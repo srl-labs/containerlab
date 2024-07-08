@@ -219,8 +219,10 @@ func (f *fakeNode) AddLink(l Link) {
 }
 
 // AddEndpoint adds the Endpoint to the node.
-func (f *fakeNode) AddEndpoint(e Endpoint) {
+func (f *fakeNode) AddEndpoint(e Endpoint) error {
 	f.Endpoints = append(f.Endpoints, e)
+
+	return nil
 }
 
 func (*fakeNode) GetLinkEndpointType() LinkEndpointType {

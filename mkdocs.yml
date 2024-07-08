@@ -9,25 +9,29 @@ nav:
       - Nodes: manual/nodes.md
       - Kinds:
           - manual/kinds/index.md
-          - Nokia SR Linux: manual/kinds/srl.md
-          - Nokia SR OS: manual/kinds/vr-sros.md
-          - Arista cEOS: manual/kinds/ceos.md
-          - Arista vEOS: manual/kinds/vr-veos.md
-          - Juniper cRPD: manual/kinds/crpd.md
-          - Juniper vMX: manual/kinds/vr-vmx.md
-          - Juniper vQFX: manual/kinds/vr-vqfx.md
-          - Juniper vSRX: manual/kinds/vr-vsrx.md
-          - Juniper vJunos-router: manual/kinds/vr-vjunosrouter.md
-          - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
-          - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
-          - Cisco XRd: manual/kinds/xrd.md
-          - Cisco XRv9k: manual/kinds/vr-xrv9k.md
-          - Cisco XRv: manual/kinds/vr-xrv.md
-          - Cisco CSR1000v: manual/kinds/vr-csr.md
-          - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
-          - Cisco 8000: manual/kinds/c8000.md
-          - Cisco c8000v: manual/kinds/vr-c8000v.md
-          - Cisco FTDv: manual/kinds/vr-ftdv.md
+          - Nokia:
+              - Nokia SR Linux: manual/kinds/srl.md
+              - Nokia SR OS: manual/kinds/vr-sros.md
+          - Arista:
+              - Arista cEOS: manual/kinds/ceos.md
+              - Arista vEOS: manual/kinds/vr-veos.md
+          - Cisco:
+              - Cisco XRd: manual/kinds/xrd.md
+              - Cisco XRv9k: manual/kinds/vr-xrv9k.md
+              - Cisco XRv: manual/kinds/vr-xrv.md
+              - Cisco CSR1000v: manual/kinds/vr-csr.md
+              - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
+              - Cisco 8000: manual/kinds/c8000.md
+              - Cisco c8000v: manual/kinds/vr-c8000v.md
+              - Cisco FTDv: manual/kinds/vr-ftdv.md
+          - Juniper:
+              - Juniper cRPD: manual/kinds/crpd.md
+              - Juniper vMX: manual/kinds/vr-vmx.md
+              - Juniper vQFX: manual/kinds/vr-vqfx.md
+              - Juniper vSRX: manual/kinds/vr-vsrx.md
+              - Juniper vJunos-router: manual/kinds/vr-vjunosrouter.md
+              - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
+              - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
           - Cumulus VX: manual/kinds/cvx.md
           - Aruba AOS-CX: manual/kinds/vr-aoscx.md
           - SONiC:
@@ -257,6 +261,11 @@ plugins:
         lab-examples/ixp-lab.md: lab-examples/peering-lab.md
   - typeset
   - glightbox
+  - macros:
+      j2_block_start_string: "[[[%"
+      j2_block_end_string: "%]]]"
+      j2_variable_start_string: "[[["
+      j2_variable_end_string: "]]]"
 
 # Customization
 extra:

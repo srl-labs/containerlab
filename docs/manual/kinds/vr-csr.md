@@ -1,10 +1,12 @@
 ---
 search:
   boost: 4
+kind_code_name: cisco_csr1000v
+kind_display_name: Cisco CSR1000v
 ---
 # Cisco CSR1000v
 
-Cisco CSR1000v virtualized router is identified with `cisco_csr1000v` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+Cisco CSR1000v virtualized router is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Cisco CSR1000v nodes launched with containerlab comes up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
@@ -35,17 +37,31 @@ Cisco CSR1000v node launched with containerlab can be managed via the following 
 !!!info
     Default user credentials: `admin:admin`
 
-## Interfaces mapping
+## Interface naming
 
-Cisco CSR1000v container can have up to 144 interfaces and uses the following mapping rules:
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in [[[ kind_display_name ]]].
 
-* `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to first data port of CSR1000v line card
-* `eth2+` - second and subsequent data interface
+The interface naming convention is: `GigabitEthernetX` (or `GiX`), where `X` is the port number.
 
-When containerlab launches Cisco CSR1000v node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
+With that naming convention in mind:
 
-Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
+* `Gi2` - first data port available
+* `Gi3` - second data port, and so on...
+
+/// admonition
+    type: warning
+Data port numbering starts at `2`, as `Gi1` is reserved for management connectivity. Attempting to use `Gi1` in a containerlab topology will result in an error.
+///
+
+The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
+
+* `eth0` - management interface connected to the containerlab management network (rendered as `GigabitEthernet1` in the CLI)
+* `eth1` - first data interface, mapped to the first data port of the VM (rendered as `GigabitEthernet2`)
+* `eth2+` - second and subsequent data interfaces, mapped to the second and subsequent data ports of the VM (rendered as `GigabitEthernet3` and so on)
+
+When containerlab launches [[[ kind_display_name ]]] node the `GigabitEthernet1` interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+
+Data interfaces `GigabitEthernet2+` need to be configured with IP addressing manually using CLI or other available management interfaces.
 
 ## Features and options
 

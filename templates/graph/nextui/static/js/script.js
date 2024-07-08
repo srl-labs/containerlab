@@ -103,9 +103,9 @@
                     sourceText.sets({
                         text: this.sourcelabel(),
                     });
-                    //TODO: accommodate larger text label
-                    sourceBg.sets({ width: 34, visible: true });
-                    sourceBg.setTransform(34 / -2);
+                    var sourceTextBound = sourceText.getBound()
+                    sourceBg.sets({ width: sourceTextBound.width, visible: true });
+                    sourceBg.setTransform(sourceTextBound.width / -2);
                     point = line.start;
                     if (stageScale) {
                         sourceBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ' + 'scale (' + stageScale + ') ');
@@ -121,8 +121,9 @@
                     targetText.sets({
                         text: this.targetlabel(),
                     });
-                    targetBg.sets({ width: 34, visible: true });
-                    targetBg.setTransform(34 / -2);
+                    var targetTextBound = targetText.getBound()
+                    targetBg.sets({ width: targetTextBound.width, visible: true });
+                    targetBg.setTransform(targetTextBound.width / -2);
                     point = line.end;
                     if (stageScale) {
                         targetBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ' + 'scale (' + stageScale + ') ');

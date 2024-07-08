@@ -20,4 +20,4 @@ topology:
       mgmt-ipv4: 172.20.20.201
 
   links:
-    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+    - endpoints: ["srl1:ethernet-1/1", "srl2:e1-1"]

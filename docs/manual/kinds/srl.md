@@ -91,37 +91,49 @@ Default credentials[^4]: `admin:NokiaSrl1!`
 Containerlab will automatically enable public-key authentication for `root`, `admin` and `linuxadmin` users if public key files are found at `~/.ssh` directory[^1].
 ///
 
-## Interfaces mapping
+## Interfaces naming
 
-SR Linux system expects interfaces inside the container to be named in a specific way - `eX-Y` - where `X` is the line card index, `Y` is the port.
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in SR Linux.
+
+The interface naming convention is: `ethernet-1/Y`, where `1` is the only available line card and `Y` is the port on the line card.
 
 With that naming convention in mind:
 
-* `e1-1` - first ethernet interface on line card 1
-* `e1-2` - second interface on line card 1
-* `e2-1` - first interface on line card 2
+* `ethernet-1/1` - first ethernet interface on line card 1
+* `ethernet-1/2` - second interface on line card 1
 
-These interface names are seen in the Linux shell; however, when configuring the interfaces via SR Linux CLI, the interfaces should be named as `ethernet-X/Y` where `X/Y` is the `linecard/port` combination.
-
-Interfaces can be defined in a non-sequential way, for example:
+As an example:
 
 ```yaml
   links:
+    # srlinux port ethernet-1/3 is connected to vsrx port ge-0/0/3
+    - endpoints: ["srlinux:ethernet-1/3", "vsrx:ge-0/0/3"]
     # srlinux port ethernet-1/5 is connected to sros port 2
-    - endpoints: ["srlinux:e1-5", "sros:eth2"]
+    - endpoints: ["srlinux:ethernet-1/5", "sros:1/1/2"]
 ```
+
+SR Linux system expects interfaces inside the container to be named in a specific way - `e1-Y` - where `1` is the only available line card and `Y` is the port on the line card, however, it is optional (but still fully supported) to use this internal naming convention in Containerlab topologies.
+
+The example ports above would be mapped to the following Linux interfaces:
+
+* `e1-1` - first ethernet interface on line card 1
+* `e1-2` - second interface on line card 1
 
 ### Breakout interfaces
 
-If the interface is intended to be configured as a breakout interface, its name must be changed accordingly.
-
-The breakout interfaces will have the name `eX-Y-Z` where `Z` is the breakout port number. For example, if interface `ethernet-1/3` on an IXR-D3 system is meant to act as a breakout 100Gb to 4x25Gb, then the interfaces in the topology must use the following naming:
+You can also use breakout (or channelised) interfaces on SR Linux nodes.
 
 ```yaml
   links:
-    # srlinux's first breakout port ethernet-1/3/1 is connected to sros port 2
-    - endpoints: ["srlinux:e1-3-1", "sros:eth2"]
+    # srlinux's first breakout port ethernet-1/3/1
+    # is connected to sros port 2
+    - endpoints: ["srlinux:ethernet-1/3/1", "sros:1/1/2"]
+    # srlinux's second breakout port ethernet-1/3/2
+    # is connected to vEOS port Et1/2
+    - endpoints: ["srlinux:ethernet-1/3/2", "veos:Et1/2"]
 ```
+
+The breakout interfaces will have the mapped Linux interface name `eX-Y-Z` where `Z` is the breakout port number. For example, if interface `ethernet-1/3` on an IXR-D3 system is meant to act as a breakout 100Gb to 4x25Gb, and the first breakout port is used in the topology (`ethernet-1/3/1`), then the mapped interfaces in the container will be called `e1-3-1`.
 
 ## Features and options
 

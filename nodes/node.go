@@ -80,6 +80,8 @@ type Node interface {
 	PostDeploy(ctx context.Context, params *PostDeployParams) error
 	WithMgmtNet(*types.MgmtNet)           // WithMgmtNet provides the management network for the node
 	WithRuntime(runtime.ContainerRuntime) // WithRuntime provides the runtime for the node
+	// CalculateInterfaceIndex returns with the interface index offset from the first valid dataplane interface based on the interface name. Errors otherwise.
+	CalculateInterfaceIndex(ifName string) (int, error)
 	// CheckInterfaceName checks if a name of the interface referenced in the topology file is correct for this node
 	CheckInterfaceName() error
 	// VerifyStartupConfig checks for existence of the referenced file and maybe performs additional config checks
@@ -96,7 +98,7 @@ type Node interface {
 	// Adds the given link to the Node (container). After adding the Link to the node,
 	// the given function f is called within the Nodes namespace to setup the link.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	AddEndpoint(e links.Endpoint)
+	AddEndpoint(e links.Endpoint) error
 	GetEndpoints() []links.Endpoint
 	GetLinkEndpointType() links.LinkEndpointType
 	GetShortName() string
@@ -134,7 +136,7 @@ func WithRuntime(r runtime.ContainerRuntime) NodeOption {
 // GenericVMInterfaceCheck checks interface names for generic VM-based nodes.
 // These nodes could only have interfaces named ethX, where X is >0.
 func GenericVMInterfaceCheck(nodeName string, eps []links.Endpoint) error {
-	ifRe := regexp.MustCompile(`eth[1-9][0-9]*$`)
+	ifRe := regexp.MustCompile(`eth[1-9][0-9]*$`) // skipcq: GO-C4007
 	for _, e := range eps {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >0", nodeName, e.GetIfaceName())

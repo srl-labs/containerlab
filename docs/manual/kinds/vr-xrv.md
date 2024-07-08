@@ -45,6 +45,13 @@ Cisco XRv node launched with containerlab can be managed via the following inter
 !!!info
     Default user credentials: `clab:clab@123`
 
+## Interface naming
+
+Cisco XRv nodes use the interface naming convention `GigabitEthernet0/0/0/X` (or `Gi0/0/0/X`, both are accepted), where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `0`, like one would normally expect in the NOS.
+
 ## Interfaces mapping
 
 Cisco XRv container can have up to 90 interfaces and uses the following mapping rules:

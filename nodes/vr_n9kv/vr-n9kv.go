@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
 
 	"github.com/srl-labs/containerlab/nodes"
 
@@ -18,6 +19,10 @@ import (
 var (
 	kindnames          = []string{"cisco_n9kv", "vr-n9kv", "vr-cisco_n9kv"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
+
+	InterfaceRegexp = regexp.MustCompile(`(?:Ethernet|Et)\s?1/(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "Ethernet1/X or Et1/X (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -33,12 +38,12 @@ func Register(r *nodes.NodeRegistry) {
 }
 
 type vrN9kv struct {
-	nodes.DefaultNode
+	nodes.VRNode
 }
 
 func (n *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	// Init VRNode
+	n.VRNode = *nodes.NewVRNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -67,6 +72,10 @@ func (n *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
 
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceOffset = InterfaceOffset
+	n.InterfaceHelp = InterfaceHelp
+
 	return nil
 }
 
@@ -77,9 +86,4 @@ func (n *vrN9kv) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 		return nil
 	}
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrN9kv) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

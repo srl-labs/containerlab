@@ -381,7 +381,7 @@ type Node interface {
 	// the master of the interface and bring the interface up.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
 	// AddEndpoint adds the Endpoint to the node
-	AddEndpoint(e Endpoint)
+	AddEndpoint(e Endpoint) error
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
 	GetEndpoints() []Endpoint
@@ -403,24 +403,38 @@ const (
 func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
 		// rename the link created with random name if its length is acceptable by linux
-		if len(endpt.GetIfaceName()) < 16 {
+		if IsValidInterfaceName(endpt.GetIfaceName()) {
 			err := netlink.LinkSetName(l, endpt.GetIfaceName())
 			if err != nil {
 				return fmt.Errorf(
 					"failed to rename link: %v", err)
 			}
 		} else {
-			// when the name is too long, we add an AltName instead of a regular interface name
-			err := netlink.LinkAddAltName(l, endpt.GetIfaceName())
+			// when the name is too long, we add a sanitized interface name as AltName
+			sanitisedIfaceName := SanitiseInterfaceName(endpt.GetIfaceName())
+			err := netlink.LinkAddAltName(l, sanitisedIfaceName)
 			if err != nil {
 				return fmt.Errorf(
-					"failed to add alias: %v", err)
+					"failed to add altname: %v", err)
 			}
 		}
 
 		// lets set the MAC address if provided
 		if len(endpt.GetMac()) == 6 {
 			err := netlink.LinkSetHardwareAddr(l, endpt.GetMac())
+			if err != nil {
+				return err
+			}
+		}
+
+		if endpt.GetIfaceAlias() != "" {
+			err := netlink.LinkSetAlias(l, endpt.GetIfaceAlias())
+			if err != nil {
+				return err
+			}
+			// Set a sanitised altname for ease of access. '/', and ' ' are changed to '-'
+			sanitisedIfaceName := SanitiseInterfaceName(endpt.GetIfaceAlias())
+			err = netlink.LinkAddAltName(l, sanitisedIfaceName)
 			if err != nil {
 				return err
 			}
@@ -476,6 +490,39 @@ func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
 		if !slices.Contains(params.NodesFilter, e.Node) {
 			return false
 		}
+	}
+
+	return true
+}
+
+// SanitiseInterfaceName sanitises the interface name by replacing '/' and ' ' with '-'.
+// Making it suitable to write as AltName for the interface.
+func SanitiseInterfaceName(ifaceName string) string {
+	var sb strings.Builder
+	sb.Grow(len(ifaceName))
+
+	for _, char := range ifaceName {
+		switch char {
+		case '/', ' ':
+			sb.WriteRune('-')
+		default:
+			sb.WriteRune(char)
+		}
+	}
+
+	return sb.String()
+}
+
+// IsValidInterfaceName checks if the interface name is valid
+// by checking its length and the presence of spaces or slashes.
+func IsValidInterfaceName(ifaceName string) bool {
+	if len(ifaceName) > 15 {
+		return false
+	}
+
+	// interface name can not contain spaces or slashes
+	if strings.ContainsAny(ifaceName, " /") {
+		return false
 	}
 
 	return true

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
 
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -17,6 +18,10 @@ import (
 var (
 	kindnames          = []string{"fortinet_fortigate"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
+
+	InterfaceRegexp = regexp.MustCompile(`port(?P<port>\d+)$`)
+	InterfaceOffset = 2
+	InterfaceHelp   = "portX (where X >= 2) or ethX (where X >= 1)"
 )
 
 const (
@@ -34,12 +39,12 @@ func Register(r *nodes.NodeRegistry) {
 }
 
 type fortigate struct {
-	nodes.DefaultNode
+	nodes.VRNode
 }
 
 func (n *fortigate) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	// Init VRNode
+	n.VRNode = *nodes.NewVRNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -82,9 +87,4 @@ func (n *fortigate) PreDeploy(_ context.Context, params *nodes.PreDeployParams) 
 	}
 
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *fortigate) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

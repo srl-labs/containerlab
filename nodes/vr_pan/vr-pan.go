@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
 
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -17,6 +18,10 @@ import (
 var (
 	kindnames          = []string{"paloalto_panos", "vr-pan", "vr-paloalto_panos"}
 	defaultCredentials = nodes.NewCredentials("admin", "Admin@123")
+
+	InterfaceRegexp = regexp.MustCompile(`Ethernet1/(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "Ethernet1/1 (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -32,12 +37,12 @@ func Register(r *nodes.NodeRegistry) {
 }
 
 type vrPan struct {
-	nodes.DefaultNode
+	nodes.VRNode
 }
 
 func (n *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	// Init VRNode
+	n.VRNode = *nodes.NewVRNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -68,6 +73,10 @@ func (n *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
 
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceOffset = InterfaceOffset
+	n.InterfaceHelp = InterfaceHelp
+
 	return nil
 }
 
@@ -78,9 +87,4 @@ func (n *vrPan) PreDeploy(_ context.Context, params *nodes.PreDeployParams) erro
 		return nil
 	}
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrPan) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

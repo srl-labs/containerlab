@@ -37,7 +37,7 @@ With the mandatory `--node | -n` flag a user specifies the name of the container
 
 ### interface
 
-With the mandatory `--interface | -i` flag a user specifies the name of the interface to set link impairments on.
+With the mandatory `--interface | -i` flag a user specifies the name of the interface to set link impairments on. This can also be the [interface alias](../../../manual/topo-def-file.md#interface-naming), if one is used.
 
 ### delay
 

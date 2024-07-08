@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"sync"
 	"text/template"
@@ -45,6 +46,12 @@ type DefaultNode struct {
 	OverwriteNode NodeOverwrites
 	// List of link endpoints that are connected to the node.
 	Endpoints []links.Endpoint
+	// Interface aliasing-related variables
+	InterfaceRegexp       *regexp.Regexp
+	InterfaceMappedPrefix string
+	InterfaceOffset       int
+	InterfaceHelp         string
+	FirstDataIfIndex      int
 	// State of the node
 	state      state.NodeState
 	statemutex sync.RWMutex
@@ -60,6 +67,10 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 		LicensePolicy:    types.LicensePolicyNone,
 		SSHConfig:        types.NewSSHConfig(),
 	}
+
+	dn.InterfaceMappedPrefix = "eth"
+	dn.InterfaceOffset = 0
+	dn.FirstDataIfIndex = 0
 
 	return dn
 }
@@ -267,10 +278,60 @@ func (d *DefaultNode) DeleteNetnsSymlink() error {
 	return utils.DeleteNetnsSymlink(d.OverwriteNode.GetContainerName())
 }
 
+func (d *DefaultNode) CheckInterfaceOverlap() error {
+	var seenEps []links.Endpoint
+
+	for _, ep := range d.Endpoints {
+		ifName := ep.GetIfaceName()
+		for _, seenEp := range seenEps {
+			if ifName == seenEp.GetIfaceName() {
+				return fmt.Errorf("%q and %q have overlapping interface names", ep, seenEp)
+			}
+		}
+		seenEps = append(seenEps, ep)
+	}
+
+	return nil
+}
+
 // CheckInterfaceName checks if a name of the interface referenced in the topology file is in the expected range of name values.
 // A no-op for the default node, specific nodes should implement this method.
-func (*DefaultNode) CheckInterfaceName() error {
-	return nil
+func (d *DefaultNode) CheckInterfaceName() error {
+	return d.CheckInterfaceOverlap()
+}
+
+// CalculateInterfaceIndex parses the supplied interface name with the InterfaceRegexp.
+// Using the the port offset, it calculates the mapped interface index based on the InterfaceOffset and the first data interface index.
+func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
+	captureGroups, err := utils.GetRegexpCaptureGroups(d.InterfaceRegexp, ifName)
+	if err != nil {
+		return 0, err
+	}
+
+	if parsedIndex, found := captureGroups["port"]; found {
+		parsedIndexInt, err := strconv.Atoi(parsedIndex)
+		if err != nil {
+			return 0, fmt.Errorf("%q parsed index %q could not be cast to an integer", ifName, parsedIndex)
+		}
+		calculatedIndex := parsedIndexInt - d.InterfaceOffset + d.FirstDataIfIndex
+		return calculatedIndex, nil
+	} else {
+		return 0, fmt.Errorf("%q does not have extracted interface index with regexp %q, 'port' capture group missing?", ifName, d.InterfaceRegexp)
+	}
+}
+
+// GetMappedInterfaceName returns with a mapped interface name based on the mapped interface prefix and calculated mapped interface index.
+func (d *DefaultNode) GetMappedInterfaceName(ifName string) (string, error) {
+	ifIndex, err := d.OverwriteNode.CalculateInterfaceIndex(ifName)
+	if err != nil {
+		return "", err
+	}
+	if !(ifIndex >= d.FirstDataIfIndex) {
+		return "", fmt.Errorf("extracted interface index for %q is out of bounds: %d ! >= %d", ifName, ifIndex, d.FirstDataIfIndex)
+	}
+	mappedIfName := fmt.Sprintf("%s%d", d.InterfaceMappedPrefix, ifIndex)
+
+	return mappedIfName, nil
 }
 
 // VerifyStartupConfig verifies that startup config files exists on disks.
@@ -346,6 +407,8 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 type NodeOverwrites interface {
 	VerifyStartupConfig(topoDir string) error
 	CheckInterfaceName() error
+	CalculateInterfaceIndex(ifName string) (int, error)
+	GetMappedInterfaceName(ifName string) (string, error)
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
@@ -544,8 +607,21 @@ func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) 
 	return netns.Do(f)
 }
 
-func (d *DefaultNode) AddEndpoint(e links.Endpoint) {
+// AddEndpoint maps the endpoint name to before adding it to the node endpoints if it matches the interface alias regexp. Returns an error if the mapping goes wrong.
+func (d *DefaultNode) AddEndpoint(e links.Endpoint) error {
+	endpointName := e.GetIfaceName()
+	if d.InterfaceRegexp != nil && d.InterfaceRegexp.MatchString(endpointName) {
+		mappedName, err := d.OverwriteNode.GetMappedInterfaceName(endpointName)
+		if err != nil {
+			return fmt.Errorf("%q interface name %q could not be mapped: %w", d.Cfg.ShortName, e.GetIfaceName(), err)
+		}
+		log.Debugf("Interface Mapping: Mapping interface %q (ifAlias) to %q (ifName)", endpointName, mappedName)
+		e.SetIfaceName(mappedName)
+		e.SetIfaceAlias(endpointName)
+	}
 	d.Endpoints = append(d.Endpoints, e)
+
+	return nil
 }
 
 func (d *DefaultNode) GetEndpoints() []links.Endpoint {

@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -103,6 +104,9 @@ var (
 		Minor:    10,
 		Revision: 0,
 	}
+
+	InterfaceRegexp = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`)
+	InterfaceHelp   = "ethernet-L/P, ethernet-L/P/C or eL-P, eL-P-C (where L, P, C >= 1)"
 )
 
 // Register registers the node in the NodeRegistry.
@@ -188,6 +192,9 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// mount srlinux topology
 	topoPath := filepath.Join(n.Cfg.LabDir, "topology.yml")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
+
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceHelp = InterfaceHelp
 
 	return nil
 }
@@ -771,15 +778,57 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	return file.Close()
 }
 
+func (s *srl) GetMappedInterfaceName(ifName string) (string, error) {
+	captureGroups, err := utils.GetRegexpCaptureGroups(s.InterfaceRegexp, ifName)
+
+	if err != nil {
+		return "", err
+	}
+
+	indexGroups := []string{"linecard", "port", "channel"}
+	parsedIndices := make(map[string]int)
+	foundIndices := make(map[string]bool)
+
+	for _, indexKey := range indexGroups {
+		if index, found := captureGroups[indexKey]; found && index != "" {
+			foundIndices[indexKey] = true
+			parsedIndices[indexKey], err = strconv.Atoi(index)
+			if err != nil {
+				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
+			}
+			if !(parsedIndices[indexKey] >= 1) {
+				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 1", ifName, indexKey, index)
+			}
+		} else {
+			foundIndices[indexKey] = false
+		}
+	}
+
+	if foundIndices["linecard"] && foundIndices["port"] {
+		if foundIndices["channel"] {
+			return fmt.Sprintf("e%d-%d-%d", parsedIndices["linecard"], parsedIndices["port"], parsedIndices["channel"]), nil
+		} else {
+			return fmt.Sprintf("e%d-%d", parsedIndices["linecard"], parsedIndices["port"]), nil
+		}
+	} else {
+		return "", fmt.Errorf("%q missing linecard or port index", ifName)
+	}
+}
+
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (s *srl) CheckInterfaceName() error {
-	// allow eX-X-X and mgmt0 interface names
-	ifRe := regexp.MustCompile(`e\d+-\d+(-\d+)?|mgmt0`)
+	// allow ethernetX-X-X, eX-X-X and mgmt0 interface names
+	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|mgmt0`)
 	nm := strings.ToLower(s.Cfg.NetworkMode)
+
+	err := s.CheckInterfaceOverlap()
+	if err != nil {
+		return err
+	}
 
 	for _, e := range s.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern. SR Linux interfaces should be named as e1-1 or e1-1-1", e.GetIfaceName())
+			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern: %s", e.GetIfaceName(), s.InterfaceHelp)
 		}
 
 		if e.GetIfaceName() == "mgmt0" && nm != "none" {

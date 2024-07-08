@@ -1,10 +1,12 @@
 ---
 search:
   boost: 4
+kind_code_name: nokia_sros
+kind_display_name: Nokia SR OS
 ---
 # Nokia SR OS
 
-[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `nokia_sros` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Nokia SR OS nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
@@ -16,58 +18,95 @@ Nokia SR OS nodes launched with containerlab come up pre-provisioned with SSH, S
 
 Nokia SR OS node launched with containerlab can be managed via the following interfaces:
 
-=== "bash"
-    to connect to a `bash` shell of a running Nokia SR OS container:
-    ```bash
-    docker exec -it <container-name/id> bash
-    ```
-=== "CLI"
-    to connect to the SR OS CLI
-    ```bash
-    ssh admin@<container-name/id>
-    ```
-=== "NETCONF"
-    NETCONF server is running over port 830
-    ```bash
-    ssh root@<container-name> -p 830 -s netconf
-    ```
-=== "gNMI"
-    using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
-    ```bash
-    gnmic -a <container-name/node-mgmt-address> --insecure \
-    -u admin -p admin \
-    capabilities
-    ```
-=== "Telnet"
-    serial port (console) is exposed over TCP port 5000:
-    ```bash
-    # from container host
-    telnet <node-name> 5000
-    ```  
-    You can also connect to the container and use `telnet localhost 5000` if telnet is not available on your container host.
+/// tab | bash
+to connect to a `bash` shell of a running Nokia SR OS container:
 
-!!!info
-    Default user credentials: `admin:admin`
+```bash
+docker exec -it <container-name/id> bash
+```
 
-## Interfaces mapping
+///
+/// tab | CLI
+to connect to the SR OS CLI
 
-Nokia SR OS container uses the following mapping for its interfaces:
+```bash
+ssh admin@<container-name/id>
+```
+
+///
+/// tab | "NETCONF"
+NETCONF server is running over port 830
+
+```bash
+ssh root@<container-name> -p 830 -s netconf
+```
+
+///
+/// tab | "gNMI"
+using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
+
+```bash
+gnmic -a <container-name/node-mgmt-address> --insecure \
+-u admin -p admin \
+capabilities
+```
+
+///
+/// tab | "Telnet"
+serial port (console) is exposed over TCP port 5000:
+
+```bash
+# from container host
+telnet <node-name> 5000
+```  
+
+You can also connect to the container and use `telnet localhost 5000` if telnet is not available on your container host.
+///
+
+/// note
+Default user credentials: `admin:admin`
+///
+
+## Interface naming
+
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in [[[ kind_display_name ]]].
+
+The interface naming convention is: `1/1/X`, where `X` is the port number.
+
+/// admonition
+    type: warning
+Nokia SR OS nodes currently only support the simplified interface alias `1/1/X`, where X denotes the port number.  
+Multi-chassis, multi-linecard setups, and channelized interfaces are not supported by interface aliasing at the moment, and you must fall back to the old `ethX`-based naming scheme ([see below](#custom-variants)) in these scenarios.
+
+Data port numbering starts at `1`, like one would normally expect in the NOS.
+///
+
+With that naming convention in mind:
+
+* `1/1/1` - first data port available
+* `1/1/2` - second data port, and so on...
+
+The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to the first data port of SR OS line card
-* `eth2+` - second and subsequent data interface
+* `eth1` - first data interface, mapped to the first data port of the VM (rendered as `1/1/1`)
+* `eth2+` - second and subsequent data interfaces, mapped to the second and subsequent data ports of the VM (rendered as `1/1/2` and so on)
+
+When containerlab launches [[[ kind_display_name ]]] node the primary BOF interface gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+
+Data interfaces `1/1/1+` need to be configured with IP addressing manually using CLI or other available management interfaces.
+
+Nokia SR OS container uses the following mapping for its interfaces:
 
 Interfaces can be defined in a non-sequential way, for example:
 
 ```yaml
   links:
     # sr1 port 3 is connected to sr2 port 5
-    - endpoints: ["sr1:eth3", "sr2:eth5"]
+    - endpoints: ["sr1:1/1/3", "sr2:1/1/5"] #(1)!
 ```
 
-When containerlab launches Nokia SR OS node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
-
-Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
+1. Or `endpoints: ["sr1:eth3", "sr2:eth5"]` in the Linux interface naming scheme.
 
 ## Features and options
 
@@ -116,42 +155,43 @@ type: >-
   lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=2 card=iom4-e mda/1=me6-10gb-sfp+
 ```
 
-???tip "How to define links in a multi line card setup?"
-    When a node uses multiple line cards users should pay special attention to the way links are defined in the topology file. As explained in the [interface mapping](#interfaces-mapping) section, SR OS nodes use `ethX` notation for their interfaces, where `X` denotes a port number on a line card/MDA.
+/// details | How to define links in a multi line card setup?
+    type: tip
+When a node uses multiple line cards users should pay special attention to the way links are defined in the topology file. As explained in the [interface naming](#interface-naming) section, SR OS nodes use `ethX` notation for their interfaces, where `X` denotes a port number on a line card/MDA.
 
-    Things get a little more tricky when multiple line cards are provided. First, every line card must be defined with a `max_nics` property that serves a simple purpose - identify how many ports at maximum this line card can bear. In the example above both line cards are equipped with the same IOM/MDA and can bear 6 ports at max. Thus, `max_nics` is set to 6.
+Things get a little more tricky when multiple line cards are provided. First, every line card must be defined with a `max_nics` property that serves a simple purpose - identify how many ports at maximum this line card can bear. In the example above both line cards are equipped with the same IOM/MDA and can bear 6 ports at max. Thus, `max_nics` is set to 6.
 
-    Another significant value of a line card definition is the `slot` position. Line cards are inserted into slots, and slot 1 comes before slot 2, and so on.
+Another significant value of a line card definition is the `slot` position. Line cards are inserted into slots, and slot 1 comes before slot 2, and so on.
 
-    Knowing the slot number and the maximum number of ports a line card has, users can identify which indexes they need to use in the `link` portion of a topology to address the right port of a chassis. Let's use the following example topology to explain how this all maps together:
+Knowing the slot number and the maximum number of ports a line card has, users can identify which indexes they need to use in the `link` portion of a topology to address the right port of a chassis. Let's use the following example topology to explain how this all maps together:
 
-    ```yaml
-    topology:
-      nodes:
-        R1:
-          kind: nokia_sros
-          image: nokia_sros:22.7.R2
-          type: >-
-            cp: cpu=2 min_ram=4 chassis=sr-7 slot=A card=cpm5 ___
-            lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=1 card=iom4-e mda/1=me6-10gb-sfp+ ___
-            lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=2 card=iom4-e mda/1=me6-10gb-sfp+
-        R2:
-          kind: nokia_sros
-          image: nokia_sros:22.7.R2
-          type: >-
-            cp: cpu=2 min_ram=4 chassis=sr-7 slot=A card=cpm5 ___
-            lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=1 card=iom4-e mda/1=me6-10gb-sfp+ ___
-            lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=2 card=iom4-e mda/1=me6-10gb-sfp+
+```yaml
+topology:
+  nodes:
+    R1:
+      kind: nokia_sros
+      image: nokia_sros:22.7.R2
+      type: >-
+        cp: cpu=2 min_ram=4 chassis=sr-7 slot=A card=cpm5 ___
+        lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=1 card=iom4-e mda/1=me6-10gb-sfp+ ___
+        lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=2 card=iom4-e mda/1=me6-10gb-sfp+
+    R2:
+      kind: nokia_sros
+      image: nokia_sros:22.7.R2
+      type: >-
+        cp: cpu=2 min_ram=4 chassis=sr-7 slot=A card=cpm5 ___
+        lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=1 card=iom4-e mda/1=me6-10gb-sfp+ ___
+        lc: cpu=4 min_ram=4 max_nics=6 chassis=sr-7 slot=2 card=iom4-e mda/1=me6-10gb-sfp+
 
-      links:
-      - endpoints: ["R1:eth1", "R2:eth3"]
-      - endpoints: ["R1:eth7", "R2:eth8"]
-    ```
+  links:
+  - endpoints: ["R1:eth1", "R2:eth3"]
+  - endpoints: ["R1:eth7", "R2:eth8"]
+```
 
-    Starting with the first pair of endpoints `R1:eth1 <--> eth3:R2`; we see that port1 of R1 is connected with port3 of R2. Looking at the slot information and `max_nics` value of 6 we see that the linecard in slot 1 can host maximum 6 ports. This means that ports from 1 till 6 belong to the line card equipped in slot=1. Consequently, links ranging from `eth1` to `eth6` will address the ports of that line card.
+Starting with the first pair of endpoints `R1:eth1 <--> eth3:R2`; we see that port1 of R1 is connected with port3 of R2. Looking at the slot information and `max_nics` value of 6 we see that the linecard in slot 1 can host maximum 6 ports. This means that ports from 1 till 6 belong to the line card equipped in slot=1. Consequently, links ranging from `eth1` to `eth6` will address the ports of that line card.
 
-    The second pair of endpoints `R1:eth7 <--> eth8:R2` addresses the ports on a line card equipped in the slot 2. This is driven by the fact that the first six interfaces belong to line card in slot 1 as we just found out. This means that our second line card that sits in slot 2 and has as well six ports, will be addressed by the interfaces `eth7` till `eth12`, where `eth7` is port1 and `eth12` is port6.
-
+The second pair of endpoints `R1:eth7 <--> eth8:R2` addresses the ports on a line card equipped in the slot 2. This is driven by the fact that the first six interfaces belong to line card in slot 1 as we just found out. This means that our second line card that sits in slot 2 and has as well six ports, will be addressed by the interfaces `eth7` till `eth12`, where `eth7` is port1 and `eth12` is port6.
+///
 An integrated variant is provided with a simple TIMOS line:
 
 ```yaml
@@ -226,8 +266,9 @@ Both `flat` and normal syntax can be used in the partial config file. For exampl
 
 It is possible to provide a partial config file that is located on a remote http(s) server. This can be done by providing a URL to the file. The URL must start with `http://` or `https://` and must point to a file that is accessible from the containerlab host.
 
-!!!note
-    The URL **must have** `.partial` in its name:
+/// note
+The URL **must have** `.partial` in its name:
+///
 
 ```yaml
 name: sros_lab

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -20,6 +21,9 @@ var (
 	kindnames          = []string{"freebsd"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 	saveCmd            = "sh -c \"/backup.sh -u $USERNAME -p $PASSWORD backup\""
+	InterfaceRegexp    = regexp.MustCompile(`vtnet(?P<port>\d+)`)
+	InterfaceOffset    = 1
+	InterfaceHelp      = "vtnetX (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
@@ -34,12 +38,12 @@ func Register(r *nodes.NodeRegistry) {
 }
 
 type vrFreeBSD struct {
-	nodes.DefaultNode
+	nodes.VRNode
 }
 
 func (n *vrFreeBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	// Init VRNode
+	n.VRNode = *nodes.NewVRNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -67,6 +71,10 @@ func (n *vrFreeBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
+
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceOffset = InterfaceOffset
+	n.InterfaceHelp = InterfaceHelp
 
 	return nil
 }
@@ -96,9 +104,4 @@ func (n *vrFreeBSD) SaveConfig(ctx context.Context) error {
 	log.Infof("saved /etc backup from %s node to %s\n", n.Cfg.ShortName, confPath)
 
 	return nil
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrFreeBSD) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

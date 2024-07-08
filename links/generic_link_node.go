@@ -38,8 +38,10 @@ func (g *GenericLinkNode) ExecFunction(_ context.Context, f func(ns.NetNS) error
 	return netns.Do(f)
 }
 
-func (g *GenericLinkNode) AddEndpoint(e Endpoint) {
+func (g *GenericLinkNode) AddEndpoint(e Endpoint) error {
 	g.endpoints = append(g.endpoints, e)
+
+	return nil
 }
 
 func (g *GenericLinkNode) GetShortName() string {

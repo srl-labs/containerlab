@@ -1,10 +1,12 @@
 ---
 search:
   boost: 4
+kind_code_name: cisco_xrv9k
+kind_display_name: Cisco XRv9k
 ---
 # Cisco XRv9k
 
-[Cisco XRv9k](https://www.cisco.com/c/en/us/products/collateral/routers/ios-xrv-9000-router/datasheet-c78-734034.html) virtualized router is identified with `cisco_xrv9k` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Cisco XRv9k](https://www.cisco.com/c/en/us/products/collateral/routers/ios-xrv-9000-router/datasheet-c78-734034.html) virtualized router is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Cisco XRv9k nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI (if available) services enabled.
 
@@ -56,21 +58,38 @@ Cisco XRv9k node launched with containerlab can be managed via the following int
 !!!info
     Default user credentials: `clab:clab@123`
 
-## Interfaces mapping
+## Interface naming
 
-Cisco XRv9k container can have up to 90 interfaces and uses the following mapping rules:
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in [[[ kind_display_name ]]].
 
-* `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to first data port of XRv9k line card
-* `eth2+` - second and subsequent data interface
+The interface naming convention is:
 
-When containerlab launches Cisco XRv9k node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
+- `GigabitEthernet0/0/0/X` or `Gi0/0/0/X`
+- `TenGigabitEthernet0/0/0/X`, `TenGigE0/0/0X` or `Te0/0/0/X`
 
-Data interfaces `eth1+` needs to be configured with IP addressing manually using CLI/management protocols.
+where X denotes the port number.
+
+With that naming convention in mind:
+
+- `Gi0/0/0/0` - first data port available
+- `Gi0/0/0/1` - second data port, and so on...
 
 /// note
-Data interfaces may take 10+ minutes to come up, please be patient.
+
+1. Data port numbering starts at `0`.
+2. Data interfaces may take 10+ minutes to come up, please be patient.
+3. Cisco XRv9k can have up to 90 interfaces.
 ///
+
+The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
+
+- `eth0` - management interface connected to the containerlab management network.
+- `eth1` - first data interface, mapped to the first data port of the VM (rendered as `Gi0/0/0/0`)
+- `eth2+` - second and subsequent data interfaces, mapped to the second and subsequent data ports of the VM (rendered as `Gi0/0/0/1` and so on)
+
+When containerlab launches [[[ kind_display_name ]]] node the management interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+
+Data interfaces `Gi0/0/0/0+` need to be configured with IP addressing manually using CLI or other available management interfaces.
 
 ## Features and options
 
@@ -98,4 +117,4 @@ Configuration is applied after the node is started, thus it can contain partial 
 
 The following labs feature Cisco XRv9k node:
 
-* [SR Linux and Cisco XRv9k](../../lab-examples/vr-xrv9k.md)
+- [SR Linux and Cisco XRv9k](../../lab-examples/vr-xrv9k.md)
