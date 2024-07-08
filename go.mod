@@ -44,7 +44,7 @@ require (
 	github.com/vishvananda/netlink v1.2.1-beta.2.0.20240301075815-8ac83962db51
 	github.com/weaveworks/ignite v0.10.0
 	go.uber.org/mock v0.4.0
-	golang.org/x/crypto v0.24.0
+	golang.org/x/crypto v0.25.0
 	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/sys v0.22.0
 	golang.org/x/term v0.22.0
@@ -288,7 +288,7 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230525183740-e7c30c78aeb2 // indirect
 	gocloud.dev v0.37.0 // indirect
 	golang.org/x/mod v0.19.0
-	golang.org/x/net v0.26.0
+	golang.org/x/net v0.27.0
 	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
