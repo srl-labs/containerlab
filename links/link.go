@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/srl-labs/containerlab/internal/slices"
 	"github.com/srl-labs/containerlab/nodes/state"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
@@ -428,6 +429,12 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 
 		if endpt.GetIfaceAlias() != "" {
 			err := netlink.LinkSetAlias(l, endpt.GetIfaceAlias())
+			if err != nil {
+				return err
+			}
+			// Set a sanitised altname for ease of access. '/', and ' ' are changed to '-'
+			sanitisedIfaceName := utils.SanitiseInterfaceName(endpt.GetIfaceAlias())
+			err = netlink.LinkAddAltName(l, sanitisedIfaceName)
 			if err != nil {
 				return err
 			}

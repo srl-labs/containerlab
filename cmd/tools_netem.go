@@ -21,6 +21,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/internal/tc"
 	"github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -124,14 +125,11 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	}()
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		netemIfLink, err := netlink.LinkByName(netemInterface)
+		netemIfLink, err := netlink.LinkByName(utils.SanitiseInterfaceName(netemInterface))
 		if err != nil {
-			// Look for aliased interfaces as well
-			netemIfLink, err = netlink.LinkByAlias(netemInterface)
-			if err != nil {
-				return err
-			}
+			return err
 		}
+
 		netemIfName := netemIfLink.Attrs().Name
 		link, err := net.InterfaceByName(netemIfName)
 		if err != nil {
