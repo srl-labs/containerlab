@@ -1,10 +1,12 @@
 ---
 search:
   boost: 4
+kind_code_name: nokia_sros
+kind_display_name: Nokia SR OS
 ---
 # Nokia SR OS
 
-[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `nokia_sros` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Nokia SR OS nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
@@ -16,66 +18,95 @@ Nokia SR OS nodes launched with containerlab come up pre-provisioned with SSH, S
 
 Nokia SR OS node launched with containerlab can be managed via the following interfaces:
 
-=== "bash"
-    to connect to a `bash` shell of a running Nokia SR OS container:
-    ```bash
-    docker exec -it <container-name/id> bash
-    ```
-=== "CLI"
-    to connect to the SR OS CLI
-    ```bash
-    ssh admin@<container-name/id>
-    ```
-=== "NETCONF"
-    NETCONF server is running over port 830
-    ```bash
-    ssh root@<container-name> -p 830 -s netconf
-    ```
-=== "gNMI"
-    using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
-    ```bash
-    gnmic -a <container-name/node-mgmt-address> --insecure \
-    -u admin -p admin \
-    capabilities
-    ```
-=== "Telnet"
-    serial port (console) is exposed over TCP port 5000:
-    ```bash
-    # from container host
-    telnet <node-name> 5000
-    ```  
-    You can also connect to the container and use `telnet localhost 5000` if telnet is not available on your container host.
+/// tab | bash
+to connect to a `bash` shell of a running Nokia SR OS container:
 
-!!!info
-    Default user credentials: `admin:admin`
+```bash
+docker exec -it <container-name/id> bash
+```
+
+///
+/// tab | CLI
+to connect to the SR OS CLI
+
+```bash
+ssh admin@<container-name/id>
+```
+
+///
+/// tab | "NETCONF"
+NETCONF server is running over port 830
+
+```bash
+ssh root@<container-name> -p 830 -s netconf
+```
+
+///
+/// tab | "gNMI"
+using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
+
+```bash
+gnmic -a <container-name/node-mgmt-address> --insecure \
+-u admin -p admin \
+capabilities
+```
+
+///
+/// tab | "Telnet"
+serial port (console) is exposed over TCP port 5000:
+
+```bash
+# from container host
+telnet <node-name> 5000
+```  
+
+You can also connect to the container and use `telnet localhost 5000` if telnet is not available on your container host.
+///
+
+/// note
+Default user credentials: `admin:admin`
+///
 
 ## Interface naming
 
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in [[[ kind_display_name ]]].
+
+The interface naming convention is: `1/1/X`, where `X` is the port number.
+
+/// admonition
+    type: warning
 Nokia SR OS nodes currently only support the simplified interface alias `1/1/X`, where X denotes the port number.  
-Multi-chassis, multi-linecard setups, and channelized interfaces are not supported by interface aliasing at the moment, and you must fall back to the old `ethX`-based naming scheme (see below) in these scenarios. 
+Multi-chassis, multi-linecard setups, and channelized interfaces are not supported by interface aliasing at the moment, and you must fall back to the old `ethX`-based naming scheme ([see below](#custom-variants)) in these scenarios.
 
-!!!info
-    Data port numbering starts at `1`, like one would normally expect in the NOS.
+Data port numbering starts at `1`, like one would normally expect in the NOS.
+///
 
-## Interfaces mapping
+With that naming convention in mind:
 
-Nokia SR OS container uses the following mapping for its interfaces:
+* `1/1/1` - first data port available
+* `1/1/2` - second data port, and so on...
+
+The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to the first data port of SR OS line card
-* `eth2+` - second and subsequent data interface
+* `eth1` - first data interface, mapped to the first data port of the VM (rendered as `1/1/1`)
+* `eth2+` - second and subsequent data interfaces, mapped to the second and subsequent data ports of the VM (rendered as `1/1/2` and so on)
+
+When containerlab launches [[[ kind_display_name ]]] node the primary BOF interface gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+
+Data interfaces `1/1/1+` need to be configured with IP addressing manually using CLI or other available management interfaces.
+
+Nokia SR OS container uses the following mapping for its interfaces:
 
 Interfaces can be defined in a non-sequential way, for example:
 
 ```yaml
   links:
     # sr1 port 3 is connected to sr2 port 5
-    - endpoints: ["sr1:eth3", "sr2:eth5"]
+    - endpoints: ["sr1:1/1/3", "sr2:1/1/5"] #(1)!
 ```
 
-When containerlab launches Nokia SR OS node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach management plane of the router.
-
-Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols.
+1. Or `endpoints: ["sr1:eth3", "sr2:eth5"]` in the Linux interface naming scheme.
 
 ## Features and options
 
@@ -234,8 +265,9 @@ Both `flat` and normal syntax can be used in the partial config file. For exampl
 
 It is possible to provide a partial config file that is located on a remote http(s) server. This can be done by providing a URL to the file. The URL must start with `http://` or `https://` and must point to a file that is accessible from the containerlab host.
 
-!!!note
-    The URL **must have** `.partial` in its name:
+/// note
+The URL **must have** `.partial` in its name:
+///
 
 ```yaml
 name: sros_lab

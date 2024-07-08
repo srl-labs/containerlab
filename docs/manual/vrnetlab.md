@@ -146,13 +146,13 @@ Containerlab offers several ways of connecting VM-based routers with the rest of
             CONNECTION_MODE: bridge # use `ovs` for openvswitch datapath
     ```
 
-
 ### Networking
 
-Vrnetlab-based container images expose their management interface on the `eth0` interface. Further `eth` interfaces, that is, `eth1` and up, are considered data interfaces and are connected to the VM via the selected connection mode. Data plane interfaces are connected to the VM preserving both the order of and discontinuity between `eth` data-plane interfaces. Internally, the vrnetlab launch script achieves this by mapping the `eth` interfaces to virtualised NICs at the corresponding PCI bus addresses, filling out gaps with dummy network interfaces.  
-For example, a vrnetlab node with endpoints `eth2`, `eth3` and `eth5` would have these devices mapped to PCI bus addresses 2, 3 and 5 respectively, while addresses 1 and 4 would be allocated an unconnected (dummy) virtualised NIC. 
+Vrnetlab-based container images expose their management interface on the `eth0` interface. Further `eth` interfaces, that is, `eth1` and up, are considered data interfaces and are connected to the VM using `tc` connection mode. Data plane interfaces are connected to the VM preserving both the order of and discontinuity between `eth` data-plane interfaces. Internally, the vrnetlab launch script achieves this by mapping the `eth` interfaces to virtualised NICs at the corresponding PCI bus addresses, filling out gaps with dummy network interfaces.
 
-For convenience and easier adaptation of configurations and lab diagrams to Containerlab topologies, vrnetlab-based nodes also support interface aliasing. Interface aliasing allows for the use of the same interface naming conventions in containerlab topologies as in the NOS, as long as interface aliasing is implemented for the NOS' kind. Note that not all NOS' implementations have support for interface aliases at the moment. For information about the supported interface naming conventions for each NOS, check out their specific Kinds page.
+For example, a vrnetlab node with endpoints `eth2`, `eth3` and `eth5` would have these devices mapped to PCI bus addresses 2, 3 and 5 respectively, while addresses 1 and 4 would be allocated an unconnected (dummy) virtualised NIC.
+
+For convenience and easier adaptation of configurations and lab diagrams to Containerlab topologies, vrnetlab-based nodes also support interface aliasing. Interface aliasing allows for the use of the same interface naming conventions in containerlab topologies as in the NOS, as long as interface aliasing is implemented for the NOS' kind. Note that not all NOS' implementations have support for interface aliases at the moment. For information about the supported interface naming conventions for each NOS, check out their specific [Kinds](../manual/kinds/index.md) page.
 
 ### Boot order
 
