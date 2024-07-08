@@ -62,29 +62,34 @@ It is possible to change the prefix that containerlab adds to node names. The `p
     In the case of an empty prefix, you have to keep in mind that nodes need to be named uniquely across all labs.
 
 Examples:
-=== "custom prefix"
-    ```yaml
-    name: mylab
-    prefix: myprefix
-    nodes:
-      n1:
-      # <some config>
-    ```
+/// tab | custom prefix
 
-    With a prefix set to `myprefix` the container name for node `n1` will be `myprefix-mylab-n1`.
-=== "empty prefix"
-    ```yaml
-    name: mylab
-    prefix: ""
-    nodes:
-      n1:
-      # <some config>
-    ```
+```yaml
+name: mylab
+prefix: myprefix
+nodes:
+  n1:
+  # <some config>
+```
 
-    When a prefix is set to an empty string, the container name will match the node name - `n1`.
+With a prefix set to `myprefix` the container name for node `n1` will be `myprefix-mylab-n1`.
+///
+/// tab | empty prefix
 
-!!!note
-    Even when you change the prefix, the lab directory is still uniformly named using the `clab-<lab-name>` pattern.
+```yaml
+name: mylab
+prefix: ""
+nodes:
+  n1:
+  # <some config>
+```
+
+When a prefix is set to an empty string, the container name will match the node name - `n1`.
+///
+
+/// note
+Even when you change the prefix, the lab directory is still uniformly named using the `clab-<lab-name>` pattern.
+///
 
 ### Topology
 
@@ -131,22 +136,78 @@ A more expressive extended form exposes all link features, but requires more typ
 
 ##### Interface naming
 
-Containerlab supports two kinds of interface naming: Linux interfaces (also referred to as "mapped" interfaces in some parts of the documentation) and interface aliases.
+Containerlab supports two kinds of interface naming: Linux interfaces[^2] and interface aliases.
 
-Interface aliases are the convenient, since they use the same naming convention as the containerised or virtualised NOS does. Many Kinds support interface aliases (which is indicated on their Kind documentation), but not all of them at the moment of writing.  
-Linux (or "mapped") interface names are the interface names directly used inside the container, which usually does not match the name of the interface as represented inside the NOS.
+The "raw" Linux interface names are the names of the interfaces as they are expected to be seen **inside** the container (but not necessarily how they look like in the configuration file). Have a look at this topology that features SR Linux and cEOS nodes interconnected with a single link using Linux interface names:
+
+```yaml title="using Linux interface names"
+# nodes configuration omitted for clarity
+topology:
+  nodes:
+    srl:
+    ceos:
+
+  links:
+    - endpoints: ["srl:e1-2", "ceos:eth2"] # (1)!
+```
+
+1. In this example, the `srl` node has an interface named `e1-2` and the `ceos` node has an interface named `eth2`. These are the Linux interface names which can be seen if you enter the container' shell and issue `ip link`.
+
+###### Aliases
+
+The downside of using Linux interface names is that they often do not match the interface naming convention used by the Network OS. This is where Interface Aliases feature (added in Containerlab v0.56.0) comes in handy.
+
+Imagine we want to create a lab with four different Kinds: SR Linux, vEOS, CSR1000v and vSRX, cabled like this:
+
+|                A side | B side           |
+| --------------------: | ---------------- |
+| SR Linux ethernet-1/1 | vEOS Ethernet1/1 |
+|         vSRX ge-0/0/2 | vEOS Ethernet1/2 |
+|          CSR1000v Gi5 | vSRX ge-0/0/5    |
+|      vEOS Ethernet1/3 | CSR1000v Gi3     |
+
+/// tab | Using Linux interfaces
+Using the `ethX` interface naming convention, the topology would look like this:
+
+```yaml
+links:
+  - endpoints: ["srl:e1-1", "vEOS:eth1"]
+  - endpoints: ["vSRX:eth3", "vEOS:eth2"]
+  - endpoints: ["CSR1000v:eth4", "vSRX:eth6"]
+  - endpoints: ["vEOS:eth3", "CSR1000v:eth2"]
+```
+
+Note the four different kinds of offset used here on the four different NOSes!
+///
+/// tab | Using interface aliases
+Using aliased interface names, the topology definition becomes much more straightforward:
+
+```yaml
+links:
+  - endpoints: ["srl:ethernet-1/1", "vEOS:Ethernet1/1"]
+  - endpoints: ["vSRX:ge-0/0/2", "vEOS:Ethernet1/2"]
+  - endpoints: ["CSR1000v:Gi5", "vSRX:ge-0/0/5"]
+  - endpoints: ["vEOS:Ethernet1/3", "CSR1000v:Gi3"]
+```
+
+///
+
+Both topology definitions result in the same lab being deployed, but the latter is easier to write and to understand.
+
+Many [Kinds](../manual/kinds/index.md) (but not all) support interface aliases and the alias names are provided in the respective kind' documentation.
 
 Containerlab transparently maps from interface aliases to Linux interface names, and there's no additional syntax or configuration needed to specify either an interface alias or a Linux interface name in topologies.
 
+/// details | How do aliases work?
+Internally, interface aliases end up being deterministically mapped to Linux interface names, which conform to Linux interface naming standards: at most 15 characters, spaces and forward slashes (`/`) not permitted.
 
-!!!note
-Internally, interface aliases end up being deterministically mapped to Linux interface names, which conform to Linux interface naming standards: at most 15 characters, spaces and forward slashes ('/') not permitted.  
 Since many NOSes use long interface names (`GigabitEthernet1`, that's exactly 1 character longer than permitted), and like to use slashes in their interface naming conventions, these NOS interface names cannot be directly used as interface names for the container interfaces created by Containerlab.  
 For example, SR Linux maps its `ethernet-1/2` interface to the Linux interface `e1-2`. On the other hand, Juniper vSRX maps its `ge-0/0/1` interface to `eth2`.
+///
 
 ##### Brief format
 
-The brief version looks as follows.
+The brief format of link definition looks as follows.
 
 ```yaml
 # nodes configuration omitted for clarity
@@ -156,9 +217,11 @@ topology:
     ceos:
 
   links:
-    - endpoints: ["srl:ethernet-1/1", "ceos:eth1"]
+    - endpoints: ["srl:ethernet-1/1", "ceos:Ethernet1/1"] #(1)!
     - endpoints: ["srl:e1-2", "ceos:eth2"]
 ```
+
+1. This example features two interface naming conventions: Linux interface names and [interface aliases](#aliases).
 
 As you see, the `topology.links` element is a list of individual links. The link itself is expressed as pair of `endpoints`. This might sound complicated, lets use a graphical explanation:
 
@@ -424,3 +487,4 @@ To help you get started, we created the following lab examples which demonstrate
 - [5-stage Clos topology with parametrized number of pods and super-spines](lab-examples/../../lab-examples/templated02.md)
 
 [^1]: if the filename has `.clab.yml` or `-clab.yml` suffix, the YAML file will have autocompletion and linting support in VSCode editor.
+[^2]: also referred to as "mapped" or "raw" interfaces in some parts of the documentation
