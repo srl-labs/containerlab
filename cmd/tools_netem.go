@@ -20,8 +20,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/internal/tc"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -125,7 +125,7 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	}()
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		netemIfLink, err := netlink.LinkByName(utils.SanitiseInterfaceName(netemInterface))
+		netemIfLink, err := netlink.LinkByName(links.SanitiseInterfaceName(netemInterface))
 		if err != nil {
 			return err
 		}
