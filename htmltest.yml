@@ -20,6 +20,9 @@ IgnoreURLs:
   - https://gist.githubusercontent.com/hellt/abc/raw/def/linux.clab.yml # test link used in docs
   - serverfault.com # returns 403
   - askubuntu.com # returns 403
+  - sonic.software # often down
+  - sonic-build.azurewebsites.net/ui/sonic/pipelines # sometimes down =)
+  - localhost
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
