@@ -60,11 +60,20 @@ Default credentials: `admin:admin`
 
 ## Interface naming convention
 
-The Cisco Catalyst 9000v container uses the following naming convention for its management and data interfaces:
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in [[[ kind_display_name ]]].
+
+The interface naming convention is: `GigabitEthernet1/0/X` (or `Gi1/0/X`), where `X` is the port number.
+
+With that naming convention in mind:
+
+* `Gi1/0/1` - first data port available
+* `Gi1/0/2` - second data port, and so on...
+
+The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
 
 - `eth0` - management interface connected to the containerlab management network.
-- `eth1` - GigabitEthernet1/0/1 interface.
-- `eth2` - GigabitEthernet1/0/2 interface and so on.
+- `eth1` - First data-plane interface. Mapped to `GigabitEthernet1/0/1` interface.
+- `eth2` - Second data-plane interface. Mapped to `GigabitEthernet1/0/2` interface and so on.
 
 Regardless of how many links are defined in your containerlab topology, the Catalyst 9000v will always display 8 data-plane interfaces. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
 
@@ -76,9 +85,22 @@ Data interfaces may take 5+ minutes to come up after the node boots.
 
 ### ASIC data-plane simulation configuration
 
-The default ASIC simulation of the node will be UADP. To enable the Q200 simulation or to enable specific features for the UADP simulation, you must provide a `vswitch.xml` file (with the relevant configuration) when building the image using [vrnetlab](../vrnetlab.md).
+The default ASIC simulation of the node will be UADP. To enable the Q200 simulation or to enable specific features for the UADP simulation, you must provide a `vswitch.xml` file (with the relevant configuration).
 
-Once the node has been built you are unable to chang the simulation type. Please refer to the README file in vrnetlab/cat9kv for more information.
+You can do this when building the image with [vrnetlab](../vrnetlab.md), Please refer to the README file in vrnetlab/cat9kv for more information.
+
+You can also use supply the vswitch.xml file via `binds` in the containerlab topology file. Refer to the example below.
+
+```yaml
+name: my-cat9kv-lab
+topology:
+  nodes:
+    node1:
+      kind: cisco_cat9kv
+      image: vrnetlab/vr-cat9kv:17.12.01p
+    binds:
+      - /path/to/vswitch.xml:/vswitch.xml
+```
 
 /// note
 You can obtain a `vswitch.xml` file from the relevant Cisco CML node definitions.
