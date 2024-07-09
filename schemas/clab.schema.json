@@ -96,10 +96,7 @@
                         "c8000",
                         "cisco_c8000",
                         "cisco_c8000v",
-                        "cisco_cat9kv", 
-                        "cisco_c9000v", 
-                        "vr-cat9kv", 
-                        "vr-c9000v",
+                        "cisco_cat9kv",
                         "cvx",
                         "cumulus_cvx",
                         "openbsd",
@@ -955,15 +952,6 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_cat9kv": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "cisco_c9000v": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-cat9kv": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-c9000v": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_ftdv": {

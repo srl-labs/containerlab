@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"cisco_cat9kv", "cisco_c9000v", "vr-cat9kv", "vr-c9000v"}
+	kindnames          = []string{"cisco_cat9kv"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?1/0/(?P<port>\d+)$`)
