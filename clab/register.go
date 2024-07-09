@@ -28,6 +28,7 @@ import (
 	srl "github.com/srl-labs/containerlab/nodes/srl"
 	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	vr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
+	vr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
 	vr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
 	vr_freebsd "github.com/srl-labs/containerlab/nodes/vr_freebsd"
 	vr_ftdv "github.com/srl-labs/containerlab/nodes/vr_ftdv"
@@ -86,6 +87,7 @@ func (c *CLab) RegisterNodes() {
 	vr_xrv.Register(c.Reg)
 	vr_xrv9k.Register(c.Reg)
 	vr_sonic.Register(c.Reg)
+	vr_cat9kv.Register(c.Reg)
 	xrd.Register(c.Reg)
 	rare.Register(c.Reg)
 	c8000.Register(c.Reg)

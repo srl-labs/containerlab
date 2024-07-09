@@ -23,6 +23,7 @@ nav:
               - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
               - Cisco 8000: manual/kinds/c8000.md
               - Cisco c8000v: manual/kinds/vr-c8000v.md
+              - Cisco Catalyst 9000v: manual/kinds/vr-cat9kv.md
               - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Juniper:
               - Juniper cRPD: manual/kinds/crpd.md
@@ -259,7 +260,7 @@ plugins:
       redirect_maps:
         lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
         lab-examples/ixp-lab.md: lab-examples/peering-lab.md
-  - typeset
+#- typeset
   - glightbox
   - macros:
       j2_block_start_string: "[[[%"

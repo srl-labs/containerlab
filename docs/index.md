@@ -41,6 +41,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Juniper vJunos-switch](manual/kinds/vr-vjunosswitch.md)
 * [Juniper vJunos Evolved](manual/kinds/vr-vjunosevolved.md)
 * [Cisco IOS XRv9k](manual/kinds/vr-xrv9k.md)
+* [Cisco Catalyst 9000v](manual/kinds/vr-cat9kv.md)
 * [Cisco Nexus 9000v](manual/kinds/vr-n9kv.md)
 * [Cisco c8000v](manual/kinds/vr-c8000v.md)
 * [Cisco CSR 1000v](manual/kinds/vr-csr.md)

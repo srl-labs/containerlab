@@ -94,9 +94,9 @@ site:
 serve-docs-full:
 ifeq ($(PUBLIC),yes)
 	@{ 	\
-		sed -i 's/^  - typeset/#- typeset/g; s/^  - glightbox/#- glightbox/g' mkdocs.yml; \
+		sed -i 's/^  - typeset/#- typeset/g' mkdocs.yml; \
 	}
-	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
+	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs --entrypoint "" squidfunk/mkdocs-material:$(MKDOCS_VER) ash -c "pip install mkdocs-macros-plugin==0.7.0 mkdocs-glightbox==0.4.0 && mkdocs serve -a 0.0.0.0:8000"
 else
 	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER)
 endif
