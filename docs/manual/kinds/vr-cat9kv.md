@@ -20,11 +20,15 @@ The Q200 simulation has a limited featureset compared to the UADP simulation.
 
 ## Resource requirements
 
+The [[[ kind_display_name ]]] is a resource-hungry VM. When launched with the default settings, it requires the following resources:
+
 |           | UADP  | Q200  |
 | --------- | ----- | ----- |
 | vCPU      | 4     | 4     |
 | RAM (MB)  | 18432 | 12288 |
 | Disk (GB) | 4     | 4     |
+
+Users can adjust the CPU and memory resources by setting adding appropriate environment variables as explained in [Tuning Qemu Parameters section](../../manual/vrnetlab.md#tuning-qemu-parameters).
 
 ## Managing [[[ kind_display_name ]]] nodes
 
