@@ -118,7 +118,7 @@ topology:
   nodes:
     node1:
       kind: cisco_cat9kv
-      image: vrnetlab/vr-cat9kv:17.12.01p-UADP
+      image: vrnetlab/vr-cat9kv:17.12.01p
     env:
      VCPU: 6
      RAM: 20480
