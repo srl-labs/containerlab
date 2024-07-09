@@ -156,7 +156,7 @@ topology:
 ###### Aliases
 
 The downside of using Linux interface names is that they often do not match the interface naming convention used by the Network OS. This is where Interface Aliases feature (added in Containerlab v0.56.0) comes in handy.
-
+<!-- --8<-- [start:aliases] -->
 Imagine we want to create a lab with four different Kinds: SR Linux, vEOS, CSR1000v and vSRX, cabled like this:
 
 |                A side | B side           |
@@ -197,6 +197,7 @@ Both topology definitions result in the same lab being deployed, but the latter 
 Many [Kinds](../manual/kinds/index.md) (but not all) support interface aliases and the alias names are provided in the respective kind' documentation.
 
 Containerlab transparently maps from interface aliases to Linux interface names, and there's no additional syntax or configuration needed to specify either an interface alias or a Linux interface name in topologies.
+<!-- --8<-- [end:aliases] -->
 
 /// details | How do aliases work?
 Internally, interface aliases end up being deterministically mapped to Linux interface names, which conform to Linux interface naming standards: at most 15 characters, spaces and forward slashes (`/`) not permitted.
