@@ -58,7 +58,7 @@ ssh admin@<container-name> -p 830 -s netconf
 Default credentials: `admin:admin`
 ///
 
-## Interface naming convention
+## Interface naming
 
 You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in the [[[ kind_display_name ]]] CLI.
 
@@ -66,12 +66,12 @@ The interface naming convention is: `GigabitEthernet1/0/X` (or `Gi1/0/X`), where
 
 With that naming convention in mind:
 
-* `Gi1/0/1` - first data port available
-* `Gi1/0/2` - second data port, and so on...
+- `Gi1/0/1` - first data port available
+- `Gi1/0/2` - second data port, and so on...
 
 The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
 
-- `eth0` - management interface connected to the containerlab management network.
+- `eth0` - management interface connected to the containerlab management network. Mapped to `GigabitEthernet0/0`.
 - `eth1` - First data-plane interface. Mapped to `GigabitEthernet1/0/1` interface.
 - `eth2` - Second data-plane interface. Mapped to `GigabitEthernet1/0/2` interface and so on.
 
@@ -102,6 +102,25 @@ topology:
 /// warning
 Regardless of how many links are defined in your containerlab topology, the Catalyst 9000v will always display 8 data-plane interfaces. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
 ///
+
+When containerlab launches [[[ kind_display_name ]]] node the `GigabitEthernet0/0` interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+
+Data interfaces `GigabitEthernet1/0/1+` need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI:
+
+```
+c9kv(config-if)#do sh ip in br
+Interface              IP-Address      OK? Method Status                Protocol
+Vlan1                  unassigned      YES unset  administratively down down    
+GigabitEthernet0/0     10.0.0.15       YES manual up                    up      
+GigabitEthernet1/0/1   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/2   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/3   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/4   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/5   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/6   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/7   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/8   unassigned      YES unset  up                    up
+```
 
 ## Features and options
 
