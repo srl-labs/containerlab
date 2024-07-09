@@ -1,12 +1,15 @@
 ---
 search:
   boost: 4
+kind_code_name: cisco_cat9kv
+kind_display_name: Cisco Catalyst 9000v
+kind_short_display_name: Cat9kv
 ---
 # Cisco Catalyst 9000v
 
-The Cisco Catalyst 9000v (or Cat9kv for short) is a virtualised form of the Cisco Catalyst 9000 series switches. It is identified with `cisco_cat9kv` or `cisco_c9000v` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qsimu VM packaged in a docker container format.
+The [[[ kind_display_name ]]] (or [[[ kind_short_display_name ]]] for short) is a virtualised form of the Cisco Catalyst 9000 series switches. It is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-The Catalyst 9000v performs simulation of the dataplane ASICs that are present in the physical hardware. The two simulated ASICs are:
+The [[[ kind_display_name ]]] performs simulation of the dataplane ASICs that are present in the physical hardware. The two simulated ASICs are:
 
 - Cisco UADP (Unified Access Data-Plane). This is the default ASIC that's simulated.
 - Silicon One Q200 (referred to as Q200).
@@ -23,26 +26,34 @@ The Q200 simulation has a limited featureset compared to the UADP simulation.
 | RAM (MB)  | 18432 | 12288 |
 | Disk (GB) | 4     | 4     |
 
-## Managing Cisco Catalyst 9000v nodes
+## Managing [[[ kind_display_name ]]] nodes
 
-You can manage the Catalyst 9000v with containerlab via the following interfaces:
+You can manage the [[[ kind_display_name ]]] with containerlab via the following interfaces:
 
-=== "bash"
-    to connect to a `bash` shell of a running Cisco CSR1000v container:
-    ```bash
-    docker exec -it <container-name/id> bash
-    ```
-=== "CLI"
-    to connect to the Catalyst 9000v CLI
-    ```bash
-    ssh admin@<container-name/id>
-    ```
-=== "NETCONF"
-    NETCONF server is running over port 830
-    ```bash
-    ssh admin@<container-name> -p 830 -s netconf
-    ```
+/// tab | bash
+to connect to a `bash` shell of a running Cisco CSR1000v container:
 
+```bash
+docker exec -it <container-name/id> bash
+```
+
+///
+/// tab | CLI
+to connect to the Catalyst 9000v CLI
+
+```bash
+ssh admin@<container-name/id>
+```
+
+///
+/// tab | NETCONF
+NETCONF server is running over port 830
+
+```bash
+ssh admin@<container-name> -p 830 -s netconf
+```
+
+///
 /// note
 Default credentials: `admin:admin`
 ///
