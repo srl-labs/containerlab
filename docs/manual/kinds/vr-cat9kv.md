@@ -60,7 +60,7 @@ Default credentials: `admin:admin`
 
 ## Interface naming convention
 
-You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in [[[ kind_display_name ]]].
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in the [[[ kind_display_name ]]] CLI.
 
 The interface naming convention is: `GigabitEthernet1/0/X` (or `Gi1/0/X`), where `X` is the port number.
 
@@ -75,10 +75,32 @@ The example ports above would be mapped to the following Linux interfaces inside
 - `eth1` - First data-plane interface. Mapped to `GigabitEthernet1/0/1` interface.
 - `eth2` - Second data-plane interface. Mapped to `GigabitEthernet1/0/2` interface and so on.
 
-Regardless of how many links are defined in your containerlab topology, the Catalyst 9000v will always display 8 data-plane interfaces. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
-
 /// note
-Data interfaces may take 5+ minutes to come up after the node boots.
+Data interfaces may take 5+ minutes to function correctly after the node boots.
+///
+
+You must define interfaces in a contigous manner in your toplogy file. For example, if you want to use `Gi1/0/4` you must define `Gi1/0/1`, `Gi1/0/2` and `Gi1/0/3`. See the example below.
+
+```yaml
+name: my-cat9kv-lab
+topology:
+  nodes:
+    cat9kv1:
+      kind: cisco_cat9kv
+      image: vrnetlab/vr-cat9kv:17.12.01p
+    cat9kv2:
+      kind: cisco_cat9kv
+      image: vrnetlab/vr-cat9kv:17.12.01p
+
+  links:
+    - endpoints: ["cat9kv1:Gi1/0/1","cat9kv2:GigabitEthernet1/0/1"] 
+    - endpoints: ["cat9kv1:Gi1/0/2","cat9kv2:GigabitEthernet1/0/2"]
+    - endpoints: ["cat9kv1:Gi1/0/3", "cat9kv2:GigabitEthernet1/0/3"]
+    - endpoints: ["cat9kv1:Gi1/0/4", "cat9kv2:GigabitEthernet1/0/4"]
+```
+
+/// warning
+Regardless of how many links are defined in your containerlab topology, the Catalyst 9000v will always display 8 data-plane interfaces. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
 ///
 
 ## Features and options
