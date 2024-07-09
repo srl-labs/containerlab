@@ -7,7 +7,7 @@ kind_short_display_name: Cat9kv
 ---
 # Cisco Catalyst 9000v
 
-The [[[ kind_display_name ]]] (or [[[ kind_short_display_name ]]] for short) is a virtualised form of the Cisco Catalyst 9000 series switches. It is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+The [[[ kind_display_name ]]] (or [[[ kind_short_display_name ]]] for short) is a virtualised form of the Cisco Catalyst 9000 series switches. It is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md) and built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 The [[[ kind_display_name ]]] performs simulation of the dataplane ASICs that are present in the physical hardware. The two simulated ASICs are:
 
@@ -132,7 +132,7 @@ GigabitEthernet1/0/8   unassigned      YES unset  up                    up
 
 The default ASIC simulation of the node will be UADP. To enable the Q200 simulation or to enable specific features for the UADP simulation, you must provide a `vswitch.xml` file (with the relevant configuration).
 
-You can do this when building the image with [vrnetlab](../vrnetlab.md), Please refer to the README file in vrnetlab/cat9kv for more information.
+You can do this when building the image with [vrnetlab](../vrnetlab.md), Please refer to the README file in [vrnetlab/cat9kv](https://github.com/hellt/vrnetlab/blob/master/cat9kv/README.md) for more information.
 
 You can also use supply the vswitch.xml file via `binds` in the containerlab topology file. Refer to the example below.
 
