@@ -7,7 +7,7 @@ kind_short_display_name: Cat9kv
 ---
 # Cisco Catalyst 9000v
 
-The [[[ kind_display_name ]]] (or [[[ kind_short_display_name ]]] for short) is a virtualised form of the Cisco Catalyst 9000 series switches. It is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+The [[[ kind_display_name ]]] (or [[[ kind_short_display_name ]]] for short) is a virtualised form of the Cisco Catalyst 9000 series switches. It is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md) and built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 The [[[ kind_display_name ]]] performs simulation of the dataplane ASICs that are present in the physical hardware. The two simulated ASICs are:
 
@@ -20,11 +20,15 @@ The Q200 simulation has a limited featureset compared to the UADP simulation.
 
 ## Resource requirements
 
+The [[[ kind_display_name ]]] is a resource-hungry VM. When launched with the default settings, it requires the following resources:
+
 |           | UADP  | Q200  |
 | --------- | ----- | ----- |
 | vCPU      | 4     | 4     |
 | RAM (MB)  | 18432 | 12288 |
 | Disk (GB) | 4     | 4     |
+
+Users can adjust the CPU and memory resources by setting adding appropriate environment variables as explained in [Tuning Qemu Parameters section](../../manual/vrnetlab.md#tuning-qemu-parameters).
 
 ## Managing [[[ kind_display_name ]]] nodes
 
@@ -58,7 +62,7 @@ ssh admin@<container-name> -p 830 -s netconf
 Default credentials: `admin:admin`
 ///
 
-## Interface naming convention
+## Interface naming
 
 You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in the [[[ kind_display_name ]]] CLI.
 
@@ -66,12 +70,12 @@ The interface naming convention is: `GigabitEthernet1/0/X` (or `Gi1/0/X`), where
 
 With that naming convention in mind:
 
-* `Gi1/0/1` - first data port available
-* `Gi1/0/2` - second data port, and so on...
+- `Gi1/0/1` - first data port available
+- `Gi1/0/2` - second data port, and so on...
 
 The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
 
-- `eth0` - management interface connected to the containerlab management network.
+- `eth0` - management interface connected to the containerlab management network. Mapped to `GigabitEthernet0/0`.
 - `eth1` - First data-plane interface. Mapped to `GigabitEthernet1/0/1` interface.
 - `eth2` - Second data-plane interface. Mapped to `GigabitEthernet1/0/2` interface and so on.
 
@@ -103,13 +107,32 @@ topology:
 Regardless of how many links are defined in your containerlab topology, the Catalyst 9000v will always display 8 data-plane interfaces. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
 ///
 
+When containerlab launches [[[ kind_display_name ]]] node the `GigabitEthernet0/0` interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+
+Data interfaces `GigabitEthernet1/0/1+` need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI:
+
+```
+c9kv(config-if)#do sh ip in br
+Interface              IP-Address      OK? Method Status                Protocol
+Vlan1                  unassigned      YES unset  administratively down down    
+GigabitEthernet0/0     10.0.0.15       YES manual up                    up      
+GigabitEthernet1/0/1   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/2   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/3   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/4   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/5   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/6   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/7   unassigned      YES unset  up                    up      
+GigabitEthernet1/0/8   unassigned      YES unset  up                    up
+```
+
 ## Features and options
 
 ### ASIC data-plane simulation configuration
 
 The default ASIC simulation of the node will be UADP. To enable the Q200 simulation or to enable specific features for the UADP simulation, you must provide a `vswitch.xml` file (with the relevant configuration).
 
-You can do this when building the image with [vrnetlab](../vrnetlab.md), Please refer to the README file in vrnetlab/cat9kv for more information.
+You can do this when building the image with [vrnetlab](../vrnetlab.md), Please refer to the README file in [vrnetlab/cat9kv](https://github.com/hellt/vrnetlab/blob/master/cat9kv/README.md) for more information.
 
 You can also use supply the vswitch.xml file via `binds` in the containerlab topology file. Refer to the example below.
 
