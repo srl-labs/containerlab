@@ -60,7 +60,7 @@ func TestGetDockerConfigPath(t *testing.T) {
 	}
 
 	for _, in := range td {
-		got, _ := getDockerConfigPath(in["path"])
+		got := getDockerConfigPath(in["path"])
 		want, _ := homedir.Expand(in["want"])
 		if got != want {
 			t.Errorf("Invalid docker config path, got %v, want %v", got, in["want"])
