@@ -7,6 +7,8 @@ function check_os {
             DISTRO_TYPE="debian"
         elif [ "$ID" = "ubuntu" ]; then
             DISTRO_TYPE="ubuntu"
+        elif [ "$ID" = "rocky" ]; then
+            DISTRO_TYPE="rhel"
         else
             echo "This is not Debian or Ubuntu"
         fi
@@ -16,13 +18,13 @@ function check_os {
 }
 
 function install-docker {
-    # check OS to determine how to install docker
-    check_os
 
     if [ "${DISTRO_TYPE}" = "debian" ]; then
         install-docker-debian
     elif [ "${DISTRO_TYPE}" = "ubuntu" ]; then
         install-docker-ubuntu
+    elif [ "${DISTRO_TYPE}" = "rhel" ]; then
+        install-docker-rhel
     else
         echo "Cannot determine the operating system"
         exit 1
@@ -73,14 +75,49 @@ function install-docker-ubuntu {
     sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 }
 
+function install-docker-rhel {
+    # using instructions from:
+    # https://docs.docker.com/engine/install/rhel/#install-using-the-repository
+    sudo yum remove docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-engine \
+                  podman \
+                  runc
+
+    sudo yum install -y yum-utils
+    sudo yum-config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+
+    sudo yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # diverges from the instructions. This means docker daemon starts on each boot.
+    sudo systemctl enable --now docker
+}
+
 function setup-sshd {
     # increase max auth tries so unknown keys don't lock ssh attempts
     sudo sed -i 's/^#*MaxAuthTries.*/MaxAuthTries 50/' /etc/ssh/sshd_config
 
-    sudo systemctl restart ssh
+    if [ "${DISTRO_TYPE}" = "rhel" ]; then
+        sudo systemctl restart sshd
+    else
+        sudo systemctl restart ssh
+    fi
 }
 
 function install-gh-cli {
+    if [ "${DISTRO_TYPE}" = "rhel" ]; then
+        install-gh-cli-rhel
+    else
+        install-gh-cli-debian
+    fi
+}
+
+function install-gh-cli-debian {
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
     && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
@@ -88,17 +125,28 @@ function install-gh-cli {
     && sudo apt install -y gh
 }
 
-function install-containerlab {
-    echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
-    sudo tee -a /etc/apt/sources.list.d/netdevops.list
+function install-gh-cli-rhel {
+    sudo dnf install 'dnf-command(config-manager)'
+    sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+    sudo dnf install -y gh --repo gh-cli
+}
 
-    sudo apt update && sudo apt install -y containerlab
+function install-containerlab {
+    # echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
+    # sudo tee -a /etc/apt/sources.list.d/netdevops.list
+
+    # sudo apt update && sudo apt install -y containerlab
+    sudo bash -c "$(curl -sL https://get.containerlab.dev)"
 }
 
 function all {
+    # check OS to determine distro
+    check_os
+
     setup-sshd
     install-docker
     install-gh-cli
+
     install-containerlab
 }
 
