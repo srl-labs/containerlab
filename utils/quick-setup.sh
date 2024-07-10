@@ -7,10 +7,12 @@ function check_os {
             DISTRO_TYPE="debian"
         elif [ "$ID" = "ubuntu" ]; then
             DISTRO_TYPE="ubuntu"
-        elif [[ "$ID" = "rocky" || "$ID" = "rhel" || "$ID" = "centos"  || "$ID" = "fedora" ]]; then
+        elif [ "$ID" = "fedora" ]; then
+            DISTRO_TYPE="fedora"
+        elif [[ "$ID" = "rocky" || "$ID" = "rhel" || "$ID" = "centos" ]]; then
             DISTRO_TYPE="rhel"
         else
-            echo "This is not Debian or Ubuntu"
+            echo "This is not a supported OS. (Debian, Ubuntu, Fedora, Rocky, CentOS, RHEL)"
         fi
     else
         echo "Cannot determine the operating system"
@@ -25,9 +27,8 @@ function install-docker {
         install-docker-ubuntu
     elif [ "${DISTRO_TYPE}" = "rhel" ]; then
         install-docker-rhel
-    else
-        echo "Cannot determine the operating system"
-        exit 1
+    elif [ "${DISTRO_TYPE}" = "fedora" ]; then
+        install-docker-fedora
     fi
 }
 
@@ -98,11 +99,34 @@ function install-docker-rhel {
     sudo systemctl enable --now docker
 }
 
+function install-docker-fedora {
+    # using instructions from:
+    # https://docs.docker.com/engine/install/rhel/#install-using-the-repository
+    sudo dnf remove -y docker \
+                  docker-client \
+                  docker-client-latest \
+                  docker-common \
+                  docker-latest \
+                  docker-latest-logrotate \
+                  docker-logrotate \
+                  docker-selinux \
+                  docker-engine-selinux \
+                  docker-engine
+
+    sudo dnf install -y dnf-plugins-core
+    sudo dnf config-manager -y --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+
+    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    # diverges from the instructions. This means docker daemon starts on each boot.
+    sudo systemctl enable --now docker
+}
+
 function setup-sshd {
     # increase max auth tries so unknown keys don't lock ssh attempts
     sudo sed -i 's/^#*MaxAuthTries.*/MaxAuthTries 50/' /etc/ssh/sshd_config
 
-    if [ "${DISTRO_TYPE}" = "rhel" ]; then
+    if [[ "${DISTRO_TYPE}" = "rhel"  || "${DISTRO_TYPE}" = "fedora" ]]; then
         sudo systemctl restart sshd
     else
         sudo systemctl restart ssh
@@ -110,7 +134,7 @@ function setup-sshd {
 }
 
 function install-gh-cli {
-    if [ "${DISTRO_TYPE}" = "rhel" ]; then
+    if [[ "${DISTRO_TYPE}" = "rhel"  || "${DISTRO_TYPE}" = "fedora" ]]; then
         install-gh-cli-rhel
     else
         install-gh-cli-debian
@@ -133,7 +157,25 @@ function install-gh-cli-rhel {
 }
 
 function install-containerlab {
-    sudo bash -c "$(curl -sL https://get.containerlab.dev)"
+    echo "${DISTRO_TYPE}"
+    if [ "${DISTRO_TYPE}" = "rhel" ]; then
+        sudo yum-config-manager -y --add-repo=https://netdevops.fury.site/yum/ && \
+        echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
+
+        sudo yum install -y containerlab
+
+    elif [ "${DISTRO_TYPE}" = "fedora" ]; then
+        sudo dnf config-manager -y --add-repo "https://netdevops.fury.site/yum/" && \
+        echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
+
+        sudo dnf install -y containerlab
+
+    else
+        echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
+        sudo tee -a /etc/apt/sources.list.d/netdevops.list
+
+        sudo apt update -y && sudo apt install containerlab -y
+    fi
 }
 
 function all {
@@ -143,7 +185,6 @@ function all {
     setup-sshd
     install-docker
     install-gh-cli
-
     install-containerlab
 }
 
