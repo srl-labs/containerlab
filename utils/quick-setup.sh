@@ -122,6 +122,13 @@ function install-docker-fedora {
     sudo systemctl enable --now docker
 }
 
+function post-install-docker {
+    # instructions from:
+    # https://docs.docker.com/engine/install/linux-postinstall/
+    sudo groupadd docker
+    sudo usermod -aG docker "$SUDO_USER"
+}
+
 function setup-sshd {
     # increase max auth tries so unknown keys don't lock ssh attempts
     sudo sed -i 's/^#*MaxAuthTries.*/MaxAuthTries 50/' /etc/ssh/sshd_config
@@ -130,6 +137,14 @@ function setup-sshd {
         sudo systemctl restart sshd
     else
         sudo systemctl restart ssh
+    fi
+}
+
+function install-make {
+    if [[ "${DISTRO_TYPE}" = "rhel"  || "${DISTRO_TYPE}" = "fedora" ]]; then
+        sudo dnf install -y make
+    else
+        sudo apt install -y make
     fi
 }
 
@@ -183,8 +198,13 @@ function all {
     check_os
 
     setup-sshd
+
     install-docker
+    post-install-docker
+
+    install-make
     install-gh-cli
+
     install-containerlab
 }
 
