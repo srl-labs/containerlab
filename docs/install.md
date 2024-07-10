@@ -36,7 +36,7 @@ To install all components at once, run the following command on any of the suppo
 curl -sL https://containerlab.dev/setup | sudo bash -s "all"
 ```
 /// note
-Please log out and log back in after execution of the script to complete the installation.
+To complete installation please execute `newgrp docker` or logout and log back in.
 ///
 
 To install an individual component, specify the function name as an argument to the script. For example, to install only `docker`:
