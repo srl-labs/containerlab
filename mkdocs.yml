@@ -261,7 +261,7 @@ plugins:
       redirect_maps:
         lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
         lab-examples/ixp-lab.md: lab-examples/peering-lab.md
-#- typeset
+  #- typeset
   - glightbox
   - macros:
       j2_block_start_string: "[[[%"
@@ -337,6 +337,7 @@ markdown_extensions:
   - pymdownx.snippets:
       check_paths: true
       dedent_subsections: true
+      url_download: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid

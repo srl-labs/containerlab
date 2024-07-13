@@ -29,12 +29,12 @@ The script officially supports the following OSes:
 * Fedora Server 40 (should work on other variants of Fedora)
 * Rocky Linux 9.3, 8.8 (should work on any 9.x and 8.x release)
 
-
 To install all components at once, run the following command on any of the supported OSes:
 
 ```bash
 curl -sL https://containerlab.dev/setup | sudo bash -s "all"
 ```
+
 /// note
 To complete installation please execute `newgrp docker` or logout and log back in.
 ///
@@ -57,11 +57,11 @@ Other systems can follow the [manual installation](#manual-installation) procedu
 /// tab | Latest release
 
 Download and install the latest release (may require `sudo`):
-
-```bash
+<!-- --8<-- [start:install-script-cmd] -->
+```{.bash .no-select}
 bash -c "$(curl -sL https://get.containerlab.dev)"
 ```
-
+<!-- --8<-- [end:install-script-cmd] -->
 ///
 
 /// tab | Specific version
