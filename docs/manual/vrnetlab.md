@@ -127,27 +127,13 @@ The following env vars are supported:
 - `QEMU_CPU` - sets the default CPU model/type for the node. Use this when the default cpu type is not suitable for your host or you want to experiment with others.
 - `QEMU_ADDITIONAL_ARGS` - allows users to pass additional qemu arguments to the VM. These arguments will be appended to the list of the existing arguments. Use this when you need to pass some specific qemu arguments to the VM overriding the defaults set by vrnetlab.
 
-### Connection modes
+### Datapath connectivity
 
-Containerlab offers several ways of connecting VM-based routers with the rest of the docker workloads. By default, vrnetlab integrated routers will use **tc** backend[^2], which doesn't require any additional packages to be installed on the container host and supports transparent passage of LACP frames.
+By hosting a VM inside a container, we made it easy to run VM-based routers in a containerized environment. However, how would you connect container's interfaces to the VM's tap interfaces in a transparent way?
+
+To solve this challenge containerlab uses **tc** backend[^2], which mirrors the traffic to and from container interfaces to the appropriate VM interfaces. A huge bonus of `tc` is that there are not bridges inbetween, and we have a clear channel that supports transparent passage of any frames, like LACP, for example.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:6,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vrnetlab.drawio&quot;}"></div>
-
-??? "Any other datapaths?"
-    Although `tc` based datapath should cover all the needed connectivity requirements, if other bridge-like datapaths are needed, Containerlab offers OpenvSwitch and Linux bridge modes.  
-    Users can plug in those datapaths by specifying `CONNECTION_MODE` env variable:
-    ```yaml
-    # the env variable can also be set in the defaults section
-    name: myTopo
-
-    topology:
-      nodes:
-        sr1:
-          kind: nokia_sros
-          image: vrnetlab/nokia_sros:20.10.R1
-          env:
-            CONNECTION_MODE: bridge # use `ovs` for openvswitch datapath
-    ```
 
 ### Networking
 
