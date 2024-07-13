@@ -14,7 +14,7 @@ cEOS nodes launched with containerlab comes up with
 * `admin` user created with password `admin`
 
 ## Getting cEOS image
-
+<!-- --8<-- [start:ceos-get-image] -->
 Arista requires its users to register with arista.com before downloading any images. Once you created an account and logged in, go to the [software downloads](https://www.arista.com/en/support/software-download) section and download ceos64 tar archive for a given release.
 
 Once downloaded, import the archive with docker:
@@ -23,7 +23,7 @@ Once downloaded, import the archive with docker:
 # import container image and save it under ceos:4.32.0F name
 docker import cEOS64-lab-4.32.0F.tar.xz ceos:4.32.0F
 ```
-
+<!-- --8<-- [end:ceos-get-image] -->
 ## Managing ceos nodes
 
 Arista cEOS node launched with containerlab can be managed via the following interfaces:
