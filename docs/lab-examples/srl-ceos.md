@@ -142,7 +142,7 @@ Once BGP peering is established, the routes can be seen in GRT of both nodes:
 
 /// tab | SR Linux
 
-```bash
+```srl
 A:srl# show / network-instance default route-table ipv4-unicast prefix 10.*2/32
 --------------------------------------------------------------------------------------------------------------------------------------------------
 IPv4 unicast route table of network instance default
