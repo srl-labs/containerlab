@@ -8,7 +8,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/containernetworking/plugins v1.5.1
 	github.com/containers/common v0.59.1
-	github.com/containers/podman/v5 v5.1.1
+	github.com/containers/podman/v5 v5.1.2
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v26.1.4+incompatible
