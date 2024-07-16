@@ -64,6 +64,12 @@ The `group` property set to the predefined value will automatically auto-align t
 
 When `graph` command is called with the `--drawio` flag, containerlab will leverage the [`clab-io-draw`](https://github.com/srl-labs/clab-io-draw) project to generate the drawio file that represents the topology in a graphical form and can be imported into [draw.io](https://draw.io).
 
+You can pass additional arguments to the `clab-io-draw` tool using the `--drawio-args=` flag. For example:
+
+```
+containerlab graph --drawio --drawio-args="--theme nokia_dark --layout horizontal" -t topo.yaml
+```
+
 ### Mermaid
 
 When `graph` is called with the `--mermaid` flag containerlab generates a graph description file in [Mermaid graph format](https://mermaid.js.org/syntax/flowchart.html). Several [Markdown renders](https://mermaid.js.org/ecosystem/integrations-community.html) such as Github, Gitlab, and Notion support rendering embeded mermaid graphs in code blocks. If the results of the render are not satisfying the result can be imported into [draw.io](https://draw.io) and further edited.
