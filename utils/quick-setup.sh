@@ -20,6 +20,11 @@ function check_os {
 }
 
 function install-docker {
+    # when this script is used to install just docker
+    # we need to run check_os to detect the distro
+    if [ -z "${DISTRO_TYPE}" ]; then
+        check_os
+    fi
 
     if [ "${DISTRO_TYPE}" = "debian" ]; then
         install-docker-debian
