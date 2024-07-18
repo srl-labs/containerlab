@@ -273,20 +273,34 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 	return http.ListenAndServe(srv, nil)
 }
 
-func (c *CLab) GenerateDrawioDiagram(version string) error {
+func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) error {
 	topoFile := c.TopoPaths.TopologyFilenameBase()
 
-	cmd := exec.Command("sudo", "docker", "run", "-v",
-		fmt.Sprintf("%s:/data", c.TopoPaths.TopologyFileDir()),
+	cmdArgs := []string{
+		"docker", "run",
+		"-v", fmt.Sprintf("%s:/data", c.TopoPaths.TopologyFileDir()),
 		fmt.Sprintf("ghcr.io/srl-labs/clab-io-draw:%s", version),
-		"-i", topoFile)
+		"-i", topoFile,
+	}
+
+	log.Infof("Generating draw.io diagram with version: %s", version)
+
+	// Process additional flags
+	for _, flag := range additionalFlags {
+		parts := strings.Fields(flag)
+		cmdArgs = append(cmdArgs, parts...)
+	}
+
+	cmd := exec.Command("sudo", cmdArgs...)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Fatalf("cmd.CombinedOutput() failed with %s\n", err)
+		log.Errorf("Command execution failed: %v", err)
+		log.Errorf("Command output: %s", string(out))
+		return fmt.Errorf("failed to generate diagram: %w\nOutput: %s", err, string(out))
 	}
 
-	log.Infof("Diagram created. %s", out)
+	log.Infof("Diagram created successfully. Output: %s", string(out))
 
 	return nil
 }

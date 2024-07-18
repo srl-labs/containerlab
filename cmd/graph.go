@@ -33,6 +33,7 @@ var (
 	mermaidDirection string
 	drawio           bool
 	drawioVersion    string
+	drawioArgs       []string
 	staticDir        string
 )
 
@@ -79,7 +80,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	}
 
 	if drawio {
-		return c.GenerateDrawioDiagram(drawioVersion)
+		return c.GenerateDrawioDiagram(drawioVersion, drawioArgs)
 	}
 
 	gtopo := clab.GraphTopo{
@@ -153,6 +154,8 @@ func init() {
 	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file")
 	graphCmd.Flags().BoolVarP(&mermaid, "mermaid", "", false, "print mermaid flowchart to stdout")
 	graphCmd.Flags().StringVarP(&mermaidDirection, "mermaid-direction", "", "TD", "specify direction of mermaid dirgram")
+	graphCmd.Flags().StringSliceVar(&drawioArgs, "drawio-args", []string{},
+		"Additional flags to pass to the drawio diagram generation tool (can be specified multiple times)")
 	graphCmd.Flags().BoolVarP(&drawio, "drawio", "", false, "generate drawio diagram file")
 	graphCmd.Flags().StringVarP(&drawioVersion, "drawio-version", "", "latest",
 		"version of the clab-io-draw container to use for generating drawio diagram file")
