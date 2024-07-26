@@ -25,14 +25,14 @@ const banner = `................................................................
 func (n *srl) banner() (string, error) {
 	// if minor is a single digit value, we need to add extra space to patch version
 	// to have banner table aligned nicely
-	if len(n.swVersion.minor) == 1 {
-		n.swVersion.patch = n.swVersion.patch + " "
+	if len(n.swVersion.Minor) == 1 {
+		n.swVersion.Patch = n.swVersion.Patch + " "
 	}
 
 	b := fmt.Sprintf(banner,
-		n.swVersion.major, n.swVersion.minor,
-		n.swVersion.major, n.swVersion.minor, n.swVersion.patch,
-		n.swVersion.major, n.swVersion.minor, n.swVersion.patch)
+		n.swVersion.Major, n.swVersion.Minor,
+		n.swVersion.Major, n.swVersion.Minor, n.swVersion.Patch,
+		n.swVersion.Major, n.swVersion.Minor, n.swVersion.Patch)
 
 	return b, nil
 }

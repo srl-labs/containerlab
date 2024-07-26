@@ -98,11 +98,11 @@ set / acl acl-filter cpm type ipv6 entry 368 action accept`
 
 // SrlVersion represents an sr linux version as a set of fields.
 type SrlVersion struct {
-	major  string
-	minor  string
-	patch  string
-	build  string
-	commit string
+	Major  string
+	Minor  string
+	Patch  string
+	Build  string
+	Commit string
 }
 
 // RunningVersion gets the software version of the running node
@@ -116,7 +116,7 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 		return nil, err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf("SR Linux node %s extracted raw version. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return n.parseVersionString(execResult.GetStdOutString()), nil
 }
@@ -136,12 +136,12 @@ func (*srl) parseVersionString(s string) *SrlVersion {
 
 // String returns a string representation of the version in a semver fashion (with leading v).
 func (v *SrlVersion) String() string {
-	return "v" + v.major + "." + v.minor + "." + v.patch + "-" + v.build + "-" + v.commit
+	return "v" + v.Major + "." + v.Minor + "." + v.Patch + "-" + v.Build + "-" + v.Commit
 }
 
 // MajorMinorSemverString returns a string representation of the major.minor version with a leading v.
 func (v *SrlVersion) MajorMinorSemverString() string {
-	return "v" + v.major + "." + v.minor
+	return "v" + v.Major + "." + v.Minor
 }
 
 // setVersionSpecificParams sets version specific parameters in the template data struct
@@ -153,13 +153,13 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 
 	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
 	// so we add the keys to the template data for rendering.
-	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.major == "0") {
+	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.Major == "0") {
 		tplData.SSHPubKeys = catenateKeys(n.sshPubKeys)
 	}
 
 	// in srlinux >= v24.3+ we add ACL rules to enable http and telnet access
 	// that are useful for labs and were removed as a security hardening measure.
-	if semver.Compare(v, "v24.3") >= 0 || n.swVersion.major == "0" {
+	if semver.Compare(v, "v24.3") >= 0 || n.swVersion.Major == "0" {
 		tplData.ACLConfig = aclConfig
 	}
 
@@ -171,7 +171,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 
 	// in versions < v24.3 (or non 0.0 versions) we have to use the version specific
 	// config for grpc and snmpv2
-	if semver.Compare(v, "v24.3") == -1 && n.swVersion.major != "0" {
+	if semver.Compare(v, "v24.3") == -1 && n.swVersion.Major != "0" {
 		tplData.SNMPConfig = snmpv2ConfigPre24_3
 
 		tplData.GRPCConfig = grpcConfigPre24_3
