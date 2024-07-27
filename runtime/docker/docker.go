@@ -17,13 +17,14 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-units"
 	"golang.org/x/sys/unix"
 
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/network"
+	networkapi "github.com/docker/docker/api/types/network"
 	dockerC "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
@@ -105,7 +106,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	// we should detect the mtu value of the default docker network and set it for the clab network
 	// as most often this is desired.
 	if n.Network == "clab" {
-		netRes, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, dockerTypes.NetworkInspectOptions{})
+		netRes, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, networkapi.InspectOptions{})
 		if err != nil {
 			d.mgmt.MTU = 1500
 			log.Debugf("an error occurred when trying to detect docker default network mtu")
@@ -124,7 +125,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	// used by the network used in the topology
 	if d.mgmt.Bridge == "" && d.mgmt.Network != "" {
 		// fetch the network by the name set in the topo and populate the bridge name used by this network
-		netRes, err := d.Client.NetworkInspect(context.TODO(), d.mgmt.Network, dockerTypes.NetworkInspectOptions{})
+		netRes, err := d.Client.NetworkInspect(context.TODO(), d.mgmt.Network, networkapi.InspectOptions{})
 		// if the network is succesfully found, set the bridge used by it
 		if err == nil {
 			if name, exists := netRes.Options["com.docker.network.bridge.name"]; exists {
@@ -146,7 +147,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	bridgeName := d.mgmt.Bridge
 
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
-	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, dockerTypes.NetworkInspectOptions{})
+	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
 	switch {
 	case dockerC.IsErrNotFound(err):
 		bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
@@ -295,7 +296,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 }
 
 // getMgmtBridgeIPs gets the management bridge v4/6 addresses.
-func getMgmtBridgeIPs(bridgeName string, netResource dockerTypes.NetworkResource) (string, string, error) {
+func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (string, string, error) {
 	var err error
 	var v4, v6 string
 	if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
@@ -366,7 +367,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
-	nres, err := d.Client.NetworkInspect(ctx, network, dockerTypes.NetworkInspectOptions{})
+	nres, err := d.Client.NetworkInspect(ctx, network, networkapi.InspectOptions{})
 	if err != nil {
 		return err
 	}
@@ -634,7 +635,7 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 		return nil, err
 	}
 
-	var nr []dockerTypes.NetworkResource
+	var nr []networkapi.Inspect
 	if d.mgmt.Network == "" {
 		nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 		defer cancel()
@@ -644,7 +645,7 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 
 		f.Add("label", "containerlab")
 
-		nr, err = d.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
+		nr, err = d.Client.NetworkList(nctx, networkapi.ListOptions{
 			Filters: f,
 		})
 
@@ -657,7 +658,7 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 
 		f.Add("name", "bridge")
 
-		bridgenet, err := d.Client.NetworkList(nctx, dockerTypes.NetworkListOptions{
+		bridgenet, err := d.Client.NetworkList(nctx, networkapi.ListOptions{
 			Filters: f,
 		})
 		if err != nil {
@@ -709,7 +710,7 @@ func (*DockerRuntime) buildFilterString(gFilters []*types.GenericFilter) filters
 
 // Transform docker-specific to generic container format.
 func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputContainers []dockerTypes.Container,
-	inputNetworkResources []dockerTypes.NetworkResource,
+	inputNetworkResources []networkapi.Inspect,
 ) ([]runtime.GenericContainer, error) {
 	var result []runtime.GenericContainer
 
@@ -816,7 +817,7 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.Exec
 	if err != nil {
 		return nil, err
 	}
-	execID, err := d.Client.ContainerExecCreate(ctx, cID, dockerTypes.ExecConfig{
+	execID, err := d.Client.ContainerExecCreate(ctx, cID, container.ExecOptions{
 		User:         "0", // root
 		AttachStderr: true,
 		AttachStdout: true,
@@ -828,7 +829,7 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.Exec
 	}
 	log.Debugf("%s exec created %v", cont.Name, cID)
 
-	rsp, err := d.Client.ContainerExecAttach(ctx, execID.ID, dockerTypes.ExecStartCheck{})
+	rsp, err := d.Client.ContainerExecAttach(ctx, execID.ID, container.ExecStartOptions{})
 	if err != nil {
 		log.Errorf("failed exec in container %s: %v", cont.Name, err)
 		return nil, err
@@ -870,13 +871,13 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.Exec
 
 // ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err.
 func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, execCmd *exec.ExecCmd) error {
-	execConfig := dockerTypes.ExecConfig{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: execCmd.GetCmd()}
+	execConfig := container.ExecOptions{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: execCmd.GetCmd()}
 	respID, err := d.Client.ContainerExecCreate(context.Background(), cID, execConfig)
 	if err != nil {
 		return err
 	}
 
-	execStartCheck := dockerTypes.ExecStartCheck{}
+	execStartCheck := container.ExecStartOptions{}
 	_, err = d.Client.ContainerExecAttach(context.Background(), respID.ID, execStartCheck)
 	if err != nil {
 		return err
