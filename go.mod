@@ -314,6 +314,6 @@ require (
 )
 
 replace (
-	github.com/weaveworks/ignite v0.10.0 => github.com/networkop/ignite v0.9.1-0.20240402115852-5f94b8e9ce09
+	github.com/weaveworks/ignite v0.10.0 => github.com/networkop/ignite v0.0.0-20240321093703-02d1c784da52
 	github.com/weaveworks/libgitops v0.0.0-20200611103311-2c871bbbbf0c => github.com/networkop/libgitops v0.0.0-20221014201752-02ecf9790f58
 )

@@ -266,13 +266,12 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 		netwOpts["com.docker.network.bridge.name"] = bridgeName
 	}
 
-	opts := dockerTypes.NetworkCreate{
-		CheckDuplicate: true,
-		Driver:         "bridge",
-		EnableIPv6:     enableIPv6,
-		IPAM:           ipam,
-		Internal:       false,
-		Attachable:     false,
+	opts := network.CreateOptions{
+		Driver:     "bridge",
+		EnableIPv6: utils.Pointer(enableIPv6),
+		IPAM:       ipam,
+		Internal:   false,
+		Attachable: false,
 		Labels: map[string]string{
 			"containerlab": "",
 		},

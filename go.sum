@@ -963,8 +963,8 @@ github.com/nbio/st v0.0.0-20140626010706-e9e8d9816f32 h1:W6apQkHrMkS0Muv8G/TipAy
 github.com/nbio/st v0.0.0-20140626010706-e9e8d9816f32/go.mod h1:9wM+0iRr9ahx58uYLpLIr5fm8diHn0JbqRycJi6w0Ms=
 github.com/nbutton23/zxcvbn-go v0.0.0-20180912185939-ae427f1e4c1d/go.mod h1:o96djdrsSGy3AWPyBgZMAGfxZNfgntdJG+11KU4QvbU=
 github.com/ncw/swift v1.0.47/go.mod h1:23YIA4yWVnGwv2dQlN4bB7egfYX6YLn0Yo/S6zZO/ZM=
-github.com/networkop/ignite v0.9.1-0.20240402115852-5f94b8e9ce09 h1:GprEaauMPGO35A5d8zEY60CbQa2knDbJw6ljdQmsvKU=
-github.com/networkop/ignite v0.9.1-0.20240402115852-5f94b8e9ce09/go.mod h1:7r4KPIAiAC6j2zr6RORoeWNE7gPfoMqo7IKhufb6vyI=
+github.com/networkop/ignite v0.0.0-20240321093703-02d1c784da52 h1:io8x1+S3yWXr5LWvpD7+H/GdOCuyReRMBwUfIrJ7QV0=
+github.com/networkop/ignite v0.0.0-20240321093703-02d1c784da52/go.mod h1:CaOhtrHiR2+pRw9i0RTQHq5AoioGIilqes3P7jAu9qI=
 github.com/networkop/libgitops v0.0.0-20221014201752-02ecf9790f58 h1:D5fRjvFIpZUQIlEyrukjNPdR3wmlmelnCul0bLlh3ls=
 github.com/networkop/libgitops v0.0.0-20221014201752-02ecf9790f58/go.mod h1:1oFuIJ/fBC3gpqsa+xtgG2Febt2ru9aWn2WEMYlIqso=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
