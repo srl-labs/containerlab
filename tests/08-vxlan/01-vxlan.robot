@@ -30,6 +30,8 @@ Check VxLAN interface parameters in srl node
     ${rc}    ${link_ifindex} =    Run And Return Rc And Output
     ...    ip -j l show ${vxlan-br} | jq -r '.[0].ifindex'
 
+    Log    ${link_ifindex}
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo docker exec clab-${lab-name}-srl1 ip -d l show e1-1
 
