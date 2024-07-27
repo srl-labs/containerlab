@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/network"
 	"github.com/docker/go-units"
 	"golang.org/x/sys/unix"
 
@@ -199,7 +198,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 		d.mgmt.Network, d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet, d.mgmt.MTU)
 
 	enableIPv6 := false
-	var ipamConfig []network.IPAMConfig
+	var ipamConfig []networkapi.IPAMConfig
 
 	var v4gw, v6gw string
 	// check if IPv4/6 addr are assigned to a mgmt bridge
@@ -219,7 +218,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 		if d.mgmt.IPv4Gw != "" {
 			v4gw = d.mgmt.IPv4Gw
 		}
-		ipamCfg := network.IPAMConfig{
+		ipamCfg := networkapi.IPAMConfig{
 			Subnet:  d.mgmt.IPv4Subnet,
 			Gateway: v4gw,
 		}
@@ -243,7 +242,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 		if d.mgmt.IPv6Gw != "" {
 			v6gw = d.mgmt.IPv6Gw
 		}
-		ipamCfg := network.IPAMConfig{
+		ipamCfg := networkapi.IPAMConfig{
 			Subnet:  ipv6_subnet,
 			Gateway: v6gw,
 		}
@@ -254,7 +253,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 		enableIPv6 = true
 	}
 
-	ipam := &network.IPAM{
+	ipam := &networkapi.IPAM{
 		Driver: "default",
 		Config: ipamConfig,
 	}
@@ -267,7 +266,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 		netwOpts["com.docker.network.bridge.name"] = bridgeName
 	}
 
-	opts := network.CreateOptions{
+	opts := networkapi.CreateOptions{
 		Driver:     "bridge",
 		EnableIPv6: utils.Pointer(enableIPv6),
 		IPAM:       ipam,
@@ -495,7 +494,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		containerHostConfig.DNSOptions = node.DNS.Options
 	}
 
-	containerNetworkingConfig := &network.NetworkingConfig{}
+	containerNetworkingConfig := &networkapi.NetworkingConfig{}
 
 	if err := d.processNetworkMode(ctx, containerNetworkingConfig, containerHostConfig, containerConfig, node); err != nil {
 		return "", err
@@ -929,7 +928,7 @@ func (d *DockerRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 
 func (d *DockerRuntime) processNetworkMode(
 	ctx context.Context,
-	containerNetworkingConfig *network.NetworkingConfig,
+	containerNetworkingConfig *networkapi.NetworkingConfig,
 	containerHostConfig *container.HostConfig,
 	containerConfig *container.Config,
 	node *types.NodeConfig,
@@ -984,9 +983,9 @@ func (d *DockerRuntime) processNetworkMode(
 	default:
 		containerHostConfig.NetworkMode = container.NetworkMode(d.mgmt.Network)
 
-		containerNetworkingConfig.EndpointsConfig = map[string]*network.EndpointSettings{
+		containerNetworkingConfig.EndpointsConfig = map[string]*networkapi.EndpointSettings{
 			d.mgmt.Network: {
-				IPAMConfig: &network.EndpointIPAMConfig{
+				IPAMConfig: &networkapi.EndpointIPAMConfig{
 					IPv4Address: node.MgmtIPv4Address,
 					IPv6Address: node.MgmtIPv6Address,
 				},
