@@ -181,8 +181,8 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="-fep3nbTedWBIZGdQl5E-63" value="&lt;font style=&quot;font-size: 6px;&quot;&gt;docker pull apine:3&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=6;fontFamily=JetBrains Mono;fontStyle=0;fontColor=#EDF3F5;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;spacing=-4;spacingRight=0;spacingBottom=1;spacingTop=-3;rotation=35;" vertex="1" parent="Hvadh7sFhpXeqMrMuhxV-1">
-          <mxGeometry x="538.96" y="202" width="72" height="1" as="geometry" />
+        <mxCell id="-fep3nbTedWBIZGdQl5E-63" value="&lt;font style=&quot;font-size: 6px;&quot;&gt;docker pull alpine:3&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=6;fontFamily=JetBrains Mono;fontStyle=0;fontColor=#EDF3F5;fontSource=https%3A%2F%2Ffonts.googleapis.com%2Fcss%3Ffamily%3DJetBrains%2BMono;spacing=-4;spacingRight=0;spacingBottom=1;spacingTop=-3;rotation=35;" vertex="1" parent="Hvadh7sFhpXeqMrMuhxV-1">
+          <mxGeometry x="536.96" y="202" width="76" height="1" as="geometry" />
         </mxCell>
         <mxCell id="-fep3nbTedWBIZGdQl5E-64" value="" style="rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontFamily=Manrope;fontSize=12;fontColor=#FFFFFF;endArrow=block;endFill=1;startArrow=oval;startFill=1;strokeColor=#98A2AE;endSize=3;startSize=3;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.592;entryY=-0.002;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="Hvadh7sFhpXeqMrMuhxV-1" source="-fep3nbTedWBIZGdQl5E-56" target="kvwh2v-Nk0NHKlyejy3k-9">
           <mxGeometry relative="1" as="geometry">
