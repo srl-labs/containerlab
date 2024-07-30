@@ -36,20 +36,25 @@ var (
 )
 
 func main() {
-	api, config := newConfig()
+
+	// create a new API handle to make API calls against otgHost
+	api := gosnappi.NewApi()
+	api.NewHttpTransport().SetLocation(otgHost).SetVerify(false)
+
+	config := newConfig()
 
 	// push traffic configuration to otgHost
 	res, err := api.SetConfig(config)
 	checkResponse(res, err)
 
 	// start transmitting configured flows
-	ts := api.NewControlState()
+	ts := gosnappi.NewControlState()
 	ts.Traffic().FlowTransmit().SetState(gosnappi.StateTrafficFlowTransmitState.START)
 	res, err = api.SetControlState(ts)
 	checkResponse(res, err)
 
 	// fetch flow metrics and wait for received frame count to be correct
-	mr := api.NewMetricsRequest()
+	mr := gosnappi.NewMetricsRequest()
 	mr.Flow()
 	waitFor(
 		func() bool {
@@ -79,13 +84,9 @@ func checkResponse(res interface{}, err error) {
 	}
 }
 
-func newConfig() (gosnappi.GosnappiApi, gosnappi.Config) {
-	// create a new API handle to make API calls against otgHost
-	api := gosnappi.NewApi()
-	api.NewHttpTransport().SetLocation(otgHost).SetVerify(false)
-
+func newConfig() (gosnappi.Config) {
 	// create an empty traffic configuration
-	config := api.NewConfig()
+	config := gosnappi.NewConfig()
 	// create traffic endpoints
 	p1 := config.Ports().Add().SetName("p1").SetLocation(otgPort1)
 	p2 := config.Ports().Add().SetName("p2").SetLocation(otgPort2)
@@ -133,7 +134,7 @@ func newConfig() (gosnappi.GosnappiApi, gosnappi.Config) {
 	tcp := f1.Packet().Add().Tcp()
 
 	eth.Src().SetValue(r1Mac)
-	eth.Dst().SetChoice("auto")
+	eth.Dst().Auto()
 
 	ip.Src().SetValue("10.10.10.1")
 	ip.Dst().Increment().SetStart("20.20.20.1").SetStep("0.0.0.1").SetCount(5)
@@ -142,7 +143,7 @@ func newConfig() (gosnappi.GosnappiApi, gosnappi.Config) {
 	tcp.DstPort().Decrement().SetStart(8070).SetStep(2).SetCount(10)
 
 	log.Printf("OTG configuration:\n%s\n", config)
-	return api, config
+	return config
 }
 
 func waitFor(fn func() bool, timeout time.Duration) {

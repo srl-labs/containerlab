@@ -4,7 +4,7 @@ topology:
   nodes:
     ixia-c:
       kind: keysight_ixia-c-one
-      image: ghcr.io/open-traffic-generator/ixia-c-one:0.1.0-84
+      image: ghcr.io/open-traffic-generator/ixia-c-one:1.6.2-13
     srl:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:23.10.1

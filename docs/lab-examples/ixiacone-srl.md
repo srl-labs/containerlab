@@ -5,7 +5,7 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                   |
 | **Topology file**             | [ixiacone-srl.clab.yaml][topofile]                                                     |
 | **Name**                      | ixiac01                                                                                |
-| **Version information**[^2]   | `containerlab:0.46.2`, `ixia-c-one:0.1.0-84`, `srlinux:23.10.1`, `docker-ce:20.10.2`   |
+| **Version information**[^2]   | `containerlab:0.46.2`, `ixia-c-one:1.6.2-13`, `srlinux:23.10.1`, `docker-ce:20.10.2`   |
 
 ## Description
 
