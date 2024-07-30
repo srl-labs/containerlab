@@ -36,7 +36,6 @@ var (
 )
 
 func main() {
-
 	// create a new API handle to make API calls against otgHost
 	api := gosnappi.NewApi()
 	api.NewHttpTransport().SetLocation(otgHost).SetVerify(false)
@@ -84,7 +83,7 @@ func checkResponse(res interface{}, err error) {
 	}
 }
 
-func newConfig() (gosnappi.Config) {
+func newConfig() gosnappi.Config {
 	// create an empty traffic configuration
 	config := gosnappi.NewConfig()
 	// create traffic endpoints

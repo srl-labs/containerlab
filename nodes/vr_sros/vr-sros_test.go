@@ -16,17 +16,17 @@ func TestAosCXInterfaceParsing(t *testing.T) {
 	}{
 		"alias-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "1/1/1",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "1/1/3",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "1/1/5",
 					},
@@ -49,17 +49,17 @@ func TestAosCXInterfaceParsing(t *testing.T) {
 		},
 		"original-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth6",
 					},
@@ -106,7 +106,8 @@ func TestAosCXInterfaceParsing(t *testing.T) {
 				if !foundError {
 					for idx, ep := range tc.node.Endpoints {
 						if ep.GetIfaceName() != tc.resultEps[idx] {
-							t.Errorf("got wrong mapped endpoint %q (%q), want %q", ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
+							t.Errorf("got wrong mapped endpoint %q (%q), want %q",
+								ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
 						}
 					}
 				}

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	// licDir is the directory where Junos 22+ expects to find the license file
+	// licDir is the directory where Junos 22+ expects to find the license file.
 	licDir  = "/config/license"
 	licFile = "license.lic"
 )

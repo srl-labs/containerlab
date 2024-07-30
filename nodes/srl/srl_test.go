@@ -92,7 +92,7 @@ func TestSRLInterfaceParsing(t *testing.T) {
 		},
 		"parse-fail": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth0",
 					},
@@ -128,7 +128,8 @@ func TestSRLInterfaceParsing(t *testing.T) {
 				gotCheckErr := tc.node.CheckInterfaceName()
 				if gotCheckErr != nil {
 					foundError = true
-					if tc.checkErrContains != "" && !(strings.Contains(fmt.Sprint(gotCheckErr), tc.checkErrContains)) {
+					if tc.checkErrContains != "" && !(strings.Contains(
+						fmt.Sprint(gotCheckErr), tc.checkErrContains)) {
 						t.Errorf("got error for check %+v, want %+v", gotCheckErr, tc.checkErrContains)
 					}
 				}
@@ -140,7 +141,8 @@ func TestSRLInterfaceParsing(t *testing.T) {
 				if !foundError {
 					for idx, ep := range tc.node.Endpoints {
 						if ep.GetIfaceName() != tc.resultEps[idx] {
-							t.Errorf("got wrong mapped endpoint %q (%q), want %q", ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
+							t.Errorf("got wrong mapped endpoint %q (%q), want %q",
+								ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
 						}
 					}
 				}

@@ -780,7 +780,6 @@ func (s *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 
 func (s *srl) GetMappedInterfaceName(ifName string) (string, error) {
 	captureGroups, err := utils.GetRegexpCaptureGroups(s.InterfaceRegexp, ifName)
-
 	if err != nil {
 		return "", err
 	}
@@ -806,7 +805,8 @@ func (s *srl) GetMappedInterfaceName(ifName string) (string, error) {
 
 	if foundIndices["linecard"] && foundIndices["port"] {
 		if foundIndices["channel"] {
-			return fmt.Sprintf("e%d-%d-%d", parsedIndices["linecard"], parsedIndices["port"], parsedIndices["channel"]), nil
+			return fmt.Sprintf("e%d-%d-%d", parsedIndices["linecard"],
+				parsedIndices["port"], parsedIndices["channel"]), nil
 		} else {
 			return fmt.Sprintf("e%d-%d", parsedIndices["linecard"], parsedIndices["port"]), nil
 		}

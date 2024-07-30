@@ -77,7 +77,8 @@ func init() {
 		defaultExportTemplateFPath, "template file for topology data export")
 	deployCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
-	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false, "skip the lab directory extended ACLs provisioning")
+	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
+		"skip the lab directory extended ACLs provisioning")
 }
 
 // deployFn function runs deploy sub command.

@@ -16,37 +16,37 @@ func TestXRV9KInterfaceParsing(t *testing.T) {
 	}{
 		"alias-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "GigabitEthernet0/0/0/0",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "Gi0/0/0/1",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "GigabitEthernet 0/0/0/2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "TenGigabitEthernet0/0/0/3",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "TenGigE0/0/0/4",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "Te0/0/0/5",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "TenGigabitEthernet 0/0/0/6",
 					},
@@ -69,17 +69,17 @@ func TestXRV9KInterfaceParsing(t *testing.T) {
 		},
 		"original-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth6",
 					},
@@ -126,7 +126,8 @@ func TestXRV9KInterfaceParsing(t *testing.T) {
 				if !foundError {
 					for idx, ep := range tc.node.Endpoints {
 						if ep.GetIfaceName() != tc.resultEps[idx] {
-							t.Errorf("got wrong mapped endpoint %q (%q), want %q", ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
+							t.Errorf("got wrong mapped endpoint %q (%q), want %q",
+								ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
 						}
 					}
 				}

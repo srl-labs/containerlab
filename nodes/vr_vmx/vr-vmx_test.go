@@ -16,17 +16,17 @@ func TestVMXInterfaceParsing(t *testing.T) {
 	}{
 		"alias-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "ge-0/0/4",
 					},
@@ -49,17 +49,17 @@ func TestVMXInterfaceParsing(t *testing.T) {
 		},
 		"original-parse": {
 			endpoints: []*links.EndpointVeth{
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
-				&links.EndpointVeth{
+				{
 					EndpointGeneric: links.EndpointGeneric{
 						IfaceName: "eth6",
 					},
@@ -106,7 +106,8 @@ func TestVMXInterfaceParsing(t *testing.T) {
 				if !foundError {
 					for idx, ep := range tc.node.Endpoints {
 						if ep.GetIfaceName() != tc.resultEps[idx] {
-							t.Errorf("got wrong mapped endpoint %q (%q), want %q", ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
+							t.Errorf("got wrong mapped endpoint %q (%q), want %q",
+								ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
 						}
 					}
 				}

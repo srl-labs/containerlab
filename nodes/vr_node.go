@@ -33,7 +33,8 @@ func (vr *VRNode) AddEndpoint(e links.Endpoint) error {
 	if vr.InterfaceRegexp != nil && !(VMInterfaceRegexp.MatchString(endpointName)) {
 		mappedName, err := vr.OverwriteNode.GetMappedInterfaceName(endpointName)
 		if err != nil {
-			return fmt.Errorf("%q interface name %q could not be mapped to an ethX-based interface name: %w", vr.Cfg.ShortName, e.GetIfaceName(), err)
+			return fmt.Errorf("%q interface name %q could not be mapped to an ethX-based interface name: %w",
+				vr.Cfg.ShortName, e.GetIfaceName(), err)
 		}
 		log.Debugf("Interface Mapping: Mapping interface %q (ifAlias) to %q (ifName)", endpointName, mappedName)
 		e.SetIfaceName(mappedName)
@@ -55,7 +56,8 @@ func (vr *VRNode) CheckInterfaceName() error {
 	for _, ep := range vr.Endpoints {
 		ifName := ep.GetIfaceName()
 		if !VMInterfaceRegexp.MatchString(ifName) {
-			return fmt.Errorf("%q interface name %q does not match the required interface patterns: %q", vr.Cfg.ShortName, ifName, vr.InterfaceHelp)
+			return fmt.Errorf("%q interface name %q does not match the required interface patterns: %q",
+				vr.Cfg.ShortName, ifName, vr.InterfaceHelp)
 		}
 	}
 

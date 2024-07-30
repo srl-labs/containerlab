@@ -67,7 +67,7 @@ func TestGenerateConfigs(t *testing.T) {
 	}
 }
 
-func TestInterfacesAliases(t *testing.T) { //skipcq: GO-R1005
+func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 	tests := map[string]struct {
 		endpoints           []*links.EndpointVeth
 		node                *DefaultNode
@@ -243,7 +243,8 @@ func TestInterfacesAliases(t *testing.T) { //skipcq: GO-R1005
 				gotEndpointErr := tc.node.AddEndpoint(ep)
 				if gotEndpointErr != nil {
 					foundError = true
-					if tc.endpointErrContains != "" && !(strings.Contains(fmt.Sprint(gotEndpointErr), tc.endpointErrContains)) {
+					if tc.endpointErrContains != "" && !(strings.Contains(
+						fmt.Sprint(gotEndpointErr), tc.endpointErrContains)) {
 						t.Errorf("got error for endpoint %+v, want %s", gotEndpointErr, tc.endpointErrContains)
 					}
 				}
@@ -257,7 +258,8 @@ func TestInterfacesAliases(t *testing.T) { //skipcq: GO-R1005
 				gotCheckErr := tc.node.CheckInterfaceName()
 				if gotCheckErr != nil {
 					foundError = true
-					if tc.checkErrContains != "" && !(strings.Contains(fmt.Sprint(gotCheckErr), tc.checkErrContains)) {
+					if tc.checkErrContains != "" && !(strings.Contains(
+						fmt.Sprint(gotCheckErr), tc.checkErrContains)) {
 						t.Errorf("got error for check %+v, want %s", gotCheckErr, tc.checkErrContains)
 					}
 				}
@@ -269,7 +271,8 @@ func TestInterfacesAliases(t *testing.T) { //skipcq: GO-R1005
 				if !foundError {
 					for idx, ep := range tc.node.Endpoints {
 						if ep.GetIfaceName() != tc.resultEps[idx] {
-							t.Errorf("got wrong mapped endpoint %q (%q), want %q", ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
+							t.Errorf("got wrong mapped endpoint %q (%q), want %q",
+								ep.GetIfaceName(), ep.GetIfaceAlias(), tc.resultEps[idx])
 						}
 					}
 				}

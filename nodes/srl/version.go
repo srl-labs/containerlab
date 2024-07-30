@@ -116,7 +116,8 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 		return nil, err
 	}
 
-	log.Debugf("SR Linux node %s extracted raw version. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf("SR Linux node %s extracted raw version. stdout: %s, stderr: %s",
+		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return n.parseVersionString(execResult.GetStdOutString()), nil
 }
