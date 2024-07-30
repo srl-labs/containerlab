@@ -11,7 +11,7 @@ require (
 	github.com/containers/podman/v5 v5.1.2
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/distribution/reference v0.6.0
-	github.com/docker/docker v26.1.4+incompatible
+	github.com/docker/docker v27.0.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/docker/go-units v0.5.0
 	github.com/dustin/go-humanize v1.0.1
@@ -305,7 +305,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.26.2 // indirect
-	k8s.io/klog/v2 v2.120.1 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
@@ -314,6 +314,6 @@ require (
 )
 
 replace (
-	github.com/weaveworks/ignite v0.10.0 => github.com/networkop/ignite v0.9.1-0.20240402115852-5f94b8e9ce09
+	github.com/weaveworks/ignite v0.10.0 => github.com/networkop/ignite v0.0.0-20240730102642-a3f2f53f9abc
 	github.com/weaveworks/libgitops v0.0.0-20200611103311-2c871bbbbf0c => github.com/networkop/libgitops v0.0.0-20221014201752-02ecf9790f58
 )
