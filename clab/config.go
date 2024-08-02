@@ -553,6 +553,11 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg.Labels[labels.NodeGroup] = cfg.Group
 	cfg.Labels[labels.NodeLabDir] = cfg.LabDir
 	cfg.Labels[labels.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
+	owner := os.Getenv("SUDO_USER")
+	if owner == "" {
+		owner = os.Getenv("USER")
+	}
+	cfg.Labels[labels.Owner] = owner
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
