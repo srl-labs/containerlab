@@ -10,4 +10,5 @@ const (
 	NodeLabDir    = "clab-node-lab-dir"
 	TopoFile      = "clab-topo-file"
 	NodeMgmtNetBr = "clab-mgmt-net-bridge"
+	Owner         = "clab-owner"
 )

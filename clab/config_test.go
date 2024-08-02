@@ -398,6 +398,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeGroup:    "",
 				labels.NodeLabDir:   "../clab-topo1/node1",
 				labels.TopoFile:     "topo1.yml",
+				labels.Owner:        "runner",
 			},
 		},
 		"custom_node_label": {
@@ -412,6 +413,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeLabDir:   "../clab-topo1/node2",
 				labels.TopoFile:     "topo1.yml",
 				"node-label":        "value",
+				labels.Owner:        "runner",
 			},
 		},
 		"custom_kind_label": {
@@ -426,6 +428,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeLabDir:   "../clab-topo2/node1",
 				labels.TopoFile:     "topo2.yml",
 				"kind-label":        "value",
+				labels.Owner:        "runner",
 			},
 		},
 		"custom_default_label": {
@@ -440,6 +443,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeLabDir:   "../clab-topo3/node2",
 				labels.TopoFile:     "topo3.yml",
 				"default-label":     "value",
+				labels.Owner:        "runner",
 			},
 		},
 	}
