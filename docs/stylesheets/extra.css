@@ -1,3 +1,17 @@
+:root {
+  /* Black logo outline for light theme */
+  --logo-outline-color: #001135;
+}
+
+[data-md-color-scheme="slate"] {
+  /* set logo outline color to white when dark theme is used */
+  --logo-outline-color: #ffffff;
+}
+
+#outline {
+  fill: var(--logo-outline-color);
+}
+
 .mdx-content__footer {
   margin-top: 20px;
   text-align: center;

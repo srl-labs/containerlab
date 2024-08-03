@@ -252,7 +252,7 @@ theme:
     text: Google Sans
     code: Fira Mono
   icon:
-    logo: fontawesome/solid/flask
+    logo: clab/icon
     repo: fontawesome/brands/github
     edit: material/file-edit-outline
   favicon: images/flask.svg
