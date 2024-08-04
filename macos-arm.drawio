@@ -436,7 +436,7 @@
     </mxGraphModel>
   </diagram>
   <diagram name="[3] docker intel" id="4FIs8z6cLPmRQUVoUADr">
-    <mxGraphModel dx="297" dy="198" grid="1" gridSize="5" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4d5766" math="0" shadow="0">
+    <mxGraphModel dx="513" dy="342" grid="1" gridSize="5" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" background="#4d5766" math="0" shadow="0">
       <root>
         <mxCell id="4suZERQY6FPwNQAJXYIK-0" />
         <mxCell id="4suZERQY6FPwNQAJXYIK-1" parent="4suZERQY6FPwNQAJXYIK-0" />
