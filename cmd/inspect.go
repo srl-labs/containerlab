@@ -133,7 +133,7 @@ func toTableData(det []types.ContainerDetails) [][]string {
 
 		if all {
 			tabData = append(tabData, []string{
-				fmt.Sprintf("%d", i+1), d.LabPath,
+				fmt.Sprintf("%d", i+1), d.LabPath, d.Owner,
 				d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address,
 			})
 			continue
@@ -163,6 +163,7 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 			State:       cont.State,
 			IPv4Address: cont.GetContainerIPv4(),
 			IPv6Address: cont.GetContainerIPv6(),
+			Owner:       cont.Labels[labels.Owner],
 		}
 		cdet.ContainerID = cont.ShortID
 
@@ -176,6 +177,10 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 
 		if kind, ok := cont.Labels[labels.NodeKind]; ok {
 			cdet.Kind = kind
+		}
+
+		if owner, ok := cont.Labels[labels.Owner]; ok {
+			cdet.Owner = owner
 		}
 
 		contDetails = append(contDetails, *cdet)
@@ -213,7 +218,7 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 			"IPv6 Address",
 		}
 		if all {
-			table.SetHeader(append([]string{"#", "Topo Path"}, header...))
+			table.SetHeader(append([]string{"#", "Topo Path", "Owner"}, header...))
 		} else {
 			table.SetHeader(append([]string{"#"}, header[1:]...))
 		}
