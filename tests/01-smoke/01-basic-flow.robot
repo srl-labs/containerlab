@@ -197,10 +197,10 @@ Ensure "inspect all" outputs IP addresses
     @{data} =    Split String    ${line}    |
     Log    ${data}
     # verify ipv4 address
-    ${ipv4} =    String.Strip String    ${data}[9]
+    ${ipv4} =    String.Strip String    ${data}[10]
     Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
     # verify ipv6 address
-    Run Keyword    Match IPv6 Address    ${data}[10]
+    Run Keyword    Match IPv6 Address    ${data}[11]
 
 Verify bind mount in l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
