@@ -11,6 +11,7 @@ import (
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
 	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
 	crpd "github.com/srl-labs/containerlab/nodes/crpd"
+	cvsr "github.com/srl-labs/containerlab/nodes/cvsr"
 	cvx "github.com/srl-labs/containerlab/nodes/cvx"
 	"github.com/srl-labs/containerlab/nodes/dell_sonic"
 	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
@@ -93,4 +94,5 @@ func (c *CLab) RegisterNodes() {
 	c8000.Register(c.Reg)
 	border0.Register(c.Reg)
 	k8s_kind.Register(c.Reg)
+	cvsr.Register(c.Reg)
 }
