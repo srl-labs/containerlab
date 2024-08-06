@@ -25,6 +25,7 @@ var (
 	inspectFormat string
 	details       bool
 	all           bool
+	wide          bool
 )
 
 // inspectCmd represents the inspect command.
@@ -43,6 +44,7 @@ func init() {
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
 	inspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json]")
 	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
+	inspectCmd.Flags().BoolVarP(&wide, "wide", "w", false, "also show the owner of a lab")
 }
 
 func inspectFn(_ *cobra.Command, _ []string) error {
@@ -131,17 +133,21 @@ func toTableData(det []types.ContainerDetails) [][]string {
 	for i := range det {
 		d := &det[i]
 
+		tabRow := []string{fmt.Sprintf("%d", i+1)}
+
 		if all {
-			tabData = append(tabData, []string{
-				fmt.Sprintf("%d", i+1), d.LabPath, d.Owner,
-				d.LabName, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address,
-			})
-			continue
+			tabRow = append(tabRow, d.LabPath, d.LabName)
 		}
-		tabData = append(tabData, []string{
-			fmt.Sprintf("%d", i+1), d.Name, d.ContainerID,
-			d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address,
-		})
+
+		// Display more columns
+		if wide {
+			tabRow = append(tabRow, d.Owner)
+		}
+
+		// Common fields
+		tabRow = append(tabRow, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address)
+
+		tabData = append(tabData, tabRow)
 	}
 	return tabData
 }
@@ -217,8 +223,13 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 			"IPv4 Address",
 			"IPv6 Address",
 		}
+
+		if wide {
+			header = append(header[:1], append([]string{"Owner"}, header[1:]...)...)
+		}
+
 		if all {
-			table.SetHeader(append([]string{"#", "Topo Path", "Owner"}, header...))
+			table.SetHeader(append([]string{"#", "Topo Path"}, header...))
 		} else {
 			table.SetHeader(append([]string{"#"}, header[1:]...))
 		}
@@ -226,6 +237,9 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		table.SetAutoWrapText(false)
 		// merge cells with lab name and topo file path
 		table.SetAutoMergeCellsByColumnIndex([]int{1, 2})
+		if wide {
+			table.SetAutoMergeCellsByColumnIndex([]int{1, 2, 3})
+		}
 		table.AppendBulk(tabData)
 		table.Render()
 

@@ -36,6 +36,9 @@ The `inspect` command produces a brief summary about the running lab components.
 
 With this flag inspect command will output every bit of information about the running containers. This is what `docker inspect` command provides.
 
+#### wide
+The local `--wide` flag adds an "Owner" column to the `inspect` output table.
+
 ### Examples
 
 #### List all running labs on the host
@@ -77,6 +80,18 @@ INFO[0000] Parsing & checking topology file: srl02.clab.yml
 | 1 | clab-srl02-srl1 | 7a7c101be7d8 | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
 | 2 | clab-srl02-srl2 | 5e3737621753 | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
 +---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
+```
+
+#### Provide owner information of running labs
+```bash
+clab inspect --all --wide
++---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
+| # |             Topo Path             | Lab Name | Owner |      Name       | Container ID |         Image         |     Kind      |  State  |  IPv4 Address  |     IPv6 Address     |
++---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
+| 1 | lab-examples/srl01/srl01.clab.yml | srl01    | user1 | clab-srl01-srl  | ea86f40b412a | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 2 | lab-examples/srl02/srl02.clab.yml | srl02    | user2 | clab-srl02-srl1 | ba7e807235b6 | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
+| 3 |                                   |          |       | clab-srl02-srl2 | 71006155b70a | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
++---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
 ```
 
 #### Provide information about a specific running lab in json format
