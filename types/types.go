@@ -282,6 +282,7 @@ type ContainerDetails struct {
 	IPv4Address string                `json:"ipv4_address,omitempty"`
 	IPv6Address string                `json:"ipv6_address,omitempty"`
 	Ports       []*GenericPortBinding `json:"ports,omitempty"`
+	Owner       string                `json:"owner,omitempty"`
 }
 
 // GenericPortBinding represents a port binding.
