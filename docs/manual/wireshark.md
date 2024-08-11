@@ -177,7 +177,7 @@ From a user's perspective, the integration is as simple as running the following
 ```bash
 curl -sL \
 https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml \
-| docker compose -f - up -d
+| DOCKER_DEFAULT_PLATFORM= docker compose -f - up -d
 ```
 
 ///
@@ -186,7 +186,7 @@ https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.ya
 ```bash
 curl -sL \
 https://github.com/siemens/edgeshark/raw/main/deployments/wget/docker-compose.yaml \
-| docker compose -f - down
+| DOCKER_DEFAULT_PLATFORM= docker compose -f - down
 ```
 
 ///
