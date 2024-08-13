@@ -11,6 +11,7 @@ The `inspect` command provides the information about the deployed labs.
 ### Flags
 
 #### all
+
 With the local `--all` flag it's possible to list all deployed labs in a single table. The output will also show the relative path to the topology file that was used to spawn this lab.
 
 The lab name and path values will be set for the first node of such lab, to reduce the clutter. Refer to the [examples](#examples) section for more details.
@@ -32,12 +33,14 @@ The local `--format` flag enables different output stylings. By default the tabl
 Currently, the only other format option is `json` that will produce the output in the JSON format.
 
 #### details
+
 The `inspect` command produces a brief summary about the running lab components. It is also possible to get a full view on the running containers by adding `--details` flag.
 
 With this flag inspect command will output every bit of information about the running containers. This is what `docker inspect` command provides.
 
 #### wide
-The local `--wide` flag adds an "Owner" column to the `inspect` output table.
+
+The local `-w | --wide` flag adds all available columns to the `inspect` output table.
 
 ### Examples
 
@@ -83,6 +86,9 @@ INFO[0000] Parsing & checking topology file: srl02.clab.yml
 ```
 
 #### Provide owner information of running labs
+
+An owner is a linux user that started the lab. When `sudo` is used, the original user is displayed as the owner.
+
 ```bash
 clab inspect --all --wide
 +---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
@@ -121,4 +127,3 @@ clab inspect --all --wide
   }
 ]
 ```
-
