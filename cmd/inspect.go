@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 
 	"github.com/olekukonko/tablewriter"
@@ -44,7 +45,7 @@ func init() {
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
 	inspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json]")
 	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
-	inspectCmd.Flags().BoolVarP(&wide, "wide", "w", false, "also show the owner of a lab")
+	inspectCmd.Flags().BoolVarP(&wide, "wide", "w", false, "also more details about a lab and its nodes")
 }
 
 func inspectFn(_ *cobra.Command, _ []string) error {
@@ -169,7 +170,6 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 			State:       cont.State,
 			IPv4Address: cont.GetContainerIPv4(),
 			IPv6Address: cont.GetContainerIPv6(),
-			Owner:       cont.Labels[labels.Owner],
 		}
 		cdet.ContainerID = cont.ShortID
 
@@ -225,7 +225,7 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		}
 
 		if wide {
-			header = append(header[:1], append([]string{"Owner"}, header[1:]...)...)
+			header = slices.Insert(header, 1, "Owner")
 		}
 
 		if all {
