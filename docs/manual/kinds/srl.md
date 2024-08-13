@@ -17,6 +17,23 @@ docker pull ghcr.io/nokia/srlinux
 
 To pull a specific version, use tags that match the released version and are listed in the [srlinux-container-image](https://github.com/nokia/srlinux-container-image) repo.
 
+//// admonition | ARM64-native SR Linux container image
+    type: tip
+SR Linux Network OS is also available as an ARM64-native container image in a preview mode. The preview mode means that not every release is available in ARM64, but the selected ones are.
+
+Users can freely pull the following ARM64-native images:
+/// tab | 24.7.1
+
+```bash
+docker pull ghcr.io/nokia/srlinux:24.7.1-arm64-preview
+```
+
+///
+
+ARM64 image unlocks running networking labs on [Apple macOS](../../macos.md) with M-chips, as well as cloud instances with ARM64 architecture and on new Microsoft Surface laptops.
+
+////
+
 ## Managing SR Linux nodes
 
 There are many ways to manage SR Linux nodes, ranging from classic CLI management all the way up to the gNMI programming.

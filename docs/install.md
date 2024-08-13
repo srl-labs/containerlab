@@ -2,7 +2,10 @@
 hide:
   - navigation
 ---
-Containerlab is distributed as a Linux deb/rpm package and can be installed on any Debian- or RHEL-like distributive in a matter of a few seconds.
+
+# Installation
+
+Containerlab is distributed as a Linux deb/rpm/apk package for amd64 and arm64 architectures and can be installed on any Debian- or RHEL-like distributive in a matter of a few seconds.
 
 ## Pre-requisites
 
@@ -259,7 +262,9 @@ In Windows 11 with WSL2 it is now possible to [enable KVM support](https://serve
 
 ## Apple macOS
 
-Running containerlab on macOS is possible both on ARM (M1/M2) and Intel chipsets with certain limitations and caveats rooted in different architectures and underlying OS.
+Running containerlab on macOS is possible both on ARM (M1/M2/M3/etc) and Intel chipsets. For a long time, we had many caveats around M-chipsets on Macs, but with the introduction of ARM64-native NOSes like Nokia SR Linux and Arista cEOS, powered by Rosetta emulation for x86_64-based NOSes, it is now possible to run containerlab on ARM-based Macs.
+
+Since we wanted to share our experience with running containerlab on macOS in details, we have created a separate - [Containerlab on macOS](macos.md) - guide.
 
 ### ARM
 
