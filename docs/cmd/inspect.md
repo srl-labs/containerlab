@@ -11,6 +11,7 @@ The `inspect` command provides the information about the deployed labs.
 ### Flags
 
 #### all
+
 With the local `--all` flag it's possible to list all deployed labs in a single table. The output will also show the relative path to the topology file that was used to spawn this lab.
 
 The lab name and path values will be set for the first node of such lab, to reduce the clutter. Refer to the [examples](#examples) section for more details.
@@ -32,9 +33,14 @@ The local `--format` flag enables different output stylings. By default the tabl
 Currently, the only other format option is `json` that will produce the output in the JSON format.
 
 #### details
+
 The `inspect` command produces a brief summary about the running lab components. It is also possible to get a full view on the running containers by adding `--details` flag.
 
 With this flag inspect command will output every bit of information about the running containers. This is what `docker inspect` command provides.
+
+#### wide
+
+The local `-w | --wide` flag adds all available columns to the `inspect` output table.
 
 ### Examples
 
@@ -79,6 +85,21 @@ INFO[0000] Parsing & checking topology file: srl02.clab.yml
 +---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
 ```
 
+#### Provide owner information of running labs
+
+An owner is a linux user that started the lab. When `sudo` is used, the original user is displayed as the owner.
+
+```bash
+clab inspect --all --wide
++---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
+| # |             Topo Path             | Lab Name | Owner |      Name       | Container ID |         Image         |     Kind      |  State  |  IPv4 Address  |     IPv6 Address     |
++---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
+| 1 | lab-examples/srl01/srl01.clab.yml | srl01    | user1 | clab-srl01-srl  | ea86f40b412a | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 2 | lab-examples/srl02/srl02.clab.yml | srl02    | user2 | clab-srl02-srl1 | ba7e807235b6 | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
+| 3 |                                   |          |       | clab-srl02-srl2 | 71006155b70a | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
++---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
+```
+
 #### Provide information about a specific running lab in json format
 
 ```bash
@@ -106,4 +127,3 @@ INFO[0000] Parsing & checking topology file: srl02.clab.yml
   }
 ]
 ```
-
