@@ -1,6 +1,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"runtime"
 
@@ -50,7 +51,7 @@ func (h *HostRequirements) Verify(kindName, nodeName string) error {
 		message := fmt.Sprintf("node %q (%s) requires minimum %d vCPUs, but the host only has %d vCPUs", nodeName, kindName, h.MinVCPU, num)
 		switch h.MinAvailMemoryGbFailAction {
 		case FailBehaviourError:
-			return fmt.Errorf(message)
+			return errors.New(message)
 		case FailBehaviourLog:
 			log.Error(message)
 		}
@@ -61,7 +62,7 @@ func (h *HostRequirements) Verify(kindName, nodeName string) error {
 			nodeName, kindName, h.MinAvailMemoryGb, num)
 		switch h.MinAvailMemoryGbFailAction {
 		case FailBehaviourError:
-			return fmt.Errorf(message)
+			return errors.New(message)
 		case FailBehaviourLog:
 			log.Error(message)
 		}

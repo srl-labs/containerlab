@@ -163,7 +163,7 @@ search .
 			}
 
 			if diff := cmp.Diff(got, tt.want); diff != "" {
-				t.Errorf(diff)
+				t.Error(diff)
 			}
 		})
 	}
