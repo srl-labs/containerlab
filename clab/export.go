@@ -6,6 +6,7 @@ package clab
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"io"
 	"path/filepath"
@@ -41,10 +42,18 @@ type TopologyExport struct {
 	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"`
 }
 
+//go:embed export_templates/auto.tmpl
+var defaultExportTemplate string
+
 // exportTopologyDataWithTemplate generates and writes topology data file to w using a template.
 func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p string) error {
-	n := filepath.Base(p)
-	t, err := template.New(n).
+	var n string
+	if len(p) != 0 {
+		n = filepath.Base(p)
+	} else {
+		n = "auto.tmpl"
+	}
+	t := template.New(n).
 		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 		Funcs(template.FuncMap{
 			"ToJSON": func(v interface{}) string {
@@ -55,8 +64,13 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 				a, _ := json.MarshalIndent(v, prefix, indent)
 				return string(a)
 			},
-		}).
-		ParseFiles(p)
+		})
+	var err error
+	if len(p) != 0 {
+		_, err = t.ParseFiles(p)
+	} else {
+		_, err = t.Parse(defaultExportTemplate)
+	}
 	if err != nil {
 		return err
 	}
