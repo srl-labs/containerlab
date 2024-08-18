@@ -5,6 +5,7 @@
 package clab
 
 import (
+	"embed"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -43,7 +44,7 @@ type TopoData struct {
 // noListFs embeds the http.Dir to override the Open method of a filesystem
 // to prevent listing of static files, see https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
 type noListFs struct {
-	http.Dir
+	http.FileSystem
 }
 
 var g *gographviz.Graph
@@ -154,7 +155,7 @@ func commandExists(cmd string) bool {
 // Open is a custom FS opener that prevents listing of the files in the filesystem
 // see https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
 func (nfs noListFs) Open(name string) (result http.File, err error) {
-	f, err := nfs.Dir.Open(name)
+	f, err := nfs.FileSystem.Open(name)
 	if err != nil {
 		return
 	}
@@ -246,10 +247,19 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	return nil
 }
 
+//go:embed graph_templates/nextui/nextui.html
+var defaultTemplate string
+
+//go:embed graph_templates/nextui/static
+var defaultStatic embed.FS
+
 func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error {
 	var t *template.Template
 
-	if !utils.FileExists(tmpl) {
+	if tmpl == "" {
+		t = template.New("nextui.html")
+		t = template.Must(t.Parse(defaultTemplate))
+	} else if !utils.FileExists(tmpl) {
 		return fmt.Errorf("%w. Path %s", e.ErrFileNotFound, tmpl)
 	}
 	t = template.Must(template.ParseFiles(tmpl))
@@ -258,11 +268,17 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 		if tmpl == "" {
 			return fmt.Errorf("the --static-dir flag must be used with the --template flag")
 		}
-
-		fs := http.FileServer(noListFs{http.Dir(staticDir)})
-		http.Handle("/static/", http.StripPrefix("/static/", fs))
-		log.Infof("Serving static files from directory: %s", staticDir)
 	}
+
+	var staticFS http.FileSystem
+	if staticDir == "" {
+		staticFS = http.FS(defaultStatic)
+	} else {
+		staticFS = http.Dir(staticDir)
+	}
+	fs := http.FileServer(noListFs{staticFS})
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	log.Infof("Serving static files from directory: %s", staticDir)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_ = t.Execute(w, topoD)

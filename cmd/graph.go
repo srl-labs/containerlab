@@ -19,11 +19,6 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-const (
-	defaultGraphTemplatePath = "/etc/containerlab/templates/graph/nextui/nextui.html"
-	defaultStaticPath        = "/etc/containerlab/templates/graph/nextui/static"
-)
-
 var (
 	srv              string
 	tmpl             string
@@ -159,9 +154,9 @@ func init() {
 	graphCmd.Flags().BoolVarP(&drawio, "drawio", "", false, "generate drawio diagram file")
 	graphCmd.Flags().StringVarP(&drawioVersion, "drawio-version", "", "latest",
 		"version of the clab-io-draw container to use for generating drawio diagram file")
-	graphCmd.Flags().StringVarP(&tmpl, "template", "", defaultGraphTemplatePath,
+	graphCmd.Flags().StringVarP(&tmpl, "template", "", "",
 		"Go html template used to generate the graph")
-	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", defaultStaticPath,
+	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", "",
 		"Serve static files from the specified directory")
 	graphCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
