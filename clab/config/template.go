@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -58,7 +59,11 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 
 	for i, v := range TemplatePaths {
 		if v == "@" {
-			TemplatePaths[i] = "/etc/containerlab/templates/"
+			prefix := os.Getenv("CLAB_PREFIX")
+			if prefix == "" {
+				prefix = "/etc/containerlab"
+			}
+			TemplatePaths[i] = filepath.Join(prefix, "templates/")
 		}
 	}
 

@@ -9,6 +9,8 @@ import (
 	_ "embed"
 	"encoding/json"
 	"html/template"
+	"os"
+	"path/filepath"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
@@ -17,11 +19,6 @@ import (
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
-)
-
-const (
-	defaultGraphTemplatePath = "/etc/containerlab/templates/graph/nextui/nextui.html"
-	defaultStaticPath        = "/etc/containerlab/templates/graph/nextui/static"
 )
 
 var (
@@ -146,6 +143,14 @@ func graphFn(_ *cobra.Command, _ []string) error {
 }
 
 func init() {
+	prefix := os.Getenv("CLAB_PREFIX")
+	if prefix == "" {
+		prefix = "/etc/containerlab"
+	}
+
+	defaultGraphTemplatePath := filepath.Join(prefix, "templates/graph/nextui/nextui.html")
+	defaultStaticPath := filepath.Join(prefix, "templates/graph/nextui/static")
+
 	rootCmd.AddCommand(graphCmd)
 	graphCmd.Flags().StringVarP(&srv, "srv", "s", "0.0.0.0:50080",
 		"HTTP server address serving the topology view")

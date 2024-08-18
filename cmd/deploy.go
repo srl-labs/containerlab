@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
@@ -16,11 +17,6 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/runtime"
-)
-
-const (
-	// file name of a topology export data.
-	defaultExportTemplateFPath = "/etc/containerlab/templates/export/auto.tmpl"
 )
 
 // name of the container management network.
@@ -62,6 +58,13 @@ var deployCmd = &cobra.Command{
 }
 
 func init() {
+	prefix := os.Getenv("CLAB_PREFIX")
+	if prefix == "" {
+		prefix = "/etc/containerlab"
+	}
+
+	defaultExportTemplateFPath := filepath.Join(prefix, "templates/export/auto.tmpl")
+
 	rootCmd.AddCommand(deployCmd)
 	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
