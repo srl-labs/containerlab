@@ -2,7 +2,10 @@ package config
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -51,20 +54,27 @@ func LoadTemplates(tmpl *template.Template, role string) error {
 	return nil
 }
 
+//go:embed templates
+var embeddedTemplates embed.FS
+
 func RenderAll(allnodes map[string]*NodeConfig) error {
 	if len(TemplatePaths) == 0 { // default is the install path
 		TemplatePaths = []string{"@"}
 	}
 
-	for i, v := range TemplatePaths {
+	var TemplateFS []fs.FS
+
+	for _, v := range TemplatePaths {
 		if v == "@" {
-			TemplatePaths[i] = "/etc/containerlab/templates/"
+			TemplateFS = append(TemplateFS, embeddedTemplates)
+		} else {
+			TemplateFS = append(TemplateFS, os.DirFS(v))
 		}
 	}
 
 	if len(TemplateNames) == 0 {
 		var err error
-		TemplateNames, err = GetTemplateNamesInDirs(TemplatePaths)
+		TemplateNames, err = GetTemplateNamesInDirs(TemplateFS)
 		if err != nil {
 			return err
 		}
