@@ -94,7 +94,7 @@ func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error)
 		return "", err
 	}
 
-	decodedAuthSplit := strings.Split(string(decodedAuth), authStringSep)
+	decodedAuthSplit := strings.SplitN(string(decodedAuth), authStringSep, authStringLength)
 
 	if len(decodedAuthSplit) != authStringLength {
 		return "", errors.New("unexpected auth string")
