@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"path"
 
+	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -21,7 +23,8 @@ var (
 
 const (
 	configDirName   = "config"
-	startupCfgFName = "startup-config.cfg"
+	startupCfgFName = "config_db.json"
+	saveCmd         = `sh -c "/backup.sh -u $USERNAME -p $PASSWORD backup"`
 )
 
 // Register registers the node in the NodeRegistry.
@@ -71,6 +74,27 @@ func (n *dell_sonic) PreDeploy(_ context.Context, params *nodes.PreDeployParams)
 		return nil
 	}
 	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
+}
+
+func (n *dell_sonic) SaveConfig(ctx context.Context) error {
+	cmd, err := exec.NewExecCmdFromString(saveCmd)
+	if err != nil {
+		return fmt.Errorf("%s: failed to create execute cmd: %w", n.Cfg.ShortName, err)
+	}
+
+	execResult, err := n.RunExec(ctx, cmd)
+	if err != nil {
+		return fmt.Errorf("%s: failed to execute cmd: %w", n.Cfg.ShortName, err)
+	}
+
+	if len(execResult.GetStdErrString()) > 0 {
+		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+	}
+
+	confPath := n.Cfg.LabDir + "/" + configDirName
+	log.Infof("saved /etc/sonic/config_db.json backup from %s node to %s\n", n.Cfg.ShortName, confPath)
+
+	return nil
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file is correct.
