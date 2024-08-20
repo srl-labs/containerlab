@@ -44,6 +44,9 @@ type TopologyExport struct {
 //go:embed export_templates/auto.tmpl
 var defaultExportTemplate string
 
+//go:embed export_templates/full.tmpl
+var fullExportTemplate string
+
 // exportTopologyDataWithTemplate generates and writes topology data file to w using a template.
 func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p string) error {
 	t := template.New("export").
@@ -59,8 +62,10 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 			},
 		})
 	var err error
-	if len(p) != 0 {
+	if p != "" {
 		_, err = t.ParseFiles(p)
+	} else if p == "__full" {
+		_, err = t.Parse(fullExportTemplate)
 	} else {
 		_, err = t.Parse(defaultExportTemplate)
 	}
