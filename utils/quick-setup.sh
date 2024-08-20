@@ -205,6 +205,12 @@ EOF
 
 }
 
+# keep SSH_AUTH_SOCK env var when using sudo
+# to extract keys from the original user' agent
+function add-ssh-socket-env-for-sudo {
+    echo 'Defaults env_keep += "SSH_AUTH_SOCK"' | sudo tee /etc/sudoers.d/ssh_auth_sock
+}
+
 function install-containerlab {
     echo "${DISTRO_TYPE}"
     if [ "${DISTRO_TYPE}" = "rhel" ]; then
@@ -238,6 +244,7 @@ function all {
 
     install-make
     install-gh-cli
+    add-ssh-socket-env-for-sudo
 
     install-containerlab
 }
