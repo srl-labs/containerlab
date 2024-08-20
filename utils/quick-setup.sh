@@ -203,8 +203,6 @@ promptcmd() {
 PROMPT_COMMAND=promptcmd
 EOF
 
-    source ~/.bashrc
-    echo "Bash prompt configuration added and sourced"
 }
 
 function install-containerlab {
