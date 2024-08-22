@@ -110,9 +110,9 @@ The default timeout is set to 2 minutes and can be changed to values like `30s, 
 
 #### export-template
 
-The local `--export-template` flag allows a user to specify a custom Go template that will be used for exporting topology data into `topology-data.json` file under the lab directory. If not set, the default template path is `/etc/containerlab/templates/export/auto.tmpl`.
+The local `--export-template` flag allows a user to specify a custom Go template that will be used for exporting topology data into `topology-data.json` file under the lab directory. If not set, the [default template](https://github.com/srl-labs/containerlab/blob/main/clab/export_templates/auto.tmpl) is used.
 
-To export full topology data instead of a subset of fields exported by default, use `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
+To export the full topology data instead of a subset of fields exported by default, use `--export-template __full` which is a special value that instructs containerlab to use the [full.tmpl](https://github.com/srl-labs/containerlab/blob/main/clab/export_templates/full.tmpl) template file. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
 
 #### log-level
 

@@ -110,7 +110,7 @@ A single path `/` is served, where the graph is generated based on either a defa
 
 ### template
 
-The `--template` flag allows to customize the HTML based graph by supplying a user defined template that will be rendered and exposed on the address specified by `--srv`.
+The `--template` flag allows to customize the HTML-based graph by supplying a user-defined template that will be rendered and exposed on the address specified by the `--srv`.
 
 ### static-dir
 

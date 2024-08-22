@@ -2,8 +2,8 @@ package config
 
 import (
 	"fmt"
+	"io/fs"
 	"net/netip"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -274,15 +274,15 @@ func ipFarEnd(in netip.Prefix) netip.Prefix {
 // GetTemplateNamesInDirs returns a list of template file names found in a list of dir `paths`
 // without traversing nested dirs
 // template names are following the pattern <some-name>__<role/kind>.tmpl.
-func GetTemplateNamesInDirs(paths []string) ([]string, error) {
+func GetTemplateNamesInDirs(dirs []fs.FS) ([]string, error) {
 	var tnames []string
-	for _, p := range paths {
-		all, err := filepath.Glob(filepath.Join(p, "*__*.tmpl"))
+	for _, dir := range dirs {
+		all, err := fs.Glob(dir, "*__*.tmpl")
 		if err != nil {
 			return nil, err
 		}
 		for _, fn := range all {
-			tn := strings.Split(filepath.Base(fn), "__")[0]
+			tn := strings.Split(fn, "__")[0]
 			// skip adding templates with the same name
 			if len(tnames) > 0 && tnames[len(tnames)-1] == tn {
 				continue

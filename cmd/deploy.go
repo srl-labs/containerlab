@@ -18,11 +18,6 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 )
 
-const (
-	// file name of a topology export data.
-	defaultExportTemplateFPath = "/etc/containerlab/templates/export/auto.tmpl"
-)
-
 // name of the container management network.
 var mgmtNetName string
 
@@ -74,7 +69,7 @@ func init() {
 		"limit the maximum number of workers creating nodes and virtual wires")
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
 	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "",
-		defaultExportTemplateFPath, "template file for topology data export")
+		"", "template file for topology data export")
 	deployCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
