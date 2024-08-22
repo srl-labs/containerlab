@@ -8,6 +8,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
@@ -257,28 +258,33 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 	var t *template.Template
 
 	if tmpl == "" {
-		t = template.New("nextui.html")
-		t = template.Must(t.Parse(defaultTemplate))
-	} else if !utils.FileExists(tmpl) {
+		t = template.Must(template.New("nextui.html").Parse(defaultTemplate))
+	} else if utils.FileExists(tmpl) {
+		t = template.Must(template.ParseFiles(tmpl))
+	} else {
 		return fmt.Errorf("%w. Path %s", e.ErrFileNotFound, tmpl)
 	}
-	t = template.Must(template.ParseFiles(tmpl))
 
-	if staticDir != "" {
-		if tmpl == "" {
-			return fmt.Errorf("the --static-dir flag must be used with the --template flag")
-		}
+	if staticDir != "" && tmpl == "" {
+		return fmt.Errorf("the --static-dir flag must be used with the --template flag")
 	}
 
 	var staticFS http.FileSystem
 	if staticDir == "" {
-		staticFS = http.FS(defaultStatic)
+		// extract the sub fs with static files from the embedded fs
+		subFS, err := fs.Sub(defaultStatic, "graph_templates/nextui/static")
+		if err != nil {
+			return err
+		}
+
+		staticFS = http.FS(subFS)
 	} else {
+		log.Infof("Serving static files from directory: %s", staticDir)
 		staticFS = http.Dir(staticDir)
 	}
+
 	fs := http.FileServer(noListFs{staticFS})
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	log.Infof("Serving static files from directory: %s", staticDir)
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_ = t.Execute(w, topoD)
