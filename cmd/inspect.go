@@ -45,7 +45,8 @@ func init() {
 	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
 	inspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json]")
 	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
-	inspectCmd.Flags().BoolVarP(&wide, "wide", "w", false, "also more details about a lab and its nodes")
+	inspectCmd.Flags().BoolVarP(&wide, "wide", "w", false,
+		"also more details about a lab and its nodes")
 }
 
 func inspectFn(_ *cobra.Command, _ []string) error {
