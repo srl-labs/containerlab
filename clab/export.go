@@ -61,14 +61,18 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 				return string(a)
 			},
 		})
+
 	var err error
-	if p != "" {
+
+	switch {
+	case p != "":
 		_, err = t.ParseFiles(p)
-	} else if p == "__full" {
+	case p == "__full":
 		_, err = t.Parse(fullExportTemplate)
-	} else {
+	default:
 		_, err = t.Parse(defaultExportTemplate)
 	}
+
 	if err != nil {
 		return err
 	}
