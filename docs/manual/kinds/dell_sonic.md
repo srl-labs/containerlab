@@ -85,7 +85,7 @@ When containerlab launches sonic-vs node, it will assign IPv4/6 address to the `
 
 VM-based Dell SONiC supports the [`startup-config`](../nodes.md#startup-config) feature. The startup configuration must be provided in a form of a json file extracted from the VM's `/etc/sonic/config_db.json` path. Consequently, the startup config must be provided in full, partial configuration is not supported.
 
-When the startup config is provided, the default containerlab config is overridden and the startup config is used instead. The user-provided startup config file is copied over to the VM's `/etc/sonic/config_db.json` path and `sudo config reload -y` command is executed to apply it.
+When the startup config is provided, the default containerlab config is overridden and the startup config is used instead. The user-provided startup config file is copied over to the VM's `/etc/sonic/config_db.json` path and `sudo config load -y` command is executed to apply it.
 
 ### Saving configuration
 
