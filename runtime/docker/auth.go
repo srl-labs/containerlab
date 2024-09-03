@@ -89,7 +89,7 @@ func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error)
 		return "", nil
 	}
 
-	decodedAuth, err := base64.URLEncoding.DecodeString(auth)
+	decodedAuth, err := base64.StdEncoding.DecodeString(auth)
 	if err != nil {
 		return "", err
 	}
