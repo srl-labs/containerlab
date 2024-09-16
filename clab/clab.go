@@ -1278,7 +1278,7 @@ func (c *CLab) Exec(ctx context.Context, cmds []string, options *ExecOptions) (*
 					continue
 				}
 			}
-			log.Warnf("error while execing on node %s: %v", cnt.Names[0], err)
+
 			resultCollection.Add(cnt.Names[0], execResult)
 		}
 	}
