@@ -111,12 +111,12 @@ func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SS
 
 // InChannel creates the channel reading the SSH connection.
 //
-// The first prompt is saved in LoginMessages
+// # The first prompt is saved in LoginMessages
 //
-// - The channel read the SSH session, splits on PromptChar
-// - Uses SSHKind's PromptParse to split the received data in *result* and *prompt* parts
-//   (if no valid prompt was found, prompt will simply be empty and result contain all the data)
-// - Emit data.
+//   - The channel read the SSH session, splits on PromptChar
+//   - Uses SSHKind's PromptParse to split the received data in *result* and *prompt* parts
+//     (if no valid prompt was found, prompt will simply be empty and result contain all the data)
+//   - Emit data.
 func (t *SSHTransport) InChannel() {
 	// Ensure we have a working channel
 	t.in = make(chan SSHReply)
@@ -370,10 +370,11 @@ func (ses *SSHSession) Close() {
 }
 
 // LogString will include the entire SSHReply
-//   Each field will be prefixed by a character.
-//   # - command sent
-//   | - result received
-//   ? - prompt part of the result
+//
+//	Each field will be prefixed by a character.
+//	# - command sent
+//	| - result received
+//	? - prompt part of the result
 func (r *SSHReply) LogString(node string, linefeed, debug bool) string { // skipcq: RVV-A0005
 	ind := 12 + len(node)
 	prefix := "\n" + strings.Repeat(" ", ind)

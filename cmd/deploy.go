@@ -22,8 +22,10 @@ import (
 var mgmtNetName string
 
 // IPv4/6 address range for container management network.
-var mgmtIPv4Subnet net.IPNet
-var mgmtIPv6Subnet net.IPNet
+var (
+	mgmtIPv4Subnet net.IPNet
+	mgmtIPv6Subnet net.IPNet
+)
 
 // reconfigure flag.
 var reconfigure bool

@@ -125,7 +125,6 @@ var vxlanDeleteCmd = &cobra.Command{
 		var err error
 
 		ls, err = utils.GetLinksByNamePrefix(delPrefix)
-
 		if err != nil {
 			return err
 		}
