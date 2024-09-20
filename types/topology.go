@@ -4,6 +4,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/utils"
+	"strings"
 )
 
 // Topology represents a lab topology.
@@ -294,10 +295,10 @@ func (t *Topology) GetNodeGroup(name string) string {
 func (t *Topology) GetNodeType(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if v := ndef.GetType(); v != "" {
-			return v
+			return strings.TrimSpace(v)
 		}
 		if v := t.GetKind(t.GetNodeKind(name)).GetType(); v != "" {
-			return v
+			return strings.TrimSpace(v)
 		}
 	}
 	return t.GetDefaults().GetType()
