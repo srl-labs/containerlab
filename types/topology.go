@@ -1,10 +1,11 @@
 package types
 
 import (
+	"strings"
+
 	"github.com/docker/go-connections/nat"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/utils"
-	"strings"
 )
 
 // Topology represents a lab topology.
