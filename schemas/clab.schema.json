@@ -100,6 +100,7 @@
                         "cisco_iol",
                         "cvx",
                         "cumulus_cvx",
+                        "huawei_n40e",
                         "openbsd",
                         "freebsd",
                         "generic_vm",
