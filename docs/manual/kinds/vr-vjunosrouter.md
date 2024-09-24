@@ -37,7 +37,12 @@ Juniper vJunos-router node launched with containerlab can be managed via the fol
     ```bash
     ssh admin@<container-name> -p 830 -s netconf
     ```
-
+=== "Console"
+    serial port (console) is exposed over telnet TCP port 5000:
+    ```bash
+    telnet <node-name> 5000
+    ```  
+    
 !!!info
     Default user credentials: `admin:admin@123`
 
