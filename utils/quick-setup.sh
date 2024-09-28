@@ -1,5 +1,8 @@
 DISTRO_TYPE=""
 
+# Docker version that will be installed by this install script.
+DOCKER_VERSION="26.1.4"
+
 function check_os {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -56,7 +59,9 @@ function install-docker-debian {
     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
 
-    sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    DOCKER_PKG_NAME=$(apt-cache madison docker-ce | awk '{ print $3 }' | grep ${DOCKER_VERSION} | head -n 1)
+
+    sudo apt-get -y install docker-ce=${DOCKER_PKG_NAME} docker-ce-cli=${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin
 }
 
 function install-docker-ubuntu {
@@ -78,7 +83,9 @@ function install-docker-ubuntu {
     sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update -y
 
-    sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    DOCKER_PKG_NAME=$(apt-cache madison docker-ce | awk '{ print $3 }' | grep ${DOCKER_VERSION} | head -n 1)
+
+    sudo apt-get -y install docker-ce=${DOCKER_PKG_NAME} docker-ce-cli=${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin
 }
 
 function install-docker-rhel {
@@ -98,7 +105,9 @@ function install-docker-rhel {
     sudo yum install -y yum-utils
     sudo yum-config-manager -y --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
 
-    sudo yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    DOCKER_PKG_NAME=$(yum list docker-ce --showduplicates | grep ${DOCKER_VERSION} | head -n 1)
+
+    sudo yum install -y docker-ce-${DOCKER_PKG_NAME} docker-ce-cli-${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin
 
     # diverges from the instructions. This means docker daemon starts on each boot.
     sudo systemctl enable --now docker
@@ -121,7 +130,9 @@ function install-docker-fedora {
     sudo dnf install -y dnf-plugins-core
     sudo dnf config-manager -y --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
 
-    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    DOCKER_PKG_NAME=$(dnf list docker-ce --showduplicates | grep ${DOCKER_VERSION} | head -n 1)
+
+    sudo dnf install -y docker-ce-${DOCKER_PKG_NAME} docker-ce-cli-${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin
 
     # diverges from the instructions. This means docker daemon starts on each boot.
     sudo systemctl enable --now docker

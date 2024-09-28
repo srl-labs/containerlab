@@ -9,7 +9,7 @@
     },
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
-            "version": "latest",
+            "version": "26.1.4",
             "dockerDashComposeVersion": "none"
         },
         // Add sshd to support gh cli codespace cp.
@@ -17,7 +17,7 @@
             "version": "latest"
         },
         "ghcr.io/devcontainers/features/go:1": {
-            "version": "1.21"
+            "version": "1.22"
         }
     },
     "remoteUser": "vscode",
