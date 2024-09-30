@@ -43,8 +43,8 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 }
 
-// resolveStitchedVEthComponent creates the veth link and return it, the endpoint that is
-// supposed to be stitched is returned seperately for further processing.
+// resolveStitchedVEthComponent creates the veth link and returns it, the endpoint that is
+// supposed to be stitched is returned separately for further processing.
 func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*LinkVEth, Endpoint, error) {
 	var err error
 
@@ -85,16 +85,26 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error
 		return nil, err
 	}
 
-	// prepare the veth struct
-	vethLink, stitchEp, err := lr.resolveStitchedVEthComponent(params)
-	if err != nil {
-		return nil, err
+	var vethLink *LinkVEth
+	var stitchEp Endpoint
+
+	// if the endpoint is host, we don't need to create the veth link
+	// the stitch endpoint becomes the vxlan link local endpoint
+	if lr.Endpoint.Node == "host" {
+		vethLink, stitchEp, err = nil, vxlanLink.localEndpoint, nil
+	} else {
+		// otherwise we need to create the veth link
+		vethLink, stitchEp, err = lr.resolveStitchedVEthComponent(params)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	// return the stitched vxlan link
-	stitchedLink := NewVxlanStitched(vxlanLink, vethLink, stitchEp)
+	vxlanStitchedLink := NewVxlanStitched(vxlanLink, vethLink, stitchEp)
 
-	return stitchedLink, nil
+	return vxlanStitchedLink, nil
 }
 
 func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*LinkVxlan, error) {
@@ -109,7 +119,7 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	}
 
 	ip := net.ParseIP(lr.Remote)
-	// if the returned ip is nil, an error occured.
+	// if the returned ip is nil, an error occurred.
 	// we consider, that we maybe have a textual hostname
 	// e.g. dns name so we try to resolve the string next
 	if ip == nil {
@@ -182,7 +192,7 @@ func (lr *LinkVxlanRaw) resolveLocalEndpoint(stitched bool, params *ResolveParam
 			vxlanRawEp.Iface = fmt.Sprintf("vx-%s", params.VxlanIfaceNameOverwrite)
 		}
 
-		// in the stiched vxlan mode we create vxlan interface in the host node namespace
+		// in the stitched vxlan mode we create vxlan interface in the host node namespace
 		vxlanRawEp.Node = "host"
 		vxlanRawEp.MAC = ""
 

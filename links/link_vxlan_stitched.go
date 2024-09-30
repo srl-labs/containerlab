@@ -15,8 +15,8 @@ type VxlanStitched struct {
 	vxlanLink *LinkVxlan
 	vethLink  *LinkVEth
 	// the veth does not distinguish between endpoints. but we
-	// need to  know which endpoint is the one used for
-	// stitching therefore we get that endpoint seperately
+	// need to know which endpoint is the one used for
+	// stitching therefore we get that endpoint separately
 	vethStitchEp Endpoint
 }
 
@@ -33,14 +33,14 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 	return vxlanStitched
 }
 
-// DeployWithExistingVeth provisons the stitched vxlan link whilst the
+// DeployWithExistingVeth provisions the stitched vxlan link whilst the
 // veth interface does already exist, hence it is not created as part of this
 // deployment.
 func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context, ep Endpoint) error {
 	return l.internalDeploy(ctx, ep, true)
 }
 
-// Deploy provisions the stitched vxlan link with all its underlaying sub-links.
+// Deploy provisions the stitched vxlan link with all its underlying sub-links.
 func (l *VxlanStitched) Deploy(ctx context.Context, ep Endpoint) error {
 	return l.internalDeploy(ctx, ep, false)
 }

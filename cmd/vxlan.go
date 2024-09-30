@@ -109,7 +109,10 @@ var vxlanCreateCmd = &cobra.Command{
 		}
 
 		for _, ep := range vxl.GetEndpoints() {
-			ep.Deploy(ctx)
+			err := ep.Deploy(ctx)
+			if err != nil {
+				return err
+			}
 		}
 
 		return nil
