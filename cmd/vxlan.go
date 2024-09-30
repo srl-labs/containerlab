@@ -56,7 +56,7 @@ var vxlanCmd = &cobra.Command{
 var vxlanCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create vxlan interface",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx := context.Background()
 
 		if _, err := netlink.LinkByName(cntLink); err != nil {
@@ -108,8 +108,10 @@ var vxlanCreateCmd = &cobra.Command{
 			return fmt.Errorf("not a VxlanStitched link")
 		}
 
-		for _, ep := range vxl.GetEndpoints() {
-			ep.Deploy(ctx)
+		// deploy the vxlan with existing link. The first endpoint is the host endpoint
+		err = vxl.DeployWithExistingVeth(ctx, vxl.GetEndpoints()[0])
+		if err != nil {
+			return err
 		}
 
 		return nil
@@ -119,7 +121,7 @@ var vxlanCreateCmd = &cobra.Command{
 var vxlanDeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "delete vxlan interface",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		var ls []netlink.Link
 		var err error
 
