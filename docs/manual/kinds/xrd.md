@@ -22,11 +22,23 @@ XRd image is available for download only for users who have an active service ac
 
 ## Host server requirements
 
-You should increase the value of `user.max_inotify_instances`:
+Cisco [xrdocs](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-setting-up-host-environment-to-run-xrd/#making-suggested-corrections-to-the-host-machine) reccomends to increase `inotify.max_user_instances` and `inotify.max_user_watches`.
+
+You can do this by executing the following:
 
 ```bash
-sysctl -w user.max_inotify_instances=64000
+sysctl -w fs.inotify.max_user_instances=64000
+sysctl -w fs.inotify.max_user_watches=64000
 ```
+
+To make the settings persist reboots append `fs.inotify.max_user_instances=64000` and `fs.inotify.max_user_watches=64000` to `/etc/sysctl.conf`. You can use the following one-liner:
+
+```
+echo -e "fs.inotify.max_user_instances=64000\nfs.inotify.max_user_watches=64000" | sudo tee -a /etc/sysctl.conf
+```
+
+!!!tip
+    If using 10+ XRd nodes, you may need to increase the `fs.inotify.max_user_instances` and/or `fs.inotify.max_user_watches` even higher.
 
 ## Managing XRd nodes
 
