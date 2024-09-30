@@ -24,6 +24,7 @@ nav:
               - Cisco 8000: manual/kinds/c8000.md
               - Cisco c8000v: manual/kinds/vr-c8000v.md
               - Cisco Catalyst 9000v: manual/kinds/vr-cat9kv.md
+              - Cisco IOL: manual/kinds/iol.md
               - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Juniper:
               - Juniper cRPD: manual/kinds/crpd.md
