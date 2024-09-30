@@ -56,7 +56,7 @@ var vxlanCmd = &cobra.Command{
 var vxlanCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create vxlan interface",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx := context.Background()
 
 		if _, err := netlink.LinkByName(cntLink); err != nil {
@@ -121,7 +121,7 @@ var vxlanCreateCmd = &cobra.Command{
 var vxlanDeleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "delete vxlan interface",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		var ls []netlink.Link
 		var err error
 
