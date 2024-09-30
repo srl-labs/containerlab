@@ -35,7 +35,7 @@ Users can adjust the CPU and memory resources by setting adding appropriate envi
 You can manage the [[[ kind_display_name ]]] with containerlab via the following interfaces:
 
 /// tab | bash
-to connect to a `bash` shell of a running Cisco CSR1000v container:
+to connect to a `bash` shell of a running [[[ kind_display_name ]]] container:
 
 ```bash
 docker exec -it <container-name/id> bash
@@ -43,7 +43,7 @@ docker exec -it <container-name/id> bash
 
 ///
 /// tab | CLI
-to connect to the Catalyst 9000v CLI
+to connect to the [[[ kind_display_name ]]]  CLI
 
 ```bash
 ssh admin@<container-name/id>
