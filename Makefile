@@ -30,6 +30,10 @@ build-debug:
 	mkdir -p $(BIN_DIR)
 	go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
 
+build-dlv-debug:
+	mkdir -p $(BIN_DIR)
+	go build -o $(BINARY) -gcflags=all="-N -l" main.go
+
 
 build-with-podman:
 	mkdir -p $(BIN_DIR)
