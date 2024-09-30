@@ -13,8 +13,10 @@ XRd comes in two [variants](https://xrdocs.io/virtual-routing/tutorials/2022-08-
 
 Containerlab supports only the control-plane flavor of XRd, as it allows to build topologies using virtual interfaces, whereas vrouter requires PCI interfaces to be attached to it.
 
-!!!tip
-    Consult with [XRd Tutorials](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-xrd-images-where-can-one-get-them/) series to get an in-depth understanding of XRd requirements and capabilities.
+/// admonition
+    type: tip
+Consult with [XRd Tutorials](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-xrd-images-where-can-one-get-them/) series to get an in-depth understanding of XRd requirements and capabilities.
+///
 
 ## Getting XRd
 
@@ -37,8 +39,10 @@ To make the settings persist reboots append `fs.inotify.max_user_instances=64000
 echo -e "fs.inotify.max_user_instances=64000\nfs.inotify.max_user_watches=64000" | sudo tee -a /etc/sysctl.conf
 ```
 
-!!!tip
-    If using 10+ XRd nodes, you may need to increase the `fs.inotify.max_user_instances` and/or `fs.inotify.max_user_watches` even higher.
+/// admonition
+    type: tip
+If using 10+ XRd nodes, you may need to increase the `fs.inotify.max_user_instances` and/or `fs.inotify.max_user_watches` even higher.
+///
 
 ## Managing XRd nodes
 
@@ -71,8 +75,10 @@ There are several management interfaces supported by XRd nodes:
     ssh clab@<container-name> -p 830 -s netconf
     ```
 
-!!!info
-    Default credentials: `clab:clab@123`
+/// admonition
+    type: info
+Default credentials: `clab:clab@123`
+///
 
 ## Interfaces mapping
 
@@ -139,8 +145,10 @@ With such topology file containerlab is instructed to take a file `xrd.cfg` from
 
 To provide a user-defined config, take the [default configuration template](https://github.com/srl-labs/containerlab/blob/main/nodes/xrd/xrd.cfg) and add the necessary configuration commands without changing the rest of the file. This will result in proper automatic assignment of IP addresses to the management interface, as well as applying user-defined commands.
 
-!!!tip
-    Check [SR Linux and XRd](../../lab-examples/srl-xrd.md) lab example where startup configuration files are provided to both nodes to see it in action.
+/// admonition
+    type: tip
+Check [SR Linux and XRd](../../lab-examples/srl-xrd.md) lab example where startup configuration files are provided to both nodes to see it in action.
+///
 
 #### Configuration persistency
 
