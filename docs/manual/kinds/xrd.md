@@ -22,7 +22,7 @@ XRd image is available for download only for users who have an active service ac
 
 ## Host server requirements
 
-Cisco [xrdocs](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-setting-up-host-environment-to-run-xrd/#making-suggested-corrections-to-the-host-machine) reccomends to increase `inotify.max_user_instances` and `inotify.max_user_watches`.
+Cisco [xrdocs](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-setting-up-host-environment-to-run-xrd/#making-suggested-corrections-to-the-host-machine) recommends to increase `inotify.max_user_instances` and `inotify.max_user_watches`.
 
 You can do this by executing the following:
 
