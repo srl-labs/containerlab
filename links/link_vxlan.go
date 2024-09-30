@@ -89,9 +89,12 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error
 	var stitchEp Endpoint
 
 	// if the endpoint is host, we don't need to create the veth link
-	// the stitch endpoint becomes the vxlan link local endpoint
+	// the stitch endpoint is just a host endpoint with the passed interface name
 	if lr.Endpoint.Node == "host" {
-		vethLink, stitchEp, err = nil, vxlanLink.localEndpoint, nil
+		// a fake endpoint used only to print the host interface name in the outputs
+		// it is not deployed as it meant to exist
+		epHost := NewEndpointHost(NewEndpointGeneric(vxlanLink.localEndpoint.GetNode(), params.VxlanIfaceNameOverwrite, nil))
+		vethLink, stitchEp, err = nil, epHost, nil
 	} else {
 		// otherwise we need to create the veth link
 		vethLink, stitchEp, err = lr.resolveStitchedVEthComponent(params)
