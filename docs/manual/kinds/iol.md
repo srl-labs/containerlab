@@ -7,7 +7,7 @@ kind_short_display_name: IOL
 ---
 # [[[ kind_display_name ]]]
 
-The Cisco IOL (IOS On Linux) (or [[[ kind_short_display_name ]]] for short) is a version of Cisco IOS/IOS-XE software which doesn't run as a virtual machine. 
+Cisco IOL (IOS On Linux) (or [[[ kind_short_display_name ]]] for short) is a version of Cisco IOS/IOS-XE software which doesn't run as a virtual machine. 
 
 Cisco IOL is distributed as a binary and executes directly ontop of Linux, hence the name IOS *On Linux*.
 
@@ -22,9 +22,9 @@ From the IOL binary you are required to build a container using the [vrnetlab](.
 IOL is distributed as two versions:
 
 - IOL
-    - Meant for usage as an L3 router, lacks L2 switching functionality.
+    - For usage as an L3 router, lacks L2 switching functionality.
 - IOL-L2
-    - Meant for usage as a virtual version of an IOS-XE switch. Still has support for some L3 features.
+    - For usage as a virtual version of an IOS-XE switch. Still has support for some L3 features.
 
 ## Resource requirements
 
@@ -93,12 +93,12 @@ topology:
 ```
 
 /// warning
-You may see more interfaces than you have defined in the [[[ kind_short_display_name ]]] CLI, this is because interfaces are provisioned in groups of 4. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
+You may see more interfaces than you have defined in the [[[ kind_short_display_name ]]] CLI, this is because interfaces are provisioned in groups. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
 ///
 
 When containerlab launches [[[ kind_display_name ]]] node the `Ethernet0/0` interface of the VM gets assigned a management address via DHCP. 
 
-On IOL the `Ethernet0/0` is in it's own management VRF so configuration in the global context will not affect the management interface. This is *not* the case in IOL-L2, applied configuration may interfere with the management interface and take down SSH access to the container.
+On IOL the `Ethernet0/0` is in it's own management VRF so configuration in the global context will not affect the management interface. On IOL-L2 the management interface is the `Vlan1` interface, it is also in it's own management VRF.
 
 Data interfaces `Ethernet0/1+` need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI:
 
