@@ -28,7 +28,7 @@ IOL is distributed as two versions:
 
 ## Resource requirements
 
-[[[ kind_display_name ]]] is very light on resources. There are no strict resource requirements but assume 1vCPU and 1GB of RAM per node at most.
+[[[ kind_display_name ]]] is very light on resources. Each IOL node requires at minimum 1GB of disk space for the NVRAM (where configuration is saved) and 1G of RAM. Assume 1vCPU per node, but you can oversubscribe and run multiple IOL nodes per vCPU.
 
 ## Managing [[[ kind_display_name ]]] nodes
 
