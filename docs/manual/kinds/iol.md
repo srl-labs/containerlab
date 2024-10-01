@@ -68,13 +68,14 @@ With that naming convention in mind:
 - `e0/1` - first data port available
 - `e0/2` - second data port, and so on...
 
-The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
+The example ports above would be mapped to the following Linux interfaces inside the container running [[[ kind_display_name ]]]:
 
 - `eth0` - management interface connected to the containerlab management network. Mapped to `Ethernet0/0`.
 - `eth1` - First data-plane interface. Mapped to `Ethernet0/1` interface.
 - `eth2` - Second data-plane interface. Mapped to `Ethernet0/2` interface and so on.
 
-When containerlab launches [[[ kind_display_name ]]], the `Ethernet0/0` interface of the VM gets assigned management IPv4 and IPv6 addresses from docker.
+When containerlab launches [[[ kind_display_name ]]], the `Ethernet0/0` or `Vlan1` interface of the container gets assigned management IPv4 and IPv6 addresses from docker. On IOL the `Ethernet0/0` is in it's own management VRF so configuration in the global context will not affect the management interface. On IOL-L2 the management interface is the `Vlan1` interface, it is also in it's own management VRF.
+
 
 Interfaces must be defined in a contigous manner in your toplogy file. For example, if you want to use `Ethernet0/4` you must define `Ethernet0/1`, `Ethernet0/2` and `Ethernet0/3`. See the example below.
 
@@ -99,8 +100,6 @@ topology:
 /// warning
 You may see more interfaces than you have defined in the [[[ kind_short_display_name ]]] CLI, this is because interfaces are provisioned in groups. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
 ///
-
-On IOL the `Ethernet0/0` is in it's own management VRF so configuration in the global context will not affect the management interface. On IOL-L2 the management interface is the `Vlan1` interface, it is also in it's own management VRF.
 
 Data interfaces `Ethernet0/1+` need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI:
 
