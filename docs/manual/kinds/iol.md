@@ -30,6 +30,8 @@ IOL is distributed as two versions:
 
 [[[ kind_display_name ]]] is very light on resources. Each IOL node requires at minimum 1GB of disk space for the NVRAM (where configuration is saved) and 1G of RAM. Assume 1vCPU per node, but you can oversubscribe and run multiple IOL nodes per vCPU.
 
+Using [KSM](../vrnetlab.md#memory-optimization) you can achieve a higher density of IOL nodes per GB of RAM.
+
 ## Managing [[[ kind_display_name ]]] nodes
 
 You can manage the [[[ kind_display_name ]]] with containerlab via the following interfaces:
@@ -72,7 +74,9 @@ The example ports above would be mapped to the following Linux interfaces inside
 - `eth1` - First data-plane interface. Mapped to `Ethernet0/1` interface.
 - `eth2` - Second data-plane interface. Mapped to `Ethernet0/2` interface and so on.
 
-You must define interfaces in a contigous manner in your toplogy file. For example, if you want to use `Ethernet0/4` you must define `Ethernet0/1`, `Ethernet0/2` and `Ethernet0/3`. See the example below.
+When containerlab launches [[[ kind_display_name ]]], the `Ethernet0/0` interface of the VM gets assigned management IPv4 and IPv6 addresses from docker.
+
+Interfaces must be defined in a contigous manner in your toplogy file. For example, if you want to use `Ethernet0/4` you must define `Ethernet0/1`, `Ethernet0/2` and `Ethernet0/3`. See the example below.
 
 ```yaml
 name: my-iol-lab
@@ -95,8 +99,6 @@ topology:
 /// warning
 You may see more interfaces than you have defined in the [[[ kind_short_display_name ]]] CLI, this is because interfaces are provisioned in groups. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
 ///
-
-When containerlab launches [[[ kind_display_name ]]] node the `Ethernet0/0` interface of the VM gets assigned a management address via DHCP. 
 
 On IOL the `Ethernet0/0` is in it's own management VRF so configuration in the global context will not affect the management interface. On IOL-L2 the management interface is the `Vlan1` interface, it is also in it's own management VRF.
 
