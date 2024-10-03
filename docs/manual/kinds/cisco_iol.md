@@ -7,28 +7,24 @@ kind_short_display_name: IOL
 ---
 # [[[ kind_display_name ]]]
 
-Cisco IOL (IOS On Linux) (or [[[ kind_short_display_name ]]] for short) is a version of Cisco IOS/IOS-XE software which doesn't run as a virtual machine. 
-
-Cisco IOL is distributed as a binary and executes directly ontop of Linux, hence the name IOS *On Linux*.
+[[[ kind_display_name ]]] (IOS On Linux or [[[ kind_short_display_name ]]] for short) is a version of Cisco IOS/IOS-XE software which is packaged as binary, in other words it does not require a virtual machine, hence the name IOS *On Linux*.
 
 It is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md) and built using [vrnetlab](../vrnetlab.md) project and essentially is the IOL binary packaged into a docker container.
 
 ## Getting and building [[[ kind_display_name ]]]
 
-You can get [[[ kind_display_name ]]] from Cisco's CML refplat .iso. It is identified by the `iol` or `ioll2` prefix. 
+You can get [[[ kind_display_name ]]] from Cisco's CML refplat .iso. It is identified by the `iol` or `ioll2` prefix.
 
 From the IOL binary you are required to build a container using the [vrnetlab](../vrnetlab.md) project.
 
 IOL is distributed as two versions:
 
-- IOL
-    - For usage as an L3 router, lacks L2 switching functionality.
-- IOL-L2
-    - For usage as a virtual version of an IOS-XE switch. Still has support for some L3 features.
+- **IOL** - For usage as an L3 router, lacks L2 switching functionality.
+- **IOL-L2** - For usage as a virtual version of an IOS-XE switch. Still has support for some L3 features.
 
 ## Resource requirements
 
-[[[ kind_display_name ]]] is very light on resources. Each IOL node requires at minimum 1GB of disk space for the NVRAM (where configuration is saved) and 1G of RAM. Assume 1vCPU per node, but you can oversubscribe and run multiple IOL nodes per vCPU.
+[[[ kind_display_name ]]] is very light on resources compared to VM-based Cisco products. Each IOL node requires at minimum 1GB of disk space for the NVRAM (where configuration is saved) and 1G of RAM. Assume 1vCPU per node, but you can oversubscribe and run multiple IOL nodes per vCPU.
 
 Using [KSM](../vrnetlab.md#memory-optimization) you can achieve a higher density of IOL nodes per GB of RAM.
 
@@ -76,7 +72,6 @@ The example ports above would be mapped to the following Linux interfaces inside
 
 When containerlab launches [[[ kind_display_name ]]], the `Ethernet0/0` or `Vlan1` interface of the container gets assigned management IPv4 and IPv6 addresses from docker. On IOL the `Ethernet0/0` is in it's own management VRF so configuration in the global context will not affect the management interface. On IOL-L2 the management interface is the `Vlan1` interface, it is also in it's own management VRF.
 
-
 Interfaces must be defined in a contigous manner in your toplogy file. For example, if you want to use `Ethernet0/4` you must define `Ethernet0/1`, `Ethernet0/2` and `Ethernet0/3`. See the example below.
 
 ```yaml
@@ -85,10 +80,10 @@ topology:
   nodes:
     iol-1:
       kind: cisco_iol
-      image: vrnetlab/vr-iol:17.12.01
+      image: vrnetlab/cisco_iol:17.12.01
     iol-2:
       kind: cisco_iol
-      image: vrnetlab/vr-iol:17.12.01
+      image: vrnetlab/cisco_iol:17.12.01
 
   links:
     - endpoints: ["iol-1:Ethernet0/1","iol-2:Ethernet0/1"] 
@@ -111,25 +106,26 @@ Ethernet0/1            unassigned      YES unset  administratively down down
 Ethernet0/2            unassigned      YES unset  administratively down down
 Ethernet0/3            unassigned      YES unset  administratively down down
 ```
+
 ## Sample topology
 
 Below is a sample topology of two IOL nodes connected via an IOL-L2 switch.
 
 ```yaml
-name: my-iol-lab
+name: iol
 topology:
   nodes:
-    iol-router1:
+    router1:
       kind: cisco_iol
-      image: vrnetlab/vr-iol:17.12.01
-    iol-router2:
+      image: vrnetlab/cisco_iol:17.12.01
+    router2:
       kind: cisco_iol
-      image: vrnetlab/vr-iol:17.12.01
-    iol-switch:
+      image: vrnetlab/cisco_iol:17.12.01
+    switch:
       kind: cisco_iol
-      image: vrnetlab/vr-iol-l2:17.12.01
+      image: vrnetlab/cisco_iol-l2:17.12.01
 
   links:
-    - endpoints: ["iol-router1:Ethernet0/1","iol-switch:Ethernet0/1"] 
-    - endpoints: ["iol-router2:Ethernet0/1","iol-switch:Ethernet0/2"]
+    - endpoints: ["router1:Ethernet0/1","switch:Ethernet0/1"]
+    - endpoints: ["router2:Ethernet0/1","switch:Ethernet0/2"]
 ```

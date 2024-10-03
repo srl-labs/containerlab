@@ -97,6 +97,7 @@
                         "cisco_c8000",
                         "cisco_c8000v",
                         "cisco_cat9kv",
+                        "cisco_iol",
                         "cvx",
                         "cumulus_cvx",
                         "openbsd",
@@ -956,6 +957,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_ftdv": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_iol": {
                             "$ref": "#/definitions/node-config"
                         },
                         "linux": {
