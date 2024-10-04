@@ -20,11 +20,11 @@ From the IOL binary you are required to build a container using the [vrnetlab](.
 IOL is distributed as two versions:
 
 - **IOL** - For usage as an L3 router, lacks L2 switching functionality.
-- **IOL-L2** - For usage as a virtual version of an IOS-XE switch. Still has support for some L3 features.
+- **IOL-L2** - For usage as a virtual version of an IOS-XE switch. Still has support for some L3 features. See [usage information](#usage-and-sample-topology).
 
 ## Resource requirements
 
-[[[ kind_display_name ]]] is very light on resources compared to VM-based Cisco products. Each IOL node requires at minimum 1GB of disk space for the NVRAM (where configuration is saved) and 1G of RAM. Assume 1vCPU per node, but you can oversubscribe and run multiple IOL nodes per vCPU.
+[[[ kind_display_name ]]] is very light on resources compared to VM-based Cisco products. Each IOL node requires at minimum 1Mb of disk space for the NVRAM (where configuration is saved) and 768M of RAM. Assume 1vCPU per node, but you can oversubscribe and run multiple IOL nodes per vCPU.
 
 Using [KSM](../vrnetlab.md#memory-optimization) you can achieve a higher density of IOL nodes per GB of RAM.
 
@@ -107,9 +107,11 @@ Ethernet0/2            unassigned      YES unset  administratively down down
 Ethernet0/3            unassigned      YES unset  administratively down down
 ```
 
-## Sample topology
+## Usage and sample topology
 
-Below is a sample topology of two IOL nodes connected via an IOL-L2 switch.
+IOL-L2 has a different startup configuration compared to the regular IOL. You can tell containerlab you are using the L2 image by supplying the `type` field in your topology. 
+
+See the sample topology below
 
 ```yaml
 name: iol
@@ -123,9 +125,9 @@ topology:
       image: vrnetlab/cisco_iol:17.12.01
     switch:
       kind: cisco_iol
-      image: vrnetlab/cisco_iol-l2:17.12.01
-
+      image: vrnetlab/cisco_iol:L2-17.12.01
+      type: l2
   links:
     - endpoints: ["router1:Ethernet0/1","switch:Ethernet0/1"]
-    - endpoints: ["router2:Ethernet0/1","switch:Ethernet0/2"]
+    - endpoints: ["router2:Ethernet0/1","switch:e0/2"]
 ```
