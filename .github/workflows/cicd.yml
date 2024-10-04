@@ -330,6 +330,14 @@ jobs:
     with:
       py_ver: ${{ needs.file-changes.outputs.py_ver }}
 
+  cisco_iol-tests:
+    uses: ./.github/workflows/cisco_iol-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+    with:
+      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
     runs-on: ubuntu-22.04
@@ -344,6 +352,7 @@ jobs:
       - kind-tests
       # - sros-tests
       - fortigate-tests
+      - cisco_iol-tests
 
     steps:
       - name: Checkout
