@@ -24,7 +24,11 @@ IOL is distributed as two versions:
 
 ## Resource requirements
 
-[[[ kind_display_name ]]] is very light on resources compared to VM-based Cisco products. Each IOL node requires at minimum 1Mb of disk space for the NVRAM (where configuration is saved) and 768M of RAM. Assume 1vCPU per node, but you can oversubscribe and run multiple IOL nodes per vCPU.
+[[[ kind_display_name ]]] is very light on resources compared to VM-based Cisco products. Each IOL node requires at minimum:
+
+- 1vCPU per node, you are able oversubscribe and run many IOL nodes per vCPU.
+- 768Mb of RAM. 
+- 1Mb of disk space for the NVRAM (where configuration is saved).
 
 Using [KSM](../vrnetlab.md#memory-optimization) you can achieve a higher density of IOL nodes per GB of RAM.
 
@@ -61,18 +65,27 @@ The interface naming convention is: `Ethernet0/X` (or `e0/X`), where `X` is the 
 
 With that naming convention in mind:
 
-- `e0/1` - first data port available
-- `e0/2` - second data port, and so on...
+- `e0/1` - First data-plane interface available
+- `e0/2` - Second data-plane interface, and so on...
+
+Keep in mind IOL defines interfaces in groups of 4. Every four interfaces (zero-indexed), the slot index increments by one.
+
+- `e0/3` - Third data-plane interface
+- `e1/0` - Fourth data-plane interface
+- `e1/1` - Fifth data-plane interface
 
 The example ports above would be mapped to the following Linux interfaces inside the container running [[[ kind_display_name ]]]:
 
 - `eth0` - management interface connected to the containerlab management network. Mapped to `Ethernet0/0`.
 - `eth1` - First data-plane interface. Mapped to `Ethernet0/1` interface.
-- `eth2` - Second data-plane interface. Mapped to `Ethernet0/2` interface and so on.
+- `eth2` - Second data-plane interface. Mapped to `Ethernet0/2` interface 
+- `eth3` - Third data-plane interface. Mapped to `Ethernet0/3` interface
+- `eth4` - Fourth data-plane interface. Mapped to `Ethernet1/0` interface
+- `eth5` - Fifth data-plane interface. Mapped to `Ethernet1/1` interface and so on...
 
 When containerlab launches [[[ kind_display_name ]]], the `Ethernet0/0` or `Vlan1` interface of the container gets assigned management IPv4 and IPv6 addresses from docker. On IOL the `Ethernet0/0` is in it's own management VRF so configuration in the global context will not affect the management interface. On IOL-L2 the management interface is the `Vlan1` interface, it is also in it's own management VRF.
 
-Interfaces must be defined in a contigous manner in your toplogy file. For example, if you want to use `Ethernet0/4` you must define `Ethernet0/1`, `Ethernet0/2` and `Ethernet0/3`. See the example below.
+Interfaces can be defined in a non-contigous manner in your toplogy file. See the example below.
 
 ```yaml
 name: my-iol-lab
@@ -87,13 +100,15 @@ topology:
 
   links:
     - endpoints: ["iol-1:Ethernet0/1","iol-2:Ethernet0/1"] 
-    - endpoints: ["iol-1:Ethernet0/2","iol-2:Ethernet0/2"]
-    - endpoints: ["iol-1:Ethernet0/3", "iol-2:Ethernet0/3"]
-    - endpoints: ["iol-1:Ethernet0/4", "iol-2:Ethernet0/4"]
+    - endpoints: ["iol-1:Ethernet1/3", "iol-2:Ethernet1/0"]
 ```
 
 /// warning
-You may see more interfaces than you have defined in the [[[ kind_short_display_name ]]] CLI, this is because interfaces are provisioned in groups. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
+When defining interfaces non-contigiously you may see more interfaces than you have defined in the [[[ kind_short_display_name ]]] CLI, this is because interfaces are provisioned in groups.
+
+At minimum you will see all numerically-lower indexed interfaces in the CLI compared to the interface you have defined, you may also see interfaces with a higher numerical index. 
+
+**Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.**
 ///
 
 Data interfaces `Ethernet0/1+` need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI:
