@@ -5,13 +5,20 @@
 package cisco_iol
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
+	"net"
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
+	"strings"
+	"text/template"
 
+	"github.com/hairyhenderson/gomplate/v3"
+	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -22,12 +29,16 @@ var (
 	kindnames          = []string{"cisco_iol"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
-	//go:embed iol.cfg
+	//go:embed iol.cfg.tmpl
 	cfgTemplate string
+
+	IOLCfgTpl, _ = template.New("clab-iol-default-config").Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(cfgTemplate)
+
+	IOLMACBase = "1a:2b:3c"
 
 	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?0/(?P<port>\d+)$`)
 	InterfaceOffset = 1
-	InterfaceHelp   = "e0/X or Ethernet0/X (where X >= 1) or ethX (where X >= 1)"
+	InterfaceHelp   = "e0/X or EthernetX/Y (where X >= 0 and Y >= 1) or ethY (where Y >= 1)"
 )
 
 // Register registers the node in the NodeRegistry.
@@ -39,6 +50,8 @@ func Register(r *nodes.NodeRegistry) {
 
 type iol struct {
 	nodes.VRNode
+
+	isL2Node bool
 }
 
 func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -48,6 +61,17 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg = cfg
 	for _, o := range opts {
 		o(n)
+	}
+
+	// check if user submitted node type is valid
+	if n.Cfg.NodeType == "" || strings.ToLower(n.Cfg.NodeType) == "iol" {
+		n.Cfg.NodeType = "iol"
+		n.isL2Node = false
+	} else if strings.ToLower(n.Cfg.NodeType) == "l2" {
+		n.isL2Node = true
+	} else {
+		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
+			n.Cfg.NodeType, "iol, l2")
 	}
 
 	n.Cfg.Binds = append(n.Cfg.Binds,
@@ -61,16 +85,6 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "iouyap.ini"), ":/iol/iouyap.ini"),
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "NETMAP"), ":/iol/NETMAP"),
 	)
-
-	// generate management interface MAC
-	hwa, err := utils.GenMac("00:1c:73")
-	if err != nil {
-		return err
-	}
-
-	n.Cfg.EnforceStartupConfig = true
-
-	n.Cfg.MacAddress = hwa.String()
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceOffset = InterfaceOffset
@@ -95,27 +109,7 @@ func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
-	return n.GenStartupConfig(ctx)
-}
-
-func (n *iol) GenStartupConfig(ctx context.Context) error {
-
-	nodeCfg := n.Config()
-
-	// set mgmt ipv4 gateway as it is already known by now
-	// since the container network has been created before we launch nodes
-	// and mgmt gateway can be used in iol.Cfg template to configure default route for mgmt
-	nodeCfg.MgmtIPv4Gateway = n.Runtime.Mgmt().IPv4Gw
-	nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
-
-	// os.Remove(path.Join(n.Cfg.LabDir, "startup.cfg"))
-
-	err := n.GenerateConfig(filepath.Join(n.Cfg.LabDir, "startup.cfg"), cfgTemplate)
-	if err != nil {
-		return err
-	}
-
-	return err
+	return n.GenInterfaceConfig(ctx)
 }
 
 func (n *iol) CreateIOLFiles(ctx context.Context) error {
@@ -127,34 +121,123 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 		utils.CreateFile(path.Join(n.Cfg.LabDir, "nvram"), "")
 	}
 
+	// create these files so the bind monut doesn't automatically
+	// make folders.
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "startup.cfg"), "")
-
-	n.GenInterfaceCfg(ctx)
+	utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), "")
+	utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), "")
 
 	return nil
 }
 
-func (n *iol) GenInterfaceCfg(_ context.Context) error {
+// Generate interfaces configuration for IOL (and iouyap/netmap)
+func (n *iol) GenInterfaceConfig(_ context.Context) error {
 
-	slot := 0
-	port := 0
-	iouyapData := "[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n"
-	netmapdata := ""
+	// add default 'boilerplate' to NETMAP and iouyap.ini for management port (e0/0)
+	iouyapData := "[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:0/0]\neth_dev = eth0\n"
+	netmapdata := "1:0/0 513:0/0\n"
 
-	for i, intf := range n.Endpoints {
+	slot, port := 0, 0
 
-		slot = i / 4
-		port = i % 4
+	IOLInterfaces := []IOLInterface{}
 
-		fmt.Printf("Interface: %v, Ethernet%d/%d\n", intf, slot, port)
+	// Regexp to pull number out of linux'ethX' interface naming
+	IntfRegExpr := regexp.MustCompile("[0-9]+")
 
-		iouyapData += fmt.Sprintf("[513:%d/%d]\neth_dev = eth%d", slot, port, i)
+	for _, intf := range n.Endpoints {
+
+		// get numeric interface number and cast to int
+		x, _ := strconv.Atoi(IntfRegExpr.FindString(intf.GetIfaceName()))
+
+		// Interface naming is Ethernet{slot}/{port}. Each slot contains max 4 ports
+		slot = x / 4
+		port = x % 4
+
+		hwa, _ := utils.GenMac(IOLMACBase)
+
+		// append data to write to NETMAP and IOUYAP files
+		iouyapData += fmt.Sprintf("[513:%d/%d]\neth_dev = %s\n", slot, port, intf.GetIfaceName())
 		netmapdata += fmt.Sprintf("1:%d/%d 513:%d/%d\n", slot, port, slot, port)
+
+		// populate template array for config
+		IOLInterfaces = append(IOLInterfaces,
+			IOLInterface{
+				intf.GetIfaceName(),
+				x,
+				slot,
+				port,
+				hwa.String(),
+			},
+		)
+
 	}
 
 	// create IOYAP and NETMAP file for interface mappings
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), iouyapData)
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), netmapdata)
 
-	return nil
+	// generate mgmt MAC, it shouldn't be the same as the linux container
+	hwa, _ := utils.GenMac(IOLMACBase)
+
+	// create startup config template
+	tpl := IOLTemplateData{
+		Hostname:           n.Cfg.ShortName,
+		IsL2Node:           n.isL2Node,
+		MgmtIPv4Addr:       n.Cfg.MgmtIPv4Address,
+		MgmtIPv4SubnetMask: CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
+		MgmtIPv4GW:         n.Cfg.MgmtIPv4Gateway,
+		MgmtIPv6Addr:       n.Cfg.MgmtIPv6Address,
+		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
+		MgmtIPv6GW:         n.Cfg.MgmtIPv6Gateway,
+		MgmtIntfMacAddr:    hwa.String(),
+		DataIFaces:         IOLInterfaces,
+	}
+
+	// generate the config
+	buf := new(bytes.Buffer)
+	err := IOLCfgTpl.Execute(buf, tpl)
+	if err != nil {
+		return err
+	}
+	// write it to disk
+	utils.CreateFile(path.Join(n.Cfg.LabDir, "startup.cfg"), buf.String())
+
+	return err
+}
+
+// Convert CIDR bitlength mask to Dotted Decimal Notation
+// for usage in Cisco config.
+// ie CIDR: /24 is DDN: 255.255.255.0
+func CIDRToDDN(length int) string {
+	// check mask length is valid
+	if length < 0 || length > 32 {
+		log.Errorf("Invalid prefix length: %d", length)
+		return ""
+	}
+
+	mask := net.CIDRMask(length, 32)
+	return fmt.Sprintf("%d.%d.%d.%d", mask[0], mask[1], mask[2], mask[3])
+}
+
+type IOLTemplateData struct {
+	Hostname           string
+	IsL2Node           bool
+	MgmtIPv4Addr       string
+	MgmtIPv4SubnetMask string
+	MgmtIPv4GW         string
+	MgmtIPv6Addr       string
+	MgmtIPv6PrefixLen  int
+	MgmtIPv6GW         string
+	MgmtIntfMacAddr    string
+	DataIFaces         []IOLInterface
+}
+
+// IOLinterface struct stores mapping info between
+// IOL interface name and linux container interface
+type IOLInterface struct {
+	IfaceName string
+	IfaceIdx  int
+	Slot      int
+	Port      int
+	MacAddr   string
 }
