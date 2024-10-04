@@ -20,6 +20,8 @@ Deploy ${lab-name} lab
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
+    Sleep    5s
+
 Verify links in node router1
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-router1 sh ip int br | head -5
