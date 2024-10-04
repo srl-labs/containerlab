@@ -26,6 +26,11 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	typeIOL = "iol"
+	typeL2  = "l2"
+)
+
 var (
 	kindnames          = []string{"cisco_iol"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
@@ -40,6 +45,8 @@ var (
 	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	InterfaceOffset = 1
 	InterfaceHelp   = "eX/Y or EthernetX/Y (where X >= 0 and Y >= 1)"
+
+	validTypes = []string{typeIOL, typeL2}
 )
 
 // Register registers the node in the NodeRegistry.
@@ -64,15 +71,17 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		o(n)
 	}
 
+	nodeType := strings.ToLower(n.Cfg.NodeType)
+
 	// check if user submitted node type is valid
-	if n.Cfg.NodeType == "" || strings.ToLower(n.Cfg.NodeType) == "iol" {
-		n.Cfg.NodeType = "iol"
+	switch nodeType {
+	case "", typeIOL:
 		n.isL2Node = false
-	} else if strings.ToLower(n.Cfg.NodeType) == "l2" {
+	case typeL2:
 		n.isL2Node = true
-	} else {
-		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
-			n.Cfg.NodeType, "iol, l2")
+	default:
+		return fmt.Errorf("invalid node type '%s'. Valid types are: %s",
+			n.Cfg.NodeType, strings.Join(validTypes, ", "))
 	}
 
 	n.Cfg.Binds = append(n.Cfg.Binds,
