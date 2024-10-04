@@ -36,8 +36,8 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 // DeployWithExistingVeth provisions the stitched vxlan link whilst the
 // veth interface does already exist, hence it is not created as part of this
 // deployment.
-func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context, ep Endpoint) error {
-	return l.internalDeploy(ctx, ep, true)
+func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
+	return l.internalDeploy(ctx, nil, true)
 }
 
 // Deploy provisions the stitched vxlan link with all its underlying sub-links.
