@@ -20,8 +20,8 @@ Deploy ${lab-name} lab
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Wait 20s for nodes to boot
-    Sleep    20s
+Wait 45s for nodes to boot
+    Sleep    45s
 
 Verify links in node router1
     ${rc}    ${output} =    Run And Return Rc And Output
