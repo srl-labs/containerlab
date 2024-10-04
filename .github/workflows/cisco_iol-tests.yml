@@ -8,7 +8,7 @@ name: cisco_iol-tests
         type: string
 
 jobs:
-  fortigate-tests:
+  cisco_iol-tests:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -48,10 +48,6 @@ jobs:
 
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
-
-      - name: Install sshpass
-        run: |
-          sudo apt update && sudo apt install sshpass -y
 
       - name: Run tests
         run: |

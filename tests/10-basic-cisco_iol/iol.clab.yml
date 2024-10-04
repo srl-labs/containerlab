@@ -3,13 +3,13 @@ topology:
   nodes:
     router1:
       kind: cisco_iol
-      image: vrnetlab/cisco_iol:17.12.01
+      image: ghcr.io/srl-labs/containerlab/cisco_iol:17.12.01
     router2:
       kind: cisco_iol
-      image: vrnetlab/cisco_iol:17.12.01
+      image: ghcr.io/srl-labs/containerlab/cisco_iol:17.12.01
     switch:
       kind: cisco_iol
-      image: vrnetlab/cisco_iol:L2-17.12.01
+      image: ghcr.io/srl-labs/containerlab/cisco_iol:L2-17.12.01
       type: l2
   links:
     - endpoints: ["router1:Ethernet0/1", "switch:Ethernet0/1"]
