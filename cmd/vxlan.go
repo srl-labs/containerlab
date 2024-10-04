@@ -108,8 +108,7 @@ var vxlanCreateCmd = &cobra.Command{
 			return fmt.Errorf("not a VxlanStitched link")
 		}
 
-		// deploy the vxlan with existing link. The first endpoint is the host endpoint
-		err = vxl.DeployWithExistingVeth(ctx, vxl.GetEndpoints()[0])
+		err = vxl.DeployWithExistingVeth(ctx)
 		if err != nil {
 			return err
 		}

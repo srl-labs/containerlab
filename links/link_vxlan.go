@@ -85,23 +85,10 @@ func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error
 		return nil, err
 	}
 
-	var vethLink *LinkVEth
-	var stitchEp Endpoint
-
-	// if the endpoint is host, we don't need to create the veth link
-	// the stitch endpoint is just a host endpoint with the passed interface name
-	if lr.Endpoint.Node == "host" {
-		// a fake endpoint used only to print the host interface name in the outputs
-		// it is not deployed as it meant to exist
-		epHost := NewEndpointHost(NewEndpointGeneric(vxlanLink.localEndpoint.GetNode(), params.VxlanIfaceNameOverwrite, nil))
-		vethLink, stitchEp, err = nil, epHost, nil
-	} else {
-		// otherwise we need to create the veth link
-		vethLink, stitchEp, err = lr.resolveStitchedVEthComponent(params)
-		if err != nil {
-			return nil, err
-		}
-
+	// prepare the veth struct
+	vethLink, stitchEp, err := lr.resolveStitchedVEthComponent(params)
+	if err != nil {
+		return nil, err
 	}
 
 	// return the stitched vxlan link
@@ -241,7 +228,7 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 	// retrieve the parent interface netlink handle
 	parentIface, err := netlink.LinkByName(l.remoteEndpoint.parentIface)
 	if err != nil {
-		return err
+		return fmt.Errorf("error looking up vxlan parent interface %s: %w", l.remoteEndpoint.parentIface, err)
 	}
 
 	// create the Vxlan struct
@@ -269,14 +256,14 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 	// add the link
 	err = netlink.LinkAdd(&vxlanconf)
 	if err != nil {
-		return err
+		return fmt.Errorf("error adding vxlan link %s: %w", l.localEndpoint.String(), err)
 	}
 
 	// fetch the mtu from the actual state for templated config generation
 	if l.MTU == 0 {
 		interf, err := netlink.LinkByName(l.localEndpoint.GetRandIfaceName())
 		if err != nil {
-			return err
+			return fmt.Errorf("error looking up local vxlan endpoint of %s : %w", l.localEndpoint.String(), err)
 		}
 		l.MTU = interf.Attrs().MTU
 	}
