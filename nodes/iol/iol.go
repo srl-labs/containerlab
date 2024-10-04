@@ -9,7 +9,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"net"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -194,7 +193,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		Hostname:           n.Cfg.ShortName,
 		IsL2Node:           n.isL2Node,
 		MgmtIPv4Addr:       n.Cfg.MgmtIPv4Address,
-		MgmtIPv4SubnetMask: CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
+		MgmtIPv4SubnetMask: utils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
 		MgmtIPv4GW:         n.Cfg.MgmtIPv4Gateway,
 		MgmtIPv6Addr:       n.Cfg.MgmtIPv6Address,
 		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
@@ -213,20 +212,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "startup.cfg"), buf.String())
 
 	return err
-}
-
-// Convert CIDR bitlength mask to Dotted Decimal Notation
-// for usage in Cisco config.
-// ie CIDR: /24 is DDN: 255.255.255.0
-func CIDRToDDN(length int) string {
-	// check mask length is valid
-	if length < 0 || length > 32 {
-		log.Errorf("Invalid prefix length: %d", length)
-		return ""
-	}
-
-	mask := net.CIDRMask(length, 32)
-	return fmt.Sprintf("%d.%d.%d.%d", mask[0], mask[1], mask[2], mask[3])
 }
 
 type IOLTemplateData struct {
