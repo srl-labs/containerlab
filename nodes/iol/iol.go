@@ -76,7 +76,7 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	n.Cfg.Binds = append(n.Cfg.Binds,
 		// mount nvram so that config persists
-		fmt.Sprint(path.Join(n.Cfg.LabDir, "nvram"), ":/opt/iol/nvram_00001"),
+		fmt.Sprint(path.Join(n.Cfg.LabDir, "nvram"), ":/iol/nvram_00001"),
 
 		// mount launch config
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "startup.cfg"), ":/iol/config.txt"),
