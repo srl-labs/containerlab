@@ -3,7 +3,11 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
+	"net"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // GenerateIPv6ULASubnet creates a random /64 ULA (Unique Local Address) IPv6 subnet in the fd00::/8 range.
@@ -26,4 +30,18 @@ func GenerateIPv6ULASubnet() (string, error) {
 	ula.WriteString(":/64")
 
 	return ula.String(), nil
+}
+
+// CIDRToDDN converts CIDR mask to a Dotted Decimal Notation
+// ie CIDR: 24 -> DDN: 255.255.255.0
+// The result is a string.
+func CIDRToDDN(length int) string {
+	// check mask length is valid
+	if length < 0 || length > 32 {
+		log.Errorf("Invalid prefix length: %d", length)
+		return ""
+	}
+
+	mask := net.CIDRMask(length, 32)
+	return fmt.Sprintf("%d.%d.%d.%d", mask[0], mask[1], mask[2], mask[3])
 }
