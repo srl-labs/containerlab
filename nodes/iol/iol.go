@@ -307,8 +307,9 @@ func (n *iol) CheckInterfaceName() error {
 	}
 
 	for _, e := range n.Endpoints {
-		if !InterfaceRegexp.MatchString(e.GetIfaceAlias()) {
-			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. Interfaces should be defined contigiously and named as Ethernet<slot>/<port> or e<slot>/<port>, where <slot> is a number from 0-9 and <port> is a number from 0-3. Management interface Ethernet0/0 cannot be used", n.Cfg.ShortName, e.GetIfaceName())
+		IFaceName := e.GetIfaceAlias()
+		if !InterfaceRegexp.MatchString(IFaceName) {
+			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. Interfaces should be defined contigiously and named as Ethernet<slot>/<port> or e<slot>/<port>, where <slot> is a number from 0-9 and <port> is a number from 0-3. Management interface Ethernet0/0 cannot be used", n.Cfg.ShortName, IFaceName)
 		}
 	}
 
