@@ -20,6 +20,7 @@ import (
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -36,9 +37,9 @@ var (
 
 	IOLMACBase = "1a:2b:3c"
 
-	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?0/(?P<port>\d+)$`)
+	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	InterfaceOffset = 1
-	InterfaceHelp   = "e0/X or EthernetX/Y (where X >= 0 and Y >= 1) or ethY (where Y >= 1)"
+	InterfaceHelp   = "eX/Y or EthernetX/Y (where X >= 0 and Y >= 1)"
 )
 
 // Register registers the node in the NodeRegistry.
@@ -49,14 +50,14 @@ func Register(r *nodes.NodeRegistry) {
 }
 
 type iol struct {
-	nodes.VRNode
+	nodes.DefaultNode
 
 	isL2Node bool
 }
 
 func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n)
+	// Init DefaultNode
+	n.DefaultNode = *nodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -240,4 +241,76 @@ type IOLInterface struct {
 	Slot      int
 	Port      int
 	MacAddr   string
+}
+
+func (n *iol) GetMappedInterfaceName(ifName string) (string, error) {
+	captureGroups, err := utils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
+	if err != nil {
+		return "", err
+	}
+
+	indexGroups := []string{"slot", "port"}
+	parsedIndices := make(map[string]int)
+	foundIndices := make(map[string]bool)
+
+	for _, indexKey := range indexGroups {
+		if index, found := captureGroups[indexKey]; found && index != "" {
+			foundIndices[indexKey] = true
+			parsedIndices[indexKey], err = strconv.Atoi(index)
+			if err != nil {
+				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
+			}
+			if !(parsedIndices[indexKey] >= 0) {
+				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 0", ifName, indexKey, index)
+			}
+		} else {
+			foundIndices[indexKey] = false
+		}
+	}
+
+	// return an ethX interface name. Slots are in 'groups' of 4 interfaces each
+	if foundIndices["slot"] && foundIndices["port"] {
+		return fmt.Sprintf("eth%d", (parsedIndices["slot"]*4)+parsedIndices["port"]), nil
+	} else {
+		return "", fmt.Errorf("%q missing slot or port index", ifName)
+	}
+}
+
+var DefaultIntfRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`)
+
+// AddEndpoint override version maps the endpoint name to an ethX-based name before adding it to the node endpoints. Returns an error if the mapping goes wrong.
+func (n *iol) AddEndpoint(e links.Endpoint) error {
+	endpointName := e.GetIfaceName()
+	// Slightly modified check: if it doesn't match the DefaultIntfRegexp, pass it to GetMappedInterfaceName. If it fails, then the interface name is wrong.
+	if n.InterfaceRegexp != nil && !(DefaultIntfRegexp.MatchString(endpointName)) {
+		mappedName, err := n.GetMappedInterfaceName(endpointName)
+		if err != nil {
+			return fmt.Errorf("%q interface name %q could not be mapped to an ethX-based interface name: %w",
+				n.Cfg.ShortName, e.GetIfaceName(), err)
+		}
+		log.Debugf("Interface Mapping: Mapping interface %q (ifAlias) to %q (ifName)", endpointName, mappedName)
+		e.SetIfaceName(mappedName)
+		e.SetIfaceAlias(endpointName)
+	}
+	n.Endpoints = append(n.Endpoints, e)
+
+	return nil
+}
+
+func (n *iol) CheckInterfaceName() error {
+	// allow interface naming as Ethernet<slot>/<port> or e<slot>/<port>
+	InterfaceRegexp := regexp.MustCompile("Ethernet((0/[1-3])|([1-9]/[0-3]))$|e((0/[1-3])|([1-9]/[0-9]))$")
+
+	err := n.CheckInterfaceOverlap()
+	if err != nil {
+		return err
+	}
+
+	for _, e := range n.Endpoints {
+		if !InterfaceRegexp.MatchString(e.GetIfaceAlias()) {
+			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. Interfaces should be defined contigiously and named as Ethernet<slot>/<port> or e<slot>/<port>, where <slot> is a number from 0-9 and <port> is a number from 0-3. Management interface Ethernet0/0 cannot be used", n.Cfg.ShortName, e.GetIfaceName())
+		}
+	}
+
+	return nil
 }
