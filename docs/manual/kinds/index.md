@@ -51,7 +51,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Cisco Nexus 9000v**      | [`vr-n9kv/vr-cisco_n9kv`](vr-n9kv.md)                           | supported |    VM     |
 | **Cisco 8000**             | [`c8000/cisco_c8000`](c8000.md)                                 | supported |    VM+    |
 | **Cisco Catalyst 9000v**   | [`cat9kv/vr-cisco_cat9kv`](vr-cat9kv.md)                        | supported |    VM     |
-| **Cisco IOL**              | [`cisco_iol`](iol.md)                                           | supported | container |
+| **Cisco IOL**              | [`cisco_iol`](cisco_iol.md)                                     | supported | container |
 | **Cisco FTDv**             | [`cisco_ftdv`](vr-ftdv.md)                                      | supported |    VM     |
 | **Cumulus VX**             | [`cvx/cumulus_cvx`](cvx.md)                                     | supported | container |
 | **Aruba ArubaOS-CX**       | [`vr-aoscx/vr-aruba_aoscx`](vr-aoscx.md)                        | supported |    VM     |
