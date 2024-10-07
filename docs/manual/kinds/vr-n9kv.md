@@ -13,7 +13,7 @@ Cisco Nexus 9000v nodes launched with containerlab comes up pre-provisioned with
 ## Managing Cisco Nexus 9000v nodes
 
 !!!note
-    Containers with Nexus 9000v inside will take ~8-10min to fully boot.  
+    Containers with Nexus 9000v inside will take ~5min to fully boot.  
     You can monitor the progress with `docker logs -f <container-name>`.
 
 Cisco Nexus 9000v node launched with containerlab can be managed via the following interfaces:
@@ -86,3 +86,17 @@ topology:
 With this knob containerlab is instructed to take a file `myconfig.txt` from the directory that hosts the topology file, and copy it to the lab directory for that specific node under the `/config/startup-config.cfg` name. Then the directory that hosts the startup-config dir is mounted to the container. This will result in this config being applied at startup by the node.
 
 Configuration is applied after the node is started, thus it can contain partial configuration snippets that you desire to add on top of the default config that a node boots up with.
+
+### Tuning memory and cpu for N9Kv-lite
+
+Vrnetlab will build `n9kv-lite` image with 10GB memory and 4 CPU. However `n9kv-lite` requires lesser resources than this. It is possible to make `n9kv-lite` nodes boot up with custom memory and CPU settings. Please refer to ['tuning qemu parameters'](../vrnetlab.md#tuning-qemu-parameters) section for more details. Following is sample for setting memory and CPU for `n9kv-lite`:
+
+```yaml
+topology:
+  nodes:
+    node:
+      kind: cisco_n9kv
+      env:
+        QEMU_MEMORY: 6144 # N9kv-lite requires minimum 6GB memory
+        QEMU_SMP: 2 # N9kv-lite requires minimum 2 CPUs
+```
