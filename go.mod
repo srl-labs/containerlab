@@ -40,7 +40,7 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/steiler/acls v0.1.1
 	github.com/stretchr/testify v1.9.0
-	github.com/tklauser/numcpus v0.8.0
+	github.com/tklauser/numcpus v0.9.0
 	github.com/vishvananda/netlink v1.3.0
 	github.com/weaveworks/ignite v0.10.0
 	go.uber.org/mock v0.4.0
