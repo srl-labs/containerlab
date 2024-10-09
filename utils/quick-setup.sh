@@ -105,7 +105,7 @@ function install-docker-rhel {
     sudo yum install -y yum-utils
     sudo yum-config-manager -y --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
 
-    DOCKER_PKG_NAME=$(yum list docker-ce --showduplicates | grep ${DOCKER_VERSION} | head -n 1)
+    DOCKER_PKG_NAME=$(yum list docker-ce --showduplicates | awk '{ print $2 }' | grep ${DOCKER_VERSION} | head -n 1)
 
     sudo yum install -y docker-ce-${DOCKER_PKG_NAME} docker-ce-cli-${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin
 
@@ -130,7 +130,7 @@ function install-docker-fedora {
     sudo dnf install -y dnf-plugins-core
     sudo dnf config-manager -y --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
 
-    DOCKER_PKG_NAME=$(dnf list docker-ce --showduplicates | grep ${DOCKER_VERSION} | head -n 1)
+    DOCKER_PKG_NAME=$(dnf list docker-ce --showduplicates | awk '{ print $2 }' | grep ${DOCKER_VERSION} | head -n 1)
 
     sudo dnf install -y docker-ce-${DOCKER_PKG_NAME} docker-ce-cli-${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin
 
