@@ -647,7 +647,6 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 		nr, err = d.Client.NetworkList(nctx, networkapi.ListOptions{
 			Filters: f,
 		})
-
 		if err != nil {
 			return nil, err
 		}

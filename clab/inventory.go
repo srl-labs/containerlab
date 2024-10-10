@@ -51,7 +51,6 @@ func (c *CLab) GenerateInventories() error {
 	}
 
 	err = c.generateAnsibleInventory(f)
-
 	if err != nil {
 		return err
 	}
