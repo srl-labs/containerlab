@@ -17,7 +17,6 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
-	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -185,11 +184,6 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 		clab.WithTimeout(timeout),
 	}
 
-	c, err := clab.NewContainerLab(opts...)
-	if err != nil {
-		return nil, err
-	}
-
 	// filter to list all containerlab containers
 	// it is overwritten if topo file is provided
 	filter := []*types.GenericFilter{{
@@ -200,29 +194,20 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 
 	// when topo file is provided, filter containers by lab name
 	if topo != "" {
-		topo, err = c.ProcessTopoPath(topo)
-		if err != nil {
-			return nil, err
-		}
+		opts = append(opts, clab.WithTopoPath(topo, varsFile))
+	}
 
-		// read topo yaml file to get the lab name
-		topo, err := os.ReadFile(topo)
-		if err != nil {
-			return nil, err
-		}
+	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		return nil, err
+	}
 
-		config := &clab.Config{}
-
-		err = yaml.Unmarshal(topo, config)
-		if err != nil {
-			return nil, fmt.Errorf("%w, failed to parse topology file", err)
-		}
-
+	if topo != "" {
 		filter = []*types.GenericFilter{{
 			FilterType: "label",
 			Field:      labels.Containerlab,
 			Operator:   "=",
-			Match:      config.Name,
+			Match:      c.Config.Name,
 		}}
 	}
 
