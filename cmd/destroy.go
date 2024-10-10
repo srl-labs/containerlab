@@ -184,11 +184,6 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 		clab.WithTimeout(timeout),
 	}
 
-	c, err := clab.NewContainerLab(opts...)
-	if err != nil {
-		return nil, err
-	}
-
 	// filter to list all containerlab containers
 	// it is overwritten if topo file is provided
 	filter := []*types.GenericFilter{{
@@ -199,11 +194,15 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 
 	// when topo file is provided, filter containers by lab name
 	if topo != "" {
-		err := c.LoadTopologyFromFile(topo, varsFile)
-		if err != nil {
-			return nil, err
-		}
+		opts = append(opts, clab.WithTopoPath(topo, varsFile))
+	}
 
+	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if topo != "" {
 		filter = []*types.GenericFilter{{
 			FilterType: "label",
 			Field:      labels.Containerlab,
