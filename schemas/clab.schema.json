@@ -100,7 +100,7 @@
                         "cisco_iol",
                         "cvx",
                         "cumulus_cvx",
-                        "huawei_n40e",
+                        "huawei_vrp",
                         "openbsd",
                         "freebsd",
                         "generic_vm",
@@ -1012,6 +1012,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "freebsd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "huawei_vrp": {
                             "$ref": "#/definitions/node-config"
                         },
                         "generic_vm": {

@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package huawei_n40e
+package huawei_vrp
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"huawei_n40e"}
+	kindnames          = []string{"huawei_vrp"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 )
 
@@ -31,15 +31,15 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	r.Register(kindnames, func() nodes.Node {
-		return new(huawei_n40e)
+		return new(huawei_vrp)
 	}, defaultCredentials)
 }
 
-type huawei_n40e struct {
+type huawei_vrp struct {
 	nodes.VRNode
 }
 
-func (n *huawei_n40e) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *huawei_vrp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
 	n.VRNode = *nodes.NewVRNode(n)
 	// set virtualization requirement
@@ -71,7 +71,7 @@ func (n *huawei_n40e) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) erro
 	return nil
 }
 
-func (s *huawei_n40e) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (s *huawei_vrp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(s.Cfg.LabDir, 0777)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -80,7 +80,7 @@ func (s *huawei_n40e) PreDeploy(_ context.Context, params *nodes.PreDeployParams
 	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
 }
 
-func (n *huawei_n40e) SaveConfig(_ context.Context) error {
+func (n *huawei_vrp) SaveConfig(_ context.Context) error {
 	err := netconf.SaveConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
