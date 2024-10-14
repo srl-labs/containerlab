@@ -1,3 +1,9 @@
+---
+vr_rns:
+  "0.20.0": >-
+    New platforms: [Cisco IOL](kinds/cisco_iol.md), [Cisco vIOS](https://github.com/hellt/vrnetlab/tree/master/vios), [Huawei VRP](kinds/huawei_vrp.md)<br/>
+    The vrnetlab version (commit) is now part of the image labels under the `vrnetlab-version` name. This should help you identify what version of vrnetlab is used to build the image.
+---
 # VM-based routers integration
 
 Containerlab focuses on containers, but many routing products ship only in virtual machine packaging. Leaving containerlab users without the ability to create topologies with both containerized and VM-based routing systems would have been a shame.
@@ -23,44 +29,46 @@ To make this work, vrnetlab provides a set of scripts that build the container i
 
 ### Compatibility matrix
 
-To make vrnetlab images to work with container-based networking in containerlab, we needed to [fork](https://github.com/hellt/vrnetlab) vrnetlab project and implement the necessary improvements. VM-based routers that you intend to run with containerlab should be built with [`hellt/vrnetlab`](https://github.com/hellt/vrnetlab) project, and not with the upstream `vrnetlab/vrnetlab`.
+To make vrnetlab images to work with container-based networking in containerlab, we needed to [fork](https://github.com/hellt/vrnetlab) vrnetlab project and implement the necessary improvements. VM-based routers that you intend to run with containerlab should be built with [`hellt/vrnetlab`](https://github.com/hellt/vrnetlab) project, and **not** with the upstream `vrnetlab/vrnetlab`.
 
-Containerlab depends on `hellt/vrnetlab` project, and sometimes features added in containerlab must be implemented in `vrnetlab` (and vice-versa). This leads to a cross-dependency between these projects.
-
-The following table provides a link between the version combinations:
+Containerlab depends on [`hellt/vrnetlab`](https://github.com/hellt/vrnetlab) project, and sometimes features added in containerlab must be implemented in `vrnetlab` (and vice-versa). This leads to a cross-dependency between these projects. The following table provides a link between the version combinations for the recent versions:
 
 | containerlab[^3] | vrnetlab[^4]                                                       | Notes                                                                                                                                                                  |
 | ---------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0.10.4`         | [`0.1.0-cl`](https://github.com/hellt/vrnetlab/tree/v0.1.0-cl)     | Initial release. Images: sros, vmx, xrv, xrv9k                                                                                                                         |
-| `0.11.0`         | [`0.2.0`](https://github.com/hellt/vrnetlab/tree/v0.2.0)           | added [vr-veos](kinds/vr-veos.md), support for [boot-delay](#boot-delay), SR OS will have a static route to docker network, improved XRv startup chances               |
-|                  | [`0.2.1`](https://github.com/hellt/vrnetlab/tree/v0.2.1)           | added timeout for SR OS images to allow eth interfaces to appear in the container namespace. Other images are not touched.                                             |
-|                  | [`0.2.2`](https://github.com/hellt/vrnetlab/tree/v0.2.2)           | fixed serial (telnet) access to SR OS nodes                                                                                                                            |
-|                  | [`0.2.3`](https://github.com/hellt/vrnetlab/tree/v0.2.3)           | set default cpu/ram for SR OS images                                                                                                                                   |
-| `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)           | added support for Cisco CSR1000v via [`cisco_csr`](kinds/vr-csr.md) and MikroTik routeros via [`mikrotik_ros`](kinds/vr-ros.md) kind                                   |
-|                  | [`0.3.1`](https://github.com/hellt/vrnetlab/tree/v0.3.1)           | enhanced SR OS boot sequence                                                                                                                                           |
-|                  | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)           | fixed SR OS CPU allocation and added Palo Alto PAN support [`paloaltp_pan`](kinds/vr-pan.md)                                                                           |
-| `0.16.0`         | [`0.5.0`](https://github.com/hellt/vrnetlab/tree/v0.5.0)           | added support for Cisco Nexus 9000v via [`cisco_n9kv`](kinds/vr-n9kv.md) kind, added support for non-continuous interfaces provisioning                                |
-| `0.19.0`         | [`0.6.0`](https://github.com/hellt/vrnetlab/tree/v0.6.0)           | added experimental support for Juniper vQFX via [`juniper_vqfx`](kinds/vr-vqfx.md) kind, added support Dell FTOS via [`dell_ftosv`](kinds/vr-ftosv.md)                 |
-|                  | [`0.6.2`](https://github.com/hellt/vrnetlab/tree/v0.6.2)           | support for IPv6 management for SR OS; support for RouterOS v7+                                                                                                        |
-|                  | [`0.7.0`](https://github.com/hellt/vrnetlab/tree/v0.7.0)           | startup-config support for vqfx and vmx                                                                                                                                |
-| `0.32.2`         | [`0.8.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.8.0)   | startup-config support for the rest of the kinds, support for multi line card SR OS                                                                                    |
-| `0.34.0`         | [`0.8.2`](https://github.com/hellt/vrnetlab/releases/tag/v0.8.2)   | startup-config support for PANOS, ISA support for Nokia VSR-I and MGMT VRF for VMX                                                                                     |
-|                  | [`0.9.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.9.0)   | Support for IPInfusion OcNOS with vrnetlab                                                                                                                             |
-| `0.41.0`         | [`0.11.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.11.0) | Added support for Juniper vSRX3.0 via [`juniper_vsrx`](kinds/vr-vsrx.md) kind                                                                                          |
-| `0.45.0`         | [`0.12.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.12.0) | Added support for Juniper vJunos-switch via [`juniper_vjunosswitch`](kinds/vr-vjunosswitch.md) kind                                                                    |
-| `0.49.0`         | [`0.14.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.14.0) | Added support for [Juniper vJunos-Evolved](kinds/vr-vjunosevolved.md), [Cisco FTDv](kinds/vr-ftdv.md), [OpenBSD](kinds/openbsd.md)                                     |
-| `0.53.0`         | [`0.15.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.15.0) | Added support for [Fortigate](kinds/fortinet_fortigate.md), [freebsd](kinds/freebsd.md), added lots of FP5 types to Nokia SR OS and support for external cf1/2 disks   |
-| `0.54.0`         | [`0.16.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.16.0) | Added support for [Cisco c8000v](kinds/c8000.md)                                                                                                                       |
-| `0.55.0`         | [`0.17.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.17.0) | Added support for [Juniper vJunos-router](kinds/vr-vjunosrouter.md), [Generic VM](kinds/generic_vm.md), support for setting qemu parameters via env vars for the nodes |
+| `0.58.0`         | [`0.20.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.20.0) | [[[vr_rns["0.20.0"]]]]                                                                                                                                                 |
 | `0.56.0`         | [`0.18.1`](https://github.com/hellt/vrnetlab/releases/tag/v0.18.1) | Added support for [Dell SONiC](kinds/dell_sonic.md), [SONiC VM](kinds/sonic-vm.md), [Cisco Catalyst 9000v](kinds/vr-cat9kv.md)                                         |
+| `0.55.0`         | [`0.17.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.17.0) | Added support for [Juniper vJunos-router](kinds/vr-vjunosrouter.md), [Generic VM](kinds/generic_vm.md), support for setting qemu parameters via env vars for the nodes |
 
-/// details | how to understand version inter-dependency between containerlab and vrnetlab?
-    type: note
-When new VM-based platform support is added to vrnetlab, it is usually accompanied by a new containerlab version. In this case the table row will have both containerlab and vrnetlab versions.  
-When vrnetlab adds new features that don't require containerlab changes, the table will have only vrnetlab version.  
-When containerlab adds new features that don't require vrnetlab changes, the table will not list containerlab version.
+* When new VM-based platform support is added to [`hellt/vrnetlab`](https://github.com/hellt/vrnetlab), it is usually accompanied by a new containerlab version. In this case the table row will have both containerlab and vrnetlab versions.  
+* When vrnetlab adds new features that don't require containerlab changes, the table will state only the vrnetlab version.  
+* When containerlab adds new features that don't require vrnetlab changes, the table will state only the containerlab version.
 
 It is worth noting, that you can use the latest containerlab version with a given vrnetlab version, even if the table doesn't list the latest containerlab version.
+
+/// details | Older release mappings
+
+| containerlab[^3] | vrnetlab[^4]                                                       | Notes                                                                                                                                                                |
+| ---------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0.10.4`         | [`0.1.0-cl`](https://github.com/hellt/vrnetlab/tree/v0.1.0-cl)     | Initial release. Images: sros, vmx, xrv, xrv9k                                                                                                                       |
+| `0.11.0`         | [`0.2.0`](https://github.com/hellt/vrnetlab/tree/v0.2.0)           | added [vr-veos](kinds/vr-veos.md), support for [boot-delay](#boot-delay), SR OS will have a static route to docker network, improved XRv startup chances             |
+|                  | [`0.2.1`](https://github.com/hellt/vrnetlab/tree/v0.2.1)           | added timeout for SR OS images to allow eth interfaces to appear in the container namespace. Other images are not touched.                                           |
+|                  | [`0.2.2`](https://github.com/hellt/vrnetlab/tree/v0.2.2)           | fixed serial (telnet) access to SR OS nodes                                                                                                                          |
+|                  | [`0.2.3`](https://github.com/hellt/vrnetlab/tree/v0.2.3)           | set default cpu/ram for SR OS images                                                                                                                                 |
+| `0.13.0`         | [`0.3.0`](https://github.com/hellt/vrnetlab/tree/v0.3.0)           | added support for Cisco CSR1000v via [`cisco_csr`](kinds/vr-csr.md) and MikroTik routeros via [`mikrotik_ros`](kinds/vr-ros.md) kind                                 |
+|                  | [`0.3.1`](https://github.com/hellt/vrnetlab/tree/v0.3.1)           | enhanced SR OS boot sequence                                                                                                                                         |
+|                  | [`0.4.0`](https://github.com/hellt/vrnetlab/tree/v0.4.0)           | fixed SR OS CPU allocation and added Palo Alto PAN support [`paloaltp_pan`](kinds/vr-pan.md)                                                                         |
+| `0.16.0`         | [`0.5.0`](https://github.com/hellt/vrnetlab/tree/v0.5.0)           | added support for Cisco Nexus 9000v via [`cisco_n9kv`](kinds/vr-n9kv.md) kind, added support for non-continuous interfaces provisioning                              |
+| `0.19.0`         | [`0.6.0`](https://github.com/hellt/vrnetlab/tree/v0.6.0)           | added experimental support for Juniper vQFX via [`juniper_vqfx`](kinds/vr-vqfx.md) kind, added support Dell FTOS via [`dell_ftosv`](kinds/vr-ftosv.md)               |
+|                  | [`0.6.2`](https://github.com/hellt/vrnetlab/tree/v0.6.2)           | support for IPv6 management for SR OS; support for RouterOS v7+                                                                                                      |
+|                  | [`0.7.0`](https://github.com/hellt/vrnetlab/tree/v0.7.0)           | startup-config support for vqfx and vmx                                                                                                                              |
+| `0.32.2`         | [`0.8.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.8.0)   | startup-config support for the rest of the kinds, support for multi line card SR OS                                                                                  |
+| `0.34.0`         | [`0.8.2`](https://github.com/hellt/vrnetlab/releases/tag/v0.8.2)   | startup-config support for PANOS, ISA support for Nokia VSR-I and MGMT VRF for VMX                                                                                   |
+|                  | [`0.9.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.9.0)   | Support for IPInfusion OcNOS with vrnetlab                                                                                                                           |
+| `0.41.0`         | [`0.11.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.11.0) | Added support for Juniper vSRX3.0 via [`juniper_vsrx`](kinds/vr-vsrx.md) kind                                                                                        |
+| `0.45.0`         | [`0.12.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.12.0) | Added support for Juniper vJunos-switch via [`juniper_vjunosswitch`](kinds/vr-vjunosswitch.md) kind                                                                  |
+| `0.49.0`         | [`0.14.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.14.0) | Added support for [Juniper vJunos-Evolved](kinds/vr-vjunosevolved.md), [Cisco FTDv](kinds/vr-ftdv.md), [OpenBSD](kinds/openbsd.md)                                   |
+| `0.53.0`         | [`0.15.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.15.0) | Added support for [Fortigate](kinds/fortinet_fortigate.md), [freebsd](kinds/freebsd.md), added lots of FP5 types to Nokia SR OS and support for external cf1/2 disks |
+| `0.54.0`         | [`0.16.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.16.0) | Added support for [Cisco c8000v](kinds/c8000.md)                                                                                                                     |
 ///
 
 ### Building vrnetlab images
@@ -122,10 +130,10 @@ When vrnetlab starts a VM inside the container it uses `qemu` command to define 
 
 The following env vars are supported:
 
-- `QEMU_SMP` - sets the number of vCPU cores and their configuration. Use this when the default number of vCPUs is not enough or excessive.
-- `QEMU_MEMORY` - sets the amount of memory allocated to the VM in MB. Use this when you want to alter the amount of allocated memory for the VM. Note, that some kinds have a different way to set CPU/MEM parameters, which is explained in the kind's documentation.
-- `QEMU_CPU` - sets the default CPU model/type for the node. Use this when the default cpu type is not suitable for your host or you want to experiment with others.
-- `QEMU_ADDITIONAL_ARGS` - allows users to pass additional qemu arguments to the VM. These arguments will be appended to the list of the existing arguments. Use this when you need to pass some specific qemu arguments to the VM overriding the defaults set by vrnetlab.
+* `QEMU_SMP` - sets the number of vCPU cores and their configuration. Use this when the default number of vCPUs is not enough or excessive.
+* `QEMU_MEMORY` - sets the amount of memory allocated to the VM in MB. Use this when you want to alter the amount of allocated memory for the VM. Note, that some kinds have a different way to set CPU/MEM parameters, which is explained in the kind's documentation.
+* `QEMU_CPU` - sets the default CPU model/type for the node. Use this when the default cpu type is not suitable for your host or you want to experiment with others.
+* `QEMU_ADDITIONAL_ARGS` - allows users to pass additional qemu arguments to the VM. These arguments will be appended to the list of the existing arguments. Use this when you need to pass some specific qemu arguments to the VM overriding the defaults set by vrnetlab.
 
 ### Datapath connectivity
 
