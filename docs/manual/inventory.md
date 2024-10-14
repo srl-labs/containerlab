@@ -179,7 +179,7 @@ Example of exported data when using default `auto.tmpl` template:
             "network": "clab",
             "bridge": "br-<...>",
             "ipv4-subnet": "172.20.20.0/24",
-            "ipv6-subnet": "2001:172:20:20::/64",
+            "ipv6-subnet": "3fff:172:20:20::/64",
             "mtu": "1500",
             "external-access": true
           },
@@ -200,7 +200,7 @@ Example of exported data when using default `auto.tmpl` template:
           "mgmt-intf": "",
           "mgmt-ipv4-address": "172.20.20.3",
           "mgmt-ipv4-prefix-length": 24,
-          "mgmt-ipv6-address": "2001:172:20:20::3",
+          "mgmt-ipv6-address": "3fff:172:20:20::3",
           "mgmt-ipv6-prefix-length": 64,
           "mac-address": "",
           "labels": {
@@ -227,7 +227,7 @@ Example of exported data when using default `auto.tmpl` template:
           "mgmt-intf": "",
           "mgmt-ipv4-address": "172.20.20.2",
           "mgmt-ipv4-prefix-length": 24,
-          "mgmt-ipv6-address": "2001:172:20:20::2",
+          "mgmt-ipv6-address": "3fff:172:20:20::2",
           "mgmt-ipv6-prefix-length": 64,
           "mac-address": "",
           "labels": {

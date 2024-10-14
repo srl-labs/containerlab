@@ -10,7 +10,7 @@ clab-templated01-{{ $input.spines.prefix }}{{ $spineIndex }}:
         - admin_state: "enable"
           ip_mtu: 1500
           ipv4_address: 75.{{ $spineIndex }}.{{ $leafIndex }}.0/31
-          ipv6_address: 2001:75:{{ $spineIndex }}:{{ $leafIndex }}::0/127
+          ipv6_address: 3fff:75:{{ $spineIndex }}:{{ $leafIndex }}::0/127
     {{- end }}
     - name: lo0
       admin_state: "enable"
@@ -32,7 +32,7 @@ clab-templated01-{{ $input.leaves.prefix }}{{ $leafIndex }}:
         - admin_state: "enable"
           ip_mtu: 1500
           ipv4_address: 75.{{ $spineIndex }}.{{ $leafIndex }}.1/31
-          ipv6_address: 2001:75:{{ $spineIndex }}:{{ $leafIndex }}::1/127
+          ipv6_address: 3fff:75:{{ $spineIndex }}:{{ $leafIndex }}::1/127
   {{- end }}
     - name: lo0
       admin_state: "enable"

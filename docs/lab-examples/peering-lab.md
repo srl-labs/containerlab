@@ -185,10 +185,10 @@ Upon successful deployment, containerlab presents the lab summary table that con
 +---+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 | # |      Name      | Container ID |             Image             |     Kind      |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
-| 1 | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
-| 2 | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
-| 3 | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
-| 4 | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 1 | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 3fff:172:20:20::5/64 |
+| 2 | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 3fff:172:20:20::3/64 |
+| 3 | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 3fff:172:20:20::4/64 |
+| 4 | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 3fff:172:20:20::2/64 |
 +---+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 ```
 
@@ -203,10 +203,10 @@ $ containerlab inspect --all
 +---+--------------+----------+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 | # |  Topo Path   | Lab Name |      Name      | Container ID |             Image             |     Kind      |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+--------------+----------+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
-| 1 | ixp.clab.yml | ixp      | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
-| 2 |              |          | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
-| 3 |              |          | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
-| 4 |              |          | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 1 | ixp.clab.yml | ixp      | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 3fff:172:20:20::5/64 |
+| 2 |              |          | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 3fff:172:20:20::3/64 |
+| 3 |              |          | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 3fff:172:20:20::4/64 |
+| 4 |              |          | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 3fff:172:20:20::2/64 |
 +---+--------------+----------+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 ```
 

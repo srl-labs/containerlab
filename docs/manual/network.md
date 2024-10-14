@@ -52,7 +52,7 @@ When no information about the management network is provided within the topo def
 The addressing information that containerlab will use on this network:
 
 * IPv4: subnet 172.20.20.0/24, gateway 172.20.20.1
-* IPv6: subnet 2001:172:20:20::/64, gateway 2001:172:20:20::1
+* IPv6: subnet 3fff:172:20:20::/64, gateway 3fff:172:20:20::1
 
 This management network will be configured with MTU value matching the value of a `docker0` host interface to match docker configuration on the system. This option is [configurable](#mtu).
 
@@ -65,8 +65,8 @@ With these defaults in place, the two containers from this lab will get connecte
 +---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
 | # |      Name       | Container ID |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
-| 1 | clab-srl02-srl1 | ca24bf3d23f7 | srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
-| 2 | clab-srl02-srl2 | ee585eac9e65 | srlinux | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
+| 1 | clab-srl02-srl1 | ca24bf3d23f7 | srlinux | srl  |       | running | 172.20.20.3/24 | 3fff:172:20:20::3/80 |
+| 2 | clab-srl02-srl2 | ee585eac9e65 | srlinux | srl  |       | running | 172.20.20.2/24 | 3fff:172:20:20::2/80 |
 +---+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
 
 # addresses can also be fetched afterwards with `inspect` command
@@ -74,12 +74,12 @@ With these defaults in place, the two containers from this lab will get connecte
 +---+----------+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
 | # | Lab Name |      Name       | Container ID |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+----------+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
-| 1 | srl02    | clab-srl02-srl1 | ca24bf3d23f7 | srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
-| 2 | srl02    | clab-srl02-srl2 | ee585eac9e65 | srlinux | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
+| 1 | srl02    | clab-srl02-srl1 | ca24bf3d23f7 | srlinux | srl  |       | running | 172.20.20.3/24 | 3fff:172:20:20::3/80 |
+| 2 | srl02    | clab-srl02-srl2 | ee585eac9e65 | srlinux | srl  |       | running | 172.20.20.2/24 | 3fff:172:20:20::2/80 |
 +---+----------+-----------------+--------------+---------+------+-------+---------+----------------+----------------------+
 ```
 
-The output above shows that srl1 container has been assigned `172.20.20.3/24 / 2001:172:20:20::3/80` IPv4/6 address. We can ensure this by querying the srl1 management interfaces address info:
+The output above shows that srl1 container has been assigned `172.20.20.3/24 / 3fff:172:20:20::3/80` IPv4/6 address. We can ensure this by querying the srl1 management interfaces address info:
 
 ```bash
 ❯ docker exec clab-srl02-srl1 ip address show dummy-mgmt0
@@ -87,7 +87,7 @@ The output above shows that srl1 container has been assigned `172.20.20.3/24 / 2
     link/ether 2a:66:2b:09:2e:4d brd ff:ff:ff:ff:ff:ff
     inet 172.20.20.3/24 brd 172.20.20.255 scope global dummy-mgmt0
        valid_lft forever preferred_lft forever
-    inet6 2001:172:20:20::3/80 scope global
+    inet6 3fff:172:20:20::3/80 scope global
        valid_lft forever preferred_lft forever
 ```
 
@@ -121,7 +121,7 @@ name: srl02
 mgmt:
   network: custom_mgmt                # management network name
   ipv4-subnet: 172.100.100.0/24       # ipv4 range
-  ipv6-subnet: 2001:172:100:100::/80  # ipv6 range (optional)
+  ipv6-subnet: 3fff:172:100:100::/80  # ipv6 range (optional)
 
 topology:
 # the rest of the file is omitted for brevity
@@ -139,14 +139,14 @@ For such cases, users can define the desired IPv4/6 addresses on a per-node basi
 mgmt:
   network: fixedips
   ipv4-subnet: 172.100.100.0/24
-  ipv6-subnet: 2001:172:100:100::/80
+  ipv6-subnet: 3fff:172:100:100::/80
 
 topology:
   nodes:
     n1:
       kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.11       # set ipv4 address on management network
-      mgmt-ipv6: 2001:172:100:100::11 # set ipv6 address on management network
+      mgmt-ipv6: 3fff:172:100:100::11 # set ipv6 address on management network
 ```
 
 Users can specify either IPv4 or IPv6 or both addresses. If one of the addresses is omitted, it will be assigned by container runtime in an arbitrary fashion.
@@ -158,7 +158,7 @@ Users can specify either IPv4 or IPv6 or both addresses. If one of the addresses
 
 #### auto-assigned addresses
 
-The default network addresses chosen by containerlab - 172.20.20.0/24 and 2001:172:20:20::/64 - may clash with the existing addressing scheme on the lab host. With the [user-defined addresses](#user-defined-addresses) discussed above, users can avoid such conflicts, but this requires manual changes to the lab topology file and may not be convenient.
+The default network addresses chosen by containerlab - 172.20.20.0/24 and 3fff:172:20:20::/64 - may clash with the existing addressing scheme on the lab host. With the [user-defined addresses](#user-defined-addresses) discussed above, users can avoid such conflicts, but this requires manual changes to the lab topology file and may not be convenient.
 
 To address this issue, containerlab provides a way to automatically assign the management network v4/v6 addresses. This is achieved by setting the `ipv4-subnet` and/or `ipv6-subnet` to `auto`:
 
@@ -494,8 +494,8 @@ For a lab named `demo` with two nodes named `l1` and `l2` containerlab will crea
 ###### CLAB-demo-START ######
 172.20.20.2     clab-demo-l1
 172.20.20.3     clab-demo-l2
-2001:172:20:20::2       clab-demo-l1
-2001:172:20:20::3       clab-demo-l2
+3fff:172:20:20::2       clab-demo-l1
+3fff:172:20:20::3       clab-demo-l2
 ###### CLAB-demo-END ######
 ```
 

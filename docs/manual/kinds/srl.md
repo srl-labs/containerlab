@@ -332,7 +332,7 @@ The certificate is generated for the following subjects (assuming node name is `
 DNS:srl
 DNS:clab-srl-srl
 DNS:srl.srl.io
-IP Address:172.20.20.3, IP Address:2001:172:20:20:0:0:0:3
+IP Address:172.20.20.3, IP Address:3fff:172:20:20:0:0:0:3
 ```
 
 Nokia SR Linux nodes support setting of [SANs](../nodes.md#subject-alternative-names-san).

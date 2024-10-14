@@ -79,7 +79,7 @@ When containerlab launches ceos node, it will set IPv4/6 addresses as assigned b
         link/ether 02:42:ac:14:14:02 brd ff:ff:ff:ff:ff:ff link-netnsid 0
         inet 172.20.20.2/24 brd 172.20.20.255 scope global eth0
         valid_lft forever preferred_lft forever
-        inet6 2001:172:20:20::2/80 scope global
+        inet6 3fff:172:20:20::2/80 scope global
         valid_lft forever preferred_lft forever
         inet6 fe80::42:acff:fe14:1402/64 scope link
         valid_lft forever preferred_lft forever
@@ -96,7 +96,7 @@ When containerlab launches ceos node, it will set IPv4/6 addresses as assigned b
     Interface       Status        MTU       IPv6 Address                     Addr State    Addr Source
     --------------- ------------ ---------- -------------------------------- ---------------- -----------
     Ma0             up           1500       fe80::42:acff:fe14:1402/64       up            link local
-                                            2001:172:20:20::2/80             up            config
+                                            3fff:172:20:20::2/80             up            config
     ```
     As you see, the management interface `Ma0` inherits the IP address that docker assigned to ceos container management interface.
 

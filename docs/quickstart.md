@@ -130,8 +130,8 @@ The table will show the node name (which equals to container name), node kind, i
 +---+---------------------+--------------+-----------------------+---------------+---------+-----------------+----------------------+
 | # |        Name         | Container ID |         Image         |     Kind      |  State  |  IPv4 Address   |     IPv6 Address     |
 +---+---------------------+--------------+-----------------------+---------------+---------+-----------------+----------------------+
-| 1 | clab-srlceos01-ceos | 6ec1b1367a77 | ceos:4.32.0F          | arista_ceos   | running | 172.20.20.11/24 | 2001:172:20:20::b/64 |
-| 2 | clab-srlceos01-srl  | 6af1e33f4573 | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.10/24 | 2001:172:20:20::a/64 |
+| 1 | clab-srlceos01-ceos | 6ec1b1367a77 | ceos:4.32.0F          | arista_ceos   | running | 172.20.20.11/24 | 3fff:172:20:20::b/64 |
+| 2 | clab-srlceos01-srl  | 6af1e33f4573 | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.10/24 | 3fff:172:20:20::a/64 |
 +---+---------------------+--------------+-----------------------+---------------+---------+-----------------+----------------------+
 ```
 
