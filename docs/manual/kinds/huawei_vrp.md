@@ -10,7 +10,7 @@ kind_display_name: Huawei VRP
 
 [[[ kind_display_name ]]] currently supports Huawei N40e and CE12800 variants, the same kind value - `[[[ kind_code_name ]]]` - is used for both.
 
-[[[ kind_display_name ]]] nodes launched with containerlab comes up pre-provisioned with SSH, SNMP, NETCONF, NXAPI and gRPC services enabled.
+[[[ kind_display_name ]]] nodes launched with containerlab comes up pre-provisioned with SSH, NETCONF services enabled.
 
 ## Managing [[[ kind_display_name ]]] nodes
 
@@ -83,6 +83,6 @@ topology:
 
 With this knob containerlab is instructed to take a file `myconfig.txt` from the directory that hosts the topology file, and copy it to the lab directory for that specific node under the `/config/startup-config.cfg` name. Then the directory that hosts the startup-config dir is mounted to the container. This will result in this config being applied at startup by the node.
 
-Configuration is applied after the node is started, thus it can contain partial configuration snippets that you desire to add on top of the default config that a node boots up with.
+Configuration is applied after the node is started, thus it can contain both partial configuration snippets that you desire to add on top of the default config that a node boots up with as well as the full configuration extracted from the VRP.
 
-The node is first provisioned with the [bootstrap config](), then the startup config
+When startup config is provided the node will undergo a reboot cycle after applying the bootstrap config, thus the startup time will be twice as long as the node boots up without a config.
