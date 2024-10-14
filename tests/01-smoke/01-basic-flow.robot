@@ -15,7 +15,7 @@ ${runtime}                  docker
 # defaults to docker exec. Will be rewritten to containerd `ctr` if needed in "Define runtime exec" test
 ${runtime-cli-exec-cmd}     sudo docker exec
 ${n2-ipv4}                  172.20.20.100/24
-${n2-ipv6}                  2001:172:20:20::100/64
+${n2-ipv6}                  3fff:172:20:20::100/64
 
 
 *** Test Cases ***

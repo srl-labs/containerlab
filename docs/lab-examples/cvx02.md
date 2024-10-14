@@ -21,7 +21,7 @@ Once the lab is started, the nodes will be able to ping each other:
 
 ```
 $  clab-cvx02-sw1
-Warning: Permanently added 'clab-cvx02-sw1,2001:172:20:20::3' (ECDSA) to the list of known hosts.
+Warning: Permanently added 'clab-cvx02-sw1,3fff:172:20:20::3' (ECDSA) to the list of known hosts.
 root@clab-cvx02-sw1's password:
 Linux sw1 5.10.16.3-networkop+ #17 SMP Mon May 24 15:22:51 BST 2021 x86_64
 root@sw1:mgmt:~# ping 12.12.12.2

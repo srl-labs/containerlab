@@ -463,7 +463,7 @@ root@docker-desktop:/Users/romandodin/clab# clab dep -t 2srl.clab.yml
 INFO[0000] Parsing & checking topology file: 2srl.clab.yml
 INFO[0000] Creating lab directory: /Users/romandodin/clab/clab-2srl
 INFO[0000] Creating root CA
-INFO[0000] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='2001:172:20:20::/64', MTU='1500'
+INFO[0000] Creating docker network: Name='clab', IPv4Subnet='172.20.20.0/24', IPv6Subnet='3fff:172:20:20::/64', MTU='1500'
 INFO[0000] Creating container: srl1
 INFO[0000] Creating container: srl2
 INFO[0001] Creating virtual wire: srl1:e1-1 <--> srl2:e1-1
@@ -471,8 +471,8 @@ INFO[0001] Adding containerlab host entries to /etc/hosts file
 +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
 | # |      Name      | Container ID |         Image         | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
-| 1 | clab-2srl-srl1 | 574bf836fb40 | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
-| 2 | clab-2srl-srl2 | f88531a74ffb | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
+| 1 | clab-2srl-srl1 | 574bf836fb40 | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.2/24 | 3fff:172:20:20::2/64 |
+| 2 | clab-2srl-srl2 | f88531a74ffb | ghcr.io/nokia/srlinux | srl  |       | running | 172.20.20.3/24 | 3fff:172:20:20::3/64 |
 +---+----------------+--------------+-----------------------+------+-------+---------+----------------+----------------------+
 ```
 

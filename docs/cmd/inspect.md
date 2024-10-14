@@ -51,10 +51,10 @@ The local `-w | --wide` flag adds all available columns to the `inspect` output 
 +---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
 | # | Topo Path  | Lab Name |      Name       | Container ID |       Image        | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
-| 1 | newlab.yml | newlab   | clab-newlab-n1  | 3c8262034088 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.4/24 | 2001:172:20:20::4/80 |
-| 2 |            |          | clab-newlab-n2  | 79c562b71997 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.5/24 | 2001:172:20:20::5/80 |
-| 3 | srl02.yml  | srl01    | clab-srl01-srl  | 13c9e7543771 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.2/24 | 2001:172:20:20::2/80 |
-| 4 |            |          | clab-srl01-srl2 | 8cfca93b7b6f | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
+| 1 | newlab.yml | newlab   | clab-newlab-n1  | 3c8262034088 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.4/24 | 3fff:172:20:20::4/80 |
+| 2 |            |          | clab-newlab-n2  | 79c562b71997 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.5/24 | 3fff:172:20:20::5/80 |
+| 3 | srl02.yml  | srl01    | clab-srl01-srl  | 13c9e7543771 | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.2/24 | 3fff:172:20:20::2/80 |
+| 4 |            |          | clab-srl01-srl2 | 8cfca93b7b6f | srlinux:20.6.3-145 | srl  |       | running | 172.20.20.3/24 | 3fff:172:20:20::3/80 |
 +---+------------+----------+-----------------+--------------+--------------------+------+-------+---------+----------------+----------------------+
 ```
 
@@ -67,8 +67,8 @@ Provide information about the running lab named `srlceos01`
 +---+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
 | # |        Name         | Container ID |  Image  | Kind | Group |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
-| 1 | clab-srlceos01-ceos | 90bebb1e2c5f | ceos    | ceos |       | running | 172.20.20.4/24 | 2001:172:20:20::4/80 |
-| 2 | clab-srlceos01-srl  | 82e9aa3c7e6b | srlinux | srl  |       | running | 172.20.20.3/24 | 2001:172:20:20::3/80 |
+| 1 | clab-srlceos01-ceos | 90bebb1e2c5f | ceos    | ceos |       | running | 172.20.20.4/24 | 3fff:172:20:20::4/80 |
+| 2 | clab-srlceos01-srl  | 82e9aa3c7e6b | srlinux | srl  |       | running | 172.20.20.3/24 | 3fff:172:20:20::3/80 |
 +---+---------------------+--------------+---------+------+-------+---------+----------------+----------------------+
 ```
 
@@ -80,8 +80,8 @@ INFO[0000] Parsing & checking topology file: srl02.clab.yml
 +---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
 | # |      Name       | Container ID |         Image         | Kind |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
-| 1 | clab-srl02-srl1 | 7a7c101be7d8 | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
-| 2 | clab-srl02-srl2 | 5e3737621753 | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
+| 1 | clab-srl02-srl1 | 7a7c101be7d8 | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.4/24 | 3fff:172:20:20::4/64 |
+| 2 | clab-srl02-srl2 | 5e3737621753 | ghcr.io/nokia/srlinux | srl  | running | 172.20.20.5/24 | 3fff:172:20:20::5/64 |
 +---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
 ```
 
@@ -94,9 +94,9 @@ clab inspect --all --wide
 +---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
 | # |             Topo Path             | Lab Name | Owner |      Name       | Container ID |         Image         |     Kind      |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
-| 1 | lab-examples/srl01/srl01.clab.yml | srl01    | user1 | clab-srl01-srl  | ea86f40b412a | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
-| 2 | lab-examples/srl02/srl02.clab.yml | srl02    | user2 | clab-srl02-srl1 | ba7e807235b6 | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
-| 3 |                                   |          |       | clab-srl02-srl2 | 71006155b70a | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
+| 1 | lab-examples/srl01/srl01.clab.yml | srl01    | user1 | clab-srl01-srl  | ea86f40b412a | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.2/24 | 3fff:172:20:20::2/64 |
+| 2 | lab-examples/srl02/srl02.clab.yml | srl02    | user2 | clab-srl02-srl1 | ba7e807235b6 | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.4/24 | 3fff:172:20:20::4/64 |
+| 3 |                                   |          |       | clab-srl02-srl2 | 71006155b70a | ghcr.io/nokia/srlinux | nokia_srlinux | running | 172.20.20.3/24 | 3fff:172:20:20::3/64 |
 +---+-----------------------------------+----------+-------+-----------------+--------------+-----------------------+---------------+---------+----------------+----------------------+
 ```
 
@@ -113,7 +113,7 @@ clab inspect --all --wide
     "kind": "srl",
     "state": "running",
     "ipv4_address": "172.20.20.3/24",
-    "ipv6_address": "2001:172:20:20::3/80"
+    "ipv6_address": "3fff:172:20:20::3/80"
   },
   {
     "lab_name": "srlceos01",
@@ -123,7 +123,7 @@ clab inspect --all --wide
     "kind": "ceos",
     "state": "running",
     "ipv4_address": "172.20.20.4/24",
-    "ipv6_address": "2001:172:20:20::4/80"
+    "ipv6_address": "3fff:172:20:20::4/80"
   }
 ]
 ```

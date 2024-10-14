@@ -451,7 +451,7 @@ Read more about user-defined management addresses [here](network.md#user-defined
 nodes:
     r1:
       kind: nokia_srlinux
-      mgmt_ipv6: 2001:172:20:20::100
+      mgmt_ipv6: 3fff:172:20:20::100
 ```
 
 ### DNS
