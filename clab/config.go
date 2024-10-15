@@ -197,6 +197,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Memory:          c.Config.Topology.GetNodeMemory(nodeName),
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
 		AutoRemove:      c.Config.Topology.GetNodeAutoRemove(nodeName),
+		RestartPolicy:   c.Config.Topology.GetRestartPolicy(nodeName),
 		Extras:          c.Config.Topology.GetNodeExtras(nodeName),
 		DNS:             c.Config.Topology.GetNodeDns(nodeName),
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),

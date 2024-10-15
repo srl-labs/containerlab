@@ -114,7 +114,8 @@ type NodeConfig struct {
 	// when set to true will prevent creation of a startup-config, for auto-provisioning testing (ZTP)
 	SuppressStartupConfig bool `json:"suppress-startup-config,omitempty"`
 	// when set to true will auto-remove a stopped/failed container
-	AutoRemove bool `json:"auto-remove,omitempty"`
+	AutoRemove    bool   `json:"auto-remove,omitempty"`
+	RestartPolicy string `json:"restart-policy,omitempty"`
 	// path to config file that is actually mounted to the container and is a result of templation
 	ResStartupConfig string            `json:"startup-config-abs-path,omitempty"`
 	Config           *ConfigDispatcher `json:"config,omitempty"`
