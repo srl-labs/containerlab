@@ -37,7 +37,8 @@ var (
 	//go:embed iol.cfg.tmpl
 	cfgTemplate string
 
-	IOLCfgTpl, _ = template.New("clab-iol-default-config").Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(cfgTemplate)
+	IOLCfgTpl, _ = template.New("clab-iol-default-config").Funcs(
+		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(cfgTemplate)
 
 	IOLMACBase = "1a:2b:3c"
 
@@ -103,7 +104,6 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
@@ -115,14 +115,12 @@ func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 }
 
 func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
-
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
 	return n.GenInterfaceConfig(ctx)
 }
 
 func (n *iol) CreateIOLFiles(ctx context.Context) error {
-
 	// If NVRAM already exists, don't need to create
 	// otherwise saved configs in NVRAM are overwritten.
 	if !utils.FileExists(path.Join(n.Cfg.LabDir, "nvram")) {
@@ -139,9 +137,8 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 	return nil
 }
 
-// Generate interfaces configuration for IOL (and iouyap/netmap)
+// Generate interfaces configuration for IOL (and iouyap/netmap).
 func (n *iol) GenInterfaceConfig(_ context.Context) error {
-
 	// add default 'boilerplate' to NETMAP and iouyap.ini for management port (e0/0)
 	iouyapData := "[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:0/0]\neth_dev = eth0\n"
 	netmapdata := "1:0/0 513:0/0\n"
@@ -228,7 +225,7 @@ type IOLTemplateData struct {
 }
 
 // IOLinterface struct stores mapping info between
-// IOL interface name and linux container interface
+// IOL interface name and linux container interface.
 type IOLInterface struct {
 	IfaceName string
 	IfaceIdx  int
