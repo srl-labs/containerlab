@@ -1,6 +1,6 @@
 ---
 vr_rns:
-  "0.20.0": >-
+  "0.20.1": >-
     New platforms: [Cisco IOL](kinds/cisco_iol.md), [Cisco vIOS](https://github.com/hellt/vrnetlab/tree/master/vios), [Huawei VRP](kinds/huawei_vrp.md)<br/>
     The vrnetlab version (commit) is now part of the image labels under the `vrnetlab-version` name. This should help you identify what version of vrnetlab is used to build the image.
 ---
@@ -35,7 +35,7 @@ Containerlab depends on [`hellt/vrnetlab`](https://github.com/hellt/vrnetlab) pr
 
 | containerlab[^3] | vrnetlab[^4]                                                       | Notes                                                                                                                                                                  |
 | ---------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `0.58.0`         | [`0.20.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.20.0) | [[[vr_rns["0.20.0"]]]]                                                                                                                                                 |
+| `0.58.0`         | [`0.20.1`](https://github.com/hellt/vrnetlab/releases/tag/v0.20.1) | [[[vr_rns["0.20.1"]]]]                                                                                                                                                 |
 | `0.56.0`         | [`0.18.1`](https://github.com/hellt/vrnetlab/releases/tag/v0.18.1) | Added support for [Dell SONiC](kinds/dell_sonic.md), [SONiC VM](kinds/sonic-vm.md), [Cisco Catalyst 9000v](kinds/vr-cat9kv.md)                                         |
 | `0.55.0`         | [`0.17.0`](https://github.com/hellt/vrnetlab/releases/tag/v0.17.0) | Added support for [Juniper vJunos-router](kinds/vr-vjunosrouter.md), [Generic VM](kinds/generic_vm.md), support for setting qemu parameters via env vars for the nodes |
 
