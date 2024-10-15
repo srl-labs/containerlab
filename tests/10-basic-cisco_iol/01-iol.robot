@@ -33,7 +33,7 @@ Verify links in node router1
 
 Verify links in node switch
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-switch sh ip int br | head -9 | tail -1
+    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-switch sh ip int br | head -5 | tail -1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    172.20.20.
