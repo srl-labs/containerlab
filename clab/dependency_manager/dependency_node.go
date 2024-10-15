@@ -91,11 +91,6 @@ func (d *DependencyNode) getExecs(p types.WaitForStage, t types.CommandType, tar
 	return e.GetExecCommands(t)
 }
 
-const (
-	execsConst     = "execs"
-	hostExecsConst = "host-execs"
-)
-
 // EnterStage is called by a node that is meant to enter the specified stage.
 // The call will be blocked until all dependencies for the node to enter the stage are met.
 func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
