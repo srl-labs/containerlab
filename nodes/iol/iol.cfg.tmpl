@@ -13,29 +13,22 @@ no ip domain lookup
 username admin privilege 15 secret admin
 !
 vrf definition clab-mgmt
+ description clab-mgmt
  address-family ipv4
  !
  address-family ipv6
  !
 !
+interface Ethernet0/0
 {{ if .IsL2Node }}
-interface Vlan1
+ no switchport
+{{ end }}
  vrf forwarding clab-mgmt
+ description clab-mgmt
  ip address {{ .MgmtIPv4Addr }} {{ .MgmtIPv4SubnetMask }}
  ipv6 address {{ .MgmtIPv6Addr }}/{{ .MgmtIPv6PrefixLen }}
-!
-{{ end }}
-interface Ethernet0/0
  no shutdown
  mac-address {{ .MgmtIntfMacAddr }}
-{{ if .IsL2Node }}
- switchport mode access
- switchport access vlan 1
-{{ else }}
- vrf forwarding clab-mgmt
- ip address {{ .MgmtIPv4Addr }} {{ .MgmtIPv4SubnetMask }}
- ipv6 address {{ .MgmtIPv6Addr }}/{{ .MgmtIPv6PrefixLen }}
-{{ end }}
 !{{ range $index, $item := .DataIFaces }}
 interface Ethernet{{ .Slot }}/{{ .Port }}
  no shutdown
@@ -43,8 +36,8 @@ interface Ethernet{{ .Slot }}/{{ .Port }}
 !{{ end }}
 ip forward-protocol nd
 !
-ip route vrf clab-mgmt 0.0.0.0 0.0.0.0 {{ if .IsL2Node }}Vlan1{{ else }}Ethernet0/0{{ end }} {{ .MgmtIPv4GW }}
-ipv6 route vrf clab-mgmt ::/0 {{ if .IsL2Node }}Vlan1{{ else }}Ethernet0/0{{ end }} {{ .MgmtIPv6GW }}
+ip route vrf clab-mgmt 0.0.0.0 0.0.0.0 {Ethernet0/0} {{ .MgmtIPv4GW }}
+ipv6 route vrf clab-mgmt ::/0 {Ethernet0/0} {{ .MgmtIPv6GW }}
 !
 ip ssh version 2
 crypto key generate rsa modulus 2048
