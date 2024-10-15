@@ -83,7 +83,7 @@ The example ports above would be mapped to the following Linux interfaces inside
 - `eth4` - Fourth data-plane interface. Mapped to `Ethernet1/0` interface
 - `eth5` - Fifth data-plane interface. Mapped to `Ethernet1/1` interface and so on...
 
-When containerlab launches [[[ kind_display_name ]]], the `Ethernet0/0` or `Vlan1` interface of the container gets assigned management IPv4 and IPv6 addresses from docker. On IOL the `Ethernet0/0` is in it's own management VRF so configuration in the global context will not affect the management interface. On IOL-L2 the management interface is the `Vlan1` interface, it is also in it's own management VRF.
+When containerlab launches [[[ kind_display_name ]]], the `Ethernet0/0` interface of the container gets assigned management IPv4 and IPv6 addresses from docker. The `Ethernet0/0` interface is in it's own management VRF so that configuration in the global context will not affect the management interface.
 
 Interfaces can be defined in a non-contigous manner in your toplogy file. See the example below.
 
