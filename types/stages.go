@@ -1,7 +1,7 @@
 package types
 
 import (
-	"golang.org/x/exp/slices"
+	"fmt"
 
 	"github.com/srl-labs/containerlab/clab/exec"
 )
@@ -19,6 +19,12 @@ const (
 	WaitForExit WaitForStage = "exit"
 )
 
+var (
+	// the defauts we need as pointers, so assign them to vars, such that we can acquire the pointer
+	defaultCommandExecutionPhaseVar = CommandExecutionPhaseEnter
+	defaultCommandTargetVar         = CommandTargetContainer
+)
+
 // Stages represents a configuration of a given node deployment stage.
 type Stages struct {
 	Create      *StageCreate      `yaml:"create"`
@@ -33,35 +39,40 @@ func NewStages() *Stages {
 	return &Stages{
 		Create: &StageCreate{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: CommandAndTargetList{},
 			},
 		},
 		CreateLinks: &StageCreateLinks{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: CommandAndTargetList{},
 			},
 		},
 		Configure: &StageConfigure{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: CommandAndTargetList{},
 			},
 		},
 		Healthy: &StageHealthy{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: CommandAndTargetList{},
 			},
 		},
 		Exit: &StageExit{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: CommandAndTargetList{},
 			},
 		},
 	}
+}
+
+// NilToDefault containing structs consist of pointer values, that need to be set to default if
+// they are not set to a concrete value via the topo file. This func is doing that initialization.
+func (s *Stages) NilToDefault() {
+	s.Configure.Execs.NilToDefault()
+	s.Create.Execs.NilToDefault()
+	s.CreateLinks.Execs.NilToDefault()
+	s.Healthy.Execs.NilToDefault()
+	s.Exit.Execs.NilToDefault()
 }
 
 // GetWaitFor returns lists of nodes that need to be waited for in a map
@@ -117,62 +128,64 @@ func (s *Stages) Merge(other *Stages) error {
 	return err
 }
 
-// Execs represents configuration of commands to execute at a given stage.
-// Every stage has two commands lists: on-enter and on-exit.
-// On-enter commands are executed when the node enters the stage.
-// On-exit commands are executed when the node exits the stage.
-type Execs struct {
-	// Commands is a list of commands to to execute
-	CommandsOnEnter []string `yaml:"on-enter,omitempty"`
-	CommandsOnExit  []string `yaml:"on-exit,omitempty"`
+type CommandAndTargetList []*CommandAndTarget
+
+func (c CommandAndTargetList) HasCommands() bool {
+	return len(c) > 0
 }
 
-func (e *Execs) HasCommands() bool {
-	return len(e.CommandsOnEnter) > 0 || len(e.CommandsOnExit) > 0
+// NilToDefault containing structs consist of pointer values, that need to be set to default if
+// they are not set to a concrete value via the topo file. This func is doing that initialization.
+func (c CommandAndTargetList) NilToDefault() {
+	for _, x := range c {
+		x.NilToDefault()
+	}
 }
 
-type CommandType uint
+type CommandAndTarget struct {
+	Command string                 `yaml:"command,omitempty"`
+	Target  *CommandTarget         `yaml:"target,omitempty"`
+	Phase   *CommandExecutionPhase `yaml:"phase,omitempty"`
+}
+
+// NilToDefault containing structs consist of pointer values, that need to be set to default if
+// they are not set to a concrete value via the topo file. This func is doing that initialization.
+func (c *CommandAndTarget) NilToDefault() {
+	// default the phase to on-enter
+	if c.Phase == nil {
+		c.Phase = &defaultCommandExecutionPhaseVar
+	}
+	// default target to container
+	if c.Target == nil {
+		c.Target = &defaultCommandTargetVar
+	}
+}
+
+func (c *CommandAndTarget) GetExecCmd() (*exec.ExecCmd, error) {
+	return exec.NewExecCmdFromString(c.Command)
+}
+
+func (c *CommandAndTarget) String() string {
+	return fmt.Sprintf("phase: %s, command: %s, target: %s", *c.Phase, c.Command, *c.Target)
+}
+
+type CommandExecutionPhase string
 
 const (
-	// CommandTypeEnter represents a command to be executed when the node enters the stage.
-	CommandTypeEnter CommandType = iota
-	// CommandTypeExit represents a command to be executed when the node exits the stage.
-	CommandTypeExit
+	// CommandExecutionPhaseEnter represents a command to be executed when the node enters the stage.
+	CommandExecutionPhaseEnter CommandExecutionPhase = "on-enter"
+	// CommandExecutionPhaseExit represents a command to be executed when the node exits the stage.
+	CommandExecutionPhaseExit CommandExecutionPhase = "on-exit"
 )
 
-type CommandTarget uint
+type CommandTarget string
 
 const (
 	// CommandTargetContainer determines that the commands are meant to be executed within the container
-	CommandTargetContainer CommandTarget = iota
+	CommandTargetContainer CommandTarget = "container"
 	// CommandTargetHost determines that the commands are meant to be executed on the host system
-	CommandTargetHost
+	CommandTargetHost CommandTarget = "host"
 )
-
-// GetExecCommands returns a list of exec commands to be executed.
-func (e *Execs) GetExecCommands(ct CommandType) ([]*exec.ExecCmd, error) {
-	var commands []string
-
-	switch ct {
-	case CommandTypeEnter:
-		commands = e.CommandsOnEnter
-	case CommandTypeExit:
-		commands = e.CommandsOnExit
-	}
-
-	var ex []*exec.ExecCmd
-
-	for _, c := range commands {
-		newCmd, err := exec.NewExecCmdFromString(c)
-		if err != nil {
-			return nil, err
-		}
-
-		ex = append(ex, newCmd)
-	}
-
-	return ex, nil
-}
 
 // StageCreate represents a creation stage of a given node.
 type StageCreate struct {
@@ -247,9 +260,8 @@ func (s *StageExit) Merge(other *StageExit) error {
 // StageBase represents a common configuration stage.
 // Other stages embed this type to inherit its configuration options.
 type StageBase struct {
-	WaitFor   WaitForList `yaml:"wait-for,omitempty"`
-	Execs     Execs       `yaml:"exec,omitempty"`
-	HostExecs Execs       `yaml:"host-exec,omitempty"`
+	WaitFor WaitForList          `yaml:"wait-for,omitempty"`
+	Execs   CommandAndTargetList `yaml:"exec,omitempty"`
 }
 
 // WaitForList is a list of WaitFor configurations.
@@ -281,41 +293,7 @@ func (s *StageBase) Merge(sc *StageBase) error {
 		s.WaitFor = append(s.WaitFor, wf)
 	}
 
-	for _, cmd := range sc.Execs.CommandsOnEnter {
-		// prevent adding the same dependency twice
-		if slices.Contains(s.Execs.CommandsOnEnter, cmd) {
-			continue
-		}
-
-		s.Execs.CommandsOnEnter = append(s.Execs.CommandsOnEnter, cmd)
-	}
-
-	for _, cmd := range sc.Execs.CommandsOnExit {
-		// prevent adding the same dependency twice
-		if slices.Contains(s.Execs.CommandsOnExit, cmd) {
-			continue
-		}
-
-		s.Execs.CommandsOnExit = append(s.Execs.CommandsOnExit, cmd)
-	}
-
-	for _, cmd := range sc.HostExecs.CommandsOnEnter {
-		// prevent adding the same dependency twice
-		if slices.Contains(s.HostExecs.CommandsOnEnter, cmd) {
-			continue
-		}
-
-		s.HostExecs.CommandsOnEnter = append(s.HostExecs.CommandsOnEnter, cmd)
-	}
-
-	for _, cmd := range sc.HostExecs.CommandsOnExit {
-		// prevent adding the same dependency twice
-		if slices.Contains(s.HostExecs.CommandsOnExit, cmd) {
-			continue
-		}
-
-		s.HostExecs.CommandsOnExit = append(s.HostExecs.CommandsOnExit, cmd)
-	}
+	s.Execs = append(s.Execs, sc.Execs...)
 
 	return nil
 }
