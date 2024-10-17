@@ -40,7 +40,7 @@ var (
 	IOLCfgTpl, _ = template.New("clab-iol-default-config").Funcs(
 		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(cfgTemplate)
 
-	IOLMACBase = "00:53:01"
+	IOLMACBase = "00:00:5E"
 
 	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	InterfaceOffset = 1
