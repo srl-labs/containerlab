@@ -92,6 +92,10 @@ Ensure node1 executed on-enter commands for its create-links stage and this outp
 
     Log    ${match}
 
+Ensure host-exec file is created with the right content
+    ${content} =    Get File    /tmp/host-exec-test
+    Should Contain    ${content}    foo    msg=File does not contain the expected string
+
 Deploy ${lab-name} lab with a single worker
     Run Keyword    Teardown
 

@@ -102,7 +102,7 @@ func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
 
 func (d *DependencyNode) runExecs(ctx context.Context, ct types.CommandType, p types.WaitForStage) {
 
-	for _, target := range []types.CommandTarget{types.CommandTargetContainer, types.CommandTargetHost} {
+	for _, target := range []types.CommandTarget{types.CommandTargetHost, types.CommandTargetContainer} {
 
 		execs, err := d.getExecs(p, ct, target)
 		if err != nil {

@@ -17,6 +17,9 @@ topology:
             - node: node2
               stage: create
         create-links:
+          host-exec:
+            on-enter:
+              - bash -c 'echo foo > /tmp/host-exec-test'
           exec:
             on-enter:
               - ls /sys/class/net/
