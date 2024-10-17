@@ -20,6 +20,8 @@ import (
 	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"
 	errs "github.com/srl-labs/containerlab/errors"
+	"github.com/srl-labs/containerlab/kinds"
+	allKinds "github.com/srl-labs/containerlab/kinds/all"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -42,7 +44,7 @@ type CLab struct {
 	Endpoints []links.Endpoint
 	Runtimes  map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
 	// reg is a registry of node kinds
-	Reg  *nodes.NodeRegistry
+	Reg  *kinds.Registry
 	Cert *cert.Cert
 	// List of SSH public keys extracted from the ~/.ssh/authorized_keys file
 	// and ~/.ssh/*.pub files.
@@ -340,9 +342,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		Cert:     &cert.Cert{},
 	}
 
-	// init a new NodeRegistry
-	c.Reg = nodes.NewNodeRegistry()
-	c.RegisterNodes()
+	c.Reg = allKinds.Registry
 
 	for _, opt := range opts {
 		err := opt(c)

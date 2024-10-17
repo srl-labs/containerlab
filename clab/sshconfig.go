@@ -65,10 +65,10 @@ func (c *CLab) addSSHConfig() error {
 	for _, n := range c.Nodes {
 		// get the Kind from the KindRegistry and and extract
 		// the kind registered Username
-		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
+		creds := c.Reg.GetCredentialsOfKind(n.Config().Kind)
 		nodeData := SSHConfigNodeTmpl{
 			Name:      n.Config().LongName,
-			Username:  NodeRegistryEntry.Credentials().GetUsername(),
+			Username:  creds.GetUsername(),
 			SSHConfig: n.GetSSHConfig(),
 		}
 

@@ -79,10 +79,10 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 
 		// add username and password to kind properties
 		// assumption is that all nodes of the same kind have the same credentials
-		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
-		if nodeRegEntry != nil {
-			kindProps.Username = nodeRegEntry.Credentials().GetUsername()
-			kindProps.Password = nodeRegEntry.Credentials().GetPassword()
+		creds := c.Reg.GetCredentialsOfKind(n.Config().Kind)
+		if creds != nil {
+			kindProps.Username = creds.GetUsername()
+			kindProps.Password = creds.GetPassword()
 		}
 
 		// add network_os to the node

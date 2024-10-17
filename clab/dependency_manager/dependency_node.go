@@ -7,8 +7,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/kinds/types/host"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/host"
 	"github.com/srl-labs/containerlab/types"
 )
 
