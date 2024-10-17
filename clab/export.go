@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"io"
+	"path/filepath"
 	"text/template"
 
 	"github.com/hairyhenderson/gomplate/v3"
@@ -49,7 +50,12 @@ var fullExportTemplate string
 
 // exportTopologyDataWithTemplate generates and writes topology data file to w using a template.
 func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p string) error {
-	t := template.New("export").
+	name := "export"
+	if p != "" {
+		name = filepath.Base(p)
+	}
+
+	t := template.New(name).
 		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 		Funcs(template.FuncMap{
 			"ToJSON": func(v interface{}) string {
