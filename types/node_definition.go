@@ -22,6 +22,7 @@ type NodeDefinition struct {
 	EnforceStartupConfig  *bool             `yaml:"enforce-startup-config,omitempty"`
 	SuppressStartupConfig *bool             `yaml:"suppress-startup-config,omitempty"`
 	AutoRemove            *bool             `yaml:"auto-remove,omitempty"`
+	RestartPolicy         string            `yaml:"restart-policy,omitempty"`
 	Config                *ConfigDispatcher `yaml:"config,omitempty"`
 	Image                 string            `yaml:"image,omitempty"`
 	ImagePullPolicy       string            `yaml:"image-pull-policy,omitempty"`
@@ -167,6 +168,13 @@ func (n *NodeDefinition) GetAutoRemove() *bool {
 		return nil
 	}
 	return n.AutoRemove
+}
+
+func (n *NodeDefinition) GetRestartPolicy() string {
+	if n == nil {
+		return ""
+	}
+	return n.RestartPolicy
 }
 
 func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {

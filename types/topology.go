@@ -245,6 +245,18 @@ func (t *Topology) GetNodeAutoRemove(name string) bool {
 	return false
 }
 
+func (t *Topology) GetRestartPolicy(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if l := ndef.GetRestartPolicy(); l != "" {
+			return l
+		}
+		if l := t.GetKind(t.GetNodeKind(name)).GetRestartPolicy(); l != "" {
+			return l
+		}
+	}
+	return t.GetDefaults().GetRestartPolicy()
+}
+
 func (t *Topology) GetNodeLicense(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if l := ndef.GetLicense(); l != "" {

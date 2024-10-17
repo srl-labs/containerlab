@@ -88,6 +88,32 @@ topology:
       image-pull-policy: Always
 ```
 
+### restart-policy
+
+With `restart-policy` a user defines the restart policy of a container as per [docker docs](https://docs.docker.com/engine/containers/start-containers-automatically/).
+
+Valid values are:
+
+- `no` - Don't automatically restart the container.
+- `on-failure` - Restart the container if it exits due to an error, which manifests as a non-zero exit code. The on-failure policy only prompts a restart if the container exits with a failure. It doesn't restart the container if the daemon restarts.
+- `always` - Always restart the container if it stops. If it's manually stopped, it's restarted only when Docker daemon restarts or the container itself is manually restarted.
+- `unless-stopped` Similar to always, except that when the container is stopped (manually or otherwise), it isn't restarted even after Docker daemon restarts.
+
+`no` is the default restart policy value for all kinds, but `linux`. Linux kind defaults to `always`.
+
+```yaml
+topology:
+  nodes:
+    srl:
+      image: ghcr.io/nokia/srlinux
+      kind: nokia_srlinux
+      restart-policy: always
+    alpine:
+      kind: linux
+      image: alpine
+      restart-policy: "no"
+```
+
 ### license
 
 Some containerized NOSes require a license to operate or can leverage a license to lift-off limitations of an unlicensed version. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
@@ -757,6 +783,24 @@ In the example above, the `ls /sys/class/net/` command will be executed when `no
 Per-stage command execution gives you additional flexibility in terms of when the commands are executed, and what commands are executed at each stage.
 
 <!-- --8<-- [end:per-stage-1] -->
+
+##### Host exec
+
+The stage's `exec` property runs the commands in the container namespace and therefore targets the container node itself. This is super useful in itself, but sometimes you need to run a command on the host as a reaction to a stage enter/exit event.
+
+This is what `host-exec` is designed for. It runs the command in the host namespace and therefore targets the host itself.
+
+```yaml
+nodes:
+  node1:
+    stages:
+      create-links:
+        host-exec:
+          on-enter:
+            - touch /tmp/hello
+```
+
+In the example above, containerlab will run `touch /tmp/hello` command when the `node1` is about to enter the `create-links` stage. You can use `host-exec` in every stage.
 
 ### certificate
 

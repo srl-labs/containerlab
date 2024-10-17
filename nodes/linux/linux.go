@@ -37,6 +37,15 @@ func (n *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	n.Cfg = cfg
+
+	// linux kind uses `always` as a default restart policy
+	// since often they run auxiliary services that might fail because
+	// of the wrong configuration or other reasons.
+	// Usually we want those services to automatically restart.
+	if n.Cfg.RestartPolicy == "" {
+		n.Cfg.RestartPolicy = "always"
+	}
+
 	for _, o := range opts {
 		o(n)
 	}

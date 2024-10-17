@@ -33,27 +33,32 @@ func NewStages() *Stages {
 	return &Stages{
 		Create: &StageCreate{
 			StageBase: StageBase{
-				Execs: Execs{},
+				Execs:     Execs{},
+				HostExecs: Execs{},
 			},
 		},
 		CreateLinks: &StageCreateLinks{
 			StageBase: StageBase{
-				Execs: Execs{},
+				Execs:     Execs{},
+				HostExecs: Execs{},
 			},
 		},
 		Configure: &StageConfigure{
 			StageBase: StageBase{
-				Execs: Execs{},
+				Execs:     Execs{},
+				HostExecs: Execs{},
 			},
 		},
 		Healthy: &StageHealthy{
 			StageBase: StageBase{
-				Execs: Execs{},
+				Execs:     Execs{},
+				HostExecs: Execs{},
 			},
 		},
 		Exit: &StageExit{
 			StageBase: StageBase{
-				Execs: Execs{},
+				Execs:     Execs{},
+				HostExecs: Execs{},
 			},
 		},
 	}
@@ -133,6 +138,15 @@ const (
 	CommandTypeEnter CommandType = iota
 	// CommandTypeExit represents a command to be executed when the node exits the stage.
 	CommandTypeExit
+)
+
+type CommandTarget uint
+
+const (
+	// CommandTargetContainer determines that the commands are meant to be executed within the container
+	CommandTargetContainer CommandTarget = iota
+	// CommandTargetHost determines that the commands are meant to be executed on the host system
+	CommandTargetHost
 )
 
 // GetExecCommands returns a list of exec commands to be executed.
@@ -233,8 +247,9 @@ func (s *StageExit) Merge(other *StageExit) error {
 // StageBase represents a common configuration stage.
 // Other stages embed this type to inherit its configuration options.
 type StageBase struct {
-	WaitFor WaitForList `yaml:"wait-for,omitempty"`
-	Execs   `yaml:"exec,omitempty"`
+	WaitFor   WaitForList `yaml:"wait-for,omitempty"`
+	Execs     Execs       `yaml:"exec,omitempty"`
+	HostExecs Execs       `yaml:"host-exec,omitempty"`
 }
 
 // WaitForList is a list of WaitFor configurations.
@@ -282,6 +297,24 @@ func (s *StageBase) Merge(sc *StageBase) error {
 		}
 
 		s.Execs.CommandsOnExit = append(s.Execs.CommandsOnExit, cmd)
+	}
+
+	for _, cmd := range sc.HostExecs.CommandsOnEnter {
+		// prevent adding the same dependency twice
+		if slices.Contains(s.HostExecs.CommandsOnEnter, cmd) {
+			continue
+		}
+
+		s.HostExecs.CommandsOnEnter = append(s.HostExecs.CommandsOnEnter, cmd)
+	}
+
+	for _, cmd := range sc.HostExecs.CommandsOnExit {
+		// prevent adding the same dependency twice
+		if slices.Contains(s.HostExecs.CommandsOnExit, cmd) {
+			continue
+		}
+
+		s.HostExecs.CommandsOnExit = append(s.HostExecs.CommandsOnExit, cmd)
 	}
 
 	return nil

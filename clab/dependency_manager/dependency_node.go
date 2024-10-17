@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/host"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -61,20 +62,33 @@ func (d *DependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
 	return d.stageWG[n]
 }
 
-func (d *DependencyNode) getExecs(p types.WaitForStage, t types.CommandType) ([]*exec.ExecCmd, error) {
+func (d *DependencyNode) getExecs(p types.WaitForStage, t types.CommandType, target types.CommandTarget) ([]*exec.ExecCmd, error) {
+
+	var sb types.StageBase
 	switch p {
 	case types.WaitForCreate:
-		return d.Config().Stages.Create.GetExecCommands(t)
+		sb = d.Config().Stages.Create.StageBase
 	case types.WaitForCreateLinks:
-		return d.Config().Stages.CreateLinks.GetExecCommands(t)
+		sb = d.Config().Stages.CreateLinks.StageBase
 	case types.WaitForConfigure:
-		return d.Config().Stages.Configure.GetExecCommands(t)
+		sb = d.Config().Stages.Configure.StageBase
 	case types.WaitForHealthy:
-		return d.Config().Stages.Healthy.GetExecCommands(t)
+		sb = d.Config().Stages.Healthy.StageBase
 	case types.WaitForExit:
-		return d.Config().Stages.Exit.GetExecCommands(t)
+		sb = d.Config().Stages.Exit.StageBase
+	default:
+		return nil, fmt.Errorf("stage %s unknown", p)
 	}
-	return nil, fmt.Errorf("stage %s unknown", p)
+
+	var e types.Execs
+	switch target {
+	case types.CommandTargetContainer:
+		e = sb.Execs
+	case types.CommandTargetHost:
+		e = sb.HostExecs
+	}
+
+	return e.GetExecCommands(t)
 }
 
 // EnterStage is called by a node that is meant to enter the specified stage.
@@ -87,26 +101,35 @@ func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
 }
 
 func (d *DependencyNode) runExecs(ctx context.Context, ct types.CommandType, p types.WaitForStage) {
-	execs, err := d.getExecs(p, ct)
-	if err != nil {
-		log.Errorf("error getting exec commands defined for %s: %v", d.GetShortName(), err)
-	}
 
-	if len(execs) == 0 {
-		return
-	}
+	for _, target := range []types.CommandTarget{types.CommandTargetHost, types.CommandTargetContainer} {
 
-	// exec the commands
-	execResultCollection := exec.NewExecCollection()
-
-	for _, exec := range execs {
-		execResult, err := d.RunExec(ctx, exec)
+		execs, err := d.getExecs(p, ct, target)
 		if err != nil {
-			log.Errorf("error on exec in node %s for stage %s: %v", d.GetShortName(), p, err)
+			log.Errorf("error getting exec commands defined for %s: %v", d.GetShortName(), err)
 		}
-		execResultCollection.Add(d.GetShortName(), execResult)
+
+		if len(execs) == 0 {
+			continue
+		}
+
+		// exec the commands
+		execResultCollection := exec.NewExecCollection()
+		var execResult *exec.ExecResult
+		for _, exec := range execs {
+			if target == types.CommandTargetContainer {
+				execResult, err = d.RunExec(ctx, exec)
+			} else {
+				execResult, err = host.RunExec(ctx, exec)
+			}
+			if err != nil {
+				log.Errorf("error on exec in node %s for stage %s: %v", d.GetShortName(), p, err)
+			}
+			execResultCollection.Add(d.GetShortName(), execResult)
+		}
+		execResultCollection.Log()
 	}
-	execResultCollection.Log()
+
 }
 
 // Done is called by a node that has finished all tasks for the provided stage.

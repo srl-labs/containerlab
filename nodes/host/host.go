@@ -109,6 +109,10 @@ func (*host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error
 
 // RunExec runs commands on the container host.
 func (*host) RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult, error) {
+	return RunExec(ctx, e)
+}
+
+func RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult, error) {
 	// retireve the command with its arguments
 	command := e.GetCmd()
 

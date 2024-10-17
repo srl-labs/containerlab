@@ -15,7 +15,7 @@
                 },
                 "image-pull-policy": {
                     "type": "string",
-                    "description": "policy for pulling the referenced cotnainer image",
+                    "description": "policy for pulling the referenced container image",
                     "markdownDescription": "container [image-pull-policy](https://containerlab.dev/manual/nodes/#image-pull-policy) to use for this node",
                     "enum": [
                         "always",
@@ -24,6 +24,21 @@
                         "Never",
                         "ifnotpresent",
                         "IfNotPresent"
+                    ]
+                },
+                "restart-policy": {
+                    "type": "string",
+                    "description": "restart policy for the referenced container image",
+                    "markdownDescription": "container [restart-policy](https://containerlab.dev/manual/nodes/#restart-policy) to use for this node",
+                    "enum": [
+                        "no",
+                        "No",
+                        "on-failure",
+                        "On-failure",
+                        "Always",
+                        "always",
+                        "unless-stopped",
+                        "Unless-stopped"
                     ]
                 },
                 "kind": {
