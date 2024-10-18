@@ -17,12 +17,11 @@ topology:
             - node: node2
               stage: create
         create-links:
-          host-exec:
-            on-enter:
-              - bash -c 'echo foo > /tmp/host-exec-test'
           exec:
-            on-enter:
-              - ls /sys/class/net/
+            - command: bash -c 'echo foo > /tmp/host-exec-test'
+              phase: on-enter
+              target: host
+            - command: ls /sys/class/net/
 
     node2:
       cmd: sh -c "date +%s%N > /tmp/time & sh"
@@ -40,8 +39,8 @@ topology:
             - node: node4
               stage: healthy
           exec:
-            on-exit:
-              - ls /sys/class/net/
+            - command: ls /sys/class/net/
+              phase: on-exit
 
     node4:
       cmd: sh -c "date +%s%N > /tmp/time & sh"
@@ -54,12 +53,12 @@ topology:
       stages:
         create-links:
           exec:
-            on-exit:
-              - ls /sys/class/net/
+            - command: ls /sys/class/net/
+              phase: on-exit
         healthy:
           exec:
-            on-exit:
-              - echo 'hey I am existing healthy stage'
+            - command: echo 'hey I am existing healthy stage'
+              phase: on-exit
 
   links:
     - endpoints: ["node1:eth1", "node2:eth1"]
