@@ -510,7 +510,7 @@ func (t *Topology) GetStages(name string) (*Stages, error) {
 		s.Merge(nodeStages)
 	}
 	// set nil values to their respective defaults
-	s.NilToDefault()
+	s.InitDefaults()
 	return s, nil
 }
 

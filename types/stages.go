@@ -65,14 +65,13 @@ func NewStages() *Stages {
 	}
 }
 
-// NilToDefault containing structs consist of pointer values, that need to be set to default if
-// they are not set to a concrete value via the topo file. This func is doing that initialization.
-func (s *Stages) NilToDefault() {
-	s.Configure.Execs.NilToDefault()
-	s.Create.Execs.NilToDefault()
-	s.CreateLinks.Execs.NilToDefault()
-	s.Healthy.Execs.NilToDefault()
-	s.Exit.Execs.NilToDefault()
+// InitDefaults set defaults for the stages.
+func (s *Stages) InitDefaults() {
+	s.Configure.Execs.InitDefaults()
+	s.Create.Execs.InitDefaults()
+	s.CreateLinks.Execs.InitDefaults()
+	s.Healthy.Execs.InitDefaults()
+	s.Exit.Execs.InitDefaults()
 }
 
 // GetWaitFor returns lists of nodes that need to be waited for in a map
@@ -136,30 +135,28 @@ func (c Execs) HasCommands() bool {
 	return len(c) > 0
 }
 
-// NilToDefault containing structs consist of pointer values, that need to be set to default if
-// they are not set to a concrete value via the topo file. This func is doing that initialization.
-func (c Execs) NilToDefault() {
-	for _, x := range c {
-		x.NilToDefault()
+// InitDefaults sets default values for Execs.
+func (execs Execs) InitDefaults() {
+	for _, e := range execs {
+		e.InitDefaults()
 	}
 }
 
 type Exec struct {
-	Command string      `yaml:"command,omitempty"`
-	Target  *ExecTarget `yaml:"target,omitempty"`
-	Phase   *ExecPhase  `yaml:"phase,omitempty"`
+	Command string     `yaml:"command,omitempty"`
+	Target  ExecTarget `yaml:"target,omitempty"`
+	Phase   ExecPhase  `yaml:"phase,omitempty"`
 }
 
-// NilToDefault containing structs consist of pointer values, that need to be set to default if
-// they are not set to a concrete value via the topo file. This func is doing that initialization.
-func (c *Exec) NilToDefault() {
+// InitDefaults sets default values for Exec.
+func (c *Exec) InitDefaults() {
 	// default the phase to on-enter
-	if c.Phase == nil {
-		c.Phase = &defaultCommandExecutionPhase
+	if c.Phase == "" {
+		c.Phase = defaultCommandExecutionPhase
 	}
 	// default target to container
-	if c.Target == nil {
-		c.Target = &defaultCommandTarget
+	if c.Target == "" {
+		c.Target = defaultCommandTarget
 	}
 }
 
@@ -168,7 +165,7 @@ func (c *Exec) GetExecCmd() (*exec.ExecCmd, error) {
 }
 
 func (c *Exec) String() string {
-	return fmt.Sprintf("phase: %s, command: %s, target: %s", *c.Phase, c.Command, *c.Target)
+	return fmt.Sprintf("phase: %s, command: %s, target: %s", c.Phase, c.Command, c.Target)
 }
 
 type ExecPhase string

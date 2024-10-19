@@ -82,7 +82,7 @@ func (d *DependencyNode) getExecs(stage types.WaitForStage, execPhase types.Exec
 	var result = []*types.Exec{}
 	for _, x := range sb.Execs {
 		// filter the list of commands for the given phase (on-enter / on-exit)
-		if *x.Phase == execPhase {
+		if x.Phase == execPhase {
 			result = append(result, x)
 		}
 	}
@@ -120,7 +120,7 @@ func (d *DependencyNode) runExecs(ctx context.Context, execPhase types.ExecPhase
 			log.Errorf("%s stage %s error parsing command: %s", d.GetShortName(), stage, exec.String())
 		}
 
-		switch *exec.Target {
+		switch exec.Target {
 		case types.CommandTargetContainer:
 			execResult, err = d.RunExec(ctx, execCmd)
 			hostname = d.GetShortName()
