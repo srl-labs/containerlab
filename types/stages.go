@@ -39,27 +39,27 @@ func NewStages() *Stages {
 	return &Stages{
 		Create: &StageCreate{
 			StageBase: StageBase{
-				Execs: CommandAndTargetList{},
+				Execs: Execs{},
 			},
 		},
 		CreateLinks: &StageCreateLinks{
 			StageBase: StageBase{
-				Execs: CommandAndTargetList{},
+				Execs: Execs{},
 			},
 		},
 		Configure: &StageConfigure{
 			StageBase: StageBase{
-				Execs: CommandAndTargetList{},
+				Execs: Execs{},
 			},
 		},
 		Healthy: &StageHealthy{
 			StageBase: StageBase{
-				Execs: CommandAndTargetList{},
+				Execs: Execs{},
 			},
 		},
 		Exit: &StageExit{
 			StageBase: StageBase{
-				Execs: CommandAndTargetList{},
+				Execs: Execs{},
 			},
 		},
 	}
@@ -128,29 +128,29 @@ func (s *Stages) Merge(other *Stages) error {
 	return err
 }
 
-type CommandAndTargetList []*CommandAndTarget
+type Execs []*Exec
 
-func (c CommandAndTargetList) HasCommands() bool {
+func (c Execs) HasCommands() bool {
 	return len(c) > 0
 }
 
 // NilToDefault containing structs consist of pointer values, that need to be set to default if
 // they are not set to a concrete value via the topo file. This func is doing that initialization.
-func (c CommandAndTargetList) NilToDefault() {
+func (c Execs) NilToDefault() {
 	for _, x := range c {
 		x.NilToDefault()
 	}
 }
 
-type CommandAndTarget struct {
-	Command string                 `yaml:"command,omitempty"`
-	Target  *CommandTarget         `yaml:"target,omitempty"`
-	Phase   *CommandExecutionPhase `yaml:"phase,omitempty"`
+type Exec struct {
+	Command string      `yaml:"command,omitempty"`
+	Target  *ExecTarget `yaml:"target,omitempty"`
+	Phase   *ExecPhase  `yaml:"phase,omitempty"`
 }
 
 // NilToDefault containing structs consist of pointer values, that need to be set to default if
 // they are not set to a concrete value via the topo file. This func is doing that initialization.
-func (c *CommandAndTarget) NilToDefault() {
+func (c *Exec) NilToDefault() {
 	// default the phase to on-enter
 	if c.Phase == nil {
 		c.Phase = &defaultCommandExecutionPhaseVar
@@ -161,30 +161,30 @@ func (c *CommandAndTarget) NilToDefault() {
 	}
 }
 
-func (c *CommandAndTarget) GetExecCmd() (*exec.ExecCmd, error) {
+func (c *Exec) GetExecCmd() (*exec.ExecCmd, error) {
 	return exec.NewExecCmdFromString(c.Command)
 }
 
-func (c *CommandAndTarget) String() string {
+func (c *Exec) String() string {
 	return fmt.Sprintf("phase: %s, command: %s, target: %s", *c.Phase, c.Command, *c.Target)
 }
 
-type CommandExecutionPhase string
+type ExecPhase string
 
 const (
 	// CommandExecutionPhaseEnter represents a command to be executed when the node enters the stage.
-	CommandExecutionPhaseEnter CommandExecutionPhase = "on-enter"
+	CommandExecutionPhaseEnter ExecPhase = "on-enter"
 	// CommandExecutionPhaseExit represents a command to be executed when the node exits the stage.
-	CommandExecutionPhaseExit CommandExecutionPhase = "on-exit"
+	CommandExecutionPhaseExit ExecPhase = "on-exit"
 )
 
-type CommandTarget string
+type ExecTarget string
 
 const (
 	// CommandTargetContainer determines that the commands are meant to be executed within the container
-	CommandTargetContainer CommandTarget = "container"
+	CommandTargetContainer ExecTarget = "container"
 	// CommandTargetHost determines that the commands are meant to be executed on the host system
-	CommandTargetHost CommandTarget = "host"
+	CommandTargetHost ExecTarget = "host"
 )
 
 // StageCreate represents a creation stage of a given node.
@@ -260,8 +260,8 @@ func (s *StageExit) Merge(other *StageExit) error {
 // StageBase represents a common configuration stage.
 // Other stages embed this type to inherit its configuration options.
 type StageBase struct {
-	WaitFor WaitForList          `yaml:"wait-for,omitempty"`
-	Execs   CommandAndTargetList `yaml:"exec,omitempty"`
+	WaitFor WaitForList `yaml:"wait-for,omitempty"`
+	Execs   Execs       `yaml:"exec,omitempty"`
 }
 
 // WaitForList is a list of WaitFor configurations.

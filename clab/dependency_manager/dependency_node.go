@@ -62,10 +62,10 @@ func (d *DependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
 	return d.stageWG[n]
 }
 
-func (d *DependencyNode) getExecs(p types.WaitForStage, t types.CommandExecutionPhase) ([]*types.CommandAndTarget, error) {
+func (d *DependencyNode) getExecs(stage types.WaitForStage, execPhase types.ExecPhase) ([]*types.Exec, error) {
 
 	var sb types.StageBase
-	switch p {
+	switch stage {
 	case types.WaitForCreate:
 		sb = d.Config().Stages.Create.StageBase
 	case types.WaitForCreateLinks:
@@ -77,13 +77,13 @@ func (d *DependencyNode) getExecs(p types.WaitForStage, t types.CommandExecution
 	case types.WaitForExit:
 		sb = d.Config().Stages.Exit.StageBase
 	default:
-		return nil, fmt.Errorf("stage %s unknown", p)
+		return nil, fmt.Errorf("stage %s unknown", stage)
 	}
 
-	var result = []*types.CommandAndTarget{}
+	var result = []*types.Exec{}
 	for _, x := range sb.Execs {
 		// filter the list of commands for the given phase (on-enter / on-exit)
-		if *x.Phase == t {
+		if *x.Phase == execPhase {
 			result = append(result, x)
 		}
 	}
@@ -100,7 +100,7 @@ func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
 	d.runExecs(ctx, types.CommandExecutionPhaseEnter, p)
 }
 
-func (d *DependencyNode) runExecs(ctx context.Context, ct types.CommandExecutionPhase, p types.WaitForStage) {
+func (d *DependencyNode) runExecs(ctx context.Context, ct types.ExecPhase, p types.WaitForStage) {
 
 	execs, err := d.getExecs(p, ct)
 	if err != nil {
