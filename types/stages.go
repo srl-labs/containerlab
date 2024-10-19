@@ -1,7 +1,7 @@
 package types
 
 import (
-	"golang.org/x/exp/slices"
+	"fmt"
 
 	"github.com/srl-labs/containerlab/clab/exec"
 )
@@ -19,6 +19,12 @@ const (
 	WaitForExit WaitForStage = "exit"
 )
 
+var (
+	// the defauts we need as pointers, so assign them to vars, such that we can acquire the pointer
+	defaultCommandExecutionPhase = CommandExecutionPhaseEnter
+	defaultCommandTarget         = CommandTargetContainer
+)
+
 // Stages represents a configuration of a given node deployment stage.
 type Stages struct {
 	Create      *StageCreate      `yaml:"create"`
@@ -33,35 +39,39 @@ func NewStages() *Stages {
 	return &Stages{
 		Create: &StageCreate{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: Execs{},
 			},
 		},
 		CreateLinks: &StageCreateLinks{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: Execs{},
 			},
 		},
 		Configure: &StageConfigure{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: Execs{},
 			},
 		},
 		Healthy: &StageHealthy{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: Execs{},
 			},
 		},
 		Exit: &StageExit{
 			StageBase: StageBase{
-				Execs:     Execs{},
-				HostExecs: Execs{},
+				Execs: Execs{},
 			},
 		},
 	}
+}
+
+// InitDefaults set defaults for the stages.
+func (s *Stages) InitDefaults() {
+	s.Configure.Execs.InitDefaults()
+	s.Create.Execs.InitDefaults()
+	s.CreateLinks.Execs.InitDefaults()
+	s.Healthy.Execs.InitDefaults()
+	s.Exit.Execs.InitDefaults()
 }
 
 // GetWaitFor returns lists of nodes that need to be waited for in a map
@@ -117,62 +127,64 @@ func (s *Stages) Merge(other *Stages) error {
 	return err
 }
 
-// Execs represents configuration of commands to execute at a given stage.
-// Every stage has two commands lists: on-enter and on-exit.
-// On-enter commands are executed when the node enters the stage.
-// On-exit commands are executed when the node exits the stage.
-type Execs struct {
-	// Commands is a list of commands to to execute
-	CommandsOnEnter []string `yaml:"on-enter,omitempty"`
-	CommandsOnExit  []string `yaml:"on-exit,omitempty"`
+// Execs represents a list of Exec configurations.
+type Execs []*Exec
+
+// HasCommands returns true if the Execs contains at least one command.
+func (c Execs) HasCommands() bool {
+	return len(c) > 0
 }
 
-func (e *Execs) HasCommands() bool {
-	return len(e.CommandsOnEnter) > 0 || len(e.CommandsOnExit) > 0
+// InitDefaults sets default values for Execs.
+func (execs Execs) InitDefaults() {
+	for _, e := range execs {
+		e.InitDefaults()
+	}
 }
 
-type CommandType uint
+type Exec struct {
+	Command string     `yaml:"command,omitempty"`
+	Target  ExecTarget `yaml:"target,omitempty"`
+	Phase   ExecPhase  `yaml:"phase,omitempty"`
+}
+
+// InitDefaults sets default values for Exec.
+func (c *Exec) InitDefaults() {
+	// default the phase to on-enter
+	if c.Phase == "" {
+		c.Phase = defaultCommandExecutionPhase
+	}
+	// default target to container
+	if c.Target == "" {
+		c.Target = defaultCommandTarget
+	}
+}
+
+func (c *Exec) GetExecCmd() (*exec.ExecCmd, error) {
+	return exec.NewExecCmdFromString(c.Command)
+}
+
+func (c *Exec) String() string {
+	return fmt.Sprintf("phase: %s, command: %s, target: %s", c.Phase, c.Command, c.Target)
+}
+
+type ExecPhase string
 
 const (
-	// CommandTypeEnter represents a command to be executed when the node enters the stage.
-	CommandTypeEnter CommandType = iota
-	// CommandTypeExit represents a command to be executed when the node exits the stage.
-	CommandTypeExit
+	// CommandExecutionPhaseEnter represents a command to be executed when the node enters the stage.
+	CommandExecutionPhaseEnter ExecPhase = "on-enter"
+	// CommandExecutionPhaseExit represents a command to be executed when the node exits the stage.
+	CommandExecutionPhaseExit ExecPhase = "on-exit"
 )
 
-type CommandTarget uint
+type ExecTarget string
 
 const (
 	// CommandTargetContainer determines that the commands are meant to be executed within the container
-	CommandTargetContainer CommandTarget = iota
+	CommandTargetContainer ExecTarget = "container"
 	// CommandTargetHost determines that the commands are meant to be executed on the host system
-	CommandTargetHost
+	CommandTargetHost ExecTarget = "host"
 )
-
-// GetExecCommands returns a list of exec commands to be executed.
-func (e *Execs) GetExecCommands(ct CommandType) ([]*exec.ExecCmd, error) {
-	var commands []string
-
-	switch ct {
-	case CommandTypeEnter:
-		commands = e.CommandsOnEnter
-	case CommandTypeExit:
-		commands = e.CommandsOnExit
-	}
-
-	var ex []*exec.ExecCmd
-
-	for _, c := range commands {
-		newCmd, err := exec.NewExecCmdFromString(c)
-		if err != nil {
-			return nil, err
-		}
-
-		ex = append(ex, newCmd)
-	}
-
-	return ex, nil
-}
 
 // StageCreate represents a creation stage of a given node.
 type StageCreate struct {
@@ -247,9 +259,8 @@ func (s *StageExit) Merge(other *StageExit) error {
 // StageBase represents a common configuration stage.
 // Other stages embed this type to inherit its configuration options.
 type StageBase struct {
-	WaitFor   WaitForList `yaml:"wait-for,omitempty"`
-	Execs     Execs       `yaml:"exec,omitempty"`
-	HostExecs Execs       `yaml:"host-exec,omitempty"`
+	WaitFor WaitForList `yaml:"wait-for,omitempty"`
+	Execs   Execs       `yaml:"exec,omitempty"`
 }
 
 // WaitForList is a list of WaitFor configurations.
@@ -268,12 +279,12 @@ func (wfl WaitForList) contains(wf *WaitFor) bool {
 
 // Merge merges base stage from sc into s.
 // Merging for WaitFor and Exec commands is done by appending from sc to s without duplicates.
-func (s *StageBase) Merge(sc *StageBase) error {
-	if sc == nil {
+func (s *StageBase) Merge(sb *StageBase) error {
+	if sb == nil {
 		return nil
 	}
 
-	for _, wf := range sc.WaitFor {
+	for _, wf := range sb.WaitFor {
 		// prevent adding the same dependency twice
 		if s.WaitFor.contains(wf) {
 			continue
@@ -281,41 +292,7 @@ func (s *StageBase) Merge(sc *StageBase) error {
 		s.WaitFor = append(s.WaitFor, wf)
 	}
 
-	for _, cmd := range sc.Execs.CommandsOnEnter {
-		// prevent adding the same dependency twice
-		if slices.Contains(s.Execs.CommandsOnEnter, cmd) {
-			continue
-		}
-
-		s.Execs.CommandsOnEnter = append(s.Execs.CommandsOnEnter, cmd)
-	}
-
-	for _, cmd := range sc.Execs.CommandsOnExit {
-		// prevent adding the same dependency twice
-		if slices.Contains(s.Execs.CommandsOnExit, cmd) {
-			continue
-		}
-
-		s.Execs.CommandsOnExit = append(s.Execs.CommandsOnExit, cmd)
-	}
-
-	for _, cmd := range sc.HostExecs.CommandsOnEnter {
-		// prevent adding the same dependency twice
-		if slices.Contains(s.HostExecs.CommandsOnEnter, cmd) {
-			continue
-		}
-
-		s.HostExecs.CommandsOnEnter = append(s.HostExecs.CommandsOnEnter, cmd)
-	}
-
-	for _, cmd := range sc.HostExecs.CommandsOnExit {
-		// prevent adding the same dependency twice
-		if slices.Contains(s.HostExecs.CommandsOnExit, cmd) {
-			continue
-		}
-
-		s.HostExecs.CommandsOnExit = append(s.HostExecs.CommandsOnExit, cmd)
-	}
+	s.Execs = append(s.Execs, sb.Execs...)
 
 	return nil
 }
