@@ -63,7 +63,6 @@ func (d *DependencyNode) getStageWG(n types.WaitForStage) *sync.WaitGroup {
 }
 
 func (d *DependencyNode) getExecs(stage types.WaitForStage, execPhase types.ExecPhase) ([]*types.Exec, error) {
-
 	var sb types.StageBase
 	switch stage {
 	case types.WaitForCreate:
@@ -100,9 +99,8 @@ func (d *DependencyNode) EnterStage(ctx context.Context, p types.WaitForStage) {
 	d.runExecs(ctx, types.CommandExecutionPhaseEnter, p)
 }
 
-func (d *DependencyNode) runExecs(ctx context.Context, ct types.ExecPhase, p types.WaitForStage) {
-
-	execs, err := d.getExecs(p, ct)
+func (d *DependencyNode) runExecs(ctx context.Context, execPhase types.ExecPhase, stage types.WaitForStage) {
+	execs, err := d.getExecs(stage, execPhase)
 	if err != nil {
 		log.Errorf("error getting exec commands defined for %s: %v", d.GetShortName(), err)
 	}
@@ -119,7 +117,7 @@ func (d *DependencyNode) runExecs(ctx context.Context, ct types.ExecPhase, p typ
 
 		execCmd, err := exec.GetExecCmd()
 		if err != nil {
-			log.Errorf("%s stage %s error parsing command: %s", d.GetShortName(), p, exec.String())
+			log.Errorf("%s stage %s error parsing command: %s", d.GetShortName(), stage, exec.String())
 		}
 
 		switch *exec.Target {
@@ -133,7 +131,7 @@ func (d *DependencyNode) runExecs(ctx context.Context, ct types.ExecPhase, p typ
 			continue
 		}
 		if err != nil {
-			log.Errorf("error on exec in node %s for stage %s: %v", d.GetShortName(), p, err)
+			log.Errorf("error on exec in node %s for stage %s: %v", d.GetShortName(), stage, err)
 		}
 		execResultCollection.Add(hostname, execResult)
 	}

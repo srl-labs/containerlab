@@ -21,8 +21,8 @@ const (
 
 var (
 	// the defauts we need as pointers, so assign them to vars, such that we can acquire the pointer
-	defaultCommandExecutionPhaseVar = CommandExecutionPhaseEnter
-	defaultCommandTargetVar         = CommandTargetContainer
+	defaultCommandExecutionPhase = CommandExecutionPhaseEnter
+	defaultCommandTarget         = CommandTargetContainer
 )
 
 // Stages represents a configuration of a given node deployment stage.
@@ -128,8 +128,10 @@ func (s *Stages) Merge(other *Stages) error {
 	return err
 }
 
+// Execs represents a list of Exec configurations.
 type Execs []*Exec
 
+// HasCommands returns true if the Execs contains at least one command.
 func (c Execs) HasCommands() bool {
 	return len(c) > 0
 }
@@ -153,11 +155,11 @@ type Exec struct {
 func (c *Exec) NilToDefault() {
 	// default the phase to on-enter
 	if c.Phase == nil {
-		c.Phase = &defaultCommandExecutionPhaseVar
+		c.Phase = &defaultCommandExecutionPhase
 	}
 	// default target to container
 	if c.Target == nil {
-		c.Target = &defaultCommandTargetVar
+		c.Target = &defaultCommandTarget
 	}
 }
 
@@ -280,12 +282,12 @@ func (wfl WaitForList) contains(wf *WaitFor) bool {
 
 // Merge merges base stage from sc into s.
 // Merging for WaitFor and Exec commands is done by appending from sc to s without duplicates.
-func (s *StageBase) Merge(sc *StageBase) error {
-	if sc == nil {
+func (s *StageBase) Merge(sb *StageBase) error {
+	if sb == nil {
 		return nil
 	}
 
-	for _, wf := range sc.WaitFor {
+	for _, wf := range sb.WaitFor {
 		// prevent adding the same dependency twice
 		if s.WaitFor.contains(wf) {
 			continue
@@ -293,7 +295,7 @@ func (s *StageBase) Merge(sc *StageBase) error {
 		s.WaitFor = append(s.WaitFor, wf)
 	}
 
-	s.Execs = append(s.Execs, sc.Execs...)
+	s.Execs = append(s.Execs, sb.Execs...)
 
 	return nil
 }
