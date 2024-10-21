@@ -14,6 +14,8 @@ topology:
       cmd: ash -c "sleep 9999"
     br-01-03-clab:
       kind: bridge
+    hostnode: # is not used, it is here for coverage
+      kind: host
 
   links:
     - endpoints: ["l1:eth1", "br-01-03-clab:l1-eth1"]
