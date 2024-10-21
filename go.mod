@@ -43,7 +43,7 @@ require (
 	github.com/tklauser/numcpus v0.9.0
 	github.com/vishvananda/netlink v1.3.0
 	github.com/weaveworks/ignite v0.10.0
-	go.uber.org/mock v0.4.0
+	go.uber.org/mock v0.5.0
 	golang.org/x/crypto v0.28.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 	golang.org/x/sys v0.26.0
