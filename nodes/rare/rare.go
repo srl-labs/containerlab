@@ -38,7 +38,8 @@ func (n *rare) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	// make ipv6 disabled on all rare node interfaces unconditionally
 	// as ipv6 will be handled by rare/freertr
-	cfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "1"
+	// The setting 'net.ipv6.conf.all.disable_ipv6' 1 - interferes with IPv6 out-of-band management. Commenting it out for now as a workaround.
+	// cfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "1" 
 
 	n.Cfg.Binds = append(n.Cfg.Binds,
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "run"), ":/rtr/run"),
