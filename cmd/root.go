@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -137,8 +138,12 @@ func getTopoFilePath(cmd *cobra.Command) error {
 
 	files, err := filepath.Glob("*.clab.y*ml")
 
-	if len(files) != 1 {
-		return errors.New("none or more than one topology files found, can't auto select one")
+	if len(files) == 0 {
+		return errors.New("no topology files matching the pattern *.clab.y*ml found")
+	}
+
+	if len(files) > 1 {
+		return fmt.Errorf("more than one topology file matching the pattern *.clab.y*ml found, can't pick one: %q", files)
 	}
 
 	topo = files[0]
