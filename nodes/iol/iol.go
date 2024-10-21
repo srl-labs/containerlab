@@ -40,7 +40,7 @@ var (
 	IOLCfgTpl, _ = template.New("clab-iol-default-config").Funcs(
 		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(cfgTemplate)
 
-	IOLMACBase = "1a:2b:3c"
+	IOLMACBase = "00:00:5E"
 
 	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	InterfaceOffset = 1
@@ -60,6 +60,7 @@ type iol struct {
 	nodes.DefaultNode
 
 	isL2Node bool
+	Pid      string
 }
 
 func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -72,6 +73,14 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	nodeType := strings.ToLower(n.Cfg.NodeType)
+
+	n.Pid = strconv.Itoa(n.Cfg.Index + 1) // n.Cfg.Index is zero-indexed, PID needs to be >= 1
+
+	env := map[string]string{
+		"IOL_PID": n.Pid,
+	}
+
+	n.Cfg.Env = utils.MergeStringMaps(env, n.Cfg.Env)
 
 	// check if user submitted node type is valid
 	switch nodeType {
@@ -141,7 +150,7 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	// add default 'boilerplate' to NETMAP and iouyap.ini for management port (e0/0)
 	iouyapData := "[default]\nbase_port = 49000\nnetmap = /iol/NETMAP\n[513:0/0]\neth_dev = eth0\n"
-	netmapdata := "1:0/0 513:0/0\n"
+	netmapdata := fmt.Sprintf("%s:0/0 513:0/0\n", n.Pid)
 
 	slot, port := 0, 0
 
@@ -163,7 +172,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 
 		// append data to write to NETMAP and IOUYAP files
 		iouyapData += fmt.Sprintf("[513:%d/%d]\neth_dev = %s\n", slot, port, intf.GetIfaceName())
-		netmapdata += fmt.Sprintf("1:%d/%d 513:%d/%d\n", slot, port, slot, port)
+		netmapdata += fmt.Sprintf("%s:%d/%d 513:%d/%d\n", n.Pid, slot, port, slot, port)
 
 		// populate template array for config
 		IOLInterfaces = append(IOLInterfaces,
