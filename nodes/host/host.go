@@ -7,9 +7,6 @@ package host
 import (
 	"bytes"
 	"context"
-	"os"
-	"path/filepath"
-	"regexp"
 
 	osexec "os/exec"
 
@@ -19,6 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var kindnames = []string{"host"}
@@ -59,30 +57,9 @@ func (*host) WithMgmtNet(*types.MgmtNet)                    {}
 // UpdateConfigWithRuntimeInfo is a noop for hosts.
 func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
-// getOSRelease returns the OS release of the host by inspecting /etc/*-release.
-func getOSRelease() string {
-	image := "N/A"
-
-	matches, err := filepath.Glob("/etc/*-release")
-	if err != nil {
-		return image
-	}
-	dat, err := os.ReadFile(matches[0])
-	if err != nil {
-		return image
-	}
-	// DISTRIB_DESCRIPTION exists in lsb-release, but not os-release.
-	// the lsb-release is coming first in the glob, so it works.
-	re := regexp.MustCompile(`DISTRIB_DESCRIPTION="(.*)"`)
-
-	regexres := re.FindSubmatch(dat)
-
-	return string(regexres[1])
-}
-
 // GetContainers returns a basic skeleton of a container to enable graphing of hosts kinds.
-func (*host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) {
-	image := getOSRelease()
+func (h *host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) {
+	image := utils.GetOSRelease()
 
 	return []runtime.GenericContainer{
 		{

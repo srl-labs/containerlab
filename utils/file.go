@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -470,4 +471,38 @@ func recursiveChown(path string, uid, gid int) error {
 
 		return err
 	})
+}
+
+var osRelease string
+
+// GetOSRelease returns the OS release of the host by inspecting /etc/*-release files.
+func GetOSRelease() string {
+	// return cached result
+	if osRelease != "" {
+		return osRelease
+	}
+	osRelease = "N/A"
+
+	matches, err := filepath.Glob("/etc/*-release")
+	if err != nil {
+		return osRelease
+	}
+
+	re := regexp.MustCompile(`(DISTRIB_DESCRIPTION|PRETTY_NAME)="(.*)"`)
+
+	for _, match := range matches {
+		data, err := os.ReadFile(match)
+		if err != nil {
+			log.Error(err)
+		}
+
+		match := re.FindSubmatch(data)
+		// [0] = whole line match, [1] = left side of "=", [2] = right side of "="
+		if len(match) >= 3 {
+			osRelease = string(match[2])
+			break
+		}
+	}
+
+	return osRelease
 }
