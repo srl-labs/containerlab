@@ -391,7 +391,9 @@ func (c *CLab) verifyLinks(ctx context.Context) error {
 // LoadKernelModules loads containerlab-required kernel modules.
 func (c *CLab) loadKernelModules() error {
 	modules := []string{"ip_tables", "ip6_tables"}
-
+	opts := []kmod.Option{
+		kmod.SetInitFunc(utils.ModInitFunc),
+	}
 	for _, m := range modules {
 		isLoaded, err := utils.IsKernelModuleLoaded(m)
 		if err != nil {
@@ -406,7 +408,7 @@ func (c *CLab) loadKernelModules() error {
 
 		log.Debugf("kernel module %q is not loaded. Trying to load", m)
 		// trying to load the kernel modules.
-		km, err := kmod.New()
+		km, err := kmod.New(opts...)
 		if err != nil {
 			log.Warnf("Unable to init module loader: %v. Skipping...", err)
 
