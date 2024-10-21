@@ -8,7 +8,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/containernetworking/plugins v1.5.1
 	github.com/containers/common v0.60.4
-	github.com/containers/podman/v5 v5.2.4
+	github.com/containers/podman/v5 v5.2.5
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v27.2.0+incompatible
@@ -171,13 +171,13 @@ require (
 	github.com/containerd/go-runc v1.0.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.15.1 // indirect
 	github.com/containerd/ttrpc v1.2.4 // indirect
-	github.com/containers/buildah v1.37.4 // indirect
+	github.com/containers/buildah v1.37.5 // indirect
 	github.com/containers/image v3.0.2+incompatible // indirect
 	github.com/containers/image/v5 v5.32.2
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.2.0 // indirect
 	github.com/containers/psgo v1.9.0 // indirect
-	github.com/containers/storage v1.55.0 // indirect
+	github.com/containers/storage v1.55.1 // indirect
 	github.com/coreos/go-iptables v0.7.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.1-0.20231103132048-7d375ecc2b09 // indirect
 	github.com/creack/pty v1.1.21 // indirect
