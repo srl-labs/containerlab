@@ -102,13 +102,13 @@ func (kv *KernelVersion) GreaterOrEqual(cmpKv *KernelVersion) bool {
 	return true
 }
 
-// modInitFunc supports uncompressed files and gzip and xz compressed files.
-func ModInitFunc(path, params string, flags int) error {
+// ModInitFunc supports uncompressed files and gzip and xz compressed files.
+func ModInitFunc(path, params string, _ int) error {
 	f, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer f.Close() // skipcq: GO-S2307
 
 	switch filepath.Ext(path) {
 	case ".gz":
@@ -117,12 +117,14 @@ func ModInitFunc(path, params string, flags int) error {
 			return err
 		}
 		defer rd.Close()
+
 		return initModule(rd, params)
 	case ".xz":
 		rd, err := xz.NewReader(f)
 		if err != nil {
 			return err
 		}
+
 		return initModule(rd, params)
 	case ".zst":
 		rd, err := zstd.NewReader(f)
@@ -130,6 +132,7 @@ func ModInitFunc(path, params string, flags int) error {
 			return err
 		}
 		defer rd.Close()
+
 		return initModule(rd, params)
 	}
 
@@ -139,6 +142,7 @@ func ModInitFunc(path, params string, flags int) error {
 			return initModule(f, params)
 		}
 	}
+
 	return nil
 }
 

@@ -389,7 +389,7 @@ func (c *CLab) verifyLinks(ctx context.Context) error {
 }
 
 // LoadKernelModules loads containerlab-required kernel modules.
-func (c *CLab) loadKernelModules() error {
+func (*CLab) loadKernelModules() error {
 	modules := []string{"ip_tables", "ip6_tables"}
 	opts := []kmod.Option{
 		kmod.SetInitFunc(utils.ModInitFunc),
