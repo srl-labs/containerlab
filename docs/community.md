@@ -247,7 +247,7 @@ Real-time telemetry from a 5 stage Clos fabric describes lightweight emulation o
 
 ### Multi-vendor EVPN VXLAN setup with Containerlab
 
-<small>:material-text: [Blog](https://www.theasciiconstruct.com/post/multivendor-evpn-vxlan-l2-overlay/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-03-12</small>
+<small>:material-text: [Blog](https://www.theasciiconstruct.com/blog/2022/03/12/multi-vendor-evpn-vxlan-setup-with-containerlab/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-03-12</small>
 
 In this post, we deploy a multivendor EVPN L2 overlay fabric, with BGP in the underlay as well. The entire fabric deployment is automated with Ansible, and Containerlab is used to define and deploy the actual topology.
 
@@ -259,7 +259,7 @@ I’ve been progressing through a series of technical books, some of which I’v
 
 ### Juniper vQFX and containerlab
 
-<small>:material-text: [Blog](https://www.theasciiconstruct.com/post/junos-vqfx-containerlab/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-02-06</small>
+<small>:material-text: [Blog](https://www.theasciiconstruct.com/blog/2022/01/24/juniper-vqfx-and-containerlab) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-02-06</small>
 
 In this post, we look at how Containerlab can be used to quickly spin up vQFX topologies for network validation and testing. We’ll walk through the entire process - how to build docker images from vQFX images, what happens behind the scenes when bringing these containers up and how to build/verify your topology.
 
