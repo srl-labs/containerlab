@@ -693,7 +693,7 @@ topology:
 
 ### stages
 
-Containerlab v0.51.0 introduces a new concept of **stages**. Stages are a way to define stages a node goes through during its lifecycle and the interdependencies between the different stages of different nodes in the lab.
+Stages are a way to define stages a node goes through during its lifecycle and the interdependencies between the different stages of different nodes in the lab.
 
 The stages are currently mainly used to host the `wait-for` knob, which is used to define the startup dependencies between nodes.
 
@@ -765,8 +765,7 @@ The existing [`exec`](#exec) node configuration parameter is used to run command
 
 These more advanced command execution scenarios are enabled in the per-stage command execution feature.
 
-<!-- --8<-- [start:per-stage-1] -->
-With per-stage command execution the user can define `exec` block under each stage; moreover, it is possible to specify when the commands should be run `on-enter` or `on-exit` of the stage.
+With per-stage command execution the user can define `exec` block under each stage; moreover, it is possible to specify when the commands should be run `on-enter` or `on-exit` of the stage. And if that is not enough, you can also specify where the command should be executed, on the host or in the container.
 
 ```yaml
 nodes:
@@ -774,33 +773,36 @@ nodes:
     stages:
       create-links:
         exec:
-          on-enter:
-            - ls /sys/class/net/
+          - command: ls /sys/class/net/
+            target: container #(1)!
+            phase: on-enter #(2)!
 ```
+
+1. `target` defaults to "container" and can be omitted. Possible values `container` or `host`
+2. `phase` defaults to "on-enter" and can be omitted. Possible values `on-enter` or `on-exit`
 
 In the example above, the `ls /sys/class/net/` command will be executed when `node1` is about to enter the `create-links` stage. As expected, the command will list only interfaces provisioned by docker (eth0 and lo), but none of the containerlab-provisioned interfaces, since the create-links stage has not been finished yet.
 
 Per-stage command execution gives you additional flexibility in terms of when the commands are executed, and what commands are executed at each stage.
 
-<!-- --8<-- [end:per-stage-1] -->
-
 ##### Host exec
 
 The stage's `exec` property runs the commands in the container namespace and therefore targets the container node itself. This is super useful in itself, but sometimes you need to run a command on the host as a reaction to a stage enter/exit event.
 
-This is what `host-exec` is designed for. It runs the command in the host namespace and therefore targets the host itself.
+This is what `target` property of the stage's `exec` is designed for. It runs the command in the host namespace and therefore targets the host itself.
 
 ```yaml
 nodes:
   node1:
     stages:
       create-links:
-        host-exec:
-          on-enter:
-            - touch /tmp/hello
+        exec:
+          - command: touch /tmp/hello
+            target: host
+            phase: on-enter
 ```
 
-In the example above, containerlab will run `touch /tmp/hello` command when the `node1` is about to enter the `create-links` stage. You can use `host-exec` in every stage.
+In the example above, containerlab will run `touch /tmp/hello` command when the `node1` is about to enter the `create-links` stage.
 
 ### certificate
 

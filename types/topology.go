@@ -509,7 +509,8 @@ func (t *Topology) GetStages(name string) (*Stages, error) {
 	if nodeStages != nil {
 		s.Merge(nodeStages)
 	}
-
+	// set nil values to their respective defaults
+	s.InitDefaults()
 	return s, nil
 }
 
