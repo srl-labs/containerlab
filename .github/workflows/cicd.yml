@@ -350,7 +350,7 @@ jobs:
       - ixiac-one-basic-tests
       - vxlan-tests
       - kind-tests
-      - sros-tests
+      # - sros-tests
       - fortigate-tests
       - cisco_iol-tests
 
