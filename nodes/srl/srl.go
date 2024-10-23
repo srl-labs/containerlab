@@ -228,16 +228,6 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 		}
 	}
 
-	// mount authorized_keys file to enable passwordless login
-	authzKeysPath := params.TopoPaths.AuthorizedKeysFilename()
-	if utils.FileExists(authzKeysPath) {
-		s.Cfg.Binds = append(s.Cfg.Binds,
-			fmt.Sprint(authzKeysPath, ":/root/.ssh/authorized_keys:ro"),
-			fmt.Sprint(authzKeysPath, ":/home/linuxadmin/.ssh/authorized_keys:ro"),
-			fmt.Sprint(authzKeysPath, ":/home/admin/.ssh/authorized_keys:ro"),
-		)
-	}
-
 	// store provided pubkeys
 	s.sshPubKeys = params.SSHPubKeys
 
