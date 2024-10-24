@@ -174,6 +174,72 @@ The remote file will be downloaded to the containerlab's temp directory at `$TMP
     * If a lab is redeployed with the lab name and startup-config paths unchanged, the local file will be overwritten.
     * For https locations the certificates won't be verified to allow fetching artifacts from servers with self-signed certificates.
 
+???info "Startup-config variables"
+    By default, the startup-config references are either provided as an absolute or a relative (to the current working dir) path to the file to be used.
+
+    Consider a two-node lab mylab.clab.yml with seed configs that the user may wish to use with thier lab. A user could create a directory for such files similar to this:
+
+    ```
+    .
+    ├── cfgs
+    │   ├── node1.partial.cfg
+    │   └── node2.partial.cfg
+    └── mylab.clab.yml
+
+    2 directories, 3 files
+    ```
+
+    Then to leverage these configs, the node could be configured with startup-config references like this:
+
+    ```yaml
+    name: mylab
+    topology:
+      nodes:
+        node1:
+          startup-config: cfgs/node1.partial.cfg
+        node2:
+          startup-config: cfgs/node2.partial.cfg
+    ```
+
+    while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can use a special variable `__clabNodeName__` in their startup-config paths. This variable will expand to the node-name for the parent node that the startup-config reference falls under.
+
+    ```yaml
+    name: mylab
+    topology:
+      nodes:
+        node1:
+          startup-config: cfg/__clabNodeName__.partial.cfg
+        node2:
+          startup-config: cfgs/__clabNodeName__.partial.cfg
+    ```
+
+    The `__clabNodeName__` variable can also be used in the kind and default sections of the config.  Using the same directory structure from the example above, the following shows how to use the magic varable for a kind.
+
+    ```yaml
+    name: mylab
+    topology:
+      defaults:
+        kind: nokia_srlinux
+      kinds:
+        nokia_srlinux:
+          startup-config: cfgs/__clabNodeName__.partial.cfg
+      nodes:
+        node1:
+        node2:
+    ``` 
+
+    The following example shows how one would do it using defaults.
+
+    ```yaml
+    name: mylab
+    topology:
+      defaults:
+        kind: nokia_srlinux
+        startup-config: cfgs/__clabNodeName__.partial.cfg
+      nodes:
+        node1:
+        node2:
+    ``` 
 ### enforce-startup-config
 
 By default, containerlab will use the config file that is available in the lab directory for a given node even if the `startup config` parameter points to another file. To make a node to boot with the config set with `startup-config` parameter no matter what, set the `enforce-startup-config` to `true`.
