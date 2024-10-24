@@ -890,3 +890,17 @@ When the node is configured with a healthcheck the health status is visible in t
 
 [^1]: [docker runtime resources constraints](https://docs.docker.com/config/containers/resource_constraints/).
 [^2]: this deployment model makes two containers to use a shared network namespace, similar to a Kubernetes pod construct.
+
+### aliases
+
+To define additional hostnames for the node use the `aliases` configuration option. Other containers on the same network can use these aliases to communicate with the node.
+
+```yaml
+topology:
+  nodes:
+    r1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+      aliases:
+        - r1.example.com
+```
