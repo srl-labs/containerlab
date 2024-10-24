@@ -214,7 +214,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		// Static IPs & Macs are properties of a network attachment
 		nets := map[string]netTypes.PerNetworkOptions{netName: {
 			StaticIPs:     staticIPs,
-			Aliases:       nil,
+			Aliases:       cfg.Aliases,
 			StaticMAC:     hwAddr,
 			InterfaceName: "",
 		}}

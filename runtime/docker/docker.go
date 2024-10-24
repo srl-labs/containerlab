@@ -999,6 +999,7 @@ func (d *DockerRuntime) processNetworkMode(
 					IPv4Address: node.MgmtIPv4Address,
 					IPv6Address: node.MgmtIPv6Address,
 				},
+				Aliases: node.Aliases,
 			},
 		}
 	}

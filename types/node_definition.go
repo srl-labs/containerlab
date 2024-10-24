@@ -75,6 +75,8 @@ type NodeDefinition struct {
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 	// Healthcheck configuration
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
+	// Network aliases
+	Aliases []string `yaml:"aliases,omitempty"`
 }
 
 // Interface compliance.
@@ -386,6 +388,13 @@ func (n *NodeDefinition) GetHealthcheckConfig() *HealthcheckConfig {
 		return nil
 	}
 	return n.HealthCheck
+}
+
+func (n *NodeDefinition) GetAliases() []string {
+	if n == nil {
+		return nil
+	}
+	return n.Aliases
 }
 
 // ImportEnvs imports all environment variales defined in the shell
