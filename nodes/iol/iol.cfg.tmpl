@@ -28,11 +28,9 @@ interface Ethernet0/0
  ip address {{ .MgmtIPv4Addr }} {{ .MgmtIPv4SubnetMask }}
  ipv6 address {{ .MgmtIPv6Addr }}/{{ .MgmtIPv6PrefixLen }}
  no shutdown
- mac-address {{ .MgmtIntfMacAddr }}
 !{{ range $index, $item := .DataIFaces }}
 interface Ethernet{{ .Slot }}/{{ .Port }}
  no shutdown
- mac-address {{ .MacAddr }}
 !{{ end }}
 ip forward-protocol nd
 !
