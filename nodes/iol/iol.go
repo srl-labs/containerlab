@@ -30,8 +30,6 @@ const (
 	typeL2  = "l2"
 
 	iol_workdir = "/iol"
-	nvram_file1 = "nvram_00001"
-	nvram_file2 = "nvram_00003"
 )
 
 var (
@@ -61,8 +59,9 @@ func Register(r *nodes.NodeRegistry) {
 type iol struct {
 	nodes.DefaultNode
 
-	isL2Node bool
-	Pid      string
+	isL2Node  bool
+	Pid       string
+	nvramFile string
 }
 
 func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -95,10 +94,11 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 			n.Cfg.NodeType, strings.Join(validTypes, ", "))
 	}
 
+	n.nvramFile = fmt.Sprint("nvram_", fmt.Sprintf("%05s", n.Pid))
+
 	n.Cfg.Binds = append(n.Cfg.Binds,
 		// mount nvram so that config persists
-		fmt.Sprint(path.Join(n.Cfg.LabDir, nvram_file1), ":", path.Join(iol_workdir, nvram_file1)),
-		fmt.Sprint(path.Join(n.Cfg.LabDir, nvram_file2), ":", path.Join(iol_workdir, nvram_file2)),
+		fmt.Sprint(path.Join(n.Cfg.LabDir, n.nvramFile), ":", path.Join(iol_workdir, n.nvramFile)),
 
 		// mount launch config
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "startup.cfg"), ":/iol/config.txt"),
@@ -135,14 +135,9 @@ func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 func (n *iol) CreateIOLFiles(ctx context.Context) error {
 	// If NVRAM already exists, don't need to create
 	// otherwise saved configs in NVRAM are overwritten.
-	if !utils.FileExists(path.Join(n.Cfg.LabDir, nvram_file1)) {
+	if !utils.FileExists(path.Join(n.Cfg.LabDir, n.nvramFile)) {
 		// create nvram file
-		utils.CreateFile(path.Join(n.Cfg.LabDir, nvram_file1), "")
-	}
-
-	if !utils.FileExists(path.Join(n.Cfg.LabDir, nvram_file2)) {
-		// create nvram file
-		utils.CreateFile(path.Join(n.Cfg.LabDir, nvram_file2), "")
+		utils.CreateFile(path.Join(n.Cfg.LabDir, n.nvramFile), "")
 	}
 
 	// create these files so the bind monut doesn't automatically
