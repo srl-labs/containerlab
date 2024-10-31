@@ -26,7 +26,7 @@ func NewTC(ns int) (*tc.Tc, error) {
 }
 
 // SetImpairments sets the impairments on the given interface of a node.
-func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, jitter time.Duration, loss float64, rate uint64) (*tc.Object, error) {
+func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, jitter time.Duration, loss float64, rate uint64, probability float64) (*tc.Object, error) {
 	err := tcnl.SetOption(netlink.ExtendedAcknowledge, true)
 	if err != nil {
 		return nil, fmt.Errorf("could not set option ExtendedAcknowledge: %v", err)
@@ -58,6 +58,10 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 	setLoss(&qdisc, loss)
 
 	setRate(&qdisc, rate)
+
+	if probability > 0 {
+		setCorruption(&qdisc, probability)
+	}
 
 	err = tcnl.Qdisc().Replace(&qdisc)
 	if err != nil {
@@ -114,6 +118,13 @@ func setRate(qdisc *tc.Object, rate uint64) {
 	byteRate := rate * 1000 / 8
 	qdisc.Attribute.Netem.Rate = &tc.NetemRate{
 		Rate: uint32(byteRate),
+	}
+}
+
+// setCorruption sets the corruption probability and correlation.
+func setCorruption(qdisc *tc.Object, probability float64) {
+	qdisc.Netem.Corrupt = &tc.NetemCorrupt{
+		Probability: uint32(math.Round(math.MaxUint32 * (probability / float64(100)))),
 	}
 }
 
