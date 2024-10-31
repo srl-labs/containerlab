@@ -48,7 +48,7 @@ func init() {
 	netemSetCmd.Flags().Float64VarP(&netemLoss, "loss", "", 0,
 		"random packet loss expressed in percentage (e.g. 0.1 means 0.1%)")
 	netemSetCmd.Flags().Uint64VarP(&netemRate, "rate", "", 0, "link rate limit in kbit")
-	netemSetCmd.Flags().Float64VarP(&netemCorruption, "corruption", "", 0, "random packet corruption expressed in percentage (e.g. 0.1 means 0.1%)")
+	netemSetCmd.Flags().Float64VarP(&netemCorruption, "corruption", "", 0, "random packet corruption probability expressed in percentage (e.g. 0.1 means 0.1%)")
 
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
