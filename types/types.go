@@ -163,6 +163,8 @@ type NodeConfig struct {
 	Certificate *CertificateConfig
 	// Healthcheck configuration parameters
 	Healthcheck *HealthcheckConfig
+	// Network aliases
+	Aliases []string `json:"aliases,omitempty"`
 	// NSPath      string `json:"nspath,omitempty"` // network namespace path for this node
 	// list of ports to publish with mysocketctl
 	Publish []string `json:"publish,omitempty"`
