@@ -5,6 +5,7 @@ With the `containerlab tools netem set` command users can set link impairments o
 * delay & jitter
 * packet loss
 * rate limiting
+* packet corruption
 
 /// details | Considerations
 Note, that `netem` is a Linux kernel module and it might not be available in particular kernel configurations.
@@ -58,6 +59,12 @@ Packet loss is specified with the `--loss` flag. The loss is specified in percen
 ### rate
 
 Egress rate limiting is specified with the `--rate` flag. The rate is specified in kbit per second format. Example: value `100` means rate of 100kbit/s.
+
+### corruption
+
+Packet corruption percentage is specified with the `--corruption` flag. Corruption modifies the contents of the packet at a random position based on percentage set.
+
+Example: corruption of 10 means 10% corruption probability for a traffic passing the interface.
 
 ## Examples
 
