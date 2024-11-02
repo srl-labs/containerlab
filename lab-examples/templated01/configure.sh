@@ -13,7 +13,7 @@ curl --help >/dev/null
 gomplate -f topology_config.gotmpl -d templated01.clab_vars.yaml >vars.yaml
 
 # build targets string
-targets=$(docker ps -f label=clab-node-kind=srl -f label=containerlab=templated01 --format {{.Names}} | paste -s -d, -)
+targets=$(docker ps -f label=clab-node-kind=nokia_srlinux -f label=containerlab=templated01 --format {{.Names}} | paste -s -d, -)
 # base gnmic command
 gnmic_cmd="gnmic --log -a ${targets} --skip-verify -u admin -p NokiaSrl1!"
 
