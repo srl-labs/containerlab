@@ -128,28 +128,28 @@ sudo yum install containerlab
 
 ///
 
-/// tab | DNF4
+//// tab | DNF4
 
-```
+```bash
 sudo dnf config-manager -y --add-repo "https://netdevops.fury.site/yum/" && \
 echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
 
 sudo dnf install containerlab
 ```
 
-///
+////
 
 
-/// tab | DNF5
+//// tab | DNF5
 
-```
+```bash
 sudo dnf config-manager addrepo --set=baseurl="https://netdevops.fury.site/yum/" && \
 echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
 
 sudo dnf install containerlab
 ```
 
-///
+////
 
 /// tab | APK
 Download `.apk` package from [Github releases](https://github.com/srl-labs/containerlab/releases).
