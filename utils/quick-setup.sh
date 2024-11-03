@@ -225,7 +225,12 @@ function add-ssh-socket-env-for-sudo {
 }
 
 function install-containerlab {
-    echo "${DISTRO_TYPE}"
+    # when this script is used to install just containerlab
+    # we need to run check_os to detect the distro
+    if [ -z "${DISTRO_TYPE}" ]; then
+        check_os
+    fi
+
     if [ "${DISTRO_TYPE}" = "rhel" ]; then
         sudo yum-config-manager -y --add-repo=https://netdevops.fury.site/yum/ && \
         echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
@@ -233,8 +238,15 @@ function install-containerlab {
         sudo yum install -y containerlab
 
     elif [ "${DISTRO_TYPE}" = "fedora" ]; then
-        sudo dnf config-manager -y --add-repo "https://netdevops.fury.site/yum/" && \
-        echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
+        # Fedora 41 onwards ships with dnf5 instead of dnf 4 (packaged just as 'dnf')
+        # and requires a slightly different syntax.
+        if rpm --quiet -q dnf; then
+            sudo dnf config-manager -y --add-repo "https://netdevops.fury.site/yum/" && \
+            echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
+        else  # dnf5
+            sudo dnf config-manager addrepo --set=baseurl="https://netdevops.fury.site/yum/" && \
+            echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
+        fi
 
         sudo dnf install -y containerlab
 
