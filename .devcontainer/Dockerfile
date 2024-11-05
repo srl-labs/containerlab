@@ -5,11 +5,30 @@ ARG CLAB_VERSION
 RUN echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
     tee -a /etc/apt/sources.list.d/netdevops.list
 
-# setup keyring for github cli
-RUN sudo mkdir -p -m 755 /etc/apt/keyrings \
-    && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-    && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+# Create the update-github-cli-key.sh script
+RUN echo '#!/bin/bash\n'\
+'set -e\n'\
+'echo "Updating GitHub CLI GPG key..."\n'\
+'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \\\n'\
+'sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg\n'\
+'sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg\n' | \
+sudo tee /usr/local/bin/update-github-cli-key.sh > /dev/null
+
+# Make the script executable
+RUN sudo chmod +x /usr/local/bin/update-github-cli-key.sh
+
+# Create an apt configuration file to run the script before updates
+RUN echo 'APT::Update::Pre-Invoke {"/usr/local/bin/update-github-cli-key.sh";};' | \
+sudo tee /etc/apt/apt.conf.d/99updategithubclikey > /dev/null
+
+# Fetch and install the GPG key for GitHub CLI (initial setup)
+RUN /usr/local/bin/update-github-cli-key.sh
+
+# Add the GitHub CLI repository
+RUN echo "deb [arch=$(dpkg --print-architecture) \
+    signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
+    https://cli.github.com/packages stable main" | \
+    sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
 
 # install containerlab and tools
 RUN apt update && apt install -y --no-install-recommends containerlab${CLAB_VERSION:+=$CLAB_VERSION} \
