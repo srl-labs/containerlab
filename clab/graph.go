@@ -8,13 +8,17 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/awalterschulze/gographviz"
+	"github.com/creack/pty"
 	log "github.com/sirupsen/logrus"
 	e "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/internal/mermaid"
@@ -23,6 +27,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"golang.org/x/term"
 )
 
 type GraphTopo struct {
@@ -298,10 +303,34 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) error {
 	topoFile := c.TopoPaths.TopologyFilenameBase()
 
+	imageName := fmt.Sprintf("ghcr.io/srl-labs/clab-io-draw:%s", version)
+
+	// If version is "latest", check for newer image and pull if necessary
+	if version == "latest" {
+		log.Info("Checking for updates to the latest Docker image...")
+		pullCmd := exec.Command("docker", "pull", imageName)
+		pullOut, pullErr := pullCmd.CombinedOutput()
+		pullOutput := string(pullOut)
+		if pullErr != nil {
+			log.Errorf("Failed to pull the latest image: %v", pullErr)
+			log.Errorf("Pull command output: %s", pullOutput)
+			return fmt.Errorf("failed to pull the latest image: %w\nOutput: %s", pullErr, pullOutput)
+		}
+
+		// Check if the image was updated or is up-to-date
+		if strings.Contains(pullOutput, "Downloaded newer image") {
+			log.Infof("Docker image updated to the latest version.")
+		} else if strings.Contains(pullOutput, "Image is up to date") {
+			log.Infof("Docker image is already the latest version.")
+		} else {
+			log.Warnf("Unexpected output from docker pull command: %s", pullOutput)
+		}
+	}
+
 	cmdArgs := []string{
-		"docker", "run",
+		"docker", "run", "-it",
 		"-v", fmt.Sprintf("%s:/data", c.TopoPaths.TopologyFileDir()),
-		fmt.Sprintf("ghcr.io/srl-labs/clab-io-draw:%s", version),
+		imageName,
 		"-i", topoFile,
 	}
 
@@ -313,16 +342,57 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 		cmdArgs = append(cmdArgs, parts...)
 	}
 
+	// Create the command
 	cmd := exec.Command("sudo", cmdArgs...)
 
-	out, err := cmd.CombinedOutput()
+	// Start the command with a pseudo-terminal (PTY)
+	ptmx, err := pty.Start(cmd)
 	if err != nil {
-		log.Errorf("Command execution failed: %v", err)
-		log.Errorf("Command output: %s", string(out))
-		return fmt.Errorf("failed to generate diagram: %w\nOutput: %s", err, string(out))
+		log.Errorf("Failed to start command with PTY: %v", err)
+		return fmt.Errorf("failed to start command with PTY: %w", err)
+	}
+	defer func() { _ = ptmx.Close() }() // Best effort to close the PTY
+
+	// Check if os.Stdin is a terminal
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		// Handle PTY size changes
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGWINCH)
+		go func() {
+			for range ch {
+				if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
+					log.Errorf("Error resizing PTY: %v", err)
+				}
+			}
+		}()
+		ch <- syscall.SIGWINCH // Initial resize
+
+		// Set the terminal to raw mode
+		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			log.Errorf("Failed to set terminal to raw mode: %v", err)
+			return fmt.Errorf("failed to set terminal to raw mode: %w", err)
+		}
+		defer func() {
+			_ = term.Restore(int(os.Stdin.Fd()), oldState) // Best effort to restore
+		}()
+
+		// Copy stdin to the PTY and the PTY to stdout
+		go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
 	}
 
-	log.Infof("Diagram created successfully. Output: %s", string(out))
+	// Always copy the PTY output to our program's stdout
+	// This ensures we capture the output regardless of TTY status
+	_, _ = io.Copy(os.Stdout, ptmx)
+
+	// Wait for the command to finish
+	err = cmd.Wait()
+	if err != nil {
+		log.Errorf("Command execution failed: %v", err)
+		return fmt.Errorf("failed to generate diagram: %w", err)
+	}
+
+	log.Infof("Diagram created successfully.")
 
 	return nil
 }
