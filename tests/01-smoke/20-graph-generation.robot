@@ -10,10 +10,10 @@ Suite Setup         Setup
 Suite Teardown      Teardown
 
 *** Variables ***
-${lab-file}         st.clab.yml
+${lab-file}         01-linux-nodes.clab.yml
 ${lab-name}         graph-test
 ${runtime}          docker
-${diagram-file}     st.clab.drawio
+${diagram-file}     01-linux-nodes.clab.drawio
 
 *** Test Cases ***
 Generate Diagram for ${lab-name} Lab
