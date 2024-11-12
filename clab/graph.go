@@ -345,7 +345,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 	// Create the command
 	cmd := exec.Command("sudo", cmdArgs...)
 
-	// Start the command with a pseudo-terminal
+	// Start the command with a pseudo-terminal (PTY)
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
 		log.Errorf("Failed to start command with PTY: %v", err)
@@ -353,30 +353,36 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 	}
 	defer func() { _ = ptmx.Close() }() // Best effort to close the PTY
 
-	// Handle PTY size changes
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGWINCH)
-	go func() {
-		for range ch {
-			if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
-				log.Errorf("Error resizing PTY: %v", err)
+	// Check if os.Stdin is a terminal
+	if term.IsTerminal(int(os.Stdin.Fd())) {
+		// Handle PTY size changes
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGWINCH)
+		go func() {
+			for range ch {
+				if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
+					log.Errorf("Error resizing PTY: %v", err)
+				}
 			}
+		}()
+		ch <- syscall.SIGWINCH // Initial resize
+
+		// Set the terminal to raw mode
+		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			log.Errorf("Failed to set terminal to raw mode: %v", err)
+			return fmt.Errorf("failed to set terminal to raw mode: %w", err)
 		}
-	}()
-	ch <- syscall.SIGWINCH // Initial resize
+		defer func() {
+			_ = term.Restore(int(os.Stdin.Fd()), oldState) // Best effort to restore
+		}()
 
-	// Set the terminal to raw mode to pass through all input
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		log.Errorf("Failed to set terminal to raw mode: %v", err)
-		return fmt.Errorf("failed to set terminal to raw mode: %w", err)
+		// Copy stdin to the PTY and the PTY to stdout
+		go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
 	}
-	defer func() {
-		_ = term.Restore(int(os.Stdin.Fd()), oldState) // Best effort to restore
-	}()
 
-	// Copy stdin to the PTY and the PTY to stdout
-	go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
+	// Always copy the PTY output to our program's stdout
+	// This ensures we capture the output regardless of TTY status
 	_, _ = io.Copy(os.Stdout, ptmx)
 
 	// Wait for the command to finish
