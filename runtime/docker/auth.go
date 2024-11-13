@@ -57,12 +57,17 @@ func getDockerConfigPath(configPath string) string {
 // with parts of the docker config.
 func GetDockerConfig(configPath string) (*DockerConfig, error) {
 	var dockerConfig DockerConfig
+	var pathErr *os.PathError
 
 	dockerConfigPath := getDockerConfigPath(configPath)
 
 	file, err := os.ReadFile(dockerConfigPath)
 	if err != nil {
-		log.Debugf("Could not read docker config: %v", err)
+		if errors.As(err, &pathErr) {
+			log.Debugf("Could not read docker config: %v", err)
+		} else {
+			log.Infof("Could not read docker config: %v", err)
+		}
 		return nil, err
 	}
 
