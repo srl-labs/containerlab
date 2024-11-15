@@ -15,7 +15,8 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	gotc "github.com/florianl/go-tc"
-	"github.com/olekukonko/tablewriter"
+	tableWriter "github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -164,8 +165,12 @@ func validateInput(_ *cobra.Command, _ []string) error {
 }
 
 func printImpairments(qdiscs []gotc.Object) {
-	table := tablewriter.NewWriter(os.Stdout)
-	header := []string{
+	table := tableWriter.NewWriter()
+	table.SetOutputMirror(os.Stdout)
+	table.SetStyle(tableWriter.StyleLight)
+	table.Style().Format.Header = text.FormatTitle
+
+	prettyHeader := tableWriter.Row{
 		"Interface",
 		"Delay",
 		"Jitter",
@@ -174,21 +179,19 @@ func printImpairments(qdiscs []gotc.Object) {
 		"Corruption",
 	}
 
-	table.SetHeader(header)
-	table.SetAutoFormatHeaders(false)
-	table.SetAutoWrapText(false)
+	table.AppendHeader(prettyHeader)
 
-	var rows [][]string
+	var prettyRows []tableWriter.Row
 
 	for _, qdisc := range qdiscs {
-		rows = append(rows, qdiscToTableData(qdisc))
+		prettyRows = append(prettyRows, qdiscToTableData(qdisc))
 	}
 
-	table.AppendBulk(rows)
+	table.AppendRows(prettyRows)
 	table.Render()
 }
 
-func qdiscToTableData(qdisc gotc.Object) []string {
+func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 	link, err := netlink.LinkByIndex(int(qdisc.Ifindex))
 	if err != nil {
 		log.Errorf("could not get netlink interface by index: %v", err)
@@ -204,7 +207,7 @@ func qdiscToTableData(qdisc gotc.Object) []string {
 	// return N/A values when netem is not set
 	// which is the case when qdisc is not set for an interface
 	if qdisc.Netem == nil {
-		return []string{
+		return tableWriter.Row{
 			ifDisplayName,
 			"N/A", // delay
 			"N/A", // jitter
@@ -226,7 +229,7 @@ func qdiscToTableData(qdisc gotc.Object) []string {
 	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
 	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 
-	return []string{
+	return tableWriter.Row{
 		ifDisplayName,
 		delay,
 		jitter,

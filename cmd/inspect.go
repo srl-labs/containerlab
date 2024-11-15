@@ -13,7 +13,8 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/olekukonko/tablewriter"
+	tableWriter "github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -130,12 +131,12 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	return err
 }
 
-func toTableData(det []types.ContainerDetails) [][]string {
-	tabData := make([][]string, 0, len(det))
+func toTableData(det []types.ContainerDetails) []tableWriter.Row {
+	tabData := make([]tableWriter.Row, 0, len(det))
 	for i := range det {
 		d := &det[i]
 
-		tabRow := []string{fmt.Sprintf("%d", i+1)}
+		tabRow := tableWriter.Row{fmt.Sprintf("%d", i+1)}
 
 		if all {
 			tabRow = append(tabRow, d.LabPath, d.LabName)
@@ -213,8 +214,12 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 
 	case "table":
 		tabData := toTableData(contDetails)
-		table := tablewriter.NewWriter(os.Stdout)
-		header := []string{
+		table := tableWriter.NewWriter()
+		table.SetOutputMirror(os.Stdout)
+		table.SetStyle(tableWriter.StyleLight)
+		table.Style().Format.Header = text.FormatTitle
+
+		prettyHeader := tableWriter.Row{
 			"Lab Name",
 			"Name",
 			"Container ID",
@@ -222,26 +227,29 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 			"Kind",
 			"State",
 			"IPv4 Address",
-			"IPv6 Address",
-		}
+			"IPv6 Address"}
 
 		if wide {
-			header = slices.Insert(header, 1, "Owner")
+			prettyHeader = slices.Insert(prettyHeader, 1, "Owner")
 		}
 
 		if all {
-			table.SetHeader(append([]string{"#", "Topo Path"}, header...))
+			table.AppendHeader(append(tableWriter.Row{"#", "Topo Path"}, prettyHeader...))
 		} else {
-			table.SetHeader(append([]string{"#"}, header[1:]...))
+			table.AppendHeader(append(tableWriter.Row{"#"}, prettyHeader[1:]...))
 		}
-		table.SetAutoFormatHeaders(false)
-		table.SetAutoWrapText(false)
 		// merge cells with lab name and topo file path
-		table.SetAutoMergeCellsByColumnIndex([]int{1, 2})
+		table.SetColumnConfigs([]tableWriter.ColumnConfig{
+			{Number: 2, AutoMerge: true},
+			{Number: 3, AutoMerge: true},
+		})
 		if wide {
-			table.SetAutoMergeCellsByColumnIndex([]int{1, 2, 3})
+			table.SetColumnConfigs([]tableWriter.ColumnConfig{
+				{Number: 2, AutoMerge: true},
+			})
 		}
-		table.AppendBulk(tabData)
+
+		table.AppendRows(tabData)
 		table.Render()
 
 		return nil
