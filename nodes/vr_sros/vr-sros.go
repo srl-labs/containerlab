@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
+	kindNames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`1/1/(?P<port>\d+)`)
@@ -56,7 +56,7 @@ type SROSTemplateData struct {
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrSROS)
 	}, defaultCredentials)
 }
@@ -74,7 +74,7 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	s.HostRequirements.VirtRequired = true
 	s.LicensePolicy = types.LicensePolicyWarn
 	// SR OS requires unbound pubkey authentication mode until this is
-	// gets fixed in later SR OS relase.
+	// gets fixed in later SR OS release.
 	s.SSHConfig.PubkeyAuthentication = types.PubkeyAuthValueUnbound
 
 	s.Cfg = cfg
@@ -129,7 +129,8 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	// b holds the configuration to be applied to the node
 	b := &bytes.Buffer{}
 
-	if isPartialConfigFile(s.Cfg.StartupConfig) {
+	// apply partial configs if partial config is used and existing node config does not exist
+	if isPartialConfigFile(s.Cfg.StartupConfig) && !nodeConfigExists(s.Cfg.LabDir) {
 		log.Infof("%s: adding config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
 
 		r, err := os.Open(s.Cfg.StartupConfig)
@@ -197,7 +198,13 @@ func createVrSROSFiles(node nodes.Node) error {
 
 	// use default startup config load function if config in full form is provided
 	if !isPartialConfigFile(nodeCfg.StartupConfig) {
-		nodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
+		// do not create new config file if there's existing config file
+		if nodeConfigExists(nodeCfg.LabDir) {
+			log.Infof("Using existing config file (%s) instead of applying a new one",
+				filepath.Join(nodeCfg.LabDir, configDirName, startupCfgFName))
+		} else {
+			nodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
+		}
 	}
 
 	if nodeCfg.License != "" {
@@ -216,6 +223,12 @@ func createVrSROSFiles(node nodes.Node) error {
 // isPartialConfigFile returns true if the config file name contains .partial substring.
 func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
+}
+
+// nodeConfigExists returns true if a file at <labdir>/<node>/tftpboot/config.txt exists.
+func nodeConfigExists(labDir string) bool {
+	_, err := os.Stat(filepath.Join(labDir, configDirName, startupCfgFName))
+	return err == nil
 }
 
 // isHealthy checks if the "/health" file created by vrnetlab exists and contains "0 running".
