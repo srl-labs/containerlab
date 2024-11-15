@@ -92,7 +92,7 @@ func (n *xrd) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 	return n.createXRDFiles(ctx)
 }
 
-func (n *xrd) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *xrd) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco XRd '%s' node", n.Cfg.ShortName)
 
 	// create interface script template
