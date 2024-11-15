@@ -170,7 +170,7 @@ func printImpairments(qdiscs []gotc.Object) {
 	table.SetStyle(tableWriter.StyleLight)
 	table.Style().Format.Header = text.FormatTitle
 
-	prettyHeader := tableWriter.Row{
+	header := tableWriter.Row{
 		"Interface",
 		"Delay",
 		"Jitter",
@@ -179,15 +179,15 @@ func printImpairments(qdiscs []gotc.Object) {
 		"Corruption",
 	}
 
-	table.AppendHeader(prettyHeader)
+	table.AppendHeader(header)
 
-	var prettyRows []tableWriter.Row
+	var rows []tableWriter.Row
 
 	for _, qdisc := range qdiscs {
-		prettyRows = append(prettyRows, qdiscToTableData(qdisc))
+		rows = append(rows, qdiscToTableData(qdisc))
 	}
 
-	table.AppendRows(prettyRows)
+	table.AppendRows(rows)
 	table.Render()
 }
 
