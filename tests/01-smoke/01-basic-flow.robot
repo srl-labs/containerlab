@@ -16,7 +16,7 @@ ${runtime}                  docker
 ${runtime-cli-exec-cmd}     sudo docker exec
 ${n2-ipv4}                  172.20.20.100/24
 ${n2-ipv6}                  3fff:172:20:20::100/64
-
+${table-delimit}            │
 
 *** Test Cases ***
 Verify number of Hosts entries before deploy
@@ -194,7 +194,7 @@ Ensure "inspect all" outputs IP addresses
     # this relates to the l2 node
     ${line} =    String.Get Line    ${output}    -3
     Log    ${line}
-    @{data} =    Split String    ${line}    |
+    @{data} =    Split String    ${line}    ${table-delimit}
     Log    ${data}
     # verify ipv4 address
     ${ipv4} =    String.Strip String    ${data}[9]

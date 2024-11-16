@@ -11,6 +11,7 @@ Suite Teardown      Cleanup
 ${lab-name}     05-docker-bridge
 ${lab-file}     05-docker-bridge.clab.yml
 ${runtime}      docker
+${table-delimit}            │
 
 
 *** Test Cases ***
@@ -27,7 +28,7 @@ Ensure inspect outputs IP addresses
     Should Be Equal As Integers    ${rc}    0
     ${line} =    String.Get Line    ${output}    -2
     Log    ${line}
-    @{data} =    Split String    ${line}    |
+    @{data} =    Split String    ${line}    ${table-delimit}
     Log    ${data}
     # verify ipv4 address
     ${ipv4} =    String.Strip String    ${data}[7]
