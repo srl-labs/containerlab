@@ -131,10 +131,10 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	return err
 }
 
-func toTableData(det []types.ContainerDetails) []tableWriter.Row {
-	tabData := make([]tableWriter.Row, 0, len(det))
-	for i := range det {
-		d := &det[i]
+func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
+	tabData := make([]tableWriter.Row, 0, len(contDetails))
+	for i := range contDetails {
+		d := &contDetails[i]
 
 		tabRow := tableWriter.Row{fmt.Sprintf("%d", i+1)}
 
@@ -216,7 +216,7 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		tabData := toTableData(contDetails)
 		table := tableWriter.NewWriter()
 		table.SetOutputMirror(os.Stdout)
-		table.SetStyle(tableWriter.StyleLight)
+		table.SetStyle(tableWriter.StyleRounded)
 		table.Style().Format.Header = text.FormatTitle
 
 		prettyHeader := tableWriter.Row{
@@ -250,6 +250,27 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		}
 
 		table.AppendRows(tabData)
+
+		// this is a crazy way of making the header to have text center-aligned
+		// see https://github.com/jedib0t/go-pretty/issues/340 for more info
+		// even though the amount of columns a table has is lower than the numbers
+		// we put in the config, it still works
+		table.SetColumnConfigs(
+			[]tableWriter.ColumnConfig{
+				{Number: 1, AlignHeader: text.AlignCenter},
+				{Number: 2, AlignHeader: text.AlignCenter},
+				{Number: 3, AlignHeader: text.AlignCenter},
+				{Number: 4, AlignHeader: text.AlignCenter},
+				{Number: 5, AlignHeader: text.AlignCenter},
+				{Number: 6, AlignHeader: text.AlignCenter},
+				{Number: 7, AlignHeader: text.AlignCenter},
+				{Number: 8, AlignHeader: text.AlignCenter},
+				{Number: 9, AlignHeader: text.AlignCenter},
+				{Number: 10, AlignHeader: text.AlignCenter},
+				{Number: 11, AlignHeader: text.AlignCenter},
+			},
+		)
+
 		table.Render()
 
 		return nil
