@@ -230,7 +230,7 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 			"Image",
 			"Kind",
 			"State",
-			"IPv4 Address\nIPv6 Address"}
+			"IPv4/6 Address"}
 
 		if wide {
 			prettyHeader = slices.Insert(prettyHeader, 1, "Owner")
