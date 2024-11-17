@@ -148,7 +148,12 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 		}
 
 		// Common fields
-		tabRow = append(tabRow, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address)
+		tabRow = append(tabRow,
+			d.Name,
+			d.Image,
+			d.Kind,
+			d.State,
+			fmt.Sprintf("%s\n%s", d.IPv4Address, d.IPv6Address))
 
 		tabData = append(tabData, tabRow)
 	}
@@ -222,12 +227,10 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		prettyHeader := tableWriter.Row{
 			"Lab Name",
 			"Name",
-			"Container ID",
 			"Image",
 			"Kind",
 			"State",
-			"IPv4 Address",
-			"IPv6 Address"}
+			"IPv4 Address\nIPv6 Address"}
 
 		if wide {
 			prettyHeader = slices.Insert(prettyHeader, 1, "Owner")
