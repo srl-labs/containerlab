@@ -136,7 +136,7 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 	for i := range contDetails {
 		d := &contDetails[i]
 
-		tabRow := tableWriter.Row{fmt.Sprintf("%d", i+1)}
+		tabRow := tableWriter.Row{}
 
 		if all {
 			tabRow = append(tabRow, d.LabPath, d.LabName)
@@ -223,8 +223,9 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		table.SetOutputMirror(os.Stdout)
 		table.SetStyle(tableWriter.StyleRounded)
 		table.Style().Format.Header = text.FormatTitle
+		table.Style().Options.SeparateRows = true
 
-		prettyHeader := tableWriter.Row{
+		header := tableWriter.Row{
 			"Lab Name",
 			"Name",
 			"Image",
@@ -233,13 +234,13 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 			"IPv4/6 Address"}
 
 		if wide {
-			prettyHeader = slices.Insert(prettyHeader, 1, "Owner")
+			header = slices.Insert(header, 1, "Owner")
 		}
 
 		if all {
-			table.AppendHeader(append(tableWriter.Row{"#", "Topo Path"}, prettyHeader...))
+			table.AppendHeader(append(tableWriter.Row{"Topo Path"}, header...))
 		} else {
-			table.AppendHeader(append(tableWriter.Row{"#"}, prettyHeader[1:]...))
+			table.AppendHeader(append(tableWriter.Row{}, header[1:]...))
 		}
 		// merge cells with lab name and topo file path
 		table.SetColumnConfigs([]tableWriter.ColumnConfig{
@@ -260,17 +261,17 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		// we put in the config, it still works
 		table.SetColumnConfigs(
 			[]tableWriter.ColumnConfig{
-				{Number: 1, AlignHeader: text.AlignCenter},
-				{Number: 2, AlignHeader: text.AlignCenter},
-				{Number: 3, AlignHeader: text.AlignCenter},
-				{Number: 4, AlignHeader: text.AlignCenter},
-				{Number: 5, AlignHeader: text.AlignCenter},
-				{Number: 6, AlignHeader: text.AlignCenter},
-				{Number: 7, AlignHeader: text.AlignCenter},
-				{Number: 8, AlignHeader: text.AlignCenter},
-				{Number: 9, AlignHeader: text.AlignCenter},
-				{Number: 10, AlignHeader: text.AlignCenter},
-				{Number: 11, AlignHeader: text.AlignCenter},
+				{Number: 1, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 2, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 3, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 4, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 5, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 6, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 7, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 8, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 9, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 10, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
+				{Number: 11, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
 			},
 		)
 
