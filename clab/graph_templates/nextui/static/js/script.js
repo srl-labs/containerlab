@@ -89,6 +89,19 @@
             'setModel': function (model) {
                 this.inherited(model);
             },
+            calculateLabelPosition: function(percentDistance) {
+              var l = this.line();
+              var n = this.line().normal().multiply(this.getOffset()*3);
+              var cp = this.line().center().add(n);
+              var bezierPoints = [ 
+                [ l.start.x, l.start.y ],
+                [ cp.x, cp.y ], 
+                [ cp.x, cp.y ], 
+                [ l.end.x, l.end.y ],
+              ];
+              var bzLength = nx.geometry.BezierCurve.getLength(bezierPoints)
+              return nx.geometry.BezierCurve.positionAlongCurve(bezierPoints, bzLength*percentDistance);
+            },
             update: function () {
                 function findCommonLinks(widget) {
                   return widget.topology().getData().links.filter( (link) => {
@@ -105,7 +118,6 @@
                 var angle = line.angle();
                 var stageScale = this.stageScale();
                 line = line.pad(50 * stageScale, 50 * stageScale);
-                const commonLinks = findCommonLinks(this);
                 if (this.sourcelabel()) {
                     var sourceBadge = this.view('sourceBadge');
                     var sourceText = this.view('sourceText');
@@ -117,13 +129,11 @@
                     var sourceTextBound = sourceText.getBound()
                     sourceBg.sets({ width: sourceTextBound.width, visible: true });
                     sourceBg.setTransform(sourceTextBound.width / -2);
-                    point = line.start;
-                    point.x += this.topology().getData().links.indexOf(this.model().getData())
-                    point.y += ((activeLayout == 'horizontal' ? 0.5 : -0.5) * this.topology().getData().links.indexOf(this.model().getData()));
+                    point = this.calculateLabelPosition(0.1);
                     if (stageScale) {
-                        sourceBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ' + 'scale (' + stageScale + ') ');
+                        sourceBadge.set('transform', 'translate(' + point[0] + ',' + point[1] + ') ' + 'scale (' + stageScale + ') ');
                     } else {
-                        sourceBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ');
+                        sourceBadge.set('transform', 'translate(' + point[0] + ',' + point[1] + ') ');
                     }
                 }
                 if (this.targetlabel()) {
@@ -137,13 +147,11 @@
                     var targetTextBound = targetText.getBound()
                     targetBg.sets({ width: targetTextBound.width, visible: true });
                     targetBg.setTransform(targetTextBound.width / -2);
-                    point = line.end;
-                    point.x += this.topology().getData().links.indexOf(this.model().getData())
-                    point.y += ((activeLayout == 'horizontal' ? 0.5 : -0.5) * this.topology().getData().links.indexOf(this.model().getData()));
+                    point = this.calculateLabelPosition(0.9);
                     if (stageScale) {
-                        targetBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ' + 'scale (' + stageScale + ') ');
+                        targetBadge.set('transform', 'translate(' + point[0] + ',' + point[1] + ') ' + 'scale (' + stageScale + ') ');
                     } else {
-                        targetBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ');
+                        targetBadge.set('transform', 'translate(' + point[0] + ',' + point[1] + ') ');
                     }
                 }
                 this.view("sourceBadge").visible(true);
