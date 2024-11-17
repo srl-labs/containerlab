@@ -90,11 +90,22 @@
                 this.inherited(model);
             },
             update: function () {
+                function findCommonLinks(widget) {
+                  return widget.topology().getData().links.filter( (link) => {
+                    if (widget.sourcelabel() == link.source && widget.targetlabel() == link.target) {
+                      return link;
+                    } else if ( widget.targetlabel() == link.source && widget.sourcelabel() == link.target ) {
+                      return link;
+                    }
+                  })
+                }
                 this.inherited();
+                const spacing = 2;
                 var line = this.line();
                 var angle = line.angle();
                 var stageScale = this.stageScale();
                 line = line.pad(50 * stageScale, 50 * stageScale);
+                const commonLinks = findCommonLinks(this);
                 if (this.sourcelabel()) {
                     var sourceBadge = this.view('sourceBadge');
                     var sourceText = this.view('sourceText');
@@ -107,6 +118,8 @@
                     sourceBg.sets({ width: sourceTextBound.width, visible: true });
                     sourceBg.setTransform(sourceTextBound.width / -2);
                     point = line.start;
+                    point.x += this.topology().getData().links.indexOf(this.model().getData())
+                    point.y += ((activeLayout == 'horizontal' ? 0.5 : -0.5) * this.topology().getData().links.indexOf(this.model().getData()));
                     if (stageScale) {
                         sourceBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ' + 'scale (' + stageScale + ') ');
                     } else {
@@ -125,6 +138,8 @@
                     targetBg.sets({ width: targetTextBound.width, visible: true });
                     targetBg.setTransform(targetTextBound.width / -2);
                     point = line.end;
+                    point.x += this.topology().getData().links.indexOf(this.model().getData())
+                    point.y += ((activeLayout == 'horizontal' ? 0.5 : -0.5) * this.topology().getData().links.indexOf(this.model().getData()));
                     if (stageScale) {
                         targetBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ' + 'scale (' + stageScale + ') ');
                     } else {
