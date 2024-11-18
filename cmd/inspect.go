@@ -227,6 +227,9 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		table.Style().Format.Header = text.FormatTitle
 		table.Style().Format.HeaderAlign = text.AlignCenter
 		table.Style().Options.SeparateRows = true
+		table.Style().Color = tableWriter.ColorOptions{
+			Header: text.Colors{text.Bold},
+		}
 
 		header := tableWriter.Row{
 			"Lab Name",
