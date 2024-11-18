@@ -245,7 +245,7 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 				{Number: 1, AutoMerge: true},
 				{Number: 2, AutoMerge: true},
 			})
-			table.AppendHeader(append(tableWriter.Row{"Topo Path"}, header...))
+			table.AppendHeader(append(tableWriter.Row{"Topology"}, header...))
 		} else {
 			table.AppendHeader(append(tableWriter.Row{}, header[1:]...))
 		}
