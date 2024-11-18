@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
@@ -150,10 +151,11 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 		// Common fields
 		tabRow = append(tabRow,
 			d.Name,
-			d.Image,
-			d.Kind,
+			fmt.Sprintf("%s\n%s", d.Kind, d.Image),
 			d.State,
-			fmt.Sprintf("%s\n%s", d.IPv4Address, d.IPv6Address))
+			fmt.Sprintf("%s\n%s",
+				ipWithoutPrefix(d.IPv4Address),
+				ipWithoutPrefix(d.IPv6Address)))
 
 		tabData = append(tabData, tabRow)
 	}
@@ -228,8 +230,7 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		header := tableWriter.Row{
 			"Lab Name",
 			"Name",
-			"Image",
-			"Kind",
+			"Kind/Image",
 			"State",
 			"IPv4/6 Address"}
 
@@ -285,4 +286,17 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 type TokenFileResults struct {
 	File    string
 	Labname string
+}
+
+func ipWithoutPrefix(ip string) string {
+	if !strings.Contains(ip, "/") {
+		return ip
+	}
+
+	ipParts := strings.Split(ip, "/")
+	if len(ipParts) != 2 {
+		return ip
+	}
+
+	return ipParts[0]
 }
