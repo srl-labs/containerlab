@@ -162,15 +162,41 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 	return tabData
 }
 
+// getTopologyPath returns the relative path to the topology file
+// if the relative path is shorted than the absolute path.
+func getTopologyPath(p string) (string, error) {
+	if p == "" {
+		return "", nil
+	}
+
+	// get topo file path relative of the cwd
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	relPath, err := filepath.Rel(cwd, p)
+	if err != nil {
+		return "", err
+	}
+
+	if len(relPath) < len(p) {
+		return relPath, nil
+	}
+
+	return p, nil
+}
+
 func printContainerInspect(containers []runtime.GenericContainer, format string) error {
 	contDetails := make([]types.ContainerDetails, 0, len(containers))
 
 	// Gather details of each container
 	for _, cont := range containers {
 
-		// get topo file path relative of the cwd
-		cwd, _ := os.Getwd()
-		path, _ := filepath.Rel(cwd, cont.Labels[labels.TopoFile])
+		path, err := getTopologyPath(cont.Labels[labels.TopoFile])
+		if err != nil {
+			return fmt.Errorf("failed to get topology path: %v", err)
+		}
 
 		cdet := &types.ContainerDetails{
 			LabName:     cont.Labels[labels.Containerlab],
