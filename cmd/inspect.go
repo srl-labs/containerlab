@@ -225,6 +225,7 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		table.SetOutputMirror(os.Stdout)
 		table.SetStyle(tableWriter.StyleRounded)
 		table.Style().Format.Header = text.FormatTitle
+		table.Style().Format.HeaderAlign = text.AlignCenter
 		table.Style().Options.SeparateRows = true
 
 		header := tableWriter.Row{
@@ -239,15 +240,16 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		}
 
 		if all {
+			// merge cells with topo file path and lab name when in all mode
+			table.SetColumnConfigs([]tableWriter.ColumnConfig{
+				{Number: 1, AutoMerge: true},
+				{Number: 2, AutoMerge: true},
+			})
 			table.AppendHeader(append(tableWriter.Row{"Topo Path"}, header...))
 		} else {
 			table.AppendHeader(append(tableWriter.Row{}, header[1:]...))
 		}
-		// merge cells with lab name and topo file path
-		table.SetColumnConfigs([]tableWriter.ColumnConfig{
-			{Number: 2, AutoMerge: true},
-			{Number: 3, AutoMerge: true},
-		})
+
 		if wide {
 			table.SetColumnConfigs([]tableWriter.ColumnConfig{
 				{Number: 2, AutoMerge: true},
@@ -255,26 +257,6 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 		}
 
 		table.AppendRows(tabData)
-
-		// this is a crazy way of making the header to have text center-aligned
-		// see https://github.com/jedib0t/go-pretty/issues/340 for more info
-		// even though the amount of columns a table has is lower than the numbers
-		// we put in the config, it still works
-		table.SetColumnConfigs(
-			[]tableWriter.ColumnConfig{
-				{Number: 1, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 2, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 3, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 4, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 5, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 6, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 7, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 8, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 9, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 10, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-				{Number: 11, AlignHeader: text.AlignCenter, ColorsHeader: text.Colors{text.Bold}},
-			},
-		)
 
 		table.Render()
 
@@ -289,7 +271,7 @@ type TokenFileResults struct {
 }
 
 func ipWithoutPrefix(ip string) string {
-	if !strings.Contains(ip, "/") {
+	if strings.Contains(ip, "N/A") {
 		return ip
 	}
 
