@@ -347,7 +347,7 @@ Verify Exec rc != 0 on no containers match
 Verify l1 node is healthy
     [Documentation]    Checking if l1 node is healthy after the lab is deployed
 
-    Sleep    3s
+    Sleep    10s
 
     ${output} =    Process.Run Process
     ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f ''{{.State.Health.Status}}''
