@@ -190,17 +190,30 @@ Ensure "inspect all" outputs IP addresses
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # get a 3rd line from the bottom of the inspect cmd.
-    # this relates to the l2 node
-    ${line} =    String.Get Line    ${output}    -3
+    
+    # get a 4th line from the bottom of the inspect cmd.
+    # this relates to the l2 node ipv4
+    ${line} =    String.Get Line    ${output}    -6
     Log    ${line}
+
     @{data} =    Split String    ${line}    ${table-delimit}
     Log    ${data}
+
     # verify ipv4 address
-    ${ipv4} =    String.Strip String    ${data}[9]
-    Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
+    ${ipv4} =    String.Strip String    ${data}[6]
+    Should Match Regexp    ${ipv4}    ^[\\d\\.]+$
+
+    # get a 3rd line from the bottom of the inspect cmd.
+    # this relates to the l2 node ipv6
+    ${line} =    String.Get Line    ${output}    -5
+    Log    ${line}
+
+    @{data} =    Split String    ${line}    ${table-delimit}
+    Log    ${data}
+
     # verify ipv6 address
-    Run Keyword    Match IPv6 Address    ${data}[10]
+    ${ipv6} =    String.Strip String    ${data}[6]
+    Run Keyword    Match IPv6 Address    ${ipv6}
 
 Verify bind mount in l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -380,4 +393,4 @@ Match IPv6 Address
     [Arguments]
     ...    ${address}=${None}
     ${ipv6} =    String.Strip String    ${address}
-    Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+/\\d{1,2}$
+    Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+$

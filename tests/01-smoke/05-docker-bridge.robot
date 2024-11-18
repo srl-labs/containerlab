@@ -26,13 +26,16 @@ Ensure inspect outputs IP addresses
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+
     ${line} =    String.Get Line    ${output}    -2
     Log    ${line}
+
     @{data} =    Split String    ${line}    ${table-delimit}
     Log    ${data}
+
     # verify ipv4 address
     ${ipv4} =    String.Strip String    ${data}[7]
-    Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
+    Should Match Regexp    ${ipv4}    ^[\\d\\.]+$
 
 
 *** Keywords ***
