@@ -167,8 +167,12 @@ func validateInput(_ *cobra.Command, _ []string) error {
 func printImpairments(qdiscs []gotc.Object) {
 	table := tableWriter.NewWriter()
 	table.SetOutputMirror(os.Stdout)
-	table.SetStyle(tableWriter.StyleLight)
+	table.SetStyle(tableWriter.StyleRounded)
 	table.Style().Format.Header = text.FormatTitle
+	table.Style().Format.HeaderAlign = text.AlignCenter
+	table.Style().Color = tableWriter.ColorOptions{
+		Header: text.Colors{text.Bold},
+	}
 
 	header := tableWriter.Row{
 		"Interface",
