@@ -23,17 +23,6 @@ type NftablesClient struct {
 
 // NewNftablesClient returns a new NftablesClient.
 func NewNftablesClient(bridgeName string) (*NftablesClient, error) {
-	loaded, err := utils.IsKernelModuleLoaded("nf_tables")
-	if err != nil {
-		return nil, err
-	}
-
-	if !loaded {
-		log.Debug("nf_tables kernel module not available")
-		// module is not loaded
-		return nil, definitions.ErrNotAvailabel
-	}
-
 	// setup netlink connection with nftables
 	nftConn, err := nftables.New(nftables.AsLasting())
 	if err != nil {
@@ -51,7 +40,7 @@ func NewNftablesClient(bridgeName string) (*NftablesClient, error) {
 	}
 	if len(chains) == 0 {
 		log.Debugf("nftables does not seem to be in use, no %s chain found.", definitions.DockerFWUserChain)
-		return nil, definitions.ErrNotAvailabel
+		return nil, definitions.ErrNotAvailable
 	}
 
 	return nftC, nil
