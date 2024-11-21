@@ -581,3 +581,10 @@ func (t *Topology) GetHealthCheckConfig(name string) *HealthcheckConfig {
 
 	return nil
 }
+
+func (t *Topology) GetNodeAliases(name string) []string {
+	if ndef, ok := t.Nodes[name]; ok {
+		return ndef.GetAliases()
+	}
+	return nil
+}

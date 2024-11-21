@@ -333,6 +333,15 @@
                 "healthcheck": {
                     "type": "object",
                     "$ref": "#/definitions/healthcheck-config"
+                },
+                "aliases": {
+                    "type": "array",
+                    "description": "list of additional network aliases for the node",
+                    "markdownDescription": "list of [aliases](https://containerlab.dev/manual/nodes/#aliases) for the node",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
                 }
             },
             "allOf": [

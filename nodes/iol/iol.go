@@ -28,6 +28,8 @@ import (
 const (
 	typeIOL = "iol"
 	typeL2  = "l2"
+
+	iol_workdir = "/iol"
 )
 
 var (
@@ -39,8 +41,6 @@ var (
 
 	IOLCfgTpl, _ = template.New("clab-iol-default-config").Funcs(
 		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(cfgTemplate)
-
-	IOLMACBase = "00:00:5E"
 
 	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	InterfaceOffset = 1
@@ -59,8 +59,9 @@ func Register(r *nodes.NodeRegistry) {
 type iol struct {
 	nodes.DefaultNode
 
-	isL2Node bool
-	Pid      string
+	isL2Node  bool
+	Pid       string
+	nvramFile string
 }
 
 func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -93,9 +94,11 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 			n.Cfg.NodeType, strings.Join(validTypes, ", "))
 	}
 
+	n.nvramFile = fmt.Sprint("nvram_", fmt.Sprintf("%05s", n.Pid))
+
 	n.Cfg.Binds = append(n.Cfg.Binds,
 		// mount nvram so that config persists
-		fmt.Sprint(path.Join(n.Cfg.LabDir, "nvram"), ":/iol/nvram_00001"),
+		fmt.Sprint(path.Join(n.Cfg.LabDir, n.nvramFile), ":", path.Join(iol_workdir, n.nvramFile)),
 
 		// mount launch config
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "startup.cfg"), ":/iol/config.txt"),
@@ -132,9 +135,9 @@ func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 func (n *iol) CreateIOLFiles(ctx context.Context) error {
 	// If NVRAM already exists, don't need to create
 	// otherwise saved configs in NVRAM are overwritten.
-	if !utils.FileExists(path.Join(n.Cfg.LabDir, "nvram")) {
+	if !utils.FileExists(path.Join(n.Cfg.LabDir, n.nvramFile)) {
 		// create nvram file
-		utils.CreateFile(path.Join(n.Cfg.LabDir, "nvram"), "")
+		utils.CreateFile(path.Join(n.Cfg.LabDir, n.nvramFile), "")
 	}
 
 	// create these files so the bind monut doesn't automatically
@@ -168,8 +171,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		slot = x / 4
 		port = x % 4
 
-		hwa, _ := utils.GenMac(IOLMACBase)
-
 		// append data to write to NETMAP and IOUYAP files
 		iouyapData += fmt.Sprintf("[513:%d/%d]\neth_dev = %s\n", slot, port, intf.GetIfaceName())
 		netmapdata += fmt.Sprintf("%s:%d/%d 513:%d/%d\n", n.Pid, slot, port, slot, port)
@@ -181,7 +182,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 				x,
 				slot,
 				port,
-				hwa.String(),
 			},
 		)
 
@@ -190,9 +190,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	// create IOYAP and NETMAP file for interface mappings
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), iouyapData)
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), netmapdata)
-
-	// generate mgmt MAC, it shouldn't be the same as the linux container
-	hwa, _ := utils.GenMac(IOLMACBase)
 
 	// create startup config template
 	tpl := IOLTemplateData{
@@ -204,7 +201,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		MgmtIPv6Addr:       n.Cfg.MgmtIPv6Address,
 		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
 		MgmtIPv6GW:         n.Cfg.MgmtIPv6Gateway,
-		MgmtIntfMacAddr:    hwa.String(),
 		DataIFaces:         IOLInterfaces,
 	}
 
@@ -229,7 +225,6 @@ type IOLTemplateData struct {
 	MgmtIPv6Addr       string
 	MgmtIPv6PrefixLen  int
 	MgmtIPv6GW         string
-	MgmtIntfMacAddr    string
 	DataIFaces         []IOLInterface
 }
 
@@ -240,7 +235,6 @@ type IOLInterface struct {
 	IfaceIdx  int
 	Slot      int
 	Port      int
-	MacAddr   string
 }
 
 func (n *iol) GetMappedInterfaceName(ifName string) (string, error) {

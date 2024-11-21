@@ -17,7 +17,7 @@ Check out the short video demonstrating the integration:
     frameborder="0">
 </iframe>
 
-Containerlab made all of these use cases possible by integrating with [border0.com](https://border0.com) service. border0.com provides personal and secure tunnels for https/https/tls/tcp/ssh ports over global anycast[^1] network spanning US, Europe and Asia.
+Containerlab made all of these use cases possible by integrating with [border0.com](https://border0.com) service. border0.com provides personal and secure tunnels for https/tls/tcp/ssh ports over global anycast[^1] network spanning US, Europe and Asia.
 
 To make a certain port of a node available via border0.com tunnel provide a `publish` container under the node/kind/default section of the topology:
 

@@ -27,7 +27,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/kellerza/template v0.0.6
-	github.com/klauspost/cpuid/v2 v2.2.8
+	github.com/klauspost/cpuid/v2 v2.2.9
 	github.com/mackerelio/go-osstat v0.2.5
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -43,11 +43,11 @@ require (
 	github.com/tklauser/numcpus v0.9.0
 	github.com/vishvananda/netlink v1.3.0
 	github.com/weaveworks/ignite v0.10.0
-	go.uber.org/mock v0.4.0
-	golang.org/x/crypto v0.28.0
+	go.uber.org/mock v0.5.0
+	golang.org/x/crypto v0.29.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/sys v0.26.0
-	golang.org/x/term v0.25.0
+	golang.org/x/sys v0.27.0
+	golang.org/x/term v0.26.0
 	gopkg.in/yaml.v2 v2.4.0
 	sigs.k8s.io/kind v0.24.0
 )
@@ -180,7 +180,7 @@ require (
 	github.com/containers/storage v1.55.1 // indirect
 	github.com/coreos/go-iptables v0.7.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.1-0.20231103132048-7d375ecc2b09 // indirect
-	github.com/creack/pty v1.1.21 // indirect
+	github.com/creack/pty v1.1.24
 	github.com/cyphar/filepath-securejoin v0.3.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/disiqueira/gotree/v3 v3.0.2 // indirect
@@ -237,7 +237,7 @@ require (
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/klauspost/compress v1.17.9
+	github.com/klauspost/compress v1.17.11
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -289,11 +289,11 @@ require (
 	go4.org/intern v0.0.0-20230205224052-192e9f60865c // indirect
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230525183740-e7c30c78aeb2 // indirect
 	gocloud.dev v0.37.0 // indirect
-	golang.org/x/mod v0.21.0
-	golang.org/x/net v0.30.0
+	golang.org/x/mod v0.22.0
+	golang.org/x/net v0.31.0
 	golang.org/x/oauth2 v0.22.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/sync v0.9.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
@@ -305,7 +305,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apimachinery v0.31.1
+	k8s.io/apimachinery v0.31.2
 	k8s.io/client-go v0.26.2 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect

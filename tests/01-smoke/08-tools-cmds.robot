@@ -28,13 +28,14 @@ Deploy ${lab-name} lab
 
 Add link impairments
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools netem set -n clab-${lab-name}-l1 -i eth3 --delay 100ms --jitter 2ms --loss 10 --rate 1000
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools netem set -n clab-${lab-name}-l1 -i eth3 --delay 100ms --jitter 2ms --loss 10 --rate 1000 --corruption 2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    100ms
     Should Contain    ${output}    2ms
     Should Contain    ${output}    10.00%
     Should Contain    ${output}    1000
+    Should Contain    ${output}    2.00%
 
 Show link impairments
     ${rc}    ${output} =    Run And Return Rc And Output

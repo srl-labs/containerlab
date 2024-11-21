@@ -62,7 +62,11 @@ func GetDockerConfig(configPath string) (*DockerConfig, error) {
 
 	file, err := os.ReadFile(dockerConfigPath)
 	if err != nil {
-		log.Infof("Could not read docker config: %v", err)
+		if errors.Is(err, os.ErrNotExist) {
+			log.Debugf("Could not read docker config: %v", err)
+		} else {
+			log.Infof("Could not read docker config: %v", err)
+		}
 		return nil, err
 	}
 
