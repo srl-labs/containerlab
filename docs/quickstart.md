@@ -6,9 +6,9 @@ hide:
 
 ## Installation
 
-Getting containerlab is as easy as it gets. Thanks to the trivial [installation](install.md) procedure it can be set up in a matter of a few seconds on any RHEL or Debian based OS[^1].
+Getting containerlab is as easy as it gets. Thanks to the [quick setup script](install.md#quick-setup) you can get up and running in a matter of seconds on any RHEL or Debian based OS[^1].
 
---8<-- "docs/install.md:install-script-cmd"
+--8<-- "docs/install.md:quick-setup-script-cmd"
 
 ## Topology definition file
 

@@ -30,14 +30,14 @@ The script officially supports the following OSes:
 * Rocky Linux 9.3, 8.8 (should work on any 9.x and 8.x release)
 
 To install all components at once, run the following command on any of the supported OSes:
-
+<!-- --8<-- [start:quick-setup-script-cmd] -->
 ```bash
 curl -sL https://containerlab.dev/setup | sudo -E bash -s "all"
 ```
-
-/// note
+/// tip
 To complete installation please execute `newgrp docker` or logout and log back in.
 ///
+<!-- --8<-- [end:quick-setup-script-cmd] -->
 
 To install an individual component, specify the function name as an argument to the script. For example, to install only `docker`:
 
