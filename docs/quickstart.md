@@ -6,9 +6,9 @@ hide:
 
 ## Installation
 
-Getting containerlab is as easy as it gets. Thanks to the trivial [installation](install.md) procedure it can be set up in a matter of a few seconds on any RHEL or Debian based OS[^1].
+Getting containerlab is as easy as it gets. Thanks to the [quick setup script](install.md#quick-setup) you can get up and running in a matter of seconds on any RHEL or Debian based OS[^1].
 
---8<-- "docs/install.md:install-script-cmd"
+--8<-- "docs/install.md:quick-setup-script-cmd"
 
 ## Topology definition file
 
@@ -124,7 +124,7 @@ sudo containerlab deploy # (1)!
   If you have several files and want to pick a specific one, use `--topo <path>` flag.
 
 In no time you will see the summary table with the deployed lab nodes.  
-The table will show the node name (which equals to container name), node kind, image name and a bunch of other usefule information. You can always list the nodes of the lab with [`containerlab inspect`](cmd/inspect.md) command.
+The table will show the node name (which equals to container name), node kind, image name and a bunch of other useful information. You can always list the nodes of the lab with [`containerlab inspect`](cmd/inspect.md) command.
 
 ```
 +---+---------------------+--------------+-----------------------+---------------+---------+-----------------+----------------------+
