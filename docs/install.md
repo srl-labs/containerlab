@@ -34,9 +34,9 @@ To install all components at once, run the following command on any of the suppo
 ```bash
 curl -sL https://containerlab.dev/setup | sudo -E bash -s "all"
 ```
-/// tip
-To complete installation please execute `newgrp docker` or logout and log back in.
-///
+
+Complete installation and enable sudo-less `docker` command execution please run `newgrp docker` or logout and log back in.
+
 <!-- --8<-- [end:quick-setup-script-cmd] -->
 
 To install an individual component, specify the function name as an argument to the script. For example, to install only `docker`:
@@ -138,7 +138,6 @@ sudo dnf install containerlab
 ```
 
 ////
-
 
 //// tab | DNF5
 

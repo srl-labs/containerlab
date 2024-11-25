@@ -124,7 +124,7 @@ sudo containerlab deploy # (1)!
   If you have several files and want to pick a specific one, use `--topo <path>` flag.
 
 In no time you will see the summary table with the deployed lab nodes.  
-The table will show the node name (which equals to container name), node kind, image name and a bunch of other usefule information. You can always list the nodes of the lab with [`containerlab inspect`](cmd/inspect.md) command.
+The table will show the node name (which equals to container name), node kind, image name and a bunch of other useful information. You can always list the nodes of the lab with [`containerlab inspect`](cmd/inspect.md) command.
 
 ```
 +---+---------------------+--------------+-----------------------+---------------+---------+-----------------+----------------------+
