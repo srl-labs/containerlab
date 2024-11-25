@@ -12,8 +12,10 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
-	"github.com/olekukonko/tablewriter"
+	tableWriter "github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -130,12 +132,12 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	return err
 }
 
-func toTableData(det []types.ContainerDetails) [][]string {
-	tabData := make([][]string, 0, len(det))
-	for i := range det {
-		d := &det[i]
+func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
+	tabData := make([]tableWriter.Row, 0, len(contDetails))
+	for i := range contDetails {
+		d := &contDetails[i]
 
-		tabRow := []string{fmt.Sprintf("%d", i+1)}
+		tabRow := tableWriter.Row{}
 
 		if all {
 			tabRow = append(tabRow, d.LabPath, d.LabName)
@@ -147,11 +149,42 @@ func toTableData(det []types.ContainerDetails) [][]string {
 		}
 
 		// Common fields
-		tabRow = append(tabRow, d.Name, d.ContainerID, d.Image, d.Kind, d.State, d.IPv4Address, d.IPv6Address)
+		tabRow = append(tabRow,
+			d.Name,
+			fmt.Sprintf("%s\n%s", d.Kind, d.Image),
+			d.State,
+			fmt.Sprintf("%s\n%s",
+				ipWithoutPrefix(d.IPv4Address),
+				ipWithoutPrefix(d.IPv6Address)))
 
 		tabData = append(tabData, tabRow)
 	}
 	return tabData
+}
+
+// getTopologyPath returns the relative path to the topology file
+// if the relative path is shorted than the absolute path.
+func getTopologyPath(p string) (string, error) {
+	if p == "" {
+		return "", nil
+	}
+
+	// get topo file path relative of the cwd
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	relPath, err := filepath.Rel(cwd, p)
+	if err != nil {
+		return "", err
+	}
+
+	if len(relPath) < len(p) {
+		return relPath, nil
+	}
+
+	return p, nil
 }
 
 func printContainerInspect(containers []runtime.GenericContainer, format string) error {
@@ -160,9 +193,10 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 	// Gather details of each container
 	for _, cont := range containers {
 
-		// get topo file path relative of the cwd
-		cwd, _ := os.Getwd()
-		path, _ := filepath.Rel(cwd, cont.Labels[labels.TopoFile])
+		path, err := getTopologyPath(cont.Labels[labels.TopoFile])
+		if err != nil {
+			return fmt.Errorf("failed to get topology path: %v", err)
+		}
 
 		cdet := &types.ContainerDetails{
 			LabName:     cont.Labels[labels.Containerlab],
@@ -213,35 +247,46 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 
 	case "table":
 		tabData := toTableData(contDetails)
-		table := tablewriter.NewWriter(os.Stdout)
-		header := []string{
+		table := tableWriter.NewWriter()
+		table.SetOutputMirror(os.Stdout)
+		table.SetStyle(tableWriter.StyleRounded)
+		table.Style().Format.Header = text.FormatTitle
+		table.Style().Format.HeaderAlign = text.AlignCenter
+		table.Style().Options.SeparateRows = true
+		table.Style().Color = tableWriter.ColorOptions{
+			Header: text.Colors{text.Bold},
+		}
+
+		header := tableWriter.Row{
 			"Lab Name",
 			"Name",
-			"Container ID",
-			"Image",
-			"Kind",
+			"Kind/Image",
 			"State",
-			"IPv4 Address",
-			"IPv6 Address",
-		}
+			"IPv4/6 Address"}
 
 		if wide {
 			header = slices.Insert(header, 1, "Owner")
 		}
 
 		if all {
-			table.SetHeader(append([]string{"#", "Topo Path"}, header...))
+			// merge cells with topo file path and lab name when in all mode
+			table.SetColumnConfigs([]tableWriter.ColumnConfig{
+				{Number: 1, AutoMerge: true},
+				{Number: 2, AutoMerge: true},
+			})
+			table.AppendHeader(append(tableWriter.Row{"Topology"}, header...))
 		} else {
-			table.SetHeader(append([]string{"#"}, header[1:]...))
+			table.AppendHeader(append(tableWriter.Row{}, header[1:]...))
 		}
-		table.SetAutoFormatHeaders(false)
-		table.SetAutoWrapText(false)
-		// merge cells with lab name and topo file path
-		table.SetAutoMergeCellsByColumnIndex([]int{1, 2})
+
 		if wide {
-			table.SetAutoMergeCellsByColumnIndex([]int{1, 2, 3})
+			table.SetColumnConfigs([]tableWriter.ColumnConfig{
+				{Number: 2, AutoMerge: true},
+			})
 		}
-		table.AppendBulk(tabData)
+
+		table.AppendRows(tabData)
+
 		table.Render()
 
 		return nil
@@ -252,4 +297,17 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 type TokenFileResults struct {
 	File    string
 	Labname string
+}
+
+func ipWithoutPrefix(ip string) string {
+	if strings.Contains(ip, "N/A") {
+		return ip
+	}
+
+	ipParts := strings.Split(ip, "/")
+	if len(ipParts) != 2 {
+		return ip
+	}
+
+	return ipParts[0]
 }
