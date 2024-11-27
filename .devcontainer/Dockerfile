@@ -60,10 +60,10 @@ RUN mkdir -p /home/vscode/.docker && echo "{}" > /home/vscode/.docker/config.jso
 COPY ./.devcontainer/zsh/.zshrc /home/vscode/.zshrc
 COPY ./.devcontainer/zsh/.p10k.zsh /home/vscode/.p10k.zsh
 COPY ./.devcontainer/zsh/install-zsh-plugins.sh /tmp/install-zsh-plugins.sh
-RUN /tmp/install-zsh-plugins.sh
+RUN bash -c "/tmp/install-zsh-plugins.sh"
 
 # Setup pyenv virtual environment for clab tests
-COPY ./tests/requirements.txt /tmp/requirements.txt
+COPY tests/requirements.txt /tmp/requirements.txt
 ENV PYENV_ROOT="/home/vscode/.pyenv"
 ENV PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
 RUN pyenv virtualenv system clab-rf \

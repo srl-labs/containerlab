@@ -40,7 +40,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/clab-devcontainer
           tags: |
             type=semver,pattern={{version}}
             type=ref,event=branch
@@ -50,19 +50,11 @@ jobs:
             # manually set tag
             type=raw,value=${{ inputs.tag }}
 
-      - name: Extract tags
-        id: extract-tags
-        run: |
-          TAGS=$(echo '${{ steps.meta.outputs.tags }}' | awk -F: '{print $2}' | paste -sd "," -)
-          echo "TAGS=$TAGS" >> $GITHUB_OUTPUT
-        shell: bash
-
       - name: Build dev container image
-        uses: devcontainers/ci@v0.3
+        uses: docker/build-push-action@v6
         env:
           CLAB_VERSION: ${{ inputs.clab_version }}
         with:
-          imageName: ghcr.io/${{ github.repository }}/clab-devcontainer
-          imageTag: ${{ steps.extract-tags.outputs.tags }}
-          platform: linux/amd64,linux/arm64
-          push: always
+          tags: ${{ steps.meta.outputs.tags }}
+          push: true
+          platforms: linux/amd64,linux/arm64
