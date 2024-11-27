@@ -45,6 +45,17 @@ RUN mkdir -p /etc/sudoers.d && echo 'Defaults env_keep += "SSH_AUTH_SOCK"' > /et
 # Switch to the vscode user provided by the base image
 USER vscode
 
+# Install Go 1.22
+RUN bash -c 'ARCH=$(uname -m | sed "s/x86_64/amd64/" | sed "s/aarch64/arm64/") && \
+    curl -L https://go.dev/dl/go1.22.9.linux-${ARCH}.tar.gz | sudo tar -C /usr/local -xzf - && \
+    /usr/local/go/bin/go install -v golang.org/x/tools/gopls@latest && \
+    /usr/local/go/bin/go install -v github.com/go-delve/delve/cmd/dlv@latest && \
+    /usr/local/go/bin/go install -v honnef.co/go/tools/cmd/staticcheck@latest && \
+    /usr/local/go/bin/go install -v github.com/cweill/gotests/gotests@latest && \
+    /usr/local/go/bin/go install -v github.com/fatih/gomodifytags@latest && \
+    /usr/local/go/bin/go install -v github.com/josharian/impl@latest && \
+    /usr/local/go/bin/go install -v github.com/haya14busa/goplay/cmd/goplay@latest'
+
 # Copy dclab script used to run the local containerlab build after `make build`
 COPY ./.devcontainer/dclab /usr/local/bin/dclab
 
