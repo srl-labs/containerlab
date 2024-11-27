@@ -47,7 +47,7 @@ USER vscode
 
 # Install Go 1.22
 RUN bash -c 'ARCH=$(uname -m | sed "s/x86_64/amd64/" | sed "s/aarch64/arm64/") && \
-    curl -L https://go.dev/dl/go1.22.9.linux-${ARCH}.tar.gz | sudo tar -C /usr/local -xzf - && \
+    curl -L https://go.dev/dl/go1.22.9.linux-${ARCH}.tar.gz | tar -C /usr/local -xzf - && \
     /usr/local/go/bin/go install -v golang.org/x/tools/gopls@latest && \
     /usr/local/go/bin/go install -v github.com/go-delve/delve/cmd/dlv@latest && \
     /usr/local/go/bin/go install -v honnef.co/go/tools/cmd/staticcheck@latest && \
