@@ -5,11 +5,14 @@ on:
     inputs:
       CLAB_VERSION:
         description: "Containerlab version"
+        default: "0.59.0"
         required: false
+        type: string
 
       TAG:
         description: "Additional container image tag"
         required: false
+        type: string
   # trigger on published release event
   # to created the devspace container when the packages are published
   release:
