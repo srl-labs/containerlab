@@ -39,6 +39,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # https://github.com/devcontainers/ci/issues/268#issuecomment-1976014578
+      - name: remove existing skopeo
+        run: |
+          sudo rm -rf $(which skopeo)
+
+      - name: Update skopeo
+        run: |
+          docker create --name skopeo quay.io/skopeo/stable:v1.17
+          docker cp skopeo:/usr/bin/skopeo /usr/local/bin/skopeo
+          sudo chmod a+x /usr/local/bin/skopeo
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5

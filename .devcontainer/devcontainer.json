@@ -16,10 +16,10 @@
         // Add sshd to support gh cli codespace cp.
         "ghcr.io/devcontainers/features/sshd:1": {
             "version": "latest"
-        },
-        "ghcr.io/devcontainers/features/go:1": {
-            "version": "1.22"
         }
+        // "ghcr.io/devcontainers/features/go:1": {
+        //     "version": "1.22"
+        // }
     },
     "remoteUser": "vscode",
     "customizations": {
