@@ -42,9 +42,6 @@ RUN mkdir -p /root/.docker && echo "{}" > /root/.docker/config.json
 # Maintain SSH_AUTH_SOCK env var when using sudo
 RUN mkdir -p /etc/sudoers.d && echo 'Defaults env_keep += "SSH_AUTH_SOCK"' > /etc/sudoers.d/ssh_auth_sock
 
-# Switch to the vscode user provided by the base image
-USER vscode
-
 # Install Go 1.22
 RUN bash -c 'ARCH=$(uname -m | sed "s/x86_64/amd64/" | sed "s/aarch64/arm64/") && \
     curl -L https://go.dev/dl/go1.22.9.linux-${ARCH}.tar.gz | tar -C /usr/local -xzf - && \
@@ -55,6 +52,9 @@ RUN bash -c 'ARCH=$(uname -m | sed "s/x86_64/amd64/" | sed "s/aarch64/arm64/") &
     /usr/local/go/bin/go install -v github.com/fatih/gomodifytags@latest && \
     /usr/local/go/bin/go install -v github.com/josharian/impl@latest && \
     /usr/local/go/bin/go install -v github.com/haya14busa/goplay/cmd/goplay@latest'
+
+# Switch to the vscode user provided by the base image
+USER vscode
 
 # Copy dclab script used to run the local containerlab build after `make build`
 COPY ./.devcontainer/dclab /usr/local/bin/dclab
