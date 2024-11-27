@@ -46,9 +46,13 @@ jobs:
 
       - name: Update skopeo
         run: |
-          docker create --name skopeo quay.io/skopeo/stable:v1.17
-          docker cp skopeo:/usr/bin/skopeo /usr/local/bin/skopeo
-          sudo chmod a+x /usr/local/bin/skopeo
+          REPO_URL="https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04"
+          sudo sh -c "echo 'deb ${REPO_URL}/ /' > /etc/apt/sources.list.d/skopeo.list"
+          curl -fsSL ${REPO_URL}/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/skopeo.gpg > /dev/null
+
+          sudo apt update
+          sudo apt install skopeo
+          skopeo --version
 
       - name: Extract Docker metadata
         id: meta
