@@ -22,14 +22,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${CLAB_VERSION}
 
 # Install GitHub CLI directly from the latest release
-RUN bash -c 'VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | \
+RUN bash -c 'ARCH=$(uname -m | sed "s/x86_64/amd64/" | sed "s/aarch64/arm64/") && \
+    VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | \
     grep -oP "\"tag_name\": \"\K[^\"]+") && \
     CLEAN_VERSION=${VERSION#v} && \
-    DOWNLOAD_URL="https://github.com/cli/cli/releases/download/${VERSION}/gh_${CLEAN_VERSION}_linux_amd64.tar.gz" && \
+    DOWNLOAD_URL="https://github.com/cli/cli/releases/download/${VERSION}/gh_${CLEAN_VERSION}_linux_${ARCH}.tar.gz" && \
     curl -L "$DOWNLOAD_URL" | tar xz -C /tmp && \
-    mv /tmp/gh_${CLEAN_VERSION}_linux_amd64/bin/gh /usr/local/bin/ && \
+    mv /tmp/gh_${CLEAN_VERSION}_linux_${ARCH}/bin/gh /usr/local/bin/ && \
     chmod +x /usr/local/bin/gh && \
-    rm -rf /tmp/gh_${CLEAN_VERSION}_linux_amd64'
+    rm -rf /tmp/gh_${CLEAN_VERSION}_linux_${ARCH}'
 
 # Install gNMIc and gNOIc
 RUN bash -c "$(curl -sL https://get-gnmic.openconfig.net)" && \

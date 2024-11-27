@@ -17,7 +17,7 @@ git clone --depth 1 https://github.com/z-shell/F-Sy-H.git ${ZSH_CUSTOM:-$HOME/.o
 ### Shell completions
 ###
 # generate containerlab completions
-containerlab completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_containerlab"
+/usr/bin/containerlab completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_containerlab"
 # add clab alias to the completions
 sed -i 's/compdef _containerlab containerlab/compdef _containerlab containerlab clab/g' /home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_containerlab
 # generate gnmic completions
@@ -25,4 +25,4 @@ gnmic completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/
 # generate gnoic completions
 gnoic completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gnoic"
 # generate gh
-# gh completion -s zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gh"
+gh completion -s zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gh"
