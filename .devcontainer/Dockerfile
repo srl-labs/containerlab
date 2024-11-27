@@ -42,17 +42,6 @@ RUN mkdir -p /root/.docker && echo "{}" > /root/.docker/config.json
 # Maintain SSH_AUTH_SOCK env var when using sudo
 RUN mkdir -p /etc/sudoers.d && echo 'Defaults env_keep += "SSH_AUTH_SOCK"' > /etc/sudoers.d/ssh_auth_sock
 
-# Install Go 1.22
-RUN bash -c 'ARCH=$(uname -m | sed "s/x86_64/amd64/" | sed "s/aarch64/arm64/") && \
-    curl -L https://go.dev/dl/go1.22.9.linux-${ARCH}.tar.gz | tar -C /usr/local -xzf - && \
-    /usr/local/go/bin/go install -v golang.org/x/tools/gopls@latest && \
-    /usr/local/go/bin/go install -v github.com/go-delve/delve/cmd/dlv@latest && \
-    /usr/local/go/bin/go install -v honnef.co/go/tools/cmd/staticcheck@latest && \
-    /usr/local/go/bin/go install -v github.com/cweill/gotests/gotests@latest && \
-    /usr/local/go/bin/go install -v github.com/fatih/gomodifytags@latest && \
-    /usr/local/go/bin/go install -v github.com/josharian/impl@latest && \
-    /usr/local/go/bin/go install -v github.com/haya14busa/goplay/cmd/goplay@latest'
-
 # Switch to the vscode user provided by the base image
 USER vscode
 
