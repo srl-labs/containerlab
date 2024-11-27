@@ -25,6 +25,8 @@
     "customizations": {
         "vscode": {
             "extensions": [
+                // go
+                "golang.go",
                 "mhutchie.git-graph",
                 "ms-azuretools.vscode-docker",
                 // Python.
