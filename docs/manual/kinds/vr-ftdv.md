@@ -41,7 +41,7 @@ Cisco FTDv node launched with containerlab can be managed via the following inte
 
 ## Interface naming
 
-You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in [[[ kind_display_name ]]].
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in -{{ kind_display_name }}-.
 
 The interface naming convention is: `GigabitEthernet0/X` (or `GiX`), where `X` is the port number.
 
@@ -54,13 +54,13 @@ With that naming convention in mind:
 Data port numbering starts at `0`.
 ///
 
-The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
+The example ports above would be mapped to the following Linux interfaces inside the container running the -{{ kind_display_name }}- VM:
 
 * `eth0` - management interface connected to the containerlab management network (rendered as `Management0/0` in the CLI)
 * `eth1` - first data interface, mapped to the first data port of the VM (rendered as `GigabitEthernet0/0`)
 * `eth2+` - second and subsequent data interfaces, mapped to the second and subsequent data ports of the VM (rendered as `GigabitEthernet0/1` and so on)
 
-When containerlab launches [[[ kind_display_name ]]] node the `Management0/0` interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+When containerlab launches -{{ kind_display_name }}- node the `Management0/0` interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the -{{ kind_display_name }}- using containerlab's assigned IP.
 
 Data interfaces `GigabitEthernet2+` need to be configured with IP addressing manually using Web UI or other available management interfaces.
 

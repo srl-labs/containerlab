@@ -19,16 +19,9 @@ To pull a specific version, use tags that match the released version and are lis
 
 //// admonition | ARM64-native SR Linux container image
     type: tip
-SR Linux Network OS is also available as an ARM64-native container image in a preview mode. The preview mode means that not every release is available in ARM64, but the selected ones are.
+SR Linux Network OS is also available as an ARM64-native container image in a preview mode. The preview mode means that some issues may be present, as the image is not yet fully qualified.
 
-Users can freely pull the following ARM64-native images:
-/// tab | 24.7.1
-
-```bash
-docker pull ghcr.io/nokia/srlinux:24.7.1-arm64-preview
-```
-
-///
+Starting with SR Linux 24.10.1 the container image is built using the manifest list, so when you pull the image, the correct architecture is selected automatically.
 
 ARM64 image unlocks running networking labs on [Apple macOS](../../macos.md) with M-chips, as well as cloud instances with ARM64 architecture and on new Microsoft Surface laptops.
 

@@ -7,9 +7,9 @@ kind_short_display_name: Cat9kv
 ---
 # Cisco Catalyst 9000v
 
-The [[[ kind_display_name ]]] (or [[[ kind_short_display_name ]]] for short) is a virtualised form of the Cisco Catalyst 9000 series switches. It is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md) and built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+The -{{ kind_display_name }}- (or -{{ kind_short_display_name }}- for short) is a virtualised form of the Cisco Catalyst 9000 series switches. It is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md) and built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-The [[[ kind_display_name ]]] performs simulation of the dataplane ASICs that are present in the physical hardware. The two simulated ASICs are:
+The -{{ kind_display_name }}- performs simulation of the dataplane ASICs that are present in the physical hardware. The two simulated ASICs are:
 
 - Cisco UADP (Unified Access Data-Plane). This is the default ASIC that's simulated.
 - Silicon One Q200 (referred to as Q200).
@@ -20,7 +20,7 @@ The Q200 simulation has a limited featureset compared to the UADP simulation.
 
 ## Resource requirements
 
-The [[[ kind_display_name ]]] is a resource-hungry VM. When launched with the default settings, it requires the following resources:
+The -{{ kind_display_name }}- is a resource-hungry VM. When launched with the default settings, it requires the following resources:
 
 |           | UADP  | Q200  |
 | --------- | ----- | ----- |
@@ -30,12 +30,12 @@ The [[[ kind_display_name ]]] is a resource-hungry VM. When launched with the de
 
 Users can adjust the CPU and memory resources by setting adding appropriate environment variables as explained in [Tuning Qemu Parameters section](../../manual/vrnetlab.md#tuning-qemu-parameters).
 
-## Managing [[[ kind_display_name ]]] nodes
+## Managing -{{ kind_display_name }}- nodes
 
-You can manage the [[[ kind_display_name ]]] with containerlab via the following interfaces:
+You can manage the -{{ kind_display_name }}- with containerlab via the following interfaces:
 
 /// tab | bash
-to connect to a `bash` shell of a running [[[ kind_display_name ]]] container:
+to connect to a `bash` shell of a running -{{ kind_display_name }}- container:
 
 ```bash
 docker exec -it <container-name/id> bash
@@ -43,7 +43,7 @@ docker exec -it <container-name/id> bash
 
 ///
 /// tab | CLI
-to connect to the [[[ kind_display_name ]]]  CLI
+to connect to the -{{ kind_display_name }}-  CLI
 
 ```bash
 ssh admin@<container-name/id>
@@ -64,7 +64,7 @@ Default credentials: `admin:admin`
 
 ## Interface naming
 
-You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in the [[[ kind_display_name ]]] CLI.
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in the -{{ kind_display_name }}- CLI.
 
 The interface naming convention is: `GigabitEthernet1/0/X` (or `Gi1/0/X`), where `X` is the port number.
 
@@ -73,7 +73,7 @@ With that naming convention in mind:
 - `Gi1/0/1` - first data port available
 - `Gi1/0/2` - second data port, and so on...
 
-The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
+The example ports above would be mapped to the following Linux interfaces inside the container running the -{{ kind_display_name }}- VM:
 
 - `eth0` - management interface connected to the containerlab management network. Mapped to `GigabitEthernet0/0`.
 - `eth1` - First data-plane interface. Mapped to `GigabitEthernet1/0/1` interface.
@@ -107,7 +107,7 @@ topology:
 Regardless of how many links are defined in your containerlab topology, the Catalyst 9000v will always display 8 data-plane interfaces. Links/interfaces that you did not define in your containerlab topology will *not* pass any traffic.
 ///
 
-When containerlab launches [[[ kind_display_name ]]] node the `GigabitEthernet0/0` interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+When containerlab launches -{{ kind_display_name }}- node the `GigabitEthernet0/0` interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the -{{ kind_display_name }}- using containerlab's assigned IP.
 
 Data interfaces `GigabitEthernet1/0/1+` need to be configured with IP addressing manually using CLI or other available management interfaces and will appear `unset` in the CLI:
 
