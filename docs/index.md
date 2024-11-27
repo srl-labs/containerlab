@@ -73,7 +73,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 
 ## Features
 
-* **IaaC approach**  
+* **Lab as Code (IaC) approach**  
     Declarative way of defining the labs by means of the topology definition [`clab` files](manual/topo-def-file.md).
 * **Network Operating Systems centric**  
     Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](manual/kinds/index.md) which allows the user to focus on the use cases, rather than infrastructure hurdles.

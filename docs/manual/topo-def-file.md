@@ -47,7 +47,7 @@ Its user's responsibility to give labs unique names if they plan to run multiple
 
 The name is a free-formed string, though it is better not to use dashes (`-`) as they are used to separate lab names from node names.
 
-When containerlab starts the containers, their names will be generated using the following pattern: `clab-{{lab-name}}-{{node-name}}`. The lab name here is used to make the container's names unique between two different labs, even if the nodes are named the same.
+When containerlab starts the containers, their names will be generated using the following pattern: `clab-${lab-name}-${node-name}`. The lab name here is used to make the container's names unique between two different labs, even if the nodes are named the same.
 
 ### Prefix
 

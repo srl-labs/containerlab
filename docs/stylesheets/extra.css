@@ -1,3 +1,17 @@
+:root {
+  /* Black logo outline for light theme */
+  --logo-outline-color: #001135;
+}
+
+[data-md-color-scheme="slate"] {
+  /* set logo outline color to white when dark theme is used */
+  --logo-outline-color: #ffffff;
+}
+
+#outline {
+  fill: var(--logo-outline-color);
+}
+
 .mdx-content__footer {
   margin-top: 20px;
   text-align: center;
@@ -149,3 +163,176 @@ div.highlight.code-scroll-lg pre>code {
 div.highlight.code-scroll-sm pre>code {
   max-height: 50vh;
 }
+
+/* START code-example admonition styles */
+:root {
+  --md-admonition-icon--code-example: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.22 4.97a.75.75 0 0 1 1.06 0l6.5 6.5a.75.75 0 0 1 0 1.06l-6.5 6.5a.749.749 0 0 1-1.275-.326.75.75 0 0 1 .215-.734L21.19 12l-5.97-5.97a.75.75 0 0 1 0-1.06m-6.44 0a.75.75 0 0 1 0 1.06L2.81 12l5.97 5.97a.749.749 0 0 1-.326 1.275.75.75 0 0 1-.734-.215l-6.5-6.5a.75.75 0 0 1 0-1.06l6.5-6.5a.75.75 0 0 1 1.06 0"/></svg>')
+}
+
+.md-typeset .admonition.code-example,
+.md-typeset details.code-example {
+  border-color: #9e9e9e;
+}
+
+.md-typeset .code-example>.admonition-title,
+.md-typeset .code-example>summary {
+  background-color: #9e9e9e1a;
+}
+
+.md-typeset .code-example>.admonition-title::before,
+.md-typeset .code-example>summary::before {
+  background-color: #9e9e9e;
+  -webkit-mask-image: var(--md-admonition-icon--code-example);
+  mask-image: var(--md-admonition-icon--code-example);
+}
+
+.md-typeset .code-example>.admonition-title::after,
+.md-typeset .code-example>summary::after {
+  background-color: #9e9e9e;
+}
+
+/* END code-example admonition styles */
+
+/* START subtle-note admonition styles */
+:root {
+  --md-admonition-icon--subtle-note: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2m3.1 5.07c.14 0 .28.05.4.16l1.27 1.27c.23.22.23.57 0 .78l-1 1-2.05-2.05 1-1c.1-.11.24-.16.38-.16m-1.97 1.74 2.06 2.06-6.06 6.06H7.07v-2.06z"/></svg>')
+}
+
+.md-typeset .admonition.subtle-note,
+.md-typeset details.subtle-note {
+  border-color: #9e9e9e;
+}
+
+.md-typeset .subtle-note>.admonition-title,
+.md-typeset .subtle-note>summary {
+  background-color: #9e9e9e1a;
+}
+
+.md-typeset .subtle-note>.admonition-title::before,
+.md-typeset .subtle-note>summary::before {
+  background-color: #9e9e9e;
+  -webkit-mask-image: var(--md-admonition-icon--subtle-note);
+  mask-image: var(--md-admonition-icon--subtle-note);
+}
+
+.md-typeset .subtle-note>.admonition-title::after,
+.md-typeset .subtle-note>summary::after {
+  background-color: #9e9e9e;
+}
+
+/* END subtle-note admonition styles */
+
+/* START subtle-info admonition styles */
+:root {
+  --md-admonition-icon--subtle-info: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2Z"/></svg>')
+}
+
+.md-typeset .admonition.subtle-info,
+.md-typeset details.subtle-info {
+  border-color: #9e9e9e;
+}
+
+.md-typeset .subtle-info>.admonition-title,
+.md-typeset .subtle-info>summary {
+  background-color: #9e9e9e1a;
+}
+
+.md-typeset .subtle-info>.admonition-title::before,
+.md-typeset .subtle-info>summary::before {
+  background-color: #9e9e9e;
+  -webkit-mask-image: var(--md-admonition-icon--subtle-info);
+  mask-image: var(--md-admonition-icon--subtle-info);
+}
+
+.md-typeset .subtle-info>.admonition-title::after,
+.md-typeset .subtle-info>summary::after {
+  background-color: #9e9e9e;
+}
+
+/* END subtle-info admonition styles */
+
+/* START subtle-question admonition styles */
+:root {
+  --md-admonition-icon--subtle-question: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m15.07 11.25-.9.92C13.45 12.89 13 13.5 13 15h-2v-.5c0-1.11.45-2.11 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41a2 2 0 0 0-2-2 2 2 0 0 0-2 2H8a4 4 0 0 1 4-4 4 4 0 0 1 4 4 3.2 3.2 0 0 1-.93 2.25M13 19h-2v-2h2M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10c0-5.53-4.5-10-10-10Z"/></svg>')
+}
+
+.md-typeset .admonition.subtle-question,
+.md-typeset details.subtle-question {
+  border-color: #9e9e9e;
+}
+
+.md-typeset .subtle-question>.admonition-title,
+.md-typeset .subtle-question>summary {
+  background-color: #9e9e9e1a;
+}
+
+.md-typeset .subtle-question>.admonition-title::before,
+.md-typeset .subtle-question>summary::before {
+  background-color: #9e9e9e;
+  -webkit-mask-image: var(--md-admonition-icon--subtle-question);
+  mask-image: var(--md-admonition-icon--subtle-question);
+}
+
+.md-typeset .subtle-question>.admonition-title::after,
+.md-typeset .subtle-question>summary::after {
+  background-color: #9e9e9e;
+}
+
+/* END subtle-question admonition styles */
+
+/* START thin scrollbar styles */
+/* First unset all rules that break Chrome styling */
+.md-typeset pre>code,
+.md-search__scrollwrap,
+.md-sidebar__scrollwrap {
+  scrollbar-color: unset;
+  scrollbar-width: unset;
+}
+
+.md-typeset pre>code:hover,
+.md-search__scrollwrap:hover,
+.md-sidebar__scrollwrap:focus-within,
+.md-sidebar__scrollwrap:hover {
+  scrollbar-color: unset;
+}
+
+.md-tooltip2__inner {
+  scrollbar-width: unset;
+}
+
+/* Wrap new scrollbar properties in @supports rule for browsers without `::-webkit-scrollbar-*` support */
+/* This way chrome won't override `::-webkit-scrollbar-*` selectors */
+/* https://developer.chrome.com/docs/css-ui/scrollbar-styling */
+@supports not selector(::-webkit-scrollbar) {
+
+  .md-typeset pre>code,
+  .md-search__scrollwrap,
+  .md-sidebar__scrollwrap {
+    scrollbar-color: var(--md-default-fg-color--lighter) #0000;
+    scrollbar-width: thin;
+  }
+
+  .md-typeset pre>code:hover,
+  .md-search__scrollwrap:hover,
+  .md-sidebar__scrollwrap:focus-within,
+  .md-sidebar__scrollwrap:hover {
+    scrollbar-color: var(--md-accent-fg-color) #0000;
+  }
+
+  .md-tooltip2__inner {
+    scrollbar-width: thin;
+  }
+}
+
+/* Restore hover color for Chrome */
+@supports selector(::-webkit-scrollbar) {
+
+  .md-typeset pre>code:hover::-webkit-scrollbar-thumb,
+  .md-search__scrollwrap:hover::-webkit-scrollbar-thumb,
+  .md-sidebar__scrollwrap:focus-within::-webkit-scrollbar-thumb,
+  .md-sidebar__scrollwrap:hover::-webkit-scrollbar-thumb {
+    background-color: var(--md-accent-fg-color);
+  }
+}
+
+/* END thin scrollbar styles */
