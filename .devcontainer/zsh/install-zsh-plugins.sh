@@ -1,6 +1,6 @@
 # atuin
 # bash <(curl --proto '=https' --tlsv1.2 -sSf https://setup.atuin.sh)
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/atuinsh/atuin/releases/download/v18.3.0/atuin-installer.sh | sh
+curl -LsSf https://github.com/atuinsh/atuin/releases/download/v18.3.0/atuin-installer.sh | sh
 
 # theme
 git clone --depth 1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
@@ -24,4 +24,4 @@ gnmic completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/
 # generate gnoic completions
 gnoic completion zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gnoic"
 # generate gh
-gh completion -s zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gh"
+# gh completion -s zsh > "/home/vscode/.oh-my-zsh/custom/plugins/zsh-autocomplete/Completions/_gh"
