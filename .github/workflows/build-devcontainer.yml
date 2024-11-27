@@ -64,4 +64,5 @@ jobs:
         with:
           imageName: ghcr.io/${{ github.repository }}/clab-devcontainer
           imageTag: ${{ steps.extract-tags.outputs.tags }}
+          platform: linux/amd64,linux/arm64
           push: always
