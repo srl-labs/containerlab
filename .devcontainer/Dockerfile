@@ -8,7 +8,6 @@ RUN echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
 
 # Install necessary packages, including curl
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    containerlab${CLAB_VERSION:+=$CLAB_VERSION} \
     direnv \
     btop \
     iputils-ping \
@@ -18,6 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dnsutils \
     telnet \
     curl
+
+# Install Containerlab
+RUN bash -c "$(curl -sL https://get.containerlab.dev)" -- -v ${CLAB_VERSION}
 
 # Install GitHub CLI directly from the latest release
 RUN bash -c 'VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | \
