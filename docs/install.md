@@ -12,7 +12,7 @@ Containerlab is distributed as a Linux deb/rpm/apk package for amd64 and arm64 a
 The following requirements must be satisfied to let containerlab tool run successfully:
 
 * A user should have `sudo` privileges to run containerlab.
-* A Linux server/VM[^2] and [Docker](https://docs.docker.com/engine/install/) installed.
+* A Linux server/VM[^1] and [Docker](https://docs.docker.com/engine/install/) installed.
 * Load container images (e.g. Nokia SR Linux, Arista cEOS) that are not downloadable from a container registry. Containerlab will try to pull images at runtime if they do not exist locally.
 
 ## Quick setup
@@ -246,7 +246,7 @@ mv /etc/containerlab/containerlab /usr/bin && chmod a+x /usr/bin/containerlab
 
 ## Windows Subsystem Linux (WSL)
 
-Containerlab [runs](https://twitter.com/ntdvps/status/1380915270328401922) on WSL, but you need to [install docker-ce](https://docs.docker.com/engine/install/) inside the WSL2 linux system instead of using Docker Desktop[^3].
+Containerlab [runs](https://twitter.com/ntdvps/status/1380915270328401922) on WSL, but you need to [install docker-ce](https://docs.docker.com/engine/install/) inside the WSL2 linux system instead of using Docker Desktop[^2].
 
 If you are running Ubuntu/Debian as your WSL2 machine, you can use the [quick setup this script](https://github.com/srl-labs/containerlab/blob/main/utils/quick-setup.sh) to install docker-ce.
 
@@ -268,7 +268,7 @@ Since we wanted to share our experience with running containerlab on macOS in de
 
 ## Upgrade
 
-To upgrade `containerlab` to the latest available version issue the following command[^1]:
+To upgrade `containerlab` to the latest available version issue the following command[^3]:
 
 ```
 sudo -E containerlab version upgrade
@@ -337,7 +337,6 @@ or more globally:
 sudo setsebool -P selinuxuser_execmod 1
 ```
 
-[^1]: only available if installed from packages
-[^2]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64. IPv6 should not be disabled in the kernel.
-[^3]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
-[^6]: FRR is a good example of arm64-capable network OS. Nokia SR Linux is going to be available for arm64 in the 2024.
+[^1]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64. IPv6 should not be disabled in the kernel.
+[^2]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
+[^3]: only available if installed from packages
