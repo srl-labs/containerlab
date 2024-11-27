@@ -55,6 +55,7 @@ jobs:
         env:
           CLAB_VERSION: ${{ inputs.clab_version }}
         with:
+          file: .devcontainer/Dockerfile
           tags: ${{ steps.meta.outputs.tags }}
           push: true
           platforms: linux/amd64,linux/arm64
