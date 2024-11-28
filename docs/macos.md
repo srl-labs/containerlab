@@ -131,7 +131,7 @@ You can see this workflow demonstration in this [YT video][yt-demo].
 
 Another option to run containerlab on ARM or Intel Macs is to use the Docker in Docker approach which is enabled by our Devcontainer.
 
-Containerlab's devcontiner was created to power [containerlab in codespaces](manual/codespaces.md), but it is a perfect fit for running containerlab on **any macOS** as it uses the docker-in-docker method where an isolated instance of a docker daemon is created inside a container.
+Containerlab's devcontainer was created to power [containerlab in codespaces](manual/codespaces.md), but it is a perfect fit for running containerlab on **any macOS** as it uses the docker-in-docker method where an isolated instance of a docker daemon is created inside a container.
 
 /// note
 Starting with **Containerlab v0.60.0**, you can use the devcontainer with ARM64 macOS to run containerlab.

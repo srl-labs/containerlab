@@ -25,6 +25,16 @@ env:
 jobs:
   devcontainer:
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        variant: ["dind", "dood"]
+        include:
+          - variant: dind
+            context: .devcontainer
+            image-suffix: ""
+          - variant: dood
+            context: .devcontainer/dood
+            image-suffix: "-dood"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -80,7 +90,8 @@ jobs:
         env:
           CLAB_VERSION: ${{ inputs.clab_version }}
         with:
-          imageName: ghcr.io/${{ github.repository }}/clab-devcontainer
+          imageName: ghcr.io/${{ github.repository }}/clab-devcontainer${{ matrix.image-suffix }}
           imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always
           platform: linux/amd64,linux/arm64
+          subFolder: ${{ matrix.context }}
