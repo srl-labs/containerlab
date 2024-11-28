@@ -20,6 +20,11 @@ env:
 jobs:
   munch-tags:
     runs-on: ubuntu-22.04
+    outputs:
+      source_name: ${{ env.SOURCE_NAME }}
+      source_branch: ${{ env.SOURCE_BRANCH }}
+      source_tag: ${{ env.SOURCE_TAG }}
+      source_tag_no_prefix: ${{ env.SOURCE_TAG_NO_V_PREFIX }}
     steps:
       - run: |
           echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
@@ -39,7 +44,6 @@ jobs:
       # exporting env vars to be used in invoked workflows
       py_ver: ${{ env.PY_VER }}
       go_ver: ${{ env.GO_VER }}
-      source_tag_no_prefix: ${{ env.SOURCE_TAG_NO_V_PREFIX }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -506,7 +510,7 @@ jobs:
     needs: build-and-release
     uses: ./.github/workflows/build-devcontainer.yml
     with:
-      CLAB_VERSION: ${{ needs.file-changes.outputs.source_tag_no_prefix }}
+      CLAB_VERSION: ${{ needs.munch-tags.outputs.source_tag_no_prefix }}
 
   # update docs allows to make the docs changes outside of the release cycle
   # it skips the code build/release and proceeds with docs publishing
