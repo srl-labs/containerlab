@@ -16,7 +16,11 @@
         "type=bind,src=/run/netns,dst=/run/netns"
     ],
     "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+            "version": "26.1.4",
+            "dockerDashComposeVersion": "none",
+            "moby": "false"
+        },
         // Add sshd to support gh cli codespaces cp.
         "ghcr.io/devcontainers/features/sshd:1": {
             "version": "latest"
