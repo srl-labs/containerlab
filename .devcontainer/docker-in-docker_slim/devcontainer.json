@@ -9,7 +9,7 @@
     },
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
-            "version": "25.0.5",
+            "version": "24.0.9",
             "dockerDashComposeVersion": "none"
             // "moby": "false"
         },
