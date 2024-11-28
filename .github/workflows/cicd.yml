@@ -499,7 +499,7 @@ jobs:
       - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER gh-deploy --force --strict
 
   build-devcontainer:
-    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') != true
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build-and-release
     uses: ./.github/workflows/build-devcontainer.yml
     with:
