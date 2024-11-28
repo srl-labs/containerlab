@@ -42,7 +42,7 @@ jobs:
 
   file-changes:
     runs-on: ubuntu-22.04
-    needs: munch-tags
+    needs: process-gitref
     outputs:
       code: ${{ steps.filter.outputs.code }}
       docs: ${{ steps.filter.outputs.docs }}
