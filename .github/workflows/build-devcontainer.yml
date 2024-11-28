@@ -1,6 +1,11 @@
 name: build-devcontainer
 on:
   workflow_call:
+    inputs:
+      CLAB_VERSION:
+        description: "Containerlab version"
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       CLAB_VERSION:
