@@ -526,6 +526,8 @@ type srlTemplateData struct {
 	GRPCConfig string
 	// ACLConfig is a string containing ACL configuration
 	ACLConfig string
+	// NetconfConfig is a string containing Netconf server configuration
+	NetconfConfig string
 }
 
 // tplIFace template interface struct.

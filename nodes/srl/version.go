@@ -94,6 +94,9 @@ set / acl acl-filter cpm type ipv6 entry 368 match ipv6 next-header tcp
 set / acl acl-filter cpm type ipv6 entry 368 match transport destination-port operator eq
 set / acl acl-filter cpm type ipv6 entry 368 match transport destination-port value 57401
 set / acl acl-filter cpm type ipv6 entry 368 action accept`
+
+	netconfConfig = `
+`
 )
 
 // SrlVersion represents an sr linux version as a set of fields.
@@ -162,6 +165,11 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 	// that are useful for labs and were removed as a security hardening measure.
 	if semver.Compare(v, "v24.3") >= 0 || n.swVersion.Major == "0" {
 		tplData.ACLConfig = aclConfig
+	}
+
+	// in srlinux >= v24.7+ we add Netconf server config to enable Netconf.
+	if semver.Compare(v, "v24.7") >= 0 || n.swVersion.Major == "0" {
+		tplData.NetconfConfig = netconfConfig
 	}
 
 	// in srlinux v23.10.x we need to enable GNMI unix socket services to enable
