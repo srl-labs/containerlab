@@ -105,7 +105,7 @@ jobs:
         env:
           CLAB_VERSION: ${{ inputs.clab_version }}
         with:
-          imageName: ghcr.io/${{ github.repository }}/clab-devcontainer${{ matrix.image-suffix }}
+          imageName: ghcr.io/${{ github.repository }}/devcontainer${{ matrix.image-suffix }}
           imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always
           platform: linux/amd64,linux/arm64
