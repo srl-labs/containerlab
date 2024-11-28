@@ -129,16 +129,27 @@ You can see this workflow demonstration in this [YT video][yt-demo].
 
 ## Devcontainer
 
-Another convenient option to run containerlab on ARM/Intel Macs and Windows is to use the [Devcontainer](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers) feature that works great with VS Code and other IDE's.
+Another convenient option to run containerlab on ARM/Intel Macs and Windows is to use the [Devcontainer](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers) feature that works great with VS Code and many other IDE's.
 
-A Devcontainer is a specification for a container that is used to create a development environment. By creating the `devcontainer.json` file, you define the development environment for your project. Containerlab project maintains a pre-built multi-arch devcontainer image that users can reuse to run containerlabs.  
-It was initially created to power [containerlab in codespaces](manual/codespaces.md), but it is a perfect fit for running containerlab on **wide range of OSes**.
+A Devcontainer is a specification for a container that is used to create a development environment. By creating the `devcontainer.json` file, you define the development environment for your project. Containerlab project maintains a set of pre-built multi-arch devcontainer images that you can use to run containerlabs.  
+It was initially created to power [containerlab in codespaces](manual/codespaces.md), but it is a perfect fit for running containerlab on a **wide range of OSes** such as macOS and Windows.
+
+The devcontainer can also be used by the developers to develop containerlab itself.
 
 /// note
-Starting with **Containerlab v0.60.0**, you can use the devcontainer with ARM64 macOS to run containerlab.
+Starting with **Containerlab v0.60.0**, you can use the devcontainer with ARM64 macOS to run containerlabs.
 ///
 
-To start using the devcontainer, you have to create a `devcontainer.json` file in your project directory where you have your containerlab topology. If you're using Containerlab the right way, your labs are neatly stored in a git repo, the `devcontainer.json` file will be in the root of the repo by the `.devcontainer/devcontainer.json` path.
+To start using the devcontainer, you have to create a `devcontainer.json` file in your project directory where you have your containerlab topology. If you're using Containerlab the right way, your labs are neatly stored in a git repo, the `devcontainer.json` file will be part of the repo.
+
+/// note | Devcontainer flavors
+Containerlab maintains two types of devcontainers configurations:
+
+1. Docker In Docker (DIND):  
+    tagged as `ghcr.io/srl-labs/containerlab/clab-devcontainer-dind:<version>`, where `<version>` is the containerlab version.
+
+    This
+///
 
 Note, the labs that we publish with Codespaces support already have the `devcontainer.json` file, in that case you don't even need to create it manually.
 
