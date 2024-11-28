@@ -25,6 +25,9 @@ jobs:
       source_branch: ${{ steps.set-outputs.outputs.SOURCE_BRANCH }}
       source_tag: ${{ steps.set-outputs.outputs.SOURCE_TAG }}
       source_tag_no_prefix: ${{ steps.set-outputs.outputs.SOURCE_TAG_NO_PREFIX }}
+      # exporting env vars to be used in invoked workflows
+      py_ver: ${{ env.PY_VER }}
+      go_ver: ${{ env.GO_VER }}
     steps:
       - id: set-outputs
         run: |
@@ -33,22 +36,12 @@ jobs:
           echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           echo "SOURCE_TAG_NO_PREFIX=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
-  test-devcontainer:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: process-gitref
-    uses: ./.github/workflows/test.yml
-    with:
-      CLAB_VERSION: ${{ needs.process-gitref.outputs.source_tag_no_prefix }}
-
   file-changes:
     runs-on: ubuntu-22.04
     needs: process-gitref
     outputs:
       code: ${{ steps.filter.outputs.code }}
       docs: ${{ steps.filter.outputs.docs }}
-      # exporting env vars to be used in invoked workflows
-      py_ver: ${{ env.PY_VER }}
-      go_ver: ${{ env.GO_VER }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -87,7 +80,7 @@ jobs:
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     uses: ./.github/workflows/build-containerlab.yml
     with:
-      go_ver: ${{ needs.file-changes.outputs.go_ver }}
+      go_ver: ${{ needs.process-gitref.outputs.go_ver }}
 
   staticcheck:
     runs-on: ubuntu-22.04
@@ -155,7 +148,7 @@ jobs:
   smoke-tests:
     uses: ./.github/workflows/smoke-tests.yml
     with:
-      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
     needs:
       - file-changes
       - build-containerlab
@@ -270,7 +263,7 @@ jobs:
   srlinux-basic-tests:
     uses: ./.github/workflows/srlinux-tests.yml
     with:
-      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
     needs:
       - file-changes
       - build-containerlab
@@ -327,7 +320,7 @@ jobs:
       - file-changes
       - build-containerlab
     with:
-      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
   kind-tests:
     uses: ./.github/workflows/kind-tests.yml
@@ -335,7 +328,7 @@ jobs:
       - file-changes
       - build-containerlab
     with:
-      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
   # sros-tests:
   #   uses: ./.github/workflows/sros-tests.yml
@@ -343,7 +336,7 @@ jobs:
   #     - file-changes
   #     - build-containerlab
   #   with:
-  #     py_ver: ${{ needs.file-changes.outputs.py_ver }}
+  #     py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
   fortigate-tests:
     uses: ./.github/workflows/fortigate-tests.yml
@@ -351,7 +344,7 @@ jobs:
       - file-changes
       - build-containerlab
     with:
-      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
   cisco_iol-tests:
     uses: ./.github/workflows/cisco_iol-tests.yml
@@ -359,7 +352,7 @@ jobs:
       - file-changes
       - build-containerlab
     with:
-      py_ver: ${{ needs.file-changes.outputs.py_ver }}
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
