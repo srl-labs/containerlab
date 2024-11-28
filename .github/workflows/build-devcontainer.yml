@@ -40,10 +40,10 @@ jobs:
         include:
           - variant: dind
             devContFile: .devcontainer/docker-in-docker/devcontainer.json
-            image-suffix: ""
+            image-suffix: "-dind"
           - variant: dind-slim
             devContFile: .devcontainer/docker-in-docker_slim/devcontainer.json
-            image-suffix: "-slim"
+            image-suffix: "-dind-slim"
           - variant: dood
             devContFile: .devcontainer/docker-outside-of-docker/devcontainer.json
             image-suffix: "-dood"
