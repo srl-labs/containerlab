@@ -18,22 +18,27 @@ env:
   PY_VER: "3.10"
 
 jobs:
-  munch-tags:
+  process-gitref:
     runs-on: ubuntu-22.04
     outputs:
-      source_name: ${{ env.SOURCE_NAME }}
-      source_branch: ${{ env.SOURCE_BRANCH }}
-      source_tag: ${{ env.SOURCE_TAG }}
-      source_tag_no_prefix: ${{ env.SOURCE_TAG_NO_V_PREFIX }}
+      source_name: ${{ steps.set-outputs.outputs.SOURCE_NAME }}
+      source_branch: ${{ steps.set-outputs.outputs.SOURCE_BRANCH }}
+      source_tag: ${{ steps.set-outputs.outputs.SOURCE_TAG }}
+      source_tag_no_prefix: ${{ steps.set-outputs.outputs.SOURCE_TAG_NO_PREFIX }}
     steps:
-      - run: |
-          echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-          echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
-          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-          echo "SOURCE_TAG_NO_V_PREFIX=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+      - id: set-outputs
+        run: |
+          echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
+          echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
+          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          echo "SOURCE_TAG_NO_PREFIX=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
-      - run: |
-          echo "tag: ${{ env.SOURCE_TAG_NO_V_PREFIX }}"
+  test-devcontainer:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: process-gitref
+    uses: ./.github/workflows/test.yml
+    with:
+      CLAB_VERSION: ${{ needs.process-gitref.outputs.source_tag_no_prefix }}
 
   file-changes:
     runs-on: ubuntu-22.04
@@ -510,7 +515,7 @@ jobs:
     needs: build-and-release
     uses: ./.github/workflows/build-devcontainer.yml
     with:
-      CLAB_VERSION: ${{ needs.munch-tags.outputs.source_tag_no_prefix }}
+      CLAB_VERSION: ${{ needs.process-gitref.outputs.source_tag_no_prefix }}
 
   # update docs allows to make the docs changes outside of the release cycle
   # it skips the code build/release and proceeds with docs publishing
