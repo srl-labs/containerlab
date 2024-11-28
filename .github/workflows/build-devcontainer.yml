@@ -30,10 +30,10 @@ jobs:
         variant: ["dind", "dood"]
         include:
           - variant: dind
-            context: .devcontainer
+            devContFile: .devcontainer/devcontainer.json
             image-suffix: ""
           - variant: dood
-            context: .devcontainer/dood
+            devContFile: .devcontainer/dood/devcontainer.json
             image-suffix: "-dood"
     steps:
       - name: Checkout repository
@@ -94,4 +94,4 @@ jobs:
           imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always
           platform: linux/amd64,linux/arm64
-          subFolder: ${{ matrix.context }}
+          configFile: ${{ matrix.devContFile }}
