@@ -27,6 +27,9 @@ jobs:
           echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           echo "SOURCE_TAG_NO_V_PREFIX=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
 
+      - run: |
+          echo "tag: ${{ env.SOURCE_TAG_NO_V_PREFIX }}"
+
   file-changes:
     runs-on: ubuntu-22.04
     needs: munch-tags
