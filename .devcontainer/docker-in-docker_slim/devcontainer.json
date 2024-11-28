@@ -1,0 +1,39 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+    "build": {
+        "dockerfile": "../slim.Dockerfile",
+        "context": "../..",
+        "args": {
+            "CLAB_VERSION": "${localEnv:CLAB_VERSION}"
+        }
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            "version": "26.1.4",
+            "dockerDashComposeVersion": "none",
+            "moby": "false"
+        },
+        // Add sshd to support gh cli codespace cp.
+        "ghcr.io/devcontainers/features/sshd:1": {
+            "version": "latest"
+        }
+    },
+    "remoteUser": "vscode",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-azuretools.vscode-docker",
+                // Python.
+                "ms-python.python",
+                // Errors and highlighters.
+                "mechatroner.rainbow-csv",
+                "redhat.vscode-yaml",
+                // markdown
+                "yzhang.markdown-all-in-one",
+                "davidanson.vscode-markdownlint"
+            ]
+        }
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/${containerWorkspaceFolder},type=bind",
+    "workspaceFolder": "/clab"
+}

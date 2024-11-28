@@ -32,14 +32,24 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        variant: ["dind", "dood"]
+        variant:
+          - "dind"
+          - "dind-slim"
+          - "dood"
+          - "dood-slim"
         include:
           - variant: dind
-            devContFile: .devcontainer/devcontainer.json
+            devContFile: .devcontainer/docker-in-docker/devcontainer.json
             image-suffix: ""
+          - variant: dind-slim
+            devContFile: .devcontainer/docker-in-docker_slim/devcontainer.json
+            image-suffix: "-slim"
           - variant: dood
-            devContFile: .devcontainer/dood/devcontainer.json
+            devContFile: .devcontainer/docker-outside-of-docker/devcontainer.json
             image-suffix: "-dood"
+          - variant: dood-slim
+            devContFile: .devcontainer/docker-outside-of-docker_slim/devcontainer.json
+            image-suffix: "-dood-slim"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

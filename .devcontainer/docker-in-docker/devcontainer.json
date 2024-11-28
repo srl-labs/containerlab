@@ -7,21 +7,13 @@
             "CLAB_VERSION": "${localEnv:CLAB_VERSION}"
         }
     },
-    "runArgs": [
-        "--network=host",
-        "--pid=host",
-        "--privileged"
-    ],
-    "mounts": [
-        "type=bind,src=/run/netns,dst=/run/netns"
-    ],
     "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
             "version": "26.1.4",
             "dockerDashComposeVersion": "none",
             "moby": "false"
         },
-        // Add sshd to support gh cli codespaces cp.
+        // Add sshd to support gh cli codespace cp.
         "ghcr.io/devcontainers/features/sshd:1": {
             "version": "latest"
         },
@@ -52,6 +44,6 @@
             ]
         }
     },
-    "workspaceFolder": "${localWorkspaceFolder}",
-    "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind"
+    "workspaceMount": "source=${localWorkspaceFolder},target=/${containerWorkspaceFolder},type=bind",
+    "workspaceFolder": "/clab"
 }
