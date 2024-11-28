@@ -92,7 +92,8 @@ EOF
 SR Linux nodes come up with SNMPv2 server enabled and running on port 161. The default SNMP community is `public`.
 
 ```shell
-docker run --init -ti goatatwork/snmpwalk:latest -v 2c -c public $address
+docker run -i -t ghcr.io/hellt/net-snmp-tools:5.9.4-r0 \
+  snmpwalk -v 2c -c public $address
 ```
 
 ///
