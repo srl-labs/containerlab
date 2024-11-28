@@ -51,7 +51,7 @@ RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 RUN mkdir -p /home/vscode/.docker && echo "{}" > /home/vscode/.docker/config.json
 
 # Setup Zsh and plugins
-COPY ./.devcontainer/zsh/.zshrc /home/vscode/.zshrc
+COPY ./.devcontainer/zsh/.zshrc-slim /home/vscode/.zshrc
 COPY ./.devcontainer/zsh/.p10k.zsh /home/vscode/.p10k.zsh
 COPY ./.devcontainer/zsh/install-zsh-plugins.sh /tmp/install-zsh-plugins.sh
 RUN bash -c "/tmp/install-zsh-plugins.sh"

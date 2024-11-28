@@ -14,7 +14,8 @@
     ],
     "mounts": [
         "type=bind,src=/run/netns,dst=/run/netns",
-        "type=bind,src=/var/lib/docker,dst=/var/lib/docker"
+        "type=bind,src=/var/lib/docker,dst=/var/lib/docker",
+        "type=bind,src=/lib/modules,dst=/lib/modules"
     ],
     "features": {
         "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
