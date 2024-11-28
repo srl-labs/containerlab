@@ -18,6 +18,15 @@ env:
   PY_VER: "3.10"
 
 jobs:
+  munch-tags:
+    runs-on: ubuntu-22.04
+    steps:
+      - run: |
+          echo "SOURCE_NAME=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+          echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+          echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "SOURCE_TAG_NO_V_PREFIX=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
   file-changes:
     runs-on: ubuntu-22.04
     outputs:
@@ -492,7 +501,8 @@ jobs:
     needs: build-and-release
     uses: ./.github/workflows/build-devcontainer.yml
     with:
-      CLAB_VERSION: ${{ github.ref_name && github.ref_name[1:] }} # remove the leading 'v'
+      CLAB_VERSION: ${{ env.SOURCE_TAG_NO_V_PREFIX }}
+
   # update docs allows to make the docs changes outside of the release cycle
   # it skips the code build/release and proceeds with docs publishing
   # the intended usage is to provide fixes/updates to docs, which do not require code changes
