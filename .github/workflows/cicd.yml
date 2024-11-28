@@ -36,7 +36,7 @@ jobs:
       # exporting env vars to be used in invoked workflows
       py_ver: ${{ env.PY_VER }}
       go_ver: ${{ env.GO_VER }}
-      SOURCE_TAG_NO_V_PREFIX: ${{ env.SOURCE_TAG_NO_V_PREFIX }}
+      source_tag_no_prefix: ${{ env.SOURCE_TAG_NO_V_PREFIX }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -503,7 +503,7 @@ jobs:
     needs: build-and-release
     uses: ./.github/workflows/build-devcontainer.yml
     with:
-      CLAB_VERSION: ${{ needs.file-changes.outputs.SOURCE_TAG_NO_V_PREFIX }}
+      CLAB_VERSION: ${{ needs.file-changes.outputs.source_tag_no_prefix }}
 
   # update docs allows to make the docs changes outside of the release cycle
   # it skips the code build/release and proceeds with docs publishing
