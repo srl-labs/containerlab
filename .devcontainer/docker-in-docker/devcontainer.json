@@ -13,7 +13,8 @@
             // see https://github.com/moby/moby/issues/48987#issuecomment-2507267417
             "moby": "false",
             "version": "26.1.4",
-            "dockerDashComposeVersion": "none"
+            "dockerDashComposeVersion": "none",
+            "installDockerComposeSwitch": "false"
         },
         // Add sshd to support gh cli codespace cp.
         "ghcr.io/devcontainers/features/sshd:1": {
