@@ -140,6 +140,10 @@ Starting with **Containerlab v0.60.0**, you can use the devcontainer with ARM64 
 
 To start using the devcontainer, you have to create a `devcontainer.json` file in your project directory where you have your containerlab topology. If you're using Containerlab the right way, your labs are neatly stored in a git repo; in this case the `devcontainer.json` file will be part of the repo.
 
+If you prefer a video tutorial, we've got you covered, else continue reading.
+
+-{{youtube(url='https://www.youtube.com/embed/Xue1pLiO0qQ')}}-
+
 ### Devcontainer flavors
 
 Containerlab provides two types of devcontainer images:
