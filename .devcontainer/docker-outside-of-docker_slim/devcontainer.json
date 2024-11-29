@@ -20,7 +20,8 @@
     "features": {
         "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
             "moby": "false",
-            "version": "26.1.4"
+            "version": "26.1.4",
+            "dockerDashComposeVersion": "none"
         },
         // Add sshd to support gh cli codespaces cp.
         "ghcr.io/devcontainers/features/sshd:1": {

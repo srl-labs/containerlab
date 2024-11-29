@@ -12,7 +12,8 @@
             // docker/moby version is that old because newer ones failed to install under emulation
             // see https://github.com/moby/moby/issues/48987#issuecomment-2507267417
             "moby": "false",
-            "version": "26.1.4"
+            "version": "26.1.4",
+            "dockerDashComposeVersion": "none"
         },
         // Add sshd to support gh cli codespace cp.
         "ghcr.io/devcontainers/features/sshd:1": {
