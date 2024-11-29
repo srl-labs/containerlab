@@ -131,39 +131,58 @@ You can see this workflow demonstration in this [YT video][yt-demo].
 
 Another convenient option to run containerlab on ARM/Intel Macs and Windows is to use the [Devcontainer](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers) feature that works great with VS Code and many other IDE's.
 
-A Devcontainer is a specification for a container that is used to create a development environment. By creating the `devcontainer.json` file, you define the development environment for your project. Containerlab project maintains a set of pre-built multi-arch devcontainer images that you can use to run containerlabs.  
+A development container (or devcontainer) allows you to use a container as a full-featured development environment. By creating the `devcontainer.json`[^4] file, you define the development environment for your project. Containerlab project maintains a set of pre-built multi-arch devcontainer images that you can use to run containerlabs.  
 It was initially created to power [containerlab in codespaces](manual/codespaces.md), but it is a perfect fit for running containerlab on a **wide range of OSes** such as macOS and Windows.
-
-The devcontainer can also be used by the developers to develop containerlab itself.
 
 /// note
 Starting with **Containerlab v0.60.0**, you can use the devcontainer with ARM64 macOS to run containerlabs.
 ///
 
-To start using the devcontainer, you have to create a `devcontainer.json` file in your project directory where you have your containerlab topology. If you're using Containerlab the right way, your labs are neatly stored in a git repo, the `devcontainer.json` file will be part of the repo.
+To start using the devcontainer, you have to create a `devcontainer.json` file in your project directory where you have your containerlab topology. If you're using Containerlab the right way, your labs are neatly stored in a git repo; in this case the `devcontainer.json` file will be part of the repo.
 
-/// note | Devcontainer flavors
-Containerlab maintains two types of devcontainers configurations:
+### Devcontainer flavors
 
-1. Docker In Docker (DIND):  
-    tagged as `ghcr.io/srl-labs/containerlab/clab-devcontainer-dind:<version>`, where `<version>` is the containerlab version.
+Containerlab provides two types of devcontainer images:
 
-    This
-///
+<h4> Docker In Docker (dind)</h4>
+defined in the [.devcontainer directory](https://github.com/srl-labs/containerlab/tree/main/.devcontainer) and tagged with
 
-Note, the labs that we publish with Codespaces support already have the `devcontainer.json` file, in that case you don't even need to create it manually.
+- [regular image](https://github.com/srl-labs/containerlab/pkgs/container/containerlab%2Fdevcontainer-dind): `ghcr.io/srl-labs/containerlab/devcontainer-dind:<version>`
+- [slim image](https://github.com/srl-labs/containerlab/pkgs/container/containerlab%2Fdevcontainer-dind-slim): `ghcr.io/srl-labs/containerlab/devcontainer-dind-slim:<version>`
 
-If you create the `devcontainer.json` file manually, you won't need to be smart about the content of the file, all you have to specify is the containerlab version you want to run. Here is an example of the `devcontainer.json` file:
+where `<version>` is the containerlab version without the `v` prefix.
 
-```json title="<code>./devcontainer/devcontainer.json</code>"
+Docker In Docker variant provides an **isolated** docker environment inside the devcontainer. This means, that the docker daemon inside the devcontainer is not connected to the docker daemon on your host, you will not see the containers/images that you have on your host.
+
+This version is best to be used with [Codespaces](manual/codespaces.md).
+
+<h4> Docker Outside Of Docker (dood)</h4>
+defined in the [.devcontainer directory](https://github.com/srl-labs/containerlab/tree/main/.devcontainer) and tagged with
+
+- [regular image](https://github.com/srl-labs/containerlab/pkgs/container/containerlab%2Fdevcontainer-dood): `ghcr.io/srl-labs/containerlab/devcontainer-dood:<version>`
+- [slim image](https://github.com/srl-labs/containerlab/pkgs/container/containerlab%2Fdevcontainer-dood-slim): `ghcr.io/srl-labs/containerlab/devcontainer-dood-slim:<version>`
+
+where `<version>` is the containerlab version without the `v` prefix.
+
+Docker Outside Of Docker variant uses the docker daemon on your host, so inside your devcontainer image you will see the images and containers that you have on your host. This variant is likely best to be on your local machine running macOS or Windows.
+
+When running in this mode, VS Code will ask you to provide a path to the workspace first time you open the devcontainer. You should select the path to the repository on your host in the dialog.
+
+The labs that we publish with Codespaces support often already have the `devcontainer.json` files, in that case you don't even need to create them manually.
+
+### Docker In Docker (dind)
+
+If you intend to run a docker-in-docker version of the devcontainer, create the `.devcontainer/docker-in-docker/devcontainer.json` file at the root of your repo with the following content:
+
+```json title="<code>./devcontainer/docker-in-docker/devcontainer.json</code>"
 {
-    "image": "ghcr.io/srl-labs/containerlab/clab-devcontainer:0.60.0" //(1)!
+    "image": "ghcr.io/srl-labs/containerlab/devcontainer-dind-slim:0.60.0" //(1)!
 }
 ```
 
 1. devcontainer versions match containerlab versions
 
-With the devcontainer file in place, when you open a repo in VS Code, you will be prompted to reopen the workspace in the devcontainer.
+With the devcontainer file in place, when you open a repo in VS Code, you will be prompted to reopen the workspace in the devcontainer. Or you can press <kbd>F1</kbd> and select `Dev Containers: Rebuild and Reopen in Container`.
 
 ![img1](https://gitlab.com/rdodin/pics/-/wikis/uploads/ee918d1d5d85d83f45ced031c5fa999d/image.png)
 
@@ -171,40 +190,37 @@ Clicking on this button will open the workspace in the devcontainer; you will se
 
 Open a terminal in the VS Code and run the topology by typing the familiar `sudo clab dep` command to deploy the lab. That's it!
 
-## Alternative options
+### Docker Outside Of Docker (dood)
 
-### UTM
+The docker-in-docker method of running a devcontainer is great for Codespaces, but when running on your local machine you might want to use the images that your have already pulled in your host's docker or see the containers that might be running on your host. In these cases, the isolation that docker-in-docker provides stands in the way, and it also have some performance implications.
 
-If OrbStack for some reason can not be used in your environment, you can use [UTM](https://mac.getutm.app/) - a free[^4] and open-source graphical virtual machine manager that provides a simple interface for creating, managing, and running virtual machines with qemu.
+That's why we also have the docker-outside-of-docker (dood) variant of the devcontainer. To use this variant create the `.devcontainer/docker-outside-of-docker/devcontainer.json` file will have more meat in it, since we need to mount some host directories for containerlab to be able to do its magic:
 
-When you have UTM installed, you can download a pre-built Debian 12 UTM image built by the Containerlab team using the following command[^5]:
-
-```bash
-sudo docker run --rm -v $(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull \
-    ghcr.io/srl-labs/containerlab/clab-utm-box:0.1.0
+```json title="<code>./devcontainer/docker-outside-of-docker/devcontainer.json</code>"
+{
+    "image": "ghcr.io/srl-labs/containerlab/devcontainer-dood-slim:0.60.0", //(1)!
+    "runArgs": [
+        "--network=host",
+        "--pid=host",
+        "--privileged"
+    ],
+    "mounts": [
+        "type=bind,src=/run/netns,dst=/run/netns",
+        "type=bind,src=/var/lib/docker,dst=/var/lib/docker",
+        "type=bind,src=/lib/modules,dst=/lib/modules"
+    ],
+    "workspaceFolder": "${localWorkspaceFolder}",
+    "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind"
+}
 ```
 
-By running this command you will download the `clab_debian12.utm` file which is a UTM image with `containerlab`, `docker-ce` and `gh` tools pre-installed[^6].
+1. The devcontainer version matches the containerlab version. The rest of the file does not change and can be copy pasted.
 
-Open the downloaded image with UTM **File -> Open -> select .utm file** and start the VM.
-
-Once the VM is started, you can log in using `debian:debian` credentials. Run `ip -4 addr` in the terminal to find out which IP got assigned to this VM.  
-Now you can use this IP for your Mac terminal to connect to the VM via SSH[^7].
-
-When logged in, you can upgrade the containerlab to the latest version with:
-
-```bash
-sudo clab version upgrade
-```
-
-and start downloading the labs you want to run.
+You can have both docker-in-docker and docker-outside-of-docker variants of the devcontainer file in your repo, and your IDE will be able to switch between them.
 
 [^1]: Or any other application that enables Docker on macOS. OrbStack is just a great choice that is used by many.
 [^2]: With Microsoft Surface laptop released with ARM64 architecture
 [^3]: The same principles apply to Docker Desktop on Windows
-[^4]: There are two options to install UTM: via [downloadable dmg](https://github.com/utmapp/UTM/releases/latest/download/UTM.dmg) file (free) or App Store (paid). The App Store version is exactly the same, it is just a way to support the project.
-[^5]: This command requires docker to be installed on your macOS. You can use Docker Desktop, Rancher or [colima](https://github.com/abiosoft/colima) to run docker on your macOS.
-[^6]: If you want to install these tools on an existing Debian machine, you can run `wget -qO- containerlab.dev/setup-debian | bash -s -- all` command.
-[^7]: The UTM image has a pre-installed ssh key for the `debian` user. You can download the shared private key from [here](https://github.com/srl-labs/clabernetes/blob/main/launcher/assets/default_id_rsa).
+[^4]: Follows the devcontainer [specification](https://containers.dev/)
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
