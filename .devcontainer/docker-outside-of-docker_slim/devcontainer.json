@@ -19,8 +19,7 @@
     ],
     "features": {
         "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-            "moby": "false",
-            "version": "26.1.4",
+            "version": "23.0.7",
             "dockerDashComposeVersion": "none",
             "installDockerComposeSwitch": "false"
         },

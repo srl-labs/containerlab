@@ -11,8 +11,7 @@
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
             // docker/moby version is that old because newer ones failed to install under emulation
             // see https://github.com/moby/moby/issues/48987#issuecomment-2507267417
-            "moby": "false",
-            "version": "26.1.4",
+            "version": "23.0.7",
             "dockerDashComposeVersion": "none",
             "installDockerComposeSwitch": "false"
         },
