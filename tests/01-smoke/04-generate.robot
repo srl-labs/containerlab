@@ -12,7 +12,7 @@ ${runtime}      docker
 Deploy ${lab-name} lab with generate command
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} generate --name ${lab-name} --kind linux --image ghcr.io/hellt/network-multitool --nodes 2,1,1 --deploy
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} generate --name ${lab-name} --kind linux --image ghcr.io/srl-labs/network-multitool --nodes 2,1,1 --deploy
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 

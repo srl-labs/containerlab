@@ -6,7 +6,7 @@ kind_display_name: OpenBSD
 ---
 # OpenBSD
 
-[OpenBSD](https://www.openbsd.org/) is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[OpenBSD](https://www.openbsd.org/) is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 ## Getting OpenBSD image
 
@@ -45,7 +45,7 @@ OpenBSD node launched with containerlab can be managed via the following interfa
 
 ## Interface naming
 
-You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in [[[ kind_display_name ]]].
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in -{{ kind_display_name }}-.
 
 The interface naming convention is: `vioX`, where `X` is the port number.
 
@@ -59,13 +59,13 @@ With that naming convention in mind:
 Data port numbering starts at `1`, as `vio0` is reserved for management connectivity. Attempting to use `vio0` in a containerlab topology will result in an error.
 ///
 
-The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
+The example ports above would be mapped to the following Linux interfaces inside the container running the -{{ kind_display_name }}- VM:
 
 * `eth0` - management interface connected to the containerlab management network (rendered as `vio0` in the CLI)
 * `eth1` - first data interface, mapped to the first data port of the VM (rendered as `vio1`)
 * `eth2+` - second and subsequent data interfaces, mapped to the second and subsequent data ports of the VM (rendered as `vio2` and so on)
 
-When containerlab launches [[[ kind_display_name ]]] node the `vio0` interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+When containerlab launches -{{ kind_display_name }}- node the `vio0` interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the -{{ kind_display_name }}- using containerlab's assigned IP.
 
 Data interfaces `vio1+` need to be configured with IP addressing manually using CLI or other available management interfaces.
 

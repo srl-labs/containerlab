@@ -2,7 +2,7 @@ package definitions
 
 import "errors"
 
-var ErrNotAvailabel = errors.New("not available")
+var ErrNotAvailable = errors.New("not available")
 
 const (
 	DockerFWUserChain = "DOCKER-USER"

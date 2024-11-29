@@ -6,7 +6,7 @@ kind_display_name: Nokia SR OS
 ---
 # Nokia SR OS
 
-[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `[[[ kind_code_name ]]]` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Nokia SR OS nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
@@ -69,7 +69,7 @@ Default user credentials: `admin:admin`
 
 ## Interface naming
 
-You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in [[[ kind_display_name ]]].
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in -{{ kind_display_name }}-.
 
 The interface naming convention is: `1/1/X`, where `X` is the port number.
 
@@ -86,13 +86,13 @@ With that naming convention in mind:
 * `1/1/1` - first data port available
 * `1/1/2` - second data port, and so on...
 
-The example ports above would be mapped to the following Linux interfaces inside the container running the [[[ kind_display_name ]]] VM:
+The example ports above would be mapped to the following Linux interfaces inside the container running the -{{ kind_display_name }}- VM:
 
 * `eth0` - management interface connected to the containerlab management network
 * `eth1` - first data interface, mapped to the first data port of the VM (rendered as `1/1/1`)
 * `eth2+` - second and subsequent data interfaces, mapped to the second and subsequent data ports of the VM (rendered as `1/1/2` and so on)
 
-When containerlab launches [[[ kind_display_name ]]] node the primary BOF interface gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the [[[ kind_display_name ]]] using containerlab's assigned IP.
+When containerlab launches -{{ kind_display_name }}- node the primary BOF interface gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the -{{ kind_display_name }}- using containerlab's assigned IP.
 
 Data interfaces `1/1/1+` need to be configured with IP addressing manually using CLI or other available management interfaces.
 

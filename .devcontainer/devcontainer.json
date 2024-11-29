@@ -10,7 +10,8 @@
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
             "version": "26.1.4",
-            "dockerDashComposeVersion": "none"
+            "dockerDashComposeVersion": "none",
+            "moby": "false"
         },
         // Add sshd to support gh cli codespace cp.
         "ghcr.io/devcontainers/features/sshd:1": {
@@ -24,6 +25,8 @@
     "customizations": {
         "vscode": {
             "extensions": [
+                // go
+                "golang.go",
                 "mhutchie.git-graph",
                 "ms-azuretools.vscode-docker",
                 // Python.

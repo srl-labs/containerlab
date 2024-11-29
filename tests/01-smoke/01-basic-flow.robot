@@ -16,7 +16,7 @@ ${runtime}                  docker
 ${runtime-cli-exec-cmd}     sudo docker exec
 ${n2-ipv4}                  172.20.20.100/24
 ${n2-ipv6}                  3fff:172:20:20::100/64
-
+${table-delimit}            │
 
 *** Test Cases ***
 Verify number of Hosts entries before deploy
@@ -190,17 +190,30 @@ Ensure "inspect all" outputs IP addresses
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # get a 3rd line from the bottom of the inspect cmd.
-    # this relates to the l2 node
-    ${line} =    String.Get Line    ${output}    -3
+    
+    # get a 4th line from the bottom of the inspect cmd.
+    # this relates to the l2 node ipv4
+    ${line} =    String.Get Line    ${output}    -6
     Log    ${line}
-    @{data} =    Split String    ${line}    |
+
+    @{data} =    Split String    ${line}    ${table-delimit}
     Log    ${data}
+
     # verify ipv4 address
-    ${ipv4} =    String.Strip String    ${data}[9]
-    Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
+    ${ipv4} =    String.Strip String    ${data}[6]
+    Should Match Regexp    ${ipv4}    ^[\\d\\.]+$
+
+    # get a 3rd line from the bottom of the inspect cmd.
+    # this relates to the l2 node ipv6
+    ${line} =    String.Get Line    ${output}    -5
+    Log    ${line}
+
+    @{data} =    Split String    ${line}    ${table-delimit}
+    Log    ${data}
+
     # verify ipv6 address
-    Run Keyword    Match IPv6 Address    ${data}[10]
+    ${ipv6} =    String.Strip String    ${data}[6]
+    Run Keyword    Match IPv6 Address    ${ipv6}
 
 Verify bind mount in l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -334,7 +347,7 @@ Verify Exec rc != 0 on no containers match
 Verify l1 node is healthy
     [Documentation]    Checking if l1 node is healthy after the lab is deployed
 
-    Sleep    3s
+    Sleep    10s
 
     ${output} =    Process.Run Process
     ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f ''{{.State.Health.Status}}''
@@ -380,4 +393,4 @@ Match IPv6 Address
     [Arguments]
     ...    ${address}=${None}
     ${ipv6} =    String.Strip String    ${address}
-    Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+/\\d{1,2}$
+    Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+$

@@ -34,7 +34,7 @@ func NewIpTablesClient(bridgeName string) (*IpTablesClient, error) {
 	if !loaded {
 		log.Debug("ip_tables kernel module not available")
 		// module is not loaded
-		return nil, definitions.ErrNotAvailabel
+		return nil, definitions.ErrNotAvailable
 	}
 
 	return &IpTablesClient{
