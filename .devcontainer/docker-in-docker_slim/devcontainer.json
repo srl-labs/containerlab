@@ -9,9 +9,8 @@
     },
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker:2": {
-            "version": "23.0.7",
-            "dockerDashComposeVersion": "none"
-            // "moby": "false"
+            "moby": "false",
+            "version": "26.1.4"
         },
         // Add sshd to support gh cli codespace cp.
         "ghcr.io/devcontainers/features/sshd:1": {
