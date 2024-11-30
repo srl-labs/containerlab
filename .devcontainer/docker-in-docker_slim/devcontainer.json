@@ -28,7 +28,7 @@
                         "path": "/bin/zsh"
                     }
                 },
-                "terminal.integrated.fontFamily": "FiraCode Nerd Font"
+                "terminal.integrated.fontFamily": "FiraCode Nerd Font, Menlo, Monaco, Cascadia Code, Consolas, Courier New, monospace"
             },
             "extensions": [
                 "ms-azuretools.vscode-docker",
