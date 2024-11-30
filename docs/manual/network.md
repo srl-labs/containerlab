@@ -264,7 +264,7 @@ Chain DOCKER-USER (1 references)
 The rule will be removed together with the management network.
 
 ///tip | RHEL 9 users
-By default RHEL 9 (and it's derivatives) will use `firewalld` as the [default firewall](https://access.redhat.com/solutions/7046655), containerlab's iptables and nftables rules will not work in this case and you will not have external access to your labs.
+By default RHEL 9 (and it's derivatives) will use `firewalld` as the [default firewall](https://access.redhat.com/solutions/7046655), containerlab's `iptables` and `nftables` rules will not work in this case and you will not have external access to your labs.
 
 To fix this you must disable `firewalld` and enable the `nftables` service.  
 
