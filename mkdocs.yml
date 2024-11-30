@@ -255,7 +255,7 @@ theme:
     logo: clab/icon
     repo: fontawesome/brands/github
     edit: material/file-edit-outline
-  favicon: images/flask.svg
+  favicon: images/favicon.svg
 
 # Plugins
 plugins:
