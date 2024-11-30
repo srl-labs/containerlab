@@ -1,0 +1,112 @@
+---
+comments: true
+hide:
+- navigation
+---
+
+# Containerlab on Windows
+
+By leveraging the [Windows Subsystem Linux (aka WSL)](https://learn.microsoft.com/en-us/windows/wsl/) you can run Containerlabs on Windows almost like on Linux. WSL allows Windows users to run a lightweight Linux VM inside Windows, and we can leverage this to run containerlab.
+
+There are two primary ways of running containerlab on Windows:
+
+1. Running containerlab directly in the WSL VM.
+2. Running containerlab inside a [Devcontainer](https://code.visualstudio.com/docs/devcontainers/containers) inside WSL.
+
+We will cover both of these ways in this document, but first let's quickly go over the WSL setup.
+
+/// admonition | Windows and WSL version
+The following instructions were tested on Windows 11 and WSL2. On Windows 10 some commands may be different, but the general idea should be the same.
+///
+
+## Setting up WSL
+
+WSL takes the central role in running containerlabs on Windows. Luckily, setting up WSL is very easy, and there are plenty of resources online from blogs to YT videos explaining the bits and pieces. Here we will provide some CLI-centric[^1] instructions that were executed on Windows 11.
+
+First things first, open up a terminal and list the running WSL virtual machines and their versions:
+
+```bash
+wsl -l -v
+```
+
+<div class="embed-result">
+```{.text .no-select .no-copy}
+  NAME      STATE           VERSION
+* Ubuntu    Running         2
+```
+</div>
+
+On this system we already have a WSL VM with Ubuntu OS running, which was created when we installed WSL on Windows. If instead of a list of WSL VMs you get an error, you need to install WSL first:
+
+```bash title="Installing WSL on Windows 11"
+wsl --install
+```
+
+Installing WSL on Windows 11 will by default install the Ubuntu distribution. While it is perfectly fine to use it, we prefer Debian, so let's remove Ubuntu and install Debian instead:
+
+```bash title="Removing Ubuntu and installing Debian"
+wsl --unregister Ubuntu #(1)!
+wsl --install -d Debian #(1)!
+```
+
+1. Unregistering a WSL VM will remove the VM. You should reference a WSL instance by the name you saw in the `wsl -l -v` command.
+2. Installing a new WSL system will prompt you to choose a username and password.
+
+Once the installation is complete, you will enter the WSL shell, which is a regular Linux shell[^2]. Congratulations, you have a working WSL system that can run containerlab.
+
+## Installing docker and containerlab on WSL
+
+Now that we have a working WSL system, we can install docker and containerlab on it like we would on any Linux system.
+
+/// danger | WSL2 and Docker Desktop
+If you have Docker Desktop[^3] installed on your Windows system, you need to ensure that it is not enabled for the WSL VM that we intend to use for containerlabs.  
+To check that your WSL system is "free" from Docker Desktop integration, run `sudo docker version` command and ensure that you have an error message saying that `docker` command is not found.
+
+Check Docker Desktop settings to see how to disable Docker Desktop integration with WSL2 if the above command **does not** return an expected error.
+///
+
+We are going to use the [quick setup script](install.md#quick-setup) to install docker and containerlab, but since this script uses `curl`, we need to install it first:
+
+```bash
+sudo apt update && sudo apt -y install curl
+```
+
+and then run the quick setup script:
+
+--8<-- "docs/install.md:quick-setup-script-cmd"
+
+Now you should be able to run the `docker version` command and see the version of docker installed. That was easy, wasn't it?
+
+The installation script also installs containerlab, so you can run `clab version` to see the version of containerlab installed. This means that containerlab is installed in the WSL VM and you can run containerlabs in a normal way, like you would on Linux.
+
+/// details | Running VM-based routers inside WSL?
+    type: subtle-question
+In Windows 11 with WSL2 it is now possible to [enable KVM support](https://serverfault.com/a/1115773/351978). Let us know if that worked for you in our [Discord](community.md).
+///
+
+## Devcontainer
+
+Another convenient option to run containerlab on Windows (and [macOS](macos.md#devcontainer)) is to use the [Devcontainer](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers) feature that works great with VS Code and many other IDE's.
+
+A development container (or devcontainer) allows you to use a container as a full-featured development environment. By creating the `devcontainer.json`[^4] file, you define the development environment for your project. Containerlab project maintains a set of pre-built multi-arch devcontainer images that you can use to run containerlabs.  
+It was initially created to power [containerlab in codespaces](manual/codespaces.md), but it is a perfect fit for running containerlab on a **wide range of OSes** such as macOS and Windows.
+
+Since the devcontainer works exactly the same way on Windows and macOS, [please refer to the macOS](macos.md#devcontainer) section for the detailed documentation and a video walkthrough.
+
+[^1]: If you don't have a decent terminal emulator on Windows, install "Windows Terminal" from the Microsoft Store.
+[^2]: The kernel and distribution parameters can be checked as follows:
+
+    ```bash
+    roman@Win11:~$ uname -a
+    Linux LAPTOP-H6R3238F 5.15.167.4-microsoft-standard-WSL2 #1 SMP Tue Nov 5 00:21:55 UTC 2024 x86_64 GNU/Linux
+    ```
+
+    ```bash
+    roman@Win11:~$ cat /etc/os-release
+    PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"
+    NAME="Debian GNU/Linux"
+    VERSION_ID="12"
+    ```
+
+[^3]: Or any other desktop docker solution like Rancher Desktop, Podman Desktop, etc.
+[^4]: Follows the devcontainer [specification](https://containers.dev/)
