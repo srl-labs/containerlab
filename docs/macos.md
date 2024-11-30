@@ -132,7 +132,7 @@ You can see this workflow demonstration in this [YT video][yt-demo].
 
 ## Devcontainer
 
-Another convenient option to run containerlab on ARM/Intel Macs and Windows is to use the [Devcontainer](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers) feature that works great with VS Code and many other IDE's.
+Another convenient option to run containerlab on ARM/Intel Macs (and [Windows](windows.md#devcontainer)) is to use the [Devcontainer](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration/introduction-to-dev-containers) feature that works great with VS Code and many other IDE's.
 
 A development container (or devcontainer) allows you to use a container as a full-featured development environment. By creating the `devcontainer.json`[^4] file, you define the development environment for your project. Containerlab project maintains a set of pre-built multi-arch devcontainer images that you can use to run containerlabs.  
 It was initially created to power [containerlab in codespaces](manual/codespaces.md), but it is a perfect fit for running containerlab on a **wide range of OSes** such as macOS and Windows.
@@ -141,7 +141,6 @@ It was initially created to power [containerlab in codespaces](manual/codespaces
 
 1. Starting with **Containerlab v0.60.0**, you can use the devcontainer with ARM64 macOS to run containerlabs.
 2. VS Code [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) needs to be installed to use this feature with VS Code.
-3. [FiraCode Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/FiraCode.zip) is required to render the prompt nicely. Downloading this font is not mandatory, but highly recommended.
 ///
 
 To start using the devcontainer, you have to create a `devcontainer.json` file in your project directory where you have your containerlab topology. If you're using Containerlab the right way, your labs are neatly stored in a git repo; in this case the `devcontainer.json` file will be part of the repo.
