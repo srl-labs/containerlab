@@ -263,6 +263,22 @@ Chain DOCKER-USER (1 references)
 
 The rule will be removed together with the management network.
 
+///tip | RHEL 9 users
+By default RHEL 9 (and it's derivatives) will use `firewalld` as the [default firewall](https://access.redhat.com/solutions/7046655), containerlab's iptables and nftables rules will not work in this case and you will not have external access to your labs.
+
+To fix this you must disable `firewalld` and enable the `nftables` service.  
+
+**Take caution when disabling firewalls, you may be exposing things you shouldn't**
+
+```
+systemctl disable firewalld
+systemctl stop firewalld
+systemctl mask firewalld
+
+systemctl enable --now nftables
+```
+///
+
 Should you not want to enable external access to your nodes you can set `external-access` property to `false` under the management section of a topology:
 
 ```yaml
