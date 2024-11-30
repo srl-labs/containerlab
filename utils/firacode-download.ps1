@@ -7,10 +7,7 @@ $myWindowsPrincipal = new-object System.Security.Principal.WindowsPrincipal($myW
 # Get the security principal for the Administrator role
 $adminRole = [System.Security.Principal.WindowsBuiltInRole]::Administrator
 # Check to see if we are currently running "as Administrator"
-if ($myWindowsPrincipal.IsInRole($adminRole)) {
-    Write-Host "In"
-}
-else {
+if (!($myWindowsPrincipal.IsInRole($adminRole))) {
     # We are not running "as Administrator" - so relaunch as administrator
     
     # Create a new process object that starts PowerShell
@@ -79,5 +76,7 @@ foreach ($Font in $Fonts) {
 # Cleanup
 Set-Location $userProfile
 Remove-Item $tmpDirPath -Recurse
+
+Write-Host("Done!")
 
 pause
