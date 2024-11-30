@@ -7,7 +7,10 @@ $myWindowsPrincipal = new-object System.Security.Principal.WindowsPrincipal($myW
 # Get the security principal for the Administrator role
 $adminRole = [System.Security.Principal.WindowsBuiltInRole]::Administrator
 # Check to see if we are currently running "as Administrator"
-if (!$myWindowsPrincipal.IsInRole($adminRole)) {
+if ($myWindowsPrincipal.IsInRole($adminRole)) {
+    Write-Host "In"
+}
+else {
     # We are not running "as Administrator" - so relaunch as administrator
     
     # Create a new process object that starts PowerShell
@@ -42,7 +45,7 @@ if (!(Test-Path -PathType Container $tmpDirPath)) {
 Set-Location $tmpDirPath
 
 # Download font
-Invoke-WebRequest https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.zip -UseBasicParsing -OutFile ".\FiraCode.zip"
+Invoke-WebRequest "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.zip" -UseBasicParsing -OutFile ".\FiraCode.zip"
 
 # unzip
 Expand-Archive "FiraCode.zip" -DestinationPath ".\FiraCode" -Force
@@ -64,12 +67,12 @@ foreach ($Font in $Fonts) {
     }
 
     # check if the key exists
-    if (!(Get-ItemProperty "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts").PSObject.Properties.Name -contains $Font.BaseName) {
-        Write-Host("Creating registry key for " + $Font.BaseName) -ForegroundColor "Green"
-        New-ItemProperty -Name $Font.BaseName -Path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" -PropertyType string -Value $Font.name
+    if ((Get-ItemProperty "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts").PSObject.Properties.Name -contains $Font.BaseName) {
+        Write-Host("Not creating registry key for " + $Font.BaseName + " already exists") -ForegroundColor "Red"
     }
     else {
-        Write-Host("Not creating registry key for " + $Font.BaseName + " already exists") -ForegroundColor "Red"
+        Write-Host("Creating registry key for " + $Font.BaseName) -ForegroundColor "Green"
+        New-ItemProperty -Name $Font.BaseName -Path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Fonts" -PropertyType string -Value $Font.name
     }
 }
 
