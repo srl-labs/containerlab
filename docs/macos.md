@@ -10,14 +10,16 @@ hide:
     type: subtle-note
 
 1. Install [OrbStack](https://orbstack.dev)[^1] on your macOS
-2. Create an **arm64** Linux VM using OrbStack or alternatives
+2. Create an **arm64** Linux VM using OrbStack
 3. Install containerlab in the VM using the usual [installation instructions](install.md)
 4. Check what images can/should work on ARM64
 5. Deploy your lab. You can see the demo of this workflow in [this YT video][yt-demo].
 
+Or use the [Devcontainer](#devcontainer) if running another VM is not your thing.
+
 [yt-demo]: https://www.youtube.com/watch?v=_BTa-CiTpvI&t=1573s
 
-If you run an Intel mac, you can still use OrbStack to deploy a VM, but you will not need to worry about ARM64 images, as your processor runs x86_64 natively.
+<small>If you run an Intel mac, you still use OrbStack to deploy a VM, but you will not need to worry about the hard-to-find ARM64 images, as your processor runs x86_64 natively.</small>
 ///
 
 For quite some time, we have been saying that containerlab and macOS is a challenging mix. This statement has been echoed through multiple workshops/demos and was based on the following reasons:
@@ -122,6 +124,7 @@ There are many software solutions that deliver Docker on macOS, both for Intel a
 - :star: [OrbStack](https://orbstack.dev/) - a great UX and performance. A choice of many and is recommended by Containerlab maintainer. Free for personal use.
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) - the original and the most popular Docker on macOS.
 - [Rancher Desktop](https://rancherdesktop.io/) - another popular software.
+- [Container Desktop](https://container-desktop.com/) - a cross-platform solution.
 - [CoLima](https://github.com/abiosoft/colima) - a lightweight, CLI-based VM solution.
 
 The way most users use Containerlab on macOS, though, not directly leveraging Docker that is provided by one of the above solutions. Instead, it might be easier to spin up a VM, powered by the above-mentioned software products, and install Containerlab natively inside this arm64/Linux VM.  
@@ -134,8 +137,11 @@ Another convenient option to run containerlab on ARM/Intel Macs and Windows is t
 A development container (or devcontainer) allows you to use a container as a full-featured development environment. By creating the `devcontainer.json`[^4] file, you define the development environment for your project. Containerlab project maintains a set of pre-built multi-arch devcontainer images that you can use to run containerlabs.  
 It was initially created to power [containerlab in codespaces](manual/codespaces.md), but it is a perfect fit for running containerlab on a **wide range of OSes** such as macOS and Windows.
 
-/// note
-Starting with **Containerlab v0.60.0**, you can use the devcontainer with ARM64 macOS to run containerlabs.
+/// note | Requirements
+
+1. Starting with **Containerlab v0.60.0**, you can use the devcontainer with ARM64 macOS to run containerlabs.
+2. VS Code [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) needs to be installed to use this feature with VS Code.
+3. [FiraCode Nerd Font](https://github.com/ryanoasis/nerd-fonts/releases/download/v3.3.0/FiraCode.zip) is required to render the prompt nicely. Downloading this font is not mandatory, but highly recommended.
 ///
 
 To start using the devcontainer, you have to create a `devcontainer.json` file in your project directory where you have your containerlab topology. If you're using Containerlab the right way, your labs are neatly stored in a git repo; in this case the `devcontainer.json` file will be part of the repo.
@@ -209,7 +215,7 @@ That's why we also have the docker-outside-of-docker (dood) variant of the devco
         "--privileged"
     ],
     "mounts": [
-        "type=bind,src=/run/netns,dst=/run/netns",
+        "type=bind,src=/run/docker/netns,dst=/run/docker/netns",
         "type=bind,src=/var/lib/docker,dst=/var/lib/docker",
         "type=bind,src=/lib/modules,dst=/lib/modules"
     ],
