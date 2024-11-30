@@ -13,7 +13,7 @@
         "--privileged"
     ],
     "mounts": [
-        "type=bind,src=/run/netns,dst=/run/netns",
+        "type=bind,src=/run/docker/netns,dst=/run/docker/netns",
         "type=bind,src=/var/lib/docker,dst=/var/lib/docker",
         "type=bind,src=/lib/modules,dst=/lib/modules"
     ],
@@ -31,6 +31,15 @@
     "remoteUser": "vscode",
     "customizations": {
         "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "zsh",
+                "terminal.integrated.profiles.linux": {
+                    "zsh": {
+                        "path": "/bin/zsh"
+                    }
+                },
+                "terminal.integrated.fontFamily": "FiraCode Nerd Font"
+            },
             "extensions": [
                 "ms-azuretools.vscode-docker",
                 // Python.

@@ -21,6 +21,15 @@
     "remoteUser": "vscode",
     "customizations": {
         "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "zsh",
+                "terminal.integrated.profiles.linux": {
+                    "zsh": {
+                        "path": "/bin/zsh"
+                    }
+                },
+                "terminal.integrated.fontFamily": "FiraCode Nerd Font"
+            },
             "extensions": [
                 "ms-azuretools.vscode-docker",
                 // Python.
