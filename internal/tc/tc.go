@@ -26,7 +26,9 @@ func NewTC(ns int) (*tc.Tc, error) {
 }
 
 // SetImpairments sets the impairments on the given interface of a node.
-func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, jitter time.Duration, loss float64, rate uint64, probability float64) (*tc.Object, error) {
+func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, jitter time.Duration,
+	loss float64, rate uint64, probability float64,
+) (*tc.Object, error) {
 	err := tcnl.SetOption(netlink.ExtendedAcknowledge, true)
 	if err != nil {
 		return nil, fmt.Errorf("could not set option ExtendedAcknowledge: %v", err)

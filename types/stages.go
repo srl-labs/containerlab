@@ -20,7 +20,7 @@ const (
 )
 
 var (
-	// the defauts we need as pointers, so assign them to vars, such that we can acquire the pointer
+	// the defauts we need as pointers, so assign them to vars, such that we can acquire the pointer.
 	defaultCommandExecutionPhase = CommandExecutionPhaseEnter
 	defaultCommandTarget         = CommandTargetContainer
 )
@@ -180,9 +180,9 @@ const (
 type ExecTarget string
 
 const (
-	// CommandTargetContainer determines that the commands are meant to be executed within the container
+	// CommandTargetContainer determines that the commands are meant to be executed within the container.
 	CommandTargetContainer ExecTarget = "container"
-	// CommandTargetHost determines that the commands are meant to be executed on the host system
+	// CommandTargetHost determines that the commands are meant to be executed on the host system.
 	CommandTargetHost ExecTarget = "host"
 )
 

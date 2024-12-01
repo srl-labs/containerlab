@@ -79,7 +79,7 @@ func (d *DependencyNode) getExecs(stage types.WaitForStage, execPhase types.Exec
 		return nil, fmt.Errorf("stage %s unknown", stage)
 	}
 
-	var result = []*types.Exec{}
+	result := []*types.Exec{}
 	for _, x := range sb.Execs {
 		// filter the list of commands for the given phase (on-enter / on-exit)
 		if x.Phase == execPhase {
@@ -136,7 +136,6 @@ func (d *DependencyNode) runExecs(ctx context.Context, execPhase types.ExecPhase
 		execResultCollection.Add(hostname, execResult)
 	}
 	execResultCollection.Log()
-
 }
 
 // Done is called by a node that has finished all tasks for the provided stage.

@@ -49,7 +49,8 @@ func init() {
 	netemSetCmd.Flags().Float64VarP(&netemLoss, "loss", "", 0,
 		"random packet loss expressed in percentage (e.g. 0.1 means 0.1%)")
 	netemSetCmd.Flags().Uint64VarP(&netemRate, "rate", "", 0, "link rate limit in kbit")
-	netemSetCmd.Flags().Float64VarP(&netemCorruption, "corruption", "", 0, "random packet corruption probability expressed in percentage (e.g. 0.1 means 0.1%)")
+	netemSetCmd.Flags().Float64VarP(&netemCorruption, "corruption", "", 0,
+		"random packet corruption probability expressed in percentage (e.g. 0.1 means 0.1%)")
 
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
@@ -231,7 +232,8 @@ func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 
 	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
-	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/
+		float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 
 	return tableWriter.Row{
 		ifDisplayName,
