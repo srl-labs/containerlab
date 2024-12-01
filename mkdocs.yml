@@ -61,7 +61,7 @@ nav:
           - External container: manual/kinds/ext-container.md
           - Host: manual/kinds/host.md
       - Configuration artifacts: manual/conf-artifacts.md
-      - Network wiring concepts: manual/network.md
+      - Network: manual/network.md
       - Packet capture & Wireshark: manual/wireshark.md
       - VM based routers integration: manual/vrnetlab.md
       - Clabernetes:

@@ -95,6 +95,8 @@ It was initially created to power [containerlab in codespaces](manual/codespaces
 
 Since the devcontainer works exactly the same way on Windows and macOS, [please refer to the macOS](macos.md#devcontainer) section for the detailed documentation and a video walkthrough.
 
+-{{youtube(url='https://www.youtube.com/embed/Xue1pLiO0qQ')}}-
+
 A few things to keep in mind when using devcontainers on windows:
 
 1. If using VS Code, you will need to install the server component in your WSL instance, this will require you to install `wget`, as VS Code installer requires it.

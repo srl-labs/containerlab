@@ -277,6 +277,7 @@ systemctl mask firewalld
 
 systemctl enable --now nftables
 ```
+
 ///
 
 Should you not want to enable external access to your nodes you can set `external-access` property to `false` under the management section of a topology:
