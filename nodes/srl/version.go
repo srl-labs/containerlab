@@ -95,7 +95,11 @@ set / acl acl-filter cpm type ipv6 entry 368 match transport destination-port op
 set / acl acl-filter cpm type ipv6 entry 368 match transport destination-port value 57401
 set / acl acl-filter cpm type ipv6 entry 368 action accept`
 
-	netconfConfig = `
+	netconfConfig = `set / system netconf-server mgmt admin-state enable ssh-server mgmt-netconf
+set / system ssh-server mgmt-netconf admin-state enable
+set / system ssh-server mgmt-netconf network-instance mgmt
+set / system ssh-server mgmt-netconf port 830
+set / system ssh-server mgmt-netconf disable-shell true
 `
 )
 

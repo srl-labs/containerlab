@@ -97,10 +97,24 @@ docker run -i -t ghcr.io/hellt/net-snmp-tools:5.9.4-r0 \
 ```
 
 ///
-/// note
-Default credentials[^4]: `admin:NokiaSrl1!`  
-Containerlab will automatically enable public-key authentication for `root`, `admin` and `linuxadmin` users if public key files are found at `~/.ssh` directory[^1].
+
+/// tab | NETCONF
+From SR Linux release 24.7.1 onwards, SR Linux comes with NETCONF server enabled and running on port 830.
+
+```bash
+docker run --rm --network clab -i -t \
+ghcr.io/hellt/netconf-console2:3.0.1 \
+--host srl --port 830 -u admin -p 'NokiaSrl1!' \
+--hello
+```
+
 ///
+
+### Credentials
+
+Default credentials[^4]: `admin:NokiaSrl1!`
+
+Containerlab will automatically enable public-key authentication for `root`, `admin` and `linuxadmin` users if public key files are found at `~/.ssh` directory[^1].
 
 ## Interfaces naming
 
@@ -166,7 +180,7 @@ SR Linux uses a `/etc/opt/srlinux/config.json` file to persist its configuration
 
 #### Default node configuration
 
-When a node is defined without the `startup-config` statement present, containerlab will make [additional configurations](https://github.com/srl-labs/containerlab/blob/srl-template-in-a-file/nodes/srl/srl_default_config.go.tpl) on top of the factory config:
+When a node is defined without the `startup-config` statement present, containerlab will make [additional configurations](https://github.com/srl-labs/containerlab/blob/main/nodes/srl/srl_default_config.go.tpl) on top of the factory config:
 
 ```yaml
 # example of a topo file that does not define a custom startup-config
@@ -305,23 +319,6 @@ INFO[0001] saved SR Linux configuration from leaf2 node. Output:
     Saved current running configuration as initial (startup) configuration '/etc/opt/srlinux/config.json'
 ```
 
-#### User defined custom agents for SR Linux nodes
-
-SR Linux supports custom "agents", i.e. small independent pieces of software that extend the functionality of the core platform and integrate with the CLI and the rest of the system. To deploy an agent, a YAML configuration file must be placed under `/etc/opt/srlinux/appmgr/`. This feature adds the ability to copy agent YAML file(s) to the config directory of a specific SRL node, or all such nodes.
-
-```yaml
-name: srl_lab_with_custom_agents
-topology:
-  nodes:
-    srl1:
-      kind: nokia_srlinux
-      ...
-      extras:
-        srl-agents:
-        - path1/my_custom_agent.yml
-        - path2/my_other_agent.yml
-```
-
 ### TLS
 
 By default, containerlab will generate TLS certificates and keys for each SR Linux node of a lab. The TLS-related files that containerlab creates are located in the TLS directory, which can be found by the `<lab-directory>/.tls/` path. Here is a list of files that containerlab creates relative to the TLS directory:
@@ -361,6 +358,14 @@ These additions are meant to make all gRPC services available to the user out of
 
 Besides augmenting the factory-provided `mgmt` gRPC server block, containerlab also adds a new `insecure-mgmt` gRPC server that provides the same services as the `mgmt` server but without TLS. This server runs on port 57401 and is meant to be used for testing purposes as well as for local gNMI clients running as part of the NDK apps or local Event Handler scripts.
 
+### SSH Keys
+
+Containerlab will read the public keys found in `~/.ssh` directory of a sudo user as well as the contents of a `~/.ssh/authorized_keys` file if it exists[^2]. The public keys will be added to the startup configuration for `admin` and `linuxadmin` users to enable passwordless access.
+
+### NETCONF
+
+Containerlab will configure the `netconf-mgmt` ssh server running over port 830 and the netconf-server instance using this SSH server to enable NETCONF management.
+
 ### License
 
 SR Linux container can run without a license emulating the datacenter types (7220 IXR) :partying_face:.  
@@ -370,7 +375,7 @@ The license file lifts these limitations as well as unlocks chassis-based platfo
 
 ## Container configuration
 
-To start an SR Linux NOS containerlab uses the configuration that is described in [SR Linux Software Installation Guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE16113AAAATQZZA01_V1_SR%20Linux%20R20.6%20Software%20Installation.pdf)
+To start an SR Linux NOS containerlab uses the configuration that is described in SR Linux Software Installation Guide
 
 /// tab | Startup command
 `sudo bash -c /opt/srlinux/bin/sr_linux`
@@ -410,16 +415,6 @@ banner  cli  config.json  devices  tls  ztp
 ```
 
 The topology file that defines the emulated hardware type is driven by the value of the kinds `type` parameter. Depending on a specified `type`, the appropriate content will be populated into the `topology.yml` file that will get mounted to `/tmp/topology.yml` directory inside the container in `ro` mode.
-
-#### Authorized keys
-
-Additionally, containerlab will mount the `authorized_keys` file that will have contents of every public key found in `~/.ssh` directory as well as the contents of a `~/.ssh/authorized_keys` file if it exists[^2]. This file will be mounted to `~/.ssh/authorized_keys` path for the following users:
-
-* `root`
-* `linuxadmin`
-* `admin`
-
-This will enable passwordless access for the users above if any public key is found in the user's directory.
 
 #### YUM/APT repositories
 
