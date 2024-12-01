@@ -52,7 +52,9 @@ wsl --install -d Debian #(1)!
 1. Unregistering a WSL VM will remove the VM. You should reference a WSL instance by the name you saw in the `wsl -l -v` command.
 2. Installing a new WSL system will prompt you to choose a username and password.
 
-Once the installation is complete, you will enter the WSL shell, which is a regular Linux shell[^2]. Congratulations, you have a working WSL system that can run containerlab.
+Once the installation is complete, you will enter the WSL shell, which is a regular Linux shell[^2].
+
+It is recommended to reboot your Windows system after installing the WSL. When the reboot is done you have a working WSL system that can run containerlab, congratulations!
 
 ## Installing docker and containerlab on WSL
 
@@ -92,6 +94,17 @@ A development container (or devcontainer) allows you to use a container as a ful
 It was initially created to power [containerlab in codespaces](manual/codespaces.md), but it is a perfect fit for running containerlab on a **wide range of OSes** such as macOS and Windows.
 
 Since the devcontainer works exactly the same way on Windows and macOS, [please refer to the macOS](macos.md#devcontainer) section for the detailed documentation and a video walkthrough.
+
+A few things to keep in mind when using devcontainers on windows:
+
+1. If using VS Code, you will need to install the server component in your WSL instance, this will require you to install `wget`, as VS Code installer requires it.
+
+    ```bash
+    sudo apt -y install wget
+    ```
+
+    Then you will be able to type `code .` in the cloned repository to open the project in VS Code.
+2. As with macOS, you will likely wish to use a Docker-outside-of-Docker method, where the devcontainer will have access to the images and containers from the WSL VM.
 
 [^1]: If you don't have a decent terminal emulator on Windows, install "Windows Terminal" from the Microsoft Store.
 [^2]: The kernel and distribution parameters can be checked as follows:
