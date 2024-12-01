@@ -147,7 +147,7 @@ Verify TLS works with JSON-RPC, certificate check and IP address as SAN
 
 Verify NETCONF works
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    docker run --rm --network clab -i -t ghcr.io/hellt/netconf-console2:3.0.1 --host clab-${lab-name}-srl1 --port 830 -u admin -p 'NokiaSrl1!' --hello
+    ...    sudo docker run --rm --network clab -i -t ghcr.io/hellt/netconf-console2:3.0.1 --host clab-${lab-name}-srl1 --port 830 -u admin -p 'NokiaSrl1!' --hello
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    base:1.1
