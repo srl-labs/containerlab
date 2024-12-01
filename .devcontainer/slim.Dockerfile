@@ -32,10 +32,6 @@ RUN bash -c 'ARCH=$(uname -m | sed "s/x86_64/amd64/" | sed "s/aarch64/arm64/") &
     chmod +x /usr/local/bin/gh && \
     rm -rf /tmp/gh_${CLEAN_VERSION}_linux_${ARCH}'
 
-# Install gNMIc and gNOIc
-RUN bash -c "$(curl -sL https://get-gnmic.openconfig.net)" && \
-    bash -c "$(curl -sL https://get-gnoic.kmrd.dev)"
-
 # Add empty docker config files to avoid clab warnings for root user
 RUN mkdir -p /root/.docker && echo "{}" > /root/.docker/config.json
 
@@ -51,23 +47,11 @@ COPY ./.devcontainer/dclab /usr/local/bin/dclab
 # Create SSH key for vscode user to enable passwordless SSH to devices
 RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 
-# Install pyenv
-RUN bash -c "$(curl https://pyenv.run)"
-
 # Add empty docker config files to avoid clab warnings for vscode user
 RUN mkdir -p /home/vscode/.docker && echo "{}" > /home/vscode/.docker/config.json
 
 # Setup Zsh and plugins
-COPY ./.devcontainer/zsh/.zshrc /home/vscode/.zshrc
+COPY ./.devcontainer/zsh/.zshrc-slim /home/vscode/.zshrc
 COPY ./.devcontainer/zsh/.p10k.zsh /home/vscode/.p10k.zsh
 COPY ./.devcontainer/zsh/install-zsh-plugins.sh /tmp/install-zsh-plugins.sh
-COPY ./.devcontainer/zsh/install-tools-completions.sh /tmp/install-tools-completions.sh
-RUN bash -c "/tmp/install-zsh-plugins.sh && /tmp/install-tools-completions.sh"
-
-# Setup pyenv virtual environment for clab tests
-COPY tests/requirements.txt /tmp/requirements.txt
-ENV PYENV_ROOT="/home/vscode/.pyenv"
-ENV PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
-RUN pyenv virtualenv system clab-rf \
-    && pyenv global clab-rf \
-    && pip install -r /tmp/requirements.txt
+RUN bash -c "/tmp/install-zsh-plugins.sh"

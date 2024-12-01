@@ -1,0 +1,61 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+    "build": {
+        "dockerfile": "../Dockerfile",
+        "context": "../..",
+        "args": {
+            "CLAB_VERSION": "${localEnv:CLAB_VERSION}"
+        }
+    },
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker:2": {
+            // docker/moby version is that old because newer ones failed to install under emulation
+            // see https://github.com/moby/moby/issues/48987#issuecomment-2507267417
+            // and https://github.com/moby/moby/issues/47895#issuecomment-2507528678
+            "version": "23.0.7",
+            "dockerDashComposeVersion": "none",
+            "installDockerComposeSwitch": "false"
+        },
+        // Add sshd to support gh cli codespace cp.
+        "ghcr.io/devcontainers/features/sshd:1": {
+            "version": "latest"
+        },
+        "ghcr.io/devcontainers/features/go:1": {
+            "version": "1.22"
+        }
+    },
+    "remoteUser": "vscode",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "zsh",
+                "terminal.integrated.profiles.linux": {
+                    "zsh": {
+                        "path": "/bin/zsh"
+                    }
+                },
+                "terminal.integrated.fontFamily": "FiraCode Nerd Font, Menlo, Monaco, Cascadia Code, Consolas, Courier New, monospace"
+            },
+            "extensions": [
+                // go
+                "golang.go",
+                "mhutchie.git-graph",
+                "ms-azuretools.vscode-docker",
+                // Python.
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                // Errors and highlighters.
+                "mechatroner.rainbow-csv",
+                "redhat.vscode-yaml",
+                "jinliming2.vscode-go-template",
+                // markdown
+                "yzhang.markdown-all-in-one",
+                "davidanson.vscode-markdownlint",
+                // proto
+                "zxh404.vscode-proto3"
+            ]
+        }
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/${containerWorkspaceFolder},type=bind",
+    "workspaceFolder": "/clab"
+}

@@ -38,7 +38,7 @@ To install all components at once, run the following command on any of the suppo
 curl -sL https://containerlab.dev/setup | sudo -E bash -s "all"
 ```
 
-Complete installation and enable sudo-less `docker` command execution please run `newgrp docker` or logout and log back in.
+To complete installation and enable sudo-less `docker` command execution, please run `newgrp docker` or logout and log back in.
 
 <!-- --8<-- [end:quick-setup-script-cmd] -->
 
@@ -181,6 +181,16 @@ yum install https://github.com/srl-labs/containerlab/releases/download/v0.7.0/co
 ///
 The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
 
+## Windows
+
+Containerlab runs on Windows powered by Windows Subsystem Linux (aka WSL), where you can run Containerlab directly or in a Devcontainer. Open up [Containerlab on Windows](windows.md) documentation for more details.
+
+## Apple macOS
+
+Running containerlab on macOS is possible both on ARM (M1/M2/M3/etc) and Intel chipsets. For a long time, we had many caveats around M-chipsets on Macs, but with the introduction of ARM64-native NOSes like Nokia SR Linux and Arista cEOS, powered by Rosetta emulation for x86_64-based NOSes, it is now possible to run containerlab on ARM-based Macs.
+
+Since we wanted to share our experience with running containerlab on macOS in details, we have created a separate - [Containerlab on macOS](macos.md) - guide.
+
 ## Container
 
 Containerlab is also available in a container packaging. The latest containerlab release can be pulled with:
@@ -244,31 +254,9 @@ tar -zxvf /tmp/clab.tar.gz -C /etc/containerlab
 mv /etc/containerlab/containerlab /usr/bin && chmod a+x /usr/bin/containerlab
 ```
 
-## Windows Subsystem Linux (WSL)
-
-Containerlab [runs](https://twitter.com/ntdvps/status/1380915270328401922) on WSL, but you need to [install docker-ce](https://docs.docker.com/engine/install/) inside the WSL2 linux system instead of using Docker Desktop[^2].
-
-If you are running Ubuntu/Debian as your WSL2 machine, you can use the [quick setup this script](https://github.com/srl-labs/containerlab/blob/main/utils/quick-setup.sh) to install docker-ce.
-
-```bash
-curl -L https://containerlab.dev/setup | sudo bash -s "install-docker" | \
-```
-
-Once installed, issue `sudo service docker start` to start the docker service inside WSL2 machine.
-
-/// details | Running VM-based routers inside WSL
-In Windows 11 with WSL2 it is now possible to [enable KVM support](https://serverfault.com/a/1115773/351978). Let us know if that worked for you in our [Discord](community.md).
-///
-
-## Apple macOS
-
-Running containerlab on macOS is possible both on ARM (M1/M2/M3/etc) and Intel chipsets. For a long time, we had many caveats around M-chipsets on Macs, but with the introduction of ARM64-native NOSes like Nokia SR Linux and Arista cEOS, powered by Rosetta emulation for x86_64-based NOSes, it is now possible to run containerlab on ARM-based Macs.
-
-Since we wanted to share our experience with running containerlab on macOS in details, we have created a separate - [Containerlab on macOS](macos.md) - guide.
-
 ## Upgrade
 
-To upgrade `containerlab` to the latest available version issue the following command[^3]:
+To upgrade `containerlab` to the latest available version issue the following command[^2]:
 
 ```
 sudo -E containerlab version upgrade
@@ -337,6 +325,5 @@ or more globally:
 sudo setsebool -P selinuxuser_execmod 1
 ```
 
-[^1]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. Architecture: AMD64. IPv6 should not be disabled in the kernel.
-[^2]: No need to uninstall Docker Desktop, just make sure that it is not integrated with WSL2 machine that you intend to use with containerlab. Moreover, you can make it even work with Docker Desktop with a [few additional steps](https://twitter.com/networkop1/status/1380976461641834500/photo/1), but installing docker-ce into the WSL maybe more intuitive.
-[^3]: only available if installed from packages
+[^1]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. IPv6 should not be disabled in the kernel.
+[^2]: only available if installed from packages
