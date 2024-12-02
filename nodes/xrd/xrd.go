@@ -135,10 +135,12 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	cfg := filepath.Join(n.Cfg.LabDir, "first-boot.cfg")
 	nodeCfg.ResStartupConfig = cfg
 
+	mgmt_script_path := filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh")
+
 	// generate script file
-	if !utils.FileExists(filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh")) {
-		utils.CreateFile(filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh"), "")
-		utils.AdjustFileACLs(filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh"))
+	if !utils.FileExists(mgmt_script_path) {
+		utils.CreateFile(mgmt_script_path, "")
+		os.Chmod(mgmt_script_path, 0775) // rwxrwxr-x
 	}
 
 	// set mgmt IPv4/IPv6 gateway as it is already known by now
