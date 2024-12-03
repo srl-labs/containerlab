@@ -34,7 +34,7 @@ Juniper vMX node launched with containerlab can be managed via the following int
     ssh admin@<container-name> -p 830 -s netconf
     ```
 === "gNMI"
-    using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
+    using the best in class [gnmic](https://gnmic.openconfig.net/) gNMI client as an example:
     ```bash
     gnmic -a <container-name/node-mgmt-address> --insecure \
     -u admin -p admin@123 \

@@ -7,6 +7,7 @@
 | **Name**                      | clos02                                                               |
 
 ## Description
+
 This labs provides a lightweight folded 5-stage CLOS fabric with Super Spine level bridging two PODs.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:7,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
@@ -14,20 +15,24 @@ This labs provides a lightweight folded 5-stage CLOS fabric with Super Spine lev
 The topology is additionally equipped with the Linux containers connected to leaves to facilitate use cases which require access side emulation.
 
 ## Use cases
+
 With this lightweight CLOS topology a user can exhibit the following scenarios:
 
 * perform configuration tasks applied to the 5-stage CLOS fabric
 * demonstrate fabric behavior leveraging the user-emulating linux containers attached to the leaves
 
 ## Configuration setup
+
 To help you get faster to the provisioning of the services on this mini fabric we added an auto-configuration script to this example.
 
 In order to make a fully deterministic lab setup we added another topology file called [setup.clos02.clab.yml][setup-topofile] where the management interfaces of each network node and clients are statically addressed with [`mgmt-ipv4/6` config option](../manual/nodes.md#mgmt-ipv4). Other than that, the topology files does not have any changes.
 
 ### Prerequisites
-The configuration of the fabric elements is carried out with [`gnmic` client](https://gnmic.kmrd.dev/install/), therefore it needs to be installed on the machine where you run the lab.
+
+The configuration of the fabric elements is carried out with [`gnmic` client](https://gnmic.openconfig.net/install/), therefore it needs to be installed on the machine where you run the lab.
 
 ### Run instructions
+
 First deploy this topology as per usual:
 
 ```
@@ -40,11 +45,9 @@ Once the lab is deployed, execute the [configuration script][setup-script]:
 bash setup.sh
 ```
 
-
-
 ### Configuration schema
-The [setup script][setup-script] will use the following IP addresses across the nodes of the lab:
 
+The [setup script][setup-script] will use the following IP addresses across the nodes of the lab:
 
 The script will configure the following:
 
