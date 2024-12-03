@@ -140,7 +140,7 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	// generate script file
 	if !utils.FileExists(mgmt_script_path) {
 		utils.CreateFile(mgmt_script_path, "")
-		os.Chmod(mgmt_script_path, 0775) // rwxrwxr-x
+		os.Chmod(mgmt_script_path, 0775) // skipcq: GSC-G302
 	}
 
 	// set mgmt IPv4/IPv6 gateway as it is already known by now
