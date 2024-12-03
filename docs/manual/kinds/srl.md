@@ -50,7 +50,7 @@ docker exec -it <container-name/id> sr_cli
 or with SSH `ssh admin@<container-name>`
 ///
 /// tab | gNMI
-using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
+using the best in class [gnmic](https://gnmic.openconfig.net/) gNMI client as an example:
 
 ```bash
 gnmic -a <container-name/node-mgmt-address> --skip-verify \
@@ -93,7 +93,7 @@ SR Linux nodes come up with SNMPv2 server enabled and running on port 161. The d
 
 ```shell
 docker run -i -t ghcr.io/hellt/net-snmp-tools:5.9.4-r0 \
-  snmpwalk -v 2c -c public $address
+  snmpwalk -v 2c -c public <node-name>
 ```
 
 ///
@@ -101,10 +101,12 @@ docker run -i -t ghcr.io/hellt/net-snmp-tools:5.9.4-r0 \
 /// tab | NETCONF
 From SR Linux release 24.7.1 onwards, SR Linux comes with NETCONF server enabled and running on port 830.
 
+Using [netconf-console2](https://github.com/hellt/netconf-console2-container):
+
 ```bash
 docker run --rm --network clab -i -t \
 ghcr.io/hellt/netconf-console2:3.0.1 \
---host srl --port 830 -u admin -p 'NokiaSrl1!' \
+--host <node-name> --port 830 -u admin -p 'NokiaSrl1!' \
 --hello
 ```
 
@@ -112,9 +114,9 @@ ghcr.io/hellt/netconf-console2:3.0.1 \
 
 ### Credentials
 
-Default credentials[^4]: `admin:NokiaSrl1!`
+Default credentials[^1]: `admin:NokiaSrl1!`
 
-Containerlab will automatically enable public-key authentication for `root`, `admin` and `linuxadmin` users if public key files are found at `~/.ssh` directory[^1].
+Containerlab will automatically enable public-key authentication for `root`, `admin` and `linuxadmin` users if public key files are found at `~/.ssh` directory[^2].
 
 ## Interfaces naming
 
@@ -360,7 +362,7 @@ Besides augmenting the factory-provided `mgmt` gRPC server block, containerlab a
 
 ### SSH Keys
 
-Containerlab will read the public keys found in `~/.ssh` directory of a sudo user as well as the contents of a `~/.ssh/authorized_keys` file if it exists[^2]. The public keys will be added to the startup configuration for `admin` and `linuxadmin` users to enable passwordless access.
+Containerlab will read the public keys found in `~/.ssh` directory of a sudo user as well as the contents of a `~/.ssh/authorized_keys` file if it exists[^4]. The public keys will be added to the startup configuration for `admin` and `linuxadmin` users to enable passwordless access.
 
 ### NETCONF
 
@@ -477,7 +479,7 @@ The easiest way to enable SSSE3 instruction set is to configure the hypervisor t
 
 Or it's also possible via the proxmox configuration file `/etc/pve/qemu-server/vmid.conf`.
 
-[^1]: The `authorized_keys` file will be created with the content of all found public keys. This file will be bind-mounted using the respecting paths inside SR Linux to enable password-less access. Experimental feature.
-[^2]: If running with `sudo`, add `-E` flag to sudo to preserve user' home directory for this feature to work as expected.
+[^1]: Prior to SR Linux 22.11.1, the default credentials were `admin:admin`.
+[^2]: The `authorized_keys` file will be created with the content of all found public keys. This file will be bind-mounted using the respecting paths inside SR Linux to enable password-less access. Experimental feature.
 [^3]: CLI configs can be saved also in the "flat" format using `info flat` command.
-[^4]: Prior to SR Linux 22.11.1, the default credentials were `admin:admin`.
+[^4]: If running with `sudo`, add `-E` flag to sudo to preserve user' home directory for this feature to work as expected.

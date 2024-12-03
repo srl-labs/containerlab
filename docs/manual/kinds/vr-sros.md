@@ -34,16 +34,25 @@ ssh admin@<container-name/id>
 ```
 
 ///
-/// tab | "NETCONF"
+/// tab | NETCONF
 NETCONF server is running over port 830
 
 ```bash
-ssh root@<container-name> -p 830 -s netconf
+ssh admin@<node-name> -p 830 -s netconf
+```
+
+or using [netconf-console2](https://github.com/hellt/netconf-console2-container) container:
+
+```bash
+docker run --rm --network clab -i -t \
+ghcr.io/hellt/netconf-console2:3.0.1 \
+--host <node-name> --port 830 -u admin -p 'admin' \
+--hello
 ```
 
 ///
-/// tab | "gNMI"
-using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
+/// tab | gNMI
+using the best in class [gnmic](https://gnmic.openconfig.net) gNMI client as an example:
 
 ```bash
 gnmic -a <container-name/node-mgmt-address> --insecure \
@@ -52,7 +61,7 @@ capabilities
 ```
 
 ///
-/// tab | "Telnet"
+/// tab | Telnet
 serial port (console) is exposed over TCP port 5000:
 
 ```bash
