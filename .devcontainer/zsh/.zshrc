@@ -40,6 +40,8 @@ zstyle ':autocomplete:history-search-backward:*' list-lines 20
 # auto completion list "bright white" - https://en.wikipedia.org/wiki/ANSI_escape_code#3-bit_and_4-bit
 zstyle ':completion:*'  list-colors '=*=97'
 
+# paste stuff immediately
+zstyle ':bracketed-paste-magic' active-widgets '.self-*'
 
 # Uncomment the following line to use case-sensitive completion.
 # CASE_SENSITIVE="true"
