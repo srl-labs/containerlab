@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"xrd", "cisco_xrd"}
+	KindNames          = []string{"xrd", "cisco_xrd"}
 	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
 	xrdEnv             = map[string]string{
 		"XR_FIRST_BOOT_CONFIG": "/etc/xrd/first-boot.cfg",
@@ -49,7 +49,7 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(KindNames, func() nodes.Node {
 		return new(xrd)
 	}, defaultCredentials)
 }

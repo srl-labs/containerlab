@@ -29,7 +29,7 @@ const (
 )
 
 var (
-	kindnames = []string{"ceos", "arista_ceos"}
+	KindNames = []string{"ceos", "arista_ceos"}
 	// defined env vars for the ceos.
 	ceosEnv = map[string]string{
 		"CEOS":                                "1",
@@ -52,7 +52,7 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(KindNames, func() nodes.Node {
 		return new(ceos)
 	}, defaultCredentials)
 }

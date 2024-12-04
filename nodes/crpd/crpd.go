@@ -26,7 +26,7 @@ const (
 )
 
 var (
-	kindnames = []string{"crpd", "juniper_crpd"}
+	KindNames = []string{"crpd", "juniper_crpd"}
 	//go:embed crpd.cfg
 	defaultCfgTemplate string
 
@@ -41,7 +41,7 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(KindNames, func() nodes.Node {
 		return new(crpd)
 	}, defaultCredentials)
 }

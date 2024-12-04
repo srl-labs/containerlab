@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"juniper_vmx", "vr-vmx", "vr-juniper_vmx"}
+	KindNames          = []string{"juniper_vmx", "vr-vmx", "vr-juniper_vmx"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin@123")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:et|xe|ge)-0/0/(?P<port>\d+)$`)
@@ -35,7 +35,7 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(KindNames, func() nodes.Node {
 		return new(vrVMX)
 	}, defaultCredentials)
 }
