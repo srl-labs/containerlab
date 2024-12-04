@@ -32,7 +32,7 @@ type LinkCommonParams struct {
 	MTU             int                    `yaml:"mtu,omitempty"`
 	Labels          map[string]string      `yaml:"labels,omitempty"`
 	Vars            map[string]interface{} `yaml:"vars,omitempty"`
-	DeploymentState LinkDeploymentState
+	DeploymentState LinkDeploymentState    `yaml:",omitempty"`
 }
 
 // GetMTU returns the MTU of the link.
