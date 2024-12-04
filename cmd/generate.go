@@ -16,27 +16,104 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/links"
+	"github.com/srl-labs/containerlab/nodes/ceos"
+	"github.com/srl-labs/containerlab/nodes/crpd"
+	"github.com/srl-labs/containerlab/nodes/rare"
+	"github.com/srl-labs/containerlab/nodes/sonic"
 	"github.com/srl-labs/containerlab/nodes/srl"
+	"github.com/srl-labs/containerlab/nodes/vr_sros"
+	"github.com/srl-labs/containerlab/nodes/vr_veos"
+	"github.com/srl-labs/containerlab/nodes/vr_vjunosevolved"
+	"github.com/srl-labs/containerlab/nodes/vr_vjunosswitch"
+	"github.com/srl-labs/containerlab/nodes/vr_vmx"
+	"github.com/srl-labs/containerlab/nodes/vr_vqfx"
+	"github.com/srl-labs/containerlab/nodes/vr_vsrx"
+	"github.com/srl-labs/containerlab/nodes/vr_xrv9k"
+	"github.com/srl-labs/containerlab/nodes/xrd"
 	"github.com/srl-labs/containerlab/types"
 	"gopkg.in/yaml.v2"
 )
 
-var interfaceFormat = map[string]string{
-	"srl":      "e1-%d",
-	"ceos":     "eth%d",
-	"crpd":     "eth%d",
-	"sonic-vs": "eth%d",
-	"linux":    "eth%d",
-	"bridge":   "veth%d",
-	"vr-sros":  "eth%d",
-	"vr-vmx":   "ge-0/0/%d",
-	"vr-vsrx":  "ge-0/0/%d",
-	"vr-vqfx":  "ge-0/0/%d",
-	"vr-xrv9k": "Gi0/0/0/%d",
-	"vr-veos":  "Et1/%d",
-	"xrd":      "eth%d",
-	"rare":     "eth%d",
+func buildInterfaceFormatMap() map[string]string {
+	m := make(map[string]string)
+
+	// Add SR Linux kinds
+	for _, k := range srl.KindNames {
+		m[k] = "e1-%d"
+	}
+
+	// Add Arista cEOS kinds
+	for _, k := range ceos.KindNames {
+		m[k] = "eth%d"
+	}
+
+	// Add Arista vEOS kinds
+	for _, k := range vr_veos.KindNames {
+		m[k] = "Et1/%d"
+	}
+
+	// Add Nokia SR OS kinds
+	for _, k := range vr_sros.KindNames {
+		m[k] = "1/1/%d"
+	}
+
+	// Add Juniper cRPD
+	for _, k := range crpd.KindNames {
+		m[k] = "eth%d"
+	}
+
+	// Add Juniper VMX kinds
+	for _, k := range vr_vmx.KindNames {
+		m[k] = "ge-0/0/%d"
+	}
+
+	// Add Juniper vSRX kinds
+	for _, k := range vr_vsrx.KindNames {
+		m[k] = "ge-0/0/%d"
+	}
+
+	// Add Juniper vQFX kinds
+	for _, k := range vr_vqfx.KindNames {
+		m[k] = "ge-0/0/%d"
+	}
+
+	// Add Juniper vJunos-Switch/Router
+	for _, k := range vr_vjunosswitch.KindNames {
+		m[k] = "et-0/0/%d"
+	}
+
+	// Add Juniper vJunos-Evolved
+	for _, k := range vr_vjunosevolved.KindNames {
+		m[k] = "et-0/0/%d"
+	}
+
+	// Add Cisco XRv9k kinds
+	for _, k := range vr_xrv9k.KindNames {
+		m[k] = "Gi0/0/0/%d"
+	}
+
+	// Add Cisco XRd
+	for _, k := range xrd.KindNames {
+		m[k] = "eth%d"
+	}
+
+	// Add RARE FreeRtr
+	for _, k := range rare.KindNames {
+		m[k] = "eth%d"
+	}
+
+	// Add SONiC VS
+	for _, k := range sonic.KindNames {
+		m[k] = "eth%d"
+	}
+
+	m["linux"] = "eth%d"
+	m["bridge"] = "veth%d"
+
+	return m
 }
+
+var interfaceFormat = buildInterfaceFormatMap()
 
 var supportedKinds = []string{
 	"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-vsrx",
@@ -77,7 +154,7 @@ var generateCmd = &cobra.Command{
 	Use:     "generate",
 	Aliases: []string{"gen"},
 	Short:   "generate a Clos topology file, based on provided flags",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if name == "" {
 			return errors.New("provide a lab name with --name flag")
 		}

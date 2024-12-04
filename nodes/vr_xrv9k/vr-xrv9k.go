@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"cisco_xrv9k", "vr-xrv9k", "vr-cisco_xrv9k"}
+	KindNames          = []string{"cisco_xrv9k", "vr-xrv9k", "vr-cisco_xrv9k"}
 	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:Gi|GigabitEthernet|Te|TenGigE|TenGigabitEthernet)\s?0/0/0/(?P<port>\d+)`)
@@ -35,7 +35,7 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(KindNames, func() nodes.Node {
 		return new(vrXRV9K)
 	}, defaultCredentials)
 }

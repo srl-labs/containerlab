@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	kindNames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
+	KindNames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`1/1/(?P<port>\d+)`)
@@ -56,7 +56,7 @@ type SROSTemplateData struct {
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(KindNames, func() nodes.Node {
 		return new(vrSROS)
 	}, defaultCredentials)
 }

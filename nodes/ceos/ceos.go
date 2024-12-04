@@ -29,7 +29,7 @@ const (
 )
 
 var (
-	kindnames = []string{"ceos", "arista_ceos"}
+	KindNames = []string{"ceos", "arista_ceos"}
 	// defined env vars for the ceos.
 	ceosEnv = map[string]string{
 		"CEOS":                                "1",
@@ -52,7 +52,7 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(KindNames, func() nodes.Node {
 		return new(ceos)
 	}, defaultCredentials)
 }
@@ -288,7 +288,7 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 func (n *ceos) CheckInterfaceName() error {
 	// allow eth and et interfaces
 	// https://regex101.com/r/umQW5Z/2
-	ifRe := regexp.MustCompile(`eth[1-9][\w\.]*$|et[1-9][\w\.]*$`)
+	ifRe := regexp.MustCompile(`eth[1-9][\w.]*$|et[1-9][\w.]*$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters", n.Cfg.ShortName, e.GetIfaceName())
