@@ -20,15 +20,15 @@ import (
 )
 
 const (
-	generateable      = true
-	generateIfFornamt = "eth%d"
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 var kindnames = []string{"linux"}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
 
 	r.Register(kindnames, func() nodes.Node {
