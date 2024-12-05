@@ -85,7 +85,8 @@ func (nre *NodeRegistryEntry) GetCredentials() *Credentials {
 	if nre.attributes == nil {
 		return nil
 	}
-	return nre.attributes.credentials
+
+	return nre.attributes.GetCredentials()
 }
 
 func (nre *NodeRegistryEntry) GetGenerateAttributes() *GenerateNodeAttributes {
