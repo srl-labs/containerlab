@@ -200,7 +200,7 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 
 	case 3:
 		if _, ok := utils.StringInSlice([]string{"ovs-bridge", "bridge"}, arr[0]); !ok {
-			return ep, fmt.Errorf("node type %s is not supported, supported nodes are %q", arr[0], supportedKinds)
+			return ep, fmt.Errorf("only bride and ovs-bridge can be used as a first block in the link definition. Got: %s", arr[0])
 		}
 
 		switch arr[0] {

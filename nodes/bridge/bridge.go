@@ -23,7 +23,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-var kindnames = []string{"bridge"}
+var kindNames = []string{"bridge"}
 
 const (
 	iptCheckCmd = "-vL FORWARD -w 5"
@@ -38,7 +38,7 @@ func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindNames, func() nodes.Node {
 		return new(bridge)
 	}, nrea)
 }

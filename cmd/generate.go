@@ -108,10 +108,11 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
-	// init a new NodeRegistry
-	reg = nodes.NewNodeRegistry()
-	// register all nodes
-	clab.RegisterNodes(reg)
+	c := &clab.CLab{}
+	c.Reg = nodes.NewNodeRegistry()
+	c.RegisterNodes()
+
+	reg = c.Reg
 
 	generateNodesAttributes := reg.GetGenerateNodeAttributes()
 	supportedKinds := []string{}
