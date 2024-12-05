@@ -28,7 +28,7 @@ var (
 
 const (
 	generateable     = true
-	generateIfFormat = "eth%d"
+	generateIfFormat = "Et1/%d"
 
 	scrapliPlatformName = "arista_eos"
 

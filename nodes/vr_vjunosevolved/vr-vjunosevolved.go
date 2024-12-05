@@ -33,7 +33,7 @@ const (
 	startupCfgFName = "startup-config.cfg"
 
 	generateable     = true
-	generateIfFormat = "eth%d"
+	generateIfFormat = "et-0/0/%d"
 )
 
 // Register registers the node in the NodeRegistry.

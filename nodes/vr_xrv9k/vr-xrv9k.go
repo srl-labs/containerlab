@@ -28,7 +28,7 @@ var (
 
 const (
 	generateable     = true
-	generateIfFormat = "eth%d"
+	generateIfFormat = "Gi0/0/0/%d"
 
 	scrapliPlatformName = "cisco_iosxr"
 

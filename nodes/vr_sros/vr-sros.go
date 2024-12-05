@@ -42,7 +42,7 @@ var (
 
 const (
 	generateable     = true
-	generateIfFormat = "eth%d"
+	generateIfFormat = "1/1/%d"
 
 	vrsrosDefaultType   = "sr-1"
 	scrapliPlatformName = "nokia_sros"

@@ -28,7 +28,7 @@ var (
 
 const (
 	generateable     = true
-	generateIfFormat = "eth%d"
+	generateIfFormat = "ge-0/0/%d"
 
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
