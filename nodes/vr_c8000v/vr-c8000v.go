@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"cisco_c8000v"}
+	kindNames          = []string{"cisco_c8000v"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`)
@@ -31,13 +31,19 @@ const (
 
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrC8000v)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrC8000v struct {

@@ -21,8 +21,8 @@ func NewNodeRegistry() *NodeRegistry {
 }
 
 // Register registers the node' init function for all provided names.
-func (r *NodeRegistry) Register(names []string, initf Initializer, credentials *Credentials) error {
-	newEntry := newRegistryEntry(names, initf, credentials)
+func (r *NodeRegistry) Register(names []string, initf Initializer, attributes *NodeRegistryEntryAttributes) error {
+	newEntry := newRegistryEntry(names, initf, attributes)
 	return r.addEntry(newEntry)
 }
 
@@ -63,6 +63,14 @@ func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	return result
 }
 
+func (r *NodeRegistry) GetGenerateNodeAttributes() map[string]*GenerateNodeAttributes {
+	result := map[string]*GenerateNodeAttributes{}
+	for k, v := range r.nodeIndex {
+		result[k] = v.GetGenerateAttributes()
+	}
+	return result
+}
+
 func (r *NodeRegistry) Kind(kind string) *NodeRegistryEntry {
 	return r.nodeIndex[kind]
 }
@@ -70,11 +78,27 @@ func (r *NodeRegistry) Kind(kind string) *NodeRegistryEntry {
 type NodeRegistryEntry struct {
 	nodeKindNames []string
 	initFunction  Initializer
-	credentials   *Credentials
+	attributes    *NodeRegistryEntryAttributes
+}
+
+func (nre *NodeRegistryEntry) GetCredentials() *Credentials {
+	if nre.attributes == nil {
+		return nil
+	}
+
+	return nre.attributes.GetCredentials()
+}
+
+func (nre *NodeRegistryEntry) GetGenerateAttributes() *GenerateNodeAttributes {
+	if nre.attributes == nil {
+		return nil
+	}
+	return nre.attributes.generateAttributes
 }
 
 // Credentials returns entry's credentials.
-func (e *NodeRegistryEntry) Credentials() *Credentials {
+// might return nil if no default credentials present.
+func (e *NodeRegistryEntryAttributes) Credentials() *Credentials {
 	if e == nil {
 		return nil
 	}
@@ -82,12 +106,64 @@ func (e *NodeRegistryEntry) Credentials() *Credentials {
 	return e.credentials
 }
 
-func newRegistryEntry(nodeKindNames []string, initFunction Initializer, credentials *Credentials) *NodeRegistryEntry {
+func newRegistryEntry(nodeKindNames []string, initFunction Initializer,
+	attributes *NodeRegistryEntryAttributes,
+) *NodeRegistryEntry {
 	return &NodeRegistryEntry{
 		nodeKindNames: nodeKindNames,
 		initFunction:  initFunction,
-		credentials:   credentials,
+		attributes:    attributes,
 	}
+}
+
+type NodeRegistryEntryAttributes struct {
+	credentials        *Credentials
+	generateAttributes *GenerateNodeAttributes
+}
+
+func NewNodeRegistryEntryAttributes(c *Credentials, ga *GenerateNodeAttributes) *NodeRegistryEntryAttributes {
+	// set default value for GenerateNodeAttributes
+	if ga == nil {
+		ga = NewGenerateNodeAttributes(false, "")
+	}
+	return &NodeRegistryEntryAttributes{
+		credentials:        c,
+		generateAttributes: ga,
+	}
+}
+
+func (nrea *NodeRegistryEntryAttributes) GetCredentials() *Credentials {
+	return nrea.credentials
+}
+
+func (nrea *NodeRegistryEntryAttributes) GetGenerateAttributes() *GenerateNodeAttributes {
+	return nrea.generateAttributes
+}
+
+type GenerateNodeAttributes struct {
+	generateable    bool
+	interfaceFormat string
+}
+
+func NewGenerateNodeAttributes(generateable bool, ifFormat string) *GenerateNodeAttributes {
+	return &GenerateNodeAttributes{
+		generateable:    generateable,
+		interfaceFormat: ifFormat,
+	}
+}
+
+func (ga *GenerateNodeAttributes) IsGenerateable() bool {
+	if ga == nil {
+		return false
+	}
+	return ga.generateable
+}
+
+func (ga *GenerateNodeAttributes) GetInterfaceFormat() string {
+	if ga == nil {
+		return ""
+	}
+	return ga.interfaceFormat
 }
 
 // Credentials defines NOS SSH credentials.

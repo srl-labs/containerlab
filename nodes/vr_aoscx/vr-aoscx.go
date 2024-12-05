@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"aruba_aoscx", "vr-aoscx", "vr-aruba_aoscx"}
+	kindNames          = []string{"aruba_aoscx", "vr-aoscx", "vr-aruba_aoscx"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`1/1/(?P<port>\d+)`)
@@ -27,9 +27,10 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil)
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrAosCX)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrAosCX struct {

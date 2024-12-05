@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	KindNames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
+	kindNames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`1/1/(?P<port>\d+)`)
@@ -41,6 +41,9 @@ var (
 )
 
 const (
+	generateable     = true
+	generateIfFormat = "1/1/%d"
+
 	vrsrosDefaultType   = "sr-1"
 	scrapliPlatformName = "nokia_sros"
 	configDirName       = "tftpboot"
@@ -56,9 +59,11 @@ type SROSTemplateData struct {
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(KindNames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrSROS)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrSROS struct {

@@ -20,13 +20,17 @@ import (
 )
 
 const (
+
 	// licDir is the directory where Junos 22+ expects to find the license file.
 	licDir  = "/config/license"
 	licFile = "license.lic"
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 var (
-	KindNames = []string{"crpd", "juniper_crpd"}
+	kindNames = []string{"crpd", "juniper_crpd"}
 	//go:embed crpd.cfg
 	defaultCfgTemplate string
 
@@ -41,9 +45,12 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(KindNames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(crpd)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type crpd struct {

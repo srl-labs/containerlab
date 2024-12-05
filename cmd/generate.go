@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"strings"
 
@@ -16,113 +15,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes/ceos"
-	"github.com/srl-labs/containerlab/nodes/crpd"
-	"github.com/srl-labs/containerlab/nodes/rare"
-	"github.com/srl-labs/containerlab/nodes/sonic"
-	"github.com/srl-labs/containerlab/nodes/srl"
-	"github.com/srl-labs/containerlab/nodes/vr_sros"
-	"github.com/srl-labs/containerlab/nodes/vr_veos"
-	"github.com/srl-labs/containerlab/nodes/vr_vjunosevolved"
-	"github.com/srl-labs/containerlab/nodes/vr_vjunosswitch"
-	"github.com/srl-labs/containerlab/nodes/vr_vmx"
-	"github.com/srl-labs/containerlab/nodes/vr_vqfx"
-	"github.com/srl-labs/containerlab/nodes/vr_vsrx"
-	"github.com/srl-labs/containerlab/nodes/vr_xrv9k"
-	"github.com/srl-labs/containerlab/nodes/xrd"
+	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
-func buildInterfaceFormatMap() map[string]string {
-	m := make(map[string]string)
-
-	// Add SR Linux kinds
-	for _, k := range srl.KindNames {
-		m[k] = "e1-%d"
-	}
-
-	// Add Arista cEOS kinds
-	for _, k := range ceos.KindNames {
-		m[k] = "eth%d"
-	}
-
-	// Add Arista vEOS kinds
-	for _, k := range vr_veos.KindNames {
-		m[k] = "Et1/%d"
-	}
-
-	// Add Nokia SR OS kinds
-	for _, k := range vr_sros.KindNames {
-		m[k] = "1/1/%d"
-	}
-
-	// Add Juniper cRPD
-	for _, k := range crpd.KindNames {
-		m[k] = "eth%d"
-	}
-
-	// Add Juniper VMX kinds
-	for _, k := range vr_vmx.KindNames {
-		m[k] = "ge-0/0/%d"
-	}
-
-	// Add Juniper vSRX kinds
-	for _, k := range vr_vsrx.KindNames {
-		m[k] = "ge-0/0/%d"
-	}
-
-	// Add Juniper vQFX kinds
-	for _, k := range vr_vqfx.KindNames {
-		m[k] = "ge-0/0/%d"
-	}
-
-	// Add Juniper vJunos-Switch/Router
-	for _, k := range vr_vjunosswitch.KindNames {
-		m[k] = "et-0/0/%d"
-	}
-
-	// Add Juniper vJunos-Evolved
-	for _, k := range vr_vjunosevolved.KindNames {
-		m[k] = "et-0/0/%d"
-	}
-
-	// Add Cisco XRv9k kinds
-	for _, k := range vr_xrv9k.KindNames {
-		m[k] = "Gi0/0/0/%d"
-	}
-
-	// Add Cisco XRd
-	for _, k := range xrd.KindNames {
-		m[k] = "eth%d"
-	}
-
-	// Add RARE FreeRtr
-	for _, k := range rare.KindNames {
-		m[k] = "eth%d"
-	}
-
-	// Add SONiC VS
-	for _, k := range sonic.KindNames {
-		m[k] = "eth%d"
-	}
-
-	m["linux"] = "eth%d"
-	m["bridge"] = "veth%d"
-
-	return m
-}
-
-var interfaceFormat = buildInterfaceFormatMap()
-
-var supportedKinds = []string{
-	"srl", "ceos", "linux", "bridge", "sonic-vs", "crpd", "vr-sros", "vr-vmx", "vr-vsrx",
-	"vr-vqfx", "juniper_vjunosevolved", "juniper_vjunosrouter", "juniper_vjunosswitch", "vr-xrv9k", "vr-veos",
-	"xrd", "rare", "openbsd", "cisco_ftdv", "freebsd",
-}
-
 const (
-	defaultSRLType     = srl.SRLinuxDefaultType
 	defaultNodePrefix  = "node"
 	defaultGroupPrefix = "tier"
 )
@@ -141,6 +40,7 @@ var (
 	groupPrefix string
 	file        string
 	deploy      bool
+	reg         *nodes.NodeRegistry
 )
 
 type nodesDef struct {
@@ -183,7 +83,7 @@ var generateCmd = &cobra.Command{
 		}
 		log.Debugf("generated topo: %s", string(b))
 		if file != "" {
-			err = saveTopoFile(file, b)
+			err = utils.CreateFile(file, string(b))
 			if err != nil {
 				return err
 			}
@@ -192,7 +92,7 @@ var generateCmd = &cobra.Command{
 			reconfigure = true
 			if file == "" {
 				file = fmt.Sprintf("%s.clab.yml", name)
-				err = saveTopoFile(file, b)
+				err = utils.CreateFile(file, string(b))
 				if err != nil {
 					return err
 				}
@@ -208,6 +108,22 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
+	c := &clab.CLab{}
+	c.Reg = nodes.NewNodeRegistry()
+	c.RegisterNodes()
+
+	reg = c.Reg
+
+	generateNodesAttributes := reg.GetGenerateNodeAttributes()
+	supportedKinds := []string{}
+
+	// prepare list of generateable node kinds
+	for k, v := range generateNodesAttributes {
+		if v.IsGenerateable() {
+			supportedKinds = append(supportedKinds, k)
+		}
+	}
+
 	rootCmd.AddCommand(generateCmd)
 	generateCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
@@ -271,6 +187,9 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 			}
 		}
 	}
+
+	generateNodesAttributes := reg.GetGenerateNodeAttributes()
+
 	for i := 0; i < numStages-1; i++ {
 		interfaceOffset := uint(0)
 		if i > 0 {
@@ -299,9 +218,9 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 				l := &links.LinkVEthRaw{
 					Endpoints: []*links.EndpointRaw{
 						links.NewEndpointRaw(node1, fmt.Sprintf(
-							interfaceFormat[nodes[i].kind], k+1+interfaceOffset), ""),
+							generateNodesAttributes[nodes[i].kind].GetInterfaceFormat(), k+1+interfaceOffset), ""),
 						links.NewEndpointRaw(node2, fmt.Sprintf(
-							interfaceFormat[nodes[i+1].kind], j+1), ""),
+							generateNodesAttributes[nodes[i+1].kind].GetInterfaceFormat(), j+1), ""),
 					},
 				}
 
@@ -400,18 +319,4 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 		result[idx] = def
 	}
 	return result, nil
-}
-
-func saveTopoFile(path string, data []byte) error {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666) // skipcq: GSC-G302
-	if err != nil {
-		return err
-	}
-
-	_, err = f.Write(data)
-	if err != nil {
-		return err
-	}
-
-	return f.Close()
 }

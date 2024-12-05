@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	KindNames          = []string{"juniper_vsrx", "vr-vsrx", "vr-juniper_vsrx"}
+	kindNames          = []string{"juniper_vsrx", "vr-vsrx", "vr-juniper_vsrx"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin@123")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:et|xe|ge)-0/0/(?P<port>\d+)$`)
@@ -27,6 +27,9 @@ var (
 )
 
 const (
+	generateable     = true
+	generateIfFormat = "ge-0/0/%d"
+
 	scrapliPlatformName = "juniper_junos"
 
 	configDirName   = "config"
@@ -35,9 +38,12 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(KindNames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrVSRX)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrVSRX struct {

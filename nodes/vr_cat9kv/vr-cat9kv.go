@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"cisco_cat9kv"}
+	kindNames          = []string{"cisco_cat9kv"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?1/0/(?P<port>\d+)$`)
@@ -31,13 +31,19 @@ const (
 
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrCat9kv)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrCat9kv struct {

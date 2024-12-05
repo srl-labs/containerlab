@@ -34,9 +34,10 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil)
 	r.Register(kindnames, func() nodes.Node {
 		return new(vrXRV)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrXRV struct {

@@ -20,9 +20,10 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil)
 	r.Register(kindnames, func() nodes.Node {
 		return new(CheckpointCloudguard)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type CheckpointCloudguard struct {

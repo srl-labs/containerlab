@@ -14,13 +14,21 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var KindNames = []string{"rare"}
+var kindNames = []string{"rare"}
+
+const (
+	generateable     = true
+	generateIfFormat = "eth%d"
+)
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(KindNames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(rare)
-	}, nil)
+	}, nrea)
 }
 
 type rare struct {

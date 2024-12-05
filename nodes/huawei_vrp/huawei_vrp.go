@@ -26,13 +26,19 @@ const (
 
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(huawei_vrp)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type huawei_vrp struct {

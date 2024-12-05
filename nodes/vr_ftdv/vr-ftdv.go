@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"cisco_ftdv"}
+	kindNames          = []string{"cisco_ftdv"}
 	defaultCredentials = nodes.NewCredentials("admin", "Admin@123")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:GigabitEthernet|Gi)\s?0/(?P<port>\d+)`)
@@ -23,11 +23,19 @@ var (
 	InterfaceHelp   = "GigabitEthernet0/X or Gi0/X (where X >= 0) or ethX (where X >= 1)"
 )
 
+const (
+	generateable     = true
+	generateIfFormat = "eth%d"
+)
+
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrFtdv)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrFtdv struct {

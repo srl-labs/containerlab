@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"freebsd"}
+	kindNames          = []string{"freebsd"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 	saveCmd            = "sh -c \"/backup.sh -u $USERNAME -p $PASSWORD backup\""
 	InterfaceRegexp    = regexp.MustCompile(`vtnet(?P<port>\d+)`)
@@ -28,13 +28,19 @@ var (
 
 const (
 	configDirName = "config"
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrFreeBSD)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrFreeBSD struct {

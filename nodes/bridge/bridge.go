@@ -23,18 +23,24 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-var kindnames = []string{"bridge"}
+var kindNames = []string{"bridge"}
 
 const (
 	iptCheckCmd = "-vL FORWARD -w 5"
 	iptAllowCmd = "-I FORWARD -i %s -j ACCEPT -w 5"
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(bridge)
-	}, nil)
+	}, nrea)
 }
 
 type bridge struct {

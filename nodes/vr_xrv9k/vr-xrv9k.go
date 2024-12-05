@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	KindNames          = []string{"cisco_xrv9k", "vr-xrv9k", "vr-cisco_xrv9k"}
+	kindNames          = []string{"cisco_xrv9k", "vr-xrv9k", "vr-cisco_xrv9k"}
 	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:Gi|GigabitEthernet|Te|TenGigE|TenGigabitEthernet)\s?0/0/0/(?P<port>\d+)`)
@@ -27,6 +27,9 @@ var (
 )
 
 const (
+	generateable     = true
+	generateIfFormat = "Gi0/0/0/%d"
+
 	scrapliPlatformName = "cisco_iosxr"
 
 	configDirName   = "config"
@@ -35,9 +38,11 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(KindNames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrXRV9K)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrXRV9K struct {
