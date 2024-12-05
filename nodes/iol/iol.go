@@ -30,10 +30,13 @@ const (
 	typeL2  = "l2"
 
 	iol_workdir = "/iol"
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 var (
-	kindnames          = []string{"cisco_iol"}
+	kindNames          = []string{"cisco_iol"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	//go:embed iol.cfg.tmpl
@@ -51,9 +54,12 @@ var (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(iol)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type iol struct {

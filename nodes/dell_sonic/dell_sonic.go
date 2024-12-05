@@ -17,8 +17,10 @@ import (
 )
 
 var (
-	kindnames          = []string{"dell_sonic"}
+	kindNames          = []string{"dell_sonic"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	generateable       = true
+	generateIfFormat   = "eth%d"
 )
 
 const (
@@ -29,9 +31,12 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(dell_sonic)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type dell_sonic struct {

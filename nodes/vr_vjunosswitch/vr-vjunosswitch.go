@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	KindNames          = []string{"juniper_vjunosrouter", "juniper_vjunosswitch"}
+	kindNames          = []string{"juniper_vjunosrouter", "juniper_vjunosswitch"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin@123")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:et|xe|ge)-0/0/(?P<port>\d+)$`)
@@ -31,13 +31,19 @@ const (
 
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(KindNames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrVJUNOSSWITCH)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrVJUNOSSWITCH struct {

@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"openbsd"}
+	kindNames          = []string{"openbsd"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 	saveCmd            = "sh -c \"/backup.sh -u $USERNAME -p $PASSWORD backup\""
 
@@ -29,13 +29,19 @@ var (
 
 const (
 	configDirName = "config"
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(vrOpenBSD)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrOpenBSD struct {

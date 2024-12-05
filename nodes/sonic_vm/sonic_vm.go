@@ -19,8 +19,11 @@ import (
 )
 
 var (
-	kindnames          = []string{"sonic-vm"}
+	kindNames          = []string{"sonic-vm"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
+
+	generateable     = true
+	generateIfFormat = "eth%d"
 )
 
 const (
@@ -31,9 +34,12 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+
+	r.Register(kindNames, func() nodes.Node {
 		return new(sonic_vm)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type sonic_vm struct {
