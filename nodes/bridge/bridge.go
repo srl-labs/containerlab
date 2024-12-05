@@ -35,7 +35,6 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFornamt)
 	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
 

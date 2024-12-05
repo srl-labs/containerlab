@@ -216,8 +216,10 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 				// create a raw veth link
 				l := &links.LinkVEthRaw{
 					Endpoints: []*links.EndpointRaw{
-						links.NewEndpointRaw(node1, fmt.Sprintf(generateNodesAttributes[nodes[i].kind].GetInterfaceFormat(), k+1+interfaceOffset), ""),
-						links.NewEndpointRaw(node2, fmt.Sprintf(generateNodesAttributes[nodes[i+1].kind].GetInterfaceFormat(), j+1), ""),
+						links.NewEndpointRaw(node1, fmt.Sprintf(
+							generateNodesAttributes[nodes[i].kind].GetInterfaceFormat(), k+1+interfaceOffset), ""),
+						links.NewEndpointRaw(node2, fmt.Sprintf(
+							generateNodesAttributes[nodes[i+1].kind].GetInterfaceFormat(), j+1), ""),
 					},
 				}
 

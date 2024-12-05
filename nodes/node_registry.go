@@ -96,7 +96,7 @@ func (nre *NodeRegistryEntry) GetGenerateAttributes() *GenerateNodeAttributes {
 }
 
 // Credentials returns entry's credentials.
-// might return nil if no default credentials present
+// might return nil if no default credentials present.
 func (e *NodeRegistryEntryAttributes) Credentials() *Credentials {
 	if e == nil {
 		return nil
@@ -105,7 +105,9 @@ func (e *NodeRegistryEntryAttributes) Credentials() *Credentials {
 	return e.credentials
 }
 
-func newRegistryEntry(nodeKindNames []string, initFunction Initializer, attributes *NodeRegistryEntryAttributes) *NodeRegistryEntry {
+func newRegistryEntry(nodeKindNames []string, initFunction Initializer,
+	attributes *NodeRegistryEntryAttributes,
+) *NodeRegistryEntry {
 	return &NodeRegistryEntry{
 		nodeKindNames: nodeKindNames,
 		initFunction:  initFunction,
