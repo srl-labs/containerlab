@@ -68,7 +68,7 @@ func (c *CLab) addSSHConfig() error {
 		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
 		nodeData := SSHConfigNodeTmpl{
 			Name:      n.Config().LongName,
-			Username:  NodeRegistryEntry.Credentials().GetUsername(),
+			Username:  NodeRegistryEntry.GetCredentials().GetUsername(),
 			SSHConfig: n.GetSSHConfig(),
 		}
 
