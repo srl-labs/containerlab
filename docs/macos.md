@@ -227,6 +227,21 @@ That's why we also have the docker-outside-of-docker (dood) variant of the devco
 
 You can have both docker-in-docker and docker-outside-of-docker variants of the devcontainer file in your repo, and your IDE will be able to switch between them.
 
+## DevPod
+
+[DevPod](https://devpod.sh) is an open-source project by loft.sh that makes using devcontainers easier and more portable.
+
+When compared to Devcontainers-way explained in the previous section, DevPod has the following advantages:
+
+- improved User Experience by offering launching workspaces directly from the browser
+- support for multiple IDEs and multiple target providers (locally with docker, or any cloud, or even on top of K8s)
+
+A short demo is worth a thousand words:
+
+-{{youtube(url='https://www.youtube.com/embed/ceDrFx2K3jE')}}-
+
+We are still polishing the DevPod integration, especially the integration with WSL. Let us know if you have any questions or suggestions.
+
 [^1]: Or any other application that enables Docker on macOS. OrbStack is just a great choice that is used by many.
 [^2]: With Microsoft Surface laptop released with ARM64 architecture
 [^3]: The same principles apply to Docker Desktop on Windows

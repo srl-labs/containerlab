@@ -43,6 +43,6 @@
             ]
         }
     },
-    "workspaceMount": "source=${localWorkspaceFolder},target=/${containerWorkspaceFolder},type=bind",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/${containerWorkspaceFolder},type=bind,consistency=cached",
     "workspaceFolder": "/clab"
 }

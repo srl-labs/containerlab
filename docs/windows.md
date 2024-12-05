@@ -15,13 +15,20 @@ There are two primary ways of running containerlab on Windows:
 
 We will cover both of these ways in this document, but first let's quickly go over the WSL setup.
 
+## Setting up WSL
+
+/// admonition | WSL-Containerlab, WHAT?
+    type: tip
+Hey, before you dive into the WSL details, you might want check out a project that the relentless team of @kaelemc, @FloSch62, and @hyposcaler-bot worked on over 900 Discord messages.
+
+It is coined as [WSL-Containerlab](https://github.com/srl-labs/WSL-Containerlab) and can be the best Containerlab-on-WSL experience if you can install WSL 2.4.4+ version. Read more at project's [README](https://github.com/srl-labs/WSL-Containerlab#readme).
+///
+
+WSL takes the central role in running containerlabs on Windows. Luckily, setting up WSL is very easy, and there are plenty of resources online from blogs to YT videos explaining the bits and pieces. Here we will provide some CLI-centric[^1] instructions that were executed on Windows 11.
+
 /// admonition | Windows and WSL version
 The following instructions were tested on Windows 11 and WSL2. On Windows 10 some commands may be different, but the general idea should be the same.
 ///
-
-## Setting up WSL
-
-WSL takes the central role in running containerlabs on Windows. Luckily, setting up WSL is very easy, and there are plenty of resources online from blogs to YT videos explaining the bits and pieces. Here we will provide some CLI-centric[^1] instructions that were executed on Windows 11.
 
 First things first, open up a terminal and list the running WSL virtual machines and their versions:
 
