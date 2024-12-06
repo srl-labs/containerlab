@@ -56,6 +56,8 @@ Finally :pray: some good news on this front, as vendors started to release or at
 
 You can also get [**FRR**](https://quay.io/repository/frrouting/frr?tab=tags) container for ARM64 architecture from their container registry.
 
+And if all you have to play with is pure control plane, you can use Juniper cRPD, which is also available for ARM64.
+
 Yes, SR Linux, cEOS, FRR do not cover all the network OSes out there, but it is a good start, and we hope that more vendors will follow the trend.
 
 The good news is that almost all of the popular applications that we see being used in containerlabs are **already** built for ARM. Your streaming telemetry stack (gnmic, prometheus/influx, grafana), regular client-emulating endpoints such as Alpine or a collection of network related tools in the network-multitool image had already been supporting ARM architecture. You can leverage the sheer ecosystem multi-arch applications that are available in the public registries.
