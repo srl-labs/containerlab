@@ -102,6 +102,9 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 				},
 			),
 			clab.WithDebug(debug),
+			// during destroy we don't want to check bind paths
+			// as it is irrelevant for this command.
+			clab.WithSkippedBindsPathsCheck(),
 		}
 
 		if keepMgmtNet {
