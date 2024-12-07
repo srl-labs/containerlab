@@ -183,13 +183,13 @@ The package installer will put the `containerlab` binary in the `/usr/bin` direc
 
 ## Windows
 
-Containerlab runs on Windows powered by Windows Subsystem Linux (aka WSL), where you can run Containerlab directly or in a Devcontainer. Open up [Containerlab on Windows](windows.md) documentation for more details.
+Containerlab runs on Windows powered by Windows Subsystem Linux (aka WSL), where you can run Containerlab directly or in a Devcontainer. Open up [**Containerlab on Windows**](windows.md) documentation for more details.
 
 ## Apple macOS
 
 Running containerlab on macOS is possible both on ARM (M1/M2/M3/etc) and Intel chipsets. For a long time, we had many caveats around M-chipsets on Macs, but with the introduction of ARM64-native NOSes like Nokia SR Linux and Arista cEOS, powered by Rosetta emulation for x86_64-based NOSes, it is now possible to run containerlab on ARM-based Macs.
 
-Since we wanted to share our experience with running containerlab on macOS in details, we have created a separate - [Containerlab on macOS](macos.md) - guide.
+Since we wanted to share our experience with running containerlab on macOS in details, we have created a separate - [**Containerlab on macOS**](macos.md) - guide.
 
 ## Container
 
