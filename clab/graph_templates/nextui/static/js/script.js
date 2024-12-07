@@ -89,8 +89,31 @@
             'setModel': function (model) {
                 this.inherited(model);
             },
+            calculateLabelPosition: function(percentDistance) {
+              var l = this.line();
+              var n = this.line().normal().multiply(this.getOffset()*3);
+              var cp = this.line().center().add(n);
+              var bezierPoints = [ 
+                [ l.start.x, l.start.y ],
+                [ cp.x, cp.y ], 
+                [ cp.x, cp.y ], 
+                [ l.end.x, l.end.y ],
+              ];
+              var bzLength = nx.geometry.BezierCurve.getLength(bezierPoints)
+              return nx.geometry.BezierCurve.positionAlongCurve(bezierPoints, bzLength*percentDistance);
+            },
             update: function () {
+                function findCommonLinks(widget) {
+                  return widget.topology().getData().links.filter( (link) => {
+                    if (widget.sourcelabel() == link.source && widget.targetlabel() == link.target) {
+                      return link;
+                    } else if ( widget.targetlabel() == link.source && widget.sourcelabel() == link.target ) {
+                      return link;
+                    }
+                  })
+                }
                 this.inherited();
+                const spacing = 2;
                 var line = this.line();
                 var angle = line.angle();
                 var stageScale = this.stageScale();
@@ -106,11 +129,11 @@
                     var sourceTextBound = sourceText.getBound()
                     sourceBg.sets({ width: sourceTextBound.width, visible: true });
                     sourceBg.setTransform(sourceTextBound.width / -2);
-                    point = line.start;
+                    point = this.calculateLabelPosition(0.1);
                     if (stageScale) {
-                        sourceBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ' + 'scale (' + stageScale + ') ');
+                        sourceBadge.set('transform', 'translate(' + point[0] + ',' + point[1] + ') ' + 'scale (' + stageScale + ') ');
                     } else {
-                        sourceBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ');
+                        sourceBadge.set('transform', 'translate(' + point[0] + ',' + point[1] + ') ');
                     }
                 }
                 if (this.targetlabel()) {
@@ -124,11 +147,11 @@
                     var targetTextBound = targetText.getBound()
                     targetBg.sets({ width: targetTextBound.width, visible: true });
                     targetBg.setTransform(targetTextBound.width / -2);
-                    point = line.end;
+                    point = this.calculateLabelPosition(0.9);
                     if (stageScale) {
-                        targetBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ' + 'scale (' + stageScale + ') ');
+                        targetBadge.set('transform', 'translate(' + point[0] + ',' + point[1] + ') ' + 'scale (' + stageScale + ') ');
                     } else {
-                        targetBadge.set('transform', 'translate(' + point.x + ',' + point.y + ') ');
+                        targetBadge.set('transform', 'translate(' + point[0] + ',' + point[1] + ') ');
                     }
                 }
                 this.view("sourceBadge").visible(true);
