@@ -19,7 +19,7 @@ on:
         required: false
         type: string
   # trigger on published release event
-  # to created the devspace container when the packages are published
+  # to created the dev container when the packages are published
   release:
     types:
       - published
@@ -33,9 +33,9 @@ jobs:
     strategy:
       matrix:
         variant:
-          # - "dind"
-          # - "dind-slim"
-          # - "dood"
+          - "dind"
+          - "dind-slim"
+          - "dood"
           - "dood-slim"
         include:
           - variant: dind
@@ -111,6 +111,5 @@ jobs:
           imageName: ghcr.io/${{ github.repository }}/devcontainer${{ matrix.image-suffix }}
           imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always
-          # platform: linux/amd64,linux/arm64
-          platform: linux/arm64
+          platform: linux/amd64,linux/arm64
           configFile: ${{ matrix.devContFile }}
