@@ -19,7 +19,7 @@ on:
         required: false
         type: string
   # trigger on published release event
-  # to created the devspace container when the packages are published
+  # to created the dev container when the packages are published
   release:
     types:
       - published
@@ -53,6 +53,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
