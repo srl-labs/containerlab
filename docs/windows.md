@@ -114,7 +114,18 @@ A few things to keep in mind when using devcontainers on windows:
     ```
 
     Then you will be able to type `code .` in the cloned repository to open the project in VS Code.
+
 2. As with macOS, you will likely wish to use a Docker-outside-of-Docker method, where the devcontainer will have access to the images and containers from the WSL VM.
+
+## DevPod
+
+DevPod delivers a stellar User Experience on macOS[^5], but on Windows, it requires a bit more setup. We tried to make it as easy as possible by providing you with the [WSL distribution](https://github.com/srl-labs/WSL-Containerlab) with the necessary tools pre-installed.
+
+When you install Containerlab WSL VM and DevPod, you will have to create the SSH provider in DevPod with the following settings:
+
+![pic](https://gitlab.com/rdodin/pics/-/wikis/uploads/f743697018ed049b5eb5a7afda175b02/image.png)
+
+And that's it! You should now be able to use DevPod to run containerlabs on Windows.
 
 [^1]: If you don't have a decent terminal emulator on Windows, install "Windows Terminal" from the Microsoft Store.
 [^2]: The kernel and distribution parameters can be checked as follows:
@@ -133,3 +144,4 @@ A few things to keep in mind when using devcontainers on windows:
 
 [^3]: Or any other desktop docker solution like Rancher Desktop, Podman Desktop, etc.
 [^4]: Follows the devcontainer [specification](https://containers.dev/)
+[^5]: Almost a [one-click solution](macos.md#devpod)
