@@ -499,7 +499,12 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 // it allows host path to have `~` and relative path to an absolute path
 // the list of binds will be changed in place.
 // if the host path doesn't exist, the error will be returned.
-func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
+func (c *CLab) resolveBindPaths(binds []string, nodeDir string) error {
+	// checks are skipped when, for example, the destroy operation is run
+	if !c.checkBindsPaths {
+		return nil
+	}
+
 	for i := range binds {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
 		elems := strings.Split(binds[i], ":")
@@ -510,7 +515,7 @@ func (c *CLab) resolveBindPaths(binds []string, nodedir string) error {
 			continue
 		}
 		// replace special variable
-		r := strings.NewReplacer(clabDirVar, c.TopoPaths.TopologyLabDir(), nodeDirVar, nodedir)
+		r := strings.NewReplacer(clabDirVar, c.TopoPaths.TopologyLabDir(), nodeDirVar, nodeDir)
 		hp := r.Replace(elems[0])
 		hp = utils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 

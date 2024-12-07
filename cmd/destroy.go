@@ -185,6 +185,9 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 	opts := []clab.ClabOption{
 		clab.WithRuntime(rt, runtimeConfig),
 		clab.WithTimeout(timeout),
+		// when listing containers we don't care if binds are accurate
+		// since this function is used in the destroy process
+		clab.WithSkippedBindsPathsCheck(),
 	}
 
 	// filter to list all containerlab containers
