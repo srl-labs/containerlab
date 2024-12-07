@@ -46,18 +46,19 @@ wsl -l -v
 On this system we already have a WSL VM with Ubuntu OS running, which was created when we installed WSL on Windows. If instead of a list of WSL VMs you get an error, you need to install WSL first:
 
 ```bash title="Installing WSL on Windows 11"
-wsl --install
-```
-
-Installing WSL on Windows 11 will by default install the Ubuntu distribution. While it is perfectly fine to use it, we prefer Debian, so let's remove Ubuntu and install Debian instead:
-
-```bash title="Removing Ubuntu and installing Debian"
-wsl --unregister Ubuntu #(1)!
 wsl --install -d Debian #(1)!
 ```
 
+1. Installing a new WSL system will prompt you to choose a username and password.
+
+If you performed a default WSL installation before, you are likely running an Ubuntu, and while it is perfectly fine to use it, we prefer Debian, so let's remove Ubuntu and install Debian instead:
+
+```bash title="Removing Ubuntu and installing Debian"
+wsl --unregister Ubuntu #(1)!
+wsl --install -d Debian
+```
+
 1. Unregistering a WSL VM will remove the VM. You should reference a WSL instance by the name you saw in the `wsl -l -v` command.
-2. Installing a new WSL system will prompt you to choose a username and password.
 
 Once the installation is complete, you will enter the WSL shell, which is a regular Linux shell[^2].
 
