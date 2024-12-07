@@ -33,9 +33,9 @@ jobs:
     strategy:
       matrix:
         variant:
-          - "dind"
-          - "dind-slim"
-          - "dood"
+          # - "dind"
+          # - "dind-slim"
+          # - "dood"
           - "dood-slim"
         include:
           - variant: dind
@@ -53,6 +53,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -108,5 +111,6 @@ jobs:
           imageName: ghcr.io/${{ github.repository }}/devcontainer${{ matrix.image-suffix }}
           imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always
-          platform: linux/amd64,linux/arm64
+          # platform: linux/amd64,linux/arm64
+          platform: linux/arm64
           configFile: ${{ matrix.devContFile }}
