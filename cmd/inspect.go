@@ -267,6 +267,9 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 
 		if wide {
 			header = slices.Insert(header, 1, "Owner")
+			table.SetColumnConfigs([]tableWriter.ColumnConfig{
+				{Number: 1, AutoMerge: true},
+			})
 		}
 
 		if all {
@@ -276,14 +279,17 @@ func printContainerInspect(containers []runtime.GenericContainer, format string)
 				{Number: 2, AutoMerge: true},
 			})
 			table.AppendHeader(append(tableWriter.Row{"Topology"}, header...))
+
+			if wide {
+				table.SetColumnConfigs([]tableWriter.ColumnConfig{
+					{Number: 1, AutoMerge: true},
+					{Number: 2, AutoMerge: true},
+					{Number: 3, AutoMerge: true},
+				})
+			}
+
 		} else {
 			table.AppendHeader(append(tableWriter.Row{}, header[1:]...))
-		}
-
-		if wide {
-			table.SetColumnConfigs([]tableWriter.ColumnConfig{
-				{Number: 2, AutoMerge: true},
-			})
 		}
 
 		table.AppendRows(tabData)
