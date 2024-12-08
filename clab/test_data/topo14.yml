@@ -1,0 +1,6 @@
+name: topo14
+topology:
+  nodes:
+    node1:
+      kind: nokia_srlinux
+      startup-config: ./configs/fabric/__clabNodeName__.cfg
