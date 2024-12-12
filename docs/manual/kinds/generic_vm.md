@@ -34,7 +34,7 @@ docker exec -it <container-name/id> bash
 
 ///
 /// tab | CLI via SSH
-to connect to the Linux shell (password `sysadmin`)
+Connect to the VM Guest via SSH. Default password see below the [Credentials](#credentials).
 
 ```bash
 ssh clab@<container-name>
