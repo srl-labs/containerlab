@@ -68,6 +68,7 @@ type iol struct {
 	nvramFile         string
 	partialStartupCfg string
 	bootCfg           string
+	interfaces        []IOLInterface
 }
 
 func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -135,7 +136,7 @@ func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
-	return n.GenInterfaceConfig(ctx)
+	return n.GenBootConfig(ctx)
 }
 
 func (n *iol) CreateIOLFiles(ctx context.Context) error {
@@ -149,10 +150,8 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 	// create these files so the bind monut doesn't automatically
 	// make folders.
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), "")
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), "")
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), "")
 
-	return nil
+	return n.GenInterfaceConfig(ctx)
 }
 
 // Generate interfaces configuration for IOL (and iouyap/netmap).
@@ -162,8 +161,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	netmapdata := fmt.Sprintf("%s:0/0 513:0/0\n", n.Pid)
 
 	slot, port := 0, 0
-
-	IOLInterfaces := []IOLInterface{}
 
 	// Regexp to pull number out of linux'ethX' interface naming
 	IntfRegExpr := regexp.MustCompile("[0-9]+")
@@ -182,7 +179,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		netmapdata += fmt.Sprintf("%s:%d/%d 513:%d/%d\n", n.Pid, slot, port, slot, port)
 
 		// populate template array for config
-		IOLInterfaces = append(IOLInterfaces,
+		n.interfaces = append(n.interfaces,
 			IOLInterface{
 				intf.GetIfaceName(),
 				x,
@@ -194,9 +191,16 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	}
 
 	// create IOUYAP and NETMAP file for interface mappings
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), iouyapData)
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), netmapdata)
+	err := utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), iouyapData)
+	if err != nil {
+		return err
+	}
+	err = utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), netmapdata)
 
+	return err
+}
+
+func (n *iol) GenBootConfig(_ context.Context) error {
 	n.bootCfg = cfgTemplate
 
 	if n.Cfg.StartupConfig != "" {
@@ -222,7 +226,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		MgmtIPv6Addr:       n.Cfg.MgmtIPv6Address,
 		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
 		MgmtIPv6GW:         n.Cfg.MgmtIPv6Gateway,
-		DataIFaces:         IOLInterfaces,
+		DataIFaces:         n.interfaces,
 		PartialCfg:         n.partialStartupCfg,
 	}
 
@@ -236,10 +240,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		return err
 	}
 
-	// write it to disk
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), buf.String())
-
-	return err
+	return utils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), buf.String())
 }
 
 type IOLTemplateData struct {
