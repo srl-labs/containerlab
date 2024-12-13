@@ -9,6 +9,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -42,9 +43,6 @@ var (
 	//go:embed iol.cfg.tmpl
 	cfgTemplate string
 
-	IOLCfgTpl, _ = template.New("clab-iol-default-config").Funcs(
-		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(cfgTemplate)
-
 	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	InterfaceOffset = 1
 	InterfaceHelp   = "eX/Y or EthernetX/Y (where X >= 0 and Y >= 1)"
@@ -65,9 +63,11 @@ func Register(r *nodes.NodeRegistry) {
 type iol struct {
 	nodes.DefaultNode
 
-	isL2Node  bool
-	Pid       string
-	nvramFile string
+	isL2Node          bool
+	Pid               string
+	nvramFile         string
+	partialStartupCfg string
+	bootCfg           string
 }
 
 func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -107,7 +107,7 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		fmt.Sprint(path.Join(n.Cfg.LabDir, n.nvramFile), ":", path.Join(iol_workdir, n.nvramFile)),
 
 		// mount launch config
-		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "startup.cfg"), ":/iol/config.txt"),
+		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "boot_config.txt"), ":/iol/config.txt"),
 
 		// mount IOYAP and NETMAP for interface mapping
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "iouyap.ini"), ":/iol/iouyap.ini"),
@@ -148,7 +148,7 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 
 	// create these files so the bind monut doesn't automatically
 	// make folders.
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "startup.cfg"), "")
+	utils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), "")
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), "")
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), "")
 
@@ -193,9 +193,24 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 
 	}
 
-	// create IOYAP and NETMAP file for interface mappings
+	// create IOUYAP and NETMAP file for interface mappings
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), iouyapData)
 	utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), netmapdata)
+
+	n.bootCfg = cfgTemplate
+
+	if n.Cfg.StartupConfig != "" {
+		cfg, err := os.ReadFile(n.Cfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		if isPartialConfigFile(n.Cfg.StartupConfig) {
+			n.partialStartupCfg = string(cfg)
+		} else {
+			n.bootCfg = string(cfg)
+		}
+	}
 
 	// create startup config template
 	tpl := IOLTemplateData{
@@ -208,7 +223,11 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
 		MgmtIPv6GW:         n.Cfg.MgmtIPv6Gateway,
 		DataIFaces:         IOLInterfaces,
+		PartialCfg:         n.partialStartupCfg,
 	}
+
+	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(
+		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(n.bootCfg)
 
 	// generate the config
 	buf := new(bytes.Buffer)
@@ -216,8 +235,9 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	// write it to disk
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "startup.cfg"), buf.String())
+	utils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), buf.String())
 
 	return err
 }
@@ -232,6 +252,7 @@ type IOLTemplateData struct {
 	MgmtIPv6PrefixLen  int
 	MgmtIPv6GW         string
 	DataIFaces         []IOLInterface
+	PartialCfg         string
 }
 
 // IOLinterface struct stores mapping info between
@@ -314,4 +335,10 @@ func (n *iol) CheckInterfaceName() error {
 	}
 
 	return nil
+}
+
+// from vr-sros.go
+// isPartialConfigFile returns true if the config file name contains .partial substring.
+func isPartialConfigFile(c string) bool {
+	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
