@@ -431,6 +431,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		AttachStderr: true,
 		Hostname:     node.ShortName,
 		Tty:          true,
+		OpenStdin:    true,
 		User:         node.User,
 		Labels:       node.Labels,
 		ExposedPorts: node.PortSet,
