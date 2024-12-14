@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
@@ -69,11 +70,13 @@ type iol struct {
 	partialStartupCfg string
 	bootCfg           string
 	interfaces        []IOLInterface
+	firstBoot         bool
 }
 
 func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.firstBoot = false
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -136,7 +139,17 @@ func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
-	return n.GenBootConfig(ctx)
+	n.GenBootConfig(ctx)
+
+	// Must update mgmt IP if not first boot
+	if !n.firstBoot {
+		// iol has a 5sec boot delay, wait a few extra secs for the console
+		time.Sleep(7 * time.Second)
+
+		return n.UpdateMgmtIntf(ctx)
+	}
+
+	return nil
 }
 
 func (n *iol) CreateIOLFiles(ctx context.Context) error {
@@ -145,6 +158,7 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 	if !utils.FileExists(path.Join(n.Cfg.LabDir, n.nvramFile)) {
 		// create nvram file
 		utils.CreateFile(path.Join(n.Cfg.LabDir, n.nvramFile), "")
+		n.firstBoot = true
 	}
 
 	// create these files so the bind monut doesn't automatically
@@ -342,4 +356,12 @@ func (n *iol) CheckInterfaceName() error {
 // isPartialConfigFile returns true if the config file name contains .partial substring.
 func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
+}
+
+func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
+
+	mgmt_str := fmt.Sprintf("\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\ripv6 address %s/%d\rend\rwr\r",
+		n.Cfg.MgmtIPv4Address, utils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength), n.Cfg.MgmtIPv6Address, n.Cfg.MgmtIPv6PrefixLength)
+
+	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
 }
