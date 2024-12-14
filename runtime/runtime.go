@@ -62,6 +62,8 @@ type ContainerRuntime interface {
 	GetContainerStatus(ctx context.Context, cID string) ContainerStatus
 	// IsHealthy returns true is the container is reported as being healthy, false otherwise
 	IsHealthy(ctx context.Context, cID string) (bool, error)
+	// Immediately write to the stdin of a container, returns error
+	WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error
 }
 
 type ContainerStatus string

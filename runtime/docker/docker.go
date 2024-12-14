@@ -1044,3 +1044,26 @@ func (d *DockerRuntime) IsHealthy(ctx context.Context, cID string) (bool, error)
 	}
 	return inspect.State.Health.Status == "healthy", nil
 }
+
+func (d *DockerRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error {
+
+	stdin, err := d.Client.ContainerAttach(ctx, cID, container.AttachOptions{
+		Stdin:  true,
+		Stream: true,
+		Stdout: true,
+		Stderr: true,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Writing to %s: %v", cID, data)
+
+	_, err = stdin.Conn.Write(data)
+	if err != nil {
+		return err
+	}
+
+	return stdin.Conn.Close()
+}
