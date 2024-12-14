@@ -406,3 +406,8 @@ func (r *PodmanRuntime) IsHealthy(ctx context.Context, cID string) (bool, error)
 	}
 	return icd.State.Health.Status == "healthy", nil
 }
+
+func (*PodmanRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error {
+	log.Infof("WriteToStdinNoWait is not yet implemented for Podman runtime")
+	return nil
+}
