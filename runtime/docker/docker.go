@@ -1046,14 +1046,12 @@ func (d *DockerRuntime) IsHealthy(ctx context.Context, cID string) (bool, error)
 }
 
 func (d *DockerRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error {
-
 	stdin, err := d.Client.ContainerAttach(ctx, cID, container.AttachOptions{
 		Stdin:  true,
 		Stream: true,
 		Stdout: true,
 		Stderr: true,
 	})
-
 	if err != nil {
 		return err
 	}
