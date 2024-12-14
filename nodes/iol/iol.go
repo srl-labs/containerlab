@@ -360,8 +360,8 @@ func isPartialConfigFile(c string) bool {
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 
-	mgmt_str := fmt.Sprintf("\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\ripv6 address %s/%d\rend\rwr\r",
-		n.Cfg.MgmtIPv4Address, utils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength), n.Cfg.MgmtIPv6Address, n.Cfg.MgmtIPv6PrefixLength)
+	mgmt_str := fmt.Sprintf("\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
+		n.Cfg.MgmtIPv4Address, utils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength), n.Cfg.MgmtIPv6Address, n.Cfg.MgmtIPv6PrefixLength, n.Cfg.MgmtIPv4Gateway, n.Cfg.MgmtIPv6Gateway)
 
 	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
 }
