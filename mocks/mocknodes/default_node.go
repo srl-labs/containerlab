@@ -22,6 +22,7 @@ import (
 type MockNodeOverwrites struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeOverwritesMockRecorder
+	isgomock struct{}
 }
 
 // MockNodeOverwritesMockRecorder is the mock recorder for MockNodeOverwrites.
@@ -39,6 +40,21 @@ func NewMockNodeOverwrites(ctrl *gomock.Controller) *MockNodeOverwrites {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockNodeOverwrites) EXPECT() *MockNodeOverwritesMockRecorder {
 	return m.recorder
+}
+
+// CalculateInterfaceIndex mocks base method.
+func (m *MockNodeOverwrites) CalculateInterfaceIndex(ifName string) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CalculateInterfaceIndex", ifName)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CalculateInterfaceIndex indicates an expected call of CalculateInterfaceIndex.
+func (mr *MockNodeOverwritesMockRecorder) CalculateInterfaceIndex(ifName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateInterfaceIndex", reflect.TypeOf((*MockNodeOverwrites)(nil).CalculateInterfaceIndex), ifName)
 }
 
 // CheckInterfaceName mocks base method.
@@ -96,6 +112,21 @@ func (m *MockNodeOverwrites) GetImages(ctx context.Context) map[string]string {
 func (mr *MockNodeOverwritesMockRecorder) GetImages(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetImages", reflect.TypeOf((*MockNodeOverwrites)(nil).GetImages), ctx)
+}
+
+// GetMappedInterfaceName mocks base method.
+func (m *MockNodeOverwrites) GetMappedInterfaceName(ifName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMappedInterfaceName", ifName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMappedInterfaceName indicates an expected call of GetMappedInterfaceName.
+func (mr *MockNodeOverwritesMockRecorder) GetMappedInterfaceName(ifName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMappedInterfaceName", reflect.TypeOf((*MockNodeOverwrites)(nil).GetMappedInterfaceName), ifName)
 }
 
 // PullImage mocks base method.
