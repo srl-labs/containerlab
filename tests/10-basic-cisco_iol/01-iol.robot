@@ -51,7 +51,7 @@ Verify full startup configuration on router3
     ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-router3 "sh run | inc hostname"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    FULL_STARTUP_CFG
+    Should Contain    ${output}    FULL_STARTUP_CFG-router3
 
 
 *** Keywords ***
