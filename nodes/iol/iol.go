@@ -144,7 +144,7 @@ func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 	// Must update mgmt IP if not first boot
 	if !n.firstBoot {
 		// iol has a 5sec boot delay, wait a few extra secs for the console
-		time.Sleep(7 * time.Second)
+		time.Sleep(10 * time.Second)
 
 		return n.UpdateMgmtIntf(ctx)
 	}
