@@ -264,7 +264,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 
 	noProxy = noProxy + "," + strings.Join(noProxyList, ",")
 
-    nodeCfg.Env["no_proxy"] = noProxy
+	nodeCfg.Env["no_proxy"] = noProxy
 	nodeCfg.Env["NO_PROXY"] = noProxy
 
 	log.Debugf("node config: %+v", nodeCfg)
