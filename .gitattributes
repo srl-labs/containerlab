@@ -1,4 +1,6 @@
-# Do not detect labguages in the following folders
+# Do not detect languages in the following folders
 templates/** -linguist-detectable
 docs/** -linguist-detectable
 lab-examples/** -linguist-detectable
+# nextui is vendored
+clab/graph_templates/nextui/** linguist-vendored
