@@ -9,12 +9,14 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
@@ -42,9 +44,6 @@ var (
 	//go:embed iol.cfg.tmpl
 	cfgTemplate string
 
-	IOLCfgTpl, _ = template.New("clab-iol-default-config").Funcs(
-		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(cfgTemplate)
-
 	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	InterfaceOffset = 1
 	InterfaceHelp   = "eX/Y or EthernetX/Y (where X >= 0 and Y >= 1)"
@@ -65,14 +64,19 @@ func Register(r *nodes.NodeRegistry) {
 type iol struct {
 	nodes.DefaultNode
 
-	isL2Node  bool
-	Pid       string
-	nvramFile string
+	isL2Node          bool
+	Pid               string
+	nvramFile         string
+	partialStartupCfg string
+	bootCfg           string
+	interfaces        []IOLInterface
+	firstBoot         bool
 }
 
 func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.firstBoot = false
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -107,7 +111,7 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		fmt.Sprint(path.Join(n.Cfg.LabDir, n.nvramFile), ":", path.Join(iol_workdir, n.nvramFile)),
 
 		// mount launch config
-		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "startup.cfg"), ":/iol/config.txt"),
+		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "boot_config.txt"), ":/iol/config.txt"),
 
 		// mount IOYAP and NETMAP for interface mapping
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "iouyap.ini"), ":/iol/iouyap.ini"),
@@ -135,7 +139,17 @@ func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
-	return n.GenInterfaceConfig(ctx)
+	n.GenBootConfig(ctx)
+
+	// Must update mgmt IP if not first boot
+	if !n.firstBoot {
+		// iol has a 5sec boot delay, wait a few extra secs for the console
+		time.Sleep(10 * time.Second)
+
+		return n.UpdateMgmtIntf(ctx)
+	}
+
+	return nil
 }
 
 func (n *iol) CreateIOLFiles(ctx context.Context) error {
@@ -144,15 +158,14 @@ func (n *iol) CreateIOLFiles(ctx context.Context) error {
 	if !utils.FileExists(path.Join(n.Cfg.LabDir, n.nvramFile)) {
 		// create nvram file
 		utils.CreateFile(path.Join(n.Cfg.LabDir, n.nvramFile), "")
+		n.firstBoot = true
 	}
 
 	// create these files so the bind monut doesn't automatically
 	// make folders.
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "startup.cfg"), "")
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), "")
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), "")
+	utils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), "")
 
-	return nil
+	return n.GenInterfaceConfig(ctx)
 }
 
 // Generate interfaces configuration for IOL (and iouyap/netmap).
@@ -162,8 +175,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	netmapdata := fmt.Sprintf("%s:0/0 513:0/0\n", n.Pid)
 
 	slot, port := 0, 0
-
-	IOLInterfaces := []IOLInterface{}
 
 	// Regexp to pull number out of linux'ethX' interface naming
 	IntfRegExpr := regexp.MustCompile("[0-9]+")
@@ -182,7 +193,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		netmapdata += fmt.Sprintf("%s:%d/%d 513:%d/%d\n", n.Pid, slot, port, slot, port)
 
 		// populate template array for config
-		IOLInterfaces = append(IOLInterfaces,
+		n.interfaces = append(n.interfaces,
 			IOLInterface{
 				intf.GetIfaceName(),
 				x,
@@ -193,9 +204,31 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 
 	}
 
-	// create IOYAP and NETMAP file for interface mappings
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), iouyapData)
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), netmapdata)
+	// create IOUYAP and NETMAP file for interface mappings
+	err := utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), iouyapData)
+	if err != nil {
+		return err
+	}
+	err = utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), netmapdata)
+
+	return err
+}
+
+func (n *iol) GenBootConfig(_ context.Context) error {
+	n.bootCfg = cfgTemplate
+
+	if n.Cfg.StartupConfig != "" {
+		cfg, err := os.ReadFile(n.Cfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		if isPartialConfigFile(n.Cfg.StartupConfig) {
+			n.partialStartupCfg = string(cfg)
+		} else {
+			n.bootCfg = string(cfg)
+		}
+	}
 
 	// create startup config template
 	tpl := IOLTemplateData{
@@ -207,8 +240,12 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		MgmtIPv6Addr:       n.Cfg.MgmtIPv6Address,
 		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
 		MgmtIPv6GW:         n.Cfg.MgmtIPv6Gateway,
-		DataIFaces:         IOLInterfaces,
+		DataIFaces:         n.interfaces,
+		PartialCfg:         n.partialStartupCfg,
 	}
+
+	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(
+		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(n.bootCfg)
 
 	// generate the config
 	buf := new(bytes.Buffer)
@@ -216,10 +253,8 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	if err != nil {
 		return err
 	}
-	// write it to disk
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "startup.cfg"), buf.String())
 
-	return err
+	return utils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), buf.String())
 }
 
 type IOLTemplateData struct {
@@ -232,6 +267,7 @@ type IOLTemplateData struct {
 	MgmtIPv6PrefixLen  int
 	MgmtIPv6GW         string
 	DataIFaces         []IOLInterface
+	PartialCfg         string
 }
 
 // IOLinterface struct stores mapping info between
@@ -314,4 +350,18 @@ func (n *iol) CheckInterfaceName() error {
 	}
 
 	return nil
+}
+
+// from vr-sros.go
+// isPartialConfigFile returns true if the config file name contains .partial substring.
+func isPartialConfigFile(c string) bool {
+	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
+}
+
+func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
+	mgmt_str := fmt.Sprintf("\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
+		n.Cfg.MgmtIPv4Address, utils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength), n.Cfg.MgmtIPv6Address,
+		n.Cfg.MgmtIPv6PrefixLength, n.Cfg.MgmtIPv4Gateway, n.Cfg.MgmtIPv6Gateway)
+
+	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
 }

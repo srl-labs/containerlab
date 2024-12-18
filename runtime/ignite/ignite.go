@@ -471,3 +471,8 @@ func (*IgniteRuntime) IsHealthy(_ context.Context, _ string) (bool, error) {
 	log.Errorf("function GetContainerHealth(...) not implemented in the Containerlab IgniteRuntime")
 	return true, nil
 }
+
+func (*IgniteRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error {
+	log.Infof("WriteToStdinNoWait is not yet implemented for Ignite runtime")
+	return nil
+}

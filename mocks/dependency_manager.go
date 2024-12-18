@@ -21,6 +21,7 @@ import (
 type MockDependencyManager struct {
 	ctrl     *gomock.Controller
 	recorder *MockDependencyManagerMockRecorder
+	isgomock struct{}
 }
 
 // MockDependencyManagerMockRecorder is the mock recorder for MockDependencyManager.

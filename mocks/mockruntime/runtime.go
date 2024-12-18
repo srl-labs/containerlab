@@ -24,6 +24,7 @@ import (
 type MockContainerRuntime struct {
 	ctrl     *gomock.Controller
 	recorder *MockContainerRuntimeMockRecorder
+	isgomock struct{}
 }
 
 // MockContainerRuntimeMockRecorder is the mock recorder for MockContainerRuntime.
@@ -370,10 +371,25 @@ func (mr *MockContainerRuntimeMockRecorder) WithMgmtNet(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithMgmtNet", reflect.TypeOf((*MockContainerRuntime)(nil).WithMgmtNet), arg0)
 }
 
+// WriteToStdinNoWait mocks base method.
+func (m *MockContainerRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteToStdinNoWait", ctx, cID, data)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteToStdinNoWait indicates an expected call of WriteToStdinNoWait.
+func (mr *MockContainerRuntimeMockRecorder) WriteToStdinNoWait(ctx, cID, data any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteToStdinNoWait", reflect.TypeOf((*MockContainerRuntime)(nil).WriteToStdinNoWait), ctx, cID, data)
+}
+
 // MockNode is a mock of Node interface.
 type MockNode struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeMockRecorder
+	isgomock struct{}
 }
 
 // MockNodeMockRecorder is the mock recorder for MockNode.

@@ -122,9 +122,61 @@ Ethernet0/2            unassigned      YES unset  administratively down down
 Ethernet0/3            unassigned      YES unset  administratively down down
 ```
 
+## Startup configuration
+
+When -{{ kind_display_name }}- is booted, it will start with a basic configuration which configures the following:
+
+- IP addressing for the Ethernet0/0 (management) interface.
+- Management VRF for the Ethernet0/0 interface.
+- Default route(s) in the management VRF context for the [management network](../network.md#management-network).
+- SSH server.
+- Sets all user defined interfaces into 'up' state.
+
+On subsequent boots (deployments which are not the first boot of -{{ kind_short_display_name }}-), -{{ kind_short_display_name }}- will take a few extra seconds to come up, this is because Containerlab must update the management interface IP addressing and default routes for the management network.
+
+### User-defined config
+
+-{{ kind_display_name }}- supports user defined startup configurations in two forms:
+
+- Full startup configuration.
+- Partial startup configuration.
+
+Both types of startup configurations are only be applied on the **first boot** of -{{ kind_short_display_name }}-. When you save configuration in IOL to the NVRAM (using `write memory` or `copy run start` commands), the NVRAM configuration will override the startup configuration.
+
+#### Full startup configuration
+
+The full startup configuration is used to fully replace/override the default startup configuration that is applied. This means you must define IP addressing and the SSH server in your configuration to access -{{ kind_short_display_name }}-.
+
+You can use the template variables that are defined in the [default startup confguration](https://github.com/srl-labs/containerlab/blob/main/nodes/iol/iol.cfg.tmpl). On lab deployment the template variables will be replaced/substituted.
+
+```yaml
+name: iol_full_startup_cfg
+topology:
+  nodes:
+    sros:
+      kind: cisco_iol
+      startup-config: configuration.txt
+```
+
+#### Partial  startup configuration
+
+The partial startup configuration is appended to the default startup configuration. This is useful to preconfigure certain things like loopback interfaces or IGP, while also taking advantage of the startup configuration that containerlab applies by default for management interface IP addressing and SSH access.
+
+The partial startup configuration must contain `.partial` in the filename. For example: `config.partial.txt` or `config.partial`
+
+```yaml
+name: iol_partial_startup_cfg
+topology:
+  nodes:
+    sros:
+      kind: cisco_iol
+      startup-config: configuration.txt.partial
+```
+
+
 ## Usage and sample topology
 
-IOL-L2 has a different startup configuration compared to the regular IOL. You can tell containerlab you are using the L2 image by supplying the `type` field in your topology.
+IOL-L2 requires a different startup configuration compared to the regular IOL. You can tell containerlab you are using the L2 image by supplying the `type` field in your topology.
 
 See the sample topology below
 
@@ -141,7 +193,7 @@ topology:
     switch:
       kind: cisco_iol
       image: vrnetlab/cisco_iol:L2-17.12.01
-      type: l2
+      type: L2
   links:
     - endpoints: ["router1:Ethernet0/1","switch:Ethernet0/1"]
     - endpoints: ["router2:Ethernet0/1","switch:e0/2"]
