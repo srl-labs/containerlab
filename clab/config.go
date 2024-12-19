@@ -231,14 +231,14 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		noProxy = noProxyLower
 		for _, defaultValue := range noProxyDefaults {
 			if !strings.Contains(noProxy, defaultValue) {
-				noProxy=noProxy + "," + defaultValue
+				noProxy = noProxy + "," + defaultValue
 			}
 		}
 	} else if existsUpper {
 		noProxy = noProxyUpper
 		for _, defaultValue := range noProxyDefaults {
 			if !strings.Contains(noProxy, defaultValue) {
-				noProxy=noProxy + "," + defaultValue
+				noProxy = noProxy + "," + defaultValue
 			}
 		}
 	} else {
