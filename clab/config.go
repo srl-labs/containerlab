@@ -260,8 +260,12 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	}
 
 	// add mgmt subnet range for the sake of completeness - some OS support it, others don't
-	noProxyList = append(noProxyList, c.Config.Mgmt.IPv4Subnet)
-	noProxyList = append(noProxyList, c.Config.Mgmt.IPv6Subnet)
+	if c.Config.Mgmt.IPv4Subnet != "" {
+		noProxyList = append(noProxyList, c.Config.Mgmt.IPv4Subnet)
+	}
+	if c.Config.Mgmt.IPv6Subnet != "" {
+		noProxyList = append(noProxyList, c.Config.Mgmt.IPv6Subnet)
+	}
 
 	// sort for better readability
 	sort.Strings(noProxyList)
