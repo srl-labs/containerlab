@@ -227,14 +227,14 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	noProxyLower, existsLower := nodeCfg.Env["no_proxy"]
 	noProxyUpper, existsUpper := nodeCfg.Env["NO_PROXY"]
 	noProxy := ""
-    if existsLower {
+	if existsLower {
 		noProxy = noProxyLower
-        for _, defaultValue := range noProxyDefaults {
+		for _, defaultValue := range noProxyDefaults {
 			if !strings.Contains(noProxy, defaultValue) {
 				noProxy=noProxy + "," + defaultValue
 			}
 		}
-    } else if existsUpper {
+	} else if existsUpper {
 		noProxy = noProxyUpper
 		for _, defaultValue := range noProxyDefaults {
 			if !strings.Contains(noProxy, defaultValue) {
@@ -247,9 +247,9 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 
 	// add all clab nodes to the no_proxy variable, if they have a static IP assigned, add this as well
 	var noProxyList []string
-    for key := range c.Config.Topology.Nodes {
-        noProxyList = append(noProxyList, key)
-        ipv4address := c.Config.Topology.Nodes[key].GetMgmtIPv4()
+	for key := range c.Config.Topology.Nodes {
+		noProxyList = append(noProxyList, key)
+		ipv4address := c.Config.Topology.Nodes[key].GetMgmtIPv4()
 		if ipv4address != "" {
 			noProxyList = append(noProxyList, ipv4address)
 		}
@@ -257,7 +257,11 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		if ipv6address != "" {
 			noProxyList = append(noProxyList, ipv6address)
 		}
-    }
+	}
+
+	// add mgmt subnet range for the sake of completeness - some OS support it, others don't
+	noProxyList = append(noProxyList, c.Config.Mgmt.IPv4Subnet)
+	noProxyList = append(noProxyList, c.Config.Mgmt.IPv6Subnet)
 
 	// sort for better readability
 	sort.Strings(noProxyList)
