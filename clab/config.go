@@ -211,14 +211,11 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		return nil, err
 	}
 
-	// Load content of the EnvVarFiles
-	envFileContent, err := utils.LoadEnvVarFiles(c.TopoPaths.TopologyFileDir(),
-		c.Config.Topology.GetNodeEnvFiles(nodeName))
+	// load environment variables
+	err = addEnvVarsToNodeCfg(c, nodeCfg)
 	if err != nil {
 		return nil, err
 	}
-	// Merge EnvVarFiles content and the existing env variable
-	nodeCfg.Env = utils.MergeStringMaps(envFileContent, nodeCfg.Env)
 
 	log.Debugf("node config: %+v", nodeCfg)
 
@@ -580,4 +577,73 @@ func labelsToEnvVars(n *types.NodeConfig) {
 		// add the value to the node env with a prefixed and special chars cleaned up key
 		n.Env["CLAB_LABEL_"+utils.ToEnvKey(k)] = v
 	}
+}
+
+// addEnvVarsToNodeCfg adds env vars that come from different sources to node config struct
+func addEnvVarsToNodeCfg(c *CLab, nodeCfg *types.NodeConfig) error {
+	// Load content of the EnvVarFiles
+	envFileContent, err := utils.LoadEnvVarFiles(c.TopoPaths.TopologyFileDir(),
+		c.Config.Topology.GetNodeEnvFiles(nodeCfg.ShortName))
+	if err != nil {
+		return err
+	}
+	// Merge EnvVarFiles content and the existing env variable
+	nodeCfg.Env = utils.MergeStringMaps(envFileContent, nodeCfg.Env)
+
+	// Default set of no_proxy entries
+	noProxyDefaults := []string{"localhost", "127.0.0.1", "::1", "*.local"}
+
+	// check if either of the no_proxy variables exists
+	noProxyLower, existsLower := nodeCfg.Env["no_proxy"]
+	noProxyUpper, existsUpper := nodeCfg.Env["NO_PROXY"]
+	noProxy := ""
+	if existsLower {
+		noProxy = noProxyLower
+		for _, defaultValue := range noProxyDefaults {
+			if !strings.Contains(noProxy, defaultValue) {
+				noProxy = noProxy + "," + defaultValue
+			}
+		}
+	} else if existsUpper {
+		noProxy = noProxyUpper
+		for _, defaultValue := range noProxyDefaults {
+			if !strings.Contains(noProxy, defaultValue) {
+				noProxy = noProxy + "," + defaultValue
+			}
+		}
+	} else {
+		noProxy = strings.Join(noProxyDefaults, ",")
+	}
+
+	// add all clab nodes to the no_proxy variable, if they have a static IP assigned, add this as well
+	var noProxyList []string
+	for key := range c.Config.Topology.Nodes {
+		noProxyList = append(noProxyList, key)
+		ipv4address := c.Config.Topology.Nodes[key].GetMgmtIPv4()
+		if ipv4address != "" {
+			noProxyList = append(noProxyList, ipv4address)
+		}
+		ipv6address := c.Config.Topology.Nodes[key].GetMgmtIPv6()
+		if ipv6address != "" {
+			noProxyList = append(noProxyList, ipv6address)
+		}
+	}
+
+	// add mgmt subnet range for the sake of completeness - some OS support it, others don't
+	if c.Config.Mgmt.IPv4Subnet != "" {
+		noProxyList = append(noProxyList, c.Config.Mgmt.IPv4Subnet)
+	}
+	if c.Config.Mgmt.IPv6Subnet != "" {
+		noProxyList = append(noProxyList, c.Config.Mgmt.IPv6Subnet)
+	}
+
+	// sort for better readability
+	sort.Strings(noProxyList)
+
+	noProxy = noProxy + "," + strings.Join(noProxyList, ",")
+
+	nodeCfg.Env["no_proxy"] = noProxy
+	nodeCfg.Env["NO_PROXY"] = noProxy
+
+	return nil
 }

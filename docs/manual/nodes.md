@@ -345,6 +345,18 @@ topology:
 
 You can also specify a magic ENV VAR - `__IMPORT_ENVS: true` - which will import all environment variables defined in your shell to the relevant topology level.
 
+/// admonition | `NO_PROXY` variable
+    type: subtle-note
+If you use an http(s) proxy on your host, you typically set the `NO_PROXY` environment variable in your containers to ensure that when containers talk to one another, they don't send traffic through the proxy, as that would lead to broken communication. And setting those env vars is tedious.
+
+Containerlab automates this process by automatically setting `NO_PROXY`/`no_proxy` environment variables in the containerlab nodes with the values of:
+
+1. localhost,127.0.0.1,::1,*.local
+2. management network range for v4 and v6 (e.g. `172.20.20.0/24`)
+3. IPv4/IPv6 management addresses of the nodes of the lab
+4. node names as stated in your topology file
+///
+
 ### env-files
 
 To add environment variables defined in a file use the `env-files` property that can be defined at `defaults`, `kind` and `node` levels.

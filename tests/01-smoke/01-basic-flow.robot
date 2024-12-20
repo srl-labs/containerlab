@@ -18,6 +18,7 @@ ${n2-ipv4}                  172.20.20.100/24
 ${n2-ipv6}                  3fff:172:20:20::100/64
 ${table-delimit}            │
 
+
 *** Test Cases ***
 Verify number of Hosts entries before deploy
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -97,6 +98,21 @@ Ensure CLAB_INTFS env var is set
     # we literally check if the string stdout:\n3 is present in the output, as this is how
     # the result is printed today.
     Should Contain    ${output.stderr}    stdout:\\n3
+
+Ensure default no_proxy env var is set
+    [Documentation]
+    ...    This test ensures that the NO_PROXY env var is populated by clab automatically
+    ...    with the relevant addresses and names
+    ${output} =    Process.Run Process
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $NO_PROXY"'
+    ...    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+
+    Should Contain
+    ...    ${output.stderr}
+    ...    localhost,127.0.0.1,::1,*.local,172.20.20.0/24,172.20.20.100,172.20.20.99,3fff:172:20:20::/64,3fff:172:20:20::100,3fff:172:20:20::99,l1,l2,l3
 
 Inspect ${lab-name} lab using its name
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -190,7 +206,7 @@ Ensure "inspect all" outputs IP addresses
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    
+
     # get a 4th line from the bottom of the inspect cmd.
     # this relates to the l2 node ipv4
     ${line} =    String.Get Line    ${output}    -6
