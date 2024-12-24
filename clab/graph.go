@@ -19,6 +19,7 @@ import (
 	"syscall"
 
 	"github.com/awalterschulze/gographviz"
+	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 	e "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/internal/mermaid"
@@ -306,8 +307,7 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 
 // GenerateDrawioDiagram pulls (if needed) and runs the "clab-io-draw" container in interactive TTY mode.
 // The container is removed automatically when the TUI session ends.
-func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) error {
-	// Create a Docker client
+func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error {
 	cli, err := dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Errorf("Failed to create Docker client: %v", err)
@@ -317,7 +317,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 	ctx := context.Background()
 	imageName := fmt.Sprintf("ghcr.io/srl-labs/clab-io-draw:%s", version)
 
-	// Decide whether to forcibly pull or only pull if not present
+	// If user asks for "latest" => always pull. Otherwise only if missing.
 	if version == "latest" {
 		log.Infof("Forcing a pull of the latest image: %s", imageName)
 		if err := forcePull(ctx, cli, imageName); err != nil {
@@ -329,9 +329,11 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 		}
 	}
 
-	// Build the container's command. The clab-io-draw container expects: clab2drawio -i ...
 	topoFile := c.TopoPaths.TopologyFilenameBase()
-	cmdArgs := append([]string{"-i", topoFile}, additionalFlags...)
+
+	// Turn user-supplied arguments into properly tokenized slice
+	parsedArgs := parseDrawioArgs(userArgs)
+	cmdArgs := append([]string{"-i", topoFile}, parsedArgs...)
 
 	log.Infof("Launching clab-io-draw version=%s with arguments: %v", version, cmdArgs)
 
@@ -346,7 +348,9 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 			Env:       []string{"TERM=xterm-256color"},
 		},
 		&container.HostConfig{
-			Binds: []string{fmt.Sprintf("%s:/data", c.TopoPaths.TopologyFileDir())},
+			Binds: []string{
+				fmt.Sprintf("%s:/data", c.TopoPaths.TopologyFileDir()),
+			},
 		},
 		nil,
 		nil,
@@ -358,7 +362,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 	}
 	containerID := createResp.ID
 
-	// Attach to the container's TTY
+	// Attach to TTY
 	attachResp, err := cli.ContainerAttach(ctx, containerID, container.AttachOptions{
 		Stream: true,
 		Stdin:  true,
@@ -371,13 +375,13 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 	}
 	defer attachResp.Close()
 
-	// Start container
+	// Start the container
 	if err := cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
 		log.Errorf("Failed to start container: %v", err)
 		return fmt.Errorf("failed to start container: %w", err)
 	}
 
-	// Put current terminal into raw mode if running interactively
+	// If we're running in a real terminal, set raw mode & handle resizing
 	inTerminal := term.IsTerminal(int(os.Stdin.Fd()))
 	var oldState *term.State
 	if inTerminal {
@@ -387,7 +391,6 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 		}
 	}
 
-	// Listen for signals (e.g. SIGWINCH for resize, SIGINT for Ctrl-C)
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGWINCH, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -406,31 +409,28 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 		}
 	}()
 
-	// Initial resize (to match local terminal size)
 	if inTerminal {
 		resizeDockerTTY(cli, ctx, containerID)
 	}
 
-	// Copy local stdin -> container
-	go func() {
-		_, _ = io.Copy(attachResp.Conn, os.Stdin)
-	}()
+	// Pipe local -> container
+	go func() { _, _ = io.Copy(attachResp.Conn, os.Stdin) }()
 
-	// Copy container output -> local stdout
+	// Pipe container -> local
 	errChan := make(chan error, 1)
 	go func() {
 		_, copyErr := io.Copy(os.Stdout, attachResp.Reader)
 		errChan <- copyErr
 	}()
 
-	// Wait for container to stop
+	// Wait for container to exit
 	waitCh, waitErrCh := cli.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
 	var exitCode int64
 	select {
-	case err := <-waitErrCh:
-		if err != nil {
-			log.Errorf("Error waiting for container: %v", err)
-			return fmt.Errorf("error waiting for container: %w", err)
+	case we := <-waitErrCh:
+		if we != nil {
+			log.Errorf("Error waiting for container: %v", we)
+			return fmt.Errorf("error waiting for container: %w", we)
 		}
 	case status := <-waitCh:
 		if status.Error != nil {
@@ -456,11 +456,9 @@ func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) e
 		log.Warnf("Failed to remove container %s: %v", containerID, err)
 	}
 
-	// If container had a non-zero exit
 	if exitCode != 0 {
 		return fmt.Errorf("clab-io-draw container exited with code %d", exitCode)
 	}
-
 	log.Info("Diagram created successfully.")
 	return nil
 }
@@ -514,4 +512,21 @@ func resizeDockerTTY(cli *dockerC.Client, ctx context.Context, containerID strin
 	}); resizeErr != nil {
 		log.Debugf("Failed to resize container TTY: %v", resizeErr)
 	}
+}
+
+func parseDrawioArgs(argList []string) []string {
+	// If the user passes multiple tokens in one argument, e.g. "-I --theme nokia_modern",
+	// we'll parse them into separate tokens.
+	var finalTokens []string
+	for _, rawArg := range argList {
+		parsed, err := shlex.Split(rawArg)
+		if err != nil {
+			// If splitting fails, fallback to using the entire rawArg
+			log.Warnf("Failed to parse %q via shlex; using as a single token", rawArg)
+			finalTokens = append(finalTokens, rawArg)
+		} else {
+			finalTokens = append(finalTokens, parsed...)
+		}
+	}
+	return finalTokens
 }
