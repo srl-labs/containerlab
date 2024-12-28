@@ -36,7 +36,7 @@ IPInfusion OcNOS node launched with containerlab can be managed via the followin
     ```
 
 !!!info
-    Default user credentials: `ocnos:ocnos`
+    Default user credentials: `admin:admin@123`
 
 ## Interfaces mapping
 
