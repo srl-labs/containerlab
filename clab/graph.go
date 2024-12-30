@@ -5,6 +5,7 @@
 package clab
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"html/template"
@@ -18,7 +19,7 @@ import (
 	"syscall"
 
 	"github.com/awalterschulze/gographviz"
-	"github.com/creack/pty"
+	"github.com/google/shlex"
 	log "github.com/sirupsen/logrus"
 	e "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/internal/mermaid"
@@ -27,6 +28,10 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
+	dockerC "github.com/docker/docker/client"
 	"golang.org/x/term"
 )
 
@@ -300,99 +305,228 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 	return http.ListenAndServe(srv, nil)
 }
 
-func (c *CLab) GenerateDrawioDiagram(version string, additionalFlags []string) error {
-	topoFile := c.TopoPaths.TopologyFilenameBase()
+// GenerateDrawioDiagram pulls (if needed) and runs the "clab-io-draw" container in interactive TTY mode.
+// The container is removed automatically when the TUI session ends.
+func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error {
+	cli, err := dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
+	if err != nil {
+		log.Errorf("Failed to create Docker client: %v", err)
+		return fmt.Errorf("failed to create Docker client: %w", err)
+	}
 
+	ctx := context.Background()
 	imageName := fmt.Sprintf("ghcr.io/srl-labs/clab-io-draw:%s", version)
 
-	// If version is "latest", check for newer image and pull if necessary
+	// If user asks for "latest" => always pull. Otherwise only if missing.
 	if version == "latest" {
-		log.Info("Checking for updates to the latest Docker image...")
-		pullCmd := exec.Command("docker", "pull", imageName)
-		pullOut, pullErr := pullCmd.CombinedOutput()
-		pullOutput := string(pullOut)
-		if pullErr != nil {
-			log.Errorf("Failed to pull the latest image: %v", pullErr)
-			log.Errorf("Pull command output: %s", pullOutput)
-			return fmt.Errorf("failed to pull the latest image: %w\nOutput: %s", pullErr, pullOutput)
+		log.Infof("Forcing a pull of the latest image: %s", imageName)
+		if err := forcePull(ctx, cli, imageName); err != nil {
+			return fmt.Errorf("failed to pull latest image: %w", err)
 		}
-
-		// Check if the image was updated or is up-to-date
-		if strings.Contains(pullOutput, "Downloaded newer image") {
-			log.Infof("Docker image updated to the latest version.")
-		} else if strings.Contains(pullOutput, "Image is up to date") {
-			log.Infof("Docker image is already the latest version.")
-		} else {
-			log.Warnf("Unexpected output from docker pull command: %s", pullOutput)
+	} else {
+		if err := pullImageIfNotPresent(ctx, cli, imageName); err != nil {
+			return fmt.Errorf("could not ensure image presence: %w", err)
 		}
 	}
 
-	cmdArgs := []string{
-		"docker", "run", "-it",
-		"-v", fmt.Sprintf("%s:/data", c.TopoPaths.TopologyFileDir()),
-		imageName,
-		"-i", topoFile,
-	}
+	topoFile := c.TopoPaths.TopologyFilenameBase()
 
-	log.Infof("Generating draw.io diagram with version: %s", version)
+	// Turn user-supplied arguments into properly tokenized slice
+	parsedArgs := parseDrawioArgs(userArgs)
+	cmdArgs := append([]string{"-i", topoFile}, parsedArgs...)
 
-	// Process additional flags
-	for _, flag := range additionalFlags {
-		parts := strings.Fields(flag)
-		cmdArgs = append(cmdArgs, parts...)
-	}
+	log.Infof("Launching clab-io-draw version=%s with arguments: %v", version, cmdArgs)
 
-	// Create the command
-	cmd := exec.Command("sudo", cmdArgs...)
-
-	// Start the command with a pseudo-terminal (PTY)
-	ptmx, err := pty.Start(cmd)
+	// Create the container in TTY mode with an open STDIN
+	createResp, err := cli.ContainerCreate(
+		ctx,
+		&container.Config{
+			Image:     imageName,
+			Cmd:       cmdArgs,
+			Tty:       true,
+			OpenStdin: true,
+			Env:       []string{"TERM=xterm-256color"},
+		},
+		&container.HostConfig{
+			Binds: []string{
+				fmt.Sprintf("%s:/data", c.TopoPaths.TopologyFileDir()),
+			},
+		},
+		nil,
+		nil,
+		"",
+	)
 	if err != nil {
-		log.Errorf("Failed to start command with PTY: %v", err)
-		return fmt.Errorf("failed to start command with PTY: %w", err)
+		log.Errorf("Failed to create container for clab-io-draw: %v", err)
+		return fmt.Errorf("failed to create container: %w", err)
 	}
-	defer func() { _ = ptmx.Close() }() // Best effort to close the PTY
+	containerID := createResp.ID
 
-	// Check if os.Stdin is a terminal
-	if term.IsTerminal(int(os.Stdin.Fd())) {
-		// Handle PTY size changes
-		ch := make(chan os.Signal, 1)
-		signal.Notify(ch, syscall.SIGWINCH)
-		go func() {
-			for range ch {
-				if err := pty.InheritSize(os.Stdin, ptmx); err != nil {
-					log.Errorf("Error resizing PTY: %v", err)
-				}
-			}
-		}()
-		ch <- syscall.SIGWINCH // Initial resize
+	// Attach to TTY
+	attachResp, err := cli.ContainerAttach(ctx, containerID, container.AttachOptions{
+		Stream: true,
+		Stdin:  true,
+		Stdout: true,
+		Stderr: true,
+	})
+	if err != nil {
+		log.Errorf("Failed to attach to container: %v", err)
+		return fmt.Errorf("failed to attach to container: %w", err)
+	}
+	defer attachResp.Close()
 
-		// Set the terminal to raw mode
-		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	// Start the container
+	if err := cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
+		log.Errorf("Failed to start container: %v", err)
+		return fmt.Errorf("failed to start container: %w", err)
+	}
+
+	// If we're running in a real terminal, set raw mode & handle resizing
+	inTerminal := term.IsTerminal(int(os.Stdin.Fd()))
+	var oldState *term.State
+	if inTerminal {
+		oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
 		if err != nil {
-			log.Errorf("Failed to set terminal to raw mode: %v", err)
-			return fmt.Errorf("failed to set terminal to raw mode: %w", err)
+			log.Warnf("Unable to set terminal to raw mode: %v", err)
 		}
-		defer func() {
-			_ = term.Restore(int(os.Stdin.Fd()), oldState) // Best effort to restore
-		}()
-
-		// Copy stdin to the PTY and the PTY to stdout
-		go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
 	}
 
-	// Always copy the PTY output to our program's stdout
-	// This ensures we capture the output regardless of TTY status
-	_, _ = io.Copy(os.Stdout, ptmx)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGWINCH, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		for s := range sigCh {
+			switch s {
+			case syscall.SIGWINCH:
+				if inTerminal {
+					resizeDockerTTY(cli, ctx, containerID)
+				}
+			case syscall.SIGINT, syscall.SIGTERM:
+				log.Infof("Received signal %v, stopping container %s", s, containerID)
+				timeoutSec := 2
+				_ = cli.ContainerStop(ctx, containerID,
+					container.StopOptions{Timeout: &[]int{timeoutSec}[0]})
+			}
+		}
+	}()
 
-	// Wait for the command to finish
-	err = cmd.Wait()
-	if err != nil {
-		log.Errorf("Command execution failed: %v", err)
-		return fmt.Errorf("failed to generate diagram: %w", err)
+	if inTerminal {
+		resizeDockerTTY(cli, ctx, containerID)
 	}
 
-	log.Infof("Diagram created successfully.")
+	// Pipe local -> container
+	go func() { _, _ = io.Copy(attachResp.Conn, os.Stdin) }()
 
+	// Pipe container -> local
+	errChan := make(chan error, 1)
+	go func() {
+		_, copyErr := io.Copy(os.Stdout, attachResp.Reader)
+		errChan <- copyErr
+	}()
+
+	// Wait for container to exit
+	waitCh, waitErrCh := cli.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
+	var exitCode int64
+	select {
+	case we := <-waitErrCh:
+		if we != nil {
+			log.Errorf("Error waiting for container: %v", we)
+			return fmt.Errorf("error waiting for container: %w", we)
+		}
+	case status := <-waitCh:
+		if status.Error != nil {
+			log.Errorf("Container wait error: %s", status.Error.Message)
+			return fmt.Errorf("container wait error: %s", status.Error.Message)
+		}
+		exitCode = status.StatusCode
+	}
+
+	// If copying container output ended in an error, log it
+	if cerr := <-errChan; cerr != nil && cerr != io.EOF {
+		log.Warnf("Error reading container output: %v", cerr)
+	}
+
+	// Restore terminal state if needed
+	if oldState != nil {
+		_ = term.Restore(int(os.Stdin.Fd()), oldState)
+	}
+
+	// Remove container
+	removeOpts := container.RemoveOptions{Force: true}
+	if err := cli.ContainerRemove(ctx, containerID, removeOpts); err != nil {
+		log.Warnf("Failed to remove container %s: %v", containerID, err)
+	}
+
+	if exitCode != 0 {
+		return fmt.Errorf("clab-io-draw container exited with code %d", exitCode)
+	}
+	log.Info("Diagram created successfully.")
 	return nil
+}
+
+// forcePull always does a Docker Pull, even if the image is already present locally.
+func forcePull(ctx context.Context, cli *dockerC.Client, imageName string) error {
+	log.Infof("Pulling image %q forcibly", imageName)
+	rc, err := cli.ImagePull(ctx, imageName, image.PullOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to pull image %q: %w", imageName, err)
+	}
+	defer rc.Close()
+	// Must consume entire body or Docker won't finalize the pull
+	_, _ = io.Copy(io.Discard, rc)
+	return nil
+}
+
+// pullImageIfNotPresent does an Inspect first. If not found, does a pull.
+// If found, just logs that it's skipping.
+func pullImageIfNotPresent(ctx context.Context, cli *dockerC.Client, imageName string) error {
+	_, _, err := cli.ImageInspectWithRaw(ctx, imageName)
+	if err == nil {
+		// Found locally
+		log.Debugf("Image %q already present locally; skipping pull", imageName)
+		return nil
+	}
+	if dockerC.IsErrNotFound(err) {
+		log.Infof("Image %q not found locally; pulling...", imageName)
+		rc, perr := cli.ImagePull(ctx, imageName, image.PullOptions{})
+		if perr != nil {
+			return fmt.Errorf("failed to pull image %q: %w", imageName, perr)
+		}
+		defer rc.Close()
+		_, _ = io.Copy(io.Discard, rc)
+		return nil
+	}
+	return fmt.Errorf("failed to inspect image %q: %w", imageName, err)
+}
+
+// resizeDockerTTY attempts to match the container's TTY size to the local terminal size.
+// Called on startup and whenever SIGWINCH is received.
+func resizeDockerTTY(cli *dockerC.Client, ctx context.Context, containerID string) {
+	w, h, err := term.GetSize(int(os.Stdin.Fd()))
+	if err != nil {
+		log.Debugf("Unable to get local terminal size: %v", err)
+		return
+	}
+	if resizeErr := cli.ContainerResize(ctx, containerID, container.ResizeOptions{
+		Width:  uint(w),
+		Height: uint(h),
+	}); resizeErr != nil {
+		log.Debugf("Failed to resize container TTY: %v", resizeErr)
+	}
+}
+
+func parseDrawioArgs(argList []string) []string {
+	// If the user passes multiple tokens in one argument, e.g. "-I --theme nokia_modern",
+	// we'll parse them into separate tokens.
+	var finalTokens []string
+	for _, rawArg := range argList {
+		parsed, err := shlex.Split(rawArg)
+		if err != nil {
+			// If splitting fails, fallback to using the entire rawArg
+			log.Warnf("Failed to parse %q via shlex; using as a single token", rawArg)
+			finalTokens = append(finalTokens, rawArg)
+		} else {
+			finalTokens = append(finalTokens, parsed...)
+		}
+	}
+	return finalTokens
 }

@@ -20,7 +20,7 @@ Generate Diagram for ${lab-name} Lab
     [Documentation]    This test runs `clab graph` to generate a diagram and verifies success.
 
     # Run the 'clab graph' command to generate the diagram
-    ${output}=    Run Process    sudo    -E    ${CLAB_BIN}    graph    -t    ${CURDIR}/${lab-file}    --drawio    --drawio-args\=--theme nokia_modern_dark
+    ${output}=    Run Process    sudo    -E    ${CLAB_BIN}    graph    -t    ${CURDIR}/${lab-file}    --drawio    --drawio-args\=--theme nokia_modern
     ...    shell=True    stdout=PIPE    stderr=PIPE
 
     Log    ${output.stdout}
