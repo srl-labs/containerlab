@@ -189,9 +189,4 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 
 		tplData.GRPCConfig = grpcConfigPre24_3
 	}
-
-	// in srlinux >= v24.10+ we add EDA configuration.
-	if semver.Compare(v, "v24.10") >= 0 || n.swVersion.Major == "0" {
-		tplData.EDAConfig = edaConfig
-	}
 }

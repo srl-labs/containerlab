@@ -570,6 +570,8 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	n.setVersionSpecificParams(&tplData)
 
+	n.setEdaConfig(&tplData)
+
 	n.setCustomPrompt(&tplData)
 
 	// set MgmtMTU to the MTU value of the runtime management network
