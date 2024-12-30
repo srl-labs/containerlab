@@ -579,7 +579,7 @@ func labelsToEnvVars(n *types.NodeConfig) {
 	}
 }
 
-// addEnvVarsToNodeCfg adds env vars that come from different sources to node config struct
+// addEnvVarsToNodeCfg adds env vars that come from different sources to node config struct.
 func addEnvVarsToNodeCfg(c *CLab, nodeCfg *types.NodeConfig) error {
 	// Load content of the EnvVarFiles
 	envFileContent, err := utils.LoadEnvVarFiles(c.TopoPaths.TopologyFileDir(),
