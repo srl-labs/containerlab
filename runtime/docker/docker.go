@@ -320,7 +320,13 @@ func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (string
 			}
 		}
 	}
-	return v4, v6, err
+
+	// didnt find any gateways, fallthrough to returning the error
+	if v4 == "" && v6 == "" {
+		return "", "", err
+	}
+
+	return v4, v6, nil
 }
 
 // postCreateNetActions performs additional actions after the network has been created.
