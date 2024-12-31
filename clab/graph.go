@@ -345,7 +345,10 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error {
 			Cmd:       cmdArgs,
 			Tty:       true,
 			OpenStdin: true,
-			Env:       []string{"TERM=xterm-256color"},
+			Env: []string{
+				"TERM=xterm-256color",
+				"COLORTERM=truecolor", // 4-bit color support
+			},
 		},
 		&container.HostConfig{
 			Binds: []string{
