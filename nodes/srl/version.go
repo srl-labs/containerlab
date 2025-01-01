@@ -2,6 +2,7 @@ package srl
 
 import (
 	"context"
+	"os"
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
@@ -192,6 +193,14 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 
 	// in srlinux >= v24.10+ we add EDA configuration.
 	if semver.Compare(v, "v24.10") >= 0 || n.swVersion.Major == "0" {
-		tplData.EDAConfig = edaConfig
+		cfg := edaDiscoveryServerConfig
+
+		if os.Getenv("CLAB_EDA_USE_DEFAULT_GRPC_SERVER") != "" {
+			cfg = cfg + "\n" + edaDefaultMgmtServerConfig
+		} else {
+			cfg = cfg + "\n" + edaCustomMgmtServerConfig
+		}
+
+		tplData.EDAConfig = cfg
 	}
 }
