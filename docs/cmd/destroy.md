@@ -14,7 +14,7 @@ The `destroy` command destroys a lab referenced by its [topology definition file
 
 #### topology
 
-With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used to spin up a lab.
+With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used to identify the lab to destroy.
 
 When the topology path refers to a directory, containerlab will look for a file with `.clab.yml` extension in that directory and use it as a topology definition file.
 
