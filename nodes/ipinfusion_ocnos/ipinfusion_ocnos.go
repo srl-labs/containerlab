@@ -17,7 +17,7 @@ import (
 
 var (
 	kindnames          = []string{"ipinfusion_ocnos"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = nodes.NewCredentials("admin", "admin@123")
 )
 
 const (
