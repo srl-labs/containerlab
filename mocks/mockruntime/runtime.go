@@ -24,6 +24,7 @@ import (
 type MockContainerRuntime struct {
 	ctrl     *gomock.Controller
 	recorder *MockContainerRuntimeMockRecorder
+	isgomock struct{}
 }
 
 // MockContainerRuntimeMockRecorder is the mock recorder for MockContainerRuntime.
@@ -374,6 +375,7 @@ func (mr *MockContainerRuntimeMockRecorder) WithMgmtNet(arg0 any) *gomock.Call {
 type MockNode struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeMockRecorder
+	isgomock struct{}
 }
 
 // MockNodeMockRecorder is the mock recorder for MockNode.

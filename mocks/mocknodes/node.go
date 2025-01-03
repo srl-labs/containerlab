@@ -28,6 +28,7 @@ import (
 type MockNode struct {
 	ctrl     *gomock.Controller
 	recorder *MockNodeMockRecorder
+	isgomock struct{}
 }
 
 // MockNodeMockRecorder is the mock recorder for MockNode.
@@ -78,16 +79,16 @@ func (mr *MockNodeMockRecorder) AddLinkToContainer(ctx, link, f any) *gomock.Cal
 // CalculateInterfaceIndex mocks base method.
 func (m *MockNode) CalculateInterfaceIndex(ifName string) (int, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CalculateInterfaceIndex")
+	ret := m.ctrl.Call(m, "CalculateInterfaceIndex", ifName)
 	ret0, _ := ret[0].(int)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CalculateInterfaceIndex indicates an expected call of CalculateInterfaceIndex.
-func (mr *MockNodeMockRecorder) CalculateInterfaceIndex() *gomock.Call {
+func (mr *MockNodeMockRecorder) CalculateInterfaceIndex(ifName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateInterfaceIndex", reflect.TypeOf((*MockNode)(nil).CalculateInterfaceIndex))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CalculateInterfaceIndex", reflect.TypeOf((*MockNode)(nil).CalculateInterfaceIndex), ifName)
 }
 
 // CheckDeploymentConditions mocks base method.
