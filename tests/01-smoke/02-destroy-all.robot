@@ -94,6 +94,16 @@ Verify ipv4-range is set correctly
     Log    ${output}
     Should Contain    ${output}    172.20.30.9
 
+Redeploy second lab
+    ${result} =    Run Process
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} redeploy -c -t ${CURDIR}/${lab2-file}
+    ...    cwd=/tmp    # using a different cwd to check lab resolution via container labels
+    ...    shell=True
+    Log    ${result.stdout}
+    Log    ${result.stderr}
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Exist    /tmp/clab-single-node
+
 Destroy all labs
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup

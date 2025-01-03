@@ -16,7 +16,7 @@ The `deploy` command spins up a lab using the topology expressed via [topology d
 
 With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used to spin up a lab.
 
-When the topology path refers to a directory, containerlab will look for a file with `.clab.yml` extension in that directory and use it as a topology definition file.
+When the topology path refers to a directory, containerlab will look for a file with `.clab.yml` or `.clab.yaml` extension in that directory and use it as a topology definition file.
 
 When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory.
 

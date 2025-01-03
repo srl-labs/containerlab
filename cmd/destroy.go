@@ -126,7 +126,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			}
 		}
 
-		err = links.SetMgmtNetUnderlayingBridge(nc.Config.Mgmt.Bridge)
+		err = links.SetMgmtNetUnderlyingBridge(nc.Config.Mgmt.Bridge)
 		if err != nil {
 			return err
 		}

@@ -85,6 +85,7 @@ nav:
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
+      - redeploy: cmd/redeploy.md
       - inspect: cmd/inspect.md
       - save: cmd/save.md
       - exec: cmd/exec.md

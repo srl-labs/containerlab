@@ -993,7 +993,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
+	err = links.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
 	}
@@ -1250,7 +1250,7 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 // Exec execute commands on running topology nodes.
 func (c *CLab) Exec(ctx context.Context, cmds []string, options *ExecOptions) (*exec.ExecCollection, error) {
-	err := links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
+	err := links.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
 	}

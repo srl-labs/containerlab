@@ -155,7 +155,7 @@ func GetMgmtBrLinkNode() Node { // skipcq: RVV-B0001
 	return getMgmtBrLinkNode()
 }
 
-func SetMgmtNetUnderlayingBridge(bridge string) error {
+func SetMgmtNetUnderlyingBridge(bridge string) error {
 	getMgmtBrLinkNode().GenericLinkNode.shortname = bridge
 	return nil
 }
