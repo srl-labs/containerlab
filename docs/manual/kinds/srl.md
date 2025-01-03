@@ -351,7 +351,7 @@ Nokia SR Linux nodes support setting of [SANs](../nodes.md#subject-alternative-n
 
 Starting with SR Linux 24.3.1, the gRPC server config block is used to configure gRPC-based services such as gNMI, gNOI, gRIBI and P4RT. The factory configuration includes the `mgmt` gRPC server block to which containerlab adds all those services and:
 
-* generated TLS profile
+* generated TLS profile - `clab-profile`
 * unix-socket access for gRPC services
 * increased rate limit
 * trace options
@@ -359,6 +359,14 @@ Starting with SR Linux 24.3.1, the gRPC server config block is used to configure
 These additions are meant to make all gRPC services available to the user out of the box with the enabled tracing and a custom TLS profile.
 
 Besides augmenting the factory-provided `mgmt` gRPC server block, containerlab also adds a new `insecure-mgmt` gRPC server that provides the same services as the `mgmt` server but without TLS. This server runs on port 57401 and is meant to be used for testing purposes as well as for local gNMI clients running as part of the NDK apps or local Event Handler scripts.
+
+#### EDA support
+
+To ensure that Containerlab-provisioned SR Linux nodes can be managed by Nokia EDA a set of gRPC servers is added:
+
+* `eda-discovery` - provides support for EDA discovery
+* `eda-mgmt` - gRPC server that references `EDA` TLS security profile that EDA setups with gNSI
+* `eda-insecure-mgmt` - insecure version of the `eda-mgmt` gRPC server
 
 ### SSH Keys
 
