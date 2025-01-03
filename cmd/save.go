@@ -46,7 +46,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 			return err
 		}
 
-		err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
+		err = links.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 		if err != nil {
 			return err
 		}
