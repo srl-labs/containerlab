@@ -177,7 +177,7 @@ Check the particular kind documentation to see if the startup-config is supporte
           startup-config: cfgs/__clabNodeName__.partial.cfg
     ```
 
-    The `__clabNodeName__` variable can also be used in the kind and default sections of the config.  Using the same directory structure from the example above, the following shows how to use the magic varable for a kind.
+    The `__clabNodeName__` variable can also be used in the kind and default sections of the config.  Using the same directory structure from the example above, the following shows how to use the magic variable for a kind.
 
     ```yaml
     name: mylab
@@ -203,11 +203,11 @@ Check the particular kind documentation to see if the startup-config is supporte
       nodes:
         node1:
         node2:
-    ``` 
+    ```
 
 #### embedded startup-config
 
-It is possible to embed the startup configuraion in the topology file itself. This is done by providing the startup-config as a multiline string.
+It is possible to embed the startup configuration in the topology file itself. This is done by providing the startup-config as a multiline string.
 
 ```yaml
 topology:
@@ -418,7 +418,7 @@ If you use an http(s) proxy on your host, you typically set the `NO_PROXY` envir
 
 Containerlab automates this process by automatically setting `NO_PROXY`/`no_proxy` environment variables in the containerlab nodes with the values of:
 
-1. localhost,127.0.0.1,::1,*.local
+1. `localhost,127.0.0.1,::1,*.local`
 2. management network range for v4 and v6 (e.g. `172.20.20.0/24`)
 3. IPv4/IPv6 management addresses of the nodes of the lab
 4. node names as stated in your topology file
