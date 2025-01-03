@@ -2,7 +2,31 @@
 
 ### Description
 
-The `redeploy` command destroys and redeploys a lab based on the topology definition file. It effectively combines the `destroy` and `deploy` commands into a single operation.
+The `redeploy` command redeploys a lab referenced by a provided topology definition file. It effectively combines the `destroy` and `deploy` commands into a single operation.
+
+The two most common applications of this command are:
+
+1. Redeploying a lab while keeping the lab directory intact:
+
+    ```bash
+    sudo containerlab redeploy -t mylab.clab.yml
+    ```
+
+    This command will destroy the lab and redeploy it using the same topology file and the same lab directory. This should keep intact any saved configurations for the nodes.
+
+2. Redeploying a lab while removing the lab directory at the destroy stage:
+
+    ```bash
+    sudo containerlab redeploy --cleanup -t mylab.clab.yml
+    ```
+
+    or using the shorthands:
+
+    ```bash
+    sudo clab rdep -c -t mylab.clab.yml
+    ```
+
+    This command will destroy the lab and remove the lab directory before deploying the lab again. This ensures a clean redeployment as if you were deploying a lab for the first time discarding any previous lab state.
 
 ### Usage
 
@@ -16,7 +40,7 @@ The `redeploy` command destroys and redeploys a lab based on the topology defini
 
 With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used to redeploy a lab.
 
-When the topology path refers to a directory, containerlab will look for a file with `.clab.yml` extension in that directory and use it as a topology definition file.
+When the topology path refers to a directory, containerlab will look for a file with `.clab.yml` or `.clab.yaml` extension in that directory and use it as a topology definition file.
 
 When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory.
 
@@ -85,7 +109,7 @@ containerlab redeploy -t mylab.clab.yml
 #### Redeploy a lab with removing the Lab directory at destroy stage
 
 ```bash
-containerlab redeploy -t mylab.clab.yml --cleanup
+containerlab redeploy --cleanup -t mylab.clab.yml
 ```
 
 #### Redeploy a lab without specifying topology file
