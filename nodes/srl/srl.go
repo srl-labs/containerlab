@@ -535,6 +535,8 @@ type srlTemplateData struct {
 	ACLConfig string
 	// NetconfConfig is a string containing Netconf server configuration
 	NetconfConfig string
+	// EDAConfig is a string containing EDA configuration
+	EDAConfig string
 }
 
 // tplIFace template interface struct.

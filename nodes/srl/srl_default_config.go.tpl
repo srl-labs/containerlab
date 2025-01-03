@@ -13,6 +13,8 @@ set / system tls server-profile clab-profile authenticate-client false
 
 {{ .GRPCConfig }}
 
+{{ .EDAConfig }}
+
 {{- if .EnableGNMIUnixSockServices }}
 system gnmi-server unix-socket services [ gnmi gnoi ] admin-state enable
 {{- end }}

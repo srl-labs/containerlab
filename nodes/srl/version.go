@@ -2,6 +2,7 @@ package srl
 
 import (
 	"context"
+	"os"
 	"regexp"
 
 	log "github.com/sirupsen/logrus"
@@ -61,11 +62,11 @@ set / acl acl-filter cpm type ipv6 entry 188 match transport destination-port va
 set / acl acl-filter cpm type ipv6 entry 188 action accept`
 
 	// grpc contains the grpc server(s) configuration for srlinux versions >= 24.3.
-	// It consists of the gNMI, gNOI, gRIBI, and p4RT services enabled on the `mgmt`
+	// It consists of the gNMI, gNOI, gNSI, gRIBI, and p4RT services enabled on the `mgmt`
 	// grpc server instance with a custom TLS profile.
 	// And in addition to the TLS secured services, the `insecure-mgmt` server instance
 	// is created that provides the same services but without TLS.
-	grpcConfig = `set / system grpc-server mgmt services [ gnmi gnoi gribi p4rt ]
+	grpcConfig = `set / system grpc-server mgmt services [ gnmi gnoi gnsi gribi p4rt ]
 set / system grpc-server mgmt tls-profile clab-profile
 set / system grpc-server mgmt rate-limit 65000
 set / system grpc-server mgmt network-instance mgmt
@@ -74,7 +75,7 @@ set / system grpc-server mgmt unix-socket admin-state enable
 set / system grpc-server mgmt admin-state enable
 delete / system grpc-server mgmt default-tls-profile
 
-set / system grpc-server insecure-mgmt services [ gnmi gnoi gribi p4rt ]
+set / system grpc-server insecure-mgmt services [ gnmi gnoi gnsi gribi p4rt ]
 set / system grpc-server insecure-mgmt port 57401
 set / system grpc-server insecure-mgmt rate-limit 65000
 set / system grpc-server insecure-mgmt network-instance mgmt
@@ -188,5 +189,18 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 		tplData.SNMPConfig = snmpv2ConfigPre24_3
 
 		tplData.GRPCConfig = grpcConfigPre24_3
+	}
+
+	// in srlinux >= v24.10+ we add EDA configuration.
+	if semver.Compare(v, "v24.10") >= 0 || n.swVersion.Major == "0" {
+		cfg := edaDiscoveryServerConfig
+
+		if os.Getenv("CLAB_EDA_USE_DEFAULT_GRPC_SERVER") != "" {
+			cfg = cfg + "\n" + edaDefaultMgmtServerConfig
+		} else {
+			cfg = cfg + "\n" + edaCustomMgmtServerConfig
+		}
+
+		tplData.EDAConfig = cfg
 	}
 }
