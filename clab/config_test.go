@@ -741,17 +741,17 @@ func TestStartupConfigInit(t *testing.T) {
 		"kinds_startup": {
 			got:  "test_data/topo13.yml",
 			node: "node1",
-			want: "/clab/clab/test_data/configs/fabric/node1.cfg",
+			want: "/test_data/configs/fabric/node1.cfg",
 		},
 		"node_startup": {
 			got:  "test_data/topo14.yml",
 			node: "node1",
-			want: "/clab/clab/test_data/configs/fabric/node1.cfg",
+			want: "/test_data/configs/fabric/node1.cfg",
 		},
 		"default_startup": {
 			got:  "test_data/topo15.yml",
 			node: "node1",
-			want: "/clab/clab/test_data/configs/fabric/node1.cfg",
+			want: "/test_data/configs/fabric/node1.cfg",
 		},
 	}
 
@@ -768,8 +768,9 @@ func TestStartupConfigInit(t *testing.T) {
 				t.Error(err)
 			}
 
-			if c.Nodes[tc.node].Config().StartupConfig != tc.want {
-				t.Errorf("want startup-config %q got startup-config %q", tc.want, c.Nodes[tc.node].Config().StartupConfig)
+			cwd, _ := os.Getwd()
+			if c.Nodes[tc.node].Config().StartupConfig != filepath.Join(cwd, tc.want) {
+				t.Errorf("want startup-config %q got startup-config %q", filepath.Join(cwd, tc.want), c.Nodes[tc.node].Config().StartupConfig)
 			}
 		})
 	}
