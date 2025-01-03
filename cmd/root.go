@@ -139,11 +139,11 @@ func getTopoFilePath(cmd *cobra.Command) error {
 	files, err := filepath.Glob("*.clab.y*ml")
 
 	if len(files) == 0 {
-		return errors.New("no topology files matching the pattern *.clab.y*ml found")
+		return errors.New("no topology files matching the pattern *.clab.yml or *.clab.yaml found")
 	}
 
 	if len(files) > 1 {
-		return fmt.Errorf("more than one topology file matching the pattern *.clab.y*ml found, can't pick one: %q", files)
+		return fmt.Errorf("more than one topology file matching the pattern *.clab.yml or *.clab.yaml found, can't pick one: %q", files)
 	}
 
 	topo = files[0]
