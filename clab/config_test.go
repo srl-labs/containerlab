@@ -770,7 +770,8 @@ func TestStartupConfigInit(t *testing.T) {
 
 			cwd, _ := os.Getwd()
 			if c.Nodes[tc.node].Config().StartupConfig != filepath.Join(cwd, tc.want) {
-				t.Errorf("want startup-config %q got startup-config %q", filepath.Join(cwd, tc.want), c.Nodes[tc.node].Config().StartupConfig)
+				t.Errorf("want startup-config %q got startup-config %q",
+					filepath.Join(cwd, tc.want), c.Nodes[tc.node].Config().StartupConfig)
 			}
 		})
 	}
