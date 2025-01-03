@@ -33,8 +33,9 @@ const (
 	DefaultVethLinkMTU = 9500
 
 	// clab specific topology variables.
-	clabDirVar = "__clabDir__"
-	nodeDirVar = "__clabNodeDir__"
+	clabDirVar  = "__clabDir__"
+	nodeDirVar  = "__clabNodeDir__"
+	nodeNameVar = "__clabNodeName__"
 )
 
 // Config defines lab configuration as it is provided in the YAML file.
@@ -259,8 +260,9 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 // It handles remote files, local files and embedded configs.
 // Returns an absolute path to the startup-config file.
 func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
-	// process startup-config
-	p := c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName)
+	// replace __clabNodeName__ magic var in startup-config path with node short name
+	r := strings.NewReplacer(nodeNameVar, nodeCfg.ShortName)
+	p := r.Replace(c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName))
 
 	// embedded config is a config that is defined as a multi-line string in the topology file
 	// it contains at least one newline

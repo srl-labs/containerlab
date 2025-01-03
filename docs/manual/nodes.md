@@ -138,6 +138,73 @@ topology:
 
 Check the particular kind documentation to see if the startup-config is supported and how it is applied.
 
+???info "Startup-config path variable"
+    By default, the startup-config references are either provided as an absolute or a relative (to the current working dir) path to the file to be used.
+
+    Consider a two-node lab `mylab.clab.yml` with seed configs that the user may wish to use in their lab. A user could create a directory for such files similar to this:
+
+    ```
+    .
+    ├── cfgs
+    │   ├── node1.partial.cfg
+    │   └── node2.partial.cfg
+    └── mylab.clab.yml
+
+    2 directories, 3 files
+    ```
+
+    Then to leverage these configs, the node could be configured with startup-config references like this:
+
+    ```yaml
+    name: mylab
+    topology:
+      nodes:
+        node1:
+          startup-config: cfgs/node1.partial.cfg
+        node2:
+          startup-config: cfgs/node2.partial.cfg
+    ```
+
+    while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can use a special variable `__clabNodeName__` in their startup-config paths. This variable will expand to the node-name for the parent node that the startup-config reference falls under.
+
+    ```yaml
+    name: mylab
+    topology:
+      nodes:
+        node1:
+          startup-config: cfg/__clabNodeName__.partial.cfg
+        node2:
+          startup-config: cfgs/__clabNodeName__.partial.cfg
+    ```
+
+    The `__clabNodeName__` variable can also be used in the kind and default sections of the config.  Using the same directory structure from the example above, the following shows how to use the magic varable for a kind.
+
+    ```yaml
+    name: mylab
+    topology:
+      defaults:
+        kind: nokia_srlinux
+      kinds:
+        nokia_srlinux:
+          startup-config: cfgs/__clabNodeName__.partial.cfg
+      nodes:
+        node1:
+        node2:
+    ``` 
+
+    The following example shows how one would do it using defaults.
+
+    ```yaml
+    name: mylab
+    topology:
+      defaults:
+        kind: nokia_srlinux
+        startup-config: cfgs/__clabNodeName__.partial.cfg
+      nodes:
+        node1:
+        node2:
+    ``` 
+
 #### embedded startup-config
 
 It is possible to embed the startup configuraion in the topology file itself. This is done by providing the startup-config as a multiline string.

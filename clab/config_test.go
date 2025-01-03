@@ -731,3 +731,47 @@ func TestSuppressConfigInit(t *testing.T) {
 		})
 	}
 }
+
+func TestStartupConfigInit(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		node string
+		want string
+	}{
+		"kinds_startup": {
+			got:  "test_data/topo13.yml",
+			node: "node1",
+			want: "/test_data/configs/fabric/node1.cfg",
+		},
+		"node_startup": {
+			got:  "test_data/topo14.yml",
+			node: "node1",
+			want: "/test_data/configs/fabric/node1.cfg",
+		},
+		"default_startup": {
+			got:  "test_data/topo15.yml",
+			node: "node1",
+			want: "/test_data/configs/fabric/node1.cfg",
+		},
+	}
+
+	teardownTestCase := setupTestCase(t)
+	defer teardownTestCase(t)
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoPath(tc.got, ""),
+			}
+			c, err := NewContainerLab(opts...)
+			if err != nil {
+				t.Error(err)
+			}
+
+			cwd, _ := os.Getwd()
+			if c.Nodes[tc.node].Config().StartupConfig != filepath.Join(cwd, tc.want) {
+				t.Errorf("want startup-config %q got startup-config %q", filepath.Join(cwd, tc.want), c.Nodes[tc.node].Config().StartupConfig)
+			}
+		})
+	}
+}
