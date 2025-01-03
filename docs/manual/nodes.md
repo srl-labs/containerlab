@@ -138,46 +138,10 @@ topology:
 
 Check the particular kind documentation to see if the startup-config is supported and how it is applied.
 
-#### embedded startup-config
-
-It is possible to embed the startup configuraion in the topology file itself. This is done by providing the startup-config as a multiline string.
-
-```yaml
-topology:
-  nodes:
-    srl:
-      startup-config: |
-        system information location "I am embedded config"
-```
-
-!!!note
-    If a config file exists in the lab directory for a given node, then it will take preference over the startup config passed with this setting. If it is desired to discard the previously saved config and use the startup config instead, use the `enforce-startup-config` setting or deploy a lab with the [`reconfigure`](../cmd/deploy.md#reconfigure) flag.
-
-#### remote startup-config
-
-It is possible to specify a remote `http(s)` location for a startup-config file. Simply provide a URL that can be accessed from the containerlab host.
-
-```yaml
-topology:
-  kinds:
-    nokia_srlinux:
-      type: ixrd3
-      image: ghcr.io/nokia/srlinux
-      startup-config: https://raw.githubusercontent.com/srl-labs/containerlab/main/tests/02-basic-srl/srl2-startup.cli
-```
-
-The remote file will be downloaded to the containerlab's temp directory at `$TMP/.clab/<filename>` path and provided to the node as a locally available startup-config file. The filename will have a generated name that follows the pattern `<lab-name>-<node-name>-<filename-from-url>`, where `<filename-from-url>` is the last element of the URL path.
-
-!!!note
-
-    * Upon deletion of a lab, the downloaded startup-config files will not be removed. A manual cleanup should be performed if required.
-    * If a lab is redeployed with the lab name and startup-config paths unchanged, the local file will be overwritten.
-    * For https locations the certificates won't be verified to allow fetching artifacts from servers with self-signed certificates.
-
-???info "Startup-config variables"
+???info "Startup-config path variable"
     By default, the startup-config references are either provided as an absolute or a relative (to the current working dir) path to the file to be used.
 
-    Consider a two-node lab mylab.clab.yml with seed configs that the user may wish to use with thier lab. A user could create a directory for such files similar to this:
+    Consider a two-node lab `mylab.clab.yml` with seed configs that the user may wish to use in their lab. A user could create a directory for such files similar to this:
 
     ```
     .
@@ -240,6 +204,43 @@ The remote file will be downloaded to the containerlab's temp directory at `$TMP
         node1:
         node2:
     ``` 
+
+#### embedded startup-config
+
+It is possible to embed the startup configuraion in the topology file itself. This is done by providing the startup-config as a multiline string.
+
+```yaml
+topology:
+  nodes:
+    srl:
+      startup-config: |
+        system information location "I am embedded config"
+```
+
+!!!note
+    If a config file exists in the lab directory for a given node, then it will take preference over the startup config passed with this setting. If it is desired to discard the previously saved config and use the startup config instead, use the `enforce-startup-config` setting or deploy a lab with the [`reconfigure`](../cmd/deploy.md#reconfigure) flag.
+
+#### remote startup-config
+
+It is possible to specify a remote `http(s)` location for a startup-config file. Simply provide a URL that can be accessed from the containerlab host.
+
+```yaml
+topology:
+  kinds:
+    nokia_srlinux:
+      type: ixrd3
+      image: ghcr.io/nokia/srlinux
+      startup-config: https://raw.githubusercontent.com/srl-labs/containerlab/main/tests/02-basic-srl/srl2-startup.cli
+```
+
+The remote file will be downloaded to the containerlab's temp directory at `$TMP/.clab/<filename>` path and provided to the node as a locally available startup-config file. The filename will have a generated name that follows the pattern `<lab-name>-<node-name>-<filename-from-url>`, where `<filename-from-url>` is the last element of the URL path.
+
+!!!note
+
+    * Upon deletion of a lab, the downloaded startup-config files will not be removed. A manual cleanup should be performed if required.
+    * If a lab is redeployed with the lab name and startup-config paths unchanged, the local file will be overwritten.
+    * For https locations the certificates won't be verified to allow fetching artifacts from servers with self-signed certificates.
+
 ### enforce-startup-config
 
 By default, containerlab will use the config file that is available in the lab directory for a given node even if the `startup config` parameter points to another file. To make a node to boot with the config set with `startup-config` parameter no matter what, set the `enforce-startup-config` to `true`.
