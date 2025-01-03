@@ -54,11 +54,7 @@ With `--max-workers` flag, it is possible to limit the number of concurrent work
 
 #### keep-mgmt-net
 
-Do not try to remove the management network during destroy phase. Usually the management docker network (in case of docker) and the underlaying bridge are being removed. If you have attached additional resources outside of containerlab and you want the bridge to remain intact just add the `--keep-mgmt-net` flag.
-
-#### reconfigure
-
-The local `--reconfigure` flag instructs containerlab to regenerate configuration artifacts during the deploy phase and overwrite previous ones if any.
+Do not try to remove the management network during destroy phase. Usually the management docker network (in case of docker) and the underlying bridge are being removed. If you have attached additional resources outside of containerlab and you want the bridge to remain intact just add the `--keep-mgmt-net` flag.
 
 #### skip-post-deploy
 
@@ -86,16 +82,10 @@ The `--skip-labdir-acl` flag can be used to skip the lab directory access contro
 containerlab redeploy -t mylab.clab.yml
 ```
 
-#### Redeploy a lab and remove the Lab directory
+#### Redeploy a lab with removing the Lab directory at destroy stage
 
 ```bash
 containerlab redeploy -t mylab.clab.yml --cleanup
-```
-
-#### Redeploy a lab with regenerating configuration artifacts
-
-```bash
-containerlab redeploy -t mylab.clab.yml --reconfigure
 ```
 
 #### Redeploy a lab without specifying topology file

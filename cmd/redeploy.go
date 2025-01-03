@@ -37,8 +37,6 @@ func init() {
 	redeployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	redeployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
 	redeployCmd.Flags().StringVarP(&deployFormat, "format", "f", "table", "output format. One of [table, json]")
-	redeployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "", false,
-		"regenerate configuration artifacts and overwrite previous ones if any")
 	redeployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
 	redeployCmd.Flags().StringVarP(&exportTemplate, "export-template", "", "",
 		"template file for topology data export")

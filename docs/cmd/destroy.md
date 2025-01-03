@@ -36,7 +36,7 @@ To make containerlab attempt a graceful shutdown of the running containers, add 
 
 #### keep-mgmt-net
 
-Do not try to remove the management network. Usually the management docker network (in case of docker) and the underlaying bridge are being removed. If you have attached additional resources outside of containerlab and you want the bridge to remain intact just add the `--keep-mgmt-net` flag.
+Do not try to remove the management network. Usually the management docker network (in case of docker) and the underlying bridge are being removed. If you have attached additional resources outside of containerlab and you want the bridge to remain intact just add the `--keep-mgmt-net` flag.
 
 #### all
 
