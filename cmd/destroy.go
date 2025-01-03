@@ -70,7 +70,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return nil
 		}
 
-		topos[topo] = filepath.Dir(cnts[0].Labels[labels.NodeLabDir])
+		topos[cnts[0].Labels[labels.TopoFile]] = filepath.Dir(cnts[0].Labels[labels.NodeLabDir])
 
 	case all:
 		containers, err := listContainers(ctx, topo)
