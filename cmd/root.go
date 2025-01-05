@@ -101,7 +101,7 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 // Errors if more than one file is found by the glob path.
 func getTopoFilePath(cmd *cobra.Command) error {
 	// set commands which may use topo file find functionality, the rest don't need it
-	if !(cmd.Name() == "deploy" || cmd.Name() == "destroy" || cmd.Name() == "inspect" ||
+	if !(cmd.Name() == "deploy" || cmd.Name() == "destroy" || cmd.Name() == "redeploy" || cmd.Name() == "inspect" ||
 		cmd.Name() == "save" || cmd.Name() == "graph") {
 		return nil
 	}
