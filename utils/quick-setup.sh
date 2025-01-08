@@ -1,4 +1,5 @@
 DISTRO_TYPE=""
+SETUP_SSHD="true"
 
 # Docker version that will be installed by this install script.
 DOCKER_VERSION="26.1.4"
@@ -262,7 +263,9 @@ function all {
     # check OS to determine distro
     check_os
 
-    setup-sshd
+    if [ "${SETUP_SSHD}" = "true" ]; then
+        setup-sshd
+    fi
 
     install-docker
     post-install-docker
