@@ -262,8 +262,10 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		return err
 	}
 
+	configContentStr := string(configContent)
+
 	// check file contains content, otherwise exit early
-	if strings.TrimSpace(string(configContent)) == "" {
+	if strings.TrimSpace(configContentStr) == "" {
 		return nil
 	}
 
@@ -315,8 +317,14 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 			}
 		}
 	}
+
+	// Replace CRLF with LF
+	configContentStr = strings.ReplaceAll(configContentStr, "\r\n", "\n")
+	// Replace tabs with 4 spaces
+	configContentStr = strings.ReplaceAll(configContentStr, "\t", "    ")
+
 	// converting byte slice to newline delimited string slice
-	cfgs := strings.Split(string(configContent), "\n")
+	cfgs := strings.Split(configContentStr, "\n")
 
 	// config snippets should not have commit command, so we need to commit manually
 	// and quit from the config mode
