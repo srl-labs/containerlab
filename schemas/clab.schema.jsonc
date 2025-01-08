@@ -174,8 +174,11 @@
             "markdownDescription": "container [image-pull-policy](https://containerlab.dev/manual/nodes/#image-pull-policy) to use for this node",
             "enum": [
               "always",
+              "Always",
               "never",
-              "ifnotpresent"
+              "Never",
+              "ifnotpresent",
+              "IfNotPresent"
             ]
           },
           "restart-policy": {
@@ -185,9 +188,13 @@
             "markdownDescription": "container [restart-policy](https://containerlab.dev/manual/nodes/#restart-policy) to use for this node",
             "enum": [
               "no",
+              "No",
               "on-failure",
+              "On-failure",
+              "Always",
               "always",
-              "unless-stopped"
+              "unless-stopped",
+              "Unless-stopped"
             ]
           },
           "kind": {
