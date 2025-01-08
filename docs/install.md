@@ -38,6 +38,14 @@ To install all components at once, run the following command on any of the suppo
 curl -sL https://containerlab.dev/setup | sudo -E bash -s "all"
 ```
 
+By default, this will also configure sshd on the system to increase max auth tries so unknown keys don't lock ssh attempts.
+This behaviour can be turned off by setting the environment variable "SETUP_SSHD" to "false" **before** running the command shown above.
+The environment variable can be set and exported with the command shown below.
+
+```bash
+export SETUP_SSHD="false"
+```
+
 To complete installation and enable sudo-less `docker` command execution, please run `newgrp docker` or logout and log back in.
 
 <!-- --8<-- [end:quick-setup-script-cmd] -->
