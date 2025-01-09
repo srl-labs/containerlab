@@ -1,5 +1,5 @@
 DISTRO_TYPE=""
-SETUP_SSHD="true"
+SETUP_SSHD="${SETUP_SSHD:-true}"
 
 # Docker version that will be installed by this install script.
 DOCKER_VERSION="26.1.4"
