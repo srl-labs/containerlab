@@ -318,12 +318,14 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		}
 	}
 
-	// Replace CRLF with LF
-	configContentStr = strings.ReplaceAll(configContentStr, "\r\n", "\n")
-	// Replace tabs with 4 spaces
-	configContentStr = strings.ReplaceAll(configContentStr, "\t", "    ")
+	// Normalize character sequences to avoid interaction issues with CLI
+	replacer := strings.NewReplacer(
+		"\r\n", "\n", // replace EOL CRLF with LF
+		"\t", "    ", // replace tabs with 4 spaces
+	)
+	configContentStr = replacer.Replace(configContentStr)
 
-	// converting byte slice to newline delimited string slice
+	// converting string to newline delimited string slice
 	cfgs := strings.Split(configContentStr, "\n")
 
 	// config snippets should not have commit command, so we need to commit manually
