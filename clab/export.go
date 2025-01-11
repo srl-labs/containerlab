@@ -17,9 +17,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
-// GenerateExports generates various export files and writes it to a lab location.
+// GenerateExports generates various export files and writes it to a file in the lab directory.
 func (c *CLab) GenerateExports(ctx context.Context, f io.Writer, p string) error {
 	err := c.exportTopologyDataWithTemplate(ctx, f, p)
 	if err != nil {
@@ -36,9 +37,11 @@ func (c *CLab) GenerateExports(ctx context.Context, f io.Writer, p string) error
 // TopologyExport holds a combination of CLab structure and map of NodeConfig types,
 // which expands Node definitions with dynamically created values.
 type TopologyExport struct {
-	Name        string                       `json:"name"`
-	Type        string                       `json:"type"`
-	Clab        *CLab                        `json:"clab,omitempty"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Clab *CLab  `json:"clab,omitempty"`
+	// SSHPubKeys is a list of string representations of SSH public keys.
+	SSHPubKeys  []string                     `json:"SSHPubKeys,omitempty"`
 	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"`
 }
 
@@ -87,6 +90,7 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 		Name:        c.Config.Name,
 		Type:        "clab",
 		Clab:        c,
+		SSHPubKeys:  utils.MarshalSSHPubKeys(c.SSHPubKeys),
 		NodeConfigs: make(map[string]*types.NodeConfig),
 	}
 

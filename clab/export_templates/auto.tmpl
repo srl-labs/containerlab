@@ -4,7 +4,8 @@
   "clab": {
     "config": {
       "prefix": "{{ .Clab.Config.Prefix }}",
-      "mgmt": {{ ToJSONPretty .Clab.Config.Mgmt "      " "  "}}
+      "mgmt": {{ ToJSONPretty .Clab.Config.Mgmt "      " "  "}},
+      "ssh-pub-keys": {{ ToJSON .SSHPubKeys }}
     }
   },
   "nodes": { {{- $i:=0 }}{{range $n, $c := .NodeConfigs}}{{if $i}},{{end}}
