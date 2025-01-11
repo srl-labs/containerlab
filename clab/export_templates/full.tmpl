@@ -2,6 +2,7 @@
   "name": "{{ .Name }}",
   "type": "{{ .Type }}",
   "clab": {{ ToJSONPretty .Clab "  " "  "}},
+  "ssh-pub-keys": {{ ToJSON .SSHPubKeys }},
   "nodes": { {{- $i:=0 }}{{range $n, $c := .NodeConfigs}}{{if $i}},{{end}}{{ $k := dict "tls-key" $c.TLSKey }}
     "{{$n}}":{{ $cj := $c | data.ToJSON | data.JSON }} {{ $dst := coll.Merge $cj $k }}{{ ToJSONPretty $dst "    " "  " }}{{$i = add $i 1}}{{end}}
   },

@@ -7,6 +7,7 @@
       "mgmt": {{ ToJSONPretty .Clab.Config.Mgmt "      " "  "}}
     }
   },
+  "ssh-pub-keys": {{ ToJSON .SSHPubKeys }},
   "nodes": { {{- $i:=0 }}{{range $n, $c := .NodeConfigs}}{{if $i}},{{end}}
     "{{$n}}": {
       "index": "{{$c.Index}}",
