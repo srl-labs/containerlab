@@ -7,6 +7,9 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/vishvananda/netlink"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/runtime/docker/firewall"
 )
 
 type EndpointBridge struct {
@@ -44,6 +47,19 @@ func (e *EndpointBridge) Verify(ctx context.Context, p *VerifyLinkParams) error 
 }
 
 func (e *EndpointBridge) Deploy(ctx context.Context) error {
+
+	log.Debugf("endpoint_bridge Deploy(%q)", e.GetNode().GetShortName())
+
+	f, err := firewall.NewFirewallClient(e.GetNode().GetShortName())
+	if err != nil {
+		return err
+	}
+	log.Debugf("using %s as the firewall interface", f.Name())
+
+	err = f.InstallForwardingRules()
+	if err != nil {
+		return err
+	}
 	return e.GetLink().Deploy(ctx, e)
 }
 

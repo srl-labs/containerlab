@@ -61,31 +61,33 @@ func (c *NftablesClient) DeleteForwardingRules() error {
 	// first check if a rule already exists to not create duplicates
 	defer c.close()
 
-	rules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv4)
-	if err != nil {
-		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
-	}
-
-	mgmtBrRules := c.getRulesForMgmtBr(c.bridgeName, rules)
-	if len(mgmtBrRules) == 0 {
-		log.Debug("external access iptables rule doesn't exist. Skipping deletion")
-		return nil
-	}
-
 	// we are not deleting the rule if the bridge still exists
 	// it happens when bridge is either still in use by docker network
 	// or it is managed externally (created manually)
-	_, err = utils.BridgeByName(c.bridgeName)
+	_, err := utils.BridgeByName(c.bridgeName)
 	if err == nil {
 		log.Debugf("bridge %s is still in use, not removing the forwarding rule", c.bridgeName)
 		return nil
 	}
 
-	log.Debugf("removing clab iptables rules for bridge %q", c.bridgeName)
-	for _, r := range mgmtBrRules {
-		c.deleteRule(r)
-	}
+	var ipVersions = []nftables.TableFamily{ nftables.TableFamilyIPv4, nftables.TableFamilyIPv6 }
+	for _, ipVersion := range ipVersions {
+		rules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, ipVersion)
+		if err != nil {
+			return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
+		}
 
+		mgmtBrRules := c.getRulesForMgmtBr(c.bridgeName, rules)
+		if len(mgmtBrRules) == 0 {
+			log.Debug("external access iptables rule doesn't exist. Skipping deletion")
+			continue
+		}
+
+		log.Debugf("removing clab iptables rules for bridge %q", c.bridgeName)
+		for _, r := range mgmtBrRules {
+			c.deleteRule(r)
+		}
+	}
 	c.flush()
 	return nil
 }
@@ -94,43 +96,45 @@ func (c *NftablesClient) DeleteForwardingRules() error {
 func (c *NftablesClient) InstallForwardingRules() error {
 	defer c.close()
 
-	rules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv4)
-	if err != nil {
-		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
-	}
+	var ipVersions = []nftables.TableFamily{ nftables.TableFamilyIPv4, nftables.TableFamilyIPv6 }
+	for _, ipVersion := range ipVersions {
+		rules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, ipVersion)
+		if err != nil {
+			return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
+		}
+		if c.allowRuleForMgmtBrExists(c.bridgeName, rules) {
+			log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", c.bridgeName)
+			continue
+		}
 
-	if c.allowRuleForMgmtBrExists(c.bridgeName, rules) {
-		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", c.bridgeName)
-		return nil
-	}
+		log.Debugf("Installing iptables rules for bridge %q IP version %d", c.bridgeName, ipVersion)
 
-	log.Debugf("Installing iptables rules for bridge %q", c.bridgeName)
+		// create a new rule
+		rule, err := c.newClabNftablesRule(definitions.DockerFWUserChain, definitions.DockerFWTable, ipVersion, 0)
+		if err != nil {
+			return err
+		}
+		// set Output interface match
+		rule.AddOutputInterfaceFilter(c.bridgeName)
 
-	// create a new rule
-	rule, err := c.newClabNftablesRule(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv4, 0)
-	if err != nil {
-		return err
+		// add a comment
+		err = rule.AddComment(definitions.IPTablesRuleComment)
+		if err != nil {
+			return err
+		}
+		// add a counter
+		err = rule.AddCounter()
+		if err != nil {
+			return err
+		}
+		// make it an ACCEPT rule
+		err = rule.AddVerdictAccept()
+		if err != nil {
+			return err
+		}
+		// mark and note for installation
+		c.insertRule(rule.rule)
 	}
-	// set Output interface match
-	rule.AddOutputInterfaceFilter(c.bridgeName)
-
-	// add a comment
-	err = rule.AddComment(definitions.IPTablesRuleComment)
-	if err != nil {
-		return err
-	}
-	// add a counter
-	err = rule.AddCounter()
-	if err != nil {
-		return err
-	}
-	// make it an ACCEPT rule
-	err = rule.AddVerdictAccept()
-	if err != nil {
-		return err
-	}
-	// mark and note for installation
-	c.insertRule(rule.rule)
 	// flush changes out to nftables
 	c.flush()
 
