@@ -80,13 +80,10 @@ func (t *TopoPaths) SetLabDir(p string) (err error) {
 func (t *TopoPaths) SetLabDirByPrefix(topologyName string) (err error) {
 	t.topoName = topologyName
 	// if "CLAB_LABDIR_BASE" Env Var is set, use that dir as a base
-	// for the labDir, otherwise use PWD.
+	// for the labDir, otherwise use dir where topology clab file is.
 	baseDir := os.Getenv("CLAB_LABDIR_BASE")
 	if baseDir == "" {
-		baseDir, err = os.Getwd()
-		if err != nil {
-			return err
-		}
+		baseDir = t.TopologyFileDir()
 	}
 	// construct the path
 	t.labDir = path.Join(baseDir, labDirPrefix+topologyName)
