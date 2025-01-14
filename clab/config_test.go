@@ -349,6 +349,10 @@ func TestVerifyLinks(t *testing.T) {
 }
 
 func TestLabelsInit(t *testing.T) {
+	owner := os.Getenv("SUDO_USER")
+	if owner == "" {
+		owner = os.Getenv("USER")
+	}
 	tests := map[string]struct {
 		got  string
 		node string
@@ -363,9 +367,9 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeKind:     "nokia_srlinux",
 				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
-				labels.NodeLabDir:   "../clab-topo1/node1",
+				labels.NodeLabDir:   "./clab-topo1/node1",
 				labels.TopoFile:     "topo1.yml",
-				labels.Owner:        "runner",
+				labels.Owner:        owner,
 			},
 		},
 		"custom_node_label": {
@@ -377,10 +381,10 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeKind:     "nokia_srlinux",
 				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
-				labels.NodeLabDir:   "../clab-topo1/node2",
+				labels.NodeLabDir:   "./clab-topo1/node2",
 				labels.TopoFile:     "topo1.yml",
 				"node-label":        "value",
-				labels.Owner:        "runner",
+				labels.Owner:        owner,
 			},
 		},
 		"custom_kind_label": {
@@ -392,10 +396,10 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeKind:     "nokia_srlinux",
 				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
-				labels.NodeLabDir:   "../clab-topo2/node1",
+				labels.NodeLabDir:   "./clab-topo2/node1",
 				labels.TopoFile:     "topo2.yml",
 				"kind-label":        "value",
-				labels.Owner:        "runner",
+				labels.Owner:        owner,
 			},
 		},
 		"custom_default_label": {
@@ -407,10 +411,10 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeKind:     "nokia_srlinux",
 				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
-				labels.NodeLabDir:   "../clab-topo3/node2",
+				labels.NodeLabDir:   "./clab-topo3/node2",
 				labels.TopoFile:     "topo3.yml",
 				"default-label":     "value",
-				labels.Owner:        "runner",
+				labels.Owner:        owner,
 			},
 		},
 	}
