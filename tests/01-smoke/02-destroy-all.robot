@@ -30,7 +30,7 @@ Deploy first lab
     Log    ${result.stdout}
     Log    ${result.stderr}
     Should Be Equal As Integers    ${result.rc}    0
-    Should Exist    %{PWD}/clab-2-linux-nodes
+    Should Exist    ${CURDIR}/clab-2-linux-nodes
 
     Set Suite Variable    ${orig_dir}    ${CURDIR}
 
@@ -42,7 +42,7 @@ Deploy second lab
     Log    ${result.stdout}
     Log    ${result.stderr}
     Should Be Equal As Integers    ${result.rc}    0
-    Should Exist    /tmp/clab-single-node
+    Should Exist    ${CURDIR}/clab-single-node
 
 Inspect ${lab2-name} lab using its name
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -102,7 +102,7 @@ Redeploy second lab
     Log    ${result.stdout}
     Log    ${result.stderr}
     Should Be Equal As Integers    ${result.rc}    0
-    Should Exist    /tmp/clab-single-node
+    Should Exist    ${CURDIR}/clab-single-node
 
 Destroy all labs
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -116,4 +116,4 @@ Check all labs have been removed
     Log    ${output}
     Should Contain    ${output}    no containers found
     Should Not Exist    /tmp/single-node
-    Should Not Exist    %{PWD}/clab-2-linux-nodes
+    Should Not Exist    ${CURDIR}/clab-2-linux-nodes

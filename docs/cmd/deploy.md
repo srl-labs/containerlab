@@ -166,7 +166,7 @@ Example command-line usage: `CLAB_VERSION_CHECK=disable containerlab deploy`
 
 To change the [lab directory](../manual/conf-artifacts.md#identifying-a-lab-directory) location, set `CLAB_LABDIR_BASE` environment variable accordingly. It denotes the base directory in which the lab directory will be created.
 
-The default behavior is to create the lab directory in the current working dir.
+The default behavior is to create the lab directory in the same directory as the topology file (`clab.yml` file).
 
 ### Examples
 

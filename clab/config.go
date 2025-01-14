@@ -239,7 +239,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
-	err = c.resolveBindPaths(binds, nodeCfg.LabDir)
+	err = c.resolveBindPaths(binds, c.TopoPaths.NodeDir(nodeName))
 	if err != nil {
 		return nil, err
 	}
