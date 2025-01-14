@@ -16,8 +16,8 @@ ${ca-keylength}     2048
 ${runtime}          docker
 
 # Node based certs files
-${l1-key}           ./clab-${lab-name}/.tls/l1/l1.key
-${l1-cert}          ./clab-${lab-name}/.tls/l1/l1.pem
+${l1-key}           ${CURDIR}/clab-${lab-name}/.tls/l1/l1.key
+${l1-cert}          ${CURDIR}/clab-${lab-name}/.tls/l1/l1.pem
 
 
 *** Test Cases ***
@@ -64,7 +64,7 @@ Review Node l1 Certificate
     Should Contain    ${output}    Issuer: L = Internet, O = srl-labs, OU = Containerlab, CN = containerlab.dev
     Should Contain    ${output}    Public-Key: (2048 bit)
 
-Verfiy node cert with CA Cert
+Verify node cert with CA Cert
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    openssl verify -CAfile ${ca-cert-file} ${l1-cert}
     Log    ${output}
