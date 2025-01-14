@@ -36,18 +36,18 @@ Get nodes mgmt IPs
     Should Be Equal As Strings    ${inspected-n2-mgmt-ip}    ${n2-mgmt-ip}
 
 Ensure n1 mgmt IPv4 is in the config file
-    ${f} =    OperatingSystem.Get File    ${EXECDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
+    ${f} =    OperatingSystem.Get File    ${CURDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
     Log    ${f}
     Log    ${n1-mgmt-ip}
     Should Contain    ${f}    ${n1-mgmt-ip}
 
 Ensure n2 mgmt IPv4 is in the config file
-    ${f} =    OperatingSystem.Get File    ${EXECDIR}/clab-${lab-name}/${node2-name}/flash/startup-config
+    ${f} =    OperatingSystem.Get File    ${CURDIR}/clab-${lab-name}/${node2-name}/flash/startup-config
     Log    ${f}
     Should Contain    ${f}    ${n2-mgmt-ip}
 
 Ensure IPv6 default route is in the config file
-    ${f} =    OperatingSystem.Get File    ${EXECDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
+    ${f} =    OperatingSystem.Get File    ${CURDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
     Log    ${f}
     Should Contain    ${f}    ipv6 route
 
