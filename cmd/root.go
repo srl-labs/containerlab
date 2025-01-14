@@ -42,6 +42,7 @@ var rootCmd = &cobra.Command{
 	Use:               "containerlab",
 	Short:             "deploy container based lab environments with a user-defined interconnections",
 	PersistentPreRunE: preRunFn,
+	Aliases:           []string{"clab"},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
