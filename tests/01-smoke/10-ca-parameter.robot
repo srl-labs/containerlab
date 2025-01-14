@@ -17,14 +17,14 @@ ${l2-keysize}               1024
 ${ca-validity-duration}     5 hours
 
 # cert files
-${ca-cert-key}              ./clab-${lab-name}/.tls/ca/ca.key
-${ca-cert-file}             ./clab-${lab-name}/.tls/ca/ca.pem
-${l1-key}                   ./clab-${lab-name}/.tls/l1/l1.key
-${l1-cert}                  ./clab-${lab-name}/.tls/l1/l1.pem
-${l2-key}                   ./clab-${lab-name}/.tls/l2/l2.key
-${l2-cert}                  ./clab-${lab-name}/.tls/l2/l2.pem
-${l3-key}                   ./clab-${lab-name}/.tls/l3/l3.key
-${l3-cert}                  ./clab-${lab-name}/.tls/l3/l3.pem
+${ca-cert-key}              ${CURDIR}/clab-${lab-name}/.tls/ca/ca.key
+${ca-cert-file}             ${CURDIR}/clab-${lab-name}/.tls/ca/ca.pem
+${l1-key}                   ${CURDIR}/clab-${lab-name}/.tls/l1/l1.key
+${l1-cert}                  ${CURDIR}/clab-${lab-name}/.tls/l1/l1.pem
+${l2-key}                   ${CURDIR}/clab-${lab-name}/.tls/l2/l2.key
+${l2-cert}                  ${CURDIR}/clab-${lab-name}/.tls/l2/l2.pem
+${l3-key}                   ${CURDIR}/clab-${lab-name}/.tls/l3/l3.key
+${l3-cert}                  ${CURDIR}/clab-${lab-name}/.tls/l3/l3.pem
 
 
 *** Test Cases ***
