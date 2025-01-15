@@ -15,7 +15,7 @@ topology:
       binds:
         - node1.lic:/dst1
         - kind.lic:/dst2
-        - __clabNodeDir__/somefile:/somefile
+        - __clabNodeDir__/__clabNodeName__:/somefile
     node2:
       kind: nokia_srlinux
       type: ixr10

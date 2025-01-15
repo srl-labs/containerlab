@@ -4,3 +4,6 @@ topology:
     node1:
       kind: nokia_srlinux
       startup-config: ./configs/fabric/__clabNodeName__.cfg
+      exec:
+        - echo "Hello world"
+        - echo "Hello node __clabNodeName__"
