@@ -78,7 +78,7 @@ func TestBindsInit(t *testing.T) {
 			want: []string{
 				"node1.lic:/dst1",
 				"kind.lic:/dst2",
-				"${PWD}/test_data/clab-topo2/node1/somefile:/somefile",
+				"${PWD}/test_data/clab-topo2/node1/node1:/somefile",
 			},
 		},
 		"kind_and_node_binds": {
@@ -734,6 +734,39 @@ func TestStartupConfigInit(t *testing.T) {
 			if c.Nodes[tc.node].Config().StartupConfig != filepath.Join(cwd, tc.want) {
 				t.Errorf("want startup-config %q got startup-config %q",
 					filepath.Join(cwd, tc.want), c.Nodes[tc.node].Config().StartupConfig)
+			}
+		})
+	}
+}
+
+func TestExecInit(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		node string
+		want []string
+	}{
+		"node_exec": {
+			got:  "test_data/topo14.yml",
+			node: "node1",
+			want: []string{
+				"echo \"Hello world\"",
+				"echo \"Hello node node1\"",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoPath(tc.got, ""),
+			}
+			c, err := NewContainerLab(opts...)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if d := cmp.Diff(c.Nodes[tc.node].Config().Exec, tc.want); d != "" {
+				t.Errorf("execs do not match %s", d)
 			}
 		})
 	}

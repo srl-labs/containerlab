@@ -239,7 +239,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	if err != nil {
 		return nil, err
 	}
-	err = c.resolveBindPaths(binds, c.TopoPaths.NodeDir(nodeName))
+	err = c.resolveBindPaths(binds, nodeName)
 	if err != nil {
 		return nil, err
 	}
@@ -253,6 +253,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 
 	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
 
+	c.processNodeExecs(nodeCfg)
+
 	return nodeCfg, nil
 }
 
@@ -261,7 +263,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 // Returns an absolute path to the startup-config file.
 func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name
-	r := strings.NewReplacer(nodeNameVar, nodeCfg.ShortName)
+	r := c.magicVarReplacer(nodeCfg.ShortName)
 	p := r.Replace(c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName))
 
 	// embedded config is a config that is defined as a multi-line string in the topology file
@@ -498,7 +500,7 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 // it allows host path to have `~` and relative path to an absolute path
 // the list of binds will be changed in place.
 // if the host path doesn't exist, the error will be returned.
-func (c *CLab) resolveBindPaths(binds []string, nodeDir string) error {
+func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 	// checks are skipped when, for example, the destroy operation is run
 	if !c.checkBindsPaths {
 		return nil
@@ -513,8 +515,8 @@ func (c *CLab) resolveBindPaths(binds []string, nodeDir string) error {
 			// volume, in this case we don't need to resolve the path
 			continue
 		}
-		// replace special variable
-		r := strings.NewReplacer(clabDirVar, c.TopoPaths.TopologyLabDir(), nodeDirVar, nodeDir)
+		// replace special variables
+		r := c.magicVarReplacer(nodeName)
 		hp := r.Replace(elems[0])
 		hp = utils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 
@@ -648,4 +650,25 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *types.NodeConfig) error {
 	nodeCfg.Env["NO_PROXY"] = noProxy
 
 	return nil
+}
+
+// processNodeExecs replaces (in place) magic variables in node execs.
+func (c *CLab) processNodeExecs(nodeCfg *types.NodeConfig) {
+	for i, e := range nodeCfg.Exec {
+		r := c.magicVarReplacer(nodeCfg.ShortName)
+		nodeCfg.Exec[i] = r.Replace(e)
+	}
+}
+
+// magicVarReplacer returns a string replacer that replaces all supported magic variables.
+func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
+	if nodeName == "" {
+		return &strings.Replacer{}
+	}
+
+	return strings.NewReplacer(
+		clabDirVar, c.TopoPaths.TopologyLabDir(),
+		nodeDirVar, c.TopoPaths.NodeDir(nodeName),
+		nodeNameVar, nodeName,
+	)
 }
