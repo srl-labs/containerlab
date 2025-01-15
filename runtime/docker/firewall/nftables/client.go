@@ -90,11 +90,23 @@ func (c *NftablesClient) DeleteForwardingRules() error {
 	return nil
 }
 
-// InstallForwardingRules installs the forwarding rules.
+// InstallForwardingRules installs the forwarding rules for v4 and v6 address families.
 func (c *NftablesClient) InstallForwardingRules() error {
 	defer c.close()
 
-	rules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv4)
+	err := c.InstallForwardingRulesForAF(nftables.TableFamilyIPv4)
+	if err != nil {
+		return err
+	}
+
+	return c.InstallForwardingRulesForAF(nftables.TableFamilyIPv6)
+
+}
+
+// InstallForwardingRulesForAF installs the forwarding rules for the specified address family.
+func (c *NftablesClient) InstallForwardingRulesForAF(af nftables.TableFamily) error {
+
+	rules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, af)
 	if err != nil {
 		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
 	}
@@ -107,7 +119,7 @@ func (c *NftablesClient) InstallForwardingRules() error {
 	log.Debugf("Installing iptables rules for bridge %q", c.bridgeName)
 
 	// create a new rule
-	rule, err := c.newClabNftablesRule(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv4, 0)
+	rule, err := c.newClabNftablesRule(definitions.DockerFWUserChain, definitions.DockerFWTable, af, 0)
 	if err != nil {
 		return err
 	}

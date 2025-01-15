@@ -20,7 +20,7 @@ func (d *DockerRuntime) deleteFwdRule() (err error) {
 }
 
 // installFwdRule installs the `allow` rule for traffic destined to the nodes
-// on the clab management network.
+// on the clab management network for v4 and v6.
 // This rule is required for external access to the nodes.
 func (d *DockerRuntime) installFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
