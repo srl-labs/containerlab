@@ -19,6 +19,8 @@ const nfTables = "nf_tables"
 type NftablesClient struct {
 	nftConn    *nftables.Conn
 	bridgeName string
+	// is ip6_tables supported
+	ip6_tables bool
 }
 
 // NewNftablesClient returns a new NftablesClient.
@@ -41,6 +43,12 @@ func NewNftablesClient(bridgeName string) (*NftablesClient, error) {
 	if len(chains) == 0 {
 		log.Debugf("nftables does not seem to be in use, no %s chain found.", definitions.DockerFWUserChain)
 		return nil, definitions.ErrNotAvailable
+	}
+
+	// check if ip6_tables is available
+	v6Tables, err := nftC.nftConn.ListTablesOfFamily(nftables.TableFamilyIPv6)
+	if err != nil || len(v6Tables) == 0 {
+		nftC.ip6_tables = false
 	}
 
 	return nftC, nil
@@ -105,8 +113,11 @@ func (c *NftablesClient) InstallForwardingRules() error {
 		return err
 	}
 
-	return c.InstallForwardingRulesForAF(nftables.TableFamilyIPv6)
+	if c.ip6_tables {
+		err = c.InstallForwardingRulesForAF(nftables.TableFamilyIPv6)
+	}
 
+	return err
 }
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family.
