@@ -44,13 +44,13 @@ var (
 	//go:embed iol.cfg.tmpl
 	cfgTemplate string
 
-	// IntfRegexp with named capture groups for extracting slot and port
+	// IntfRegexp with named capture groups for extracting slot and port.
 	CapturingIntfRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
-	// ethX naming is the "raw" or "default" interface naming
+	// ethX naming is the "raw" or "default" interface naming.
 	DefaultIntfRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`)
-	// Match on the management interface
+	// Match on the management interface.
 	MgmtIntfRegexp = regexp.MustCompile(`(eth0|e0/0|Ethernet0/0)$`)
-	// Matches on any allowed/legal interface name
+	// Matches on any allowed/legal interface name.
 	AllowedIntfRegexp = regexp.MustCompile("Ethernet((0/[1-3])|([1-9]/[0-3]))$|e((0/[1-3])|([1-9]/[0-9]))$|eth[1-9][0-9]*$")
 	IntfHelpMsg       = "Interfaces should follow Ethernet<slot>/<port> or e<slot>/<port> naming convention, where <slot> is a number from 0-9 and <port> is a number from 0-3. You can also use ethX-based interface naming."
 
@@ -322,7 +322,8 @@ func (n *iol) AddEndpoint(e links.Endpoint) error {
 
 	IFaceName = endpointName
 
-	if !(DefaultIntfRegexp.MatchString(endpointName)) && AllowedIntfRegexp.MatchString(endpointName) {
+	if !(DefaultIntfRegexp.MatchString(endpointName)) &&
+		AllowedIntfRegexp.MatchString(endpointName) {
 		log.Debugf("%s: %s needs mapping", n.Cfg.ShortName, endpointName)
 		mappedName, err := n.GetMappedInterfaceName(endpointName)
 		if err != nil {
@@ -343,7 +344,6 @@ func (n *iol) AddEndpoint(e links.Endpoint) error {
 }
 
 func (n *iol) CheckInterfaceName() error {
-
 	err := n.CheckInterfaceOverlap()
 	if err != nil {
 		return err
@@ -356,7 +356,8 @@ func (n *iol) CheckInterfaceName() error {
 		}
 
 		if !DefaultIntfRegexp.MatchString(IFaceName) {
-			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. %s", n.Cfg.ShortName, IFaceName, IntfHelpMsg)
+			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. %s",
+				n.Cfg.ShortName, IFaceName, IntfHelpMsg)
 		}
 
 	}
