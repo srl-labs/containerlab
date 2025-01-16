@@ -44,9 +44,15 @@ var (
 	//go:embed iol.cfg.tmpl
 	cfgTemplate string
 
-	InterfaceRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
-	InterfaceOffset = 1
-	InterfaceHelp   = "eX/Y or EthernetX/Y (where X >= 0 and Y >= 1)"
+	// IntfRegexp with named capture groups for extracting slot and port.
+	CapturingIntfRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
+	// ethX naming is the "raw" or "default" interface naming.
+	DefaultIntfRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`)
+	// Match on the management interface.
+	MgmtIntfRegexp = regexp.MustCompile(`(eth0|e0/0|Ethernet0/0)$`)
+	// Matches on any allowed/legal interface name.
+	AllowedIntfRegexp = regexp.MustCompile("Ethernet((0/[1-3])|([1-9]/[0-3]))$|e((0/[1-3])|([1-9]/[0-9]))$|eth[1-9][0-9]*$")
+	IntfHelpMsg       = "Interfaces should follow Ethernet<slot>/<port> or e<slot>/<port> naming convention, where <slot> is a number from 0-9 and <port> is a number from 0-3. You can also use ethX-based interface naming."
 
 	validTypes = []string{typeIOL, typeL2}
 )
@@ -117,10 +123,6 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "iouyap.ini"), ":/iol/iouyap.ini"),
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "NETMAP"), ":/iol/NETMAP"),
 	)
-
-	n.InterfaceRegexp = InterfaceRegexp
-	n.InterfaceOffset = InterfaceOffset
-	n.InterfaceHelp = InterfaceHelp
 
 	return nil
 }
@@ -280,7 +282,7 @@ type IOLInterface struct {
 }
 
 func (n *iol) GetMappedInterfaceName(ifName string) (string, error) {
-	captureGroups, err := utils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
+	captureGroups, err := utils.GetRegexpCaptureGroups(CapturingIntfRegexp, ifName)
 	if err != nil {
 		return "", err
 	}
@@ -312,41 +314,52 @@ func (n *iol) GetMappedInterfaceName(ifName string) (string, error) {
 	}
 }
 
-var DefaultIntfRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`)
-
-// AddEndpoint override version maps the endpoint name to an ethX-based name before adding it to the node endpoints. Returns an error if the mapping goes wrong.
+// AddEndpoint override maps the endpoint name to an ethX-based naming where neccesary, before adding it to the node endpoints. Returns an error if the mapping goes wrong or if the
+// interface name is NOT allowed.
 func (n *iol) AddEndpoint(e links.Endpoint) error {
 	endpointName := e.GetIfaceName()
-	// Slightly modified check: if it doesn't match the DefaultIntfRegexp, pass it to GetMappedInterfaceName. If it fails, then the interface name is wrong.
-	if n.InterfaceRegexp != nil && !(DefaultIntfRegexp.MatchString(endpointName)) {
+	var IFaceName, IFaceAlias string
+
+	IFaceName = endpointName
+
+	if !(DefaultIntfRegexp.MatchString(endpointName)) &&
+		AllowedIntfRegexp.MatchString(endpointName) {
+		log.Debugf("%s: %s needs mapping", n.Cfg.ShortName, endpointName)
 		mappedName, err := n.GetMappedInterfaceName(endpointName)
 		if err != nil {
-			return fmt.Errorf("%q interface name %q could not be mapped to an ethX-based interface name: %w",
-				n.Cfg.ShortName, e.GetIfaceName(), err)
+			return fmt.Errorf("%q interface name %q could not be mapped to an ethX-based interface name: %w\n%s",
+				n.Cfg.ShortName, e.GetIfaceName(), err, IntfHelpMsg)
 		}
 		log.Debugf("Interface Mapping: Mapping interface %q (ifAlias) to %q (ifName)", endpointName, mappedName)
-		e.SetIfaceName(mappedName)
-		e.SetIfaceAlias(endpointName)
+		IFaceName = mappedName
+		IFaceAlias = endpointName
 	}
+
+	e.SetIfaceName(IFaceName)
+	// should be nil if ethX naming is used.
+	e.SetIfaceAlias(IFaceAlias)
 	n.Endpoints = append(n.Endpoints, e)
 
 	return nil
 }
 
 func (n *iol) CheckInterfaceName() error {
-	// allow interface naming as Ethernet<slot>/<port> or e<slot>/<port>
-	InterfaceRegexp := regexp.MustCompile("Ethernet((0/[1-3])|([1-9]/[0-3]))$|e((0/[1-3])|([1-9]/[0-9]))$")
-
 	err := n.CheckInterfaceOverlap()
 	if err != nil {
 		return err
 	}
 
 	for _, e := range n.Endpoints {
-		IFaceName := e.GetIfaceAlias()
-		if !InterfaceRegexp.MatchString(IFaceName) {
-			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. Interfaces should be defined contigiously and named as Ethernet<slot>/<port> or e<slot>/<port>, where <slot> is a number from 0-9 and <port> is a number from 0-3. Management interface Ethernet0/0 cannot be used", n.Cfg.ShortName, IFaceName)
+		IFaceName := e.GetIfaceName()
+		if MgmtIntfRegexp.MatchString(IFaceName) {
+			return fmt.Errorf("IOL Node: %q. Management interface Ethernet0/0, e0/0 or eth0 is not allowed", n.Cfg.ShortName)
 		}
+
+		if !DefaultIntfRegexp.MatchString(IFaceName) {
+			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. %s",
+				n.Cfg.ShortName, IFaceName, IntfHelpMsg)
+		}
+
 	}
 
 	return nil
