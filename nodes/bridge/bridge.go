@@ -140,15 +140,3 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 
 	return f.InstallForwardingRules(b.Cfg.ShortName, "", definitions.ForwardChain)
 }
-
-// deleteIPTablesBridgeFwdRule deletes `allow` rule for the traffic routed to ingress the bridge
-// previously installed during the post deploy stage.
-func (b *bridge) deleteIPTablesBridgeFwdRule() (err error) {
-	f, err := firewall.NewFirewallClient()
-	if err != nil {
-		return err
-	}
-	log.Debugf("setting up bridge firewall rules using %s as the firewall interface", f.Name())
-
-	return f.DeleteForwardingRules(b.Cfg.ShortName, "", definitions.ForwardChain)
-}
