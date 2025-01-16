@@ -3,26 +3,28 @@ package docker
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall"
+	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
 )
 
-// deleteFwdRule deletes `allow` rule installed with installFwdRule when the bridge interface doesn't exist anymore.
-func (d *DockerRuntime) deleteFwdRule() (err error) {
+// deleteMgmtNetworkFwdRule deletes `allow` rule installed with installFwdRule
+// when the containerlab management network (bridge) interface doesn't exist anymore.
+func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
 		return
 	}
 
-	f, err := firewall.NewFirewallClient(d.mgmt.Bridge)
+	f, err := firewall.NewFirewallClient()
 	if err != nil {
 		return err
 	}
 
-	return f.DeleteForwardingRules()
+	return f.DeleteForwardingRules("", d.mgmt.Bridge, definitions.DockerUserChain)
 }
 
-// installFwdRule installs the `allow` rule for traffic destined to the nodes
+// installMgmtNetworkFwdRule installs the `allow` rule for traffic destined to the nodes
 // on the clab management network for v4 and v6.
 // This rule is required for external access to the nodes.
-func (d *DockerRuntime) installFwdRule() (err error) {
+func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
 		return
 	}
@@ -32,11 +34,11 @@ func (d *DockerRuntime) installFwdRule() (err error) {
 		return
 	}
 
-	f, err := firewall.NewFirewallClient(d.mgmt.Bridge)
+	f, err := firewall.NewFirewallClient()
 	if err != nil {
 		return err
 	}
 	log.Debugf("using %s as the firewall interface", f.Name())
 
-	return f.InstallForwardingRules()
+	return f.InstallForwardingRules("", d.mgmt.Bridge, definitions.DockerUserChain)
 }

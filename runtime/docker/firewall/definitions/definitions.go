@@ -5,8 +5,8 @@ import "errors"
 var ErrNotAvailable = errors.New("not available")
 
 const (
-	DockerFWUserChain = "DOCKER-USER"
-	DockerFWTable     = "filter"
+	DockerUserChain = "DOCKER-USER"
+	FilterTable     = "filter"
 
 	IPTablesRuleComment = "set by containerlab"
 
@@ -15,7 +15,7 @@ const (
 
 // ClabFirewall is the interface that all firewall clients must implement.
 type ClabFirewall interface {
-	DeleteForwardingRules() error
-	InstallForwardingRules() error
+	DeleteForwardingRules(inInterface, outInterface, chain string) error
+	InstallForwardingRules(inInterface, outInterface, chain string) error
 	Name() string
 }

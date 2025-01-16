@@ -354,7 +354,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", d.mgmt.Bridge, err)
 	}
-	err = d.installFwdRule()
+	err = d.installMgmtNetworkFwdRule()
 	if err != nil {
 		log.Warnf("errors during iptables rules install: %v", err)
 	}
@@ -391,7 +391,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		return err
 	}
 
-	err = d.deleteFwdRule()
+	err = d.deleteMgmtNetworkFwdRule()
 	if err != nil {
 		log.Warnf("errors during iptables rules removal: %v", err)
 	}

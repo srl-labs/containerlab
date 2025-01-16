@@ -7,15 +7,15 @@ import (
 )
 
 // NewFirewallClient returns a firewall client based on the availability of nftables or iptables.
-func NewFirewallClient(bridgeName string) (definitions.ClabFirewall, error) {
+func NewFirewallClient() (definitions.ClabFirewall, error) {
 	var clf definitions.ClabFirewall
 
-	clf, err := nftables.NewNftablesClient(bridgeName)
+	clf, err := nftables.NewNftablesClient()
 	if err == nil {
 		return clf, nil
 	}
 
-	clf, err = iptables.NewIpTablesClient(bridgeName)
+	clf, err = iptables.NewIpTablesClient()
 	if err == nil {
 		return clf, nil
 	}
