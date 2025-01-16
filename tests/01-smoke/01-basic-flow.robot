@@ -317,6 +317,25 @@ Verify iptables allow rule is set
     ...    ignore_case=True
     ...    collapse_spaces=True
 
+Verify ip6tables allow rule is set
+    [Documentation]    Checking if ip6tables allow rule is set so that external traffic can reach containerlab management network
+    Skip If    '${runtime}' != 'docker'
+
+    # Add check for ip6tables availability
+    ${rc}    ${output} =    Run And Return Rc And Output    which ip6tables
+    Skip If    ${rc} != 0    ip6tables command not found
+
+
+    ${ipt} =    Run
+    ...    sudo ip6tables -vnL DOCKER-USER
+    Log    ${ipt}
+    # debian 12 uses `0` for protocol, while previous versions use `all`
+    Should Contain Any    ${ipt}
+    ...    ACCEPT all -- * ${MgmtBr}
+    ...    ACCEPT 0 -- * ${MgmtBr}
+    ...    ignore_case=True
+    ...    collapse_spaces=True
+
 Verify DNS-Server Config
     [Documentation]    Check if the DNS config did take effect
     Skip If    '${runtime}' != 'docker'
@@ -403,6 +422,18 @@ Verify iptables allow rule are gone
     Log    ${ipt}
     Should Not Contain    ${ipt}    ${MgmtBr}
 
+Verify ip6tables allow rule are gone
+    [Documentation]    Checking if ip6tables allow rule is removed once the lab is destroyed
+    Skip If    '${runtime}' != 'docker'
+
+    # Add check for ip6tables availability
+    ${rc}    ${output} =    Run And Return Rc And Output    which ip6tables
+    Skip If    ${rc} != 0    ip6tables command not found
+
+    ${ipt} =    Run
+    ...    sudo ip6tables -vnL DOCKER-USER
+    Log    ${ipt}
+    Should Not Contain    ${ipt}    ${MgmtBr}
 
 *** Keywords ***
 Match IPv6 Address
