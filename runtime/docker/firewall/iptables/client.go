@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	iptCheckArgs = "-vL DOCKER-USER"
-	iptAllowArgs = "-I DOCKER-USER %s %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
-	iptDelArgs   = "-D DOCKER-USER %s %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
+	iptCheckArgs = "-vL DOCKER-USER -w 5"
+	iptAllowArgs = "-I DOCKER-USER %s %s -j ACCEPT -w 5 -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
+	iptDelArgs   = "-D DOCKER-USER %s %s -j ACCEPT -w 5 -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
 	ipTables     = "ip_tables"
 
 	v4AF         = "v4"

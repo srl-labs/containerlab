@@ -6,6 +6,7 @@ var ErrNotAvailable = errors.New("not available")
 
 const (
 	DockerUserChain = "DOCKER-USER"
+	ForwardChain    = "FORWARD"
 	FilterTable     = "filter"
 
 	IPTablesRuleComment = "set by containerlab"
