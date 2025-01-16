@@ -70,8 +70,8 @@ jobs:
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
-      - name: setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      # - name: setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
 
       - name: Run smoke tests
         run: |

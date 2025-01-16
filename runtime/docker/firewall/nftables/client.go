@@ -68,19 +68,22 @@ func (c *NftablesClient) DeleteForwardingRules() error {
 
 	defer c.close()
 
-	v4rules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv4)
+	allRules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv4)
 	if err != nil {
 		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
 	}
 
-	v6rules, err := c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv6)
-	if err != nil {
-		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
+	var v6rules []*nftables.Rule
+	if c.ip6_tables {
+		v6rules, err = c.getRules(definitions.DockerFWUserChain, definitions.DockerFWTable, nftables.TableFamilyIPv6)
+		if err != nil {
+			return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
+		}
 	}
 
-	v4v6rules := append(v4rules, v6rules...)
+	allRules = append(allRules, v6rules...)
 
-	mgmtBrRules := c.getRulesForMgmtBr(c.bridgeName, v4v6rules)
+	mgmtBrRules := c.getRulesForMgmtBr(c.bridgeName, allRules)
 	if len(mgmtBrRules) == 0 {
 		log.Debug("external access iptables rule doesn't exist. Skipping deletion")
 		return nil
