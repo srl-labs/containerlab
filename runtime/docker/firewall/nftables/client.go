@@ -87,7 +87,7 @@ func (c *NftablesClient) DeleteForwardingRules(inInterface, outInterface, chain 
 
 	allRules = append(allRules, v6rules...)
 
-	mgmtBrRules := c.getRulesForMgmtBr(iface, allRules)
+	mgmtBrRules := c.getClabRulesForInterface(iface, allRules)
 	if len(mgmtBrRules) == 0 {
 		log.Debug("external access iptables rule doesn't exist. Skipping deletion")
 		return nil
@@ -140,7 +140,7 @@ func (c *NftablesClient) InstallForwardingRulesForAF(af nftables.TableFamily, in
 		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
 	}
 
-	if c.allowRuleForMgmtBrExists(iface, rules) {
+	if c.allowRuleExistsForInterface(iface, rules) {
 		log.Debugf("found allowing iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", inInterface)
 		return nil
 	}
@@ -261,17 +261,17 @@ func (nftC *NftablesClient) close() {
 	nftC.nftConn.CloseLasting()
 }
 
-// allowRuleForMgmtBrExists checks if an allow rule for the provided bridge name exists.
+// allowRuleExistsForInterface checks if an allow rule for the provided interface name exists.
 // The actual check doesn't verify that `allow` is set, it just checks if the rule
-// has the provided bridge name in the output interface match and has a comment that is setup
+// has the provided interface name and has a comment that is setup
 // by containerlab.
-func (nftC *NftablesClient) allowRuleForMgmtBrExists(brName string, rules []*nftables.Rule) bool {
-	return len(nftC.getRulesForMgmtBr(brName, rules)) > 0
+func (nftC *NftablesClient) allowRuleExistsForInterface(iface string, rules []*nftables.Rule) bool {
+	return len(nftC.getClabRulesForInterface(iface, rules)) > 0
 }
 
-// getRulesForMgmtBr returns all rules that have the provided bridge name in the output interface match
+// getClabRulesForInterface returns all rules that have the provided interface name in the output interface match
 // and have a comment that is setup by containerlab.
-func (*NftablesClient) getRulesForMgmtBr(brName string, rules []*nftables.Rule) []*nftables.Rule {
+func (*NftablesClient) getClabRulesForInterface(brName string, rules []*nftables.Rule) []*nftables.Rule {
 	var result []*nftables.Rule
 
 	for _, r := range rules {
