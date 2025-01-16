@@ -14,8 +14,8 @@ import (
 
 const (
 	iptCheckArgs = "-vL DOCKER-USER"
-	iptAllowArgs = "-I DOCKER-USER -o %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
-	iptDelArgs   = "-D DOCKER-USER -o %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
+	iptAllowArgs = "-I DOCKER-USER %s %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
+	iptDelArgs   = "-D DOCKER-USER %s %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
 	ipTables     = "ip_tables"
 
 	v4AF         = "v4"
@@ -54,7 +54,8 @@ func (*IpTablesClient) Name() string {
 	return ipTables
 }
 
-// InstallForwardingRules installs the forwarding rules for v4 and v6 address families.
+// InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the provided
+// input or output interfac and chain.
 func (c *IpTablesClient) InstallForwardingRules(inInterface, outInterface, chain string) error {
 	err := c.InstallForwardingRulesForAF(v4AF, inInterface, outInterface, chain)
 	if err != nil {
@@ -76,16 +77,18 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(af, inInterface, outInterfa
 	}
 
 	iface := inInterface
+	direction := "i"
 	if outInterface != "" {
 		iface = outInterface
+		direction = "o"
 	}
 
 	// first check if a rule already exists to not create duplicates
-	if c.allowRuleForMgmtBrExists(af, iface) {
+	if c.allowRuleExistsForInterface(af, iface) {
 		return nil
 	}
 
-	cmd, err := shlex.Split(fmt.Sprintf(iptAllowArgs, iface))
+	cmd, err := shlex.Split(fmt.Sprintf(iptAllowArgs, direction, iface))
 	if err != nil {
 		return err
 	}
@@ -123,8 +126,10 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af, inInterface, outInterfac
 	}
 
 	iface := inInterface
+	direction := "i"
 	if outInterface != "" {
 		iface = outInterface
+		direction = "o"
 	}
 
 	// first check if a rule exists before trying to delete it
@@ -149,7 +154,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af, inInterface, outInterfac
 		return nil
 	}
 
-	cmd, err := shlex.Split(fmt.Sprintf(iptDelArgs, iface))
+	cmd, err := shlex.Split(fmt.Sprintf(iptDelArgs, direction, iface))
 	if err != nil {
 		return err
 	}
@@ -166,10 +171,10 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af, inInterface, outInterfac
 	return nil
 }
 
-// allowRuleForMgmtBrExists checks if an allow rule for the provided bridge name exists.
+// allowRuleExistsForInterface checks if an allow rule for the provided bridge name exists.
 // The actual check doesn't verify that `allow` is set, it just checks if the rule
 // has the provided bridge name in the output interface.
-func (c *IpTablesClient) allowRuleForMgmtBrExists(af, iface string) bool {
+func (c *IpTablesClient) allowRuleExistsForInterface(af, iface string) bool {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
