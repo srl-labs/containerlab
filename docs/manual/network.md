@@ -247,17 +247,22 @@ With this approach, users can prevent IP address overlap with nodes deployed on 
 
 #### external access
 
-Containerlab will attempt to enable external access to the nodes by default. This means that external systems/hosts will be able to communicate with the nodes of your topology without requiring any manual iptables/nftables rules to be installed.
+Containerlab will attempt to enable external management access to the nodes by default. This means that external systems/hosts will be able to communicate with the nodes of your topology without requiring any manual iptables/nftables rules to be installed.
 
-To allow external communications containerlab installs a rule in the `DOCKER-USER` chain, allowing all packets targeting containerlab's management network. The rule looks like follows:
+To allow external communications containerlab installs a rule in the `DOCKER-USER` chain for v4 and v6, allowing all packets targeting containerlab's management network. The rule looks like follows:
 
 ```shell
-❯ sudo iptables -vnL DOCKER-USER
-Chain DOCKER-USER (1 references)
- pkts bytes target     prot opt in     out     source               destination         
-    0     0 ACCEPT     all  --  *      br-a8b9fc8b33a2  0.0.0.0/0            0.0.0.0/0            /* set by containerlab */
-12719   79M RETURN     all  --  *      *       0.0.0.0/0            0.0.0.0/0      
+sudo iptables -vnL DOCKER-USER
 ```
+
+<div class="embed-result">
+```{.no-copy .no-select}
+Chain DOCKER-USER (1 references)
+ pkts bytes target     prot opt in     out     source               destination
+    0     0 ACCEPT     all  --  *      br-a8b9fc8b33a2  0.0.0.0/0            0.0.0.0/0            /* set by containerlab */
+12719   79M RETURN     all  --  *      *       0.0.0.0/0            0.0.0.0/0
+```
+</div>
 
 1. The `br-a8b9fc8b33a2` bridge interface is the interface that backs up the containerlab's management network (`clab` docker network).
 
