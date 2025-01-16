@@ -325,6 +325,8 @@ Verify ip6tables allow rule is set
     ${rc}    ${output} =    Run And Return Rc And Output    which nft
     Skip If    ${rc} != 0    nft command not found
 
+    ${rc}    ${output} =    Run And Return Rc And Output    sudo nft list tables
+    Skip If    'ip6 filter' not in '''${output}'''    ip6 filter chain not found
 
     ${ipt} =    Run
     ...    sudo nft list chain ip6 filter DOCKER-USER
@@ -425,6 +427,9 @@ Verify ip6tables allow rule are gone
     # Add check for ip6tables availability
     ${rc}    ${output} =    Run And Return Rc And Output    which nft
     Skip If    ${rc} != 0    nft command not found
+
+    ${rc}    ${output} =    Run And Return Rc And Output    sudo nft list tables
+    Skip If    'ip6 filter' not in '''${output}'''    ip6 filter chain not found
 
     ${ipt} =    Run
     ...    sudo nft list chain ip6 filter DOCKER-USER
