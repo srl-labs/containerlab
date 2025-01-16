@@ -55,7 +55,7 @@ func (*IpTablesClient) Name() string {
 }
 
 // InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the provided
-// input or output interfac and chain.
+// input or output interface and chain.
 func (c *IpTablesClient) InstallForwardingRules(inInterface, outInterface, chain string) error {
 	err := c.InstallForwardingRulesForAF(v4AF, inInterface, outInterface, chain)
 	if err != nil {

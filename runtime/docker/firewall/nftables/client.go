@@ -111,7 +111,8 @@ func (c *NftablesClient) DeleteForwardingRules(inInterface, outInterface, chain 
 	return nil
 }
 
-// InstallForwardingRules installs the forwarding rules for v4 and v6 address families.
+// InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the provided
+// input or output interface and chain.
 func (c *NftablesClient) InstallForwardingRules(inInterface, outInterface, chain string) error {
 	defer c.close()
 
