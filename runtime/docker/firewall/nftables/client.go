@@ -58,7 +58,7 @@ func (*NftablesClient) Name() string {
 	return nfTables
 }
 
-// DeleteForwardingRules deletes the forwarding rules.
+// DeleteForwardingRules deletes the forwarding rules for in or out interface in a given chain.
 func (c *NftablesClient) DeleteForwardingRules(inInterface, outInterface, chain string) error {
 	iface := inInterface
 	if outInterface != "" {
@@ -87,8 +87,8 @@ func (c *NftablesClient) DeleteForwardingRules(inInterface, outInterface, chain 
 
 	allRules = append(allRules, v6rules...)
 
-	mgmtBrRules := c.getClabRulesForInterface(iface, allRules)
-	if len(mgmtBrRules) == 0 {
+	clabRules := c.getClabRulesForInterface(iface, allRules)
+	if len(clabRules) == 0 {
 		log.Debug("external access iptables rule doesn't exist. Skipping deletion")
 		return nil
 	}
@@ -103,7 +103,7 @@ func (c *NftablesClient) DeleteForwardingRules(inInterface, outInterface, chain 
 	}
 
 	log.Debugf("removing clab iptables rules for bridge %q", iface)
-	for _, r := range mgmtBrRules {
+	for _, r := range clabRules {
 		c.deleteRule(r)
 	}
 
@@ -269,8 +269,8 @@ func (nftC *NftablesClient) allowRuleExistsForInterface(iface string, rules []*n
 	return len(nftC.getClabRulesForInterface(iface, rules)) > 0
 }
 
-// getClabRulesForInterface returns all rules that have the provided interface name in the output interface match
-// and have a comment that is setup by containerlab.
+// getClabRulesForInterface returns rules that have the provided interface name in the output interface match
+// and have a comment that is setup by containerlab from the list of `rules`.
 func (*NftablesClient) getClabRulesForInterface(brName string, rules []*nftables.Rule) []*nftables.Rule {
 	var result []*nftables.Rule
 

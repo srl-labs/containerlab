@@ -26,6 +26,7 @@ func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 // This rule is required for external access to the nodes.
 func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
+		log.Debug("skipping setup of forwarding rules for the management network since External Access is disabled by a user")
 		return
 	}
 
@@ -40,5 +41,7 @@ func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 	}
 	log.Debugf("using %s as the firewall interface", f.Name())
 
+	// install the rules with the management bridge listed as the outgoing interface with the allow action
+	// in the DOCKER-USER chain
 	return f.InstallForwardingRules("", d.mgmt.Bridge, definitions.DockerUserChain)
 }
