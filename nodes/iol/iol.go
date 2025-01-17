@@ -49,11 +49,11 @@ var (
 	// IntfRegexp with named capture groups for extracting slot and port.
 	CapturingIntfRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	// ethX naming is the "raw" or "default" interface naming.
-	DefaultIntfRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`)
+	DefaultIntfRegexp = regexp.MustCompile(`eth[1-9]\d*$`)
 	// Match on the management interface.
 	MgmtIntfRegexp = regexp.MustCompile(`(eth0|e0/0|Ethernet0/0)$`)
 	// Matches on any allowed/legal interface name.
-	AllowedIntfRegexp = regexp.MustCompile("(e|Ethernet)((0/[1-3])|([1-9]/[0-3]))$|eth[1-9][0-9]*$")
+	AllowedIntfRegexp = regexp.MustCompile(`(e|Ethernet)((0/[123])|([1-9]/[0-3]))$|eth[1-9]\d*$`)
 	IntfHelpMsg       = "Interfaces should follow Ethernet<slot>/<port> or e<slot>/<port> naming convention, where <slot> is a number from 0-9 and <port> is a number from 0-3. You can also use ethX-based interface naming."
 
 	validTypes = []string{typeIOL, typeL2}
@@ -181,7 +181,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	slot, port := 0, 0
 
 	// Regexp to pull number out of linux'ethX' interface naming
-	IntfRegExpr := regexp.MustCompile("[0-9]+")
+	IntfRegExpr := regexp.MustCompile(`\d+`)
 
 	for _, intf := range n.Endpoints {
 
