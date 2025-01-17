@@ -11,6 +11,7 @@ The exact command that performs configuration save depends on a given kind. The 
 | **Nokia SR Linux** | `sr_cli -d tools system configuration save` |                                                         |
 | **Nokia SR OS**    |                                             | delivered via netconf RPC `copy-config running startup` |
 | **Arista cEOS**    | `Cli -p 15 -c wr`                           |                                                         |
+| **Cisco IOL**      | `write memory`                              |                                                         |
 
 ### Usage
 
