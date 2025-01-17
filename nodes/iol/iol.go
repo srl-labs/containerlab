@@ -20,6 +20,8 @@ import (
 
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
+	"github.com/scrapli/scrapligo/driver/options"
+	"github.com/scrapli/scrapligo/platform"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
@@ -377,4 +379,39 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 		n.Cfg.MgmtIPv6PrefixLength, n.Cfg.MgmtIPv4Gateway, n.Cfg.MgmtIPv6Gateway)
 
 	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
+}
+
+// SaveConfig is used for "clab save" functionality -- it saves the running config to the startup configuration
+func (n *iol) SaveConfig(_ context.Context) error {
+	p, err := platform.NewPlatform(
+		"cisco_iosxe",
+		n.Cfg.LongName,
+		options.WithAuthNoStrictKey(),
+		options.WithAuthUsername(defaultCredentials.GetUsername()),
+		options.WithAuthPassword(defaultCredentials.GetPassword()),
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to create platform; error: %+v", err)
+	}
+
+	d, err := p.GetNetworkDriver()
+	if err != nil {
+		return fmt.Errorf("failed to fetch network driver from the platform; error: %+v", err)
+	}
+
+	err = d.Open()
+	if err != nil {
+		return fmt.Errorf("failed to open driver; error: %+v", err)
+	}
+
+	defer d.Close()
+
+	_, err = d.SendCommand("write memory")
+	if err != nil {
+		return fmt.Errorf("failed to send command; error: %+v", err)
+	}
+
+	log.Infof("Successfully copied running configuration to startup configuration file for node: %q\n", n.Cfg.ShortName)
+	return nil
 }
