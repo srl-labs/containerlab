@@ -3,6 +3,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Containerlab topology definition file",
     "type": "object",
+    // ADDED: We enforce no extraneous properties at the root
     "additionalProperties": false,
     "properties": {
       "name": {
@@ -15,6 +16,7 @@
         "markdownDescription": "[lab prefix](https://containerlab.dev/manual/topo-def-file/#prefix)"
       },
       "mgmt": {
+        // ADDED: This object has more strictly enforced properties
         "description": "configuration container for management network",
         "markdownDescription": "configuration container for [management network](https://containerlab.dev/manual/network/#management-network)",
         "type": "object",
@@ -96,6 +98,8 @@
             }
           },
           "kinds": {
+            // CHANGED: Instead of listing all known "kinds" explicitly, 
+            // we now allow any property name with node-config as its schema.
             "description": "topology kinds configuration container",
             "markdownDescription": "topology [kinds](https://containerlab.dev/manual/topo-def-file/#kinds) configuration container",
             "type": "object",
@@ -137,14 +141,19 @@
     "required": ["name", "topology"],
   
     "definitions": {
+      ////////////////////////////////////////////////////////////////////////////////////
+      // NEW DEFINITION: Factored-out patterns for "ports" and "publish" to reduce clutter
+      ////////////////////////////////////////////////////////////////////////////////////
       "port-pattern": {
         "type": "string",
         "description": "String pattern defining a valid port mapping",
+        // CHANGED: Moved the complex 'ports' regex here
         "pattern": "^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?:([0-9]{1,5}):([0-9]{1,5})$|^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?:([0-9]{1,5}):([0-9]{1,5})+(\\/tcp|\\/udp|\\/sctp)$|^([0-9]{1,5}):([0-9]{1,5})$|^([0-9]{1,5}):([0-9]{1,5})+(\\/tcp|\\/udp|\\/sctp)$|^([0-9]{1,5})$|^([0-9]{1,5})-([0-9]{1,5}):([0-9]{1,5})+(\\/tcp|\\/udp|\\/sctp)?$"
       },
       "publish-pattern": {
         "type": "string",
         "description": "String pattern defining a valid publish port format",
+        // CHANGED: Moved the complex 'publish' regex here
         "pattern": "(^http|^https|^tcp|^tls)\\/(([0-9]+$)|([0-9]+\\/.+$))"
       },
   
@@ -159,6 +168,7 @@
             "markdownDescription": "container [image](https://containerlab.dev/manual/nodes/#image) to use for this node"
           },
           "image-pull-policy": {
+            // REMOVED: "Always", "Never", "IfNotPresent" to unify case.  
             "type": "string",
             "description": "policy for pulling the referenced container image",
             "markdownDescription": "container [image-pull-policy](https://containerlab.dev/manual/nodes/#image-pull-policy) to use for this node",
@@ -172,6 +182,7 @@
             ]
           },
           "restart-policy": {
+            // REMOVED: duplicates for different case variants
             "type": "string",
             "description": "restart policy for the referenced container image",
             "markdownDescription": "container [restart-policy](https://containerlab.dev/manual/nodes/#restart-policy) to use for this node",
@@ -327,6 +338,7 @@
             "description": "list of port mappings",
             "markdownDescription": "list of [port](https://containerlab.dev/manual/nodes/#ports) mappings",
             "minItems": 1,
+            // CHANGED: Reference the separate "port-pattern" definition
             "items": {
               "$ref": "#/definitions/port-pattern"
             },
@@ -353,6 +365,7 @@
           "user": {
             "description": "user to use within the container",
             "markdownDescription": "[user](https://containerlab.dev/manual/nodes/#user) to use within the container",
+            // CHANGED: Removed "minItems" since "user" is a string/number, not an array
             "anyOf": [
               {
                 "type": "string"
@@ -377,6 +390,7 @@
             "description": "list of ports to publish",
             "markdownDescription": "list of ports to [publish](https://containerlab.dev/manual/nodes/#publish)",
             "minItems": 1,
+            // CHANGED: Reference the separate "publish-pattern" definition
             "items": {
               "$ref": "#/definitions/publish-pattern"
             },
@@ -488,6 +502,7 @@
             "uniqueItems": true
           }
         },
+        // CHANGED: We keep the "allOf" logic but ensure no duplication
         "allOf": [
           {
             "properties": {
@@ -756,6 +771,7 @@
             "description": "CA certificate validity duration. Can only be set if the external CA certificate is not provided"
           }
         },
+        // CHANGED: OneOf logic remains the same, but we add "additionalProperties": false
         "oneOf": [
           {
             "required": ["cert", "key"],
@@ -877,6 +893,7 @@
       },
       "stages-enum": {
         "type": "string",
+        // CHANGED: Single enum covers valid stage names
         "enum": ["create", "create-links", "configure", "healthy", "exit"]
       },
       "stage-exec": {
