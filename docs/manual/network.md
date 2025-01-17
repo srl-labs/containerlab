@@ -259,12 +259,13 @@ sudo iptables -vnL DOCKER-USER
 ```{.no-copy .no-select}
 Chain DOCKER-USER (1 references)
  pkts bytes target     prot opt in     out     source               destination
-    0     0 ACCEPT     all  --  *      br-a8b9fc8b33a2  0.0.0.0/0            0.0.0.0/0            /* set by containerlab */
-12719   79M RETURN     all  --  *      *       0.0.0.0/0            0.0.0.0/0
+    0     0 ACCEPT     0    --  br-1351328e1855 *       0.0.0.0/0            0.0.0.0/0            /* set by containerlab */
+    0     0 ACCEPT     0    --  *      br-1351328e1855  0.0.0.0/0            0.0.0.0/0            /* set by containerlab */
+    0     0 RETURN     0    --  *      *       0.0.0.0/0            0.0.0.0/0
 ```
 </div>
 
-1. The `br-a8b9fc8b33a2` bridge interface is the interface that backs up the containerlab's management network (`clab` docker network).
+1. The `br-1351328e1855` bridge interface is the interface that backs up the containerlab's management network (`clab` docker network).
 
 The rule will be removed together with the management network.
 
