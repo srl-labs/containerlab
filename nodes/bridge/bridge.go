@@ -129,7 +129,7 @@ func (b *bridge) GetLinkEndpointType() links.LinkEndpointType {
 	return links.LinkEndpointTypeBridge
 }
 
-// installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed to ingress the bridge
+// installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed in and out of the bridge
 // otherwise, communication over the bridge is not permitted on most systems.
 func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	f, err := firewall.NewFirewallClient()
