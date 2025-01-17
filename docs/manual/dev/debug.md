@@ -17,9 +17,13 @@ We will document the workflow for the latter (non-root user) case, as this is th
 
 The debug configuration defined in the `launch.json` file will contain the important fields such as `asRoot` and `console`, both needed for the debugging as a root user.
 
-Here is an example of a configuration file that launches `containerlab tools vxlan create` command in the debug mode:
+Here is an example of a configuration file that has debug configurations to run the following debug configurations:
 
-```json
+1. run `containerlab tools vxlan create` command
+2. run `containerlab deploy` command for a given topology
+3. run `containerlab destroy` for a given topology
+
+```{.json .code-scroll-lg}
 {
     "version": "0.2.0",
     "configurations": [
@@ -41,6 +45,36 @@ Here is an example of a configuration file that launches `containerlab tools vxl
                 "ens3"
             ],
             "preLaunchTask": "delete vx-ens3 interface",
+        },
+        {
+            "name": "deploy linux lab",
+            "type": "go",
+            "request": "launch",
+            "mode": "exec",
+            "console": "integratedTerminal",
+            "asRoot": true,
+            "program": "${workspaceFolder}/bin/containerlab",
+            "args": [
+                "dep",
+                "-t",
+                "private/linux.clab.yml"
+            ],
+            "preLaunchTask": "delete linux lab",
+        },
+        {
+            "name": "destroy linux lab",
+            "type": "go",
+            "request": "launch",
+            "mode": "exec",
+            "console": "integratedTerminal",
+            "asRoot": true,
+            "program": "${workspaceFolder}/bin/containerlab",
+            "args": [
+                "des",
+                "-t",
+                "private/linux.clab.yml"
+            ],
+            "preLaunchTask": "make build-dlv-debug",
         }
     ]
 }
@@ -58,7 +92,7 @@ Here is a simple task file that contains two tasks - one is building the binary 
 
 The dependencies between the tasks are defined in the `dependsOn` field, and this is how you can first build the binary and then run the preparation step.
 
-```json
+```{.json .code-scroll-lg}
 {
     "version": "2.0.0",
     "tasks": [
@@ -66,6 +100,17 @@ The dependencies between the tasks are defined in the `dependsOn` field, and thi
             "label": "delete vx-ens3 interface",
             "type": "shell",
             "command": "sudo ip link delete vx-ens3",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "dependsOn": "make build-dlv-debug",
+            "problemMatcher": []
+        },
+        {
+            "label": "delete linux lab",
+            "type": "shell",
+            "command": "sudo clab des -c -t private/linux.clab.yml",
             "presentation": {
                 "reveal": "always",
                 "panel": "new"
