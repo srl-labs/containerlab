@@ -20,7 +20,11 @@ build:
 
 build-linux-arm64:
 	mkdir -p $(BIN_DIR)
-	GOARCH=arm64 go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
+	GOOS=linux GOARCH=arm64 go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
+
+build-linux-amd64:
+	mkdir -p $(BIN_DIR)
+	GOOS=linux GOARCH=amd64 go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
 
 build-with-cover:
 	mkdir -p $(BIN_DIR)
