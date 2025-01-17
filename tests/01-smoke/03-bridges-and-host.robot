@@ -114,11 +114,10 @@ Setup
     Run    sudo ctr -n clab image rm docker.io/library/alpine:3
 
 Cleanup
-    Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    
+
     Run    sudo ip l del ${bridge-name}
     Run    sudo ip l del ${host-link-name}
