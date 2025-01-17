@@ -75,6 +75,17 @@ iptables -I FORWARD -i br-clab -j ACCEPT
 iptables -I FORWARD -o br-clab -j ACCEPT
 ```
 
-This will ensure that traffic is forwarded when passing this particular bridge. Note, that once you destroy the lab, the rule will stay, if you wish to remove it, you will have to do it manually.
+This will ensure that traffic is forwarded when passing this particular bridge.
+
+/// warning
+Once you destroy the lab, the rules in the FORWARD chain will stay, if you wish to remove it, you will have to do it manually. For example the with the following script (for v4 family):
+
+```
+sudo iptables -vL FORWARD --line-numbers -n | \
+grep "set by containerlab" | awk '{print $1}' \
+| sort -r | xargs -I {} sudo iptables -D FORWARD {}
+```
+
+///
 
 Check out ["External bridge"](../../lab-examples/ext-bridge.md) lab for a ready-made example on how to use bridges.

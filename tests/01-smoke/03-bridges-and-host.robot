@@ -105,36 +105,6 @@ Verify ip6tables allow rule is set
     Should Match Regexp    ${ipt}    oifname.*${bridge-name}.*accept
     Should Match Regexp    ${ipt}    iifname.*${bridge-name}.*accept
 
-Destroy ${lab-name} lab
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-
-Verify iptables allow rule are gone
-    [Documentation]    Checking if iptables allow rule is removed once the lab is destroyed
-    Skip If    '${runtime}' != 'docker'
-    ${ipt} =    Run
-    ...    sudo iptables -vnL FORWARD
-    Log    ${ipt}
-    Should Not Contain    ${ipt}    ${bridge-name}
-
-Verify ip6tables allow rule are gone
-    [Documentation]    Checking if ip6tables allow rule is removed once the lab is destroyed
-    Skip If    '${runtime}' != 'docker'
-
-    # Add check for ip6tables availability
-    ${rc}    ${output} =    Run And Return Rc And Output    which nft
-    Skip If    ${rc} != 0    nft command not found
-
-    ${rc}    ${output} =    Run And Return Rc And Output    sudo nft list tables
-    Skip If    'ip6 filter' not in '''${output}'''    ip6 filter chain not found
-
-    ${ipt} =    Run
-    ...    sudo nft list chain ip6 filter FORWARD
-    Log    ${ipt}
-    Should Not Contain    ${ipt}    ${bridge-name}
-
 *** Keywords ***
 Setup
     # ensure the bridge we about to create is deleted first
@@ -144,5 +114,11 @@ Setup
     Run    sudo ctr -n clab image rm docker.io/library/alpine:3
 
 Cleanup
+    Destroy ${lab-name} lab
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    
     Run    sudo ip l del ${bridge-name}
     Run    sudo ip l del ${host-link-name}
