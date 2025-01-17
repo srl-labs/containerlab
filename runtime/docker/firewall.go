@@ -43,5 +43,17 @@ func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 
 	// install the rules with the management bridge listed as the outgoing interface with the allow action
 	// in the DOCKER-USER chain
-	return f.InstallForwardingRules("", d.mgmt.Bridge, definitions.DockerUserChain)
+	err = f.InstallForwardingRules("", d.mgmt.Bridge, definitions.DockerUserChain)
+	if err != nil {
+		return err
+	}
+
+	// install the rules with the management bridge listed as the incoming interface with the allow action
+	// in the DOCKER-USER chain
+	err = f.InstallForwardingRules(d.mgmt.Bridge, "", definitions.DockerUserChain)
+	if err != nil {
+		return err
+	}
+
+	return err
 }

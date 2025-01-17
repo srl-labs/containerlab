@@ -35,7 +35,7 @@ func NewNftablesClient() (*NftablesClient, error) {
 		ip6_tables: true,
 	}
 
-	chains, err := nftC.getChains(definitions.DockerUserChain)
+	chains, err := nftC.getChains(definitions.DockerUserChain, nftables.TableFamilyIPv4)
 	if err != nil {
 		return nil, err
 	}
@@ -185,10 +185,11 @@ func (c *NftablesClient) InstallForwardingRulesForAF(af nftables.TableFamily, in
 	return nil
 }
 
-func (nftC *NftablesClient) getChains(name string) ([]*nftables.Chain, error) {
+// getChains returns all chains with the provided name and family.
+func (nftC *NftablesClient) getChains(name string, family nftables.TableFamily) ([]*nftables.Chain, error) {
 	var result []*nftables.Chain
 
-	chains, err := nftC.nftConn.ListChains()
+	chains, err := nftC.nftConn.ListChainsOfTableFamily(family)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +209,7 @@ func (nftC *NftablesClient) deleteRule(r *nftables.Rule) {
 // getRules returns all rules for the provided chain name, table name and family.
 func (nftC *NftablesClient) getRules(chainName, tableName string, family nftables.TableFamily) ([]*nftables.Rule, error) {
 	// get chain reference
-	chains, err := nftC.getChains(chainName)
+	chains, err := nftC.getChains(chainName, family)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +226,7 @@ func (nftC *NftablesClient) getRules(chainName, tableName string, family nftable
 func (nftC *NftablesClient) newClabNftablesRule(chainName, tableName string,
 	family nftables.TableFamily, position uint64,
 ) (*clabNftablesRule, error) {
-	chains, err := nftC.getChains(chainName)
+	chains, err := nftC.getChains(chainName, family)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +273,7 @@ func (nftC *NftablesClient) allowRuleExistsForInterface(iface string, rules []*n
 
 // getClabRulesForInterface returns rules that have the provided interface name in the output interface match
 // and have a comment that is setup by containerlab from the list of `rules`.
-func (*NftablesClient) getClabRulesForInterface(brName string, rules []*nftables.Rule) []*nftables.Rule {
+func (*NftablesClient) getClabRulesForInterface(iface string, rules []*nftables.Rule) []*nftables.Rule {
 	var result []*nftables.Rule
 
 	for _, r := range rules {
@@ -284,7 +285,7 @@ func (*NftablesClient) getClabRulesForInterface(brName string, rules []*nftables
 			// Cmp is a comparison expression
 			// in the case of the rule we are looking for, it should be a comparison of the output interface name
 			case *expr.Cmp:
-				if bytes.Equal(v.Data, []byte(brName+"\x00")) {
+				if bytes.Equal(v.Data, []byte(iface+"\x00")) {
 					oifNameFound = true
 				}
 			// Match is a match expression
