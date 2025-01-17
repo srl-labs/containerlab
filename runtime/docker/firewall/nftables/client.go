@@ -20,6 +20,11 @@ var directionMap = map[string]expr.MetaKey{
 	definitions.OutDirection: expr.MetaKeyOIFNAME,
 }
 
+var afMap = map[nftables.TableFamily]string{
+	nftables.TableFamilyIPv4: "ipv4",
+	nftables.TableFamilyIPv6: "ipv6",
+}
+
 // NftablesClient is a client for nftables.
 type NftablesClient struct {
 	nftConn *nftables.Conn
@@ -146,7 +151,7 @@ func (c *NftablesClient) InstallForwardingRulesForAF(af nftables.TableFamily, ru
 		return nil
 	}
 
-	log.Debugf("Installing iptables rules for bridge %q", iface)
+	log.Debugf("Installing iptables rules for interface %q, direction %s, family %s", iface, rule.Direction, afMap[af])
 
 	// create a new rule
 	r, err := c.newClabNftablesRule(rule.Chain, rule.Table, af, 0)
