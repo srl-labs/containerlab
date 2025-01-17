@@ -5,7 +5,6 @@
 package clab
 
 import (
-	border0 "github.com/srl-labs/containerlab/nodes/border0"
 	bridge "github.com/srl-labs/containerlab/nodes/bridge"
 	c8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
@@ -93,7 +92,6 @@ func (c *CLab) RegisterNodes() {
 	xrd.Register(c.Reg)
 	rare.Register(c.Reg)
 	c8000.Register(c.Reg)
-	border0.Register(c.Reg)
 	k8s_kind.Register(c.Reg)
 	cisco_iol.Register(c.Reg)
 	huawei_vrp.Register(c.Reg)

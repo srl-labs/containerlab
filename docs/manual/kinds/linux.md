@@ -5,6 +5,7 @@ search:
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 # Linux container
+
 Labs deployed with containerlab are endlessly flexible, mostly because containerlab can spin up and wire regular containers as part of the lab topology.
 
 Nowadays more and more workloads are packaged into containers, and containerlab users can nicely integrate them in their labs following a familiar docker' compose-like syntax. As long as the networking domain is considered, the most common use case for bare linux containers is to introduce "clients" or traffic generators which are connected to the network nodes or host telemetry/monitoring stacks.
@@ -14,6 +15,7 @@ Nowadays more and more workloads are packaged into containers, and containerlab 
 But, of course, you are free to choose which container to add into your lab, there is not restriction to that!
 
 ## Using linux containers
+
 As with any other node, the linux container is a node of a specific kind, `linux` in this case.
 
 ```yaml
@@ -42,7 +44,6 @@ Containerlab tries to deliver the same level of flexibility in container configu
 * [env](../nodes.md#env) - to set environment variables
 * [user](../nodes.md#user) - to set a user that will be used inside the container system
 * [cmd](../nodes.md#cmd) - to provide a command that will be executed when the container is started
-* [publish](../nodes.md#publish) - to expose container' service via [border0.com integration](../published-ports.md)
 
 !!!note
     Nodes of `linux` kind will have a `on-failure` restart policy when run with docker runtime. This means that if container fails/exits with a non zero return code, docker will restart this container automatically.  
