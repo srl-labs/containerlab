@@ -140,7 +140,7 @@ func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 	return n.CreateIOLFiles(ctx)
 }
 
-func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *iol) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
 	n.GenBootConfig(ctx)
@@ -274,7 +274,7 @@ type IOLTemplateData struct {
 	PartialCfg         string
 }
 
-// IOLinterface struct stores mapping info between
+// IOLInterface struct stores mapping info between
 // IOL interface name and linux container interface.
 type IOLInterface struct {
 	IfaceName string
@@ -283,7 +283,7 @@ type IOLInterface struct {
 	Port      int
 }
 
-func (n *iol) GetMappedInterfaceName(ifName string) (string, error) {
+func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 	captureGroups, err := utils.GetRegexpCaptureGroups(CapturingIntfRegexp, ifName)
 	if err != nil {
 		return "", err
