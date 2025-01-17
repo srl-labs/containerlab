@@ -24,6 +24,11 @@ const (
 	ip6tablesCmd = "ip6tables"
 )
 
+var iptablesCmd = map[string]string{
+	v4AF: ip4tablesCmd,
+	v6AF: ip6tablesCmd,
+}
+
 // IpTablesClient is a client for iptables.
 type IpTablesClient struct {
 	ip6_tables bool
@@ -79,7 +84,7 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(af string, rule definitions
 	iface := rule.Interface
 
 	// first check if a rule already exists to not create duplicates
-	if c.allowRuleExistsForInterface(af, iface) {
+	if c.ruleExists(af, rule) {
 		return nil
 	}
 
@@ -165,14 +170,9 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule definitions.
 	return nil
 }
 
-// allowRuleExistsForInterface checks if an allow rule for the provided bridge name exists.
-// The actual check doesn't verify that `allow` is set, it just checks if the rule
-// has the provided bridge name in the output interface.
-func (c *IpTablesClient) allowRuleExistsForInterface(af, iface string) bool {
-	iptCmd := ip4tablesCmd
-	if af == v6AF {
-		iptCmd = ip6tablesCmd
-	}
+// ruleExists checks if an allow rule for the provided `rule` exists.
+func (c *IpTablesClient) ruleExists(af string, rule definitions.FirewallRule) bool {
+	iptCmd := iptablesCmd[af]
 
 	res, err := exec.Command(iptCmd, strings.Split(iptCheckArgs, " ")...).CombinedOutput()
 	if err != nil {
@@ -180,8 +180,22 @@ func (c *IpTablesClient) allowRuleExistsForInterface(af, iface string) bool {
 		// if we errored on check we don't want to try setting up the rule
 		return true
 	}
-	if bytes.Contains(res, []byte(iface)) {
-		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", iface)
+
+	// replace contiguous whitespace chars from the result with a single space
+	// to be able to compare the result with the iface and direction chars
+	res = bytes.Join(bytes.Fields(res), []byte(" "))
+
+	var matcher string
+	if rule.Direction == definitions.InDirection {
+		matcher = fmt.Sprintf("%s *", rule.Interface)
+	}
+
+	if rule.Direction == definitions.OutDirection {
+		matcher = fmt.Sprintf("* %s", rule.Interface)
+	}
+
+	if bytes.Contains(res, []byte(matcher)) {
+		log.Debugf("found iptables forwarding rule targeting the interface %q direction %s. Skipping creation of the forwarding rule", rule.Interface, rule.Direction)
 
 		return true
 	}
