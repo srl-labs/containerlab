@@ -93,7 +93,7 @@ func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 	// in the DOCKER-USER chain
 	r = definitions.FirewallRule{
 		Interface: d.mgmt.Bridge,
-		Direction: definitions.OutDirection,
+		Direction: definitions.InDirection,
 		Chain:     definitions.DockerUserChain,
 		Table:     definitions.FilterTable,
 		Action:    definitions.AcceptAction,
