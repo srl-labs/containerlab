@@ -19,7 +19,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -38,7 +37,6 @@ var inspectCmd = &cobra.Command{
 	Short:   "inspect lab details",
 	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
 	Aliases: []string{"ins", "i"},
-	PreRunE: common.SudoCheck,
 	RunE:    inspectFn,
 }
 

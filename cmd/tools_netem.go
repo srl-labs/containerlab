@@ -20,6 +20,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/internal/tc"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
@@ -70,7 +71,7 @@ var netemSetCmd = &cobra.Command{
 	Long: `The netem queue discipline provides Network Emulation
 functionality for testing protocols by emulating the properties
 of real-world networks.`,
-	PreRunE: validateInput,
+	PreRunE: validateInputAndRoot,
 	RunE:    netemSetFn,
 }
 
@@ -153,7 +154,7 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	return err
 }
 
-func validateInput(_ *cobra.Command, _ []string) error {
+func validateInputAndRoot(c *cobra.Command, args []string) error {
 	if netemLoss < 0 || netemLoss > 100 {
 		return fmt.Errorf("packet loss must be in the range between 0 and 100")
 	}
@@ -161,6 +162,8 @@ func validateInput(_ *cobra.Command, _ []string) error {
 	if netemJitter != 0 && netemDelay == 0 {
 		return fmt.Errorf("jitter cannot be set without setting delay")
 	}
+
+	common.CheckAndGetRootPrivs(c, args)
 
 	return nil
 }

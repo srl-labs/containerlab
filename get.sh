@@ -250,7 +250,11 @@ downloadFile() {
 installFile() {
     tar xf "$TMP_FILE" -C "$TMP_ROOT"
     echo "Preparing to install $BINARY_NAME ${TAG_WO_VER} into ${BIN_INSTALL_DIR}"
-    runAsRoot cp "$TMP_ROOT/$BINARY_NAME" "$BIN_INSTALL_DIR/$BINARY_NAME"
+    # Set SUID bit on the containerlab binary
+    runAsRoot install -m 4755 "$TMP_ROOT/$BINARY_NAME" "$BIN_INSTALL_DIR/$BINARY_NAME"
+    # Add clab admins group and add current user to it
+    runAsRoot groupadd clab_admins
+    runAsRoot usermod -aG "$SUDO_USER" clab_admins
     echo "$BINARY_NAME installed into $BIN_INSTALL_DIR/$BINARY_NAME"
 }
 

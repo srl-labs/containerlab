@@ -32,7 +32,7 @@ var destroyCmd = &cobra.Command{
 	Short:   "destroy a lab",
 	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
 	Aliases: []string{"des"},
-	PreRunE: common.SudoCheck,
+	PreRunE: common.CheckAndGetRootPrivs,
 	RunE:    destroyFn,
 }
 

@@ -28,7 +28,7 @@ var (
 var execCmd = &cobra.Command{
 	Use:     "exec",
 	Short:   "execute a command on one or multiple containers",
-	PreRunE: common.SudoCheck,
+	PreRunE: common.CheckAndGetRootPrivs,
 	RunE:    execFn,
 }
 

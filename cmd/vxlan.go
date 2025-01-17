@@ -11,6 +11,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -54,8 +55,9 @@ var vxlanCmd = &cobra.Command{
 }
 
 var vxlanCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "create vxlan interface",
+	Use:     "create",
+	Short:   "create vxlan interface",
+	PreRunE: common.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx := context.Background()
 
@@ -118,8 +120,9 @@ var vxlanCreateCmd = &cobra.Command{
 }
 
 var vxlanDeleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "delete vxlan interface",
+	Use:     "delete",
+	Short:   "delete vxlan interface",
+	PreRunE: common.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		var ls []netlink.Link
 		var err error
