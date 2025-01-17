@@ -71,7 +71,7 @@ Verify iptables allow rule is set
     Skip If    '${runtime}' != 'docker'
 
     ${ipt} =    Run
-    ...    sudo iptables -vnL DOCKER-USER
+    ...    sudo iptables -vnL FORWARD
     Log    ${ipt}
     # debian 12 uses `0` for protocol, while previous versions use `all`
     # this matches the rule in the in direction
@@ -100,7 +100,7 @@ Verify ip6tables allow rule is set
     Skip If    'ip6 filter' not in '''${output}'''    ip6 filter chain not found
 
     ${ipt} =    Run
-    ...    sudo nft list chain ip6 filter DOCKER-USER
+    ...    sudo nft list chain ip6 filter FORWARD
     Log    ${ipt}
     Should Match Regexp    ${ipt}    oifname.*${bridge-name}.*accept
     Should Match Regexp    ${ipt}    iifname.*${bridge-name}.*accept
@@ -115,7 +115,7 @@ Verify iptables allow rule are gone
     [Documentation]    Checking if iptables allow rule is removed once the lab is destroyed
     Skip If    '${runtime}' != 'docker'
     ${ipt} =    Run
-    ...    sudo iptables -vnL DOCKER-USER
+    ...    sudo iptables -vnL FORWARD
     Log    ${ipt}
     Should Not Contain    ${ipt}    ${bridge-name}
 
@@ -131,7 +131,7 @@ Verify ip6tables allow rule are gone
     Skip If    'ip6 filter' not in '''${output}'''    ip6 filter chain not found
 
     ${ipt} =    Run
-    ...    sudo nft list chain ip6 filter DOCKER-USER
+    ...    sudo nft list chain ip6 filter FORWARD
     Log    ${ipt}
     Should Not Contain    ${ipt}    ${bridge-name}
 
