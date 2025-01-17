@@ -15,7 +15,7 @@ For example, by connecting a lab node to a bridge we can:
 3. scale out containerlab labs by running separate labs in different hosts and get network reachability between them
 4. wiring nodes' data interfaces via a broadcast domain (linux bridge) and use vlans to making dynamic connections
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:8,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
+-{{diagram(url='srl-labs/containerlab/diagrams/containerlab.drawio', page='8', title='Using bridges')}}-
 
 ## Using bridge kind
 
@@ -53,9 +53,11 @@ In the example above, node `br-clab` of kind `bridge` tells containerlab to iden
 
 When connecting other nodes to a bridge, the bridge endpoint must be present in the `links` section.
 
-!!!note
-    When choosing names of the interfaces that need to be connected to the bridge make sure that these names are not clashing with existing interfaces.  
-    In the example above we named interfaces `eth1`, `eth2`, `eth3` accordingly and ensured that none of these interfaces existed before in the root netns.  
+/// admonition
+    type: subtle-note
+When choosing names of the interfaces that need to be connected to the bridge make sure that these names are not clashing with existing interfaces.  
+In the example above we named interfaces `eth1`, `eth2`, `eth3` accordingly and ensured that none of these interfaces existed before in the root netns.  
+///
 
 As a result of such topology definition, you will see bridge `br-clab` with three interfaces attached to it:
 
@@ -66,12 +68,12 @@ br-clab         8000.6281eb7133d2       no              eth1
                                                         eth3
 ```
 
-Containerlab automatically adds an iptables rule for the referenced bridges to allow forwarding over them. Namely, for a given bridge named `br-clab` containerlab will attempt to call the following iptables command during the lab deployment:
+Containerlab automatically adds iptables rules for the referenced bridges (v4 and v6) to allow traffic ingressing to the bridges. Namely, for a given bridge named `br-clab` containerlab will attempt to create the allowing rule in the filter table, FORWARD chain like this:
 
 ```
 iptables -I FORWARD -i br-clab -j ACCEPT
 ```
 
-This will ensure that traffic is forwarded when passing this particular bridge. Note, that once you destroy the lab, the rule will stay.
+This will ensure that traffic is forwarded when passing this particular bridge. Note, that once you destroy the lab, the rule will stay, if you wish to remove it, you will have to do it manually.
 
 Check out ["External bridge"](../../lab-examples/ext-bridge.md) lab for a ready-made example on how to use bridges.

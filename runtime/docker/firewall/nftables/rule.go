@@ -13,22 +13,29 @@ type clabNftablesRule struct {
 	rule *nftables.Rule
 }
 
-func (cnr *clabNftablesRule) AddOutputInterfaceFilter(oif string) {
+// AddInterfaceFilter adds an interface filter to the rule.
+func (cnr *clabNftablesRule) AddInterfaceFilter(ifName string, isOutput bool) {
 	// define the metadata to evaluate
-	metaOifName := &expr.Meta{
-		Key:            expr.MetaKeyOIFNAME,
+	metaKey := expr.MetaKeyIIFNAME
+	if isOutput {
+		metaKey = expr.MetaKeyOIFNAME
+	}
+
+	metaIfName := &expr.Meta{
+		Key:            metaKey,
 		SourceRegister: false,
 		Register:       1,
 	}
+
 	// define the comparison
 	comp := &expr.Cmp{
 		Op:       expr.CmpOpEq,
 		Register: 1,
-		Data:     []byte(oif + "\x00"),
+		Data:     []byte(ifName + "\x00"),
 	}
 
 	// add expr to rule
-	cnr.rule.Exprs = append(cnr.rule.Exprs, metaOifName, comp)
+	cnr.rule.Exprs = append(cnr.rule.Exprs, metaIfName, comp)
 }
 
 func (cnr *clabNftablesRule) AddCounter() error {

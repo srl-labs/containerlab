@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	iptCheckArgs = "-vL DOCKER-USER"
-	iptAllowArgs = "-I DOCKER-USER -o %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
-	iptDelArgs   = "-D DOCKER-USER -o %s -j ACCEPT -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
+	iptCheckArgs = "-vL DOCKER-USER -w 5"
+	iptAllowArgs = "-I DOCKER-USER %s %s -j ACCEPT -w 5 -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
+	iptDelArgs   = "-D DOCKER-USER %s %s -j ACCEPT -w 5 -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
 	ipTables     = "ip_tables"
 
 	v4AF         = "v4"
@@ -26,12 +26,11 @@ const (
 
 // IpTablesClient is a client for iptables.
 type IpTablesClient struct {
-	bridgeName string
 	ip6_tables bool
 }
 
 // NewIpTablesClient returns a new IpTablesClient.
-func NewIpTablesClient(bridgeName string) (*IpTablesClient, error) {
+func NewIpTablesClient() (*IpTablesClient, error) {
 	v4ModLoaded, err := utils.IsKernelModuleLoaded("ip_tables")
 	if err != nil {
 		return nil, err
@@ -46,7 +45,6 @@ func NewIpTablesClient(bridgeName string) (*IpTablesClient, error) {
 	}
 
 	return &IpTablesClient{
-		bridgeName: bridgeName,
 		ip6_tables: v6ModLoaded,
 	}, nil
 }
@@ -56,38 +54,46 @@ func (*IpTablesClient) Name() string {
 	return ipTables
 }
 
-// InstallForwardingRules installs the forwarding rules for v4 and v6 address families.
-func (c *IpTablesClient) InstallForwardingRules() error {
-	err := c.InstallForwardingRulesForAF(v4AF)
+// InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the provided
+// input or output interface and chain.
+func (c *IpTablesClient) InstallForwardingRules(inInterface, outInterface, chain string) error {
+	err := c.InstallForwardingRulesForAF(v4AF, inInterface, outInterface, chain)
 	if err != nil {
 		return err
 	}
 
 	if c.ip6_tables {
-		err = c.InstallForwardingRulesForAF(v6AF)
+		err = c.InstallForwardingRulesForAF(v6AF, inInterface, outInterface, chain)
 	}
 
 	return err
 }
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family.
-func (c *IpTablesClient) InstallForwardingRulesForAF(af string) error {
+func (c *IpTablesClient) InstallForwardingRulesForAF(af, inInterface, outInterface, chain string) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
 	}
 
+	iface := inInterface
+	direction := "i"
+	if outInterface != "" {
+		iface = outInterface
+		direction = "o"
+	}
+
 	// first check if a rule already exists to not create duplicates
-	if c.allowRuleForMgmtBrExists(af) {
+	if c.allowRuleExistsForInterface(af, iface) {
 		return nil
 	}
 
-	cmd, err := shlex.Split(fmt.Sprintf(iptAllowArgs, c.bridgeName))
+	cmd, err := shlex.Split(fmt.Sprintf(iptAllowArgs, direction, iface))
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("Installing iptables (%s) rules for bridge %q", af, c.bridgeName)
+	log.Debugf("Installing iptables (%s) rules for bridge %q", af, iface)
 
 	stdOutErr, err := exec.Command(iptCmd, cmd...).CombinedOutput()
 	if err != nil {
@@ -99,24 +105,31 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(af string) error {
 }
 
 // DeleteForwardingRules deletes the forwarding rules for v4 and v6 address families.
-func (c *IpTablesClient) DeleteForwardingRules() error {
-	err := c.DeleteForwardingRulesForAF(v4AF)
+func (c *IpTablesClient) DeleteForwardingRules(inInterface, outInterface, chain string) error {
+	err := c.DeleteForwardingRulesForAF(v4AF, inInterface, outInterface, chain)
 	if err != nil {
 		return err
 	}
 
 	if c.ip6_tables {
-		err = c.InstallForwardingRulesForAF(v6AF)
+		err = c.DeleteForwardingRulesForAF(v6AF, inInterface, outInterface, chain)
 	}
 
 	return err
 }
 
 // DeleteForwardingRulesForAF deletes the forwarding rules for a specified AF.
-func (c *IpTablesClient) DeleteForwardingRulesForAF(af string) error {
+func (c *IpTablesClient) DeleteForwardingRulesForAF(af, inInterface, outInterface, chain string) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
+	}
+
+	iface := inInterface
+	direction := "i"
+	if outInterface != "" {
+		iface = outInterface
+		direction = "o"
 	}
 
 	// first check if a rule exists before trying to delete it
@@ -127,7 +140,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af string) error {
 		return fmt.Errorf("missing DOCKER-USER iptables chain. See http://containerlab.dev/manual/network/#external-access")
 	}
 
-	if !bytes.Contains(res, []byte(c.bridgeName)) {
+	if !bytes.Contains(res, []byte(iface)) {
 		log.Debug("external access iptables rule doesn't exist. Skipping deletion")
 		return nil
 	}
@@ -135,18 +148,18 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af string) error {
 	// we are not deleting the rule if the bridge still exists
 	// it happens when bridge is either still in use by docker network
 	// or it is managed externally (created manually)
-	_, err = utils.BridgeByName(c.bridgeName)
+	_, err = utils.BridgeByName(iface)
 	if err == nil {
-		log.Debugf("bridge %s is still in use, not removing the forwarding rule", c.bridgeName)
+		log.Debugf("bridge %s is still in use, not removing the forwarding rule", iface)
 		return nil
 	}
 
-	cmd, err := shlex.Split(fmt.Sprintf(iptDelArgs, c.bridgeName))
+	cmd, err := shlex.Split(fmt.Sprintf(iptDelArgs, direction, iface))
 	if err != nil {
 		return err
 	}
 
-	log.Debugf("removing clab iptables rules for bridge %q", c.bridgeName)
+	log.Debugf("removing clab iptables rules for bridge %q", iface)
 	log.Debugf("trying to delete the forwarding rule with cmd: iptables %s", cmd)
 
 	stdOutErr, err := exec.Command(iptCmd, cmd...).CombinedOutput()
@@ -158,10 +171,10 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af string) error {
 	return nil
 }
 
-// allowRuleForMgmtBrExists checks if an allow rule for the provided bridge name exists.
+// allowRuleExistsForInterface checks if an allow rule for the provided bridge name exists.
 // The actual check doesn't verify that `allow` is set, it just checks if the rule
 // has the provided bridge name in the output interface.
-func (c *IpTablesClient) allowRuleForMgmtBrExists(af string) bool {
+func (c *IpTablesClient) allowRuleExistsForInterface(af, iface string) bool {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
@@ -173,8 +186,8 @@ func (c *IpTablesClient) allowRuleForMgmtBrExists(af string) bool {
 		// if we errored on check we don't want to try setting up the rule
 		return true
 	}
-	if bytes.Contains(res, []byte(c.bridgeName)) {
-		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", c.bridgeName)
+	if bytes.Contains(res, []byte(iface)) {
+		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", iface)
 
 		return true
 	}
