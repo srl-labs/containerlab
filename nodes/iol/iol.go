@@ -51,7 +51,7 @@ var (
 	// Match on the management interface.
 	MgmtIntfRegexp = regexp.MustCompile(`(eth0|e0/0|Ethernet0/0)$`)
 	// Matches on any allowed/legal interface name.
-	AllowedIntfRegexp = regexp.MustCompile("Ethernet((0/[1-3])|([1-9]/[0-3]))$|e((0/[1-3])|([1-9]/[0-9]))$|eth[1-9][0-9]*$")
+	AllowedIntfRegexp = regexp.MustCompile("(e|Ethernet)((0/[1-3])|([1-9]/[0-3]))$|eth[1-9][0-9]*$")
 	IntfHelpMsg       = "Interfaces should follow Ethernet<slot>/<port> or e<slot>/<port> naming convention, where <slot> is a number from 0-9 and <port> is a number from 0-3. You can also use ethX-based interface naming."
 
 	validTypes = []string{typeIOL, typeL2}
