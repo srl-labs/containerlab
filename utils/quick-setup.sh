@@ -260,7 +260,7 @@ function install-containerlab {
 
     echo "Adding ${USER} to clab_admins group..."
 
-    sudo groupadd clab_admins
+    sudo groupadd -r clab_admins
     sudo usermod -aG clab_admins "$SUDO_USER"
 }
 

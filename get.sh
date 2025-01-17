@@ -253,7 +253,7 @@ installFile() {
     # Set SUID bit on the containerlab binary
     runAsRoot install -m 4755 "$TMP_ROOT/$BINARY_NAME" "$BIN_INSTALL_DIR/$BINARY_NAME"
     # Add clab admins group and add current user to it
-    runAsRoot groupadd clab_admins
+    runAsRoot groupadd -r clab_admins
     runAsRoot usermod -aG "$SUDO_USER" clab_admins
     echo "$BINARY_NAME installed into $BIN_INSTALL_DIR/$BINARY_NAME"
 }

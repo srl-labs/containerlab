@@ -33,5 +33,5 @@ elif type "wget" > /dev/null 2>&1; then
     exit 0
 fi
 
-groupadd clab_admins
+groupadd -r clab_admins
 usermod -aG clab_admins "$SUDO_USER"
