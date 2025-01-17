@@ -165,9 +165,6 @@ type NodeConfig struct {
 	Healthcheck *HealthcheckConfig
 	// Network aliases
 	Aliases []string `json:"aliases,omitempty"`
-	// NSPath      string `json:"nspath,omitempty"` // network namespace path for this node
-	// list of ports to publish with mysocketctl
-	Publish []string `json:"publish,omitempty"`
 	// Extra /etc/hosts entries for all nodes.
 	ExtraHosts []string          `json:"extra-hosts,omitempty"`
 	Labels     map[string]string `json:"labels,omitempty"` // container labels

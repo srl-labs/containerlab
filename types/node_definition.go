@@ -40,8 +40,6 @@ type NodeDefinition struct {
 	MgmtIPv4 string `yaml:"mgmt-ipv4,omitempty"`
 	// user-defined IPv6 address in the management network
 	MgmtIPv6 string `yaml:"mgmt-ipv6,omitempty"`
-	// list of ports to publish with mysocketctl
-	Publish []string `yaml:"publish,omitempty"`
 	// environment variables
 	Env map[string]string `yaml:"env,omitempty"`
 	// external file containing environment variables
@@ -254,13 +252,6 @@ func (n *NodeDefinition) GetMgmtIPv6() string {
 		return ""
 	}
 	return n.MgmtIPv6
-}
-
-func (n *NodeDefinition) GetPublish() []string {
-	if n == nil {
-		return nil
-	}
-	return n.Publish
 }
 
 func (n *NodeDefinition) GetEnv() map[string]string {

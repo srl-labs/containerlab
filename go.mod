@@ -5,7 +5,6 @@ go 1.22.1
 require (
 	github.com/a8m/envsubst v1.4.2
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
-	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/containernetworking/plugins v1.5.1
 	github.com/containers/common v0.60.4
 	github.com/containers/podman/v5 v5.2.5
@@ -16,12 +15,10 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/florianl/go-tc v0.4.4
-	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/go-cmp v0.6.0
 	github.com/google/nftables v0.2.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/google/uuid v1.6.0
-	github.com/h2non/gock v1.2.0
 	github.com/hairyhenderson/gomplate/v3 v3.11.8
 	github.com/hashicorp/go-version v1.7.0
 	github.com/jedib0t/go-pretty/v6 v6.6.5
@@ -36,7 +33,6 @@ require (
 	github.com/pmorjan/kmod v1.1.1
 	github.com/scrapli/scrapligo v1.3.3
 	github.com/sirupsen/logrus v1.9.3
-	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966
 	github.com/spf13/cobra v1.8.1
 	github.com/steiler/acls v0.1.1
 	github.com/stretchr/testify v1.10.0
@@ -91,7 +87,6 @@ require (
 	github.com/google/go-containerregistry v0.20.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/google/safetext v0.0.0-20220905092116-b49f7bc46da2 // indirect
-	github.com/h2non/parth v0.0.0-20190131123155-b4df798d6542 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20240418210053-89b07f4543e0 // indirect

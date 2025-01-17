@@ -138,21 +138,6 @@ func (t *Topology) GetNodeEnvFiles(name string) []string {
 	return nil
 }
 
-func (t *Topology) GetNodePublish(name string) []string {
-	if ndef, ok := t.Nodes[name]; ok {
-		if len(ndef.GetPublish()) > 0 {
-			return ndef.GetPublish()
-		}
-		if kdef, ok := t.Kinds[ndef.GetKind()]; ok && kdef != nil {
-			if len(kdef.GetPublish()) > 0 {
-				return kdef.GetPublish()
-			}
-		}
-		return t.Defaults.GetPublish()
-	}
-	return nil
-}
-
 func (t *Topology) GetNodeLabels(name string) map[string]string {
 	if ndef, ok := t.Nodes[name]; ok {
 		return utils.MergeStringMaps(t.Defaults.GetLabels(),

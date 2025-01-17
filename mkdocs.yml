@@ -70,7 +70,6 @@ nav:
           - Quickstart: manual/clabernetes/quickstart.md
           - Packet capture in c9s: manual/clabernetes/pcap.md
       - Node filtering: manual/node-filtering.md
-      - Publish ports: manual/published-ports.md
       - Multi-node labs: manual/multi-node.md
       - Certificate management: manual/cert.md
       - Inventory: manual/inventory.md

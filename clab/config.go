@@ -188,7 +188,6 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		NetworkMode:     strings.ToLower(c.Config.Topology.GetNodeNetworkMode(nodeName)),
 		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
 		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
-		Publish:         c.Config.Topology.GetNodePublish(nodeName),
 		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),

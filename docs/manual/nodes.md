@@ -579,24 +579,6 @@ topology:
           - some-opt
 ```
 
-### publish
-
-Container lab integrates with [border0.com](https://border0.com) service to allow for private, Internet-reachable tunnels created for ports of containerlab nodes. This enables effortless access sharing with customers/partners/colleagues.
-
-This integration is extensively covered on [Publish ports](published-ports.md) page.
-
-```yaml
-name: demo
-topology:
-  nodes:
-    r1:
-      kind: nokia_srlinux
-      publish:
-        - tcp/22     # tcp port 22 will be published
-        - tcp/57400  # tcp port 57400 will be published
-        - http/8080  # http port 8080 will be published
-```
-
 ### network-mode
 
 By default containerlab nodes use bridge-mode driver - nodes are created with their first interface connected to a docker network (management network).
