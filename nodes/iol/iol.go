@@ -20,6 +20,8 @@ import (
 
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
+	"github.com/scrapli/scrapligo/driver/options"
+	"github.com/scrapli/scrapligo/platform"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
@@ -47,11 +49,11 @@ var (
 	// IntfRegexp with named capture groups for extracting slot and port.
 	CapturingIntfRegexp = regexp.MustCompile(`(?:e|Ethernet)\s?(?P<slot>\d+)/(?P<port>\d+)$`)
 	// ethX naming is the "raw" or "default" interface naming.
-	DefaultIntfRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`)
+	DefaultIntfRegexp = regexp.MustCompile(`eth[1-9]\d*$`)
 	// Match on the management interface.
 	MgmtIntfRegexp = regexp.MustCompile(`(eth0|e0/0|Ethernet0/0)$`)
 	// Matches on any allowed/legal interface name.
-	AllowedIntfRegexp = regexp.MustCompile("Ethernet((0/[1-3])|([1-9]/[0-3]))$|e((0/[1-3])|([1-9]/[0-9]))$|eth[1-9][0-9]*$")
+	AllowedIntfRegexp = regexp.MustCompile(`(e|Ethernet)((0/[123])|([1-9]/[0-3]))$|eth[1-9]\d*$`)
 	IntfHelpMsg       = "Interfaces should follow Ethernet<slot>/<port> or e<slot>/<port> naming convention, where <slot> is a number from 0-9 and <port> is a number from 0-3. You can also use ethX-based interface naming."
 
 	validTypes = []string{typeIOL, typeL2}
@@ -138,7 +140,7 @@ func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 	return n.CreateIOLFiles(ctx)
 }
 
-func (n *iol) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *iol) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
 	n.GenBootConfig(ctx)
@@ -179,7 +181,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	slot, port := 0, 0
 
 	// Regexp to pull number out of linux'ethX' interface naming
-	IntfRegExpr := regexp.MustCompile("[0-9]+")
+	IntfRegExpr := regexp.MustCompile(`\d+`)
 
 	for _, intf := range n.Endpoints {
 
@@ -272,7 +274,7 @@ type IOLTemplateData struct {
 	PartialCfg         string
 }
 
-// IOLinterface struct stores mapping info between
+// IOLInterface struct stores mapping info between
 // IOL interface name and linux container interface.
 type IOLInterface struct {
 	IfaceName string
@@ -281,7 +283,7 @@ type IOLInterface struct {
 	Port      int
 }
 
-func (n *iol) GetMappedInterfaceName(ifName string) (string, error) {
+func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 	captureGroups, err := utils.GetRegexpCaptureGroups(CapturingIntfRegexp, ifName)
 	if err != nil {
 		return "", err
@@ -377,4 +379,39 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 		n.Cfg.MgmtIPv6PrefixLength, n.Cfg.MgmtIPv4Gateway, n.Cfg.MgmtIPv6Gateway)
 
 	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
+}
+
+// SaveConfig is used for "clab save" functionality -- it saves the running config to the startup configuration
+func (n *iol) SaveConfig(_ context.Context) error {
+	p, err := platform.NewPlatform(
+		"cisco_iosxe",
+		n.Cfg.LongName,
+		options.WithAuthNoStrictKey(),
+		options.WithAuthUsername(defaultCredentials.GetUsername()),
+		options.WithAuthPassword(defaultCredentials.GetPassword()),
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to create platform; error: %+v", err)
+	}
+
+	d, err := p.GetNetworkDriver()
+	if err != nil {
+		return fmt.Errorf("failed to fetch network driver from the platform; error: %+v", err)
+	}
+
+	err = d.Open()
+	if err != nil {
+		return fmt.Errorf("failed to open driver; error: %+v", err)
+	}
+
+	defer d.Close()
+
+	_, err = d.SendCommand("write memory")
+	if err != nil {
+		return fmt.Errorf("failed to send command; error: %+v", err)
+	}
+
+	log.Infof("Successfully copied running configuration to startup configuration file for node: %q\n", n.Cfg.ShortName)
+	return nil
 }
