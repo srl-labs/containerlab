@@ -6,15 +6,19 @@ vr_rns:
 ---
 # VM-based routers integration
 
+<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
+
 Containerlab focuses on containers, but many routing products ship only in virtual machine packaging. Leaving containerlab users without the ability to create topologies with both containerized and VM-based routing systems would have been a shame.
 
 Keeping this requirement in mind from the very beginning, we added [`bridge`](../lab-examples/ext-bridge.md)/[`ovs-bridge`](kinds/ovs-bridge.md) kind that allows bridging your containerized topology with other resources available via a bridged network. For example, a VM based router:
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vrnetlab.drawio&quot;}"></div>
-
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
+-{{diagram(url='srl-labs/containerlab/diagrams/vrnetlab.drawio', page='0', title='', zoom='1.5')}}-
 
 With this approach, you could bridge VM-based routing systems by attaching interfaces to the bridge you define in your topology. However, it doesn't allow users to define the VM-based nodes in the same topology file. With [`vrnetlab`](https://github.com/hellt/vrnetlab) integration, containerlab is now capable of launching topologies with VM-based routers defined in the same topology file.
+
+/// danger
+Containerlab uses the forked version of vrnetlab hosted at https://github.com/hellt/vrnetlab. You will not be able to build a compatible container with the upstream vrnetlab project.
+///
 
 ## Vrnetlab
 
@@ -22,10 +26,12 @@ Vrnetlab packages a regular VM inside a container and makes it runnable as if it
 
 To make this work, vrnetlab provides a set of scripts that build the container image out of a user-provided VM disk. This integration enables containerlab to build topologies that consist both of native containerized NOSes and VMs:
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:1,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vrnetlab.drawio&quot;}"></div>
+-{{diagram(url='srl-labs/containerlab/diagrams/vrnetlab.drawio', page='1', title='', zoom='1.5')}}-
 
-!!! warning
-    Ensure that the VM that containerlab runs on has [Nested virtualization enabled](https://stafwag.github.io/blog/blog/2018/06/04/nested-virtualization-in-kvm/) to support vrnetlab-based containers.
+/// admonition
+    type: warning
+Ensure that the VM that containerlab runs on has [Nested virtualization enabled](https://stafwag.github.io/blog/blog/2018/06/04/nested-virtualization-in-kvm/) to support vrnetlab-based containers.
+///
 
 ### Compatibility matrix
 
@@ -33,7 +39,7 @@ To make vrnetlab images to work with container-based networking in containerlab,
 
 Containerlab depends on [`hellt/vrnetlab`](https://github.com/hellt/vrnetlab) project, and sometimes features added in containerlab must be implemented in `vrnetlab` (and vice-versa). This leads to a cross-dependency between these projects. The following table provides a link between the version combinations for the recent versions:
 
-| containerlab[^3] | vrnetlab[^4]                                                       | Notes                                                                                                                                                                  |
+| containerlab[^1] | vrnetlab[^2]                                                       | Notes                                                                                                                                                                  |
 | ---------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `0.58.0`         | [`0.20.1`](https://github.com/hellt/vrnetlab/releases/tag/v0.20.1) | -{{vr_rns["0.20.1"]}}-                                                                                                                                                 |
 | `0.56.0`         | [`0.18.1`](https://github.com/hellt/vrnetlab/releases/tag/v0.18.1) | Added support for [Dell SONiC](kinds/dell_sonic.md), [SONiC VM](kinds/sonic-vm.md), [Cisco Catalyst 9000v](kinds/vr-cat9kv.md)                                         |
@@ -47,7 +53,7 @@ It is worth noting, that you can use the latest containerlab version with a give
 
 /// details | Older release mappings
 
-| containerlab[^3] | vrnetlab[^4]                                                       | Notes                                                                                                                                                                |
+| containerlab[^1] | vrnetlab[^2]                                                       | Notes                                                                                                                                                                |
 | ---------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `0.10.4`         | [`0.1.0-cl`](https://github.com/hellt/vrnetlab/tree/v0.1.0-cl)     | Initial release. Images: sros, vmx, xrv, xrv9k                                                                                                                       |
 | `0.11.0`         | [`0.2.0`](https://github.com/hellt/vrnetlab/tree/v0.2.0)           | added [vr-veos](kinds/vr-veos.md), support for [boot-delay](#boot-delay), SR OS will have a static route to docker network, improved XRv startup chances             |
@@ -100,7 +106,7 @@ The images that work with containerlab will appear in the supported list as we i
 
 | Product               | Kind                                                    | Demo lab                                   | Notes                                                                                                                                                                                                        |
 | --------------------- | ------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Nokia SR OS           | [nokia_sros](kinds/vr-sros.md)                          | [SRL & SR OS](../lab-examples/vr-sros.md)  | When building SR OS vrnetlab image for use with containerlab, **do not** provide the license during the image build process. The license shall be provided in the containerlab topology definition file[^1]. |
+| Nokia SR OS           | [nokia_sros](kinds/vr-sros.md)                          | [SRL & SR OS](../lab-examples/vr-sros.md)  | When building SR OS vrnetlab image for use with containerlab, **do not** provide the license during the image build process. The license shall be provided in the containerlab topology definition file[^3]. |
 | Juniper vMX           | [juniper_vmx](kinds/vr-vmx.md)                          | [SRL & vMX](../lab-examples/vr-vmx.md)     |                                                                                                                                                                                                              |
 | Juniper vQFX          | [juniper_vqfx](kinds/vr-vqfx.md)                        |                                            |                                                                                                                                                                                                              |
 | Juniper vSRX          | [juniper_vsrx](kinds/vr-vsrx.md)                        |                                            |                                                                                                                                                                                                              |
@@ -139,9 +145,40 @@ The following env vars are supported:
 
 By hosting a VM inside a container, we made it easy to run VM-based routers in a containerized environment. However, how would you connect container's interfaces to the VM's tap interfaces in a transparent way?
 
-To solve this challenge containerlab uses **tc** backend[^2], which mirrors the traffic to and from container interfaces to the appropriate VM interfaces. A huge bonus of `tc` is that there are not bridges inbetween, and we have a clear channel that supports transparent passage of any frames, like LACP, for example.
+To solve this challenge containerlab uses **tc** backend[^4], which mirrors the traffic to and from container interfaces to the appropriate VM interfaces. A huge bonus of `tc` is that there are not bridges inbetween, and we have a clear channel that supports transparent passage of any frames, like LACP, for example.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:6,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vrnetlab.drawio&quot;}"></div>
+
+#### Management interface
+
+By default, vrnetlab uses the [qemu user mode networking](https://wiki.qemu.org/Documentation/Networking#User_Networking_(SLIRP)) to connect the VM's (guest) management interface to the host. In this mode, the host can reach the guests management interface using a predefined IP address, which is in vrnetlab's case is `10.0.0.15`.
+
+In the VM's CLI you will note the management interface to be configured with the said address:
+
+```
+csr-r1#show ip int br
+Interface              IP-Address      OK? Method Status                Protocol
+GigabitEthernet1       10.0.0.15       YES manual up                    up
+GigabitEthernet2       unassigned      YES unset  administratively down down
+```
+
+The downside of this method of exposing the management interface to the host is that ALL VM nodes will have the same IP address assigned to their management interface. This poses two problems:
+
+1. What if you require the management address to have a specific IP that matches your production IP plan?
+2. How to integrate the nodes with external management systems that often glean the management interface IP address to identify the node against the inventory?
+
+Starting with hellt/vrnetlab v0.21.0 a new datapath mode has been added to the vrnetlab called **Transparent Management**. When this mode is enabled, the IP address that Containerlab assigns to the management interface will be configured in the Network OS configuration.
+
+To enabled this mode, set the `CLAB_MGMT_PASSTHROUGH` to `true` in your topology file:
+
+```yaml title="snippet from the clab file"
+topology:
+  defaults:
+    env:
+      CLAB_MGMT_PASSTHROUGH: "true"
+```
+
+This will result in all your VM-based nodes that have been adapted to use this mode (see [vrnetlab/#286](https://github.com/hellt/vrnetlab/issues/286) for the supported NOSes) to be configured with the IP addresses that you see in the containerlab table upon deploy.
 
 ### Networking
 
@@ -207,7 +244,7 @@ Typically a lab consists of a few types of VMs which are spawned and interconnec
 
 Effectively we run just two types of VMs in that lab, and thus we can implement a memory deduplication technique that drastically reduces the memory footprint of a lab. In Linux, this can be achieved with technologies like KSM (via `ksmtuned`). Install KSM package on your distribution and enable it to save memory.
 
-Find some examples below (or contribut a new one)
+Find some examples below (or contribute a new one)
 
 /// tab | Debian/Ububntu
 
@@ -225,7 +262,7 @@ grep . /sys/kernel/mm/ksm/*
 If you want KSM always active you could change `#KSM_THRES_COEF=20` in `/etc/ksmtuned.conf` to `KSM_THRES_COEF=99`. That way KSM will kick in as soon as free RAM dops below 99% instead of below the default 20% of free RAM.
 ///
 
-[^1]: see [this example lab](../lab-examples/vr-sros.md) with a license path provided in the topology definition file
-[^2]: pros and cons of different datapaths were examined [here](https://netdevops.me/2021/transparently-redirecting-packetsframes-between-interfaces/)
-[^3]: to install a certain version of containerlab, use the [instructions](../install.md) from installation doc.
-[^4]: to have a guaranteed compatibility checkout to the mentioned tag and build the images.
+[^1]: to install a certain version of containerlab, use the [instructions](../install.md) from installation doc.
+[^2]: to have a guaranteed compatibility checkout to the mentioned tag and build the images.
+[^3]: see [this example lab](../lab-examples/vr-sros.md) with a license path provided in the topology definition file
+[^4]: pros and cons of different datapaths were examined [here](https://netdevops.me/2021/transparently-redirecting-packetsframes-between-interfaces/)

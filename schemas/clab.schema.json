@@ -231,17 +231,6 @@
                     "description": "command to launch container with",
                     "markdownDescription": "[command](https://containerlab.dev/manual/nodes/#cmd) to launch container with"
                 },
-                "publish": {
-                    "type": "array",
-                    "description": "list of ports to publish",
-                    "markdownDescription": "list of ports to [publish](https://containerlab.dev/manual/nodes/#publish)",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string",
-                        "pattern": "(^http|^https|^tcp|^tls)\/(([0-9]+$)|([0-9]+\/.+$))"
-                    },
-                    "uniqueItems": true
-                },
                 "labels": {
                     "type": "object",
                     "description": "container labels",
