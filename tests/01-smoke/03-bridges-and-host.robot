@@ -66,6 +66,44 @@ Verify management network is using user-specified bridge
     Log    ${res}
     Should Contain    ${res}    master ${mgmt-br-name} state UP
 
+Verify iptables allow rule is set
+    [Documentation]    Checking if iptables allow rule is set so that external traffic can reach containerlab management network
+    Skip If    '${runtime}' != 'docker'
+
+    ${ipt} =    Run
+    ...    sudo iptables -vnL FORWARD
+    Log    ${ipt}
+    # debian 12 uses `0` for protocol, while previous versions use `all`
+    # this matches the rule in the in direction
+    Should Contain Any    ${ipt}
+    ...    ACCEPT all -- * ${bridge-name}
+    ...    ACCEPT 0 -- * ${bridge-name}
+    ...    ignore_case=True
+    ...    collapse_spaces=True
+
+    # this matches the rule in the out direction
+    Should Contain Any    ${ipt}
+    ...    ACCEPT all -- ${bridge-name} *
+    ...    ACCEPT 0 -- ${bridge-name} *
+    ...    ignore_case=True
+    ...    collapse_spaces=True
+
+Verify ip6tables allow rule is set
+    [Documentation]    Checking if ip6tables allow rule is set so that external traffic can reach containerlab management network
+    Skip If    '${runtime}' != 'docker'
+
+    # Add check for ip6tables availability
+    ${rc}    ${output} =    Run And Return Rc And Output    which nft
+    Skip If    ${rc} != 0    nft command not found
+
+    ${rc}    ${output} =    Run And Return Rc And Output    sudo nft list tables
+    Skip If    'ip6 filter' not in '''${output}'''    ip6 filter chain not found
+
+    ${ipt} =    Run
+    ...    sudo nft list chain ip6 filter FORWARD
+    Log    ${ipt}
+    Should Match Regexp    ${ipt}    oifname.*${bridge-name}.*accept
+    Should Match Regexp    ${ipt}    iifname.*${bridge-name}.*accept
 
 *** Keywords ***
 Setup
@@ -79,5 +117,7 @@ Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
     Run    sudo ip l del ${bridge-name}
     Run    sudo ip l del ${host-link-name}

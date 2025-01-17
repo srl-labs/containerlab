@@ -311,9 +311,17 @@ Verify iptables allow rule is set
     ...    sudo iptables -vnL DOCKER-USER
     Log    ${ipt}
     # debian 12 uses `0` for protocol, while previous versions use `all`
+    # this matches the rule in the in direction
     Should Contain Any    ${ipt}
     ...    ACCEPT all -- * ${MgmtBr}
     ...    ACCEPT 0 -- * ${MgmtBr}
+    ...    ignore_case=True
+    ...    collapse_spaces=True
+
+    # this matches the rule in the out direction
+    Should Contain Any    ${ipt}
+    ...    ACCEPT all -- ${MgmtBr} *
+    ...    ACCEPT 0 -- ${MgmtBr} *
     ...    ignore_case=True
     ...    collapse_spaces=True
 
@@ -332,6 +340,7 @@ Verify ip6tables allow rule is set
     ...    sudo nft list chain ip6 filter DOCKER-USER
     Log    ${ipt}
     Should Match Regexp    ${ipt}    oifname.*${MgmtBr}.*accept
+    Should Match Regexp    ${ipt}    iifname.*${MgmtBr}.*accept
 
 
 Verify DNS-Server Config

@@ -14,8 +14,8 @@ import (
 
 const (
 	iptCheckArgs = "-vL DOCKER-USER -w 5"
-	iptAllowArgs = "-I DOCKER-USER %s %s -j ACCEPT -w 5 -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
-	iptDelArgs   = "-D DOCKER-USER %s %s -j ACCEPT -w 5 -m comment --comment \"" + definitions.IPTablesRuleComment + "\""
+	iptAllowArgs = "-I DOCKER-USER -%s %s -j ACCEPT -w 5 -m comment --comment \"" + definitions.ContainerlabComment + "\""
+	iptDelArgs   = "-D DOCKER-USER -%s %s -j ACCEPT -w 5 -m comment --comment \"" + definitions.ContainerlabComment + "\""
 	ipTables     = "ip_tables"
 
 	v4AF         = "v4"
@@ -23,6 +23,11 @@ const (
 	v6AF         = "v6"
 	ip6tablesCmd = "ip6tables"
 )
+
+var iptablesCmd = map[string]string{
+	v4AF: ip4tablesCmd,
+	v6AF: ip6tablesCmd,
+}
 
 // IpTablesClient is a client for iptables.
 type IpTablesClient struct {
@@ -56,39 +61,36 @@ func (*IpTablesClient) Name() string {
 
 // InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the provided
 // input or output interface and chain.
-func (c *IpTablesClient) InstallForwardingRules(inInterface, outInterface, chain string) error {
-	err := c.InstallForwardingRulesForAF(v4AF, inInterface, outInterface, chain)
+func (c *IpTablesClient) InstallForwardingRules(rule definitions.FirewallRule) error {
+	err := c.InstallForwardingRulesForAF(v4AF, rule)
 	if err != nil {
 		return err
 	}
 
 	if c.ip6_tables {
-		err = c.InstallForwardingRulesForAF(v6AF, inInterface, outInterface, chain)
+		err = c.InstallForwardingRulesForAF(v6AF, rule)
 	}
 
 	return err
 }
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family.
-func (c *IpTablesClient) InstallForwardingRulesForAF(af, inInterface, outInterface, chain string) error {
+func (c *IpTablesClient) InstallForwardingRulesForAF(af string, rule definitions.FirewallRule) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
 	}
 
-	iface := inInterface
-	direction := "i"
-	if outInterface != "" {
-		iface = outInterface
-		direction = "o"
-	}
+	iface := rule.Interface
 
 	// first check if a rule already exists to not create duplicates
-	if c.allowRuleExistsForInterface(af, iface) {
+	if c.ruleExists(af, rule) {
 		return nil
 	}
 
-	cmd, err := shlex.Split(fmt.Sprintf(iptAllowArgs, direction, iface))
+	directionFlag := strings.ToLower(string(rule.Direction[0]))
+
+	cmd, err := shlex.Split(fmt.Sprintf(iptAllowArgs, directionFlag, iface))
 	if err != nil {
 		return err
 	}
@@ -105,32 +107,27 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(af, inInterface, outInterfa
 }
 
 // DeleteForwardingRules deletes the forwarding rules for v4 and v6 address families.
-func (c *IpTablesClient) DeleteForwardingRules(inInterface, outInterface, chain string) error {
-	err := c.DeleteForwardingRulesForAF(v4AF, inInterface, outInterface, chain)
+func (c *IpTablesClient) DeleteForwardingRules(rule definitions.FirewallRule) error {
+	err := c.DeleteForwardingRulesForAF(v4AF, rule)
 	if err != nil {
 		return err
 	}
 
 	if c.ip6_tables {
-		err = c.DeleteForwardingRulesForAF(v6AF, inInterface, outInterface, chain)
+		err = c.DeleteForwardingRulesForAF(v6AF, rule)
 	}
 
 	return err
 }
 
 // DeleteForwardingRulesForAF deletes the forwarding rules for a specified AF.
-func (c *IpTablesClient) DeleteForwardingRulesForAF(af, inInterface, outInterface, chain string) error {
+func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule definitions.FirewallRule) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
 	}
 
-	iface := inInterface
-	direction := "i"
-	if outInterface != "" {
-		iface = outInterface
-		direction = "o"
-	}
+	iface := rule.Interface
 
 	// first check if a rule exists before trying to delete it
 	res, err := exec.Command(iptCmd, strings.Split(iptCheckArgs, " ")...).Output()
@@ -154,7 +151,9 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af, inInterface, outInterfac
 		return nil
 	}
 
-	cmd, err := shlex.Split(fmt.Sprintf(iptDelArgs, direction, iface))
+	directionFlag := strings.ToLower(string(rule.Direction[0]))
+
+	cmd, err := shlex.Split(fmt.Sprintf(iptDelArgs, directionFlag, iface))
 	if err != nil {
 		return err
 	}
@@ -171,14 +170,9 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af, inInterface, outInterfac
 	return nil
 }
 
-// allowRuleExistsForInterface checks if an allow rule for the provided bridge name exists.
-// The actual check doesn't verify that `allow` is set, it just checks if the rule
-// has the provided bridge name in the output interface.
-func (c *IpTablesClient) allowRuleExistsForInterface(af, iface string) bool {
-	iptCmd := ip4tablesCmd
-	if af == v6AF {
-		iptCmd = ip6tablesCmd
-	}
+// ruleExists checks if an allow rule for the provided `rule` exists.
+func (c *IpTablesClient) ruleExists(af string, rule definitions.FirewallRule) bool {
+	iptCmd := iptablesCmd[af]
 
 	res, err := exec.Command(iptCmd, strings.Split(iptCheckArgs, " ")...).CombinedOutput()
 	if err != nil {
@@ -186,8 +180,22 @@ func (c *IpTablesClient) allowRuleExistsForInterface(af, iface string) bool {
 		// if we errored on check we don't want to try setting up the rule
 		return true
 	}
-	if bytes.Contains(res, []byte(iface)) {
-		log.Debugf("found iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", iface)
+
+	// replace contiguous whitespace chars from the result with a single space
+	// to be able to compare the result with the iface and direction chars
+	res = bytes.Join(bytes.Fields(res), []byte(" "))
+
+	var matcher string
+	if rule.Direction == definitions.InDirection {
+		matcher = fmt.Sprintf("%s *", rule.Interface)
+	}
+
+	if rule.Direction == definitions.OutDirection {
+		matcher = fmt.Sprintf("* %s", rule.Interface)
+	}
+
+	if bytes.Contains(res, []byte(matcher)) {
+		log.Debugf("found iptables forwarding rule targeting the interface %q direction %s. Skipping creation of the forwarding rule", rule.Interface, rule.Direction)
 
 		return true
 	}

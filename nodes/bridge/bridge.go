@@ -129,7 +129,7 @@ func (b *bridge) GetLinkEndpointType() links.LinkEndpointType {
 	return links.LinkEndpointTypeBridge
 }
 
-// installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed to ingress the bridge
+// installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed in and out of the bridge
 // otherwise, communication over the bridge is not permitted on most systems.
 func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	f, err := firewall.NewFirewallClient()
@@ -138,5 +138,27 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	}
 	log.Debugf("setting up bridge firewall rules using %s as the firewall interface", f.Name())
 
-	return f.InstallForwardingRules(b.Cfg.ShortName, "", definitions.ForwardChain)
+	r := definitions.FirewallRule{
+		Interface: b.Cfg.ShortName,
+		Direction: definitions.InDirection,
+		Action:    definitions.AcceptAction,
+		Comment:   definitions.ContainerlabComment,
+		Table:     definitions.FilterTable,
+		Chain:     definitions.ForwardChain,
+	}
+	err = f.InstallForwardingRules(r)
+	if err != nil {
+		return err
+	}
+
+	r = definitions.FirewallRule{
+		Interface: b.Cfg.ShortName,
+		Direction: definitions.OutDirection,
+		Action:    definitions.AcceptAction,
+		Comment:   definitions.ContainerlabComment,
+		Table:     definitions.FilterTable,
+		Chain:     definitions.ForwardChain,
+	}
+
+	return f.InstallForwardingRules(r)
 }
