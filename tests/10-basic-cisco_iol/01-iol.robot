@@ -75,20 +75,20 @@ Verify startup-config is saved to NVRAM on switch
 
 Log IP addresses for router1
     ${rc}    ${ipv4_addr} =    Run And Return Rc And Output
-    ...    cat clab-${lab-name}/topology-data.json | jq '.nodes.router1."mgmt-ipv4-address"'
+    ...    cat ${CURDIR}/clab-${lab-name}/topology-data.json | jq '.nodes.router1."mgmt-ipv4-address"'
     Log    \n--> LOG: IPv4 addr - ${ipv4_addr}    console=True
     Should Be Equal As Integers    ${rc}    0
     ${rc}    ${ipv6_addr} =    Run And Return Rc And Output
-    ...    cat clab-${lab-name}/topology-data.json | jq '.nodes.router1."mgmt-ipv6-address"'
+    ...    cat ${CURDIR}/clab-${lab-name}/topology-data.json | jq '.nodes.router1."mgmt-ipv6-address"'
     Log    \n--> LOG: IPv6 addr - ${ipv6_addr}    console=True
 
 Log IP addresses for switch
     ${rc}    ${ipv4_addr} =    Run And Return Rc And Output
-    ...    cat clab-${lab-name}/topology-data.json | jq '.nodes.switch."mgmt-ipv4-address"'
+    ...    cat ${CURDIR}/clab-${lab-name}/topology-data.json | jq '.nodes.switch."mgmt-ipv4-address"'
     Log    \n--> LOG: IPv4 addr - ${ipv4_addr}    console=True
     Should Be Equal As Integers    ${rc}    0
     ${rc}    ${ipv6_addr} =    Run And Return Rc And Output
-    ...    cat clab-${lab-name}/topology-data.json | jq '.nodes.switch."mgmt-ipv6-address"'
+    ...    cat ${CURDIR}/clab-${lab-name}/topology-data.json | jq '.nodes.switch."mgmt-ipv6-address"'
     Log    \n--> LOG: IPv6 addr - ${ipv6_addr}    console=True
 
 Destroy ${lab-name} lab
@@ -110,12 +110,12 @@ Wait 60s for nodes to boot
 
 Verify connectivity via new management addresses on router1
     ${rc}    ${ipv4_addr} =    Run And Return Rc And Output
-    ...    cat clab-${lab-name}/topology-data.json | jq -r '.nodes.router1."mgmt-ipv4-address"'
+    ...    cat ${CURDIR}/clab-${lab-name}/topology-data.json | jq -r '.nodes.router1."mgmt-ipv4-address"'
     Should Be Equal As Integers    ${rc}    0
     Log    \n--> LOG: IPv4 addr - ${ipv4_addr}    console=True
 
     ${rc}    ${ipv6_addr} =    Run And Return Rc And Output
-    ...    cat clab-${lab-name}/topology-data.json | jq -r '.nodes.router1."mgmt-ipv6-address"'
+    ...    cat ${CURDIR}/clab-${lab-name}/topology-data.json | jq -r '.nodes.router1."mgmt-ipv6-address"'
     Should Be Equal As Integers    ${rc}    0
     Log    \n--> LOG: IPv6 addr - ${ipv6_addr}    console=True
 
@@ -128,12 +128,12 @@ Verify connectivity via new management addresses on router1
 
 Verify connectivity via new management addresses on switch
     ${rc}    ${ipv4_addr} =    Run And Return Rc And Output
-    ...    cat clab-${lab-name}/topology-data.json | jq -r '.nodes.switch."mgmt-ipv4-address"'
+    ...    cat ${CURDIR}/clab-${lab-name}/topology-data.json | jq -r '.nodes.switch."mgmt-ipv4-address"'
     Should Be Equal As Integers    ${rc}    0
     Log    \n--> LOG: IPv4 addr - ${ipv4_addr}    console=True
 
     ${rc}    ${ipv6_addr} =    Run And Return Rc And Output
-    ...    cat clab-${lab-name}/topology-data.json | jq -r '.nodes.switch."mgmt-ipv6-address"'
+    ...    cat ${CURDIR}/clab-${lab-name}/topology-data.json | jq -r '.nodes.switch."mgmt-ipv6-address"'
     Should Be Equal As Integers    ${rc}    0
     Log    \n--> LOG: IPv6 addr - ${ipv6_addr}    console=True
 
