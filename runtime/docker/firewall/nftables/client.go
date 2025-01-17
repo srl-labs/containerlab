@@ -59,12 +59,8 @@ func (*NftablesClient) Name() string {
 }
 
 // DeleteForwardingRules deletes the forwarding rules for in or out interface in a given chain.
-func (c *NftablesClient) DeleteForwardingRules(inInterface, outInterface, chain string) error {
-	iface := inInterface
-	if outInterface != "" {
-		iface = outInterface
-	}
-
+func (c *NftablesClient) DeleteForwardingRules(rule definitions.FirewallRule) error {
+	iface := rule.Interface
 	if iface == "docker0" {
 		log.Debug("skipping deletion of iptables forwarding rule for non-bridged or default management network")
 		return nil
@@ -72,14 +68,14 @@ func (c *NftablesClient) DeleteForwardingRules(inInterface, outInterface, chain 
 
 	defer c.close()
 
-	allRules, err := c.getRules(chain, definitions.FilterTable, nftables.TableFamilyIPv4)
+	allRules, err := c.getRules(rule.Chain, rule.Table, nftables.TableFamilyIPv4)
 	if err != nil {
 		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
 	}
 
 	var v6rules []*nftables.Rule
 	if c.ip6_tables {
-		v6rules, err = c.getRules(chain, definitions.FilterTable, nftables.TableFamilyIPv6)
+		v6rules, err = c.getRules(rule.Chain, rule.Table, nftables.TableFamilyIPv4)
 		if err != nil {
 			return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
 		}
@@ -96,7 +92,7 @@ func (c *NftablesClient) DeleteForwardingRules(inInterface, outInterface, chain 
 	// we are not deleting the rule if the bridge still exists
 	// it happens when bridge is either still in use by docker network
 	// or it is managed externally (created manually)
-	_, err = utils.BridgeByName(iface)
+	_, err = utils.BridgeByName(rule.Interface)
 	if err == nil {
 		log.Debugf("bridge %s is still in use, not removing the forwarding rule", iface)
 		return nil
@@ -113,16 +109,16 @@ func (c *NftablesClient) DeleteForwardingRules(inInterface, outInterface, chain 
 
 // InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the provided
 // input or output interface and chain.
-func (c *NftablesClient) InstallForwardingRules(inInterface, outInterface, chain string) error {
+func (c *NftablesClient) InstallForwardingRules(rule definitions.FirewallRule) error {
 	defer c.close()
 
-	err := c.InstallForwardingRulesForAF(nftables.TableFamilyIPv4, inInterface, outInterface, chain)
+	err := c.InstallForwardingRulesForAF(nftables.TableFamilyIPv4, rule)
 	if err != nil {
 		return err
 	}
 
 	if c.ip6_tables {
-		err = c.InstallForwardingRulesForAF(nftables.TableFamilyIPv6, inInterface, outInterface, chain)
+		err = c.InstallForwardingRulesForAF(nftables.TableFamilyIPv6, rule)
 	}
 
 	return err
@@ -130,55 +126,46 @@ func (c *NftablesClient) InstallForwardingRules(inInterface, outInterface, chain
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family
 // input interface and chain.
-func (c *NftablesClient) InstallForwardingRulesForAF(af nftables.TableFamily, inInterface, outInterface, chain string) error {
-	iface := inInterface
-	if outInterface != "" {
-		iface = outInterface
-	}
+func (c *NftablesClient) InstallForwardingRulesForAF(af nftables.TableFamily, rule definitions.FirewallRule) error {
+	iface := rule.Interface
 
-	rules, err := c.getRules(chain, definitions.FilterTable, af)
+	rules, err := c.getRules(rule.Chain, rule.Table, af)
 	if err != nil {
 		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
 	}
 
 	if c.allowRuleExistsForInterface(iface, rules) {
-		log.Debugf("found allowing iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", inInterface)
+		log.Debugf("found allowing iptables forwarding rule targeting the bridge %q. Skipping creation of the forwarding rule.", iface)
 		return nil
 	}
 
 	log.Debugf("Installing iptables rules for bridge %q", iface)
 
 	// create a new rule
-	rule, err := c.newClabNftablesRule(chain, definitions.FilterTable, af, 0)
+	r, err := c.newClabNftablesRule(rule.Chain, rule.Table, af, 0)
 	if err != nil {
 		return err
 	}
 	// set interface match
-	if inInterface != "" {
-		rule.AddInterfaceFilter(iface, false)
-	}
-
-	if outInterface != "" {
-		rule.AddInterfaceFilter(iface, true)
-	}
+	r.AddInterfaceFilter(rule)
 
 	// add a comment
-	err = rule.AddComment(definitions.IPTablesRuleComment)
+	err = r.AddComment(rule.Comment)
 	if err != nil {
 		return err
 	}
 	// add a counter
-	err = rule.AddCounter()
+	err = r.AddCounter()
 	if err != nil {
 		return err
 	}
 	// make it an ACCEPT rule
-	err = rule.AddVerdictAccept()
+	err = r.AddVerdictAccept()
 	if err != nil {
 		return err
 	}
 	// mark and note for installation
-	c.insertRule(rule.rule)
+	c.insertRule(r.rule)
 	// flush changes out to nftables
 	c.flush()
 
@@ -294,7 +281,7 @@ func (*NftablesClient) getClabRulesForInterface(iface string, rules []*nftables.
 			case *expr.Match:
 				if v.Name == "comment" {
 					if val, ok := v.Info.(*xt.Unknown); ok {
-						if bytes.HasPrefix(*val, []byte(definitions.IPTablesRuleComment)) {
+						if bytes.HasPrefix(*val, []byte(definitions.ContainerlabComment)) {
 							commentFound = true
 						}
 					}

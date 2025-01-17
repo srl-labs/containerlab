@@ -18,7 +18,39 @@ func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 		return err
 	}
 
-	return f.DeleteForwardingRules("", d.mgmt.Bridge, definitions.DockerUserChain)
+	// delete the rules with the management bridge listed as the outgoing interface with the allow action
+	// in the DOCKER-USER chain
+	r := definitions.FirewallRule{
+		Interface: d.mgmt.Bridge,
+		Direction: definitions.OutDirection,
+		Chain:     definitions.DockerUserChain,
+		Table:     definitions.FilterTable,
+		Action:    definitions.AcceptAction,
+		Comment:   definitions.ContainerlabComment,
+	}
+
+	err = f.DeleteForwardingRules(r)
+	if err != nil {
+		return err
+	}
+
+	// install the rules with the management bridge listed as the incoming interface with the allow action
+	// in the DOCKER-USER chain
+	r = definitions.FirewallRule{
+		Interface: d.mgmt.Bridge,
+		Direction: definitions.OutDirection,
+		Chain:     definitions.DockerUserChain,
+		Table:     definitions.FilterTable,
+		Action:    definitions.AcceptAction,
+		Comment:   definitions.ContainerlabComment,
+	}
+
+	err = f.DeleteForwardingRules(r)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 // installMgmtNetworkFwdRule installs the `allow` rule for traffic destined to the nodes
@@ -43,14 +75,32 @@ func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 
 	// install the rules with the management bridge listed as the outgoing interface with the allow action
 	// in the DOCKER-USER chain
-	err = f.InstallForwardingRules("", d.mgmt.Bridge, definitions.DockerUserChain)
+	r := definitions.FirewallRule{
+		Interface: d.mgmt.Bridge,
+		Direction: definitions.OutDirection,
+		Chain:     definitions.DockerUserChain,
+		Table:     definitions.FilterTable,
+		Action:    definitions.AcceptAction,
+		Comment:   definitions.ContainerlabComment,
+	}
+
+	err = f.InstallForwardingRules(r)
 	if err != nil {
 		return err
 	}
 
 	// install the rules with the management bridge listed as the incoming interface with the allow action
 	// in the DOCKER-USER chain
-	err = f.InstallForwardingRules(d.mgmt.Bridge, "", definitions.DockerUserChain)
+	r = definitions.FirewallRule{
+		Interface: d.mgmt.Bridge,
+		Direction: definitions.OutDirection,
+		Chain:     definitions.DockerUserChain,
+		Table:     definitions.FilterTable,
+		Action:    definitions.AcceptAction,
+		Comment:   definitions.ContainerlabComment,
+	}
+
+	err = f.InstallForwardingRules(r)
 	if err != nil {
 		return err
 	}
