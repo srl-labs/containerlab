@@ -96,7 +96,7 @@ site:
 # when PUBLIC=yes is not set, the mkdocs-material insiders image is used with all the dependencies included.
 .PHONY: serve-docs-full
 serve-docs-full:
-ifeq ($(PUBLIC),yes)
+ifdef PUBLIC
 	@{ 	\
 		sed -i 's/^  - typeset/#- typeset/g' mkdocs.yml; \
 	}
