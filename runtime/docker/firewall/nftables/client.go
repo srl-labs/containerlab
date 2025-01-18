@@ -30,6 +30,8 @@ type NftablesClient struct {
 	nftConn *nftables.Conn
 	// is ip6_tables supported
 	ip6_tables bool
+	// is ip6 for docker supported
+	ip6_docker bool
 }
 
 // NewNftablesClient returns a new NftablesClient.
@@ -42,22 +44,31 @@ func NewNftablesClient() (*NftablesClient, error) {
 
 	nftC := &NftablesClient{
 		nftConn:    nftConn,
-		ip6_tables: true,
+		ip6_tables: false,
+		ip6_docker: false,
 	}
 
-	chains, err := nftC.getChains(definitions.DockerUserChain, nftables.TableFamilyIPv4)
+	chain, err := nftC.getChain(definitions.ForwardChain, definitions.FilterTable, nftables.TableFamilyIPv4)
 	if err != nil {
 		return nil, err
 	}
-	if len(chains) == 0 {
+	if chain == nil {
 		log.Debugf("nftables does not seem to be in use, no %s chain found.", definitions.DockerUserChain)
 		return nil, definitions.ErrNotAvailable
 	}
 
-	// check if ip6_tables is available
-	v6Tables, err := nftC.nftConn.ListTablesOfFamily(nftables.TableFamilyIPv6)
-	if err != nil || len(v6Tables) == 0 {
-		nftC.ip6_tables = false
+	// check if ip6_tables is generally available
+	v6Chains, err := nftC.nftConn.ListChainsOfTableFamily(nftables.TableFamilyIPv6)
+	if err == nil && len(v6Chains) > 0 {
+		log.Debugf("nftables: ip6 address family generally supported")
+		nftC.ip6_tables = true
+	}
+
+	// check if ip6 docker-user chain is available
+	v6DockerChain, err := nftC.getChain(definitions.DockerUserChain, definitions.FilterTable, nftables.TableFamilyIPv6)
+	if err == nil && v6DockerChain != nil {
+		log.Debugf("nftables: ip6 docker is supported")
+		nftC.ip6_docker = true
 	}
 
 	return nftC, nil
@@ -83,15 +94,23 @@ func (c *NftablesClient) DeleteForwardingRules(rule definitions.FirewallRule) er
 		return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
 	}
 
-	var v6rules []*nftables.Rule
-	if c.ip6_tables {
-		v6rules, err = c.getRules(rule.Chain, rule.Table, nftables.TableFamilyIPv6)
+	if c.ip6_tables && rule.Chain == definitions.ForwardChain {
+		v6rules, err := c.getRules(rule.Chain, rule.Table, nftables.TableFamilyIPv6)
 		if err != nil {
-			return fmt.Errorf("%w. See http://containerlab.dev/manual/network/#external-access", err)
+			return fmt.Errorf("failed to get iptables rules for chain %s, table %s, family %s: %w",
+				rule.Chain, rule.Table, afMap[nftables.TableFamilyIPv6], err)
 		}
+		allRules = append(allRules, v6rules...)
 	}
 
-	allRules = append(allRules, v6rules...)
+	if c.ip6_docker && rule.Chain == definitions.DockerUserChain {
+		v6rules, err := c.getRules(rule.Chain, rule.Table, nftables.TableFamilyIPv6)
+		if err != nil {
+			return fmt.Errorf("failed to get iptables rules for chain %s, table %s, family %s: %w",
+				rule.Chain, rule.Table, afMap[nftables.TableFamilyIPv6], err)
+		}
+		allRules = append(allRules, v6rules...)
+	}
 
 	clabRules := c.getClabRulesForInterface(iface, allRules)
 	if len(clabRules) == 0 {
@@ -129,11 +148,18 @@ func (c *NftablesClient) InstallForwardingRules(rule definitions.FirewallRule) e
 		return err
 	}
 
-	if c.ip6_tables {
-		err = c.InstallForwardingRulesForAF(nftables.TableFamilyIPv6, rule)
+	if !c.ip6_tables && rule.Chain == definitions.ForwardChain {
+		log.Debug("ip6_tables is not supported, skipping installation of ip6 forwarding rules")
+		return nil
 	}
 
-	return err
+	if !c.ip6_docker && rule.Chain == definitions.DockerUserChain {
+		log.Debug("ip6_tables is not supported by docker, skipping installation of ip6 forwarding rules")
+		return nil
+	}
+
+	// now it is safe to install the ip6 rules
+	return c.InstallForwardingRulesForAF(nftables.TableFamilyIPv6, rule)
 }
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family
@@ -184,21 +210,20 @@ func (c *NftablesClient) InstallForwardingRulesForAF(af nftables.TableFamily, ru
 	return nil
 }
 
-// getChains returns all chains with the provided name and family.
-func (nftC *NftablesClient) getChains(name string, family nftables.TableFamily) ([]*nftables.Chain, error) {
-	var result []*nftables.Chain
-
+// getChain returns a chain for the provided name, table name and family.
+func (nftC *NftablesClient) getChain(name, table string, family nftables.TableFamily) (*nftables.Chain, error) {
 	chains, err := nftC.nftConn.ListChainsOfTableFamily(family)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, c := range chains {
-		if c.Name == name {
-			result = append(result, c)
+		if c.Name == name && c.Table.Name == table {
+			return c, nil
 		}
 	}
-	return result, nil
+
+	return nil, nil
 }
 
 func (nftC *NftablesClient) deleteRule(r *nftables.Rule) error {
@@ -207,44 +232,40 @@ func (nftC *NftablesClient) deleteRule(r *nftables.Rule) error {
 
 // getRules returns all rules for the provided chain name, table name and family.
 func (nftC *NftablesClient) getRules(chainName, tableName string, family nftables.TableFamily) ([]*nftables.Rule, error) {
-	// get chain reference
-	chains, err := nftC.getChains(chainName, family)
+	chain, err := nftC.getChain(chainName, tableName, family)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, c := range chains {
-		if c.Table.Name == tableName && c.Table.Family == family {
-			return nftC.nftConn.GetRules(c.Table, c)
-		}
+	if chain == nil {
+		return nil, fmt.Errorf("no match for chain %q, table %q with family %q found", chainName, tableName, family)
 	}
 
-	return nil, fmt.Errorf("no match for chain %q, table %q with family %q found", chainName, tableName, family)
+	return nftC.nftConn.GetRules(chain.Table, chain)
+
 }
 
 func (nftC *NftablesClient) newClabNftablesRule(chainName, tableName string,
 	family nftables.TableFamily, position uint64,
 ) (*clabNftablesRule, error) {
-	chains, err := nftC.getChains(chainName, family)
+	chain, err := nftC.getChain(chainName, tableName, family)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, c := range chains {
-		if c.Table.Name == tableName && c.Table.Family == family {
-			r := &nftables.Rule{
-				Handle:   0,
-				Position: position,
-				Table:    c.Table,
-				Chain:    c,
-				Exprs:    []expr.Any{},
-			}
-
-			return &clabNftablesRule{rule: r}, nil
-		}
+	if chain == nil {
+		return nil, errors.New("chain " + chainName + " not found in table " + tableName + " with family " + string(family))
 	}
 
-	return nil, errors.New("chain " + chainName + " not found in table " + tableName + " with family " + string(family))
+	r := &nftables.Rule{
+		Handle:   0,
+		Position: position,
+		Table:    chain.Table,
+		Chain:    chain,
+		Exprs:    []expr.Any{},
+	}
+
+	return &clabNftablesRule{rule: r}, nil
 }
 
 // InsertRule inserts a rule.
