@@ -153,7 +153,7 @@ You can use the template variables that are defined in the [default startup conf
 name: iol_full_startup_cfg
 topology:
   nodes:
-    sros:
+    iol:
       kind: cisco_iol
       startup-config: configuration.txt
 ```
@@ -168,7 +168,7 @@ The partial startup configuration must contain `.partial` in the filename. For e
 name: iol_partial_startup_cfg
 topology:
   nodes:
-    sros:
+    iol:
       kind: cisco_iol
       startup-config: configuration.txt.partial
 ```
