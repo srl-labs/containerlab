@@ -48,6 +48,8 @@ export SETUP_SSHD="false"
 
 To complete installation and enable sudo-less `docker` command execution, please run `newgrp docker` or logout and log back in.
 
+Containerlab is also set up for sudo-less operation, and the user executing the quick install script is automatically granted access to privileged commands. For further information, see [Sudo-less operation](#sudo-less-operation).
+
 <!-- --8<-- [end:quick-setup-script-cmd] -->
 
 To install an individual component, specify the function name as an argument to the script. For example, to install only `docker`:
@@ -188,6 +190,7 @@ yum install https://github.com/srl-labs/containerlab/releases/download/v0.7.0/co
 
 ///
 The package installer will put the `containerlab` binary in the `/usr/bin` directory as well as create the `/usr/bin/clab -> /usr/bin/containerlab` symlink. The symlink allows the users to save on typing when they use containerlab: `clab <command>`.
+Containerlab is also set up for sudo-less operation, and the current user (even if the package manager was called through `sudo`) is automatically granted access to privileged Containerlab commands. For further information, see [Sudo-less operation](#sudo-less-operation).
 
 ## Windows
 
@@ -333,5 +336,65 @@ or more globally:
 sudo setsebool -P selinuxuser_execmod 1
 ```
 
+## Sudo-less operation
+Containerlab requires root privileges to perform certain operations.
+
+To simplify usage, by default, Containerlab is installed as a _SUID binary_[^3] to permit sudo-less operation.
+
+/// details | Enabling sudo-less operations for manually built/installed Containerlab
+To enable sudo-less operation for users who who manually built and installed Containerlab, or did not use a package manager to install it, the following commands need to be run:
+
+```
+# Set SUID bit on Containerlab binary
+sudo chmod u+s `which containerlab`
+# Create clab_admins Unix group
+sudo groupadd -r clab_admins
+# Add current user to clab_admins group
+sudo usermod -aG "$USER" clab_admins
+```
+
+Users who manage their Containerlab installation via `deb/yum/dnf` package managers will have the sudo-less functionality automatically enabled during the first upgrade from pre-`0.6.3` versions.
+
+To check whether Containerlab is enabled for sudo-less operations, run the following commands:
+
+```
+$ ls -hal `which containerlab` 
+-rwsr-xr-x 1 root root 131M Jan 17 17:56 /usr/bin/containerlab
+#  ^ SUID bit set, owned by root
+
+user@host$ groups
+... clab_admins ...
+#   ^ user is member of clab_admins group
+```
+///
+
+Additionally, to prevent unathorised users from gaining root-level privileges through Containerlab, the usage of privileged Containerlab commands is gated behind a Unix user group membership check. Privileged Containerlab commands can only be performed by users who are part of the `clab_admins` group.  
+By default (starting with version `0.6.3`), the `clab_admins` Unix group is created during the initial installation of Containerlab, and the user installing Containerlab is automatically added to this user group. Additional users who require access to privileged Containerlab commands should also be added to this user group.
+
+Users who are _not_ part of this group can still execute non-privileged commands, such as:
+- generate
+- graph
+- inspect (requires `docker` group membership)
+- save
+- version (no upgrade)
+
+Non-privileged commands are executed as the user running the Containerlab commands. Privileged commands are executed as root during runtime.
+
+To allow _any user on the host_ to use all Containerlab commands, simply delete the `clab_admins` Unix group.
+
+/// danger
+Much like the `docker` group, any users part of the `clab_admins` group are effectively given root-level privileges to the system running Containerlab. **If this group does not exist and the binary still has the SUID bit set, any user who can run Containerlab should be treated as having root privileges.**
+///
+
+To **disable sudo-less operation**, simply unset the SUID flag on the Containerlab binary:
+
+```
+sudo chmod u-s `which containerlab`
+```
+
+Containerlab installers will **not** attempt to set the SUID flag or create the `clab_admins` group as long as the empty file `/etc/containerlab/suid_setup_done` exists.  
+This file is automatically created during the first installation of Containerlab `0.6.3` or newer.
+
 [^1]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. IPv6 should not be disabled in the kernel.
 [^2]: only available if installed from packages
+[^3]: SUID, or "set user ID", is a special permission bit that can be set on Unix systems. SUID binaries run as the owner of the file, rather than as the executing user.
