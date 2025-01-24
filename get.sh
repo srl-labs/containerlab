@@ -250,11 +250,15 @@ downloadFile() {
 installFile() {
     tar xf "$TMP_FILE" -C "$TMP_ROOT"
     echo "Preparing to install $BINARY_NAME ${TAG_WO_VER} into ${BIN_INSTALL_DIR}"
-    # Set SUID bit on the containerlab binary
-    runAsRoot install -m 4755 "$TMP_ROOT/$BINARY_NAME" "$BIN_INSTALL_DIR/$BINARY_NAME"
-    # Add clab admins group and add current user to it
-    runAsRoot groupadd -r clab_admins
-    runAsRoot usermod -aG "$SUDO_USER" clab_admins
+    # If SUID setup is running for the first time
+    if [ ! -f /etc/containerlab/suid_setup_done ]; then
+        # Set SUID bit on the containerlab binary
+        runAsRoot install -m 4755 "$TMP_ROOT/$BINARY_NAME" "$BIN_INSTALL_DIR/$BINARY_NAME"
+        # Add clab admins group and add current user to it
+        runAsRoot groupadd -r clab_admins
+        runAsRoot usermod -aG "$SUDO_USER" clab_admins
+        runAsRoot touch /etc/containerlab/suid_setup_done
+    fi
     echo "$BINARY_NAME installed into $BIN_INSTALL_DIR/$BINARY_NAME"
 }
 

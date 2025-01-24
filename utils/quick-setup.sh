@@ -257,11 +257,6 @@ function install-containerlab {
 
         sudo apt update -y && sudo apt install containerlab -y
     fi
-
-    echo "Adding ${USER} to clab_admins group..."
-
-    sudo groupadd -r clab_admins
-    sudo usermod -aG clab_admins "$SUDO_USER"
 }
 
 function all {
