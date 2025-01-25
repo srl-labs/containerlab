@@ -103,6 +103,8 @@ set / system ssh-server mgmt-netconf network-instance mgmt
 set / system ssh-server mgmt-netconf port 830
 set / system ssh-server mgmt-netconf disable-shell true
 `
+
+	ocServerConfig = `set / system management openconfig admin-state enable`
 )
 
 // SrlVersion represents an sr linux version as a set of fields.
@@ -192,7 +194,9 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 		tplData.GRPCConfig = grpcConfigPre24_3
 	}
 
-	// in srlinux >= v24.10+ we add EDA configuration.
+	// in srlinux >= v24.10+ we add
+	// - EDA configuration
+	// - openconfig server enable
 	if semver.Compare(v, "v24.10") >= 0 || n.swVersion.Major == "0" {
 		cfg := edaDiscoveryServerConfig
 
@@ -203,5 +207,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 		}
 
 		tplData.EDAConfig = cfg
+
+		tplData.OCServerConfig = ocServerConfig
 	}
 }
