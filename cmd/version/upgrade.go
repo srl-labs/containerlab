@@ -15,7 +15,7 @@ import (
 	"github.com/srl-labs/containerlab/cmd/common"
 )
 
-var downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
+const downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
 
 // upgradeCmd represents the version command.
 var upgradeCmd = &cobra.Command{
