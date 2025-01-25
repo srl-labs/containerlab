@@ -445,6 +445,37 @@ Verify ip6tables allow rule are gone
     Log    ${ipt}
     Should Not Contain    ${ipt}    ${MgmtBr}
 
+Verify containerlab version
+    [Documentation]    Ensures that 'containerlab version' subcommand runs successfully
+    ...                and prints basic version fields.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} version
+    Log    ${output}
+    # The command should exit with 0
+    Should Be Equal As Integers    ${rc}    0
+
+    # Check for presence of version/commit/date lines (case-sensitive or partial match)
+    Should Contain    ${output}    version:
+    Should Contain    ${output}    commit:
+    Should Contain    ${output}    date:
+
+Verify containerlab version check
+    [Documentation]    Ensures that 'containerlab version check' either says you're on latest version
+    ...                or that a new version is available. Also verifies the command succeeds.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo -E ${CLAB_BIN} version check
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    # On success, containerlab either prints:
+    #  "You are on the latest version" OR
+    #  "A newer containerlab version (...) is available!"
+    # So we allow for either outcome
+    Should Contain Any
+    ...    ${output}
+    ...    You are on the latest version
+    ...    A newer containerlab version
+
 *** Keywords ***
 Match IPv6 Address
     [Arguments]
