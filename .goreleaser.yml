@@ -11,7 +11,7 @@ builds:
       - -trimpath
       - -tags=podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp
     ldflags:
-      - -s -w -X github.com/srl-labs/containerlab/cmd.version={{.Version}} -X github.com/srl-labs/containerlab/cmd.commit={{.ShortCommit}} -X github.com/srl-labs/containerlab/cmd.date={{.Date}}
+      - -s -w -X github.com/srl-labs/containerlab/cmd/version.Version={{.Version}} -X github.com/srl-labs/containerlab/cmd/version.commit={{.ShortCommit}} -X github.com/srl-labs/containerlab/cmd/version.date={{.Date}}
     goos:
       - linux
     goarch:
