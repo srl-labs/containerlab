@@ -70,7 +70,6 @@ func init() {
 
 	// Add "version" to root command
 	rootCmd.AddCommand(version.VersionCmd)
-
 }
 
 func preRunFn(cmd *cobra.Command, _ []string) error {
