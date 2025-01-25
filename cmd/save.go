@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -23,7 +24,7 @@ var saveCmd = &cobra.Command{
 	Short: "save containers configuration",
 	Long: `save performs a configuration save. The exact command that is used to save the config depends on the node kind.
 Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact command used per node's kind`,
-	PreRunE: sudoCheck,
+	PreRunE: common.SudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if name == "" && topo == "" {
 			return fmt.Errorf("provide topology file path  with --topo flag")

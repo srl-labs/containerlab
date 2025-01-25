@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package cmd
+package version
 
 import (
 	"fmt"
@@ -12,6 +12,7 @@ import (
 	"os/exec"
 
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/cmd/common"
 )
 
 var downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
@@ -20,7 +21,7 @@ var downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
 var upgradeCmd = &cobra.Command{
 	Use:     "upgrade",
 	Short:   "upgrade containerlab to latest available version",
-	PreRunE: sudoCheck,
+	PreRunE: common.SudoCheck,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		f, err := os.CreateTemp("", "containerlab")
 		defer os.Remove(f.Name())
@@ -64,5 +65,5 @@ func downloadFile(url string, file *os.File) error {
 }
 
 func init() {
-	versionCmd.AddCommand(upgradeCmd)
+	VersionCmd.AddCommand(upgradeCmd)
 }

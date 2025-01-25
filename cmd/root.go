@@ -14,6 +14,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/cmd/version"
 	"github.com/srl-labs/containerlab/git"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -66,14 +67,10 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info",
 		"logging level; one of [trace, debug, info, warning, error, fatal]")
-}
 
-func sudoCheck(_ *cobra.Command, _ []string) error {
-	id := os.Geteuid()
-	if id != 0 {
-		return errors.New("containerlab requires sudo privileges to run")
-	}
-	return nil
+	// Add "version" to root command
+	rootCmd.AddCommand(version.VersionCmd)
+
 }
 
 func preRunFn(cmd *cobra.Command, _ []string) error {
