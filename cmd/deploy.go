@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
+	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/cmd/version"
 	"github.com/srl-labs/containerlab/runtime"
 )
 
@@ -54,7 +56,7 @@ var deployCmd = &cobra.Command{
 	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
-	PreRunE:      sudoCheck,
+	PreRunE:      common.SudoCheck,
 	RunE:         deployFn,
 }
 
@@ -82,7 +84,7 @@ func init() {
 func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
 
-	log.Infof("Containerlab v%s started", version)
+	log.Infof("Containerlab v%s started", version.Version)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -124,7 +126,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// dispatch a version check that will run in background
-	vCh := getLatestClabVersion(ctx)
+	vCh := version.GetLatestClabVersion(ctx)
 
 	deploymentOptions, err := clab.NewDeployOptions(maxWorkers)
 	if err != nil {
@@ -143,7 +145,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// log new version availability info if ready
-	newVerNotification(vCh)
+	version.NewVerNotification(vCh)
 
 	// print table summary
 	return printContainerInspect(containers, deployFormat)

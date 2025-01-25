@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/cmd/common"
 )
 
 // redeployCmd represents the redeploy command.
@@ -12,7 +13,7 @@ var redeployCmd = &cobra.Command{
 	Short:        "destroy and redeploy a lab",
 	Long:         "destroy a lab and deploy it again based on the topology definition file\nreference: https://containerlab.dev/cmd/redeploy/",
 	Aliases:      []string{"rdep"},
-	PreRunE:      sudoCheck,
+	PreRunE:      common.SudoCheck,
 	SilenceUsage: true,
 	RunE:         redeployFn,
 }
@@ -44,7 +45,7 @@ func init() {
 		"skip the lab directory extended ACLs provisioning")
 }
 
-func redeployFn(cmd *cobra.Command, args []string) error {
+func redeployFn(_ *cobra.Command, args []string) error {
 	// First destroy the lab
 	err := destroyFn(destroyCmd, args)
 	if err != nil {

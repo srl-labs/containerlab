@@ -8,7 +8,7 @@ MKDOCS_INS_VER = 9.5.9-insiders-4.52.2-hellt
 DATE := $(shell date)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
-LDFLAGS := -s -w -X 'github.com/srl-labs/containerlab/cmd.version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$(COMMIT_HASH)' -X 'github.com/srl-labs/containerlab/cmd.date=$(DATE)'
+LDFLAGS := -s -w -X 'github.com/srl-labs/containerlab/cmd/version.Version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd/version.commit=$(COMMIT_HASH)' -X 'github.com/srl-labs/containerlab/cmd/version.date=$(DATE)'
 
 include .mk/lint.mk
 
