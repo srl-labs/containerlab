@@ -41,7 +41,7 @@ var projASCIILogo string
 var VersionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Show containerlab version or upgrade",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		fmt.Println(projASCIILogo)
 		verSlug := docsLinkFromVer(Version)
 		fmt.Printf("    version: %s\n", Version)
@@ -74,7 +74,7 @@ func docsLinkFromVer(ver string) string {
 	return relSlug
 }
 
-// GetLatestClabVersion: optional function for a background check. It respects
+// GetLatestClabVersion optional function for a background check. It respects
 // CLAB_VERSION_CHECK="disable" to skip remote calls. Typically used in your
 // "deploy" or other commands if you want a background version check.
 func GetLatestClabVersion(ctx context.Context) chan string {

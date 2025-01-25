@@ -25,7 +25,7 @@ var saveCmd = &cobra.Command{
 	Long: `save performs a configuration save. The exact command that is used to save the config depends on the node kind.
 Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact command used per node's kind`,
 	PreRunE: common.SudoCheck,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if name == "" && topo == "" {
 			return fmt.Errorf("provide topology file path  with --topo flag")
 		}

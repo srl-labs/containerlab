@@ -45,7 +45,7 @@ func init() {
 		"skip the lab directory extended ACLs provisioning")
 }
 
-func redeployFn(cmd *cobra.Command, args []string) error {
+func redeployFn(_ *cobra.Command, args []string) error {
 	// First destroy the lab
 	err := destroyFn(destroyCmd, args)
 	if err != nil {

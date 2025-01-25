@@ -22,7 +22,7 @@ var upgradeCmd = &cobra.Command{
 	Use:     "upgrade",
 	Short:   "upgrade containerlab to latest available version",
 	PreRunE: common.SudoCheck,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		f, err := os.CreateTemp("", "containerlab")
 		defer os.Remove(f.Name())
 		if err != nil {
@@ -53,7 +53,7 @@ func downloadFile(url string, file *os.File) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() // skipcq: GO-S2307
 
 	// Write the body to file
 	_, err = io.Copy(file, resp.Body)

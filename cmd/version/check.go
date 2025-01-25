@@ -16,7 +16,7 @@ import (
 var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Check if a new version of containerlab is available",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		// We'll use a short 5-second timeout for the remote request
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -37,17 +37,17 @@ var checkCmd = &cobra.Command{
 
 // getLatestVersion fetches the latest containerlab release version from GitHub
 // and sends that version string to the vc channel if it's newer than local.
-func getLatestVersion(ctx context.Context, vc chan<- string) {
+func getLatestVersion(ctx context.Context, vc chan<- string) { // skipcq: RVV-A0006
 	defer close(vc)
 
 	client := &http.Client{
 		// Don’t follow redirects
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "HEAD", fmt.Sprintf("%s/releases/latest", repoUrl), nil)
+	req, err := http.NewRequestWithContext(ctx, "HEAD", fmt.Sprintf("%s/releases/latest", repoUrl), http.NoBody)
 	if err != nil {
 		log.Debugf("error occurred during latest version fetch: %v", err)
 		return
@@ -61,7 +61,7 @@ func getLatestVersion(ctx context.Context, vc chan<- string) {
 		log.Debugf("error occurred during latest version fetch: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() // skipcq: GO-S2307
 
 	loc := resp.Header.Get("Location")
 	split := strings.Split(loc, "releases/tag/")
@@ -87,7 +87,7 @@ func getLatestVersion(ctx context.Context, vc chan<- string) {
 	}
 }
 
-// NewVerNotification: non-blocking check that prints an INFO log if a new
+// NewVerNotification non-blocking check that prints an INFO log if a new
 // version is available. Useful for "background" checks in long-running commands
 // (like "deploy") where we don't want to block the user.
 func NewVerNotification(vc <-chan string) {
@@ -102,7 +102,7 @@ func NewVerNotification(vc <-chan string) {
 	}
 }
 
-// newVerNotificationWithTimeout: a blocking check that waits for version info
+// newVerNotificationWithTimeout a blocking check that waits for version info
 // or a context timeout. Suitable for subcommands like "check" that want to wait
 // for a definite result or a quick fallback if unreachable.
 func newVerNotificationWithTimeout(ctx context.Context, vc <-chan string) {
