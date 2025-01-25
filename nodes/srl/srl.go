@@ -346,7 +346,7 @@ func (s *srl) Ready(ctx context.Context) error {
 				continue
 			}
 
-			if len(execResult.GetStdErrString()) != 0 {
+			if execResult.GetStdErrString() != "" {
 				log.Debugf("error during checking SR Linux boot status: %s", execResult.GetStdErrString())
 				time.Sleep(retryTimer)
 				continue
@@ -367,7 +367,7 @@ func (s *srl) Ready(ctx context.Context) error {
 				continue
 			}
 
-			if len(execResult.GetStdErrString()) != 0 {
+			if execResult.GetStdErrString() != "" {
 				log.Debugf("readyForConfigCmd stderr: %s", string(execResult.GetStdErrString()))
 				time.Sleep(retryTimer)
 				continue
@@ -537,6 +537,8 @@ type srlTemplateData struct {
 	NetconfConfig string
 	// EDAConfig is a string containing EDA configuration
 	EDAConfig string
+	// OCServerConfig is a string containing OpenConfig server configuration
+	OCServerConfig string
 }
 
 // tplIFace template interface struct.
@@ -556,16 +558,17 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	// tplData holds data used in templating of the default config snippet
 	tplData := srlTemplateData{
-		TLSKey:     n.Cfg.TLSKey,
-		TLSCert:    n.Cfg.TLSCert,
-		TLSAnchor:  n.Cfg.TLSAnchor,
-		Banner:     b,
-		IFaces:     map[string]tplIFace{},
-		MgmtMTU:    0,
-		MgmtIPMTU:  0,
-		DNSServers: n.Config().DNS.Servers,
-		SNMPConfig: snmpv2Config,
-		GRPCConfig: grpcConfig,
+		TLSKey:         n.Cfg.TLSKey,
+		TLSCert:        n.Cfg.TLSCert,
+		TLSAnchor:      n.Cfg.TLSAnchor,
+		Banner:         b,
+		IFaces:         map[string]tplIFace{},
+		MgmtMTU:        0,
+		MgmtIPMTU:      0,
+		DNSServers:     n.Config().DNS.Servers,
+		SNMPConfig:     snmpv2Config,
+		GRPCConfig:     grpcConfig,
+		OCServerConfig: "",
 	}
 
 	n.setVersionSpecificParams(&tplData)
@@ -681,7 +684,7 @@ func (s *srl) addOverlayCLIConfig(ctx context.Context) error {
 		return err
 	}
 
-	if len(execResult.GetStdErrString()) != 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
@@ -703,7 +706,7 @@ func (s *srl) commitConfig(ctx context.Context) error {
 		return err
 	}
 
-	if len(execResult.GetStdErrString()) != 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
@@ -723,7 +726,7 @@ func (s *srl) generateCheckpoint(ctx context.Context) error {
 		return err
 	}
 
-	if len(execResult.GetStdErrString()) != 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
@@ -864,8 +867,10 @@ gpgcheck=0`
 	}
 
 	// mount srlinux repository files
-	s.Cfg.Binds = append(s.Cfg.Binds, yumPath+":/etc/yum.repos.d/srlinux.repo:ro")
-	s.Cfg.Binds = append(s.Cfg.Binds, aptPath+":/etc/apt/sources.list.d/srlinux.list:ro")
+	s.Cfg.Binds = append(
+		s.Cfg.Binds,
+		yumPath+":/etc/yum.repos.d/srlinux.repo:ro",
+		aptPath+":/etc/apt/sources.list.d/srlinux.list:ro")
 
 	return nil
 }

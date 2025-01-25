@@ -31,6 +31,8 @@ set / system json-rpc-server admin-state enable network-instance mgmt https admi
 
 {{ .NetconfConfig }}
 
+{{ .OCServerConfig }}
+
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 
