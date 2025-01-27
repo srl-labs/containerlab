@@ -353,7 +353,7 @@ sudo groupadd -r clab_admins
 sudo usermod -aG "$USER" clab_admins
 ```
 
-Users who manage their Containerlab installation via `deb/yum/dnf` package managers will have the sudo-less functionality automatically enabled during the first upgrade from pre-`0.6.3` versions.
+Users who manage their Containerlab installation via `deb/yum/dnf` package managers will have the sudo-less functionality automatically enabled during the first upgrade from pre-`0.63.0` versions.
 
 To check whether Containerlab is enabled for sudo-less operations, run the following commands:
 
@@ -369,7 +369,7 @@ user@host$ groups
 ///
 
 Additionally, to prevent unathorised users from gaining root-level privileges through Containerlab, the usage of privileged Containerlab commands is gated behind a Unix user group membership check. Privileged Containerlab commands can only be performed by users who are part of the `clab_admins` group.  
-By default (starting with version `0.6.3`), the `clab_admins` Unix group is created during the initial installation of Containerlab, and the user installing Containerlab is automatically added to this user group. Additional users who require access to privileged Containerlab commands should also be added to this user group.
+By default (starting with version `0.63.0`), the `clab_admins` Unix group is created during the initial installation of Containerlab, and the user installing Containerlab is automatically added to this user group. Additional users who require access to privileged Containerlab commands should also be added to this user group.
 
 Users who are _not_ part of this group can still execute non-privileged commands, such as:
 - generate
@@ -393,7 +393,7 @@ sudo chmod u-s `which containerlab`
 ```
 
 Containerlab installers will **not** attempt to set the SUID flag or create the `clab_admins` group as long as the empty file `/etc/containerlab/suid_setup_done` exists.  
-This file is automatically created during the first installation of Containerlab `0.6.3` or newer.
+This file is automatically created during the first installation of Containerlab `0.63.0` or newer.
 
 [^1]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. IPv6 should not be disabled in the kernel.
 [^2]: only available if installed from packages
