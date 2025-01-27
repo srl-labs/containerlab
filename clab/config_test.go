@@ -385,6 +385,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.TopoFile:     "topo1.yml",
 				"node-label":        "value",
 				labels.Owner:        owner,
+				"with-dollar-sign":  "some$value",
 			},
 		},
 		"custom_kind_label": {

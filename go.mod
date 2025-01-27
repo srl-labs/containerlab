@@ -3,7 +3,6 @@ module github.com/srl-labs/containerlab
 go 1.22.1
 
 require (
-	github.com/a8m/envsubst v1.4.2
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/containernetworking/plugins v1.5.1
 	github.com/containers/common v0.60.4
@@ -21,6 +20,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hairyhenderson/gomplate/v3 v3.11.8
 	github.com/hashicorp/go-version v1.7.0
+	github.com/hellt/envsubst v0.2.0
 	github.com/jedib0t/go-pretty/v6 v6.6.5
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.2
@@ -285,7 +285,7 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20230525183740-e7c30c78aeb2 // indirect
 	gocloud.dev v0.37.0 // indirect
 	golang.org/x/mod v0.22.0
-	golang.org/x/net v0.31.0
+	golang.org/x/net v0.31.0 // indirect
 	golang.org/x/oauth2 v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/text v0.21.0 // indirect

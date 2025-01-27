@@ -13,9 +13,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/a8m/envsubst"
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
+	"github.com/hellt/envsubst"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
@@ -72,7 +72,9 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	log.Debugf("topology:\n%s\n", buf.String())
 
 	// expand env vars if any
-	yamlFile, err := envsubst.Bytes(buf.Bytes())
+	// do not replace vars initialized with defaults
+	// and do not replace vars that are not set
+	yamlFile, err := envsubst.BytesRestrictedNoReplace(buf.Bytes(), false, false, true, true)
 	if err != nil {
 		return err
 	}

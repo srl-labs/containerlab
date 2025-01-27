@@ -17,3 +17,5 @@ topology:
       mgmt-ipv4: 172.100.100.12
       labels:
         node-label: value
+        # tests that unset $value is not substituted
+        with-dollar-sign: some$value
