@@ -13,9 +13,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/a8m/envsubst"
 	"github.com/hairyhenderson/gomplate/v3"
 	"github.com/hairyhenderson/gomplate/v3/data"
+	"github.com/hellt/envsubst"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
