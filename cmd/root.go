@@ -20,15 +20,6 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-<<<<<<< HEAD
-=======
-const (
-	CLAB_AUTHORISED_GROUP = "clab_admins"
-	ROOT_UID              = 0
-	NOMODIFY              = -1
-)
-
->>>>>>> b1098918 (containerlab: Add shorthands for root UID and no-modify flags for readability)
 var (
 	debugCount int
 	debug      bool

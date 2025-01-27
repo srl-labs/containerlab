@@ -12,7 +12,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const CLAB_AUTHORISED_GROUP = "clab_admins"
+const (
+	CLAB_AUTHORISED_GROUP = "clab_admins"
+	ROOT_UID              = 0
+	NOMODIFY              = -1
+)
 
 func CheckAndGetRootPrivs(_ *cobra.Command, _ []string) error {
 	_, euid, suid := unix.Getresuid()
