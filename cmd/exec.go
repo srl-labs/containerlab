@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/exec"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -26,10 +25,9 @@ var (
 
 // execCmd represents the exec command.
 var execCmd = &cobra.Command{
-	Use:     "exec",
-	Short:   "execute a command on one or multiple containers",
-	PreRunE: common.CheckAndGetRootPrivs,
-	RunE:    execFn,
+	Use:   "exec",
+	Short: "execute a command on one or multiple containers",
+	RunE:  execFn,
 }
 
 func execFn(_ *cobra.Command, _ []string) error {

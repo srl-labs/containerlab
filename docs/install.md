@@ -372,6 +372,7 @@ Additionally, to prevent unathorised users from gaining root-level privileges th
 By default (starting with version `0.63.0`), the `clab_admins` Unix group is created during the initial installation of Containerlab, and the user installing Containerlab is automatically added to this user group. Additional users who require access to privileged Containerlab commands should also be added to this user group.
 
 Users who are _not_ part of this group can still execute non-privileged commands, such as:
+- exec (requires `docker` group membership)
 - generate
 - graph
 - inspect (requires `docker` group membership)
