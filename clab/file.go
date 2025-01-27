@@ -72,7 +72,9 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	log.Debugf("topology:\n%s\n", buf.String())
 
 	// expand env vars if any
-	yamlFile, err := envsubst.Bytes(buf.Bytes())
+	// do not replace vars initialized with defaults
+	// and do not replace vars that are not set
+	yamlFile, err := envsubst.BytesRestrictedNoReplace(buf.Bytes(), false, false, true, true)
 	if err != nil {
 		return err
 	}
