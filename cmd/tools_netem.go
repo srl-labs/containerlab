@@ -76,9 +76,10 @@ of real-world networks.`,
 }
 
 var netemShowCmd = &cobra.Command{
-	Use:   "show",
-	Short: "show link impairments for a node",
-	RunE:  netemShowFn,
+	Use:     "show",
+	Short:   "show link impairments for a node",
+	PreRunE: validateInputAndRoot,
+	RunE:    netemShowFn,
 }
 
 func netemSetFn(_ *cobra.Command, _ []string) error {
