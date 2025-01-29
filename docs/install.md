@@ -37,9 +37,10 @@ To install all components at once, run the following command on any of the suppo
 ```bash
 curl -sL https://containerlab.dev/setup | sudo -E bash -s "all"
 ```
+<!-- --8<-- [end:quick-setup-script-cmd] -->
 
 By default, this will also configure sshd on the system to increase max auth tries so unknown keys don't lock ssh attempts.
-This behaviour can be turned off by setting the environment variable "SETUP_SSHD" to "false" **before** running the command shown above.
+This behavior can be turned off by setting the environment variable "SETUP_SSHD" to "false" **before** running the command shown above.
 The environment variable can be set and exported with the command shown below.
 
 ```bash
@@ -49,8 +50,6 @@ export SETUP_SSHD="false"
 To complete installation and enable sudo-less `docker` command execution, please run `newgrp docker` or logout and log back in.
 
 Containerlab is also set up for sudo-less operation, and the user executing the quick install script is automatically granted access to privileged commands. For further information, see [Sudo-less operation](#sudo-less-operation).
-
-<!-- --8<-- [end:quick-setup-script-cmd] -->
 
 To install an individual component, specify the function name as an argument to the script. For example, to install only `docker`:
 
