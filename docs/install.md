@@ -337,14 +337,16 @@ sudo setsebool -P selinuxuser_execmod 1
 ```
 
 ## Sudo-less operation
+
 Containerlab requires root privileges to perform certain operations.
 
 To simplify usage, by default, Containerlab is installed as a _SUID binary_[^3] to permit sudo-less operation.
 
 /// details | Enabling sudo-less operations for manually built/installed Containerlab
+    type: subtle-note
 To enable sudo-less operation for users who who manually built and installed Containerlab, or did not use a package manager to install it, the following commands need to be run:
 
-```
+```bash
 # Set SUID bit on Containerlab binary
 sudo chmod u+s `which containerlab`
 # Create clab_admins Unix group
@@ -357,34 +359,48 @@ Users who manage their Containerlab installation via `deb/yum/dnf` package manag
 
 To check whether Containerlab is enabled for sudo-less operations, run the following commands:
 
+```{.bash .no-select}
+ls -hal `which containerlab`
 ```
-$ ls -hal `which containerlab` 
+
+<div class="embed-result">
+```{.bash .no-select .no-copy}
 -rwsr-xr-x 1 root root 131M Jan 17 17:56 /usr/bin/containerlab
 #  ^ SUID bit set, owned by root
-
-user@host$ groups
+```
+</div>
+```{.bash .no-select}
+groups
+```
+<div class="embed-result">
+```{.bash .no-select .no-copy}
 ... clab_admins ...
 #   ^ user is member of clab_admins group
 ```
+</div>
+
 ///
 
-Additionally, to prevent unathorised users from gaining root-level privileges through Containerlab, the usage of privileged Containerlab commands is gated behind a Unix user group membership check. Privileged Containerlab commands can only be performed by users who are part of the `clab_admins` group.  
+Additionally, to prevent unauthorized users from gaining root-level privileges through Containerlab, the usage of privileged Containerlab commands is gated behind a Unix user group membership check. Privileged Containerlab commands can only be performed by users who are part of the `clab_admins` group.  
 By default (starting with version `0.63.0`), the `clab_admins` Unix group is created during the initial installation of Containerlab, and the user installing Containerlab is automatically added to this user group. Additional users who require access to privileged Containerlab commands should also be added to this user group.
 
 Users who are _not_ part of this group can still execute non-privileged commands, such as:
-- exec (requires `docker` group membership)
-- generate
-- graph
-- inspect (requires `docker` group membership)
-- save
-- version (no upgrade)
+
+* exec (requires `docker` group membership)
+* generate
+* graph
+* inspect (requires `docker` group membership)
+* save
+* version (no upgrade)
 
 Non-privileged commands are executed as the user running the Containerlab commands. Privileged commands are executed as root during runtime.
 
 To allow _any user on the host_ to use all Containerlab commands, simply delete the `clab_admins` Unix group.
 
 /// danger
-Much like the `docker` group, any users part of the `clab_admins` group are effectively given root-level privileges to the system running Containerlab. **If this group does not exist and the binary still has the SUID bit set, any user who can run Containerlab should be treated as having root privileges.**
+Much like the `docker` group, any users part of the `clab_admins` group are effectively given root-level privileges to the system running Containerlab.
+
+**If this group does not exist and the binary still has the SUID bit set, any user who can run Containerlab should be treated as having root privileges.**
 ///
 
 To **disable sudo-less operation**, simply unset the SUID flag on the Containerlab binary:
