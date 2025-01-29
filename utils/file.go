@@ -390,7 +390,7 @@ func getRealUserIDs() (int, int, error) {
 }
 
 // AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds ACL rules:
-// rwx for the real UID user and r-x for the real GID group
+// rwx for the real UID user and r-x for the real GID group.
 func AdjustFileACLs(fsPath string) error {
 	userUID, userGID, err := getRealUserIDs()
 	if err != nil {

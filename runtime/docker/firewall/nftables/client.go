@@ -242,7 +242,6 @@ func (nftC *NftablesClient) getRules(chainName, tableName string, family nftable
 	}
 
 	return nftC.nftConn.GetRules(chain.Table, chain)
-
 }
 
 func (nftC *NftablesClient) newClabNftablesRule(chainName, tableName string,

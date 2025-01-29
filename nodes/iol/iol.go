@@ -381,7 +381,7 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
 }
 
-// SaveConfig is used for "clab save" functionality -- it saves the running config to the startup configuration
+// SaveConfig is used for "clab save" functionality -- it saves the running config to the startup configuration.
 func (n *iol) SaveConfig(_ context.Context) error {
 	p, err := platform.NewPlatform(
 		"cisco_iosxe",
@@ -390,7 +390,6 @@ func (n *iol) SaveConfig(_ context.Context) error {
 		options.WithAuthUsername(defaultCredentials.GetUsername()),
 		options.WithAuthPassword(defaultCredentials.GetPassword()),
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to create platform; error: %+v", err)
 	}
