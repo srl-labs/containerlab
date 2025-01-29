@@ -6,15 +6,12 @@ package clab
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
 
-	"github.com/hairyhenderson/gomplate/v3"
-	"github.com/hairyhenderson/gomplate/v3/data"
 	"github.com/hellt/envsubst"
 
 	log "github.com/sirupsen/logrus"
@@ -40,7 +37,6 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 
 	// load the topology file/template
 	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameBase()).
-		Funcs(gomplate.CreateFuncs(context.Background(), new(data.Data))).
 		ParseFiles(c.TopoPaths.TopologyFilenameAbsPath())
 	if err != nil {
 		return err
@@ -102,7 +98,7 @@ func readTemplateVariables(topo, varsFile string) (interface{}, error) {
 			case err != nil:
 				return nil, err
 			}
-			// file with current extention found, go read it.
+			// file with current extension found, go read it.
 			goto READFILE
 		}
 		// no var file found, assume the topology is not a template

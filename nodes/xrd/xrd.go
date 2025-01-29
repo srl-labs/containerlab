@@ -15,8 +15,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/hairyhenderson/gomplate/v3"
-	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
@@ -36,8 +34,7 @@ var (
 	//go:embed mgmt_intf_v6_addr.sh.tmpl
 	scriptTemplate string
 
-	xrdMgmtScriptTpl, _ = template.New("clab-xrd-mgmt-ipv6-script").Funcs(
-		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(scriptTemplate)
+	xrdMgmtScriptTpl, _ = template.New("clab-xrd-mgmt-ipv6-script").Parse(scriptTemplate)
 
 	//go:embed xrd.cfg
 	cfgTemplate string
