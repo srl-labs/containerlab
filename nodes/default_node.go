@@ -17,8 +17,6 @@ import (
 	"text/template"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/hairyhenderson/gomplate/v3"
-	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -369,10 +367,7 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 
 	log.Debugf("generating config for node %s from file %s", d.Cfg.ShortName, d.Cfg.StartupConfig)
 
-	// gomplate overrides the built-in *slice* function. You can still use *coll.Slice*
-	gfuncs := gomplate.CreateFuncs(context.Background(), new(data.Data))
-	delete(gfuncs, "slice")
-	tpl, err := template.New(filepath.Base(d.Cfg.StartupConfig)).Funcs(gfuncs).Parse(templ)
+	tpl, err := template.New(filepath.Base(d.Cfg.StartupConfig)).Funcs(utils.TemplateFuncs).Parse(templ)
 	if err != nil {
 		return err
 	}

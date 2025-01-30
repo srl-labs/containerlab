@@ -2,14 +2,11 @@ package vr_sros
 
 import (
 	"bytes"
-	"context"
 	_ "embed"
 	"io"
 	"strings"
 	"text/template"
 
-	"github.com/hairyhenderson/gomplate/v3"
-	"github.com/hairyhenderson/gomplate/v3/data"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
@@ -26,8 +23,7 @@ func (s *vrSROS) generateSSHPublicKeysConfig() (io.Reader, error) {
 
 	s.prepareSSHPubKeys(&tplData)
 
-	t, err := template.New("SSHKeys").Funcs(
-		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(SROSSSHKeysTemplate)
+	t, err := template.New("SSHKeys").Parse(SROSSSHKeysTemplate)
 	if err != nil {
 		return nil, err
 	}

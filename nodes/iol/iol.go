@@ -18,8 +18,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/hairyhenderson/gomplate/v3"
-	"github.com/hairyhenderson/gomplate/v3/data"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/platform"
 	log "github.com/sirupsen/logrus"
@@ -248,8 +246,7 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 		PartialCfg:         n.partialStartupCfg,
 	}
 
-	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(
-		gomplate.CreateFuncs(context.Background(), new(data.Data))).Parse(n.bootCfg)
+	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(utils.TemplateFuncs).Parse(n.bootCfg)
 
 	// generate the config
 	buf := new(bytes.Buffer)
