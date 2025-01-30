@@ -44,6 +44,20 @@ func (m *MockContainerRuntime) EXPECT() *MockContainerRuntimeMockRecorder {
 	return m.recorder
 }
 
+// CheckConnection mocks base method.
+func (m *MockContainerRuntime) CheckConnection(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckConnection", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckConnection indicates an expected call of CheckConnection.
+func (mr *MockContainerRuntimeMockRecorder) CheckConnection(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckConnection", reflect.TypeOf((*MockContainerRuntime)(nil).CheckConnection), ctx)
+}
+
 // Config mocks base method.
 func (m *MockContainerRuntime) Config() runtime.RuntimeConfig {
 	m.ctrl.T.Helper()
