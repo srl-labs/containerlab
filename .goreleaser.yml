@@ -17,10 +17,9 @@ builds:
     goarch:
       - amd64
       - arm64
-    # removing upx compression due to https://github.com/srl-labs/containerlab/issues/1264
-    # hooks:
-    #   post:
-    #     - upx "{{ .Path }}"
+    hooks:
+      post:
+        - chmod 4755 "{{ .Path }}" # set SUID bit
 
 dockers:
   - goos: linux
@@ -93,11 +92,12 @@ nfpms:
       - rpm
       - deb
       - apk
+      - archlinux
     scripts:
       postinstall: ./utils/postinstall.sh
     bindir: /usr/bin
     contents:
-      - src: ./containerlab
+      - src: /usr/bin/containerlab
         dst: /usr/bin/containerlab
         file_info:
           mode: 4755 # SUID bit set
