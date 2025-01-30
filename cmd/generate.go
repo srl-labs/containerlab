@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -89,6 +90,10 @@ var generateCmd = &cobra.Command{
 			}
 		}
 		if deploy {
+			err = common.CheckAndGetRootPrivs(nil, nil)
+			if err != nil {
+				return err
+			}
 			reconfigure = true
 			if file == "" {
 				file = fmt.Sprintf("%s.clab.yml", name)
