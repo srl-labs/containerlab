@@ -22,7 +22,7 @@ ${runtime}              docker
 *** Test Cases ***
 Test lab1 with Github
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-url}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-url}
     ...    shell=True
 
     Log    ${output.stdout}
@@ -36,7 +36,7 @@ Test lab1 with Github
 
 Test lab1 with Gitlab
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-gitlab-url}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-gitlab-url}
     ...    shell=True
 
     Log    ${output.stdout}
@@ -50,7 +50,7 @@ Test lab1 with Gitlab
 
 Test lab2 with Github
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-url2}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-url2}
     ...    shell=True
 
     Log    ${output.stdout}
@@ -64,7 +64,7 @@ Test lab2 with Github
 
 Test lab2 with Gitlab
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-gitlab-url2}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-gitlab-url2}
     ...    shell=True
 
     Log    ${output.stdout}
@@ -78,7 +78,7 @@ Test lab2 with Gitlab
 
 Test lab3 with Github
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab2-url}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab2-url}
     ...    shell=True
 
     Log    ${output.stdout}
@@ -92,7 +92,7 @@ Test lab3 with Github
 
 Test lab3 with Gitlab
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab2-gitlab-url}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab2-gitlab-url}
     ...    shell=True
 
     Log    ${output.stdout}
@@ -106,7 +106,7 @@ Test lab3 with Gitlab
 
 Test lab1 with short github url
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-shorturl}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-shorturl}
     ...    shell=True
 
     Log    ${output.stdout}
@@ -119,7 +119,7 @@ Test lab1 with short github url
 
 Test lab1 downloaded from https url
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${http-lab-url}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${http-lab-url}
     ...    shell=True
 
     Log    ${output.stdout}
@@ -132,7 +132,7 @@ Test lab1 downloaded from https url
 
 Test deploy referencing folder as topo
     ${output_pre} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${single-topo-folder}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${single-topo-folder}
     ...    shell=True
 
     Log    ${output_pre.stdout}
@@ -150,7 +150,7 @@ Test deploy referencing folder as topo
 
     ## destroy with just a reference to a folder
     ${output_post1} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${single-topo-folder}
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${single-topo-folder}
     ...    shell=True
 
     ## double check deletion via runtime ps 
@@ -163,7 +163,7 @@ Test deploy referencing folder as topo
 
 *** Keywords ***
 Cleanup
-    Process.Run Process    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup
+    Process.Run Process    ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup
     ...    shell=True
 
     Process.Run Process    sudo -E rm -rf clab-test-repo

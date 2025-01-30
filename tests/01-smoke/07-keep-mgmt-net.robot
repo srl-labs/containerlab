@@ -10,7 +10,7 @@ Library             String
 Resource            ../common.robot
 
 Suite Setup         Setup
-Suite Teardown      Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
+Suite Teardown      Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
 
 
 *** Variables ***
@@ -23,13 +23,13 @@ ${mgmt-bridge}      01-07-net
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Destroy ${lab-name} lab keep mgmt net
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --keep-mgmt-net
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --keep-mgmt-net
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -42,13 +42,13 @@ Check ${lab-name} mgmt network remains
 Deploy ${lab-name} lab again
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Destroy ${lab-name} lab dont keep mgmt net
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 

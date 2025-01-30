@@ -31,7 +31,7 @@ ${l3-cert}                  ${CURDIR}/clab-${lab-name}/.tls/l3/l3.pem
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
@@ -106,7 +106,7 @@ Verify l2 extra SANs
 
 *** Keywords ***
 Teardown
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
 
 Get Certificate Date
     [Arguments]    ${certificate_output}    ${type}

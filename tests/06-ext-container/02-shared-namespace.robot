@@ -18,7 +18,7 @@ ${runtime}          docker
 Deploy ${lab-name}-ext lab
     Log    ${CURDIR}
     ${output} =    Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -d -t ${CURDIR}/${lab-file-name-1}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -d -t ${CURDIR}/${lab-file-name-1}
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -27,7 +27,7 @@ Deploy ${lab-name}-ext lab
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${output} =    Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -d -t ${CURDIR}/${lab-file-name-2}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -d -t ${CURDIR}/${lab-file-name-2}
     ...    shell=True
     ...    timeout=30s
     Log    ${output.stdout}
@@ -36,28 +36,28 @@ Deploy ${lab-name} lab
 
 Verify ip on ext-node
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext-node --cmd "ip address show dev d1"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext-node --cmd "ip address show dev d1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    128.66.0.1/32
 
 Verify links in node0
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=node0 --cmd "ip link show dev net0"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=node0 --cmd "ip link show dev net0"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
 Verify ext-node defined interface is present for node1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=node1 --cmd "ip address show dev d1"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=node1 --cmd "ip address show dev d1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    128.66.0.1/32
 
 Verify topo defined link in node1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=node1 --cmd "ip link show dev net0"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=node1 --cmd "ip link show dev net0"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
@@ -68,5 +68,5 @@ Setup
     Cleanup
 
 Cleanup
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name-1} --cleanup
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name-2} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name-1} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name-2} --cleanup

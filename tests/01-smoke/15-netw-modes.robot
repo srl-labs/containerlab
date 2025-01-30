@@ -15,7 +15,7 @@ ${lab}      ${CURDIR}/netmodes.clab.yml
 *** Test Cases ***
 Deploy lab
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab}
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -25,4 +25,4 @@ Deploy lab
 *** Keywords ***
 Teardown
     # destroy all labs
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -c -a
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -c -a

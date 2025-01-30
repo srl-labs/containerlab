@@ -19,7 +19,7 @@ ${vxlan-br-ip}      172.20.25.1/24
 *** Test Cases ***
 Deploy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file} -d
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file} -d
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -103,7 +103,7 @@ Setup
 
 Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
 
     ${rc}    ${output} =    Run And Return Rc And Output

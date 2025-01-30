@@ -20,7 +20,7 @@ ${node-cert-dir}    /tmp/clab-tests/certs/06-node-cert
 *** Test Cases ***
 Create CA certificate
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} tools cert ca create --path ${root-ca-dir} --name root-ca --expiry 1m --locality CICD -d
+    ...    ${CLAB_BIN} tools cert ca create --path ${root-ca-dir} --name root-ca --expiry 1m --locality CICD -d
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain
@@ -37,7 +37,7 @@ Create CA certificate
 
 Create and sign end node certificates
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} tools cert sign --ca-cert ${root-ca-dir}/root-ca.pem --ca-key ${root-ca-dir}/root-ca.key --hosts node.io,192.168.0.1 --path ${node-cert-dir} -d
+    ...    ${CLAB_BIN} tools cert sign --ca-cert ${root-ca-dir}/root-ca.pem --ca-key ${root-ca-dir}/root-ca.key --hosts node.io,192.168.0.1 --path ${node-cert-dir} -d
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain

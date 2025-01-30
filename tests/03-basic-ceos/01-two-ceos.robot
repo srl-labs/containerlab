@@ -21,7 +21,7 @@ ${runtime}          docker
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} deploy -t ${CURDIR}/${lab-file-name}
+    ...    ${CLAB_BIN} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -53,7 +53,7 @@ Ensure IPv6 default route is in the config file
 
 Ensure MGMT VRF is present
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    MGMT
@@ -75,5 +75,5 @@ Ensure n2 is reachable over ssh
 
 *** Keywords ***
 Cleanup
-    Run    sudo -E ${CLAB_BIN} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    ${CLAB_BIN} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    rm -rf ${CURDIR}/${lab-name}
