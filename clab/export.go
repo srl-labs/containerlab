@@ -7,7 +7,6 @@ package clab
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
 	"io"
 	"path/filepath"
 	"text/template"
@@ -56,16 +55,7 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 	}
 
 	t := template.New(name).
-		Funcs(template.FuncMap{
-			"ToJSON": func(v interface{}) string {
-				a, _ := json.Marshal(v)
-				return string(a)
-			},
-			"ToJSONPretty": func(v interface{}, prefix string, indent string) string {
-				a, _ := json.MarshalIndent(v, prefix, indent)
-				return string(a)
-			},
-		})
+		Funcs(utils.TemplateFuncs)
 
 	var err error
 

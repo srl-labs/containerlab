@@ -36,7 +36,7 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	}
 
 	// load the topology file/template
-	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameBase()).
+	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameBase()).Funcs(utils.TemplateFuncs).
 		ParseFiles(c.TopoPaths.TopologyFilenameAbsPath())
 	if err != nil {
 		return err

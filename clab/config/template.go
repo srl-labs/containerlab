@@ -13,6 +13,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -78,7 +79,7 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 		log.Infof("No template names specified (-l) using: %s", strings.Join(TemplateNames, ", "))
 	}
 
-	tmpl := template.New("").Funcs(jT.Funcs)
+	tmpl := template.New("").Funcs(utils.TemplateFuncs).Funcs(jT.Funcs)
 
 	for _, nc := range allnodes {
 		for _, baseN := range TemplateNames {

@@ -367,7 +367,7 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 
 	log.Debugf("generating config for node %s from file %s", d.Cfg.ShortName, d.Cfg.StartupConfig)
 
-	tpl, err := template.New(filepath.Base(d.Cfg.StartupConfig)).Parse(templ)
+	tpl, err := template.New(filepath.Base(d.Cfg.StartupConfig)).Funcs(utils.TemplateFuncs).Parse(templ)
 	if err != nil {
 		return err
 	}

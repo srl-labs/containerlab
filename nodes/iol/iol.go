@@ -246,7 +246,7 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 		PartialCfg:         n.partialStartupCfg,
 	}
 
-	IOLCfgTpl, _ := template.New("clab-iol-default-config").Parse(n.bootCfg)
+	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(utils.TemplateFuncs).Parse(n.bootCfg)
 
 	// generate the config
 	buf := new(bytes.Buffer)
