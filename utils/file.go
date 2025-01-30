@@ -156,6 +156,12 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		return err
 	}
 
+	// Change file ownership to user running Containerlab instead of effective UID
+	err = SetUIDAndGID(dst)
+	if err != nil {
+		return err
+	}
+
 	err = out.Chmod(mode)
 	if err != nil {
 		return err
@@ -192,6 +198,12 @@ func CreateFile(file, content string) (err error) {
 	}
 
 	_, err = f.WriteString(content)
+	if err != nil {
+		return err
+	}
+
+	// Change file ownership to user running Containerlab instead of effective UID
+	err = SetUIDAndGID(file)
 	if err != nil {
 		return err
 	}
