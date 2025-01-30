@@ -4,7 +4,7 @@ Library             String
 Library             Process
 Resource            ../common.robot
 
-Suite Teardown      Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
+Suite Teardown      Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
 
 
 *** Variables ***
@@ -29,7 +29,7 @@ Verify number of Hosts entries before deploy
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
@@ -44,7 +44,7 @@ Ensure exec node option works
 Exec command with no filtering
     [Documentation]    This tests ensures that when `exec` command is called without user provided filters, the command is executed on all nodes of the lab.
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd 'uname -n'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd 'uname -n'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
@@ -61,7 +61,7 @@ Exec command with no filtering
 Exec command with filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters, the command is executed ONLY on selected nodes of the lab.
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'uname -n'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'uname -n'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
@@ -74,7 +74,7 @@ Exec command with filtering
 Exec command with json output and filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters and json output, the command is executed ONLY on selected nodes of the lab and the actual JSON is populated to stdout.
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -87,7 +87,7 @@ Ensure CLAB_INTFS env var is set
     ...    This test ensures that the CLAB_INTFS environment variable is set in the container
     ...    and that it contains the correct number of interfaces.
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $CLAB_INTFS"'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $CLAB_INTFS"'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -104,7 +104,7 @@ Ensure default no_proxy env var is set
     ...    This test ensures that the NO_PROXY env var is populated by clab automatically
     ...    with the relevant addresses and names
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $NO_PROXY"'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $NO_PROXY"'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -116,7 +116,7 @@ Ensure default no_proxy env var is set
 
 Inspect ${lab-name} lab using its name
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -203,7 +203,7 @@ Verify links on host
 
 Ensure "inspect all" outputs IP addresses
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect --all
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -371,7 +371,7 @@ Verify DNS-Options Config
 Verify Exec rc == 0 on containers match
     [Documentation]    Checking that the return code is != 0 if on the exce call not containers match
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd "echo test"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd "echo test"
     Log    ${output}
     Should Contain    ${output}    test
     Should Not Contain    ${output}    Error: filter did not match any containers
@@ -380,7 +380,7 @@ Verify Exec rc == 0 on containers match
 Verify Exec rc != 0 on no containers match
     [Documentation]    Checking that the return code is != 0 if on the exce call not containers match
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
     Log    ${output}
     Should Not Contain    ${output}    test
     Should Contain    ${output}    Error: filter did not match any containers
@@ -403,7 +403,7 @@ Verify l1 node is healthy
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -449,7 +449,7 @@ Verify containerlab version
     [Documentation]    Ensures that 'containerlab version' subcommand runs successfully
     ...                and prints basic version fields.
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} version
+    ...    ${CLAB_BIN} version
     Log    ${output}
     # The command should exit with 0
     Should Be Equal As Integers    ${rc}    0
@@ -463,7 +463,7 @@ Verify containerlab version check
     [Documentation]    Ensures that 'containerlab version check' either says you're on latest version
     ...                or that a new version is available. Also verifies the command succeeds.
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} version check
+    ...    ${CLAB_BIN} version check
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 

@@ -20,7 +20,7 @@ Create Bridge
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${result} =    Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} -d
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} -d
     ...    timeout=800s
     ...    shell=True
     Log    ${result.stderr}
@@ -95,7 +95,7 @@ Verify kind cluster k02 nodes are ready
     Should Be Equal As Integers    ${output}    1
 
 Cleanup
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    rm -rf ${CURDIR}/${lab-name}
     Run    sudo ip l set dev br01 down
     Run    sudo ip l del dev br01

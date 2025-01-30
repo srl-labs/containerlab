@@ -38,7 +38,7 @@ Deploy ${lab-name} lab
     Should Contain    ${output}    mtu 9100    msg=Bridge mtu is not 9100 before lab deployment
 
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -105,7 +105,7 @@ Deploy vxlab link between l1 and l3 with tools cmd
     Should Contain    ${output}    mtu 9100
 
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools vxlan create --remote 172.20.25.23 --link ${l1_host_link} --id 101 --port 14788
+    ...    ${CLAB_BIN} --runtime ${runtime} tools vxlan create --remote 172.20.25.23 --link ${l1_host_link} --id 101 --port 14788
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -126,7 +126,7 @@ Check VxLAN connectivity l1-l3
 
 Deploy vxlab link between l2 and l4 with tools cmd
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools vxlan create --remote 172.20.25.24 --link ${l2_host_link} --id 102
+    ...    ${CLAB_BIN} --runtime ${runtime} tools vxlan create --remote 172.20.25.24 --link ${l2_host_link} --id 102
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -167,7 +167,7 @@ Setup
 
 Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
 
     ${rc}    ${output} =    Run And Return Rc And Output

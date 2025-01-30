@@ -173,7 +173,7 @@ jobs:
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
-        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PY_VER }}
@@ -226,7 +226,7 @@ jobs:
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
-        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PY_VER }}
@@ -289,7 +289,7 @@ jobs:
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
-        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chmod a+x /usr/bin/containerlab
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PY_VER }}

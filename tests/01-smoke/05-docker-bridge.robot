@@ -17,13 +17,13 @@ ${table-delimit}    │
 *** Test Cases ***
 Deploy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    \n--> LOG: Deploy output\n${output}    console=True
     Should Be Equal As Integers    ${rc}    0
 
 Ensure inspect outputs IP addresses
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
     Log    \n--> LOG: Inspect output\n${output}    console=True
     Should Be Equal As Integers    ${rc}    0
 
@@ -45,5 +45,5 @@ Setup
 
 Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}

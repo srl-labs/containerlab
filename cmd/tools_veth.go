@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
@@ -43,8 +44,9 @@ var vethCmd = &cobra.Command{
 }
 
 var vethCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create a veth interface and attach its sides to the specified containers",
+	Use:     "create",
+	Short:   "Create a veth interface and attach its sides to the specified containers",
+	PreRunE: common.CheckAndGetRootPrivs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 

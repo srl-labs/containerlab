@@ -24,7 +24,7 @@ ${runtime-cli-exec-cmd}     sudo docker exec
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
@@ -45,7 +45,7 @@ Verify links in node n1 pre-deploy
 Deploy veth between bridge and n1
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools veth create -d -a clab-${lab-name}-n1:eth1 -b bridge:${bridge-name}:${bridge-n1-iface}
+    ...    ${CLAB_BIN} --runtime ${runtime} tools veth create -d -a clab-${lab-name}-n1:eth1 -b bridge:${bridge-name}:${bridge-n1-iface}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -65,7 +65,7 @@ Verify bridge link
 Deploy veth between n1 and n2
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools veth create -d -a clab-${lab-name}-n1:eth2 -b clab-${lab-name}-n2:eth2
+    ...    ${CLAB_BIN} --runtime ${runtime} tools veth create -d -a clab-${lab-name}-n1:eth2 -b clab-${lab-name}-n2:eth2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -86,7 +86,7 @@ Verify links in node n2 post-deploy
 Deploy veth between n2 and host
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} tools veth create -d -a clab-${lab-name}-n2:eth3 -b host:${host-n1-iface}
+    ...    ${CLAB_BIN} --runtime ${runtime} tools veth create -d -a clab-${lab-name}-n2:eth3 -b host:${host-n1-iface}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -110,5 +110,5 @@ Setup
     Run    sudo ip l add dev ${bridge-name} type bridge
 
 Teardown
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Run    sudo ip l del dev ${bridge-name}

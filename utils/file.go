@@ -156,6 +156,12 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		return err
 	}
 
+	// Change file ownership to user running Containerlab instead of effective UID
+	err = SetUIDAndGID(dst)
+	if err != nil {
+		return err
+	}
+
 	err = out.Chmod(mode)
 	if err != nil {
 		return err
@@ -192,6 +198,12 @@ func CreateFile(file, content string) (err error) {
 	}
 
 	_, err = f.WriteString(content)
+	if err != nil {
+		return err
+	}
+
+	// Change file ownership to user running Containerlab instead of effective UID
+	err = SetUIDAndGID(file)
 	if err != nil {
 		return err
 	}
@@ -362,32 +374,44 @@ func NewHTTPClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-// AdjustFileACLs takes the given fs path, tries to load
-// the access file acl of that path and adds ACL rules
-// rwx for the SUDO_UID and r-x for the SUDO_GID group.
+func getRealUserIDs() (int, int, error) {
+	// Here we check whether SUDO set the SUDO_UID and SUDO_GID variables
+	var userUID, userGID int
+	var err error
+
+	sudoUID, isSudoUIDSet := os.LookupEnv("SUDO_UID")
+	if isSudoUIDSet {
+		userUID, err = strconv.Atoi(sudoUID)
+		if err != nil {
+			return -1, -1, fmt.Errorf("unable to convert SUDO_UID %q to int", sudoUID)
+		}
+		sudoGID, isSudoGIDSet := os.LookupEnv("SUDO_GID")
+		if isSudoGIDSet {
+			userGID, err = strconv.Atoi(sudoGID)
+			if err != nil {
+				return -1, -1, fmt.Errorf("unable to convert SUDO_GID %q to int", sudoGID)
+			}
+		}
+		// Otherwise just check for the real UID/GID (instead of the effective UID)
+	} else {
+		userUID = os.Getuid()
+		userGID = os.Getgid()
+	}
+
+	return userUID, userGID, nil
+}
+
+// AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds ACL rules:
+// rwx for the real UID user and r-x for the real GID group.
 func AdjustFileACLs(fsPath string) error {
-	/// here we trust sudo to set up env variables
-	// a missing SUDO_UID env var indicates the root user
-	// runs clab without sudo
-	uid, isSet := os.LookupEnv("SUDO_UID")
-	if !isSet {
-		// nothing to do, already running as root
+	userUID, userGID, err := getRealUserIDs()
+	if err != nil {
+		return fmt.Errorf("unable to retrieve real user UID and GID: %v", err)
+	}
+
+	if userUID == 0 && userGID == 0 {
+		// We are running as root without sudo, return early
 		return nil
-	}
-
-	gid, isSet := os.LookupEnv("SUDO_GID")
-	if !isSet {
-		return fmt.Errorf("unable to retrieve GID. will only adjust UID for %q", fsPath)
-	}
-
-	iUID, err := strconv.Atoi(uid)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_UID %q to int", uid)
-	}
-
-	iGID, err := strconv.Atoi(gid)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_GID %q to int", gid)
 	}
 
 	// create a new ACL instance
@@ -399,13 +423,13 @@ func AdjustFileACLs(fsPath string) error {
 	}
 
 	// add an entry for the group
-	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_GROUP, uint32(iGID), 5))
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_GROUP, uint32(userGID), 5))
 	if err != nil {
 		return err
 	}
 
 	// add an entry for the User
-	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_USER, uint32(iUID), 7))
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_USER, uint32(userUID), 7))
 	if err != nil {
 		return err
 	}
@@ -425,36 +449,20 @@ func AdjustFileACLs(fsPath string) error {
 	return a.Apply(fsPath, acls.PosixACLDefault)
 }
 
-// SetUIDAndGID changes the UID and GID
-// of the given path recursively to the values taken from
-// SUDO_UID and SUDO_GID. Which should reflect be the non-root
-// user that called clab via sudo.
+// SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from getRealUserIDs,
+// which should reflect the non-root user's UID and GID.
 func SetUIDAndGID(fsPath string) error {
-	// here we trust sudo to set up env variables
-	// a missing SUDO_UID env var indicates the root user
-	// runs clab without sudo
-	uid, isSet := os.LookupEnv("SUDO_UID")
-	if !isSet {
-		// nothing to do, already running as root
+	userUID, userGID, err := getRealUserIDs()
+	if err != nil {
+		return fmt.Errorf("unable to retrieve real user UID and GID: %v", err)
+	}
+
+	if userUID == 0 && userGID == 0 {
+		// We are running as root without sudo, return early
 		return nil
 	}
 
-	gid, isSet := os.LookupEnv("SUDO_GID")
-	if !isSet {
-		return errors.New("failed to lookup SUDO_GID env var")
-	}
-
-	iUID, err := strconv.Atoi(uid)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_UID %q to int", uid)
-	}
-
-	iGID, err := strconv.Atoi(gid)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_GID %q to int", gid)
-	}
-
-	err = recursiveChown(fsPath, iUID, iGID)
+	err = recursiveChown(fsPath, userUID, userGID)
 	if err != nil {
 		return err
 	}

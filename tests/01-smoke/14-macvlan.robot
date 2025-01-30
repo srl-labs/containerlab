@@ -51,7 +51,7 @@ Check macvlan interface on l1
 *** Keywords ***
 Teardown
     # destroy all labs
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -c -a
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -c -a
 
 Setup
     # skipping this test suite for podman for now

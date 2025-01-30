@@ -17,7 +17,7 @@ ${runtime}          docker
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     IF    ${rc} != 0    Fatal Error    Failed to deploy ${lab-name} lab
@@ -47,4 +47,4 @@ Cleanup
     ${contents} =    OperatingSystem.Get File    /tmp/${lab-name}-sros1.log
     Log    ${contents}
 
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup

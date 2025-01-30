@@ -411,3 +411,12 @@ func (*PodmanRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data [
 	log.Infof("WriteToStdinNoWait is not yet implemented for Podman runtime")
 	return nil
 }
+
+func (r *PodmanRuntime) CheckConnection(ctx context.Context) error {
+	_, err := r.connect(ctx)
+	if err != nil {
+		return fmt.Errorf("could not connect to Podman runtime: %w", err)
+	}
+
+	return nil
+}

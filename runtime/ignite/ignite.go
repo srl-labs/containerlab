@@ -476,3 +476,12 @@ func (*IgniteRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data [
 	log.Infof("WriteToStdinNoWait is not yet implemented for Ignite runtime")
 	return nil
 }
+
+func (*IgniteRuntime) CheckConnection(_ context.Context) error {
+	// For now, we only check that KVM path exists and assume Ignite works otherwise
+	if _, err := os.Stat(kvmPath); err != nil {
+		return fmt.Errorf("cannot find %q: %s", kvmPath, err)
+	}
+
+	return nil
+}

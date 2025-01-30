@@ -23,27 +23,27 @@ Start ext-containers
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Verify links in node ext1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext1 --cmd "ip link show dev eth1"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext1 --cmd "ip link show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
 Verify ip and thereby exec on ext1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext1 --cmd "ip address show dev eth1"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext1 --cmd "ip address show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.0.1/24
 
 Inspect the lab using topology file reference
     ${result} =    Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file-name}
     ...    shell=True
     Log    \n--> LOG: Inspect output\n${result.stdout}    console=True
     Log    ${result.stderr}
@@ -55,14 +55,14 @@ Inspect the lab using topology file reference
 
 Verify links in node ext2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext2 --cmd "ip link show dev eth1"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext2 --cmd "ip link show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
 Verify ip and thereby exec on ext2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext2 --cmd "ip address show dev eth1"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec --label clab-node-name\=ext2 --cmd "ip address show dev eth1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    192.168.0.2/24
@@ -82,6 +82,6 @@ Setup
     Skip If    '${runtime}' != 'docker'
 
 Cleanup
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    ${runtime} rm -f ext1
     Run    ${runtime} rm -f ext2

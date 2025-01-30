@@ -56,7 +56,7 @@ var deployCmd = &cobra.Command{
 	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
-	PreRunE:      common.SudoCheck,
+	PreRunE:      common.CheckAndGetRootPrivs,
 	RunE:         deployFn,
 }
 

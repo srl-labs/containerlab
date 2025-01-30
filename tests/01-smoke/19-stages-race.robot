@@ -20,7 +20,7 @@ ${runtime}      docker
 *** Test Cases ***
 Deploy ${lab-name} lab
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     ...    shell=True
 
     Log    ${output.stdout}
@@ -35,11 +35,11 @@ Deploy ${lab-name} lab
 
 *** Keywords ***
 Teardown
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -c -t ${CURDIR}/${lab-file}
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -c -t ${CURDIR}/${lab-file}
 
 Setup
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -c -t ${CURDIR}/${lab-file}
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -c -t ${CURDIR}/${lab-file}
     ...    shell=True
 
     Log    ${output.stdout}

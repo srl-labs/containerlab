@@ -14,6 +14,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/cmd/version"
 	"github.com/srl-labs/containerlab/git"
 	"github.com/srl-labs/containerlab/utils"
@@ -88,6 +89,18 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 
 	// setting output to stderr, so that json outputs can be parsed
 	log.SetOutput(os.Stderr)
+
+	err := common.DropRootPrivs()
+	if err != nil {
+		return err
+	}
+	// Rootless operations only supported for Docker runtime
+	if rt != "" && rt != "docker" {
+		err := common.CheckAndGetRootPrivs(cmd, nil)
+		if err != nil {
+			return err
+		}
+	}
 
 	return getTopoFilePath(cmd)
 }

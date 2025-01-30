@@ -64,6 +64,8 @@ type ContainerRuntime interface {
 	IsHealthy(ctx context.Context, cID string) (bool, error)
 	// Immediately write to the stdin of a container, returns error
 	WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error
+	// CheckConnectivity returns an error if it cannot connect to the runtime, nil otherwise
+	CheckConnection(ctx context.Context) error
 }
 
 type ContainerStatus string

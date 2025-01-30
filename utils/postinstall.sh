@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# this post install script is used to count the number of installations of containerlab
+# this post install script is used for setting up the clab_admins group and to count the number of installations of containerlab
 # when the installation is done via apt or yum package manager
 
 # exit if sh shell is not found
@@ -31,4 +31,10 @@ if type "curl" > /dev/null 2>&1; then
 elif type "wget" > /dev/null 2>&1; then
     wget -T 2 -q -O /dev/null "$REPO_URL" || true
     exit 0
+fi
+
+if [ ! -f /etc/containerlab/suid_setup_done ]; then
+    groupadd -r clab_admins
+    usermod -aG clab_admins "$SUDO_USER"
+    touch /etc/containerlab/suid_setup_done
 fi
