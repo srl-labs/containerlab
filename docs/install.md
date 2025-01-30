@@ -392,7 +392,8 @@ Users who are _not_ part of this group can still execute non-privileged commands
 * save
 * version (no upgrade)
 
-Non-privileged commands are executed as the user running the Containerlab commands. Privileged commands are executed as root during runtime.
+Non-privileged commands are executed as the user running the Containerlab commands. Privileged commands are executed as root during runtime.  
+Non-privileged command execution is only supported when the default container runtime, Docker.
 
 To allow _any user on the host_ to use all Containerlab commands, simply delete the `clab_admins` Unix group.
 
