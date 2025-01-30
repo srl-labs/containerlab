@@ -75,6 +75,7 @@ nav:
       - Inventory: manual/inventory.md
       - Image management: manual/images.md
       - Labs and Codespaces: manual/codespaces.md
+      - VS Code Extension: manual/vsc-extension.md
       - Link Impairments: manual/impairments.md
       - Developers guide:
           - manual/dev/index.md
