@@ -1071,3 +1071,16 @@ func (d *DockerRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data
 
 	return stdin.Conn.Close()
 }
+
+func (d *DockerRuntime) CheckConnection(ctx context.Context) error {
+	_, err := d.Client.Ping(ctx)
+	if err != nil {
+		if errors.Is(err, os.ErrPermission) {
+			return fmt.Errorf("could not connect to the Docker runtime, make sure your user is part of the `docker` group: %w", err)
+		} else {
+			return fmt.Errorf("could not connect to the Docker runtime: %w", err)
+		}
+	}
+
+	return nil
+}

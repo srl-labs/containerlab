@@ -83,6 +83,11 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
 
+	err = c.CheckConnectivity(ctx)
+	if err != nil {
+		return err
+	}
+
 	var containers []runtime.GenericContainer
 	var glabels []*types.GenericFilter
 

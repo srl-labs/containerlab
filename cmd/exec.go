@@ -73,6 +73,11 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	err = c.CheckConnectivity(ctx)
+	if err != nil {
+		return err
+	}
+
 	var filters []*types.GenericFilter
 
 	if len(labelsFilter) != 0 {

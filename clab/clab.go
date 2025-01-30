@@ -1297,3 +1297,15 @@ func (c *CLab) Exec(ctx context.Context, cmds []string, options *ExecOptions) (*
 
 	return resultCollection, nil
 }
+
+// CheckConnectivity checks the connectivity to all container runtimes, returns an error if it encounters any, otherwise nil.
+func (c *CLab) CheckConnectivity(ctx context.Context) error {
+	for _, r := range c.Runtimes {
+		err := r.CheckConnection(ctx)
+		if err != nil {
+			return fmt.Errorf("could not connect to container runtime: %v", err)
+		}
+	}
+
+	return nil
+}
