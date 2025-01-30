@@ -90,9 +90,13 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 	// setting output to stderr, so that json outputs can be parsed
 	log.SetOutput(os.Stderr)
 
+	err := common.DropRootPrivs()
+	if err != nil {
+		return err
+	}
 	// Rootless operations only supported for Docker runtime
-	if rt == "" || rt == "docker" {
-		err := common.DropRootPrivs()
+	if rt != "" && rt != "docker" {
+		err := common.CheckAndGetRootPrivs(cmd, nil)
 		if err != nil {
 			return err
 		}
