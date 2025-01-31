@@ -16,6 +16,8 @@ if [ ! -f /etc/containerlab/suid_setup_done ]; then
     touch /etc/containerlab/suid_setup_done
 fi
 
+echo "Please run the command 'newgrp clab_admins' to ensure that your Containerlab admin group membership is updated. You can check this by running 'groups'."  
+
 # exit at this point if no /etc/apt/sources.list.d/netdevops.list or /etc/yum.repos.d/yum.fury.io_netdevops_.repo is found
 # no need to count these installs
 if [ ! -e /etc/apt/sources.list.d/netdevops.list ] && [ ! -e /etc/yum.repos.d/yum.fury.io_netdevops_.repo ]; then
