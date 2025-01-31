@@ -33,6 +33,8 @@ elif type "wget" > /dev/null 2>&1; then
     exit 0
 fi
 
+chmod 4755 /usr/bin/containerlab
+
 if [ ! -f /etc/containerlab/suid_setup_done ]; then
     groupadd -r clab_admins
     usermod -aG clab_admins "$SUDO_USER"
