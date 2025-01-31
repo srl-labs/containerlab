@@ -48,7 +48,7 @@ func CheckAndGetRootPrivs(_ *cobra.Command, _ []string) error {
 			}
 
 			if !slices.Contains(effUserGroupIDs, clabGroup.Gid) {
-				return fmt.Errorf("user '%v' is not part of containerlab admin group 'clab_admins' (GID %v), which is required to execute this command.\nTo add yourself to this group, run the following command:\n\t$ sudo gpasswd -a %v clab_admins",
+				return fmt.Errorf("user '%v' is not part of containerlab admin group 'clab_admins' (GID %v), which is required to execute this command.\nTo add yourself to this group, run the following command:\n\t$ sudo usermod -aG clab_admins %v",
 					currentEffUser.Username, clabGroup.Gid, currentEffUser.Username)
 			}
 
