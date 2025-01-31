@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VER: "1.22.6"
+  GO_VER: "1.22.11"
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.5.9-insiders-4.52.2-hellt
   GORELEASER_VER: v2.6.1
