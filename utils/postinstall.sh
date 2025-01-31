@@ -14,6 +14,7 @@ if [ ! -f /etc/containerlab/suid_setup_done ]; then
     groupadd -r clab_admins
     usermod -aG clab_admins "$SUDO_USER"
     touch /etc/containerlab/suid_setup_done
+    echo "to use sudo-less operations run 'newgrp clab_admins'"
 fi
 
 # exit at this point if no /etc/apt/sources.list.d/netdevops.list or /etc/yum.repos.d/yum.fury.io_netdevops_.repo is found
