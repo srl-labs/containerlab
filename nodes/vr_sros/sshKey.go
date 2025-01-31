@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -23,7 +24,7 @@ func (s *vrSROS) generateSSHPublicKeysConfig() (io.Reader, error) {
 
 	s.prepareSSHPubKeys(&tplData)
 
-	t, err := template.New("SSHKeys").Parse(SROSSSHKeysTemplate)
+	t, err := template.New("SSHKeys").Funcs(utils.TemplateFuncs).Parse(SROSSSHKeysTemplate)
 	if err != nil {
 		return nil, err
 	}

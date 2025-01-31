@@ -4,9 +4,9 @@
 /configure system security user-params attempts count 64
 
 {{ range $index, $key := .SSHPubKeysRSA }}
-/configure system security user-params local-user user "admin" public-keys rsa rsa-key {{ sub 32 $index }} key-value {{ $key }}
+/configure system security user-params local-user user "admin" public-keys rsa rsa-key {{ subtract 32 $index }} key-value {{ $key }}
 {{ end }}
 
 {{ range $index, $key := .SSHPubKeysECDSA }}
-/configure system security user-params local-user user "admin" public-keys ecdsa ecdsa-key {{ sub 32 $index }} key-value {{ $key }}
+/configure system security user-params local-user user "admin" public-keys ecdsa ecdsa-key {{ subtract 32 $index }} key-value {{ $key }}
 {{ end }}
