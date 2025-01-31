@@ -97,10 +97,6 @@ nfpms:
       postinstall: ./utils/postinstall.sh
     bindir: /usr/bin
     contents:
-      - src: /usr/bin/containerlab
-        dst: /usr/bin/containerlab
-        file_info:
-          mode: 4755 # SUID bit set
       - src: ./lab-examples
         dst: /etc/containerlab/lab-examples
       - src: /usr/bin/containerlab
