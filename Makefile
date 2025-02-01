@@ -17,36 +17,52 @@ all: build
 build:
 	mkdir -p $(BIN_DIR)
 	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
+	sudo chown root:root $(BINARY)
+	sudo chmod 4755 $(BINARY)
 
 build-linux-arm64:
 	mkdir -p $(BIN_DIR)
 	GOOS=linux GOARCH=arm64 go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
+	sudo chown root:root $(BINARY)
+	sudo chmod 4755 $(BINARY)
 
 build-linux-amd64:
 	mkdir -p $(BIN_DIR)
 	GOOS=linux GOARCH=amd64 go build -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
+	sudo chown root:root $(BINARY)
+	sudo chmod 4755 $(BINARY)
 
 build-with-cover:
 	mkdir -p $(BIN_DIR)
 	go build -cover -o $(BINARY) -ldflags="$(LDFLAGS)" main.go
+	sudo chown root:root $(BINARY)
+	sudo chmod 4755 $(BINARY)
 
 build-debug:
 	mkdir -p $(BIN_DIR)
 	go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
+	sudo chown root:root $(BINARY)
+	sudo chmod 4755 $(BINARY)
 
 build-dlv-debug:
 	mkdir -p $(BIN_DIR)
 	go build -o $(BINARY) -gcflags=all="-N -l" main.go
+	sudo chown root:root $(BINARY)
+	sudo chmod 4755 $(BINARY)
 
 
 build-with-podman:
 	mkdir -p $(BIN_DIR)
 	CGO_ENABLED=0 go build -o $(BINARY) -ldflags="$(LDFLAGS)" -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
 	chmod a+x $(BINARY)
+	sudo chown root:root $(BINARY)
+	sudo chmod 4755 $(BINARY)
 
 build-with-podman-debug:
 	mkdir -p $(BIN_DIR)
 	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -cover -trimpath -tags "podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp" main.go
+	sudo chown root:root $(BINARY)
+	sudo chmod 4755 $(BINARY)
 
 convert-coverage:
 	go tool covdata textfmt -i=/tmp/clab-tests/coverage -o coverage.out
