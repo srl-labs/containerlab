@@ -164,6 +164,8 @@ func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime
 		ifaceDetails.InterfaceName = iface.Attrs().Name
 		ifaceDetails.InterfaceAlias = iface.Attrs().Alias
 		ifaceDetails.InterfaceMTU = iface.Attrs().MTU
+		ifaceDetails.InterfaceMAC = iface.Attrs().HardwareAddr.String()
+		ifaceDetails.InterfaceIndex = iface.Attrs().Index
 		ifaceDetails.InterfaceType = iface.Type()
 		ifaceDetails.InterfaceState = iface.Attrs().OperState.String()
 
@@ -187,6 +189,8 @@ func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) []tableW
 				container.ContainerName,
 				iface.InterfaceName,
 				ifaceAlias,
+				iface.InterfaceMAC,
+				iface.InterfaceIndex,
 				iface.InterfaceMTU,
 				iface.InterfaceType,
 				iface.InterfaceState,
@@ -263,8 +267,10 @@ func printContainerInterfaces(ctx context.Context, containers []clabRuntime.Gene
 
 		header := tableWriter.Row{
 			"Container Name",
-			"Interface Name",
-			"Interface Alias",
+			"Name",
+			"Alias",
+			"MAC",
+			"Index",
 			"MTU",
 			"Type",
 			"State",

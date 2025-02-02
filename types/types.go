@@ -289,6 +289,8 @@ type ContainerDetails struct {
 type ContainerInterfaceDetails struct {
 	InterfaceName  string `json:"name"`
 	InterfaceAlias string `json:"alias"`
+	InterfaceMAC   string `json:"mac"`
+	InterfaceIndex int    `json:"ifindex"`
 	InterfaceMTU   int    `json:"mtu"`
 	InterfaceType  string `json:"type"`
 	InterfaceState string `json:"state"`
