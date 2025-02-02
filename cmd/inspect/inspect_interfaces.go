@@ -172,7 +172,7 @@ func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime
 	return &containerInterfaces, nil
 }
 
-func interfacestoTableData(contInterfaces []*types.ContainerInterfaces) []tableWriter.Row {
+func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) []tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0)
 	for _, container := range contInterfaces {
 		for _, iface := range container.Interfaces {
@@ -248,7 +248,7 @@ func printContainerInterfaces(ctx context.Context, containers []clabRuntime.Gene
 		return nil
 
 	case "table":
-		tabData := interfacestoTableData(contInterfaces)
+		tabData := interfacesToTableData(contInterfaces)
 		table := tableWriter.NewWriter()
 		table.SetOutputMirror(os.Stdout)
 		table.SetStyle(tableWriter.StyleRounded)
