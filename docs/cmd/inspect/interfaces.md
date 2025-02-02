@@ -1,4 +1,4 @@
-# inspect interfaces subcommand
+# Inspect interfaces subcommand
 
 ### Description
 
@@ -37,7 +37,7 @@ Currently, the only other format option is `json`, which will produce the output
 
 #### List all nodes' network interfaces in a lab
 
-```bash
+```
 ❯ clab inspect interfaces
 ╭─────────────────────────┬────────────────┬─────────────────┬────────┬─────────╮
 │      Container Name     │ Interface Name │ Interface Alias │  Type  │  State  │
@@ -68,7 +68,7 @@ Currently, the only other format option is `json`, which will produce the output
 
 #### List the network interfaces of a specific node in a lab
 
-```bash
+```
 ❯ containerlab inspect interfaces --node clab-srlceos-ceos
 ╭───────────────────────┬────────────────┬─────────────────┬────────┬─────────╮
 │     Container Name    │ Interface Name │ Interface Alias │  Type  │  State  │
