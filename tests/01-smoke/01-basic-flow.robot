@@ -232,8 +232,8 @@ Ensure "inspect all" outputs IP addresses
     Run Keyword    Match IPv6 Address    ${ipv6}
 
 Verify "inspect interfaces" contains the expected output
-${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} inspect interfaces
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect interfaces -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
