@@ -2,7 +2,8 @@
 
 ### Description
 
-The `inspect interfaces` subcommand provides information about the interfaces of deployed containers of a deployed lab.
+The `inspect interfaces` subcommand provides information about the network interfaces of deployed nodes of a deployed lab.
+The subcommand gathers information directly from deployed containers, and displays information about their operational state, network interface type, and if applicable, the applied network interface alias.
 
 ### Usage
 
@@ -34,7 +35,7 @@ Currently, the only other format option is `json`, which will produce the output
 
 ### Examples
 
-#### List all interfaces in a lab
+#### List all nodes' network interfaces in a lab
 
 ```bash
 ❯ clab inspect interfaces
@@ -65,7 +66,7 @@ Currently, the only other format option is `json`, which will produce the output
 ├─────────────────────────┼────────────────┼─────────────────┼────────┼─────────┤
 ```
 
-#### List the interfaces of a specific node in a lab
+#### List the network interfaces of a specific node in a lab
 
 ```bash
 ❯ containerlab inspect interfaces --node clab-srlceos-ceos
@@ -78,7 +79,7 @@ Currently, the only other format option is `json`, which will produce the output
 ╰───────────────────────┴────────────────┴─────────────────┴────────┴─────────╯
 ```
 
-#### List all interfaces in a lab in JSON format
+#### List all nodes' network interfaces in a lab in JSON format
 
 ```bash
 ❯ clab inspect interfaces --format json
