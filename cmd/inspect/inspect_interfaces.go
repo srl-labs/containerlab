@@ -33,7 +33,7 @@ var (
 var inspectInterfacesCmd = &cobra.Command{
 	Use:     "interfaces",
 	Short:   "inspect interfaces of one or multiple nodes in a lab",
-	Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect-interfaces/",
+	Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
 	Aliases: []string{"int", "intf"},
 	RunE:    inspectInterfacesFn,
 	PreRunE: common.CheckAndGetRootPrivs,
