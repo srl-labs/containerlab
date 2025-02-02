@@ -39,7 +39,9 @@
                 "redhat.vscode-yaml",
                 // markdown
                 "yzhang.markdown-all-in-one",
-                "davidanson.vscode-markdownlint"
+                "davidanson.vscode-markdownlint",
+                // containerlab
+                "srl-labs.vscode-containerlab"
             ]
         }
     },
