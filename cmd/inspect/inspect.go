@@ -55,6 +55,10 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
+	if inspectFormat != "table" && inspectFormat != "json" {
+		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", inspectFormat)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

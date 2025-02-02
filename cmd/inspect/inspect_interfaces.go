@@ -52,6 +52,10 @@ func inspectInterfacesFn(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
+	if interfacesFormat != "table" && interfacesFormat != "json" {
+		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", interfacesFormat)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -131,8 +135,6 @@ func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime
 		containerInterfaces.ContainerName = container.Names[0]
 	}
 
-	containerInterfaces.Interfaces = make([]*types.ContainerInterfaceDetails, 0)
-
 	// retrieve the containers NSPath
 	nodeNsPath, err := rt.GetNSPath(ctx, containerInterfaces.ContainerName)
 	if err != nil {
@@ -159,6 +161,8 @@ func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime
 		return nil, fmt.Errorf("unable to fetch network interfaces: %w", err)
 	}
 
+	containerInterfaces.Interfaces = make([]*types.ContainerInterfaceDetails, 0, len(interfaces))
+
 	for _, iface := range interfaces {
 		ifaceDetails := types.ContainerInterfaceDetails{}
 		ifaceDetails.InterfaceName = iface.Attrs().Name
@@ -168,14 +172,16 @@ func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime
 		ifaceDetails.InterfaceIndex = iface.Attrs().Index
 		ifaceDetails.InterfaceType = iface.Type()
 		ifaceDetails.InterfaceState = iface.Attrs().OperState.String()
+		log.Tracef("Interface info: %+v", ifaceDetails)
 
 		containerInterfaces.Interfaces = append(containerInterfaces.Interfaces, &ifaceDetails)
 	}
+	log.Debugf("Fetched %v interfaces for %v", len(interfaces), containerInterfaces.ContainerName)
 
 	return &containerInterfaces, nil
 }
 
-func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) []tableWriter.Row {
+func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) *[]tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0)
 	for _, container := range contInterfaces {
 		for _, iface := range container.Interfaces {
@@ -199,12 +205,10 @@ func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) []tableW
 			tabData = append(tabData, tabRow)
 		}
 	}
-	return tabData
+	return &tabData
 }
 
 func printContainerInterfaces(ctx context.Context, containers []clabRuntime.GenericContainer, format string) error {
-	contInterfaces := make([]*types.ContainerInterfaces, 0, len(containers))
-
 	// Get the runtime initializer.
 	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 	if err != nil {
@@ -227,22 +231,31 @@ func printContainerInterfaces(ctx context.Context, containers []clabRuntime.Gene
 	}
 
 	// Gather interface information for each container
+	contInterfaces := make([]*types.ContainerInterfaces, 0, len(containers))
+
 	for _, cont := range containers {
 		cIfs, err := getContainerInterfaces(ctx, rt, cont)
 		if err != nil {
 			return fmt.Errorf("error getting container interfaces for %v: %w", cIfs.ContainerName, err)
 		}
 
-		sort.Slice(cIfs.Interfaces, func(i, j int) bool {
-			return cIfs.Interfaces[i].InterfaceName < cIfs.Interfaces[j].InterfaceName
-		})
-
+		if len(cIfs.Interfaces) > 0 {
+			sort.Slice(cIfs.Interfaces, func(i, j int) bool {
+				return cIfs.Interfaces[i].InterfaceName < cIfs.Interfaces[j].InterfaceName
+			})
+		} else {
+			log.Warnf("No interfaces found for container %v", cIfs.ContainerName)
+		}
 		contInterfaces = append(contInterfaces, cIfs)
 	}
 
-	sort.Slice(contInterfaces, func(i, j int) bool {
-		return contInterfaces[i].ContainerName < contInterfaces[j].ContainerName
-	})
+	if len(contInterfaces) == len(containers) {
+		sort.Slice(contInterfaces, func(i, j int) bool {
+			return contInterfaces[i].ContainerName < contInterfaces[j].ContainerName
+		})
+	} else {
+		return fmt.Errorf("could not retrieve retrieve container interfaces for all containers, expected %v, got %v", len(containers), len(contInterfaces))
+	}
 
 	switch format {
 	case "json":
@@ -254,7 +267,6 @@ func printContainerInterfaces(ctx context.Context, containers []clabRuntime.Gene
 		return nil
 
 	case "table":
-		tabData := interfacesToTableData(contInterfaces)
 		table := tableWriter.NewWriter()
 		table.SetOutputMirror(os.Stdout)
 		table.SetStyle(tableWriter.StyleRounded)
@@ -297,7 +309,8 @@ func printContainerInterfaces(ctx context.Context, containers []clabRuntime.Gene
 			},
 		})
 
-		table.AppendRows(tabData)
+		tabData := interfacesToTableData(contInterfaces)
+		table.AppendRows(*tabData)
 
 		table.Render()
 
