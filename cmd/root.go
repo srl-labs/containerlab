@@ -124,7 +124,8 @@ func getTopoFilePath(cmd *cobra.Command) error { // skipcq: GO-R1005
 			}
 		case utils.IsHttpURL(common.Topo, true):
 			// canonize the passed topo as URL by adding https schema if it was missing
-			if !strings.HasPrefix(common.Topo, "http://") && !strings.HasPrefix(common.Topo, "https://") {
+			if !strings.HasPrefix(common.Topo, "http://") &&
+				!strings.HasPrefix(common.Topo, "https://") {
 				common.Topo = "https://" + common.Topo
 			}
 		}

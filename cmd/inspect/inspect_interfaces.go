@@ -122,7 +122,9 @@ func inspectInterfacesFn(_ *cobra.Command, _ []string) error {
 	return err
 }
 
-func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime, container clabRuntime.GenericContainer) (*types.ContainerInterfaces, error) {
+func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime,
+	container clabRuntime.GenericContainer,
+) (*types.ContainerInterfaces, error) {
 	containerInterfaces := types.ContainerInterfaces{}
 
 	if len(container.Names) > 0 {
@@ -282,7 +284,8 @@ func printContainerInterfaces(ctx context.Context, containers []clabRuntime.Gene
 					default:
 						return text.Colors{text.FgYellow}.Sprint(state)
 					}
-				}},
+				},
+			},
 		})
 
 		table.AppendRows(tabData)

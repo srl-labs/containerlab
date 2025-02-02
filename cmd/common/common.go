@@ -24,5 +24,5 @@ var NodeFilter []string
 // lab Name.
 var Name string
 
-// Use graceful shutdown
+// Use graceful shutdown.
 var Graceful bool
