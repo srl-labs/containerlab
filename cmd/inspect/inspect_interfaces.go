@@ -144,15 +144,18 @@ func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime
 	// Get handle for NS
 	nsHandle, err := netlinkNs.GetFromPath(nodeNsPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to get NS handle: %w", err)
 	}
 
 	netlinkHandle, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to enter NS: %w", err)
 	}
 
 	interfaces, err := netlinkHandle.LinkList()
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch network interfaces: %w", err)
+	}
 
 	for _, iface := range interfaces {
 		ifaceDetails := types.ContainerInterfaceDetails{}
@@ -168,7 +171,7 @@ func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime
 }
 
 func interfacestoTableData(contInterfaces []*types.ContainerInterfaces) []tableWriter.Row {
-	tabData := make([]tableWriter.Row, 0, 0)
+	tabData := make([]tableWriter.Row, 0)
 	for _, container := range contInterfaces {
 		for _, iface := range container.Interfaces {
 			tabRow := tableWriter.Row{}
