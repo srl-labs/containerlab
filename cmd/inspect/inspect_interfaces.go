@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -135,30 +134,42 @@ func getContainerInterfaces(ctx context.Context, rt clabRuntime.ContainerRuntime
 		containerInterfaces.ContainerName = container.Names[0]
 	}
 
-	// retrieve the containers NSPath
+	// Retrieve the path to the container network NS
 	nodeNsPath, err := rt.GetNSPath(ctx, containerInterfaces.ContainerName)
 	if err != nil {
 		return nil, err
 	}
 
-	// Lock the OS Thread so we don't accidentally switch namespaces
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	// Get handle for NS
-	nsHandle, err := netlinkNs.GetFromPath(nodeNsPath)
-	if err != nil {
-		return nil, fmt.Errorf("unable to get NS handle: %w", err)
+	// Get network NS handle
+	var containerNsHandle netlinkNs.NsHandle
+	if nodeNsPath != "" {
+		// Get the handle for the container network NS
+		containerNsHandle, err = netlinkNs.GetFromPath(nodeNsPath)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get container network NS handle: %w", err)
+		}
+	} else if rt.GetName() == "podman" {
+		// Network NS path is empty and the runtime is Podman -> host network mode
+		// Manually get the handle for the root network namespace
+		containerNsHandle, err = netlinkNs.Get()
+		if err != nil {
+			return nil, fmt.Errorf("unable to get root network NS handle: %w", err)
+		}
+	} else {
+		log.Warnf("Container %v has no namespace set, skipping!", containerInterfaces.ContainerName)
+		containerInterfaces.Interfaces = make([]*types.ContainerInterfaceDetails, 0)
+		return &containerInterfaces, nil
 	}
 
-	netlinkHandle, err := netlink.NewHandleAt(nsHandle)
+	// Get Netlink handle in container network NS
+	netlinkHandle, err := netlink.NewHandleAt(containerNsHandle)
 	if err != nil {
-		return nil, fmt.Errorf("unable to enter NS: %w", err)
+		return nil, fmt.Errorf("unable to enter container network NS: %w", err)
 	}
 
 	interfaces, err := netlinkHandle.LinkList()
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch network interfaces: %w", err)
+		return nil, fmt.Errorf("unable to list network interfaces: %w", err)
 	}
 
 	containerInterfaces.Interfaces = make([]*types.ContainerInterfaceDetails, 0, len(interfaces))
@@ -209,16 +220,15 @@ func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) *[]table
 }
 
 func printContainerInterfaces(ctx context.Context, containers []clabRuntime.GenericContainer, format string) error {
-	// Get the runtime initializer.
 	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 	if err != nil {
 		return err
 	}
 
-	// init the runtime
+	// Get the container runtime
 	rt := rinit()
 
-	// init runtime with timeout
+	// Init container runtime
 	err = rt.Init(
 		clabRuntime.WithConfig(
 			&clabRuntime.RuntimeConfig{
