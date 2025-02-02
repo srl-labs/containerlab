@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package cmd
+package inspect
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -31,8 +32,8 @@ var (
 	wide          bool
 )
 
-// inspectCmd represents the inspect command.
-var inspectCmd = &cobra.Command{
+// InspectCmd represents the inspect command.
+var InspectCmd = &cobra.Command{
 	Use:     "inspect",
 	Short:   "inspect lab details",
 	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
@@ -41,17 +42,15 @@ var inspectCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(inspectCmd)
-
-	inspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
-	inspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json]")
-	inspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
-	inspectCmd.Flags().BoolVarP(&wide, "wide", "w", false,
+	InspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers")
+	InspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json]")
+	InspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
+	InspectCmd.Flags().BoolVarP(&wide, "wide", "w", false,
 		"also more details about a lab and its nodes")
 }
 
 func inspectFn(_ *cobra.Command, _ []string) error {
-	if name == "" && topo == "" && !all {
+	if common.Name == "" && common.Topo == "" && !all {
 		fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
 		return nil
 	}
@@ -60,21 +59,21 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	defer cancel()
 
 	opts := []clab.ClabOption{
-		clab.WithTimeout(timeout),
-		clab.WithRuntime(rt,
+		clab.WithTimeout(common.Timeout),
+		clab.WithRuntime(common.Runtime,
 			&runtime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: graceful,
+				Debug:            common.Debug,
+				Timeout:          common.Timeout,
+				GracefulShutdown: common.Graceful,
 			},
 		),
-		clab.WithDebug(debug),
+		clab.WithDebug(common.Debug),
 	}
 
-	if topo != "" {
+	if common.Topo != "" {
 		opts = append(opts,
-			clab.WithTopoPath(topo, varsFile),
-			clab.WithNodeFilter(nodeFilter),
+			clab.WithTopoPath(common.Topo, common.VarsFile),
+			clab.WithNodeFilter(common.NodeFilter),
 		)
 	}
 
@@ -92,17 +91,17 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	var glabels []*types.GenericFilter
 
 	// if the topo file is available, use it
-	if topo != "" {
+	if common.Topo != "" {
 		containers, err = c.ListNodesContainers(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %s", err)
 		}
 	} else {
 		// or when just the name is given
-		if name != "" {
+		if common.Name != "" {
 			// if name is set, filter for name
 			glabels = []*types.GenericFilter{{
-				FilterType: "label", Match: name,
+				FilterType: "label", Match: common.Name,
 				Field: labels.Containerlab, Operator: "=",
 			}}
 		} else {
@@ -132,7 +131,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	err = printContainerInspect(containers, inspectFormat)
+	err = PrintContainerInspect(containers, inspectFormat)
 	return err
 }
 
@@ -191,7 +190,7 @@ func getTopologyPath(p string) (string, error) {
 	return p, nil
 }
 
-func printContainerInspect(containers []runtime.GenericContainer, format string) error {
+func PrintContainerInspect(containers []runtime.GenericContainer, format string) error {
 	contDetails := make([]types.ContainerDetails, 0, len(containers))
 
 	// Gather details of each container

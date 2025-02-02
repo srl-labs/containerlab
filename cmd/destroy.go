@@ -21,8 +21,8 @@ import (
 )
 
 var (
+	all         bool
 	cleanup     bool
-	graceful    bool
 	keepMgmtNet bool
 )
 
@@ -39,13 +39,13 @@ var destroyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(destroyCmd)
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
-	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false,
+	destroyCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
 		"attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
-	destroyCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	destroyCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 }
 
@@ -61,7 +61,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 
 	switch {
 	case !all:
-		cnts, err := listContainers(ctx, topo)
+		cnts, err := listContainers(ctx, common.Topo)
 		if err != nil {
 			return err
 		}
@@ -75,7 +75,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			filepath.Dir(cnts[0].Labels[labels.NodeLabDir])
 
 	case all:
-		containers, err := listContainers(ctx, topo)
+		containers, err := listContainers(ctx, common.Topo)
 		if err != nil {
 			return err
 		}
@@ -93,17 +93,17 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	log.Debugf("We got the following topos struct for destroy: %+v", topos)
 	for topo, labdir := range topos {
 		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithTopoPath(topo, varsFile),
-			clab.WithNodeFilter(nodeFilter),
-			clab.WithRuntime(rt,
+			clab.WithTimeout(common.Timeout),
+			clab.WithTopoPath(topo, common.VarsFile),
+			clab.WithNodeFilter(common.NodeFilter),
+			clab.WithRuntime(common.Runtime,
 				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
+					Debug:            common.Debug,
+					Timeout:          common.Timeout,
+					GracefulShutdown: common.Graceful,
 				},
 			),
-			clab.WithDebug(debug),
+			clab.WithDebug(common.Debug),
 			// during destroy we don't want to check bind paths
 			// as it is irrelevant for this command.
 			clab.WithSkippedBindsPathsCheck(),
@@ -179,14 +179,14 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 // otherwise lists all containerlab containers.
 func listContainers(ctx context.Context, topo string) ([]runtime.GenericContainer, error) {
 	runtimeConfig := &runtime.RuntimeConfig{
-		Debug:            debug,
-		Timeout:          timeout,
-		GracefulShutdown: graceful,
+		Debug:            common.Debug,
+		Timeout:          common.Timeout,
+		GracefulShutdown: common.Graceful,
 	}
 
 	opts := []clab.ClabOption{
-		clab.WithRuntime(rt, runtimeConfig),
-		clab.WithTimeout(timeout),
+		clab.WithRuntime(common.Runtime, runtimeConfig),
+		clab.WithTimeout(common.Timeout),
 		// when listing containers we don't care if binds are accurate
 		// since this function is used in the destroy process
 		clab.WithSkippedBindsPathsCheck(),
@@ -202,7 +202,7 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 
 	// when topo file is provided, filter containers by lab name
 	if topo != "" {
-		opts = append(opts, clab.WithTopoPath(topo, varsFile))
+		opts = append(opts, clab.WithTopoPath(topo, common.VarsFile))
 	}
 
 	c, err := clab.NewContainerLab(opts...)

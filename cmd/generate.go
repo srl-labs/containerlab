@@ -56,7 +56,7 @@ var generateCmd = &cobra.Command{
 	Aliases: []string{"gen"},
 	Short:   "generate a Clos topology file, based on provided flags",
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if name == "" {
+		if common.Name == "" {
 			return errors.New("provide a lab name with --name flag")
 		}
 		licenses, err := parseFlag(kind, license)
@@ -77,7 +77,7 @@ var generateCmd = &cobra.Command{
 		}
 		log.Debugf("parsed nodes definitions: %+v", nodeDefs)
 
-		b, err := generateTopologyConfig(name, mgmtNetName, mgmtIPv4Subnet.String(),
+		b, err := generateTopologyConfig(common.Name, mgmtNetName, mgmtIPv4Subnet.String(),
 			mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
 		if err != nil {
 			return err
@@ -96,13 +96,13 @@ var generateCmd = &cobra.Command{
 			}
 			reconfigure = true
 			if file == "" {
-				file = fmt.Sprintf("%s.clab.yml", name)
+				file = fmt.Sprintf("%s.clab.yml", common.Name)
 				err = utils.CreateFile(file, string(b))
 				if err != nil {
 					return err
 				}
 			}
-			topo = file
+			common.Topo = file
 			return deployCmd.RunE(deployCmd, nil)
 		}
 		if file == "" {
