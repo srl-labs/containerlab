@@ -28,6 +28,8 @@ WSL takes the central role in running containerlabs on Windows. Luckily, setting
 
 /// admonition | Windows and WSL version
 The following instructions were tested on Windows 11 and WSL2. On Windows 10 some commands may be different, but the general idea should be the same.
+
+To check what WSL version you have, run `wsl -v` in your windows terminal.
 ///
 
 First things first, open up a terminal and list the running WSL virtual machines and their versions:
