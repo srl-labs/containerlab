@@ -285,6 +285,20 @@ type ContainerDetails struct {
 	Owner       string                `json:"owner,omitempty"`
 }
 
+// ContainerInterfaceDetails contains information about a specific container's network interfaces.
+type ContainerInterfaceDetails struct {
+	InterfaceName  string `json:"name,omitempty"`
+	InterfaceAlias string `json:"alias,omitempty"`
+	InterfaceType  string `json:"type,omitempty"`
+	InterfaceState string `json:"state,omitempty"`
+}
+
+// ContainerInterfaces contains information about a container's network interfaces.
+type ContainerInterfaces struct {
+	ContainerName string                       `json:"name,omitempty"`
+	Interfaces    []*ContainerInterfaceDetails `json:"interfaces"`
+}
+
 // GenericPortBinding represents a port binding.
 type GenericPortBinding struct {
 	HostIP        string `json:"host_ip,omitempty"`
