@@ -287,15 +287,16 @@ type ContainerDetails struct {
 
 // ContainerInterfaceDetails contains information about a specific container's network interfaces.
 type ContainerInterfaceDetails struct {
-	InterfaceName  string `json:"name,omitempty"`
-	InterfaceAlias string `json:"alias,omitempty"`
-	InterfaceType  string `json:"type,omitempty"`
-	InterfaceState string `json:"state,omitempty"`
+	InterfaceName  string `json:"name"`
+	InterfaceAlias string `json:"alias"`
+	InterfaceMTU   int    `json:"mtu"`
+	InterfaceType  string `json:"type"`
+	InterfaceState string `json:"state"`
 }
 
 // ContainerInterfaces contains information about a container's network interfaces.
 type ContainerInterfaces struct {
-	ContainerName string                       `json:"name,omitempty"`
+	ContainerName string                       `json:"name"`
 	Interfaces    []*ContainerInterfaceDetails `json:"interfaces"`
 }
 
