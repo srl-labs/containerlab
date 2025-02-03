@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -48,24 +49,24 @@ func execFn(_ *cobra.Command, _ []string) error {
 	// exec can work with or without a topology file
 	// when topology file is provided we need to parse it
 	// when topo file is not provided, we rely on labels to perform the filtering
-	if topo != "" {
-		opts = append(opts, clab.WithTopoPath(topo, varsFile))
+	if common.Topo != "" {
+		opts = append(opts, clab.WithTopoPath(common.Topo, common.VarsFile))
 	}
 
 	opts = append(opts,
-		clab.WithTimeout(timeout),
-		clab.WithRuntime(rt,
+		clab.WithTimeout(common.Timeout),
+		clab.WithRuntime(common.Runtime,
 			&runtime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: graceful,
+				Debug:            common.Debug,
+				Timeout:          common.Timeout,
+				GracefulShutdown: common.Graceful,
 			},
 		),
-		clab.WithDebug(debug),
+		clab.WithDebug(common.Debug),
 	)
 
-	if name != "" {
-		opts = append(opts, clab.WithLabName(name))
+	if common.Name != "" {
+		opts = append(opts, clab.WithLabName(common.Name))
 	}
 
 	c, err := clab.NewContainerLab(opts...)
@@ -84,7 +85,7 @@ func execFn(_ *cobra.Command, _ []string) error {
 		filters = types.FilterFromLabelStrings(labelsFilter)
 	}
 
-	if topo != "" {
+	if common.Topo != "" {
 		labFilter := []string{fmt.Sprintf("%s=%s", labels.Containerlab, c.Config.Name)}
 		filters = append(filters, types.FilterFromLabelStrings(labFilter)...)
 	}

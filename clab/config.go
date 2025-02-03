@@ -557,6 +557,7 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 
 	cfg.Labels[labels.Containerlab] = c.Config.Name
 	cfg.Labels[labels.NodeName] = cfg.ShortName
+	cfg.Labels[labels.LongName] = cfg.LongName
 	cfg.Labels[labels.NodeKind] = cfg.Kind
 	cfg.Labels[labels.NodeType] = cfg.NodeType
 	cfg.Labels[labels.NodeGroup] = cfg.Group

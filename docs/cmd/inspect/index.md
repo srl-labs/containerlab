@@ -1,4 +1,4 @@
-# inspect command
+# Inspect command
 
 ### Description
 

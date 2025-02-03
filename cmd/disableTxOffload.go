@@ -27,15 +27,15 @@ var disableTxOffloadCmd = &cobra.Command{
 		ctx := context.Background()
 
 		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithRuntime(rt,
+			clab.WithTimeout(common.Timeout),
+			clab.WithRuntime(common.Runtime,
 				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
+					Debug:            common.Debug,
+					Timeout:          common.Timeout,
+					GracefulShutdown: common.Graceful,
 				},
 			),
-			clab.WithDebug(debug),
+			clab.WithDebug(common.Debug),
 		}
 		c, err := clab.NewContainerLab(opts...)
 		if err != nil {

@@ -4,6 +4,7 @@ const (
 	// label names constants.
 	Containerlab  = "containerlab"
 	NodeName      = "clab-node-name"
+	LongName      = "clab-node-longname"
 	NodeKind      = "clab-node-kind"
 	NodeType      = "clab-node-type"
 	NodeGroup     = "clab-node-group"

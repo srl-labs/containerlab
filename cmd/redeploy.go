@@ -23,17 +23,17 @@ func init() {
 
 	// Add destroy flags
 	redeployCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
-	redeployCmd.Flags().BoolVarP(&graceful, "graceful", "", false,
+	redeployCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
 		"attempt to stop containers before removing")
 	redeployCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
 	redeployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers creating/deleting nodes")
 	redeployCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
-	redeployCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	redeployCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 
 	// Add deploy flags
-	redeployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
+	redeployCmd.Flags().BoolVarP(&common.Graph, "graph", "g", false, "generate topology graph")
 	redeployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	redeployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	redeployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")

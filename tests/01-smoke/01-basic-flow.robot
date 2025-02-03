@@ -231,6 +231,18 @@ Ensure "inspect all" outputs IP addresses
     ${ipv6} =    String.Strip String    ${data}[6]
     Run Keyword    Match IPv6 Address    ${ipv6}
 
+Verify "inspect interfaces" contains the expected output
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect interfaces -t ${CURDIR}/${lab-file}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    # Check for presence of node name, interface, interface type and operational state
+    Should Contain    ${output}    clab-${lab-name}-l2
+    Should Contain    ${output}    eth2
+    Should Contain    ${output}    veth
+    Should Contain    ${output}    up
+
 Verify bind mount in l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-2-linux-nodes-l1 cat 01-test.txt

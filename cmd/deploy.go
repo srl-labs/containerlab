@@ -16,6 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/cmd/inspect"
 	"github.com/srl-labs/containerlab/cmd/version"
 	"github.com/srl-labs/containerlab/runtime"
 )
@@ -43,9 +44,6 @@ var exportTemplate string
 
 var deployFormat string
 
-// subset of nodes to work with.
-var nodeFilter []string
-
 // skipLabDirFileACLs skips provisioning of extended File ACLs for the Lab directory.
 var skipLabDirFileACLs bool
 
@@ -62,7 +60,7 @@ var deployCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(deployCmd)
-	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
+	deployCmd.Flags().BoolVarP(&common.Graph, "graph", "g", false, "generate topology graph")
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
@@ -74,7 +72,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
 	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "",
 		"", "template file for topology data export")
-	deployCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	deployCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
 		"skip the lab directory extended ACLs provisioning")
@@ -92,23 +90,23 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	setupCTRLCHandler(cancel)
 
 	opts := []clab.ClabOption{
-		clab.WithTimeout(timeout),
-		clab.WithTopoPath(topo, varsFile),
-		clab.WithNodeFilter(nodeFilter),
-		clab.WithRuntime(rt,
+		clab.WithTimeout(common.Timeout),
+		clab.WithTopoPath(common.Topo, common.VarsFile),
+		clab.WithNodeFilter(common.NodeFilter),
+		clab.WithRuntime(common.Runtime,
 			&runtime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: graceful,
+				Debug:            common.Debug,
+				Timeout:          common.Timeout,
+				GracefulShutdown: common.Graceful,
 			},
 		),
 		clab.WithDependencyManager(dependency_manager.NewDependencyManager()),
-		clab.WithDebug(debug),
+		clab.WithDebug(common.Debug),
 	}
 
 	// process optional settings
-	if name != "" {
-		opts = append(opts, clab.WithLabName(name))
+	if common.Name != "" {
+		opts = append(opts, clab.WithLabName(common.Name))
 	}
 	if mgmtNetName != "" {
 		opts = append(opts, clab.WithManagementNetworkName(mgmtNetName))
@@ -135,7 +133,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 
 	deploymentOptions.SetExportTemplate(exportTemplate).
 		SetReconfigure(reconfigure).
-		SetGraph(graph).
+		SetGraph(common.Graph).
 		SetSkipPostDeploy(skipPostDeploy).
 		SetSkipLabDirFileACLs(skipLabDirFileACLs)
 
@@ -148,7 +146,7 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	version.NewVerNotification(vCh)
 
 	// print table summary
-	return printContainerInspect(containers, deployFormat)
+	return inspect.PrintContainerInspect(containers, deployFormat)
 }
 
 // setupCTRLCHandler sets-up the handler for CTRL-C

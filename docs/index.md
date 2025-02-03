@@ -82,7 +82,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **Multi-vendor and open**  
     Although being kick-started by Nokia engineers, containerlab doesn't take sides and supports NOSes from other vendors and opensource projects.
 * **Lab orchestration**  
-    Starting the containers and interconnecting them alone is already good, but containerlab packages even more features like managing lab lifecycle: [deploy](cmd/deploy.md), [destroy](cmd/destroy.md), [save](cmd/save.md), [inspect](cmd/inspect.md), [graph](cmd/graph.md) operations.
+    Starting the containers and interconnecting them alone is already good, but containerlab packages even more features like managing lab lifecycle: [deploy](cmd/deploy.md), [destroy](cmd/destroy.md), [save](cmd/save.md), [inspect](cmd/inspect/index.md), [graph](cmd/graph.md) operations.
 * **Scaled labs generator**  
     With [`generate`](cmd/generate.md) capabilities of containerlab it possible to define/launch CLOS-based topologies of arbitrary scale. Just say how many tiers you need and how big each tier is, the rest will be done in a split second.
 * **Simplicity and convenience**  

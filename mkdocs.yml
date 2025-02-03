@@ -85,7 +85,9 @@ nav:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
       - redeploy: cmd/redeploy.md
-      - inspect: cmd/inspect.md
+      - inspect:
+          - cmd/inspect/index.md
+          - interfaces: cmd/inspect/interfaces.md
       - save: cmd/save.md
       - exec: cmd/exec.md
       - generate: cmd/generate.md

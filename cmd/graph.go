@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -44,17 +45,17 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	var err error
 
 	opts := []clab.ClabOption{
-		clab.WithTimeout(timeout),
-		clab.WithTopoPath(topo, varsFile),
-		clab.WithNodeFilter(nodeFilter),
-		clab.WithRuntime(rt,
+		clab.WithTimeout(common.Timeout),
+		clab.WithTopoPath(common.Topo, common.VarsFile),
+		clab.WithNodeFilter(common.NodeFilter),
+		clab.WithRuntime(common.Runtime,
 			&runtime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: graceful,
+				Debug:            common.Debug,
+				Timeout:          common.Timeout,
+				GracefulShutdown: common.Graceful,
 			},
 		),
-		clab.WithDebug(debug),
+		clab.WithDebug(common.Debug),
 	}
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
@@ -158,7 +159,7 @@ func init() {
 		"Go html template used to generate the graph")
 	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", "",
 		"Serve static files from the specified directory")
-	graphCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	graphCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 	graphCmd.MarkFlagsMutuallyExclusive("dot", "mermaid", "drawio")
 }
