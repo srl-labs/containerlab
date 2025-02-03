@@ -106,8 +106,8 @@ func inspectInterfacesFn(_ *cobra.Command, _ []string) error {
 
 	if interfacesNodeName != "" {
 		glabels = append(glabels, &types.GenericFilter{
-			FilterType: "label", Match: strings.TrimPrefix(interfacesNodeName, "clab-"+labName+"-"),
-			Field: labels.NodeName, Operator: "=",
+			FilterType: "label", Match: interfacesNodeName,
+			Field: labels.LongName, Operator: "=",
 		})
 	}
 

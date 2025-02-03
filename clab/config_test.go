@@ -364,6 +364,7 @@ func TestLabelsInit(t *testing.T) {
 			want: map[string]string{
 				labels.Containerlab: "topo1",
 				labels.NodeName:     "node1",
+				labels.LongName:     "clab-topo1-node1",
 				labels.NodeKind:     "nokia_srlinux",
 				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
@@ -378,6 +379,7 @@ func TestLabelsInit(t *testing.T) {
 			want: map[string]string{
 				labels.Containerlab: "topo1",
 				labels.NodeName:     "node2",
+				labels.LongName:     "clab-topo1-node2",
 				labels.NodeKind:     "nokia_srlinux",
 				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
@@ -394,6 +396,7 @@ func TestLabelsInit(t *testing.T) {
 			want: map[string]string{
 				labels.Containerlab: "topo2",
 				labels.NodeName:     "node1",
+				labels.LongName:     "clab-topo2-node1",
 				labels.NodeKind:     "nokia_srlinux",
 				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
@@ -409,6 +412,7 @@ func TestLabelsInit(t *testing.T) {
 			want: map[string]string{
 				labels.Containerlab: "topo3",
 				labels.NodeName:     "node2",
+				labels.LongName:     "clab-topo3-node2",
 				labels.NodeKind:     "nokia_srlinux",
 				labels.NodeType:     "ixrd2l",
 				labels.NodeGroup:    "",
