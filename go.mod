@@ -5,7 +5,7 @@ go 1.22.11
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/containernetworking/plugins v1.5.1
-	github.com/containers/common v0.61.1
+	github.com/containers/common v0.62.0
 	github.com/containers/podman/v5 v5.3.2
 	github.com/digitalocean/go-openvswitch v0.0.0-20201214180534-ce0f183468d8
 	github.com/distribution/reference v0.6.0
@@ -40,7 +40,7 @@ require (
 	github.com/weaveworks/ignite v0.10.0
 	go.uber.org/mock v0.5.0
 	golang.org/x/crypto v0.32.0
-	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
+	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329
 	golang.org/x/sys v0.29.0
 	golang.org/x/term v0.28.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -195,8 +195,8 @@ require (
 	github.com/nxadm/tail v1.4.11 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/opencontainers/runc v1.2.1 // indirect
-	github.com/opencontainers/runtime-tools v0.9.1-0.20241001195557-6c9570a1678f // indirect
+	github.com/opencontainers/runc v1.2.4 // indirect
+	github.com/opencontainers/runtime-tools v0.9.1-0.20241108202711-f7e3563b0271 // indirect
 	github.com/opencontainers/selinux v1.11.1 // indirect
 	github.com/ostreedev/ostree-go v0.0.0-20210805093236-719684c64e4f // indirect
 	github.com/otiai10/copy v1.14.0 // indirect
@@ -205,7 +205,7 @@ require (
 	github.com/safchain/ethtool v0.4.0 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/sirikothe/gotextfsm v1.0.1-0.20200816110946-6aa2cfd355e4 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
 	github.com/sylabs/sif/v2 v2.20.2 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
