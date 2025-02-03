@@ -293,8 +293,8 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/hellt
-    - icon: fontawesome/brands/twitter
-      link: https://twitter.com/ntdvps
+    - icon: fontawesome/brands/bluesky
+      link: https://bsky.app/profile/containerlab.dev
     - icon: fontawesome/brands/discord
       link: https://discord.gg/vAyddtaEV9
   consent:
