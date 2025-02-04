@@ -402,13 +402,6 @@ sudo CLAB_SKIP_SROS_SSH_KEY_CONFIG=true -E clab deploy -t <topo-file>
 
 Path to a valid license must be provided for all Nokia SR OS nodes with a [`license`](../nodes.md#license) directive.
 
-If your SR OS license file is issued for a specific UUID, you can define it with custom type definition:
-
-```yaml
-# note, typically only the cp needs the UUID defined.
-type: "cp: uuid=00001234-5678-9abc-def1-000012345678 cpu=4 ram=6 slot=A chassis=SR-12 card=cpm5 ___ lc: cpu=4 ram=6 max_nics=36 slot=1 chassis=SR-12 card=iom3-xp-c mda/1=m10-1gb+1-10gb"
-```
-
 ### File mounts
 
 When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For Nokia SR OS kind containerlab creates `tftpboot` directory where the license file will be copied.
