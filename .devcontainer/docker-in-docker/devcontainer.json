@@ -52,7 +52,9 @@
                 "yzhang.markdown-all-in-one",
                 "davidanson.vscode-markdownlint",
                 // proto
-                "zxh404.vscode-proto3"
+                "zxh404.vscode-proto3",
+                // containerlab
+                "srl-labs.vscode-containerlab"
             ]
         }
     },

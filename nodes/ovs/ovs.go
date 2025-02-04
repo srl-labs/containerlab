@@ -21,11 +21,11 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-var kindnames = []string{"ovs-bridge"}
+var kindNames = []string{"ovs-bridge"}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindNames, func() nodes.Node {
 		return new(ovs)
 	}, nil)
 }
@@ -50,10 +50,7 @@ func (n *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
 	// check if ovs bridge exists
-	c := goOvs.New(
-		// Prepend "sudo" to all commands.
-		goOvs.Sudo(),
-	)
+	c := goOvs.New()
 
 	// We were previously doing c.VSwitch.Get.Bridge() but it doesn't work
 	// when the bridge has a protocol version higher than 1.0
@@ -78,10 +75,7 @@ func (*ovs) PullImage(_ context.Context) error             { return nil }
 func (*ovs) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 
 func (n *ovs) Delete(_ context.Context) error {
-	c := goOvs.New(
-		// Prepend "sudo" to all commands.
-		goOvs.Sudo(),
-	)
+	c := goOvs.New()
 
 	for _, ep := range n.GetEndpoints() {
 		// Under the hood, this is called with "--if-exists", so it will handle the case where it doesn't exist for some reason.
@@ -121,10 +115,7 @@ func (n *ovs) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(
 		return err
 	}
 
-	c := goOvs.New(
-		// Prepend "sudo" to all commands.
-		goOvs.Sudo(),
-	)
+	c := goOvs.New()
 
 	// need to reread the link, due to the changed the function f might have applied to
 	// the link. Usually it renames the link to its final name.

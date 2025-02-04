@@ -9,6 +9,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/config"
 	"github.com/srl-labs/containerlab/clab/config/transport"
+	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/nodes"
 
 	log "github.com/sirupsen/logrus"
@@ -59,10 +60,10 @@ func configRun(_ *cobra.Command, args []string) error {
 	config.DebugCount = debugCount
 
 	c, err := clab.NewContainerLab(
-		clab.WithTimeout(timeout),
-		clab.WithTopoPath(topo, varsFile),
-		clab.WithNodeFilter(nodeFilter),
-		clab.WithDebug(debug),
+		clab.WithTimeout(common.Timeout),
+		clab.WithTopoPath(common.Topo, common.VarsFile),
+		clab.WithNodeFilter(common.NodeFilter),
+		clab.WithDebug(common.Debug),
 	)
 	if err != nil {
 		return err
@@ -156,7 +157,7 @@ func init() {
 		"comma separated list of nodes to include")
 	configCmd.Flags().SortFlags = false
 
-	configCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	configCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 
 	configCmd.AddCommand(configSendCmd)

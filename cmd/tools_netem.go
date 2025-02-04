@@ -84,7 +84,7 @@ var netemShowCmd = &cobra.Command{
 
 func netemSetFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
-	_, rinit, err := clab.RuntimeInitializer(rt)
+	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	err = rt.Init(
 		runtime.WithConfig(
 			&runtime.RuntimeConfig{
-				Timeout: timeout,
+				Timeout: common.Timeout,
 			},
 		),
 	)
@@ -251,7 +251,7 @@ func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 
 func netemShowFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
-	_, rinit, err := clab.RuntimeInitializer(rt)
+	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,7 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	err = rt.Init(
 		runtime.WithConfig(
 			&runtime.RuntimeConfig{
-				Timeout: timeout,
+				Timeout: common.Timeout,
 			},
 		),
 	)

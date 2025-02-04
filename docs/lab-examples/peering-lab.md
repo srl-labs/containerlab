@@ -196,7 +196,7 @@ This table contains vital information about the deployed nodes, such as the name
 
 ### Inspecting the lab
 
-At any point in time, containerlab users can refresh themselves on what is currently deployed in the lab environment by using the [`containerlab inspect`](../cmd/inspect.md) command:
+At any point in time, containerlab users can refresh themselves on what is currently deployed in the lab environment by using the [`containerlab inspect`](../cmd/inspect/index.md) command:
 
 ```
 $ containerlab inspect --all
