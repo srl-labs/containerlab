@@ -193,7 +193,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 // skipcq: GO-R1005
 func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string) (string, error) {
 	var err error
-	log.Debugf("Network does not exist", "name", d.mgmt.Network)
+	log.Debug("Network does not exist", "name", d.mgmt.Network)
 	log.Info("Creating docker network",
 		"name", d.mgmt.Network,
 		"IPv4 subnet", d.mgmt.IPv4Subnet,
