@@ -30,15 +30,29 @@ jobs:
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Install a specific version of uv.
+          version: "0.5.28"
+          enable-cache: true
+
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.py_ver }}
-          cache: pip
-          cache-dependency-path: "tests/requirements.txt"
+          # cache: pip
+          # cache-dependency-path: "tests/requirements.txt"
+          python-version-file: "pyproject.toml"
 
-      - name: Install robotframework
+      - name: Install the project
+        run: uv sync --all-extras --dev
+
+      # - name: setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+
+      - name: Activate virtualenv
         run: |
-          pip install -r tests/requirements.txt
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
