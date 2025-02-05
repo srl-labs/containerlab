@@ -47,16 +47,19 @@ Exec command with no filtering
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd 'uname -n'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
+    # check if output contains the expected log string
     Should Contain
     ...    ${output}
-    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
+    ...    Executed command command="uname -n" node=clab-2-linux-nodes-l1 stdout=
+  │ l1
     Should Contain
     ...    ${output}
-    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l2\\". stdout:\\nl2
+    ...    Executed command command="uname -n" node=clab-2-linux-nodes-l2 stdout=
+  │ l2
     Should Contain
     ...    ${output}
-    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l3\\". stdout:\\nl3
+    ...    Executed command command="uname -n" node=clab-2-linux-nodes-l3 stdout=
+  │ l3
 
 Exec command with filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters, the command is executed ONLY on selected nodes of the lab.
