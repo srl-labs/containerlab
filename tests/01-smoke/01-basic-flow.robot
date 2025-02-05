@@ -17,6 +17,18 @@ ${runtime-cli-exec-cmd}     sudo docker exec
 ${n2-ipv4}                  172.20.20.100/24
 ${n2-ipv6}                  3fff:172:20:20::100/64
 ${table-delimit}            │
+${l1-uname-exec-output}     SEPARATOR=\n
+...                         Executed command command="uname -n" node=clab-2-linux-nodes-l1
+...                         ${SPACE}${SPACE}stdout=
+...                         ${SPACE}${SPACE}│ l1
+${l2-uname-exec-output}     SEPARATOR=\n
+...                         Executed command command="uname -n" node=clab-2-linux-nodes-l2
+...                         ${SPACE}${SPACE}stdout=
+...                         ${SPACE}${SPACE}│ l2
+${l3-uname-exec-output}     SEPARATOR=\n
+...                         Executed command command="uname -n" node=clab-2-linux-nodes-l3
+...                         ${SPACE}${SPACE}stdout=
+...                         ${SPACE}${SPACE}│ l3
 
 
 *** Test Cases ***
@@ -49,17 +61,11 @@ Exec command with no filtering
     Should Be Equal As Integers    ${rc}    0
     # check if output contains the expected log string
     Should Contain
-    ...    ${output}
-    ...    Executed command command="uname -n" node=clab-2-linux-nodes-l1 stdout=
-  │ l1
+    ...    ${output}    ${l1-uname-exec-output}
     Should Contain
-    ...    ${output}
-    ...    Executed command command="uname -n" node=clab-2-linux-nodes-l2 stdout=
-  │ l2
+    ...    ${output}    ${l2-uname-exec-output}
     Should Contain
-    ...    ${output}
-    ...    Executed command command="uname -n" node=clab-2-linux-nodes-l3 stdout=
-  │ l3
+    ...    ${output}    ${l3-uname-exec-output}
 
 Exec command with filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters, the command is executed ONLY on selected nodes of the lab.
@@ -68,11 +74,14 @@ Exec command with filtering
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
+
     Should Contain
-    ...    ${output}
-    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
-    Should Not Contain    ${output}    stdout:\\nl2
-    Should Not Contain    ${output}    stdout:\\nl3
+    ...    ${output}    ${l1-uname-exec-output}
+
+    Should Not Contain    ${output}
+    ...    stdout=${\n}${SPACE}${SPACE}│ l2"""
+    Should Not Contain    ${output}
+    ...    stdout=${\n}${SPACE}${SPACE}│ l3"""
 
 Exec command with json output and filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters and json output, the command is executed ONLY on selected nodes of the lab and the actual JSON is populated to stdout.
@@ -100,7 +109,9 @@ Ensure CLAB_INTFS env var is set
     # may be worth to change this to stdout in the future
     # we literally check if the string stdout:\n3 is present in the output, as this is how
     # the result is printed today.
-    Should Contain    ${output.stderr}    stdout:\\n3
+    Should Contain    ${output.stderr}
+    ...    stdout=
+    ...    │ l3
 
 Ensure default no_proxy env var is set
     [Documentation]
@@ -357,7 +368,6 @@ Verify ip6tables allow rule is set
     Should Match Regexp    ${ipt}    oifname.*${MgmtBr}.*accept
     Should Match Regexp    ${ipt}    iifname.*${MgmtBr}.*accept
 
-
 Verify DNS-Server Config
     [Documentation]    Check if the DNS config did take effect
     Skip If    '${runtime}' != 'docker'
@@ -462,7 +472,7 @@ Verify ip6tables allow rule are gone
 
 Verify containerlab version
     [Documentation]    Ensures that 'containerlab version' subcommand runs successfully
-    ...                and prints basic version fields.
+    ...    and prints basic version fields.
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} version
     Log    ${output}
@@ -476,20 +486,21 @@ Verify containerlab version
 
 Verify containerlab version check
     [Documentation]    Ensures that 'containerlab version check' either says you're on latest version
-    ...                or that a new version is available. Also verifies the command succeeds.
+    ...    or that a new version is available. Also verifies the command succeeds.
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} version check
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
     # On success, containerlab either prints:
-    #  "You are on the latest version" OR
-    #  "A newer containerlab version (...) is available!"
+    #    "You are on the latest version" OR
+    #    "A newer containerlab version (...) is available!"
     # So we allow for either outcome
     Should Contain Any
     ...    ${output}
     ...    You are on the latest version
     ...    A newer containerlab version
+
 
 *** Keywords ***
 Match IPv6 Address
