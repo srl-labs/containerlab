@@ -79,6 +79,11 @@ jobs:
       # - name: setup tmate session
       #   uses: mxschmitt/action-tmate@v3
 
+      - name: Activate virtualenv
+        run: |
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
       - name: Run smoke tests
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}

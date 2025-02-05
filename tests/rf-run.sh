@@ -35,4 +35,4 @@ function get_logname() {
   fi
 }
 
-GOCOVERDIR=${COV_DIR} uv run -- robot --consolecolors on -r none --variable CLAB_BIN:${CLAB_BIN} --variable runtime:$1 -l ./tests/out/$(get_logname $2)-$1-log --output ./tests/out/$(basename $2)-$1-out.xml $2
+GOCOVERDIR=${COV_DIR} robot --consolecolors on -r none --variable CLAB_BIN:${CLAB_BIN} --variable runtime:$1 -l ./tests/out/$(get_logname $2)-$1-log --output ./tests/out/$(basename $2)-$1-out.xml $2
