@@ -3,7 +3,7 @@
 Containerlab's test program largely consists of:
 
 - Go-based unit tests
-- RobotFramework-based integration tests
+- [RobotFramework](https://robotframework.org/)-based integration tests
 
 ## Integration Tests
 
@@ -11,20 +11,11 @@ The integration tests are written in RobotFramework and are located in the [`tes
 
 ### Local execution
 
-To execute the integration tests locally you have to install the python environment with the required dependencies. If you're using `pyenv` you can use the following commands:
+To execute the integration tests locally you have to install the python environment with the required dependencies. If you're using [`uv`](https://docs.astral.sh/uv/) you can simply do:
 
-1. Create a venv and activate it
-
-    ```bash
-    pyenv virtualenv 3.11 clab-rf
-    pyenv shell clab-rf
-    ```
-
-2. Install the dependencies
-
-    ```bash
-    pip install -r tests/requirements.txt
-    ```
+```
+uv sync
+```
 
 Usually you would run the tests using the locally built containerlab binary that contains the unreleased changes. The typical workflow then starts with building the containerlab binary:
 
