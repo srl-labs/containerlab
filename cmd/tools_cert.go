@@ -165,8 +165,14 @@ func signCert(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
-		certHosts, commonName, country, locality, organization, organizationUnit)
+	log.Info("Creating and signing certificate",
+		"Hosts", certHosts,
+		"CN", commonName,
+		"C", country,
+		"L", locality,
+		"O", organization,
+		"OU", organizationUnit,
+	)
 
 	expDuration, err := time.ParseDuration(expiry)
 	if err != nil {
