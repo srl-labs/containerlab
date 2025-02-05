@@ -136,7 +136,10 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 
 	// apply partial configs if partial config is used and existing node config does not exist
 	if isPartialConfigFile(s.Cfg.StartupConfig) && !nodeConfigExists(s.Cfg.LabDir) {
-		log.Infof("%s: adding config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
+		log.Info("Adding configuration",
+			"node", s.Cfg.LongName,
+			"type", "partial",
+			"source", s.Cfg.StartupConfig)
 
 		r, err := os.Open(s.Cfg.StartupConfig)
 		if err != nil {
@@ -157,7 +160,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
 
 	if len(s.sshPubKeys) > 0 && !skipSSHKeyCfg {
-		log.Infof("%s: adding public keys configuration", s.Cfg.LongName)
+		log.Info("Adding public keys configuration", "node", s.Cfg.LongName)
 
 		sshConf, err := s.generateSSHPublicKeysConfig()
 		if err != nil {
@@ -269,7 +272,11 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		return nil
 	}
 
-	log.Infof("Waiting for %[1]s to be ready. This may take a while. Monitor boot log with `sudo docker logs -f %[1]s`", s.Cfg.LongName)
+	log.Info("Waiting for node to be ready. This may take a while",
+		"node", s.Cfg.LongName,
+		"log", fmt.Sprintf("docker logs -f %[1]s", s.Cfg.LongName),
+	)
+
 	for loop := true; loop; {
 		if !s.isHealthy(ctx) {
 			time.Sleep(5 * time.Second) // cool-off period
@@ -281,13 +288,10 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		case <-ctx.Done():
 			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
 		default:
-			logger := log.NewWithOptions(os.Stderr, log.Options{})
-			stdlog := logger.StandardLog(log.StandardLogOptions{
-				ForceLevel: log.DebugLevel,
-			})
+			sl := log.StandardLog()
 			li, err := scraplilogging.NewInstance(
 				scraplilogging.WithLevel("debug"),
-				scraplilogging.WithLogger(stdlog.Print))
+				scraplilogging.WithLogger(sl.Print))
 			if err != nil {
 				return err
 			}
