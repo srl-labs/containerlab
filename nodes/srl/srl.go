@@ -246,7 +246,7 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
 		"kind", s.Cfg.Kind,
-		"node name", s.Cfg.ShortName)
+		"node", s.Cfg.ShortName)
 
 	// generate the certificate
 	certificate, err := s.LoadOrGenerateCertificate(s.cert, s.topologyName)

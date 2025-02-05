@@ -1110,13 +1110,13 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	log.Info("Adding containerlab host entries to /etc/hosts file")
+	log.Info("Adding host entries", "path", "/etc/hosts")
 	err = c.appendHostsFileEntries(ctx)
 	if err != nil {
 		log.Errorf("failed to create hosts file: %v", err)
 	}
 
-	log.Info("Adding ssh config for containerlab nodes")
+	log.Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
 	err = c.addSSHConfig()
 	if err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
@@ -1215,13 +1215,13 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	log.Info("Destroying lab", "name", c.Config.Name)
 	c.deleteNodes(ctx, maxWorkers, serialNodes)
 
-	log.Info("Removing containerlab host entries from /etc/hosts file")
+	log.Info("Removing host entries", "path", "/etc/hosts")
 	err = c.DeleteEntriesFromHostsFile()
 	if err != nil {
 		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
 	}
 
-	log.Info("Removing ssh config for containerlab nodes")
+	log.Info("Removing SSH config", "path", c.TopoPaths.SSHConfigPath())
 	err = c.RemoveSSHConfig(c.TopoPaths)
 	if err != nil {
 		log.Errorf("failed to remove ssh config file: %v", err)
