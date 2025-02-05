@@ -73,7 +73,6 @@ Exec command with filtering
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'uname -n'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
 
     Should Contain
     ...    ${output}    ${l1-uname-exec-output}
