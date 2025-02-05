@@ -193,9 +193,12 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 // skipcq: GO-R1005
 func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string) (string, error) {
 	var err error
-	log.Debugf("Network %q does not exist", d.mgmt.Network)
-	log.Infof("Creating docker network: Name=%q, IPv4Subnet=%q, IPv6Subnet=%q, MTU=%d",
-		d.mgmt.Network, d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet, d.mgmt.MTU)
+	log.Debugf("Network does not exist", "name", d.mgmt.Network)
+	log.Info("Creating docker network",
+		"name", d.mgmt.Network,
+		"IPv4 subnet", d.mgmt.IPv4Subnet,
+		"IPv6 subnet", d.mgmt.IPv6Subnet,
+		"MTU", d.mgmt.MTU)
 
 	enableIPv6 := false
 	var ipamConfig []networkapi.IPAMConfig
@@ -411,7 +414,7 @@ func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 
 // CreateContainer creates a docker container (but does not start it).
 func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { // skipcq: GO-R1005
-	log.Infof("Creating container: %q", node.ShortName)
+	log.Info("Creating container", "name", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
@@ -919,7 +922,8 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", cID)
+	log.Info("Removed container", "name", cID)
+
 	return nil
 }
 

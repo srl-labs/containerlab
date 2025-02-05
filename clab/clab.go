@@ -982,7 +982,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	log.Debugf("lab Conf: %+v", c.Config)
 	if options.reconfigure {
 		_ = c.Destroy(ctx, uint(len(c.Nodes)), true)
-		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
+		log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return nil, err
 		}
@@ -1006,7 +1006,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
+	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
 	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
 
 	if !options.skipLabDirFileACLs {
@@ -1212,7 +1212,7 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		maxWorkers = 1
 	}
 
-	log.Infof("Destroying lab: %s", c.Config.Name)
+	log.Info("Destroying lab", "name", c.Config.Name)
 	c.deleteNodes(ctx, maxWorkers, serialNodes)
 
 	log.Info("Removing containerlab host entries from /etc/hosts file")

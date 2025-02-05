@@ -81,6 +81,8 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 	// setting output to stderr, so that json outputs can be parsed
 	log.SetOutput(os.Stderr)
 
+	log.SetTimeFormat(time.TimeOnly)
+
 	err := common.DropRootPrivs()
 	if err != nil {
 		return err
