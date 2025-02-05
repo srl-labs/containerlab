@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/vishvananda/netlink"
 )
 

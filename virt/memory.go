@@ -1,8 +1,8 @@
 package virt
 
 import (
+	"github.com/charmbracelet/log"
 	"github.com/mackerelio/go-osstat/memory"
-	log "github.com/sirupsen/logrus"
 )
 
 type MemoryType int

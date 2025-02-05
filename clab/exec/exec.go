@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 
 	"github.com/google/shlex"
 )

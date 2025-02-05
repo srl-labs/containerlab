@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/klauspost/cpuid/v2"
-	log "github.com/sirupsen/logrus"
 )
 
 // VerifySSSE3Support check if SSSE3 is supported on the host.

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/cmd/inspect"

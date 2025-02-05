@@ -20,6 +20,7 @@ import (
 	"github.com/docker/go-units"
 	"golang.org/x/sys/unix"
 
+	"github.com/charmbracelet/log"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -28,7 +29,6 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"

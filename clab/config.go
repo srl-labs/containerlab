@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/pmorjan/kmod"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"

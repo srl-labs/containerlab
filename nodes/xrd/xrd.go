@@ -15,7 +15,7 @@ import (
 	"strings"
 	"text/template"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"

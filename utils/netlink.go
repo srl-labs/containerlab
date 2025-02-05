@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/jsimonetti/rtnetlink/rtnl"
-	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
 

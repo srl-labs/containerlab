@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"gopkg.in/yaml.v2"
 )
 

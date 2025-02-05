@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/cert"
 	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"

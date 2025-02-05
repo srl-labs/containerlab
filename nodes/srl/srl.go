@@ -18,8 +18,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/srl-labs/containerlab/cert"
