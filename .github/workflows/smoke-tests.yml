@@ -79,9 +79,6 @@ jobs:
       # - name: setup tmate session
       #   uses: mxschmitt/action-tmate@v3
 
-      - name: Add uv venv to PATH
-        run: echo "export PATH=$PWD/.venv/bin:$PATH" >> $GITHUB_ENV
-
       - name: Run smoke tests
         run: |
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
