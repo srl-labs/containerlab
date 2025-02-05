@@ -11,7 +11,7 @@ import (
 
 	jT "github.com/kellerza/template"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
@@ -166,5 +166,5 @@ func (c *NodeConfig) Print(vars, rendered bool) { // skipcq: RVV-A0005
 		}
 	}
 
-	log.Infoln(s.String())
+	log.Info(s.String())
 }

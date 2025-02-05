@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/types"
 	"golang.org/x/crypto/ssh"
 )

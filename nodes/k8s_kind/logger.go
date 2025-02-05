@@ -5,19 +5,19 @@
 package k8s_kind
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	kindLog "sigs.k8s.io/kind/pkg/log"
 )
 
 // kindLogger implements the log.Logger interface for kind.
 type kindLogger struct {
-	l log.FieldLogger
+	l *log.Logger
 	v kindLog.Level
 }
 
 func newKindLogger(clusterName string, v kindLog.Level) *kindLogger {
 	return &kindLogger{
-		l: log.WithField("kind-cluster", clusterName),
+		l: log.With("kind-cluster", clusterName),
 		v: v,
 	}
 }
@@ -47,7 +47,7 @@ func (l *kindLogger) V(v kindLog.Level) kindLog.InfoLogger {
 }
 
 type kindInfoLogger struct {
-	l       log.FieldLogger
+	l       *log.Logger
 	v       kindLog.Level
 	enabled bool
 }

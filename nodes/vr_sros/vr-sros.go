@@ -16,13 +16,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/options"
 	scraplilogging "github.com/scrapli/scrapligo/logging"
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
@@ -281,9 +281,13 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		case <-ctx.Done():
 			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
 		default:
+			logger := log.NewWithOptions(os.Stderr, log.Options{})
+			stdlog := logger.StandardLog(log.StandardLogOptions{
+				ForceLevel: log.DebugLevel,
+			})
 			li, err := scraplilogging.NewInstance(
 				scraplilogging.WithLevel("debug"),
-				scraplilogging.WithLogger(log.Debugln))
+				scraplilogging.WithLogger(stdlog.Print))
 			if err != nil {
 				return err
 			}

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	log "github.com/sirupsen/logrus"
 	"github.com/vishvananda/netlink"
 )
 

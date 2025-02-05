@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"golang.org/x/exp/slices"
 )
 

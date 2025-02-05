@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	log "github.com/sirupsen/logrus"
 )
 
 const (

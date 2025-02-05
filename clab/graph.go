@@ -19,8 +19,8 @@ import (
 	"syscall"
 
 	"github.com/awalterschulze/gographviz"
+	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
-	log "github.com/sirupsen/logrus"
 	e "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/internal/mermaid"
 	"github.com/srl-labs/containerlab/labels"

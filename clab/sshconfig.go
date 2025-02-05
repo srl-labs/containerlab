@@ -6,7 +6,7 @@ import (
 	"path"
 	"text/template"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"

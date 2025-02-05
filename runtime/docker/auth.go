@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/distribution/reference"
 	"github.com/docker/docker/api/types/registry"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 )
 

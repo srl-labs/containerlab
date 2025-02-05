@@ -6,7 +6,7 @@ import (
 	"os"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/vishvananda/netlink"
 )
 

@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
@@ -82,7 +82,7 @@ func init() {
 func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
 
-	log.Infof("Containerlab v%s started", version.Version)
+	log.Info("Containerlab started", "version", version.Version)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

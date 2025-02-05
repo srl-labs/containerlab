@@ -12,9 +12,9 @@ import (
 
 	netTypes "github.com/containers/common/libnetwork/types"
 
+	"github.com/charmbracelet/log"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
 // Reusing parts of the code from podman specgenutil/util.go

@@ -20,9 +20,9 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
+	"github.com/charmbracelet/log"
 	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/google/shlex"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"

@@ -14,9 +14,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
@@ -123,7 +123,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	}
 
 	if len(containers) == 0 {
-		log.Println("no containers found")
+		log.Info("no containers found")
 		return nil
 	}
 	if details {

@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	gover "github.com/hashicorp/go-version"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
