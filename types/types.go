@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/docker/go-connections/nat"
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 

@@ -53,11 +53,11 @@ topology:
       stages:
         create-links:
           exec:
-            - command: ls /sys/class/net/
+            - command: uname -n
               phase: on-exit
         healthy:
           exec:
-            - command: echo 'hey I am existing healthy stage'
+            - command: echo 'hey I am exiting healthy stage'
               phase: on-exit
 
   links:

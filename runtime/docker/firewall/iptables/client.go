@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
 	"github.com/srl-labs/containerlab/utils"
 )

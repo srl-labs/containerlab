@@ -8,9 +8,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	goOvs "github.com/digitalocean/go-openvswitch/ovs"
-	log "github.com/sirupsen/logrus"
 	cExec "github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/internal/slices"
 	"github.com/srl-labs/containerlab/links"

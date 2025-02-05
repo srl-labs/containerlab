@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/pmorjan/kmod"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
@@ -52,7 +52,7 @@ type Config struct {
 
 // ParseTopology parses the lab topology.
 func (c *CLab) parseTopology() error {
-	log.Infof("Parsing & checking topology file: %s", c.TopoPaths.TopologyFilenameBase())
+	log.Info("Parsing & checking topology", "file", c.TopoPaths.TopologyFilenameBase())
 
 	err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name)
 	if err != nil {

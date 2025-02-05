@@ -42,7 +42,7 @@ Create and sign end node certificates
     Should Be Equal As Integers    ${rc}    0
     Should Contain
     ...    ${output}
-    ...    Creating and signing certificate: Hosts=[\\"node.io\\" \\"192.168.0.1\\"], CN=containerlab.dev, C=Internet, L=Server, O=Containerlab, OU=Containerlab Tools
+    ...    Creating and signing certificate Hosts="[node.io 192.168.0.1]" CN=containerlab.dev C=Internet L=Server O=Containerlab OU="Containerlab Tools"
     # check the cert contents with openssl
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    openssl x509 -in ${node-cert-dir}/cert.pem -text

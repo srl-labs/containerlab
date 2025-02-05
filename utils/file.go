@@ -25,7 +25,7 @@ import (
 
 	"github.com/steiler/acls"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 )
 
 var (

@@ -1,7 +1,7 @@
 package docker
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
 )

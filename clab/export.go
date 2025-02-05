@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -20,7 +20,7 @@ import (
 func (c *CLab) GenerateExports(ctx context.Context, f io.Writer, p string) error {
 	err := c.exportTopologyDataWithTemplate(ctx, f, p)
 	if err != nil {
-		log.Warningf("Cannot parse export template %s: %v", p, err)
+		log.Warnf("Cannot parse export template %s: %v", p, err)
 		// a minimal topology data file that just provides the name of a lab that failed to generate a proper export data
 		err = c.exportTopologyDataWithMinimalTemplate(f)
 		if err != nil {

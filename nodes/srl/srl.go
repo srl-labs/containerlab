@@ -18,8 +18,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/srl-labs/containerlab/cert"
@@ -244,7 +244,9 @@ func (s *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 }
 
 func (s *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
-	log.Infof("Running postdeploy actions for Nokia SR Linux '%s' node", s.Cfg.ShortName)
+	log.Info("Running postdeploy actions",
+		"kind", s.Cfg.Kind,
+		"node", s.Cfg.ShortName)
 
 	// generate the certificate
 	certificate, err := s.LoadOrGenerateCertificate(s.cert, s.topologyName)

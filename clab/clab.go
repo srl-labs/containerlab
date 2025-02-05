@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/cert"
 	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -982,7 +982,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	log.Debugf("lab Conf: %+v", c.Config)
 	if options.reconfigure {
 		_ = c.Destroy(ctx, uint(len(c.Nodes)), true)
-		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
+		log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return nil, err
 		}
@@ -1006,7 +1006,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
+	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
 	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
 
 	if !options.skipLabDirFileACLs {
@@ -1110,13 +1110,13 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	log.Info("Adding containerlab host entries to /etc/hosts file")
+	log.Info("Adding host entries", "path", "/etc/hosts")
 	err = c.appendHostsFileEntries(ctx)
 	if err != nil {
 		log.Errorf("failed to create hosts file: %v", err)
 	}
 
-	log.Info("Adding ssh config for containerlab nodes")
+	log.Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
 	err = c.addSSHConfig()
 	if err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
@@ -1212,16 +1212,16 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		maxWorkers = 1
 	}
 
-	log.Infof("Destroying lab: %s", c.Config.Name)
+	log.Info("Destroying lab", "name", c.Config.Name)
 	c.deleteNodes(ctx, maxWorkers, serialNodes)
 
-	log.Info("Removing containerlab host entries from /etc/hosts file")
+	log.Info("Removing host entries", "path", "/etc/hosts")
 	err = c.DeleteEntriesFromHostsFile()
 	if err != nil {
 		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
 	}
 
-	log.Info("Removing ssh config for containerlab nodes")
+	log.Info("Removing SSH config", "path", c.TopoPaths.SSHConfigPath())
 	err = c.RemoveSSHConfig(c.TopoPaths)
 	if err != nil {
 		log.Errorf("failed to remove ssh config file: %v", err)
