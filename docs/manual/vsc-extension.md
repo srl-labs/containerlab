@@ -55,7 +55,7 @@ We have also set some default keybindings you can use to interact with the lab w
 | `CTRL+ALT+K` | Destroy  |
 | `CTRL+ALT+G` | Graph    |
 
-### draw.io
+### clab-io-draw
 Integrated as a 'graph' action within the extension, The [clab-io-draw](https://github.com/srl-labs/clab-io-draw) project unifies two tools, clab2drawio and drawio2clab. These tools facilitate the conversion between Containerlab YAML files and Draw.io diagrams, making it easier for network engineers and architects to visualize, document, and share their network topologies.
 
 ### TopoViewer
