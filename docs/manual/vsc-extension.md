@@ -57,11 +57,10 @@ We have also set some default keybindings you can use to interact with the lab w
 
 ### TopoViewer
 
-Integrated into the extension as a 'graph' action is the [TopoViewer](https://github.com/asadarafat/topoViewer) project by @asadarafat. TopoViewer is an interactive way to visualize your containerlab topologies. The containerlab must be running for the TopoViewer to be able to visualize it.
+Integrated as a 'graph' action within the extension, the [TopoViewer](https://github.com/asadarafat/topoViewer) project by @asadarafat offers an interactive way to visualize your containerlab topologies. Please ensure that containerlab is running for TopoViewer to function properly.
 
 #### Enhanced Containerlab Topology Visualization with TopoViewer
 
-This section explains how to enhance your Containerlab topology visualization using TopoViewer. 
 By adding specific labels to your Containerlab topology definition, you can customize device icons, logically group nodes, and even define geo-positioning for a more intuitive network diagram.
 
 TopoViewer leverages custom labels in your Containerlab topology to:
