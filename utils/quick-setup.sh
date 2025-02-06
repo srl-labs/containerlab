@@ -1,5 +1,6 @@
 DISTRO_TYPE=""
 SETUP_SSHD="${SETUP_SSHD:-true}"
+CLAB_ADMINS="${CLAB_ADMINS:-true}"
 
 # Docker version that will be installed by this install script.
 DOCKER_VERSION="26.1.4"
@@ -259,6 +260,10 @@ function install-containerlab {
     fi
 }
 
+function post-install-clab {
+    sudo usermod -aG clab_admins "$SUDO_USER"
+}
+
 function all {
     # check OS to determine distro
     check_os
@@ -275,6 +280,10 @@ function all {
     add-ssh-socket-env-for-sudo
 
     install-containerlab
+
+    if [ "${CLAB_ADMINS}" = "true" ]; then
+        post-install-clab
+    fi
 }
 
 "$@"
