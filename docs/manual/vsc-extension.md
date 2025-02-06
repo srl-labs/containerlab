@@ -61,6 +61,8 @@ Integrated into the extension as a 'graph' action is the [TopoViewer](https://gi
 
 TopoViewer is an interactive way to visualize your containerlab topologies. The topology must be running for the TopoViewer to be able to visualize it.
 
+---
+
 #### Enhanced Containerlab Topology Visualization with TopoViewer
 
 This section explains how to enhance your Containerlab topology visualization using TopoViewer. 
@@ -71,7 +73,6 @@ TopoViewer leverages custom labels in your Containerlab topology to:
 - **Organize Nodes:** Group nodes under defined categories with hierarchical levels.
 - **Position Nodes Geographically:** Use geo-coordinates to map node positions.
 
----
 
 #### Supported TopoViewer Labels
 
@@ -107,8 +108,6 @@ when label `topoViewer-role` value is not defined, it will be defaulted to **pe*
 4. topoViewer-geoCoordinateLat and topoViewer-geoCoordinateLng
     - **Value Format:** `string`
     - **Purpose:** Define the geographic latitude and longitude for node positioning in a geo-based layout. If omitted, TopoViewer assigns random positions.
-
----
 
 #### Example Containerlab Topology Definition
 
@@ -237,19 +236,13 @@ topology:
 ```
 
 
----
-
 #### Example Visualization
 
 Below is an example screenshot illustrating how TopoViewer displays the labeled topology:
 
 ![topoviewer-labeled-topology](https://github.com/user-attachments/assets/4393f56f-3010-40fb-96ba-c3fdeabea6f0)
 
-
-
 With these enhancements, TopoViewer transforms your Containerlab topology into a clear, intuitive, and manageable network topology.
-
----
 
 
 ### Packet capture
