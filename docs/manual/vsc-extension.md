@@ -129,10 +129,11 @@ these are supported TopoViewer labes
 Below is an example Containerlab topology definition that utilizes these labels to enhance the visualization
 
 //// tab | Visualization output
-Below is an example screenshot illustrating how TopoViewer displays the labeled topology
+
 ![topoviewer-labeled-topology](https://github.com/user-attachments/assets/f8c75b7f-36aa-46d3-865b-3f6a25ac52dc)
 ////
-//// tab | Topology definition
+//// tab | Containerlab Topology definition
+
 /// details | 
 ```yaml
 name: nokia-DataCenter-lab
