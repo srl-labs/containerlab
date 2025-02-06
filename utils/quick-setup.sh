@@ -261,6 +261,12 @@ function install-containerlab {
 }
 
 function post-install-clab {
+    if [ $(getent group clab_admins) ]; then
+        echo "clab_admins group exists"
+    else
+      echo "Creating clab_admins group..."
+      groupadd -r clab_admins 
+    fi
     sudo usermod -aG clab_admins "$SUDO_USER"
 }
 
