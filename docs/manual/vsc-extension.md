@@ -98,7 +98,7 @@ these are supported TopoViewer labes
       when label topoViewer-role value is not defined, it will be defaulted to **pe**
 
 ////
-//// tab | group
+//// tab | graph-group
 
   - **Value Format:** `string`
   - **Alias:** `topoViewer-group`
@@ -145,7 +145,7 @@ topology:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
-        topoViewer-role: spine
+        graph-icon: spine
         topoViewer-group: "Data Center Spine"
         topoViewer-groupLevel: 2
 
@@ -153,9 +153,9 @@ topology:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
-        topoViewer-role: spine
-        topoViewer-group: "Data Center Spine"
-        topoViewer-groupLevel: 2
+        graph-icon: spine
+        graph-group: "Data Center Spine"
+        graph-level: 2
         topoViewer-geoCoordinateLat: "52.532161628640615"
         topoViewer-geoCoordinateLng: "13.420430194846846"
 
@@ -183,7 +183,7 @@ topology:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
-        topoViewer-role: controller
+        graph-icon: controller
         topoViewer-group: "Data Center Leaf"
         topoViewer-groupLevel: 3
         topoViewer-geoCoordinateLat: "51.326388273344435"
