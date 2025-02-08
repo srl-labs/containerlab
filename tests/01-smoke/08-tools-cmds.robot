@@ -46,3 +46,22 @@ Show link impairments
     Should Contain    ${output}    2ms
     Should Contain    ${output}    10.00%
     Should Contain    ${output}    1000
+
+Show link impairments in JSON format
+    ${rc}    ${output} =    Run And Return Rc And Output    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-l1 --format json
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    # Verify the JSON keys exist
+    Should Contain    ${output}    "Interface"
+    Should Contain    ${output}    "NodeName"
+    Should Contain    ${output}    "Delay"
+    Should Contain    ${output}    "Jitter"
+    Should Contain    ${output}    "PacketLoss"
+    Should Contain    ${output}    "Rate"
+    Should Contain    ${output}    "Corruption"
+    # Verify the expected values appear
+    Should Contain    ${output}    "100ms"
+    Should Contain    ${output}    "2ms"
+    Should Contain    ${output}    "10.00%"
+    Should Contain    ${output}    "1000"
+    Should Contain    ${output}    "2.00%"
