@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net"
@@ -35,6 +36,8 @@ var (
 	netemLoss       float64
 	netemRate       uint64
 	netemCorruption float64
+	// new flag for output format (table or json)
+	netemFormat string
 )
 
 func init() {
@@ -58,6 +61,8 @@ func init() {
 
 	netemCmd.AddCommand(netemShowCmd)
 	netemShowCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
+	// add the new flag for output format
+	netemShowCmd.Flags().StringVarP(&netemFormat, "format", "f", "table", "output format (table, json)")
 }
 
 var netemCmd = &cobra.Command{
@@ -236,8 +241,7 @@ func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 
 	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
-	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/
-		float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 
 	return tableWriter.Row{
 		ifDisplayName,
@@ -246,6 +250,67 @@ func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 		loss,
 		rate,
 		corruption,
+	}
+}
+
+// ImpairmentData represents a simplified view of the impairments
+// for JSON output.
+type ImpairmentData struct {
+	Interface  string `json:"Interface"`
+	NodeName   string `json:"NodeName"`
+	Delay      string `json:"Delay"`
+	Jitter     string `json:"Jitter"`
+	PacketLoss string `json:"PacketLoss"`
+	Rate       string `json:"Rate"`
+	Corruption string `json:"Corruption"`
+}
+
+// qdiscToJSONData converts the full qdisc object to a simplified view.
+func qdiscToJSONData(qdisc gotc.Object) ImpairmentData {
+	link, err := netlink.LinkByIndex(int(qdisc.Ifindex))
+	if err != nil {
+		log.Errorf("could not get netlink interface by index: %v", err)
+	}
+
+	var delay, jitter, loss, rate, corruption string
+
+	ifDisplayName := link.Attrs().Name
+	if link.Attrs().Alias != "" {
+		ifDisplayName += fmt.Sprintf(" (%s)", link.Attrs().Alias)
+	}
+
+	if qdisc.Netem == nil {
+		return ImpairmentData{
+			Interface:  ifDisplayName,
+			NodeName:   netemNode,
+			Delay:      "N/A",
+			Jitter:     "N/A",
+			PacketLoss: "N/A",
+			Rate:       "N/A",
+			Corruption: "N/A",
+		}
+	}
+
+	if qdisc.Netem.Latency64 != nil {
+		delay = (time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond).String()
+	}
+
+	if qdisc.Netem.Jitter64 != nil {
+		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
+	}
+
+	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
+	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+
+	return ImpairmentData{
+		Interface:  ifDisplayName,
+		NodeName:   netemNode,
+		Delay:      delay,
+		Jitter:     jitter,
+		PacketLoss: loss,
+		Rate:       rate,
+		Corruption: corruption,
 	}
 }
 
@@ -303,7 +368,19 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
-		printImpairments(qdiscs)
+		if netemFormat == "json" {
+			var impairments []ImpairmentData
+			for _, q := range qdiscs {
+				impairments = append(impairments, qdiscToJSONData(q))
+			}
+			jsonData, err := json.MarshalIndent(impairments, "", "  ")
+			if err != nil {
+				return fmt.Errorf("error marshalling JSON: %v", err)
+			}
+			fmt.Println(string(jsonData))
+		} else {
+			printImpairments(qdiscs)
+		}
 
 		return nil
 	})
