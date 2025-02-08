@@ -11,6 +11,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
 
@@ -36,8 +37,7 @@ var (
 	netemLoss       float64
 	netemRate       uint64
 	netemCorruption float64
-	// new flag for output format (table or json)
-	netemFormat string
+	netemFormat     string
 )
 
 func init() {
@@ -88,6 +88,11 @@ var netemShowCmd = &cobra.Command{
 }
 
 func netemSetFn(_ *cobra.Command, _ []string) error {
+	// Ensure that the sch_netem kernel module is loaded (for Fedora/RHEL compatibility)
+	if err := exec.Command("modprobe", "sch_netem").Run(); err != nil {
+		log.Warnf("failed to load sch_netem kernel module: %v", err)
+	}
+
 	// Get the runtime initializer.
 	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 	if err != nil {
