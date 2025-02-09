@@ -51,14 +51,15 @@ Show link impairments in JSON format
     ${rc}    ${output} =    Run And Return Rc And Output    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-l1 --format json
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # Verify the JSON keys exist
-    Should Contain    ${output}    "Interface"
-    Should Contain    ${output}    "NodeName"
-    Should Contain    ${output}    "Delay"
-    Should Contain    ${output}    "Jitter"
-    Should Contain    ${output}    "PacketLoss"
-    Should Contain    ${output}    "Rate"
-    Should Contain    ${output}    "Corruption"
+    # Verify that the output contains the node key
+    Should Contain    ${output}    "clab-${lab-name}-l1"
+    # Verify the JSON keys exist in the impairment objects.
+    Should Contain    ${output}    "interface"
+    Should Contain    ${output}    "delay"
+    Should Contain    ${output}    "jitter"
+    Should Contain    ${output}    "packet_loss"
+    Should Contain    ${output}    "rate"
+    Should Contain    ${output}    "corruption"
     # Verify the expected values appear
     Should Contain    ${output}    "100ms"
     Should Contain    ${output}    "2ms"

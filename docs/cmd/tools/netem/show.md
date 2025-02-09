@@ -38,34 +38,65 @@ containerlab tools netem show -n clab-netem-r1
 
 ```bash
 containerlab tools netem show -n clab-netem-r1 --format json
-[
-  {
-    "Interface": "lo",
-    "NodeName": "clab-netem-r1",
-    "Delay": "N/A",
-    "Jitter": "N/A",
-    "Packet Loss": "N/A",
-    "Rate (Kbit)": "N/A",
-    "Corruption": "N/A"
-  },
-  {
-    "Interface": "eth0",
-    "NodeName": "clab-netem-r1",
-    "Delay": "N/A",
-    "Jitter": "N/A",
-    "Packet Loss": "N/A",
-    "Rate (Kbit)": "N/A",
-    "Corruption": "N/A"
-  },
-  {
-    "Interface": "eth1",
-    "NodeName": "clab-netem-r1",
-    "Delay": "15ms",
-    "Jitter": "2ms",
-    "Packet Loss": "0.00%",
-    "Rate (Kbit)": "0",
-    "Corruption": "N/A"
-  }
-]
+{
+  "clab-vlan-srl1": [
+    {
+      "interface": "lo",
+      "delay": "N/A",
+      "jitter": "N/A",
+      "packet_loss": "N/A",
+      "rate": "N/A",
+      "corruption": "N/A"
+    },
+    {
+      "interface": "mgmt0",
+      "delay": "N/A",
+      "jitter": "N/A",
+      "packet_loss": "N/A",
+      "rate": "N/A",
+      "corruption": "N/A"
+    },
+    {
+      "interface": "e1-1",
+      "delay": "N/A",
+      "jitter": "N/A",
+      "packet_loss": "N/A",
+      "rate": "N/A",
+      "corruption": "N/A"
+    },
+    {
+      "interface": "e1-10",
+      "delay": "N/A",
+      "jitter": "N/A",
+      "packet_loss": "N/A",
+      "rate": "N/A",
+      "corruption": "N/A"
+    },
+    {
+      "interface": "gway-2801",
+      "delay": "N/A",
+      "jitter": "N/A",
+      "packet_loss": "N/A",
+      "rate": "N/A",
+      "corruption": "N/A"
+    },
+    {
+      "interface": "monit_in",
+      "delay": "N/A",
+      "jitter": "N/A",
+      "packet_loss": "N/A",
+      "rate": "N/A",
+      "corruption": "N/A"
+    },
+    {
+      "interface": "mgmt0-0 (mgmt0.0)",
+      "delay": "N/A",
+      "jitter": "N/A",
+      "packet_loss": "N/A",
+      "rate": "N/A",
+      "corruption": "N/A"
+    }
+  ]
+}
 
 ```

@@ -27,6 +27,7 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/vishvananda/netlink"
+	"github.com/srl-labs/containerlab/types"
 )
 
 var (
@@ -258,20 +259,8 @@ func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 	}
 }
 
-// ImpairmentData represents a simplified view of the impairments
-// for JSON output.
-type ImpairmentData struct {
-	Interface  string `json:"Interface"`
-	NodeName   string `json:"NodeName"`
-	Delay      string `json:"Delay"`
-	Jitter     string `json:"Jitter"`
-	PacketLoss string `json:"PacketLoss"`
-	Rate       string `json:"Rate"`
-	Corruption string `json:"Corruption"`
-}
-
 // qdiscToJSONData converts the full qdisc object to a simplified view.
-func qdiscToJSONData(qdisc gotc.Object) ImpairmentData {
+func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 	link, err := netlink.LinkByIndex(int(qdisc.Ifindex))
 	if err != nil {
 		log.Errorf("could not get netlink interface by index: %v", err)
@@ -284,10 +273,10 @@ func qdiscToJSONData(qdisc gotc.Object) ImpairmentData {
 		ifDisplayName += fmt.Sprintf(" (%s)", link.Attrs().Alias)
 	}
 
+	// Return "N/A" values when netem is not set.
 	if qdisc.Netem == nil {
-		return ImpairmentData{
+		return types.ImpairmentData{
 			Interface:  ifDisplayName,
-			NodeName:   netemNode,
 			Delay:      "N/A",
 			Jitter:     "N/A",
 			PacketLoss: "N/A",
@@ -299,7 +288,6 @@ func qdiscToJSONData(qdisc gotc.Object) ImpairmentData {
 	if qdisc.Netem.Latency64 != nil {
 		delay = (time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond).String()
 	}
-
 	if qdisc.Netem.Jitter64 != nil {
 		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
 	}
@@ -308,9 +296,8 @@ func qdiscToJSONData(qdisc gotc.Object) ImpairmentData {
 	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
 	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 
-	return ImpairmentData{
+	return types.ImpairmentData{
 		Interface:  ifDisplayName,
-		NodeName:   netemNode,
 		Delay:      delay,
 		Jitter:     jitter,
 		PacketLoss: loss,
@@ -328,8 +315,6 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 
 	// init the runtime
 	rt := rinit()
-
-	// init runtime with timeout
 	err = rt.Init(
 		runtime.WithConfig(
 			&runtime.RuntimeConfig{
@@ -344,14 +329,13 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// retrieve the containers NSPath
+	// retrieve the container's NSPath
 	nodeNsPath, err := rt.GetNSPath(ctx, netemNode)
 	if err != nil {
 		return err
 	}
 
 	var nodeNs ns.NetNS
-
 	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
 		return err
 	}
@@ -360,10 +344,9 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-
 	defer func() {
 		if err := tcnl.Close(); err != nil {
-			log.Errorf("could not close rtnetlink socket: %v\n", err)
+			log.Errorf("could not close rtnetlink socket: %v", err)
 		}
 	}()
 
@@ -374,11 +357,15 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 		}
 
 		if netemFormat == "json" {
-			var impairments []ImpairmentData
+			var impairments []types.ImpairmentData
 			for _, q := range qdiscs {
 				impairments = append(impairments, qdiscToJSONData(q))
 			}
-			jsonData, err := json.MarshalIndent(impairments, "", "  ")
+			// Structure output as a map keyed by the node name.
+			outputData := map[string][]types.ImpairmentData{
+				netemNode: impairments,
+			}
+			jsonData, err := json.MarshalIndent(outputData, "", "  ")
 			if err != nil {
 				return fmt.Errorf("error marshalling JSON: %v", err)
 			}

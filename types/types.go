@@ -428,3 +428,12 @@ func (h *HealthcheckConfig) GetTimeoutDuration() time.Duration {
 func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
 	return time.Duration(h.StartPeriod) * time.Second
 }
+
+type ImpairmentData struct {
+	Interface  string `json:"interface"`
+	Delay      string `json:"delay"`
+	Jitter     string `json:"jitter"`
+	PacketLoss string `json:"packet_loss"`
+	Rate       string `json:"rate"`
+	Corruption string `json:"corruption"`
+}
