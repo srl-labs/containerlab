@@ -26,8 +26,8 @@ import (
 	"github.com/srl-labs/containerlab/internal/tc"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/vishvananda/netlink"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/vishvananda/netlink"
 )
 
 var (
@@ -247,7 +247,8 @@ func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 
 	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
-	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/
+		float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 
 	return tableWriter.Row{
 		ifDisplayName,
@@ -294,7 +295,8 @@ func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 
 	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
-	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/
+		float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
 
 	return types.ImpairmentData{
 		Interface:  ifDisplayName,
