@@ -23,7 +23,7 @@ var operStateToString = map[OperState]string{
 	down: "down",
 }
 
-// Implement UnmarshalYAML for YAML v2
+// UnmarshalYAML Implement UnmarshalYAML for OperState
 func (s *OperState) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var operStateStr string
 	if err := unmarshal(&operStateStr); err != nil {
@@ -39,7 +39,7 @@ func (s *OperState) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-// Implement MarshalYAML for OperState (optional)
-func (s OperState) MarshalYAML() (interface{}, error) {
-	return operStateToString[s], nil
+// MarshalYAML Implement MarshalYAML for OperState
+func (s *OperState) MarshalYAML() (interface{}, error) {
+	return operStateToString[*s], nil
 }
