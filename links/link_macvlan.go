@@ -153,6 +153,12 @@ func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 		return fmt.Errorf("failed to lookup %q: %v", l.NodeEndpoint.GetRandIfaceName(), err)
 	}
 
+	// enable promiscuous mode
+	err = netlink.SetPromiscOn(mvInterface)
+	if err != nil {
+		return fmt.Errorf("failed setting promiscuous mode for interface %s (%s:%s): %v", l.NodeEndpoint.GetRandIfaceName(), l.NodeEndpoint.GetNode().GetShortName(), l.NodeEndpoint.GetIfaceName(), err)
+	}
+
 	// add the link to the Node Namespace
 	err = l.NodeEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
 		SetNameMACAndUpInterface(mvInterface, l.NodeEndpoint))
