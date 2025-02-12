@@ -37,6 +37,14 @@ containerlab tools netem show -n clab-netem-r1
 
 ### Showing link impairments for a node in json format
 
+When displaying the netem details in json format, the fields have the following types:
+
+* delay - string with the time suffix (ms, s, etc)
+* jitter - string with the time suffix (ms, s, etc)
+* packet_loss - a value with a floating point and 2 decimal places
+* rate - an integer value expressed in kbit/s
+* corruption - a value with a floating point and 2 decimal places
+
 ```bash
 containerlab tools netem show -n srl --format json
 ```
