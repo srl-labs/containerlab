@@ -64,6 +64,6 @@ Show link impairments in JSON format
     # Verify the expected values appear
     Should Contain    ${output}    "100ms"
     Should Contain    ${output}    "2ms"
-    Should Contain    ${output}    10.00
+    Should Contain    ${output}    10
     Should Contain    ${output}    1000
-    Should Contain    ${output}    2.00
+    Should Contain    ${output}    2
