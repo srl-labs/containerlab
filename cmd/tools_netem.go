@@ -62,7 +62,6 @@ func init() {
 
 	netemCmd.AddCommand(netemShowCmd)
 	netemShowCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
-	// add the new flag for output format
 	netemShowCmd.Flags().StringVarP(&netemFormat, "format", "f", "table", "output format (table, json)")
 }
 
@@ -91,7 +90,7 @@ var netemShowCmd = &cobra.Command{
 func netemSetFn(_ *cobra.Command, _ []string) error {
 	// Ensure that the sch_netem kernel module is loaded (for Fedora/RHEL compatibility)
 	if err := exec.Command("modprobe", "sch_netem").Run(); err != nil {
-		log.Warnf("failed to load sch_netem kernel module: %v", err)
+		log.Warn("failed to load sch_netem kernel module (expected on OrbStack machines)", "err", err)
 	}
 
 	// Get the runtime initializer.
@@ -277,26 +276,26 @@ func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 	// Return "N/A" values when netem is not set.
 	if qdisc.Netem == nil {
 		return types.ImpairmentData{
-			Interface:  ifDisplayName,
-			Delay:      "N/A",
-			Jitter:     "N/A",
-			PacketLoss: "N/A",
-			Rate:       "N/A",
-			Corruption: "N/A",
+			Interface: ifDisplayName,
 		}
 	}
 
-	if qdisc.Netem.Latency64 != nil {
+	if qdisc.Netem.Latency64 != nil && *qdisc.Netem.Latency64 != 0 {
 		delay = (time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond).String()
 	}
-	if qdisc.Netem.Jitter64 != nil {
+	if qdisc.Netem.Jitter64 != nil && *qdisc.Netem.Jitter64 != 0 {
 		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
 	}
-
-	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
-	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
-	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/
-		float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+	if qdisc.Netem.Rate != nil && int(qdisc.Netem.Rate.Rate) != 0 {
+		rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
+	}
+	if qdisc.Netem.Corrupt != nil && qdisc.Netem.Corrupt.Probability != 0 {
+		corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/
+			float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+	}
+	if qdisc.Netem.Qopt.Loss != 0 {
+		loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+	}
 
 	return types.ImpairmentData{
 		Interface:  ifDisplayName,

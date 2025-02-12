@@ -17,6 +17,7 @@ containerlab tools netem show [local-flags]
 With the mandatory `--node | -n` flag a user specifies the name of the containerlab node to show link impairments on.
 
 ### format
+
 The optional --format | -f flag can be used to choose the output format. The default value is table, which displays the output in a formatted table. Specifying json returns the link impairment details in JSON format.
 
 ## Examples
@@ -34,69 +35,52 @@ containerlab tools netem show -n clab-netem-r1
 +-----------+-------+--------+-------------+-------------+
 ```
 
-### Showing link impairments for a node
+### Showing link impairments for a node in json format
 
 ```bash
-containerlab tools netem show -n clab-netem-r1 --format json
+containerlab tools netem show -n srl --format json
 {
-  "clab-vlan-srl1": [
+  "srl": [
     {
       "interface": "lo",
-      "delay": "N/A",
-      "jitter": "N/A",
-      "packet_loss": "N/A",
-      "rate": "N/A",
-      "corruption": "N/A"
+      "delay": "",
+      "jitter": "",
+      "packet_loss": "",
+      "rate": "",
+      "corruption": ""
     },
     {
       "interface": "mgmt0",
-      "delay": "N/A",
-      "jitter": "N/A",
-      "packet_loss": "N/A",
-      "rate": "N/A",
-      "corruption": "N/A"
+      "delay": "1s",
+      "jitter": "5ms",
+      "packet_loss": "",
+      "rate": "",
+      "corruption": ""
     },
     {
-      "interface": "e1-1",
-      "delay": "N/A",
-      "jitter": "N/A",
-      "packet_loss": "N/A",
-      "rate": "N/A",
-      "corruption": "N/A"
-    },
-    {
-      "interface": "e1-10",
-      "delay": "N/A",
-      "jitter": "N/A",
-      "packet_loss": "N/A",
-      "rate": "N/A",
-      "corruption": "N/A"
-    },
-    {
-      "interface": "gway-2801",
-      "delay": "N/A",
-      "jitter": "N/A",
-      "packet_loss": "N/A",
-      "rate": "N/A",
-      "corruption": "N/A"
+      "interface": "gway-2800",
+      "delay": "",
+      "jitter": "",
+      "packet_loss": "",
+      "rate": "",
+      "corruption": ""
     },
     {
       "interface": "monit_in",
-      "delay": "N/A",
-      "jitter": "N/A",
-      "packet_loss": "N/A",
-      "rate": "N/A",
-      "corruption": "N/A"
+      "delay": "",
+      "jitter": "",
+      "packet_loss": "",
+      "rate": "",
+      "corruption": ""
     },
     {
       "interface": "mgmt0-0 (mgmt0.0)",
-      "delay": "N/A",
-      "jitter": "N/A",
-      "packet_loss": "N/A",
-      "rate": "N/A",
-      "corruption": "N/A"
+      "delay": "",
+      "jitter": "",
+      "packet_loss": "",
+      "rate": "",
+      "corruption": ""
     }
   ]
 }
-
 ```
