@@ -430,10 +430,10 @@ func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
 }
 
 type ImpairmentData struct {
-	Interface  string `json:"interface"`
-	Delay      string `json:"delay"`
-	Jitter     string `json:"jitter"`
-	PacketLoss string `json:"packet_loss"`
-	Rate       string `json:"rate"`
-	Corruption string `json:"corruption"`
+	Interface  string  `json:"interface"`
+	Delay      string  `json:"delay"`
+	Jitter     string  `json:"jitter"`
+	PacketLoss float64 `json:"packet_loss"`
+	Rate       int     `json:"rate"`
+	Corruption float64 `json:"corruption"`
 }

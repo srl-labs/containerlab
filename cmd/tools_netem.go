@@ -266,7 +266,9 @@ func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 		log.Errorf("could not get netlink interface by index: %v", err)
 	}
 
-	var delay, jitter, loss, rate, corruption string
+	var delay, jitter string
+	var loss, corruption float64
+	var rate int
 
 	ifDisplayName := link.Attrs().Name
 	if link.Attrs().Alias != "" {
@@ -287,14 +289,16 @@ func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
 	}
 	if qdisc.Netem.Rate != nil && int(qdisc.Netem.Rate.Rate) != 0 {
-		rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
+		rate = int(qdisc.Netem.Rate.Rate * 8 / 1000)
 	}
 	if qdisc.Netem.Corrupt != nil && qdisc.Netem.Corrupt.Probability != 0 {
-		corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/
-			float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+		// round to 2 decimal places
+		corruption = math.Round((float64(qdisc.Netem.Corrupt.Probability)/
+			float64(math.MaxUint32)*100)*100) / 100
 	}
 	if qdisc.Netem.Qopt.Loss != 0 {
-		loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+		// round to 2 decimal places
+		loss = math.Round((float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100)*100) / 100
 	}
 
 	return types.ImpairmentData{

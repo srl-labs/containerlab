@@ -48,7 +48,8 @@ Show link impairments
     Should Contain    ${output}    1000
 
 Show link impairments in JSON format
-    ${rc}    ${output} =    Run And Return Rc And Output    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-l1 --format json
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-l1 --format json
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # Verify that the output contains the node key
@@ -63,6 +64,6 @@ Show link impairments in JSON format
     # Verify the expected values appear
     Should Contain    ${output}    "100ms"
     Should Contain    ${output}    "2ms"
-    Should Contain    ${output}    "10.00%"
-    Should Contain    ${output}    "1000"
-    Should Contain    ${output}    "2.00%"
+    Should Contain    ${output}    10.00
+    Should Contain    ${output}    1000
+    Should Contain    ${output}    2.00

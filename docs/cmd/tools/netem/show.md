@@ -39,48 +39,53 @@ containerlab tools netem show -n clab-netem-r1
 
 ```bash
 containerlab tools netem show -n srl --format json
+```
+
+<div class="embed-result">
+```json
 {
   "srl": [
     {
       "interface": "lo",
       "delay": "",
       "jitter": "",
-      "packet_loss": "",
-      "rate": "",
-      "corruption": ""
+      "packet_loss": 0,
+      "rate": 0,
+      "corruption": 0
     },
     {
       "interface": "mgmt0",
       "delay": "1s",
       "jitter": "5ms",
-      "packet_loss": "",
-      "rate": "",
-      "corruption": ""
+      "packet_loss": 0.1,
+      "rate": 0,
+      "corruption": 0.2
     },
     {
       "interface": "gway-2800",
       "delay": "",
       "jitter": "",
-      "packet_loss": "",
-      "rate": "",
-      "corruption": ""
+      "packet_loss": 0,
+      "rate": 0,
+      "corruption": 0
     },
     {
       "interface": "monit_in",
       "delay": "",
       "jitter": "",
-      "packet_loss": "",
-      "rate": "",
-      "corruption": ""
+      "packet_loss": 0,
+      "rate": 0,
+      "corruption": 0
     },
     {
       "interface": "mgmt0-0 (mgmt0.0)",
       "delay": "",
       "jitter": "",
-      "packet_loss": "",
-      "rate": "",
-      "corruption": ""
+      "packet_loss": 0,
+      "rate": 0,
+      "corruption": 0
     }
   ]
 }
 ```
+</div>
