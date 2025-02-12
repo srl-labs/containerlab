@@ -61,8 +61,9 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*Li
 		LinkCommonParams: lr.LinkCommonParams,
 		HostInterface:    hostIface,
 		Endpoint: &EndpointRaw{
-			Node:  lr.Endpoint.Node,
-			Iface: lr.Endpoint.Iface,
+			Node:      lr.Endpoint.Node,
+			Iface:     lr.Endpoint.Iface,
+			OperState: up,
 		},
 	}
 
@@ -185,6 +186,7 @@ func (lr *LinkVxlanRaw) resolveLocalEndpoint(stitched bool, params *ResolveParam
 		// in the stitched vxlan mode we create vxlan interface in the host node namespace
 		vxlanRawEp.Node = "host"
 		vxlanRawEp.MAC = ""
+		vxlanRawEp.OperState = up
 
 		// resolve local Endpoint
 		return vxlanRawEp.Resolve(params, link)
