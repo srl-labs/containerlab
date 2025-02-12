@@ -248,15 +248,17 @@ The veth link is the most common link type used in containerlab. It creates a vi
 links:
   - type: veth
     endpoints:
-      - node: <NodeA-Name>                  # mandatory
-        interface: <NodeA-Interface-Name>   # mandatory
-        mac: <NodeA-Interface-Mac>          # optional
-      - node: <NodeB-Name>                  # mandatory
-        interface: <NodeB-Interface-Name>   # mandatory
-        mac: <NodeB-Interface-Mac>          # optional
-    mtu: <link-mtu>                         # optional
-    vars: <link-variables>                  # optional (used in templating)
-    labels: <link-labels>                   # optional (used in templating)
+      - node: <NodeA-Name>                        # mandatory
+        interface: <NodeA-Interface-Name>         # mandatory
+        mac: <NodeA-Interface-Mac>                # optional
+        oper-state: <up/down | enable/disable>    # optional 
+      - node: <NodeB-Name>                        # mandatory
+        interface: <NodeB-Interface-Name>         # mandatory
+        mac: <NodeB-Interface-Mac>                # optional
+        oper-state: <up/down | enable/disable>    # optional
+    mtu: <link-mtu>                                  # optional
+    vars: <link-variables>                           # optional (used in templating)
+    labels: <link-labels>                            # optional (used in templating)
 ```
 
 ###### mgmt-net
@@ -267,13 +269,14 @@ The mgmt-net link type represents a veth pair that is connected to a container n
   links:
   - type: mgmt-net
     endpoint:
-      node: <NodeA-Name>                  # mandatory
-      interface: <NodeA-Interface-Name>   # mandatory
-      mac: <NodeA-Interface-Mac>          # optional
-    host-interface: <interface-name         # mandatory
-    mtu: <link-mtu>                         # optional
-    vars: <link-variables>                  # optional (used in templating)
-    labels: <link-labels>                   # optional (used in templating)
+      node: <NodeA-Name>                          # mandatory
+      interface: <NodeA-Interface-Name>           # mandatory
+      mac: <NodeA-Interface-Mac>                  # optional
+      oper-state: <up/down | enable/disable>      # optional
+    host-interface: <interface-name                  # mandatory
+    mtu: <link-mtu>                                  # optional
+    vars: <link-variables>                           # optional (used in templating)
+    labels: <link-labels>                            # optional (used in templating)
 ```
 
 The `host-interface` is the desired interface name that will be attached to the management network in the host namespace.
@@ -286,13 +289,14 @@ The macvlan link type creates a MACVlan interface with the `host-interface` as i
   links:
   - type: macvlan
     endpoint:
-      node: <NodeA-Name>                  # mandatory
-      interface: <NodeA-Interface-Name>   # mandatory
-      mac: <NodeA-Interface-Mac>          # optional
-    host-interface: <interface-name>        # mandatory
-    mode: <macvlan-mode>                    # optional ("bridge" by default)
-    vars: <link-variables>                  # optional (used in templating)
-    labels: <link-labels>                   # optional (used in templating)
+      node: <NodeA-Name>                        # mandatory
+      interface: <NodeA-Interface-Name>         # mandatory
+      mac: <NodeA-Interface-Mac>                # optional
+      oper-state: <up/down | enable/disable>    # optional
+    host-interface: <interface-name>              # mandatory
+    mode: <macvlan-mode>                          # optional ("bridge" by default)
+    vars: <link-variables>                        # optional (used in templating)
+    labels: <link-labels>                         # optional (used in templating)
 ```
 
 The `host-interface` is the name of the existing interface present in the host namespace.
@@ -308,13 +312,14 @@ In comparison to the veth type, no bridge or other namespace is required to be r
   links:
   - type: host
     endpoint:
-      node: <NodeA-Name>                  # mandatory
-      interface: <NodeA-Interface-Name>   # mandatory
-      mac: <NodeA-Interface-Mac>          # optional
-    host-interface: <interface-name>        # mandatory
-    mtu: <link-mtu>                         # optional
-    vars: <link-variables>                  # optional (used in templating)
-    labels: <link-labels>                   # optional (used in templating)
+      node: <NodeA-Name>                        # mandatory
+      interface: <NodeA-Interface-Name>         # mandatory
+      mac: <NodeA-Interface-Mac>                # optional
+      oper-state: <up/down | enable/disable>    # optional
+    host-interface: <interface-name>               # mandatory
+    mtu: <link-mtu>                                # optional
+    vars: <link-variables>                         # optional (used in templating)
+    labels: <link-labels>                          # optional (used in templating)
 ```
 
 The `host-interface` parameter defines the name of the veth interface in the host's network namespace.
@@ -326,16 +331,17 @@ The vxlan type results in a vxlan tunnel interface that is created in the host n
 ```yaml
   links:
     - type: vxlan                       
-      endpoint:                              # mandatory
-        node: <Node-Name>                    # mandatory
-        interface: <Node-Interface-Name>     # mandatory
-        mac: <Node-Interface-Mac>            # optional
-      remote: <Remote-VTEP-IP>               # mandatory
-      vni: <VNI>                             # mandatory
-      udp-port: <VTEP-UDP-Port>              # mandatory
-      mtu: <link-mtu>                        # optional
-      vars: <link-variables>                 # optional (used in templating)
-      labels: <link-labels>                  # optional (used in templating)
+      endpoint:                                   # mandatory
+        node: <Node-Name>                         # mandatory
+        interface: <Node-Interface-Name>          # mandatory
+        mac: <Node-Interface-Mac>                 # optional
+        oper-state: <up/down | enable/disable>    # optional
+      remote: <Remote-VTEP-IP>                       # mandatory
+      vni: <VNI>                                     # mandatory
+      udp-port: <VTEP-UDP-Port>                      # mandatory
+      mtu: <link-mtu>                                # optional
+      vars: <link-variables>                         # optional (used in templating)
+      labels: <link-labels>                          # optional (used in templating)
 ```
 
 ###### vxlan-stitched
@@ -346,16 +352,17 @@ In addition to these interfaces, tc rules are being provisioned to stitch the vx
 ```yaml
   links:
     - type: vxlan-stitch
-      endpoint:                              # mandatory
-        node: <Node-Name>                    # mandatory
-        interface: <Node-Interface-Name>     # mandatory
-        mac: <Node-Interface-Mac>            # optional
-      remote: <Remote-VTEP-IP>               # mandatory
-      vni: <VNI>                             # mandatory
-      udp-port: <VTEP-UDP-Port>              # mandatory
-      mtu: <link-mtu>                        # optional
-      vars: <link-variables>                 # optional (used in templating)
-      labels: <link-labels>                  # optional (used in templating)
+      endpoint:                                   # mandatory
+        node: <Node-Name>                         # mandatory
+        interface: <Node-Interface-Name>          # mandatory
+        mac: <Node-Interface-Mac>                 # optional
+        oper-state: <up/down | enable/disable>    # optional
+      remote: <Remote-VTEP-IP>                       # mandatory
+      vni: <VNI>                                     # mandatory
+      udp-port: <VTEP-UDP-Port>                      # mandatory
+      mtu: <link-mtu>                                # optional
+      vars: <link-variables>                         # optional (used in templating)
+      labels: <link-labels>                          # optional (used in templating)
 ```
 
 ###### dummy
@@ -368,12 +375,13 @@ Such interfaces are useful for testing and debugging purposes where we want to m
   links:
   - type: dummy
     endpoint:
-      node: <NodeA-Name>                    # mandatory
-      interface: <NodeA-Interface-Name>     # mandatory
-      mac: <NodeA-Interface-Mac>            # optional
-    mtu: <link-mtu>                         # optional
-    vars: <link-variables>                  # optional (used in templating)
-    labels: <link-labels>                   # optional (used in templating)
+      node: <NodeA-Name>                        # mandatory
+      interface: <NodeA-Interface-Name>         # mandatory
+      mac: <NodeA-Interface-Mac>                # optional
+      oper-state: <up/down | enable/disable>    # optional
+    mtu: <link-mtu>                                # optional
+    vars: <link-variables>                         # optional (used in templating)
+    labels: <link-labels>                          # optional (used in templating)
 ```
 
 #### Kinds
