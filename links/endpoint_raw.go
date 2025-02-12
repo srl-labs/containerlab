@@ -10,18 +10,39 @@ import (
 // EndpointRaw is the raw (string) representation of an endpoint as defined in the topology file
 // for a given link definition.
 type EndpointRaw struct {
-	Node  string `yaml:"node"`
-	Iface string `yaml:"interface"`
-	MAC   string `yaml:"mac,omitempty"`
+	Node      string    `yaml:"node"`
+	Iface     string    `yaml:"interface"`
+	MAC       string    `yaml:"mac,omitempty"`
+	OperState OperState `yaml:"oper-state"`
 }
 
 // NewEndpointRaw creates a new EndpointRaw struct.
-func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
+func NewEndpointRaw(node, nodeIf, mac string) *EndpointRaw {
 	return &EndpointRaw{
-		Node:  node,
-		Iface: nodeIf,
-		MAC:   Mac,
+		Node:      node,
+		Iface:     nodeIf,
+		MAC:       mac,
+		OperState: up,
 	}
+}
+
+// UnmarshalYAML for EndpointRaw
+func (s *EndpointRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// First, unmarshal the entire object into the struct
+	type Alias EndpointRaw // Create an alias to avoid infinite recursion
+	aux := (*Alias)(s)
+
+	// Unmarshal the YAML into the struct
+	if err := unmarshal(&aux); err != nil {
+		return err
+	}
+
+	// Set the default value for OperState if it's empty
+	if s.OperState == "" {
+		s.OperState = up
+	}
+
+	return nil
 }
 
 // Resolve resolves the EndpointRaw into an Endpoint interface that is implemented
@@ -36,7 +57,7 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 		return nil, fmt.Errorf("unable to find node %s", er.Node)
 	}
 
-	genericEndpoint := NewEndpointGeneric(node, er.Iface, l)
+	genericEndpoint := NewEndpointGeneric(node, er.Iface, er.OperState, l)
 
 	var err error
 	if er.MAC == "" {

@@ -219,7 +219,7 @@ func (l *LinkVxlan) Deploy(ctx context.Context, _ Endpoint) error {
 
 	// add the link to the Node Namespace
 	err = l.localEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
-		SetNameMACAndUpInterface(mvInterface, l.localEndpoint))
+		SetNameMACAndOperStateInterface(mvInterface, l.localEndpoint))
 	return err
 }
 

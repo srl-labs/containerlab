@@ -45,6 +45,7 @@ type Endpoint interface {
 	// Setters for ifaceName and Alias
 	SetIfaceName(string)
 	SetIfaceAlias(string)
+	GetOperState() OperState
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -53,21 +54,27 @@ type EndpointGeneric struct {
 	IfaceName  string
 	IfaceAlias string
 	// Link is the link this endpoint belongs to.
-	Link     Link
-	MAC      net.HardwareAddr
-	randName string
+	Link      Link
+	MAC       net.HardwareAddr
+	randName  string
+	OperState OperState
 }
 
-func NewEndpointGeneric(node Node, iface string, link Link) *EndpointGeneric {
+func NewEndpointGeneric(node Node, iface string, operState OperState, link Link) *EndpointGeneric {
 	return &EndpointGeneric{
 		Node:       node,
 		IfaceName:  iface,
 		IfaceAlias: "",
 		// random name is generated for the endpoint to avoid name collisions
 		// when it is first deployed in the root namespace
-		randName: genRandomIfName(),
-		Link:     link,
+		randName:  genRandomIfName(),
+		Link:      link,
+		OperState: operState,
 	}
+}
+
+func (e *EndpointGeneric) GetOperState() OperState {
+	return e.OperState
 }
 
 func (e *EndpointGeneric) GetRandIfaceName() string {

@@ -71,7 +71,7 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 	// create the host side MacVlan Endpoint
 	link.HostEndpoint = &EndpointMacVlan{
-		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
+		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, r.Endpoint.OperState, link),
 	}
 
 	// populate the host interfaces mac address
@@ -155,7 +155,7 @@ func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 
 	// add the link to the Node Namespace
 	err = l.NodeEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
-		SetNameMACAndUpInterface(mvInterface, l.NodeEndpoint))
+		SetNameMACAndOperStateInterface(mvInterface, l.NodeEndpoint))
 	return err
 }
 

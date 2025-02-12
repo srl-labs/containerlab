@@ -87,7 +87,7 @@ func (l *LinkDummy) Deploy(ctx context.Context, ep Endpoint) error {
 	// if the node is a regular namespace node
 	// add link to node, rename, set mac and Up
 	err = ep.GetNode().AddLinkToContainer(ctx, link,
-		SetNameMACAndUpInterface(link, ep))
+		SetNameMACAndOperStateInterface(link, ep))
 	if err != nil {
 		return err
 	}

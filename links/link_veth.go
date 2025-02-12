@@ -147,7 +147,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 	// if the node is a regular namespace node
 	// add link to node, rename, set mac and Up
 	err = ep.GetNode().AddLinkToContainer(ctx, linkA,
-		SetNameMACAndUpInterface(linkA, ep))
+		SetNameMACAndOperStateInterface(linkA, ep))
 	if err != nil {
 		return err
 	}
@@ -187,7 +187,7 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	// if the node is a regular namespace node
 	// add link to node, rename, set mac and Up
 	err = ep.GetNode().AddLinkToContainer(ctx, link,
-		SetNameMACAndUpInterface(link, ep))
+		SetNameMACAndOperStateInterface(link, ep))
 	if err != nil {
 		return err
 	}

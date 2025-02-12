@@ -398,9 +398,9 @@ const (
 	LinkEndpointTypeHost   = "host"
 )
 
-// SetNameMACAndUpInterface is a helper function that will bind interface name and Mac
+// SetNameMACAndOperStateInterface is a helper function that will bind interface name and Mac
 // and return a function that can run in the netns.Do() call for execution in a network namespace.
-func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
+func SetNameMACAndOperStateInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
 		// rename the link created with random name if its length is acceptable by linux
 		if IsValidInterfaceName(endpt.GetIfaceName()) {
@@ -440,10 +440,13 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			}
 		}
 
-		// bring the given link up
-		if err := netlink.LinkSetUp(l); err != nil {
-			return fmt.Errorf("failed to set %q up: %v",
-				endpt.GetIfaceName(), err)
+		// if operStateUp is true, bring the interface up
+		if endpt.GetOperState() == up {
+			// bring the given link up
+			if err := netlink.LinkSetUp(l); err != nil {
+				return fmt.Errorf("failed to set %q up: %v",
+					endpt.GetIfaceName(), err)
+			}
 		}
 
 		return nil
