@@ -351,7 +351,7 @@ sudo chmod u+s `which containerlab`
 # Create clab_admins Unix group
 sudo groupadd -r clab_admins
 # Add current user to clab_admins group
-sudo usermod -aG "$USER" clab_admins
+sudo usermod -aG clab_admins "$USER"
 ```
 
 Users who manage their Containerlab installation via `deb/yum/dnf` package managers will have the sudo-less functionality automatically enabled during the first upgrade from pre-`0.63.0` versions.
