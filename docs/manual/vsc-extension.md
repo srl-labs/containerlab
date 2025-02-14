@@ -146,8 +146,8 @@ topology:
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
         graph-icon: spine
-        topoViewer-group: "Data Center Spine"
-        topoViewer-groupLevel: 2
+        graph-group: "Data Center Spine"
+        graph-level: 2
 
     Spine-02:
       kind: srl
@@ -156,88 +156,88 @@ topology:
         graph-icon: spine
         graph-group: "Data Center Spine"
         graph-level: 2
-        topoViewer-geoCoordinateLat: "52.532161628640615"
-        topoViewer-geoCoordinateLng: "13.420430194846846"
+        graph-geoCoordinateLat: "52.532161628640615"
+        graph-geoCoordinateLng: "13.420430194846846"
 
     Leaf-01:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
         topoViewer-role: server
-        topoViewer-group: "Data Center Leaf"
-        topoViewer-groupLevel: 3
-        topoViewer-geoCoordinateLat: "51.45664108633426"
-        topoViewer-geoCoordinateLng: "7.00441511803141"
+        graph-group: "Data Center Leaf"
+        graph-level: 3
+        graph-geoCoordinateLat: "51.45664108633426"
+        graph-geoCoordinateLng: "7.00441511803141"
 
     Leaf-02:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
         topoViewer-role: client
-        topoViewer-group: "Data Center Leaf"
-        topoViewer-groupLevel: 3
-        topoViewer-geoCoordinateLat: "51.53871503745607"
-        topoViewer-geoCoordinateLng: "7.564717804534128"
+        graph-group: "Data Center Leaf"
+        graph-level: 3
+        graph-geoCoordinateLat: "51.53871503745607"
+        graph-geoCoordinateLng: "7.564717804534128"
 
     Leaf-03:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
         graph-icon: controller
-        topoViewer-group: "Data Center Leaf"
-        topoViewer-groupLevel: 3
-        topoViewer-geoCoordinateLat: "51.326388273344435"
-        topoViewer-geoCoordinateLng: "9.49831138932782"
+        graph-group: "Data Center Leaf"
+        graph-level: 3
+        graph-geoCoordinateLat: "51.326388273344435"
+        graph-geoCoordinateLng: "9.49831138932782"
 
     Leaf-04:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
         topoViewer-role: rgw
-        topoViewer-group: "Data Center Leaf"
-        topoViewer-groupLevel: 3
-        topoViewer-geoCoordinateLat: "51.09927769956055"
-        topoViewer-geoCoordinateLng: "13.980732881349564"
+        graph-group: "Data Center Leaf"
+        graph-level: 3
+        graph-geoCoordinateLat: "51.09927769956055"
+        graph-geoCoordinateLng: "13.980732881349564"
 
     BorderLeaf-01:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
         topoViewer-role: switch
-        topoViewer-group: "Data Center Border Leaf"
-        topoViewer-groupLevel: 2
-        topoViewer-geoCoordinateLat: "54.318988964885484"
-        topoViewer-geoCoordinateLng: "10.190450002066472"
+        graph-group: "Data Center Border Leaf"
+        graph-level: 2
+        graph-geoCoordinateLat: "54.318988964885484"
+        graph-geoCoordinateLng: "10.190450002066472"
 
     BorderLeaf-02:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
         topoViewer-role: switch
-        topoViewer-group: "Data Center Border Leaf"
-        topoViewer-groupLevel: 2
-        topoViewer-geoCoordinateLat: "54.168316500414994"
-        topoViewer-geoCoordinateLng: "12.311934204350786"
+        graph-group: "Data Center Border Leaf"
+        graph-level: 2
+        graph-geoCoordinateLat: "54.168316500414994"
+        graph-geoCoordinateLng: "12.311934204350786"
 
     DCGW-01:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
         topoViewer-role: pe
-        topoViewer-group: "Data Center DCGW-01"
-        topoViewer-groupLevel: 1
-        topoViewer-geoCoordinateLat: "54.318988964885484"
-        topoViewer-geoCoordinateLng: "10.190450002066472"
+        graph-group: "Data Center DCGW-01"
+        graph-level: 1
+        graph-geoCoordinateLat: "54.318988964885484"
+        graph-geoCoordinateLng: "10.190450002066472"
 
     DCGW-02:
       kind: srl
       image: ghcr.io/nokia/srlinux:24.10.2-357-arm64
       labels:
         topoViewer-role: router
-        topoViewer-group: "Data Center DCGW-02"
-        topoViewer-groupLevel: 1
-        topoViewer-geoCoordinateLat: "54.168316500414994"
-        topoViewer-geoCoordinateLng: "12.311934204350786"
+        graph-group: "Data Center DCGW-02"
+        graph-level: 1
+        graph-geoCoordinateLat: "54.168316500414994"
+        graph-geoCoordinateLng: "12.311934204350786"
 
   links:
 
