@@ -60,81 +60,110 @@ Integrated as a 'graph' action within the extension, The [clab-io-draw](https://
 
 ### TopoViewer
 
-Integrated as a 'graph' action within the extension, the [TopoViewer](https://github.com/asadarafat/topoViewer) project by @asadarafat offers an interactive way to visualize your containerlab topologies. Please ensure that containerlab is running for TopoViewer to function properly.
+Integrated as a 'graph' action within the extension, the [TopoViewer](https://github.com/asadarafat/topoViewer) project by @asadarafat offers an interactive way to visualize your containerlab topologies. 
 
-#### Enhanced Containerlab Topology Visualization with TopoViewer
+/// tip
+Your lab must be deployed in order to use TopoViewer.
+///
 
-By adding specific labels to your Containerlab topology definition, you can customize device icons, logically group nodes, and even define geo-positioning for a more intuitive network diagram.
+#### Label reference
 
-TopoViewer leverages custom labels in your Containerlab topology to:
+TopoViewer enables customization of the topology visualization by use of the `labels` field in your Containerlab topology definition. By adding these labels you are able to:
 
   - **Customize Icons:** Assign specific icons to nodes based on their role.
   - **Organize Nodes:** Group nodes under defined categories with hierarchical levels.
-  - **Position Nodes Geographically:** Use geo-coordinates to map node positions.
+  - **Position Nodes Geographically:** Use geographic coordinates (latitude and longitude) to place nodes on a world map.
 
+//// tab | Icon
 
-/// details | Supported TopoViewer Labels
-these are supported TopoViewer labes
-//// tab | graph-icon
+| Type     | Name         | Alias             |
+| -------- | ------------ | ----------------- |
+| `string` | `graph-icon` | `topoviewer-icon` |
 
-  - **Value Format:** `string`
-  - **Alias:** `topoViewer-role`
-  - **Purpose:** Defines the role of each node. TopoViewer maps these roles to unique icons.
-  - **Available Roles and Icons:**
+Using `graph-icon` you can define a role for a node. Changing the role will change the icon of the node in the topology visualization.
 
-       | Role           | Icon                                                                                                                                         |
-        |----------------|----------------------------------------------------------------------------------------------------------------------------------------------|
-        | **pe** / **router**         | <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" fill="none"><style type="text/css">.st0{fill:#001135;}.st1{fill:none;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}</style><rect width="50" height="50" class="st0"/><g><g><path d="M29.9,8.2V20h11.67" class="st1"/><path d="M38,16.04l3.12,3.17c0.54,0.54,0.54,1.29,0,1.79L38,24.17" class="st1"/></g><g><path d="M8.33,19.92h11.83v-11.67" class="st1"/><path d="M16.17,11.79l3.17,-3.12c0.54,-0.54,1.29,-0.54,1.79,0l3.21,3.17" class="st1"/></g><g><path d="M20,41.79V30H8.33" class="st1"/><path d="M11.88,33.96L8.75,30.79c-0.54,-0.54,-0.54,-1.29,0,-1.79l3.17,-3.21" class="st1"/></g><g><path d="M41.67,29.96H29.83v11.67" class="st1"/><path d="M33.83,38.08l-3.17,3.12c-0.54,0.54,-1.29,0.54,-1.79,0l-3.21,-3.17" class="st1"/></g></g></svg> |
-        | **dcgw**       | <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" fill="none"><style type="text/css">.st0{fill:#001135;}.st1{fill:none;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}</style><rect width="50" height="50" class="st0"/><g><g><path d="M39.08,16.58h-4.46c-0.75,0 -1.25,-0.54 -1.29,-1.29V10.79" class="st1"/><path d="M41.25,8.83L34.58,15.54" class="st1"/></g><g><path d="M8.29,14.13V9.67c0,-0.75,0.54,-1.25,1.29,-1.29h4.5" class="st1"/><path d="M16.21,16.25L9.5,9.54" class="st1"/></g><g><path d="M10.38,33.71h4.46c0.75,0,1.25,0.54,1.29,1.29v4.5" class="st1"/><path d="M8.29,41.58L15,34.92" class="st1"/></g><g><path d="M41.67,35.83v4.46c0,0.75,-0.54,-1.25,-1.29,-1.29h-4.5" class="st1"/><path d="M33.79,33.75L40.46,40.42" class="st1"/></g><g><line x1="41.71" y1="20.83" x2="8.38" y2="20.83" class="st1"/><line x1="41.71" y1="25" x2="8.38" y2="25" class="st1"/><line x1="41.71" y1="29.17" x2="8.38" y2="29.17" class="st1"/></g></g></svg> |
-        | **leaf** / **switch**       | <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" fill="none"><style type="text/css">.st0{fill:#001135;}.st1{fill:none;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}</style><rect width="50" height="50" class="st0"/><g><g><path d="M38.13,11.38l3.17,3.17c0.54,0.54,0.54,1.29,0,1.79l-3.17,3.21" class="st1"/><path d="M11.88,19.54l-3.17,-3.17c-0.54,-0.54,-0.54,-1.29,0,-1.79l3.17,-3.21" class="st1"/></g><g><path d="M38.13,30.46l3.17,3.17c0.54,0.54,0.54,1.29,0,1.79l-3.17,3.21" class="st1"/><path d="M11.88,38.63l-3.17,-3.17c-0.54,-0.54,-0.54,-1.29,0,-1.79l3.17,-3.21" class="st1"/></g><g><path d="M40.25,15.33H28.29l-6.67,19.13H9.67" class="st1"/><path d="M40.25,34.46H28.29l-6.67,-19.13H9.67" class="st1"/></g></g></svg> |
-        | **spine**      | <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" fill="none"><style type="text/css">.st0{fill:#001135;}.st1{fill:none;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}</style><rect width="50" height="50" class="st0"/><g><g><path d="M40.83,12.54H28.33L21.67,37.46H9.17" class="st1"/><path d="M11.67,41.67l-2.92,-3.38c-0.54,-0.54 -0.54,-1.29 0,-1.79l2.92,-3.17" class="st1"/><path d="M38.33,8.33l2.92,3.38c0.54,0.54 0.54,1.29 0,1.79L38.33,16.67" class="st1"/></g><g><path d="M40.83,37.46H26.67" class="st1"/><path d="M38.33,33.33l2.92,3.17c0.54,0.54 0.54,1.29 0,1.79l-2.92,3.38" class="st1"/></g><g><path d="M23.33,12.54H9.17" class="st1"/><path d="M11.67,16.67l-2.92,-3.17c-0.54,-0.54 -0.54,-1.29 0,-1.79l2.92,-3.38" class="st1"/></g><g><line x1="41.67" y1="25" x2="30" y2="25" class="st1"/><line x1="8.33" y1="25" x2="20" y2="25" class="st1"/></g></g></svg> |
-        | **server**        | <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" fill="none"><style type="text/css">.st0{fill:#001135;}.st1{fill:none;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}</style><rect width="50" height="50" class="st0"/><g><path d="M35.38,39.58H14.63c-0.46,0-0.83-0.38-0.83-0.83V11.25c0-0.46,0.38-0.83,0.83-0.83h20.71c0.46,0,0.83,0.38,0.83,0.83V38.75C36.21,39.21,35.83,39.58,35.38,39.58z" class="st1"/><line x1="14.63" y1="17.21" x2="32.79" y2="17.21" class="st1"/><line x1="14.63" y1="32.79" x2="32.79" y2="32.79" class="st1"/><line x1="14.63" y1="27.58" x2="32.79" y2="27.58" class="st1"/><line x1="14.63" y1="22.42" x2="32.79" y2="22.42" class="st1"/></g></svg> |
-        | **pon**        | <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" fill="none"><style type="text/css">.st0{fill:#001135;}.st1{fill:none;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}.st2{fill:#FFFFFF;stroke:#FFFFFF;stroke-width:1.67;stroke-miterlimit:10;}</style><rect width="50" height="50" class="st0"/><g><polyline points="8.71,8.33 40.42,25 8.71,41.67" class="st1"/><line x1="8.71" y1="25" x2="30.75" y2="25" class="st1"/><circle cx="39.63" cy="25" r="1.25" class="st2"/></g></svg> |
-        | **controller**        | <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" fill="none"><style type="text/css">.st0{fill:#001135;}.st1{fill:none;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}</style><rect width="50" height="50" class="st0"/><g><g><path d="M34.5,25c0,5.25-4.25,9.5-9.5,9.5S15.5,30.25,15.5,25S19.75,15.5,25,15.5c2.63,0,5,1.08,6.75,2.79C33.42,20.04,34.5,22.42,34.5,25z" class="st1"/><g><path d="M38.5,11.58l2.79,3c0.5,0.5,0.5,1.21,0,1.71l-2.79,3.21" class="st1"/><line x1="24.92" y1="15.5" x2="40.79" y2="15.5" class="st1"/></g></g><g><path d="M11.5,38.42L8.71,35.42c-0.5,-0.5,-0.5,-1.21,0,-1.71l2.79,-3.21" class="st1"/><line x1="25.08" y1="34.5" x2="9.21" y2="34.5" class="st1"/></g></g></svg> |
-        | **rgw**        | <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" fill="none"><style type="text/css">.st0{fill:#001135;}.st1{fill:none;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}.st2{fill:#FFFFFF;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;}</style><rect width="50" height="50" class="st0"/><path d="M25,31.21c0.33,0,0.63,-0.29,0.63,-0.63c0,-0.33,-0.29,-0.63,-0.63,-0.63c-0.33,0,-0.63,0.29,-0.63,0.63C24.38,30.92,24.67,31.21,25,31.21z" class="st2"/><path d="M19.5,22.75c3.13,-3.13,8.33,-3.13,11.46,0" class="st1"/><path d="M22.38,26.63c1.58,-1.58,4.17,-1.58,5.75,0" class="st1"/><g><path d="M7.08,23.17l15.71,-15.21c1.29,-1.25,3.38,-1.25,4.67,0L42.92,23.21" class="st1"/><path d="M12.46,26.58v13c0,1.83,1.5,3.33,3.33,3.33h7.46c1,0,1.79,-0.79,1.79,-1.79v-3.54" class="st1"/><path d="M37.63,26.58v13c0,1.83,-1.5,3.33,-3.33,3.33h-3.54" class="st1"/></g></svg> |
-        | **client**        | <svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50" fill="none"><style type="text/css">.st0{fill:#001135;}.st4{fill:none;stroke:#FFFFFF;stroke-width:1.67;stroke-linecap:round;stroke-linejoin:round;}</style><rect width="50" height="50" class="st0"/><path class="st4" d="M41.67,37.96H8.33H41.67z M37.13,13.54c0,-0.21,0,-0.42,-0.08,-0.58c-0.08,-0.21,-0.17,-0.38,-0.33,-0.50c-0.13,-0.13,-0.33,-0.25,-0.50,-0.33c-0.21,-0.08,-0.38,-0.08,-0.58,-0.08H14.42c-0.21,0,-0.42,0,-0.58,0.08c-0.21,0.08,-0.38,0.17,-0.50,0.33c-0.13,0.13,-0.25,0.33,-0.33,0.50c-0.08,0.21,-0.08,0.38,-0.08,0.58V31.67h24.25V13.54z"/></svg> | 
+!!!info
+      When no icon label is defined. The node icon will default to `pe`.
 
-!!!warning
-      when label topoViewer-role value is not defined, it will be defaulted to **pe**
+**Available Roles and Icons:**
 
-////
-//// tab | graph-group
-
-  - **Value Format:** `string`
-  - **Alias:** `topoViewer-group`
-  - **Purpose:** Categorizes nodes into specific groups (e.g., "Data Center Spine", "Data Center Leaf") to enhance the structure and readability of the topology.
+| Role                      | Icon                                           |
+| ------------------------- | ---------------------------------------------- |
+| **`pe`** / **`router`**   | ![](../images/topoviewer-icons/router.svg)     |
+| **`dcgw`**                | ![](../images/topoviewer-icons/dcgw.svg)       |
+| **`leaf`** / **`switch`** | ![](../images/topoviewer-icons/switch.svg)     |
+| **`spine`**               | ![](../images/topoviewer-icons/spine.svg)      |
+| **`server`**              | ![](../images/topoviewer-icons/server.svg)     |
+| **`pon`**                 | ![](../images/topoviewer-icons/pon.svg)        |
+| **`controller`**          | ![](../images/topoviewer-icons/controller.svg) |
+| **`rgw`**                 | ![](../images/topoviewer-icons/rgw.svg)        |
+| **`client`**              | ![](../images/topoviewer-icons/client.svg)     |
 
 ////
-//// tab | graph-level
+//// tab | Group
 
-  - **Value Format:** Positive `integer`
-  - **Alias:** `graph-leveltopoViewer-groupLevel`
-  - **Purpose:** Works in conjunction with `topoViewer-group` to define the hierarchical level of nodes:
-    - **Vertical Layout:** Level 1 nodes appear at the top, with higher numbers positioned lower.
-    - **Horizontal Layout:** Level 1 nodes appear on the left, with higher numbers positioned to the right.
+| Type     | Name          | Alias              |
+| -------- | ------------- | ------------------ |
+| `string` | `graph-group` | `topoviewer-group` |
 
-////
-//// tab | geo-coordinate-lat / geo-coordinate-lng
+Use `graph-group` to categorize nodes into specific groups such as "Datacenter Spine" or "Datacenter Leaf". 
 
-  - **Value Format:** `string`
-  - **Alias:** `topoViewer-geoCoordinateLat` and `topoViewer-geoCoordinateLng`
-  - **Purpose:** Define the geographic latitude and longitude for node positioning in a geo-based layout. If omitted, TopoViewer assigns random positions.
+In the topology visualization this will position all nodes that belong tothe group together in a box.
 
 ////
-///
+//// tab | Level
+
+| Type                 | Name          | Alias                              |
+| -------------------- | ------------- | ---------------------------------- |
+| `integer (unsigned)` | `graph-level` | `graph-leveltopoViewer-groupLevel` |
+
+When you have groups defined, you can use the `graph-level` label to position the nodes hierarchically depending on their level value.
+
+The level value must be a positive integer. 
+
+The `graph-level` value is defined in a reverse scale, where `1` is the highest or best value.
+
+**Vertical Layout**
+
+When using the vertical layout algorithm to position nodes. The numerically higher the level value, the lower the group will be positioned relative to other groups. 
+
+The group with the value `1` will be positioned at the top of the visualization.
+
+**Horizontal Layout**
+
+When using the horizontal layout algorithm, The numerically higher the level value, the further left the group will be positioned relative to other groups. 
+
+The group with the value `1` will be positioned furtherest to the left. 
+
+////
+//// tab | Geo coordinates
+
+| Type     | Name                                               |
+| -------- | -------------------------------------------------- |
+| `string` | `topoViewer-geoCoordinateLat`/`geo-coordinate-lng` |
+
+When using the geo positioning layout algorithm, you should set geographical coordinates in your topology definition so that TopoViewer is aware of where the nodes should be positioned.
+
+If not defined the nodes will be randomly placed on the map.
+
+TopoViewer accepts coordinates in latitude and longitude. Ensure to convert if using other coordinate systems (such as DMS).
+
+`topoViewer-geoCoordinateLat` is sets the latitude component of the coordinates.
+`topoViewer-geoCoordinateLng` is sets the longitude component of the coordinates.
+
+////
 
 
-#### Example Containerlab Topology Definition
+##### Sample topology
 
-Below is an example Containerlab topology definition that utilizes these labels to enhance the visualization
+Below is an example Containerlab topology definition that utilizes these labels to enhance the visualization.
 
-//// tab | Visualization output
+//// tab | Topology visualization
 
 ![topoviewer-labeled-topology](https://github.com/user-attachments/assets/f8c75b7f-36aa-46d3-865b-3f6a25ac52dc)
 ////
-//// tab | Containerlab Topology definition
+//// tab | Topology definition
 
-/// details | 
 ```yaml
 name: nokia-DataCenter-lab
 
@@ -256,7 +285,7 @@ topology:
     - endpoints: ["Spine-02:e1-5", "BorderLeaf-02:e1-1"]
     - endpoints: ["DCGW-02:e1-1", "BorderLeaf-02:e1-2"]
 ```
-///
+
 ////
 
 
