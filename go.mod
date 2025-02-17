@@ -218,7 +218,7 @@ require (
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
 	github.com/ulikunitz/xz v0.5.12
 	github.com/vbatts/tar-split v0.11.7 // indirect
-	github.com/vishvananda/netns v0.0.4
+	github.com/vishvananda/netns v0.0.5
 	github.com/weaveworks/libgitops v0.0.0-20200611103311-2c871bbbbf0c // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
