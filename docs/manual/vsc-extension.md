@@ -143,6 +143,7 @@ The group with the level value `1` will be positioned furthest to the left.
 | Type     | Name                 |
 | -------- | -------------------- |
 | `string` | `geo-coordinate-lng` |
+| `string` | `geo-coordinate-lat` |
 
 When using the geo positioning layout algorithm, you should set geographical coordinates in your topology definition so that TopoViewer is aware of where the nodes should be positioned.
 
