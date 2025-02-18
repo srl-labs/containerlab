@@ -55,12 +55,13 @@ We have also set some default keybindings you can use to interact with the lab w
 | `CTRL+ALT+K` | Destroy  |
 | `CTRL+ALT+G` | Graph    |
 
-### clab-io-draw
-Integrated as a 'graph' action within the extension, The [clab-io-draw](https://github.com/srl-labs/clab-io-draw) project unifies two tools, clab2drawio and drawio2clab. These tools facilitate the conversion between Containerlab YAML files and Draw.io diagrams, making it easier for network engineers and architects to visualize, document, and share their network topologies.
+### Draw.io integration
+
+The [clab-io-draw](https://github.com/srl-labs/clab-io-draw) project unifies two tools, clab2drawio and drawio2clab. These tools facilitate the conversion between Containerlab YAML files and Draw.io diagrams, making it easier for network engineers and architects to visualize, document, and share their network topologies.
 
 ### TopoViewer
 
-Integrated as a 'graph' action within the extension, the [TopoViewer](https://github.com/asadarafat/topoViewer) project by @asadarafat offers an interactive way to visualize your containerlab topologies. 
+Integrated as a "graph" action within the extension, the [TopoViewer](https://github.com/asadarafat/topoViewer) project by @asadarafat offers an interactive way to visualize your containerlab topologies.
 
 /// tip
 Your lab must be deployed in order to use TopoViewer.
@@ -68,26 +69,26 @@ Your lab must be deployed in order to use TopoViewer.
 
 #### Label reference
 
-TopoViewer enables customization of the topology visualization by use of the `labels` field in your Containerlab topology definition. By adding these labels you are able to:
+TopoViewer enables customization of the topology visualization by use of the [`labels`](../manual/nodes.md#labels) field in your Containerlab topology definition. By adding these labels you are able to:
 
-  - **Customize Icons:** Assign specific icons to nodes based on their role.
-  - **Organize Nodes:** Group nodes under defined categories with hierarchical levels.
-  - **Position Nodes Geographically:** Use geographic coordinates (latitude and longitude) to place nodes on a world map.
+- **Customize Icons:** Assign specific icons to nodes based on their role.
+- **Organize Nodes:** Group nodes under defined categories with hierarchical levels.
+- **Position Nodes Geographically:** Use geographic coordinates (latitude and longitude) to place nodes on a world map.
 
-//// tab | Icon
+/// tab | Icon
 
-| Type     | Name         | Alias             |
-| -------- | ------------ | ----------------- |
-| `string` | `graph-icon` | `topoviewer-icon` |
+| Type     | Name         |
+| -------- | ------------ |
+| `string` | `graph-icon` |
 
-Using `graph-icon` you can define a role for a node. Changing the role will change the icon of the node in the topology visualization.
+Using the `graph-icon` label you can define a role for a node (or a group of nodes if set under the kind/defaults section). Changing the role will change the icon of the node in the topology visualization.
 
-!!!info
-      When no icon label is defined. The node icon will default to `pe`.
+> When no icon label is defined. The node icon will default to `pe`.
 
-**Available Roles and Icons:**
+//// details | Available Roles and Icons
+    type: subtle-note
 
-| Role                      | Icon                                           |
+| Role/Label name           | Icon                                           |
 | ------------------------- | ---------------------------------------------- |
 | **`pe`** / **`router`**   | ![](../images/topoviewer-icons/router.svg)     |
 | **`dcgw`**                | ![](../images/topoviewer-icons/dcgw.svg)       |
@@ -100,47 +101,48 @@ Using `graph-icon` you can define a role for a node. Changing the role will chan
 | **`client`**              | ![](../images/topoviewer-icons/client.svg)     |
 
 ////
-//// tab | Group
+///
+/// tab | Group
 
-| Type     | Name          | Alias              |
-| -------- | ------------- | ------------------ |
-| `string` | `graph-group` | `topoviewer-group` |
+| Type     | Name          |
+| -------- | ------------- |
+| `string` | `graph-group` |
 
-Use `graph-group` to categorize nodes into specific groups such as "Datacenter Spine" or "Datacenter Leaf". 
+Use `graph-group` label to categorize nodes into specific groups such as "Spine", "Leaf", etc.
 
-In the topology visualization this will position all nodes that belong tothe group together in a box.
+In the topology visualization this will group all nodes that belong to the group together and draw a box around them.
 
-////
-//// tab | Level
+///
+/// tab | Level
 
-| Type                 | Name          | Alias                              |
-| -------------------- | ------------- | ---------------------------------- |
-| `integer (unsigned)` | `graph-level` | `graph-leveltopoViewer-groupLevel` |
+| Type                 | Name          |
+| -------------------- | ------------- |
+| `integer (unsigned)` | `graph-level` |
 
 When you have groups defined, you can use the `graph-level` label to position the nodes hierarchically depending on their level value.
 
-The level value must be a positive integer. 
+The level value must be a positive integer.
 
-The `graph-level` value is defined in a reverse scale, where `1` is the highest or best value.
+The `graph-level` value is defined in a reverse order, where `1` is the highest level.
 
-**Vertical Layout**
+<h5>Vertical Layout</h5>
 
-When using the vertical layout algorithm to position nodes. The numerically higher the level value, the lower the group will be positioned relative to other groups. 
+When using the vertical layout algorithm to position nodes, the numerically higher the level value, the lower the group will be positioned relative to other groups.
 
-The group with the value `1` will be positioned at the top of the visualization.
+The group with the level value `1` will be positioned at the top of the visualization.
 
-**Horizontal Layout**
+<h5>Horizontal Layout</h5>
 
-When using the horizontal layout algorithm, The numerically higher the level value, the further left the group will be positioned relative to other groups. 
+When using the horizontal layout algorithm, the numerically higher the level value, the further left the group will be positioned relative to other groups.
 
-The group with the value `1` will be positioned furtherest to the left. 
+The group with the level value `1` will be positioned furthest to the left.
 
-////
-//// tab | Geo coordinates
+///
+/// tab | Geo coordinates
 
-| Type     | Name                                               |
-| -------- | -------------------------------------------------- |
-| `string` | `topoViewer-geoCoordinateLat`/`geo-coordinate-lng` |
+| Type     | Name                 |
+| -------- | -------------------- |
+| `string` | `geo-coordinate-lng` |
 
 When using the geo positioning layout algorithm, you should set geographical coordinates in your topology definition so that TopoViewer is aware of where the nodes should be positioned.
 
@@ -148,23 +150,22 @@ If not defined the nodes will be randomly placed on the map.
 
 TopoViewer accepts coordinates in latitude and longitude. Ensure to convert if using other coordinate systems (such as DMS).
 
-`topoViewer-geoCoordinateLat` is sets the latitude component of the coordinates.
-`topoViewer-geoCoordinateLng` is sets the longitude component of the coordinates.
+`geo-coordinate-lat` sets the latitude component of the coordinates.
+`geo-coordinate-lng` sets the longitude component of the coordinates.
 
-////
+///
 
-
-##### Sample topology
+#### Sample topology
 
 Below is an example Containerlab topology definition that utilizes these labels to enhance the visualization.
 
-//// tab | Topology visualization
+/// tab | Topology visualization
 
 ![topoviewer-labeled-topology](https://github.com/user-attachments/assets/f8c75b7f-36aa-46d3-865b-3f6a25ac52dc)
-////
-//// tab | Topology definition
+///
+/// tab | Topology definition
 
-```yaml
+```{.yaml .code-scroll-lg}
 name: nokia-DataCenter-lab
 
 topology:
@@ -286,12 +287,9 @@ topology:
     - endpoints: ["DCGW-02:e1-1", "BorderLeaf-02:e1-2"]
 ```
 
-////
-
-
+///
 
 With these enhancements, TopoViewer transforms your Containerlab topology into a clear, intuitive, and manageable network topology.
-
 
 ### Packet capture
 
