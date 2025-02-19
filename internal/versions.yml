@@ -1,8 +1,0 @@
-# these versions are used by the installation script
-# to detect what versions are available
-# in order to not depend on the gh api and its rate limits
-
-versions:
-  latest: 0.64.0
-  rc: 0.65.0-rc1
-  alpha: 0.66.0-alpha1
