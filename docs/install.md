@@ -108,12 +108,6 @@ bash -c "$(wget -qO - https://get.containerlab.dev)"
 
 ///
 
-Since the installation script uses GitHub API, users may hit the rate limit imposed by GitHub. To avoid this, users can pass their personal GitHub token as an env var to the installation script:
-
-```bash
-GITHUB_TOKEN=<your token> bash -c "$(curl -sL https://get.containerlab.dev)"
-```
-
 ## Package managers
 
 It is possible to install official containerlab releases via public APT/YUM repository.

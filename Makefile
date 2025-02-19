@@ -161,3 +161,9 @@ oci-arm-push: build-linux-arm64
 	@echo "With the following pull command you get a containerlab binary at your working directory. To use this downloaded binary - do `chmod +x ./containerlab` and then `./containerlab deploy`. Make sure not forget to add ./ prefix in order to use the downloaded binary and not the globally installed containerlab!"
 	@echo 'If https proxy is configured in your environment, pass the proxies via --env HTTPS_PROXY="<proxy-address>" flag of the docker run command.'
 	@echo "download with: sudo docker run --rm -v \$$(pwd):/workspace ghcr.io/oras-project/oras:v1.1.0 pull ghcr.io/srl-labs/clab-oci:$(COMMIT_HASH)"
+
+tag-release: # tag the release and save the version in ./internal/versions/latest
+	@VERSION_CLEAN=$$(echo "$(VERSION)" | sed 's/^v//') && \
+	echo "$$VERSION_CLEAN" > ./internal/versions/latest && \
+	git add . && git commit -m "release $$VERSION_CLEAN" && \
+	git tag v$$VERSION_CLEAN
