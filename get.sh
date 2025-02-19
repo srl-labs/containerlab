@@ -10,7 +10,7 @@
 : ${REPO_NAME:="srl-labs/containerlab"}
 : ${REPO_URL:="https://github.com/$REPO_NAME"}
 : ${PROJECT_URL:="https://containerlab.dev"}
-: ${VERSIONS_FILE_URL:="https://raw.githubusercontent.com/srl-labs/containerlab/refs/heads/main/internal/versions.yml"}
+: ${VERSIONS_FILE_URL:="https://raw.githubusercontent.com/srl-labs/containerlab/refs/heads/main/internal/versions/latest"}
 
 # detectArch discovers the architecture for this system.
 detectArch() {
@@ -117,10 +117,10 @@ setDesiredVersion() {
         # when desired version is not provided
         # get latest tag from the <repo>/internal/versions.yml
         if type "curl" &>/dev/null; then
-            local latest_version=$(curl -s ${VERSIONS_FILE_URL} | grep latest | awk -F ': ' '{print $2}')
+            local latest_version=$(curl -s ${VERSIONS_FILE_URL})
             processVersion "$latest_version"
         elif type "wget" &>/dev/null; then
-            local latest_version=$(wget -q -O- ${VERSIONS_FILE_URL} | grep latest | awk -F ': ' '{print $2}')
+            local latest_version=$(wget -q -O- ${VERSIONS_FILE_URL})
             processVersion "$latest_version"
         fi
     else
