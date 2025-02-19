@@ -279,7 +279,7 @@ We encourage lab authors to add `codespaces` and `clab-topo` topics to the lab r
 
 If you happen to have a _private_ image that you want to use in Codespaces you can push this image to your personal GitHub registry.
 
-To be able to access a private image you would need to (re)authenticate with the `read:packages` token entitlement against the GitHub registry. Thankfully, it is a matter of a copy-paste exerceise.
+To be able to access a private image you would need to (re)authenticate with the `read:packages` token entitlement against the GitHub registry. Thankfully, it is a matter of a copy-paste exercise.
 
 First, unset the existing token and request the one with `read:packages` capability:
 

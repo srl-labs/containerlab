@@ -112,7 +112,6 @@ processVersion() {
 
 # setDesiredVersion sets the desired version either to an explicit version provided by a user
 # or to the latest release available on github releases
-# ❯ cat internal/versions.yaml | grep latest | awk -F ': ' '{print $2}'
 setDesiredVersion() {
     if [ "x$DESIRED_VERSION" == "x" ]; then
         # when desired version is not provided
