@@ -10,7 +10,7 @@
 : ${REPO_NAME:="srl-labs/containerlab"}
 : ${REPO_URL:="https://github.com/$REPO_NAME"}
 : ${PROJECT_URL:="https://containerlab.dev"}
-: ${VERSIONS_FILE_URL?="https://raw.githubusercontent.com/srl-labs/containerlab/refs/heads/main/internal/versions.yml"}
+: ${VERSIONS_FILE_URL:="https://raw.githubusercontent.com/srl-labs/containerlab/refs/heads/main/internal/versions.yml"}
 
 # detectArch discovers the architecture for this system.
 detectArch() {
