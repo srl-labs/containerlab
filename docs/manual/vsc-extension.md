@@ -140,10 +140,10 @@ The group with the level value `1` will be positioned furthest to the left.
 ///
 /// tab | Geo coordinates
 
-| Type     | Name                 |
-| -------- | -------------------- |
-| `string` | `geo-coordinate-lng` |
-| `string` | `geo-coordinate-lat` |
+| Type     | Name                     |
+| -------- | ------------------------ |
+| `string` | `graph-geoCoordinateLat` |
+| `string` | `graph-geoCoordinateLng` |
 
 When using the geo positioning layout algorithm, you should set geographical coordinates in your topology definition so that TopoViewer is aware of where the nodes should be positioned.
 
@@ -151,8 +151,8 @@ If not defined the nodes will be randomly placed on the map.
 
 TopoViewer accepts coordinates in latitude and longitude. Ensure to convert if using other coordinate systems (such as DMS).
 
-`geo-coordinate-lat` sets the latitude component of the coordinates.
-`geo-coordinate-lng` sets the longitude component of the coordinates.
+`graph-geoCoordinateLat` sets the latitude component of the coordinates.
+`graph-geoCoordinateLng` sets the longitude component of the coordinates.
 
 ///
 
