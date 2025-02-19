@@ -204,8 +204,8 @@ func strToFloat64(str string) (float64, error) {
 	return float64(iv), nil
 }
 
-// SubstituteEnvsAndTemplate substitutes environment variables and template the string `s`
-// with `data` template data.
+// SubstituteEnvsAndTemplate substitutes environment variables and template the reader `r`
+// with the `data` template data.
 func SubstituteEnvsAndTemplate(r io.Reader, data any) (*bytes.Buffer, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
