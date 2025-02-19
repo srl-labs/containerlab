@@ -1,13 +1,17 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"reflect"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/hellt/envsubst"
 )
 
 var TemplateFuncs = template.FuncMap{
@@ -198,4 +202,32 @@ func strToFloat64(str string) (float64, error) {
 	}
 
 	return float64(iv), nil
+}
+
+// SubstituteEnvsAndTemplate substitutes environment variables and template the string `s`
+// with `data` template data.
+func SubstituteEnvsAndTemplate(r io.Reader, data any) (*bytes.Buffer, error) {
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// expand env vars in `b` if any were set
+	// do not replace vars initialized with defaults
+	// and do not replace vars that are not set
+	b, err = envsubst.BytesRestrictedNoReplace(b, false, false, true, true)
+	if err != nil {
+		return nil, err
+	}
+
+	t, err := template.New("template").Funcs(TemplateFuncs).Parse(string(b))
+	if err != nil {
+		return nil, err
+	}
+
+	buf := new(bytes.Buffer)
+
+	t.Execute(buf, data)
+
+	return buf, nil
 }

@@ -12,6 +12,16 @@
   fill: var(--logo-outline-color);
 }
 
+.md-grid {
+  /* a slightly increased width for the main content ~1300px */
+  max-width: 65rem;
+}
+
+.md-post--excerpt {
+  /* a slightly increased width for the main content ~1300px */
+  max-width: 40rem;
+}
+
 .mdx-content__footer {
   margin-top: 20px;
   text-align: center;

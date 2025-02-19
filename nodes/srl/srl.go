@@ -445,7 +445,7 @@ func (s *srl) createSRLFiles() error {
 	var cfgTemplate string
 	cfgPath := filepath.Join(s.Cfg.LabDir, "config", "config.json")
 	if s.Cfg.StartupConfig != "" {
-		log.Debugf("Reading startup-config %s", s.Cfg.StartupConfig)
+		log.Debug("Reading startup-config", "file", s.Cfg.StartupConfig)
 
 		c, err := os.ReadFile(s.Cfg.StartupConfig)
 		if err != nil {
@@ -461,7 +461,12 @@ func (s *srl) createSRLFiles() error {
 			log.Debugf("startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
 				s.Cfg.ShortName)
 
-			s.startupCliCfg = c
+			cBuf, err := utils.SubstituteEnvsAndTemplate(bytes.NewReader(c), s.Cfg)
+			if err != nil {
+				return err
+			}
+
+			s.startupCliCfg = cBuf.Bytes()
 
 			// no need to generate and mount startup-config passed in a CLI format
 			// as we will apply it over the top of a default config in the post deploy stage

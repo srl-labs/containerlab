@@ -5,7 +5,6 @@
 package nodes
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -13,8 +12,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
-	"text/template"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -349,8 +348,8 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 }
 
 // GenerateConfig generates configuration for the nodes
-// out of the template based on the node configuration and saves the result to dst.
-func (d *DefaultNode) GenerateConfig(dst, templ string) error {
+// out of the template `t` based on the node configuration and saves the result to dst.
+func (d *DefaultNode) GenerateConfig(dst, t string) error {
 	// If the config file is already present in the node dir
 	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
 	// this will persist the changes that users make to a running config when booted from some startup config
@@ -365,27 +364,20 @@ func (d *DefaultNode) GenerateConfig(dst, templ string) error {
 		return nil
 	}
 
-	log.Debugf("generating config for node %s from file %s", d.Cfg.ShortName, d.Cfg.StartupConfig)
+	log.Debug("Generating config", "node", d.Cfg.ShortName, "file", d.Cfg.StartupConfig)
 
-	tpl, err := template.New(filepath.Base(d.Cfg.StartupConfig)).Funcs(utils.TemplateFuncs).Parse(templ)
+	cfgBuf, err := utils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
 	if err != nil {
 		return err
 	}
-
-	dstBytes := new(bytes.Buffer)
-
-	err = tpl.Execute(dstBytes, d.Cfg)
-	if err != nil {
-		return err
-	}
-	log.Debugf("node '%s' generated config: %s", d.Cfg.ShortName, dstBytes.String())
+	log.Debugf("node '%s' generated config: %s", d.Cfg.ShortName, cfgBuf.String())
 
 	f, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 
-	_, err = f.Write(dstBytes.Bytes())
+	_, err = f.Write(cfgBuf.Bytes())
 	if err != nil {
 		f.Close()
 		return err

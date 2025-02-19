@@ -259,7 +259,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 
 // processStartupConfig processes the raw path of the startup-config as it is defined in the topology file.
 // It handles remote files, local files and embedded configs.
-// Returns an absolute path to the startup-config file.
+// As a result the `nodeCfg.StartupConfig` will be set to an absPath of the startup config file.
 func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name
 	r := c.magicVarReplacer(nodeCfg.ShortName)
@@ -302,7 +302,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 				return err
 			}
 
-			// adjust the nodeconfig by pointing startup-config to the local downloaded file
+			// adjust the NodeConfig by pointing startup-config to the local downloaded file
 			p = absDestFile
 		}
 	}
