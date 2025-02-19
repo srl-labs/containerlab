@@ -331,10 +331,8 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyDuplicateAddresses(); err != nil {
 		return err
 	}
-	if err = c.verifyContainersUniqueness(ctx); err != nil {
-		return err
-	}
-	return nil
+
+	return c.verifyContainersUniqueness(ctx)
 }
 
 // verifyRootNetNSLinks makes sure, that there will be no overlap in
@@ -376,7 +374,8 @@ func (c *CLab) verifyRootNetNSLinks() error {
 // appear only once.
 func (c *CLab) verifyLinks(ctx context.Context) error {
 	var err error
-	verificationErrors := []error{}
+	var verificationErrors []error
+
 	for _, e := range c.Endpoints {
 		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
 		if err != nil {
@@ -468,7 +467,7 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 		return nil
 	}
 
-	dups := []string{}
+	var dups []string
 	for _, n := range c.Nodes {
 		if n.Config().SkipUniquenessCheck {
 			continue

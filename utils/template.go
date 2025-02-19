@@ -27,7 +27,7 @@ func toJson(v any) string {
 	return string(a)
 }
 
-func toJsonPretty(v any, prefix string, indent string) string {
+func toJsonPretty(v any, prefix, indent string) string {
 	a, _ := json.MarshalIndent(v, prefix, indent)
 	return string(a)
 }
