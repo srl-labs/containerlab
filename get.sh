@@ -10,6 +10,7 @@
 : ${REPO_NAME:="srl-labs/containerlab"}
 : ${REPO_URL:="https://github.com/$REPO_NAME"}
 : ${PROJECT_URL:="https://containerlab.dev"}
+: ${VERSIONS_FILE_URL?="https://raw.githubusercontent.com/srl-labs/containerlab/refs/heads/main/internal/versions.yml"}
 
 # detectArch discovers the architecture for this system.
 detectArch() {
@@ -95,49 +96,45 @@ verifyOpenssl() {
         fi
     fi
 }
+# Handle version retrieval error
+handleVersionError() {
+    echo "Failed to retrieve latest containerlab version"
+    exit 1
+}
+
+# Process version into tags
+processVersion() {
+    local version=$1
+    [ -z "$version" ] && handleVersionError
+    TAG_WO_VER="$version"
+    TAG="v${version}"
+}
 
 # setDesiredVersion sets the desired version either to an explicit version provided by a user
 # or to the latest release available on github releases
+# ❯ cat internal/versions.yaml | grep latest | awk -F ': ' '{print $2}'
 setDesiredVersion() {
     if [ "x$DESIRED_VERSION" == "x" ]; then
-        # check if GITHUB_TOKEN env var is set and use it for API calls
-        local gh_token=${GITHUB_TOKEN:-}
-        if [ ! -z "$gh_token" ]; then
-            local curl_auth_header=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
-            local wget_auth_header=(--header="Authorization: Bearer ${GITHUB_TOKEN}")
-        fi
         # when desired version is not provided
-        # get latest tag from the gh releases
+        # get latest tag from the <repo>/internal/versions.yml
         if type "curl" &>/dev/null; then
-            local latest_release_url=$(curl -s "${curl_auth_header[@]}" https://api.github.com/repos/$REPO_NAME/releases/latest | sed '5q;d' | cut -d '"' -f 4)
-            if [ -z "$latest_release_url" ]; then
-                echo "Failed to retrieve latest release URL due to rate limiting. Please provide env var GITHUB_TOKEN with your GitHub personal access token."
-                exit 1
-            fi
-            TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')
-            # tag with stripped `v` prefix
-            TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
+            local latest_version=$(curl -s ${VERSIONS_FILE_URL} | grep latest | awk -F ': ' '{print $2}')
+            processVersion "$latest_version"
         elif type "wget" &>/dev/null; then
-            # get latest release info and get 5th line out of the response to get the URL
-            local latest_release_url=$(wget -q "${wget_auth_header[@]}" https://api.github.com/repos/$REPO_NAME/releases/latest -O- | sed '5q;d' | cut -d '"' -f 4)
-            if [ -z "$latest_release_url" ]; then
-                echo "Failed to retrieve latest release URL due to rate limiting. Please provide env var GITHUB_TOKEN with your GitHub personal access token."
-                exit 1
-            fi
-            TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')
-            TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
+            local latest_version=$(wget -q -O- ${VERSIONS_FILE_URL} | grep latest | awk -F ': ' '{print $2}')
+            processVersion "$latest_version"
         fi
     else
         TAG=$DESIRED_VERSION
         TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
 
         if type "curl" &>/dev/null; then
-            if ! curl -s -o /dev/null --fail https://api.github.com/repos/$REPO_NAME/releases/tags/$DESIRED_VERSION; then
+            if ! curl -s -o /dev/null --fail https://github.com/srl-labs/containerlab/releases/tag/$DESIRED_VERSION; then
                 echo "release $DESIRED_VERSION not found"
                 exit 1
             fi
         elif type "wget" &>/dev/null; then
-            if ! wget -q https://api.github.com/repos/$REPO_NAME/releases/tags/$DESIRED_VERSION; then
+            if ! wget -q https://github.com/srl-labs/containerlab/releases/tag/$DESIRED_VERSION; then
                 echo "release $DESIRED_VERSION not found"
                 exit 1
             fi
