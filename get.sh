@@ -1,6 +1,6 @@
 # The install script is based off of the Apache 2.0 script from Helm,
 # https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
-# test 123 rapid change
+
 : ${BINARY_NAME:="containerlab"}
 : ${PROJECT_NAME:="containerlab"} # if project name does not match binary name
 : ${USE_SUDO:="true"}
