@@ -22,13 +22,16 @@ var upgradeCmd = &cobra.Command{
 	Use:     "upgrade",
 	Short:   "upgrade containerlab to latest available version",
 	PreRunE: common.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		f, err := os.CreateTemp("", "containerlab")
 		defer os.Remove(f.Name())
 		if err != nil {
 			return fmt.Errorf("failed to create temp file: %w", err)
 		}
-		_ = downloadFile(downloadURL, f)
+		err = downloadFile(downloadURL, f)
+		if err != nil {
+			return fmt.Errorf("failed to download upgrade script: %w", err)
+		}
 
 		c := exec.Command("sudo", "bash", f.Name())
 		// pass the environment variables to the upgrade script
