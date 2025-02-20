@@ -10,7 +10,7 @@
 : ${REPO_NAME:="srl-labs/containerlab"}
 : ${REPO_URL:="https://github.com/$REPO_NAME"}
 : ${PROJECT_URL:="https://containerlab.dev"}
-: ${VERSIONS_FILE_URL:="https://raw.githubusercontent.com/srl-labs/containerlab/refs/heads/main/internal/versions/latest"}
+: ${LATEST_VERSION_URL:="$REPO_URL/releases/latest"}
 
 # detectArch discovers the architecture for this system.
 detectArch() {
@@ -106,8 +106,8 @@ handleVersionError() {
 processVersion() {
     local version=$1
     [ -z "$version" ] && handleVersionError
-    TAG_WO_VER="$version"
-    TAG="v${version}"
+    TAG_WO_VER=$(echo "${version}" | cut -c 2-)
+    TAG="${version}"
 }
 
 # setDesiredVersion sets the desired version either to an explicit version provided by a user
@@ -117,10 +117,10 @@ setDesiredVersion() {
         # when desired version is not provided
         # get latest tag from the <repo>/internal/versions.yml
         if type "curl" &>/dev/null; then
-            local latest_version=$(curl -s ${VERSIONS_FILE_URL})
+            local latest_version=$(curl -s -I ${LATEST_VERSION_URL} | grep -i "location:" | awk -F'/' '{print $NF}')
             processVersion "$latest_version"
         elif type "wget" &>/dev/null; then
-            local latest_version=$(wget -q -O- ${VERSIONS_FILE_URL})
+            local latest_version=$(wget -qO- -S --spider ${LATEST_VERSION_URL} 2>&1 | grep -i "location:" | awk -F'/' '{print $NF}')
             processVersion "$latest_version"
         fi
     else
