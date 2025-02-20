@@ -260,12 +260,12 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	var err error
 	var d *network.Driver
 
-	configContent, err := io.ReadAll(config)
+	configContent, err := utils.SubstituteEnvsAndTemplate(config, s.Cfg)
 	if err != nil {
 		return err
 	}
 
-	configContentStr := string(configContent)
+	configContentStr := configContent.String()
 
 	// check file contains content, otherwise exit early
 	if strings.TrimSpace(configContentStr) == "" {
@@ -288,7 +288,9 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		case <-ctx.Done():
 			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
 		default:
-			sl := log.StandardLog()
+			sl := log.StandardLog(log.StandardLogOptions{
+				ForceLevel: log.DebugLevel,
+			})
 			li, err := scraplilogging.NewInstance(
 				scraplilogging.WithLevel("debug"),
 				scraplilogging.WithLogger(sl.Print))

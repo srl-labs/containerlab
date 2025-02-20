@@ -259,7 +259,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 
 // processStartupConfig processes the raw path of the startup-config as it is defined in the topology file.
 // It handles remote files, local files and embedded configs.
-// Returns an absolute path to the startup-config file.
+// As a result the `nodeCfg.StartupConfig` will be set to an absPath of the startup config file.
 func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name
 	r := c.magicVarReplacer(nodeCfg.ShortName)
@@ -302,7 +302,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 				return err
 			}
 
-			// adjust the nodeconfig by pointing startup-config to the local downloaded file
+			// adjust the NodeConfig by pointing startup-config to the local downloaded file
 			p = absDestFile
 		}
 	}
@@ -331,10 +331,8 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyDuplicateAddresses(); err != nil {
 		return err
 	}
-	if err = c.verifyContainersUniqueness(ctx); err != nil {
-		return err
-	}
-	return nil
+
+	return c.verifyContainersUniqueness(ctx)
 }
 
 // verifyRootNetNSLinks makes sure, that there will be no overlap in
@@ -376,7 +374,8 @@ func (c *CLab) verifyRootNetNSLinks() error {
 // appear only once.
 func (c *CLab) verifyLinks(ctx context.Context) error {
 	var err error
-	verificationErrors := []error{}
+	var verificationErrors []error
+
 	for _, e := range c.Endpoints {
 		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
 		if err != nil {
@@ -468,7 +467,7 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 		return nil
 	}
 
-	dups := []string{}
+	var dups []string
 	for _, n := range c.Nodes {
 		if n.Config().SkipUniquenessCheck {
 			continue

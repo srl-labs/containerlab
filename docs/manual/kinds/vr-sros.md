@@ -215,9 +215,13 @@ Nokia SR OS nodes come up with a basic "blank" configuration where only the card
 
 #### User-defined config
 
-SR OS nodes launched with hellt/vrnetlab come up with some basic configuration that configures the management interfaces, line cards, mdas and power modules. This configuration is applied right after the node is booted.
+SR OS nodes launched with [hellt/vrnetlab](https://github.com/hellt/vrnetlab) come up with some basic configuration that configures the management interfaces, line cards, mdas and power modules. This configuration is applied right after the node is booted.
 
 Since this initial configuration is meant to provide a bare minimum configuration to make the node operational, users will likely want to apply their own configuration to the node to enable some features or to configure some interfaces. This can be done by providing a user-defined configuration file using [`startup-config`](../nodes.md#startup-config) property of the node/kind.
+
+/// tip
+Configuration text can contain Go template logic as well as make use of [environment variables](../topo-def-file.md#environment-variables) allowing for runtime customization of the configuration.
+///
 
 ##### Full startup-config
 
@@ -232,8 +236,9 @@ topology:
       startup-config: myconfig.txt
 ```
 
-!!!note
-    With the above configuration, the node will boot with the configuration specified in `myconfig.txt`, no other configuration will be applied. You have to provision interfaces, cards, power-shelves, etc. yourself.
+/// note
+With the above configuration, the node will boot with the configuration specified in `myconfig.txt`, no other configuration will be applied. You have to provision interfaces, cards, power-shelves, etc. yourself.
+///
 
 ##### Partial startup-config
 
