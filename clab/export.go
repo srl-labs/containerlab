@@ -17,10 +17,12 @@ import (
 )
 
 // GenerateExports generates various export files and writes it to a file in the lab directory.
+// `p` is the path to the template.
+// `f` is the file to write the exported data to.
 func (c *CLab) GenerateExports(ctx context.Context, f io.Writer, p string) error {
 	err := c.exportTopologyDataWithTemplate(ctx, f, p)
 	if err != nil {
-		log.Warnf("Cannot parse export template %s: %v", p, err)
+		log.Warn("Failed to execute the export template", "template", p, "err", err)
 		// a minimal topology data file that just provides the name of a lab that failed to generate a proper export data
 		err = c.exportTopologyDataWithMinimalTemplate(f)
 		if err != nil {
@@ -47,7 +49,7 @@ var defaultExportTemplate string
 //go:embed export_templates/full.tmpl
 var fullExportTemplate string
 
-// exportTopologyDataWithTemplate generates and writes topology data file to w using a template.
+// exportTopologyDataWithTemplate generates and writes topology data file to w using a template referenced by path `p`.
 func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p string) error {
 	name := "export"
 	if p != "" {

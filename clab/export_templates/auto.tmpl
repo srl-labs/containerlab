@@ -45,15 +45,17 @@
         "node": "{{ $ep.GetNode.GetShortName }}",
         "interface": "{{ $ep.GetIfaceName }}",
         "mac": "{{ $ep.GetMac }}",
-        "peer": "z"
-      },
-      {{- $ep :=  index $eps 1 }}
+        "peer": "{{if eq (len $eps) 2}}z{{else}}dummy{{end}}"
+      }
+      {{- if eq (len $eps) 2 }}
+      {{- $ep :=  index $eps 1 }},
       "z": {
         "node": "{{  $ep.GetNode.GetShortName }}",
         "interface": "{{ $ep.GetIfaceName }}",
         "mac": "{{ $ep.GetMac }}",
         "peer": "a"
       }
+      {{- end }}
     }{{end}}
   ]
 }
