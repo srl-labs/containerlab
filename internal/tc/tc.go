@@ -84,6 +84,24 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 	return nil, fmt.Errorf("could not find qdisc for interface %q", link.Name)
 }
 
+// DeleteImpairments deletes the netem impairments from the given interface.
+func DeleteImpairments(tcnl *tc.Tc, link *net.Interface) error {
+	qdisc := tc.Object{
+		Msg: tc.Msg{
+			Family:  unix.AF_UNSPEC,
+			Ifindex: uint32(link.Index),
+			Handle:  core.BuildHandle(0x1, 0x0),
+			Parent:  tc.HandleRoot,
+			Info:    0,
+		},
+		Attribute: tc.Attribute{
+			Kind:  "netem",
+			Netem: &tc.Netem{},
+		},
+	}
+	return tcnl.Qdisc().Delete(&qdisc)
+}
+
 // setDelay sets delay and jitter to the qdisc.
 func setDelay(qdisc *tc.Object, delay, jitter time.Duration) error {
 	delayTcTime, err := core.Duration2TcTime(delay)

@@ -67,3 +67,21 @@ Show link impairments in JSON format
     Should Contain    ${output}    10
     Should Contain    ${output}    1000
     Should Contain    ${output}    2
+
+Reset link impairments
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem reset -n clab-${lab-name}-l1 -i eth3
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Reset impairments on node "clab-${lab-name}-l1", interface "eth3"
+
+    # Show impairments again to verify they have been reset.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-l1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    # Verify that the previous impairment values are no longer present.
+    Should Not Contain    ${output}    100ms
+    Should Not Contain    ${output}    2ms
+    Should Not Contain    ${output}    10.00%
+    Should Not Contain    ${output}    1000

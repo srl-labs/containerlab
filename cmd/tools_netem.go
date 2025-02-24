@@ -63,6 +63,13 @@ func init() {
 	netemCmd.AddCommand(netemShowCmd)
 	netemShowCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
 	netemShowCmd.Flags().StringVarP(&netemFormat, "format", "f", "table", "output format (table, json)")
+
+	// Add reset command
+	netemCmd.AddCommand(netemResetCmd)
+	netemResetCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to reset impairment on")
+	netemResetCmd.Flags().StringVarP(&netemInterface, "interface", "i", "", "interface to reset impairment on")
+	netemResetCmd.MarkFlagRequired("node")
+	netemResetCmd.MarkFlagRequired("interface")
 }
 
 var netemCmd = &cobra.Command{
@@ -85,6 +92,14 @@ var netemShowCmd = &cobra.Command{
 	Short:   "show link impairments for a node",
 	PreRunE: validateInputAndRoot,
 	RunE:    netemShowFn,
+}
+
+var netemResetCmd = &cobra.Command{
+	Use:     "reset",
+	Short:   "reset link impairments",
+	Long:    `Reset network impairments by deleting the netem qdisc from the specified interface.`,
+	PreRunE: validateInputAndRoot,
+	RunE:    netemResetFn,
 }
 
 func netemSetFn(_ *cobra.Command, _ []string) error {
@@ -379,6 +394,70 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 			printImpairments(qdiscs)
 		}
 
+		return nil
+	})
+
+	return err
+}
+
+func netemResetFn(_ *cobra.Command, _ []string) error {
+	// Get the runtime initializer.
+	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+	if err != nil {
+		return err
+	}
+
+	// init the runtime
+	rt := rinit()
+	err = rt.Init(
+		runtime.WithConfig(
+			&runtime.RuntimeConfig{
+				Timeout: common.Timeout,
+			},
+		),
+	)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// retrieve the container's NSPath
+	nodeNsPath, err := rt.GetNSPath(ctx, netemNode)
+	if err != nil {
+		return err
+	}
+
+	var nodeNs ns.NetNS
+	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
+		return err
+	}
+
+	tcnl, err := tc.NewTC(int(nodeNs.Fd()))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := tcnl.Close(); err != nil {
+			log.Errorf("could not close rtnetlink socket: %v\n", err)
+		}
+	}()
+
+	err = nodeNs.Do(func(_ ns.NetNS) error {
+		netemIfLink, err := netlink.LinkByName(links.SanitiseInterfaceName(netemInterface))
+		if err != nil {
+			return err
+		}
+		// Retrieve the standard net.Interface from the netlink.Link name.
+		netemIfIface, err := net.InterfaceByName(netemIfLink.Attrs().Name)
+		if err != nil {
+			return err
+		}
+		if err := tc.DeleteImpairments(tcnl, netemIfIface); err != nil {
+			return err
+		}
+		fmt.Printf("Reset impairments on node %q, interface %q\n", netemNode, netemIfLink.Attrs().Name)
 		return nil
 	})
 
