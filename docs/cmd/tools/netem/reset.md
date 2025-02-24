@@ -29,6 +29,7 @@ containerlab tools netem reset -n clab-netem-r1 -i eth1
 ```
 
 Output:
+
 ```bash
 Reset impairments on node "clab-netem-r1", interface "eth1"
 ```
@@ -36,10 +37,13 @@ Reset impairments on node "clab-netem-r1", interface "eth1"
 ### Resetting impairments when none are set
 
 If no impairments are configured on the specified interface, the command will complete without error:
+
 ```bash
 containerlab tools netem reset -n clab-netem-r1 -i eth0
 ```
+
 Output:
+
 ```bash
 Reset impairments on node "clab-netem-r1", interface "eth0"
 ```
