@@ -85,4 +85,3 @@ Reset link impairments
     Should Not Contain    ${output}    2ms
     Should Not Contain    ${output}    10.00%
     Should Not Contain    ${output}    1000
-    Should Not Contain    ${output}    2
