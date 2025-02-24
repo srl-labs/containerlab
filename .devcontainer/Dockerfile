@@ -55,8 +55,8 @@ COPY ./.devcontainer/dclab /usr/local/bin/dclab
 # Create SSH key for vscode user to enable passwordless SSH to devices
 RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 
-# Install pyenv
-RUN bash -c "$(curl https://pyenv.run)"
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:0.6.2 /uv /uvx /bin/
 
 # Add empty docker config files to avoid clab warnings for vscode user
 RUN mkdir -p /home/vscode/.docker && echo "{}" > /home/vscode/.docker/config.json
@@ -67,11 +67,3 @@ COPY ./.devcontainer/zsh/.p10k.zsh /home/vscode/.p10k.zsh
 COPY ./.devcontainer/zsh/install-zsh-plugins.sh /tmp/install-zsh-plugins.sh
 COPY ./.devcontainer/zsh/install-tools-completions.sh /tmp/install-tools-completions.sh
 RUN bash -c "/tmp/install-zsh-plugins.sh && /tmp/install-tools-completions.sh"
-
-# Setup pyenv virtual environment for clab tests
-COPY tests/requirements.txt /tmp/requirements.txt
-ENV PYENV_ROOT="/home/vscode/.pyenv"
-ENV PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
-RUN pyenv virtualenv system clab-rf \
-    && pyenv global clab-rf \
-    && pip install -r /tmp/requirements.txt
