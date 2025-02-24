@@ -61,9 +61,8 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 
 	setRate(&qdisc, rate)
 
-	if probability > 0 {
-		setCorruption(&qdisc, probability)
-	}
+	// Always set the corruption field (even if probability is 0) to allow resetting.
+	setCorruption(&qdisc, probability)
 
 	err = tcnl.Qdisc().Replace(&qdisc)
 	if err != nil {
