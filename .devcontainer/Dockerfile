@@ -56,7 +56,7 @@ COPY ./.devcontainer/dclab /usr/local/bin/dclab
 RUN ssh-keygen -t ecdsa -b 256 -N "" -f ~/.ssh/id_ecdsa
 
 # Install uv
-RUN bash -c "$(curl -LsSf https://astral.sh/uv/install.sh | sh)"
+COPY --from=ghcr.io/astral-sh/uv:0.6.2 /uv /uvx /bin/
 
 # Add empty docker config files to avoid clab warnings for vscode user
 RUN mkdir -p /home/vscode/.docker && echo "{}" > /home/vscode/.docker/config.json
