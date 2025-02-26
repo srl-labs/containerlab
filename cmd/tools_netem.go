@@ -379,6 +379,9 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 		if netemFormat == "json" {
 			var impairments []types.ImpairmentData
 			for _, q := range qdiscs {
+				if q.Attribute.Kind != "netem" {
+					continue // skip clsact or other qdisc types
+				}
 				impairments = append(impairments, qdiscToJSONData(q))
 			}
 			// Structure output as a map keyed by the node name.
