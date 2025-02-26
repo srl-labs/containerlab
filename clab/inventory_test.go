@@ -101,3 +101,47 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 		})
 	}
 }
+
+func TestGeneratNornirSimpleInventory(t *testing.T) {
+	tests := map[string]struct {
+		got  string
+		want string
+	}{
+		"case1": {
+			got: "test_data/topo1.yml",
+			want: `
+node1:
+    username: admin
+    password: NokiaSrl1!
+    platform: unsupported_nornir_platform
+    hostname: 172.100.100.11
+node2:
+    username: admin
+    password: NokiaSrl1!
+    platform: unsupported_nornir_platform
+    hostname: 172.100.100.12`,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoPath(tc.got, ""),
+			}
+			c, err := NewContainerLab(opts...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var s strings.Builder
+			err = c.generateNornirSimpleInventory(&s)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if diff := cmp.Diff(tc.want, s.String()); diff != "" {
+				t.Errorf("failed at '%s', diff: (-want +got)\n%s", name, diff)
+			}
+		})
+	}
+}

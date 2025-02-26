@@ -44,18 +44,33 @@ type AnsibleInventory struct {
 
 // GenerateInventories generate various inventory files and writes it to a lab location.
 func (c *CLab) GenerateInventories() error {
+	// generate Ansible Inventory
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
-	f, err := os.Create(ansibleInvFPath)
-	if err != nil {
-		return err
+
+	ansible_f, ansible_err := os.Create(ansibleInvFPath)
+	if ansible_err != nil {
+		return ansible_err
 	}
 
-	err = c.generateAnsibleInventory(f)
-	if err != nil {
-		return err
+	ansible_err = c.generateAnsibleInventory(ansible_f)
+	if ansible_err != nil {
+		return ansible_err
+	}
+	ansible_f.Close()
+
+	// generate Nornir Simple Inventory
+	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
+	nornir_f, nornir_err := os.Create(nornirSimpleInvFPath)
+	if nornir_err != nil {
+		return nornir_err
 	}
 
-	return f.Close()
+	nornir_err = c.generateNornirSimpleInventory(nornir_f)
+	if nornir_err != nil {
+		return nornir_err
+	}
+	nornir_f.Close()
+	return nil
 }
 
 // generateAnsibleInventory generates and writes ansible inventory file to w.
@@ -141,5 +156,104 @@ func (n *KindProps) setAnsibleConnection(kind string) {
 		n.AnsibleConn = "ansible.netcommon.httpapi"
 	case "nokia_sros", "vr-sros":
 		n.AnsibleConn = "ansible.netcommon.network_cli"
+	}
+}
+
+// Nornir Simple Inventory
+// https://nornir.readthedocs.io/en/latest/tutorial/inventory.html
+
+//go:embed inventory_nornir_simple.go.tpl
+var nornirSimpleInvT string
+
+// NornirSimpleKindProps is the kind properties structure used to generate the nornir simple inventory file.
+type NornirSimpleInventoryKindProps struct {
+	Username string
+	Password string
+	Hostname string
+	Platform string
+}
+
+// NornirSimpleInventoryNode represents the data structure used to generate the nornir simple inventory file.
+// It embeds the NodeConfig struct and adds the Username and Password fields extracted from
+// the node registry.
+type NornirSimpleInventoryNode struct {
+	*types.NodeConfig
+}
+
+// NornirSimpleInventory represents the data structure used to generate the nornir simple inventory file.
+type NornirSimpleInventory struct {
+	// clab node kinds
+	Kinds map[string]*NornirSimpleInventoryKindProps
+	// clab nodes aggregated by their kind
+	Nodes map[string][]*NornirSimpleInventoryNode
+	// clab nodes aggregated by user-defined groups
+	Groups map[string][]*NornirSimpleInventoryNode
+}
+
+// generateNornirSimpleInventory generates and writes a Nornir Simple inventory file to w.
+func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
+	inv := NornirSimpleInventory{
+		Kinds:  make(map[string]*NornirSimpleInventoryKindProps),
+		Nodes:  make(map[string][]*NornirSimpleInventoryNode),
+		Groups: make(map[string][]*NornirSimpleInventoryNode),
+	}
+
+	for _, n := range c.Nodes {
+		nornirNode := &NornirSimpleInventoryNode{
+			NodeConfig: n.Config(),
+		}
+
+		// add NornirSimpleInventoryKindProps to the inventory struct
+		// the NornirSimpleInventoryKindProps is passed as a ref and is populated
+		// down below
+		NornirSimpleInventoryKindProps := &NornirSimpleInventoryKindProps{}
+		inv.Kinds[n.Config().Kind] = NornirSimpleInventoryKindProps
+
+		// add username and password to kind properties
+		// assumption is that all nodes of the same kind have the same credentials
+		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
+		if nodeRegEntry != nil {
+			NornirSimpleInventoryKindProps.Username = nodeRegEntry.GetCredentials().GetUsername()
+			NornirSimpleInventoryKindProps.Password = nodeRegEntry.GetCredentials().GetPassword()
+		}
+
+		// add platform to the node
+		NornirSimpleInventoryKindProps.setNetworkPlatform(n.Config().Kind)
+
+		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], nornirNode)
+	}
+
+	// sort nodes by name as they are not sorted originally
+	for _, nodes := range inv.Nodes {
+		sort.Slice(nodes, func(i, j int) bool {
+			return nodes[i].ShortName < nodes[j].ShortName
+		})
+	}
+
+	t, err := template.New("nornir_simple").Parse(nornirSimpleInvT)
+	if err != nil {
+		return err
+	}
+	err = t.Execute(w, inv)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+// setNetworkPlatform sets the platform variable for the kind.
+func (n *NornirSimpleInventoryKindProps) setNetworkPlatform(kind string) {
+	switch kind {
+	case "ceos":
+		n.Platform = "eos"
+	case "xrd", "cisco_xrd":
+		n.Platform = "iosxr"
+	case "cisco_n9kv":
+		n.Platform = "nxos"
+	case "crpd", "juniper_crpd":
+		n.Platform = "junos"
+	default:
+		n.Platform = "unsupported_nornir_platform"
 	}
 }

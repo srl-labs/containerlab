@@ -130,6 +130,47 @@ As a result of this configuration, the generated inventory will look like this:
           ansible_host: 172.100.100.11
 ```
 
+## Nornir
+
+A Nornir [Simple Inventory](https://nornir.readthedocs.io/en/latest/tutorial/inventory.html) is generated automatically for every lab. The inverntory file can be found in the lab directory under the `nornir-simple-inventory.yml` name. Not all kinds are supported in Nornir. When a node is not supported in Nornir Inventory the platform in the inventory for the node will be set to `unsupported_nornir_platform`
+
+///tab | topology file
+
+```yaml
+name: nornir
+mgmt:
+  network: fixedips
+  ipv4-subnet: 172.200.20.0/24
+topology:
+  nodes:
+    spine1:
+      kind: ceos
+      image: ceos:4.33-arm
+      mgmt-ipv4: 172.200.20.2
+    spine2:
+      kind: ceos
+      image: ceos:4.33-arm
+      mgmt-ipv4: 172.200.20.3
+```
+
+///
+///tab | generated Nornir Simple inventory
+
+```yaml
+spine1:
+  username: admin
+  password: admin
+  platform: eos
+  hostname: 172.200.20.2
+spine2:
+  username: admin
+  password: admin
+  platform: eos
+  hostname: 172.200.20.3
+```
+
+///
+
 ## Topology Data
 
 Every time a user runs a `deploy` command, containerlab automatically exports information about the topology into `topology-data.json` file in the lab directory. Schema of exported data is determined based on a Go template specified in `--export-template` parameter, or a default template `/etc/containerlab/templates/export/auto.tmpl`, if the parameter is not provided.
