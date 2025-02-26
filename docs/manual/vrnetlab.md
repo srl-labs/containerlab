@@ -151,7 +151,7 @@ To solve this challenge containerlab uses **tc** backend[^4], which mirrors the 
 
 #### Management interface
 
-By default, vrnetlab uses the [qemu user mode networking](https://wiki.qemu.org/Documentation/Networking#User_Networking_(SLIRP)) to connect the VM's (guest) management interface to the host. In this mode, the host can reach the guests management interface using a predefined IP address, which is in vrnetlab's case is `10.0.0.15`.
+By default, vrnetlab uses the [qemu user mode networking](https://wiki.qemu.org/Documentation/Networking#User_Networking_(SLIRP)) to connect the VM's (guest) management interface to the host. In this mode, the host can reach the guests management interface using a predefined IP address, which in vrnetlab's case is `10.0.0.15`.
 
 In the VM's CLI you will note the management interface to be configured with the said address:
 
@@ -246,7 +246,7 @@ Effectively we run just two types of VMs in that lab, and thus we can implement 
 
 Find some examples below (or contribute a new one)
 
-/// tab | Debian/Ububntu
+/// tab | Debian/Ubuntu
 
 ```bash
 sudo apt-get update -y
@@ -259,7 +259,7 @@ sudo echo 1 > /sys/kernel/mm/ksm/run
 grep . /sys/kernel/mm/ksm/*
 ```
 
-If you want KSM always active you could change `#KSM_THRES_COEF=20` in `/etc/ksmtuned.conf` to `KSM_THRES_COEF=99`. That way KSM will kick in as soon as free RAM dops below 99% instead of below the default 20% of free RAM.
+If you want KSM always active you could change `#KSM_THRES_COEF=20` in `/etc/ksmtuned.conf` to `KSM_THRES_COEF=99`. That way KSM will kick in as soon as free RAM drops below 99% instead of below the default 20% of free RAM.
 ///
 
 [^1]: to install a certain version of containerlab, use the [instructions](../install.md) from installation doc.
