@@ -157,6 +157,7 @@ topology:
 ///tab | generated Nornir Simple inventory
 
 ```yaml
+---
 spine1:
   username: admin
   password: admin

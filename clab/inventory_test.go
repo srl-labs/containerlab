@@ -109,7 +109,7 @@ func TestGeneratNornirSimpleInventory(t *testing.T) {
 	}{
 		"case1": {
 			got: "test_data/topo1.yml",
-			want: `
+			want: `---
 node1:
     username: admin
     password: NokiaSrl1!

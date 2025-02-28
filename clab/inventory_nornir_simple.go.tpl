@@ -1,5 +1,6 @@
-{{- range $kind, $nodes := .Nodes }}
-  {{- $kindProps := index $.Kinds $kind }}
+---
+{{- range $kind, $nodes := .Nodes -}}
+  {{- $kindProps := index $.Kinds $kind -}}
   {{- range $node := $nodes }}
 {{ $node.ShortName }}:
     username: {{ $kindProps.Username }}
