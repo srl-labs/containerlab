@@ -165,7 +165,7 @@ func (n *KindProps) setAnsibleConnection(kind string) {
 //go:embed inventory_nornir_simple.go.tpl
 var nornirSimpleInvT string
 
-// NornirSimpleKindProps is the kind properties structure used to generate the nornir simple inventory file.
+// NornirSimpleInventoryKindProps is the kind properties structure used to generate the nornir simple inventory file.
 type NornirSimpleInventoryKindProps struct {
 	Username string
 	Password string
