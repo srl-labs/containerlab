@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"os/user"
-	"slices"
 
 	"github.com/spf13/cobra"
+	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/sys/unix"
 
 	"github.com/charmbracelet/log"
@@ -24,41 +24,40 @@ func CheckAndGetRootPrivs(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("this containerlab command requires root privileges or root via SUID to run, effective UID: %v SUID: %v", euid, suid)
 	}
 
+	// If we are not running directly as root, and SUID is properly set, attempt to get root privileges
 	if euid != 0 && suid == 0 {
-		clabGroupExists := true
-		clabGroup, err := user.LookupGroup(CLAB_AUTHORISED_GROUP)
+		clabGroupExists, err := utils.UnixGroupExists(CLAB_AUTHORISED_GROUP)
 		if err != nil {
-			if _, ok := err.(user.UnknownGroupError); ok {
-				log.Debug("Containerlab admin group does not exist, skipping group membership check")
-				clabGroupExists = false
-			} else {
-				return fmt.Errorf("failed to lookup containerlab admin group: %v", err)
-			}
+			return fmt.Errorf("failed to lookup containerlab admin group: %w", err)
 		}
 
 		if clabGroupExists {
 			currentEffUser, err := user.Current()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to retrieve current user details: %w", err)
 			}
 
-			effUserGroupIDs, err := currentEffUser.GroupIds()
+			userInClabGroup, err := utils.UserInUnixGroup(currentEffUser.Username, CLAB_AUTHORISED_GROUP)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to check containerlab admin group membership: %w", err)
 			}
 
-			if !slices.Contains(effUserGroupIDs, clabGroup.Gid) {
-				return fmt.Errorf("user '%v' is not part of containerlab admin group 'clab_admins' (GID %v), which is required to execute this command.\nTo add yourself to this group, run the following command:\n\t$ sudo usermod -aG clab_admins %v",
-					currentEffUser.Username, clabGroup.Gid, currentEffUser.Username)
+			if !userInClabGroup {
+				return fmt.Errorf("user '%v' is not part of containerlab admin group 'clab_admins', which is required to execute this command.\nTo add yourself to this group, run the following command:\n\t$ sudo usermod -aG clab_admins %v",
+					currentEffUser.Username, currentEffUser.Username)
 			}
 
 			log.Debug("Group membership check passed")
+		} else {
+			log.Debug("Containerlab admin group 'clab_admins' does not exist, skipping group membership check")
 		}
 
 		err = obtainRootPrivs()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to obtain root privileges: %w", err)
 		}
+	} else if euid == 0 {
+		log.Debugf("Already running as root, skipping root privilege escalation")
 	}
 
 	return nil
@@ -90,10 +89,10 @@ func DropRootPrivs() error {
 
 func changePrivileges(new_uid, new_gid, saved_uid, saved_gid int) error {
 	if err := unix.Setresuid(-1, new_uid, saved_uid); err != nil {
-		return fmt.Errorf("failed to set UID: %v", err)
+		return fmt.Errorf("failed to set UID: %w", err)
 	}
 	if err := unix.Setresgid(-1, new_gid, saved_gid); err != nil {
-		return fmt.Errorf("failed to set GID: %v", err)
+		return fmt.Errorf("failed to set GID: %w", err)
 	}
 	log.Debugf("Changed running UIDs to UID: %d GID: %d", new_uid, new_gid)
 	return nil
