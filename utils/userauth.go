@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// UnixGroupExists checks if the group, given as a group name, exists on the system.
+// `getent group` is used to retrieve domain-joined group information, as `os/user`'s pure Go implementation only checks against /etc/groups.
 func UnixGroupExists(groupName string) (bool, error) {
 	cmd := exec.Command("getent", "group", groupName)
 	out, err := cmd.Output()
@@ -42,6 +44,7 @@ func getUnixGroupMembers(groupName string) ([]string, error) {
 	return users, nil
 }
 
+// UserInUnixGroup returns whether the given user (via username) is part of the Unix group given in the second argument.
 func UserInUnixGroup(username, groupName string) (bool, error) {
 	groupMembers, err := getUnixGroupMembers(groupName)
 	if err != nil {
