@@ -73,8 +73,8 @@ func subtract(a, b any) (any, error) {
 // 2 arguments: start, end (start=4 end=8 "4 5 6 7 8")
 // 3 arguments: start, end, step (start=4 end=8 step=2 "4 6 8")
 // Also works with counting down (start=8 end=4 step=2 "8 6 4")
-// Copied from gomplate
-func seq(n ...any) (any, error) {
+// Copied from gomplate.
+func seq(n ...any) (any, error) { // skipcq: GO-R1005
 	start := int64(1)
 	end := int64(0)
 	step := int64(1)
