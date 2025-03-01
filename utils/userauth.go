@@ -12,7 +12,6 @@ import (
 func UnixGroupExists(groupName string) (bool, error) {
 	cmd := exec.Command("getent", "group", groupName)
 	_, err := cmd.Output()
-
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			// Exit code 2 means group does not exist
