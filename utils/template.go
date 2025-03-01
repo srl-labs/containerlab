@@ -19,6 +19,7 @@ var TemplateFuncs = template.FuncMap{
 	"ToJSONPretty": toJsonPretty,
 	"add":          add,
 	"subtract":     subtract,
+	"seq":          seq,
 }
 
 func toJson(v any) string {
@@ -64,6 +65,80 @@ func subtract(a, b any) (any, error) {
 	}
 
 	return ia - ib, nil
+}
+
+// Generate number sequence
+// Default values: start 1, step 1
+// 1 argument: end (end=8 "1 2 3 4 5 6 7 8")
+// 2 arguments: start, end (start=4 end=8 "4 5 6 7 8")
+// 3 arguments: start, end, step (start=4 end=8 step=2 "4 6 8")
+// Also works with counting down (start=8 end=4 step=2 "8 6 4")
+// Copied from gomplate
+func seq(n ...any) (any, error) {
+	start := int64(1)
+	end := int64(0)
+	step := int64(1)
+
+	var err error
+
+	switch len(n) {
+	case 1:
+		end, err = ToInt64(n[0])
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+	case 2:
+		start, err = ToInt64(n[0])
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+
+		end, err = ToInt64(n[1])
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+	case 3:
+		start, err = ToInt64(n[0])
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+
+		end, err = ToInt64(n[1])
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+
+		step, err = ToInt64(n[2])
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("expected 1, 2, or 3 arguments, got %d", len(n))
+	}
+
+	// if step is 0, return empty sequence
+	if step == 0 {
+		return []int64{}, nil
+	}
+
+	// handle cases where step has wrong sign
+	if end < start && step > 0 {
+		step = -step
+	}
+	if end > start && step < 0 {
+		step = -step
+	}
+
+	// adjust the end so it aligns exactly (avoids infinite loop!)
+	end -= (end - start) % step
+
+	seq := []int64{start}
+	last := start
+	for last != end {
+		last = seq[len(seq)-1] + step
+		seq = append(seq, last)
+	}
+	return seq, nil
 }
 
 func containsFloat(n ...any) bool {
