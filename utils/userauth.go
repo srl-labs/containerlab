@@ -11,14 +11,19 @@ import (
 // `getent group` is used to retrieve domain-joined group information, as `os/user`'s pure Go implementation only checks against /etc/groups.
 func UnixGroupExists(groupName string) (bool, error) {
 	cmd := exec.Command("getent", "group", groupName)
-	out, err := cmd.Output()
+	_, err := cmd.Output()
 
 	if err != nil {
-		return false, fmt.Errorf("error while looking up user groups using getent command %v: %v", groupName, err)
-	}
-
-	if string(out) == "" {
-		return false, nil
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// Exit code 2 means group does not exist
+			if exitError.ExitCode() == 2 {
+				return false, nil
+			} else {
+				return false, fmt.Errorf("error while looking up user groups using getent command %v: %v", groupName, err)
+			}
+		} else {
+			return false, fmt.Errorf("error while looking up user groups using getent command %v: %v", groupName, err)
+		}
 	}
 
 	return true, nil
