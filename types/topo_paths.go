@@ -11,19 +11,20 @@ import (
 )
 
 const (
-	ansibleInventoryFileName  = "ansible-inventory.yml"
-	topologyExportDatFileName = "topology-data.json"
-	authzKeysFileName         = "authorized_keys"
-	tlsDir                    = ".tls"
-	caDir                     = "ca"
-	graph                     = "graph"
-	labDirPrefix              = "clab-"
-	backupFileSuffix          = ".bak"
-	backupFilePrefix          = "."
-	CertFileSuffix            = ".pem"
-	KeyFileSuffix             = ".key"
-	CSRFileSuffix             = ".csr"
-	sshConfigFilePathTmpl     = "/etc/ssh/ssh_config.d/clab-%s.conf"
+	ansibleInventoryFileName      = "ansible-inventory.yml"
+	nornirSimpleInventoryFileName = "nornir-simple-inventory.yml"
+	topologyExportDatFileName     = "topology-data.json"
+	authzKeysFileName             = "authorized_keys"
+	tlsDir                        = ".tls"
+	caDir                         = "ca"
+	graph                         = "graph"
+	labDirPrefix                  = "clab-"
+	backupFileSuffix              = ".bak"
+	backupFilePrefix              = "."
+	CertFileSuffix                = ".pem"
+	KeyFileSuffix                 = ".key"
+	CSRFileSuffix                 = ".csr"
+	sshConfigFilePathTmpl         = "/etc/ssh/ssh_config.d/clab-%s.conf"
 )
 
 // clabTmpDir is the directory where clab stores temporary and/or downloaded files.
@@ -158,6 +159,11 @@ func (t *TopoPaths) TopoExportFile() string {
 // AnsibleInventoryFileAbsPath returns the absolute path to the ansible-inventory file.
 func (t *TopoPaths) AnsibleInventoryFileAbsPath() string {
 	return path.Join(t.labDir, ansibleInventoryFileName)
+}
+
+// NornirSimpleInventoryFileAbsPath returns the absolute path to the ansible-inventory file.
+func (t *TopoPaths) NornirSimpleInventoryFileAbsPath() string {
+	return path.Join(t.labDir, nornirSimpleInventoryFileName)
 }
 
 // TopologyFilenameAbsPath returns the absolute path to the topology file.
