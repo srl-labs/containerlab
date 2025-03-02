@@ -312,7 +312,7 @@ The default username used to connect to a node via SSH.
 
 ### `containerlab.sudoEnabledByDefault`
 
-Whether or not to append `sudo` to any commands executed by the extension.
+Whether or not to prepend `sudo` to any commands executed by the extension.
 
 | Type      | Default |
 | --------- | ------- |
@@ -351,3 +351,57 @@ By default this setting is empty, it should be used to override the [default map
 ```
 
 In the settings UI, simply set the 'Item' field to the kind and the 'Value' field to `nokia_srl` and the command to `sr_cli`.
+
+### `containerlab.wsl.wiresharkPath`
+
+The linux path to the Wireshark executable on the Windows System.
+
+The default Wireshark install location on Windows is `C:\Program Files\Wireshark\wireshark.exe`. This maps into a WSL/Linux path of `/mnt/c/Program Files/Wireshark/wireshark.exe`.
+
+| Type     | Default                                        |
+| -------- | ---------------------------------------------- |
+| `string` | `/mnt/c/Program Files/Wireshark/wireshark.exe` |
+
+### `containerlab.remote.hostname`
+
+An override to set the target hostname or IP address of the system.
+
+This is useful in cases where you need to change the hostname used to initiate packet capture. For example using `127.0.0.1` instead of `localhost`.
+
+| Type     | Default     |
+| -------- | ----------- |
+| `string` | `undefined` |
+
+### `containerlab.drawioDefaultTheme`
+
+The default theme to be used for the draw.io graph functions. Options are:
+
+- `nokia_modern`
+- `nokia`
+- `grafana`
+
+| Type     | Default        |
+| -------- | -------------- |
+| `string` | `nokia_modern` |
+
+### `containerlab.runtime`
+
+Used to set the runtime that containerlab is using in the system. Options are:
+
+- `docker`
+- `podman`
+- `ignite`
+
+It is not recommended to change this unless you know what you are doing.
+
+| Type     | Default  |
+| -------- | -------- |
+| `string` | `docker` |
+
+### `containerlab.skipCleanupWarning`
+
+Whether to hide the confirmation message when doing a cleanup operation on your lab.
+
+| Type      | Default |
+| --------- | ------- |
+| `boolean` | `false` |
