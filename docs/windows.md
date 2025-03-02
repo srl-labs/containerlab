@@ -17,10 +17,10 @@ We will cover both of these ways in this document, but first let's quickly go ov
 
 ## Setting up WSL
 
-You need to have WSL installed on your system. So lets begin with getting WSL installed. 
+You need to have WSL installed on your system. So lets begin with getting WSL installed.
 
 /// warning
-Before starting, please ensure that hardware virtualization is supported on your system and __enabled__ in your BIOS, The setting is likely called **SVM (AMD-V)** or **Intel VT-x** (depending on CPU and motherboard/system manufacturer).
+Before starting, please ensure that hardware virtualization is supported on your system and **enabled** in your BIOS, The setting is likely called **SVM (AMD-V)** or **Intel VT-x** (depending on CPU and motherboard/system manufacturer).
 ///
 
 ### Windows 11
@@ -37,7 +37,8 @@ then reboot your system. WSL2 should now be installed.
 
 Newer versions of Windows 10 allow the same installation method as Windows 11. However for older versions you must follow a more manual process.
 
-/// note
+/// admonition | Note
+    type: subtle-note
 Instructions are from ['Manual installation steps for older versions of WSL'.](https://learn.microsoft.com/en-us/windows/wsl/install-manual)
 ///
 
@@ -61,12 +62,12 @@ wsl --set-default-version 2
 
 ## WSL-Containerlab
 
-To make the experience as easy as possible, we created our own WSL distribution with Containerlab and all the tools you need ready to go. The project is called [WSL-Containerlab](https://github.com/srl-labs/WSL-Containerlab).
+While you can use a default WSL distributive, for a better user experience we recommend using the [WSL-Containerlab](https://github.com/srl-labs/WSL-Containerlab) distributive created by the Containerlab team.
 
 Simply ensure you are using WSL 2.4.4 or newer. You can verify with the `wsl --version` command:
 
 ```powershell hl_lines="2"
-PS C:\Users\Kaelem> wsl --version
+wsl --version
 WSL version: 2.4.11.0
 Kernel version: 5.15.167.4-1
 WSLg version: 1.0.65
@@ -82,7 +83,7 @@ Download the .wsl file from the [releases page](https://github.com/srl-labs/wsl-
 
 Simply double click the file, and the distribution will install. You can also install with `wsl --install --from-file C:\path\to\clab.wsl`
 
-You should be able to see "Containerlab" as a program in your start menu. 
+You should be able to see "Containerlab" as a program in your start menu.
 
 #### Initial setup
 
@@ -92,7 +93,7 @@ On the first startup of Containerlab WSL, there is an initial setup phase to hel
 
 You will be presented with options to select the shell/prompt you want to use.
 
-After that, SSH keys will be copied or generated (if no keys exist). This is to allow for paswordless SSH which enhances the [DevPod](#devpod) integration. 
+After that, SSH keys will be copied or generated (if no keys exist). This is to allow for paswordless SSH which enhances the [DevPod](#devpod) integration.
 
 ### Uninstallation
 
@@ -200,7 +201,7 @@ DevPod delivers a stellar User Experience on macOS[^5], but on Windows, it requi
 
 Since SSH keys are copied in the [initial setup](#initial-setup). You simply have to configure the provider in DevPod.
 
-![](./images/devpod.gif)
+![devpod-animation](https://gitlab.com/rdodin/pics/-/wikis/uploads/453ad6538927eded1bc5829b4b8fef40/devpod.gif)
 
 And that's it! You should now be able to use DevPod to run containerlabs on Windows.
 
