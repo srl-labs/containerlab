@@ -47,30 +47,35 @@ func (c *CLab) GenerateInventories() error {
 	// generate Ansible Inventory
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 
-	ansible_f, ansible_err := os.Create(ansibleInvFPath)
-	if ansible_err != nil {
-		return ansible_err
+	var err error
+	ansibleFile, err := os.Create(ansibleInvFPath)
+	if err != nil {
+		return err
 	}
 
-	ansible_err = c.generateAnsibleInventory(ansible_f)
-	if ansible_err != nil {
-		return ansible_err
+	err = c.generateAnsibleInventory(ansibleFile)
+	if err != nil {
+		return err
 	}
-	ansible_f.Close()
+
+	err = ansibleFile.Close()
+	if err != nil {
+		return err
+	}
 
 	// generate Nornir Simple Inventory
 	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
-	nornir_f, nornir_err := os.Create(nornirSimpleInvFPath)
-	if nornir_err != nil {
-		return nornir_err
+	nornirFile, err := os.Create(nornirSimpleInvFPath)
+	if err != nil {
+		return err
 	}
 
-	nornir_err = c.generateNornirSimpleInventory(nornir_f)
-	if nornir_err != nil {
-		return nornir_err
+	err = c.generateNornirSimpleInventory(nornirFile)
+	if err != nil {
+		return err
 	}
-	nornir_f.Close()
-	return nil
+
+	return nornirFile.Close()
 }
 
 // generateAnsibleInventory generates and writes ansible inventory file to w.
