@@ -23,6 +23,9 @@ IgnoreURLs:
   - sonic.software # often down
   - sonic-build.azurewebsites.net/ui/sonic/pipelines # sometimes down =)
   - localhost
+  - x.com # started to give 400
+  - virtualizestuff.com
+  - hashnode.com
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
