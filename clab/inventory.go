@@ -208,22 +208,22 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 			NodeConfig: n.Config(),
 		}
 
-		// add NornirSimpleInventoryKindProps to the inventory struct
-		// the NornirSimpleInventoryKindProps is passed as a ref and is populated
+		// add nornirSimpleInventoryKindProps to the inventory struct
+		// the nornirSimpleInventoryKindProps is passed as a ref and is populated
 		// down below
-		NornirSimpleInventoryKindProps := &NornirSimpleInventoryKindProps{}
-		inv.Kinds[n.Config().Kind] = NornirSimpleInventoryKindProps
+		nornirSimpleInventoryKindProps := &NornirSimpleInventoryKindProps{}
+		inv.Kinds[n.Config().Kind] = nornirSimpleInventoryKindProps
 
 		// add username and password to kind properties
 		// assumption is that all nodes of the same kind have the same credentials
 		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
 		if nodeRegEntry != nil {
-			NornirSimpleInventoryKindProps.Username = nodeRegEntry.GetCredentials().GetUsername()
-			NornirSimpleInventoryKindProps.Password = nodeRegEntry.GetCredentials().GetPassword()
+			nornirSimpleInventoryKindProps.Username = nodeRegEntry.GetCredentials().GetUsername()
+			nornirSimpleInventoryKindProps.Password = nodeRegEntry.GetCredentials().GetPassword()
 		}
 
 		// add platform to the node
-		NornirSimpleInventoryKindProps.setNetworkPlatform(n.Config().Kind)
+		nornirSimpleInventoryKindProps.setNetworkPlatform(n.Config().Kind)
 
 		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], nornirNode)
 	}
