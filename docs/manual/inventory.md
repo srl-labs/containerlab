@@ -1,8 +1,10 @@
+# Inventory
+
 To accommodate for smooth transition from lab deployment to subsequent automation activities, containerlab generates inventory files for different automation tools.
 
 ## Ansible
 
-Ansible inventory is generated automatically for every lab. The inventory file can be found in the lab directory under the `ansible-inventory.yml` name.
+Ansible inventory is generated automatically for every lab. The inventory file can be found in the [lab directory](../manual/conf-artifacts.md) under the `ansible-inventory.yml` name.
 
 Lab nodes are grouped under their kinds in the inventory so that the users can selectively choose the right group of nodes in the playbooks.
 
@@ -13,7 +15,7 @@ name: ansible
 topology:
   nodes:
     r1:
-      kind: crpd
+      kind: juniper_crpd
       image: crpd:latest
 
     r2:
@@ -35,7 +37,7 @@ topology:
 ```yaml
 all:
   children:
-    crpd:
+    juniper_crpd:
       hosts:
         clab-ansible-r1:
           ansible_host: <mgmt-ipv4-address>
@@ -132,9 +134,9 @@ As a result of this configuration, the generated inventory will look like this:
 
 ## Nornir
 
-A Nornir [Simple Inventory](https://nornir.readthedocs.io/en/latest/tutorial/inventory.html) is generated automatically for every lab. The inverntory file can be found in the lab directory under the `nornir-simple-inventory.yml` name. Not all kinds are supported in Nornir. When a node is not supported in Nornir Inventory the platform in the inventory for the node will be set to `unsupported_nornir_platform`
+A Nornir [Simple Inventory](https://nornir.readthedocs.io/en/latest/tutorial/inventory.html) is generated automatically for every lab. The inventory file can be found in the [lab directory](../manual/conf-artifacts.md) under the `nornir-simple-inventory.yml` name.
 
-///tab | topology file
+///tab | Topology file
 
 ```yaml
 name: nornir
@@ -143,165 +145,168 @@ mgmt:
   ipv4-subnet: 172.200.20.0/24
 topology:
   nodes:
-    spine1:
-      kind: ceos
-      image: ceos:4.33-arm
+    node1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:latest
       mgmt-ipv4: 172.200.20.2
-    spine2:
-      kind: ceos
+    node2:
+      kind: arista_ceos
       image: ceos:4.33-arm
       mgmt-ipv4: 172.200.20.3
 ```
 
 ///
-///tab | generated Nornir Simple inventory
+///tab | Generated Nornir Simple inventory
 
 ```yaml
 ---
 spine1:
   username: admin
-  password: admin
-  platform: eos
+  password: NokiaSrl1!
+  platform: nokia_srlinux
   hostname: 172.200.20.2
 spine2:
   username: admin
   password: admin
-  platform: eos
+  platform: arista_eos
   hostname: 172.200.20.3
 ```
 
 ///
 
+The `platform` field of the Host object in the inventory is set according to the platform names as adopted by the [scrapli core](https://carlmontanari.github.io/scrapli/reference/driver/core/) and [scrapli community](https://github.com/scrapli/scrapli_community) libraries[^2]. If there is no matching scrapli platform name, the node's `kind` is used instead.
+
 ## Topology Data
 
-Every time a user runs a `deploy` command, containerlab automatically exports information about the topology into `topology-data.json` file in the lab directory. Schema of exported data is determined based on a Go template specified in `--export-template` parameter, or a default template `/etc/containerlab/templates/export/auto.tmpl`, if the parameter is not provided.
+Every time a user runs a `deploy` command, containerlab automatically exports information about the topology into `topology-data.json` file in the lab directory. Schema of exported data is determined based on a Go template specified in `--export-template` parameter, or a [default template](https://github.com/srl-labs/containerlab/blob/main/clab/export_templates/auto.tmpl) if the parameter is not provided.
 
 Containerlab internal data that is submitted for export via the template, has the following structure:
 
 ```golang
-type TopologyExport struct {
- Name        string                       `json:"name"`                  // Containerlab topology name
- Type        string                       `json:"type"`                  // Always 'clab'
- Clab        *CLab                        `json:"clab,omitempty"`        // Data parsed from a topology definitions yaml file
- NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"` // Definitions of nodes expanded with dynamically created data
-}
+--8<-- "clab/export.go:37:44"
 ```
 
 To get the full list of fields available for export, you can export topology data with the following template `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
 
 Example of exported data when using default `auto.tmpl` template:
 
-=== "topology file srl02.clab.yml"
-    ```yaml
-    name: srl02
+/// tab | topology file `srl02.clab.yml`
 
-    topology:
-      kinds:
-        srl:
-          type: ixrd3
-          image: ghcr.io/nokia/srlinux
-      nodes:
-        srl1:
-          kind: nokia_srlinux
-        srl2:
-          kind: nokia_srlinux
+  ```yaml
+  name: srl02
 
-      links:
-        - endpoints: ["srl1:e1-1", "srl2:e1-1"]
-    ```
-=== "sample generated topology-data.json"
-    ```json
-    {
-      "name": "srl02",
-      "type": "clab",
-      "clab": {
-        "config": {
-          "prefix": "clab",
-          "mgmt": {
-            "network": "clab",
-            "bridge": "br-<...>",
-            "ipv4-subnet": "172.20.20.0/24",
-            "ipv6-subnet": "3fff:172:20:20::/64",
-            "mtu": "1500",
-            "external-access": true
-          },
-          "config-path": "<full path to a directory with srl02.clab.yml>"
-        }
+  topology:
+    kinds:
+      srl:
+        type: ixrd3
+        image: ghcr.io/nokia/srlinux
+    nodes:
+      srl1:
+        kind: nokia_srlinux
+      srl2:
+        kind: nokia_srlinux
+
+    links:
+      - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+  ```
+
+///
+/// tab | sample generated `topology-data.json`
+
+```json
+{
+  "name": "srl02",
+  "type": "clab",
+  "clab": {
+    "config": {
+      "prefix": "clab",
+      "mgmt": {
+        "network": "clab",
+        "bridge": "br-<...>",
+        "ipv4-subnet": "172.20.20.0/24",
+        "ipv6-subnet": "3fff:172:20:20::/64",
+        "mtu": "1500",
+        "external-access": true
       },
-      "nodes": {
-        "srl1": {
-          "index": "0",
-          "shortname": "srl1",
-          "longname": "clab-srl02-srl1",
-          "fqdn": "srl1.srl02.io",
-          "group": "",
-          "labdir": "<full path to the lab node directory>",
-          "kind": "srl",
-          "image": "ghcr.io/nokia/srlinux",
-          "mgmt-net": "",
-          "mgmt-intf": "",
-          "mgmt-ipv4-address": "172.20.20.3",
-          "mgmt-ipv4-prefix-length": 24,
-          "mgmt-ipv6-address": "3fff:172:20:20::3",
-          "mgmt-ipv6-prefix-length": 64,
-          "mac-address": "",
-          "labels": {
-            "clab-mgmt-net-bridge": "br-<...>",
-            "clab-node-group": "",
-            "clab-node-kind": "srl",
-            "clab-node-lab-dir": "<full path to the lab node directory>",
-            "clab-node-name": "srl1",
-            "clab-node-type": "ixrd3",
-            "clab-topo-file": "<full path to the srl02.clab.yml file>",
-            "containerlab": "srl02"
-          }
-        },
-        "srl2": {
-          "index": "1",
-          "shortname": "srl2",
-          "longname": "clab-srl02-srl2",
-          "fqdn": "srl2.srl02.io",
-          "group": "",
-          "labdir": "<full path to the lab node directory>",
-          "kind": "srl",
-          "image": "ghcr.io/nokia/srlinux",
-          "mgmt-net": "",
-          "mgmt-intf": "",
-          "mgmt-ipv4-address": "172.20.20.2",
-          "mgmt-ipv4-prefix-length": 24,
-          "mgmt-ipv6-address": "3fff:172:20:20::2",
-          "mgmt-ipv6-prefix-length": 64,
-          "mac-address": "",
-          "labels": {
-            "clab-mgmt-net-bridge": "br-<...>",
-            "clab-node-group": "",
-            "clab-node-kind": "srl",
-            "clab-node-lab-dir": "<full path to the lab node directory>",
-            "clab-node-name": "srl2",
-            "clab-node-type": "ixrd3",
-            "clab-topo-file": "<full path to the srl02.clab.yml file>",
-            "containerlab": "srl02"
-          }
-        }
-      },
-      "links": [
-        {
-          "a": {
-            "node": "srl1",
-            "interface": "e1-1",
-            "mac": "<mac address>",
-            "peer": "z"
-          },
-          "z": {
-            "node": "srl2",
-            "interface": "e1-1",
-            "mac": "<mac address>",
-            "peer": "a"
-          }
-        }
-      ]
+      "config-path": "<full path to a directory with srl02.clab.yml>"
     }
-    ```
+  },
+  "nodes": {
+    "srl1": {
+      "index": "0",
+      "shortname": "srl1",
+      "longname": "clab-srl02-srl1",
+      "fqdn": "srl1.srl02.io",
+      "group": "",
+      "labdir": "<full path to the lab node directory>",
+      "kind": "srl",
+      "image": "ghcr.io/nokia/srlinux",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.3",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::3",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-<...>",
+        "clab-node-group": "",
+        "clab-node-kind": "srl",
+        "clab-node-lab-dir": "<full path to the lab node directory>",
+        "clab-node-name": "srl1",
+        "clab-node-type": "ixrd3",
+        "clab-topo-file": "<full path to the srl02.clab.yml file>",
+        "containerlab": "srl02"
+      }
+    },
+    "srl2": {
+      "index": "1",
+      "shortname": "srl2",
+      "longname": "clab-srl02-srl2",
+      "fqdn": "srl2.srl02.io",
+      "group": "",
+      "labdir": "<full path to the lab node directory>",
+      "kind": "srl",
+      "image": "ghcr.io/nokia/srlinux",
+      "mgmt-net": "",
+      "mgmt-intf": "",
+      "mgmt-ipv4-address": "172.20.20.2",
+      "mgmt-ipv4-prefix-length": 24,
+      "mgmt-ipv6-address": "3fff:172:20:20::2",
+      "mgmt-ipv6-prefix-length": 64,
+      "mac-address": "",
+      "labels": {
+        "clab-mgmt-net-bridge": "br-<...>",
+        "clab-node-group": "",
+        "clab-node-kind": "srl",
+        "clab-node-lab-dir": "<full path to the lab node directory>",
+        "clab-node-name": "srl2",
+        "clab-node-type": "ixrd3",
+        "clab-topo-file": "<full path to the srl02.clab.yml file>",
+        "containerlab": "srl02"
+      }
+    }
+  },
+  "links": [
+    {
+      "a": {
+        "node": "srl1",
+        "interface": "e1-1",
+        "mac": "<mac address>",
+        "peer": "z"
+      },
+      "z": {
+        "node": "srl2",
+        "interface": "e1-1",
+        "mac": "<mac address>",
+        "peer": "a"
+      }
+    }
+  ]
+}
+```
+
+///
 
 ## SSH Config
 
@@ -345,3 +350,4 @@ A:srl#
 ```
 
 [^1]: For example [Ansible Docker connection](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_connection.html) plugin.
+[^2]: The names are ~consistent with the napalm, nornir and netmiko libraries.

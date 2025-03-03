@@ -214,16 +214,24 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 		nornirSimpleInventoryKindProps := &NornirSimpleInventoryKindProps{}
 		inv.Kinds[n.Config().Kind] = nornirSimpleInventoryKindProps
 
+		// the nornir platform is set by default to the node's kind
+		// and is overwritten next if the node's registry entry has
+		// the scrapli platform name for this kind
+		nornirSimpleInventoryKindProps.Platform = n.Config().Kind
+
 		// add username and password to kind properties
 		// assumption is that all nodes of the same kind have the same credentials
 		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
 		if nodeRegEntry != nil {
 			nornirSimpleInventoryKindProps.Username = nodeRegEntry.GetCredentials().GetUsername()
 			nornirSimpleInventoryKindProps.Password = nodeRegEntry.GetCredentials().GetPassword()
-		}
 
-		// add platform to the node
-		nornirSimpleInventoryKindProps.setNetworkPlatform(n.Config().Kind)
+			scrapliPlatformName := nodeRegEntry.PlatformAttrs().ScrapliPlatformName
+			if scrapliPlatformName != "" {
+				nornirSimpleInventoryKindProps.Platform = scrapliPlatformName
+			}
+
+		}
 
 		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], nornirNode)
 	}
@@ -245,20 +253,4 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 	}
 
 	return err
-}
-
-// setNetworkPlatform sets the platform variable for the kind.
-func (n *NornirSimpleInventoryKindProps) setNetworkPlatform(kind string) {
-	switch kind {
-	case "ceos":
-		n.Platform = "eos"
-	case "xrd", "cisco_xrd":
-		n.Platform = "iosxr"
-	case "cisco_n9kv":
-		n.Platform = "nxos"
-	case "crpd", "juniper_crpd":
-		n.Platform = "junos"
-	default:
-		n.Platform = "unsupported_nornir_platform"
-	}
 }

@@ -96,6 +96,14 @@ func (nre *NodeRegistryEntry) GetGenerateAttributes() *GenerateNodeAttributes {
 	return nre.attributes.generateAttributes
 }
 
+func (nre *NodeRegistryEntry) PlatformAttrs() *PlatformAttrs {
+	if nre.attributes == nil {
+		return nil
+	}
+
+	return nre.attributes.PlatformAttrs()
+}
+
 // Credentials returns entry's credentials.
 // might return nil if no default credentials present.
 func (e *NodeRegistryEntryAttributes) Credentials() *Credentials {
@@ -149,8 +157,12 @@ func (nrea *NodeRegistryEntryAttributes) GetGenerateAttributes() *GenerateNodeAt
 	return nrea.generateAttributes
 }
 
-// PlatformAttrs returns the platform attributes of this node.
+// PlatformAttrs returns the platform attributes of this node's registry attributes.
 func (nrea *NodeRegistryEntryAttributes) PlatformAttrs() *PlatformAttrs {
+	if nrea == nil {
+		return nil
+	}
+
 	return nrea.platformAttrs
 }
 
