@@ -1,6 +1,7 @@
 module github.com/srl-labs/containerlab
 
 go 1.22.11
+toolchain go1.23.6
 
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
@@ -39,7 +40,7 @@ require (
 	github.com/vishvananda/netlink v1.3.1-0.20240922070040-084abd93d350
 	github.com/weaveworks/ignite v0.10.0
 	go.uber.org/mock v0.5.0
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.35.0
 	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329
 	golang.org/x/sys v0.30.0
 	golang.org/x/term v0.29.0
