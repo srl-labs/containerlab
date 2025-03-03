@@ -223,8 +223,10 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 		// assumption is that all nodes of the same kind have the same credentials
 		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
 		if nodeRegEntry != nil {
-			nornirSimpleInventoryKindProps.Username = nodeRegEntry.GetCredentials().GetUsername()
-			nornirSimpleInventoryKindProps.Password = nodeRegEntry.GetCredentials().GetPassword()
+			nornirSimpleInventoryKindProps.Username =
+				nodeRegEntry.GetCredentials().GetUsername()
+			nornirSimpleInventoryKindProps.Password =
+				nodeRegEntry.GetCredentials().GetPassword()
 
 			scrapliPlatformName := nodeRegEntry.PlatformAttrs().ScrapliPlatformName
 			if scrapliPlatformName != "" {
