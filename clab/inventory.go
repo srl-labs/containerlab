@@ -228,9 +228,8 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 			nornirSimpleInventoryKindProps.Password =
 				nodeRegEntry.GetCredentials().GetPassword()
 
-			scrapliPlatformName := nodeRegEntry.PlatformAttrs().ScrapliPlatformName
-			if scrapliPlatformName != "" {
-				nornirSimpleInventoryKindProps.Platform = scrapliPlatformName
+			if nodeRegEntry.PlatformAttrs() != nil {
+				nornirSimpleInventoryKindProps.Platform = nodeRegEntry.PlatformAttrs().ScrapliPlatformName
 			}
 
 		}
