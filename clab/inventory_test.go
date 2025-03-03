@@ -113,12 +113,12 @@ func TestGeneratNornirSimpleInventory(t *testing.T) {
 node1:
     username: admin
     password: NokiaSrl1!
-    platform: unsupported_nornir_platform
+    platform: nokia_srlinux
     hostname: 172.100.100.11
 node2:
     username: admin
     password: NokiaSrl1!
-    platform: unsupported_nornir_platform
+    platform: nokia_srlinux
     hostname: 172.100.100.12`,
 		},
 	}
