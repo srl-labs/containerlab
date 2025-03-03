@@ -27,11 +27,18 @@ var (
 const (
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
+
+	scrapliPlatformName = "paloalto_panos"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(vrPan)
 	}, nrea)

@@ -33,7 +33,12 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil)
+	platformOpts := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformOpts)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(c8000)
 	}, nrea)

@@ -29,7 +29,7 @@ var kindnames = []string{"linux"}
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
+	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
 	r.Register(kindnames, func() nodes.Node {
 		return new(linux)

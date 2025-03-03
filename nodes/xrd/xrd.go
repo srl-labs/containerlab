@@ -50,7 +50,11 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(xrd)

@@ -27,6 +27,8 @@ const (
 
 	generateable     = true
 	generateIfFormat = "eth%d"
+
+	scrapliPlatformName = "juniper_junos"
 )
 
 var (
@@ -46,7 +48,11 @@ var (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	platformOpts := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(crpd)

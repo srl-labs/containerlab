@@ -54,6 +54,8 @@ var (
 	//go:embed srl_default_config.go.tpl
 	srlConfigCmdsTpl string
 
+	scrapliPlatformName = "nokia_srlinux"
+
 	kindNames = []string{"srl", "nokia_srlinux"}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
@@ -113,7 +115,11 @@ var (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	platformOpts := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(srl)

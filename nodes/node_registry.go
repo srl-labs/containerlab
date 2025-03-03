@@ -116,12 +116,20 @@ func newRegistryEntry(nodeKindNames []string, initFunction Initializer,
 	}
 }
 
+// PlatformAttrs contains the platform attributes this node/platform is known to have in different libraries and tools.
+// Most often just the platform/provider name.
+type PlatformAttrs struct {
+	ScrapliPlatformName string
+}
+
 type NodeRegistryEntryAttributes struct {
 	credentials        *Credentials
 	generateAttributes *GenerateNodeAttributes
+	platformAttrs      *PlatformAttrs
 }
 
-func NewNodeRegistryEntryAttributes(c *Credentials, ga *GenerateNodeAttributes) *NodeRegistryEntryAttributes {
+// NewNodeRegistryEntryAttributes creates a new NodeRegistryEntryAttributes.
+func NewNodeRegistryEntryAttributes(c *Credentials, ga *GenerateNodeAttributes, pa *PlatformAttrs) *NodeRegistryEntryAttributes {
 	// set default value for GenerateNodeAttributes
 	if ga == nil {
 		ga = NewGenerateNodeAttributes(false, "")
@@ -129,6 +137,7 @@ func NewNodeRegistryEntryAttributes(c *Credentials, ga *GenerateNodeAttributes) 
 	return &NodeRegistryEntryAttributes{
 		credentials:        c,
 		generateAttributes: ga,
+		platformAttrs:      pa,
 	}
 }
 
@@ -138,6 +147,11 @@ func (nrea *NodeRegistryEntryAttributes) GetCredentials() *Credentials {
 
 func (nrea *NodeRegistryEntryAttributes) GetGenerateAttributes() *GenerateNodeAttributes {
 	return nrea.generateAttributes
+}
+
+// PlatformAttrs returns the platform attributes of this node.
+func (nrea *NodeRegistryEntryAttributes) PlatformAttrs() *PlatformAttrs {
+	return nrea.platformAttrs
 }
 
 type GenerateNodeAttributes struct {
