@@ -180,6 +180,16 @@
                     },
                     "uniqueItems": true
                 },
+                "volumes": {
+                    "type": "array",
+                    "description": "list of volumes to attach",
+                    "markdownDescription": "list of [volumes](https://containerlab.dev/manual/nodes/#volumes) to attach",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
                 "ports": {
                     "type": "array",
                     "description": "list of port mappings",
