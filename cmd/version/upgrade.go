@@ -51,8 +51,15 @@ var upgradeCmd = &cobra.Command{
 
 // downloadFile will download a file from a URL and write its content to a file.
 func downloadFile(url string, file *os.File) error {
+	// Create an HTTP client with specific transport
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+	}
+
 	// Get the data
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}
