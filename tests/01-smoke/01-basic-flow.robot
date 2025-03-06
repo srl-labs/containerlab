@@ -18,15 +18,15 @@ ${n2-ipv4}                  172.20.20.100/24
 ${n2-ipv6}                  3fff:172:20:20::100/64
 ${table-delimit}            │
 ${l1-uname-exec-output}     SEPARATOR=\n
-...                         Executed command command="uname -n" node=clab-2-linux-nodes-l1
+...                         Executed command node=clab-2-linux-nodes-l1 command="uname -n"
 ...                         ${SPACE}${SPACE}stdout=
 ...                         ${SPACE}${SPACE}│ l1
 ${l2-uname-exec-output}     SEPARATOR=\n
-...                         Executed command command="uname -n" node=clab-2-linux-nodes-l2
+...                         Executed command node=clab-2-linux-nodes-l2 command="uname -n"
 ...                         ${SPACE}${SPACE}stdout=
 ...                         ${SPACE}${SPACE}│ l2
 ${l3-uname-exec-output}     SEPARATOR=\n
-...                         Executed command command="uname -n" node=clab-2-linux-nodes-l3
+...                         Executed command node=clab-2-linux-nodes-l3 command="uname -n"
 ...                         ${SPACE}${SPACE}stdout=
 ...                         ${SPACE}${SPACE}│ l3
 

@@ -15,11 +15,11 @@ ${lab-file}                     stages.clab.yml
 ${lab-name}                     stages
 ${runtime}                      docker
 ${n4-exec-output}               SEPARATOR=\n
-...                             Executed command command="uname -n" node=node4
+...                             Executed command node=node4 command="uname -n"
 ...                             ${SPACE}${SPACE}stdout=
 ...                             ${SPACE}${SPACE}│ node4
 ${n4-exec-healthy-output}       SEPARATOR=\n
-...                             Executed command command="echo hey I am exiting healthy stage" node=node4
+...                             Executed command node=node4 command="echo hey I am exiting healthy stage"
 ...                             ${SPACE}${SPACE}stdout=
 ...                             ${SPACE}${SPACE}│ hey I am exiting healthy stage
 
