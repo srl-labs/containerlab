@@ -15,11 +15,11 @@ ${lab-file}                     stages.clab.yml
 ${lab-name}                     stages
 ${runtime}                      docker
 ${n4-exec-output}               SEPARATOR=\n
-...                             Executed command command="uname -n" node=node4
+...                             Executed command node=node4 command="uname -n"
 ...                             ${SPACE}${SPACE}stdout=
 ...                             ${SPACE}${SPACE}│ node4
 ${n4-exec-healthy-output}       SEPARATOR=\n
-...                             Executed command command="echo hey I am exiting healthy stage" node=node4
+...                             Executed command node=node4 command="echo hey I am exiting healthy stage"
 ...                             ${SPACE}${SPACE}stdout=
 ...                             ${SPACE}${SPACE}│ hey I am exiting healthy stage
 
@@ -81,7 +81,7 @@ Ensure node4 executed on-exit commands for its healthy stage
 Ensure node3 executed on-exit commands for its create stage and this output doesn't contain any non eth0/lo interfaces
     ${extracted_text} =    Extract Text Between Markers
     ...    ${deploylog.stderr}
-    ...    INFO Executed command command="ls /sys/class/net/" node=node3
+    ...    INFO Executed command node=node3 command="ls /sys/class/net/"
 
     Log    extracted node3 output is${\n}${extracted_text}    console=${True}
 
@@ -98,7 +98,7 @@ Ensure node3 executed on-exit commands for its create stage and this output does
 Ensure node1 executed on-enter commands for its create-links stage and this output doesn't contain any non eth0/lo interfaces
     ${extracted_text} =    Extract Text Between Markers
     ...    ${deploylog.stderr}
-    ...    INFO Executed command command="ls /sys/class/net/" node=node1
+    ...    INFO Executed command node=node1 command="ls /sys/class/net/"
 
     Log    ${extracted_text}    console=${True}
 

@@ -262,8 +262,8 @@ func (ec *ExecCollection) Log() {
 			default:
 				log.Info(
 					"Executed command",
-					"command", er.GetCmdString(),
 					"node", k,
+					"command", er.GetCmdString(),
 					"stdout", er.GetStdOutString(),
 				)
 			}
