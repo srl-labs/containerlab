@@ -5,6 +5,7 @@
 package clab
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -104,11 +105,13 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 
 func TestGeneratNornirSimpleInventory(t *testing.T) {
 	tests := map[string]struct {
-		got  string
-		want string
+		got                              string
+		want                             string
+		clab_nornir_platform_name_schema string // environment variable feature flag to direct platform name
 	}{
-		"case1": {
-			got: "test_data/topo1.yml",
+		"case1-default-platform": {
+			got:                              "test_data/topo1.yml",
+			clab_nornir_platform_name_schema: "",
 			want: `---
 node1:
     username: admin
@@ -121,10 +124,67 @@ node2:
     platform: nokia_srlinux
     hostname: 172.100.100.12`,
 		},
+		"case2-scrapi-platform": {
+			got:                              "test_data/topo12.yml",
+			clab_nornir_platform_name_schema: "scrapi",
+			want: `---
+node1:
+    username: admin
+    password: admin
+    platform: arista_eos
+    hostname: 
+node2:
+    username: admin
+    password: admin
+    platform: arista_eos
+    hostname: 
+node3:
+    username: admin
+    password: admin
+    platform: arista_eos
+    hostname: 
+node4:
+    username: 
+    password: 
+    platform: linux
+    hostname: `,
+		},
+		"case3-nornir-platform": {
+			got:                              "test_data/topo12.yml",
+			clab_nornir_platform_name_schema: "napalm",
+			want: `---
+node1:
+    username: admin
+    password: admin
+    platform: eos
+    hostname: 
+node2:
+    username: admin
+    password: admin
+    platform: eos
+    hostname: 
+node3:
+    username: admin
+    password: admin
+    platform: eos
+    hostname: 
+node4:
+    username: 
+    password: 
+    platform: linux
+    hostname: `,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
+			// Set the environment variable
+			if err := os.Setenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA", tc.clab_nornir_platform_name_schema); err != nil {
+				t.Fatalf("failed to set environment variable: %v", err)
+			}
+			// Unset the environment variable after the test
+			defer os.Unsetenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA")
+
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}

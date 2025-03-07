@@ -128,6 +128,7 @@ func newRegistryEntry(nodeKindNames []string, initFunction Initializer,
 // Most often just the platform/provider name.
 type PlatformAttrs struct {
 	ScrapliPlatformName string
+	NapalmPlatformName  string
 }
 
 type NodeRegistryEntryAttributes struct {

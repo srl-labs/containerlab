@@ -203,6 +203,8 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 		Groups: make(map[string][]*NornirSimpleInventoryNode),
 	}
 
+	platformNameSchema := os.Getenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA")
+
 	for _, n := range c.Nodes {
 		nornirNode := &NornirSimpleInventoryNode{
 			NodeConfig: n.Config(),
@@ -215,8 +217,9 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 		inv.Kinds[n.Config().Kind] = nornirSimpleInventoryKindProps
 
 		// the nornir platform is set by default to the node's kind
-		// and is overwritten next if the node's registry entry has
-		// the scrapli platform name for this kind
+		// and is overwritten with the proper Nornir Inventory Platform
+		// based on the the value of CLAB_PLATFORM_NAME_SCHEMA (nornir or scrapi).
+		// defaults to Nornir-Napalm/Netmiko compatible platform name
 		nornirSimpleInventoryKindProps.Platform = n.Config().Kind
 
 		// add username and password to kind properties
@@ -229,7 +232,12 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 				nodeRegEntry.GetCredentials().GetPassword()
 
 			if nodeRegEntry.PlatformAttrs() != nil {
-				nornirSimpleInventoryKindProps.Platform = nodeRegEntry.PlatformAttrs().ScrapliPlatformName
+				switch platformNameSchema {
+				case "napalm":
+					nornirSimpleInventoryKindProps.Platform = nodeRegEntry.PlatformAttrs().NapalmPlatformName
+				case "scrapi":
+					nornirSimpleInventoryKindProps.Platform = nodeRegEntry.PlatformAttrs().ScrapliPlatformName
+				}
 			}
 
 		}

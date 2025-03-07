@@ -31,6 +31,7 @@ const (
 	generateIfFormat = "Gi0/0/0/%d"
 
 	scrapliPlatformName = "cisco_iosxr"
+	NapalmPlatformName  = "iosxr"
 
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
@@ -41,6 +42,7 @@ func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 	platformAttrs := &nodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
+		NapalmPlatformName:  NapalmPlatformName,
 	}
 
 	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)

@@ -30,12 +30,14 @@ const (
 	startupCfgFName = "startup-config.cfg"
 
 	scrapliPlatformName = "cisco_nxos"
+	NapalmPlatformName  = "nxos"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	platformAttrs := &nodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
+		NapalmPlatformName:  NapalmPlatformName,
 	}
 
 	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)

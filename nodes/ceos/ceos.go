@@ -30,6 +30,7 @@ const (
 	generateIfFormat          = "eth%d"
 
 	scrapliPlatformName = "arista_eos"
+	NapalmPlatformName  = "eos"
 )
 
 var (
@@ -59,6 +60,7 @@ func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 	platformAttrs := &nodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
+		NapalmPlatformName:  NapalmPlatformName,
 	}
 
 	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
