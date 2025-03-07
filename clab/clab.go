@@ -1026,6 +1026,14 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
+	// create an empty nornir simple inventory file that will get populated later
+	// we create it here first, so that bind mounts of nornir-simple-inventory.yml file could work
+	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
+	_, err = os.Create(nornirSimpleInvFPath)
+	if err != nil {
+		return nil, err
+	}
+
 	// in an similar fashion, create an empty topology data file
 	topoDataFPath := c.TopoPaths.TopoExportFile()
 	topoDataF, err := os.Create(topoDataFPath)

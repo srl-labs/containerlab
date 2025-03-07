@@ -18,6 +18,8 @@ import (
 const (
 	generateable     = true
 	generateIfFormat = "eth%d"
+
+	scrapliPlatformName = "sonic"
 )
 
 var kindNames = []string{"sonic-vs"}
@@ -25,7 +27,11 @@ var kindNames = []string{"sonic-vs"}
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, platformAttrs)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(sonic)

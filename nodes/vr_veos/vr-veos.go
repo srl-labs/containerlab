@@ -31,6 +31,7 @@ const (
 	generateIfFormat = "Et1/%d"
 
 	scrapliPlatformName = "arista_eos"
+	NapalmPlatformName  = "eos"
 
 	configDirName   = "config"
 	startupCfgFName = "startup-config.cfg"
@@ -39,7 +40,12 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+		NapalmPlatformName:  NapalmPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(vrVEOS)
