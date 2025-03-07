@@ -194,8 +194,13 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":/etc/opt/srlinux/:rw"))
 
 	// mount srlinux topology
-	topoPath := filepath.Join(n.Cfg.LabDir, "topology.yml")
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(topoPath, ":/tmp/topology.yml:ro"))
+	srcTopoPath := filepath.Join(n.Cfg.LabDir, "topology.yml")
+	dstTopoPath := "/tmp/topology.yml"
+	// if a user provided a topology file, it means that they want to use a custom srl topology file
+	// in that case we do not need to mount the one for the provided type
+	if !utils.DestinationBindMountExists(n.Cfg.Binds, dstTopoPath) {
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(srcTopoPath, ":", dstTopoPath, ":ro"))
+	}
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceHelp = InterfaceHelp
