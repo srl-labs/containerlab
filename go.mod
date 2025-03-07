@@ -101,7 +101,7 @@ require (
 	github.com/moby/sys/userns v0.1.0 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
-	github.com/muesli/termenv v0.15.3-0.20241212154518-8c990cd6cf4b // indirect
+	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
