@@ -47,6 +47,7 @@ import (
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
+	vr_openwrt "github.com/Takalele/containerlab/nodes/vr_openwrt"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
