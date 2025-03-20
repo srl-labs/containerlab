@@ -45,7 +45,7 @@ func (n *vrOpenWrt) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 
 	// Add a simple bind-mount for the 'overlay' directory
 	n.Cfg.Binds = append(n.Cfg.Binds,
-		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "overlay"), ":/config/overlay"),
+		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "overlay"), ":/overlay"),
 	)
 
 	return nil
