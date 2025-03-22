@@ -13,7 +13,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var kindNames = []string{"vr-openwrt"}
+var kindNames = []string{"openwrt"}
 
 const (
 	generateable     = true
