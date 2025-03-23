@@ -2,7 +2,7 @@
 search:
   boost: 4
 kind_code_name: paloalto_panos
-kind_display_name: Cisco Nexus9000v
+kind_display_name: Palo Alto PA-VM
 ---
 # Palo Alto PA-VM
 
