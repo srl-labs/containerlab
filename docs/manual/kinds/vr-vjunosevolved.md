@@ -59,7 +59,7 @@ Data port numbering starts at `0`.
 
 The example ports above would be mapped to the following Linux interfaces inside the container running the -{{ kind_display_name }}- VM:
 
-Juniper vJunosEvolved container can have up to 17 interfaces and uses the following mapping rules:
+Juniper vJunosEvolved container can have up to 13 interfaces (1 management and 12 data-plane interfaces) and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
 * `eth1` - first data interface, mapped to a first data port of vJunosEvolved VM, which is `et-0/0/0` **and not `et-0/0/1`**.
