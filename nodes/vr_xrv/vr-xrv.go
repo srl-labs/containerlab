@@ -27,14 +27,20 @@ var (
 
 const (
 	scrapliPlatformName = "cisco_iosxr"
-
-	configDirName   = "config"
-	startupCfgFName = "startup-config.cfg"
+	NapalmPlatformName  = "iosxr"
+	configDirName       = "config"
+	startupCfgFName     = "startup-config.cfg"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+		NapalmPlatformName:  NapalmPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(vrXRV)
 	}, nrea)

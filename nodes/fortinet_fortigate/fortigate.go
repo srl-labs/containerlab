@@ -25,18 +25,21 @@ var (
 )
 
 const (
-	// scrapligo doesn't have a driver for fortigate, can be copied from scrapli community
-	// scrapliPlatformName = "fortinet_fortigate".
-	configDirName    = "config"
-	startupCfgFName  = "startup-config.cfg"
-	generateable     = true
-	generateIfFormat = "eth%d"
+	scrapliPlatformName = "fortinet_fortios"
+	configDirName       = "config"
+	startupCfgFName     = "startup-config.cfg"
+	generateable        = true
+	generateIfFormat    = "eth%d"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
 	r.Register(kindnames, func() nodes.Node {
 		return new(fortigate)
