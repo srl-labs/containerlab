@@ -355,4 +355,3 @@ A:srl#
 ```
 
 [^1]: For example [Ansible Docker connection](https://docs.ansible.com/ansible/latest/collections/community/docker/docker_connection.html) plugin.
-[^2]: The names are ~consistent with the napalm, nornir and netmiko libraries.
