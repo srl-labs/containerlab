@@ -14,6 +14,8 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
+const NornirPlatformNameSchemaEnvVar = "CLAB_NORNIR_PLATFORM_NAME_SCHEMA"
+
 //go:embed inventory_ansible.go.tpl
 var ansibleInvT string
 
@@ -203,7 +205,7 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 		Groups: make(map[string][]*NornirSimpleInventoryNode),
 	}
 
-	platformNameSchema := os.Getenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA")
+	platformNameSchema := os.Getenv(NornirPlatformNameSchemaEnvVar)
 
 	for _, n := range c.Nodes {
 		nornirNode := &NornirSimpleInventoryNode{
