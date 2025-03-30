@@ -23,7 +23,7 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes)
+	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(vrOpenWrt)
