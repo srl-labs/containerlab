@@ -34,12 +34,18 @@ const (
 	startupCfgFName = "startup-config.cfg"
 
 	scrapliPlatformName = "juniper_junos"
+	NapalmPlatformName  = "junos"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+		NapalmPlatformName:  NapalmPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(vrVMX)
