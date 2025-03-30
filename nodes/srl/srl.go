@@ -79,10 +79,12 @@ var (
 		"ixrh2":    "7220IXRH2.yml",
 		"ixrh3":    "7220IXRH3.yml",
 		"ixrh4":    "7220IXRH4.yml",
+		"ixrh432d": "7220IXRH4-32D.yml",
 		"ixr6":     "7250IXR6.yml",
 		"ixr6e":    "7250IXR6e.yml",
 		"ixr10":    "7250IXR10.yml",
 		"ixr10e":   "7250IXR10e.yml",
+		"ixr18e":   "7250IXR18e.yml",
 		"sxr1x44s": "7730SXR-1x-44s.yml",
 		"sxr1d32d": "7730SXR-1d-32d.yml",
 		"ixrx1b":   "7250IXRX1b.yml",
@@ -554,6 +556,8 @@ type srlTemplateData struct {
 	EDAConfig string
 	// OCServerConfig is a string containing OpenConfig server configuration
 	OCServerConfig string
+	// NDKServerConfig is a string containing NDK server configuration
+	NDKServerConfig string
 }
 
 // tplIFace template interface struct.
@@ -573,17 +577,18 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	// tplData holds data used in templating of the default config snippet
 	tplData := srlTemplateData{
-		TLSKey:         n.Cfg.TLSKey,
-		TLSCert:        n.Cfg.TLSCert,
-		TLSAnchor:      n.Cfg.TLSAnchor,
-		Banner:         b,
-		IFaces:         map[string]tplIFace{},
-		MgmtMTU:        0,
-		MgmtIPMTU:      0,
-		DNSServers:     n.Config().DNS.Servers,
-		SNMPConfig:     snmpv2Config,
-		GRPCConfig:     grpcConfig,
-		OCServerConfig: "",
+		TLSKey:          n.Cfg.TLSKey,
+		TLSCert:         n.Cfg.TLSCert,
+		TLSAnchor:       n.Cfg.TLSAnchor,
+		Banner:          b,
+		IFaces:          map[string]tplIFace{},
+		MgmtMTU:         0,
+		MgmtIPMTU:       0,
+		DNSServers:      n.Config().DNS.Servers,
+		SNMPConfig:      snmpv2Config,
+		GRPCConfig:      grpcConfig,
+		OCServerConfig:  "",
+		NDKServerConfig: "",
 	}
 
 	n.setVersionSpecificParams(&tplData)
