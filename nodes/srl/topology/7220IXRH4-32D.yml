@@ -1,0 +1,13 @@
+# Copyright 2021 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+chassis_configuration:
+  "chassis_type": 84
+  "base_mac": "{{.MAC}}"
+  "cpm_card_type": 18
+
+slot_configuration:
+  1:
+    "card_type": 18
+    "mda_type": 25
