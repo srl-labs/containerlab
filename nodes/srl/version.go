@@ -105,6 +105,8 @@ set / system ssh-server mgmt-netconf disable-shell true
 `
 
 	ocServerConfig = `set / system management openconfig admin-state enable`
+
+	ndkServerConfig = `set / system ndk-server admin-state enable`
 )
 
 // SrlVersion represents an sr linux version as a set of fields.
@@ -209,5 +211,10 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 		tplData.EDAConfig = cfg
 
 		tplData.OCServerConfig = ocServerConfig
+	}
+
+	// in srlinux >= v25.3 we enable ndk server.
+	if semver.Compare(v, "v25.3") >= 0 || n.swVersion.Major == "0" {
+		tplData.NDKServerConfig = ndkServerConfig
 	}
 }

@@ -556,6 +556,8 @@ type srlTemplateData struct {
 	EDAConfig string
 	// OCServerConfig is a string containing OpenConfig server configuration
 	OCServerConfig string
+	// NDKServerConfig is a string containing NDK server configuration
+	NDKServerConfig string
 }
 
 // tplIFace template interface struct.
@@ -575,17 +577,18 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	// tplData holds data used in templating of the default config snippet
 	tplData := srlTemplateData{
-		TLSKey:         n.Cfg.TLSKey,
-		TLSCert:        n.Cfg.TLSCert,
-		TLSAnchor:      n.Cfg.TLSAnchor,
-		Banner:         b,
-		IFaces:         map[string]tplIFace{},
-		MgmtMTU:        0,
-		MgmtIPMTU:      0,
-		DNSServers:     n.Config().DNS.Servers,
-		SNMPConfig:     snmpv2Config,
-		GRPCConfig:     grpcConfig,
-		OCServerConfig: "",
+		TLSKey:          n.Cfg.TLSKey,
+		TLSCert:         n.Cfg.TLSCert,
+		TLSAnchor:       n.Cfg.TLSAnchor,
+		Banner:          b,
+		IFaces:          map[string]tplIFace{},
+		MgmtMTU:         0,
+		MgmtIPMTU:       0,
+		DNSServers:      n.Config().DNS.Servers,
+		SNMPConfig:      snmpv2Config,
+		GRPCConfig:      grpcConfig,
+		OCServerConfig:  "",
+		NDKServerConfig: "",
 	}
 
 	n.setVersionSpecificParams(&tplData)
