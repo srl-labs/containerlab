@@ -33,7 +33,7 @@ var upgradeCmd = &cobra.Command{
 			return fmt.Errorf("failed to download upgrade script: %w", err)
 		}
 
-		c := exec.Command("sudo", "bash", f.Name())
+		c := exec.Command("sudo", "-E", "bash", f.Name())
 		// pass the environment variables to the upgrade script
 		// so that GITHUB_TOKEN is available
 		c.Env = os.Environ()
@@ -51,8 +51,15 @@ var upgradeCmd = &cobra.Command{
 
 // downloadFile will download a file from a URL and write its content to a file.
 func downloadFile(url string, file *os.File) error {
+	// Create an HTTP client with specific transport
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+	}
+
 	// Get the data
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}

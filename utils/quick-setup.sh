@@ -3,7 +3,7 @@ SETUP_SSHD="${SETUP_SSHD:-true}"
 CLAB_ADMINS="${CLAB_ADMINS:-true}"
 
 # Docker version that will be installed by this install script.
-DOCKER_VERSION="26.1.4"
+DOCKER_VERSION="27.5.1"
 
 function check_os {
     if [ -f /etc/os-release ]; then

@@ -49,7 +49,7 @@ There are two most common ways of capturing the traffic:
 - local capture: when the capture is started from the containerlab host itself.
 - remote capture: when the capture is started from a remote machine that connects via SSH to the containerlab host and starts the capture.
 
-In both cases, the capturing software (tcpdump or tshark) needs to be available on the containerlab host.
+In both cases, the capturing software (`tcpdump` or `tshark`) needs to be available on the containerlab host.
 
 ### local capture
 
@@ -121,7 +121,7 @@ for i in "${ADDR[@]}"; do
     IFACES+=" -i $i"
 done
 
-ssh $1 "ip netns exec $2 tshark -l ${IFACES} -w -" | \
+ssh $1 "sudo ip netns exec $2 tshark -l ${IFACES} -w -" | \
     /Applications/Wireshark.app/Contents/MacOS/Wireshark -k -i -
 ```
 
@@ -137,7 +137,7 @@ where
 - `srl` is the container name of the node that has the interface you want to capture from
 - `e1-1` is the interface name you want to capture from
 
-The script uses the `tshark` CLI tool instead of `tcpdump` to be able to capture from multiple interfaces at once. This is achieved by splitting the interface names by comma and passing them to the `tshark` command as `-i <interface1> -i <interface2> -i <interface3>`.
+The script uses the `tshark` CLI tool instead of `tcpdump` to be able to capture from multiple interfaces at once[^1]. This is achieved by splitting the interface names by comma and passing them to the `tshark` command as `-i <interface1> -i <interface2> -i <interface3>`.
 
 Here is a short demo of how the script works and how to use it based on the lab topology with linux nodes and SR Linux NOS:
 
@@ -164,7 +164,7 @@ How about a Web UI that displays every interface of every container and can star
 [Edgeshark][edgeshark-docs] visualizes the communication of containers and thus helps in diagnosing it, both in-between containers as well as with the "outside world". It can be deployed to Linux stand-alone container hosts, including KinD deployments. Edgeshark also supports capturing container traffic using Wireshark.
 ///
 
-Yep, you got it right, edgeshark is a Web UI for Wireshark[^1] that is capable of capturing traffic from any interface of any container (and physical interface) in your lab. Moreover, it plugs into containerlab natively, and is free and open-source.
+Yep, you got it right, edgeshark is a Web UI for Wireshark[^2] that is capable of capturing traffic from any interface of any container (and physical interface) in your lab. Moreover, it plugs into containerlab natively, and is free and open-source.
 
 This diagram shows a typical integration of edgeshark with containerlab:
 
@@ -220,7 +220,7 @@ Luckily, you only need to do it once and it will work for all the future capture
 
 [Edgeshark documentation](https://edgeshark.siemens.io/#/getting-started?id=optional-capture-plugin) provides a detailed guide on how to perform these two steps for Windows and Linux systems.
 
-There was a tiny gap in MacOS support, but we contributed the necessary piece[^2] and here is how you configure your MacOS system to work with Edgeshark:
+There was a tiny gap in MacOS support, but we contributed the necessary piece[^3] and here is how you configure your MacOS system to work with Edgeshark:
 
 1. Download the zip file with the AppleScript that enables the `packetflix://` URL schema handling, unarchive it and move the EdgeShark-handler script to the Applications folder. Here is the script that does all that, run it from your MacOS:
 
@@ -232,9 +232,9 @@ There was a tiny gap in MacOS support, but we contributed the necessary piece[^2
     sudo mv packetflix-handler.app /Applications
     ```
 
-2. Download the [external capture plugin](https://github.com/siemens/cshargextcap/releases/latest) for Darwin OS and your architecture, unarchive and copy it to the `/Applications/Wireshark.app/Contents/MacOS/extcap/` directory.
+2. Download the [external capture plugin](https://github.com/siemens/cshargextcap/releases/latest) for Darwin OS and your architecture, unarchive and copy it with Finder[^4] to the `/Applications/Wireshark.app/Contents/MacOS/extcap/` directory.
 
-With these steps done[^3], you should be able to click on the "fin" icon next to the interface name and see the Wireshark UI opening up and starting the capture.
+With these steps done[^5], you should be able to click on the "fin" icon next to the interface name and see the Wireshark UI opening up and starting the capture.
 
 ## Examples
 
@@ -312,7 +312,10 @@ ip netns exec $netns_name ip link
 
 [edgeshark-docs]: https://edgeshark.siemens.io/#/
 
-[^1]: It is more than just a UI for Wireshark, but in the context of pcap capture we focus on this feature solely.
-[^2]: https://github.com/siemens/cshargextcap/issues/14#issuecomment-1932267889
-[^3]: You may be asked to allow running the application downloaded from Internet as per MacOS security policy.
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
+
+[^1]: Install `tshark` if you don't have it, or edit the script to use `tcpdump` instead.
+[^2]: It is more than just a UI for Wireshark, but in the context of pcap capture we focus on this feature solely.
+[^3]: https://github.com/siemens/cshargextcap/issues/14#issuecomment-1932267889
+[^4]: If you granted your Terminal app full permission to the disk you could use `cp` instead of a Finder, but if you see "operation not permitted" error, then try using Finder when copying the file.
+[^5]: You may be asked to allow running the application downloaded from Internet as per MacOS security policy.

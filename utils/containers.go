@@ -60,3 +60,19 @@ func ContainerNSToPID(cID string) (int, error) {
 	}
 	return pid, nil
 }
+
+// DestinationBindMountExists checks if a bind mount destination exists in a list of bind mounts.
+// The bind options are not matched, only the destination is matched.
+// The binds are expected to be in the format of "source:destination[:options]".
+func DestinationBindMountExists(binds []string, dest string) bool {
+	for _, b := range binds {
+		parts := strings.Split(b, ":")
+		if len(parts) >= 2 {
+			// The destination is the second part
+			if parts[1] == dest {
+				return true
+			}
+		}
+	}
+	return false
+}
