@@ -18,6 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -119,7 +120,8 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
-		if labdir != "" {
+		// check if labdir exists and is a directory
+		if labdir != "" && utils.FileOrDirExists(labdir) {
 			// adjust the labdir. Usually we take the PWD. but now on destroy time,
 			// we might be in a different Dir.
 			err = nc.TopoPaths.SetLabDir(labdir)
