@@ -10,7 +10,7 @@ Here we will discuss different ways how you can share your lab with others in a 
 
 [SSHX](https://sshx.io) is a web-based terminal emulator that allows you to share access to a terminal sessions with others and have a collaborative terminal experience.
 
-Containerlab users can leverage this fantastic free service to share lab access with read/write and read-only access by adding a simple container with `sshx` to their set of lab nodes:
+Containerlab users can leverage this handy free service[^1] to share lab access with read/write and read-only access by adding a simple container with `sshx` to their set of lab nodes:
 
 ```yaml
 name: shared-lab
@@ -24,9 +24,10 @@ topology:
       kind: linux
       image: ghcr.io/srl-labs/network-multitool
       exec:
-        - ash -c "curl -sSf https://sshx.io/get | sh > /dev/null"
-        - ash -c "sshx -q --enable-readers > /tmp/sshx &"
-        - cat /tmp/sshx
+        - >-
+          ash -c "curl -sSf https://sshx.io/get | sh > /dev/null ;
+          sshx -q --enable-readers > /tmp/sshx &
+          while [ ! -s /tmp/sshx ]; do sleep 1; done && cat /tmp/sshx"
 ```
 
 By adding the `sshx` node to this simple lab and deploying it, you will see an sshx link in the lab output:
@@ -59,3 +60,20 @@ The great part is that this `sshx` container has access to all other lab nodes a
 Attentive reader also noticed that sshx link has two parts separated by a comma. If you copy the link from the beginning to a comma, you get a link that has **read-only** access. Share this link with someone and they will be able to see by can not touch...
 
 The full link gives **read/write** access, and users with a link would be able to open terminals and execute commands in the shell.
+
+You can also provide the sshx-based access to a lab on demand, even if your lab file did not feature the sshx node from the beginning.  
+To do so, run the adhoc command to create a container in the docker network that your lab uses (`clab` by default):
+
+```shell
+docker rm -f sshx-adhoc
+docker run --network clab --rm -i -t \
+  --name sshx-adhoc --entrypoint '' -d \
+  ghcr.io/srl-labs/network-multitool \
+  ash -c 'ash -c "curl -sSf https://sshx.io/get | sh > /dev/null ;
+  sshx -q --enable-readers"'
+docker logs -f sshx-adhoc
+```
+
+You will get to see the same sshx link as if you had sshx container node in your lab topology.
+
+[^1]: Feel free to access the security of it by googling other researches having a go at it. For a self-hosted alternative you may consider [frp](https://github.com/fatedier/frp).
