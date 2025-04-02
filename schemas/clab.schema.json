@@ -189,18 +189,24 @@
                     "uniqueItems": true
                 },
                 "env": {
-                  "type": "object",
-                  "description": "environment variables",
-                  "markdownDescription": "[environment variables](https://containerlab.dev/manual/nodes/#env)",
-                  "patternProperties": {
-                    ".*": {
-                    "anyOf": [
-                        { "type": "string" },
-                        { "type": "number" },
-                        { "type": "boolean" }
-                      ]
+                    "type": "object",
+                    "description": "environment variables",
+                    "markdownDescription": "[environment variables](https://containerlab.dev/manual/nodes/#env)",
+                    "patternProperties": {
+                        ".*": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "number"
+                                },
+                                {
+                                    "type": "boolean"
+                                }
+                            ]
+                        }
                     }
-                  }
                 },
                 "user": {
                     "description": "user to use within the container",
@@ -447,7 +453,7 @@
                     "type": "object"
                 }
             },
-          "additionalProperties": false
+            "additionalProperties": false
         },
         "extras-config": {
             "type": "object",
@@ -468,7 +474,7 @@
                     "description": "http/s proxy to be used by mysocketctl"
                 }
             },
-          "additionalProperties": false
+            "additionalProperties": false
         },
         "config-config": {
             "type": "object",
@@ -758,46 +764,52 @@
             ]
         },
         "stage-exec": {
-          "description": "per-stage exec configuration",
-          "oneOf": [
-            {
-              "type": "object",
-              "properties": {
-                "on-enter": {
-                  "$ref": "#/definitions/stage-exec-list"
+            "description": "per-stage exec configuration",
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "on-enter": {
+                            "$ref": "#/definitions/stage-exec-list"
+                        },
+                        "on-exit": {
+                            "$ref": "#/definitions/stage-exec-list"
+                        }
+                    },
+                    "additionalProperties": false
                 },
-                "on-exit": {
-                  "$ref": "#/definitions/stage-exec-list"
+                {
+                    "type": "array",
+                    "description": "List of exec commands as objects, each containing `command`, `target`, and `phase`",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "command": {
+                                "type": "string",
+                                "description": "Shell command to execute"
+                            },
+                            "target": {
+                                "type": "string",
+                                "description": "Location to run the command (e.g. 'container', 'host')",
+                                "default": "container"
+                            },
+                            "phase": {
+                                "type": "string",
+                                "enum": [
+                                    "on-enter",
+                                    "on-exit"
+                                ],
+                                "description": "Phase to execute this command (on-enter or on-exit)"
+                            }
+                        },
+                        "required": [
+                            "command",
+                            "phase"
+                        ]
+                    }
                 }
-              },
-              "additionalProperties": false
-            },
-            {
-              "type": "array",
-              "description": "List of exec commands as objects, each containing `command`, `target`, and `phase`",
-              "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "command": {
-                    "type": "string",
-                    "description": "Shell command to execute"
-                  },
-                  "target": {
-                    "type": "string",
-                    "description": "Location to run the command (e.g. 'container', 'host')",
-                    "default": "container"
-                  },
-                  "phase": {
-                    "type": "string",
-                    "enum": ["on-enter", "on-exit"],
-                    "description": "Phase to execute this command (on-enter or on-exit)"
-                  }
-                },
-                "required": ["command", "phase"]
-              }
-            }
-          ]
+            ]
         },
         "stage-exec-list": {
             "type": "array",
@@ -1096,7 +1108,7 @@
                     "$ref": "#/definitions/certificate-authority-config"
                 }
             },
-          "additionalProperties": false
+            "additionalProperties": false
         }
     },
     "additionalProperties": false,
