@@ -189,23 +189,18 @@
                     "uniqueItems": true
                 },
                 "env": {
-                    "type": "object",
-                    "description": "environment variables",
-                    "markdownDescription": "[environment variables](https://containerlab.dev/manual/nodes/#env)",
-                    "patternProperties": {
-                        ".+": {
-                            "anyOf": [
-                                {
-                                    "type": "string",
-                                    "minItems": 1
-                                },
-                                {
-                                    "type": "number",
-                                    "minItems": 1
-                                }
-                            ]
-                        }
+                  "type": "object",
+                  "description": "environment variables",
+                  "markdownDescription": "[environment variables](https://containerlab.dev/manual/nodes/#env)",
+                  "patternProperties": {
+                    ".*": {
+                    "anyOf": [
+                        { "type": "string" },
+                        { "type": "number" },
+                        { "type": "boolean" }
+                      ]
                     }
+                  }
                 },
                 "user": {
                     "description": "user to use within the container",
@@ -756,16 +751,46 @@
             ]
         },
         "stage-exec": {
-            "type": "object",
-            "description": "per-stage exec configuration",
-            "properties": {
+          "description": "per-stage exec configuration",
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
                 "on-enter": {
-                    "$ref": "#/definitions/stage-exec-list"
+                  "$ref": "#/definitions/stage-exec-list"
                 },
                 "on-exit": {
-                    "$ref": "#/definitions/stage-exec-list"
+                  "$ref": "#/definitions/stage-exec-list"
                 }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "array",
+              "description": "List of exec commands as objects, each containing `command`, `target`, and `phase`",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "description": "Shell command to execute"
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Location to run the command (e.g. 'container', 'host')",
+                    "default": "container"
+                  },
+                  "phase": {
+                    "type": "string",
+                    "enum": ["on-enter", "on-exit"],
+                    "description": "Phase to execute this command (on-enter or on-exit)"
+                  }
+                },
+                "required": ["command", "phase"]
+              }
             }
+          ]
         },
         "stage-exec-list": {
             "type": "array",
