@@ -199,17 +199,34 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 
 	// Gather details of each container
 	for _, cont := range containers {
-
 		path, err := getTopologyPath(cont.Labels[labels.TopoFile])
 		if err != nil {
 			return fmt.Errorf("failed to get topology path: %v", err)
+		}
+
+		baseState, healthInfo := parseStateHealth(cont.State, cont.Status)
+
+		// Format differently based on output format
+		var stateStr string
+		if format == "json" {
+			if healthInfo != "" {
+				stateStr = fmt.Sprintf("%s %s", baseState, healthInfo)
+			} else {
+				stateStr = baseState
+			}
+		} else {
+			if healthInfo != "" {
+				stateStr = fmt.Sprintf("%s\n%s", baseState, healthInfo)
+			} else {
+				stateStr = baseState
+			}
 		}
 
 		cdet := &types.ContainerDetails{
 			LabName:     cont.Labels[labels.Containerlab],
 			LabPath:     path,
 			Image:       cont.Image,
-			State:       cont.State,
+			State:       stateStr,
 			IPv4Address: cont.GetContainerIPv4(),
 			IPv6Address: cont.GetContainerIPv6(),
 		}
@@ -306,6 +323,36 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 		return nil
 	}
 	return nil
+}
+
+// parseStateHealth extracts base state and health info separately
+func parseStateHealth(state, status string) (string, string) {
+	// Default base state is from the State field
+	baseState := state
+
+	// If State field doesn't have clear info, try to extract from Status
+	if baseState == "" || baseState == "running" {
+		// The Status usually starts with "Up" for running containers
+		if strings.HasPrefix(status, "Up") {
+			baseState = "running"
+		} else if strings.HasPrefix(status, "Created") {
+			baseState = "created"
+		} else if strings.HasPrefix(status, "Exited") {
+			baseState = "exited"
+		}
+	}
+
+	// Extract health information if present
+	healthInfo := ""
+	if strings.Contains(status, "(healthy)") {
+		healthInfo = "healthy"
+	} else if strings.Contains(status, "(health: starting)") {
+		healthInfo = "health: starting"
+	} else if strings.Contains(status, "(unhealthy)") {
+		healthInfo = "unhealthy"
+	}
+
+	return baseState, healthInfo
 }
 
 type TokenFileResults struct {
