@@ -446,7 +446,8 @@
                     "markdownDescription": "link-scoped variables used by config engine",
                     "type": "object"
                 }
-            }
+            },
+          "additionalProperties": false
         },
         "extras-config": {
             "type": "object",
@@ -466,7 +467,8 @@
                     "type": "string",
                     "description": "http/s proxy to be used by mysocketctl"
                 }
-            }
+            },
+          "additionalProperties": false
         },
         "config-config": {
             "type": "object",
@@ -477,7 +479,8 @@
                     "description": "config variables passed to config engine",
                     "markdownDescription": "config variables passed to config engine"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "certificate-config": {
             "type": "object",
@@ -507,7 +510,8 @@
                     "description": "Duration for how long the certificate issued by the CA will be valid.",
                     "markdownDescription": "Duration for how long the certificate issued by the CA will be valid."
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "healthcheck-config": {
             "type": "object",
@@ -540,7 +544,8 @@
                     "type": "integer",
                     "description": "time in seconds to wait before starting the healthcheck"
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "dns-config": {
             "type": "object",
@@ -571,7 +576,8 @@
                     },
                     "uniqueItems": true
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "certificate-authority-config": {
             "type": "object",
@@ -595,6 +601,7 @@
                     "description": "CA certificate validity duration. Can only be set if the external CA certificate is not provided"
                 }
             },
+            "additionalProperties": false,
             "oneOf": [
                 {
                     "required": [
@@ -873,7 +880,8 @@
                     "default": 1500
                 }
             },
-            "minProperties": 1
+            "minProperties": 1,
+            "additionalProperties": false
         },
         "topology": {
             "description": "topology configuration container",
@@ -1058,7 +1066,8 @@
                         "generic_vm": {
                             "$ref": "#/definitions/node-config"
                         }
-                    }
+                    },
+                    "additionalProperties": false
                 },
                 "defaults": {
                     "$ref": "#/definitions/node-config"
@@ -1073,6 +1082,7 @@
                     }
                 }
             },
+            "additionalProperties": false,
             "required": [
                 "nodes"
             ]
@@ -1085,7 +1095,8 @@
                 "certificate-authority": {
                     "$ref": "#/definitions/certificate-authority-config"
                 }
-            }
+            },
+          "additionalProperties": false
         }
     },
     "additionalProperties": false,
