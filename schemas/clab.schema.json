@@ -193,7 +193,7 @@
                     "description": "environment variables",
                     "markdownDescription": "[environment variables](https://containerlab.dev/manual/nodes/#env)",
                     "patternProperties": {
-                        ".*": {
+                        ".+": {
                             "anyOf": [
                                 {
                                     "type": "string"
