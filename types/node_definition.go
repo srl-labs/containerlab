@@ -34,6 +34,12 @@ type NodeDefinition struct {
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
+	// list of devices to map in the container
+	Devices []string `yaml:"devices,omitempty"`
+	// List of capabilities to add for the container
+	CapAdd []string `yaml:"cap-add,omitempty"`
+	// Set the shared memory size allocated to the container
+	ShmSize string `yaml:"shm-size,omitempty"`
 	// list of port bindings
 	Ports []string `yaml:"ports,omitempty"`
 	// user-defined IPv4 address in the management network
@@ -231,6 +237,27 @@ func (n *NodeDefinition) GetBinds() []string {
 		return nil
 	}
 	return n.Binds
+}
+
+func (n *NodeDefinition) GetDevices() []string {
+	if n == nil {
+		return nil
+	}
+	return n.Devices
+}
+
+func (n *NodeDefinition) GetCapAdd() []string {
+	if n == nil {
+		return nil
+	}
+	return n.CapAdd
+}
+
+func (n *NodeDefinition) GetNodeShmSize() string {
+	if n == nil {
+		return ""
+	}
+	return n.ShmSize
 }
 
 func (n *NodeDefinition) GetPorts() []string {

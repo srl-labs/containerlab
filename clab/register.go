@@ -49,6 +49,7 @@ import (
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
 	vr_openwrt "github.com/srl-labs/containerlab/nodes/vr_openwrt"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
+	sixwind_vsr "github.com/srl-labs/containerlab/nodes/6wind_vsr"
 )
 
 // RegisterNodes registers all the nodes/kinds supported by containerlab.
@@ -97,4 +98,5 @@ func (c *CLab) RegisterNodes() {
 	k8s_kind.Register(c.Reg)
 	cisco_iol.Register(c.Reg)
 	huawei_vrp.Register(c.Reg)
+	sixwind_vsr.Register(c.Reg)
 }

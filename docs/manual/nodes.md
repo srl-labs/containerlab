@@ -732,6 +732,51 @@ my-node:
   cpu-set: 0-1,4-5
 ```
 
+### shm-size
+
+The `shm-size` parameter can be used to customize the the shared memory size limit allocated to the container.
+By default, this limit is 64MB with docker runtime.
+
+```yaml
+# my-node will be allocated 256MB of shared memory.
+my-node:
+  image: alpine:3
+  kind: linux
+  shm-size: 256MB
+```
+
+Supported memory suffixes (case insensitive): `b`, `kib`, `kb`, `mib`, `mb`, `gib`, `gb`.
+
+### devices
+
+The `devices` parameter can be used to add host devices to the container.
+
+```yaml
+# my-node will be able to access the host /dev/ppp and /dev/net/tun devices.
+my-node:
+  image: alpine:3
+  kind: linux
+  devices:
+    - /dev/ppp
+    - /dev/net/tun
+```
+
+### cap-add
+
+The `cap-add` parameter can be used to add capabilities to the container.
+Docker containers are currently executed in privileged mode, so this should not be needed.
+If this becomes configurable, specifying the capabilities required for a container will be useful.
+
+```yaml
+# my-node will be given the NET_ADMIN and the SYS_ADMIN capabilities
+my-node:
+  image: alpine:3
+  kind: linux
+  cap-add:
+    - NET_ADMIN
+    - SYS_ADMIN
+```
+
 ### sysctls
 
 The sysctl container' setting can be set via the `sysctls` knob under the `defaults`, `kind` and `node` levels.

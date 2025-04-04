@@ -70,6 +70,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Check Point Cloudguard** | [`checkpoint_cloudguard`](checkpoint_cloudguard.md) | supported |    VM     |
 | **Fortinet Fortigate**     | [`fortinet_fortigate`](fortinet_fortigate.md)       | supported |    VM     |
 | **Palo Alto PAN**          | [`paloalto_panos`](vr-pan.md)                       | supported |    VM     |
+| **6WIND VSR**              | [`6wind_vsr`](6wind_vsr.md)                         | supported | container |
 | **Linux bridge**           | [`bridge`](bridge.md)                               | supported |    N/A    |
 | **Linux container**        | [`linux`](linux.md)                                 | supported | container |
 | **RARE/freeRtr**           | [`rare`](rare-freertr.md)                           | supported | container |
