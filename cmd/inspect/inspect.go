@@ -155,11 +155,18 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 			tabRow = append(tabRow, d.Owner)
 		}
 
+		// we do not want to print status other than health in the table view
+		if !strings.Contains(d.Status, "health") {
+			d.Status = ""
+		} else {
+			d.Status = fmt.Sprintf("(%s)", d.Status)
+		}
+
 		// Common fields
 		tabRow = append(tabRow,
 			d.Name,
 			fmt.Sprintf("%s\n%s", d.Kind, d.Image),
-			d.State,
+			fmt.Sprintf("%s\n%s", d.State, d.Status),
 			fmt.Sprintf("%s\n%s",
 				ipWithoutPrefix(d.IPv4Address),
 				ipWithoutPrefix(d.IPv6Address)))
@@ -199,17 +206,19 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 
 	// Gather details of each container
 	for _, cont := range containers {
-
 		path, err := getTopologyPath(cont.Labels[labels.TopoFile])
 		if err != nil {
 			return fmt.Errorf("failed to get topology path: %v", err)
 		}
+
+		status := parseStatus(cont.Status)
 
 		cdet := &types.ContainerDetails{
 			LabName:     cont.Labels[labels.Containerlab],
 			LabPath:     path,
 			Image:       cont.Image,
 			State:       cont.State,
+			Status:      status,
 			IPv4Address: cont.GetContainerIPv4(),
 			IPv6Address: cont.GetContainerIPv6(),
 		}
@@ -306,6 +315,19 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 		return nil
 	}
 	return nil
+}
+
+// parseStatus returns health info if it is available and return the raw status otherwise.
+func parseStatus(status string) string {
+	if strings.Contains(status, "healthy") {
+		status = "healthy"
+	} else if strings.Contains(status, "health: starting") {
+		status = "health: starting"
+	} else if strings.Contains(status, "unhealthy") {
+		status = "unhealthy"
+	}
+
+	return status
 }
 
 type TokenFileResults struct {
