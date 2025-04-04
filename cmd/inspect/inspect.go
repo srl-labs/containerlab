@@ -155,11 +155,18 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 			tabRow = append(tabRow, d.Owner)
 		}
 
+		// we do not want to print status other than health in the table view
+		if !strings.Contains(d.Status, "health") {
+			d.Status = ""
+		} else {
+			d.Status = fmt.Sprintf("(%s)", d.Status)
+		}
+
 		// Common fields
 		tabRow = append(tabRow,
 			d.Name,
 			fmt.Sprintf("%s\n%s", d.Kind, d.Image),
-			d.State,
+			fmt.Sprintf("%s\n%s", d.State, d.Status),
 			fmt.Sprintf("%s\n%s",
 				ipWithoutPrefix(d.IPv4Address),
 				ipWithoutPrefix(d.IPv6Address)))
@@ -204,29 +211,14 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 			return fmt.Errorf("failed to get topology path: %v", err)
 		}
 
-		baseState, healthInfo := parseStateHealth(cont.State, cont.Status)
-
-		// Format differently based on output format
-		var stateStr string
-		if format == "json" {
-			if healthInfo != "" {
-				stateStr = fmt.Sprintf("%s %s", baseState, healthInfo)
-			} else {
-				stateStr = baseState
-			}
-		} else {
-			if healthInfo != "" {
-				stateStr = fmt.Sprintf("%s\n%s", baseState, healthInfo)
-			} else {
-				stateStr = baseState
-			}
-		}
+		status := parseStatus(cont.Status)
 
 		cdet := &types.ContainerDetails{
 			LabName:     cont.Labels[labels.Containerlab],
 			LabPath:     path,
 			Image:       cont.Image,
-			State:       stateStr,
+			State:       cont.State,
+			Status:      status,
 			IPv4Address: cont.GetContainerIPv4(),
 			IPv6Address: cont.GetContainerIPv6(),
 		}
@@ -325,34 +317,17 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 	return nil
 }
 
-// parseStateHealth extracts base state and health info separately
-func parseStateHealth(state, status string) (string, string) {
-	// Default base state is from the State field
-	baseState := state
-
-	// If State field doesn't have clear info, try to extract from Status
-	if baseState == "" || baseState == "running" {
-		// The Status usually starts with "Up" for running containers
-		if strings.HasPrefix(status, "Up") {
-			baseState = "running"
-		} else if strings.HasPrefix(status, "Created") {
-			baseState = "created"
-		} else if strings.HasPrefix(status, "Exited") {
-			baseState = "exited"
-		}
+// parseStatus returns health info if it is available and return the raw status otherwise.
+func parseStatus(status string) string {
+	if strings.Contains(status, "healthy") {
+		status = "healthy"
+	} else if strings.Contains(status, "health: starting") {
+		status = "health: starting"
+	} else if strings.Contains(status, "unhealthy") {
+		status = "unhealthy"
 	}
 
-	// Extract health information if present
-	healthInfo := ""
-	if strings.Contains(status, "(healthy)") {
-		healthInfo = "healthy"
-	} else if strings.Contains(status, "(health: starting)") {
-		healthInfo = "health: starting"
-	} else if strings.Contains(status, "(unhealthy)") {
-		healthInfo = "unhealthy"
-	}
-
-	return baseState, healthInfo
+	return status
 }
 
 type TokenFileResults struct {
