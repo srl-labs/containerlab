@@ -50,7 +50,8 @@ func addSubcommands() {
 func init() {
 	rootCmd.SilenceUsage = true
 	rootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
-	rootCmd.PersistentFlags().StringVarP(&common.Topo, "topo", "t", "", "path to the topology file")
+	rootCmd.PersistentFlags().StringVarP(&common.Topo, "topo", "t", "",
+		"path to the topology definition file, a directory containing one, 'stdin', or a URL")
 	rootCmd.PersistentFlags().StringVarP(&common.VarsFile, "vars", "", "",
 		"path to the topology template variables file")
 	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
