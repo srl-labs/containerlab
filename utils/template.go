@@ -370,6 +370,12 @@ func (sf *StringFuncs) Split(sep string, s any) []string {
 
 // ReplaceAll replaces all occurrences of a given string with another.
 func (sf *StringFuncs) ReplaceAll(old, new string, s any) string {
+	if old == "" {
+		return ToString(s)
+	}
+	if s == nil {
+		return ""
+	}
 	return strings.ReplaceAll(ToString(s), old, new)
 }
 
