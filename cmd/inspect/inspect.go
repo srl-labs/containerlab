@@ -177,7 +177,7 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 }
 
 // getTopologyPath returns the relative path to the topology file
-// if the relative path is shorted than the absolute path.
+// if the relative path is shorter than the absolute path.
 func getTopologyPath(p string) (string, error) {
 	if p == "" {
 		return "", nil
