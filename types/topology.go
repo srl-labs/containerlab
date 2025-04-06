@@ -161,6 +161,38 @@ func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 	return nil
 }
 
+func (t *Topology) GetNodeDevices(name string) []string {
+	if ndef, ok := t.Nodes[name]; ok {
+		return utils.MergeStringSlices(
+			utils.MergeStringSlices(t.GetDefaults().GetDevices(),
+				t.GetKind(t.GetNodeKind(name)).GetDevices()),
+			ndef.GetDevices())
+	}
+	return nil
+}
+
+func (t *Topology) GetNodeCapAdd(name string) []string {
+	if ndef, ok := t.Nodes[name]; ok {
+		return utils.MergeStringSlices(
+			utils.MergeStringSlices(t.GetDefaults().GetCapAdd(),
+				t.GetKind(t.GetNodeKind(name)).GetCapAdd()),
+			ndef.GetCapAdd())
+	}
+	return nil
+}
+
+func (t *Topology) GetNodeShmSize(name string) string {
+	if ndef, ok := t.Nodes[name]; ok {
+		if v := ndef.GetNodeShmSize(); v != "" {
+			return v
+		}
+		if v := t.GetKind(t.GetNodeKind(name)).GetNodeShmSize(); v != "" {
+			return v
+		}
+	}
+	return t.GetDefaults().GetNodeShmSize()
+}
+
 func (t *Topology) GetNodeStartupConfig(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if v := ndef.GetStartupConfig(); v != "" {

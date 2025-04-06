@@ -47,6 +47,7 @@ func TestGetCanonicalImageName(t *testing.T) {
 		})
 	}
 }
+
 func TestDestinationBindMountExists(t *testing.T) {
 	tests := map[string]struct {
 		binds []string

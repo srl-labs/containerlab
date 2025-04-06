@@ -46,6 +46,13 @@ const (
 	defaultDockerNetwork = "bridge"
 )
 
+// DeviceMapping represents the device mapping between the host and the container.
+type DeviceMapping struct {
+	PathOnHost        string
+	PathInContainer   string
+	CgroupPermissions string
+}
+
 func init() {
 	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
 		return &DockerRuntime{
@@ -480,6 +487,16 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	if rlimit.Max > rLimitMaxValue {
 		rlimit.Max = rLimitMaxValue
 	}
+	// Iterate through each Device
+	for _, str := range node.Devices {
+		// Perform your action on each string
+		mappings := container.DeviceMapping{}
+		mappings.PathOnHost = str
+		mappings.PathInContainer = str
+		mappings.CgroupPermissions = "rwm"
+		resources.Devices = append(resources.Devices, mappings)
+	}
+
 	ulimit := units.Ulimit{
 		Name: "nofile",
 		Hard: int64(rlimit.Max),
@@ -505,6 +522,18 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	}
 
 	containerNetworkingConfig := &networkapi.NetworkingConfig{}
+
+	if node.ShmSize != "" {
+		shmsize, err := humanize.ParseBytes(node.ShmSize)
+		if err != nil {
+			return "", err
+		}
+		containerHostConfig.ShmSize = int64(shmsize)
+	}
+
+	if len(node.CapAdd) > 0 {
+		containerHostConfig.CapAdd = append(containerHostConfig.CapAdd, node.CapAdd...)
+	}
 
 	if err := d.processNetworkMode(ctx, containerNetworkingConfig, containerHostConfig, containerConfig, node); err != nil {
 		return "", err

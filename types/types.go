@@ -135,6 +135,12 @@ type NodeConfig struct {
 	Env  map[string]string `json:"env,omitempty"`
 	// Bind mounts strings (src:dest:options).
 	Binds []string `json:"binds,omitempty"`
+	// Devices to map in the container
+	Devices []string `json:"devices,omitempty"`
+	// Capabilities required by the container (if not run in privileged mode)
+	CapAdd []string `json:"cap-add,omitempty"`
+	// Size of the shared memory allocated to the container
+	ShmSize string `json:"shm-size,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
 	PortBindings nat.PortMap `json:"portbindings,omitempty"`
 	// ResultingPortBindings is a list of port bindings that are actually applied to the container

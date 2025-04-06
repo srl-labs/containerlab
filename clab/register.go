@@ -5,6 +5,7 @@
 package clab
 
 import (
+	sixwind_vsr "github.com/srl-labs/containerlab/nodes/6wind_vsr"
 	bridge "github.com/srl-labs/containerlab/nodes/bridge"
 	c8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
@@ -36,6 +37,7 @@ import (
 	vr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
 	vr_n9kv "github.com/srl-labs/containerlab/nodes/vr_n9kv"
 	vr_openbsd "github.com/srl-labs/containerlab/nodes/vr_openbsd"
+	vr_openwrt "github.com/srl-labs/containerlab/nodes/vr_openwrt"
 	vr_pan "github.com/srl-labs/containerlab/nodes/vr_pan"
 	vr_ros "github.com/srl-labs/containerlab/nodes/vr_ros"
 	vr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
@@ -47,7 +49,6 @@ import (
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
-	vr_openwrt "github.com/srl-labs/containerlab/nodes/vr_openwrt"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
@@ -97,4 +98,5 @@ func (c *CLab) RegisterNodes() {
 	k8s_kind.Register(c.Reg)
 	cisco_iol.Register(c.Reg)
 	huawei_vrp.Register(c.Reg)
+	sixwind_vsr.Register(c.Reg)
 }
