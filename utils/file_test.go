@@ -105,13 +105,13 @@ func TestIsHttpURL(t *testing.T) {
 			want:            true,
 		},
 		{
-			name:            "Valid URL without scheme",
+			name:            "Valid URL without schema",
 			url:             "srlinux.dev/clab-srl",
 			allowSchemaless: true,
 			want:            true,
 		},
 		{
-			name:            "Valid URL without scheme and schemaless not allowed",
+			name:            "Valid URL without schema and schemaless not allowed",
 			url:             "srlinux.dev/clab-srl",
 			allowSchemaless: false,
 			want:            false,
