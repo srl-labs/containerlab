@@ -471,3 +471,89 @@ func TestStringsReplaceAll(t *testing.T) {
 		})
 	}
 }
+func TestConvFuncsJoin(t *testing.T) {
+	tests := map[string]struct {
+		input any
+		sep   string
+		want  string
+		err   string
+	}{
+		"slice of integers": {
+			input: []int{1, 2, 3, 4},
+			sep:   "-",
+			want:  "1-2-3-4",
+		},
+		"slice of mixed types": {
+			input: []any{1, "two", true, 4.5},
+			sep:   ", ",
+			want:  "1, two, true, 4.5",
+		},
+		"empty slice": {
+			input: []string{},
+			sep:   ",",
+			want:  "",
+		},
+		"single element slice": {
+			input: []any{"solo"},
+			sep:   "---",
+			want:  "solo",
+		},
+		"slice with nil elements": {
+			input: []any{nil, "test", nil},
+			sep:   "|",
+			want:  "nil|test|nil",
+		},
+		"non-slice input": {
+			input: "not a slice",
+			sep:   ",",
+			err:   "input to Join must be an array",
+		},
+		"slice with empty strings": {
+			input: []string{"", "", ""},
+			sep:   ",",
+			want:  ",,",
+		},
+		"complex separator": {
+			input: []int{1, 2, 3},
+			sep:   "<==>",
+			want:  "1<==>2<==>3",
+		},
+		"slice of booleans": {
+			input: []bool{true, false, true},
+			sep:   " and ",
+			want:  "true and false and true",
+		},
+		"slice of floats": {
+			input: []float64{1.1, 2.2, 3.3},
+			sep:   ";",
+			want:  "1.1;2.2;3.3",
+		},
+		"nil input": {
+			input: nil,
+			sep:   ",",
+			err:   "input to Join must be an array",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cf := ConvFuncs{}
+			got, err := cf.Join(tc.input, tc.sep)
+			if tc.err != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.err)
+				}
+				if !strings.Contains(err.Error(), tc.err) {
+					t.Fatalf("expected error containing %q, got %q", tc.err, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !cmp.Equal(got, tc.want) {
+				t.Fatalf("wanted %q, got %q", tc.want, got)
+			}
+		})
+	}
+}

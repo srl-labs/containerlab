@@ -24,6 +24,7 @@ func CreateFuncs() template.FuncMap {
 		"seq":          seq,
 	}
 	maps.Copy(f, CreateStringFuncs())
+	maps.Copy(f, CreateConvFuncs())
 
 	return f
 }
@@ -370,6 +371,73 @@ func (sf *StringFuncs) Split(sep string, s any) []string {
 // ReplaceAll replaces all occurrences of a given string with another.
 func (sf *StringFuncs) ReplaceAll(old, new string, s any) string {
 	return strings.ReplaceAll(ToString(s), old, new)
+}
+
+// CreateConvFuncs -
+func CreateConvFuncs() map[string]any {
+	f := map[string]any{}
+
+	ns := &ConvFuncs{}
+	f["conv"] = func() any { return ns }
+
+	return f
+}
+
+// ConvFuncs
+type ConvFuncs struct {
+}
+
+// Join concatenates the elements of a to create a single string.
+// The separator string sep is placed between elements in the resulting string.
+//
+// This is functionally identical to strings.Join, except that each element is
+// coerced to a string first
+func (ConvFuncs) Join(in any, sep string) (out string, err error) {
+	s, ok := in.([]string)
+	if ok {
+		return strings.Join(s, sep), nil
+	}
+
+	var a []any
+	a, ok = in.([]any)
+	if !ok {
+		a, err = InterfaceSlice(in)
+		if err != nil {
+			return "", fmt.Errorf("input to Join must be an array: %w", err)
+		}
+		ok = true
+	}
+	if ok {
+		b := make([]string, len(a))
+		for i := range a {
+			b[i] = ToString(a[i])
+		}
+		return strings.Join(b, sep), nil
+	}
+
+	return "", fmt.Errorf("input to Join must be an array")
+}
+
+// InterfaceSlice converts an array or slice of any type into an []any
+// for use in functions that expect this.
+func InterfaceSlice(slice any) ([]any, error) {
+	// avoid all this nonsense if this is already a []any...
+	if s, ok := slice.([]any); ok {
+		return s, nil
+	}
+	s := reflect.ValueOf(slice)
+	kind := s.Kind()
+	switch kind {
+	case reflect.Slice, reflect.Array:
+		l := s.Len()
+		ret := make([]any, l)
+		for i := range l {
+			ret[i] = s.Index(i).Interface()
+		}
+		return ret, nil
+	default:
+		return nil, fmt.Errorf("expected an array or slice, but got a %T", s)
+	}
 }
 
 // SubstituteEnvsAndTemplate substitutes environment variables and template the reader `r`
