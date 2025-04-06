@@ -79,7 +79,7 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 		log.Infof("No template names specified (-l) using: %s", strings.Join(TemplateNames, ", "))
 	}
 
-	tmpl := template.New("").Funcs(utils.TemplateFuncs).Funcs(jT.Funcs)
+	tmpl := template.New("").Funcs(utils.CreateFuncs()).Funcs(jT.Funcs)
 
 	for _, nc := range allnodes {
 		for _, baseN := range TemplateNames {

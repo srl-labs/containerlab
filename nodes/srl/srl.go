@@ -101,7 +101,7 @@ var (
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
-	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(utils.TemplateFuncs).
+	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(utils.CreateFuncs()).
 			Parse(srlConfigCmdsTpl)
 
 	requiredKernelVersion = &utils.KernelVersion{

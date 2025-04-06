@@ -36,7 +36,7 @@ var (
 
 	kindnames          = []string{"6wind_vsr"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
-	vsrCfgTpl, _       = template.New("clab-vsr-default-config").Funcs(utils.TemplateFuncs).
+	vsrCfgTpl, _       = template.New("clab-vsr-default-config").Funcs(utils.CreateFuncs()).
 				Parse(vsrConfigCmdsTpl)
 	saveCmd = `bash -c "echo 'show config nodefault fullpath' | nc-cli"`
 )

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"reflect"
 	"strconv"
@@ -14,14 +15,17 @@ import (
 	"github.com/hellt/envsubst"
 )
 
-var TemplateFuncs = template.FuncMap{
-	"ToJSON":             toJson,
-	"ToJSONPretty":       toJsonPretty,
-	"add":                add,
-	"subtract":           subtract,
-	"seq":                seq,
-	"stringsSplit":       stringsSplit,
-	"strings.ReplaceAll": stringsReplaceAll,
+func CreateFuncs() template.FuncMap {
+	f := template.FuncMap{
+		"ToJSON":       toJson,
+		"ToJSONPretty": toJsonPretty,
+		"add":          add,
+		"subtract":     subtract,
+		"seq":          seq,
+	}
+	maps.Copy(f, CreateStringFuncs())
+
+	return f
 }
 
 func toJson(v any) string {
@@ -341,16 +345,30 @@ func ToString(in any) string {
 	return fmt.Sprint(in)
 }
 
-// stringsSplit slices input into the substrings separated by separator, returning a slice of the substrings between those separators. If input does not contain separator and separator is not empty, returns a single-element slice whose only element is input.
+// CreateStringFuncs -
+func CreateStringFuncs() map[string]any {
+	f := map[string]any{}
+
+	ns := &StringFuncs{}
+	f["strings"] = func() any { return ns }
+
+	return f
+}
+
+// StringFuncs
+type StringFuncs struct {
+}
+
+// Split slices input into the substrings separated by separator, returning a slice of the substrings between those separators. If input does not contain separator and separator is not empty, returns a single-element slice whose only element is input.
 // If separator is empty, it will split after each UTF-8 sequence. If both inputs are empty (i.e. strings.Split "" ""), it will return an empty slice.
 // This is equivalent to strings.SplitN with a count of -1.
 // Note that the delimiter is not included in the resulting elements.
-func stringsSplit(sep string, s any) []string {
+func (sf *StringFuncs) Split(sep string, s any) []string {
 	return strings.Split(ToString(s), sep)
 }
 
-// stringsReplaceAll replaces all occurrences of a given string with another.
-func stringsReplaceAll(old, new string, s any) string {
+// ReplaceAll replaces all occurrences of a given string with another.
+func (sf *StringFuncs) ReplaceAll(old, new string, s any) string {
 	return strings.ReplaceAll(ToString(s), old, new)
 }
 
@@ -370,7 +388,7 @@ func SubstituteEnvsAndTemplate(r io.Reader, data any) (*bytes.Buffer, error) {
 		return nil, err
 	}
 
-	t, err := template.New("template").Funcs(TemplateFuncs).Parse(string(b))
+	t, err := template.New("template").Funcs(CreateFuncs()).Parse(string(b))
 	if err != nil {
 		return nil, err
 	}

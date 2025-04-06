@@ -57,7 +57,7 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 	}
 
 	t := template.New(name).
-		Funcs(utils.TemplateFuncs)
+		Funcs(utils.CreateFuncs())
 
 	var err error
 

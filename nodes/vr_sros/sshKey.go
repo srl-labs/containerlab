@@ -24,7 +24,7 @@ func (s *vrSROS) generateSSHPublicKeysConfig() (io.Reader, error) {
 
 	s.prepareSSHPubKeys(&tplData)
 
-	t, err := template.New("SSHKeys").Funcs(utils.TemplateFuncs).Parse(SROSSSHKeysTemplate)
+	t, err := template.New("SSHKeys").Funcs(utils.CreateFuncs()).Parse(SROSSSHKeysTemplate)
 	if err != nil {
 		return nil, err
 	}

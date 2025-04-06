@@ -52,7 +52,8 @@ func TestStringsSplit(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := stringsSplit(tc.separator, tc.input)
+			sf := &StringFuncs{}
+			got := sf.Split(tc.separator, tc.input)
 			if !cmp.Equal(got, tc.want) {
 				t.Fatalf("wanted %v, got %v", tc.want, got)
 			}
@@ -462,7 +463,8 @@ func TestStringsReplaceAll(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := stringsReplaceAll(tc.old, tc.new, tc.s)
+			sf := &StringFuncs{}
+			got := sf.ReplaceAll(tc.old, tc.new, tc.s)
 			if !cmp.Equal(got, tc.want) {
 				t.Fatalf("wanted %q, got %q", tc.want, got)
 			}
