@@ -140,7 +140,7 @@ type NodeConfig struct {
 	// Capabilities required by the container (if not run in privileged mode)
 	CapAdd []string `json:"cap-add,omitempty"`
 	// Size of the shared memory allocated to the container
-	ShmSize string  `json:"shm-size,omitempty"`
+	ShmSize string `json:"shm-size,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
 	PortBindings nat.PortMap `json:"portbindings,omitempty"`
 	// ResultingPortBindings is a list of port bindings that are actually applied to the container

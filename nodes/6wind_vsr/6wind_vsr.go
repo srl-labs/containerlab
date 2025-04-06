@@ -25,8 +25,8 @@ import (
 
 const (
 	ifWaitScriptContainerPath = "/usr/sbin/if-wait.sh"
-	generateable     = true
-	generateIfFormat = "eth%d"
+	generateable              = true
+	generateIfFormat          = "eth%d"
 )
 
 var (
@@ -37,9 +37,8 @@ var (
 	kindnames          = []string{"6wind_vsr"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 	vsrCfgTpl, _       = template.New("clab-vsr-default-config").Funcs(utils.TemplateFuncs).
-	Parse(vsrConfigCmdsTpl)
-	saveCmd            = `bash -c "echo 'show config nodefault fullpath' | nc-cli"`
-
+				Parse(vsrConfigCmdsTpl)
+	saveCmd = `bash -c "echo 'show config nodefault fullpath' | nc-cli"`
 )
 
 // Register registers the node in the NodeRegistry.
@@ -57,9 +56,9 @@ type sixwind_vsr struct {
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
-	itfwaitpath string
+	itfwaitpath        string
 	ConsolidatedConfig string
-	UserStartupConfig string
+	UserStartupConfig  string
 }
 
 func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
@@ -122,16 +121,16 @@ func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) erro
 	os.Chmod(n.itfwaitpath, 0777)
 
 	// Adding if-wait.sh script to the filesystem
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.itfwaitpath,":", ifWaitScriptContainerPath))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.itfwaitpath, ":", ifWaitScriptContainerPath))
 
 	// Path to the consolidated config file (startup + default will be aggregated)
-	n.ConsolidatedConfig =  path.Join(n.Cfg.LabDir, "init-config.cli")
+	n.ConsolidatedConfig = path.Join(n.Cfg.LabDir, "init-config.cli")
 
 	// Path to the user persistent config
 	n.UserStartupConfig = path.Join(n.Cfg.LabDir, "user-startup.conf")
 
 	// Mount startup config
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.ConsolidatedConfig,":/etc/init-config.cli"))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.ConsolidatedConfig, ":/etc/init-config.cli"))
 
 	// We need the interfaces with their correct name before launching the init process
 	// prepending original Cmd with if-wait.sh script to make sure that interfaces are available
@@ -158,7 +157,8 @@ func (n *sixwind_vsr) SaveConfig(ctx context.Context) error {
 
 	err = os.WriteFile(n.UserStartupConfig, execResult.GetStdOutByteSlice(), 0777)
 	if err != nil {
-		return fmt.Errorf("failed to write config by %s path from %s container: %v", n.UserStartupConfig, n.Cfg.ShortName, err)
+		return fmt.Errorf("failed to write config by %s path from %s container: %v",
+			n.UserStartupConfig, n.Cfg.ShortName, err)
 	}
 	log.Infof("saved 6WIND VSR configuration from %s node to %s\n", n.Cfg.ShortName, n.UserStartupConfig)
 
@@ -176,7 +176,6 @@ func (n *sixwind_vsr) CheckInterfaceName() error {
 	}
 	return nil
 }
-
 
 const banner = `#######################################################################
 # Welcome to 6WIND Virtual Service Router                             #
@@ -201,13 +200,12 @@ type vsrTemplateData struct {
 	SSHPubKeys []string
 }
 
-// addDefaultConfig adds VSR default configuration
+// addDefaultConfig adds VSR default configuration.
 func (n *sixwind_vsr) addDefaultConfig(ctx context.Context) error {
-
 	// tplData holds data used in templating of the default config snippet
 	tplData := vsrTemplateData{
-		Banner:         banner,
-		SSHPubKeys:	utils.MarshalSSHPubKeys(n.sshPubKeys),
+		Banner:     banner,
+		SSHPubKeys: utils.MarshalSSHPubKeys(n.sshPubKeys),
 	}
 
 	if n.Cfg.License != "" {
@@ -240,5 +238,3 @@ func (n *sixwind_vsr) addDefaultConfig(ctx context.Context) error {
 
 	return nil
 }
-
-

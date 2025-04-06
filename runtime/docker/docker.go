@@ -494,7 +494,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		mappings.PathOnHost = str
 		mappings.PathInContainer = str
 		mappings.CgroupPermissions = "rwm"
-		resources.Devices = append(resources.Devices,mappings)
+		resources.Devices = append(resources.Devices, mappings)
 	}
 
 	ulimit := units.Ulimit{

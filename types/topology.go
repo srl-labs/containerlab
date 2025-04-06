@@ -163,21 +163,21 @@ func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 
 func (t *Topology) GetNodeDevices(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-                return utils.MergeStringSlices(
-                        utils.MergeStringSlices(t.GetDefaults().GetDevices(),
-                                t.GetKind(t.GetNodeKind(name)).GetDevices()),
-                        ndef.GetDevices())
-        }
+		return utils.MergeStringSlices(
+			utils.MergeStringSlices(t.GetDefaults().GetDevices(),
+				t.GetKind(t.GetNodeKind(name)).GetDevices()),
+			ndef.GetDevices())
+	}
 	return nil
 }
 
 func (t *Topology) GetNodeCapAdd(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-                return utils.MergeStringSlices(
-                        utils.MergeStringSlices(t.GetDefaults().GetCapAdd(),
-                                t.GetKind(t.GetNodeKind(name)).GetCapAdd()),
-                        ndef.GetCapAdd())
-        }
+		return utils.MergeStringSlices(
+			utils.MergeStringSlices(t.GetDefaults().GetCapAdd(),
+				t.GetKind(t.GetNodeKind(name)).GetCapAdd()),
+			ndef.GetCapAdd())
+	}
 	return nil
 }
 
