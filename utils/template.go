@@ -15,11 +15,13 @@ import (
 )
 
 var TemplateFuncs = template.FuncMap{
-	"ToJSON":       toJson,
-	"ToJSONPretty": toJsonPretty,
-	"add":          add,
-	"subtract":     subtract,
-	"seq":          seq,
+	"ToJSON":             toJson,
+	"ToJSONPretty":       toJsonPretty,
+	"add":                add,
+	"subtract":           subtract,
+	"seq":                seq,
+	"stringsSplit":       stringsSplit,
+	"strings.ReplaceAll": stringsReplaceAll,
 }
 
 func toJson(v any) string {
@@ -277,6 +279,79 @@ func strToFloat64(str string) (float64, error) {
 	}
 
 	return float64(iv), nil
+}
+
+var (
+	errorType       = reflect.TypeOf((*error)(nil)).Elem()
+	fmtStringerType = reflect.TypeOf((*fmt.Stringer)(nil)).Elem()
+)
+
+// indirect returns the item at the end of indirection, and a bool to indicate if it's nil.
+func indirect(v reflect.Value) (rv reflect.Value, isNil bool) {
+	for ; v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface; v = v.Elem() {
+		if v.IsNil() {
+			return v, true
+		}
+	}
+	return v, false
+}
+
+// printableValue returns the, possibly indirected, interface value inside v that
+// is best for a call to formatted printer.
+func printableValue(v reflect.Value) (any, bool) {
+	if v.Kind() == reflect.Ptr {
+		v, _ = indirect(v) // fmt.Fprint handles nil.
+	}
+	if !v.IsValid() {
+		return "<no value>", true
+	}
+
+	if !v.Type().Implements(errorType) && !v.Type().Implements(fmtStringerType) {
+		if v.CanAddr() && (reflect.PointerTo(v.Type()).Implements(errorType) || reflect.PointerTo(v.Type()).Implements(fmtStringerType)) {
+			v = v.Addr()
+		} else {
+			switch v.Kind() {
+			case reflect.Chan, reflect.Func:
+				return nil, false
+			}
+		}
+	}
+	return v.Interface(), true
+}
+
+func ToString(in any) string {
+	if in == nil {
+		return "nil"
+	}
+	if s, ok := in.(string); ok {
+		return s
+	}
+	if s, ok := in.(fmt.Stringer); ok {
+		return s.String()
+	}
+	if s, ok := in.([]byte); ok {
+		return string(s)
+	}
+
+	v, ok := printableValue(reflect.ValueOf(in))
+	if ok {
+		in = v
+	}
+
+	return fmt.Sprint(in)
+}
+
+// stringsSplit slices input into the substrings separated by separator, returning a slice of the substrings between those separators. If input does not contain separator and separator is not empty, returns a single-element slice whose only element is input.
+// If separator is empty, it will split after each UTF-8 sequence. If both inputs are empty (i.e. strings.Split "" ""), it will return an empty slice.
+// This is equivalent to strings.SplitN with a count of -1.
+// Note that the delimiter is not included in the resulting elements.
+func stringsSplit(sep string, s any) []string {
+	return strings.Split(ToString(s), sep)
+}
+
+// stringsReplaceAll replaces all occurrences of a given string with another.
+func stringsReplaceAll(old, new string, s any) string {
+	return strings.ReplaceAll(ToString(s), old, new)
 }
 
 // SubstituteEnvsAndTemplate substitutes environment variables and template the reader `r`
