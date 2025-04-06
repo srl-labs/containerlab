@@ -440,6 +440,26 @@ func InterfaceSlice(slice any) ([]any, error) {
 	}
 }
 
+// ToInt converts the input to an int (signed integer, 32- or 64-bit depending on platform). This is similar to conv.ToInt64 on 64-bit platforms, but is useful when input to another function must be provided as an int.
+// Unconvertible inputs will result in errors.
+// On 32-bit systems, given a number that is too large to fit in an int, the result is -1. This is done to protect against CWE-190 and CWE-681.
+func (ConvFuncs) ToInt(in any) (int, error) {
+	i, err := ToInt64(in)
+	if err != nil {
+		return 0, err
+	}
+
+	// Bounds-checking to protect against CWE-190 and CWE-681
+	// https://cwe.mitre.org/data/definitions/190.html
+	// https://cwe.mitre.org/data/definitions/681.html
+	if i >= math.MinInt && i <= math.MaxInt {
+		return int(i), nil
+	}
+
+	// maybe we're on a 32-bit system, so we can't represent this number
+	return 0, fmt.Errorf("could not convert %v to int", in)
+}
+
 // SubstituteEnvsAndTemplate substitutes environment variables and template the reader `r`
 // with the `data` template data.
 func SubstituteEnvsAndTemplate(r io.Reader, data any) (*bytes.Buffer, error) {

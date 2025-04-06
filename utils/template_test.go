@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"math"
 	"strings"
 	"testing"
 
@@ -553,6 +554,100 @@ func TestConvFuncsJoin(t *testing.T) {
 			}
 			if !cmp.Equal(got, tc.want) {
 				t.Fatalf("wanted %q, got %q", tc.want, got)
+			}
+		})
+	}
+}
+func TestConvFuncsToInt(t *testing.T) {
+	tests := map[string]struct {
+		input any
+		want  int
+		err   string
+	}{
+		"max int value": {
+			input: math.MaxInt,
+			want:  math.MaxInt,
+		},
+		"min int value": {
+			input: math.MinInt,
+			want:  math.MinInt,
+		},
+		"float64 with decimal places": {
+			input: 123.456,
+			want:  123,
+		},
+		"hex string": {
+			input: "0xFF",
+			want:  255,
+		},
+		"octal string": {
+			input: "0o777",
+			want:  511,
+		},
+		"binary string": {
+			input: "0b1010",
+			want:  10,
+		},
+		"scientific notation string": {
+			input: "1e5",
+			want:  100000,
+		},
+		"invalid hex string": {
+			input: "0xZZ",
+			err:   "could not convert",
+		},
+		"empty string": {
+			input: "",
+			err:   "could not convert",
+		},
+		"complex number": {
+			input: complex(1, 2),
+			err:   "could not convert",
+		},
+		"channel input": {
+			input: make(chan int),
+			err:   "could not convert",
+		},
+		"function input": {
+			input: func() {},
+			err:   "could not convert",
+		},
+		"map input": {
+			input: map[string]int{},
+			err:   "could not convert",
+		},
+		"slice input": {
+			input: []int{1, 2, 3},
+			err:   "could not convert",
+		},
+		"too large uint64": {
+			input: uint64(math.MaxUint64),
+			err:   "could not convert",
+		},
+		"pointer input": {
+			input: &struct{}{},
+			err:   "could not convert",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			cf := ConvFuncs{}
+			got, err := cf.ToInt(tc.input)
+			if tc.err != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.err)
+				}
+				if !strings.Contains(err.Error(), tc.err) {
+					t.Fatalf("expected error containing %q, got %q", tc.err, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !cmp.Equal(got, tc.want) {
+				t.Fatalf("wanted %v, got %v", tc.want, got)
 			}
 		})
 	}
