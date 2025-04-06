@@ -207,14 +207,14 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 
 	switch {
 	case path == "-" || path == "stdin":
-		log.Debugf("interpretting topo %q as stdin", path)
+		log.Debugf("interpreting topo %q as stdin", path)
 		file, err = readFromStdin(c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
 		}
 	// if the path is not a local file and a URL, download the file and store it in the tmp dir
 	case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
-		log.Debugf("interpretting topo %q as remote URL", path)
+		log.Debugf("interpreting topo %q as remote URL", path)
 		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
@@ -224,7 +224,7 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 		return "", fmt.Errorf("provide a path to the clab topology file")
 
 	default:
-		log.Debugf("interpretting topo %q as file path", path)
+		log.Debugf("interpreting topo %q as file path", path)
 		file, err = FindTopoFileByPath(path)
 		if err != nil {
 			return "", err

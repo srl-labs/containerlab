@@ -104,13 +104,15 @@ func IsHttpURL(s string, allowSchemaless bool) bool {
 		return false
 	}
 
-	//
+	// if schemaless is not allowed and the string does not contain a schema, it is not an URL
 	if !allowSchemaless && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
 		return false
 	}
 
-	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
-		s = "https://" + s
+	// if schemaless is allowed and the string does not contain a schema, but contains a dot
+	// then it is not a valid URL
+	if allowSchemaless && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") && strings.Contains(s, ".") {
+		return false
 	}
 
 	u, err := url.ParseRequestURI(s)
