@@ -346,3 +346,8 @@ div.highlight.code-scroll-sm pre>code {
 }
 
 /* END thin scrollbar styles */
+
+
+[dir="ltr"] .md-typeset blockquote {
+  border-left: .1rem solid var(--md-default-fg-color--lightest);
+}

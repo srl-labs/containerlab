@@ -79,6 +79,7 @@ nav:
       - VS Code Extension: manual/vsc-extension.md
       - Link Impairments: manual/impairments.md
       - Share lab access: manual/share-access.md
+      - Configuration management: manual/config-mgmt.md
       - Developers guide:
           - manual/dev/index.md
           - Documentation: manual/dev/doc.md
