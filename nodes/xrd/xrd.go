@@ -34,7 +34,7 @@ var (
 	//go:embed mgmt_intf_v6_addr.sh.tmpl
 	scriptTemplate string
 
-	xrdMgmtScriptTpl, _ = template.New("clab-xrd-mgmt-ipv6-script").Funcs(utils.TemplateFuncs).Parse(scriptTemplate)
+	xrdMgmtScriptTpl, _ = template.New("clab-xrd-mgmt-ipv6-script").Funcs(utils.CreateFuncs()).Parse(scriptTemplate)
 
 	//go:embed xrd.cfg
 	cfgTemplate string

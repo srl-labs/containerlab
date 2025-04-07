@@ -101,7 +101,7 @@ var (
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
-	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(utils.TemplateFuncs).
+	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(utils.CreateFuncs()).
 			Parse(srlConfigCmdsTpl)
 
 	requiredKernelVersion = &utils.KernelVersion{
@@ -465,19 +465,19 @@ func (n *srl) createSRLFiles() error {
 			return err
 		}
 
+		cBuf, err := utils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		if err != nil {
+			return err
+		}
+
 		// Determine if startup-config is a JSON file
 		// Get slice of data with optional leading whitespace removed.
 		// See RFC 7159, Section 2 for the definition of JSON whitespace.
-		x := bytes.TrimLeft(c, " \t\r\n")
+		x := bytes.TrimLeft(cBuf.Bytes(), " \t\r\n")
 		isJSON := len(x) > 0 && x[0] == '{'
 		if !isJSON {
 			log.Debugf("startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
 				n.Cfg.ShortName)
-
-			cBuf, err := utils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
-			if err != nil {
-				return err
-			}
 
 			n.startupCliCfg = cBuf.Bytes()
 
@@ -485,7 +485,7 @@ func (n *srl) createSRLFiles() error {
 			// as we will apply it over the top of a default config in the post deploy stage
 			return nil
 		}
-		cfgTemplate = string(c)
+		cfgTemplate = cBuf.String()
 	}
 
 	if cfgTemplate == "" {
