@@ -309,7 +309,7 @@ topology:
 
 1. It is mandatory to use YAML's multiline string syntax to denote that the string below is a partial config and not a file.
 
-Embedded partial configs will persist on containerlab's host and use the same directory as the [remote startup-config](../nodes.md#remote-startup-config) files.
+Embedded partial configs will persist on containerlab's host and use the same directory as the [remote startup-config](../config-mgmt.md#remote) files.
 
 #### Configuration save
 
