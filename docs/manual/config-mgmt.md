@@ -284,4 +284,6 @@ On top of the built-in function, Containerlab bundles the following custom funct
 - `conv.Join` - joins a list of strings into a single string. Documented [here](https://docs.gomplate.ca/functions/conv/#convjoin).
 - `conv.ToInt` - converts a string to an integer. Documented [here](https://docs.gomplate.ca/functions/conv/#convtoint).
 
+> If a function you need is not available, check if it is available in the [gomplate](https://docs.gomplate.ca/functions/) documentation and ask a request to add it via Containerlab's issue tracker.
+
 [^1]: You can use https://repeatit.io/ to play online with Go templating language.
