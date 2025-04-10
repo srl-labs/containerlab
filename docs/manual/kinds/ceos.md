@@ -450,3 +450,11 @@ topology:
         - /etc/sysctl.d/99-zceoslab.conf:/etc/sysctl.d/99-zceoslab.conf:ro
 ...
 ```
+
+### macOS
+
+When running Containerlab on an OrbStack VM on macOS, using MD5 passwords in BGP neighbor statements causes the BGP session to remain stuck in the `Active` state and prevents it from reaching the `Established` state.
+
+Removing the MD5 password authentication from all the neighbors under the BGP configuration section, and resetting the BGP sessions, allows the sessions to be established successfully.
+
+The issue is likely due to the macOS kernel not supporting the MD5 option on TCP sockets in macOS version 15.4. This may also affect other macOS versions.
