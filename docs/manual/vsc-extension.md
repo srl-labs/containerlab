@@ -405,3 +405,11 @@ Whether to hide the confirmation message when doing a cleanup operation on your 
 | Type      | Default |
 | --------- | ------- |
 | `boolean` | `false` |
+
+### `containerlab.node.telnetPort`
+
+The port to use when using the 'Connect (Telnet)' command. The telnet command is executed inside the container via `docker exec -it <node> telnet 127.0.0.1 <port>`, where `<port>` is the value this setting modifies.
+
+| Type      | Default |
+| --------- | ------- |
+| `number`  |  `5000` |
