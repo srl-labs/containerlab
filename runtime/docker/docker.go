@@ -939,7 +939,7 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 	force := !d.config.GracefulShutdown
 	if d.config.GracefulShutdown {
 		log.Infof("Stopping container: %s", cID)
-		timeout := int(d.config.Timeout)
+		timeout := int(d.config.Timeout.Seconds())
 		err = d.Client.ContainerStop(ctx, cID, container.StopOptions{Timeout: &timeout})
 		if err != nil {
 			log.Errorf("could not stop container %q: %v", cID, err)
