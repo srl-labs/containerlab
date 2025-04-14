@@ -279,6 +279,7 @@ type K8sKindDeployExtras struct {
 type ContainerDetails struct {
 	LabName     string `json:"lab_name,omitempty"`
 	LabPath     string `json:"labPath,omitempty"`
+	AbsLabPath  string `json:"abs_lab_path,omitempty"`
 	Name        string `json:"name,omitempty"`
 	ContainerID string `json:"container_id,omitempty"`
 	Image       string `json:"image,omitempty"`

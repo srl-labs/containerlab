@@ -1,7 +1,3 @@
-// Copyright 2020 Nokia
-// Licensed under the BSD 3-Clause License.
-// SPDX-License-Identifier: BSD-3-Clause
-
 package inspect
 
 import (
@@ -88,7 +84,9 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
-		return fmt.Errorf("could not parse the topology file: %v", err)
+		// do not wrap error message to avoid printing it twice
+		// when it originates from the topo parsing part
+		return err //nolint:wrapcheck
 	}
 
 	err = c.CheckConnectivity(ctx)
@@ -130,6 +128,10 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	// Handle empty results
 	if len(containers) == 0 {
 		if inspectFormat == "json" { // Handles both details and non-details JSON
+			// Print an empty JSON object or array depending on context
+			// If --all or --name was used (implying potential multiple labs), print an empty object {}
+			// If --topo was used (implying a single lab), perhaps an empty array [] or object {} is suitable.
+			// Let's stick with {} for simplicity as it represents "no labs found matching criteria".
 			fmt.Println("{}")
 		} else { // Table format
 			log.Info("no containers found")
@@ -187,33 +189,71 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0, len(contDetails))
+
+	// Track first entry per lab for --all output formatting
+	firstInLab := make(map[string]bool)
+	if all {
+		for i := range contDetails {
+			d := &contDetails[i]
+			if _, seen := firstInLab[d.LabName]; !seen {
+				firstInLab[d.LabName] = true
+			}
+		}
+	}
+
 	for i := range contDetails {
 		d := &contDetails[i]
 
 		tabRow := tableWriter.Row{}
 
+		// For --all, only print Topo Path and Lab Name for the first node of each lab
 		if all {
-			tabRow = append(tabRow, d.LabPath, d.LabName)
+			if firstInLab[d.LabName] {
+				tabRow = append(tabRow, d.LabPath, d.LabName)
+				firstInLab[d.LabName] = false // Mark as printed for this lab
+			} else {
+				tabRow = append(tabRow, "", "") // Empty cells for subsequent nodes in the same lab
+			}
 		}
 
-		// Display more columns
+		// Display more columns if --wide is used
 		if wide {
-			tabRow = append(tabRow, d.Owner)
+			// For --all, only print Owner for the first node of each lab
+			if all {
+				// Need to re-check if it's the first entry for the owner column specifically
+				// Re-initialize the map for this check
+				firstOwnerInLab := make(map[string]bool)
+				for _, det := range contDetails {
+					if _, seen := firstOwnerInLab[det.LabName]; !seen {
+						firstOwnerInLab[det.LabName] = true
+					}
+				}
+				if firstOwnerInLab[d.LabName] {
+					tabRow = append(tabRow, d.Owner)
+					// No need to mark false here as the outer loop handles the row logic
+				} else {
+					tabRow = append(tabRow, "")
+				}
+
+			} else { // Not --all, print owner for every node if --wide
+				tabRow = append(tabRow, d.Owner)
+			}
 		}
 
 		// we do not want to print status other than health in the table view
+		statusDisplay := d.Status
 		if !strings.Contains(d.Status, "health") {
-			d.Status = ""
+			statusDisplay = ""
 		} else {
-			d.Status = fmt.Sprintf("(%s)", d.Status)
+			statusDisplay = fmt.Sprintf("(%s)", d.Status)
 		}
 
 		// Common fields
 		tabRow = append(tabRow,
 			d.Name,
-			fmt.Sprintf("%s\n%s", d.Kind, d.Image),
-			fmt.Sprintf("%s\n%s", d.State, d.Status),
-			fmt.Sprintf("%s\n%s",
+			fmt.Sprintf("%s\n%s", d.Kind, d.Image), // Combine Kind and Image
+			fmt.Sprintf("%s\n%s", d.State, statusDisplay), // Combine State and Status
+			fmt.Sprintf("%s\n%s", // Combine IPv4 and IPv6
 				ipWithoutPrefix(d.IPv4Address),
 				ipWithoutPrefix(d.IPv6Address)))
 
@@ -222,6 +262,9 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 	return tabData
 }
 
+// getTopologyPath calculates the relative path to the topology file from the current working directory.
+// If the path is already relative and shorter, it returns the relative path.
+// Otherwise, it returns the original path (likely absolute or not easily relativized).
 func getTopologyPath(p string) (string, error) {
 	if p == "" {
 		return "", nil
@@ -230,18 +273,24 @@ func getTopologyPath(p string) (string, error) {
 	// get topo file path relative of the cwd
 	cwd, err := os.Getwd()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get current working directory: %w", err)
 	}
 
-	relPath, err := filepath.Rel(cwd, p)
-	if err != nil {
-		return "", err
+	// Check if the path is already absolute
+	if filepath.IsAbs(p) {
+		relPath, err := filepath.Rel(cwd, p)
+		if err != nil {
+			// If relativization fails, return the original absolute path
+			return p, nil
+		}
+		// Return the shorter path (prefer relative if shorter)
+		if len(relPath) < len(p) {
+			return relPath, nil
+		}
+		return p, nil // Return absolute path if relative is not shorter
 	}
 
-	if len(relPath) < len(p) {
-		return relPath, nil
-	}
-
+	// If the path is already relative, just return it
 	return p, nil
 }
 
@@ -256,25 +305,35 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 		table.Style().Format.HeaderAlign = text.AlignCenter
 		table.Style().Options.SeparateRows = true
 		table.Style().Color = tableWriter.ColorOptions{Header: text.Colors{text.Bold}}
-		headerBase := tableWriter.Row{"Lab Name", "Name", "Kind/Image", "State", "IPv4/6 Address"}
+
+		// Define base header structure
+		headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
 		if wide {
-			headerBase = slices.Insert(headerBase, 1, "Owner")
+			// Insert Owner after Lab Name (or at the beginning if not --all)
+			headerBase = slices.Insert(headerBase, 0, "Owner") // Position adjusted
 		}
+
 		var header tableWriter.Row
 		colConfigs := []tableWriter.ColumnConfig{}
+
 		if all {
-			header = append(tableWriter.Row{"Topology"}, headerBase...)
+			// Prepend Topology and Lab Name for --all
+			header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
+			// Configure auto-merge for Topology, Lab Name, and Owner (if wide)
 			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true}) // Topology
 			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 2, AutoMerge: true}) // Lab Name
 			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 3, AutoMerge: true})
-			} // Owner
+				// Owner is now column 3 when --all is active
+				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 3, AutoMerge: true}) // Owner
+			}
 		} else {
-			header = headerBase[1:] // Remove "Lab Name"
+			header = headerBase // Use base header directly
 			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true})
-			} // Owner (now col 1)
+				// Owner is column 1 when --all is not active
+				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true}) // Owner
+			}
 		}
+
 		table.AppendHeader(header)
 		if len(colConfigs) > 0 {
 			table.SetColumnConfigs(colConfigs)
@@ -289,16 +348,30 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 
 	// Gather summary details of each container
 	for _, cont := range containers {
-		path, err := getTopologyPath(cont.Labels[labels.TopoFile])
+		rawPath := cont.Labels[labels.TopoFile]
+		relPath, err := getTopologyPath(rawPath)
 		if err != nil {
-			return fmt.Errorf("failed to get topology path: %v", err)
+			// Log error but continue, maybe path is unavailable
+			log.Warnf("failed to get relative topology path for container %s: %v", cont.Names[0], err)
+			relPath = rawPath // Use raw path as fallback for display
+		}
+
+		// Calculate absolute path, handle potential errors
+		absPath := ""
+		if rawPath != "" {
+			absPath, err = filepath.Abs(rawPath)
+			if err != nil {
+				log.Warnf("failed to get absolute topology path for container %s: %v", cont.Names[0], err)
+				absPath = rawPath // Use raw path as fallback
+			}
 		}
 
 		status := parseStatus(cont.Status)
 
-		cdet := &types.ContainerDetails{
+		cdet := types.ContainerDetails{ // Use pointer receiver style for consistency if modifying struct
 			LabName:     cont.Labels[labels.Containerlab],
-			LabPath:     path,
+			LabPath:     relPath, // Relative path for table view
+			AbsLabPath:  absPath, // Absolute path for JSON view
 			Image:       cont.Image,
 			State:       cont.State,
 			Status:      status,
@@ -323,7 +396,7 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 			cdet.Owner = owner
 		}
 
-		contDetails = append(contDetails, *cdet)
+		contDetails = append(contDetails, cdet)
 	}
 
 	// Sort summary details by lab name, then container name
@@ -338,12 +411,14 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 	switch format {
 	case "json":
 		// Group summary results by LabName
+		// Use a map where keys are lab names and values are slices of container details
 		groupedLabs := make(map[string][]types.ContainerDetails)
 		for _, cd := range contDetails {
 			labName := cd.LabName
 			if labName == "" {
-				labName = "_unknown_lab_"
+				labName = "_unknown_lab_" // Should not happen if filters work correctly
 			}
+			// Assign the *entire* ContainerDetails struct (including AbsLabPath)
 			groupedLabs[labName] = append(groupedLabs[labName], cd)
 		}
 		// Marshal the grouped summary map
@@ -355,7 +430,7 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 		return nil
 
 	case "table":
-		// Generate and render table using the summary data
+		// Generate and render table using the summary data (which uses relative LabPath)
 		tabData := toTableData(contDetails)
 		table := tableWriter.NewWriter()
 		table.SetOutputMirror(os.Stdout)
@@ -367,33 +442,28 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 			Header: text.Colors{text.Bold},
 		}
 
-		// Define base header
-		headerBase := tableWriter.Row{
-			"Lab Name",
-			"Name",
-			"Kind/Image",
-			"State",
-			"IPv4/6 Address",
-		}
+		// Define base header structure (same as in the empty table case)
+		headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
 		if wide {
-			headerBase = slices.Insert(headerBase, 1, "Owner")
+			headerBase = slices.Insert(headerBase, 0, "Owner") // Position adjusted
 		}
 
-		// Adjust header and column configs based on flags
 		var header tableWriter.Row
 		colConfigs := []tableWriter.ColumnConfig{}
 
 		if all {
-			header = append(tableWriter.Row{"Topology"}, headerBase...)
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true}) // Topology
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 2, AutoMerge: true}) // Lab Name
+			header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true, VAlign: text.VAlignMiddle}) // Topology
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 2, AutoMerge: true, VAlign: text.VAlignMiddle}) // Lab Name
 			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 3, AutoMerge: true}) // Owner
+				// Owner is now column 3 when --all is active
+				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 3, AutoMerge: true, VAlign: text.VAlignMiddle}) // Owner
 			}
 		} else {
-			header = headerBase[1:] // Remove "Lab Name"
+			header = headerBase // Use base header directly
 			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true}) // Owner (now col 1)
+				// Owner is column 1 when --all is not active
+				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true, VAlign: text.VAlignMiddle}) // Owner
 			}
 		}
 
@@ -410,23 +480,28 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 	return fmt.Errorf("internal error: unhandled format %q", format)
 }
 
+// parseStatus extracts a simpler status string, focusing on health states.
 func parseStatus(status string) string {
 	if strings.Contains(status, "healthy") {
-		status = "healthy"
+		return "healthy"
 	} else if strings.Contains(status, "health: starting") {
-		status = "health: starting"
+		return "health: starting"
 	} else if strings.Contains(status, "unhealthy") {
-		status = "unhealthy"
+		return "unhealthy"
 	}
-
-	return status
+	// Return empty if no specific health status found, table logic will hide it
+	return ""
 }
 
+// TokenFileResults helper struct (seems unused in current inspect logic, kept for completeness).
 type TokenFileResults struct {
 	File    string
 	Labname string
 }
 
+// ipWithoutPrefix removes the CIDR prefix length from an IP address string.
+// Returns "N/A" if input contains "N/A".
+// Returns original string if it doesn't contain exactly one "/".
 func ipWithoutPrefix(ip string) string {
 	if strings.Contains(ip, "N/A") {
 		return ip
@@ -434,7 +509,7 @@ func ipWithoutPrefix(ip string) string {
 
 	ipParts := strings.Split(ip, "/")
 	if len(ipParts) != 2 {
-		return ip
+		return ip // Return original if not in expected format "address/prefix"
 	}
 
 	return ipParts[0]

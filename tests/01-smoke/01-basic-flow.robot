@@ -136,50 +136,40 @@ Inspect ${lab-name} lab using its name
 Inspect Lab Using JSON Format
     [Documentation]    Verify inspect command with JSON format output using topology file.
     # Run inspect command with JSON format
-    ${result} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --format json
-    ...    shell=True
+    ${result} =    Process.Run Process    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --format json    shell=True
     Log    STDOUT: ${result.stdout}
     Log    STDERR: ${result.stderr}
     Should Be Equal As Integers    ${result.rc}    0    Inspect command failed
     Should Not Be Empty    ${result.stdout}    JSON output should not be empty
 
-    # Verify it's valid JSON and has the correct number of nodes (using jq)
+    # Verify it's valid JSON and has the correct number of nodes under the lab key (using jq)
     # The jq command uses -e to set exit code based on boolean result
-    ${jq_check} =    Process.Run Process
-    ...    echo '${result.stdout}' | jq -e 'length == 3'
-    ...    shell=True
+    # Note: JSON output is now {"lab_name": [nodes...]}
+    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}" | length == 3'    shell=True
     Log    JQ Length Check -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
-    Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected JSON array of length 3
+    Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected JSON array of length 3 under key "${lab-name}"
 
     # Verify name of the first node (l1)
-    ${jq_check} =    Process.Run Process
-    ...    echo '${result.stdout}' | jq -e '.[0].name == "clab-${lab-name}-l1"'
-    ...    shell=True
+    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}"[0].name == "clab-${lab-name}-l1"'    shell=True
     Log    JQ Name Check (l1) -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
     Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected node name clab-${lab-name}-l1
 
     # Verify kind of the second node (l2)
-    ${jq_check} =    Process.Run Process
-    ...    echo '${result.stdout}' | jq -e '.[1].kind == "linux"'
-    ...    shell=True
+    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}"[1].kind == "linux"'    shell=True
     Log    JQ Kind Check (l2) -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
     Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected node kind linux
 
     # Verify state of the third node (l3)
-    ${jq_check} =    Process.Run Process
-    ...    echo '${result.stdout}' | jq -e '.[2].state == "running"'
-    ...    shell=True
+    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}"[2].state == "running"'    shell=True
     Log    JQ State Check (l3) -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
     Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected node state running
 
     # Verify static IPv4 of the second node (l2) - Skip if Podman due to known issue #1291
     Skip If    '${runtime}' == 'podman'    Skipping static IP check for Podman (Issue #1291)
-    ${jq_check} =    Process.Run Process
-    ...    echo '${result.stdout}' | jq -e '.[1].ipv4_address == "${n2-ipv4}"'
-    ...    shell=True
+    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}"[1].ipv4_address == "${n2-ipv4}"'    shell=True
     Log    JQ IPv4 Check (l2) -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
     Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected node l2 IPv4 ${n2-ipv4}
+
 
 Define runtime exec command
     IF    "${runtime}" == "podman"
