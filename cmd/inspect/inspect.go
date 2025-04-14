@@ -185,7 +185,6 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	return err
 }
 
-// toTableData remains unchanged
 func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0, len(contDetails))
 	for i := range contDetails {
@@ -223,7 +222,6 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 	return tabData
 }
 
-// getTopologyPath remains unchanged
 func getTopologyPath(p string) (string, error) {
 	if p == "" {
 		return "", nil
@@ -412,7 +410,6 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 	return fmt.Errorf("internal error: unhandled format %q", format)
 }
 
-// parseStatus remains unchanged
 func parseStatus(status string) string {
 	if strings.Contains(status, "healthy") {
 		status = "healthy"
@@ -425,13 +422,11 @@ func parseStatus(status string) string {
 	return status
 }
 
-// TokenFileResults remains unchanged
 type TokenFileResults struct {
 	File    string
 	Labname string
 }
 
-// ipWithoutPrefix remains unchanged
 func ipWithoutPrefix(ip string) string {
 	if strings.Contains(ip, "N/A") {
 		return ip
