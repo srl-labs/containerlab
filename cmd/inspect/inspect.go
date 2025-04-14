@@ -245,18 +245,16 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 		}
 
 		// we do not want to print status other than health in the table view
-		statusDisplay := d.Status
-		if !strings.Contains(d.Status, "health") {
-			statusDisplay = ""
+		if !strings.Contains(d.Status, "health") { // Checks the status directly
+			d.Status = "" // Modifies the field directly
 		} else {
-			statusDisplay = fmt.Sprintf("(%s)", d.Status)
+			d.Status = fmt.Sprintf("(%s)", d.Status) // Modifies the field directly
 		}
-
 		// Common fields
 		tabRow = append(tabRow,
 			d.Name,
-			fmt.Sprintf("%s\n%s", d.Kind, d.Image), // Combine Kind and Image
-			fmt.Sprintf("%s\n%s", d.State, statusDisplay), // Combine State and Status
+			fmt.Sprintf("%s\n%s", d.Kind, d.Image),   // Combine Kind and Image
+			fmt.Sprintf("%s\n%s", d.State, d.Status), // Combine State and Status
 			fmt.Sprintf("%s\n%s", // Combine IPv4 and IPv6
 				ipWithoutPrefix(d.IPv4Address),
 				ipWithoutPrefix(d.IPv6Address)))
@@ -494,7 +492,7 @@ func parseStatus(status string) string {
 		return "unhealthy"
 	}
 	// Return empty if no specific health status found, table logic will hide it
-	return ""
+	return status
 }
 
 // TokenFileResults helper struct (seems unused in current inspect logic, kept for completeness).
