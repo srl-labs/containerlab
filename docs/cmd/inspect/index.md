@@ -104,26 +104,34 @@ clab inspect --all --wide
 
 ```bash
 ❯ containerlab inspect --name srlceos01 -f json
-[
-  {
-    "lab_name": "srlceos01",
-    "name": "clab-srlceos01-srl",
-    "container_id": "82e9aa3c7e6b",
-    "image": "srlinux",
-    "kind": "srl",
-    "state": "running",
-    "ipv4_address": "172.20.20.3/24",
-    "ipv6_address": "3fff:172:20:20::3/80"
-  },
-  {
-    "lab_name": "srlceos01",
-    "name": "clab-srlceos01-ceos",
-    "container_id": "90bebb1e2c5f",
-    "image": "ceos",
-    "kind": "ceos",
-    "state": "running",
-    "ipv4_address": "172.20.20.4/24",
-    "ipv6_address": "3fff:172:20:20::4/80"
-  }
-]
+{
+  "srlceos01": [
+    {
+      "lab_name": "srlceos01",
+      "lab_path": "path/to/srlceos01.clab.yml",
+      "name": "clab-srlceos01-srl",
+      "container_id": "82e9aa3c7e6b",
+      "image": "srlinux",
+      "kind": "srl",
+      "state": "running",
+      "status": "Up 2 hours",
+      "ipv4_address": "172.20.20.3/24",
+      "ipv6_address": "3fff:172:20:20::3/80",
+      "owner": "user1"
+    },
+    {
+      "lab_name": "srlceos01",
+      "lab_path": "path/to/srlceos01.clab.yml",
+      "name": "clab-srlceos01-ceos",
+      "container_id": "90bebb1e2c5f",
+      "image": "ceos",
+      "kind": "ceos",
+      "state": "running",
+      "status": "Up 2 hours",
+      "ipv4_address": "172.20.20.4/24",
+      "ipv6_address": "3fff:172:20:20::4/80",
+      "owner": "user1"
+    }
+  ]
+}
 ```
