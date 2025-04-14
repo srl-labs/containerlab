@@ -75,8 +75,8 @@ Provide information about the running lab named `srlceos01`
 #### Provide information about a specific running lab by its topology file
 
 ```bash
-❯ clab inspect -t srl02.clab.yml 
-INFO[0000] Parsing & checking topology file: srl02.clab.yml 
+❯ clab inspect -t srl02.clab.yml
+INFO[0000] Parsing & checking topology file: srl02.clab.yml
 +---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
 | # |      Name       | Container ID |         Image         | Kind |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+-----------------+--------------+-----------------------+------+---------+----------------+----------------------+
@@ -103,34 +103,36 @@ clab inspect --all --wide
 #### Provide information about a specific running lab in json format
 
 ```bash
-❯ containerlab inspect --name srlceos01 -f json
+❯ containerlab inspect --name clan -f json
 {
-  "srlceos01": [
+  "vlan": [
     {
-      "lab_name": "srlceos01",
-      "lab_path": "path/to/srlceos01.clab.yml",
-      "name": "clab-srlceos01-srl",
-      "container_id": "82e9aa3c7e6b",
-      "image": "srlinux",
-      "kind": "srl",
+      "lab_name": "vlan",
+      "labPath": "../../srlinux-vlan-handling-lab/vlan.clab.yml",
+      "absLabPath": "/root/projects/srlinux-vlan-handling-lab/vlan.clab.yml",
+      "name": "clab-vlan-client1",
+      "container_id": "2c70173f3f41",
+      "image": "ghcr.io/srl-labs/alpine",
+      "kind": "linux",
       "state": "running",
-      "status": "Up 2 hours",
-      "ipv4_address": "172.20.20.3/24",
-      "ipv6_address": "3fff:172:20:20::3/80",
-      "owner": "user1"
+      "status": "Up 4 hours",
+      "ipv4_address": "172.20.20.4/24",
+      "ipv6_address": "3fff:172:20:20::4/64",
+      "owner": "root"
     },
     {
-      "lab_name": "srlceos01",
-      "lab_path": "path/to/srlceos01.clab.yml",
-      "name": "clab-srlceos01-ceos",
-      "container_id": "90bebb1e2c5f",
-      "image": "ceos",
-      "kind": "ceos",
+      "lab_name": "vlan",
+      "labPath": "../../srlinux-vlan-handling-lab/vlan.clab.yml",
+      "absLabPath": "/root/projects/srlinux-vlan-handling-lab/vlan.clab.yml",
+      "name": "clab-vlan-client2",
+      "container_id": "9a12e9566d8c",
+      "image": "ghcr.io/srl-labs/alpine",
+      "kind": "linux",
       "state": "running",
-      "status": "Up 2 hours",
-      "ipv4_address": "172.20.20.4/24",
-      "ipv6_address": "3fff:172:20:20::4/80",
-      "owner": "user1"
+      "status": "Up 4 hours",
+      "ipv4_address": "172.20.20.2/24",
+      "ipv6_address": "3fff:172:20:20::2/64",
+      "owner": "root"
     }
   ]
 }
