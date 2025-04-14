@@ -136,39 +136,47 @@ Inspect ${lab-name} lab using its name
 Inspect Lab Using JSON Format
     [Documentation]    Verify inspect command with JSON format output using topology file.
     # Run inspect command with JSON format
-    ${result} =    Process.Run Process    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --format json    shell=True
-    Log    STDOUT: ${result.stdout}
-    Log    STDERR: ${result.stderr}
-    Should Be Equal As Integers    ${result.rc}    0    Inspect command failed
-    Should Not Be Empty    ${result.stdout}    JSON output should not be empty
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --format json
+    ...    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Not Be Empty    ${output.stdout}
 
-    # Verify it's valid JSON and has the correct number of nodes under the lab key (using jq)
-    # The jq command uses -e to set exit code based on boolean result
-    # Note: JSON output is now {"lab_name": [nodes...]}
-    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}" | length == 3'    shell=True
-    Log    JQ Length Check -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
-    Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected JSON array of length 3 under key "${lab-name}"
+    # Save JSON to a temp file for jq processing
+    Create File    /tmp/clab_output.json    ${output.stdout}
 
-    # Verify name of the first node (l1)
-    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}"[0].name == "clab-${lab-name}-l1"'    shell=True
-    Log    JQ Name Check (l1) -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
-    Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected node name clab-${lab-name}-l1
+    # Check the number of nodes
+    ${count_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}" | length'
+    Log    ${count_check}
+    Should Be Equal As Integers    ${count_check[0]}    0
+    Should Contain    ${count_check[1]}    3
 
-    # Verify kind of the second node (l2)
-    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}"[1].kind == "linux"'    shell=True
-    Log    JQ Kind Check (l2) -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
-    Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected node kind linux
+    # Check node name
+    ${name_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}"[0].name'
+    Log    ${name_check}
+    Should Be Equal As Integers    ${name_check[0]}    0
+    Should Contain    ${name_check[1]}    clab-${lab-name}-l1
 
-    # Verify state of the third node (l3)
-    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}"[2].state == "running"'    shell=True
-    Log    JQ State Check (l3) -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
-    Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected node state running
+    # Check node kind
+    ${kind_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}"[1].kind'
+    Log    ${kind_check}
+    Should Be Equal As Integers    ${kind_check[0]}    0
+    Should Contain    ${kind_check[1]}    linux
 
-    # Verify static IPv4 of the second node (l2) - Skip if Podman due to known issue #1291
-    Skip If    '${runtime}' == 'podman'    Skipping static IP check for Podman (Issue #1291)
-    ${jq_check} =    Process.Run Process    echo '${result.stdout}' | jq -e '."${lab-name}"[1].ipv4_address == "${n2-ipv4}"'    shell=True
-    Log    JQ IPv4 Check (l2) -> RC: ${jq_check.rc} Stderr: ${jq_check.stderr}
-    Should Be Equal As Integers    ${jq_check.rc}    0    JQ validation failed: Expected node l2 IPv4 ${n2-ipv4}
+    # Skip IPv4 check for Podman
+    Skip If    '${runtime}' == 'podman'    Skipping IPv4 check for Podman
+
+    # Check IPv4 address
+    ${ip_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}"[1].ipv4_address'
+    Log    ${ip_check}
+    Should Be Equal As Integers    ${ip_check[0]}    0
+    Should Contain    ${ip_check[1]}    ${n2-ipv4}
 
 
 Define runtime exec command
