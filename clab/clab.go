@@ -59,6 +59,21 @@ type CLab struct {
 	// checkBindsPaths toggle enables or disables binds paths checks
 	// when set to true, bind sources are verified to exist on the host.
 	checkBindsPaths bool
+	// customOwner is the user-specified owner label for the lab
+	customOwner string
+}
+
+// WithLabOwner sets the owner label for all nodes in the lab.
+// Only users in the clab_admins group can set a custom owner.
+func WithLabOwner(owner string) ClabOption {
+	return func(c *CLab) error {
+		if utils.IsInClabAdminsGroup() {
+			c.customOwner = owner
+		} else if owner != "" {
+			log.Warn("Only users in clab_admins group can set custom owner. Using current user as owner.")
+		}
+		return nil
+	}
 }
 
 type ClabOption func(c *CLab) error

@@ -551,6 +551,8 @@ func (c *CLab) HasKind(k string) bool {
 }
 
 // addDefaultLabels adds default labels to node's config struct.
+// Update the addDefaultLabels function in clab/config.go
+// addDefaultLabels adds default labels to node's config struct.
 func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg := n.Config()
 	if cfg.Labels == nil {
@@ -565,9 +567,14 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg.Labels[labels.NodeGroup] = cfg.Group
 	cfg.Labels[labels.NodeLabDir] = cfg.LabDir
 	cfg.Labels[labels.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
-	owner := os.Getenv("SUDO_USER")
+
+	// Use custom owner if set, otherwise use current user
+	owner := c.customOwner
 	if owner == "" {
-		owner = os.Getenv("USER")
+		owner = os.Getenv("SUDO_USER")
+		if owner == "" {
+			owner = os.Getenv("USER")
+		}
 	}
 	cfg.Labels[labels.Owner] = owner
 }

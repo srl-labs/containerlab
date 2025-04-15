@@ -18,7 +18,7 @@ It is assumed, that the interconnection between the tiers is done in a full-mesh
 
 #### name
 
-With the global `--name | -n` flag a user sets the name of the lab that will be generated.
+With the global `--name` flag a user sets the name of the lab that will be generated.
 
 #### nodes
 The user configures the CLOS fabric topology by using the `--nodes` flag. The flag value is a comma separated list of CLOS tiers where each tier is defined by the number of nodes, its kind and type. Multiple `--node` flags can be specified.
@@ -42,11 +42,11 @@ For example the following value will generate a 3-tier CLOS fabric of cEOS nodes
 
 ```bash
 # cEOS fabric
-containerlab gen -n 3tier --kind ceos --nodes 4,2,1
+containerlab gen --name 3tier --kind ceos --nodes 4,2,1
 
 # since SR Linux kind is assumed by default
 # SRL fabric command is even shorter
-containerlab gen -n 3tier --nodes 4,2,1
+containerlab gen --name 3tier --nodes 4,2,1
 ```
 
 #### image
@@ -54,7 +54,7 @@ Use `--image` flag to specify the container image that should be used by a given
 
 The value of this flag follows the `kind=image` pattern. For example, to set the container image `ceos:4.32.0F` for the `ceos` kind the flag will be: `--image ceos=ceos:4.32.0F`.
 
-To set images for multiple kinds repeat the flag: `--image srl=srlinux:latest --image ceos=ceos:4.32.0F` or use the comma separated form: `--image srl=srlinux:latest,ceos=ceos:latest`
+To set images for multiple kinds repeat the flag: `--image srl=ghcr.io/nokia/srlinux:latest --image ceos=ceos:4.32.0F` or use the comma separated form: `--image srl=ghcr.io/nokia/srlinux:latest,ceos=ceos:latest`
 
 If the kind information is not provided in the `image` flag, the kind value will be taken from the `--kind` flag.
 
@@ -96,6 +96,17 @@ Default: `clab`.
 #### ipv4-subnet | ipv6-subnet
 With `--ipv4-subnet` and `ipv6-subnet` it's possible to change the address ranges of the management network. Nodes will receive IP addresses from these ranges if they are configured with DHCP.
 
+#### owner
+
+With `--owner` flag you can specify a custom owner for the lab. This value will be applied as the owner label for all nodes in the lab.
+
+This flag is designed for multi-user environments where you need to track ownership of lab resources. Only users who are members of the `clab_admins` group can set a custom owner. If a non-admin user attempts to set an owner, the flag will be ignored with a warning, and the current user will be used as the owner instead.
+
+Example:
+```bash
+containerlab generate --name 3tier --nodes 8,4,2 --owner bob --deploy
+```
+
 ### Examples
 
 #### Generate topology for a 3-tier CLOS network
@@ -105,7 +116,7 @@ Generate and deploy a lab topology for 3-tier CLOS network with 8 leafs, 4 spine
     The `srl` kind in the image and license flags can be omitted, as it is implied by default
 
 ```bash
-containerlab generate --name 3tier --image srl=srlinux:latest \
+containerlab generate --name 3tier --image srl=ghcr.io/nokia/srlinux:latest \
                       --license srl=license.key \
                       --nodes 8,4,2 --deploy
 ```

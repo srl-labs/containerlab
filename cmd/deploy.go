@@ -47,6 +47,9 @@ var deployFormat string
 // skipLabDirFileACLs skips provisioning of extended File ACLs for the Lab directory.
 var skipLabDirFileACLs bool
 
+// labOwner flag for setting the owner label
+var labOwner string
+
 // deployCmd represents the deploy command.
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
@@ -76,6 +79,8 @@ func init() {
 		"comma separated list of nodes to include")
 	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
 		"skip the lab directory extended ACLs provisioning")
+	deployCmd.Flags().StringVarP(&labOwner, "owner", "", "",
+		"lab owner name (only for users in clab_admins group)")
 }
 
 // deployFn function runs deploy sub command.
@@ -88,6 +93,11 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	defer cancel()
 
 	setupCTRLCHandler(cancel)
+
+	// Check for owner from environment (set by generate command)
+	if labOwner == "" && os.Getenv("CLAB_OWNER") != "" {
+		labOwner = os.Getenv("CLAB_OWNER")
+	}
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(common.Timeout),
@@ -107,6 +117,9 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	// process optional settings
 	if common.Name != "" {
 		opts = append(opts, clab.WithLabName(common.Name))
+	}
+	if labOwner != "" {
+		opts = append(opts, clab.WithLabOwner(labOwner))
 	}
 	if mgmtNetName != "" {
 		opts = append(opts, clab.WithManagementNetworkName(mgmtNetName))
