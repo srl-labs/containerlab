@@ -52,8 +52,7 @@ func init() {
 
 func inspectFn(_ *cobra.Command, _ []string) error {
 	if common.Name == "" && common.Topo == "" && !all {
-		fmt.Println("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
-		return nil
+		return fmt.Errorf("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
 	}
 
 	// Format validation (only relevant if --details is NOT used)
