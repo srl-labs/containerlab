@@ -97,35 +97,9 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	var containers []runtime.GenericContainer
-	var gLabels []*types.GenericFilter
-
-	if common.Topo != "" {
-		// List containers defined in the topology file
-		containers, err = c.ListNodesContainers(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to list containers based on topology: %s", err)
-		}
-	} else {
-		// List containers based on labels (--name or --all)
-		if common.Name != "" {
-			// Filter by specific lab name
-			gLabels = []*types.GenericFilter{{
-				FilterType: "label", Match: common.Name,
-				Field: labels.Containerlab, Operator: "=",
-			}}
-		} else { // --all case
-			// Filter for any containerlab container
-			gLabels = []*types.GenericFilter{{
-				FilterType: "label",
-				Field:      labels.Containerlab, Operator: "exists",
-			}}
-		}
-
-		containers, err = c.ListContainers(ctx, gLabels)
-		if err != nil {
-			return fmt.Errorf("failed to list containers based on labels: %s", err)
-		}
+	containers, err := listContainers(ctx, c)
+	if err != nil {
+		return err
 	}
 
 	// Handle empty results
@@ -182,6 +156,43 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	// Handle non-details cases (table or grouped JSON summary)
 	err = PrintContainerInspect(containers, inspectFormat)
 	return err
+}
+
+// listContainers handles listing containers based on different criteria (topology or labels)
+func listContainers(ctx context.Context, c *clab.CLab) ([]runtime.GenericContainer, error) {
+	var containers []runtime.GenericContainer
+	var err error
+	var gLabels []*types.GenericFilter
+
+	if common.Topo != "" {
+		// List containers defined in the topology file
+		containers, err = c.ListNodesContainers(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list containers based on topology: %s", err)
+		}
+	} else {
+		// List containers based on labels (--name or --all)
+		if common.Name != "" {
+			// Filter by specific lab name
+			gLabels = []*types.GenericFilter{{
+				FilterType: "label", Match: common.Name,
+				Field: labels.Containerlab, Operator: "=",
+			}}
+		} else { // --all case
+			// Filter for any containerlab container
+			gLabels = []*types.GenericFilter{{
+				FilterType: "label",
+				Field:      labels.Containerlab, Operator: "exists",
+			}}
+		}
+
+		containers, err = c.ListContainers(ctx, gLabels)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list containers based on labels: %s", err)
+		}
+	}
+
+	return containers, nil
 }
 
 func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
