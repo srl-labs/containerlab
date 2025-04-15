@@ -42,7 +42,8 @@ var InspectCmd = &cobra.Command{
 }
 
 func init() {
-	InspectCmd.Flags().BoolVarP(&details, "details", "", false, "print all details of lab containers (JSON format, grouped by lab)")
+	InspectCmd.Flags().BoolVarP(&details, "details", "", false,
+		"print all details of lab containers (JSON format, grouped by lab)")
 	InspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json]")
 	InspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
 	InspectCmd.Flags().BoolVarP(&wide, "wide", "w", false,
@@ -259,7 +260,7 @@ func getTopologyPath(p string) (string, error) {
 	return p, nil
 }
 
-// PrintContainerInspect handles non-details output (table or grouped JSON summary)
+// PrintContainerInspect handles non-details output (table or grouped JSON summary).
 func PrintContainerInspect(containers []runtime.GenericContainer, format string) error {
 	// Handle empty case for table rendering specifically
 	if len(containers) == 0 && format == "table" {
@@ -282,15 +283,27 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 
 		if all {
 			header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true, VAlign: text.VAlignMiddle})
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 2, AutoMerge: true, VAlign: text.VAlignMiddle})
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    1,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			})
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    2,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			})
 			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 3, AutoMerge: true, VAlign: text.VAlignMiddle})
+				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+					Number:    3,
+					AutoMerge: true, VAlign: text.VAlignMiddle,
+				})
 			}
 		} else {
 			header = headerBase
 			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true, VAlign: text.VAlignMiddle})
+				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+					Number:    1,
+					AutoMerge: true, VAlign: text.VAlignMiddle,
+				})
 			}
 		}
 
@@ -409,15 +422,27 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 
 		if all {
 			header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true, VAlign: text.VAlignMiddle})
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 2, AutoMerge: true, VAlign: text.VAlignMiddle})
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    1,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			})
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    2,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			})
 			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 3, AutoMerge: true, VAlign: text.VAlignMiddle})
+				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+					Number:    3,
+					AutoMerge: true, VAlign: text.VAlignMiddle,
+				})
 			}
 		} else {
 			header = headerBase
 			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{Number: 1, AutoMerge: true, VAlign: text.VAlignMiddle})
+				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+					Number:    1,
+					AutoMerge: true, VAlign: text.VAlignMiddle,
+				})
 			}
 		}
 
