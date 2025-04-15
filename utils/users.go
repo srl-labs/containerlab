@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-// IsInClabAdminsGroup checks if the current user is in the clab_admins group
+// IsInClabAdminsGroup checks if the current user is in the clab_admins group.
 func IsInClabAdminsGroup() bool {
 	// Get current user
 	currentUser, err := user.Current()

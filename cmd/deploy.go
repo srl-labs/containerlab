@@ -47,7 +47,7 @@ var deployFormat string
 // skipLabDirFileACLs skips provisioning of extended File ACLs for the Lab directory.
 var skipLabDirFileACLs bool
 
-// labOwner flag for setting the owner label
+// labOwner flag for setting the owner label.
 var labOwner string
 
 // deployCmd represents the deploy command.
