@@ -195,10 +195,8 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 	return tabData
 }
 
-// getTopologyPath calculates the relative path to the topology file from the current working directory.
-// If the path is already relative and shorter, it returns the relative path.
-// The path p is an absolute path.
-func getTopologyPath(p string) (string, error) {
+// getShortestTopologyPath calculates the relative path to the provided topology file from the current working directory and returns it if it is shorted than the absolute path p.
+func getShortestTopologyPath(p string) (string, error) {
 	if p == "" {
 		return "", nil
 	}
@@ -269,29 +267,19 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 
 	// Gather summary details of each container
 	for _, cont := range containers {
-		rawPath := cont.Labels[labels.TopoFile]
-		relPath, err := getTopologyPath(rawPath)
+		absPath := cont.Labels[labels.TopoFile]
+		shortPath, err := getShortestTopologyPath(absPath)
 		if err != nil {
-			log.Warnf("failed to get relative topology path for container %s: %v, using raw path %q", cont.Names[0], err, rawPath)
-			relPath = rawPath // Use raw path as fallback for display
-		}
-
-		// Calculate absolute path, handle potential errors
-		absPath := ""
-		if rawPath != "" {
-			absPath, err = filepath.Abs(rawPath)
-			if err != nil {
-				log.Warnf("failed to get absolute topology path for container %s: %v, using raw path %q", cont.Names[0], err, rawPath)
-				absPath = rawPath // Use raw path as fallback
-			}
+			log.Warnf("failed to get relative topology path for container %s: %v, using raw path %q", cont.Names[0], err, absPath)
+			shortPath = absPath // Use raw path as fallback for display
 		}
 
 		status := parseStatus(cont.Status)
 
 		cdet := types.ContainerDetails{
 			LabName:     cont.Labels[labels.Containerlab],
-			LabPath:     relPath, // Relative path for table view
-			AbsLabPath:  absPath, // Absolute path for JSON view
+			LabPath:     shortPath, // Relative or shortest path for table view
+			AbsLabPath:  absPath,   // Absolute path for JSON view
 			Image:       cont.Image,
 			State:       cont.State,
 			Status:      status,
@@ -338,13 +326,15 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 			// Assign the *entire* ContainerDetails struct (including AbsLabPath)
 			groupedLabs[labName] = append(groupedLabs[labName], cd)
 		}
-		// Marshal the grouped summary map
+
 		b, err := json.MarshalIndent(groupedLabs, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal grouped container summary: %v", err)
 		}
+
 		fmt.Println(string(b))
-		return nil
+
+		return err
 
 	case "table":
 		// Generate and render table using the summary data (which uses relative LabPath)
@@ -418,12 +408,6 @@ func parseStatus(status string) string {
 	}
 	// Return original status if no specific health info found
 	return status
-}
-
-// TokenFileResults helper struct (seems unused in current inspect logic, kept for completeness).
-type TokenFileResults struct {
-	File    string
-	Labname string
 }
 
 // ipWithoutPrefix removes the CIDR prefix length from an IP address string.
