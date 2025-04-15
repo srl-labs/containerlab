@@ -109,7 +109,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		} else { // Table format
 			log.Info("no containers found")
 		}
-		return err // Return after handling empty results
+		return err
 	}
 
 	// Handle --details (always produces grouped JSON output)
@@ -144,13 +144,14 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 			groupedDetails[labName] = append(groupedDetails[labName], cont)
 		}
 
-		// Marshal and print the grouped map
 		b, err := json.MarshalIndent(groupedDetails, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal grouped container details: %v", err)
 		}
+
 		fmt.Println(string(b))
-		return nil // Return after handling details
+
+		return err
 	}
 
 	// Handle non-details cases (table or grouped JSON summary)
@@ -268,61 +269,6 @@ func getTopologyPath(p string) (string, error) {
 
 // PrintContainerInspect handles non-details output (table or grouped JSON summary).
 func PrintContainerInspect(containers []runtime.GenericContainer, format string) error {
-	// Handle empty case for table rendering specifically
-	if len(containers) == 0 && format == "table" {
-		table := tableWriter.NewWriter()
-		table.SetOutputMirror(os.Stdout)
-		table.SetStyle(tableWriter.StyleRounded)
-		table.Style().Format.Header = text.FormatTitle
-		table.Style().Format.HeaderAlign = text.AlignCenter
-		table.Style().Options.SeparateRows = true
-		table.Style().Color = tableWriter.ColorOptions{Header: text.Colors{text.Bold}}
-
-		// Define base header structure
-		headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
-		if wide {
-			headerBase = slices.Insert(headerBase, 0, "Owner")
-		}
-
-		var header tableWriter.Row
-		colConfigs := []tableWriter.ColumnConfig{}
-
-		if all {
-			header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-				Number:    1,
-				AutoMerge: true, VAlign: text.VAlignMiddle,
-			})
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-				Number:    2,
-				AutoMerge: true, VAlign: text.VAlignMiddle,
-			})
-			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-					Number:    3,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				})
-			}
-		} else {
-			header = headerBase
-			if wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-					Number:    1,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				})
-			}
-		}
-
-		table.AppendHeader(header)
-		if len(colConfigs) > 0 {
-			table.SetColumnConfigs(colConfigs)
-		}
-		table.Render()
-		return nil
-	}
-	// If format is JSON and containers is empty, inspectFn already handled it.
-
-	// --- Process container details for summary view ---
 	contDetails := make([]types.ContainerDetails, 0, len(containers))
 
 	// Gather summary details of each container
