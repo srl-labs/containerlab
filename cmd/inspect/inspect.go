@@ -197,7 +197,7 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 
 // getTopologyPath calculates the relative path to the topology file from the current working directory.
 // If the path is already relative and shorter, it returns the relative path.
-// Otherwise, it returns the original path (likely absolute or not easily relativized).
+// The path p is an absolute path.
 func getTopologyPath(p string) (string, error) {
 	if p == "" {
 		return "", nil
@@ -206,24 +206,18 @@ func getTopologyPath(p string) (string, error) {
 	// get topo file path relative of the cwd
 	cwd, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("failed to get current working directory: %w", err)
+		return "", err
 	}
 
-	// Check if the path is already absolute
-	if filepath.IsAbs(p) {
-		relPath, err := filepath.Rel(cwd, p)
-		if err != nil {
-			// If relativization fails, return the original absolute path
-			return p, nil
-		}
-		// Return the shorter path (prefer relative if shorter)
-		if len(relPath) < len(p) {
-			return relPath, nil
-		}
-		return p, nil // Return absolute path if relative is not shorter
+	relPath, err := filepath.Rel(cwd, p)
+	if err != nil {
+		return "", err
 	}
 
-	// If the path is already relative, just return it
+	if len(relPath) < len(p) {
+		return relPath, nil
+	}
+
 	return p, nil
 }
 
