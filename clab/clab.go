@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -67,7 +68,13 @@ type CLab struct {
 // Only users in the clab_admins group can set a custom owner.
 func WithLabOwner(owner string) ClabOption {
 	return func(c *CLab) error {
-		if utils.IsInClabAdminsGroup() {
+		currentUser, err := user.Current()
+		if err != nil {
+			log.Warn("Failed to get current user when trying to set the custom lab owner", "error", err)
+			return nil
+		}
+
+		if isClabAdmin, err := utils.UserInUnixGroup(currentUser.Username, "clab_admins"); err == nil && isClabAdmin {
 			c.customOwner = owner
 		} else if owner != "" {
 			log.Warn("Only users in clab_admins group can set custom owner. Using current user as owner.")
