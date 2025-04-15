@@ -133,6 +133,108 @@ Inspect ${lab-name} lab using its name
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
+Inspect Lab Using JSON Format
+    [Documentation]    Verify inspect command with JSON format output using topology file.
+    # Run inspect command with JSON format
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --format json
+    ...    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Not Be Empty    ${output.stdout}
+
+    # Save JSON to a temp file for jq processing
+    Create File    /tmp/clab_output.json    ${output.stdout}
+
+    # Check the number of nodes
+    ${count_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}" | length'
+    Log    ${count_check}
+    Should Be Equal As Integers    ${count_check[0]}    0
+    Should Contain    ${count_check[1]}    3
+
+    # Check node name
+    ${name_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}"[0].name'
+    Log    ${name_check}
+    Should Be Equal As Integers    ${name_check[0]}    0
+    Should Contain    ${name_check[1]}    clab-${lab-name}-l1
+
+    # Check node kind
+    ${kind_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}"[1].kind'
+    Log    ${kind_check}
+    Should Be Equal As Integers    ${kind_check[0]}    0
+    Should Contain    ${kind_check[1]}    linux
+
+    # Skip IPv4 check for Podman
+    Skip If    '${runtime}' == 'podman'    Skipping IPv4 check for Podman
+
+    # Check IPv4 address
+    ${ip_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}"[1].ipv4_address'
+    Log    ${ip_check}
+    Should Be Equal As Integers    ${ip_check[0]}    0
+    Should Contain    ${ip_check[1]}    ${n2-ipv4}
+
+
+Inspect Lab Using Details Flag
+    [Documentation]    Verify inspect command with --details flag outputs detailed grouped JSON per lab.
+    # Run inspect command with --details flag
+    ${output}=    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --details
+    ...    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Not Be Empty    ${output.stdout}
+
+    # Save JSON to a temp file for jq processing
+    Create File    /tmp/clab_details_output.json    ${output.stdout}
+
+    # Check the key for our lab name is present and is a non-empty array
+    ${count_check}=    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}" | length'
+    Log    ${count_check}
+    Should Be Equal As Integers    ${count_check[0]}    0
+    Should Contain    ${count_check[1]}    3
+
+    # Check that containers have the expected fields in details view
+    ${field_check}=    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0] | has("Names") and has("Image") and has("State") and has("Labels")'
+    Log    ${field_check}
+    Should Be Equal As Integers    ${field_check[0]}    0
+    Should Contain    ${field_check[1]}    true
+
+    # Check that the container name matches expected pattern
+    ${name_check}=    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0].Names[0]'
+    Log    ${name_check}
+    Should Be Equal As Integers    ${name_check[0]}    0
+    Should Contain    ${name_check[1]}    clab-${lab-name}-l1
+
+    # Check that the State is "running"
+    ${state_check}=    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0].State'
+    Log    ${state_check}
+    Should Be Equal As Integers    ${state_check[0]}    0
+    Should Contain    ${state_check[1]}    running
+
+    # Check that the Labels map includes clab-node-name
+    ${label_check}=    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0].Labels["clab-node-name"]'
+    Log    ${label_check}
+    Should Be Equal As Integers    ${label_check[0]}    0
+    Should Contain    ${label_check[1]}    l1
+
+    # Check that IP addresses are present
+    ${ipv4_check}=    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[1].NetworkSettings.IPv4addr'
+    Log    ${ipv4_check}
+    Should Be Equal As Integers    ${ipv4_check[0]}    0
+    Should Contain    ${ipv4_check[1]}    172.20.20.100
+
 Define runtime exec command
     IF    "${runtime}" == "podman"
         Set Suite Variable    ${runtime-cli-exec-cmd}    sudo podman exec
