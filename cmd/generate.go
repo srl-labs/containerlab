@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 
@@ -103,6 +104,13 @@ var generateCmd = &cobra.Command{
 				}
 			}
 			common.Topo = file
+
+			// Pass owner to deploy command if specified
+			if labOwner != "" {
+				// This will be picked up by the deploy command
+				os.Setenv("CLAB_OWNER", labOwner)
+			}
+
 			return deployCmd.RunE(deployCmd, nil)
 		}
 		if file == "" {
@@ -148,6 +156,9 @@ func init() {
 		"deploy a fabric based on the generated topology file")
 	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers creating nodes and virtual wires")
+	// Add the owner flag to generate command
+	generateCmd.Flags().StringVarP(&labOwner, "owner", "", "",
+		"lab owner name (only for users in clab_admins group)")
 }
 
 func generateTopologyConfig(name, network, ipv4range, ipv6range string,

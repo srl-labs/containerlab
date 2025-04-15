@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -59,6 +60,27 @@ type CLab struct {
 	// checkBindsPaths toggle enables or disables binds paths checks
 	// when set to true, bind sources are verified to exist on the host.
 	checkBindsPaths bool
+	// customOwner is the user-specified owner label for the lab
+	customOwner string
+}
+
+// WithLabOwner sets the owner label for all nodes in the lab.
+// Only users in the clab_admins group can set a custom owner.
+func WithLabOwner(owner string) ClabOption {
+	return func(c *CLab) error {
+		currentUser, err := user.Current()
+		if err != nil {
+			log.Warn("Failed to get current user when trying to set the custom lab owner", "error", err)
+			return nil
+		}
+
+		if isClabAdmin, err := utils.UserInUnixGroup(currentUser.Username, "clab_admins"); err == nil && isClabAdmin {
+			c.customOwner = owner
+		} else if owner != "" {
+			log.Warn("Only users in clab_admins group can set custom owner. Using current user as owner.")
+		}
+		return nil
+	}
 }
 
 type ClabOption func(c *CLab) error

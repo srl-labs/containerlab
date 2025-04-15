@@ -143,6 +143,17 @@ The extended File ACLs are provisioned for the lab directory by default, unless 
 
 While this is useful in most cases, sometimes extended File ACLs might prevent your lab from working, especially when your lab directory end up being mounted from the network filesystem (NFS, CIFS, etc.). In such cases, you can use this flag to skip the ACL provisioning.
 
+#### owner
+
+The local `--owner` flag allows you to specify a custom owner for the lab. This value will be applied as the owner label for all nodes in the lab.
+
+This flag is designed for multi-user environments where you need to track ownership of lab resources. Only users who are members of the `clab_admins` group can set a custom owner. If a non-admin user attempts to set an owner, the flag will be ignored with a warning, and the current user will be used as the owner instead.
+
+Example:
+```bash
+containerlab deploy -t mylab.clab.yml --owner alice
+```
+
 ### Environment variables
 
 #### `CLAB_RUNTIME`
