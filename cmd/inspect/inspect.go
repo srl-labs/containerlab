@@ -130,13 +130,10 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 	// Handle empty results
 	if len(containers) == 0 {
-		if inspectFormat == "json" { // Handles both details and non-details JSON
-			// Print an empty JSON object for consistency with grouped output
+		if inspectFormat == "json" {
 			fmt.Println("{}")
 		} else { // Table format
 			log.Info("no containers found")
-			// Let PrintContainerInspect render an empty table structure
-			err = PrintContainerInspect(containers, inspectFormat)
 		}
 		return err // Return after handling empty results
 	}
