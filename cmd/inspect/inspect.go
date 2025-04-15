@@ -167,29 +167,26 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 		tabRow := tableWriter.Row{}
 
 		if all {
-			tabRow = append(tabRow, d.LabPath, d.LabName) // Use relative LabPath for table
+			tabRow = append(tabRow, d.LabPath, d.LabName)
 		}
 
 		if wide {
-			tabRow = append(tabRow, d.Owner) // Append the actual owner value consistently
+			tabRow = append(tabRow, d.Owner)
 		}
 
-		// Status formatting
-		statusDisplay := d.Status
-		if !strings.Contains(statusDisplay, "health") {
-			statusDisplay = ""
+		// we do not want to print status other than health in the table view
+		if !strings.Contains(d.Status, "health") {
+			d.Status = ""
 		} else {
-			if statusDisplay != "" {
-				statusDisplay = fmt.Sprintf("(%s)", statusDisplay)
-			}
+			d.Status = fmt.Sprintf("(%s)", d.Status)
 		}
 
 		// Common fields
 		tabRow = append(tabRow,
 			d.Name,
-			fmt.Sprintf("%s\n%s", d.Kind, d.Image), // Combine Kind and Image
-			strings.TrimSpace(fmt.Sprintf("%s\n%s", d.State, statusDisplay)), // Combine State and formatted Status
-			fmt.Sprintf("%s\n%s", // Combine IPv4 and IPv6
+			fmt.Sprintf("%s\n%s", d.Kind, d.Image),
+			fmt.Sprintf("%s\n%s", d.State, d.Status),
+			fmt.Sprintf("%s\n%s",
 				ipWithoutPrefix(d.IPv4Address),
 				ipWithoutPrefix(d.IPv6Address)))
 
