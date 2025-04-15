@@ -191,62 +191,33 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0, len(contDetails))
 
-	// Track first entry per lab for --all output formatting
-	firstInLab := make(map[string]bool)
-
 	for i := range contDetails {
 		d := &contDetails[i]
-
 		tabRow := tableWriter.Row{}
 
-		// For --all, only print Topo Path and Lab Name for the first node of each lab
 		if all {
-			if _, seen := firstInLab[d.LabName]; !seen {
-				firstInLab[d.LabName] = true
-				tabRow = append(tabRow, d.LabPath, d.LabName) // Use relative LabPath for table
-			} else {
-				tabRow = append(tabRow, "", "") // Empty cells for subsequent nodes in the same lab
-			}
+			tabRow = append(tabRow, d.LabPath, d.LabName) // Use relative LabPath for table
 		}
 
-		// Display more columns if --wide is used
 		if wide {
-			// For --all, only print Owner for the first node of each lab
-			// Need to re-check if it's the first entry for the owner column specifically
-			// Re-initialize the map for this check within the loop scope might be safer if order changes
-			firstOwnerInLabCheck := make(map[string]bool)
-			for _, det := range contDetails {
-				if _, seen := firstOwnerInLabCheck[det.LabName]; !seen {
-					firstOwnerInLabCheck[det.LabName] = true
-				}
-			}
-
-			if all {
-				if firstOwnerInLabCheck[d.LabName] {
-					tabRow = append(tabRow, d.Owner)
-					// No need to mark false here as the outer loop handles the row logic,
-					// and the check map is rebuilt anyway.
-				} else {
-					tabRow = append(tabRow, "")
-				}
-
-			} else { // Not --all, print owner for every node if --wide
-				tabRow = append(tabRow, d.Owner)
-			}
+			tabRow = append(tabRow, d.Owner) // Append the actual owner value consistently
 		}
 
-		// we do not want to print status other than health in the table view
-		statusDisplay := d.Status // Use a temp var for display formatting
+		// Status formatting
+		statusDisplay := d.Status
 		if !strings.Contains(statusDisplay, "health") {
 			statusDisplay = ""
 		} else {
-			statusDisplay = fmt.Sprintf("(%s)", statusDisplay)
+			if statusDisplay != "" {
+				statusDisplay = fmt.Sprintf("(%s)", statusDisplay)
+			}
 		}
+
 		// Common fields
 		tabRow = append(tabRow,
 			d.Name,
 			fmt.Sprintf("%s\n%s", d.Kind, d.Image), // Combine Kind and Image
-			fmt.Sprintf("%s\n%s", d.State, statusDisplay), // Combine State and formatted Status
+			strings.TrimSpace(fmt.Sprintf("%s\n%s", d.State, statusDisplay)), // Combine State and formatted Status
 			fmt.Sprintf("%s\n%s", // Combine IPv4 and IPv6
 				ipWithoutPrefix(d.IPv4Address),
 				ipWithoutPrefix(d.IPv6Address)))
