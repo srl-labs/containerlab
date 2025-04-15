@@ -89,9 +89,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
-		// do not wrap error message to avoid printing it twice
-		// when it originates from the topo parsing part
-		return err //nolint:wrapcheck
+		return err
 	}
 
 	err = c.CheckConnectivity(ctx)
@@ -100,7 +98,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	}
 
 	var containers []runtime.GenericContainer
-	var glabels []*types.GenericFilter
+	var gLabels []*types.GenericFilter
 
 	if common.Topo != "" {
 		// List containers defined in the topology file
@@ -112,19 +110,19 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		// List containers based on labels (--name or --all)
 		if common.Name != "" {
 			// Filter by specific lab name
-			glabels = []*types.GenericFilter{{
+			gLabels = []*types.GenericFilter{{
 				FilterType: "label", Match: common.Name,
 				Field: labels.Containerlab, Operator: "=",
 			}}
 		} else { // --all case
 			// Filter for any containerlab container
-			glabels = []*types.GenericFilter{{
+			gLabels = []*types.GenericFilter{{
 				FilterType: "label",
 				Field:      labels.Containerlab, Operator: "exists",
 			}}
 		}
 
-		containers, err = c.ListContainers(ctx, glabels)
+		containers, err = c.ListContainers(ctx, gLabels)
 		if err != nil {
 			return fmt.Errorf("failed to list containers based on labels: %s", err)
 		}
