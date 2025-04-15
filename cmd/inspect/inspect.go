@@ -114,44 +114,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 	// Handle --details (always produces grouped JSON output)
 	if details {
-		groupedDetails := make(map[string][]runtime.GenericContainer)
-		// Sort containers first by lab name, then by container name for consistent output
-		sort.Slice(containers, func(i, j int) bool {
-			labNameI := containers[i].Labels[labels.Containerlab]
-			labNameJ := containers[j].Labels[labels.Containerlab]
-			if labNameI == labNameJ {
-				// Use the first name if available
-				nameI := ""
-				if len(containers[i].Names) > 0 {
-					nameI = containers[i].Names[0]
-				}
-				nameJ := ""
-				if len(containers[j].Names) > 0 {
-					nameJ = containers[j].Names[0]
-				}
-				return nameI < nameJ
-			}
-			return labNameI < labNameJ
-		})
-
-		// Group the sorted containers
-		for _, cont := range containers {
-			labName := cont.Labels[labels.Containerlab]
-			// Ensure labName exists, default to a placeholder if missing (shouldn't happen with filters)
-			if labName == "" {
-				labName = "_unknown_lab_"
-			}
-			groupedDetails[labName] = append(groupedDetails[labName], cont)
-		}
-
-		b, err := json.MarshalIndent(groupedDetails, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal grouped container details: %v", err)
-		}
-
-		fmt.Println(string(b))
-
-		return err
+		return printContainerDetailsJSON(containers)
 	}
 
 	// Handle non-details cases (table or grouped JSON summary)
@@ -159,7 +122,7 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	return err
 }
 
-// listContainers handles listing containers based on different criteria (topology or labels)
+// listContainers handles listing containers based on different criteria (topology or labels).
 func listContainers(ctx context.Context, c *clab.CLab) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
 	var err error
@@ -265,6 +228,48 @@ func getTopologyPath(p string) (string, error) {
 
 	// If the path is already relative, just return it
 	return p, nil
+}
+
+// printContainerDetailsJSON handles the detailed JSON output of containers grouped by lab name.
+func printContainerDetailsJSON(containers []runtime.GenericContainer) error {
+	groupedDetails := make(map[string][]runtime.GenericContainer)
+	// Sort containers first by lab name, then by container name for consistent output
+	sort.Slice(containers, func(i, j int) bool {
+		labNameI := containers[i].Labels[labels.Containerlab]
+		labNameJ := containers[j].Labels[labels.Containerlab]
+		if labNameI == labNameJ {
+			// Use the first name if available
+			nameI := ""
+			if len(containers[i].Names) > 0 {
+				nameI = containers[i].Names[0]
+			}
+			nameJ := ""
+			if len(containers[j].Names) > 0 {
+				nameJ = containers[j].Names[0]
+			}
+			return nameI < nameJ
+		}
+		return labNameI < labNameJ
+	})
+
+	// Group the sorted containers
+	for _, cont := range containers {
+		labName := cont.Labels[labels.Containerlab]
+		// Ensure labName exists, default to a placeholder if missing (shouldn't happen with filters)
+		if labName == "" {
+			labName = "_unknown_lab_"
+		}
+		groupedDetails[labName] = append(groupedDetails[labName], cont)
+	}
+
+	b, err := json.MarshalIndent(groupedDetails, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal grouped container details: %v", err)
+	}
+
+	fmt.Println(string(b))
+
+	return nil
 }
 
 // PrintContainerInspect handles non-details output (table or grouped JSON summary).
