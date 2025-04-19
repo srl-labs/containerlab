@@ -319,15 +319,11 @@ var sshxListCmd = &cobra.Command{
 
 		// Populate listItems
 		for _, c := range containers {
-			name := c.Names[0]
-			if strings.HasPrefix(name, "/") {
-				name = name[1:] // Remove leading slash
-			}
+			name := strings.TrimPrefix(c.Names[0], "/")
 
-			// Infer network name from container name
-			network := "unknown"
-			if strings.HasPrefix(name, "sshx-") {
-				network = strings.TrimPrefix(name, "sshx-")
+			network := c.NetworkName
+			if network == "" {
+				network = "unknown"
 			}
 
 			// Try to get the SSHX link if container is running
