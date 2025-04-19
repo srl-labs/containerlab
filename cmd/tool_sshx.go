@@ -29,7 +29,6 @@ var (
 	sshxContainerName string
 	sshxEnableReaders bool
 	sshxImage         string
-	sshxNetworkID     string
 	outputFormat      string
 )
 
@@ -52,7 +51,6 @@ func init() {
 
 	// Attach command flags
 	sshxAttachCmd.Flags().StringVarP(&sshxNetworkName, "network", "n", "clab", "name of the network to attach SSHX container to")
-	sshxAttachCmd.Flags().StringVarP(&sshxNetworkID, "network-id", "", "", "ID of the network to attach SSHX container to (takes precedence over network name)")
 	sshxAttachCmd.Flags().StringVarP(&sshxContainerName, "name", "", "", "name of the SSHX container (defaults to sshx-<network>)")
 	sshxAttachCmd.Flags().BoolVarP(&sshxEnableReaders, "enable-readers", "w", false, "enable read-only access links")
 	sshxAttachCmd.Flags().StringVarP(&sshxImage, "image", "i", "ghcr.io/srl-labs/network-multitool", "container image to use for SSHX")
