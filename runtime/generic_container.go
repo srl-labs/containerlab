@@ -19,6 +19,7 @@ type GenericContainer struct {
 	Status          string
 	Labels          map[string]string
 	Pid             int
+	NetworkName     string
 	NetworkSettings GenericMgmtIPs
 	Mounts          []ContainerMount
 	runtime         ContainerRuntime
