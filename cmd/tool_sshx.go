@@ -6,13 +6,15 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/exec"
@@ -27,8 +29,18 @@ var (
 	sshxContainerName string
 	sshxEnableReaders bool
 	sshxImage         string
-	sshxNetworkID     string // Added to store the full network ID
+	sshxNetworkID     string
+	outputFormat      string
 )
+
+// Struct ONLY for list JSON output
+type SSHXListItem struct {
+	Name        string `json:"name"`
+	Network     string `json:"network"`
+	State       string `json:"state"`
+	IPv4Address string `json:"ipv4_address"`
+	Link        string `json:"link"`
+}
 
 func init() {
 	toolsCmd.AddCommand(sshxCmd)
@@ -36,11 +48,13 @@ func init() {
 	sshxCmd.AddCommand(sshxDetachCmd)
 	sshxCmd.AddCommand(sshxListCmd)
 
+	sshxCmd.PersistentFlags().StringVarP(&outputFormat, "format", "f", "table", "output format for 'list' command (table, json)")
+
 	// Attach command flags
 	sshxAttachCmd.Flags().StringVarP(&sshxNetworkName, "network", "n", "clab", "name of the network to attach SSHX container to")
 	sshxAttachCmd.Flags().StringVarP(&sshxNetworkID, "network-id", "", "", "ID of the network to attach SSHX container to (takes precedence over network name)")
 	sshxAttachCmd.Flags().StringVarP(&sshxContainerName, "name", "", "", "name of the SSHX container (defaults to sshx-<network>)")
-	sshxAttachCmd.Flags().BoolVarP(&sshxEnableReaders, "enable-readers", "o", true, "enable read-only access links")
+	sshxAttachCmd.Flags().BoolVarP(&sshxEnableReaders, "enable-readers", "w", false, "enable read-only access links")
 	sshxAttachCmd.Flags().StringVarP(&sshxImage, "image", "i", "ghcr.io/srl-labs/network-multitool", "container image to use for SSHX")
 
 	// Detach command flags
@@ -53,6 +67,12 @@ var sshxCmd = &cobra.Command{
 	Use:   "sshx",
 	Short: "SSHX terminal sharing operations",
 	Long:  "Attach or detach SSHX terminal sharing containers to lab networks",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if cmd.Name() == "list" && outputFormat != "table" && outputFormat != "json" {
+			return fmt.Errorf("invalid output format: %s. Must be 'table' or 'json'", outputFormat)
+		}
+		return nil
+	},
 }
 
 // SSHXNode implements runtime.Node interface for SSHX containers
@@ -60,6 +80,7 @@ type SSHXNode struct {
 	config *types.NodeConfig
 }
 
+// NewSSHXNode
 func NewSSHXNode(name, image, network string, enableReaders bool) *SSHXNode {
 	log.Debugf("Creating SSHXNode config: name=%s, image=%s, network=%s, enableReaders=%t", name, image, network, enableReaders)
 
@@ -68,26 +89,24 @@ func NewSSHXNode(name, image, network string, enableReaders bool) *SSHXNode {
 		enableReadersFlag = "--enable-readers"
 	}
 
-	sshxCmdStr := fmt.Sprintf(
-		`ash -c "curl -sSf https://sshx.io/get | sh > /dev/null ; sshx -q %s > /tmp/sshx & while [ ! -s /tmp/sshx ]; do sleep 1; done && cat /tmp/sshx"`,
+	sshxScript := fmt.Sprintf(
+		`curl -sSf https://sshx.io/get | sh > /dev/null ; sshx -q %s > /tmp/sshx & while [ ! -s /tmp/sshx ]; do sleep 1; done && cat /tmp/sshx ; sleep infinity`,
 		enableReadersFlag,
 	)
 
-	// Create labels that match containerlab's format
 	labels := map[string]string{
 		"containerlab":   "sshx-tool",
 		"clab-node-name": name,
 		"tool-type":      "sshx",
 	}
 
-	// Create node config
 	nodeConfig := &types.NodeConfig{
 		LongName:   name,
 		ShortName:  name,
 		Image:      image,
-		Entrypoint: "ash",
-		Cmd:        "-c " + sshxCmdStr,
-		MgmtNet:    network, // The network reference
+		Entrypoint: "",
+		Cmd:        "ash -c '" + sshxScript + "'",
+		MgmtNet:    network,
 		Labels:     labels,
 	}
 
@@ -104,6 +123,7 @@ func (n *SSHXNode) GetEndpoints() []links.Endpoint {
 	return nil
 }
 
+// sshxAttachCmd
 var sshxAttachCmd = &cobra.Command{
 	Use:     "attach",
 	Short:   "attach SSHX terminal sharing to a lab network",
@@ -112,28 +132,22 @@ var sshxAttachCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Add some logging for flags
 		log.Debugf("sshx attach called with flags: networkName='%s', containerName='%s', enableReaders=%t, image='%s'",
 			sshxNetworkName, sshxContainerName, sshxEnableReaders, sshxImage)
 
-		// Generate the container name if not specified
 		if sshxContainerName == "" {
 			netName := sshxNetworkName
-			// Strip "clab-" prefix if present for cleaner container naming
 			netName = strings.Replace(netName, "clab-", "", 1)
 			sshxContainerName = fmt.Sprintf("sshx-%s", netName)
 			log.Debugf("Container name not provided, generated name: %s", sshxContainerName)
 		}
 
-		// Initialize the runtime, **passing the network name**
-		// rt, err := initRuntime() // Old call
-		rt, err := initRuntime(sshxNetworkName) // ** New call **
+		rt, err := initRuntime(sshxNetworkName)
 		if err != nil {
 			return err
 		}
 		log.Debugf("Runtime initialized: %s", rt.GetName())
 
-		// Check if container already exists
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "name",
@@ -149,26 +163,22 @@ var sshxAttachCmd = &cobra.Command{
 			return fmt.Errorf("container %s already exists", sshxContainerName)
 		}
 
-		log.Infof("Using network name '%s'", sshxNetworkName)                                       // Added log
-		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, sshxNetworkName) // Added quotes
+		log.Infof("Using network name '%s'", sshxNetworkName)
+		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, sshxNetworkName)
 
-		// Create a proper Node implementation for SSHX
 		log.Debugf("Creating SSHXNode config: name=%s, image=%s, network=%s, enableReaders=%t",
-			sshxContainerName, sshxImage, sshxNetworkName, sshxEnableReaders) // Added log
+			sshxContainerName, sshxImage, sshxNetworkName, sshxEnableReaders)
 		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, sshxNetworkName, sshxEnableReaders)
 
-		// Create the container
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
 			return fmt.Errorf("failed to create SSHX container: %w", err)
 		}
 		log.Debugf("Container %s created with ID: %s", sshxContainerName, id)
 
-		// Start the container
 		_, err = rt.StartContainer(ctx, id, sshxNode)
 		if err != nil {
-			// Attempt to clean up the created container if start fails
-			log.Debugf("Removing container due to start error: %s", sshxContainerName) // Added log
+			log.Debugf("Removing container due to start error: %s", sshxContainerName)
 			delErr := rt.DeleteContainer(ctx, sshxContainerName)
 			if delErr != nil {
 				log.Warnf("Failed to clean up container %s after start error: %v", sshxContainerName, delErr)
@@ -180,7 +190,6 @@ var sshxAttachCmd = &cobra.Command{
 		log.Infof("SSHX container %s started. Waiting for SSHX link...", sshxContainerName)
 		time.Sleep(5 * time.Second)
 
-		// Try to retrieve the link
 		execCmd, err := exec.NewExecCmdFromString("cat /tmp/sshx")
 		if err != nil {
 			return fmt.Errorf("failed to create exec command: %w", err)
@@ -190,7 +199,7 @@ var sshxAttachCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println("SSHX container started but failed to retrieve the link.")
 			fmt.Printf("Check the container logs: docker logs %s\n", sshxContainerName)
-			return nil
+			return nil // Don't return error, just inform user
 		}
 
 		if execResult.GetReturnCode() == 0 {
@@ -199,7 +208,6 @@ var sshxAttachCmd = &cobra.Command{
 				fmt.Println("SSHX link for collaborative terminal access:")
 				fmt.Println(sshxLink)
 
-				// Parse and display reader link if enabled
 				if sshxEnableReaders {
 					parts := strings.Split(sshxLink, "#")
 					if len(parts) > 1 {
@@ -221,6 +229,7 @@ var sshxAttachCmd = &cobra.Command{
 	},
 }
 
+// sshxDetachCmd
 var sshxDetachCmd = &cobra.Command{
 	Use:     "detach",
 	Short:   "detach SSHX terminal sharing from a lab network",
@@ -229,21 +238,17 @@ var sshxDetachCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Generate the container name if not specified
 		if sshxContainerName == "" {
 			netName := sshxNetworkName
 			netName = strings.Replace(netName, "clab-", "", 1)
 			sshxContainerName = fmt.Sprintf("sshx-%s", netName)
 		}
 
-		// Initialize the runtime, **passing the network name**
-		// rt, err := initRuntime() // Old call
-		rt, err := initRuntime(sshxNetworkName) // ** Updated call **
+		rt, err := initRuntime(sshxNetworkName)
 		if err != nil {
 			return err
 		}
 
-		// Check if container exists
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "name",
@@ -262,7 +267,6 @@ var sshxDetachCmd = &cobra.Command{
 
 		log.Infof("Removing SSHX container %s", sshxContainerName)
 
-		// Delete the container
 		err = rt.DeleteContainer(ctx, sshxContainerName)
 		if err != nil {
 			return fmt.Errorf("failed to remove SSHX container: %w", err)
@@ -273,6 +277,7 @@ var sshxDetachCmd = &cobra.Command{
 	},
 }
 
+// sshxListCmd
 var sshxListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list active SSHX containers",
@@ -280,16 +285,11 @@ var sshxListCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Initialize the runtime, **passing the network name**
-		// The network name isn't strictly required for listing by label,
-		// but we pass it for consistency with the updated function signature.
-		// rt, err := initRuntime() // Old call
-		rt, err := initRuntime(sshxNetworkName) // ** Updated call **
+		rt, err := initRuntime(sshxNetworkName) // Pass default or an empty string if preferred
 		if err != nil {
 			return err
 		}
 
-		// Filter for SSHX containers using the label
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
@@ -304,24 +304,28 @@ var sshxListCmd = &cobra.Command{
 			return fmt.Errorf("failed to list containers: %w", err)
 		}
 
+		// Prepare data structure for both outputs
+		var listItems []SSHXListItem
+
 		if len(containers) == 0 {
-			fmt.Println("No active SSHX containers found")
+			if outputFormat == "json" {
+				// Output empty JSON array
+				fmt.Println("[]")
+			} else {
+				fmt.Println("No active SSHX containers found")
+			}
 			return nil
 		}
 
-		// Create a table writer
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)
-		fmt.Fprintln(w, "NAME\tNETWORK\tSTATUS\tIPv4 ADDRESS\tLINK")
-
+		// Populate listItems
 		for _, c := range containers {
 			name := c.Names[0]
 			if strings.HasPrefix(name, "/") {
-				name = name[1:] // Remove leading slash if present
+				name = name[1:] // Remove leading slash
 			}
 
-			// Get network name - this would be in a label or we can infer from container name
+			// Infer network name from container name
 			network := "unknown"
-			// If container name follows sshx-<network> pattern, extract network
 			if strings.HasPrefix(name, "sshx-") {
 				network = strings.TrimPrefix(name, "sshx-")
 			}
@@ -329,36 +333,77 @@ var sshxListCmd = &cobra.Command{
 			// Try to get the SSHX link if container is running
 			link := "N/A"
 			if c.State == "running" {
-				execCmd, err := exec.NewExecCmdFromString("cat /tmp/sshx")
-				if err == nil {
-					execResult, err := rt.Exec(ctx, name, execCmd)
+				execCmd, cmdErr := exec.NewExecCmdFromString("cat /tmp/sshx")
+				if cmdErr == nil {
+					execResult, execErr := rt.Exec(ctx, name, execCmd)
 					// Check both errors and return code
-					if err == nil && execResult != nil && execResult.GetReturnCode() == 0 {
-						link = strings.TrimSpace(execResult.GetStdOutString())
-					} else if err != nil {
-						log.Debugf("Error executing 'cat /tmp/sshx' in %s: %v", name, err)
-					} else if execResult != nil {
+					if execErr == nil && execResult != nil && execResult.GetReturnCode() == 0 {
+						linkContent := strings.TrimSpace(execResult.GetStdOutString())
+						if strings.Contains(linkContent, "https://sshx.io/") {
+							link = linkContent
+						} else {
+							// File exists but content is invalid or empty
+							link = "Error: Invalid link content"
+							log.Debugf("Invalid content in /tmp/sshx for %s: %s", name, linkContent)
+						}
+					} else if execErr != nil {
+						log.Debugf("Error executing 'cat /tmp/sshx' in %s: %v", name, execErr)
+						link = "Error: Failed to exec"
+					} else if execResult != nil { // execErr is nil, but return code != 0
 						log.Debugf("'cat /tmp/sshx' in %s exited with code %d", name, execResult.GetReturnCode())
+						link = "Error: Link file not found/ready"
 					}
 				} else {
-					log.Debugf("Error creating exec command for %s: %v", name, err)
+					log.Debugf("Error creating exec command for %s: %v", name, cmdErr)
+					link = "Error: Failed to create exec cmd"
 				}
 			}
 
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
-				name,
-				network,
-				c.State,
-				c.NetworkSettings.IPv4addr, // Assuming this gets populated correctly by ListContainers now
-				link,
-			)
+			listItems = append(listItems, SSHXListItem{
+				Name:        name,
+				Network:     network,
+				State:       c.State,
+				IPv4Address: c.NetworkSettings.IPv4addr,
+				Link:        link,
+			})
 		}
-		w.Flush()
+
+		// Output based on format
+		if outputFormat == "json" {
+			b, err := json.MarshalIndent(listItems, "", "  ")
+			if err != nil {
+				return fmt.Errorf("failed to marshal list output to JSON: %w", err)
+			}
+			fmt.Println(string(b))
+		} else {
+			// Use go-pretty table
+			t := table.NewWriter()
+			t.SetOutputMirror(os.Stdout)
+			t.SetStyle(table.StyleRounded) // Or StyleDefault, StyleLight, etc.
+			t.Style().Format.Header = text.FormatTitle
+			t.Style().Options.SeparateRows = true // Add lines between rows
+
+			t.AppendHeader(table.Row{"NAME", "NETWORK", "STATUS", "IPv4 ADDRESS", "LINK"})
+
+			rows := []table.Row{}
+			for _, item := range listItems {
+				rows = append(rows, table.Row{
+					item.Name,
+					item.Network,
+					item.State,
+					item.IPv4Address,
+					item.Link,
+				})
+			}
+			t.AppendRows(rows)
+			t.Render()
+		}
+
 		return nil
 	},
 }
 
-// initRuntime initializes the container runtime specified by the user
+// initRuntime
 func initRuntime(networkName string) (runtime.ContainerRuntime, error) {
 	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 	if err != nil {
@@ -367,7 +412,6 @@ func initRuntime(networkName string) (runtime.ContainerRuntime, error) {
 
 	rt := rinit()
 
-	// Create a minimal MgmtNet struct for the tool context
 	mgmtNet := &types.MgmtNet{
 		Network: networkName,
 	}
@@ -379,7 +423,6 @@ func initRuntime(networkName string) (runtime.ContainerRuntime, error) {
 				Timeout: common.Timeout,
 			},
 		),
-		// Pass the management network config using WithMgmtNet
 		runtime.WithMgmtNet(mgmtNet),
 	)
 	if err != nil {
