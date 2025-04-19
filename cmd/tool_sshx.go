@@ -2,14 +2,20 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/charmbracelet/log"
 
-	containertypes "github.com/docker/docker/api/types/container"
+	// Correct imports needed:
+	// Still needed for Container type in list result
+	containertypes "github.com/docker/docker/api/types/container" // Alias for container specific types
+	"github.com/docker/docker/api/types/filters"
 	imagetypes "github.com/docker/docker/api/types/image"
 	networktypes "github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -22,10 +28,13 @@ const (
 	sshxContainerImage    = "ghcr.io/srl-labs/network-multitool:latest"
 	sshxContainerBaseName = "clab-sshx"
 	sshxOutputFile        = "/tmp/sshx_url"
+	sshxLabel             = "containerlab-sshx"
+	sshxNetworkLabel      = "containerlab-sshx-network"
 )
 
 var (
 	sshxNetwork string
+	listFormat  string
 )
 
 // sshxCmd represents the base command for sshx tooling.
@@ -54,9 +63,17 @@ var sshxDetachCmd = &cobra.Command{
 	`,
 }
 
+// sshxListCmd Added command definition
+var sshxListCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List running sshx containers managed by this tool",
+	RunE:  sshxListRunE,
+	Long: `Lists sshx containers created by the 'sshx attach' command.
+Supports table (default) and json output formats.`,
+}
+
 // generateSshxContainerName creates a predictable name for the sshx container.
 func generateSshxContainerName(networkName string) string {
-	// Sanitize network name slightly for use in container name
 	safeNetworkName := strings.ReplaceAll(networkName, "/", "-")
 	safeNetworkName = strings.ReplaceAll(safeNetworkName, "_", "-")
 	return fmt.Sprintf("%s-%s", sshxContainerBaseName, safeNetworkName)
@@ -77,7 +94,6 @@ func sshxAttachRunE(_ *cobra.Command, _ []string) error {
 
 	contName := generateSshxContainerName(sshxNetwork)
 
-	// Check if container already exists
 	_, err = cli.ContainerInspect(ctx, contName)
 	if err == nil {
 		log.Warnf("Container '%s' already exists. Use 'detach' first if you want to recreate it.", contName)
@@ -87,7 +103,6 @@ func sshxAttachRunE(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to inspect container '%s': %w", contName, err)
 	}
 
-	// Ensure image is available locally
 	log.Debugf("Pulling image %s...", sshxContainerImage)
 	reader, err := cli.ImagePull(ctx, sshxContainerImage, imagetypes.PullOptions{})
 	if err != nil {
@@ -98,7 +113,6 @@ func sshxAttachRunE(_ *cobra.Command, _ []string) error {
 		log.Debugf("Image %s pulled or already present.", sshxContainerImage)
 	}
 
-	// Command to run inside the container
 	cmd := []string{
 		"sh", "-c",
 		fmt.Sprintf(`echo 'Installing sshx...' && curl -sSf https://sshx.io/get | sh > /dev/null && echo 'Starting sshx...' && sshx -q --enable-readers > %s & \
@@ -106,19 +120,24 @@ func sshxAttachRunE(_ *cobra.Command, _ []string) error {
 			sshxOutputFile, sshxOutputFile, sshxOutputFile),
 	}
 
+	containerLabels := map[string]string{
+		sshxLabel:        "true",
+		sshxNetworkLabel: sshxNetwork,
+	}
+
 	log.Debugf("Creating container '%s' with image '%s' on network '%s'", contName, sshxContainerImage, sshxNetwork)
-	// Use containertypes and networktypes
 	resp, err := cli.ContainerCreate(ctx,
 		&containertypes.Config{
-			Image: sshxContainerImage,
-			Cmd:   cmd,
-			Tty:   false,
+			Image:  sshxContainerImage,
+			Cmd:    cmd,
+			Tty:    false,
+			Labels: containerLabels,
 		},
 		&containertypes.HostConfig{
 			NetworkMode: containertypes.NetworkMode(sshxNetwork),
 			AutoRemove:  false,
 		},
-		&networktypes.NetworkingConfig{}, nil, // Platform is nil
+		&networktypes.NetworkingConfig{}, nil,
 		contName)
 	if err != nil {
 		if strings.Contains(err.Error(), "network not found") {
@@ -129,16 +148,14 @@ func sshxAttachRunE(_ *cobra.Command, _ []string) error {
 
 	log.Debugf("Starting container '%s' (%s)...", contName, resp.ID)
 	if err := cli.ContainerStart(ctx, resp.ID, containertypes.StartOptions{}); err != nil {
-		// Use containertypes.RemoveOptions from api/types/container
 		_ = cli.ContainerRemove(context.Background(), resp.ID, containertypes.RemoveOptions{Force: true})
 		return fmt.Errorf("failed to start container '%s': %w", contName, err)
 	}
 
 	log.Infof("Container '%s' started. Waiting for sshx URL...", contName)
 
-	time.Sleep(5 * time.Second) // Give sshx some time to start
+	time.Sleep(5 * time.Second)
 
-	// Use containertypes.LogsOptions from api/types/container
 	logOpts := containertypes.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -148,36 +165,33 @@ func sshxAttachRunE(_ *cobra.Command, _ []string) error {
 	logReader, err := cli.ContainerLogs(ctx, resp.ID, logOpts)
 	if err != nil {
 		log.Warnf("Failed to get logs for container '%s': %v. Check logs manually using 'docker logs %s'", contName, err, contName)
-		return nil
-	}
-	defer logReader.Close()
-
-	logOutput, err := io.ReadAll(logReader)
-	if err != nil {
-		log.Warnf("Failed to read logs for container '%s': %v. Check logs manually using 'docker logs %s'", contName, err, contName)
-		return nil
-	}
-
-	// Try to find the URL in the logs
-	logLines := strings.Split(string(logOutput), "\n")
-	urlFound := false
-	fmt.Println("--- SSHX Access ---")
-	for i := len(logLines) - 1; i >= 0; i-- {
-		line := logLines[i]
-		if len(line) > 8 && (line[0] == 0x01 || line[0] == 0x02) {
-			line = line[8:]
+	} else {
+		defer logReader.Close()
+		logOutput, err := io.ReadAll(logReader)
+		if err != nil {
+			log.Warnf("Failed to read logs for container '%s': %v. Check logs manually using 'docker logs %s'", contName, err, contName)
+		} else {
+			logLines := strings.Split(string(logOutput), "\n")
+			urlFound := false
+			fmt.Println("--- SSHX Access ---")
+			for i := len(logLines) - 1; i >= 0; i-- {
+				line := logLines[i]
+				if len(line) > 8 && (line[0] == 0x01 || line[0] == 0x02) {
+					line = line[8:]
+				}
+				trimmedLine := strings.TrimSpace(line)
+				if strings.HasPrefix(trimmedLine, "https://sshx.io/s/") {
+					fmt.Printf("Found URL: %s\n", trimmedLine)
+					urlFound = true
+					break
+				}
+			}
+			if !urlFound {
+				fmt.Printf("Could not automatically find the sshx URL in recent logs.\nCheck the full logs: docker logs %s\n", contName)
+			}
+			fmt.Println("-------------------")
 		}
-		trimmedLine := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmedLine, "https://sshx.io/s/") {
-			fmt.Printf("Found URL: %s\n", trimmedLine)
-			urlFound = true
-			break
-		}
 	}
-	if !urlFound {
-		fmt.Printf("Could not automatically find the sshx URL in recent logs.\nCheck the full logs: docker logs %s\n", contName)
-	}
-	fmt.Println("-------------------")
 	log.Infof("sshx container '%s' is running. Use 'detach' command to remove it.", contName)
 
 	return nil
@@ -229,12 +243,106 @@ func sshxDetachRunE(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func init() {
-	toolsCmd.AddCommand(sshxCmd)
+// SshxContainerInfo Added struct for list output
+type SshxContainerInfo struct {
+	Name      string `json:"name"`
+	ID        string `json:"id"`
+	Network   string `json:"network"`
+	Image     string `json:"image"`
+	State     string `json:"state"`
+	Status    string `json:"status"`
+	CreatedAt string `json:"created_at"`
+}
 
+// sshxListRunE Added function for list command execution
+func sshxListRunE(_ *cobra.Command, _ []string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), common.Timeout)
+	defer cancel()
+
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return fmt.Errorf("failed to create docker client: %w", err)
+	}
+	defer cli.Close()
+
+	containerFilters := filters.NewArgs()
+	containerFilters.Add("label", fmt.Sprintf("%s=true", sshxLabel))
+
+	log.Debugf("Listing containers with label '%s=true'", sshxLabel)
+	// Corrected: Use containertypes.ListOptions based on the provided URL/docs
+	containers, err := cli.ContainerList(ctx, containertypes.ListOptions{
+		All:     true,
+		Filters: containerFilters,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	if len(containers) == 0 {
+		log.Infof("No sshx containers found.")
+		return nil
+	}
+
+	outputData := make([]SshxContainerInfo, 0, len(containers))
+	for _, c := range containers {
+		name := "unknown"
+		if len(c.Names) > 0 {
+			name = strings.TrimPrefix(c.Names[0], "/")
+		}
+		network := c.Labels[sshxNetworkLabel]
+		if network == "" {
+			network = "unknown (label missing)"
+		}
+
+		info := SshxContainerInfo{
+			Name:      name,
+			ID:        c.ID[:12],
+			Network:   network,
+			Image:     c.Image,
+			State:     c.State,
+			Status:    c.Status,
+			CreatedAt: time.Unix(c.Created, 0).Format(time.RFC3339),
+		}
+		outputData = append(outputData, info)
+	}
+
+	switch listFormat {
+	case "json":
+		jsonOutput, err := json.MarshalIndent(outputData, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal data to JSON: %w", err)
+		}
+		fmt.Println(string(jsonOutput))
+	case "table":
+		fallthrough
+	default:
+		if listFormat != "table" && listFormat != "" {
+			log.Warnf("Unsupported format '%s', defaulting to 'table'", listFormat)
+		}
+		writer := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
+		fmt.Fprintln(writer, "NAME\tID\tNETWORK\tIMAGE\tSTATE\tSTATUS\tCREATED AT")
+		for _, info := range outputData {
+			fmt.Fprintf(writer, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+				info.Name, info.ID, info.Network, info.Image, info.State, info.Status, info.CreatedAt)
+		}
+		writer.Flush()
+	}
+
+	return nil
+}
+
+func init() {
+	// This line is ESSENTIAL and must be present and uncommented
+	toolsCmd.AddCommand(sshxCmd) // Add the main sshx command to the tools command
+
+	// The rest of the init function remains the same:
 	sshxCmd.AddCommand(sshxAttachCmd)
 	sshxCmd.AddCommand(sshxDetachCmd)
+	sshxCmd.AddCommand(sshxListCmd) // Added list command
 
+	// Added format flag specifically to the list command
+	sshxListCmd.Flags().StringVarP(&listFormat, "format", "f", "table", "Output format (table, json)")
+
+	// Original persistent flag for network
 	sshxCmd.PersistentFlags().StringVarP(&sshxNetwork, "network", "n", sshxDefaultNetwork, "Docker network to attach/detach the sshx container to/from")
-
 }
