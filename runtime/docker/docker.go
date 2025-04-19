@@ -827,6 +827,12 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 			}
 		}
 
+		if bridgeName != "" {
+			ctr.NetworkName = bridgeName
+		} else {
+			ctr.NetworkName = "unknown"
+		}
+
 		if ifcfg, ok := i.NetworkSettings.Networks[bridgeName]; ok {
 			ctr.NetworkSettings.IPv4addr = ifcfg.IPAddress
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
