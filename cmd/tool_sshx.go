@@ -65,12 +65,6 @@ var sshxCmd = &cobra.Command{
 	Use:   "sshx",
 	Short: "SSHX terminal sharing operations",
 	Long:  "Attach or detach SSHX terminal sharing containers to lab networks",
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if cmd.Name() == "list" && outputFormat != "table" && outputFormat != "json" {
-			return fmt.Errorf("invalid output format: %s. Must be 'table' or 'json'", outputFormat)
-		}
-		return nil
-	},
 }
 
 // SSHXNode implements runtime.Node interface for SSHX containers
