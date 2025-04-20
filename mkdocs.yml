@@ -111,6 +111,10 @@ nav:
               - set: cmd/tools/netem/set.md
               - reset: cmd/tools/netem/reset.md
               - show: cmd/tools/netem/show.md
+          - sshx:
+              - attach: cmd/tools/sshx/attach.md
+              - detach: cmd/tools/sshx/detach.md
+              - list: cmd/tools/sshx/list.md
       - version:
           - cmd/version/index.md
           - check: cmd/version/check.md
