@@ -183,6 +183,14 @@ var sshxAttachCmd = &cobra.Command{
 		log.Infof("Using network name '%s'", networkName)
 		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
 
+		// Pull the container image before creating the container
+		log.Infof("Pulling image %s...", sshxImage)
+		err = rt.PullImage(ctx, sshxImage, types.PullPolicyIfNotPresent)
+		if err != nil {
+			return fmt.Errorf("failed to pull image %s: %w", sshxImage, err)
+		}
+		log.Debugf("Image %s pulled successfully", sshxImage)
+
 		// Create labels map
 		labelsMap := map[string]string{
 			// Use the constant from the labels package for consistency
