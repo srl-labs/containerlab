@@ -88,7 +88,6 @@ func NewSSHXNode(name, image, network string, enableReaders bool) *SSHXNode {
 	)
 
 	labels := map[string]string{
-		"containerlab":   "sshx-tool",
 		"clab-node-name": name,
 		"tool-type":      "sshx",
 	}
@@ -291,17 +290,25 @@ var sshxListCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Get the network from topo file if provided
-		networkName, err := getNetworkName(ctx)
+		// Initialize runtime without specific network
+		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
 		}
 
-		rt, err := initRuntime(networkName)
+		rt := rinit()
+		err = rt.Init(
+			runtime.WithConfig(
+				&runtime.RuntimeConfig{
+					Timeout: common.Timeout,
+				},
+			),
+		)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}
 
+		// Filter only by SSHX label, not by network
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
@@ -464,14 +471,6 @@ func getNetworkName(ctx context.Context) (string, error) {
 	c, err := clab.NewContainerLab(opts...)
 	if err != nil {
 		log.Debugf("Error creating containerlab instance: %v", err)
-		log.Debugf("Using default network name: %s", sshxNetworkName)
-		return sshxNetworkName, nil
-	}
-
-	// Check connectivity
-	err = c.CheckConnectivity(ctx)
-	if err != nil {
-		log.Debugf("Failed to check connectivity: %v", err)
 		log.Debugf("Using default network name: %s", sshxNetworkName)
 		return sshxNetworkName, nil
 	}
