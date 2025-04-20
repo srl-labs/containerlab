@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -124,17 +125,24 @@ var sshxAttachCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		log.Debugf("sshx attach called with flags: networkName='%s', containerName='%s', enableReaders=%t, image='%s'",
-			sshxNetworkName, sshxContainerName, sshxEnableReaders, sshxImage)
+		log.Debugf("sshx attach called with flags: networkName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s'",
+			sshxNetworkName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo)
+
+		// Get the network from topo file if provided
+		networkName, err := getNetworkName(ctx)
+		if err != nil {
+			return err
+		}
+		log.Debugf("Using network name: %s", networkName)
 
 		if sshxContainerName == "" {
-			netName := sshxNetworkName
+			netName := networkName
 			netName = strings.Replace(netName, "clab-", "", 1)
 			sshxContainerName = fmt.Sprintf("sshx-%s", netName)
 			log.Debugf("Container name not provided, generated name: %s", sshxContainerName)
 		}
 
-		rt, err := initRuntime(sshxNetworkName)
+		rt, err := initRuntime(networkName)
 		if err != nil {
 			return err
 		}
@@ -155,12 +163,12 @@ var sshxAttachCmd = &cobra.Command{
 			return fmt.Errorf("container %s already exists", sshxContainerName)
 		}
 
-		log.Infof("Using network name '%s'", sshxNetworkName)
-		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, sshxNetworkName)
+		log.Infof("Using network name '%s'", networkName)
+		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
 
 		log.Debugf("Creating SSHXNode config: name=%s, image=%s, network=%s, enableReaders=%t",
-			sshxContainerName, sshxImage, sshxNetworkName, sshxEnableReaders)
-		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, sshxNetworkName, sshxEnableReaders)
+			sshxContainerName, sshxImage, networkName, sshxEnableReaders)
+		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders)
 
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
@@ -230,13 +238,19 @@ var sshxDetachCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
+		// Get the network from topo file if provided
+		networkName, err := getNetworkName(ctx)
+		if err != nil {
+			return err
+		}
+
 		if sshxContainerName == "" {
-			netName := sshxNetworkName
+			netName := networkName
 			netName = strings.Replace(netName, "clab-", "", 1)
 			sshxContainerName = fmt.Sprintf("sshx-%s", netName)
 		}
 
-		rt, err := initRuntime(sshxNetworkName)
+		rt, err := initRuntime(networkName)
 		if err != nil {
 			return err
 		}
@@ -277,7 +291,13 @@ var sshxListCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		rt, err := initRuntime(sshxNetworkName) // Pass default or an empty string if preferred
+		// Get the network from topo file if provided
+		networkName, err := getNetworkName(ctx)
+		if err != nil {
+			return err
+		}
+
+		rt, err := initRuntime(networkName)
 		if err != nil {
 			return err
 		}
@@ -389,6 +409,93 @@ var sshxListCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+// getNetworkName determines which network name to use based on the presence of a topology file
+// or explicit network name provided
+func getNetworkName(ctx context.Context) (string, error) {
+	if sshxNetworkName != "clab" {
+		log.Infof("Using explicitly provided network name: %s", sshxNetworkName)
+		return sshxNetworkName, nil
+	}
+	// Explicitly check for topology files in current directory if none provided
+	if common.Topo == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			log.Debugf("Failed to get current working directory: %v", err)
+		} else {
+			entries, err := os.ReadDir(cwd)
+			if err != nil {
+				log.Debugf("Failed to read directory contents: %v", err)
+			} else {
+				for _, entry := range entries {
+					if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".clab.yml") {
+						// Found a topology file, explicitly set it
+						common.Topo = filepath.Join(cwd, entry.Name())
+						log.Debugf("Found topology file: %s", common.Topo)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// Prepare options for CLab instance
+	opts := []clab.ClabOption{
+		clab.WithTimeout(common.Timeout),
+		clab.WithRuntime(common.Runtime,
+			&runtime.RuntimeConfig{
+				Debug:            common.Debug,
+				Timeout:          common.Timeout,
+				GracefulShutdown: common.Graceful,
+			},
+		),
+		clab.WithDebug(common.Debug),
+	}
+
+	if common.Topo != "" {
+		log.Debugf("Using topology file: %s", common.Topo)
+		opts = append(opts, clab.WithTopoPath(common.Topo, common.VarsFile))
+	} else {
+		log.Debugf("No topology file provided or found")
+	}
+
+	// Create CLab instance with options
+	c, err := clab.NewContainerLab(opts...)
+	if err != nil {
+		log.Debugf("Error creating containerlab instance: %v", err)
+		log.Debugf("Using default network name: %s", sshxNetworkName)
+		return sshxNetworkName, nil
+	}
+
+	// Check connectivity
+	err = c.CheckConnectivity(ctx)
+	if err != nil {
+		log.Debugf("Failed to check connectivity: %v", err)
+		log.Debugf("Using default network name: %s", sshxNetworkName)
+		return sshxNetworkName, nil
+	}
+
+	// Get network name from topology if available
+	if c.Config != nil {
+		// First try to get network from mgmt configuration
+		if c.Config.Mgmt.Network != "" {
+			networkName := c.Config.Mgmt.Network
+			log.Debugf("Using network name from topology mgmt config: %s", networkName)
+			return networkName, nil
+		}
+
+		// Otherwise use the lab name
+		if c.Config.Name != "" {
+			networkName := "clab-" + c.Config.Name
+			log.Debugf("Using lab name for network: %s", networkName)
+			return networkName, nil
+		}
+	}
+
+	// Fall back to default if all else fails
+	log.Debugf("No topology network found, using default network: %s", sshxNetworkName)
+	return sshxNetworkName, nil
 }
 
 // initRuntime
