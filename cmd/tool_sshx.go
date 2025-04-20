@@ -20,6 +20,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -31,6 +32,7 @@ var (
 	sshxEnableReaders bool
 	sshxImage         string
 	outputFormat      string
+	sshxOwner         string
 )
 
 // Struct ONLY for list JSON output
@@ -40,6 +42,7 @@ type SSHXListItem struct {
 	State       string `json:"state"`
 	IPv4Address string `json:"ipv4_address"`
 	Link        string `json:"link"`
+	Owner       string `json:"owner"`
 }
 
 func init() {
@@ -55,6 +58,7 @@ func init() {
 	sshxAttachCmd.Flags().StringVarP(&sshxContainerName, "name", "", "", "name of the SSHX container (defaults to sshx-<network>)")
 	sshxAttachCmd.Flags().BoolVarP(&sshxEnableReaders, "enable-readers", "w", false, "enable read-only access links")
 	sshxAttachCmd.Flags().StringVarP(&sshxImage, "image", "i", "ghcr.io/srl-labs/network-multitool", "container image to use for SSHX")
+	sshxAttachCmd.Flags().StringVarP(&sshxOwner, "owner", "o", "", "lab owner name for the SSHX container")
 
 	// Detach command flags
 	sshxDetachCmd.Flags().StringVarP(&sshxNetworkName, "network", "n", "clab", "name of the network where SSHX container is attached")
@@ -74,8 +78,9 @@ type SSHXNode struct {
 }
 
 // NewSSHXNode
-func NewSSHXNode(name, image, network string, enableReaders bool) *SSHXNode {
-	log.Debugf("Creating SSHXNode config: name=%s, image=%s, network=%s, enableReaders=%t", name, image, network, enableReaders)
+func NewSSHXNode(name, image, network string, enableReaders bool, labels map[string]string) *SSHXNode {
+	log.Debugf("Creating SSHXNode config: name=%s, image=%s, network=%s, enableReaders=%t",
+		name, image, network, enableReaders)
 
 	enableReadersFlag := ""
 	if enableReaders {
@@ -86,11 +91,6 @@ func NewSSHXNode(name, image, network string, enableReaders bool) *SSHXNode {
 		`curl -sSf https://sshx.io/get | sh > /dev/null ; sshx -q %s > /tmp/sshx & while [ ! -s /tmp/sshx ]; do sleep 1; done && cat /tmp/sshx ; sleep infinity`,
 		enableReadersFlag,
 	)
-
-	labels := map[string]string{
-		"clab-node-name": name,
-		"tool-type":      "sshx",
-	}
 
 	nodeConfig := &types.NodeConfig{
 		LongName:   name,
@@ -124,8 +124,26 @@ var sshxAttachCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		log.Debugf("sshx attach called with flags: networkName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s'",
-			sshxNetworkName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo)
+		log.Debugf("sshx attach called with flags: networkName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', owner='%s'",
+			sshxNetworkName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxOwner)
+
+		ownerToSet := sshxOwner
+
+		if ownerToSet == "" { // If the --owner flag was NOT provided
+			ownerToSet = os.Getenv("SUDO_USER")
+			if ownerToSet == "" {
+				ownerToSet = os.Getenv("USER")
+			}
+
+			// Handle case where neither is set
+			if ownerToSet == "" {
+				log.Warnf("Could not determine owner from flags or environment (SUDO_USER/USER). Owner label will not be set.")
+			} else {
+				log.Debugf("Determined owner from environment: %s", ownerToSet)
+			}
+		} else {
+			log.Debugf("Using owner from --owner flag: %s", ownerToSet)
+		}
 
 		// Get the network from topo file if provided
 		networkName, err := getNetworkName(ctx)
@@ -165,9 +183,25 @@ var sshxAttachCmd = &cobra.Command{
 		log.Infof("Using network name '%s'", networkName)
 		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
 
-		log.Debugf("Creating SSHXNode config: name=%s, image=%s, network=%s, enableReaders=%t",
-			sshxContainerName, sshxImage, networkName, sshxEnableReaders)
-		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders)
+		// Create labels map
+		labelsMap := map[string]string{
+			// Use the constant from the labels package for consistency
+			labels.NodeName: sshxContainerName,
+			"tool-type":     "sshx",
+		}
+
+		// Add owner label if it was determined (either from flag or env)
+		if ownerToSet != "" {
+			// Use the constant from the labels package
+			labelsMap[labels.Owner] = ownerToSet
+			log.Debugf("Setting owner label to: %s", ownerToSet)
+		} else {
+			log.Debugf("Owner label is empty, not setting.")
+		}
+
+		log.Debugf("Creating SSHXNode with labels: %v", labelsMap)
+		// Pass the final labelsMap to the NewSSHXNode function
+		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders, labelsMap)
 
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
@@ -198,7 +232,7 @@ var sshxAttachCmd = &cobra.Command{
 		if err != nil {
 			fmt.Println("SSHX container started but failed to retrieve the link.")
 			fmt.Printf("Check the container logs: docker logs %s\n", sshxContainerName)
-			return nil // Don't return error, just inform user
+			return nil
 		}
 
 		if execResult.GetReturnCode() == 0 {
@@ -222,7 +256,7 @@ var sshxAttachCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Println("SSHX container started, but link not found.")
+		fmt.Println("SSHX container started, but link not found or invalid.")
 		fmt.Printf("Check logs: docker logs %s\n", sshxContainerName)
 		return nil
 	},
@@ -345,6 +379,12 @@ var sshxListCmd = &cobra.Command{
 				network = "unknown"
 			}
 
+			// Get owner from container labels
+			owner := "N/A"
+			if ownerVal, exists := c.Labels["clab-owner"]; exists && ownerVal != "" {
+				owner = ownerVal
+			}
+
 			// Try to get the SSHX link if container is running
 			link := "N/A"
 			if c.State == "running" {
@@ -380,6 +420,7 @@ var sshxListCmd = &cobra.Command{
 				State:       c.State,
 				IPv4Address: c.NetworkSettings.IPv4addr,
 				Link:        link,
+				Owner:       owner,
 			})
 		}
 
@@ -398,7 +439,8 @@ var sshxListCmd = &cobra.Command{
 			t.Style().Format.Header = text.FormatTitle
 			t.Style().Options.SeparateRows = true // Add lines between rows
 
-			t.AppendHeader(table.Row{"NAME", "NETWORK", "STATUS", "IPv4 ADDRESS", "LINK"})
+			// Add OWNER to the header
+			t.AppendHeader(table.Row{"NAME", "NETWORK", "STATUS", "IPv4 ADDRESS", "LINK", "OWNER"})
 
 			rows := []table.Row{}
 			for _, item := range listItems {
@@ -408,6 +450,7 @@ var sshxListCmd = &cobra.Command{
 					item.State,
 					item.IPv4Address,
 					item.Link,
+					item.Owner, // Add owner to the table row
 				})
 			}
 			t.AppendRows(rows)
