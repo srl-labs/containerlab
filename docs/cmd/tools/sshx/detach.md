@@ -8,44 +8,39 @@ Use this command when you've completed your collaboration session and want to re
 
 ## Usage
 
-`containerlab tools sshx detach [local-flags]`
+```
+containerlab tools sshx detach [flags]
+```
 
 ## Flags
 
-### network
+### --lab | -l
 
-The network where the SSHX container is attached, specified with `--network | -n` flag. Defaults to `clab`.
+Name of the lab where the SSHX container is attached. This directly specifies the lab name to use.
 
-If a topology file (*.clab.yml) is present in the current directory, the network name will be automatically detected from it.
-Or if it is given via -t --topology
+### --topology | -t
 
-### name
-
-The name of the SSHX container to detach, specified with `--name` flag.
-
-If not provided, the name will be automatically determined as `sshx-<network>` where `<network>` is the network name with any `clab-` prefix removed.
+Path to the topology file (*.clab.yml) that defines the lab. This flag is defined at the global level. If provided without specifying a lab name via `-l`, containerlab will extract the lab name from this file.
 
 ## Examples
 
 ```bash
-# Detach the SSHX container from the default network
+# Detach the SSHX container from a lab specified by lab name
+❯ containerlab tools sshx detach -l mylab
+11:40:03 INFO Removing SSHX container clab-mylab-sshx
+11:40:03 INFO SSHX container clab-mylab-sshx removed successfully
+
+# Detach using a specific topology file
+❯ containerlab tools sshx detach -t mylab.clab.yml
+11:40:03 INFO Parsing & checking topology file=mylab.clab.yml
+11:40:03 INFO Removing SSHX container clab-mylab-sshx
+11:40:03 INFO SSHX container clab-mylab-sshx removed successfully
+
+# Using auto-discovered topology file in current directory
 ❯ containerlab tools sshx detach
-INFO[0000] Removing SSHX container sshx-default
-INFO[0001] SSHX container sshx-default removed successfully
-
-# Detach from a specific network
-❯ containerlab tools sshx detach -n clab-mylab
-INFO[0000] Removing SSHX container sshx-mylab
-INFO[0001] SSHX container sshx-mylab removed successfully
-
-# Detach a container with a custom name
-❯ containerlab tools sshx detach --name my-shared-terminal
-INFO[0000] Removing SSHX container my-shared-terminal
-INFO[0001] SSHX container my-shared-terminal removed successfully
-
-# When the container doesn't exist
-❯ containerlab tools sshx detach -n clab-nonexistent
-INFO[0000] SSHX container sshx-nonexistent does not exist, nothing to detach
+11:40:03 INFO Parsing & checking topology file=mylab.clab.yml
+11:40:03 INFO Removing SSHX container clab-mylab-sshx
+11:40:03 INFO SSHX container clab-mylab-sshx removed successfully
 ```
 
 After detaching the SSHX container, the terminal sharing session is terminated, and the shareable link will no longer work. This effectively ends the collaboration session and removes the container from your system.

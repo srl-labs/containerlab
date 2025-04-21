@@ -119,77 +119,47 @@ func (n *SSHXNode) GetEndpoints() []links.Endpoint {
 	return nil
 }
 
-// getLabName gets lab name from flag, topo file, or running containers
-func getLabName() (string, error) {
+// getLabConfig gets lab configuration and returns lab name, network name and containerlab instance
+func getLabConfig(ctx context.Context) (string, string, *clab.CLab, error) {
+	var labName string
+	var c *clab.CLab
+	var err error
+
 	// If lab name is provided directly, use it
 	if sshxLabName != "" {
-		return sshxLabName, nil
+		labName = sshxLabName
 	}
 
-	// If topo file is provided, load it to get lab name
-	if common.Topo != "" {
-		c, err := clab.NewContainerLab(
-			clab.WithTopoPath(common.Topo, common.VarsFile),
-			clab.WithTimeout(common.Timeout),
-		)
-		if err != nil {
-			return "", fmt.Errorf("failed to create containerlab instance: %w", err)
-		}
-
-		if c.Config != nil {
-			return c.Config.Name, nil
-		}
-		return "", fmt.Errorf("failed to get lab name from topology file")
-	}
-
-	// Auto-discover topology files in current directory
-	cwd, err := os.Getwd()
-	if err == nil {
-		entries, err := os.ReadDir(cwd)
+	// If topo file is provided or discovered
+	if common.Topo == "" && labName == "" {
+		// Auto-discover topology files in current directory
+		cwd, err := os.Getwd()
 		if err == nil {
-			for _, entry := range entries {
-				if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".clab.yml") {
-					// Found a topology file, explicitly set it
-					common.Topo = filepath.Join(cwd, entry.Name())
-					log.Debugf("Found topology file: %s", common.Topo)
-
-					// Try to get lab name from the discovered topology file
-					c, err := clab.NewContainerLab(
-						clab.WithTopoPath(common.Topo, common.VarsFile),
-						clab.WithTimeout(common.Timeout),
-					)
-					if err == nil && c.Config != nil {
-						return c.Config.Name, nil
+			entries, err := os.ReadDir(cwd)
+			if err == nil {
+				for _, entry := range entries {
+					if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".clab.yml") {
+						// Found a topology file
+						common.Topo = filepath.Join(cwd, entry.Name())
+						log.Debugf("Found topology file: %s", common.Topo)
+						break
 					}
-					break
 				}
 			}
 		}
-	}
-
-	// If we're here, we didn't find any usable topology files
-	return "", fmt.Errorf("no lab name (-l) or topology file (-t) provided")
-}
-
-// getTopoAndNetwork gets topology file and network name from lab name or topo file
-func getTopoAndNetwork(ctx context.Context) (string, string, error) {
-	// Try to get lab name first
-	labName, err := getLabName()
-	if err != nil {
-		return "", "", err
 	}
 
 	// If we have lab name but no topo file, try to find it from containers
 	if labName != "" && common.Topo == "" {
 		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 		if err != nil {
-			return "", "", err
+			return "", "", nil, err
 		}
 
 		rt := rinit()
 		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
 		if err != nil {
-			return "", "", err
+			return "", "", nil, err
 		}
 
 		// Find containers for this lab
@@ -203,24 +173,24 @@ func getTopoAndNetwork(ctx context.Context) (string, string, error) {
 		}
 		containers, err := rt.ListContainers(ctx, filter)
 		if err != nil {
-			return "", "", err
+			return "", "", nil, err
 		}
 
 		if len(containers) == 0 {
-			return "", "", fmt.Errorf("lab '%s' not found - no running containers", labName)
+			return "", "", nil, fmt.Errorf("lab '%s' not found - no running containers", labName)
 		}
 
 		// Get topo file from container labels
 		topoFile := containers[0].Labels["clab-topo-file"]
 		if topoFile == "" {
-			return "", "", fmt.Errorf("could not determine topology file from container labels")
+			return "", "", nil, fmt.Errorf("could not determine topology file from container labels")
 		}
 
 		log.Debugf("Found topology file for lab %s: %s", labName, topoFile)
 		common.Topo = topoFile
 	}
 
-	// Now create containerlab instance to get network name
+	// Create a single containerlab instance
 	opts := []clab.ClabOption{
 		clab.WithTimeout(common.Timeout),
 		clab.WithRuntime(common.Runtime, &runtime.RuntimeConfig{
@@ -234,24 +204,30 @@ func getTopoAndNetwork(ctx context.Context) (string, string, error) {
 	if common.Topo != "" {
 		opts = append(opts, clab.WithTopoPath(common.Topo, common.VarsFile))
 	} else {
-		return "", "", fmt.Errorf("no topology file found or provided")
+		return "", "", nil, fmt.Errorf("no topology file found or provided")
 	}
 
-	c, err := clab.NewContainerLab(opts...)
+	c, err = clab.NewContainerLab(opts...)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to create containerlab instance: %w", err)
+		return "", "", nil, fmt.Errorf("failed to create containerlab instance: %w", err)
 	}
 
 	if c.Config == nil {
-		return "", "", fmt.Errorf("failed to load lab configuration")
+		return "", "", nil, fmt.Errorf("failed to load lab configuration")
 	}
 
+	// Get lab name if not provided
+	if labName == "" {
+		labName = c.Config.Name
+	}
+
+	// Get network name
 	networkName := c.Config.Mgmt.Network
 	if networkName == "" {
 		networkName = "clab-" + c.Config.Name
 	}
 
-	return c.Config.Name, networkName, nil
+	return labName, networkName, c, nil
 }
 
 // getOwner gets owner name from flag or environment variables
@@ -336,7 +312,7 @@ var sshxAttachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo)
 
 		// Get lab name and network
-		labName, networkName, err := getTopoAndNetwork(ctx)
+		labName, networkName, _, err := getLabConfig(ctx)
 		if err != nil {
 			return err
 		}
@@ -438,7 +414,7 @@ var sshxDetachCmd = &cobra.Command{
 		defer cancel()
 
 		// Get lab name
-		labName, err := getLabName()
+		labName, _, _, err := getLabConfig(ctx)
 		if err != nil {
 			return err
 		}

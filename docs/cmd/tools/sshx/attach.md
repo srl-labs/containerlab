@@ -12,74 +12,89 @@ SSHX terminal sharing is particularly useful for:
 
 ## Usage
 
-`containerlab tools sshx attach [local-flags]`
+```
+containerlab tools sshx attach [flags]
+```
 
 ## Flags
 
-### network
+### --lab | -l
 
-The network to attach the SSHX container to, specified with `--network | -n` flag. Defaults to `clab`.
+Name of the lab to attach the SSHX container to. This directly specifies the lab name to use.
 
-If a topology file (*.clab.yml) is present in the current directory, the network name will be automatically detected from it.
-Or if it is given via -t --topology
+### --name
 
-### name
+Name of the SSHX container. If not provided, the name will be automatically generated as `clab-<labname>-sshx`.
 
-The name for the SSHX container, specified with `--name` flag.
+### --enable-readers | -w
 
-If not provided, the name will be automatically generated as `sshx-<network>` where `<network>` is the network name with any `clab-` prefix removed.
+Enable read-only access links. When enabled, the command will generate an additional link that can be shared with users who should have read-only access to the terminal session.
 
-### enable-readers
+### --image | -i
 
-Enable read-only access links with the `--enable-readers | -w` flag. 
+The container image to use for SSHX. Defaults to `ghcr.io/srl-labs/network-multitool`.
 
-When enabled, the command will generate an additional link that can be shared with users who should have read-only access to the terminal session.
+### --owner | -o
 
-### image
+The owner name to associate with the SSHX container. If not provided, it will be determined from environment variables (SUDO_USER or USER).
 
-The container image to use for SSHX, specified with `--image | -i` flag. Defaults to `ghcr.io/srl-labs/network-multitool`.
+### --topology | -t
 
-### owner
+Path to the topology file (*.clab.yml) that defines the lab. This flag is defined at the global level. If provided without specifying a lab name via `-l`, containerlab will extract the lab name from this file.
 
-The owner name to associate with the SSHX container, specified with `--owner | -o` flag.
+### --format | -f
 
-If not provided, the owner will be determined by containerlab
+Output format for the command. Defined at the parent command level and applies to the `list` command. Values: `table` (default) or `json`.
 
 ## Examples
 
 ```bash
-# Attach an SSHX container to the default network
-❯ containerlab tools sshx attach
-INFO[0000] Using network name 'clab-default'
-INFO[0000] Creating SSHX container sshx-default on network 'clab-default'
-INFO[0005] SSHX container sshx-default started. Waiting for SSHX link...
+# Attach an SSHX container to a lab specified by lab name
+❯ containerlab tools sshx attach -l mylab
+11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
+11:40:03 INFO Creating SSHX container clab-mylab-sshx on network 'clab-mylab'
+11:40:03 INFO Creating container name=clab-mylab-sshx
+11:40:03 INFO SSHX container clab-mylab-sshx started. Waiting for SSHX link...
 SSHX link for collaborative terminal access:
 https://sshx.io/s#sessionid,accesskey
 
-# Attach SSHX to a specific network with a custom name
-❯ containerlab tools sshx attach -n clab-mylab --name my-shared-terminal
-INFO[0000] Using network name 'clab-mylab'
-INFO[0000] Creating SSHX container my-shared-terminal on network 'clab-mylab'
-INFO[0005] SSHX container my-shared-terminal started. Waiting for SSHX link...
+# Attach SSHX with a specific topology file
+❯ containerlab tools sshx attach -t mylab.clab.yml
+11:40:03 INFO Parsing & checking topology file=mylab.clab.yml
+11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
+11:40:03 INFO Creating SSHX container clab-mylab-sshx on network 'clab-mylab'
+11:40:03 INFO Creating container name=clab-mylab-sshx
+11:40:03 INFO SSHX container clab-mylab-sshx started. Waiting for SSHX link...
+SSHX link for collaborative terminal access:
+https://sshx.io/s#sessionid,accesskey
+
+# Attach with a custom container name
+❯ containerlab tools sshx attach -l mylab --name my-shared-terminal
+11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
+11:40:03 INFO Creating SSHX container my-shared-terminal on network 'clab-mylab'
+11:40:03 INFO Creating container name=my-shared-terminal
+11:40:03 INFO SSHX container my-shared-terminal started. Waiting for SSHX link...
 SSHX link for collaborative terminal access:
 https://sshx.io/s#sessionid,accesskey
 
 # Attach with read-only access enabled
-❯ containerlab tools sshx attach --enable-readers
-INFO[0000] Using network name 'clab-default'
-INFO[0000] Creating SSHX container sshx-default on network 'clab-default'
-INFO[0005] SSHX container sshx-default started. Waiting for SSHX link...
+❯ containerlab tools sshx attach -l mylab --enable-readers
+11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
+11:40:03 INFO Creating SSHX container clab-mylab-sshx on network 'clab-mylab'
+11:40:03 INFO Creating container name=clab-mylab-sshx
+11:40:03 INFO SSHX container clab-mylab-sshx started. Waiting for SSHX link...
 SSHX link for collaborative terminal access:
 https://sshx.io/s#sessionid,accesskey
 
 Read-only access link:
-https://sshx.io/s#sessionid
+https://sshx.io/s#sessionid,accesskey
 
 # Attach with a specific owner
-❯ containerlab tools sshx attach --owner alice
-INFO[0000] Using network name 'clab-default'
-INFO[0000] Creating SSHX container sshx-default on network 'clab-default'
-INFO[0005] SSHX container sshx-default started. Waiting for SSHX link...
+❯ containerlab tools sshx attach -l mylab --owner alice
+11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
+11:40:03 INFO Creating SSHX container clab-mylab-sshx on network 'clab-mylab'
+11:40:03 INFO Creating container name=clab-mylab-sshx
+11:40:03 INFO SSHX container clab-mylab-sshx started. Waiting for SSHX link...
 SSHX link for collaborative terminal access:
 https://sshx.io/s#sessionid,accesskey
 ```

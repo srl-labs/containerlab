@@ -2,7 +2,7 @@
 
 ## Description
 
-The `list` sub-command under the `tools sshx` command displays all active SSHX containers across all networks. This command provides a comprehensive view of all running terminal sharing sessions, including their network association, status, IP address, sharing links, and owner information.
+The `list` sub-command under the `tools sshx` command displays all active SSHX containers across all labs. This command provides a comprehensive view of all running terminal sharing sessions, including their network association, status, IP address, sharing links, and owner information.
 
 This is useful for:
 - Identifying all active sharing sessions
@@ -12,11 +12,13 @@ This is useful for:
 
 ## Usage
 
-`containerlab tools sshx list [local-flags]`
+```
+containerlab tools sshx list [flags]
+```
 
 ## Flags
 
-### format
+### --format | -f
 
 The output format for the list, specified with `--format | -f` flag. Possible values:
 - `table` (default) - Displays the information in a formatted table
@@ -41,7 +43,7 @@ The JSON output is particularly useful for scripting or programmatic access to t
 ❯ containerlab tools sshx list -f json
 [
   {
-    "name": "sshx-lab1",
+    "name": "clab-lab1-sshx",
     "network": "clab-lab1",
     "state": "running",
     "ipv4_address": "172.20.20.5",
@@ -49,7 +51,7 @@ The JSON output is particularly useful for scripting or programmatic access to t
     "owner": "alice"
   },
   {
-    "name": "sshx-lab2",
+    "name": "clab-lab2-sshx",
     "network": "clab-lab2",
     "state": "running",
     "ipv4_address": "172.20.30.8",
