@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -162,6 +163,58 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			err = os.RemoveAll(clab.TopoPaths.TopologyLabDir())
 			if err != nil {
 				log.Errorf("error deleting lab directory: %v", err)
+			}
+		}
+	}
+
+	if len(errs) != 0 {
+		return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
+	}
+
+	// Additional step: Remove any SSHX containers associated with destroyed labs
+	if !all && len(labs) > 0 {
+		// Get the lab name from the first lab
+		labName := labs[0].Config.Name
+		log.Debugf("Looking for SSHX containers with lab name: %s", labName)
+
+		// Initialize runtime
+		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		if err == nil {
+			rt := rinit()
+			err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{
+				Timeout: common.Timeout,
+			}))
+
+			if err == nil {
+				// Look for SSHX containers with matching lab label
+				sshxFilter := []*types.GenericFilter{
+					{
+						FilterType: "label",
+						Field:      "tool-type",
+						Operator:   "=",
+						Match:      "sshx",
+					},
+					{
+						FilterType: "label",
+						Field:      labels.Containerlab,
+						Operator:   "=",
+						Match:      labName,
+					},
+				}
+
+				sshxContainers, err := rt.ListContainers(ctx, sshxFilter)
+				if err == nil && len(sshxContainers) > 0 {
+					log.Infof("Found %d SSHX containers associated with lab %s", len(sshxContainers), labName)
+					for _, container := range sshxContainers {
+						containerName := strings.TrimPrefix(container.Names[0], "/")
+						log.Infof("Removing SSHX container: %s", containerName)
+						if err := rt.DeleteContainer(ctx, containerName); err != nil {
+							log.Warnf("Failed to remove SSHX container %s: %v", containerName, err)
+						} else {
+							log.Infof("SSHX container %s removed successfully", containerName)
+						}
+					}
+				}
 			}
 		}
 	}

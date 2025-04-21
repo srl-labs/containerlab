@@ -20,7 +20,6 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/cmd/common"
-	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -146,11 +145,11 @@ var sshxAttachCmd = &cobra.Command{
 		}
 
 		// Get the network from topo file if provided
-		networkName, err := getNetworkName(ctx)
+		networkName, labName, topoInfo, err := getNetworkAndTopoInfo(ctx)
 		if err != nil {
 			return err
 		}
-		log.Debugf("Using network name: %s", networkName)
+		log.Debugf("Using network name: %s, lab name: %s", networkName, labName)
 
 		if sshxContainerName == "" {
 			netName := networkName
@@ -191,17 +190,41 @@ var sshxAttachCmd = &cobra.Command{
 		}
 		log.Debugf("Image %s pulled successfully", sshxImage)
 
-		// Create labels map
+		// Create properly-formatted containerlab labels
 		labelsMap := map[string]string{
-			// Use the constant from the labels package for consistency
-			labels.NodeName: sshxContainerName,
-			"tool-type":     "sshx",
+			// Core containerlab labels
+			"containerlab":       labName,
+			"clab-node-name":     strings.Replace(sshxContainerName, "clab-"+labName+"-", "", 1), // Short name without lab prefix
+			"clab-node-longname": sshxContainerName,
+			"clab-node-kind":     "linux",
+			"clab-node-group":    "",
+			"clab-node-type":     "tool",
+			"tool-type":          "sshx",
+		}
+
+		// Add topology file path if available
+		if topoInfo.topoPath != "" {
+			absPath, err := filepath.Abs(topoInfo.topoPath)
+			if err == nil {
+				labelsMap["clab-topo-file"] = absPath
+			} else {
+				labelsMap["clab-topo-file"] = topoInfo.topoPath
+			}
+		}
+
+		// Set node lab directory
+		labDir := ""
+		if topoInfo.topoPath != "" {
+			// Lab directory is typically based on the lab name
+			baseDir := filepath.Dir(topoInfo.topoPath)
+			labDir = filepath.Join(baseDir, "clab-"+labName,
+				strings.Replace(sshxContainerName, "clab-"+labName+"-", "", 1))
+			labelsMap["clab-node-lab-dir"] = labDir
 		}
 
 		// Add owner label if it was determined (either from flag or env)
 		if ownerToSet != "" {
-			// Use the constant from the labels package
-			labelsMap[labels.Owner] = ownerToSet
+			labelsMap["clab-owner"] = ownerToSet
 			log.Debugf("Setting owner label to: %s", ownerToSet)
 		} else {
 			log.Debugf("Owner label is empty, not setting.")
@@ -280,7 +303,7 @@ var sshxDetachCmd = &cobra.Command{
 		defer cancel()
 
 		// Get the network from topo file if provided
-		networkName, err := getNetworkName(ctx)
+		networkName, _, _, err := getNetworkAndTopoInfo(ctx)
 		if err != nil {
 			return err
 		}
@@ -469,13 +492,26 @@ var sshxListCmd = &cobra.Command{
 	},
 }
 
-// getNetworkName determines which network name to use based on the presence of a topology file
-// or explicit network name provided
-func getNetworkName(ctx context.Context) (string, error) {
+// Structure to hold topology information
+type topoInfo struct {
+	topoPath string
+	labName  string
+}
+
+// getNetworkAndTopoInfo determines which network name to use based on the presence of a topology file
+// or explicit network name provided, and returns the network name, lab name, and topology information
+func getNetworkAndTopoInfo(ctx context.Context) (string, string, topoInfo, error) {
+	// Default lab name and info
+	labName := "sshx-tool"
+	info := topoInfo{
+		labName: labName,
+	}
+
 	if sshxNetworkName != "clab" {
 		log.Infof("Using explicitly provided network name: %s", sshxNetworkName)
-		return sshxNetworkName, nil
+		return sshxNetworkName, labName, info, nil
 	}
+
 	// Explicitly check for topology files in current directory if none provided
 	if common.Topo == "" {
 		cwd, err := os.Getwd()
@@ -496,6 +532,11 @@ func getNetworkName(ctx context.Context) (string, error) {
 				}
 			}
 		}
+	}
+
+	// Update topology info if we have a path
+	if common.Topo != "" {
+		info.topoPath = common.Topo
 	}
 
 	// Prepare options for CLab instance
@@ -523,29 +564,36 @@ func getNetworkName(ctx context.Context) (string, error) {
 	if err != nil {
 		log.Debugf("Error creating containerlab instance: %v", err)
 		log.Debugf("Using default network name: %s", sshxNetworkName)
-		return sshxNetworkName, nil
+		return sshxNetworkName, labName, info, nil
 	}
 
-	// Get network name from topology if available
+	// Get network name and lab name from topology if available
 	if c.Config != nil {
+		// Get the lab name if available
+		if c.Config.Name != "" {
+			labName = c.Config.Name
+			info.labName = labName
+			log.Debugf("Using lab name from topology: %s", labName)
+		}
+
 		// First try to get network from mgmt configuration
 		if c.Config.Mgmt.Network != "" {
 			networkName := c.Config.Mgmt.Network
 			log.Debugf("Using network name from topology mgmt config: %s", networkName)
-			return networkName, nil
+			return networkName, labName, info, nil
 		}
 
-		// Otherwise use the lab name
+		// Otherwise use the lab name for network
 		if c.Config.Name != "" {
 			networkName := "clab-" + c.Config.Name
 			log.Debugf("Using lab name for network: %s", networkName)
-			return networkName, nil
+			return networkName, labName, info, nil
 		}
 	}
 
 	// Fall back to default if all else fails
 	log.Debugf("No topology network found, using default network: %s", sshxNetworkName)
-	return sshxNetworkName, nil
+	return sshxNetworkName, labName, info, nil
 }
 
 // initRuntime
