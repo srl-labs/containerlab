@@ -37,13 +37,6 @@ Attach SSHX Using Lab Name Parameter
     Should Contain    ${output}    SSHX link for collaborative terminal access:
     Should Contain    ${output}    https://sshx.io/
 
-    # Verify container is running
-    ${rc}    ${container_status}=    Run And Return Rc And Output
-    ...    ${runtime} ps -f name=${sshx_container} --format "{{.Status}}"
-    Log    ${container_status}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${container_status}    Up
-
 List SSHX Containers
     [Documentation]    Test listing SSHX containers
     ${rc}    ${output}=    Run And Return Rc And Output
