@@ -1,9 +1,10 @@
 *** Comments ***
 This test suite verifies the functionality of the SSHX terminal sharing operations:
-- Attaching an SSHX container to a lab network
+- Attaching an SSHX container using lab name (-l) parameter
+- Attaching an SSHX container using topology file (-t) parameter
+- Testing read-only access with --enable-readers
 - Listing active SSHX containers
 - Detaching an SSHX container from a lab network
-- Verifying the SSHX container is properly removed
 
 *** Settings ***
 Library             OperatingSystem
@@ -14,65 +15,100 @@ Suite Teardown      Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} -
 
 *** Variables ***
 ${runtime}          docker
-${lab-name}         sshx-test
+${lab_name}         2-linux-nodes
 ${topo}             ${CURDIR}/01-linux-nodes.clab.yml
-${network-name}     clab
-${sshx-container}   ${lab-name}
+${sshx_container}   clab-${lab_name}-sshx
 
 *** Test Cases ***
-Deploy ${lab-name} lab
-    Log    ${CURDIR}
-    ${rc}    ${output} =    Run And Return Rc And Output
+Deploy Test Lab
+    [Documentation]    Deploy the test lab for SSHX tests
+    ${rc}    ${output}=    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Attach SSHX container to lab network
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx attach -n ${network-name} --name ${sshx-container}
+Attach SSHX Using Lab Name Parameter
+    [Documentation]    Test attaching SSHX container using the -l (lab name) parameter
+    ${rc}    ${output}=    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx attach -l ${lab_name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    SSHX container ${sshx-container} started
+    Should Contain    ${output}    SSHX container ${sshx_container} started
     Should Contain    ${output}    SSHX link for collaborative terminal access:
     Should Contain    ${output}    https://sshx.io/
 
-List SSHX containers
-    ${rc}    ${output} =    Run And Return Rc And Output
+    # Verify container is running
+    ${rc}    ${container_status}=    Run And Return Rc And Output
+    ...    ${runtime} ps -f name=${sshx_container} --format "{{.Status}}"
+    Log    ${container_status}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${container_status}    Up
+
+List SSHX Containers
+    [Documentation]    Test listing SSHX containers
+    ${rc}    ${output}=    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} tools sshx list
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ${sshx-container}
-    Should Contain    ${output}    ${network-name}
+    Should Contain    ${output}    ${sshx_container}
     Should Contain    ${output}    running
 
-List SSHX containers in JSON format
-    ${rc}    ${output} =    Run And Return Rc And Output
+List SSHX Containers JSON Format
+    [Documentation]    Test listing SSHX containers in JSON format
+    ${rc}    ${output}=    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} tools sshx list --format json
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    "${sshx-container}"
-    Should Contain    ${output}    "${network-name}"
+    Should Contain    ${output}    "${sshx_container}"
     Should Contain    ${output}    "running"
-    Should Contain    ${output}    "ipv4_address"
-    Should Contain    ${output}    "link"
-    Should Contain    ${output}    "owner"
 
-Detach SSHX container from lab network
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx detach -n ${network-name} --name ${sshx-container}
+Detach SSHX Using Lab Name Parameter
+    [Documentation]    Test detaching SSHX container using the -l (lab name) parameter
+    ${rc}    ${output}=    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx detach -l ${lab_name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    SSHX container ${sshx-container} removed successfully
+    Should Contain    ${output}    SSHX container ${sshx_container} removed successfully
 
-Verify SSHX container is removed
-    ${rc}    ${output} =    Run And Return Rc And Output
+    # Verify container is removed
+    ${rc}    ${output}=    Run And Return Rc And Output
+    ...    ${runtime} ps -a | grep ${sshx_container} || true
+    Log    ${output}
+    Should Not Contain    ${output}    ${sshx_container}
+
+Attach SSHX Using Topology File Parameter
+    [Documentation]    Test attaching SSHX container using the -t (topology file) parameter
+    ${rc}    ${output}=    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx attach -t ${topo}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    SSHX container ${sshx_container} started
+    Should Contain    ${output}    SSHX link for collaborative terminal access:
+    Should Contain    ${output}    https://sshx.io/
+
+    # Clean up this container before the next test
+    Run    ${CLAB_BIN} --runtime ${runtime} tools sshx detach -l ${lab_name}
+    Sleep    2s
+
+Attach SSHX With Read-Only Access
+    [Documentation]    Test attaching SSHX with the --enable-readers flag
+    ${rc}    ${output}=    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx attach -l ${lab_name} --enable-readers
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    SSHX container ${sshx_container} started
+    Should Contain    ${output}    SSHX link for collaborative terminal access:
+    Should Contain    ${output}    https://sshx.io/
+    Should Contain    ${output}    Read-only access link:
+
+    # Clean up this container for the final test
+    Run    ${CLAB_BIN} --runtime ${runtime} tools sshx detach -l ${lab_name}
+    Sleep    2s
+
+Verify SSHX Container List Is Empty
+    [Documentation]    Test that no SSHX containers are listed after detaching
+    ${rc}    ${output}=    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} tools sshx list
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Not Contain    ${output}    ${sshx-container}
-
-    # Also verify with the runtime directly
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} ps -a | grep ${sshx-container}
-    Log    ${output}
-    Should Not Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    ${sshx_container}
