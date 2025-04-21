@@ -2,9 +2,10 @@
 
 ## Description
 
-The `attach` sub-command under the `tools sshx` command creates and starts a container that runs the SSHX client. This establishes a terminal sharing session and provides a shareable web link that allows others to access your terminal through their browser.
+The `attach` sub-command under the `tools sshx` command creates and starts a container that runs the [SSHX](https://sshx.io/) client. SSHX client establishes a terminal sharing session and provides a shareable web link that allows others to access the container's shell via their browser.
 
 SSHX terminal sharing is particularly useful for:
+
 - Remote collaboration on lab environments
 - Sharing terminal access with team members
 - Providing troubleshooting assistance
@@ -24,7 +25,7 @@ Name of the lab to attach the SSHX container to. This directly specifies the lab
 
 ### --topology | -t
 
-Path to the topology file (*.clab.yml) that defines the lab. This flag is defined at the global level. If provided without specifying a lab name via `-l`, containerlab will extract the lab name from this file.
+Path to the topology file (`*.clab.yml`) that defines the lab. This global flag can be provided instead of the lab name provided with the `--lab | -l` flag. When lab name is not provided and the topology is provided, containerlab will extract the lab name from the topology file.
 
 ### --name
 
@@ -40,12 +41,11 @@ Mount the host's SSH directory (~/.ssh) into the container. This allows the SSHX
 
 ### --image | -i
 
-The container image to use for SSHX. Defaults to `ghcr.io/srl-labs/network-multitool`.
+The container image to use for SSHX client. Defaults to [`ghcr.io/srl-labs/network-multitool`](https://github.com/srl-labs/network-multitool).
 
 ### --owner | -o
 
 The owner name to associate with the SSHX container. If not provided, it will be determined from environment variables (SUDO_USER or USER).
-
 
 ### --format | -f
 

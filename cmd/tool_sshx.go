@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,9 +21,11 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/cmd/common"
+	clabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // Configuration variables for the SSHX commands
@@ -101,6 +104,8 @@ func NewSSHXNode(name, image, network string, enableReaders bool, labels map[str
 		enableReadersFlag,
 	)
 
+	_, gid, _ := utils.GetRealUserIDs()
+
 	nodeConfig := &types.NodeConfig{
 		LongName:   name,
 		ShortName:  name,
@@ -109,6 +114,8 @@ func NewSSHXNode(name, image, network string, enableReaders bool, labels map[str
 		Cmd:        "ash -c '" + sshxScript + "'",
 		MgmtNet:    network,
 		Labels:     labels,
+		User:       "user",            // user `user` is a sudo user in srl-labs/network-multitool
+		Group:      strconv.Itoa(gid), // gid is set to current user's gid to ensure
 	}
 
 	// Add SSH directory mount if enabled
@@ -296,7 +303,7 @@ func createLabels(labName, containerName, owner string) map[string]string {
 
 	// Add owner label if available
 	if owner != "" {
-		labels["clab-owner"] = owner
+		labels[clabels.Owner] = owner
 	}
 
 	return labels
@@ -530,7 +537,7 @@ var sshxListCmd = &cobra.Command{
 
 			// Get owner from container labels
 			owner := "N/A"
-			if ownerVal, exists := c.Labels["clab-owner"]; exists && ownerVal != "" {
+			if ownerVal, exists := c.Labels[clabels.Owner]; exists && ownerVal != "" {
 				owner = ownerVal
 			}
 
