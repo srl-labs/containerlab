@@ -33,6 +33,7 @@ var (
 	sshxImage         string
 	outputFormat      string
 	sshxOwner         string
+	sshxExposeSshDir  bool // New flag to control SSH directory mounting
 )
 
 // SSHXListItem defines the structure for SSHX container info in JSON output
@@ -70,6 +71,8 @@ func init() {
 		"container image to use for SSHX")
 	sshxAttachCmd.Flags().StringVarP(&sshxOwner, "owner", "o", "",
 		"lab owner name for the SSHX container")
+	sshxAttachCmd.Flags().BoolVarP(&sshxExposeSshDir, "expose-ssh", "s", true,
+		"mount host's SSH directory (~/.ssh) into the container")
 
 	// Detach command flags
 	sshxDetachCmd.Flags().StringVarP(&sshxLabName, "lab", "l", "",
@@ -84,9 +87,9 @@ var sshxCmd = &cobra.Command{
 }
 
 // NewSSHXNode creates a new SSHX node configuration
-func NewSSHXNode(name, image, network string, enableReaders bool, labels map[string]string) *SSHXNode {
-	log.Debugf("Creating SSHXNode: name=%s, image=%s, network=%s, enableReaders=%t",
-		name, image, network, enableReaders)
+func NewSSHXNode(name, image, network string, enableReaders bool, labels map[string]string, exposeSSH bool) *SSHXNode {
+	log.Debugf("Creating SSHXNode: name=%s, image=%s, network=%s, enableReaders=%t, exposeSSH=%t",
+		name, image, network, enableReaders, exposeSSH)
 
 	enableReadersFlag := ""
 	if enableReaders {
@@ -98,16 +101,36 @@ func NewSSHXNode(name, image, network string, enableReaders bool, labels map[str
 		enableReadersFlag,
 	)
 
+	nodeConfig := &types.NodeConfig{
+		LongName:   name,
+		ShortName:  name,
+		Image:      image,
+		Entrypoint: "",
+		Cmd:        "ash -c '" + sshxScript + "'",
+		MgmtNet:    network,
+		Labels:     labels,
+	}
+
+	// Add SSH directory mount if enabled
+	if exposeSSH {
+		// Get user's home directory
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			sshDir := filepath.Join(homeDir, ".ssh")
+			// Check if the directory exists
+			if _, err := os.Stat(sshDir); err == nil {
+				nodeConfig.Binds = append(nodeConfig.Binds, fmt.Sprintf("%s:/root/.ssh:ro", sshDir))
+				log.Debugf("Mounting SSH directory: %s -> /root/.ssh", sshDir)
+			} else {
+				log.Warnf("User's SSH directory not found at %s, skipping mount", sshDir)
+			}
+		} else {
+			log.Warnf("Could not determine home directory: %v", err)
+		}
+	}
+
 	return &SSHXNode{
-		config: &types.NodeConfig{
-			LongName:   name,
-			ShortName:  name,
-			Image:      image,
-			Entrypoint: "",
-			Cmd:        "ash -c '" + sshxScript + "'",
-			MgmtNet:    network,
-			Labels:     labels,
-		},
+		config: nodeConfig,
 	}
 }
 
@@ -308,8 +331,8 @@ var sshxAttachCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		log.Debugf("sshx attach called with flags: labName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s'",
-			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo)
+		log.Debugf("sshx attach called with flags: labName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', exposeSSH=%t",
+			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxExposeSshDir)
 
 		// Get lab name and network
 		labName, networkName, _, err := getLabConfig(ctx)
@@ -360,7 +383,7 @@ var sshxAttachCmd = &cobra.Command{
 
 		// Create and start SSHX container
 		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
-		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders, labelsMap)
+		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders, labelsMap, sshxExposeSshDir)
 
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
@@ -398,6 +421,13 @@ var sshxAttachCmd = &cobra.Command{
 					fmt.Println(readerLink)
 				}
 			}
+		}
+
+		// Print a helpful note about SSH access to lab nodes
+		fmt.Println("\nInside the shared terminal, you can connect to lab nodes using SSH:")
+		fmt.Printf("ssh admin@clab-%s-node1\n", labName)
+		if sshxExposeSshDir {
+			fmt.Println("\nYour SSH keys and configuration have been mounted to allow direct authentication.")
 		}
 
 		return nil
