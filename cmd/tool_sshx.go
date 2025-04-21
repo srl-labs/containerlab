@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	sshxNetworkName   string
+	sshxLabName       string
 	sshxContainerName string
 	sshxEnableReaders bool
 	sshxImage         string
@@ -53,22 +53,21 @@ func init() {
 	sshxCmd.PersistentFlags().StringVarP(&outputFormat, "format", "f", "table", "output format for 'list' command (table, json)")
 
 	// Attach command flags
-	sshxAttachCmd.Flags().StringVarP(&sshxNetworkName, "network", "n", "clab", "name of the network to attach SSHX container to")
-	sshxAttachCmd.Flags().StringVarP(&sshxContainerName, "name", "", "", "name of the SSHX container (defaults to sshx-<network>)")
+	sshxAttachCmd.Flags().StringVarP(&sshxLabName, "lab", "l", "", "name of the lab to attach SSHX container to")
+	sshxAttachCmd.Flags().StringVarP(&sshxContainerName, "name", "", "", "name of the SSHX container (defaults to sshx-<labname>)")
 	sshxAttachCmd.Flags().BoolVarP(&sshxEnableReaders, "enable-readers", "w", false, "enable read-only access links")
 	sshxAttachCmd.Flags().StringVarP(&sshxImage, "image", "i", "ghcr.io/srl-labs/network-multitool", "container image to use for SSHX")
 	sshxAttachCmd.Flags().StringVarP(&sshxOwner, "owner", "o", "", "lab owner name for the SSHX container")
 
 	// Detach command flags
-	sshxDetachCmd.Flags().StringVarP(&sshxNetworkName, "network", "n", "clab", "name of the network where SSHX container is attached")
-	sshxDetachCmd.Flags().StringVarP(&sshxContainerName, "name", "", "", "name of the SSHX container to detach")
+	sshxDetachCmd.Flags().StringVarP(&sshxLabName, "lab", "l", "", "name of the lab where SSHX container is attached")
 }
 
 // sshxCmd represents the sshx command container.
 var sshxCmd = &cobra.Command{
 	Use:   "sshx",
 	Short: "SSHX terminal sharing operations",
-	Long:  "Attach or detach SSHX terminal sharing containers to lab networks",
+	Long:  "Attach or detach SSHX terminal sharing containers to labs",
 }
 
 // SSHXNode implements runtime.Node interface for SSHX containers
@@ -117,24 +116,22 @@ func (n *SSHXNode) GetEndpoints() []links.Endpoint {
 // sshxAttachCmd
 var sshxAttachCmd = &cobra.Command{
 	Use:     "attach",
-	Short:   "attach SSHX terminal sharing to a lab network",
+	Short:   "attach SSHX terminal sharing to a lab",
 	PreRunE: common.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		log.Debugf("sshx attach called with flags: networkName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', owner='%s'",
-			sshxNetworkName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxOwner)
+		log.Debugf("sshx attach called with flags: labName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', owner='%s'",
+			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxOwner)
 
+		// Determine owner
 		ownerToSet := sshxOwner
-
-		if ownerToSet == "" { // If the --owner flag was NOT provided
+		if ownerToSet == "" {
 			ownerToSet = os.Getenv("SUDO_USER")
 			if ownerToSet == "" {
 				ownerToSet = os.Getenv("USER")
 			}
-
-			// Handle case where neither is set
 			if ownerToSet == "" {
 				log.Warnf("Could not determine owner from flags or environment (SUDO_USER/USER). Owner label will not be set.")
 			} else {
@@ -144,26 +141,93 @@ var sshxAttachCmd = &cobra.Command{
 			log.Debugf("Using owner from --owner flag: %s", ownerToSet)
 		}
 
-		// Get the network from topo file if provided
-		networkName, labName, topoInfo, err := getNetworkAndTopoInfo(ctx)
-		if err != nil {
-			return err
+		// Must have either a lab name or a topo file
+		if sshxLabName == "" && common.Topo == "" {
+			return fmt.Errorf("no lab name (-l) or topology file (-t) provided. Please specify one of these options")
 		}
-		log.Debugf("Using network name: %s, lab name: %s", networkName, labName)
+
+		var labName string
+		var networkName string
+
+		// Create containerlab instance with the topology
+		opts := []clab.ClabOption{
+			clab.WithTimeout(common.Timeout),
+			clab.WithRuntime(common.Runtime,
+				&runtime.RuntimeConfig{
+					Debug:            common.Debug,
+					Timeout:          common.Timeout,
+					GracefulShutdown: common.Graceful,
+				},
+			),
+			clab.WithDebug(common.Debug),
+		}
+
+		// If lab name is provided but topo file is not, try to find running containers and get the topo file
+		if sshxLabName != "" && common.Topo == "" {
+			log.Debugf("Lab name provided, finding containers for lab: %s", sshxLabName)
+			containers, err := listContainers(ctx, "")
+			if err != nil {
+				return fmt.Errorf("failed to list containers: %w", err)
+			}
+
+			// Filter containers by lab name
+			var labContainers []runtime.GenericContainer
+			for _, c := range containers {
+				if c.Labels["containerlab"] == sshxLabName {
+					labContainers = append(labContainers, c)
+				}
+			}
+
+			if len(labContainers) == 0 {
+				return fmt.Errorf("lab '%s' not found - no running containers for this lab", sshxLabName)
+			}
+
+			// Get topology file path from container labels
+			topoFile := labContainers[0].Labels["clab-topo-file"]
+			if topoFile != "" {
+				log.Debugf("Found topology file for lab %s: %s", sshxLabName, topoFile)
+				common.Topo = topoFile
+			} else {
+				return fmt.Errorf("could not determine topology file from lab containers")
+			}
+		}
+
+		if common.Topo != "" {
+			opts = append(opts, clab.WithTopoPath(common.Topo, common.VarsFile))
+		} else {
+			return fmt.Errorf("no topology file found or provided")
+		}
+
+		c, err := clab.NewContainerLab(opts...)
+		if err != nil {
+			return fmt.Errorf("failed to create containerlab instance: %w", err)
+		}
+
+		// Get lab and network name from topology
+		if c.Config != nil {
+			labName = c.Config.Name
+			if c.Config.Mgmt.Network != "" {
+				networkName = c.Config.Mgmt.Network
+			} else {
+				networkName = "clab-" + labName
+			}
+			log.Debugf("Using network name: %s, lab name: %s", networkName, labName)
+		} else {
+			return fmt.Errorf("failed to load lab configuration")
+		}
 
 		if sshxContainerName == "" {
-			netName := networkName
-			netName = strings.Replace(netName, "clab-", "", 1)
-			sshxContainerName = fmt.Sprintf("sshx-%s", netName)
+			sshxContainerName = fmt.Sprintf("clab-%s-sshx", labName)
 			log.Debugf("Container name not provided, generated name: %s", sshxContainerName)
 		}
 
+		// Initialize runtime
 		rt, err := initRuntime(networkName)
 		if err != nil {
 			return err
 		}
-		log.Debugf("Runtime initialized: %s", rt.GetName())
 
+		// Check if container already exists
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "name",
@@ -179,22 +243,18 @@ var sshxAttachCmd = &cobra.Command{
 			return fmt.Errorf("container %s already exists", sshxContainerName)
 		}
 
-		log.Infof("Using network name '%s'", networkName)
-		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
-
-		// Pull the container image before creating the container
+		// Pull the container image
 		log.Infof("Pulling image %s...", sshxImage)
 		err = rt.PullImage(ctx, sshxImage, types.PullPolicyIfNotPresent)
 		if err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", sshxImage, err)
 		}
-		log.Debugf("Image %s pulled successfully", sshxImage)
 
-		// Create properly-formatted containerlab labels
+		// Create containerlab labels
 		labelsMap := map[string]string{
 			// Core containerlab labels
 			"containerlab":       labName,
-			"clab-node-name":     strings.Replace(sshxContainerName, "clab-"+labName+"-", "", 1), // Short name without lab prefix
+			"clab-node-name":     strings.Replace(sshxContainerName, "clab-"+labName+"-", "", 1),
 			"clab-node-longname": sshxContainerName,
 			"clab-node-kind":     "linux",
 			"clab-node-group":    "",
@@ -202,43 +262,37 @@ var sshxAttachCmd = &cobra.Command{
 			"tool-type":          "sshx",
 		}
 
-		// Add topology file path if available
-		if topoInfo.topoPath != "" {
-			absPath, err := filepath.Abs(topoInfo.topoPath)
+		// Add topology file path
+		if common.Topo != "" {
+			absPath, err := filepath.Abs(common.Topo)
 			if err == nil {
 				labelsMap["clab-topo-file"] = absPath
 			} else {
-				labelsMap["clab-topo-file"] = topoInfo.topoPath
+				labelsMap["clab-topo-file"] = common.Topo
 			}
 		}
 
 		// Set node lab directory
-		labDir := ""
-		if topoInfo.topoPath != "" {
-			// Lab directory is typically based on the lab name
-			baseDir := filepath.Dir(topoInfo.topoPath)
-			labDir = filepath.Join(baseDir, "clab-"+labName,
+		if common.Topo != "" {
+			baseDir := filepath.Dir(common.Topo)
+			labDir := filepath.Join(baseDir, "clab-"+labName,
 				strings.Replace(sshxContainerName, "clab-"+labName+"-", "", 1))
 			labelsMap["clab-node-lab-dir"] = labDir
 		}
 
-		// Add owner label if it was determined (either from flag or env)
+		// Add owner label if available
 		if ownerToSet != "" {
 			labelsMap["clab-owner"] = ownerToSet
-			log.Debugf("Setting owner label to: %s", ownerToSet)
-		} else {
-			log.Debugf("Owner label is empty, not setting.")
 		}
 
-		log.Debugf("Creating SSHXNode with labels: %v", labelsMap)
-		// Pass the final labelsMap to the NewSSHXNode function
+		// Create and start SSHX container
+		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
 		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders, labelsMap)
 
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
 			return fmt.Errorf("failed to create SSHX container: %w", err)
 		}
-		log.Debugf("Container %s created with ID: %s", sshxContainerName, id)
 
 		_, err = rt.StartContainer(ctx, id, sshxNode)
 		if err != nil {
@@ -249,11 +303,11 @@ var sshxAttachCmd = &cobra.Command{
 			}
 			return fmt.Errorf("failed to start SSHX container: %w", err)
 		}
-		log.Debugf("Container %s started successfully", sshxContainerName)
 
 		log.Infof("SSHX container %s started. Waiting for SSHX link...", sshxContainerName)
 		time.Sleep(5 * time.Second)
 
+		// Get SSHX link
 		execCmd, err := exec.NewExecCmdFromString("cat /tmp/sshx")
 		if err != nil {
 			return fmt.Errorf("failed to create exec command: %w", err)
@@ -296,53 +350,70 @@ var sshxAttachCmd = &cobra.Command{
 // sshxDetachCmd
 var sshxDetachCmd = &cobra.Command{
 	Use:     "detach",
-	Short:   "detach SSHX terminal sharing from a lab network",
+	Short:   "detach SSHX terminal sharing from a lab",
 	PreRunE: common.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Get the network from topo file if provided
-		networkName, _, _, err := getNetworkAndTopoInfo(ctx)
+		var labName string
+
+		// Create containerlab instance with the topology, if needed
+		opts := []clab.ClabOption{
+			clab.WithTimeout(common.Timeout),
+			clab.WithRuntime(common.Runtime,
+				&runtime.RuntimeConfig{
+					Debug:            common.Debug,
+					Timeout:          common.Timeout,
+					GracefulShutdown: common.Graceful,
+				},
+			),
+			clab.WithDebug(common.Debug),
+		}
+
+		// First try to get the lab name
+		if sshxLabName != "" {
+			// If lab name is provided directly, use it
+			labName = sshxLabName
+		} else if common.Topo != "" {
+			// If topology file is provided, load it to get lab name
+			opts = append(opts, clab.WithTopoPath(common.Topo, common.VarsFile))
+			c, err := clab.NewContainerLab(opts...)
+			if err != nil {
+				return fmt.Errorf("failed to create containerlab instance: %w", err)
+			}
+
+			if c.Config != nil {
+				labName = c.Config.Name
+				log.Debugf("Extracted lab name from topology: %s", labName)
+			} else {
+				return fmt.Errorf("failed to load lab configuration from topology file")
+			}
+		} else {
+			return fmt.Errorf("no lab name (-l) or topology file (-t) provided. Please specify one of these options")
+		}
+
+		if labName == "" {
+			return fmt.Errorf("could not determine lab name")
+		}
+
+		// Form the container name
+		containerName := fmt.Sprintf("clab-%s-sshx", labName)
+		log.Debugf("Container name for deletion: %s", containerName)
+
+		// Initialize runtime
+		rt, err := initSimpleRuntime()
 		if err != nil {
 			return err
 		}
 
-		if sshxContainerName == "" {
-			netName := networkName
-			netName = strings.Replace(netName, "clab-", "", 1)
-			sshxContainerName = fmt.Sprintf("sshx-%s", netName)
-		}
-
-		rt, err := initRuntime(networkName)
-		if err != nil {
-			return err
-		}
-
-		filter := []*types.GenericFilter{
-			{
-				FilterType: "name",
-				Match:      sshxContainerName,
-			},
-		}
-		containers, err := rt.ListContainers(ctx, filter)
-		if err != nil {
-			return fmt.Errorf("failed to list containers: %w", err)
-		}
-
-		if len(containers) == 0 {
-			log.Infof("SSHX container %s does not exist, nothing to detach", sshxContainerName)
-			return nil
-		}
-
-		log.Infof("Removing SSHX container %s", sshxContainerName)
-
-		err = rt.DeleteContainer(ctx, sshxContainerName)
+		log.Infof("Removing SSHX container %s", containerName)
+		err = rt.DeleteContainer(ctx, containerName)
 		if err != nil {
 			return fmt.Errorf("failed to remove SSHX container: %w", err)
 		}
 
-		log.Infof("SSHX container %s removed successfully", sshxContainerName)
+		log.Infof("SSHX container %s removed successfully", containerName)
 		return nil
 	},
 }
@@ -355,25 +426,13 @@ var sshxListCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Initialize runtime without specific network
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		// Initialize runtime
+		rt, err := initSimpleRuntime()
 		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
+			return err
 		}
 
-		rt := rinit()
-		err = rt.Init(
-			runtime.WithConfig(
-				&runtime.RuntimeConfig{
-					Timeout: common.Timeout,
-				},
-			),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to initialize runtime: %w", err)
-		}
-
-		// Filter only by SSHX label, not by network
+		// Filter only by SSHX label
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
@@ -422,25 +481,19 @@ var sshxListCmd = &cobra.Command{
 				execCmd, cmdErr := exec.NewExecCmdFromString("cat /tmp/sshx")
 				if cmdErr == nil {
 					execResult, execErr := rt.Exec(ctx, name, execCmd)
-					// Check both errors and return code
 					if execErr == nil && execResult != nil && execResult.GetReturnCode() == 0 {
 						linkContent := strings.TrimSpace(execResult.GetStdOutString())
 						if strings.Contains(linkContent, "https://sshx.io/") {
 							link = linkContent
 						} else {
-							// File exists but content is invalid or empty
 							link = "Error: Invalid link content"
-							log.Debugf("Invalid content in /tmp/sshx for %s: %s", name, linkContent)
 						}
 					} else if execErr != nil {
-						log.Debugf("Error executing 'cat /tmp/sshx' in %s: %v", name, execErr)
 						link = "Error: Failed to exec"
-					} else if execResult != nil { // execErr is nil, but return code != 0
-						log.Debugf("'cat /tmp/sshx' in %s exited with code %d", name, execResult.GetReturnCode())
+					} else if execResult != nil {
 						link = "Error: Link file not found/ready"
 					}
 				} else {
-					log.Debugf("Error creating exec command for %s: %v", name, cmdErr)
 					link = "Error: Failed to create exec cmd"
 				}
 			}
@@ -466,11 +519,10 @@ var sshxListCmd = &cobra.Command{
 			// Use go-pretty table
 			t := table.NewWriter()
 			t.SetOutputMirror(os.Stdout)
-			t.SetStyle(table.StyleRounded) // Or StyleDefault, StyleLight, etc.
+			t.SetStyle(table.StyleRounded)
 			t.Style().Format.Header = text.FormatTitle
-			t.Style().Options.SeparateRows = true // Add lines between rows
+			t.Style().Options.SeparateRows = true
 
-			// Add OWNER to the header
 			t.AppendHeader(table.Row{"NAME", "NETWORK", "STATUS", "IPv4 ADDRESS", "LINK", "OWNER"})
 
 			rows := []table.Row{}
@@ -481,7 +533,7 @@ var sshxListCmd = &cobra.Command{
 					item.State,
 					item.IPv4Address,
 					item.Link,
-					item.Owner, // Add owner to the table row
+					item.Owner,
 				})
 			}
 			t.AppendRows(rows)
@@ -492,111 +544,7 @@ var sshxListCmd = &cobra.Command{
 	},
 }
 
-// Structure to hold topology information
-type topoInfo struct {
-	topoPath string
-	labName  string
-}
-
-// getNetworkAndTopoInfo determines which network name to use based on the presence of a topology file
-// or explicit network name provided, and returns the network name, lab name, and topology information
-func getNetworkAndTopoInfo(ctx context.Context) (string, string, topoInfo, error) {
-	// Default lab name and info
-	labName := "sshx-tool"
-	info := topoInfo{
-		labName: labName,
-	}
-
-	if sshxNetworkName != "clab" {
-		log.Infof("Using explicitly provided network name: %s", sshxNetworkName)
-		return sshxNetworkName, labName, info, nil
-	}
-
-	// Explicitly check for topology files in current directory if none provided
-	if common.Topo == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			log.Debugf("Failed to get current working directory: %v", err)
-		} else {
-			entries, err := os.ReadDir(cwd)
-			if err != nil {
-				log.Debugf("Failed to read directory contents: %v", err)
-			} else {
-				for _, entry := range entries {
-					if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".clab.yml") {
-						// Found a topology file, explicitly set it
-						common.Topo = filepath.Join(cwd, entry.Name())
-						log.Debugf("Found topology file: %s", common.Topo)
-						break
-					}
-				}
-			}
-		}
-	}
-
-	// Update topology info if we have a path
-	if common.Topo != "" {
-		info.topoPath = common.Topo
-	}
-
-	// Prepare options for CLab instance
-	opts := []clab.ClabOption{
-		clab.WithTimeout(common.Timeout),
-		clab.WithRuntime(common.Runtime,
-			&runtime.RuntimeConfig{
-				Debug:            common.Debug,
-				Timeout:          common.Timeout,
-				GracefulShutdown: common.Graceful,
-			},
-		),
-		clab.WithDebug(common.Debug),
-	}
-
-	if common.Topo != "" {
-		log.Debugf("Using topology file: %s", common.Topo)
-		opts = append(opts, clab.WithTopoPath(common.Topo, common.VarsFile))
-	} else {
-		log.Debugf("No topology file provided or found")
-	}
-
-	// Create CLab instance with options
-	c, err := clab.NewContainerLab(opts...)
-	if err != nil {
-		log.Debugf("Error creating containerlab instance: %v", err)
-		log.Debugf("Using default network name: %s", sshxNetworkName)
-		return sshxNetworkName, labName, info, nil
-	}
-
-	// Get network name and lab name from topology if available
-	if c.Config != nil {
-		// Get the lab name if available
-		if c.Config.Name != "" {
-			labName = c.Config.Name
-			info.labName = labName
-			log.Debugf("Using lab name from topology: %s", labName)
-		}
-
-		// First try to get network from mgmt configuration
-		if c.Config.Mgmt.Network != "" {
-			networkName := c.Config.Mgmt.Network
-			log.Debugf("Using network name from topology mgmt config: %s", networkName)
-			return networkName, labName, info, nil
-		}
-
-		// Otherwise use the lab name for network
-		if c.Config.Name != "" {
-			networkName := "clab-" + c.Config.Name
-			log.Debugf("Using lab name for network: %s", networkName)
-			return networkName, labName, info, nil
-		}
-	}
-
-	// Fall back to default if all else fails
-	log.Debugf("No topology network found, using default network: %s", sshxNetworkName)
-	return sshxNetworkName, labName, info, nil
-}
-
-// initRuntime
+// initRuntime initializes a runtime with a specific network name
 func initRuntime(networkName string) (runtime.ContainerRuntime, error) {
 	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 	if err != nil {
@@ -608,7 +556,6 @@ func initRuntime(networkName string) (runtime.ContainerRuntime, error) {
 	mgmtNet := &types.MgmtNet{
 		Network: networkName,
 	}
-	log.Debugf("Initializing runtime with MgmtNet: %+v", mgmtNet)
 
 	err = rt.Init(
 		runtime.WithConfig(
@@ -617,6 +564,28 @@ func initRuntime(networkName string) (runtime.ContainerRuntime, error) {
 			},
 		),
 		runtime.WithMgmtNet(mgmtNet),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize runtime: %w", err)
+	}
+
+	return rt, nil
+}
+
+// initSimpleRuntime initializes a runtime without a specific network
+func initSimpleRuntime() (runtime.ContainerRuntime, error) {
+	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
+	}
+
+	rt := rinit()
+	err = rt.Init(
+		runtime.WithConfig(
+			&runtime.RuntimeConfig{
+				Timeout: common.Timeout,
+			},
+		),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize runtime: %w", err)
