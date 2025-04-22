@@ -5,6 +5,7 @@
 The `list` sub-command under the `tools sshx` command displays all active SSHX containers across all labs. This command provides a comprehensive view of all running terminal sharing sessions, including their network association, status, IP address, sharing links, and owner information.
 
 This is useful for:
+
 - Identifying all active sharing sessions
 - Getting the sharing links for existing sessions
 - Seeing who created each sharing session
@@ -21,6 +22,7 @@ containerlab tools sshx list [flags]
 ### --format | -f
 
 The output format for the list, specified with `--format | -f` flag. Possible values:
+
 - `table` (default) - Displays the information in a formatted table
 - `json` - Outputs the information in JSON format
 
@@ -66,6 +68,7 @@ No active SSHX containers found
 ```
 
 The list command shows the following information for each SSHX container:
+
 - **NAME**: The name of the SSHX container
 - **NETWORK**: The network the container is attached to
 - **STATUS**: The current status of the container (running, stopped, etc.)

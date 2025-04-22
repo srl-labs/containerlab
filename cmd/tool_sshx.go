@@ -36,7 +36,7 @@ var (
 	sshxImage         string
 	outputFormat      string
 	sshxOwner         string
-	sshxExposeSshDir  bool // New flag to control SSH directory mounting
+	sshxMountSSHDir   bool // New flag to control SSH directory mounting
 )
 
 // SSHXListItem defines the structure for SSHX container info in JSON output
@@ -74,8 +74,8 @@ func init() {
 		"container image to use for SSHX")
 	sshxAttachCmd.Flags().StringVarP(&sshxOwner, "owner", "o", "",
 		"lab owner name for the SSHX container")
-	sshxAttachCmd.Flags().BoolVarP(&sshxExposeSshDir, "expose-ssh", "s", true,
-		"mount host's SSH directory (~/.ssh) into the container")
+	sshxAttachCmd.Flags().BoolVarP(&sshxMountSSHDir, "expose-ssh", "s", false,
+		"mount host user's SSH directory (~/.ssh) to the sshx container")
 
 	// Detach command flags
 	sshxDetachCmd.Flags().StringVarP(&sshxLabName, "lab", "l", "",
@@ -90,9 +90,9 @@ var sshxCmd = &cobra.Command{
 }
 
 // NewSSHXNode creates a new SSHX node configuration
-func NewSSHXNode(name, image, network string, enableReaders bool, labels map[string]string, exposeSSH bool) *SSHXNode {
+func NewSSHXNode(name, image, network string, enableReaders bool, labels map[string]string, mountSSH bool) *SSHXNode {
 	log.Debugf("Creating SSHXNode: name=%s, image=%s, network=%s, enableReaders=%t, exposeSSH=%t",
-		name, image, network, enableReaders, exposeSSH)
+		name, image, network, enableReaders, mountSSH)
 
 	enableReadersFlag := ""
 	if enableReaders {
@@ -106,6 +106,9 @@ func NewSSHXNode(name, image, network string, enableReaders bool, labels map[str
 
 	_, gid, _ := utils.GetRealUserIDs()
 
+	// user `user` is a sudo user in srl-labs/network-multitool
+	userName := "user"
+
 	nodeConfig := &types.NodeConfig{
 		LongName:   name,
 		ShortName:  name,
@@ -114,26 +117,22 @@ func NewSSHXNode(name, image, network string, enableReaders bool, labels map[str
 		Cmd:        "ash -c '" + sshxScript + "'",
 		MgmtNet:    network,
 		Labels:     labels,
-		User:       "user",            // user `user` is a sudo user in srl-labs/network-multitool
+		User:       userName,
 		Group:      strconv.Itoa(gid), // gid is set to current user's gid to ensure
 	}
 
 	// Add SSH directory mount if enabled
-	if exposeSSH {
+	if mountSSH {
 		// Get user's home directory
-		homeDir, err := os.UserHomeDir()
-		if err == nil {
-			sshDir := filepath.Join(homeDir, ".ssh")
-			// Check if the directory exists
-			if _, err := os.Stat(sshDir); err == nil {
-				nodeConfig.Binds = append(nodeConfig.Binds, fmt.Sprintf("%s:/root/.ssh:ro", sshDir))
-				log.Debugf("Mounting SSH directory: %s -> /root/.ssh", sshDir)
-			} else {
-				log.Warnf("User's SSH directory not found at %s, skipping mount", sshDir)
-			}
+		sshDir := utils.ExpandHome("~/.ssh")
+		// Check if the directory exists
+		if _, err := os.Stat(sshDir); err == nil {
+			nodeConfig.Binds = append(nodeConfig.Binds, fmt.Sprintf("%s:/home/%s/.ssh:ro", sshDir, userName))
+			log.Debugf("Mounting SSH directory: %s -> /home/%s/.ssh", sshDir, userName)
 		} else {
-			log.Warnf("Could not determine home directory: %v", err)
+			log.Warnf("User's SSH directory not found at %s, skipping mount", sshDir)
 		}
+
 	}
 
 	return &SSHXNode{
@@ -339,7 +338,7 @@ var sshxAttachCmd = &cobra.Command{
 		defer cancel()
 
 		log.Debugf("sshx attach called with flags: labName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', exposeSSH=%t",
-			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxExposeSshDir)
+			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
 
 		// Get lab name and network
 		labName, networkName, _, err := getLabConfig(ctx)
@@ -390,7 +389,7 @@ var sshxAttachCmd = &cobra.Command{
 
 		// Create and start SSHX container
 		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
-		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders, labelsMap, sshxExposeSshDir)
+		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders, labelsMap, sshxMountSSHDir)
 
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
@@ -433,7 +432,7 @@ var sshxAttachCmd = &cobra.Command{
 		// Print a helpful note about SSH access to lab nodes
 		fmt.Println("\nInside the shared terminal, you can connect to lab nodes using SSH:")
 		fmt.Printf("ssh admin@clab-%s-node1\n", labName)
-		if sshxExposeSshDir {
+		if sshxMountSSHDir {
 			fmt.Println("\nYour SSH keys and configuration have been mounted to allow direct authentication.")
 		}
 

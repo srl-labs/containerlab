@@ -35,9 +35,10 @@ Name of the SSHX container. If not provided, the name will be automatically gene
 
 Enable read-only access links. When enabled, the command will generate an additional link that can be shared with users who should have read-only access to the terminal session.
 
-### --expose-ssh | -s
+<!-- TODO: ssh mounting removed for now, as it needs to work with non root users -->
+<!-- ### --expose-ssh | -s
 
-Mount the host's SSH directory (~/.ssh) into the container. This allows the SSHX session to use your existing SSH keys to connect to lab nodes. Enabled by default. `--expose-ssh=true`
+Mount the host's SSH directory (~/.ssh) into the container. This allows the SSHX session to use your existing SSH keys to connect to lab nodes. Enabled by default. `--expose-ssh=true` -->
 
 ### --image | -i
 
@@ -53,8 +54,9 @@ Output format for the command. Defined at the parent command level and applies t
 
 ## Examples
 
+Attach an SSHX container to a lab specified by lab name
+
 ```bash
-# Attach an SSHX container to a lab specified by lab name
 ❯ containerlab tools sshx attach -l mylab
 11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
 11:40:03 INFO Creating SSHX container clab-mylab-sshx on network 'clab-mylab'
@@ -65,22 +67,13 @@ https://sshx.io/s#sessionid,accesskey
 
 Inside the shared terminal, you can connect to lab nodes using SSH:
 ssh admin@clab-mylab-node1
+```
 
-Your SSH keys and configuration have been mounted to allow direct authentication.
+Attach SSHX without exposing SSH keys
 
-# Attach SSHX without exposing SSH keys
-❯ containerlab tools sshx attach -l mylab --expose-ssh=false
-11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
-11:40:03 INFO Creating SSHX container clab-mylab-sshx on network 'clab-mylab'
-11:40:03 INFO Creating container name=clab-mylab-sshx
-11:40:03 INFO SSHX container clab-mylab-sshx started. Waiting for SSHX link...
-SSHX link for collaborative terminal access:
-https://sshx.io/s#sessionid,accesskey
+Attach with a specific topology file
 
-Inside the shared terminal, you can connect to lab nodes using SSH:
-ssh admin@clab-mylab-node1
-
-# Attach with a specific topology file
+```bash
 ❯ containerlab tools sshx attach -t mylab.clab.yml
 11:40:03 INFO Parsing & checking topology file=mylab.clab.yml
 11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
@@ -92,10 +85,11 @@ https://sshx.io/s#sessionid,accesskey
 
 Inside the shared terminal, you can connect to lab nodes using SSH:
 ssh admin@clab-mylab-node1
+```
 
-Your SSH keys and configuration have been mounted to allow direct authentication.
+Attach with a custom container name
 
-# Attach with a custom container name
+```
 ❯ containerlab tools sshx attach -l mylab --name my-shared-terminal
 11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
 11:40:03 INFO Creating SSHX container my-shared-terminal on network 'clab-mylab'
@@ -107,9 +101,11 @@ https://sshx.io/s#sessionid,accesskey
 Inside the shared terminal, you can connect to lab nodes using SSH:
 ssh admin@clab-mylab-node1
 
-Your SSH keys and configuration have been mounted to allow direct authentication.
+```
 
-# Attach with read-only access enabled
+Attach with read-only access enabled
+
+```bash
 ❯ containerlab tools sshx attach -l mylab --enable-readers
 11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
 11:40:03 INFO Creating SSHX container clab-mylab-sshx on network 'clab-mylab'
@@ -123,25 +119,9 @@ https://sshx.io/s#sessionid,accesskey
 
 Inside the shared terminal, you can connect to lab nodes using SSH:
 ssh admin@clab-mylab-node1
-
-Your SSH keys and configuration have been mounted to allow direct authentication.
-
-# Attach with a specific owner
-❯ containerlab tools sshx attach -l mylab --owner alice
-11:40:03 INFO Pulling image ghcr.io/srl-labs/network-multitool...
-11:40:03 INFO Creating SSHX container clab-mylab-sshx on network 'clab-mylab'
-11:40:03 INFO Creating container name=clab-mylab-sshx
-11:40:03 INFO SSHX container clab-mylab-sshx started. Waiting for SSHX link...
-SSHX link for collaborative terminal access:
-https://sshx.io/s#sessionid,accesskey
-
-Inside the shared terminal, you can connect to lab nodes using SSH:
-ssh admin@clab-mylab-node1
-
-Your SSH keys and configuration have been mounted to allow direct authentication.
 ```
 
-When the SSHX container is attached, anyone with the sharing link can access your terminal session through their web browser. From this shared terminal, they can connect to any node in the lab using SSH, with authentication handled automatically if SSH key mounting is enabled.
+When the SSHX container is attached, anyone with the sharing link can access your terminal session through their web browser. From this shared terminal, they can connect to any node in the lab using SSH.
 
 The container is automatically connected to the lab's management network, which provides DNS resolution for all lab nodes. This allows you to use node names like `clab-mylab-node1` directly in SSH commands without needing to know specific IP addresses.
 
