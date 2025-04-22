@@ -99,7 +99,7 @@ func NewSSHXNode(name, image, network string, enableReaders bool, labels map[str
 		enableReadersFlag = "--enable-readers"
 	}
 
-	sshxScript := fmt.Sprintf(
+	sshxCmd := fmt.Sprintf(
 		`curl -sSf https://sshx.io/get | sh > /dev/null ; sshx -q %s > /tmp/sshx & while [ ! -s /tmp/sshx ]; do sleep 1; done && cat /tmp/sshx ; sleep infinity`,
 		enableReadersFlag,
 	)
@@ -114,7 +114,7 @@ func NewSSHXNode(name, image, network string, enableReaders bool, labels map[str
 		ShortName:  name,
 		Image:      image,
 		Entrypoint: "",
-		Cmd:        "ash -c '" + sshxScript + "'",
+		Cmd:        "ash -c '" + sshxCmd + "'",
 		MgmtNet:    network,
 		Labels:     labels,
 		User:       userName,
@@ -408,13 +408,11 @@ var sshxAttachCmd = &cobra.Command{
 		// Get SSHX link
 		link := getSSHXLink(ctx, rt, sshxContainerName)
 		if link == "" {
-			fmt.Println("SSHX container started but failed to retrieve the link.")
-			fmt.Printf("Check the container logs: docker logs %s\n", sshxContainerName)
+			log.Warn("SSHX container started but failed to retrieve the link.\nCheck the container logs: docker logs %s", sshxContainerName)
 			return nil
 		}
 
-		fmt.Println("SSHX link for collaborative terminal access:")
-		fmt.Println(link)
+		log.Info("SSHX successfully started", "link", link, "note", fmt.Sprintf("Inside the shared terminal, you can connect to lab nodes using SSH:\nssh admin@clab-%s-<node-name>", labName))
 
 		// Display read-only link if enabled
 		if sshxEnableReaders {
@@ -429,9 +427,6 @@ var sshxAttachCmd = &cobra.Command{
 			}
 		}
 
-		// Print a helpful note about SSH access to lab nodes
-		fmt.Println("\nInside the shared terminal, you can connect to lab nodes using SSH:")
-		fmt.Printf("ssh admin@clab-%s-node1\n", labName)
 		if sshxMountSSHDir {
 			fmt.Println("\nYour SSH keys and configuration have been mounted to allow direct authentication.")
 		}
