@@ -5,10 +5,10 @@ topology:
   nodes:
     srl:
       kind: nokia_srlinux
-      image: ghcr.io/nokia/srlinux:24.3.3
+      image: ghcr.io/nokia/srlinux
     ceos:
       kind: arista_ceos
       image: ceos:4.32.0F
 
   links:
-    - endpoints: ["srl:e1-1", "ceos:eth1"]
+    - endpoints: ["srl:ethernet-1/1", "ceos:eth1"]

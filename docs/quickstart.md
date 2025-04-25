@@ -83,7 +83,7 @@ Below you will find different image names you can come across when working with 
 
 Our topology file defines two nodes, where each node is defined with its own container image:
 
-* `ghcr.io/nokia/srlinux:24.3.3` - for Nokia SR Linux node
+* `ghcr.io/nokia/srlinux` - for Nokia SR Linux node
 * `ceos:4.32.0F` - for Arista cEOS node
 
 When containerlab starts to deploy the lab, it will first check if the images are available locally. Local images can be listed with `docker images` command.
