@@ -6,6 +6,8 @@ package cmd
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -67,14 +69,27 @@ type APIServerNode struct {
 	config *types.NodeConfig
 }
 
+// generateRandomJWTSecret creates a random string for use as JWT secret
+func generateRandomJWTSecret() (string, error) {
+	// Generate 32 random bytes (256 bits)
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode as base64 string
+	return base64.StdEncoding.EncodeToString(bytes), nil
+}
+
 func init() {
 	toolsCmd.AddCommand(apiServerCmd)
 	apiServerCmd.AddCommand(apiServerStartCmd)
 	apiServerCmd.AddCommand(apiServerStopCmd)
-	apiServerCmd.AddCommand(apiServerListCmd)
+	apiServerCmd.AddCommand(apiServerStatusCmd)
 
 	apiServerCmd.PersistentFlags().StringVarP(&outputFormatAPI, "format", "f", "table",
-		"output format for 'list' command (table, json)")
+		"output format for 'status' command (table, json)")
 
 	// Start command flags
 	apiServerStartCmd.Flags().StringVarP(&apiServerImage, "image", "i", "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
@@ -88,7 +103,7 @@ func init() {
 	apiServerStartCmd.Flags().StringVarP(&apiServerHost, "host", "", "localhost",
 		"host address for the API server")
 	apiServerStartCmd.Flags().StringVarP(&apiServerJWTSecret, "jwt-secret", "", "",
-		"JWT secret key for authentication (required)")
+		"JWT secret key for authentication (generated randomly if not provided)")
 	apiServerStartCmd.Flags().StringVarP(&apiServerJWTExpiration, "jwt-expiration", "", "60m",
 		"JWT token expiration time")
 	apiServerStartCmd.Flags().StringVarP(&apiServerUserGroup, "user-group", "", "clab_api",
@@ -116,8 +131,7 @@ func init() {
 	apiServerStartCmd.Flags().StringVarP(&apiServerOwner, "owner", "o", "",
 		"owner name for the API server container")
 
-	// Mark JWT secret as required
-	apiServerStartCmd.MarkFlagRequired("jwt-secret")
+	// Removed: apiServerStartCmd.MarkFlagRequired("jwt-secret")
 
 	// Stop command flags
 	apiServerStopCmd.Flags().StringVarP(&apiServerName, "name", "n", "clab-api-server",
@@ -147,20 +161,26 @@ func NewAPIServerNode(name, image, labsDir string, env map[string]string, labels
 		log.Warnf("Failed to create labs directory %s: %v", absLabsDir, err)
 	}
 
+	// Define the shared labs directory path within the container from environment variables
+	sharedLabsDirInContainer := "/opt/containerlab/labs" // Default value
+	if val, ok := env["CLAB_SHARED_LABS_DIR"]; ok {
+		sharedLabsDirInContainer = val
+	}
+
 	// Set up binds
 	binds := []string{
 		"/var/run/docker.sock:/var/run/docker.sock",
-		"/var/run/netns:/var/run/netns",
-		"/var/lib/docker/containers:/var/lib/docker/containers",
-		fmt.Sprintf("%s:%s", absLabsDir, env["CLAB_SHARED_LABS_DIR"]),
+		"/var/run/netns:/var/run/netns",                            // Mount host netns directory
+		"/var/lib/docker/containers:/var/lib/docker/containers",    // Needed for some runtime operations
+		fmt.Sprintf("%s:%s", absLabsDir, sharedLabsDirInContainer), // Mount the shared labs directory
 	}
 
-	// Find containerlab binary
+	// Find containerlab binary and add bind mount if found
 	clabPath, err := findContainerlabPath()
 	if err == nil {
 		binds = append(binds, fmt.Sprintf("%s:/usr/bin/containerlab:ro", clabPath))
 	} else {
-		log.Warnf("Could not find containerlab binary: %v", err)
+		log.Warnf("Could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH.", err)
 	}
 
 	nodeConfig := &types.NodeConfig{
@@ -170,7 +190,7 @@ func NewAPIServerNode(name, image, labsDir string, env map[string]string, labels
 		Env:         env,
 		Binds:       binds,
 		Labels:      labels,
-		NetworkMode: "host",
+		NetworkMode: "host", // Use host network namespace
 	}
 
 	return &APIServerNode{
@@ -254,9 +274,14 @@ var apiServerStartCmd = &cobra.Command{
 		log.Debugf("api-server start called with flags: name='%s', image='%s', labsDir='%s', port=%d, host='%s'",
 			apiServerName, apiServerImage, apiServerLabsDir, apiServerPort, apiServerHost)
 
-		// Check for required JWT secret
+		// Generate random JWT secret if not provided
 		if apiServerJWTSecret == "" {
-			return fmt.Errorf("jwt-secret is required")
+			var err error
+			apiServerJWTSecret, err = generateRandomJWTSecret()
+			if err != nil {
+				return fmt.Errorf("failed to generate random JWT secret: %w", err)
+			}
+			log.Infof("Generated random JWT secret for API server")
 		}
 
 		// Initialize runtime
@@ -383,10 +408,10 @@ var apiServerStopCmd = &cobra.Command{
 	},
 }
 
-// apiServerListCmd lists active API server containers
-var apiServerListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list active Containerlab API server containers",
+// apiServerStatusCmd shows status of active API server containers
+var apiServerStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "show status of active Containerlab API server containers",
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
