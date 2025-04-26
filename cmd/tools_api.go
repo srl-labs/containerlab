@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -149,30 +148,16 @@ var apiServerCmd = &cobra.Command{
 func NewAPIServerNode(name, image, labsDir string, env map[string]string, labels map[string]string) *APIServerNode {
 	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s", name, image, labsDir)
 
-	// Ensure labs directory exists
-	absLabsDir, err := filepath.Abs(labsDir)
-	if err != nil {
-		log.Warnf("Failed to get absolute path for labs directory %s: %v", labsDir, err)
-		absLabsDir = labsDir
-	}
-
-	// Create the labs directory if it doesn't exist
-	if err := os.MkdirAll(absLabsDir, 0755); err != nil {
-		log.Warnf("Failed to create labs directory %s: %v", absLabsDir, err)
-	}
-
-	// Define the shared labs directory path within the container from environment variables
-	sharedLabsDirInContainer := "/opt/containerlab/labs" // Default value
-	if val, ok := env["CLAB_SHARED_LABS_DIR"]; ok {
-		sharedLabsDirInContainer = val
-	}
-
 	// Set up binds
 	binds := []string{
 		"/var/run/docker.sock:/var/run/docker.sock",
-		"/var/run/netns:/var/run/netns",                            // Mount host netns directory
-		"/var/lib/docker/containers:/var/lib/docker/containers",    // Needed for some runtime operations
-		fmt.Sprintf("%s:%s", absLabsDir, sharedLabsDirInContainer), // Mount the shared labs directory
+		"/var/run/netns:/var/run/netns",
+		"/var/lib/docker/containers:/var/lib/docker/containers",
+		"/etc/passwd:/etc/passwd:ro",
+		"/etc/shadow:/etc/shadow:ro",
+		"/etc/group:/etc/group:ro",
+		"/etc/gshadow:/etc/gshadow:ro",
+		"/home:/home",
 	}
 
 	// Find containerlab binary and add bind mount if found
