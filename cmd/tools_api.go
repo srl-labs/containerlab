@@ -502,7 +502,7 @@ var apiServerStatusCmd = &cobra.Command{
 			}
 
 			// Get labs dir from labels or use default
-			labsDir := "/opt/containerlab/labs" // default
+			labsDir := "~/.clab" // default
 			if dirsVal, ok := env["clab-labs-dir"]; ok {
 				labsDir = dirsVal
 			}
