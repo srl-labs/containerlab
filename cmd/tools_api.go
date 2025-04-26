@@ -53,14 +53,13 @@ var (
 
 // APIServerListItem defines the structure for API server container info in JSON output
 type APIServerListItem struct {
-	Name        string            `json:"name"`
-	State       string            `json:"state"`
-	Host        string            `json:"host"`
-	Port        int               `json:"port"`
-	LabsDir     string            `json:"labs_dir"`
-	Runtime     string            `json:"runtime"`
-	Owner       string            `json:"owner"`
-	Environment map[string]string `json:"environment"`
+	Name    string `json:"name"`
+	State   string `json:"state"`
+	Host    string `json:"host"`
+	Port    int    `json:"port"`
+	LabsDir string `json:"labs_dir"`
+	Runtime string `json:"runtime"`
+	Owner   string `json:"owner"`
 }
 
 // APIServerNode implements runtime.Node interface for API server containers
@@ -254,12 +253,16 @@ func (n *APIServerNode) GetEndpoints() []links.Endpoint {
 }
 
 // createLabels creates container labels
-func createAPIServerLabels(containerName, owner string) map[string]string {
+func createAPIServerLabels(containerName, owner string, port int, labsDir, host, runtimeType string) map[string]string {
 	labels := map[string]string{
 		"clab-node-name": containerName,
 		"clab-node-kind": "linux",
 		"clab-node-type": "tool",
 		"tool-type":      "api-server",
+		"clab-api-port":  fmt.Sprintf("%d", port),
+		"clab-api-host":  host,
+		"clab-labs-dir":  labsDir,
+		"clab-runtime":   runtimeType,
 	}
 
 	// Add owner label if available
@@ -368,8 +371,11 @@ var apiServerStartCmd = &cobra.Command{
 		}
 
 		// Create container labels
+		if apiServerLabsDir == "" {
+			apiServerLabsDir = "~/.clab"
+		}
 		owner := getOwnerName()
-		labels := createAPIServerLabels(apiServerName, owner)
+		labels := createAPIServerLabels(apiServerName, owner, apiServerPort, apiServerLabsDir, apiServerHost, apiServerRuntime)
 
 		// Create and start API server container
 		log.Infof("Creating API server container %s", apiServerName)
@@ -478,18 +484,9 @@ var apiServerStatusCmd = &cobra.Command{
 		for _, c := range containers {
 			name := strings.TrimPrefix(c.Names[0], "/")
 
-			// Extract environment variables from container inspect
-			env := make(map[string]string)
-			for key, value := range c.Labels {
-				// Store some information in environment map for display
-				if strings.HasPrefix(key, "clab-") {
-					env[key] = value
-				}
-			}
-
 			// Get port from labels or use default
 			port := 8080 // default
-			if portStr, ok := env["clab-api-port"]; ok {
+			if portStr, ok := c.Labels["clab-api-port"]; ok {
 				if portVal, err := strconv.Atoi(portStr); err == nil {
 					port = portVal
 				}
@@ -497,20 +494,20 @@ var apiServerStatusCmd = &cobra.Command{
 
 			// Get host from labels or use default
 			host := "localhost" // default
-			if hostVal, ok := env["clab-api-host"]; ok {
+			if hostVal, ok := c.Labels["clab-api-host"]; ok {
 				host = hostVal
 			}
 
 			// Get labs dir from labels or use default
 			labsDir := "~/.clab" // default
-			if dirsVal, ok := env["clab-labs-dir"]; ok {
+			if dirsVal, ok := c.Labels["clab-labs-dir"]; ok {
 				labsDir = dirsVal
 			}
 
 			// Get runtime from labels or use default
-			runtime := "docker" // default
-			if rtVal, ok := env["clab-runtime"]; ok {
-				runtime = rtVal
+			runtimeType := "docker" // default
+			if rtVal, ok := c.Labels["clab-runtime"]; ok {
+				runtimeType = rtVal
 			}
 
 			// Get owner from container labels
@@ -520,14 +517,13 @@ var apiServerStatusCmd = &cobra.Command{
 			}
 
 			listItems = append(listItems, APIServerListItem{
-				Name:        name,
-				State:       c.State,
-				Host:        host,
-				Port:        port,
-				LabsDir:     labsDir,
-				Runtime:     runtime,
-				Owner:       owner,
-				Environment: env,
+				Name:    name,
+				State:   c.State,
+				Host:    host,
+				Port:    port,
+				LabsDir: labsDir,
+				Runtime: runtimeType, // Changed from 'runtime' to 'runtimeType'
+				Owner:   owner,
 			})
 		}
 
