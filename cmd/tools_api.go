@@ -144,20 +144,56 @@ var apiServerCmd = &cobra.Command{
 	Long:  "Start, stop, and manage Containerlab API server containers",
 }
 
-// NewAPIServerNode creates a new API server node configuration
 func NewAPIServerNode(name, image, labsDir string, env map[string]string, labels map[string]string) *APIServerNode {
 	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s", name, image, labsDir)
 
-	// Set up binds
-	binds := []string{
-		"/var/run/docker.sock:/var/run/docker.sock",
-		"/var/run/netns:/var/run/netns",
-		"/var/lib/docker/containers:/var/lib/docker/containers",
-		"/etc/passwd:/etc/passwd:ro",
-		"/etc/shadow:/etc/shadow:ro",
-		"/etc/group:/etc/group:ro",
-		"/etc/gshadow:/etc/gshadow:ro",
-		"/home:/home",
+	// Set up binds based on the runtime
+	var binds []string
+
+	// Check the runtime from environment variables or flags
+	runtime := env["CLAB_RUNTIME"]
+	if runtime == "" {
+		runtime = apiServerRuntime // fallback to global flag value
+	}
+
+	switch runtime {
+	case "podman":
+		binds = []string{
+			// Mount podman socket to its proper location
+			"/run/podman/podman.sock:/run/podman/podman.sock",
+			"/var/run/netns:/var/run/netns",
+			"/var/lib/containers:/var/lib/containers",
+			"/etc/passwd:/etc/passwd:ro",
+			"/etc/shadow:/etc/shadow:ro",
+			"/etc/group:/etc/group:ro",
+			"/etc/gshadow:/etc/gshadow:ro",
+			"/home:/home",
+		}
+
+		// For rootless podman, check if XDG_RUNTIME_DIR is set
+		if os.Getenv("XDG_RUNTIME_DIR") != "" {
+			userID := os.Getenv("UID")
+			if userID == "" {
+				userID = strconv.Itoa(os.Getuid())
+			}
+			podmanSocket := fmt.Sprintf("/run/user/%s/podman/podman.sock", userID)
+			if _, err := os.Stat(podmanSocket); err == nil {
+				// Mount the user-specific podman socket
+				binds[0] = fmt.Sprintf("%s:/run/user/%s/podman/podman.sock", podmanSocket, userID)
+			}
+		}
+
+	default: // docker
+		binds = []string{
+			"/var/run/docker.sock:/var/run/docker.sock",
+			"/var/run/netns:/var/run/netns",
+			"/var/lib/docker/containers:/var/lib/docker/containers",
+			"/etc/passwd:/etc/passwd:ro",
+			"/etc/shadow:/etc/shadow:ro",
+			"/etc/group:/etc/group:ro",
+			"/etc/gshadow:/etc/gshadow:ro",
+			"/home:/home",
+		}
 	}
 
 	// Find containerlab binary and add bind mount if found
