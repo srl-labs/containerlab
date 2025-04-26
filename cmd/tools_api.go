@@ -522,7 +522,7 @@ var apiServerStatusCmd = &cobra.Command{
 				Host:    host,
 				Port:    port,
 				LabsDir: labsDir,
-				Runtime: runtimeType, // Changed from 'runtime' to 'runtimeType'
+				Runtime: runtimeType,
 				Owner:   owner,
 			})
 		}

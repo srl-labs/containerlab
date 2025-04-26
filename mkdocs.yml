@@ -111,6 +111,10 @@ nav:
               - set: cmd/tools/netem/set.md
               - reset: cmd/tools/netem/reset.md
               - show: cmd/tools/netem/show.md
+          - netem:
+              - set: cmd/tools/api-server/start.md
+              - reset: cmd/tools/api-server/stop.md
+              - show: cmd/tools/api-server/status.md
       - version:
           - cmd/version/index.md
           - check: cmd/version/check.md
