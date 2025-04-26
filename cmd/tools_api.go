@@ -95,7 +95,7 @@ func init() {
 		"container image to use for API server")
 	apiServerStartCmd.Flags().StringVarP(&apiServerName, "name", "n", "clab-api-server",
 		"name of the API server container")
-	apiServerStartCmd.Flags().StringVarP(&apiServerLabsDir, "labs-dir", "l", "/opt/containerlab/labs",
+	apiServerStartCmd.Flags().StringVarP(&apiServerLabsDir, "labs-dir", "l", "",
 		"directory to mount as shared labs directory")
 	apiServerStartCmd.Flags().IntVarP(&apiServerPort, "port", "p", 8080,
 		"port to expose the API server on")
