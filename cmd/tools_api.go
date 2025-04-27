@@ -443,16 +443,28 @@ var apiServerStatusCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
-		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer: %w", err)
+		// Initialize containerlab with runtime using the same approach as inspect command
+		opts := []clab.ClabOption{
+			clab.WithTimeout(common.Timeout),
+			clab.WithRuntime(common.Runtime,
+				&runtime.RuntimeConfig{
+					Debug:            common.Debug,
+					Timeout:          common.Timeout,
+					GracefulShutdown: common.Graceful,
+				},
+			),
+			clab.WithDebug(common.Debug),
 		}
 
-		rt := rinit()
-		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
+		c, err := clab.NewContainerLab(opts...)
 		if err != nil {
-			return fmt.Errorf("failed to initialize runtime: %w", err)
+			return err
+		}
+
+		// Check connectivity like inspect does
+		err = c.CheckConnectivity(ctx)
+		if err != nil {
+			return err
 		}
 
 		// Filter only by API server label
@@ -465,7 +477,7 @@ var apiServerStatusCmd = &cobra.Command{
 			},
 		}
 
-		containers, err := rt.ListContainers(ctx, filter)
+		containers, err := c.ListContainers(ctx, filter)
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %w", err)
 		}
