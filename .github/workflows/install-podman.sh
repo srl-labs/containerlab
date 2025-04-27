@@ -12,3 +12,4 @@ echo \
 sudo apt-get update -qq
 sudo apt-get -qq -y install podman
 sudo systemctl start podman
+sudo mkdir -p /var/run/netns
