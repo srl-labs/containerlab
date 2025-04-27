@@ -108,8 +108,6 @@ func init() {
 		"user group for API access")
 	apiServerStartCmd.Flags().StringVarP(&apiServerSuperUserGroup, "superuser-group", "", "clab_admins",
 		"superuser group name")
-	apiServerStartCmd.Flags().StringVarP(&apiServerRuntime, "runtime", "r", "docker",
-		"runtime to use for containerlab (docker/podman)")
 	apiServerStartCmd.Flags().StringVarP(&apiServerLogLevel, "log-level", "", "debug",
 		"log level (debug/info/warn/error)")
 	apiServerStartCmd.Flags().StringVarP(&apiServerGinMode, "gin-mode", "", "release",
@@ -143,17 +141,11 @@ var apiServerCmd = &cobra.Command{
 	Long:  "Start, stop, and manage Containerlab API server containers",
 }
 
-func NewAPIServerNode(name, image, labsDir string, env map[string]string, labels map[string]string) *APIServerNode {
-	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s", name, image, labsDir)
+func NewAPIServerNode(name, image, labsDir, runtime string, env map[string]string, labels map[string]string) *APIServerNode {
+	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s", name, image, labsDir, runtime)
 
 	// Set up binds based on the runtime
 	var binds []string
-
-	// Check the runtime from environment variables or flags
-	runtime := env["CLAB_RUNTIME"]
-	if runtime == "" {
-		runtime = apiServerRuntime // fallback to global flag value
-	}
 
 	switch runtime {
 	case "podman":
@@ -288,12 +280,12 @@ func getOwnerName() string {
 
 // apiServerStartCmd starts API server container
 var apiServerStartCmd = &cobra.Command{
-	Use:     "start",
-	Short:   "start Containerlab API server container",
-	PreRunE: common.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+    Use:     "start",
+    Short:   "start Containerlab API server container",
+    PreRunE: common.CheckAndGetRootPrivs,
+    RunE: func(_ *cobra.Command, _ []string) error {
+        ctx, cancel := context.WithCancel(context.Background())
+        defer cancel()
 
 		log.Debugf("api-server start called with flags: name='%s', image='%s', labsDir='%s', port=%d, host='%s'",
 			apiServerName, apiServerImage, apiServerLabsDir, apiServerPort, apiServerHost)
@@ -308,17 +300,22 @@ var apiServerStartCmd = &cobra.Command{
 			log.Infof("Generated random JWT secret for API server")
 		}
 
-		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
-		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
-		}
+        runtimeName := common.Runtime
+        if runtimeName == "" {
+            runtimeName = apiServerRuntime
+        }
 
-		rt := rinit()
-		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
-		if err != nil {
-			return fmt.Errorf("failed to initialize runtime: %w", err)
-		}
+        // Initialize runtime
+        _, rinit, err := clab.RuntimeInitializer(runtimeName)
+        if err != nil {
+            return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtimeName, err)
+        }
+
+        rt := rinit()
+        err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
+        if err != nil {
+            return fmt.Errorf("failed to initialize runtime: %w", err)
+        }
 
 		// Check if container already exists
 		filter := []*types.GenericFilter{{FilterType: "name", Match: apiServerName}}
@@ -375,11 +372,11 @@ var apiServerStartCmd = &cobra.Command{
 			apiServerLabsDir = "~/.clab"
 		}
 		owner := getOwnerName()
-		labels := createAPIServerLabels(apiServerName, owner, apiServerPort, apiServerLabsDir, apiServerHost, apiServerRuntime)
+		labels := createAPIServerLabels(apiServerName, owner, apiServerPort, apiServerLabsDir, apiServerHost, runtimeName)
 
 		// Create and start API server container
 		log.Infof("Creating API server container %s", apiServerName)
-		apiServerNode := NewAPIServerNode(apiServerName, apiServerImage, apiServerLabsDir, env, labels)
+		apiServerNode := NewAPIServerNode(apiServerName, apiServerImage, apiServerLabsDir, runtimeName, env, labels)
 
 		id, err := rt.CreateContainer(ctx, apiServerNode.Config())
 		if err != nil {
@@ -402,71 +399,82 @@ var apiServerStartCmd = &cobra.Command{
 	},
 }
 
-// apiServerStopCmd stops API server container
 var apiServerStopCmd = &cobra.Command{
-	Use:     "stop",
-	Short:   "stop Containerlab API server container",
-	PreRunE: common.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+    Use:     "stop",
+    Short:   "stop Containerlab API server container",
+    PreRunE: common.CheckAndGetRootPrivs,
+    RunE: func(_ *cobra.Command, _ []string) error {
+        ctx, cancel := context.WithCancel(context.Background())
+        defer cancel()
 
-		log.Debugf("Container name for deletion: %s", apiServerName)
+        log.Debugf("Container name for deletion: %s", apiServerName)
 
-		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
-		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer: %w", err)
-		}
+        // Use common.Runtime if available, otherwise use the api-server flag
+        runtimeName := common.Runtime
+        if runtimeName == "" {
+            runtimeName = apiServerRuntime
+        }
 
-		rt := rinit()
-		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
-		if err != nil {
-			return fmt.Errorf("failed to initialize runtime: %w", err)
-		}
+        // Initialize runtime
+        _, rinit, err := clab.RuntimeInitializer(runtimeName)
+        if err != nil {
+            return fmt.Errorf("failed to get runtime initializer: %w", err)
+        }
 
-		log.Infof("Removing API server container %s", apiServerName)
-		if err := rt.DeleteContainer(ctx, apiServerName); err != nil {
-			return fmt.Errorf("failed to remove API server container: %w", err)
-		}
+        rt := rinit()
+        err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
+        if err != nil {
+            return fmt.Errorf("failed to initialize runtime: %w", err)
+        }
 
-		log.Infof("API server container %s removed successfully", apiServerName)
-		return nil
-	},
+        log.Infof("Removing API server container %s", apiServerName)
+        if err := rt.DeleteContainer(ctx, apiServerName); err != nil {
+            return fmt.Errorf("failed to remove API server container: %w", err)
+        }
+
+        log.Infof("API server container %s removed successfully", apiServerName)
+        return nil
+    },
 }
 
 // apiServerStatusCmd shows status of active API server containers
 var apiServerStatusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "show status of active Containerlab API server containers",
-	PreRunE: common.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+    Use:   "status",
+    Short: "show status of active Containerlab API server containers",
+    PreRunE: common.CheckAndGetRootPrivs,
+    RunE: func(_ *cobra.Command, _ []string) error {
+        ctx, cancel := context.WithCancel(context.Background())
+        defer cancel()
 
-		// Initialize containerlab with runtime using the same approach as inspect command
-		opts := []clab.ClabOption{
-			clab.WithTimeout(common.Timeout),
-			clab.WithRuntime(common.Runtime,
-				&runtime.RuntimeConfig{
-					Debug:            common.Debug,
-					Timeout:          common.Timeout,
-					GracefulShutdown: common.Graceful,
-				},
-			),
-			clab.WithDebug(common.Debug),
-		}
+        // Use common.Runtime for consistency with other commands
+        runtimeName := common.Runtime
+        if runtimeName == "" {
+            runtimeName = apiServerRuntime
+        }
 
-		c, err := clab.NewContainerLab(opts...)
-		if err != nil {
-			return err
-		}
+        // Initialize containerlab with runtime using the same approach as inspect command
+        opts := []clab.ClabOption{
+            clab.WithTimeout(common.Timeout),
+            clab.WithRuntime(runtimeName,
+                &runtime.RuntimeConfig{
+                    Debug:            common.Debug,
+                    Timeout:          common.Timeout,
+                    GracefulShutdown: common.Graceful,
+                },
+            ),
+            clab.WithDebug(common.Debug),
+        }
 
-		// Check connectivity like inspect does
-		err = c.CheckConnectivity(ctx)
-		if err != nil {
-			return err
-		}
+        c, err := clab.NewContainerLab(opts...)
+        if err != nil {
+            return err
+        }
+
+        // Check connectivity like inspect does
+        err = c.CheckConnectivity(ctx)
+        if err != nil {
+            return err
+        }
 
 		// Filter only by API server label
 		filter := []*types.GenericFilter{
