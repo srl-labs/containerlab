@@ -439,6 +439,7 @@ var apiServerStopCmd = &cobra.Command{
 var apiServerStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "show status of active Containerlab API server containers",
+	PreRunE: common.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
