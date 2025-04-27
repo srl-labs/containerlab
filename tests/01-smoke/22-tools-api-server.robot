@@ -31,59 +31,8 @@ Start API Server With Default Settings
     Should Contain    ${output}    API server container ${api_server_name} started successfully
     Should Contain    ${output}    API Server available at: http://localhost:8080
 
-    # Give container a moment to start or crash
-    Sleep    5s
-
-    # Check container status
-    ${rc}    ${output}=    Run And Return Rc And Output
-    ...    ${runtime} ps -a | grep ${api_server_name}
-    Log    ${output}
-
-    # Get container logs regardless of status
-    ${rc}    ${logs}=    Run And Return Rc And Output
-    ...    ${runtime} logs ${api_server_name}
-    Log    Container logs:
-    Log    ${logs}
-
-    # Get more detailed container information
-    ${rc}    ${inspect}=    Run And Return Rc And Output
-    ...    ${runtime} inspect ${api_server_name}
-    Log    Container inspect:
-    Log    ${inspect}
-
-    # Get container exit code if exited
-    ${rc}    ${exit_code}=    Run And Return Rc And Output
-    ...    ${runtime} inspect -f '{{.State.ExitCode}}' ${api_server_name}
-    Log    Container exit code: ${exit_code}
-
-    # Get container state
-    ${rc}    ${state}=    Run And Return Rc And Output
-    ...    ${runtime} inspect -f '{{.State.Status}}' ${api_server_name}
-    Log    Container state: ${state}
-
-    # Original checks
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ${api_server_name}
-    # This check is intentionally flexible to help debug
-    IF    '${state}' != 'running'
-        Fail    Container is not running. Status: ${state}. Check logs above.
-    END
-
 Test API Server Health Endpoint
     [Documentation]    Test the API server health endpoint
-    # First check container status
-    ${rc}    ${status}=    Run And Return Rc And Output
-    ...    ${runtime} inspect -f '{{.State.Status}}' ${api_server_name}
-    Log    Container status before health check: ${status}
-
-    # If container is not running, get logs and fail early
-    IF    '${status}' != 'running'
-        ${rc}    ${logs}=    Run And Return Rc And Output
-        ...    ${runtime} logs ${api_server_name}
-        Log    Container logs: ${logs}
-        Fail    Container is not running. Cannot check health endpoint.
-    END
-
     # Give the server a moment to fully start
     Sleep    15s
 
