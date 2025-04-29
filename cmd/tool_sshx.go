@@ -379,7 +379,7 @@ var sshxAttachCmd = &cobra.Command{
 
 		// Pull the container image
 		log.Infof("Pulling image %s...", sshxImage)
-		if err := rt.PullImage(ctx, sshxImage, types.PullPolicyIfNotPresent); err != nil {
+		if err := rt.PullImage(ctx, sshxImage, types.PullPolicyAlways); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", sshxImage, err)
 		}
 
