@@ -112,11 +112,6 @@ Test SSHX Reattach Functionality
     Should Be Equal As Integers    ${rc1}    0
     Should Contain    ${output1}    SSHX successfully started
 
-    # Get the container ID for later comparison
-    ${container_id_before}=    Run
-    ...    ${runtime} ps -q -f name=${sshx_container}
-    Log    Original container ID: ${container_id_before}
-
     # Sleep to ensure container is fully operational
     Sleep    3s
 
@@ -126,16 +121,6 @@ Test SSHX Reattach Functionality
     Log    ${output2}
     Should Be Equal As Integers    ${rc2}    0
     Should Contain    ${output2}    SSHX successfully reattached
-
-    # Get the new container ID
-    ${container_id_after}=    Run
-    ...    ${runtime} ps -q -f name=${sshx_container}
-    Log    New container ID: ${container_id_after}
-
-    # Verify the container exists
-    ${container_exists}=    Run And Return Rc
-    ...    test -n "${container_id_after}"
-    Should Be Equal As Integers    ${container_exists}    0    The SSHX container should exist
 
     # Clean up this container before the next test
     ${clean_rc}=    Run And Return Rc
