@@ -3,6 +3,7 @@ This test suite verifies the functionality of the SSHX terminal sharing operatio
 - Attaching an SSHX container using lab name (-l) parameter
 - Attaching an SSHX container using topology file (-t) parameter
 - Testing read-only access with --enable-readers
+- Testing reattach functionality
 - Listing active SSHX containers
 - Detaching an SSHX container from a lab network
 
@@ -34,7 +35,7 @@ Attach SSHX Using Lab Name Parameter
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    SSHX container ${sshx_container} started
-    Should Contain    ${output}    SSHX link for collaborative terminal access:
+    Should Contain    ${output}    SSHX successfully started
     Should Contain    ${output}    https://sshx.io/
 
 List SSHX Containers
@@ -76,11 +77,13 @@ Attach SSHX Using Topology File Parameter
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    SSHX container ${sshx_container} started
-    Should Contain    ${output}    SSHX link for collaborative terminal access:
+    Should Contain    ${output}    SSHX successfully started
     Should Contain    ${output}    https://sshx.io/
 
     # Clean up this container before the next test
-    Run    ${CLAB_BIN} --runtime ${runtime} tools sshx detach -l ${lab_name}
+    ${clean_rc}=    Run And Return Rc
+    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx detach -l ${lab_name}
+    Log    Cleanup return code: ${clean_rc}
     Sleep    2s
 
 Attach SSHX With Read-Only Access
@@ -90,12 +93,54 @@ Attach SSHX With Read-Only Access
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    SSHX container ${sshx_container} started
-    Should Contain    ${output}    SSHX link for collaborative terminal access:
+    Should Contain    ${output}    SSHX successfully started
     Should Contain    ${output}    https://sshx.io/
     Should Contain    ${output}    Read-only access link:
 
-    # Clean up this container for the final test
-    Run    ${CLAB_BIN} --runtime ${runtime} tools sshx detach -l ${lab_name}
+    # Clean up this container before the next test
+    ${clean_rc}=    Run And Return Rc
+    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx detach -l ${lab_name}
+    Log    Cleanup return code: ${clean_rc}
+    Sleep    2s
+
+Test SSHX Reattach Functionality
+    [Documentation]    Test reattaching SSHX container (detach+attach)
+    # First attach an SSHX container
+    ${rc1}    ${output1}=    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx attach -l ${lab_name}
+    Log    ${output1}
+    Should Be Equal As Integers    ${rc1}    0
+    Should Contain    ${output1}    SSHX successfully started
+
+    # Get the container ID for later comparison
+    ${container_id_before}=    Run
+    ...    ${runtime} ps -q -f name=${sshx_container}
+    Log    Original container ID: ${container_id_before}
+
+    # Sleep to ensure container is fully operational
+    Sleep    3s
+
+    # Now reattach the container
+    ${rc2}    ${output2}=    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx reattach -l ${lab_name}
+    Log    ${output2}
+    Should Be Equal As Integers    ${rc2}    0
+    Should Contain    ${output2}    SSHX successfully reattached
+
+    # Get the new container ID
+    ${container_id_after}=    Run
+    ...    ${runtime} ps -q -f name=${sshx_container}
+    Log    New container ID: ${container_id_after}
+
+    # Verify the container exists
+    ${container_exists}=    Run And Return Rc
+    ...    test -n "${container_id_after}"
+    Should Be Equal As Integers    ${container_exists}    0    The SSHX container should exist
+
+    # Clean up this container before the next test
+    ${clean_rc}=    Run And Return Rc
+    ...    ${CLAB_BIN} --runtime ${runtime} tools sshx detach -l ${lab_name}
+    Log    Cleanup return code: ${clean_rc}
     Sleep    2s
 
 Verify SSHX Container List Is Empty

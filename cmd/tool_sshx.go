@@ -59,6 +59,7 @@ func init() {
 	sshxCmd.AddCommand(sshxAttachCmd)
 	sshxCmd.AddCommand(sshxDetachCmd)
 	sshxCmd.AddCommand(sshxListCmd)
+	sshxCmd.AddCommand(sshxReattachCmd)
 
 	sshxCmd.PersistentFlags().StringVarP(&outputFormat, "format", "f", "table",
 		"output format for 'list' command (table, json)")
@@ -80,6 +81,20 @@ func init() {
 	// Detach command flags
 	sshxDetachCmd.Flags().StringVarP(&sshxLabName, "lab", "l", "",
 		"name of the lab where SSHX container is attached")
+
+	// Reattach command flags
+	sshxReattachCmd.Flags().StringVarP(&sshxLabName, "lab", "l", "",
+		"name of the lab to reattach SSHX container to")
+	sshxReattachCmd.Flags().StringVarP(&sshxContainerName, "name", "", "",
+		"name of the SSHX container (defaults to sshx-<labname>)")
+	sshxReattachCmd.Flags().BoolVarP(&sshxEnableReaders, "enable-readers", "w", false,
+		"enable read-only access links")
+	sshxReattachCmd.Flags().StringVarP(&sshxImage, "image", "i", "ghcr.io/srl-labs/network-multitool",
+		"container image to use for SSHX")
+	sshxReattachCmd.Flags().StringVarP(&sshxOwner, "owner", "o", "",
+		"lab owner name for the SSHX container")
+	sshxReattachCmd.Flags().BoolVarP(&sshxMountSSHDir, "expose-ssh", "s", false,
+		"mount host user's SSH directory (~/.ssh) to the sshx container")
 }
 
 // sshxCmd represents the sshx command container
@@ -581,6 +596,113 @@ var sshxListCmd = &cobra.Command{
 				})
 			}
 			t.Render()
+		}
+
+		return nil
+	},
+}
+
+var sshxReattachCmd = &cobra.Command{
+	Use:     "reattach",
+	Short:   "detach and reattach SSHX terminal sharing to a lab",
+	PreRunE: common.CheckAndGetRootPrivs,
+	RunE: func(_ *cobra.Command, _ []string) error {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		log.Debugf("sshx reattach called with flags: labName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', exposeSSH=%t",
+			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
+
+		// Get lab name and network
+		labName, networkName, _, err := getLabConfig(ctx)
+		if err != nil {
+			return err
+		}
+
+		// Set container name if not provided
+		if sshxContainerName == "" {
+			sshxContainerName = fmt.Sprintf("clab-%s-sshx", labName)
+			log.Debugf("Container name not provided, generated name: %s", sshxContainerName)
+		}
+
+		// Initialize runtime
+		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		if err != nil {
+			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
+		}
+
+		rt := rinit()
+		err = rt.Init(
+			runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}),
+			runtime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to initialize runtime: %w", err)
+		}
+
+		// Step 1: Detach (remove) existing SSHX container if it exists
+		log.Infof("Removing existing SSHX container %s if present...", sshxContainerName)
+		err = rt.DeleteContainer(ctx, sshxContainerName)
+		if err != nil {
+			// Just log the error but continue - the container might not exist
+			log.Debugf("Could not remove container %s: %v. This is normal if it doesn't exist.", sshxContainerName, err)
+		} else {
+			log.Infof("Successfully removed existing SSHX container")
+		}
+
+		// Step 2: Create and attach new SSHX container
+		// Pull the container image
+		log.Infof("Pulling image %s...", sshxImage)
+		if err := rt.PullImage(ctx, sshxImage, types.PullPolicyAlways); err != nil {
+			return fmt.Errorf("failed to pull image %s: %w", sshxImage, err)
+		}
+
+		// Create container labels
+		owner := getOwner()
+		labelsMap := createLabels(labName, sshxContainerName, owner)
+
+		// Create and start SSHX container
+		log.Infof("Creating new SSHX container %s on network '%s'", sshxContainerName, networkName)
+		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders, labelsMap, sshxMountSSHDir)
+
+		id, err := rt.CreateContainer(ctx, sshxNode.Config())
+		if err != nil {
+			return fmt.Errorf("failed to create SSHX container: %w", err)
+		}
+
+		if _, err := rt.StartContainer(ctx, id, sshxNode); err != nil {
+			// Clean up on failure
+			rt.DeleteContainer(ctx, sshxContainerName)
+			return fmt.Errorf("failed to start SSHX container: %w", err)
+		}
+
+		log.Infof("SSHX container %s started. Waiting for SSHX link...", sshxContainerName)
+		time.Sleep(5 * time.Second)
+
+		// Get SSHX link
+		link := getSSHXLink(ctx, rt, sshxContainerName)
+		if link == "" {
+			log.Warn("SSHX container started but failed to retrieve the link.\nCheck the container logs: docker logs %s", sshxContainerName)
+			return nil
+		}
+
+		log.Info("SSHX successfully reattached", "link", link, "note", fmt.Sprintf("Inside the shared terminal, you can connect to lab nodes using SSH:\nssh admin@clab-%s-<node-name>", labName))
+
+		// Display read-only link if enabled
+		if sshxEnableReaders {
+			parts := strings.Split(link, "#")
+			if len(parts) > 1 {
+				accessParts := strings.Split(parts[1], ",")
+				if len(accessParts) > 1 {
+					readerLink := fmt.Sprintf("%s#%s", parts[0], accessParts[0])
+					fmt.Println("\nRead-only access link:")
+					fmt.Println(readerLink)
+				}
+			}
+		}
+
+		if sshxMountSSHDir {
+			fmt.Println("\nYour SSH keys and configuration have been mounted to allow direct authentication.")
 		}
 
 		return nil

@@ -114,6 +114,7 @@ nav:
           - sshx:
               - attach: cmd/tools/sshx/attach.md
               - detach: cmd/tools/sshx/detach.md
+              - reattach: cmd/tools/sshx/reattach.md
               - list: cmd/tools/sshx/list.md
       - version:
           - cmd/version/index.md
