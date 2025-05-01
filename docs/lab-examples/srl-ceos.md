@@ -7,7 +7,7 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 4 GB        |
 | **Topology file**             | [srlceos01.clab.yml][topofile]                                              |
 | **Name**                      | srlceos01                                                                   |
-| **Version information**[^2]   | `containerlab:0.56.0`, `srlinux:24.3.3`, `ceos:4.32.0F`, `docker-ce:26.0.0` |
+| **Version information**[^2]   | `containerlab:0.56.0`, `srlinux:24.10`, `ceos:4.32.0F`, `docker-ce:26.0.0`  |
 
 ## Description
 
