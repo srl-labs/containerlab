@@ -29,7 +29,7 @@ const (
 
 var (
 	kindNames          = []string{"vpp"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = nodes.NewCredentials("root", "vpp")
 	saveCmd            = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
 )
 
