@@ -5,14 +5,12 @@
 package vpp
 
 import (
-	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
 	"os"
 	"path"
 	"strings"
-	"text/template"
 
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
@@ -30,16 +28,9 @@ const (
 )
 
 var (
-	vppStartupConfigCmdsTpl string
-	vppBootstrapCmdsTpl     string
-
-	kindnames              = []string{"vpp"}
-	defaultCredentials     = nodes.NewCredentials("admin", "admin")
-	vppStartupConfigTpl, _ = template.New("clab-startup.conf").Funcs(utils.CreateFuncs()).
-				Parse(vppStartupConfigCmdsTpl)
-	vppBootstrapTpl, _ = template.New("bootstrap.vpp").Funcs(utils.CreateFuncs()).
-				Parse(vppBootstrapCmdsTpl)
-	saveCmd = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
+	kindNames          = []string{"vpp"}
+	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	saveCmd            = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
 )
 
 // Register registers the node in the NodeRegistry.
@@ -47,7 +38,7 @@ func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindNames, func() nodes.Node {
 		return new(vpp)
 	}, nrea)
 }
@@ -57,21 +48,7 @@ type vpp struct {
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
-	itfwaitpath   string
-	StartupConfig string
-	Bootstrap     string
-}
-
-func (n *vpp) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	// store provided pubkeys
-	n.sshPubKeys = params.SSHPubKeys
-
-	// Generate the VPP startup config using a template
-	if err := n.addStartupConfig(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	itfWaitPath string
 }
 
 func (n *vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -99,25 +76,17 @@ func (n *vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	// Creating if-wait script in lab dir
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	n.itfwaitpath = path.Join(n.Cfg.LabDir, "if-wait.sh")
-	utils.CreateFile(n.itfwaitpath, utils.IfWaitScript)
-	os.Chmod(n.itfwaitpath, 0777)
+	n.itfWaitPath = path.Join(n.Cfg.LabDir, "if-wait.sh")
+	utils.CreateFile(n.itfWaitPath, utils.IfWaitScript)
+	os.Chmod(n.itfWaitPath, 0777)
 
 	// Adding if-wait.sh script to the filesystem
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.itfwaitpath, ":", ifWaitScriptContainerPath))
-
-	// Path to the VPP startup config file, used to start the dataplane
-	n.StartupConfig = path.Join(n.Cfg.LabDir, "clab-startup.conf")
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.StartupConfig, ":/etc/vpp/clab-startup.conf"))
-
-	// Path to the VPP CLI bootstrap file, used to program the dataplane
-	n.Bootstrap = path.Join(n.Cfg.LabDir, "clab.vpp")
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.Bootstrap, ":/etc/vpp/clab.vpp"))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.itfWaitPath, ":", ifWaitScriptContainerPath))
 
 	// We need the interfaces with their correct name before launching the init process
-	// prepending original Cmd with if-wait.sh script to make sure that interfaces are available
+	// prepending original CMD with if-wait.sh script to make sure that interfaces are available
 	// before init process starts
-	n.Cfg.Entrypoint = "bash -c '" + ifWaitScriptContainerPath + " ; exec /usr/bin/vpp -c /etc/vpp/clab-startup.conf'"
+	n.Cfg.Entrypoint = "bash -c '" + ifWaitScriptContainerPath + " ; exec /sbin/init-container.sh'"
 
 	for _, o := range opts {
 		o(n)
@@ -137,7 +106,7 @@ func (n *vpp) SaveConfig(ctx context.Context) error {
 		return fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
 	}
 
-	log.Infof("saved VPP configuration from %s node\n", n.Cfg.ShortName)
+	log.Infof("Saved VPP configuration from %s node\n", n.Cfg.ShortName)
 
 	return nil
 }
@@ -151,49 +120,5 @@ func (n *vpp) CheckInterfaceName() error {
 			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
 		}
 	}
-	return nil
-}
-
-const banner = `#######################################################################
-# Welcome to FD.io's Vector Packet Processor                          #
-#                                                                     #
-# Most useful commands at that step:                                  #
-#                                                                     #
-# show interface        # for interface names, packet and state       #
-# show runtime          # for the VPP runtime statistics              #
-# ?                     # for the list of available commands          #
-#                                                                     #
-# Feel free to customize this banner using                            #
-# cmd banner post-login message                                       #
-#######################################################################`
-
-// VPP template data top level data struct.
-type vppTemplateData struct {
-	Banner     string
-	SSHPubKeys []string
-}
-
-// addDefaultConfig adds VSR default configuration.
-func (n *vpp) addStartupConfig(ctx context.Context) error {
-	buf := new(bytes.Buffer)
-	err := vppStartupConfigTpl.Execute(buf, n)
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
-
-	out, err := os.OpenFile(n.StartupConfig, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Errorf("failed to open VPP startup config file: %v", err)
-	}
-	defer out.Close()
-
-	b, err := out.WriteString(buf.String())
-	if err != nil {
-		log.Errorf("failed to write in the file: %v", err)
-	}
-	log.Debugf("Wrote %d bytes", b)
-
 	return nil
 }
