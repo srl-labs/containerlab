@@ -25,6 +25,8 @@ const (
 	ifWaitScriptContainerPath = "/usr/sbin/if-wait.sh"
 	generateable              = true
 	generateIfFormat          = "eth%d"
+
+	targetAuthzKeysPath = "/root/.ssh/authorized_keys"
 )
 
 var (
@@ -104,6 +106,10 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) e
 	utils.CreateFile(n.ifWaitPath, utils.IfWaitScript)
 	os.Chmod(n.ifWaitPath, 0777)
 
+	// record pubkeys extracted by clab
+	// with the vpp struct
+	n.sshPubKeys = params.SSHPubKeys
+
 	// use startup config file provided by a user
 	// this effectively overwrites the default startup config
 	// provided within the repo
@@ -149,4 +155,18 @@ func (n *fdio_vpp) CheckInterfaceName() error {
 		}
 	}
 	return nil
+}
+
+func (n *fdio_vpp) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+	// add public keys extracted by containerlab from the host
+	// to the vpp's root linux user authorized keys
+	// to enable passwordless ssh
+	keys := strings.Join(utils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
+	execCmd := exec.NewExecCmdFromSlice([]string{
+		"bash", "-c",
+		fmt.Sprintf("echo '%s' > %s", keys, targetAuthzKeysPath),
+	})
+	_, err := n.RunExec(ctx, execCmd)
+
+	return err
 }

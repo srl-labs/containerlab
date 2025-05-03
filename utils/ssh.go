@@ -36,7 +36,7 @@ func parseSSHVersion(in string) string {
 	return match[1]
 }
 
-// MarshalSSHPubKeys marshales the ssh public keys
+// MarshalSSHPubKeys marshals the ssh public keys
 // and a string slice that contains string representations of the keys.
 func MarshalSSHPubKeys(in []ssh.PublicKey) []string {
 	r := []string{}
