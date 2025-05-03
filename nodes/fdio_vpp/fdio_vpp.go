@@ -31,6 +31,9 @@ var (
 	kindNames          = []string{"fdio_vpp"}
 	defaultCredentials = nodes.NewCredentials("root", "vpp")
 	saveCmd            = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
+
+	//go:embed vpp_startup_config.go.tpl
+	vppStartupConfigTpl string
 )
 
 // Register registers the node in the NodeRegistry.
@@ -48,7 +51,7 @@ type fdio_vpp struct {
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
-	itfWaitPath string
+	ifWaitPath string
 }
 
 func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -56,7 +59,7 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
-	// Containers are run in priviledge mode so it should not matter now
+	// Containers are run in privileged mode so it should not matter now
 	// If it changes, add the capabilities to run VPP
 	n.Cfg.CapAdd = append(n.Cfg.CapAdd,
 		"NET_ADMIN",
@@ -74,14 +77,13 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		"/dev/vfio/vfio",
 	)
 
-	// Creating if-wait script in lab dir
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	n.itfWaitPath = path.Join(n.Cfg.LabDir, "if-wait.sh")
-	utils.CreateFile(n.itfWaitPath, utils.IfWaitScript)
-	os.Chmod(n.itfWaitPath, 0777)
+	// Adding if-wait.sh script mount
+	n.ifWaitPath = path.Join(n.Cfg.LabDir, "if-wait.sh")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.ifWaitPath, ":", ifWaitScriptContainerPath))
 
-	// Adding if-wait.sh script to the filesystem
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.itfWaitPath, ":", ifWaitScriptContainerPath))
+	// Path to the VPP startup config file, used to start the dataplane
+	n.Cfg.ResStartupConfig = path.Join(n.Cfg.LabDir, "clab-startup.conf")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.Cfg.ResStartupConfig, ":/etc/vpp/startup.conf"))
 
 	// We need the interfaces with their correct name before launching the init process
 	// prepending original CMD with if-wait.sh script to make sure that interfaces are available
@@ -93,6 +95,32 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	return nil
+}
+
+func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+	nodeCfg := n.Config()
+
+	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateFile(n.ifWaitPath, utils.IfWaitScript)
+	os.Chmod(n.ifWaitPath, 0777)
+
+	// use startup config file provided by a user
+	// this effectively overwrites the default startup config
+	// provided within the repo
+	if nodeCfg.StartupConfig != "" {
+		c, err := os.ReadFile(nodeCfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+		vppStartupConfigTpl = string(c)
+	}
+
+	err := n.GenerateConfig(nodeCfg.ResStartupConfig, vppStartupConfigTpl)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 func (n *fdio_vpp) SaveConfig(ctx context.Context) error {
