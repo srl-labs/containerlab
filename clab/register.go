@@ -27,7 +27,7 @@ import (
 	rare "github.com/srl-labs/containerlab/nodes/rare"
 	sonic "github.com/srl-labs/containerlab/nodes/sonic"
 	vr_sonic "github.com/srl-labs/containerlab/nodes/sonic_vm"
-	vpp "github.com/srl-labs/containerlab/nodes/vpp"
+	fdio_vpp "github.com/srl-labs/containerlab/nodes/fdio_vpp"
 	srl "github.com/srl-labs/containerlab/nodes/srl"
 	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	vr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
@@ -100,5 +100,5 @@ func (c *CLab) RegisterNodes() {
 	cisco_iol.Register(c.Reg)
 	huawei_vrp.Register(c.Reg)
 	sixwind_vsr.Register(c.Reg)
-	vpp.Register(c.Reg)
+	fdio_vpp.Register(c.Reg)
 }

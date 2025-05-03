@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package vpp
+package fdio_vpp
 
 import (
 	"context"
@@ -28,7 +28,7 @@ const (
 )
 
 var (
-	kindNames          = []string{"vpp"}
+	kindNames          = []string{"fdio_vpp"}
 	defaultCredentials = nodes.NewCredentials("root", "vpp")
 	saveCmd            = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
 )
@@ -39,11 +39,11 @@ func Register(r *nodes.NodeRegistry) {
 	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
 	r.Register(kindNames, func() nodes.Node {
-		return new(vpp)
+		return new(fdio_vpp)
 	}, nrea)
 }
 
-type vpp struct {
+type fdio_vpp struct {
 	nodes.DefaultNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
@@ -51,7 +51,7 @@ type vpp struct {
 	itfWaitPath string
 }
 
-func (n *vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	n.Cfg = cfg
@@ -95,7 +95,7 @@ func (n *vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vpp) SaveConfig(ctx context.Context) error {
+func (n *fdio_vpp) SaveConfig(ctx context.Context) error {
 	cmd, _ := exec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
@@ -113,7 +113,7 @@ func (n *vpp) SaveConfig(ctx context.Context) error {
 
 // CheckInterfaceName allows any interface name for vpp nodes, but checks
 // if eth0 is only used with network-mode=none.
-func (n *vpp) CheckInterfaceName() error {
+func (n *fdio_vpp) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 	for _, e := range n.Endpoints {
 		if e.GetIfaceName() == "eth0" && nm != "none" {
