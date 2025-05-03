@@ -30,10 +30,11 @@ const (
 )
 
 var (
+	//go:embed vpp_startup_config.go.tpl
 	vppStartupConfigCmdsTpl string
 	vppBootstrapCmdsTpl     string
 
-	kindnames              = []string{"vpp"}
+	kindNames              = []string{"vpp"}
 	defaultCredentials     = nodes.NewCredentials("admin", "admin")
 	vppStartupConfigTpl, _ = template.New("clab-startup.conf").Funcs(utils.CreateFuncs()).
 				Parse(vppStartupConfigCmdsTpl)
@@ -47,7 +48,7 @@ func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindNames, func() nodes.Node {
 		return new(vpp)
 	}, nrea)
 }
@@ -57,21 +58,9 @@ type vpp struct {
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
-	itfwaitpath   string
+	ifWaitPath    string
 	StartupConfig string
 	Bootstrap     string
-}
-
-func (n *vpp) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	// store provided pubkeys
-	n.sshPubKeys = params.SSHPubKeys
-
-	// Generate the VPP startup config using a template
-	if err := n.addStartupConfig(ctx); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (n *vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -79,7 +68,11 @@ func (n *vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
-	// Containers are run in priviledge mode so it should not matter now
+	for _, o := range opts {
+		o(n)
+	}
+
+	// Containers are run in privilege mode so it should not matter now
 	// If it changes, add the capabilities to run VPP
 	n.Cfg.CapAdd = append(n.Cfg.CapAdd,
 		"NET_ADMIN",
@@ -97,14 +90,9 @@ func (n *vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		"/dev/vfio/vfio",
 	)
 
-	// Creating if-wait script in lab dir
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	n.itfwaitpath = path.Join(n.Cfg.LabDir, "if-wait.sh")
-	utils.CreateFile(n.itfwaitpath, utils.IfWaitScript)
-	os.Chmod(n.itfwaitpath, 0777)
-
-	// Adding if-wait.sh script to the filesystem
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.itfwaitpath, ":", ifWaitScriptContainerPath))
+	// Adding if-wait.sh script mount
+	n.ifWaitPath = path.Join(n.Cfg.LabDir, "if-wait.sh")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.ifWaitPath, ":", ifWaitScriptContainerPath))
 
 	// Path to the VPP startup config file, used to start the dataplane
 	n.StartupConfig = path.Join(n.Cfg.LabDir, "clab-startup.conf")
@@ -119,11 +107,21 @@ func (n *vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// before init process starts
 	n.Cfg.Entrypoint = "bash -c '" + ifWaitScriptContainerPath + " ; exec /usr/bin/vpp -c /etc/vpp/clab-startup.conf'"
 
-	for _, o := range opts {
-		o(n)
+	return nil
+}
+
+func (n *vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+
+	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateFile(n.ifWaitPath, utils.IfWaitScript)
+	os.Chmod(n.ifWaitPath, 0777)
+
+	err := n.GenerateConfig(n.StartupConfig, vppStartupConfigCmdsTpl)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return err
 }
 
 func (n *vpp) SaveConfig(ctx context.Context) error {

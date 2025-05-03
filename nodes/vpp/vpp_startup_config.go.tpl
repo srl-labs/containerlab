@@ -6,7 +6,7 @@ unix {
   log /var/log/vpp/vpp.log
   full-coredump
   cli-listen /run/vpp/cli.sock
-  cli-prompt {{ .ShortName }}#
+  cli-prompt {{ .ShortName }}
   cli-no-pager
   poll-sleep-usec 100
 }
