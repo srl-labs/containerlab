@@ -26,7 +26,7 @@ configuration `vppcfg`, and the `controlplane` with its configuration in `bird2`
 ### 1. Docker Image
 
 A VPP Containerlab image, including source and build instructions, is provided by IPng Networks on
-their [Git Repo](https://github.com/pimvanpelt/vpp-containerlab). Images are published each time a
+their [Git Repo](https://git.ipng.ch/ipng/vpp-containerlab). Images are published each time a
 VPP release is completed, using Debian Bookworm base image, and VPP Debian packages from
 [FD.io](https://fd.io)'s official release repository at
 [Packagecloud.io](https://packagecloud.io/app/fdio/release/search).
@@ -48,7 +48,7 @@ integrators.
 
 #### VPP Configuration
 
-The Containerlab image ships with [vppcfg](https://github.com/pimvanpelt/vppcfg.git), a utility
+The Containerlab image ships with [vppcfg](https://git.ipng.ch/ipng/vppcfg), a utility
 that takes a YAML configuration file, checks it for syntax and semantic correctness, and then
 reconciles a running VPP dataplane with its configuration. It is meant to be re-entrant and
 stateless. This tool connects to the VPP API and creates/removes all of the configuration in a
@@ -64,7 +64,7 @@ root@clab-vpp:~# vppcfg plan -c /etc/vpp/vppcfg.yaml -o /etc/vpp/vppcfg.vpp
 root@clab-vpp:~# vppctl exec /etc/vpp/vppcfg.vpp
 ```
 
-For more details on `vppcfg`, see its [Config Guide](https://github.com/pimvanpelt/vppcfg/blob/main/docs/config-guide.md).
+For more details on `vppcfg`, see its [Config Guide](https://git.ipng.ch/ipng/vppcfg/blob/main/docs/config-guide.md).
 
 ### 3. Controlplane
 
