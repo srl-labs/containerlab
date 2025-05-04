@@ -97,7 +97,8 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.vppStartupCfgSrcPath, ":", vppStartupCfgDstPath))
 
 	// Path to the VPP config file that configures the vpp interfaces/etc
-	n.Cfg.ResStartupConfig = path.Join(n.Cfg.LabDir, "vppcfg.yaml")
+	n.vppCfgSrcPath = path.Join(n.Cfg.LabDir, "vppcfg.yaml")
+	n.Cfg.ResStartupConfig = n.vppCfgSrcPath
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.Cfg.ResStartupConfig, ":", vppCfgDstPath))
 
 	// We need the interfaces with their correct name before launching the init process
