@@ -22,11 +22,13 @@ import (
 )
 
 const (
-	ifWaitScriptContainerPath = "/usr/sbin/if-wait.sh"
-	generateable              = true
-	generateIfFormat          = "eth%d"
+	generateable     = true
+	generateIfFormat = "eth%d"
 
 	targetAuthzKeysPath = "/root/.ssh/authorized_keys"
+
+	ifWaitScriptDstPath  = "/usr/sbin/if-wait.sh"
+	vppStartupCfgDstPath = "/etc/vpp/startup.conf"
 )
 
 var (
@@ -34,6 +36,8 @@ var (
 	defaultCredentials = nodes.NewCredentials("root", "vpp")
 	saveCmd            = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
 
+	// vppStartupConfigTpl is the template for the vpp startup config itself
+	// (plugins, page sizes, etc)
 	//go:embed vpp_startup_config.go.tpl
 	vppStartupConfigTpl string
 )
@@ -53,7 +57,9 @@ type fdio_vpp struct {
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
-	ifWaitPath string
+	ifWaitSrcPath string
+	// Path to the vpp startup config file
+	vppStartupCfgSrcPath string
 }
 
 func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -79,17 +85,17 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	)
 
 	// Adding if-wait.sh script mount
-	n.ifWaitPath = path.Join(n.Cfg.LabDir, "if-wait.sh")
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.ifWaitPath, ":", ifWaitScriptContainerPath))
+	n.ifWaitSrcPath = path.Join(n.Cfg.LabDir, "if-wait.sh")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.ifWaitSrcPath, ":", ifWaitScriptDstPath))
 
 	// Path to the VPP startup config file, used to start the dataplane
-	n.Cfg.ResStartupConfig = path.Join(n.Cfg.LabDir, "clab-startup.conf")
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.Cfg.ResStartupConfig, ":/etc/vpp/startup.conf"))
+	n.vppStartupCfgSrcPath = path.Join(n.Cfg.LabDir, "vpp-startup.conf")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.vppStartupCfgSrcPath, ":", vppStartupCfgDstPath))
 
 	// We need the interfaces with their correct name before launching the init process
 	// prepending original CMD with if-wait.sh script to make sure that interfaces are available
 	// before init process starts
-	n.Cfg.Entrypoint = "bash -c '" + ifWaitScriptContainerPath + " ; exec /sbin/init-container.sh'"
+	n.Cfg.Entrypoint = "bash -c '" + ifWaitScriptDstPath + " ; exec /sbin/init-container.sh'"
 
 	for _, o := range opts {
 		o(n)
@@ -99,11 +105,11 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	nodeCfg := n.Config()
+	// nodeCfg := n.Config()
 
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	utils.CreateFile(n.ifWaitPath, utils.IfWaitScript)
-	os.Chmod(n.ifWaitPath, 0777)
+	utils.CreateFile(n.ifWaitSrcPath, utils.IfWaitScript)
+	os.Chmod(n.ifWaitSrcPath, 0777)
 
 	// record pubkeys extracted by clab
 	// with the vpp struct
@@ -112,15 +118,15 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) e
 	// use startup config file provided by a user
 	// this effectively overwrites the default startup config
 	// provided within the repo
-	if nodeCfg.StartupConfig != "" {
-		c, err := os.ReadFile(nodeCfg.StartupConfig)
-		if err != nil {
-			return err
-		}
-		vppStartupConfigTpl = string(c)
-	}
+	// if nodeCfg.StartupConfig != "" {
+	// 	c, err := os.ReadFile(nodeCfg.StartupConfig)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	vppStartupConfigTpl = string(c)
+	// }
 
-	err := n.GenerateConfig(nodeCfg.ResStartupConfig, vppStartupConfigTpl)
+	err := n.GenerateConfig(n.vppStartupCfgSrcPath, vppStartupConfigTpl)
 	if err != nil {
 		return err
 	}
