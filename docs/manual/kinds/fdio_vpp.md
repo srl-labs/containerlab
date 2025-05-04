@@ -19,7 +19,7 @@ VPP release is completed, using Debian Bookworm base image, and VPP Debian packa
 [FD.io](https://fd.io)'s official release repository at
 [Packagecloud.io](https://packagecloud.io/app/fdio/release/search).
 
-The resulting container image name is [`git.ipng.ch/ipng/vpp-containerlab`](https://git.ipng.ch/ipng/-/packages/container/vpp-containerlab/versions) and it is hosted at [IPng package registry](https://git.ipng.ch/ipng/vpp-containerlab/packages) package repository.
+The resulting container image name is [`git.ipng.ch/ipng/vpp-containerlab`](https://git.ipng.ch/ipng/-/packages/container/vpp-containerlab/versions) and it is hosted at the [IPng package repository](https://git.ipng.ch/ipng/vpp-containerlab/packages).
 
 /// admonition | Image architecture
     type: subtle-note
@@ -38,7 +38,7 @@ ssh root@<node-name>
 ///
 
 /// tab | vppctl
-The `vppctl` utility is available in the Linux shell and can be used to configure the VPP datapath.
+The `vppctl` utility is available in the Linux shell and can be used to configure the VPP dataplane.
 ///
 
 /// tab | birdc
@@ -69,7 +69,7 @@ Take a look at the repo's [README](https://git.ipng.ch/ipng/vpp-containerlab) fo
 
 The [vppcfg](#vpp-configuration)-styled configuration file is used to provision a lab node with the dataplane configuration.
 
-With the [`startup-config`](../nodes.md#startup-config) property of the node/kind a user sets the path to the local config file that will be mounted to the node and executed with the `vppcfg` utility.
+With the [`startup-config`](../nodes.md#startup-config) property of the node/kind, a user sets the path to the local config file that will be mounted to the node and executed with the `vppcfg` utility.
 
 The control plane configuration is therefore handled separately, and is provided as a bind mount to the node with a target path being relevant to the routing daemon in use.)
 
@@ -114,14 +114,10 @@ create and test your own Docker image for use with Container lab.
 
 ## About the -{{ kind_display_name }}- for Containerlab
 
-There are three moving parts to the -{{ kind_display_name }}-: the `docker image`, the `dataplane` with its
-configuration `vppcfg`, and the `controlplane` with its configuration in `bird2`.
+There are two moving parts to the -{{ kind_display_name }}-: the `dataplane` with its configuration
+in `vppcfg`, and the `controlplane` with its configuration in `bird2`.
 
-### 1. Docker Image
-
-The docker image details are described in [Getting -{{ kind_display_name }}- image](#getting-fdio-vpp-image).
-
-### 2. Dataplane
+### 1. Dataplane
 
 #### VPP Startup
 
@@ -154,9 +150,9 @@ root@clab-vpp:~# vppcfg plan -c /etc/vpp/vppcfg.yaml -o /etc/vpp/vppcfg.vpp
 root@clab-vpp:~# vppctl exec /etc/vpp/vppcfg.vpp
 ```
 
-For more details on `vppcfg`, see its [Config Guide](https://git.ipng.ch/ipng/vppcfg/src/branch/main/docs/user-guide.md).
+For more details on `vppcfg`, see its [Config Guide](https://git.ipng.ch/ipng/vppcfg/src/branch/main/docs/config-guide.md).
 
-### 3. Controlplane
+### 2. Controlplane
 
 #### VPP Linux Control Plane
 
