@@ -29,6 +29,8 @@ const (
 
 	ifWaitScriptDstPath  = "/usr/sbin/if-wait.sh"
 	vppStartupCfgDstPath = "/etc/vpp/startup.conf"
+
+	vppCfgDstPath = "/etc/vpp/vppcfg.yaml"
 )
 
 var (
@@ -60,6 +62,8 @@ type fdio_vpp struct {
 	ifWaitSrcPath string
 	// Path to the vpp startup config file
 	vppStartupCfgSrcPath string
+	// Path to vpp config file
+	vppCfgSrcPath string
 }
 
 func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -92,6 +96,10 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.vppStartupCfgSrcPath = path.Join(n.Cfg.LabDir, "vpp-startup.conf")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.vppStartupCfgSrcPath, ":", vppStartupCfgDstPath))
 
+	// Path to the VPP config file that configures the vpp interfaces/etc
+	n.Cfg.ResStartupConfig = path.Join(n.Cfg.LabDir, "vppcfg.yaml")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.Cfg.ResStartupConfig, ":", vppCfgDstPath))
+
 	// We need the interfaces with their correct name before launching the init process
 	// prepending original CMD with if-wait.sh script to make sure that interfaces are available
 	// before init process starts
@@ -105,7 +113,7 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	// nodeCfg := n.Config()
+	nodeCfg := n.Config()
 
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	utils.CreateFile(n.ifWaitSrcPath, utils.IfWaitScript)
@@ -115,23 +123,31 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) e
 	// with the vpp struct
 	n.sshPubKeys = params.SSHPubKeys
 
-	// use startup config file provided by a user
-	// this effectively overwrites the default startup config
-	// provided within the repo
-	// if nodeCfg.StartupConfig != "" {
-	// 	c, err := os.ReadFile(nodeCfg.StartupConfig)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	vppStartupConfigTpl = string(c)
-	// }
+	// handle vpp config provided in yaml file
+	// and mounted to /etc/vpp/vppcfg.yaml
+	var vppCfgTpl string
 
-	err := n.GenerateConfig(n.vppStartupCfgSrcPath, vppStartupConfigTpl)
+	// use the startup config file provided by a user
+	if nodeCfg.StartupConfig != "" {
+		c, err := os.ReadFile(nodeCfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+		vppCfgTpl = string(c)
+	}
+
+	err := n.GenerateConfig(n.Cfg.ResStartupConfig, vppCfgTpl)
 	if err != nil {
 		return err
 	}
 
-	return err
+	// template the vpp dataplane config (aka vpp startup config)
+	err = n.GenerateConfig(n.vppStartupCfgSrcPath, vppStartupConfigTpl)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (n *fdio_vpp) SaveConfig(ctx context.Context) error {
