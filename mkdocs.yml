@@ -53,7 +53,7 @@ nav:
           - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
           - Palo Alto PAN: manual/kinds/vr-pan.md
           - 6WIND VSR: manual/kinds/6wind_vsr.md
-          - FD.io VPP: manual/kinds/vpp.md
+          - FD.io VPP: manual/kinds/fdio_vpp.md
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
