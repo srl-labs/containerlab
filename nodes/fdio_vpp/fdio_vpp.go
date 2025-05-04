@@ -76,7 +76,6 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Devices = append(n.Cfg.Devices,
 		"/dev/net/tun",
 		"/dev/vhost-net",
-		"/dev/vfio/vfio",
 	)
 
 	// Adding if-wait.sh script mount
