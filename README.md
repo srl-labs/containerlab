@@ -28,6 +28,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [RARE/FreeRtr](https://containerlab.dev/manual/kinds/rare-freertr/)
 * [Ostinato](https://containerlab.dev/manual/kinds/ostinato/)
 * [6WIND VSR](https://containerlab.dev/manual/kinds/6wind_vsr/)
+* [FD.io VPP](https://containerlab.dev/manual/kinds/fdio_vpp/)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](https://containerlab.dev/manual/vrnetlab/):
 

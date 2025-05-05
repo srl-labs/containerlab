@@ -324,6 +324,13 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 			Ports:           []*types.GenericPortBinding{},
 		}
 
+		// Extract network name from labels
+		if netName, ok := v.Labels["clab-net-mgmt"]; ok && netName != "" {
+			genericList[i].NetworkName = netName
+		} else {
+			genericList[i].NetworkName = "unknown"
+		}
+
 		// convert the exposed ports the GenericPorts and add them to the GenericContainer
 		for _, p := range cList[i].Ports {
 			genericList[i].Ports = append(genericList[i].Ports,

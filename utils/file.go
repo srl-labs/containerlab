@@ -385,7 +385,7 @@ func NewHTTPClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-func getRealUserIDs() (int, int, error) {
+func GetRealUserIDs() (int, int, error) {
 	// Here we check whether SUDO set the SUDO_UID and SUDO_GID variables
 	var userUID, userGID int
 	var err error
@@ -415,7 +415,7 @@ func getRealUserIDs() (int, int, error) {
 // AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds ACL rules:
 // rwx for the real UID user and r-x for the real GID group.
 func AdjustFileACLs(fsPath string) error {
-	userUID, userGID, err := getRealUserIDs()
+	userUID, userGID, err := GetRealUserIDs()
 	if err != nil {
 		return fmt.Errorf("unable to retrieve real user UID and GID: %v", err)
 	}
@@ -463,7 +463,7 @@ func AdjustFileACLs(fsPath string) error {
 // SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from getRealUserIDs,
 // which should reflect the non-root user's UID and GID.
 func SetUIDAndGID(fsPath string) error {
-	userUID, userGID, err := getRealUserIDs()
+	userUID, userGID, err := GetRealUserIDs()
 	if err != nil {
 		return fmt.Errorf("unable to retrieve real user UID and GID: %v", err)
 	}

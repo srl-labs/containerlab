@@ -38,7 +38,9 @@ jobs:
           - "18*.robot"
           - "19*.robot"
           - "20*.robot"
+          - "21*.robot"
           - "22*.robot"
+
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ matrix.runtime == 'podman' }}
     steps:
@@ -59,7 +61,7 @@ jobs:
         run: sudo bash ./.github/workflows/install-podman.sh
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           # Install a specific version of uv.
           version: "0.5.28"

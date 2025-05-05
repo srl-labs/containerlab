@@ -176,7 +176,7 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           # Install a specific version of uv.
           version: "0.5.28"
@@ -246,7 +246,7 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           # Install a specific version of uv.
           version: "0.5.28"
@@ -325,7 +325,7 @@ jobs:
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           # Install a specific version of uv.
           version: "0.5.28"
@@ -412,9 +412,18 @@ jobs:
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
+  fdio_vpp-tests:
+    uses: ./.github/workflows/fdio_vpp-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+      - process-gitref
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - unit-test
       - smoke-tests
@@ -427,6 +436,7 @@ jobs:
       # - sros-tests
       - fortigate-tests
       - cisco_iol-tests
+      - fdio_vpp-tests
 
     steps:
       - name: Checkout
@@ -501,6 +511,7 @@ jobs:
       - kind-tests
       - cisco_iol-tests
       - fortigate-tests
+      - fdio_vpp-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4

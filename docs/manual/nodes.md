@@ -266,7 +266,7 @@ ports:
   - 55554:43554/tcp
 ```
 
-The list of port bindings consists of strings in the same format that is acceptable by `docker run` command's [`-p/--export` flag](https://docs.docker.com/engine/reference/commandline/run/#publish-or-expose-port--p---expose).
+The list of port bindings consists of strings in the same format that is acceptable by `docker run` command's [`-p/--expose` flag](https://docs.docker.com/reference/cli/docker/container/run/#publish).
 
 This option is only configurable under the node level.
 

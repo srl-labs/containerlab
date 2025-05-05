@@ -11,7 +11,7 @@ The integration tests are written in RobotFramework and are located in the [`tes
 
 ### Local execution
 
-To execute the integration tests locally you have to install the python environment with the required dependencies. If you're using [`uv`](https://docs.astral.sh/uv/) you can simply do:
+To execute the integration tests locally you have to install the python environment with the required dependencies. Containerlab uses [`uv`](https://docs.astral.sh/uv/) for all things Python, so getting the venv dialed in as as simple as:
 
 ```
 uv sync

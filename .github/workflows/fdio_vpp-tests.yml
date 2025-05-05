@@ -1,4 +1,4 @@
-name: sros-test
+name: fdio_vpp-tests
 
 "on":
   workflow_call:
@@ -8,9 +8,8 @@ name: sros-test
         type: string
 
 jobs:
-  sros-tests:
-    runs-on:
-      group: Default
+  fdio_vpp-tests:
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         runtime:
@@ -57,15 +56,18 @@ jobs:
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
+      # - name: setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+
       - name: Run tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/07-sros/${{ matrix.test-suite }}
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/11-fdio-vpp/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 07-sros-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 11-fdio_vpp-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -74,6 +76,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-sros-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-fdio_vpp-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7

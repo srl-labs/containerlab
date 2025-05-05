@@ -46,55 +46,28 @@
                     "description": "kind of this node",
                     "markdownDescription": "[kind](https://containerlab.dev/manual/nodes/#kind) of this node",
                     "enum": [
-                        "srl",
                         "nokia_srlinux",
-                        "ceos",
                         "arista_ceos",
-                        "crpd",
                         "juniper_crpd",
                         "sonic-vs",
                         "sonic-vm",
-                        "vr-sros",
                         "nokia_sros",
-                        "vr-nokia_sros",
-                        "vr-vmx",
-                        "vr-juniper_vmx",
                         "juniper_vmx",
-                        "vr-vqfx",
-                        "vr-juniper_vqfx",
                         "juniper_vqfx",
-                        "vr-vsrx",
-                        "vr-juniper_vsrx",
                         "juniper_vsrx",
                         "juniper_vjunosrouter",
                         "juniper_vjunosswitch",
                         "juniper_vjunosevolved",
-                        "vr-xrv",
-                        "vr-cisco_xrv",
                         "cisco_xrv",
-                        "vr-xrv9k",
-                        "vr-cisco_xrv9k",
                         "cisco_xrv9k",
-                        "vr-veos",
-                        "vr-arista_veos",
                         "arista_veos",
-                        "vr-csr",
-                        "vr-cisco_csr",
                         "cisco_csr1000v",
-                        "vr-pan",
-                        "vr-paloalto_panos",
                         "paloalto_panos",
-                        "vr-ros",
-                        "vr-mikrotik_ros",
                         "mikrotik_ros",
-                        "vr-n9kv",
-                        "vr-cisco_n9kv",
                         "cisco_n9kv",
                         "cisco_ftdv",
                         "dell_ftosv",
                         "dell_sonic",
-                        "vr-aoscx",
-                        "vr-aruba_aoscx",
                         "aruba_aoscx",
                         "linux",
                         "bridge",
@@ -105,22 +78,20 @@
                         "ipinfusion_ocnos",
                         "checkpoint_cloudguard",
                         "ext-container",
-                        "xrd",
                         "rare",
                         "cisco_xrd",
-                        "c8000",
                         "cisco_c8000",
                         "cisco_c8000v",
                         "cisco_cat9kv",
                         "cisco_iol",
-                        "cvx",
                         "cumulus_cvx",
                         "huawei_vrp",
                         "openbsd",
                         "freebsd",
                         "generic_vm",
                         "fortinet_fortigate",
-                        "k8s-kind"
+                        "k8s-kind",
+                        "fdio_vpp"
                     ]
                 },
                 "license": {
@@ -181,7 +152,7 @@
                     "type": "array",
                     "description": "list of port mappings",
                     "markdownDescription": "list of [port](https://containerlab.dev/manual/nodes/#ports) mappings",
-                    "minItems": 1,
+                    "minItems": 0,
                     "items": {
                         "type": "string",
                         "pattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?:([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$|^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?:([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])+(\/tcp|\/udp|\/sctp)$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])+(\/tcp|\/udp|\/sctp)$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])-([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])+(\/tcp|\/udp|\/sctp)?$"
@@ -348,7 +319,7 @@
                     "if": {
                         "properties": {
                             "kind": {
-                                "pattern": "(srl|nokia_srlinux)"
+                                "pattern": "(nokia_srlinux)"
                             }
                         },
                         "required": [
@@ -371,10 +342,15 @@
                                     "ixrh2",
                                     "ixrh3",
                                     "ixrh4",
+                                    "ixrh432d",
+                                    "ixrh5",
+                                    "ixrh564d",
+                                    "ixrh564o",
                                     "ixr6",
                                     "ixr6e",
                                     "ixr10",
                                     "ixr10e",
+                                    "ixr18e",
                                     "sxr1x44s",
                                     "sxr1d32d",
                                     "ixrx1b",
@@ -388,7 +364,7 @@
                     "if": {
                         "properties": {
                             "kind": {
-                                "pattern": "(vr-sros|vr-nokia_sros)"
+                                "pattern": "(nokia_sros)"
                             }
                         },
                         "required": [
@@ -922,25 +898,13 @@
                     "markdownDescription": "topology [kinds](https://containerlab.dev/manual/topo-def-file/#kinds) configuration container",
                     "type": "object",
                     "properties": {
-                        "srl": {
-                            "$ref": "#/definitions/node-config"
-                        },
                         "nokia_srlinux": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "ceos": {
                             "$ref": "#/definitions/node-config"
                         },
                         "arista_ceos": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-arista_veos": {
-                            "$ref": "#/definitions/node-config"
-                        },
                         "juniper_crpd": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "crpd": {
                             "$ref": "#/definitions/node-config"
                         },
                         "sonic-vs": {
@@ -955,22 +919,13 @@
                         "dell_sonic": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-nokia_sros": {
+                        "nokia_sros": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-sros": {
+                        "juniper_vmx": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-juniper_vmx": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-vmx": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-juniper_vsrx": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-vsrx": {
+                        "juniper_vsrx": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vjunosrouter": {
@@ -982,34 +937,19 @@
                         "juniper_vjunosevolved": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-aruba_aoscx": {
+                        "aruba_aoscx": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-aoscx": {
+                        "cisco_xrv": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-cisco_xrv": {
+                        "cisco_xrv9k": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-xrv": {
+                        "cisco_nxos": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vr-cisco_xrv9k": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-xrv9k": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-cisco_nxos": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-nxos": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-cisco_csr": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "vr-csr": {
+                        "cisco_csr": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_cat9kv": {
@@ -1030,9 +970,6 @@
                         "ovs-bridge": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "mysocketio": {
-                            "$ref": "#/definitions/node-config"
-                        },
                         "host": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -1048,19 +985,16 @@
                         "ext-container": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "xrd": {
+                        "cisco_xrd": {
                             "$ref": "#/definitions/node-config"
                         },
                         "rare": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "c8000": {
+                        "cisco_8000": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "c8000v": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "cvx": {
+                        "cisco_c8000v": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cumulus_cvx": {
@@ -1076,6 +1010,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "generic_vm": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "fdio_vpp": {
                             "$ref": "#/definitions/node-config"
                         }
                     },
