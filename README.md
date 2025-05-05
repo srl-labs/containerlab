@@ -53,6 +53,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Huawei VRP](https://containerlab.dev/manual/kinds/huawei_vrp)
 * [OpenBSD](https://containerlab.dev/manual/kinds/openbsd)
 * [FreeBSD](https://containerlab.dev/manual/kinds/freebsd)
+* [OpenWRT](https://containerlab.dev/manual/kinds/openwrt/)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span contain all the needed variants of nodes:
 
