@@ -508,6 +508,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
 		Privileged:   true,
+		PidMode:      "",
 		// Network mode will be defined below via switch
 		NetworkMode: "",
 		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
@@ -1036,6 +1037,7 @@ func (d *DockerRuntime) processNetworkMode(
 		containerConfig.Hostname = ""
 	case "host":
 		containerHostConfig.NetworkMode = "host"
+		containerHostConfig.PidMode = "host"
 	default:
 		containerHostConfig.NetworkMode = container.NetworkMode(d.mgmt.Network)
 

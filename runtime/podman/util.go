@@ -191,6 +191,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
+		specBasicConfig.PidNS = specgen.Namespace{NSMode: "host"}
 	// Bridge will be used if none provided
 	case "bridge", "":
 		netName := r.mgmt.Network

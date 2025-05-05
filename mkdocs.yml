@@ -112,11 +112,16 @@ nav:
               - set: cmd/tools/netem/set.md
               - reset: cmd/tools/netem/reset.md
               - show: cmd/tools/netem/show.md
+          - api-server:
+              - set: cmd/tools/api-server/start.md
+              - reset: cmd/tools/api-server/stop.md
+              - show: cmd/tools/api-server/status.md
           - sshx:
               - attach: cmd/tools/sshx/attach.md
               - detach: cmd/tools/sshx/detach.md
               - reattach: cmd/tools/sshx/reattach.md
               - list: cmd/tools/sshx/list.md
+
       - version:
           - cmd/version/index.md
           - check: cmd/version/check.md
