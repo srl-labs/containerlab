@@ -1,0 +1,38 @@
+name: e2e-vpp
+
+topology:
+  kinds:
+    fdio_vpp:
+      image: git.ipng.ch/ipng/vpp-containerlab:latest
+      startup-config: config/__clabNodeName__/vppcfg.yaml
+      binds:
+        - config/__clabNodeName__/bird-local.conf:/etc/bird/bird-local.conf:ro
+    linux:
+      image: alpine:latest
+
+  nodes:
+    vpp1:
+      kind: fdio_vpp
+    vpp2:
+      kind: fdio_vpp
+    client1:
+      kind: linux
+      exec:
+        - ip link set address 00:c1:ab:00:00:01 dev eth1
+        - ip addr add 10.82.98.66/28 dev eth1
+        - ip route add 10.82.98.0/24 via 10.82.98.65
+        - ip addr add 2001:db8:8298:101::2/64 dev eth1
+        - ip route add 2001:db8:8298::/48 via 2001:db8:8298:101::1
+    client2:
+      kind: linux
+      exec:
+        - ip link set address 00:c1:ab:00:00:02 dev eth1
+        - ip addr add 10.82.98.82/28 dev eth1
+        - ip route add 10.82.98.0/24 via 10.82.98.81
+        - ip addr add 2001:db8:8298:102::2/64 dev eth1
+        - ip route add 2001:db8:8298::/48 via 2001:db8:8298:102::1
+
+  links:
+    - endpoints: ["vpp1:eth2", "vpp2:eth2"]
+    - endpoints: ["client1:eth1", "vpp1:eth1"]
+    - endpoints: ["client2:eth1", "vpp2:eth1"]
