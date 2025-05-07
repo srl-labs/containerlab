@@ -104,6 +104,7 @@ func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRunt
 		Binds:       binds,
 		Labels:      labels,
 		NetworkMode: "host", // Use host network namespace
+		PidMode:     "host",
 	}
 
 	return &APIServerNode{
