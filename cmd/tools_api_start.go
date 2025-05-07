@@ -62,6 +62,8 @@ func init() {
 		"SSH proxy maximum port")
 	apiServerStartCmd.Flags().StringVarP(&apiServerOwner, "owner", "o", "",
 		"owner name for the API server container")
+	apiServerStartCmd.Flags().StringVarP(&apiServerRuntime, "runtime", "r", "docker",
+		"container runtime to use for API server")
 }
 
 func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRuntime, env map[string]string, labels map[string]string) (*APIServerNode, error) {
