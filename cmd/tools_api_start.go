@@ -92,7 +92,7 @@ func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRunt
 	// Find containerlab binary and add bind mount if found
 	clabPath, err := getContainerlabBinaryPath()
 	if err != nil {
-		return nil, fmt.Errorf("Could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH.", err)
+		return nil, fmt.Errorf("could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH.", err)
 	}
 	binds = append(binds, fmt.Sprintf("%s:/usr/bin/containerlab:ro", clabPath))
 
