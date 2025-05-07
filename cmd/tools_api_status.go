@@ -35,6 +35,8 @@ type APIServerListItem struct {
 
 func init() {
 	apiServerCmd.AddCommand(apiServerStatusCmd)
+	apiServerStatusCmd.Flags().StringVarP(&outputFormatAPI, "format", "f", "table",
+		"output format for 'status' command (table, json)")
 }
 
 // apiServerStatusCmd shows status of active API server containers
