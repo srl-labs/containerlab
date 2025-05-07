@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -141,59 +141,38 @@ var apiServerCmd = &cobra.Command{
 	Long:  "Start, stop, and manage Containerlab API server containers",
 }
 
-func NewAPIServerNode(name, image, labsDir, runtime string, env map[string]string, labels map[string]string) *APIServerNode {
+func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRuntime, env map[string]string, labels map[string]string) (*APIServerNode, error) {
 	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s", name, image, labsDir, runtime)
 
 	// Set up binds based on the runtime
-	var binds []string
-
-	switch runtime {
-	case "podman":
-		binds = []string{
-			// Mount podman socket to its proper location
-			"/run/podman/podman.sock:/run/podman/podman.sock",
-			"/var/run/netns:/var/run/netns",
-			"/var/lib/containers:/var/lib/containers",
-			"/etc/passwd:/etc/passwd:ro",
-			"/etc/shadow:/etc/shadow:ro",
-			"/etc/group:/etc/group:ro",
-			"/etc/gshadow:/etc/gshadow:ro",
-			"/home:/home",
-		}
-
-		// For rootless podman, check if XDG_RUNTIME_DIR is set
-		if os.Getenv("XDG_RUNTIME_DIR") != "" {
-			userID := os.Getenv("UID")
-			if userID == "" {
-				userID = strconv.Itoa(os.Getuid())
-			}
-			podmanSocket := fmt.Sprintf("/run/user/%s/podman/podman.sock", userID)
-			if _, err := os.Stat(podmanSocket); err == nil {
-				// Mount the user-specific podman socket
-				binds[0] = fmt.Sprintf("%s:/run/user/%s/podman/podman.sock", podmanSocket, userID)
-			}
-		}
-
-	default: // docker
-		binds = []string{
-			"/var/run/docker.sock:/var/run/docker.sock",
-			"/var/run/netns:/var/run/netns",
-			"/var/lib/docker/containers:/var/lib/docker/containers",
-			"/etc/passwd:/etc/passwd:ro",
-			"/etc/shadow:/etc/shadow:ro",
-			"/etc/group:/etc/group:ro",
-			"/etc/gshadow:/etc/gshadow:ro",
-			"/home:/home",
-		}
+	binds := []string{
+		"/var/run/netns:/var/run/netns",
+		"/var/lib/containers:/var/lib/containers",
+		"/etc/passwd:/etc/passwd:ro",
+		"/etc/shadow:/etc/shadow:ro",
+		"/etc/group:/etc/group:ro",
+		"/etc/gshadow:/etc/gshadow:ro",
+		"/home:/home",
 	}
+
+	// get the runtime socket path
+	rtSocket, err := runtime.GetRuntimeSocket()
+	if err != nil {
+		return nil, err
+	}
+
+	// build the bindmount for the socket, path sound be the same in the container as is on the host
+	rtSocketBind := fmt.Sprintf("%s:%s", rtSocket, rtSocket)
+
+	// append the socket to the binds
+	binds = append(binds, rtSocketBind)
 
 	// Find containerlab binary and add bind mount if found
-	clabPath, err := findContainerlabPath()
-	if err == nil {
-		binds = append(binds, fmt.Sprintf("%s:/usr/bin/containerlab:ro", clabPath))
-	} else {
-		log.Warnf("Could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH.", err)
+	clabPath, err := getContainerlabBinaryPath()
+	if err != nil {
+		return nil, fmt.Errorf("Could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH.", err)
 	}
+	binds = append(binds, fmt.Sprintf("%s:/usr/bin/containerlab:ro", clabPath))
 
 	nodeConfig := &types.NodeConfig{
 		LongName:    name,
@@ -207,32 +186,21 @@ func NewAPIServerNode(name, image, labsDir, runtime string, env map[string]strin
 
 	return &APIServerNode{
 		config: nodeConfig,
-	}
+	}, nil
 }
 
-// findContainerlabPath tries to find the containerlab binary path
-func findContainerlabPath() (string, error) {
-	// Try using 'which' command to locate containerlab
-	cmd := exec.Command("which", "containerlab")
-	output, err := cmd.Output()
-	if err == nil {
-		return strings.TrimSpace(string(output)), nil
+// getContainerlabBinaryPath determine the binary path of the running executable
+func getContainerlabBinaryPath() (string, error) {
+	exePath, err := os.Executable()
+	if err != nil {
+		return "", err
 	}
 
-	// Try common locations
-	locations := []string{
-		"/usr/bin/containerlab",
-		"/usr/local/bin/containerlab",
-		"/opt/containerlab/containerlab",
+	absPath, err := filepath.EvalSymlinks(exePath)
+	if err != nil {
+		return "", err
 	}
-
-	for _, loc := range locations {
-		if _, err := os.Stat(loc); err == nil {
-			return loc, nil
-		}
-	}
-
-	return "", fmt.Errorf("containerlab binary not found")
+	return absPath, nil
 }
 
 func (n *APIServerNode) Config() *types.NodeConfig {
@@ -376,7 +344,10 @@ var apiServerStartCmd = &cobra.Command{
 
 		// Create and start API server container
 		log.Infof("Creating API server container %s", apiServerName)
-		apiServerNode := NewAPIServerNode(apiServerName, apiServerImage, apiServerLabsDir, runtimeName, env, labels)
+		apiServerNode, err := NewAPIServerNode(apiServerName, apiServerImage, apiServerLabsDir, rt, env, labels)
+		if err != nil {
+			return err
+		}
 
 		id, err := rt.CreateContainer(ctx, apiServerNode.Config())
 		if err != nil {

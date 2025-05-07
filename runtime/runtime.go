@@ -66,6 +66,8 @@ type ContainerRuntime interface {
 	WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error
 	// CheckConnectivity returns an error if it cannot connect to the runtime, nil otherwise
 	CheckConnection(ctx context.Context) error
+	// GetRuntimeSocket returns the path to the control socket
+	GetRuntimeSocket() (string, error)
 }
 
 type ContainerStatus string

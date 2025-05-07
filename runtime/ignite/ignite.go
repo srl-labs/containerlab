@@ -485,3 +485,7 @@ func (*IgniteRuntime) CheckConnection(_ context.Context) error {
 
 	return nil
 }
+
+func (*IgniteRuntime) GetRuntimeSocket() (string, error) {
+	return "", fmt.Errorf("GetRuntimeSocket() is unimplemented for ignite runtime")
+}

@@ -6,6 +6,8 @@ package podman
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -419,4 +421,21 @@ func (r *PodmanRuntime) CheckConnection(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (r *PodmanRuntime) GetRuntimeSocket() (string, error) {
+	socket := "/run/podman/podman.sock"
+
+	// For rootless podman, check if XDG_RUNTIME_DIR is set
+	if os.Getenv("XDG_RUNTIME_DIR") != "" {
+		userID := os.Getenv("UID")
+		if userID == "" {
+			userID = strconv.Itoa(os.Getuid())
+		}
+		nonRootSocket := fmt.Sprintf("/run/user/%s/podman/podman.sock", userID)
+		if _, err := os.Stat(nonRootSocket); err == nil {
+			socket = nonRootSocket
+		}
+	}
+	return socket, nil
 }

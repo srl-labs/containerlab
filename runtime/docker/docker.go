@@ -1125,3 +1125,7 @@ func (d *DockerRuntime) CheckConnection(ctx context.Context) error {
 
 	return nil
 }
+
+func (*DockerRuntime) GetRuntimeSocket() (string, error) {
+	return "/var/run/docker.sock", nil
+}
