@@ -216,6 +216,21 @@ func (mr *MockContainerRuntimeMockRecorder) GetName() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetName", reflect.TypeOf((*MockContainerRuntime)(nil).GetName))
 }
 
+// GetRuntimeSocket mocks base method.
+func (m *MockContainerRuntime) GetRuntimeSocket() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRuntimeSocket")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRuntimeSocket indicates an expected call of GetRuntimeSocket.
+func (mr *MockContainerRuntimeMockRecorder) GetRuntimeSocket() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRuntimeSocket", reflect.TypeOf((*MockContainerRuntime)(nil).GetRuntimeSocket))
+}
+
 // Init mocks base method.
 func (m *MockContainerRuntime) Init(arg0 ...runtime.RuntimeOption) error {
 	m.ctrl.T.Helper()
