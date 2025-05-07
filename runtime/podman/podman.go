@@ -170,7 +170,7 @@ func (r *PodmanRuntime) PullImage(ctx context.Context, image string, pullPolicy 
 	}
 
 	// Pull the image if it doesn't exist
-	if !ex {
+	if !ex || pullPolicy == types.PullPolicyAlways {
 		_, err = images.Pull(ctx, canonicalImage, &images.PullOptions{})
 	}
 	return err
