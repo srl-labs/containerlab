@@ -18,6 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 func init() {
@@ -66,15 +67,21 @@ func init() {
 func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRuntime, env map[string]string, labels map[string]string) (*APIServerNode, error) {
 	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s", name, image, labsDir, runtime)
 
+	netnsPath := "/run/netns"
+
 	// Set up binds based on the runtime
 	binds := []string{
-		"/var/run/netns:/var/run/netns",
+		fmt.Sprintf("%s:%s", netnsPath, netnsPath),
 		"/var/lib/containers:/var/lib/containers",
 		"/etc/passwd:/etc/passwd:ro",
 		"/etc/shadow:/etc/shadow:ro",
 		"/etc/group:/etc/group:ro",
 		"/etc/gshadow:/etc/gshadow:ro",
 		"/home:/home",
+	}
+
+	if !utils.DirExists(netnsPath) {
+		utils.CreateDirectory(netnsPath, 0755)
 	}
 
 	// get the runtime socket path
@@ -92,7 +99,7 @@ func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRunt
 	// Find containerlab binary and add bind mount if found
 	clabPath, err := getContainerlabBinaryPath()
 	if err != nil {
-		return nil, fmt.Errorf("could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH.", err)
+		return nil, fmt.Errorf("could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH", err)
 	}
 	binds = append(binds, fmt.Sprintf("%s:/usr/bin/containerlab:ro", clabPath))
 
