@@ -489,3 +489,7 @@ func (*IgniteRuntime) CheckConnection(_ context.Context) error {
 func (*IgniteRuntime) GetRuntimeSocket() (string, error) {
 	return "", fmt.Errorf("GetRuntimeSocket() is unimplemented for ignite runtime")
 }
+
+func (*IgniteRuntime) GetCooCBindMounts() types.Binds {
+	return nil
+}

@@ -1141,3 +1141,7 @@ func (d *DockerRuntime) CheckConnection(ctx context.Context) error {
 func (*DockerRuntime) GetRuntimeSocket() (string, error) {
 	return "/var/run/docker.sock", nil
 }
+
+func (*DockerRuntime) GetCooCBindMounts() types.Binds {
+	return nil
+}

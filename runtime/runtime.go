@@ -68,6 +68,8 @@ type ContainerRuntime interface {
 	CheckConnection(ctx context.Context) error
 	// GetRuntimeSocket returns the path to the control socket
 	GetRuntimeSocket() (string, error)
+	// GetCooCBindMounts returns the extra mounts a container running this runtime in Container-outside-of-Container (CooC - General case – container uses host container runtime) does need to function properly
+	GetCooCBindMounts() types.Binds
 }
 
 type ContainerStatus string

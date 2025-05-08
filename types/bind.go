@@ -5,6 +5,16 @@ import (
 	"strings"
 )
 
+type Binds []*Bind
+
+func (b Binds) ToStringSlice() []string {
+	result := make([]string,0,len(b))
+	for _,bind := range b {
+		result = append(result, bind.String())
+	}
+	return result
+}
+
 // Bind represents a bind mount.
 type Bind struct {
 	src  string
@@ -12,8 +22,16 @@ type Bind struct {
 	mode string
 }
 
+func NewBind(src, dst, mode string ) *Bind {
+	return &Bind{
+		src: src,
+		dst: dst,
+		mode: mode,
+	}
+}
+
 // NewBind creates a new bind mount.
-func NewBind(bind string) (*Bind, error) {
+func NewBindParse(bind string) (*Bind, error) {
 	b := &Bind{}
 
 	split := strings.Split(bind, ":")

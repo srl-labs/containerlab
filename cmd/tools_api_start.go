@@ -72,14 +72,14 @@ func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRunt
 	netnsPath := "/run/netns"
 
 	// Set up binds based on the runtime
-	binds := []string{
-		fmt.Sprintf("%s:%s", netnsPath, netnsPath),
-		"/var/lib/containers:/var/lib/containers",
-		"/etc/passwd:/etc/passwd:ro",
-		"/etc/shadow:/etc/shadow:ro",
-		"/etc/group:/etc/group:ro",
-		"/etc/gshadow:/etc/gshadow:ro",
-		"/home:/home",
+	binds := types.Binds{
+		types.NewBind(netnsPath,netnsPath,""),
+		types.NewBind("/var/lib/containers","/var/lib/containers",""),
+		types.NewBind("/etc/passwd","/etc/passwd","ro"),
+		types.NewBind("/etc/shadow","/etc/shadow","ro"),
+		types.NewBind("/etc/group","/etc/group","ro"),
+		types.NewBind("/etc/gshadow","/etc/gshadow","ro"),
+		types.NewBind("/home","/home",""),
 	}
 
 	if !utils.DirExists(netnsPath) {
@@ -93,24 +93,25 @@ func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRunt
 	}
 
 	// build the bindmount for the socket, path sound be the same in the container as is on the host
-	rtSocketBind := fmt.Sprintf("%s:%s", rtSocket, rtSocket)
-
 	// append the socket to the binds
-	binds = append(binds, rtSocketBind)
+	binds = append(binds, types.NewBind(rtSocket, rtSocket,""))
+
+	// append the mounts required for container out of container operation
+	binds = append(binds, runtime.GetCooCBindMounts()...)
 
 	// Find containerlab binary and add bind mount if found
 	clabPath, err := getContainerlabBinaryPath()
 	if err != nil {
 		return nil, fmt.Errorf("could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH", err)
 	}
-	binds = append(binds, fmt.Sprintf("%s:/usr/bin/containerlab:ro", clabPath))
+	binds = append(binds, types.NewBind(clabPath,"/usr/bin/containerlab","ro"))
 
 	nodeConfig := &types.NodeConfig{
 		LongName:    name,
 		ShortName:   name,
 		Image:       image,
 		Env:         env,
-		Binds:       binds,
+		Binds:       binds.ToStringSlice(),
 		Labels:      labels,
 		NetworkMode: "host", // Use host network namespace
 		PidMode:     "host",

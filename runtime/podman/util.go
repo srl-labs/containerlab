@@ -531,3 +531,23 @@ func (r *PodmanRuntime) postStartActions(ctx context.Context, cID string, cfg *t
 	err = r.disableTXOffload(ctx)
 	return err
 }
+
+func (r *PodmanRuntime) GetCooCBindMounts() types.Binds {
+	return Binds{
+		{
+			src: "/var/lib/containers",
+			dst: "/var/lib/containers",
+			mode: "Z,rshared"
+		},
+		{
+			src: "/run/containers/storage",
+			dst: "/run/containers/storage",
+			mode: "Z,rshared"
+		},
+		{
+			src: "/run/netns",
+			dst: "/run/netns",
+			mode: "Z,rshared"
+		}
+	}
+}
