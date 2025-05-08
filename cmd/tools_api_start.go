@@ -73,13 +73,13 @@ func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRunt
 
 	// Set up binds based on the runtime
 	binds := types.Binds{
-		types.NewBind(netnsPath,netnsPath,""),
-		types.NewBind("/var/lib/containers","/var/lib/containers",""),
-		types.NewBind("/etc/passwd","/etc/passwd","ro"),
-		types.NewBind("/etc/shadow","/etc/shadow","ro"),
-		types.NewBind("/etc/group","/etc/group","ro"),
-		types.NewBind("/etc/gshadow","/etc/gshadow","ro"),
-		types.NewBind("/home","/home",""),
+		types.NewBind(netnsPath, netnsPath, ""),
+		types.NewBind("/var/lib/containers", "/var/lib/containers", ""),
+		types.NewBind("/etc/passwd", "/etc/passwd", "ro"),
+		types.NewBind("/etc/shadow", "/etc/shadow", "ro"),
+		types.NewBind("/etc/group", "/etc/group", "ro"),
+		types.NewBind("/etc/gshadow", "/etc/gshadow", "ro"),
+		types.NewBind("/home", "/home", ""),
 	}
 
 	if !utils.DirExists(netnsPath) {
@@ -94,7 +94,7 @@ func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRunt
 
 	// build the bindmount for the socket, path sound be the same in the container as is on the host
 	// append the socket to the binds
-	binds = append(binds, types.NewBind(rtSocket, rtSocket,""))
+	binds = append(binds, types.NewBind(rtSocket, rtSocket, ""))
 
 	// append the mounts required for container out of container operation
 	binds = append(binds, runtime.GetCooCBindMounts()...)
@@ -104,7 +104,7 @@ func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRunt
 	if err != nil {
 		return nil, fmt.Errorf("could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH", err)
 	}
-	binds = append(binds, types.NewBind(clabPath,"/usr/bin/containerlab","ro"))
+	binds = append(binds, types.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
 
 	nodeConfig := &types.NodeConfig{
 		LongName:    name,
