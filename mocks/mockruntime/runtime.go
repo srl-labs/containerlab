@@ -172,6 +172,20 @@ func (mr *MockContainerRuntimeMockRecorder) GetContainerStatus(ctx, cID any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerStatus", reflect.TypeOf((*MockContainerRuntime)(nil).GetContainerStatus), ctx, cID)
 }
 
+// GetCooCBindMounts mocks base method.
+func (m *MockContainerRuntime) GetCooCBindMounts() types.Binds {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCooCBindMounts")
+	ret0, _ := ret[0].(types.Binds)
+	return ret0
+}
+
+// GetCooCBindMounts indicates an expected call of GetCooCBindMounts.
+func (mr *MockContainerRuntimeMockRecorder) GetCooCBindMounts() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCooCBindMounts", reflect.TypeOf((*MockContainerRuntime)(nil).GetCooCBindMounts))
+}
+
 // GetHostsPath mocks base method.
 func (m *MockContainerRuntime) GetHostsPath(arg0 context.Context, arg1 string) (string, error) {
 	m.ctrl.T.Helper()
