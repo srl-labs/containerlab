@@ -5,11 +5,13 @@ import (
 	"strings"
 )
 
+// Binds represent a list of bind mounts.
 type Binds []*Bind
 
+// ToStringSlice returns a slice of strings representing the bind mounts.
 func (b Binds) ToStringSlice() []string {
-	result := make([]string,0,len(b))
-	for _,bind := range b {
+	result := make([]string, 0, len(b))
+	for _, bind := range b {
 		result = append(result, bind.String())
 	}
 	return result
@@ -22,16 +24,17 @@ type Bind struct {
 	mode string
 }
 
-func NewBind(src, dst, mode string ) *Bind {
+// NewBind creates a new Bind.
+func NewBind(src, dst, mode string) *Bind {
 	return &Bind{
-		src: src,
-		dst: dst,
+		src:  src,
+		dst:  dst,
 		mode: mode,
 	}
 }
 
-// NewBind creates a new bind mount.
-func NewBindParse(bind string) (*Bind, error) {
+// NewBindFromString creates a new Bind instance from the string representation.
+func NewBindFromString(bind string) (*Bind, error) {
 	b := &Bind{}
 
 	split := strings.Split(bind, ":")
