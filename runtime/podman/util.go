@@ -533,21 +533,9 @@ func (r *PodmanRuntime) postStartActions(ctx context.Context, cID string, cfg *t
 }
 
 func (r *PodmanRuntime) GetCooCBindMounts() types.Binds {
-	return Binds{
-		{
-			src: "/var/lib/containers",
-			dst: "/var/lib/containers",
-			mode: "Z,rshared"
-		},
-		{
-			src: "/run/containers/storage",
-			dst: "/run/containers/storage",
-			mode: "Z,rshared"
-		},
-		{
-			src: "/run/netns",
-			dst: "/run/netns",
-			mode: "Z,rshared"
-		}
+	return types.Binds{
+		types.NewBind("/var/lib/containers", "/var/lib/containers", "Z,rshared"),
+		types.NewBind("/run/containers/storage", "/run/containers/storage", "Z,rshared"),
+		types.NewBind("/run/netns", "/run/netns", "Z,rshared"),
 	}
 }

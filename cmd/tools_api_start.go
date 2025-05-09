@@ -18,7 +18,6 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 func init() {
@@ -69,21 +68,14 @@ func init() {
 func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRuntime, env map[string]string, labels map[string]string) (*APIServerNode, error) {
 	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s", name, image, labsDir, runtime)
 
-	netnsPath := "/run/netns"
-
 	// Set up binds based on the runtime
 	binds := types.Binds{
-		types.NewBind(netnsPath, netnsPath, ""),
-		types.NewBind("/var/lib/containers", "/var/lib/containers", ""),
+		//	types.NewBind(netnsPath, netnsPath, ""),
 		types.NewBind("/etc/passwd", "/etc/passwd", "ro"),
 		types.NewBind("/etc/shadow", "/etc/shadow", "ro"),
 		types.NewBind("/etc/group", "/etc/group", "ro"),
 		types.NewBind("/etc/gshadow", "/etc/gshadow", "ro"),
 		types.NewBind("/home", "/home", ""),
-	}
-
-	if !utils.DirExists(netnsPath) {
-		utils.CreateDirectory(netnsPath, 0755)
 	}
 
 	// get the runtime socket path

@@ -1143,5 +1143,8 @@ func (*DockerRuntime) GetRuntimeSocket() (string, error) {
 }
 
 func (*DockerRuntime) GetCooCBindMounts() types.Binds {
-	return nil
+	return types.Binds{
+		types.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
+		types.NewBind("/run/netns", "/run/netns", ""),
+	}
 }
