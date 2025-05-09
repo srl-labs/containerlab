@@ -76,7 +76,7 @@ func (t *Topology) GetNodeBinds(name string) ([]string, error) {
 	// thereby more specific binds will overwrite less specific one
 	for _, bs := range bindSources {
 		for _, bind := range bs {
-			b, err := NewBind(bind)
+			b, err := NewBindFromString(bind)
 			if err != nil {
 				return nil, err
 			}

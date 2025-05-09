@@ -540,6 +540,10 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		return "", err
 	}
 
+	if err := d.processPidMode(node, containerHostConfig); err != nil {
+		return "", err
+	}
+
 	// regular linux containers may benefit from automatic restart on failure
 	// note, that veth pairs added to this container (outside of eth0) will be lost on restart
 	if !node.AutoRemove && node.RestartPolicy != "" {
@@ -983,6 +987,17 @@ func (d *DockerRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 	return hostsPath, nil
 }
 
+func (*DockerRuntime) processPidMode(node *types.NodeConfig, containerHostConfig *container.HostConfig) error {
+	pidMode := container.PidMode(node.PidMode)
+	if !pidMode.Valid() {
+		return fmt.Errorf("pid mode %q invalid", node.PidMode)
+	}
+
+	containerHostConfig.PidMode = pidMode
+
+	return nil
+}
+
 func (d *DockerRuntime) processNetworkMode(
 	ctx context.Context,
 	containerNetworkingConfig *networkapi.NetworkingConfig,
@@ -1037,7 +1052,6 @@ func (d *DockerRuntime) processNetworkMode(
 		containerConfig.Hostname = ""
 	case "host":
 		containerHostConfig.NetworkMode = "host"
-		containerHostConfig.PidMode = "host"
 	default:
 		containerHostConfig.NetworkMode = container.NetworkMode(d.mgmt.Network)
 
@@ -1124,4 +1138,15 @@ func (d *DockerRuntime) CheckConnection(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (*DockerRuntime) GetRuntimeSocket() (string, error) {
+	return "/var/run/docker.sock", nil
+}
+
+func (*DockerRuntime) GetCooCBindMounts() types.Binds {
+	return types.Binds{
+		types.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
+		types.NewBind("/run/netns", "/run/netns", ""),
+	}
 }

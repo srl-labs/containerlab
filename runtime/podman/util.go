@@ -185,13 +185,12 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		}
 	case "host":
 		specNetConfig = specgen.ContainerNetworkConfig{
-			NetNS: specgen.Namespace{NSMode: "host"},
+			NetNS: specgen.Namespace{NSMode: specgen.Host},
 			// UseImageResolvConf:  false,
 			UseImageHosts: utils.Pointer(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
-		specBasicConfig.PidNS = specgen.Namespace{NSMode: "host"}
 	// Bridge will be used if none provided
 	case "bridge", "":
 		netName := r.mgmt.Network
@@ -257,6 +256,13 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	default:
 		return sg, fmt.Errorf("network Mode %q is not currently supported with Podman", netMode)
 	}
+
+	// process pid namespace mode
+	specBasicConfig.PidNS, err = specgen.ParseNamespace(cfg.PidMode)
+	if err != nil {
+		return sg, err
+	}
+
 	// Compile the final spec
 	sg = specgen.SpecGenerator{
 		ContainerBasicConfig:       specBasicConfig,
@@ -524,4 +530,12 @@ func (r *PodmanRuntime) postStartActions(ctx context.Context, cID string, cfg *t
 	// may not exist in netlink before a container is attached to it
 	err = r.disableTXOffload(ctx)
 	return err
+}
+
+func (r *PodmanRuntime) GetCooCBindMounts() types.Binds {
+	return types.Binds{
+		types.NewBind("/var/lib/containers", "/var/lib/containers", "Z,rshared"),
+		types.NewBind("/run/containers/storage", "/run/containers/storage", "Z,rshared"),
+		types.NewBind("/run/netns", "/run/netns", "Z,rshared"),
+	}
 }

@@ -472,7 +472,7 @@ func (*IgniteRuntime) IsHealthy(_ context.Context, _ string) (bool, error) {
 	return true, nil
 }
 
-func (*IgniteRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error {
+func (*IgniteRuntime) WriteToStdinNoWait(_ context.Context, cID string, data []byte) error {
 	log.Infof("WriteToStdinNoWait is not yet implemented for Ignite runtime")
 	return nil
 }
@@ -483,5 +483,13 @@ func (*IgniteRuntime) CheckConnection(_ context.Context) error {
 		return fmt.Errorf("cannot find %q: %s", kvmPath, err)
 	}
 
+	return nil
+}
+
+func (*IgniteRuntime) GetRuntimeSocket() (string, error) {
+	return "", fmt.Errorf("GetRuntimeSocket() is unimplemented for ignite runtime")
+}
+
+func (*IgniteRuntime) GetCooCBindMounts() types.Binds {
 	return nil
 }
