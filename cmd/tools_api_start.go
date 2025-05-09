@@ -119,7 +119,7 @@ func (n *APIServerNode) Config() *types.NodeConfig {
 }
 
 // GetEndpoints implementation for the Node interface
-func (n *APIServerNode) GetEndpoints() []links.Endpoint {
+func (*APIServerNode) GetEndpoints() []links.Endpoint {
 	return nil
 }
 
