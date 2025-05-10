@@ -308,7 +308,7 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 		if contDetails[i].LabName == contDetails[j].LabName {
 			return contDetails[i].Name < contDetails[j].Name
 		}
-		return contDetails[i].LabName < contDetails[j].Name
+		return contDetails[i].LabName < contDetails[j].LabName
 	})
 
 	// --- Output based on format ---
