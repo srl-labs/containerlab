@@ -22,6 +22,7 @@ topology:
               phase: on-enter
               target: host
             - command: ls /sys/class/net/
+              phase: on-enter
 
     node2:
       cmd: sh -c "date +%s%N > /tmp/time & sh"
