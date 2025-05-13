@@ -413,20 +413,6 @@
             },
             "additionalProperties": false
         },
-        "link-config-extended": {
-            "description": "Extended link configuration definitions",
-            "markdownDescription": "Extended link configuration definitions",
-            "anyOf": [
-                { "$ref": "#/definitions/link-type-veth"},
-                { "$ref": "#/definitions/link-type-mgmt-net"},
-                { "$ref": "#/definitions/link-type-macvlan"},
-                { "$ref": "#/definitions/link-type-host"},
-                { "$ref": "#/definitions/link-type-vxlan"},
-                { "$ref": "#/definitions/link-type-vxlan-stitched"},
-                { "$ref": "#/definitions/link-type-dummy"}
-            ],
-            "additionalProperties": false
-        },
         "link-type-veth": {
             "type": "object",
             "description": "Link definition to support the veth interfaces",
