@@ -96,7 +96,7 @@ all:
 
 ### User-defined groups
 
-Users can enforce custom grouping of nodes in the inventory by adding the `ansible-inventory` label to the node definition:
+Users can enforce custom grouping of nodes in the inventory by adding the `ansible-group` label to the node definition:
 
 ```yaml
 name: custom-groups
