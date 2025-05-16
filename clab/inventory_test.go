@@ -175,7 +175,7 @@ node4:
     hostname: `,
 		},
 		"case4-default-groups-platform": {
-			got:                              "test_data/topo8_ansible_groups.yml",
+			got:                              "test_data/topo8_nornir_groups.yml",
 			clab_nornir_platform_name_schema: "",
 			want: `---
 node4:
@@ -197,6 +197,7 @@ node2:
     hostname: 172.100.100.12
     groups:
       - extra_group
+      - second_extra_group
 node3:
     username: admin
     password: NokiaSrl1!

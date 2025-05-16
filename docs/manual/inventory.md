@@ -174,7 +174,7 @@ node2:
 
 ### User-defined groups
 
-Users can add custom grouping of nodes in the inventory by adding the `nornir-group` label to the node definition:
+Users can add custom grouping of nodes in the inventory by adding labels that start with `nornir-group` to the node definition:
 
 ```yaml
 name: custom-groups
@@ -186,8 +186,10 @@ topology:
         nornir-group: spine
     node2:
       # <some node config data>
+      # multiple groups are possible
       labels:
         nornir-group: extra_group
+        nornir-group-2: another_extra_group
 ```
 
 As a result of this configuration, the generated inventory will look like this:
@@ -208,6 +210,7 @@ node2:
   hostname: 172.200.20.3
   groups:
     - extra_group
+    - another_extra_group
 ```
 
 ///

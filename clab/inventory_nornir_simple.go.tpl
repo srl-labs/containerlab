@@ -7,9 +7,11 @@
     password: {{ $kindProps.Password }}
     platform: {{ $kindProps.Platform }}
     hostname: {{ $node.MgmtIPv4Address }}
-    {{- if $node.NornirGroup }}
+    {{- if $node.NornirGroups }}
     groups:
-      - {{ $node.NornirGroup }}
+    {{- range $group := $node.NornirGroups }}
+      - {{ $group }}
+    {{- end }}
     {{- end }}
   {{- end }}
 {{- end }}
