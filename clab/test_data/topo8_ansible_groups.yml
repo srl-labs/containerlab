@@ -13,6 +13,7 @@ topology:
       mgmt-ipv4: 172.100.100.11
       labels:
         ansible-group: spine
+        nornir-group: spine
     node2:
       kind: nokia_srlinux
       license: node1.lic
@@ -21,6 +22,7 @@ topology:
       labels:
         node-label: value
         ansible-group: extra_group
+        nornir-group: extra_group
 
     node3:
       kind: nokia_srlinux
@@ -30,6 +32,7 @@ topology:
       labels:
         node-label: value
         ansible-group: extra_group
+        nornir-group: extra_group
 
     node4:
       kind: linux

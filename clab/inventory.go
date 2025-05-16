@@ -185,6 +185,7 @@ type NornirSimpleInventoryKindProps struct {
 // the node registry.
 type NornirSimpleInventoryNode struct {
 	*types.NodeConfig
+	NornirGroup string
 }
 
 // NornirSimpleInventory represents the data structure used to generate the nornir simple inventory file.
@@ -243,6 +244,7 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 			}
 
 		}
+		nornirNode.NornirGroup = n.Config().Labels["nornir-group"]
 
 		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], nornirNode)
 	}
