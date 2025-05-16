@@ -176,7 +176,6 @@ var nornirSimpleInvT string
 type NornirSimpleInventoryKindProps struct {
 	Username string
 	Password string
-	Hostname string
 	Platform string
 }
 
