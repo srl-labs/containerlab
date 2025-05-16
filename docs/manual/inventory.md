@@ -160,12 +160,12 @@ topology:
 
 ```yaml
 ---
-spine1:
+node1:
   username: admin
   password: NokiaSrl1!
   platform: nokia_srlinux
   hostname: 172.200.20.2
-spine2:
+node2:
   username: admin
   password: admin
   platform: arista_eos
