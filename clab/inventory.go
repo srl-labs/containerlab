@@ -8,7 +8,9 @@ import (
 	_ "embed"
 	"io"
 	"os"
+	"slices"
 	"sort"
+	"strings"
 	"text/template"
 
 	"github.com/srl-labs/containerlab/types"
@@ -176,7 +178,6 @@ var nornirSimpleInvT string
 type NornirSimpleInventoryKindProps struct {
 	Username string
 	Password string
-	Hostname string
 	Platform string
 }
 
@@ -185,6 +186,7 @@ type NornirSimpleInventoryKindProps struct {
 // the node registry.
 type NornirSimpleInventoryNode struct {
 	*types.NodeConfig
+	NornirGroups []string
 }
 
 // NornirSimpleInventory represents the data structure used to generate the nornir simple inventory file.
@@ -243,6 +245,13 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 			}
 
 		}
+		for key, value := range n.Config().Labels {
+			if strings.HasPrefix(key, "nornir-group") {
+				nornirNode.NornirGroups = append(nornirNode.NornirGroups, value)
+			}
+		}
+		// sort by group name so it's deterministic
+		slices.Sort(nornirNode.NornirGroups)
 
 		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], nornirNode)
 	}
