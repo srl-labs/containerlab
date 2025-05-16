@@ -172,6 +172,44 @@ node2:
   hostname: 172.200.20.3
 ```
 
+### User-defined groups
+
+Users can add custom grouping of nodes in the inventory by adding the `nornir-group` label to the node definition:
+
+```yaml
+name: custom-groups
+topology:
+  nodes:
+    node1:
+      # <some node config data>
+      labels:
+        nornir-group: spine
+    node2:
+      # <some node config data>
+      labels:
+        nornir-group: extra_group
+```
+
+As a result of this configuration, the generated inventory will look like this:
+
+```yaml
+---
+node1:
+  username: admin
+  password: NokiaSrl1!
+  platform: nokia_srlinux
+  hostname: 172.200.20.2
+  groups:
+    - spine
+node2:
+  username: admin
+  password: admin
+  platform: arista_eos
+  hostname: 172.200.20.3
+  groups:
+    - extra_group
+```
+
 ///
 
 The `platform` field can be influenced to support Napalm/Netmiko or scrapi compliant names.  To influence the platform used set the `CLAB_NORNIR_PLATFORM_NAME_SCHEMA` env variable to either `napalm` or `scrapi` as the value. By default the platform will be set to the `kind`.  Further reading is available below:
