@@ -398,12 +398,12 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 
 // parseStatus extracts a simpler status string, focusing on health states.
 func parseStatus(status string) string {
-	if strings.Contains(status, "healthy") {
-		return "healthy"
+	if strings.Contains(status, "unhealthy") {
+		return "unhealthy"
 	} else if strings.Contains(status, "health: starting") {
 		return "health: starting"
-	} else if strings.Contains(status, "unhealthy") {
-		return "unhealthy"
+	} else if strings.Contains(status, "healthy") {
+		return "healthy"
 	}
 	// Return original status if no specific health info found
 	return status
