@@ -12,6 +12,7 @@ import (
 	clabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // createLabels creates container labels
@@ -53,47 +54,27 @@ func CreateLabels(labName, containerName, owner, toolType string) map[string]str
 // GetOwner determines the owner name from a provided parameter or environment variables.
 // It first checks the provided owner parameter, then falls back to SUDO_USER environment
 // variable, and finally the USER environment variable.
+// GetOwner determines the owner name from a provided parameter or environment variables.
+// It first checks the provided owner parameter, then falls back to SUDO_USER environment
+// variable, and finally the USER environment variable. This function is now located in
+// the utils package and kept here for backward compatibility.
+// TODO: remove this wrapper once all callers are migrated to utils.GetOwner.
 func GetOwner(owner string) string {
-	// If owner is explicitly provided, use it
-	if owner != "" {
-		return owner
-	}
-
-	// Check for SUDO_USER first (when commands are run with sudo)
-	if sudoUser := os.Getenv("SUDO_USER"); sudoUser != "" {
-		return sudoUser
-	}
-
-	// Fall back to USER environment variable
-	return os.Getenv("USER")
+	return utils.GetOwner(owner)
 }
 
 // GetLabConfig gets lab configuration and returns lab name, network name and containerlab instance
-func GetLabConfig(ctx context.Context, toolLabName string) (string, string, *clab.CLab, error) {
-	var labName string
+func GetLabConfig(ctx context.Context, labName string) (string, string, *clab.CLab, error) {
 	var c *clab.CLab
 	var err error
 
-	// If lab name is provided directly, use it
-	if toolLabName != "" {
-		labName = toolLabName
-	}
-
 	// If topo file is provided or discovered
 	if Topo == "" && labName == "" {
-		// Auto-discover topology files in current directory
 		cwd, err := os.Getwd()
 		if err == nil {
-			entries, err := os.ReadDir(cwd)
+			Topo, err = clab.FindTopoFileByPath(cwd)
 			if err == nil {
-				for _, entry := range entries {
-					if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".clab.yml") {
-						// Found a topology file
-						Topo = filepath.Join(cwd, entry.Name())
-						log.Debugf("Found topology file: %s", Topo)
-						break
-					}
-				}
+				log.Debugf("Found topology file: %s", Topo)
 			}
 		}
 	}

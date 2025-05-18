@@ -254,7 +254,7 @@ var gottyAttachCmd = &cobra.Command{
 		}
 
 		// Create container labels
-		owner := common.GetOwner(gottyOwner)
+		owner := utils.GetOwner(gottyOwner)
 		labelsMap := common.CreateLabels(labName, gottyContainerName, owner, "gotty")
 
 		// Create and start GoTTY container
@@ -528,7 +528,7 @@ var gottyReattachCmd = &cobra.Command{
 		}
 
 		// Create container labels
-		owner := common.GetOwner(gottyOwner)
+		owner := utils.GetOwner(gottyOwner)
 		labelsMap := common.CreateLabels(labName, gottyContainerName, owner, "gotty")
 
 		// Create and start GoTTY container
