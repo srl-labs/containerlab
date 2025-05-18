@@ -11,7 +11,6 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	clabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
 )
 
 // createLabels creates container labels
@@ -55,56 +54,12 @@ func GetLabConfig(ctx context.Context, labName string) (string, string, *clab.CL
 	var c *clab.CLab
 	var err error
 
-	// If topo file is provided or discovered
+	// If no topology path or lab name provided, use current directory as topo path
 	if Topo == "" && labName == "" {
 		cwd, err := os.Getwd()
 		if err == nil {
-			Topo, err = clab.FindTopoFileByPath(cwd)
-			if err == nil {
-				log.Debugf("Found topology file: %s", Topo)
-			}
+			Topo = cwd
 		}
-	}
-
-	// If we have lab name but no topo file, try to find it from containers
-	if labName != "" && Topo == "" {
-		_, rinit, err := clab.RuntimeInitializer(Runtime)
-		if err != nil {
-			return "", "", nil, err
-		}
-
-		rt := rinit()
-		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: Timeout}))
-		if err != nil {
-			return "", "", nil, err
-		}
-
-		// Find containers for this lab
-		filter := []*types.GenericFilter{
-			{
-				FilterType: "label",
-				Field:      "containerlab",
-				Operator:   "=",
-				Match:      labName,
-			},
-		}
-		containers, err := rt.ListContainers(ctx, filter)
-		if err != nil {
-			return "", "", nil, err
-		}
-
-		if len(containers) == 0 {
-			return "", "", nil, fmt.Errorf("lab '%s' not found - no running containers", labName)
-		}
-
-		// Get topo file from container labels
-		topoFile := containers[0].Labels["clab-topo-file"]
-		if topoFile == "" {
-			return "", "", nil, fmt.Errorf("could not determine topology file from container labels")
-		}
-
-		log.Debugf("Found topology file for lab %s: %s", labName, topoFile)
-		Topo = topoFile
 	}
 
 	// Create a single containerlab instance
@@ -120,6 +75,8 @@ func GetLabConfig(ctx context.Context, labName string) (string, string, *clab.CL
 
 	if Topo != "" {
 		opts = append(opts, clab.WithTopoPath(Topo, VarsFile))
+	} else if labName != "" {
+		opts = append(opts, clab.WithTopoFromLab(labName))
 	} else {
 		return "", "", nil, fmt.Errorf("no topology file found or provided")
 	}
@@ -127,6 +84,12 @@ func GetLabConfig(ctx context.Context, labName string) (string, string, *clab.CL
 	c, err = clab.NewContainerLab(opts...)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("failed to create containerlab instance: %w", err)
+	}
+
+	// update Topo with the absolute topology file path
+	if c.TopoPaths != nil && c.TopoPaths.TopologyFileIsSet() {
+		Topo = c.TopoPaths.TopologyFilenameAbsPath()
+		log.Debugf("Using topology file: %s", Topo)
 	}
 
 	if c.Config == nil {
