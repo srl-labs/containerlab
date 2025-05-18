@@ -5,7 +5,7 @@ search:
 
 # Nodes
 
-Node object is one of the containerlab' pillars. Essentially, it is nodes and links what constitute the lab topology. To let users build flexible and customizable labs the nodes are meant to be configurable.
+Node object is one of the containerlab' pillars. Essentially, it is nodes and links that constitute the lab topology. To let users build flexible and customizable labs the nodes are meant to be configurable.
 
 The node configuration is part of the [topology definition file](topo-def-file.md) and **may** consist of the following fields that we explain in details below.
 

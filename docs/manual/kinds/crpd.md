@@ -12,7 +12,7 @@ Once downloaded, load the Docker image:
 
 ```bash
 # load cRPD container image, shows up as crpd:24.2R1.14 in docker images
-docker load junos-routing-crpd-docker-24.2R1.14.tgz
+sudo docker load -i junos-routing-crpd-docker-24.2R1.14.tgz
 ```
 
 ## Managing cRPD nodes

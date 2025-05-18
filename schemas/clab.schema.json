@@ -204,23 +204,7 @@
                     "markdownDescription": "[command](https://containerlab.dev/manual/nodes/#cmd) to launch container with"
                 },
                 "labels": {
-                    "type": "object",
-                    "description": "container labels",
-                    "markdownDescription": "container [labels](https://containerlab.dev/manual/nodes/#labels)",
-                    "patternProperties": {
-                        ".+": {
-                            "anyOf": [
-                                {
-                                    "type": "string",
-                                    "minItems": 1
-                                },
-                                {
-                                    "type": "number",
-                                    "minItems": 1
-                                }
-                            ]
-                        }
-                    }
+                    "$ref": "#/definitions/labels"
                 },
                 "runtime": {
                     "type": "string",
@@ -232,16 +216,14 @@
                     ]
                 },
                 "mgmt-ipv4": {
-                    "type": "string",
                     "description": "IPv4 management address of the node (e.g. 172.10.10.11)",
                     "markdownDescription": "[IPv4 management address](https://containerlab.dev/manual/nodes/#mgmt-ipv4) of the node (e.g. 172.10.10.11)",
-                    "pattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?$"
+                    "$ref": "#/definitions/ipv4-addr"
                 },
                 "mgmt-ipv6": {
-                    "type": "string",
                     "description": "IPv6 management address of the node (e.g. 172.10.10.11)",
                     "markdownDescription": "[IPv6 management address](https://containerlab.dev/manual/nodes/#mgmt-ipv6) of the node (e.g. 172.10.10.11)",
-                    "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
+                    "$ref": "#/definitions/ipv6-addr"
                 },
                 "network-mode": {
                     "type": "string",
@@ -250,9 +232,10 @@
                     "pattern": "^(host)|(container:\\S+)|(none)$"
                 },
                 "cpu": {
-                    "type": "integer",
+                    "type": "number",
                     "description": "number of vcpu to allocate for this node/container",
-                    "markdownDescription": "Allowed [CPU](https://containerlab.dev/manual/nodes/#cpu) usage by the node/container"
+                    "markdownDescription": "Allowed [CPU](https://containerlab.dev/manual/nodes/#cpu) usage by the node/container",
+                    "minimum": 0
                 },
                 "memory": {
                     "type": "string",
@@ -407,7 +390,7 @@
             ],
             "additionalProperties": false
         },
-        "link-config": {
+        "link-config-short": {
             "type": "object",
             "description": "link configuration container",
             "markdownDescription": "link configuration container",
@@ -423,14 +406,225 @@
                     },
                     "uniqueItems": true
                 },
+                "mtu": { "$ref": "#/definitions/mtu"},
                 "vars": {
-                    "description": "link-scoped variables used by config engine",
-                    "markdownDescription": "link-scoped variables used by config engine",
-                    "type": "object"
+                    "$ref": "#/definitions/link-vars"
                 }
             },
             "additionalProperties": false
         },
+        "link-type-veth": {
+            "type": "object",
+            "description": "Link definition to support the veth interfaces",
+            "markdownDescription": "Link definition to support the veth interfaces",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "veth"
+                },
+                "endpoints": {
+                    "type": "array",
+                    "description": "Endpoints for the links",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                        "$ref": "#/definitions/link-endpoint"
+                    }
+                },
+                "mtu": { "$ref": "#/definitions/mtu"},
+                "vars": { "$ref": "#/definitions/link-vars"},
+                "labels": { "$ref": "#/definitions/labels"}
+            },
+            "required": ["type", "endpoints"],
+            "additionalItems": false
+        },
+        "link-type-mgmt-net": {
+            "type": "object",
+            "description": "Link definition for management network interfaces",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "mgmt-net"
+                },
+                "endpoint": {
+                    "$ref": "#/definitions/link-endpoint"
+                },
+                "host-interface": { "$ref": "#/definitions/link-host-interface"},
+                "mtu": { "$ref": "#/definitions/mtu"},
+                "vars": { "$ref": "#/definitions/link-vars"},
+                "labels": { "$ref": "#/definitions/labels"}
+            },
+            "required": ["type", "endpoint", "host-interface"],
+            "additionalProperties": false
+        },
+        "link-type-macvlan": {
+            "type": "object",
+            "description": "Link definition describing a macvlan link endpoint configuration",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "macvlan"
+                },
+                "endpoint": {
+                    "$ref": "#/definitions/link-endpoint"
+                },
+                "host-interface": { "$ref": "#/definitions/mtu"},
+                "mtu": { "$ref": "#/definitions/mtu"},
+                "vars": { "$ref": "#/definitions/link-vars"},
+                "labels": { "$ref": "#/definitions/labels"}
+            },
+            "required": ["type", "endpoint", "host-interface"],
+            "additionalProperties": false   
+        },
+        "link-type-host": {
+            "type": "object",
+            "description": "",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "host"
+                },
+                "endpoint": {
+                    "$ref": "#/definitions/link-endpoint"
+                },
+                "host-interface": { "$ref": "#/definitions/link-host-interface"},
+                "mtu": { "$ref": "#/definitions/mtu"},
+                "vars": { "$ref": "#/definitions/link-vars"},
+                "labels": { "$ref": "#/definitions/labels"}
+            },
+            "required": ["type", "endpoint", "host-interface"],
+            "additionalProperties": false
+        },
+        "link-type-vxlan": {
+            "type": "object",
+            "description": "",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "vxlan"
+                },
+                "endpoint": {
+                    "$ref": "#/definitions/link-endpoint"
+                },
+                "remote": {"$ref": "#/definitions/link-vxlan-remote"},
+                "vni":  {"$ref": "#/definitions/link-vxlan-vni"},
+                "udp-port":  {"$ref": "#/definitions/link-vxlan-udpport"},
+                "mtu": { "$ref": "#/definitions/mtu" },
+                "vars": { "$ref": "#/definitions/link-vars" },
+                "labels": { "$ref": "#/definitions/labels"}
+            },
+            "required": ["type", "endpoint", "remote", "vni", "udp-port"],
+            "additionalProperties": false
+        },
+        "link-type-vxlan-stitched": {
+            "type": "object",
+            "description": "",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "vxlan-stitch"
+                },
+                "endpoint": {
+                    "$ref": "#/definitions/link-endpoint"
+                },
+                "remote": {"$ref": "#/definitions/link-vxlan-remote"},
+                "vni":  {"$ref": "#/definitions/link-vxlan-vni"},
+                "udp-port":  {"$ref": "#/definitions/link-vxlan-udpport"},
+                "mtu": { "$ref": "#/definitions/mtu" },
+                "vars": { "$ref": "#/definitions/link-vars" },
+                "labels": { "$ref": "#/definitions/labels"}
+            },
+            "required": ["type", "endpoint", "remote", "vni", "udp-port"],
+            "additionalProperties": false
+        },
+        "link-type-dummy": {
+            "type": "object",
+            "description": "",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "dummy"
+                },
+                "endpoint": {
+                    "$ref": "#/definitions/link-endpoint"
+                },
+                "mtu": { "$ref": "#/definitions/mtu"},
+                "vars": { "$ref": "#/definitions/link-vars"},
+                "labels": { "$ref": "#/definitions/labels"}
+            },
+            "required": ["type", "endpoint"],
+            "additionalProperties": false
+        },
+
+        "link-endpoint": {
+            "type": "object",
+            "description": "Common link endpoint object for extended link configs",
+            "properties": {
+                "node": {
+                    "type": "string",
+                    "description": ""
+                },
+                "interface": {
+                    "type": "string",
+                    "description": ""
+                },
+                "mac": {
+                    "type": "string",
+                    "description": "",
+                    "pattern": "^(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})"
+                }
+            },
+            "required": ["node", "interface"],
+            "additionalProperties": false
+        },
+        "link-vxlan-remote": {
+            "anyOf": [
+                { "$ref": "#/definitions/ipv4-addr"},
+                { "$ref": "#/definitions/ipv6-addr"}
+            ]
+        },
+        "link-vxlan-vni": {
+            "type": "integer",
+            "description": "VXLAN VNI",
+            "minimum": 1,
+            "maximum": 16777215
+        },
+        "link-vxlan-udpport": {
+            "type": "integer",
+            "description": "Remote UDP port",
+            "minimum": 1,
+            "maximum": 65535
+        },
+        "link-vars": {
+            "type": "object",
+            "description": "link-scoped variables used by config engine",
+            "markdownDescription": "link-scoped variables used by config engine"
+        },
+        "labels":{
+            "type": "object",
+            "description": "container labels",
+            "markdownDescription": "container [labels](https://containerlab.dev/manual/nodes/#labels)",
+            "patternProperties": {
+                ".+": {
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "minItems": 1
+                        },
+                        {
+                            "type": "number",
+                            "minItems": 1
+                        }
+                    ]
+                }
+            }
+        },
+        "link-host-interface": {
+            "type": "string",
+            "description": "link-scoped variables used by config engine",
+            "markdownDescription": "link-scoped variables used by config engine"
+        },
+
         "extras-config": {
             "type": "object",
             "description": "node's extra configurations",
@@ -795,6 +989,26 @@
             "items": {
                 "type": "string"
             }
+        },
+        "mtu": {
+            "description": "MTU for the custom network",
+            "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
+            "type": "number",
+            "maximum": 65535,
+            "minimum": 1,
+            "default": 1500
+        },
+        "ipv4-addr": {
+            "description": "IPv4 address",
+            "markdownDescription": "IPv4 address",
+            "type": "string",
+            "pattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?$"
+        },
+        "ipv6-addr": {
+            "description": "IPv6 address",
+            "markdownDescription": "IPv6 address",
+            "type": "string",
+            "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
         }
     },
     "type": "object",
@@ -838,14 +1052,13 @@
                 "ipv4-gw": {
                     "description": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
                     "markdownDescription": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
-                    "type": "string",
-                    "pattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?$"
+                    "$ref": "#/definitions/ipv4-addr"
                 },
                 "ipv6-gw": {
                     "description": "IPv6 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
                     "markdownDescription": "IPv6 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
                     "type": "string",
-                    "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
+                    "$ref": "#/definitions/ipv6-addr"
                 },
                 "ipv4-range": {
                     "description": "IPv4 range out of the ipv4-subnet to use for the custom management network. e.g. 172.100.100.128/25",
@@ -862,10 +1075,7 @@
                 "mtu": {
                     "description": "MTU for the custom network",
                     "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
-                    "type": "number",
-                    "maximum": 65535,
-                    "minimum": 1,
-                    "default": 1500
+                    "$ref": "#/definitions/mtu"
                 }
             },
             "minProperties": 1,
@@ -887,7 +1097,7 @@
                                     "type": "null"
                                 },
                                 {
-                                    "$ref": "#/definitions/node-config"
+                                "$ref": "#/definitions/node-config"
                                 }
                             ]
                         }
@@ -1027,7 +1237,16 @@
                     "markdownDescription": "[topology links](https://containerlab.dev/manual/topo-def-file/#links)",
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/link-config"
+                        "anyOf": [
+                            { "$ref": "#/definitions/link-config-short"},
+                            { "$ref": "#/definitions/link-type-veth"},
+                            { "$ref": "#/definitions/link-type-mgmt-net"},
+                            { "$ref": "#/definitions/link-type-macvlan"},
+                            { "$ref": "#/definitions/link-type-host"},
+                            { "$ref": "#/definitions/link-type-vxlan"},
+                            { "$ref": "#/definitions/link-type-vxlan-stitched"},
+                            { "$ref": "#/definitions/link-type-dummy"}
+                        ]
                     }
                 }
             },

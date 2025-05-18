@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/charmbracelet/log"
 	"gopkg.in/yaml.v2"
 )
 
@@ -87,14 +86,16 @@ type NodeDefinition struct {
 var _ yaml.Unmarshaler = &NodeDefinition{}
 
 // UnmarshalYAML is a custom unmarshaller for NodeDefinition type that allows to map old attributes to new ones.
-func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 	// define an alias type to avoid recursion during unmarshalling
 	type NodeDefinitionAlias NodeDefinition
 
+	// NodeDefinitionWithDeprecatedFields can contain fields that are deprecated
+	// but still supported for backward compatibility.
+	// see https://github.com/srl-labs/containerlab/blob/6eb44ca5a64cb427a5c43e31c35ac50145a8397f/types/node_definition.go#L96
+	// for how it was used.
 	type NodeDefinitionWithDeprecatedFields struct {
 		NodeDefinitionAlias `yaml:",inline"`
-		DeprecatedMgmtIPv4  string `yaml:"mgmt_ipv4,omitempty"`
-		DeprecatedMgmtIPv6  string `yaml:"mgmt_ipv6,omitempty"`
 	}
 
 	nd := &NodeDefinitionWithDeprecatedFields{}
@@ -102,17 +103,6 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	nd.NodeDefinitionAlias = (NodeDefinitionAlias)(*n)
 	if err := unmarshal(nd); err != nil {
 		return err
-	}
-
-	// process deprecated fields and use their values for new fields if new fields are not set
-	if len(nd.DeprecatedMgmtIPv4) > 0 && len(nd.MgmtIPv4) == 0 {
-		log.Warnf("Attribute \"mgmt_ipv4\" is deprecated and will be removed in future. Change it to \"mgmt-ipv4\"")
-		nd.MgmtIPv4 = nd.DeprecatedMgmtIPv4
-	}
-
-	if len(nd.DeprecatedMgmtIPv6) > 0 && len(nd.MgmtIPv6) == 0 {
-		log.Warnf("Attribute \"mgmt_ipv6\" is deprecated and will be removed in future. Change it to \"mgmt-ipv6\"")
-		nd.MgmtIPv6 = nd.DeprecatedMgmtIPv6
 	}
 
 	*n = (NodeDefinition)(nd.NodeDefinitionAlias)

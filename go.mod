@@ -1,6 +1,6 @@
 module github.com/srl-labs/containerlab
 
-go 1.23
+go 1.23.0
 
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
@@ -39,10 +39,10 @@ require (
 	github.com/vishvananda/netlink v1.3.1-0.20240922070040-084abd93d350
 	github.com/weaveworks/ignite v0.10.0
 	go.uber.org/mock v0.5.0
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.38.0
 	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329
-	golang.org/x/sys v0.30.0
-	golang.org/x/term v0.29.0
+	golang.org/x/sys v0.33.0
+	golang.org/x/term v0.32.0
 	gopkg.in/yaml.v2 v2.4.0
 	sigs.k8s.io/kind v0.27.0
 )
@@ -227,8 +227,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	golang.org/x/mod v0.23.0
 	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sync v0.11.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
