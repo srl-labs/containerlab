@@ -18,6 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 func init() {
@@ -74,8 +75,11 @@ func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRunt
 		types.NewBind("/etc/passwd", "/etc/passwd", "ro"),
 		types.NewBind("/etc/shadow", "/etc/shadow", "ro"),
 		types.NewBind("/etc/group", "/etc/group", "ro"),
-		types.NewBind("/etc/gshadow", "/etc/gshadow", "ro"),
 		types.NewBind("/home", "/home", ""),
+	}
+	// if /etc/gshadow exists, add it to the binds
+	if utils.FileExists("/etc/gshadow") {
+		binds = append(binds, types.NewBind("/etc/gshadow", "/etc/gshadow", "ro"))
 	}
 
 	// get the runtime socket path
