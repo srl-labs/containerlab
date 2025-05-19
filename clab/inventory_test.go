@@ -5,7 +5,6 @@
 package clab
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -174,16 +173,44 @@ node4:
     platform: linux
     hostname: `,
 		},
+		"case4-default-groups-platform": {
+			got:                              "test_data/topo8_nornir_groups.yml",
+			clab_nornir_platform_name_schema: "",
+			want: `---
+node4:
+    username: 
+    password: 
+    platform: linux
+    hostname: 172.100.100.14
+node1:
+    username: admin
+    password: NokiaSrl1!
+    platform: nokia_srlinux
+    hostname: 172.100.100.11
+    groups:
+      - spine
+node2:
+    username: admin
+    password: NokiaSrl1!
+    platform: nokia_srlinux
+    hostname: 172.100.100.12
+    groups:
+      - extra_group
+      - second_extra_group
+node3:
+    username: admin
+    password: NokiaSrl1!
+    platform: nokia_srlinux
+    hostname: 172.100.100.13
+    groups:
+      - extra_group`,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// Set the environment variable
-			if err := os.Setenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA", tc.clab_nornir_platform_name_schema); err != nil {
-				t.Fatalf("failed to set environment variable: %v", err)
-			}
-			// Unset the environment variable after the test
-			defer os.Unsetenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA")
+			t.Setenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA", tc.clab_nornir_platform_name_schema)
 
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
