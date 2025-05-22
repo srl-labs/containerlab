@@ -194,10 +194,18 @@ var sshxAttachCmd = &cobra.Command{
 		log.Debugf("sshx attach called with flags: labName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', exposeSSH=%t",
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
 
-		// Get lab name and network
-		labName, networkName, _, err := common.GetLabConfig(ctx, sshxLabName)
+		// Get lab topology information
+		clabInstance, err := clab.GetTopology(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
+		}
+		labName := clabInstance.Config.Name
+		networkName := clabInstance.Config.Mgmt.Network
+		if networkName == "" {
+			networkName = "clab-" + labName
+		}
+		if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
+			common.Topo = clabInstance.TopoPaths.TopologyFilenameAbsPath()
 		}
 
 		// Set container name if not provided
@@ -298,10 +306,14 @@ var sshxDetachCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Get lab name
-		labName, _, _, err := common.GetLabConfig(ctx, sshxLabName)
+		// Get lab topology information
+		clabInstance, err := clab.GetTopology(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
+		}
+		labName := clabInstance.Config.Name
+		if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
+			common.Topo = clabInstance.TopoPaths.TopologyFilenameAbsPath()
 		}
 
 		// Form the container name
@@ -452,10 +464,18 @@ var sshxReattachCmd = &cobra.Command{
 		log.Debugf("sshx reattach called with flags: labName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', exposeSSH=%t",
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
 
-		// Get lab name and network
-		labName, networkName, _, err := common.GetLabConfig(ctx, sshxLabName)
+		// Get lab topology information
+		clabInstance, err := clab.GetTopology(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
+		}
+		labName := clabInstance.Config.Name
+		networkName := clabInstance.Config.Mgmt.Network
+		if networkName == "" {
+			networkName = "clab-" + labName
+		}
+		if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
+			common.Topo = clabInstance.TopoPaths.TopologyFilenameAbsPath()
 		}
 
 		// Set container name if not provided

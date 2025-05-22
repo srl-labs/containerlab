@@ -210,11 +210,19 @@ var gottyAttachCmd = &cobra.Command{
 		log.Debugf("gotty attach called with flags: labName='%s', containerName='%s', port=%d, username='%s', password='%s', shell='%s', image='%s', topo='%s'",
 			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
 
-		// Get lab name and network
-		labName, networkName, _, err := common.GetLabConfig(ctx, gottyLabName)
-		if err != nil {
-			return err
-		}
+                // Get lab topology information
+                clabInstance, err := clab.GetTopology(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+                if err != nil {
+                        return err
+                }
+                labName := clabInstance.Config.Name
+                networkName := clabInstance.Config.Mgmt.Network
+                if networkName == "" {
+                        networkName = "clab-" + labName
+                }
+                if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
+                        common.Topo = clabInstance.TopoPaths.TopologyFilenameAbsPath()
+                }
 
 		// Set container name if not provided
 		if gottyContainerName == "" {
@@ -313,11 +321,15 @@ var gottyDetachCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		// Get lab name
-		labName, _, _, err := common.GetLabConfig(ctx, gottyLabName)
-		if err != nil {
-			return err
-		}
+                // Get lab topology information
+                clabInstance, err := clab.GetTopology(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+                if err != nil {
+                        return err
+                }
+                labName := clabInstance.Config.Name
+                if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
+                        common.Topo = clabInstance.TopoPaths.TopologyFilenameAbsPath()
+                }
 
 		// Form the container name
 		containerName := fmt.Sprintf("clab-%s-gotty", labName)
@@ -483,11 +495,19 @@ var gottyReattachCmd = &cobra.Command{
 		log.Debugf("gotty reattach called with flags: labName='%s', containerName='%s', port=%d, username='%s', password='%s', shell='%s', image='%s', topo='%s'",
 			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
 
-		// Get lab name and network
-		labName, networkName, _, err := common.GetLabConfig(ctx, gottyLabName)
-		if err != nil {
-			return err
-		}
+                // Get lab topology information
+                clabInstance, err := clab.GetTopology(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+                if err != nil {
+                        return err
+                }
+                labName := clabInstance.Config.Name
+                networkName := clabInstance.Config.Mgmt.Network
+                if networkName == "" {
+                        networkName = "clab-" + labName
+                }
+                if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
+                        common.Topo = clabInstance.TopoPaths.TopologyFilenameAbsPath()
+                }
 
 		// Set container name if not provided
 		if gottyContainerName == "" {

@@ -365,6 +365,36 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 	return tmpFile.Name(), err
 }
 
+// GetTopology creates a containerlab instance using either a topology file path
+// or a running lab name. It returns the initialized CLab structure with the
+// topology loaded.
+func GetTopology(ctx context.Context, topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool) (*CLab, error) {
+	if topoPath == "" && labName == "" {
+		cwd, err := os.Getwd()
+		if err == nil {
+			topoPath = cwd
+		}
+	}
+
+	opts := []ClabOption{
+		WithTimeout(timeout),
+		WithRuntime(runtimeName, &runtime.RuntimeConfig{
+			Debug:            debug,
+			Timeout:          timeout,
+			GracefulShutdown: graceful,
+		}),
+		WithDebug(debug),
+	}
+
+	if topoPath != "" {
+		opts = append(opts, WithTopoPath(topoPath, varsFile))
+	} else {
+		opts = append(opts, WithTopoFromLab(labName))
+	}
+
+	return NewContainerLab(opts...)
+}
+
 // WithNodeFilter option sets a filter for nodes to be deployed.
 // A filter is a list of node names to be deployed,
 // names are provided exactly as they are listed in the topology file.
