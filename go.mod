@@ -36,7 +36,7 @@ require (
 	github.com/steiler/acls v0.1.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tklauser/numcpus v0.9.0
-	github.com/vishvananda/netlink v1.3.1-0.20240922070040-084abd93d350
+	github.com/vishvananda/netlink v1.3.1
 	github.com/weaveworks/ignite v0.10.0
 	go.uber.org/mock v0.5.0
 	golang.org/x/crypto v0.38.0
