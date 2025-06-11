@@ -51,6 +51,7 @@ import (
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
+	cjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
 )
 
 // RegisterNodes registers all the nodes/kinds supported by containerlab.
@@ -101,4 +102,5 @@ func (c *CLab) RegisterNodes() {
 	huawei_vrp.Register(c.Reg)
 	sixwind_vsr.Register(c.Reg)
 	fdio_vpp.Register(c.Reg)
+	cjunosevolved.Register(c.Reg)
 }
