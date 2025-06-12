@@ -34,6 +34,7 @@ nav:
               - Juniper vJunos-router: manual/kinds/vr-vjunosrouter.md
               - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
               - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
+              - Juniper cJunosEvolved: manual/kinds/cjunosevolved.md
           - Cumulus VX: manual/kinds/cvx.md
           - Aruba AOS-CX: manual/kinds/vr-aoscx.md
           - SONiC:
@@ -145,6 +146,7 @@ nav:
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - Nokia SR Linux and Juniper vJunos-switch: lab-examples/srl-vjunos-switch.md
       - Nokia SR Linux and Juniper vJunosEvolved: lab-examples/srl-vjunosevolved.md
+      - Nokia SR Linux and Juniper cJunosEvolved: lab-examples/srl-cjunosevolved.md
       - FRR: lab-examples/frr01.md
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
