@@ -380,7 +380,7 @@
                                         ]
                                     },
                                     {
-                                        "pattern": "cp:.+"
+                                        "pattern": "^((lc|cp):\\s)?((cpu|ram|max_nics)=\\d+|slot=[A-Z]|chassis=[^\\s]+|card=.*|\\s)+$"
                                     }
                                 ]
                             }
