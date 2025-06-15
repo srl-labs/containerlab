@@ -12,4 +12,5 @@ const (
 	TopoFile      = "clab-topo-file"
 	NodeMgmtNetBr = "clab-mgmt-net-bridge"
 	Owner         = "clab-owner"
+	ToolType      = "tool-type"
 )

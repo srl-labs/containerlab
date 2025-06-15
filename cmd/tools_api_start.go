@@ -140,10 +140,10 @@ func getContainerlabBinaryPath() (string, error) {
 // createLabels creates container labels
 func createAPIServerLabels(containerName, owner string, port int, labsDir, host, runtimeType string) map[string]string {
 	labels := map[string]string{
-		"clab-node-name": containerName,
-		"clab-node-kind": "linux",
-		"clab-node-type": "tool",
-		"tool-type":      "api-server",
+		clabels.NodeName: containerName,
+		clabels.NodeKind: "linux",
+		clabels.NodeType: "tool",
+		clabels.ToolType: "api-server",
 		"clab-api-port":  fmt.Sprintf("%d", port),
 		"clab-api-host":  host,
 		"clab-labs-dir":  labsDir,

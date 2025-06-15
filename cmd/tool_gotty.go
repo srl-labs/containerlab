@@ -266,7 +266,7 @@ var gottyAttachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabels(labName, gottyContainerName, owner, "gotty")
+		labelsMap := common.CreateLabelsMap(labName, gottyContainerName, owner, "gotty")
 
 		// Create and start GoTTY container
 		log.Infof("Creating GoTTY container %s on network '%s'", gottyContainerName, networkName)
@@ -384,7 +384,7 @@ var gottyListCmd = &cobra.Command{
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      "tool-type",
+				Field:      clabels.ToolType,
 				Operator:   "=",
 				Match:      "gotty",
 			},
@@ -555,7 +555,7 @@ var gottyReattachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabels(labName, gottyContainerName, owner, "gotty")
+		labelsMap := common.CreateLabelsMap(labName, gottyContainerName, owner, "gotty")
 
 		// Create and start GoTTY container
 		log.Infof("Creating new GoTTY container %s on network '%s'", gottyContainerName, networkName)

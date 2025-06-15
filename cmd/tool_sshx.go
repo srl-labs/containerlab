@@ -250,7 +250,7 @@ var sshxAttachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabels(labName, sshxContainerName, owner, "sshx")
+		labelsMap := common.CreateLabelsMap(labName, sshxContainerName, owner, "sshx")
 
 		// Create and start SSHX container
 		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
@@ -369,7 +369,7 @@ var sshxListCmd = &cobra.Command{
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      "tool-type",
+				Field:      clabels.ToolType,
 				Operator:   "=",
 				Match:      "sshx",
 			},
@@ -524,7 +524,7 @@ var sshxReattachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabels(labName, sshxContainerName, owner, "sshx")
+		labelsMap := common.CreateLabelsMap(labName, sshxContainerName, owner, "sshx")
 
 		// Create and start SSHX container
 		log.Infof("Creating new SSHX container %s on network '%s'", sshxContainerName, networkName)

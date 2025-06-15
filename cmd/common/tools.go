@@ -7,32 +7,32 @@ import (
 	clabels "github.com/srl-labs/containerlab/labels"
 )
 
-// createLabels creates container labels
-func CreateLabels(labName, containerName, owner, toolType string) map[string]string {
+// CreateLabelsMap creates container labels map for additional containers launched after the lab is up. Such as sshx, gotty, etc.
+func CreateLabelsMap(labName, containerName, owner, toolType string) map[string]string {
 	shortName := strings.Replace(containerName, "clab-"+labName+"-", "", 1)
 
 	labels := map[string]string{
-		"containerlab":       labName,
-		"clab-node-name":     shortName,
-		"clab-node-longname": containerName,
-		"clab-node-kind":     "linux",
-		"clab-node-group":    "",
-		"clab-node-type":     "tool",
-		"tool-type":          toolType,
+		clabels.Containerlab: labName,
+		clabels.NodeName:     shortName,
+		clabels.LongName:     containerName,
+		clabels.NodeKind:     "linux",
+		clabels.NodeGroup:    "",
+		clabels.NodeType:     "tool",
+		clabels.ToolType:     toolType,
 	}
 
 	// Add topology file path
 	if Topo != "" {
 		absPath, err := filepath.Abs(Topo)
 		if err == nil {
-			labels["clab-topo-file"] = absPath
+			labels[clabels.TopoFile] = absPath
 		} else {
-			labels["clab-topo-file"] = Topo
+			labels[clabels.TopoFile] = Topo
 		}
 
 		// Set node lab directory
 		baseDir := filepath.Dir(Topo)
-		labels["clab-node-lab-dir"] = filepath.Join(baseDir, "clab-"+labName, shortName)
+		labels[clabels.NodeLabDir] = filepath.Join(baseDir, "clab-"+labName, shortName)
 	}
 
 	// Add owner label if available
