@@ -21,6 +21,7 @@ import (
 	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"
 	errs "github.com/srl-labs/containerlab/errors"
+	clabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -221,6 +222,54 @@ func WithTopoPath(path, varsFile string) ClabOption {
 	}
 }
 
+// WithTopoFromLab loads the topology file path based on a running lab name.
+// The lab name is used to look up the container labels of a running lab and
+// derive the topology file location. It falls back to WithTopoPath once the
+// topology path is discovered.
+func WithTopoFromLab(labName string) ClabOption {
+	return func(c *CLab) error {
+		if labName == "" {
+			return fmt.Errorf("lab name is required to derive topology path")
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		filter := []*types.GenericFilter{
+			{
+				FilterType: "label",
+				Field:      clabels.Containerlab,
+				Operator:   "=",
+				Match:      labName,
+			},
+		}
+
+		containers, err := c.globalRuntime().ListContainers(ctx, filter)
+		if err != nil {
+			return fmt.Errorf("failed to list containers for lab '%s': %w", labName, err)
+		}
+
+		if len(containers) == 0 {
+			return fmt.Errorf("lab '%s' not found - no running containers", labName)
+		}
+
+		topoFile := containers[0].Labels[clabels.TopoFile]
+		if topoFile == "" {
+			return fmt.Errorf("could not determine topology file from container labels")
+		}
+
+		// Verify topology file exists and is accessible
+		if !utils.FileOrDirExists(topoFile) {
+			return fmt.Errorf("topology file '%s' referenced by lab '%s' does not exist or is not accessible",
+				topoFile, labName)
+		}
+
+		log.Debugf("found topology file for lab %s: %s", labName, topoFile)
+
+		return WithTopoPath(topoFile, "")(c)
+	}
+}
+
 // ProcessTopoPath takes a topology path, which might be the path to a directory or a file
 // or stdin or a URL and returns the topology file name if found.
 func (c *CLab) ProcessTopoPath(path string) (string, error) {
@@ -322,6 +371,38 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 	err = utils.CopyFile(url, tmpFile.Name(), 0644)
 
 	return tmpFile.Name(), err
+}
+
+// NewContainerlabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
+// or a lab name. It returns the initialized CLab structure with the
+// topology loaded.
+func NewContainerlabFromTopologyFileOrLabName(ctx context.Context, topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool) (*CLab, error) {
+	if topoPath == "" && labName == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current working directory and no topology path or lab name provided: %w", err)
+		}
+		topoPath = cwd
+	}
+
+	opts := []ClabOption{
+		WithTimeout(timeout),
+		WithRuntime(runtimeName, &runtime.RuntimeConfig{
+			Debug:            debug,
+			Timeout:          timeout,
+			GracefulShutdown: graceful,
+		}),
+		WithDebug(debug),
+	}
+
+	switch {
+	case topoPath != "":
+		opts = append(opts, WithTopoPath(topoPath, varsFile))
+	case labName != "":
+		opts = append(opts, WithTopoFromLab(labName))
+	}
+
+	return NewContainerLab(opts...)
 }
 
 // WithNodeFilter option sets a filter for nodes to be deployed.

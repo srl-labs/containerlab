@@ -121,6 +121,11 @@ nav:
               - detach: cmd/tools/sshx/detach.md
               - reattach: cmd/tools/sshx/reattach.md
               - list: cmd/tools/sshx/list.md
+          - gotty:
+              - attach: cmd/tools/gotty/attach.md
+              - detach: cmd/tools/gotty/detach.md
+              - reattach: cmd/tools/gotty/reattach.md
+              - list: cmd/tools/gotty/list.md
       - version:
           - cmd/version/index.md
           - check: cmd/version/check.md

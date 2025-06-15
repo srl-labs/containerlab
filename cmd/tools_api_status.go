@@ -82,7 +82,7 @@ var apiServerStatusCmd = &cobra.Command{
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      "tool-type",
+				Field:      clabels.ToolType,
 				Operator:   "=",
 				Match:      "api-server",
 			},
