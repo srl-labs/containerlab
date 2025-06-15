@@ -16,7 +16,6 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/labels"
-	clabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -202,7 +201,7 @@ func removeToolContainers(ctx context.Context, rt runtime.ContainerRuntime, labN
 	toolFilter := []*types.GenericFilter{
 		{
 			FilterType: "label",
-			Field:      clabels.ToolType,
+			Field:      labels.ToolType,
 			Operator:   "=",
 			Match:      toolType,
 		},

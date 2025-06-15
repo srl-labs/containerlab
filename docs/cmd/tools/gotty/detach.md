@@ -12,11 +12,11 @@ containerlab tools gotty detach [flags]
 
 ## Flags
 
-### --lab | -l
+### `--lab | -l`
 
 Name of the lab where the GoTTY container is attached.
 
-### --topology | -t
+### `--topology | -t`
 
 Path to the topology file (`*.clab.yml`) to derive the lab name if `--lab` is not provided.
 

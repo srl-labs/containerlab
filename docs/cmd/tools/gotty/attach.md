@@ -12,39 +12,39 @@ containerlab tools gotty attach [flags]
 
 ## Flags
 
-### --lab | -l
+### `--lab | -l`
 
 Name of the lab to attach the GoTTY container to.
 
-### --topology | -t
+### `--topology | -t`
 
 Path to the topology file (`*.clab.yml`) that defines the lab. This flag can be used instead of `--lab`.
 
-### --name
+### `--name`
 
 Name of the GoTTY container. If omitted it defaults to `clab-<labname>-gotty`.
 
-### --port | -p
+### `--port | -p`
 
 Port for the GoTTY web interface. Default is `8080`.
 
-### --username | -u
+### `--username | -u`
 
 Username used to authenticate to the GoTTY web terminal. Defaults to `admin`.
 
-### --password | -P
+### `--password | -P`
 
 Password used to authenticate to the GoTTY web terminal. Defaults to `admin`.
 
-### --shell | -s
+### `--shell | -s`
 
 Shell to start inside the container. Defaults to `bash`.
 
-### --image | -i
+### `--image | -i`
 
 Container image used to run GoTTY. Defaults to `ghcr.io/srl-labs/network-multitool`.
 
-### --owner | -o
+### `--owner | -o`
 
 Owner name to associate with the GoTTY container. If not provided it will be discovered automatically from environment variables.
 
@@ -65,4 +65,3 @@ Once started, open the printed URL in a browser to access the terminal. From the
 ```
 ssh admin@clab-mylab-node1
 ```
-

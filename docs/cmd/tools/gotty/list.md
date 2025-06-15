@@ -12,7 +12,7 @@ containerlab tools gotty list [flags]
 
 ## Flags
 
-### --format | -f
+### `--format | -f`
 
 Output format for the command. Either `table` (default) or `json`.
 
