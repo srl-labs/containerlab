@@ -285,21 +285,20 @@ func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs
 	mntSpec := make([]specs.Mount, len(mounts))
 	// Note: we don't do any input validation here
 	for i, mnt := range mounts {
-		mntSplit := strings.SplitN(mnt, ":", 3)
-
-		if len(mntSplit) == 1 {
-			return nil, fmt.Errorf("%w: %s", errInvalidBind, mnt)
+		bind, err := types.NewBind(mnt)
+		if err != nil {
+			return nil, err
 		}
 
 		mntSpec[i] = specs.Mount{
-			Destination: mntSplit[1],
+			Destination: bind.Dst(),
 			Type:        "bind",
-			Source:      mntSplit[0],
+			Source:      bind.Src(),
 		}
 
 		// when options are provided in the bind mount spec
-		if len(mntSplit) == 3 {
-			mntSpec[i].Options = strings.Split(mntSplit[2], ",")
+		if bind.Mode() != "" {
+			mntSpec[i].Options = strings.Split(bind.Mode(), ",")
 		}
 	}
 	log.Debugf("convertMounts method received mounts %v and produced %+v as a result", mounts, mntSpec)
