@@ -232,7 +232,9 @@ func WithTopoFromLab(labName string) ClabOption {
 			return fmt.Errorf("lab name is required to derive topology path")
 		}
 
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
@@ -244,7 +246,7 @@ func WithTopoFromLab(labName string) ClabOption {
 
 		containers, err := c.globalRuntime().ListContainers(ctx, filter)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to list containers for lab '%s': %w", labName, err)
 		}
 
 		if len(containers) == 0 {
@@ -254,6 +256,12 @@ func WithTopoFromLab(labName string) ClabOption {
 		topoFile := containers[0].Labels[clabels.TopoFile]
 		if topoFile == "" {
 			return fmt.Errorf("could not determine topology file from container labels")
+		}
+
+		// Verify topology file exists and is accessible
+		if !utils.FileOrDirExists(topoFile) {
+			return fmt.Errorf("topology file '%s' referenced by lab '%s' does not exist or is not accessible",
+				topoFile, labName)
 		}
 
 		log.Debugf("found topology file for lab %s: %s", labName, topoFile)
