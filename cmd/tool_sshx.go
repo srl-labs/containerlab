@@ -246,7 +246,10 @@ var sshxAttachCmd = &cobra.Command{
 		}
 
 		// Create container labels
-		owner := utils.GetOwner(sshxOwner)
+		owner := sshxOwner
+		if owner == "" {
+			owner = utils.GetOwner()
+		}
 		labelsMap := common.CreateLabels(labName, sshxContainerName, owner, "sshx")
 
 		// Create and start SSHX container
@@ -517,7 +520,10 @@ var sshxReattachCmd = &cobra.Command{
 		}
 
 		// Create container labels
-		owner := utils.GetOwner(sshxOwner)
+		owner := sshxOwner
+		if owner == "" {
+			owner = utils.GetOwner()
+		}
 		labelsMap := common.CreateLabels(labName, sshxContainerName, owner, "sshx")
 
 		// Create and start SSHX container
