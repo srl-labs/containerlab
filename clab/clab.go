@@ -365,15 +365,16 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 	return tmpFile.Name(), err
 }
 
-// GetTopology creates a containerlab instance using either a topology file path
-// or a running lab name. It returns the initialized CLab structure with the
+// NewContainerlabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
+// or a lab name. It returns the initialized CLab structure with the
 // topology loaded.
-func GetTopology(ctx context.Context, topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool) (*CLab, error) {
+func NewContainerlabFromTopologyFileOrLabName(ctx context.Context, topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool) (*CLab, error) {
 	if topoPath == "" && labName == "" {
 		cwd, err := os.Getwd()
-		if err == nil {
-			topoPath = cwd
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current working directory and no topology path or lab name provided: %w", err)
 		}
+		topoPath = cwd
 	}
 
 	opts := []ClabOption{
@@ -386,9 +387,10 @@ func GetTopology(ctx context.Context, topoPath, labName, varsFile, runtimeName s
 		WithDebug(debug),
 	}
 
-	if topoPath != "" {
+	switch {
+	case topoPath != "":
 		opts = append(opts, WithTopoPath(topoPath, varsFile))
-	} else {
+	case labName != "":
 		opts = append(opts, WithTopoFromLab(labName))
 	}
 

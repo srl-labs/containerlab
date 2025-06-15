@@ -195,7 +195,7 @@ var sshxAttachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := clab.GetTopology(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -310,7 +310,7 @@ var sshxDetachCmd = &cobra.Command{
 		defer cancel()
 
 		// Get lab topology information
-		clabInstance, err := clab.GetTopology(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -468,7 +468,7 @@ var sshxReattachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := clab.GetTopology(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}

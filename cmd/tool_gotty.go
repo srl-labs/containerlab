@@ -211,7 +211,7 @@ var gottyAttachCmd = &cobra.Command{
 			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
 
 		// Get lab topology information
-		clabInstance, err := clab.GetTopology(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -325,7 +325,7 @@ var gottyDetachCmd = &cobra.Command{
 		defer cancel()
 
 		// Get lab topology information
-		clabInstance, err := clab.GetTopology(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -499,7 +499,7 @@ var gottyReattachCmd = &cobra.Command{
 			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
 
 		// Get lab topology information
-		clabInstance, err := clab.GetTopology(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
