@@ -15,7 +15,7 @@ nav:
           - Arista:
               - Arista cEOS: manual/kinds/ceos.md
               - Arista vEOS: manual/kinds/vr-veos.md
-          - Vyos: manual/kinds/vyos.md
+          - VyOS Networks VyOS: manual/kinds/vyosnetworks_vyos.md
           - Cisco:
               - Cisco XRd: manual/kinds/xrd.md
               - Cisco XRv9k: manual/kinds/vr-xrv9k.md
