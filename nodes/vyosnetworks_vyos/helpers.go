@@ -1,4 +1,4 @@
-package vyos
+package vyosnetworks_vyos
 
 import (
 	"context"

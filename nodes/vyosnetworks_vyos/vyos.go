@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package vyos
+package vyosnetworks_vyos
 
 import (
 	"context"
@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	KindNames          = []string{"vyos"}
+	KindNames          = []string{"vyosnetworks_vyos", "vyos"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	//go:embed vyos.config.boot

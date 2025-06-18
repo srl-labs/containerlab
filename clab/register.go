@@ -50,7 +50,7 @@ import (
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
-	"github.com/srl-labs/containerlab/nodes/vyos"
+	vyosnetworks_vyos "github.com/srl-labs/containerlab/nodes/vyosnetworks_vyos"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
@@ -102,5 +102,5 @@ func (c *CLab) RegisterNodes() {
 	huawei_vrp.Register(c.Reg)
 	sixwind_vsr.Register(c.Reg)
 	fdio_vpp.Register(c.Reg)
-	vyos.Register(c.Reg)
+	vyosnetworks_vyos.Register(c.Reg)
 }
