@@ -134,7 +134,8 @@ func validateFilter(nodes map[string]nodes.Node) error {
 		}
 		return nil
 	}
-	mis := []string{}
+
+	var mis []string
 	for _, nn := range configFilter {
 		if _, ok := nodes[nn]; !ok {
 			mis = append(mis, nn)

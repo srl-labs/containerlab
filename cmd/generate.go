@@ -128,7 +128,7 @@ func init() {
 	reg = c.Reg
 
 	generateNodesAttributes := reg.GetGenerateNodeAttributes()
-	supportedKinds := []string{}
+	var supportedKinds []string
 
 	// prepare list of generateable node kinds
 	for k, v := range generateNodesAttributes {
