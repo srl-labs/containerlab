@@ -92,7 +92,7 @@
                         "fortinet_fortigate",
                         "k8s-kind",
                         "fdio_vpp",
-                        "vyos"
+                        "vyosnetworks_vyos"
                     ]
                 },
                 "license": {
@@ -1212,7 +1212,7 @@
                         "arista_ceos": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "vyos": {
+                        "vyosnetworks_vyos": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_crpd": {

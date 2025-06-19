@@ -4,7 +4,7 @@ search:
 ---
 # VyOS Networks VyOS
 
-VyOS is identified with the `vyosnetworks_vyos` or `vyos` kind in the [topology file](../topo-def-file.md).
+VyOS is identified with the `vyosnetworks_vyos` kind in the [topology file](../topo-def-file.md).
 
 VyOS nodes will launch with the following features
 

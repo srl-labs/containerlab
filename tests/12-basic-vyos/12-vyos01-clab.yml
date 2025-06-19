@@ -7,13 +7,13 @@ name: 12-01-two-vyos
 
 topology:
   kinds:
-    vyos:
+    vyosnetworks_vyos:
       image: vyos
   nodes:
     n1:
-      kind: vyos
+      kind: vyosnetworks_vyos
     n2:
-      kind: vyos
+      kind: vyosnetworks_vyos
       mgmt-ipv4: 172.20.20.22
 
   links:

@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	KindNames          = []string{"vyosnetworks_vyos", "vyos"}
+	KindNames          = []string{"vyosnetworks_vyos"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin")
 
 	//go:embed vyos.config.boot
