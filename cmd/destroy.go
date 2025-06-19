@@ -39,7 +39,7 @@ var destroyCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(destroyCmd)
+	RootCmd.AddCommand(destroyCmd)
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
 	destroyCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
 		"attempt to stop containers before removing")

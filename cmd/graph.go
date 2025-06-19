@@ -142,7 +142,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 }
 
 func init() {
-	rootCmd.AddCommand(graphCmd)
+	RootCmd.AddCommand(graphCmd)
 	graphCmd.Flags().StringVarP(&srv, "srv", "s", "0.0.0.0:50080",
 		"HTTP server address serving the topology view")
 	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false,

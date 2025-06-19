@@ -26,8 +26,8 @@ var (
 	logLevel   string
 )
 
-// rootCmd represents the base command when called without any subcommands.
-var rootCmd = &cobra.Command{
+// RootCmd represents the base command when called without any subcommands.
+var RootCmd = &cobra.Command{
 	Use:               "containerlab",
 	Short:             "deploy container based lab environments with a user-defined interconnections",
 	PersistentPreRunE: preRunFn,
@@ -37,29 +37,29 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := RootCmd.Execute(); err != nil {
 		os.Exit(1) // skipcq: RVV-A0003
 	}
 }
 
 func addSubcommands() {
-	rootCmd.AddCommand(inspect.InspectCmd)
-	rootCmd.AddCommand(version.VersionCmd)
+	RootCmd.AddCommand(inspect.InspectCmd)
+	RootCmd.AddCommand(version.VersionCmd)
 }
 
 func init() {
-	rootCmd.SilenceUsage = true
-	rootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
-	rootCmd.PersistentFlags().StringVarP(&common.Topo, "topo", "t", "",
+	RootCmd.SilenceUsage = true
+	RootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
+	RootCmd.PersistentFlags().StringVarP(&common.Topo, "topo", "t", "",
 		"path to the topology definition file, a directory containing one, 'stdin', or a URL")
-	rootCmd.PersistentFlags().StringVarP(&common.VarsFile, "vars", "", "",
+	RootCmd.PersistentFlags().StringVarP(&common.VarsFile, "vars", "", "",
 		"path to the topology template variables file")
-	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
-	rootCmd.PersistentFlags().StringVarP(&common.Name, "name", "", "", "lab name")
-	rootCmd.PersistentFlags().DurationVarP(&common.Timeout, "timeout", "", 120*time.Second,
+	_ = RootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
+	RootCmd.PersistentFlags().StringVarP(&common.Name, "name", "", "", "lab name")
+	RootCmd.PersistentFlags().DurationVarP(&common.Timeout, "timeout", "", 120*time.Second,
 		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
-	rootCmd.PersistentFlags().StringVarP(&common.Runtime, "runtime", "r", "", "container runtime")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info",
+	RootCmd.PersistentFlags().StringVarP(&common.Runtime, "runtime", "r", "", "container runtime")
+	RootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info",
 		"logging level; one of [trace, debug, info, warning, error, fatal]")
 
 	addSubcommands()

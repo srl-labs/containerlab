@@ -111,7 +111,7 @@ func execFn(_ *cobra.Command, _ []string) error {
 }
 
 func init() {
-	rootCmd.AddCommand(execCmd)
+	RootCmd.AddCommand(execCmd)
 	execCmd.Flags().StringArrayVarP(&execCommands, "cmd", "", []string{}, "command to execute")
 	execCmd.Flags().StringSliceVarP(&labelsFilter, "label", "", []string{}, "labels to filter container subset")
 	execCmd.Flags().StringVarP(&execFormat, "format", "f", "plain", "output format. One of [json, plain]")

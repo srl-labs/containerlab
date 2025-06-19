@@ -147,7 +147,7 @@ func validateFilter(nodes map[string]nodes.Node) error {
 }
 
 func init() {
-	rootCmd.AddCommand(configCmd)
+	RootCmd.AddCommand(configCmd)
 	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{},
 		"comma separated list of paths to search for templates")
 	_ = configCmd.MarkFlagDirname("template-path")

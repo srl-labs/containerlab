@@ -4,8 +4,16 @@
 
 package main
 
-import "github.com/srl-labs/containerlab/cmd"
+import (
+	"context"
+	"os"
+
+	"github.com/charmbracelet/fang"
+	"github.com/srl-labs/containerlab/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	if err := fang.Execute(context.TODO(), cmd.RootCmd); err != nil {
+		os.Exit(1)
+	}
 }

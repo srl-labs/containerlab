@@ -137,7 +137,7 @@ func init() {
 		}
 	}
 
-	rootCmd.AddCommand(generateCmd)
+	RootCmd.AddCommand(generateCmd)
 	generateCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
