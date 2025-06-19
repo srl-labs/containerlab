@@ -500,7 +500,7 @@ Verify Exec rc == 0 on containers match
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd "echo test"
     Log    ${output}
     Should Contain    ${output}    test
-    Should Not Contain    ${output}    Error: filter did not match any containers
+    Should Not Contain    ${output}    Filter did not match any containers
     Should Be Equal As Integers    ${rc}    0
 
 Verify Exec rc != 0 on no containers match
@@ -509,7 +509,7 @@ Verify Exec rc != 0 on no containers match
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
     Log    ${output}
     Should Not Contain    ${output}    test
-    Should Contain    ${output}    Error: filter did not match any containers
+    Should Contain    ${output}    Filter did not match any containers
     Should Not Be Equal As Integers    ${rc}    0
 
 Verify l1 node is healthy

@@ -75,5 +75,5 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 func init() {
 	saveCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
-	rootCmd.AddCommand(saveCmd)
+	RootCmd.AddCommand(saveCmd)
 }

@@ -19,7 +19,7 @@ var redeployCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(redeployCmd) // Add to rootCmd
+	RootCmd.AddCommand(redeployCmd) // Add to rootCmd
 
 	// Add destroy flags
 	redeployCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
