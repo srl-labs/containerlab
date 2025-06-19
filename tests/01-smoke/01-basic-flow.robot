@@ -500,7 +500,7 @@ Verify Exec rc == 0 on containers match
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd "echo test"
     Log    ${output}
     Should Contain    ${output}    test
-    Should Not Contain    ${output}    Error: filter did not match any containers
+    Should Not Contain    ${output}    Filter did not match any containers
     Should Be Equal As Integers    ${rc}    0
 
 Verify Exec rc != 0 on no containers match
