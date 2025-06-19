@@ -8,7 +8,7 @@ name: 12-01-two-vyos
 topology:
   kinds:
     vyosnetworks_vyos:
-      image: vyos
+      image: ghcr.io/evilhamsterman/vyos:stream
   nodes:
     n1:
       kind: vyosnetworks_vyos
