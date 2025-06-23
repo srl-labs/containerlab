@@ -5,9 +5,8 @@ name: "sros"
 topology:
   kinds:
     nokia_srsim:
-      # memory: 8G
-      license: license.txt
-      image: harbor.ncse.io/library/srux/srsim:0.0.I8135
+      license: /opt/nokia/sros/license.txt
+      image: harbor.ncse.io/library/srux/srsim:0.0.I8161
   nodes:
     sr-sim1:
       kind: nokia_srsim

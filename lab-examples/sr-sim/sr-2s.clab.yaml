@@ -6,8 +6,8 @@ name: "sros"
 topology:
   kinds:
     nokia_srsim:
-      license: license.txt
-      image: harbor.ncse.io/library/srux/srsim:0.0.I8121
+      license: /opt/nokia/sros/license.txt
+      image: harbor.ncse.io/library/srux/srsim:0.0.I8161
 
   nodes: 
     fab:
@@ -17,21 +17,23 @@ topology:
       type: SR-2s
       env: 
         NOKIA_SROS_SLOT: A
-
-
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
+        NOKIA_SROS_FABRIC_IF: eth1
     sr-2s-b:
       kind: nokia_srsim
       type: SR-2s
       network-mode: container:sr-2s-a
       env: 
         NOKIA_SROS_SLOT: B
-
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
+        NOKIA_SROS_FABRIC_IF: eth2
     sr-2s-1:
       kind: nokia_srsim
       type: SR-2s
       network-mode: container:sr-2s-a
       env: 
         NOKIA_SROS_SLOT: 1
+        NOKIA_SROS_FABRIC_IF: eth3
       stages:
         create:
           wait-for:
@@ -45,6 +47,7 @@ topology:
       network-mode: container:sr-2s-a
       env: 
         NOKIA_SROS_SLOT: 2
+        NOKIA_SROS_FABRIC_IF: eth4
       stages:
         create:
           wait-for:
@@ -54,11 +57,10 @@ topology:
               stage: create
   links:
     ## FABRIC LINKS
-    - endpoints: ["fab:veth0", "sr-2s-a:fab-0"] # dummy veth0 to make the fab bridge UP, otherwise it will say NO-CARRIER 
-    - endpoints: ["sr-2s-a:fab-a", "fab:vetha"]
-    - endpoints: ["sr-2s-b:fab-b", "fab:vethb"]
-    - endpoints: ["sr-2s-1:fab-1", "fab:veth1"]
-    - endpoints: ["sr-2s-2:fab-2", "fab:veth2"]
+    - endpoints: ["sr-2s-a:eth1", "fab:veth1"]
+    - endpoints: ["sr-2s-b:eth2", "fab:veth2"]
+    - endpoints: ["sr-2s-1:eth3", "fab:veth3"]
+    - endpoints: ["sr-2s-2:eth4", "fab:veth4"]
     # DATA LINKS
     - endpoints: ["sr-2s-1:e1-1-c1-1", "sr-2s-2:e2-1-c1-1"]
     - endpoints: ["sr-2s-1:e1-1-c2-1", "sr-2s-2:e2-1-c2-1"]

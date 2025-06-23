@@ -6,9 +6,8 @@ name: "sros"
 topology:
   kinds:
     nokia_srsim:
-      memory: 16G
-      license: license.txt
-      image: harbor.ncse.io/library/srux/srsim:0.0.I8121
+      license: /opt/nokia/sros/license.txt
+      image: harbor.ncse.io/library/srux/srsim:0.0.I8161
   nodes: 
     fab:
       kind: bridge
@@ -16,7 +15,7 @@ topology:
     sr-14s-a: 
       kind: nokia_srsim
       type: SR-14s
-      startup-config:  config-14s.cfg
+      # startup-config:  config-14s.cfg
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
         NOKIA_SROS_SLOT: A 
@@ -25,7 +24,7 @@ topology:
       kind: nokia_srsim
       type: SR-14s
       network-mode: container:sr-14s-a
-      startup-config:  config-14s.cfg
+      # startup-config:  config-14s.cfg
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
         NOKIA_SROS_SLOT: B
