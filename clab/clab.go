@@ -1005,10 +1005,15 @@ func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContai
 
 	for _, n := range c.Nodes {
 		cts, err := n.GetContainers(ctx)
+		networkMode := c.Config.Topology.GetNodeNetworkMode(n.Config().ShortName)
 		if err != nil {
 			return containers, fmt.Errorf("could not get container for node %s: %v", n.Config().LongName, err)
 		}
-
+		if networkMode != "" && n.Config().Kind == "nokia_srsim" {
+			//skip
+			log.Debugf("Skipping node %q from list...", n.Config().ShortName)
+			continue
+		}
 		containers = append(containers, cts...)
 	}
 

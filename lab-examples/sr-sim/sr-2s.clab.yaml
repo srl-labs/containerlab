@@ -1,0 +1,72 @@
+## Required bridge:
+# sudo ip link add name fab type bridge
+# sudo ip link set fab mtu 9000
+# sudo ip link set fab up
+name: "sros"
+topology:
+  kinds:
+    nokia_srsim:
+      license: license.txt
+      image: harbor.ncse.io/library/srux/srsim:0.0.I8121
+
+  nodes: 
+    fab:
+      kind: bridge
+    sr-2s-a: 
+      kind: nokia_srsim
+      type: SR-2s
+      env: 
+        NOKIA_SROS_SLOT: A
+
+
+    sr-2s-b:
+      kind: nokia_srsim
+      type: SR-2s
+      network-mode: container:sr-2s-a
+      env: 
+        NOKIA_SROS_SLOT: B
+
+    sr-2s-1:
+      kind: nokia_srsim
+      type: SR-2s
+      network-mode: container:sr-2s-a
+      env: 
+        NOKIA_SROS_SLOT: 1
+      stages:
+        create:
+          wait-for:
+            - node: sr-2s-a
+              stage: create
+            - node: sr-2s-b
+              stage: create
+    sr-2s-2:
+      kind: nokia_srsim
+      type: SR-2s
+      network-mode: container:sr-2s-a
+      env: 
+        NOKIA_SROS_SLOT: 2
+      stages:
+        create:
+          wait-for:
+            - node: sr-2s-a
+              stage: create
+            - node: sr-2s-b
+              stage: create
+  links:
+    ## FABRIC LINKS
+    - endpoints: ["fab:veth0", "sr-2s-a:fab-0"] # dummy veth0 to make the fab bridge UP, otherwise it will say NO-CARRIER 
+    - endpoints: ["sr-2s-a:fab-a", "fab:vetha"]
+    - endpoints: ["sr-2s-b:fab-b", "fab:vethb"]
+    - endpoints: ["sr-2s-1:fab-1", "fab:veth1"]
+    - endpoints: ["sr-2s-2:fab-2", "fab:veth2"]
+    # DATA LINKS
+    - endpoints: ["sr-2s-1:e1-1-c1-1", "sr-2s-2:e2-1-c1-1"]
+    - endpoints: ["sr-2s-1:e1-1-c2-1", "sr-2s-2:e2-1-c2-1"]
+
+
+      ##    // the format of the interface name will be one of:
+      ##    //   e1-2-3       -> card 1, mda 2, port 3
+      ##    //   e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
+      ##    //   e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
+      ##    //   e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
+

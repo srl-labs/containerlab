@@ -210,7 +210,12 @@ node3:
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			// Set the environment variable
-			t.Setenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA", tc.clab_nornir_platform_name_schema)
+			if err := os.Setenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA",
+				tc.clab_nornir_platform_name_schema); err != nil {
+				t.Fatalf("failed to set environment variable: %v", err)
+			}
+			// Unset the environment variable after the test
+			defer os.Unsetenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA")
 
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),

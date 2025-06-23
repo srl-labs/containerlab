@@ -1,0 +1,58 @@
+# sudo ip link add name fab type bridge
+# sudo ip link set fab mtu 9000
+# sudo ip link set fab up
+name: "sros"
+topology:
+  kinds:
+    nokia_srsim:
+      # memory: 8G
+      license: license.txt
+      image: harbor.ncse.io/library/srux/srsim:0.0.I8135
+  nodes:
+    sr-sim1:
+      kind: nokia_srsim
+      # type: SR-1
+      # env: 
+      #   NOKIA_SROS_MDA_1: me12-100gb-qsfp28 #override default card
+    sr-sim2: 
+      kind: nokia_srsim
+      type: SR-1x-92S
+      startup-config: config.cfg
+      env: 
+         NOKIA_SROS_SLOT: A
+    sr-sim2-iom:
+      kind: nokia_srsim
+      type: SR-1x-92S
+      network-mode: container:sr-sim2
+      env:
+        NOKIA_SROS_SLOT: 1 
+    sr-sim3:
+      kind: nokia_srsim
+      type: SR-1x-92S
+      startup-config: config.cfg
+      env: 
+         NOKIA_SROS_SLOT: A
+    sr-sim3-iom:
+      kind: nokia_srsim
+      type: SR-1x-92S
+      network-mode: container:sr-sim3
+      env: 
+         NOKIA_SROS_SLOT: 1
+
+
+  links:
+  #  #Fabric Interconnects
+  #   - endpoints: ["sr-sim2:fab-a", "sr-sim2:fab-1"] 
+  #   - endpoints: ["sr-sim3:fab-a", "sr-sim3:fab-1"] 
+    # Data Interfaces
+    - endpoints: ["sr-sim1:e1-1-c1-1", "sr-sim2-iom:e1-1-c1-1"]    
+    - endpoints: ["sr-sim1:e1-1-c2-1", "sr-sim3-iom:e1-1-c1-1"]    
+    - endpoints: ["sr-sim2-iom:e1-1-c22-1", "sr-sim3-iom:e1-1-c22-1"]
+
+
+      ##    // the format of the interface name will be one of:
+      ##    //   e1-2-3       -> card 1, mda 2, port 3
+      ##    //   e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
+      ##    //   e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
+      ##    //   e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
+

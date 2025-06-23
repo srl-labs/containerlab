@@ -153,7 +153,7 @@ func (n *AnsibleKindProps) setNetworkOS(kind string) {
 	switch kind {
 	case "nokia_srlinux", "srl":
 		n.NetworkOS = "nokia.srlinux.srlinux"
-	case "nokia_sros", "vr-sros":
+	case "nokia_sros", "vr-sros", "nokia_srsim":
 		n.NetworkOS = "nokia.sros.md"
 	}
 }
@@ -163,7 +163,7 @@ func (n *AnsibleKindProps) setAnsibleConnection(kind string) {
 	switch kind {
 	case "nokia_srlinux", "srl":
 		n.AnsibleConn = "ansible.netcommon.httpapi"
-	case "nokia_sros", "vr-sros":
+	case "nokia_sros", "vr-sros", "nokia_srsim":
 		n.AnsibleConn = "ansible.netcommon.network_cli"
 	}
 }

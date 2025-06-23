@@ -310,7 +310,7 @@ func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
 	if parsedIndex, found := captureGroups["port"]; found {
 		parsedIndexInt, err := strconv.Atoi(parsedIndex)
 		if err != nil {
-			return 0, fmt.Errorf("%q parsed index %q could not be cast to an integer", ifName, parsedIndex)
+			return 0, fmt.Errorf("d'ohh %q parsed index %q could not be cast to an integer", ifName, parsedIndex)
 		}
 		calculatedIndex := parsedIndexInt - d.InterfaceOffset + d.FirstDataIfIndex
 		return calculatedIndex, nil

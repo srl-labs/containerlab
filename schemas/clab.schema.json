@@ -52,6 +52,7 @@
                         "sonic-vs",
                         "sonic-vm",
                         "nokia_sros",
+                        "nokia_srsim",
                         "juniper_vmx",
                         "juniper_vqfx",
                         "juniper_vsrx",
@@ -383,6 +384,69 @@
                                     },
                                     {
                                         "pattern": "^((lc|cp):\\s)?((cpu|ram|max_nics)=\\d+|slot=[A-Z]|chassis=[^\\s]+|card=.*|\\s)+$"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                },
+                                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "(nokia_srsim)"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "anyOf": [
+                                    {
+                                        "enum": [
+                                               "dms-1-24d",
+                                               "ixr-10",
+                                               "ixr-6",
+                                               "ixr-e2c",
+                                               "ixr-e2",
+                                               "ixr-ec",
+                                               "ixr-e",
+                                               "ixr-r4",
+                                               "ixr-r6dl",
+                                               "ixr-r6d",
+                                               "ixr-r6",
+                                               "ixr-s",
+                                               "ixr-x3",
+                                               "ixr-x",
+                                               "sar-1",
+                                               "sr-1-24d",
+                                               "sr-12e",
+                                               "sr-12",
+                                               "sr-1-46s",
+                                               "sr-14s",
+                                               "sr-1-92s",
+                                               "sr-1e",
+                                               "sr-1se",
+                                               "sr-1s",
+                                               "sr-1x-48d",
+                                               "sr-1x-92s",
+                                               "sr-1",
+                                               "sr-2e",
+                                               "sr-2se",
+                                               "sr-2s",
+                                               "sr-3e",
+                                               "sr-7s",
+                                               "sr-7",
+                                               "sr-a4",
+                                               "sr-a8",
+                                               "vsr-i",
+                                               "xrs-20e",
+                                               "xrs-2"
+                                        ]
                                     }
                                 ]
                             }
@@ -1218,6 +1282,9 @@
                     "type": "object",
                     "properties": {
                         "nokia_srlinux": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "nokia_srsim": {
                             "$ref": "#/definitions/node-config"
                         },
                         "arista_ceos": {

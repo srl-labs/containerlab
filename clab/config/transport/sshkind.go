@@ -61,6 +61,44 @@ func (*VrSrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 	return nil
 }
 
+// SrosSSHKind implements SShKind.
+type SrosSSHKind struct{}
+
+func (*SrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // skipcq: RVV-A0005
+	s.PromptChar = "#" // ensure it's '#'
+	// s.debug = true
+	r := s.Run("/environment more false", 5)
+	if r.result != "" {
+		log.Warnf("%s Are you in MD-Mode?%s", s.Target, r.LogString(s.Target, true, false))
+	}
+
+	if transaction {
+		s.Run("/configure global", 5).Info(s.Target)
+		s.Run("discard", 1).Info(s.Target)
+	}
+	return nil
+}
+
+func (*SrosSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
+	res := s.Run("commit", 10)
+	if res.result != "" {
+		return res, fmt.Errorf("could not commit %s", res.result)
+	}
+	return res, nil
+}
+
+func (*SrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
+	// SROS MD-CLI \r...prompt
+	r := strings.LastIndex(*in, "\r\n\r\n")
+	if r > 0 {
+		return &SSHReply{
+			result: (*in)[:r],
+			prompt: (*in)[r+4:] + s.PromptChar,
+		}
+	}
+	return nil
+}
+
 // SrlSSHKind implements SShKind.
 type SrlSSHKind struct{}
 
