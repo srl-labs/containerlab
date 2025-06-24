@@ -14,6 +14,7 @@ import (
 	cvx "github.com/srl-labs/containerlab/nodes/cvx"
 	dell_sonic "github.com/srl-labs/containerlab/nodes/dell_sonic"
 	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
+	fdio_vpp "github.com/srl-labs/containerlab/nodes/fdio_vpp"
 	fortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
 	generic_vm "github.com/srl-labs/containerlab/nodes/generic_vm"
 	host "github.com/srl-labs/containerlab/nodes/host"
@@ -27,7 +28,6 @@ import (
 	rare "github.com/srl-labs/containerlab/nodes/rare"
 	sonic "github.com/srl-labs/containerlab/nodes/sonic"
 	vr_sonic "github.com/srl-labs/containerlab/nodes/sonic_vm"
-	fdio_vpp "github.com/srl-labs/containerlab/nodes/fdio_vpp"
 	srl "github.com/srl-labs/containerlab/nodes/srl"
 	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	vr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
@@ -50,6 +50,7 @@ import (
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
+	vyosnetworks_vyos "github.com/srl-labs/containerlab/nodes/vyosnetworks_vyos"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
@@ -101,4 +102,5 @@ func (c *CLab) RegisterNodes() {
 	huawei_vrp.Register(c.Reg)
 	sixwind_vsr.Register(c.Reg)
 	fdio_vpp.Register(c.Reg)
+	vyosnetworks_vyos.Register(c.Reg)
 }

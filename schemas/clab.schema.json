@@ -91,7 +91,8 @@
                         "generic_vm",
                         "fortinet_fortigate",
                         "k8s-kind",
-                        "fdio_vpp"
+                        "fdio_vpp",
+                        "vyosnetworks_vyos"
                     ]
                 },
                 "license": {
@@ -406,7 +407,9 @@
                     },
                     "uniqueItems": true
                 },
-                "mtu": { "$ref": "#/definitions/mtu"},
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
                 "vars": {
                     "$ref": "#/definitions/link-vars"
                 }
@@ -431,11 +434,20 @@
                         "$ref": "#/definitions/link-endpoint"
                     }
                 },
-                "mtu": { "$ref": "#/definitions/mtu"},
-                "vars": { "$ref": "#/definitions/link-vars"},
-                "labels": { "$ref": "#/definitions/labels"}
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
+                }
             },
-            "required": ["type", "endpoints"],
+            "required": [
+                "type",
+                "endpoints"
+            ],
             "additionalItems": false
         },
         "link-type-mgmt-net": {
@@ -449,12 +461,24 @@
                 "endpoint": {
                     "$ref": "#/definitions/link-endpoint"
                 },
-                "host-interface": { "$ref": "#/definitions/link-host-interface"},
-                "mtu": { "$ref": "#/definitions/mtu"},
-                "vars": { "$ref": "#/definitions/link-vars"},
-                "labels": { "$ref": "#/definitions/labels"}
+                "host-interface": {
+                    "$ref": "#/definitions/link-host-interface"
+                },
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
+                }
             },
-            "required": ["type", "endpoint", "host-interface"],
+            "required": [
+                "type",
+                "endpoint",
+                "host-interface"
+            ],
             "additionalProperties": false
         },
         "link-type-macvlan": {
@@ -468,13 +492,25 @@
                 "endpoint": {
                     "$ref": "#/definitions/link-endpoint"
                 },
-                "host-interface": { "$ref": "#/definitions/mtu"},
-                "mtu": { "$ref": "#/definitions/mtu"},
-                "vars": { "$ref": "#/definitions/link-vars"},
-                "labels": { "$ref": "#/definitions/labels"}
+                "host-interface": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
+                }
             },
-            "required": ["type", "endpoint", "host-interface"],
-            "additionalProperties": false   
+            "required": [
+                "type",
+                "endpoint",
+                "host-interface"
+            ],
+            "additionalProperties": false
         },
         "link-type-host": {
             "type": "object",
@@ -487,12 +523,24 @@
                 "endpoint": {
                     "$ref": "#/definitions/link-endpoint"
                 },
-                "host-interface": { "$ref": "#/definitions/link-host-interface"},
-                "mtu": { "$ref": "#/definitions/mtu"},
-                "vars": { "$ref": "#/definitions/link-vars"},
-                "labels": { "$ref": "#/definitions/labels"}
+                "host-interface": {
+                    "$ref": "#/definitions/link-host-interface"
+                },
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
+                }
             },
-            "required": ["type", "endpoint", "host-interface"],
+            "required": [
+                "type",
+                "endpoint",
+                "host-interface"
+            ],
             "additionalProperties": false
         },
         "link-type-vxlan": {
@@ -506,14 +554,32 @@
                 "endpoint": {
                     "$ref": "#/definitions/link-endpoint"
                 },
-                "remote": {"$ref": "#/definitions/link-vxlan-remote"},
-                "vni":  {"$ref": "#/definitions/link-vxlan-vni"},
-                "udp-port":  {"$ref": "#/definitions/link-vxlan-udpport"},
-                "mtu": { "$ref": "#/definitions/mtu" },
-                "vars": { "$ref": "#/definitions/link-vars" },
-                "labels": { "$ref": "#/definitions/labels"}
+                "remote": {
+                    "$ref": "#/definitions/link-vxlan-remote"
+                },
+                "vni": {
+                    "$ref": "#/definitions/link-vxlan-vni"
+                },
+                "udp-port": {
+                    "$ref": "#/definitions/link-vxlan-udpport"
+                },
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
+                }
             },
-            "required": ["type", "endpoint", "remote", "vni", "udp-port"],
+            "required": [
+                "type",
+                "endpoint",
+                "remote",
+                "vni",
+                "udp-port"
+            ],
             "additionalProperties": false
         },
         "link-type-vxlan-stitched": {
@@ -527,14 +593,32 @@
                 "endpoint": {
                     "$ref": "#/definitions/link-endpoint"
                 },
-                "remote": {"$ref": "#/definitions/link-vxlan-remote"},
-                "vni":  {"$ref": "#/definitions/link-vxlan-vni"},
-                "udp-port":  {"$ref": "#/definitions/link-vxlan-udpport"},
-                "mtu": { "$ref": "#/definitions/mtu" },
-                "vars": { "$ref": "#/definitions/link-vars" },
-                "labels": { "$ref": "#/definitions/labels"}
+                "remote": {
+                    "$ref": "#/definitions/link-vxlan-remote"
+                },
+                "vni": {
+                    "$ref": "#/definitions/link-vxlan-vni"
+                },
+                "udp-port": {
+                    "$ref": "#/definitions/link-vxlan-udpport"
+                },
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
+                }
             },
-            "required": ["type", "endpoint", "remote", "vni", "udp-port"],
+            "required": [
+                "type",
+                "endpoint",
+                "remote",
+                "vni",
+                "udp-port"
+            ],
             "additionalProperties": false
         },
         "link-type-dummy": {
@@ -548,14 +632,22 @@
                 "endpoint": {
                     "$ref": "#/definitions/link-endpoint"
                 },
-                "mtu": { "$ref": "#/definitions/mtu"},
-                "vars": { "$ref": "#/definitions/link-vars"},
-                "labels": { "$ref": "#/definitions/labels"}
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
+                }
             },
-            "required": ["type", "endpoint"],
+            "required": [
+                "type",
+                "endpoint"
+            ],
             "additionalProperties": false
         },
-
         "link-endpoint": {
             "type": "object",
             "description": "Common link endpoint object for extended link configs",
@@ -574,13 +666,20 @@
                     "pattern": "^(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})"
                 }
             },
-            "required": ["node", "interface"],
+            "required": [
+                "node",
+                "interface"
+            ],
             "additionalProperties": false
         },
         "link-vxlan-remote": {
             "anyOf": [
-                { "$ref": "#/definitions/ipv4-addr"},
-                { "$ref": "#/definitions/ipv6-addr"}
+                {
+                    "$ref": "#/definitions/ipv4-addr"
+                },
+                {
+                    "$ref": "#/definitions/ipv6-addr"
+                }
             ]
         },
         "link-vxlan-vni": {
@@ -600,7 +699,7 @@
             "description": "link-scoped variables used by config engine",
             "markdownDescription": "link-scoped variables used by config engine"
         },
-        "labels":{
+        "labels": {
             "type": "object",
             "description": "container labels",
             "markdownDescription": "container [labels](https://containerlab.dev/manual/nodes/#labels)",
@@ -624,7 +723,6 @@
             "description": "link-scoped variables used by config engine",
             "markdownDescription": "link-scoped variables used by config engine"
         },
-
         "extras-config": {
             "type": "object",
             "description": "node's extra configurations",
@@ -1097,7 +1195,7 @@
                                     "type": "null"
                                 },
                                 {
-                                "$ref": "#/definitions/node-config"
+                                    "$ref": "#/definitions/node-config"
                                 }
                             ]
                         }
@@ -1112,6 +1210,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "arista_ceos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "vyosnetworks_vyos": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_crpd": {
@@ -1238,14 +1339,30 @@
                     "minItems": 1,
                     "items": {
                         "anyOf": [
-                            { "$ref": "#/definitions/link-config-short"},
-                            { "$ref": "#/definitions/link-type-veth"},
-                            { "$ref": "#/definitions/link-type-mgmt-net"},
-                            { "$ref": "#/definitions/link-type-macvlan"},
-                            { "$ref": "#/definitions/link-type-host"},
-                            { "$ref": "#/definitions/link-type-vxlan"},
-                            { "$ref": "#/definitions/link-type-vxlan-stitched"},
-                            { "$ref": "#/definitions/link-type-dummy"}
+                            {
+                                "$ref": "#/definitions/link-config-short"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-veth"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-mgmt-net"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-macvlan"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-host"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-vxlan"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-vxlan-stitched"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-dummy"
+                            }
                         ]
                     }
                 }

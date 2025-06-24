@@ -421,6 +421,15 @@ jobs:
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
+  vyosnetworks_vyos-tests:
+    uses: ./.github/workflows/vyosnetworks_vyos-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+      - process-gitref
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
     runs-on: ubuntu-24.04
