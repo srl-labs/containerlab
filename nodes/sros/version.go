@@ -132,6 +132,7 @@ configure system security ssh client-mac-list-v2 mac 220 name hmac-sha1-96
 configure system security ssh client-mac-list-v2 mac 225 name hmac-md5
 configure system security ssh client-mac-list-v2 mac 240 name hmac-md5-96
 configure system security user-params local-user user "admin" restricted-to-home false
+configure system security user-params local-user user "admin" password "NokiaSros1!"
 configure system security user-params local-user user "admin" access console true
 configure system security user-params local-user user "admin" console member ["administrative"]`
 	// ocServerConfig = `set / system management openconfig admin-state enable`.

@@ -24,6 +24,7 @@ import (
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -70,56 +71,13 @@ var (
 		"net.ipv4.conf.all.rp_filter":        "0",
 		"net.ipv4.conf.default.rp_filter":    "0",
 	}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
-
-	// srosTypes = map[string]string{
-	// 	"dms-1-24d": "DMS-1-24D.yml",
-	// 	"ixr-10":    "IXR-10.yml",
-	// 	"ixr-6":     "IXR-6.yml",
-	// 	"ixr-e":     "IXR-e.yml",
-	// 	"ixr-e2":    "IXR-e2.yml",
-	// 	"ixr-e2c":   "IXR-e2c.yml",
-	// 	"ixr-ec":    "IXR-ec.yml",
-	// 	"ixr-r4":    "IXR-R4.yml",
-	// 	"ixr-r6":    "IXR-R6.yml",
-	// 	"ixr-r6d":   "IXR-R6d.yml",
-	// 	"ixr-r6dl":  "IXR-R6dl.yml",
-	// 	"ixr-s":     "IXR-s.yml",
-	// 	"ixr-x":     "IXR-x.yml",
-	// 	"ixr-x3":    "IXR-x3.yml",
-	// 	"sar-1":     "SAR-1.yml",
-	// 	"sar-hm":    "SAR-Hm.yml",
-	// 	"sar-hmc":   "SAR-Hmc.yml",
-	// 	"sr-1-24d":  "SR-1-24D.yml",
-	// 	"sr-1-46s":  "SR-1-46S.yml",
-	// 	"sr-1-48d":  "SR-1-48D.yml",
-	// 	"sr-1-92s":  "SR-1-92S.yml",
-	// 	"sr-1":      "SR-1.yml",
-	// 	"sr-12":     "SR-12.yml",
-	// 	"sr-12e":    "SR-12e.yml",
-	// 	"sr-14s":    "SR-14s.yml",
-	// 	"sr-1e":     "SR-1e.yml",
-	// 	"sr-1se":    "SR-1se.yml",
-	// 	"sr-1x-48d": "SR-1x-48D.yml",
-	// 	"sr-1x-92s": "SR-1x-92S.yml",
-	// 	"sr-2e":     "SR-2e.yml",
-	// 	"sr-2s":     "SR-2s.yml",
-	// 	"sr-2se":    "SR-2se.yml",
-	// 	"sr-3e":     "SR-3e.yml",
-	// 	"sr-7":      "SR-7.yml",
-	// 	"sr-7s":     "SR-7s.yml",
-	// 	"sr-a4":     "SR-a4.yml",
-	// 	"vsr-i":     "VSR-I.yml",
-	// 	"xrs-20":    "XRS-20.yml",
-	// 	"xrs-20e":   "XRS-20e.yml",
-	// }
+	defaultCredentials = nodes.NewCredentials("admin", "NokiaSros1!")
 
 	srosEnv = map[string]string{
 		"SRSIM":                      "1",
 		"NOKIA_SROS_CHASSIS":         SrosDefaultType,     // fillers to be override
 		"NOKIA_SROS_SYSTEM_BASE_MAC": "fa:ac:ff:ff:10:00", // filler to be override
 	}
-	// srosTopology = srosTopo{}
 
 	// saveCmd          = `/opt/srlinux/bin/sr_cli -d "tools system configuration save"`.
 	readyCmd = `/usr/bin/pidof cpm`
@@ -177,11 +135,6 @@ type sros struct {
 	swVersion *SrosVersion
 }
 
-// type srosTopo struct {
-// 	Cpm  map[string][]map[string]string `yaml:"chassis_configuration"`
-// 	Slot map[string][]map[string]string `yaml:"slot_configuration"`
-// }
-
 func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
@@ -204,16 +157,6 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	if n.Cfg.NodeType == "" {
 		n.Cfg.NodeType = SrosDefaultType
 	}
-
-	// n.srosNodeTypeToLower()
-	// if _, found := srosTypes[n.Cfg.NodeType]; !found {
-	// 	keys := make([]string, 0, len(srosTypes))
-	// 	for key := range srosTypes {
-	// 		keys = append(keys, key)
-	// 	}
-	// 	return fmt.Errorf("wrong node type '%s' doesn't exist. Should be any of %s",
-	// 		n.Cfg.NodeType, strings.Join(keys, ", "))
-	// }
 
 	if n.Cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
@@ -387,17 +330,6 @@ func (n *sros) createSROSFiles() error {
 	}
 
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0777)
-
-	// generate SR-OS topology file
-	// err = generateSrosTopology(n.Cfg)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// if n.Cfg.MacAddress != "" {
-	// 	srosEnv["NOKIA_SROS_SYSTEM_BASE_MAC"] = n.Cfg.MacAddress
-	// }
-
 	// Override NodeType var with existing env
 	mac := genMac(n.Cfg)
 	if n.Cfg.NodeType != "" {
@@ -474,83 +406,6 @@ func SlotisInteger(s string) bool {
 	_, err := strconv.Atoi(s)
 	return err == nil
 }
-
-// func generateSrosTopology(cfg *types.NodeConfig) error {
-// 	dst := filepath.Join(cfg.LabDir, "topology.yml")
-// 	var srosTopology srosTopo
-
-// 	tpl, err := template.ParseFS(topologies, "topology/"+srosTypes[cfg.NodeType])
-// 	if err != nil {
-// 		return errors.Wrap(err, "failed to parse SR-OS topology template")
-// 	}
-
-// 	mac := genMac(cfg)
-// 	log.Debugf("MAC: %s, dst: %q", mac, dst)
-
-// 	var buf bytes.Buffer
-// 	if err := tpl.Execute(&buf, mac); err != nil {
-// 		return err
-// 	}
-
-// 	err = yaml.Unmarshal(buf.Bytes(), &srosTopology)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	err = utils.CreateFile(dst, buf.String())
-// 	if err != nil {
-// 		return err
-// 	}
-// 	log.Debugf("Wrote %s", dst)
-
-// 	// Control Plane Cards
-// 	nr_cpms := len(srosTopology.Cpm)
-// 	nr_LC := len(srosTopology.Slot)
-// 	log.Debugf("SR-OS NodeType %q: TopologyFile: %s, Number of CPMs: %d, LineCards %d", cfg.NodeType, srosTypes[cfg.NodeType], nr_cpms, nr_LC)
-
-// 	if nr_cpms >= 1 && nr_LC > 0 {
-// 		if cfg.Extras != nil && cfg.Extras.SROSCard != "" {
-// 			cfg.Extras.SROSCard = strings.ToLower(cfg.Extras.SROSCard)
-// 			switch cfg.Extras.SROSCard {
-// 			case "cpm-a", "a":
-// 				log.Debugf("Found match for card %q, topology: %+v", cfg.Extras.SROSCard, srosTopology.Cpm["A"])
-// 				_ = assingTopoMapToEnv(srosTopology.Cpm["A"], srosEnv)
-// 			case "cpm-b", "b":
-// 				log.Debugf("Found match for card %q, topology: %+v", cfg.Extras.SROSCard, srosTopology.Cpm["B"])
-// 				_ = assingTopoMapToEnv(srosTopology.Cpm["B"], srosEnv)
-// 			// linecard
-// 			default:
-// 				m := CardRegexp.FindStringSubmatch(cfg.Extras.SROSCard)
-// 				if m != nil {
-// 					log.Debugf("Found match %q for card %q, topology %+v", m[1], cfg.Extras.SROSCard, srosTopology.Slot[m[1]])
-// 					_ = assingTopoMapToEnv(srosTopology.Slot[m[1]], srosEnv)
-// 				} else {
-// 					return fmt.Errorf("couldn't find a match for `sros-card` %q with regexp `^(?i)(?:iom-|lc-)?([1-9])$`", cfg.Extras.SROSCard)
-// 				}
-// 			}
-
-// 		} else {
-// 			return fmt.Errorf("multi Line Card system node %q (%s) requires option `extras.sros-card` on node definition: CPM: %d, LC: %d", cfg.ShortName, cfg.NodeType, nr_cpms, nr_LC)
-// 		}
-// 	} else if nr_LC == 0 {
-// 		log.Debugf("Single Line Card system %q (%s) detected", cfg.ShortName, cfg.NodeType)
-// 		_ = assingTopoMapToEnv(srosTopology.Cpm["A"], srosEnv)
-// 	} else {
-// 		return fmt.Errorf("oops, multi Line Card system node %q (%s) requires option `extras.sros-card` on node definition: CPM: %d, LC: %d", cfg.ShortName, cfg.NodeType, nr_cpms, nr_LC)
-// 	}
-// 	return nil
-// }
-
-// func assingTopoMapToEnv(topo []map[string]string, target_map map[string]string) error {
-// 	for _, item := range topo {
-// 		k, kOk := item["name"]
-// 		v, vOk := item["value"]
-// 		if kOk && vOk {
-// 			target_map[k] = v
-// 		}
-// 	}
-// 	return nil
-// }
 
 // srosTemplateData top level data struct.
 type srosTemplateData struct {
@@ -688,110 +543,6 @@ func (n *sros) populateHosts(ctx context.Context, nodes map[string]nodes.Node) e
 	return file.Close()
 }
 
-// // Override method for SR-OS
-// func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
-// 	log.Infof("ifName: %s", ifName)
-// 	captureGroups, err := utils.GetRegexpCaptureGroups(InterfaceRegexp2, ifName)
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	indexGroups := []string{"card", "connector", "mda", "port", "xiom", "mgmtPort", "fabricPort"}
-// 	parsedIndices := make(map[string]int)
-// 	foundIndices := make(map[string]bool)
-// 	var str string = ""
-
-// 	for _, indexKey := range indexGroups {
-// 		if index, found := captureGroups[indexKey]; found && index != "" {
-// 			foundIndices[indexKey] = true
-// 			parsedIndices[indexKey], err = strconv.Atoi(index)
-// 			if err != nil {
-// 				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
-// 			}
-// 		} else {
-// 			foundIndices[indexKey] = false
-// 		}
-// 	}
-// 	if foundIndices["card"] && foundIndices["mda"] && foundIndices["port"] {
-// 		if foundIndices["connector"] {
-// 			if foundIndices["xiom"] {
-// 				str = fmt.Sprintf("e%d-x%d-%d-c%d-%d", parsedIndices["card"], parsedIndices["xiom"],
-// 					parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"])
-// 			} else {
-// 				str = fmt.Sprintf("e%d-%d-c%d-%d", parsedIndices["card"],
-// 					parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"])
-// 			}
-// 		} else {
-// 			str = fmt.Sprintf("e%d-%d-%d", parsedIndices["card"], parsedIndices["mda"], parsedIndices["port"])
-// 		}
-// 	}
-// 	if foundIndices["mgmtPort"] {
-// 		str = fmt.Sprintf("eth%d", parsedIndices["mgmtPort"])
-// 	}
-// 	if foundIndices["fabricPort"] {
-// 		str = fmt.Sprintf("fab%d", parsedIndices["fabricPort"])
-// 	}
-// 	if str != "" {
-// 		log.Infof("ifName, %q, MappedIf %q", ifName, str)
-// 		return str, nil
-// 	} else {
-// 		log.Warnf("ifName, %q, MappedIf %q", ifName, str)
-// 		return "", fmt.Errorf("%q missing linecard, mda or port index", ifName)
-// 	}
-
-// }
-
-// func (n *sros) CalculateInterfaceIndex(ifName string) (int, error) {
-// 	captureGroups, err := utils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	indexGroups := []string{"card", "connector", "mda", "port", "xiom", "mgmtPort", "fabricPort"}
-// 	parsedIndices := make(map[string]int)
-// 	foundIndices := make(map[string]bool)
-
-// 	for _, indexKey := range indexGroups {
-// 		if index, found := captureGroups[indexKey]; found && index != "" {
-// 			foundIndices[indexKey] = true
-// 			parsedIndices[indexKey], err = strconv.Atoi(index)
-// 			if err != nil {
-// 				return 0, fmt.Errorf("override func CalculateInterfaceIndex: %q parsed index %q could not be cast to an integer", ifName, index)
-// 			}
-// 		} else {
-// 			foundIndices[indexKey] = false
-// 		}
-// 	}
-// 	var calculatedIndex int = -1
-// 	if foundIndices["port"] && !foundIndices["connector"] {
-// 		calculatedIndex = parsedIndices["port"] - n.InterfaceOffset + n.FirstDataIfIndex
-// 	}
-// 	if foundIndices["card"] && foundIndices["mda"] && foundIndices["port"] {
-// 		if foundIndices["connector"] {
-// 			if foundIndices["xiom"] {
-// 				calculatedIndex = 1000*parsedIndices["card"] + 100*parsedIndices["xiom"] + 10*parsedIndices["mda"] + parsedIndices["connector"] + parsedIndices["port"] - n.InterfaceOffset + n.FirstDataIfIndex
-// 			} else {
-// 				calculatedIndex = 100*parsedIndices["card"] + 10 + parsedIndices["mda"] + parsedIndices["connector"] + parsedIndices["port"] - n.InterfaceOffset + n.FirstDataIfIndex
-// 			}
-// 		} else {
-// 			calculatedIndex = 1000*parsedIndices["card"] + 10*parsedIndices["mda"] + parsedIndices["port"] - n.InterfaceOffset + n.FirstDataIfIndex
-// 		}
-// 	}
-// 	if foundIndices["mgmtPort"] {
-// 		calculatedIndex = parsedIndices["mgmtPort"] - n.InterfaceOffset + n.FirstDataIfIndex
-// 	}
-// 	if foundIndices["fabricPort"] {
-// 		calculatedIndex = parsedIndices["fabricPort"] + 2 - n.InterfaceOffset + n.FirstDataIfIndex
-
-// 	}
-// 	log.Infof("calculatedIndex %d for %s", calculatedIndex, ifName)
-// 	if calculatedIndex != -1 {
-// 		return calculatedIndex, nil
-// 	} else {
-// 		return 0, fmt.Errorf("%q does not have extracted interface index with regexp %q, 'port','mgmtPort','fabricPort' capture group missing?", ifName, n.InterfaceRegexp)
-
-// 	}
-// }
-
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *sros) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
@@ -802,9 +553,7 @@ func (n *sros) CheckInterfaceName() error {
 	}
 
 	for _, e := range n.Endpoints {
-		// log.Infof("e.GetIfaceName() %q", e.GetIfaceName())
 		if !InterfaceRegexp2.MatchString(e.GetIfaceName()) {
-			// if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("nokia SR-OS interface name %q doesn't match the required pattern: %s", e.GetIfaceName(), n.InterfaceHelp)
 		}
 
@@ -813,5 +562,19 @@ func (n *sros) CheckInterfaceName() error {
 		}
 	}
 
+	return nil
+}
+
+func (s *sros) SaveConfig(_ context.Context) error {
+	err := netconf.SaveConfig(s.Cfg.LongName,
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
+		scrapliPlatformName,
+	)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
 	return nil
 }
