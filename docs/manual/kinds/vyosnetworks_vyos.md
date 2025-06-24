@@ -2,9 +2,10 @@
 search:
   boost: 4
 ---
+
 # VyOS Networks VyOS
 
-VyOS is identified with the `vyosnetworks_vyos` kind in the [topology file](../topo-def-file.md).
+Containerized VyOS network operating system is identified with the `vyosnetworks_vyos` kind in the [topology file](../topo-def-file.md).
 
 VyOS nodes will launch with the following features
 
@@ -14,20 +15,21 @@ VyOS nodes will launch with the following features
 * Default credentials of`admin:admin`
 * Available SSH keys installed into the `admin` user authorized keys
 
+/// warning
+VyOS node in Containerlab has only been tested with v1.5 Q1 Stream or higher
+///
+
 ## Getting VyOS image
 <!-- --8<-- [start:vyos-get-image] -->
-VyOS does not provide a native container. You must create a container from the ISO. It is available in three ways https://vyos.net/get/
-
-!!!warning
-    VyOS in Containerlab is only tested with v1.5 Q1 Stream or higher
+VyOS does not provide a native container; you must create a container from the ISO image that can be [obtained](https://vyos.net/get/) in three ways:
 
 1. LTS release which requires paying for a [subscription](https://vyos.io/subscriptions/software)
-2. A release called [**Stream**](https://vyos.net/get/stream/), this is the basis for what will become the next LTS release. Similar to CentOS Stream and RHEL
+2. A release called [Stream](https://vyos.net/get/stream/), this is the basis for what will become the next LTS release. Similar to CentOS Stream and RHEL
 3. A nightly [rolling release](https://vyos.net/get/nightly-builds/) with the bleeding edge changes
 
-Once you've obtained an ISO you have to extract the squashfs filesystem and convert it to a container. VyOS provides instructions on their [site](https://docs.vyos.io/en/latest/installation/virtual/docker.html#deploy-container-from-iso)
+Once you've obtained an ISO you have to extract the squashfs filesystem and convert it to a container. VyOS provides instructions on their [site](https://docs.vyos.io/en/latest/installation/virtual/docker.html#deploy-container-from-iso) on how to do this.
 
-However a better experience can be had if you use the following Dockerfile and script. The script is for a Debian or derivitive, but can be adapted to another distribution.
+To simplify the process, you may use the following Dockerfile and script created for a Debian or its derivative (but can be adapted to another distribution).
 
 ### Extract the filesystem
 
@@ -59,28 +61,39 @@ CMD ["/sbin/init"]
 ```
 
 <!-- --8<-- [end:vyos-get-image] -->
+
 ## Managing VyOS nodes
 
 VyOS nodes launched with containerlab can be managed via the following interfaces:
 
-=== "CLI"
-    to connect to the VyOS CLI
-    ```bash
-    docker exec -it <container-name/id> su - admin
-    ```
-=== "SSH"
-    SSH server is running on the management interface
-    ```bash
-    ssh admin@<container-name>
-    ```
-=== "API"
-    The [VyOS HTTP API](https://docs.vyos.io/en/latest/automation/vyos-api.html) is running on the https port of the management interface. It uses the TLS certificate provided by containerlab. It uses the password as the API key.
-    ```bash
-    curl --cacert <clab-folder>/.tls/ca/ca.pem --request POST  https://<node-name>/retrieve --form data='{"op": "showConfig", "path": []}' --form key="admin"
-    ```
+/// tab | CLI
+to connect to the VyOS CLI
 
-!!!info
-    Default user credentials: `admin:admin`
+```bash
+docker exec -it <container-name/id> su - admin
+```
+
+///
+/// tab | SSH
+SSH server is running on the management interface
+
+```bash
+ssh admin@<container-name>
+```
+
+///
+/// tab | API
+The [VyOS HTTP API](https://docs.vyos.io/en/latest/automation/vyos-api.html) is running on the https port of the management interface. It uses the TLS certificate provided by containerlab. It uses the password as the API key.
+
+```bash
+curl --cacert <clab-folder>/.tls/ca/ca.pem --request POST  https://<node-name>/retrieve --form data='{"op": "showConfig", "path": []}' --form key="admin"
+```
+
+///
+
+## Default user credentials
+
+User credentials: `admin:admin`
 
 ## Interfaces mapping
 
@@ -90,7 +103,7 @@ VyOS only allows interfaces in the format `ethN`. The `eth0` interface is reserv
 
 ### Node configuration
 
-VyOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `vyos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+VyOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `vyosnetworks_vyos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
 
@@ -127,24 +140,24 @@ When a config file is passed via `startup-config` parameter it will be used duri
 It is possible to change the default config which every VyOS node will start with by specifying it in the `topology.kinds.vyos.startup-config`
 
 ```yaml
-    name: vyos_lab
+name: vyos_lab
 
-    topology:
-      kinds:
-        vyosnetworks_vyos:
-        startup-config: vyos-custom-startup.cfg
-      nodes:
-        # vyos1 will boot with vyos-custom-startup.cfg as set in the kind parameters
-        vyos1:
-          kind: vyosnetworks_vyos
-          image: vyos:latest
-        # vyos2 will boot with its own specific startup config, as it overrides the kind variables
-        vyos2:
-          kind: vyosnetworks_vyos
-          image: vyos:latest
-          startup-config: node-specific-startup.cfg
-      links:
-        - endpoints: ["vyos1:eth1", "vyos2:eth1"]
+topology:
+  kinds:
+    vyosnetworks_vyos:
+    startup-config: vyos-custom-startup.cfg
+  nodes:
+    # vyos1 will boot with vyos-custom-startup.cfg as set in the kind parameters
+    vyos1:
+      kind: vyosnetworks_vyos
+      image: vyos:latest
+    # vyos2 will boot with its own specific startup config, as it overrides the kind variables
+    vyos2:
+      kind: vyosnetworks_vyos
+      image: vyos:latest
+      startup-config: node-specific-startup.cfg
+  links:
+    - endpoints: ["vyos1:eth1", "vyos2:eth1"]
 ```
 
 [^1]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
