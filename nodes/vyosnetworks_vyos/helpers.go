@@ -23,7 +23,7 @@ func (n *vyos) save(_ context.Context, cli *network.Driver) error {
 	if err != nil {
 		return err
 	} else if resp.Failed != nil {
-		return fmt.Errorf("Save failed. Response: %w", err)
+		return fmt.Errorf("save failed. Response: %w", err)
 	}
 	log.Info("Save successful", "node", n.Cfg.ShortName)
 	return nil
@@ -112,7 +112,7 @@ func pkcs1To8(der []byte) ([]byte, error) {
 	log.Debug("Converting PKCS#1 key to PKCS#8")
 	block, _ := pem.Decode(der)
 	if block == nil {
-		return nil, errors.New("Something went wrong decoding the PEM")
+		return nil, errors.New("something went wrong decoding the PEM")
 	}
 
 	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)

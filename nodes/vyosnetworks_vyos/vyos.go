@@ -186,7 +186,7 @@ func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	if err != nil {
 		return err
 	} else if resp.Failed != nil {
-		return errors.New("Failed to configure management interface")
+		return errors.New("failed to configure management interface")
 	}
 	if err = n.save(ctx, cli); err != nil {
 		return err
@@ -202,7 +202,7 @@ func (n *vyos) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`eth[1-9]$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("Vyos node %q has an interface named %q which doesn't match the required pattern. Interfaces may only be named ethX where X is any number greater than 0", n.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf("vyos node %q has an interface named %q which doesn't match the required pattern. Interfaces may only be named ethX where X is any number greater than 0", n.Cfg.ShortName, e.GetIfaceName())
 		}
 	}
 
