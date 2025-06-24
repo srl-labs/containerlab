@@ -421,7 +421,7 @@ jobs:
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
-  vyosnetwork_vyos-tests:
+  vyosnetworks_vyos-tests:
     uses: ./.github/workflows/vyosnetworks_vyos-tests.yml
     needs:
       - file-changes

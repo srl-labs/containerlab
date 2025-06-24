@@ -8,7 +8,7 @@ name: vyosnetworks_vyos-tests
         type: string
 
 jobs:
-  fdio_vpp-tests:
+  vyosnetworks_vyos-tests:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -61,13 +61,13 @@ jobs:
 
       - name: Run tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/11-fdio-vpp/${{ matrix.test-suite }}
+          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/12-basic-vyos/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 11-fdio_vpp-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 12-basic-vyos-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
