@@ -25,6 +25,7 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
+
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
@@ -1002,18 +1003,19 @@ func (c *CLab) ListContainers(ctx context.Context, filter []*types.GenericFilter
 // ListNodesContainers lists all containers based on the nodes stored in clab instance.
 func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
-
 	for _, n := range c.Nodes {
 		cts, err := n.GetContainers(ctx)
 		networkMode := c.Config.Topology.GetNodeNetworkMode(n.Config().ShortName)
 		if err != nil {
 			return containers, fmt.Errorf("could not get container for node %s: %v", n.Config().LongName, err)
 		}
+		//WIP need rework on inspect command to better visualize hidden containers, in the meantime, sr-sim containerswith network mode are skipped from list
 		if networkMode != "" && n.Config().Kind == "nokia_srsim" {
 			//skip
 			log.Debugf("Skipping node %q from list...", n.Config().ShortName)
 			continue
 		}
+
 		containers = append(containers, cts...)
 	}
 

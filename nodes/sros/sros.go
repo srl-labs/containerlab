@@ -39,28 +39,16 @@ const (
 	generateIfFormat = "e%d-%d"
 
 	retryTimer = time.Second
-
-	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory config.
-	// Default config is a config that adds some basic configuration to the node, such as tls certs, gnmi/json-rpc, login-banner.
-	// defaultCfgPath = "/tmp/clab-default-config"
-	// // overlayCfgPath is a path to a file with additional config that clab adds on top of the default config.
-	// // Partial config provided via startup-config parameter is an overlay config.
-	// overlayCfgPath = "/tmp/clab-overlay-config"
+	// additional config that clab adds on top of the factory config.
+	scrapliPlatformName = "nokia_sros"
 )
 
 var (
 
-	// //go:embed topology/*
-	// topologies embed.FS
-
 	//go:embed sros_default_config.go.tpl
 	srosConfigCmdsTpl string
-
-	// additional config that clab adds on top of the factory config.
-	scrapliPlatformName = "nokia_sros"
-
-	kindNames  = []string{"sros", "nokia_srsim"}
-	srosSysctl = map[string]string{
+	kindNames         = []string{"nokia_srsim"}
+	srosSysctl        = map[string]string{
 		"net.ipv4.ip_forward":                "0",
 		"net.ipv6.conf.all.disable_ipv6":     "0",
 		"net.ipv6.conf.default.disable_ipv6": "0",
@@ -93,17 +81,19 @@ var (
 		Revision: 0,
 	}
 
+	cfgDir = "/nokia/config"
+	cf3Dir = "/home/sros/cf3:"
+	licDir = "/nokia/license"
+
+	// This is wrong but it was generating some weird conditions... further debug required. Good regexp is the second var
 	InterfaceRegexp  = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`)
-	InterfaceRegexp2 = regexp.MustCompile(`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+)|iom-(?P<iom>\d+)|(fab-)(?P<fabricPort>\d+|[ab]))$`)
+	InterfaceRegexp2 = regexp.MustCompile(`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`)
 	InterfaceHelp    = `The format of the interface name need to be one of:
       e1-2-3       -> card 1, mda 2, port 3
       e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
       e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
       e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
-	  eth0/eth1, for management interfaces of CPM-A/CPM-B
-	  iom-[1-9] for iom management interfaces
-	  fab[1-9] for fabric interfaces`
-	CardRegexp = regexp.MustCompile(`^(?i)(?:iom-|lc-)?([1-9])$`)
+	  eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
 )
 
 // Register registers the node in the NodeRegistry.
@@ -171,20 +161,16 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	maps.Copy(n.Cfg.Sysctls, srosSysctl)
 
-	// for k, v := range srosSysctl {
-	// 	n.Cfg.Sysctls[k] = v
-	// }
-
 	if n.Cfg.License != "" {
 		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
 		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
-			filepath.Join(n.Cfg.LabDir, "license.key"), ":/nokia/license/license.txt:ro"))
+			filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 	}
 
 	// mount config directory
 	cfgPath := filepath.Join(n.Cfg.LabDir, "config")
 	log.Debugf("cfgPath: %s", cfgPath)
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":/nokia/config/:rw"))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"))
 	log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
 
 	n.InterfaceRegexp = InterfaceRegexp
@@ -316,6 +302,7 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 
 func (n *sros) createSROSFiles() error {
 	log.Debugf("Creating directory structure for SR-OS container: %s", n.Cfg.ShortName)
+
 	var src string
 	var err error
 
@@ -338,7 +325,6 @@ func (n *sros) createSROSFiles() error {
 	}
 	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
 	log.Debugf("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
-	// log.Infof("HELLO %+v", n.Cfg.Env)
 	if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists && SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) {
 		log.Debugf("Skipping config generation for %q because found NOKIA_SROS_SLOT %q is not control plane", n.Cfg.ShortName, n.Cfg.Env["NOKIA_SROS_SLOT"])
 	} else {
@@ -393,12 +379,6 @@ func (n *sros) createSROSFilesConfig() error {
 		log.Errorf("node=%s, failed to generate config: %v", n.Cfg.ShortName, err)
 	}
 	return err
-}
-
-func (n *sros) srosNodeTypeToLower() {
-	nodeType := n.Cfg.NodeType
-	n.Cfg.NodeType = strings.ToLower(nodeType)
-	log.Debugf("Converted %q NodeType to %q", nodeType, n.Cfg.NodeType)
 }
 
 // SlotisInteger checks if the slot string represents a valid integer
@@ -565,7 +545,7 @@ func (n *sros) CheckInterfaceName() error {
 	return nil
 }
 
-func (s *sros) SaveConfig(_ context.Context) error {
+func (s *sros) SaveConfig(ctx context.Context) error {
 	err := netconf.SaveConfig(s.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
@@ -575,6 +555,18 @@ func (s *sros) SaveConfig(_ context.Context) error {
 		return err
 	}
 
-	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
+	log.Infof("saved %s running configuration to startup configuration file, retrieve file from /home/sros/cf3:/config.cfg\n", s.Cfg.ShortName)
+	cmd, _ := exec.NewExecCmdFromString("cp " + cf3Dir + "/config.cfg " + cfgDir + "/config.cfg")
+	execResult, err := s.RunExec(ctx, cmd)
+
+	if err != nil {
+		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
+	}
+	if len(execResult.GetStdErrString()) > 0 {
+		return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, execResult.GetStdErrString())
+	}
+
+	log.Infof("saved SR OS configuration from %s node \n%s", s.Cfg.ShortName)
+
 	return nil
 }

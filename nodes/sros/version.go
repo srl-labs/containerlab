@@ -23,6 +23,7 @@ configure    system grpc rib-api admin-state enable
 `
 
 	netconfConfig = `configure    system security user-params local-user user "admin" access netconf true
+configure    system management-interface netconf listen admin-state enable
 configure    system management-interface netconf auto-config-save true
 `
 
