@@ -52,6 +52,11 @@ func init() {
 }
 
 func destroyFn(_ *cobra.Command, _ []string) error {
+	// cleanup doesn't make sense with node-filter
+	if len(common.NodeFilter) != 0 && cleanup {
+		return fmt.Errorf("cleanup cannot be used with node-filter")
+	}
+
 	var err error
 	var labs []*clab.CLab
 	ctx, cancel := context.WithCancel(context.Background())
@@ -63,13 +68,34 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 
 	switch {
 	case !all:
+		log.Debug("topology file", "file", common.Topo)
 		cnts, err := listContainers(ctx, common.Topo)
 		if err != nil {
 			return err
 		}
 
 		if len(cnts) == 0 {
-			log.Info("no containerlab containers found")
+			log.Info("No containerlab containers found")
+			if cleanup {
+				// do our best to find a labdir
+				var labDirs []string
+				if common.Topo != "" {
+					topoDir := filepath.Dir(common.Topo)
+					log.Debug("Looking for lab directory next to topology file", "path", topoDir)
+					labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
+				} else if len(labDirs) == 0 {
+					// Look in the current directory
+					log.Debug("Looking for lab directory in current directory")
+					labDirs, _ = filepath.Glob("clab-*")
+				}
+				if len(labDirs) != 0 {
+					// we only really care about the first found
+					log.Info("Removing lab directory", "path", labDirs[0])
+					if err := os.RemoveAll(labDirs[0]); err != nil {
+						log.Errorf("error deleting lab directory: %v", err)
+					}
+				}
+			}
 			return nil
 		}
 
