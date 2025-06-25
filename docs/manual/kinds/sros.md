@@ -10,7 +10,7 @@ kind_display_name: Nokia SR-SIM
 
 The Containerized Service Router Simulator, known as the SR-SIM, is a containerized version of the SR OS software that runs on the hardware platforms and it is available to Nokia customers who have an active SR-SIM license. The SR-SIM container emulates a number of hardware routers. These routers are either pizza-box systems with integrated linecards, or chassis-based systems with multiple linecards per chassis. The operator can model both types of devices. This tool is provided as a container image and designed to run on an x86 system with common container runtimes such as Docker.
 
-The configuration of hardware elements (such as provisioning line cards, PSUs, etc.) and software elements (such as interfaces, network protocols, and services) is performed the same way as on the physical SR OS platforms with each linecard running as a separate container for emulation of multi-linecard systems (distributed model).  Pizza-box systems with integrated linecards run in an integrated model with one container per emulated sytem.
+The configuration of hardware elements (such as provisioning linecards, PSUs, etc.) and software elements (such as interfaces, network protocols, and services) is performed the same way as on the physical SR OS platforms with each linecard running as a separate container for emulation of multi-linecard systems (distributed model).  Pizza-box systems with integrated linecards run in an integrated model with one container per emulated sytem.
 
 Nokia SR-SIM nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled. Note that the default `admin` password is changed.
 
@@ -94,7 +94,7 @@ Looking for cf3:/bof.cfg ... OK, reading
 
 You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in -{{ kind_display_name }}-.
 
-The interface naming convention inside the SR OS command line is typically: `L/X/M/C/P`,  `L/M/C/P` or `L/M/P` where `L` is the line card number, `X` the xiom number (when present), `M` the MDA position, `C` is the cage or connector number, and `P` is the breakout port inside the port connector. This mapping is represented in the containerlab topology file with the following linux interface name convention: `eL-xX-M-cC-P`, `eL-M-cC-P`, `eL-M-P`. In brief, the prefix `e` is added at the beginning of the port and the forward slash character `/` is replaced with a dash or hyphen `-` as separator. Some practical examples are shown belown.
+The interface naming convention inside the SR OS command line is typically: `L/X/M/C/P`,  `L/M/C/P` or `L/M/P` where `L` is the linecard number, `X` the xiom number (when present), `M` the MDA position, `C` is the cage or connector number, and `P` is the breakout port inside the port connector. This mapping is represented in the containerlab topology file with the following linux interface name convention: `eL-xX-M-cC-P`, `eL-M-cC-P`, `eL-M-P`. In brief, the prefix `e` is added at the beginning of the port and the forward slash character `/` is replaced with a dash or hyphen `-` as separator. Some practical examples are shown belown.
 
 /// admonition
     type: Port_Naming
@@ -348,7 +348,7 @@ topology:
 ```
 ///
 
-When a node uses multiple line cards users should pay special attention to the way links are defined in the topology file. As explained in the [interface naming](#interface-naming) section, SR OS nodes will need to be mapped to the linecard, xiom, mda or port they use, therefore the endpoints array need to indicate the linecard where the connections are made.
+When a node uses multiple linecards users should pay special attention to the way links are defined in the topology file. As explained in the [interface naming](#interface-naming) section, SR OS nodes will need to be mapped to the linecard, xiom, mda or port they use, therefore the endpoints array need to indicate the linecard where the connections are made.
 
 
 ### Node configuration
@@ -357,7 +357,7 @@ Nokia SR OS nodes come up with a basic "blank" configuration where only the card
 
 #### User-defined config
 
-SR-SIM nodes launched come up with some basic configuration that configures the management interfaces, line cards, mdas and power modules need to be provisioned. This initial configuration is applied right after the node is booted.
+SR-SIM nodes launched come up with some basic configuration that configures the management interfaces, linecards, mdas and power modules need to be provisioned. This initial configuration is applied right after the node is booted.
 
 Since this initial configuration is meant to provide a bare minimum configuration to make the node operational, users will likely want to apply their own configuration to the node to enable some features or to configure some interfaces. This can be done by providing a user-defined configuration file using [`startup-config`](../nodes.md#startup-config) property of the node/kind.
 
@@ -453,7 +453,7 @@ topology:
 
 Embedded partial configs will persist on containerlab's host and use the same directory as the [remote startup-config](../config-mgmt.md#remote) files.
 
-#### Configuration save WIP
+#### Configuration save
 
 Containerlab's [`save`](../../cmd/save.md) command will perform a configuration save for `Nokia SR OS` nodes via Netconf. The configuration will be saved under `config.cfg` file and can be found at the node's directory inside the lab parent directory:
 
@@ -463,7 +463,7 @@ Containerlab's [`save`](../../cmd/save.md) command will perform a configuration 
 cat clab-cert01/sr/config/config.cfg
 ```
 
-#### Boot Options File
+#### Boot Options File WIP HERE
 
 By default `nokia_srsim` nodes boot up with a pre-defined "Boot Options File" (BOF). This file includes boot settings including:
 
