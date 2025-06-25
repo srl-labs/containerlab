@@ -82,7 +82,9 @@ var (
 	}
 
 	cfgDir = "/nokia/config"
-	cf3Dir = "/home/sros/cf3:"
+	cf1Dir = "/home/sros/flash1"
+	cf2Dir = "/home/sros/flash2"
+	cf3Dir = "/home/sros/flash3"
 	licDir = "/nokia/license"
 
 	// This is wrong but it was generating some weird conditions... further debug required. Good regexp is the second var
@@ -168,10 +170,20 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	// mount config directory
-	cfgPath := filepath.Join(n.Cfg.LabDir, "config")
-	log.Debugf("cfgPath: %s", cfgPath)
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"))
-	log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
+	if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists && SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) {
+		log.Debugf("Skipping config mounts")
+	} else {
+		cfgPath := filepath.Join(n.Cfg.LabDir, "config")
+		cf1Path := filepath.Join(n.Cfg.LabDir, "/config/cf1")
+		cf2Path := filepath.Join(n.Cfg.LabDir, "/config/cf2")
+		cf3Path := filepath.Join(n.Cfg.LabDir, "/config/cf3")
+		log.Debugf("cfgPath: %s, cf3Dir: %s", cfgPath, cf3Dir)
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"))
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"))
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"))
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
+		log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
+	}
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceHelp = InterfaceHelp
@@ -555,7 +567,7 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Infof("saved %s running configuration to startup configuration file, retrieve file from /home/sros/cf3:/config.cfg\n", s.Cfg.ShortName)
+	log.Infof("saved %s running configuration to startup configuration file, retrieve file from %s\n", s.Cfg.ShortName, cf3Dir)
 	cmd, _ := exec.NewExecCmdFromString("cp " + cf3Dir + "/config.cfg " + cfgDir + "/config.cfg")
 	execResult, err := s.RunExec(ctx, cmd)
 

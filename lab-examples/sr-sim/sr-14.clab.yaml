@@ -116,7 +116,7 @@ topology:
               stage: create
   links:
     ## FABRIC LINKS
-    - endpoints: ["fab:veth0", "sr-14s-a:fab-0"] # dummy veth0 to make the fab bridge UP, otherwise it will say NO-CARRIER 
+    - endpoints: ["fab:veth0", "sr-14s-a:eth9"] # dummy veth0 to make the fab bridge UP, otherwise it will say NO-CARRIER 
     - endpoints: ["sr-14s-a:eth1", "macvlan:fab"]
     - endpoints: ["sr-14s-b:eth2", "macvlan:fab"]
     - endpoints: ["sr-14s-1:eth3", "macvlan:fab"]
