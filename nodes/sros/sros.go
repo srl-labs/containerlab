@@ -178,10 +178,10 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		cf2Path := filepath.Join(n.Cfg.LabDir, "/config/cf2")
 		cf3Path := filepath.Join(n.Cfg.LabDir, "/config/cf3")
 		log.Debugf("cfgPath: %s, cf3Dir: %s", cfgPath, cf3Dir)
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"))
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"))
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"))
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
+			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
+			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
+			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
 		log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
 	}
 
