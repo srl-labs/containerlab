@@ -81,7 +81,7 @@ var (
 		Revision: 0,
 	}
 
-	cfgDir = "/nokia/config"
+	// cfgDir = "/nokia/config"
 	cf1Dir = "/home/sros/flash1"
 	cf2Dir = "/home/sros/flash2"
 	cf3Dir = "/home/sros/flash3"
@@ -173,13 +173,13 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists && SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) {
 		log.Debugf("Skipping config mounts")
 	} else {
-		cfgPath := filepath.Join(n.Cfg.LabDir, "config")
-		cf1Path := filepath.Join(n.Cfg.LabDir, "/config/cf1")
-		cf2Path := filepath.Join(n.Cfg.LabDir, "/config/cf2")
-		cf3Path := filepath.Join(n.Cfg.LabDir, "/config/cf3")
-		log.Debugf("cfgPath: %s, cf3Dir: %s", cfgPath, cf3Dir)
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
-			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
+		// cfgPath := filepath.Join(n.Cfg.LabDir, "config")
+		cf1Path := filepath.Join(n.Cfg.LabDir, "config/cf1")
+		cf2Path := filepath.Join(n.Cfg.LabDir, "config/cf2")
+		cf3Path := filepath.Join(n.Cfg.LabDir, "config/cf3")
+		log.Debugf("cf3Dir: %s", cf3Dir)
+		// n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
 			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
 			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
 		log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
@@ -329,6 +329,9 @@ func (n *sros) createSROSFiles() error {
 	}
 
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config/cf3"), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config/cf2"), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config/cf1"), 0777)
 	// Override NodeType var with existing env
 	mac := genMac(n.Cfg)
 	if n.Cfg.NodeType != "" {
@@ -351,7 +354,7 @@ func (n *sros) createSROSFilesConfig() error {
 	// will be used as a template in GenerateConfig()
 	var cfgTemplate string
 	var err error
-	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.cfg")
+	cfgPath := filepath.Join(n.Cfg.LabDir, "config/cf3/", "config.cfg")
 	if n.Cfg.StartupConfig != "" {
 		log.Debugf("Reading startup-config on node %s, file: %s", n.Cfg.ShortName, n.Cfg.StartupConfig)
 
@@ -568,15 +571,15 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file, retrieve file from %s\n", s.Cfg.ShortName, cf3Dir)
-	cmd, _ := exec.NewExecCmdFromString("cp " + cf3Dir + "/config.cfg " + cfgDir + "/config.cfg")
-	execResult, err := s.RunExec(ctx, cmd)
+	// cmd, _ := exec.NewExecCmdFromString("cp " + cf3Dir + "/config.cfg " + cfgDir + "/config.cfg")
+	// execResult, err := s.RunExec(ctx, cmd)
 
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
 	}
-	if len(execResult.GetStdErrString()) > 0 {
-		return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, execResult.GetStdErrString())
-	}
+	// if len(execResult.GetStdErrString()) > 0 {
+	// 	return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, execResult.GetStdErrString())
+	// }
 
 	log.Infof("saved SR OS configuration from %s node \n%s", s.Cfg.ShortName)
 

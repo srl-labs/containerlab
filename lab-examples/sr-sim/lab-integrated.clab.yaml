@@ -1,0 +1,24 @@
+name: "sros"
+mgmt:
+  network: srsim_mgmt
+  ipv4-subnet: 10.78.140.0/24
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license.txt
+      image: harbor.ncse.io/library/srux/srsim:0.0.I8161
+  nodes:
+    sr-sim10:
+      kind: nokia_srsim
+      type: SR-1 # Implicit default
+    sr-sim11: 
+      kind: nokia_srsim
+  links:
+    # Data Interfaces
+    - endpoints: ["sr-sim10:e1-1-c1-1", "sr-sim11:e1-1-c1-1"]    
+    - endpoints: ["sr-sim10:e1-1-c1-2", "sr-sim11:e1-1-c1-2"]    
+      ##    // the format of the interface name will be one of:
+      ##    //   e1-2-3       -> card 1, mda 2, port 3
+      ##    //   e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
+      ##    //   e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
+      ##    //   e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
