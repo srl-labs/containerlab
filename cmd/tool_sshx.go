@@ -104,7 +104,7 @@ var sshxCmd = &cobra.Command{
 }
 
 // NewSSHXNode creates a new SSHX node configuration
-func NewSSHXNode(name, image, network string, enableReaders bool, labels map[string]string, mountSSH bool) *SSHXNode {
+func NewSSHXNode(name, image, network, labName string, enableReaders bool, labels map[string]string, mountSSH bool) *SSHXNode {
 	log.Debugf("Creating SSHXNode: name=%s, image=%s, network=%s, enableReaders=%t, exposeSSH=%t",
 		name, image, network, enableReaders, mountSSH)
 
@@ -147,6 +147,15 @@ func NewSSHXNode(name, image, network string, enableReaders bool, labels map[str
 			log.Warnf("User's SSH directory not found at %s, skipping mount", sshDir)
 		}
 
+	}
+
+	// mount lab ssh config
+	etcSshFile := fmt.Sprintf("/etc/ssh/ssh_config.d/clab-%s.conf", labName)
+	if _, err := os.Stat(etcSshFile); err == nil {
+		nodeConfig.Binds = append(nodeConfig.Binds, fmt.Sprintf("%s:/%s:ro", etcSshFile, etcSshFile))
+		log.Debugf("Mounting SSH directory: %s -> %s", etcSshFile, etcSshFile)
+	} else {
+		log.Warnf("User's SSH directory not found at %s, skipping mount", etcSshFile)
 	}
 
 	return &SSHXNode{
@@ -254,7 +263,7 @@ var sshxAttachCmd = &cobra.Command{
 
 		// Create and start SSHX container
 		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
-		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders, labelsMap, sshxMountSSHDir)
+		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, labName, sshxEnableReaders, labelsMap, sshxMountSSHDir)
 
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
@@ -528,7 +537,7 @@ var sshxReattachCmd = &cobra.Command{
 
 		// Create and start SSHX container
 		log.Infof("Creating new SSHX container %s on network '%s'", sshxContainerName, networkName)
-		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, sshxEnableReaders, labelsMap, sshxMountSSHDir)
+		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, labName, sshxEnableReaders, labelsMap, sshxMountSSHDir)
 
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
