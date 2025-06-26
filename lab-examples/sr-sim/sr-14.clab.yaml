@@ -11,11 +11,9 @@ topology:
   nodes: 
     fab:
       kind: bridge
-      # network-mode: container:sr-14s-a
     sr-14s-a: 
       kind: nokia_srsim
       type: SR-14s
-      # startup-config:  config-14s.cfg
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
         NOKIA_SROS_SLOT: A 
@@ -24,7 +22,6 @@ topology:
       kind: nokia_srsim
       type: SR-14s
       network-mode: container:sr-14s-a
-      # startup-config:  config-14s.cfg
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
         NOKIA_SROS_SLOT: B
@@ -36,7 +33,6 @@ topology:
       env:
         NOKIA_SROS_SLOT: 1 
         NOKIA_SROS_FABRIC_IF: eth3
-
       stages:
         create:
           wait-for:

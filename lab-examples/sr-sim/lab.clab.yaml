@@ -1,6 +1,3 @@
-# sudo ip link add name fab type bridge
-# sudo ip link set fab mtu 9000
-# sudo ip link set fab up
 name: "sros"
 topology:
   kinds:
@@ -10,9 +7,6 @@ topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
-      # type: SR-1
-      # env: 
-      #   NOKIA_SROS_MDA_1: me12-100gb-qsfp28 #override default card
     sr-sim2: 
       kind: nokia_srsim
       type: SR-1x-92S
@@ -37,12 +31,7 @@ topology:
       network-mode: container:sr-sim3
       env: 
          NOKIA_SROS_SLOT: 1
-
-
   links:
-  #  #Fabric Interconnects
-  #   - endpoints: ["sr-sim2:fab-a", "sr-sim2:fab-1"] 
-  #   - endpoints: ["sr-sim3:fab-a", "sr-sim3:fab-1"] 
     # Data Interfaces
     - endpoints: ["sr-sim1:e1-1-c1-1", "sr-sim2-iom:e1-1-c1-1"]    
     - endpoints: ["sr-sim1:e1-1-c2-1", "sr-sim3-iom:e1-1-c1-1"]    

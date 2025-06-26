@@ -8,7 +8,6 @@ topology:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
       image: harbor.ncse.io/library/srux/srsim:0.0.I8161
-
   nodes: 
     fab:
       kind: bridge

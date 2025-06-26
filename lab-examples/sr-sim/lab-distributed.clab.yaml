@@ -24,7 +24,6 @@ topology:
     srsim10-a: 
       kind: nokia_srsim
       type: SR-7
-      # network-mode: container:srsim10-a
       env: 
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
@@ -69,7 +68,6 @@ topology:
     srsim11-a: 
       kind: nokia_srsim
       type: SR-7
-      # network-mode: container:srsim11-a
       env: 
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
@@ -98,14 +96,14 @@ topology:
         NOKIA_SROS_FABRIC_IF: eth4
   links:
     ## FABRIC LINKS
-    - endpoints: ["srsim10-a:eth1", "macvlan:fab1"]
-    - endpoints: ["srsim10-b:eth2", "macvlan:fab1"]
-    - endpoints: ["srsim10-1:eth3", "macvlan:fab1"]
-    - endpoints: ["srsim10-2:eth4", "macvlan:fab1"]
-    - endpoints: ["srsim11-a:eth1", "macvlan:fab2"]
-    - endpoints: ["srsim11-b:eth2", "macvlan:fab2"]
-    - endpoints: ["srsim11-1:eth3", "macvlan:fab2"]
-    - endpoints: ["srsim11-2:eth4", "macvlan:fab2"]
+    - endpoints: ["srsim10-a:eth1", "fab1:veth1"]
+    - endpoints: ["srsim10-b:eth2", "fab1:veth2"]
+    - endpoints: ["srsim10-1:eth3", "fab1:veth3"]
+    - endpoints: ["srsim10-2:eth4", "fab1:veth4"]
+    - endpoints: ["srsim11-a:eth1", "fab2:veth5"]
+    - endpoints: ["srsim11-b:eth2", "fab2:veth6"]
+    - endpoints: ["srsim11-1:eth3", "fab2:veth7"]
+    - endpoints: ["srsim11-2:eth4", "fab2:veth8"]
     # # DATA LINKS
     - endpoints: ["srsim10-1:e1-1-c1-1", "srsim11-1:e1-1-c1-1"]
     - endpoints: ["srsim10-2:e2-1-c1-1", "srsim11-2:e2-1-c2-1"]
