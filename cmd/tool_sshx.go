@@ -150,12 +150,12 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 	}
 
 	// mount lab ssh config
-	etcSshFile := fmt.Sprintf("/etc/ssh/ssh_config.d/clab-%s.conf", labName)
-	if _, err := os.Stat(etcSshFile); err == nil {
-		nodeConfig.Binds = append(nodeConfig.Binds, fmt.Sprintf("%s:/%s:ro", etcSshFile, etcSshFile))
-		log.Debugf("Mounting SSH directory: %s -> %s", etcSshFile, etcSshFile)
+	labSSHConfFile := fmt.Sprintf("/etc/ssh/ssh_config.d/clab-%s.conf", labName)
+	if _, err := os.Stat(labSSHConfFile); err == nil {
+		nodeConfig.Binds = append(nodeConfig.Binds, fmt.Sprintf("%s:/%s:ro", labSSHConfFile, labSSHConfFile))
+		log.Debugf("Mounting SSH directory: %s -> %s", labSSHConfFile, labSSHConfFile)
 	} else {
-		log.Warnf("User's SSH directory not found at %s, skipping mount", etcSshFile)
+		log.Warnf("Lab's SSH config file not found at %s, skipping the mount", labSSHConfFile)
 	}
 
 	return &SSHXNode{
