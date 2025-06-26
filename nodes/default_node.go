@@ -143,9 +143,10 @@ func (d *DefaultNode) VerifyHostRequirements() error {
 }
 
 func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
-	// Set the "CLAB_INTFS" variable to the number of interfaces
-	// Which is required by vrnetlab to determine if all configured interfaces are present
-	// such that the internal VM can be started with these interfaces assigned.
+	// Set the "CLAB_INTFS" variable to the number of interfaces (endpoints) a node has.
+	// This env var does not count in the eth0 interface that is automatically created by the container runtime.
+	// This env var is used by some containers (e.g. vrnetlab systems) to postpone the startup until all interfaces
+	// have been added to the container namespace.
 	d.Config().Env[types.CLAB_ENV_INTFS] = strconv.Itoa(len(d.GetEndpoints()))
 
 	// create the container
