@@ -53,9 +53,13 @@ clab tools sshx attach -l srl
 
 Note, the log message that goes as `SSHX successfully started` as it will also have the SSHX link in it. By pasting this link in a browser you will get a collaborative terminal session in the browser where you can open many shell windows that will belong to the `sshx` container that runs from the `ghcr.io/srl-labs/network-multitool` with lots of networking tools installed.
 
+### Connecting to lab nodes
+
 The great part is that this `sshx` container has access to all other lab nodes and you can refer to them by name, as they appear in your topology file. For example, we can ssh to the SR Linux container that is part of our lab:
 
 ![img](https://gitlab.com/rdodin/pics/-/wikis/uploads/38073aeb55006b57f4b5e3db1d6a230f/CleanShot_2025-03-30_at_21.46.35_2x.png)
+
+Also, inside the sshx container you will enjoy the autocompletion of the SSH targets from your lab. Just type `ssh <tab>` and you will get the list of the nodes in your lab that you can SSH to.
 
 ### Read-only link
 
