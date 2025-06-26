@@ -19,7 +19,7 @@ int_calc() {
     fi
     
     # More comprehensive interface pattern including common container interfaces
-    AVAIL_INTFS_NUM=$(ls -1 /sys/class/net/ 2>/dev/null | grep -cE '^(eth[1-9]|et[0-9]|ens|eno|enp|e[1-9]|net[0-9])' || echo 0)
+    AVAIL_INTFS_NUM=$(ls -1 /sys/class/net/ 2>/dev/null | grep -cE '^(eth[1-9]|et[0-9]|ens|eno|enp|e[1-9]|net[0-9])')
     return 0
 }
 
