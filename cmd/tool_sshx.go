@@ -167,7 +167,7 @@ func (n *SSHXNode) Config() *types.NodeConfig {
 	return n.config
 }
 
-func (n *SSHXNode) GetEndpoints() []links.Endpoint {
+func (*SSHXNode) GetEndpoints() []links.Endpoint {
 	return nil
 }
 
