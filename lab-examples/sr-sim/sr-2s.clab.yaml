@@ -14,25 +14,27 @@ topology:
     sr-2s-a: 
       kind: nokia_srsim
       type: SR-2s
+      startup-config: config-2s.partial.cfg
       env: 
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
-        NOKIA_SROS_FABRIC_IF: eth1
+        # NOKIA_SROS_FABRIC_IF: eth1
     sr-2s-b:
       kind: nokia_srsim
       type: SR-2s
       network-mode: container:sr-2s-a
+      startup-config: config-2s.partial.cfg
       env: 
         NOKIA_SROS_SLOT: B
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
-        NOKIA_SROS_FABRIC_IF: eth2
+        # NOKIA_SROS_FABRIC_IF: eth2
     sr-2s-1:
       kind: nokia_srsim
       type: SR-2s
       network-mode: container:sr-2s-a
       env: 
         NOKIA_SROS_SLOT: 1
-        NOKIA_SROS_FABRIC_IF: eth3
+        # NOKIA_SROS_FABRIC_IF: eth3
       stages:
         create:
           wait-for:
@@ -46,7 +48,7 @@ topology:
       network-mode: container:sr-2s-a
       env: 
         NOKIA_SROS_SLOT: 2
-        NOKIA_SROS_FABRIC_IF: eth4
+        # NOKIA_SROS_FABRIC_IF: eth4
       stages:
         create:
           wait-for:
@@ -56,10 +58,10 @@ topology:
               stage: create
   links:
     ## FABRIC LINKS
-    - endpoints: ["sr-2s-a:eth1", "fab:veth1"]
-    - endpoints: ["sr-2s-b:eth2", "fab:veth2"]
-    - endpoints: ["sr-2s-1:eth3", "fab:veth3"]
-    - endpoints: ["sr-2s-2:eth4", "fab:veth4"]
+    # - endpoints: ["sr-2s-a:eth1", "fab:veth1"]
+    # - endpoints: ["sr-2s-b:eth2", "fab:veth2"]
+    # - endpoints: ["sr-2s-1:eth3", "fab:veth3"]
+    # - endpoints: ["sr-2s-2:eth4", "fab:veth4"]
     # DATA LINKS
     - endpoints: ["sr-2s-1:e1-1-c1-1", "sr-2s-2:e2-1-c1-1"]
     - endpoints: ["sr-2s-1:e1-1-c2-1", "sr-2s-2:e2-1-c2-1"]

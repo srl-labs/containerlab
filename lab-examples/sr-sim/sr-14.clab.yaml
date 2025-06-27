@@ -9,30 +9,30 @@ topology:
       license: /opt/nokia/sros/license.txt
       image: harbor.ncse.io/library/srux/srsim:0.0.I8161
   nodes: 
-    fab:
-      kind: bridge
     sr-14s-a: 
       kind: nokia_srsim
       type: SR-14s
+      startup-config: config-14s.partial.cfg
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
         NOKIA_SROS_SLOT: A 
-        NOKIA_SROS_FABRIC_IF: eth1
+        # NOKIA_SROS_FABRIC_IF: eth1
     sr-14s-b:
       kind: nokia_srsim
       type: SR-14s
       network-mode: container:sr-14s-a
+      startup-config: config-14s.partial.cfg
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
         NOKIA_SROS_SLOT: B
-        NOKIA_SROS_FABRIC_IF: eth2
+        # NOKIA_SROS_FABRIC_IF: eth2
     sr-14s-1:
       kind: nokia_srsim
       type: SR-14s
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: 1 
-        NOKIA_SROS_FABRIC_IF: eth3
+        # NOKIA_SROS_FABRIC_IF: eth3
       stages:
         create:
           wait-for:
@@ -46,7 +46,7 @@ topology:
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: 2
-        NOKIA_SROS_FABRIC_IF: eth4
+        # NOKIA_SROS_FABRIC_IF: eth4
       stages:
         create:
           wait-for:
@@ -60,7 +60,7 @@ topology:
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: 3
-        NOKIA_SROS_FABRIC_IF: eth5
+        # NOKIA_SROS_FABRIC_IF: eth5
       stages:
         create:
           wait-for:
@@ -74,7 +74,7 @@ topology:
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: 4
-        NOKIA_SROS_FABRIC_IF: eth6
+        # NOKIA_SROS_FABRIC_IF: eth6
       stages:
         create:
           wait-for:
@@ -88,7 +88,7 @@ topology:
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: 5
-        NOKIA_SROS_FABRIC_IF: eth7
+        # NOKIA_SROS_FABRIC_IF: eth7
       stages:
         create:
           wait-for:
@@ -102,7 +102,7 @@ topology:
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: 6
-        NOKIA_SROS_FABRIC_IF: eth8
+        # NOKIA_SROS_FABRIC_IF: eth8
       stages:
         create:
           wait-for:
@@ -111,16 +111,16 @@ topology:
             - node: sr-14s-b
               stage: create
   links:
-    ## FABRIC LINKS
-    - endpoints: ["fab:veth0", "sr-14s-a:eth9"] # dummy veth0 to make the fab bridge UP, otherwise it will say NO-CARRIER 
-    - endpoints: ["sr-14s-a:eth1", "macvlan:fab"]
-    - endpoints: ["sr-14s-b:eth2", "macvlan:fab"]
-    - endpoints: ["sr-14s-1:eth3", "macvlan:fab"]
-    - endpoints: ["sr-14s-2:eth4", "macvlan:fab"]
-    - endpoints: ["sr-14s-3:eth5", "macvlan:fab"]
-    - endpoints: ["sr-14s-4:eth6", "macvlan:fab"]
-    - endpoints: ["sr-14s-5:eth7", "macvlan:fab"]
-    - endpoints: ["sr-14s-6:eth8", "macvlan:fab"]
+    # ## FABRIC LINKS
+    # - endpoints: ["fab:veth0", "sr-14s-a:eth9"] # dummy veth0 to make the fab bridge UP, otherwise it will say NO-CARRIER 
+    # - endpoints: ["sr-14s-a:eth1", "macvlan:fab"]
+    # - endpoints: ["sr-14s-b:eth2", "macvlan:fab"]
+    # - endpoints: ["sr-14s-1:eth3", "macvlan:fab"]
+    # - endpoints: ["sr-14s-2:eth4", "macvlan:fab"]
+    # - endpoints: ["sr-14s-3:eth5", "macvlan:fab"]
+    # - endpoints: ["sr-14s-4:eth6", "macvlan:fab"]
+    # - endpoints: ["sr-14s-5:eth7", "macvlan:fab"]
+    # - endpoints: ["sr-14s-6:eth8", "macvlan:fab"]
 
       
     ## DATA LINKS

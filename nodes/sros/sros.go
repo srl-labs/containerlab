@@ -185,7 +185,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	// mount config directory
-	if isCPM(n) {
+	if isCPM(n, "") {
 		// cfgPath := filepath.Join(n.Cfg.LabDir, "config")
 		cf1Path := filepath.Join(n.Cfg.LabDir, configCf1)
 		cf2Path := filepath.Join(n.Cfg.LabDir, configCf2)
@@ -197,7 +197,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
 		log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
 	} else {
-		log.Warnf("Skipping config mounts on node %q", n.Cfg.ShortName)
+		log.Debugf("Skipping config mounts on node %q", n.Cfg.ShortName)
 	}
 
 	n.InterfaceRegexp = InterfaceRegexp
@@ -242,7 +242,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	b := &bytes.Buffer{}
 
 	// apply partial configs if partial config is used
-	if isPartialConfigFile(n.Cfg.StartupConfig) && isCPM(n) {
+	if isPartialConfigFile(n.Cfg.StartupConfig) && isCPM(n, "A") {
 		log.Info("Adding configuration",
 			"node", n.Cfg.LongName,
 			"type", "partial",
@@ -265,7 +265,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	// injection mechanism assumes MD-CLI mode.
 	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
 
-	if len(n.sshPubKeys) > 0 && !skipSSHKeyCfg {
+	if len(n.sshPubKeys) > 0 && !skipSSHKeyCfg && isCPM(n, "A") {
 		log.Info("Adding public keys configuration", "node", n.Cfg.LongName)
 
 		sshConf, err := n.generateSSHPublicKeysConfig()
@@ -391,7 +391,7 @@ func (n *sros) createSROSFiles() error {
 	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
 	log.Debugf("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
 	// Skip config if node is not CPM
-	if isCPM(n) {
+	if isCPM(n, "") {
 		err = n.createSROSFilesConfig()
 	}
 
@@ -456,11 +456,20 @@ func SlotisInteger(s string) bool {
 }
 
 // Check if a container is a CPM
-func isCPM(n *sros) bool {
-	// 1st option just check the env var
+func isCPM(n *sros, cpm string) bool {
+	// Check if container is a linecard
 	if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists && SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) {
 		return false
 	}
+	//check if container is the CPM given by the string cpm
+	if cpm != "" {
+		if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists &&
+			!SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) &&
+			!strings.EqualFold(n.Cfg.Env["NOKIA_SROS_SLOT"], cpm) {
+			return false
+		}
+	}
+	// None of the previous conditions are meet
 	return true
 }
 
@@ -560,8 +569,8 @@ func (n *sros) applyPartialConfig(ctx context.Context, addr, platformName,
 	var err error
 	var d *network.Driver
 
-	if !isCPM(n) {
-		log.Debugf("Skipping partial Cfg because Container %q does not contain a CPM", n.Cfg.LongName)
+	if !isCPM(n, "A") {
+		log.Debugf("Skipping partial Cfg because Container %q does not contain a CPM-A", n.Cfg.LongName)
 		return nil
 	}
 
@@ -769,7 +778,7 @@ func nodeConfigExists(labDir string) bool {
 	return err == nil
 }
 func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
-	return CheckPortWithRetry(n.Cfg.MgmtIPv4Address, 22, 10*time.Second, 3, 500*time.Millisecond)
+	return CheckPortWithRetry(n.Cfg.MgmtIPv4Address, 22, readyTimeout, 5, retryTimer)
 }
 
 // CheckPortWithRetry checks if a port is open with retry logic

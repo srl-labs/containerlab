@@ -1,11 +1,3 @@
-## Required bridges:
-# sudo ip link add name fab1 type bridge
-# sudo ip link set fab1 mtu 9000
-# sudo ip link set fab1 up
-# # Required bridges:
-# sudo ip link add name fab2 type bridge
-# sudo ip link set fab2 mtu 9000
-# sudo ip link set fab2 up
 name: "sros"
 mgmt:
   network: srsim_mgmt
@@ -16,18 +8,13 @@ topology:
       license: /opt/nokia/sros/license.txt
       image: harbor.ncse.io/library/srux/srsim:0.0.I8161
   nodes: 
-    fab1:
-      kind: bridge
-    fab2:
-      kind: bridge
-    # SRSIM 10
     srsim10-a: 
       kind: nokia_srsim
       type: SR-7
+      startup-config: srsim10.distributed.partial.cfg
       env: 
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
-        NOKIA_SROS_FABRIC_IF: eth1
     srsim10-b:
       kind: nokia_srsim
       type: SR-7
@@ -35,43 +22,26 @@ topology:
       env: 
         NOKIA_SROS_SLOT: B
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
-        NOKIA_SROS_FABRIC_IF: eth2
     srsim10-1:
       kind: nokia_srsim
       type: SR-7
       network-mode: container:srsim10-a
       env: 
         NOKIA_SROS_SLOT: 1
-        NOKIA_SROS_FABRIC_IF: eth3
-      stages:
-        create:
-          wait-for:
-            - node: srsim10-a
-              stage: create
-            - node: srsim10-b
-              stage: create
     srsim10-2:
       kind: nokia_srsim
       type: SR-7
       network-mode: container:srsim10-a
       env: 
         NOKIA_SROS_SLOT: 2
-        NOKIA_SROS_FABRIC_IF: eth4
-      stages:
-        create:
-          wait-for:
-            - node: srsim10-a
-              stage: create
-            - node: srsim10-b
-              stage: create
     ## SRSIM 11
     srsim11-a: 
       kind: nokia_srsim
       type: SR-7
+      startup-config: srsim11.distributed.partial.cfg
       env: 
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
-        NOKIA_SROS_FABRIC_IF: eth1
     srsim11-b:
       kind: nokia_srsim
       type: SR-7
@@ -79,34 +49,22 @@ topology:
       env: 
         NOKIA_SROS_SLOT: B
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
-        NOKIA_SROS_FABRIC_IF: eth2
     srsim11-1:
       kind: nokia_srsim
       type: SR-7
       network-mode: container:srsim11-a
       env: 
         NOKIA_SROS_SLOT: 1
-        NOKIA_SROS_FABRIC_IF: eth3
     srsim11-2:
       kind: nokia_srsim
       type: SR-7
       network-mode: container:srsim11-a
       env: 
         NOKIA_SROS_SLOT: 2
-        NOKIA_SROS_FABRIC_IF: eth4
   links:
-    ## FABRIC LINKS
-    - endpoints: ["srsim10-a:eth1", "fab1:veth1"]
-    - endpoints: ["srsim10-b:eth2", "fab1:veth2"]
-    - endpoints: ["srsim10-1:eth3", "fab1:veth3"]
-    - endpoints: ["srsim10-2:eth4", "fab1:veth4"]
-    - endpoints: ["srsim11-a:eth1", "fab2:veth5"]
-    - endpoints: ["srsim11-b:eth2", "fab2:veth6"]
-    - endpoints: ["srsim11-1:eth3", "fab2:veth7"]
-    - endpoints: ["srsim11-2:eth4", "fab2:veth8"]
     # # DATA LINKS
     - endpoints: ["srsim10-1:e1-1-c1-1", "srsim11-1:e1-1-c1-1"]
-    - endpoints: ["srsim10-2:e2-1-c1-1", "srsim11-2:e2-1-c2-1"]
+    - endpoints: ["srsim10-2:e2-1-c1-1", "srsim11-2:e2-1-c1-1"]
 
       ##    // the format of the interface name will be one of:
       ##    //   e1-2-3       -> card 1, mda 2, port 3
