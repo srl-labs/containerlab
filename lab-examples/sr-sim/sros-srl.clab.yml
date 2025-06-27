@@ -1,0 +1,15 @@
+name: sr01
+
+topology:
+  nodes:
+    srl:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+    sros:
+      kind: nokia_srsim
+      image: nokia_srsim:25.10.R1
+      type: sr-1
+      license: /opt/nokia/sros/license-sros25.txt # Not included in the lab, ask your Nokia representative
+
+  links:
+    - endpoints: ["srl:e1-1", "sros:e1-1-c1-1"]
