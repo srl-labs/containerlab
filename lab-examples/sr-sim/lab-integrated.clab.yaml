@@ -11,8 +11,10 @@ topology:
     sr-sim10:
       kind: nokia_srsim
       type: SR-1 # Implicit default
+      startup-config: srsim10.partial.cfg
     sr-sim11: 
       kind: nokia_srsim
+      startup-config: srsim11.partial.cfg
   links:
     # Data Interfaces
     - endpoints: ["sr-sim10:e1-1-c1-1", "sr-sim11:e1-1-c1-1"]    

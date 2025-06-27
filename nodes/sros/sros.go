@@ -9,7 +9,9 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"io"
 	"maps"
+	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,6 +22,13 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/scrapli/scrapligo/driver/network"
+	"github.com/scrapli/scrapligo/driver/options"
+	scraplilogging "github.com/scrapli/scrapligo/logging"
+
+	"github.com/scrapli/scrapligo/platform"
+	"github.com/scrapli/scrapligo/transport"
+	"github.com/scrapli/scrapligo/util"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/srl-labs/containerlab/cert"
@@ -41,6 +50,10 @@ const (
 	retryTimer = time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName = "nokia_sros"
+	configCf3           = "config/cf3"
+	configCf2           = "config/cf2"
+	configCf1           = "config/cf1"
+	startupCfgFName     = "config.cfg"
 )
 
 var (
@@ -57,6 +70,8 @@ var (
 		"net.ipv6.conf.all.autoconf":         "0",
 		"net.ipv6.conf.default.autoconf":     "0",
 		"net.ipv4.conf.all.rp_filter":        "0",
+		"net.ipv6.conf.all.accept_ra":        "0",
+		"net.ipv6.conf.default.accept_ra":    "0",
 		"net.ipv4.conf.default.rp_filter":    "0",
 	}
 	defaultCredentials = nodes.NewCredentials("admin", "NokiaSros1!")
@@ -65,12 +80,12 @@ var (
 		"SRSIM":                      "1",
 		"NOKIA_SROS_CHASSIS":         SrosDefaultType,     // fillers to be override
 		"NOKIA_SROS_SYSTEM_BASE_MAC": "fa:ac:ff:ff:10:00", // filler to be override
+		"NOKIA_SROS_SLOT":            "A",                 // filler to be override
 	}
 
-	// saveCmd          = `/opt/srlinux/bin/sr_cli -d "tools system configuration save"`.
-	readyCmd = `/usr/bin/pidof cpm`
-	// // readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
-	// readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config".
+	readyCmdCpm  = `/usr/bin/pidof cpm`
+	readyCmdBoth = `/usr/bin/pidof both`
+	readyCmdIom  = `/usr/bin/pidof iom`
 
 	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(utils.CreateFuncs()).
 			Parse(srosConfigCmdsTpl)
@@ -80,7 +95,7 @@ var (
 		Minor:    10,
 		Revision: 0,
 	}
-
+	// Internal directories inside SR-SIM container
 	// cfgDir = "/nokia/config"
 	cf1Dir = "/home/sros/flash1"
 	cf2Dir = "/home/sros/flash2"
@@ -170,19 +185,19 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	// mount config directory
-	if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists && SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) {
-		log.Debugf("Skipping config mounts")
-	} else {
+	if isCPM(n) {
 		// cfgPath := filepath.Join(n.Cfg.LabDir, "config")
-		cf1Path := filepath.Join(n.Cfg.LabDir, "config/cf1")
-		cf2Path := filepath.Join(n.Cfg.LabDir, "config/cf2")
-		cf3Path := filepath.Join(n.Cfg.LabDir, "config/cf3")
+		cf1Path := filepath.Join(n.Cfg.LabDir, configCf1)
+		cf2Path := filepath.Join(n.Cfg.LabDir, configCf2)
+		cf3Path := filepath.Join(n.Cfg.LabDir, configCf3)
 		log.Debugf("cf3Dir: %s", cf3Dir)
 		// n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
 		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
 			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
 			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
 		log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
+	} else {
+		log.Warnf("Skipping config mounts on node %q", n.Cfg.ShortName)
 	}
 
 	n.InterfaceRegexp = InterfaceRegexp
@@ -208,40 +223,71 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 }
 
 func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
-	log.Info("Running postdeploy actions",
-		"kind", n.Cfg.Kind,
-		"node", n.Cfg.ShortName)
-
-	// generate the certificate
-	certificate, err := n.LoadOrGenerateCertificate(n.cert, n.topologyName)
-	if err != nil {
+	var err error
+	// start waiting for initial commit and mgmt server ready
+	if err = n.Ready(ctx); err != nil {
 		return err
 	}
-
-	// set the certificate data
-	n.Config().TLSCert = string(certificate.Cert)
-	n.Config().TLSKey = string(certificate.Key)
 
 	// Populate /etc/hosts for service discovery on mgmt interface
-	if err := n.populateHosts(ctx, params.Nodes); err != nil {
+	if err = n.populateHosts(ctx, params.Nodes); err != nil {
 		log.Warnf("Unable to populate hosts for node %q: %v", n.Cfg.ShortName, err)
 	}
-
-	// start waiting for initial commit and mgmt server ready
-	if err := n.Ready(ctx); err != nil {
-		return err
-	}
-
 	n.swVersion, err = n.RunningVersion(ctx)
 	if err != nil {
 		return err
 	}
 
-	// return if config file is found in the lab directory.
-	// This can be either if the startup-config has been mounted by that path
-	// or the config has been previously generated and saved
-	if utils.FileExists(filepath.Join(n.Cfg.LabDir, "config", "config.cfg")) {
-		return nil
+	// b holds the configuration to be applied to the node
+	b := &bytes.Buffer{}
+
+	// apply partial configs if partial config is used
+	if isPartialConfigFile(n.Cfg.StartupConfig) && isCPM(n) {
+		log.Info("Adding configuration",
+			"node", n.Cfg.LongName,
+			"type", "partial",
+			"source", n.Cfg.StartupConfig)
+
+		r, err := os.Open(n.Cfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		defer r.Close() // skipcq: GO-S2307
+
+		_, err = io.Copy(b, r)
+		if err != nil {
+			return err
+		}
+	}
+	// skip ssh key configuration if CLAB_SKIP_SROS_SSH_KEY_CONFIG env var is set
+	// which is needed for SR OS nodes running in classic CLI mode, because our key
+	// injection mechanism assumes MD-CLI mode.
+	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
+
+	if len(n.sshPubKeys) > 0 && !skipSSHKeyCfg {
+		log.Info("Adding public keys configuration", "node", n.Cfg.LongName)
+
+		sshConf, err := n.generateSSHPublicKeysConfig()
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(b, sshConf)
+		if err != nil {
+			return err
+		}
+	}
+
+	// apply the aggregated config snippets
+	if b.Len() > 0 {
+		err := n.applyPartialConfig(ctx, n.Cfg.MgmtIPv4Address, scrapliPlatformName,
+			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
+			b,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -253,7 +299,8 @@ func (n *sros) Ready(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
 	var err error
-
+	readyCmds := []string{readyCmdCpm, readyCmdBoth, readyCmdIom}
+	readyCmdsStrings := []string{"CPM", "BOTH", "IOM"}
 	log.Debugf("Waiting for SR-OS node %q to boot...", n.Cfg.ShortName)
 	for {
 		select {
@@ -261,28 +308,31 @@ func (n *sros) Ready(ctx context.Context) error {
 			return fmt.Errorf("timed out waiting for SR-OS node %s to boot: %v", n.Cfg.ShortName, err)
 		default:
 			//  check if cpm is running
-			cmd, _ := exec.NewExecCmdFromString(readyCmd)
-			execResult, err := n.RunExec(ctx, cmd)
-			if err != nil || (execResult != nil && execResult.GetReturnCode() != 1) {
-				logMsg := "CPM status check failed"
+			for k, cmd := range readyCmds {
+				cmd, _ := exec.NewExecCmdFromString(cmd)
+				execResult, err := n.RunExec(ctx, cmd)
+				// log.Infof("ReadyCommand: %q return code: %d", execResult.GetReturnCode())
+				if err != nil || (execResult != nil && execResult.GetReturnCode() != 1) {
+					// log.Warnf("Node %s is NOT ready to accept configs", n.Cfg.ShortName)
+					logMsg := readyCmdsStrings[k] + " status check failed on " + n.Cfg.ShortName + " retrying..."
 
-				if err != nil {
-					logMsg += fmt.Sprintf(" error: %v", err)
+					if err != nil {
+						logMsg += fmt.Sprintf(" error: %v", err)
+					}
+
+					if execResult != nil && execResult.GetReturnCode() != 0 {
+						logMsg += fmt.Sprintf(", output: \n%s", execResult)
+					}
+					log.Debug(logMsg)
+					if execResult != nil && execResult.GetReturnCode() == 0 {
+						log.Debugf("Node %s is ready to be configured", n.Cfg.ShortName)
+						return nil
+					}
+					time.Sleep(retryTimer)
+
 				}
-
-				if execResult != nil && execResult.GetReturnCode() != 0 {
-					logMsg += fmt.Sprintf(", output: \n%s", execResult)
-				}
-
-				log.Debug(logMsg)
-				time.Sleep(retryTimer)
-
-				continue
 			}
 
-			log.Debugf("Node %s is ready to accept configs", n.Cfg.ShortName)
-
-			return nil
 		}
 	}
 }
@@ -329,9 +379,9 @@ func (n *sros) createSROSFiles() error {
 	}
 
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config/cf3"), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config/cf2"), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config/cf1"), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configCf1), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configCf2), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configCf3), 0777)
 	// Override NodeType var with existing env
 	mac := genMac(n.Cfg)
 	if n.Cfg.NodeType != "" {
@@ -340,11 +390,11 @@ func (n *sros) createSROSFiles() error {
 	}
 	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
 	log.Debugf("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
-	if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists && SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) {
-		log.Debugf("Skipping config generation for %q because found NOKIA_SROS_SLOT %q is not control plane", n.Cfg.ShortName, n.Cfg.Env["NOKIA_SROS_SLOT"])
-	} else {
+	// Skip config if node is not CPM
+	if isCPM(n) {
 		err = n.createSROSFilesConfig()
 	}
+
 	return err
 }
 
@@ -354,9 +404,12 @@ func (n *sros) createSROSFilesConfig() error {
 	// will be used as a template in GenerateConfig()
 	var cfgTemplate string
 	var err error
-	cfgPath := filepath.Join(n.Cfg.LabDir, "config/cf3/", "config.cfg")
-	if n.Cfg.StartupConfig != "" {
-		log.Debugf("Reading startup-config on node %s, file: %s", n.Cfg.ShortName, n.Cfg.StartupConfig)
+	cfgPath := filepath.Join(n.Cfg.LabDir, configCf3, startupCfgFName)
+	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
+	// log.Infof("Reading startup-config on node %s, file: %s, isPartial: %t", n.Cfg.ShortName, n.Cfg.StartupConfig, isPartial)
+	if n.Cfg.StartupConfig != "" && !isPartial {
+		// User provides startup config
+		log.Debugf("Reading startup-config on node %s, file: %s, isPartial: %t", n.Cfg.ShortName, n.Cfg.StartupConfig, isPartial)
 
 		c, err := os.ReadFile(n.Cfg.StartupConfig)
 		if err != nil {
@@ -370,7 +423,7 @@ func (n *sros) createSROSFilesConfig() error {
 
 		cfgTemplate = cBuf.String()
 	} else {
-		// Use default clab config from template
+		// Use default clab config from embeded template
 		log.Debugf("Rendering SR-OS default clab config for node=%s...", n.Cfg.ShortName)
 		err = n.addDefaultConfig()
 		log.Debugf("Rendered default startup Config for node=%s:\n %s", n.Cfg.ShortName, n.startupCliCfg)
@@ -402,18 +455,28 @@ func SlotisInteger(s string) bool {
 	return err == nil
 }
 
+// Check if a container is a CPM
+func isCPM(n *sros) bool {
+	// 1st option just check the env var
+	if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists && SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) {
+		return false
+	}
+	return true
+}
+
 // srosTemplateData top level data struct.
 type srosTemplateData struct {
-	Name       string
-	TLSKey     string
-	TLSCert    string
-	TLSAnchor  string
-	Banner     string
-	IFaces     map[string]tplIFace
-	SSHPubKeys string
-	MgmtMTU    int
-	MgmtIPMTU  int
-	DNSServers []string
+	Name            string
+	TLSKey          string
+	TLSCert         string
+	TLSAnchor       string
+	Banner          string
+	IFaces          map[string]tplIFace
+	SSHPubKeysRSA   []string
+	SSHPubKeysECDSA []string
+	MgmtMTU         int
+	MgmtIPMTU       int
+	DNSServers      []string
 	// EnableGNMIUnixSockServices enables GNMI unix socket services
 	// for the node. This is needed for "23.10 <= ver < 24.3" versions
 	EnableGNMIUnixSockServices bool
@@ -486,6 +549,115 @@ func (n *sros) addDefaultConfig() error {
 	} else {
 		log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
+	}
+
+	return nil
+}
+
+// applyPartialConfig applies partial configuration to the SR OS.
+func (n *sros) applyPartialConfig(ctx context.Context, addr, platformName,
+	username, password string, config io.Reader) error {
+	var err error
+	var d *network.Driver
+
+	if !isCPM(n) {
+		log.Debugf("Skipping partial Cfg because Container %q does not contain a CPM", n.Cfg.LongName)
+		return nil
+	}
+
+	configContent, err := utils.SubstituteEnvsAndTemplate(config, n.Cfg)
+	if err != nil {
+		return err
+	}
+
+	configContentStr := configContent.String()
+	// check file contains content, otherwise exit early
+	if strings.TrimSpace(configContentStr) == "" {
+		return nil
+	}
+
+	log.Info("Waiting for node to be ready. This should not take too long...",
+		"node", n.Cfg.LongName,
+		"log", fmt.Sprintf("docker logs -f %[1]s", n.Cfg.LongName),
+	)
+
+	for loop := true; loop; {
+		isHealthy, e := n.IsHealthy(ctx)
+		if !isHealthy {
+			time.Sleep(1 * time.Second) // cool-off period
+			log.Debugf("Waiting for %s to become healthy: %v", n.Cfg.ShortName, e)
+			continue
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
+		default:
+			sl := log.StandardLog(log.StandardLogOptions{
+				ForceLevel: log.DebugLevel,
+			})
+			li, err := scraplilogging.NewInstance(
+				scraplilogging.WithLevel("debug"),
+				scraplilogging.WithLogger(sl.Print))
+			if err != nil {
+				return err
+			}
+			opts := []util.Option{
+				options.WithAuthNoStrictKey(),
+				options.WithAuthUsername(username),
+				options.WithAuthPassword(password),
+				options.WithTransportType(transport.StandardTransport),
+				options.WithTimeoutOps(5 * time.Second),
+				options.WithLogger(li),
+			}
+
+			p, err := platform.NewPlatform(platformName, addr, opts...)
+			if err != nil {
+				return fmt.Errorf("%s: failed to create platform: %+v", addr, err)
+			}
+
+			d, err = p.GetNetworkDriver()
+			if err != nil {
+				return fmt.Errorf("%s: could not create the driver: %+v", addr, err)
+			}
+
+			err = d.Open()
+			if err == nil {
+				// driver successfully opened, exit the loop
+				loop = false
+			} else {
+				log.Debugf("%s: not yet ready - %v", addr, err)
+				time.Sleep(5 * time.Second) // cool-off period
+				if err != nil && strings.Contains(err.Error(), "ssh: handshake failed: ssh: unable to authenticate") {
+					// Handle authentication error
+					return fmt.Errorf("cannot apply partial config due to authentication failed, check the password: %w", err)
+				}
+
+			}
+		}
+	}
+
+	// Normalize character sequences to avoid interaction issues with CLI
+	replacer := strings.NewReplacer(
+		"\r\n", "\n", // replace EOL CRLF with LF
+		"\t", "    ", // replace tabs with 4 spaces
+	)
+	configContentStr = replacer.Replace(configContentStr)
+
+	// converting string to newline delimited string slice
+	cfgs := strings.Split(configContentStr, "\n")
+
+	// config snippets should not have commit command, so we need to commit manually
+	// and quit from the config mode
+	cfgs = append(cfgs, "commit", "/admin save", "/exit all", "quit-config")
+
+	mr, err := d.SendConfigs(cfgs)
+	if err != nil || (mr != nil && mr.Failed != nil) {
+		if mr != nil {
+			return fmt.Errorf("failed to apply config; error: %+v %+v", err, mr.Failed)
+		} else {
+			return fmt.Errorf("failed to apply config; error: %+v", err)
+		}
 	}
 
 	return nil
@@ -584,4 +756,39 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 	log.Infof("saved SR OS configuration from %s node \n%s", s.Cfg.ShortName)
 
 	return nil
+}
+
+// isPartialConfigFile returns true if the config file name contains .partial substring.
+func isPartialConfigFile(c string) bool {
+	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
+}
+
+// nodeConfigExists returns true if a file at <labdir>/<node>/config/config.cfg exists.
+func nodeConfigExists(labDir string) bool {
+	_, err := os.Stat(filepath.Join(labDir, configCf3, startupCfgFName))
+	return err == nil
+}
+func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
+	return CheckPortWithRetry(n.Cfg.MgmtIPv4Address, 22, 10*time.Second, 3, 500*time.Millisecond)
+}
+
+// CheckPortWithRetry checks if a port is open with retry logic
+func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries int, retryDelay time.Duration) (bool, error) {
+	var lastErr error
+
+	for i := range maxRetries {
+		if i > 0 {
+			time.Sleep(retryDelay)
+		}
+
+		address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+		conn, err := net.DialTimeout("tcp", address, timeout)
+		if err == nil {
+			conn.Close()
+			return true, nil
+		}
+		lastErr = err
+	}
+
+	return false, lastErr
 }
