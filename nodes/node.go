@@ -38,6 +38,10 @@ var (
 	ErrCommandExecError = errors.New("command execution error")
 	// ErrContainersNotFound indicated that for a given node no containers where found in the runtime.
 	ErrContainersNotFound = errors.New("containers not found")
+	// ErrNoStartupConfig indicates that we are supposed to enforce a startup config but none are provided
+	ErrNoStartupConfig = errors.New("no startup-config provided")
+	// ErrIncompatibleOptions for options that are mutually exclusive
+	ErrIncompatibleOptions = errors.New("incompatible options")
 )
 
 // SetNonDefaultRuntimePerKind sets a non default runtime for kinds that requires that (see cvx).

@@ -350,41 +350,49 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 
 // GenerateConfig generates configuration for the nodes
 // out of the template `t` based on the node configuration and saves the result to dst.
+// If the config file is already present in the node dir
+// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
+// this will persist the changes that users make to a running config when booted from some startup config
 func (d *DefaultNode) GenerateConfig(dst, t string) error {
-	// If the config file is already present in the node dir
-	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
-	// this will persist the changes that users make to a running config when booted from some startup config
+	// Check for incompatible options
+	if d.Cfg.EnforceStartupConfig && d.Cfg.SuppressStartupConfig {
+		return ErrIncompatibleOptions
+	}
+	if d.Cfg.EnforceStartupConfig && d.Cfg.StartupConfig == "" {
+		return ErrNoStartupConfig
+	}
+
 	if d.Cfg.SuppressStartupConfig {
-		log.Infof("Startup config generation for '%s' node suppressed", d.Cfg.ShortName)
-		return nil
-	} else if d.Cfg.EnforceStartupConfig {
-		log.Infof("Startup config for '%s' node enforced: '%s'", d.Cfg.ShortName, dst)
-		// continue with config generation
-	} else if utils.FileExists(dst) && d.Cfg.StartupConfig == "" {
-		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, d.Cfg.ShortName)
+		log.Info("Startup config generation suppressed", "node", d.Cfg.ShortName)
 		return nil
 	}
 
-	log.Debug("Generating config", "node", d.Cfg.ShortName, "file", d.Cfg.StartupConfig)
+	if !d.Cfg.EnforceStartupConfig && utils.FileExists(dst) {
+		log.Debug("Existing config found", "node", d.Cfg.ShortName, "path", dst)
+		return nil
+	} else {
 
-	cfgBuf, err := utils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
-	if err != nil {
-		return err
+		log.Debug("Generating config", "node", d.Cfg.ShortName, "file", d.Cfg.StartupConfig)
+
+		cfgBuf, err := utils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
+		if err != nil {
+			return err
+		}
+		log.Debug("Generated config", "node", d.Cfg.ShortName, "content", cfgBuf.String())
+
+		f, err := os.Create(dst)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = f.Write(cfgBuf.Bytes())
+		if err != nil {
+			return err
+		}
 	}
-	log.Debugf("node '%s' generated config: %s", d.Cfg.ShortName, cfgBuf.String())
 
-	f, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
-	_, err = f.Write(cfgBuf.Bytes())
-	if err != nil {
-		f.Close()
-		return err
-	}
-
-	return f.Close()
+	return nil
 }
 
 // NodeOverwrites is an interface that every node implements.

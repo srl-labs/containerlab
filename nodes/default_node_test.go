@@ -1,6 +1,7 @@
 package nodes
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,54 +14,143 @@ import (
 )
 
 func TestGenerateConfigs(t *testing.T) {
+	defCfg := "default config"
+	oldCfg := "old config"
+	newCfg := "new config"
+
 	tests := map[string]struct {
-		node   *DefaultNode
-		err    error
-		exists bool
-		out    string
+		cfg        *types.NodeConfig
+		err        error
+		preExists  bool
+		postExists bool
+		template   string
+		out        string
 	}{
-		"suppress-true": {
-			node: &DefaultNode{
-				Cfg: &types.NodeConfig{
-					SuppressStartupConfig: true,
-					ShortName:             "suppress",
-				},
+		"suppress-true-first-start": {
+			cfg: &types.NodeConfig{
+				SuppressStartupConfig: true,
 			},
-			err:    nil,
-			exists: false,
-			out:    "",
+			err:        nil,
+			preExists:  false,
+			postExists: false,
+			template:   defCfg,
 		},
-		"suppress-false": {
-			node: &DefaultNode{
-				Cfg: &types.NodeConfig{
-					SuppressStartupConfig: false,
-					ShortName:             "configure",
-				},
+		"suppress-true-existing-lab": {
+			cfg: &types.NodeConfig{
+				SuppressStartupConfig: true,
 			},
-			err:    nil,
-			exists: true,
-			out:    "foo",
+			err:        nil,
+			preExists:  true,
+			postExists: true,
+			out:        oldCfg,
+			template:   defCfg,
+		},
+		"suppress-false-first-start": {
+			cfg: &types.NodeConfig{
+				SuppressStartupConfig: false,
+			},
+			err:        nil,
+			preExists:  false,
+			postExists: true,
+			out:        defCfg,
+			template:   defCfg,
+		},
+		"suppress-false-existing-lab": {
+			cfg: &types.NodeConfig{
+				SuppressStartupConfig: false,
+			},
+			err:        nil,
+			preExists:  true,
+			postExists: true,
+			out:        oldCfg,
+			template:   defCfg,
+		},
+		"startup-config-first-start": {
+			cfg: &types.NodeConfig{
+				StartupConfig: "other",
+			},
+			err:        nil,
+			preExists:  false,
+			postExists: true,
+			out:        newCfg,
+			template:   newCfg,
+		},
+		"startup-config-existing-lab": {
+			cfg: &types.NodeConfig{
+				StartupConfig: "other",
+			},
+			err:        nil,
+			preExists:  true,
+			postExists: true,
+			out:        oldCfg,
+			template:   newCfg,
+		},
+		"enforce-startup-config-first-start": {
+			cfg: &types.NodeConfig{
+				StartupConfig:        "other",
+				EnforceStartupConfig: true,
+			},
+			err:        nil,
+			preExists:  false,
+			postExists: true,
+			out:        newCfg,
+			template:   newCfg,
+		},
+		"enforce-startup-config-existing-lab": {
+			cfg: &types.NodeConfig{
+				StartupConfig:        "other",
+				EnforceStartupConfig: true,
+			},
+			err:        nil,
+			preExists:  true,
+			postExists: true,
+			out:        newCfg,
+			template:   newCfg,
+		},
+		"enforce-startup-config-no-startup": {
+			cfg: &types.NodeConfig{
+				EnforceStartupConfig: true,
+			},
+			err: ErrNoStartupConfig,
+		},
+		"enforce-and-suppress-startup-config": {
+			cfg: &types.NodeConfig{
+				EnforceStartupConfig:  true,
+				SuppressStartupConfig: true,
+			},
+			err: ErrIncompatibleOptions,
 		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(tt *testing.T) {
+			node := &DefaultNode{Cfg: tc.cfg}
 			dstFolder := tt.TempDir()
 			dstFile := filepath.Join(dstFolder, "config")
-			err := tc.node.GenerateConfig(dstFile, "foo")
-			if err != tc.err {
-				t.Errorf("got %v, wanted %v", err, tc.err)
+
+			if tc.preExists {
+				err := os.WriteFile(dstFile, []byte(oldCfg), 0666)
+				if err != nil {
+					tt.Errorf("Could not write existing config: %v", err)
+				}
 			}
-			if tc.exists {
+
+			err := node.GenerateConfig(dstFile, tc.template)
+			if tc.err != nil {
+				if !errors.Is(err, tc.err) {
+					tt.Errorf("got: %v, wanted: %v", err, tc.err)
+				}
+			}
+			if tc.postExists {
 				cnt, err := os.ReadFile(dstFile)
 				if err != nil {
-					t.Fatal(err)
+					tt.Fatal(err)
 				}
 				if string(cnt) != tc.out {
-					t.Errorf("got %v, wanted %v", string(cnt), tc.out)
+					tt.Errorf("got %v, wanted %v", string(cnt), tc.out)
 				}
 			} else {
 				if _, err := os.Stat(dstFile); err == nil {
-					t.Errorf("config file created")
+					tt.Errorf("config file created")
 				}
 			}
 		})
@@ -235,7 +325,7 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 	}
 
 	for name, tc := range tests {
-		t.Run(name, func(tt *testing.T) {
+		t.Run(name, func(*testing.T) {
 			foundError := false
 			tc.node.OverwriteNode = tc.node
 			tc.node.InterfaceMappedPrefix = "eth"
