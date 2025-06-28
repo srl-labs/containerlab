@@ -363,12 +363,12 @@ func (d *DefaultNode) GenerateConfig(dst, t string) error {
 	}
 
 	if d.Cfg.SuppressStartupConfig {
-		log.Infof("Startup config generation for '%s' node suppressed", d.Cfg.ShortName)
+		log.Info("Startup config generation suppressed", "node", d.Cfg.ShortName)
 		return nil
 	}
 
 	if !d.Cfg.EnforceStartupConfig && utils.FileExists(dst) {
-		log.Debug("Existing config found for '%s'", d.Cfg.ShortName, "path", dst)
+		log.Debug("Existing config found", "node", d.Cfg.ShortName, "path", dst)
 		return nil
 	} else {
 
@@ -378,7 +378,7 @@ func (d *DefaultNode) GenerateConfig(dst, t string) error {
 		if err != nil {
 			return err
 		}
-		log.Debugf("node '%s' generated config: %s", d.Cfg.ShortName, cfgBuf.String())
+		log.Debug("Generated config", "node", d.Cfg.ShortName, "content", cfgBuf.String())
 
 		f, err := os.Create(dst)
 		if err != nil {
