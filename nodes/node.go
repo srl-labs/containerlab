@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/srl-labs/containerlab/cert"
@@ -38,10 +39,31 @@ var (
 	ErrCommandExecError = errors.New("command execution error")
 	// ErrContainersNotFound indicated that for a given node no containers where found in the runtime.
 	ErrContainersNotFound = errors.New("containers not found")
-
-	// ErrNoStartupConfig
+	// ErrNoStartupConfig indicates that we are supposed to enforce a startup config but none are provided
 	ErrNoStartupConfig = errors.New("no startup-config provided")
 )
+
+// ErrIncompatibleOptions enforce-startup-config and suppress-startup-config are mutually exclusive
+type ErrIncompatibleOptions struct {
+	Options []string
+}
+
+func (e ErrIncompatibleOptions) Error() string {
+	var sb strings.Builder
+	l := len(e.Options)
+	if l > 2 {
+		for i := 0; i < l-1; i++ {
+			sb.WriteString(e.Options[i])
+			sb.WriteString(", ")
+		}
+	} else {
+		sb.WriteString(e.Options[0])
+		sb.WriteString(" ")
+	}
+	sb.WriteString("and ")
+	sb.WriteString(e.Options[l-1])
+	return fmt.Sprintf("the options %s are incompatible", sb.String())
+}
 
 // SetNonDefaultRuntimePerKind sets a non default runtime for kinds that requires that (see cvx).
 func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {

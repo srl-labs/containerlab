@@ -113,6 +113,15 @@ func TestGenerateConfigs(t *testing.T) {
 			},
 			err: ErrNoStartupConfig,
 		},
+		"enforce-and-suppress-startup-config": {
+			cfg: &types.NodeConfig{
+				EnforceStartupConfig:  true,
+				SuppressStartupConfig: true,
+			},
+			err: ErrIncompatibleOptions{
+				Options: []string{"enforce-startup-config", "suppress-startup-config"},
+			},
+		},
 	}
 	for name, tc := range tests {
 		t.Run(name, func(tt *testing.T) {
