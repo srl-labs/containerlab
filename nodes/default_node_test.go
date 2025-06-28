@@ -118,9 +118,7 @@ func TestGenerateConfigs(t *testing.T) {
 				EnforceStartupConfig:  true,
 				SuppressStartupConfig: true,
 			},
-			err: ErrIncompatibleOptions{
-				Options: []string{"enforce-startup-config", "suppress-startup-config"},
-			},
+			err: ErrIncompatibleOptions,
 		},
 	}
 	for name, tc := range tests {
@@ -139,7 +137,7 @@ func TestGenerateConfigs(t *testing.T) {
 			err := node.GenerateConfig(dstFile, tc.template)
 			if tc.err != nil {
 				if !errors.Is(err, tc.err) {
-					tt.Errorf("got %v, wanted %v", err, tc.err)
+					tt.Errorf("got: %v, wanted: %v", err, tc.err)
 				}
 			}
 			if tc.postExists {
