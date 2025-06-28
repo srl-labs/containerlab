@@ -325,7 +325,7 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 	}
 
 	for name, tc := range tests {
-		t.Run(name, func(tt *testing.T) {
+		t.Run(name, func(*testing.T) {
 			foundError := false
 			tc.node.OverwriteNode = tc.node
 			tc.node.InterfaceMappedPrefix = "eth"
