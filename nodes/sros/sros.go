@@ -22,13 +22,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/scrapli/scrapligo/driver/network"
-	"github.com/scrapli/scrapligo/driver/options"
-	scraplilogging "github.com/scrapli/scrapligo/logging"
 
-	"github.com/scrapli/scrapligo/platform"
-	"github.com/scrapli/scrapligo/transport"
-	"github.com/scrapli/scrapligo/util"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/srl-labs/containerlab/cert"
@@ -238,58 +232,32 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 		return err
 	}
 
-	// b holds the configuration to be applied to the node
-	b := &bytes.Buffer{}
-
-	// apply partial configs if partial config is used
-	if isPartialConfigFile(n.Cfg.StartupConfig) && isCPM(n, "A") {
-		log.Info("Adding configuration",
-			"node", n.Cfg.LongName,
-			"type", "partial",
-			"source", n.Cfg.StartupConfig)
-
-		r, err := os.Open(n.Cfg.StartupConfig)
-		if err != nil {
-			return err
+	for time.Now().Before(time.Now().Add(readyTimeout)) {
+		// Check if context is cancelled
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("context cancelled: %w", err)
 		}
 
-		defer r.Close() // skipcq: GO-S2307
-
-		_, err = io.Copy(b, r)
+		isHealthy, err := n.IsHealthy(ctx)
 		if err != nil {
-			return err
-		}
-	}
-	// skip ssh key configuration if CLAB_SKIP_SROS_SSH_KEY_CONFIG env var is set
-	// which is needed for SR OS nodes running in classic CLI mode, because our key
-	// injection mechanism assumes MD-CLI mode.
-	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
-
-	if len(n.sshPubKeys) > 0 && !skipSSHKeyCfg && isCPM(n, "A") {
-		log.Info("Adding public keys configuration", "node", n.Cfg.LongName)
-
-		sshConf, err := n.generateSSHPublicKeysConfig()
-		if err != nil {
-			return err
+			log.Debug(fmt.Errorf("health check failed: %w", err))
 		}
 
-		_, err = io.Copy(b, sshConf)
-		if err != nil {
-			return err
+		if isHealthy {
+			if err := n.SaveConfig(ctx); err != nil {
+				log.Debug(fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err))
+			}
+			return nil
+		}
+
+		// Wait before next check
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(retryTimer):
+			// continue to next iteration
 		}
 	}
-
-	// apply the aggregated config snippets
-	if b.Len() > 0 {
-		err := n.applyPartialConfig(ctx, n.Cfg.MgmtIPv4Address, scrapliPlatformName,
-			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
-			b,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -406,7 +374,6 @@ func (n *sros) createSROSFilesConfig() error {
 	var err error
 	cfgPath := filepath.Join(n.Cfg.LabDir, configCf3, startupCfgFName)
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
-	// log.Infof("Reading startup-config on node %s, file: %s, isPartial: %t", n.Cfg.ShortName, n.Cfg.StartupConfig, isPartial)
 	if n.Cfg.StartupConfig != "" && !isPartial {
 		// User provides startup config
 		log.Debugf("Reading startup-config on node %s, file: %s, isPartial: %t", n.Cfg.ShortName, n.Cfg.StartupConfig, isPartial)
@@ -509,6 +476,10 @@ type srosTemplateData struct {
 	SystemConfig string
 	// LoggingConfig is a string containing Logging configuration
 	LoggingConfig string
+	// SSHConfig is a string containing SSH configuration
+	SSHConfig string
+	//PartialConfig
+	PartialConfig string
 }
 
 // tplIFace template interface struct.
@@ -519,13 +490,12 @@ type tplIFace struct {
 	Mtu        int
 }
 
-// addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner.
+// addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner, ssh keys.
 func (n *sros) addDefaultConfig() error {
 	b, err := n.banner()
 	if err != nil {
 		return err
 	}
-
 	// tplData holds data used in templating of the default config snippet
 	tplData := srosTemplateData{
 		Name:          n.Cfg.ShortName,
@@ -542,12 +512,12 @@ func (n *sros) addDefaultConfig() error {
 		GRPCConfig:    grpcConfig,
 		NetconfConfig: netconfConfig,
 		LoggingConfig: loggingConfig,
+		SSHConfig:     sshConfig,
 	}
 
-	// n.setCustomPrompt(&tplData)
+	n.prepareSSHPubKeys(&tplData)
 
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
-
 	buf := new(bytes.Buffer)
 	err = srosCfgTpl.Execute(buf, tplData)
 	if err != nil {
@@ -558,117 +528,54 @@ func (n *sros) addDefaultConfig() error {
 	} else {
 		log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
+
+	}
+
+	err = n.addPartialConfig()
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
 // applyPartialConfig applies partial configuration to the SR OS.
-func (n *sros) applyPartialConfig(ctx context.Context, addr, platformName,
-	username, password string, config io.Reader) error {
-	var err error
-	var d *network.Driver
+func (n *sros) addPartialConfig() error {
+	// b holds the configuration to be applied to the node
+	b := &bytes.Buffer{}
 
-	if !isCPM(n, "A") {
-		log.Debugf("Skipping partial Cfg because Container %q does not contain a CPM-A", n.Cfg.LongName)
-		return nil
-	}
+	// apply partial configs if partial config is used
+	if isPartialConfigFile(n.Cfg.StartupConfig) && isCPM(n, "") {
+		log.Info("Adding configuration",
+			"node", n.Cfg.LongName,
+			"type", "partial",
+			"source", n.Cfg.StartupConfig)
 
-	configContent, err := utils.SubstituteEnvsAndTemplate(config, n.Cfg)
-	if err != nil {
-		return err
-	}
-
-	configContentStr := configContent.String()
-	// check file contains content, otherwise exit early
-	if strings.TrimSpace(configContentStr) == "" {
-		return nil
-	}
-
-	log.Info("Waiting for node to be ready. This should not take too long...",
-		"node", n.Cfg.LongName,
-		"log", fmt.Sprintf("docker logs -f %[1]s", n.Cfg.LongName),
-	)
-
-	for loop := true; loop; {
-		isHealthy, e := n.IsHealthy(ctx)
-		if !isHealthy {
-			time.Sleep(1 * time.Second) // cool-off period
-			log.Debugf("Waiting for %s to become healthy: %v", n.Cfg.ShortName, e)
-			continue
+		r, err := os.Open(n.Cfg.StartupConfig)
+		if err != nil {
+			return err
 		}
 
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
-		default:
-			sl := log.StandardLog(log.StandardLogOptions{
-				ForceLevel: log.DebugLevel,
-			})
-			li, err := scraplilogging.NewInstance(
-				scraplilogging.WithLevel("debug"),
-				scraplilogging.WithLogger(sl.Print))
-			if err != nil {
-				return err
-			}
-			opts := []util.Option{
-				options.WithAuthNoStrictKey(),
-				options.WithAuthUsername(username),
-				options.WithAuthPassword(password),
-				options.WithTransportType(transport.StandardTransport),
-				options.WithTimeoutOps(5 * time.Second),
-				options.WithLogger(li),
-			}
+		defer r.Close() // skipcq: GO-S2307
 
-			p, err := platform.NewPlatform(platformName, addr, opts...)
-			if err != nil {
-				return fmt.Errorf("%s: failed to create platform: %+v", addr, err)
-			}
-
-			d, err = p.GetNetworkDriver()
-			if err != nil {
-				return fmt.Errorf("%s: could not create the driver: %+v", addr, err)
-			}
-
-			err = d.Open()
-			if err == nil {
-				// driver successfully opened, exit the loop
-				loop = false
-			} else {
-				log.Debugf("%s: not yet ready - %v", addr, err)
-				time.Sleep(5 * time.Second) // cool-off period
-				if err != nil && strings.Contains(err.Error(), "ssh: handshake failed: ssh: unable to authenticate") {
-					// Handle authentication error
-					return fmt.Errorf("cannot apply partial config due to authentication failed, check the password: %w", err)
-				}
-
-			}
+		_, err = io.Copy(b, r)
+		if err != nil {
+			return err
 		}
-	}
 
-	// Normalize character sequences to avoid interaction issues with CLI
-	replacer := strings.NewReplacer(
-		"\r\n", "\n", // replace EOL CRLF with LF
-		"\t", "    ", // replace tabs with 4 spaces
-	)
-	configContentStr = replacer.Replace(configContentStr)
-
-	// converting string to newline delimited string slice
-	cfgs := strings.Split(configContentStr, "\n")
-
-	// config snippets should not have commit command, so we need to commit manually
-	// and quit from the config mode
-	cfgs = append(cfgs, "commit", "/admin save", "/exit all", "quit-config")
-
-	mr, err := d.SendConfigs(cfgs)
-	if err != nil || (mr != nil && mr.Failed != nil) {
-		if mr != nil {
-			return fmt.Errorf("failed to apply config; error: %+v %+v", err, mr.Failed)
+		configContent, err := utils.SubstituteEnvsAndTemplate(b, n.Cfg)
+		if err != nil {
+			return err
+		}
+		if configContent.Len() == 0 {
+			log.Warnf("Buffer empty for PARTIAL config, Not parsed template data for node %q", n.Cfg.ShortName)
 		} else {
-			return fmt.Errorf("failed to apply config; error: %+v", err)
+			log.Debugf("Node %q additional PARTIAL config:\n%s", n.Cfg.ShortName, configContent.String())
+			n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
 		}
+	} else {
+		log.Warnf("Passed startup-config option but it will not have any effect for node %q", n.Cfg.ShortName)
 	}
-
 	return nil
 }
 
@@ -742,7 +649,19 @@ func (n *sros) CheckInterfaceName() error {
 }
 
 func (s *sros) SaveConfig(ctx context.Context) error {
-	err := netconf.SaveConfig(s.Cfg.LongName,
+	// s.Cfg.MgmtIPv4Address
+	var address string
+	//Handle DNS issues, check if address exist
+	if _, err := net.LookupHost(s.Cfg.LongName); err != nil {
+		if s.Cfg.MgmtIPv6Address != "" {
+			address = s.Cfg.MgmtIPv6Address
+		} else {
+			address = s.Cfg.MgmtIPv4Address
+		}
+	} else {
+		address = s.Cfg.LongName
+	}
+	err := netconf.SaveConfig(address,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -758,11 +677,6 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
 	}
-	// if len(execResult.GetStdErrString()) > 0 {
-	// 	return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, execResult.GetStdErrString())
-	// }
-
-	log.Infof("saved SR OS configuration from %s node \n%s", s.Cfg.ShortName)
 
 	return nil
 }
@@ -772,13 +686,8 @@ func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
-// nodeConfigExists returns true if a file at <labdir>/<node>/config/config.cfg exists.
-func nodeConfigExists(labDir string) bool {
-	_, err := os.Stat(filepath.Join(labDir, configCf3, startupCfgFName))
-	return err == nil
-}
 func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
-	return CheckPortWithRetry(n.Cfg.MgmtIPv4Address, 22, readyTimeout, 5, retryTimer)
+	return CheckPortWithRetry(n.Cfg.MgmtIPv4Address, 830, readyTimeout, 5, retryTimer)
 }
 
 // CheckPortWithRetry checks if a port is open with retry logic
@@ -792,6 +701,7 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 
 		address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 		conn, err := net.DialTimeout("tcp", address, timeout)
+		// log.Infof("CONNECTION to %q: %+v", host, conn)
 		if err == nil {
 			conn.Close()
 			return true, nil

@@ -106,7 +106,13 @@ configure system security aaa local-profiles profile "default" entry 90 match "e
 configure system security aaa local-profiles profile "default" entry 90 action permit
 configure system security aaa local-profiles profile "default" entry 100 match "configure li"
 configure system security aaa local-profiles profile "default" entry 100 action deny
-configure system security ssh server-cipher-list-v2 cipher 190 name aes256-ctr
+configure system security user-params local-user user "admin" restricted-to-home false
+configure system security user-params local-user user "admin" password "NokiaSros1!"
+configure system security user-params local-user user "admin" access console true
+configure system security user-params local-user user "admin" console member ["administrative"]
+configure system security user-params attempts count 64`
+	// ocServerConfig = `set / system management openconfig admin-state enable`.
+	sshConfig = `configure system security ssh server-cipher-list-v2 cipher 190 name aes256-ctr
 configure system security ssh server-cipher-list-v2 cipher 192 name aes192-ctr
 configure system security ssh server-cipher-list-v2 cipher 194 name aes128-ctr
 configure system security ssh server-cipher-list-v2 cipher 200 name aes128-cbc
@@ -132,12 +138,7 @@ configure system security ssh client-mac-list-v2 mac 215 name hmac-sha1
 configure system security ssh client-mac-list-v2 mac 220 name hmac-sha1-96
 configure system security ssh client-mac-list-v2 mac 225 name hmac-md5
 configure system security ssh client-mac-list-v2 mac 240 name hmac-md5-96
-configure system security user-params local-user user "admin" restricted-to-home false
-configure system security user-params local-user user "admin" password "NokiaSros1!"
-configure system security user-params local-user user "admin" access console true
-configure system security user-params local-user user "admin" console member ["administrative"]`
-	// ocServerConfig = `set / system management openconfig admin-state enable`.
-
+`
 )
 
 // SrosVersion represents an SR-OS version as a set of fields.

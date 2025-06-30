@@ -1,42 +1,12 @@
 package sros
 
 import (
-	"bytes"
 	_ "embed"
-	"io"
 	"strings"
-	"text/template"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 )
-
-// SROSSSHKeysTemplate holds the template for the SSH keys configuration.
-//
-//go:embed ssh_keys.go.tpl
-var SROSSSHKeysTemplate string
-
-// generateSSHPublicKeysConfig generates public keys configuration blob
-// to add keys extracted from the clab host.
-func (s *sros) generateSSHPublicKeysConfig() (io.Reader, error) {
-	tplData := srosTemplateData{}
-
-	s.prepareSSHPubKeys(&tplData)
-
-	t, err := template.New("SSHKeys").Funcs(utils.CreateFuncs()).Parse(SROSSSHKeysTemplate)
-	if err != nil {
-		return nil, err
-	}
-
-	buf := new(bytes.Buffer)
-	err = t.Execute(buf, tplData)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf, nil
-}
 
 // prepareSSHPubKeys maps the ssh pub keys into the SSH key type based slice
 // and checks that not more then 32 keys per type are present, otherwise truncates
