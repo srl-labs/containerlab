@@ -44,6 +44,7 @@ const (
 	retryTimer = time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName = "nokia_sros"
+	configStartup       = "config/startup"
 	configCf3           = "config/cf3"
 	configCf2           = "config/cf2"
 	configCf1           = "config/cf1"
@@ -90,10 +91,10 @@ var (
 		Revision: 0,
 	}
 	// Internal directories inside SR-SIM container
-	// cfgDir = "/nokia/config"
+	cfgDir = "/nokia/config" // Where the startup config will be stored
 	cf1Dir = "/home/sros/flash1"
 	cf2Dir = "/home/sros/flash2"
-	cf3Dir = "/home/sros/flash3"
+	cf3Dir = "/home/sros/flash3" // Where the running config will be stored
 	licDir = "/nokia/license"
 
 	// This is wrong but it was generating some weird conditions... further debug required. Good regexp is the second var
@@ -180,13 +181,13 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	// mount config directory
 	if isCPM(n, "") {
-		// cfgPath := filepath.Join(n.Cfg.LabDir, "config")
+		cfgPath := filepath.Join(n.Cfg.LabDir, configStartup)
 		cf1Path := filepath.Join(n.Cfg.LabDir, configCf1)
 		cf2Path := filepath.Join(n.Cfg.LabDir, configCf2)
 		cf3Path := filepath.Join(n.Cfg.LabDir, configCf3)
 		log.Debugf("cf3Dir: %s", cf3Dir)
-		// n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
+			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
 			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
 			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
 		log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
@@ -353,6 +354,7 @@ func (n *sros) createSROSFiles() error {
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configCf1), 0777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configCf2), 0777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configCf3), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configStartup), 0777)
 	// Override NodeType var with existing env
 	mac := genMac(n.Cfg)
 	if n.Cfg.NodeType != "" {
@@ -375,7 +377,7 @@ func (n *sros) createSROSFilesConfig() error {
 	// will be used as a template in GenerateConfig()
 	var cfgTemplate string
 	var err error
-	cfgPath := filepath.Join(n.Cfg.LabDir, configCf3, startupCfgFName)
+	cfgPath := filepath.Join(n.Cfg.LabDir, configStartup, startupCfgFName)
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
 	if n.Cfg.StartupConfig != "" && !isPartial {
 		// User provides startup config
@@ -666,9 +668,7 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Infof("saved %s running configuration to startup configuration file, retrieve file from %s\n", s.Cfg.ShortName, cf3Dir)
-	// cmd, _ := exec.NewExecCmdFromString("cp " + cf3Dir + "/config.cfg " + cfgDir + "/config.cfg")
-	// execResult, err := s.RunExec(ctx, cmd)
+	log.Infof("saved %q running configuration\n", s.Cfg.LongName)
 
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
@@ -719,10 +719,11 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 
 func ResolveClabContainer(s *sros) (string, error) {
 	if _, err := net.LookupHost(s.Cfg.LongName); err != nil {
-		if s.Cfg.MgmtIPv6Address != "" {
-			return s.Cfg.MgmtIPv6Address, nil
-		} else if s.Cfg.MgmtIPv4Address != "" {
+
+		if s.Cfg.MgmtIPv4Address != "" {
 			return s.Cfg.MgmtIPv4Address, nil
+		} else if s.Cfg.MgmtIPv6Address != "" {
+			return s.Cfg.MgmtIPv6Address, nil
 		} else {
 			return s.Cfg.LongName, err
 		}
