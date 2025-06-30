@@ -36,7 +36,7 @@ import (
 const (
 	SrosDefaultType = "SR-1" // default sros node type
 
-	readyTimeout = time.Minute * 5 // max wait time for node to boot
+	readyTimeout = time.Minute * 1 // max wait time for node to boot
 
 	generateable     = true
 	generateIfFormat = "e%d-%d"
@@ -231,7 +231,10 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	if err != nil {
 		return err
 	}
-
+	if !isCPM(n, "A") {
+		return nil
+	}
+	//This code only runs on active CPM
 	for time.Now().Before(time.Now().Add(readyTimeout)) {
 		// Check if context is cancelled
 		if err := ctx.Err(); err != nil {
@@ -240,7 +243,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 
 		isHealthy, err := n.IsHealthy(ctx)
 		if err != nil {
-			log.Debug(fmt.Errorf("health check failed: %w", err))
+			log.Debug(fmt.Errorf("health check failed, check 'docker logs -f %s': %w", n.Cfg.LongName, err))
 		}
 
 		if isHealthy {
@@ -650,18 +653,11 @@ func (n *sros) CheckInterfaceName() error {
 
 func (s *sros) SaveConfig(ctx context.Context) error {
 	// s.Cfg.MgmtIPv4Address
-	var address string
-	//Handle DNS issues, check if address exist
-	if _, err := net.LookupHost(s.Cfg.LongName); err != nil {
-		if s.Cfg.MgmtIPv6Address != "" {
-			address = s.Cfg.MgmtIPv6Address
-		} else {
-			address = s.Cfg.MgmtIPv4Address
-		}
-	} else {
-		address = s.Cfg.LongName
+	addr, err := ResolveClabContainer(s)
+	if err != nil {
+		return err
 	}
-	err := netconf.SaveConfig(address,
+	err = netconf.SaveConfig(addr,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -686,8 +682,17 @@ func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
+// Func that checks the Health status of a node
 func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
-	return CheckPortWithRetry(n.Cfg.MgmtIPv4Address, 830, readyTimeout, 5, retryTimer)
+	if !isCPM(n, "") {
+		return true, fmt.Errorf("node %q is not a CPM, healthcheck has no effect", n.Cfg.LongName)
+	}
+	addr, err := ResolveClabContainer(n)
+	if err != nil {
+		return false, err
+	}
+	log.Debugf("Checking connection to %q->%q", n.Cfg.LongName, addr)
+	return CheckPortWithRetry(addr, 830, readyTimeout, 5, retryTimer)
 }
 
 // CheckPortWithRetry checks if a port is open with retry logic
@@ -710,4 +715,18 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 	}
 
 	return false, lastErr
+}
+
+func ResolveClabContainer(s *sros) (string, error) {
+	if _, err := net.LookupHost(s.Cfg.LongName); err != nil {
+		if s.Cfg.MgmtIPv6Address != "" {
+			return s.Cfg.MgmtIPv6Address, nil
+		} else if s.Cfg.MgmtIPv4Address != "" {
+			return s.Cfg.MgmtIPv4Address, nil
+		} else {
+			return s.Cfg.LongName, err
+		}
+	} else {
+		return s.Cfg.LongName, nil
+	}
 }
