@@ -8,7 +8,7 @@ AWS credentials are automatically discovered using the standard AWS credential c
 
 1. **Environment variables** (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
 2. **Shared credentials file** (`~/.aws/credentials`)
-3. **IAM roles** (EC2 instance profiles, ECS task roles, Lambda execution roles)
+3. **IAM roles** (EC2 instance profiles)
 
 Optional: You can also use a `.env` file in the current directory to set credentials.
 
@@ -41,7 +41,7 @@ topology:
       startup-config: s3://my-bucket/configs/router2.cli
 ```
 
-## Configuration
+## Authentication
 
 ### Environment Variables
 ```bash
@@ -67,17 +67,3 @@ aws_secret_access_key = your-secret-key
 region = us-east-1
 ```
 
-## S3 URL Format
-
-S3 URLs must follow this format:
-```
-s3://bucket-name/path/to/file
-```
-Both the bucket name and file path are required.
-
-## Implementation Details
-
-This implementation uses the MinIO Go client library which provides:
-- Full AWS credential chain support
-- Compatible with S3 and S3-compatible storage services
-- Minimal binary size impact (approximately 1MB vs 7MB with AWS SDK)
