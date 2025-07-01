@@ -6,6 +6,7 @@ package utils
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -22,7 +23,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/joho/godotenv"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/steiler/acls"
 
 	"github.com/charmbracelet/log"
@@ -31,6 +36,7 @@ import (
 var (
 	errNonRegularFile = errors.New("non-regular file")
 	errHTTPFetch      = errors.New("failed to fetch http(s) resource")
+	errS3Fetch        = errors.New("failed to fetch s3 resource")
 )
 
 // FileExists returns true if a file referenced by filename exists & accessible.
@@ -61,7 +67,7 @@ func DirExists(filename string) bool {
 // mode is the desired target file permissions, e.g. "0644".
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if !IsHttpURL(src, false) {
+	if !IsHttpURL(src, false) && !IsS3URL(src) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -129,15 +135,42 @@ func IsHttpURL(s string, allowSchemaless bool) bool {
 	return err == nil && u.Host != ""
 }
 
+// IsS3URL checks if the URL is an S3 URL (s3://bucket/key format).
+func IsS3URL(s string) bool {
+	return strings.HasPrefix(s, "s3://")
+}
+
+// ParseS3URL parses an S3 URL and returns the bucket and key.
+func ParseS3URL(s3URL string) (bucket, key string, err error) {
+	if !IsS3URL(s3URL) {
+		return "", "", fmt.Errorf("not an S3 URL: %s", s3URL)
+	}
+
+	u, err := url.Parse(s3URL)
+	if err != nil {
+		return "", "", err
+	}
+
+	bucket = u.Host
+	key = strings.TrimPrefix(u.Path, "/")
+
+	if bucket == "" || key == "" {
+		return "", "", fmt.Errorf("invalid S3 URL format: %s", s3URL)
+	}
+
+	return bucket, key, nil
+}
+
 // CopyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
-// src can be an http(s) URL as well.
+// src can be an http(s) URL or an S3 URL.
 func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
-	if IsHttpURL(src, false) {
+	switch {
+	case IsHttpURL(src, false):
 		client := NewHTTPClient()
 
 		// download using client
@@ -147,7 +180,55 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		}
 
 		in = resp.Body
-	} else {
+
+	case IsS3URL(src):
+		bucket, key, err := ParseS3URL(src)
+		if err != nil {
+			return err
+		}
+
+		// Try to load .env file if it exists
+		_ = godotenv.Load(".env")
+
+		// Get region from environment, default to us-east-1
+		region := os.Getenv("AWS_REGION")
+		if region == "" {
+			region = "us-east-1"
+		}
+
+		// Create credential chain that mimics AWS SDK behavior
+		credProviders := []credentials.Provider{
+			&credentials.EnvAWS{},                                              // 1. Environment variables
+			&credentials.FileAWSCredentials{},                                  // 2. ~/.aws/credentials (default profile)
+			&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
+		}
+
+		// Create MinIO client with chained credentials
+		client, err := minio.New("s3.amazonaws.com", &minio.Options{
+			Creds:  credentials.NewChainCredentials(credProviders),
+			Secure: true,
+			Region: region,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create S3 client: %w", err)
+		}
+
+		// Get object from S3
+		object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
+		if err != nil {
+			return fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
+		}
+
+		// Verify object exists by reading its stats
+		_, err = object.Stat()
+		if err != nil {
+			object.Close()
+			return fmt.Errorf("%w: %s: object not found or access denied: %v", errS3Fetch, src, err)
+		}
+
+		in = object
+
+	default:
 		in, err = os.Open(src)
 		if err != nil {
 			return err

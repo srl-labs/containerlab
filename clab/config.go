@@ -261,7 +261,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 }
 
 // processStartupConfig processes the raw path of the startup-config as it is defined in the topology file.
-// It handles remote files, local files and embedded configs.
+// It handles remote files (HTTP/HTTPS/S3), local files and embedded configs.
 // As a result the `nodeCfg.StartupConfig` will be set to an absPath of the startup config file.
 func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name
@@ -271,8 +271,8 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// embedded config is a config that is defined as a multi-line string in the topology file
 	// it contains at least one newline
 	isEmbeddedConfig := strings.Count(p, "\n") >= 1
-	// downloadable config starts with http(s)://
-	isDownloadableConfig := utils.IsHttpURL(p, false)
+	// downloadable config starts with http(s):// or s3://
+	isDownloadableConfig := utils.IsHttpURL(p, false) || utils.IsS3URL(p)
 
 	if isEmbeddedConfig || isDownloadableConfig {
 		switch {
