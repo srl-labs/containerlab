@@ -1,18 +1,14 @@
-## Required bridge:
-# sudo ip link add name sr-14s-fab type bridge
-# sudo ip link set sr-14s-fab mtu 9000
-# sudo ip link set sr-14s-fab up
 name: "sros"
 topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
-      image: harbor.ncse.io/library/srux/srsim:0.0.I8161
+      image: nokia_srsim:25.10.R1
   nodes: 
     sr-14s-a: 
       kind: nokia_srsim
       type: SR-14s
-      startup-config: config-14s.partial.cfg
+      startup-config: configs/config-14s.partial.cfg
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
         NOKIA_SROS_SLOT: A 
@@ -20,7 +16,6 @@ topology:
       kind: nokia_srsim
       type: SR-14s
       network-mode: container:sr-14s-a
-      startup-config: config-14s.partial.cfg
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
         NOKIA_SROS_SLOT: B
@@ -63,7 +58,7 @@ topology:
 
   links:   
     ## DATA LINKS
-    - endpoints: ["sr-14s-1:e1-1-c1-1", "sr-14s-2:e2-x1-1-c1-1"]
+    - endpoints: ["sr-14s-1:e1-1-c1-1", "sr-14s-2:e2-1-c1-1"]
     - endpoints: ["sr-14s-1:e1-2-c1-1", "sr-14s-2:e3-1-c1-1"]
 
 

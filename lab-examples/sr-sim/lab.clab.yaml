@@ -3,14 +3,14 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
-      image: harbor.ncse.io/library/srux/srsim:0.0.I8161
+      image: nokia_srsim:25.10.R1
   nodes:
     sr-sim1:
       kind: nokia_srsim
     sr-sim2: 
       kind: nokia_srsim
       type: SR-1x-92S
-      startup-config: config.cfg
+      startup-config: configs/config.cfg
       env: 
          NOKIA_SROS_SLOT: A
     sr-sim2-iom:
@@ -22,7 +22,7 @@ topology:
     sr-sim3:
       kind: nokia_srsim
       type: SR-1x-92S
-      startup-config: config.cfg
+      startup-config: configs/config.cfg
       env: 
          NOKIA_SROS_SLOT: A
     sr-sim3-iom:

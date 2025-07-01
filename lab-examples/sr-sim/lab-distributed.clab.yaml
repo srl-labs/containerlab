@@ -6,12 +6,12 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
-      image: harbor.ncse.io/library/srux/srsim:0.0.I8161
+      image: nokia_srsim:25.10.R1
   nodes: 
     srsim10-a: 
       kind: nokia_srsim
       type: SR-7
-      startup-config: srsim10.distributed.partial.cfg
+      startup-config: configs/srsim10.distributed.partial.cfg
       env: 
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 
@@ -38,7 +38,7 @@ topology:
     srsim11-a: 
       kind: nokia_srsim
       type: SR-7
-      startup-config: srsim11.distributed.partial.cfg
+      startup-config: configs/srsim11.distributed.partial.cfg
       env: 
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 

@@ -248,8 +248,9 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 		}
 
 		if isHealthy {
-			if err := n.SaveConfig(ctx); err != nil {
-				log.Debug(fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err))
+			err = n.SaveConfig(ctx)
+			if err != nil {
+				return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
 			}
 			return nil
 		}
@@ -546,40 +547,41 @@ func (n *sros) addDefaultConfig() error {
 
 // applyPartialConfig applies partial configuration to the SR OS.
 func (n *sros) addPartialConfig() error {
-	// b holds the configuration to be applied to the node
-	b := &bytes.Buffer{}
+	if n.Cfg.StartupConfig != "" {
+		// b holds the configuration to be applied to the node
+		b := &bytes.Buffer{}
+		// apply partial configs if partial config is used
+		if isPartialConfigFile(n.Cfg.StartupConfig) && isCPM(n, "") {
+			log.Info("Adding configuration",
+				"node", n.Cfg.LongName,
+				"type", "partial",
+				"source", n.Cfg.StartupConfig)
 
-	// apply partial configs if partial config is used
-	if isPartialConfigFile(n.Cfg.StartupConfig) && isCPM(n, "") {
-		log.Info("Adding configuration",
-			"node", n.Cfg.LongName,
-			"type", "partial",
-			"source", n.Cfg.StartupConfig)
+			r, err := os.Open(n.Cfg.StartupConfig)
+			if err != nil {
+				return err
+			}
 
-		r, err := os.Open(n.Cfg.StartupConfig)
-		if err != nil {
-			return err
-		}
+			defer r.Close() // skipcq: GO-S2307
 
-		defer r.Close() // skipcq: GO-S2307
+			_, err = io.Copy(b, r)
+			if err != nil {
+				return err
+			}
 
-		_, err = io.Copy(b, r)
-		if err != nil {
-			return err
-		}
-
-		configContent, err := utils.SubstituteEnvsAndTemplate(b, n.Cfg)
-		if err != nil {
-			return err
-		}
-		if configContent.Len() == 0 {
-			log.Warnf("Buffer empty for PARTIAL config, Not parsed template data for node %q", n.Cfg.ShortName)
+			configContent, err := utils.SubstituteEnvsAndTemplate(b, n.Cfg)
+			if err != nil {
+				return err
+			}
+			if configContent.Len() == 0 {
+				log.Warnf("Buffer empty for PARTIAL config, Not parsed template data for node %q", n.Cfg.ShortName)
+			} else {
+				log.Debugf("Node %q additional PARTIAL config:\n%s", n.Cfg.ShortName, configContent.String())
+				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
+			}
 		} else {
-			log.Debugf("Node %q additional PARTIAL config:\n%s", n.Cfg.ShortName, configContent.String())
-			n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
+			log.Warnf("Passed startup-config option but it will not have any effect for node %q", n.Cfg.ShortName)
 		}
-	} else {
-		log.Warnf("Passed startup-config option but it will not have any effect for node %q", n.Cfg.ShortName)
 	}
 	return nil
 }
@@ -659,7 +661,7 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = netconf.SaveConfig(addr,
+	err = netconf.SaveConfig(fmt.Sprintf("[%s]", addr),
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -691,7 +693,7 @@ func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	log.Debugf("Checking connection to %q->%q", n.Cfg.LongName, addr)
+	log.Debugf("Checking netconf connection to %q->%q:830", n.Cfg.LongName, addr)
 	return CheckPortWithRetry(addr, 830, readyTimeout, 5, retryTimer)
 }
 
@@ -717,13 +719,13 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 	return false, lastErr
 }
 
+// Functions that tries to do a DNS lookup to resolve the IP for the container, in case it doesn't find it, it returns the address associated with the data structure of the container
 func ResolveClabContainer(s *sros) (string, error) {
 	if _, err := net.LookupHost(s.Cfg.LongName); err != nil {
-
-		if s.Cfg.MgmtIPv4Address != "" {
-			return s.Cfg.MgmtIPv4Address, nil
-		} else if s.Cfg.MgmtIPv6Address != "" {
+		if s.Cfg.MgmtIPv6Address != "" {
 			return s.Cfg.MgmtIPv6Address, nil
+		} else if s.Cfg.MgmtIPv4Address != "" {
+			return s.Cfg.MgmtIPv4Address, nil
 		} else {
 			return s.Cfg.LongName, err
 		}
