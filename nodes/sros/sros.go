@@ -97,10 +97,8 @@ var (
 	cf3Dir = "/home/sros/flash3" // Where the running config will be stored
 	licDir = "/nokia/license"
 
-	// This is wrong but it was generating some weird conditions... further debug required. Good regexp is the second var
-	InterfaceRegexp  = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`)
-	InterfaceRegexp2 = regexp.MustCompile(`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`)
-	InterfaceHelp    = `The format of the interface name need to be one of:
+	InterfaceRegexp = regexp.MustCompile(`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`)
+	InterfaceHelp   = `The format of the interface name need to be one of:
       e1-2-3       -> card 1, mda 2, port 3
       e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
       e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
@@ -194,8 +192,16 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	} else {
 		log.Debugf("Skipping config mounts on node %q", n.Cfg.ShortName)
 	}
+	/*
+		Commenting line because it  was generating some weird conditions related to default_node.go functions
+		to check interface aliases... further debug required.
+		ERRO failed deploy links for node "srsim11-1": failed to rename link: file exists
+		ERRO failed deploy links for node "srsim10-1": file exists
+		Without setting this var it works OK
+		InterfaceRegexp  = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`)
+		n.InterfaceRegexp = InterfaceRegexp
 
-	n.InterfaceRegexp = InterfaceRegexp
+	*/
 	n.InterfaceHelp = InterfaceHelp
 
 	return nil
@@ -284,9 +290,7 @@ func (n *sros) Ready(ctx context.Context) error {
 			for k, cmd := range readyCmds {
 				cmd, _ := exec.NewExecCmdFromString(cmd)
 				execResult, err := n.RunExec(ctx, cmd)
-				// log.Infof("ReadyCommand: %q return code: %d", execResult.GetReturnCode())
 				if err != nil || (execResult != nil && execResult.GetReturnCode() != 1) {
-					// log.Warnf("Node %s is NOT ready to accept configs", n.Cfg.ShortName)
 					logMsg := readyCmdsStrings[k] + " status check failed on " + n.Cfg.ShortName + " retrying..."
 
 					if err != nil {
@@ -643,7 +647,7 @@ func (n *sros) CheckInterfaceName() error {
 	}
 
 	for _, e := range n.Endpoints {
-		if !InterfaceRegexp2.MatchString(e.GetIfaceName()) {
+		if !InterfaceRegexp.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("nokia SR-OS interface name %q doesn't match the required pattern: %s", e.GetIfaceName(), n.InterfaceHelp)
 		}
 
@@ -708,7 +712,6 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 
 		address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 		conn, err := net.DialTimeout("tcp", address, timeout)
-		// log.Infof("CONNECTION to %q: %+v", host, conn)
 		if err == nil {
 			conn.Close()
 			return true, nil
