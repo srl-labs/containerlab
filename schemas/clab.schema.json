@@ -1203,7 +1203,7 @@
                 },
                 "groups": {
                     "description": "topology groups configuration container",
-                    "markdownDescription": "topology [groups](https://containerlab.dev/manual/<placeholder>/) configuration container",
+                    "markdownDescription": "topology [groups](https://containerlab.dev/manual/topo-def-file/#groups) configuration container",
                     "type": "object",
                     "patternProperties": {
                         ".*": {
