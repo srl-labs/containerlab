@@ -40,7 +40,7 @@ IPInfusion OcNOS node launched with containerlab can be managed via the followin
 
 ## Interfaces mapping
 
-ipinfusion_ocnos container can have up to 144 interfaces and uses the following mapping rules:
+ipinfusion_ocnos container can have up to 63 interfaces (eth management + 62 additional data interfaces defined in the topology file) and uses the following mapping rules:
 
 * `eth0` - management interface connected to the containerlab management network
 * `eth1` - first data interface, mapped to first data port of OcNOS line card
