@@ -1201,6 +1201,16 @@
                         }
                     }
                 },
+                "groups": {
+                    "description": "topology groups configuration container",
+                    "markdownDescription": "topology [groups](https://containerlab.dev/manual/<placeholder>/) configuration container",
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": {
+                            "$ref": "#/definitions/node-config"
+                        }
+                    }
+                },
                 "kinds": {
                     "description": "topology kinds configuration container",
                     "markdownDescription": "topology [kinds](https://containerlab.dev/manual/topo-def-file/#kinds) configuration container",
