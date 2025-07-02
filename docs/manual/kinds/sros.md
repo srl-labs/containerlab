@@ -10,7 +10,7 @@ The [Nokia SR OS](https://www.nokia.com/networks/products/service-router-operati
 
 The containerized Service Router Simulator, known as SR-SIM, is a cloud-native version of the SR OS software that runs on hardware platforms. It is available to Nokia customers who have an active SR-SIM license. The SR-SIM container emulates various hardware routers: either pizza-box systems with integrated linecards or chassis-based systems with multiple linecards per chassis. Operators can model both types of devices. This tool is provided as a container image and is designed to run natively on x86 systems with common container runtimes such as Docker.
 
-Hardware elements (such as linecards, PSUs, fans, etc.) and software elements (such as interfaces, network protocols, and services) are emulated and configured in the same way as physical SR OS platforms. Each linecard runs as a separate container for emulation of multi-linecard systems (distributed model). Pizza-box systems with integrated linecards run in an integrated model with one container per emulated system.
+Hardware elements (such as linecards, PSUs, fans, etc.) and software elements (such as interfaces, network protocols, and services) are emulated and configured just like physical SR OS platforms. Each linecard runs as a separate container for emulation of multi-linecard systems (distributed model). Pizza-box systems with integrated linecards run in an integrated model with one container per emulated system.
 
 Nokia SR-SIM nodes launched with containerlab are pre-provisioned with SSH, SNMP, NETCONF, and gNMI services enabled. Note that the default `admin` password is changed.
 
