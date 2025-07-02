@@ -376,6 +376,54 @@ Such interfaces are useful for testing and debugging purposes where we want to m
     labels: <link-labels>                   # optional (used in templating)
 ```
 
+#### Groups
+
+`groups` sets the values for the properties of all nodes belonging to the group that you define, it's more flexible than `kinds` which only sets the properties for nodes of that specific kind.
+
+It is useful to organise your topology, especially in cases where nodes of the same kind may require differing properties such as `type` or image version.
+
+Values inherited from `groups` will take precendence over `kinds` and `defaults`.
+
+For example, the We create separate groups for debian and alpine clients, as well as a group for spines where the nodes will be of type `ixrd3l`.
+
+```yaml
+topology:
+  defaults:
+    kind: nokia_srlinux
+    image: ghcr.io/nokia/srlinux
+  groups:
+    spines:
+      type: ixrd3l
+    apline-clients:
+      kind: linux
+      image: alpine
+    debian-clients:
+      kind: linux
+      image: debian
+  nodes:
+    srl1:
+      group: spines
+    srl2:
+      group: spines
+    srl3:
+    srl4:
+    client1:
+      group: alpine-clients
+    client2:
+      group: alpine-clients
+    client3:
+      group: debian-clients
+    client4:
+      group: debian-clients
+```
+
+Now with the above example, we can notice:
+
+- The client nodes in the `alpine-clients` group will be `linux` kind and run the `alpine` image.
+- The client nodes in the `debian-clients` group will be `linux` kind and run the `debian` image. 
+- The nodes in the `spines` group will be `ixrd3l` chassis, but still inherit the kind and image from defaults.
+- The `srl3` and `srl4` don't belong to any group, so they will inerit their properties from the `defaults`.
+
 #### Kinds
 
 Kinds define the behavior and the nature of a node, it says if the node is a specific containerized Network OS, virtualized router or something else. We go into details of kinds in its own [document section](kinds/index.md), so here we will discuss what happens when `kinds` section appears in the topology definition:

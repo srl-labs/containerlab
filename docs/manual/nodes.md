@@ -52,9 +52,11 @@ With `type` the user sets a type of the node. Types work in combination with the
 
 Other nodes might treat `type` field differently, that will depend on the kind of the node. The `type` values and effects defined in the documentation for a specific kind.
 
-### group
+### group 
 
-`group` is a freeform string that denotes which group a node belongs to. The grouping is currently only used to sort topology elements on a [graph](../cmd/graph.md#layout-and-sorting).
+`group` is a freeform string that denotes which group a node belongs to. This can be used to inherit values from the [groups](./topo-def-file.md#groups) container.
+
+The grouping is also used to sort topology elements on a [graph](../cmd/graph.md#layout-and-sorting).
 
 ### image
 
