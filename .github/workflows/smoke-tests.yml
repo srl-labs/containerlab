@@ -11,11 +11,16 @@ name: smoke-tests
         required: true
       AWS_SECRET_ACCESS_KEY:
         required: true
+    environment:
+      type: string
+      description: environment to run tests in
+      required: true
 
 jobs:
   smoke-tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    environment: ${{ inputs.environment }}
     strategy:
       fail-fast: false
       matrix:
@@ -97,7 +102,6 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          FOOBIEST: BAR
         run: |
           echo $AWS_ACCESS_KEY_ID
           echo \n\n\n\n
