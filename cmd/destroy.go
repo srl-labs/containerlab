@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -193,83 +192,11 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	// Remove any tool containers associated with destroyed labs
-	if len(labs) > 0 {
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
-		if err != nil {
-			return err
-		}
-
-		rt := rinit()
-		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{
-			Timeout: common.Timeout,
-		}))
-		if err != nil {
-			return err
-		}
-
-		for _, clab := range labs {
-			labName := clab.Config.Name
-			log.Debugf("Looking for tool containers with lab name: %s", labName)
-			// Clean up any tool containers (SSHX, GoTTY, etc.)
-			toolErrs := removeToolContainers(ctx, rt, labName, "sshx")
-			errs = append(errs, toolErrs...)
-			toolErrs = removeToolContainers(ctx, rt, labName, "gotty")
-			errs = append(errs, toolErrs...)
-		}
-	}
-
 	if len(errs) != 0 {
 		return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
 	}
 
 	return nil
-}
-
-// removeToolContainers removes containers of a specific tool type associated with a lab
-func removeToolContainers(ctx context.Context, rt runtime.ContainerRuntime, labName, toolType string) []error {
-	toolFilter := []*types.GenericFilter{
-		{
-			FilterType: "label",
-			Field:      labels.ToolType,
-			Operator:   "=",
-			Match:      toolType,
-		},
-		{
-			FilterType: "label",
-			Field:      labels.Containerlab,
-			Operator:   "=",
-			Match:      labName,
-		},
-	}
-
-	var errs []error
-	containers, err := rt.ListContainers(ctx, toolFilter)
-	if err != nil {
-		log.Error("Failed to list tool containers", "tool", toolType, "error", err)
-		errs = append(errs, err)
-		return errs
-	}
-
-	if len(containers) == 0 {
-		log.Debug("No tool containers found for lab", "tool", toolType, "lab", labName)
-		return nil
-	}
-
-	log.Info("Found tool containers associated with a lab", "tool", toolType, "lab", labName, "count", len(containers))
-
-	for _, container := range containers {
-		containerName := strings.TrimPrefix(container.Names[0], "/")
-		log.Info("Removing tool container", "tool", toolType, "container", containerName)
-		if err := rt.DeleteContainer(ctx, containerName); err != nil {
-			log.Warn("Failed to remove tool container", "tool", toolType, "container", containerName, "error", err)
-			errs = append(errs, err)
-		} else {
-			log.Info("Tool container removed successfully", "tool", toolType, "container", containerName)
-		}
-	}
-
-	return errs
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
