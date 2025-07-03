@@ -93,7 +93,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
+          ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - name: Upload test report

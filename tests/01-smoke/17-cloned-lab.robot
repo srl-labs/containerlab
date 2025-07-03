@@ -17,7 +17,7 @@ ${lab2-gitlab-url}      https://github.com/hellt/clab-test-repo/tree/branch1
 ${http-lab-url}         https://gist.githubusercontent.com/hellt/66a5d8fca7bf526b46adae9008a5e04b/raw/034a542c3fbb17333afd20e6e7d21869fee6aeb5/linux.clab.yml
 ${single-topo-folder}   tests/01-smoke/single-topo-folder
 
-${s3-url}             s3://clab-integration/srl02-s3.clab.yml
+${s3-url}               s3://clab-integration/srl02-s3.clab.yml
 
 ${runtime}              docker
 
