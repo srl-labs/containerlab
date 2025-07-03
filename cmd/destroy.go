@@ -194,24 +194,28 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// Remove any tool containers associated with destroyed labs
-	if !all && len(labs) > 0 {
-		// Get the lab name from the first lab
-		labName := labs[0].Config.Name
-		log.Debugf("Looking for tool containers with lab name: %s", labName)
-
-		// Initialize runtime
+	if len(labs) > 0 {
 		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
-		if err == nil {
-			rt := rinit()
-			err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{
-				Timeout: common.Timeout,
-			}))
+		if err != nil {
+			return err
+		}
 
-			if err == nil {
-				// Clean up any tool containers (SSHX, GoTTY, etc.)
-				removeToolContainers(ctx, rt, labName, "sshx")
-				removeToolContainers(ctx, rt, labName, "gotty")
-			}
+		rt := rinit()
+		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{
+			Timeout: common.Timeout,
+		}))
+		if err != nil {
+			return err
+		}
+
+		for _, clab := range labs {
+			labName := clab.Config.Name
+			log.Debugf("Looking for tool containers with lab name: %s", labName)
+			// Clean up any tool containers (SSHX, GoTTY, etc.)
+			toolErrs := removeToolContainers(ctx, rt, labName, "sshx")
+			errs = append(errs, toolErrs...)
+			toolErrs = removeToolContainers(ctx, rt, labName, "gotty")
+			errs = append(errs, toolErrs...)
 		}
 	}
 
@@ -223,7 +227,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 }
 
 // removeToolContainers removes containers of a specific tool type associated with a lab
-func removeToolContainers(ctx context.Context, rt runtime.ContainerRuntime, labName, toolType string) {
+func removeToolContainers(ctx context.Context, rt runtime.ContainerRuntime, labName, toolType string) []error {
 	toolFilter := []*types.GenericFilter{
 		{
 			FilterType: "label",
@@ -239,27 +243,33 @@ func removeToolContainers(ctx context.Context, rt runtime.ContainerRuntime, labN
 		},
 	}
 
+	var errs []error
 	containers, err := rt.ListContainers(ctx, toolFilter)
 	if err != nil {
-		log.Warnf("Failed to list %s containers: %v", toolType, err)
-		return
+		log.Errorf("Failed to list %s containers: %v", toolType, err)
+		errs = append(errs, err)
+		return errs
 	}
 
 	if len(containers) == 0 {
 		log.Debugf("No %s containers found for lab %s", toolType, labName)
-		return
+		return nil
 	}
 
 	log.Infof("Found %d %s containers associated with lab %s", len(containers), toolType, labName)
+
 	for _, container := range containers {
 		containerName := strings.TrimPrefix(container.Names[0], "/")
 		log.Infof("Removing %s container: %s", toolType, containerName)
 		if err := rt.DeleteContainer(ctx, containerName); err != nil {
 			log.Warnf("Failed to remove %s container %s: %v", toolType, containerName, err)
+			errs = append(errs, err)
 		} else {
 			log.Infof("%s container %s removed successfully", toolType, containerName)
 		}
 	}
+
+	return errs
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
