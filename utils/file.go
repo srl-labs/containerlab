@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/steiler/acls"
@@ -186,9 +185,6 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		if err != nil {
 			return err
 		}
-
-		// Try to load .env file if it exists
-		_ = godotenv.Load(".env")
 
 		// Get region from environment, default to us-east-1
 		region := os.Getenv("AWS_REGION")

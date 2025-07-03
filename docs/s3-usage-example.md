@@ -10,8 +10,6 @@ AWS credentials are automatically discovered using the standard AWS credential c
 2. **Shared credentials file** (`~/.aws/credentials`)
 3. **IAM roles** (EC2 instance profiles)
 
-Optional: You can also use a `.env` file in the current directory to set credentials.
-
 ## Usage Examples
 
 ### Topology Files from S3
@@ -48,14 +46,6 @@ topology:
 export AWS_ACCESS_KEY_ID=your-access-key
 export AWS_SECRET_ACCESS_KEY=your-secret-key
 export AWS_REGION=us-east-1  # Optional, defaults to us-east-1
-```
-
-### .env File
-Create a `.env` file in your current directory:
-```
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=us-east-1
 ```
 
 ### AWS Credentials File
