@@ -319,9 +319,9 @@ When docker is correctly installed, additional iptables chains will become avail
 
 ### bridge network driver options
 
-By default, containerlab will create the management bridge with default driver options[^2], however, for special networking setups required in some cases, this can be overriden in the `driver-opts` section of `mgmt`.  
+By default, containerlab will create the management bridge with default driver options[^2], however, for special networking setups required in some cases, this can be overridden in the `driver-opts` section of the `mgmt` block.
 
-This section a key-value pair for each overridden driver option:
+This section is a key-value pair for each overridden driver option:
 
 ```yaml
 mgmt:
