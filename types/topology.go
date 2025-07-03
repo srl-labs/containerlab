@@ -79,6 +79,12 @@ func (t *Topology) GetNodeKind(name string) string {
 				return k
 			}
 		}
+		if v := t.Defaults.GetGroup(); v != "" {
+			// Check for groups at default levels
+			if k := t.GetGroup(v).GetKind(); k != "" {
+				return k
+			}
+		}
 		// if no node kind is set, there is no way for us to look up the kind in the kind ... obviousely
 	}
 	return t.GetDefaults().GetKind()
@@ -382,7 +388,7 @@ func (t *Topology) GetNodeGroup(name string) string {
 		if v := ndef.GetGroup(); v != "" {
 			return v
 		}
-		if v := ndef.GetKind(); v != "" {
+		if v := t.GetNodeKind(name); v != "" {
 			// Check if the node actually has a kind, then get the group from kinds
 			if g := t.GetKind(v).GetGroup(); g != "" {
 				return g
