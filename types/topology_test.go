@@ -343,6 +343,323 @@ var topologyTestSet = map[string]struct {
 			},
 		},
 	},
+	"node_group": {
+		input: &Topology{
+			Groups: map[string]*NodeDefinition{
+				"grp1": {
+					Kind:          "srl",
+					Type:          "type1",
+					StartupConfig: "test_data/config.cfg",
+					Image:         "image:latest",
+					License:       "test_data/lic1.key",
+					Position:      "pos1",
+					Cmd:           "runit",
+					Exec: []string{
+						"bash test1.sh",
+						"bash test2.sh",
+					},
+					User: "user1",
+					Binds: []string{
+						"a:b",
+						"c:d",
+					},
+					Ports: []string{
+						"80:8080",
+					},
+					Env: map[string]string{
+						"env1": "v1",
+						"env2": "v2",
+					},
+					Labels: map[string]string{
+						"label1": "v1",
+						"label2": "v2",
+					},
+					CPU:        1,
+					Memory:     "1G",
+					AutoRemove: utils.Pointer(true),
+					DNS: &DNSConfig{
+						Servers: []string{"8.8.8.8"},
+						Search:  []string{"bar.com"},
+						Options: []string{"someotheropt"},
+					},
+					Certificate: &CertificateConfig{
+						Issue: utils.Pointer(true),
+					},
+				},
+			},
+			Nodes: map[string]*NodeDefinition{
+				"node1": {
+					Group: "grp1",
+					Env: map[string]string{
+						"env2": "notv2",
+					},
+					Labels: map[string]string{
+						"label2": "notv2",
+					},
+					Memory:     "2G",
+					AutoRemove: utils.Pointer(false),
+					DNS: &DNSConfig{
+						Servers: []string{"1.1.1.1"},
+						Search:  []string{"foo.com"},
+						Options: []string{"someopt"},
+					},
+				},
+			},
+		},
+		want: map[string]*NodeDefinition{
+			"node1": {
+				Kind:          "srl",
+				Group:         "grp1",
+				Type:          "type1",
+				StartupConfig: "test_data/config.cfg",
+				Image:         "image:latest",
+				License:       "test_data/lic1.key",
+				Position:      "pos1",
+				Cmd:           "runit",
+				Exec: []string{
+					"bash test1.sh",
+					"bash test2.sh",
+				},
+				User: "user1",
+				Binds: []string{
+					"a:b",
+					"c:d",
+				},
+				Ports: []string{
+					"80:8080",
+				},
+				Env: map[string]string{
+					"env1": "v1",
+					"env2": "notv2",
+				},
+				Labels: map[string]string{
+					"label1": "v1",
+					"label2": "notv2",
+				},
+				CPU:        1,
+				Memory:     "2G",
+				AutoRemove: utils.Pointer(false),
+				DNS: &DNSConfig{
+					Servers: []string{"1.1.1.1"},
+					Search:  []string{"foo.com"},
+					Options: []string{"someopt"},
+				},
+				Certificate: &CertificateConfig{
+					Issue: utils.Pointer(true),
+				},
+			},
+		},
+	},
+	"node_group_kind": {
+		input: &Topology{
+			Kinds: map[string]*NodeDefinition{
+				"srl": {
+					User: "user0",
+					CPU:  1,
+					Binds: []string{
+						"x:z",
+						"m:n", // overriden by group
+					},
+				},
+			},
+			Groups: map[string]*NodeDefinition{
+				"grp1": {
+					Kind:          "srl",
+					User:          "user1",
+					Type:          "type1",
+					StartupConfig: "test_data/config.cfg",
+					Image:         "image:latest",
+					License:       "test_data/lic1.key",
+					Position:      "pos1",
+					Cmd:           "runit",
+					Exec: []string{
+						"bash test1.sh",
+						"bash test2.sh",
+					},
+					Binds: []string{
+						"a:b",
+						"c:d",
+					},
+					Ports: []string{
+						"80:8080",
+					},
+					Env: map[string]string{
+						"env1": "v1",
+						"env2": "v2",
+					},
+					Labels: map[string]string{
+						"label1": "v1",
+						"label2": "v2",
+					},
+					CPU:    2,
+					Memory: "2G",
+					DNS: &DNSConfig{
+						Servers: []string{"1.1.1.1"},
+						Search:  []string{"foo.com"},
+						Options: []string{"someopt"},
+					},
+				},
+			},
+			Nodes: map[string]*NodeDefinition{
+				"node1": {
+					Group: "grp1",
+					Binds: []string{
+						"e:f",
+						"newm:n",
+					},
+				},
+			},
+		},
+		want: map[string]*NodeDefinition{
+			"node1": {
+				Kind:          "srl",
+				Group:         "grp1",
+				Type:          "type1",
+				StartupConfig: "test_data/config.cfg",
+				Image:         "image:latest",
+				License:       "test_data/lic1.key",
+				Position:      "pos1",
+				Cmd:           "runit",
+				User:          "user1",
+				Exec: []string{
+					"bash test1.sh",
+					"bash test2.sh",
+				},
+				Binds: []string{
+					"e:f",
+					"a:b",
+					"c:d",
+					"x:z",
+					"newm:n",
+				},
+				Ports: []string{
+					"80:8080",
+				},
+				Env: map[string]string{
+					"env1": "v1",
+					"env2": "v2",
+				},
+				Labels: map[string]string{
+					"label1": "v1",
+					"label2": "v2",
+				},
+				CPU:    1,
+				Memory: "2G",
+				DNS: &DNSConfig{
+					Servers: []string{"1.1.1.1"},
+					Search:  []string{"foo.com"},
+					Options: []string{"someopt"},
+				},
+				Certificate: &CertificateConfig{
+					Issue: utils.Pointer(false),
+				},
+			},
+		},
+	},
+	"node_group_default": {
+		input: &Topology{
+			Defaults: &NodeDefinition{
+				Kind: "linux", // overriden by group
+				User: "user1",
+				CPU:  1,
+				Binds: []string{
+					"x:z",
+					"m:n", // overriden by node
+				},
+			},
+			Groups: map[string]*NodeDefinition{
+				"grp1": {
+					Kind:          "srl",
+					Type:          "type1",
+					StartupConfig: "test_data/config.cfg",
+					Image:         "image:latest",
+					License:       "test_data/lic1.key",
+					Position:      "pos1",
+					Cmd:           "runit",
+					Exec: []string{
+						"bash test1.sh",
+						"bash test2.sh",
+					},
+					Binds: []string{
+						"a:b",
+						"c:d",
+					},
+					Ports: []string{
+						"80:8080",
+					},
+					Env: map[string]string{
+						"env1": "v1",
+						"env2": "v2",
+					},
+					Labels: map[string]string{
+						"label1": "v1",
+						"label2": "v2",
+					},
+					CPU:    2,
+					Memory: "2G",
+					DNS: &DNSConfig{
+						Servers: []string{"1.1.1.1"},
+						Search:  []string{"foo.com"},
+						Options: []string{"someopt"},
+					},
+				},
+			},
+			Nodes: map[string]*NodeDefinition{
+				"node1": {
+					Group: "grp1",
+					Binds: []string{
+						"e:f",
+						"newm:n",
+					},
+				},
+			},
+		},
+		want: map[string]*NodeDefinition{
+			"node1": {
+				Kind:          "srl",
+				Group:         "grp1",
+				Type:          "type1",
+				StartupConfig: "test_data/config.cfg",
+				Image:         "image:latest",
+				License:       "test_data/lic1.key",
+				Position:      "pos1",
+				Cmd:           "runit",
+				User:          "user1",
+				Exec: []string{
+					"bash test1.sh",
+					"bash test2.sh",
+				},
+				Binds: []string{
+					"e:f",
+					"a:b",
+					"c:d",
+					"x:z",
+					"newm:n",
+				},
+				Ports: []string{
+					"80:8080",
+				},
+				Env: map[string]string{
+					"env1": "v1",
+					"env2": "v2",
+				},
+				Labels: map[string]string{
+					"label1": "v1",
+					"label2": "v2",
+				},
+				CPU:    1,
+				Memory: "2G",
+				DNS: &DNSConfig{
+					Servers: []string{"1.1.1.1"},
+					Search:  []string{"foo.com"},
+					Options: []string{"someopt"},
+				},
+				Certificate: &CertificateConfig{
+					Issue: utils.Pointer(false),
+				},
+			},
+		},
+	},
 }
 
 func TestGetNodeKind(t *testing.T) {
