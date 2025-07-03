@@ -16,6 +16,8 @@ fi
 export AWS_ACCESS_KEY_ID
 export AWS_SECRET_ACCESS_KEY
 
+env
+
 echo "Running tests with containerlab binary at $(which ${CLAB_BIN}) path and selected runtime: $1"
 
 COV_DIR=/tmp/clab-tests/coverage
