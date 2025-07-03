@@ -150,11 +150,8 @@ jobs:
   smoke-tests:
     uses: ./.github/workflows/smoke-tests.yml
     with:
-      environment: ci-env
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    secrets: inherit
     needs:
       - file-changes
       - process-gitref

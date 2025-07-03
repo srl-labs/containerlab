@@ -6,21 +6,12 @@ name: smoke-tests
       py_ver:
         required: true
         type: string
-      environment:
-        type: string
-        description: environment to run tests in
-        required: true
-    secrets:
-      AWS_ACCESS_KEY_ID:
-        required: true
-      AWS_SECRET_ACCESS_KEY:
-        required: true
 
 jobs:
   smoke-tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    environment: ${{ inputs.environment }}
+    environment: ci-env
     strategy:
       fail-fast: false
       matrix:
