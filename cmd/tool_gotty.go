@@ -24,6 +24,8 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const gotty string = "gotty"
+
 // Configuration variables for the GoTTY commands
 var (
 	gottyLabName       string
@@ -106,7 +108,7 @@ func init() {
 
 // gottyCmd represents the gotty command container
 var gottyCmd = &cobra.Command{
-	Use:   "gotty",
+	Use:   gotty,
 	Short: "GoTTY web terminal operations",
 	Long:  "Attach or detach GoTTY web terminal containers to labs",
 }
@@ -266,7 +268,7 @@ var gottyAttachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabelsMap(labName, gottyContainerName, owner, "gotty")
+		labelsMap := common.CreateLabelsMap(labName, gottyContainerName, owner, gotty)
 
 		// Create and start GoTTY container
 		log.Infof("Creating GoTTY container %s on network '%s'", gottyContainerName, networkName)
@@ -386,7 +388,7 @@ var gottyListCmd = &cobra.Command{
 				FilterType: "label",
 				Field:      clabels.ToolType,
 				Operator:   "=",
-				Match:      "gotty",
+				Match:      gotty,
 			},
 		}
 
@@ -555,7 +557,7 @@ var gottyReattachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabelsMap(labName, gottyContainerName, owner, "gotty")
+		labelsMap := common.CreateLabelsMap(labName, gottyContainerName, owner, gotty)
 
 		// Create and start GoTTY container
 		log.Infof("Creating new GoTTY container %s on network '%s'", gottyContainerName, networkName)

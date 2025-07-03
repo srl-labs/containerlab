@@ -27,6 +27,8 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
+const sshx string = "sshx"
+
 // Configuration variables for the SSHX commands
 var (
 	sshxLabName       string
@@ -98,7 +100,7 @@ func init() {
 
 // sshxCmd represents the sshx command container
 var sshxCmd = &cobra.Command{
-	Use:   "sshx",
+	Use:   sshx,
 	Short: "SSHX terminal sharing operations",
 	Long:  "Attach or detach SSHX terminal sharing containers to labs",
 }
@@ -259,7 +261,7 @@ var sshxAttachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabelsMap(labName, sshxContainerName, owner, "sshx")
+		labelsMap := common.CreateLabelsMap(labName, sshxContainerName, owner, sshx)
 
 		// Create and start SSHX container
 		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
@@ -380,7 +382,7 @@ var sshxListCmd = &cobra.Command{
 				FilterType: "label",
 				Field:      clabels.ToolType,
 				Operator:   "=",
-				Match:      "sshx",
+				Match:      sshx,
 			},
 		}
 
@@ -533,7 +535,7 @@ var sshxReattachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabelsMap(labName, sshxContainerName, owner, "sshx")
+		labelsMap := common.CreateLabelsMap(labName, sshxContainerName, owner, sshx)
 
 		// Create and start SSHX container
 		log.Infof("Creating new SSHX container %s on network '%s'", sshxContainerName, networkName)
