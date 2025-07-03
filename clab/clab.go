@@ -932,6 +932,50 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	wg.Wait()
 }
 
+func (c *CLab) deleteToolContainers(ctx context.Context) {
+	toolTypes := []string{"sshx", "gotty"}
+
+	for _, toolType := range toolTypes {
+		toolFilter := []*types.GenericFilter{
+			{
+				FilterType: "label",
+				Field:      clabels.ToolType,
+				Operator:   "=",
+				Match:      toolType,
+			},
+			{
+				FilterType: "label",
+				Field:      clabels.Containerlab,
+				Operator:   "=",
+				Match:      c.Config.Name,
+			},
+		}
+
+		containers, err := c.globalRuntime().ListContainers(ctx, toolFilter)
+		if err != nil {
+			log.Error("Failed to list tool containers", "tool", toolType, "error", err)
+			return
+		}
+
+		if len(containers) == 0 {
+			log.Debug("No tool containers found for lab", "tool", toolType, "lab", c.Config.Name)
+			return
+		}
+
+		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab", c.Config.Name, "count", len(containers))
+
+		for _, container := range containers {
+			containerName := strings.TrimPrefix(container.Names[0], "/")
+			log.Info("Removing tool container", "tool", toolType, "container", containerName)
+			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
+				log.Error("Failed to remove tool container", "tool", toolType, "container", containerName, "error", err)
+			} else {
+				log.Info("Tool container removed successfully", "tool", toolType, "container", containerName)
+			}
+		}
+	}
+}
+
 // ListContainers lists all containers using provided filter.
 func (c *CLab) ListContainers(ctx context.Context, filter []*types.GenericFilter) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
@@ -1328,6 +1372,8 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	log.Info("Destroying lab", "name", c.Config.Name)
 	c.deleteNodes(ctx, maxWorkers, serialNodes)
+
+	c.deleteToolContainers(ctx)
 
 	log.Info("Removing host entries", "path", "/etc/hosts")
 	err = c.DeleteEntriesFromHostsFile()

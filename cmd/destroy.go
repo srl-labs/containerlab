@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -193,73 +192,11 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	// Remove any tool containers associated with destroyed labs
-	if !all && len(labs) > 0 {
-		// Get the lab name from the first lab
-		labName := labs[0].Config.Name
-		log.Debugf("Looking for tool containers with lab name: %s", labName)
-
-		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
-		if err == nil {
-			rt := rinit()
-			err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{
-				Timeout: common.Timeout,
-			}))
-
-			if err == nil {
-				// Clean up any tool containers (SSHX, GoTTY, etc.)
-				removeToolContainers(ctx, rt, labName, "sshx")
-				removeToolContainers(ctx, rt, labName, "gotty")
-			}
-		}
-	}
-
 	if len(errs) != 0 {
 		return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
 	}
 
 	return nil
-}
-
-// removeToolContainers removes containers of a specific tool type associated with a lab
-func removeToolContainers(ctx context.Context, rt runtime.ContainerRuntime, labName, toolType string) {
-	toolFilter := []*types.GenericFilter{
-		{
-			FilterType: "label",
-			Field:      labels.ToolType,
-			Operator:   "=",
-			Match:      toolType,
-		},
-		{
-			FilterType: "label",
-			Field:      labels.Containerlab,
-			Operator:   "=",
-			Match:      labName,
-		},
-	}
-
-	containers, err := rt.ListContainers(ctx, toolFilter)
-	if err != nil {
-		log.Warnf("Failed to list %s containers: %v", toolType, err)
-		return
-	}
-
-	if len(containers) == 0 {
-		log.Debugf("No %s containers found for lab %s", toolType, labName)
-		return
-	}
-
-	log.Infof("Found %d %s containers associated with lab %s", len(containers), toolType, labName)
-	for _, container := range containers {
-		containerName := strings.TrimPrefix(container.Names[0], "/")
-		log.Infof("Removing %s container: %s", toolType, containerName)
-		if err := rt.DeleteContainer(ctx, containerName); err != nil {
-			log.Warnf("Failed to remove %s container %s: %v", toolType, containerName, err)
-		} else {
-			log.Infof("%s container %s removed successfully", toolType, containerName)
-		}
-	}
 }
 
 func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
