@@ -302,7 +302,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 
 	// Merge in bridge network driver options from topology file
 	for k, v := range d.mgmt.DriverOpts {
-		log.Debugf("Adding bridge network driver option", "option", k, "value", v)
+		log.Debug("Adding bridge network driver option", "option", k, "value", v)
 		netwOpts[k] = v
 	}
 
