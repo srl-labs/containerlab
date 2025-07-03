@@ -246,26 +246,26 @@ func removeToolContainers(ctx context.Context, rt runtime.ContainerRuntime, labN
 	var errs []error
 	containers, err := rt.ListContainers(ctx, toolFilter)
 	if err != nil {
-		log.Errorf("Failed to list %s containers: %v", toolType, err)
+		log.Error("Failed to list tool containers", "tool", toolType, "error", err)
 		errs = append(errs, err)
 		return errs
 	}
 
 	if len(containers) == 0 {
-		log.Debugf("No %s containers found for lab %s", toolType, labName)
+		log.Debug("No tool containers found for lab", "tool", toolType, "lab", labName)
 		return nil
 	}
 
-	log.Infof("Found %d %s containers associated with lab %s", len(containers), toolType, labName)
+	log.Info("Found tool containers associated with a lab", "tool", toolType, "lab", labName, "count", len(containers))
 
 	for _, container := range containers {
 		containerName := strings.TrimPrefix(container.Names[0], "/")
-		log.Infof("Removing %s container: %s", toolType, containerName)
+		log.Info("Removing tool container", "tool", toolType, "container", containerName)
 		if err := rt.DeleteContainer(ctx, containerName); err != nil {
-			log.Warnf("Failed to remove %s container %s: %v", toolType, containerName, err)
+			log.Warn("Failed to remove tool container", "tool", toolType, "container", containerName, "error", err)
 			errs = append(errs, err)
 		} else {
-			log.Infof("%s container %s removed successfully", toolType, containerName)
+			log.Info("Tool container removed successfully", "tool", toolType, "container", containerName)
 		}
 	}
 
