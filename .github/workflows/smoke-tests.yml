@@ -94,6 +94,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
           FOOBIEST: BAR
         run: |
+          echo $AWS_ACCESS_KEY_ID
+          echo \n\n\n\n
           ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
