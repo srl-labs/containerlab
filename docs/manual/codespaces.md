@@ -5,7 +5,7 @@ comments: true
 
 # Containerlab labs in Codespaces
 
-The best labs are the labs that you can run anywhere, anytime, with a single click and preferrably for free.
+The best labs are the labs that you can run anywhere, anytime, with a single click and preferably for free.
 
 Containerlab commoditized the labbing experience by providing a simple and easy to use tool to create and manage network topologies. But still you have to think a machine to run the lab on.  
 Or, rather, you **had**.
@@ -21,13 +21,13 @@ With Containerlab in Codespaces you can:
 1. Spin up an existing lab with a single click without having to install anything on your local machine.
 2. Start with Containerlab using the cloud IDE provided by Codespaces.
 
-Here is a quick demo how anyone can run the full [SR Linux Streaming Telemetry lab][srl-telemetry-lab] by just clicking on a [link](https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1). It is hard to imagine a more easy and convenient way to run your labs in the cloud.
+Here is a quick demo how anyone can run the full [SR Linux Streaming Telemetry lab][srl-telemetry-lab] by just [clicking on a link](https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1). It is hard to imagine an easier way to run your labs in the cloud.
 
 <video width="100%" controls>
   <source src="https://gitlab.com/rdodin/pics/-/wikis/uploads/b3e83eb56d674a0e967a74e020399e29/srl-tel-sneak.mp4" type="video/mp4">
 </video>
 
-<small>Fancy a full demo? Check out the 17min [:simple-youtube: video](https://www.youtube.com/watch?v=kpmTa9h0I-Q) by Roman. Would you rather straight try it yourself, then [click here](https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1).</small>
+<small>Fancy a full demo? Check out the 17min [:simple-youtube: video](https://www.youtube.com/watch?v=kpmTa9h0I-Q) by Roman. Would you rather straight try it yourself, [please go ahead](https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1).</small>
 
 ### How does it work?
 
@@ -45,13 +45,13 @@ Codespaces environment boots for a couple of minutes, but once it is up and runn
 
 ### Codespaces
 
-As we mentioned, the Codepsaces environment is a VM in the cloud; you can install packages, run other workloads, and use the VM in any way you like, you have the full control of it. What makes Codespaces VM different from a any other VM in the cloud is that it is tightly integrated with GitHub and VS Code, and provides a configurable and ready-to-use environment.
+As we mentioned, the Codespaces environment is a VM in the cloud; you can install packages, run other workloads, and use the VM in any way you like, you have the full control of it. What makes Codespaces VM different from a any other VM in the cloud is that it is tightly integrated with GitHub and VS Code, and provides a configurable and ready-to-use environment.
 
 We said it is free, but it is free to a certain extent, let's dig in.
 
 #### Free plan
 
-The best part about Codespaces is that it has a suitable free tier. GitHub offers **120 cpu-hours/month and 15 GB storage for free**[^7] to all users. This means that you can run a Codespace environment for 120 cpu-hours per month without any charges. This is a compelling offer for those who
+The best part about Codespaces is that it has a suitable free tier. GitHub offers **120 cpu-hours/month and 15 GB storage for free**[^4] to all users. This means that you can run a Codespace environment for 120 cpu-hours per month without any charges. This is a compelling offer for those who
 
 - want to spin up a lab provided by others to get through a tutorial or a demo
 - don't need to run the labs 24/7
@@ -62,7 +62,7 @@ You can select which GitHub machine type you want to use for your project; each 
 <small>By the time of this writing (Jun 2024) the following machine types were available for GitHub users by default and beefier machines can be requested via [GitHub support form](https://support.github.com/contact?tags=rr-general-technical).</small>
 <!-- --8<-- [end:request-beefier] -->
 
-| Machine type | Memory (GB) | Storage (GB) | Run time included in the free tier[^6]<br>(hours/month) |
+| Machine type | Memory (GB) | Storage (GB) | Run time included in the free tier[^5]<br>(hours/month) |
 | ------------ | ----------- | ------------ | ------------------------------------------------------- |
 | 2 core       | 4           | 32           | 60 (2cpu*60h=120 cpu/hours)                             |
 | 4 core       | 8           | 32           | 30                                                      |
@@ -112,10 +112,10 @@ It is always a good idea to periodically check how much of the cpu-hours you've 
 
 ![billing](https://gitlab.com/rdodin/pics/-/wikis/uploads/4bf6eb89bd3b4f2d4b05ecdc3ab22675/image.png){.img-shadow}
 
-The screenshot shows that 10 cpu-hours out of 120 available were consumed in the current month' period and the codespaces environments occupy 8.15 GB of storage out of 15 GB included. So far it is all well within the free tier limits.[^5]
+The screenshot shows that 10 cpu-hours out of 120 available were consumed in the current month' period and the codespaces environments occupy 8.15 GB of storage out of 15 GB included. So far it is all well within the free tier limits.[^6]
 
 /// note
-All users by default have a $0 spending limit[^4], which means that if you exceed the free tier limits, your environments will be stopped and you will **not** be charged. You can change this limit to a higher value if you want to be able to use Codespaces even after you exceed the free tier limits.
+All users by default have a $0 spending limit[^7], which means that if you exceed the free tier limits, your environments will be stopped and you will **not** be charged. You can change this limit to a higher value if you want to be able to use Codespaces even after you exceed the free tier limits.
 ///
 
 To avoid any surprises and lower your anxiety levels, GitHub Codespaces have two important settings that you configure at [github.com/settings/codespaces](https://github.com/settings/codespaces):
@@ -142,7 +142,7 @@ By now you should be willing to try running your labs in Codespaces. To our luck
 
 ```json
 {
-    "image": "ghcr.io/srl-labs/containerlab/clab-devcontainer:0.55.0",
+    "image": "ghcr.io/srl-labs/containerlab/devcontainer-dind-slim:0.68.0",
     "hostRequirements": {
         "cpus": 4, // (1)!
         "memory": "8gb",
@@ -251,18 +251,23 @@ And of course, you can always launch the Codespace using the GitHub UI by clicki
 
 The key pillar behind Codespaces is the Containerlab' Dev Container image that defines the environment in which the lab will run. The Dev Container image is a Docker image that contains all the necessary tools and dependencies to run Containerlab and other tools that you might need in the lab.
 
-The following two files define Containerlab's Dev Container image:
+Containerlab has four devcontainer images that differ in the way the docker is setup and the tools installed (slim and regular variants):
 
-1. [devcontainer.json](https://github.com/srl-labs/containerlab/blob/main/.devcontainer/devcontainer.json) - the Dev Container configuration file that defines how the environment is built, configured and launched.
-2. [Dockerfile](https://github.com/srl-labs/containerlab/blob/main/.devcontainer/Dockerfile) - the Dockerfile that the Dev Container is built from.
+1. Docker in Docker (dind) - is the devcontainer that is meant to contain an isolated docker environment inside the container. This image is **suitable for Codespaces**.
+2. Docker outside of Docker (dood) - is a devcontainer image that mounts the docker socket from the outside, and therefore can reuse the images existing on the host machine. This image is mostly used with [DevPod](../macos.md#devpod).
 
-The resulting Dev Container image contains the following tools and dependencies:
+You will find the devcontainer definition files in [containerlab/.devcontianer](https://github.com/srl-labs/containerlab/tree/main/.devcontainer) directory where:
+
+1. devcontainer.json - the Dev Container configuration file that defines how the environment is built, configured and launched.
+2. Dockerfile and slim.Dockerfile - the Dockerfile files that the Dev Container is built from.
+
+The resulting Dev Container image (in a non-slim variant) contains the following tools and dependencies:
 
 - containerlab binary installed via the deb repository
 - docker in docker setup
 - [gNMIc](https://gnmic.openconfig.net) and [gNOIc](https://gnoic.kmrd.dev) tools
 - Go SDK
-- Python 3 with pyenv
+- Python 3 with `uv`
 - `gh` CLI tool
 - zsh shell with oh-my-zsh configuration
 - VS Code plugins
@@ -299,7 +304,7 @@ grep user: | awk '{print $2}') --password-stdin
 
 [devcontainers-doc]: https://containers.dev/
 [codespaces-doc]: https://github.com/features/codespaces
-[clab-devcontainer]: https://github.com/srl-labs/containerlab/pkgs/container/containerlab%2Fclab-devcontainer
+[clab-devcontainer]: https://github.com/srl-labs/containerlab/pkgs/container/containerlab%2Fdevcontainer-dind-slim
 [billing]: https://github.com/settings/billing/summary
 [codespace-panel]: https://github.com/codespaces
 [srl-telemetry-lab]: https://github.com/srl-labs/srl-telemetry-lab
@@ -307,7 +312,7 @@ grep user: | awk '{print $2}') --password-stdin
 [^1]: Check out the [Dev Container section](#dev-container) to learn more about the Containerlab' Dev Container package.
 [^2]: At the moment of writing, GitHub Codespaces offer 120 cpu-hours/month and 15 GB storage for free to all users. See [here](#free-plan) for more details.
 [^3]: A link points to the codespaces environment and refers a repo with the `.devcontainer` folder that defines the environment. For example: https://codespaces.new/srl-labs/srl-telemetry-lab?quickstart=1
-[^4]: As indicated by the "Montly spending limit" text at the very bottom of the report table.
-[^5]: You can also see message about when the quota reset happens.
-[^6]: The runtime assumes no other environments are running at the same time and storage quota is not exceeded.
-[^7]: The terms of the free plan may be subject to change, consult with the [official documentation](https://docs.github.com/en/billing/managing-billing-for-github-codespaces/about-billing-for-github-codespaces#monthly-included-storage-and-core-hours-for-personal-accounts) for the most recent information.
+[^4]: The terms of the free plan may be subject to change, consult with the [official documentation](https://docs.github.com/en/billing/managing-billing-for-github-codespaces/about-billing-for-github-codespaces#monthly-included-storage-and-core-hours-for-personal-accounts) for the most recent information.
+[^5]: The runtime assumes no other environments are running at the same time and storage quota is not exceeded.
+[^6]: You can also see message about when the quota reset happens.
+[^7]: As indicated by the "Monthly spending limit" text at the very bottom of the report table.
