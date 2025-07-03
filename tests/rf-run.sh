@@ -38,4 +38,4 @@ function get_logname() {
 # activate venv
 source .venv/bin/activate
 
-GOCOVERDIR=${COV_DIR} robot --consolecolors on -r none --variable CLAB_BIN:${CLAB_BIN} --variable runtime:$1 -l ./tests/out/$(get_logname $2)-$1-log --output ./tests/out/$(basename $2)-$1-out.xml $2
+GOCOVERDIR=${COV_DIR} AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" robot --consolecolors on -r none --variable CLAB_BIN:${CLAB_BIN} --variable runtime:$1 -l ./tests/out/$(get_logname $2)-$1-log --output ./tests/out/$(basename $2)-$1-out.xml $2
