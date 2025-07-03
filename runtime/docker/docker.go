@@ -35,6 +35,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -62,9 +63,10 @@ func init() {
 }
 
 type DockerRuntime struct {
-	config runtime.RuntimeConfig
-	Client *dockerC.Client
-	mgmt   *types.MgmtNet
+	config  runtime.RuntimeConfig
+	Client  *dockerC.Client
+	mgmt    *types.MgmtNet
+	version string
 }
 
 func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
@@ -78,6 +80,16 @@ func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 		o(d)
 	}
 	d.config.VerifyLinkParams = links.NewVerifyLinkParams()
+
+	// Retrieve Docker version to determine whether to apply certain overrides
+	dockerVersion, err := d.Client.ServerVersion(context.Background())
+	if err != nil {
+		return err
+	}
+
+	// Needs to be proper SemVer for comparison
+	d.version = "v" + dockerVersion.Version
+
 	return nil
 }
 
@@ -274,6 +286,19 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 
 	if bridgeName != "" {
 		netwOpts["com.docker.network.bridge.name"] = bridgeName
+	}
+
+	// nat-unprotected mode is needed starting in Docker release 28 to access all ports without exposing them explicitly
+	if semver.Compare(d.version, "v28.0.0") > 0 {
+		log.Debug("Using Docker version 28 or later, enabling NAT unprotected mode on bridge")
+		netwOpts["com.docker.network.bridge.gateway_mode_ipv4"] = "nat-unprotected"
+		netwOpts["com.docker.network.bridge.gateway_mode_ipv6"] = "nat-unprotected"
+	}
+
+	// Merge in bridge network driver options from topology file
+	for k, v := range d.mgmt.DriverOpts {
+		log.Debugf("Adding bridge network driver option %s=%s", k, v)
+		netwOpts[k] = v
 	}
 
 	opts := networkapi.CreateOptions{

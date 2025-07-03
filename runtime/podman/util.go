@@ -466,6 +466,13 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 	if r.mgmt.MTU != 0 {
 		options["mtu"] = strconv.Itoa(r.mgmt.MTU)
 	}
+
+	// Merge in bridge network driver options from topology file
+	for k, v := range r.mgmt.DriverOpts {
+		log.Debugf("Adding bridge network driver option %s=%s", k, v)
+		options[k] = v
+	}
+
 	// compile the resulting struct
 	toReturn := netTypes.Network{
 		DNSEnabled:       dnsEnabled,
