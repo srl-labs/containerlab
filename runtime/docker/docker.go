@@ -45,6 +45,10 @@ const (
 	rLimitMaxValue = 1048576
 	// defaultDockerNetwork is a name of a docker network that docker uses by default when creating containers.
 	defaultDockerNetwork = "bridge"
+
+	natUnprotectedValue         = "nat-unprotected"
+	bridgeGatewayModeIPv4Option = "com.docker.network.bridge.gateway_mode_ipv4"
+	bridgeGatewayModeIPv6Option = "com.docker.network.bridge.gateway_mode_ipv6"
 )
 
 // DeviceMapping represents the device mapping between the host and the container.
@@ -289,15 +293,16 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 	}
 
 	// nat-unprotected mode is needed starting in Docker release 28 to access all ports without exposing them explicitly
+	// see https://github.com/srl-labs/containerlab/issues/2638
 	if semver.Compare(d.version, "v28.0.0") > 0 {
 		log.Debug("Using Docker version 28 or later, enabling NAT unprotected mode on bridge")
-		netwOpts["com.docker.network.bridge.gateway_mode_ipv4"] = "nat-unprotected"
-		netwOpts["com.docker.network.bridge.gateway_mode_ipv6"] = "nat-unprotected"
+		netwOpts[bridgeGatewayModeIPv4Option] = natUnprotectedValue
+		netwOpts[bridgeGatewayModeIPv6Option] = natUnprotectedValue
 	}
 
 	// Merge in bridge network driver options from topology file
 	for k, v := range d.mgmt.DriverOpts {
-		log.Debugf("Adding bridge network driver option %s=%s", k, v)
+		log.Debugf("Adding bridge network driver option", "option", k, "value", v)
 		netwOpts[k] = v
 	}
 
