@@ -17,6 +17,7 @@ type Topology struct {
 	Groups   map[string]*NodeDefinition `yaml:"groups,omitempty"`
 }
 
+// NewTopology creates a new Topology instance with initialized fields.
 func NewTopology() *Topology {
 	return &Topology{
 		Defaults: new(NodeDefinition),
@@ -27,6 +28,7 @@ func NewTopology() *Topology {
 	}
 }
 
+// GetDefaults returns the default node definition.
 func (t *Topology) GetDefaults() *NodeDefinition {
 	if t.Defaults != nil {
 		return t.Defaults
@@ -34,6 +36,7 @@ func (t *Topology) GetDefaults() *NodeDefinition {
 	return new(NodeDefinition)
 }
 
+// GetKind returns the node definition for the given kind.
 func (t *Topology) GetKind(kind string) *NodeDefinition {
 	if t.Kinds == nil {
 		return new(NodeDefinition)
@@ -44,6 +47,8 @@ func (t *Topology) GetKind(kind string) *NodeDefinition {
 	return new(NodeDefinition)
 }
 
+// GetKinds returns all kinds defined in the topology.
+// If no kinds are defined, it returns an empty map.
 func (t *Topology) GetKinds() map[string]*NodeDefinition {
 	if t.Kinds == nil {
 		return make(map[string]*NodeDefinition)

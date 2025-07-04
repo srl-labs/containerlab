@@ -85,9 +85,9 @@ type NodeDefinition struct {
 // Interface compliance.
 var _ yaml.Unmarshaler = &NodeDefinition{}
 
-// UnmarshalYAML is a custom unmarshaller for NodeDefinition type that allows to map old attributes to new ones.
+// UnmarshalYAML is a custom unmarshaler for NodeDefinition type that allows to map old attributes to new ones.
 func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
-	// define an alias type to avoid recursion during unmarshalling
+	// define an alias type to avoid recursion during unmarshaling
 	type NodeDefinitionAlias NodeDefinition
 
 	// NodeDefinitionWithDeprecatedFields can contain fields that are deprecated
@@ -405,7 +405,7 @@ func (n *NodeDefinition) GetAliases() []string {
 	return n.Aliases
 }
 
-// ImportEnvs imports all environment variales defined in the shell
+// ImportEnvs imports all environment variables defined in the shell
 // if __IMPORT_ENVS is set to true.
 func (n *NodeDefinition) ImportEnvs() {
 	if n == nil || n.Env == nil {
