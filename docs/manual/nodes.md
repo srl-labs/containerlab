@@ -54,19 +54,39 @@ Other nodes might treat `type` field differently, that will depend on the kind o
 
 ### group
 
-`group` is a freeform string that denotes which group a node belongs to. The grouping is currently only used to sort topology elements on a [graph](../cmd/graph.md#layout-and-sorting).
+`group` is a freeform string that denotes which group a node belongs to. This can be used to inherit values from the [groups](./topo-def-file.md#groups) container.
+
+The grouping is also used to sort topology elements on a [graph](../cmd/graph.md#layout-and-sorting).
+
+The inheritance model is as follows (from most specific to less specific):
+
+```
+node -> group -> kind -> defaults
+```
 
 ### image
 
-The common `image` attribute sets the container image name that will be used to start the node. The image name should be provided in a well-known format of `repository(:tag)`.
+The `image` attribute sets the container image name that the container node will use. The image name should be provided in a well-known format of the `[registry]/repository[:tag]`.
 
-We use `<repository>` image name throughout the docs articles. This means that the image with `<repository>:latest` name will be looked up. A user will need to add the latest tag if they want to use the same loose-tag naming:
+For example, consider the following possible image definitions:
 
-```bash
-# tagging srlinux:20.6.1-286 as srlinux:latest
-# after this change it's possible to use `srlinux:latest` or `srlinux` image name
-docker tag srlinux:20.6.1-286 srlinux:latest
-```
+- `ghcr.io/nokia/srlinux:24.10` where:
+    - registry: `ghcr.io`
+    - repository: `nokia`
+    - image: `srlinux`
+    - tag: `24.10`
+
+- `ghcr.io/nokia/srlinux`, where:
+    - registry: `ghcr.io`
+    - repository: `nokia`
+    - image: `srlinux`
+    - tag: `latest` (default tag, if not specified)
+
+- `alpine:3`, where:
+    - registry: `docker.io` (default registry, if not specified)
+    - repository: `library` (default repository, if not specified)
+    - image: `alpine`
+    - tag: `3`
 
 ### image-pull-policy
 
@@ -174,82 +194,84 @@ topology:
 4. The `~` char will be expanded to a user's home directory.
 5. mount an anonymous volume to a container under `/var/run/somedir` (implicit RW mode)
 
-???info "Bind variables"
-    By default, binds are either provided as an absolute or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
+/// details | Bind variables
+By default, binds are either provided as an absolute or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
 
-    Consider a two-node lab `mylab.clab.yml` with node-specific files, such as state information or additional configuration artifacts. A user could create a directory for such files similar to that:
+Consider a two-node lab `mylab.clab.yml` with node-specific files, such as state information or additional configuration artifacts. A user could create a directory for such files similar to that:
 
-    ```
-    .
-    ├── cfgs
-    │   ├── n1
-    │   │   └── conf
-    │   └── n2
-    │       └── conf
-    └── mylab.clab.yml
+```
+.
+├── cfgs
+│   ├── n1
+│   │   └── conf
+│   └── n2
+│       └── conf
+└── mylab.clab.yml
 
-    3 directories, 3 files
-    ```
+3 directories, 3 files
+```
 
-    Then to mount those files to the nodes, the nodes would have been configured with binds like that:
+Then to mount those files to the nodes, the nodes would have been configured with binds like that:
 
-    ```yaml
-    name: mylab
-    topology:
-      nodes:
-        n1:
-          binds:
-            - cfgs/n1/conf:/conf
-        n2:
-          binds:
-            - cfgs/n2/conf:/conf
-    ```
+```yaml
+name: mylab
+topology:
+  nodes:
+    n1:
+      binds:
+        - cfgs/n1/conf:/conf
+    n2:
+      binds:
+        - cfgs/n2/conf:/conf
+```
 
-    while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can use a special variable `__clabNodeDir__` in their bind paths. This variable will expand to the node-specific directory that containerlab creates for each node.
+while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can use a special variable `__clabNodeDir__` in their bind paths. This variable will expand to the node-specific directory that containerlab creates for each node.
 
-    This means that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
+This means that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
 
-    ```
-    .
-    ├── clab-mylab
-    │   ├── n1
-    │   │   └── conf
-    │   └── n2
-    │       └── conf
-    └── mylab.clab.yml
+```
+.
+├── clab-mylab
+│   ├── n1
+│   │   └── conf
+│   └── n2
+│       └── conf
+└── mylab.clab.yml
 
-    3 directories, 3 files
-    ```
+3 directories, 3 files
+```
 
-    With this structure in place, the clab file can leverage the `__clabNodeDir__` variable:
+With this structure in place, the clab file can leverage the `__clabNodeDir__` variable:
 
-    ```yaml
-    name: mylab
-    topology:
-      nodes:
-        n1:
-          binds:
-            - __clabNodeDir__/conf:/conf
-        n2:
-          binds:
-            - __clabNodeDir__/conf:/conf
-    ```
+```yaml
+name: mylab
+topology:
+  nodes:
+    n1:
+      binds:
+        - __clabNodeDir__/conf:/conf
+    n2:
+      binds:
+        - __clabNodeDir__/conf:/conf
+```
 
-    Notice how `__clabNodeDir__` hides the directory structure and node names and removes the verbosity of the previous approach.
+Notice how `__clabNodeDir__` hides the directory structure and node names and removes the verbosity of the previous approach.
 
-    Another special variable the containerlab topology file can use is `__clabDir__`. In the example above, it would expand into `clab-mylab` folder. With `__clabDir__` variable it becomes convenient to bind files like `ansible-inventory.yml` or `topology-data.json` that containerlab automatically creates:
+Another special variable the containerlab topology file can use is `__clabDir__`. In the example above, it would expand into `clab-mylab` folder. With `__clabDir__` variable it becomes convenient to bind files like `ansible-inventory.yml` or `topology-data.json` that containerlab automatically creates:
 
-    ```yaml
-    name: mylab
-    topology:
-      nodes:
-        ansible:
-          binds:
-            - __clabDir__/ansible-inventory.yml:/ansible-inventory.yml:ro
-        graphite:
-          binds:
-            - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
-    ```
+```yaml
+name: mylab
+topology:
+  nodes:
+    ansible:
+      binds:
+        - __clabDir__/ansible-inventory.yml:/ansible-inventory.yml:ro
+    graphite:
+      binds:
+        - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
+```
+
+///
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
 
