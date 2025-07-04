@@ -30,6 +30,7 @@ import (
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
+	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -340,34 +341,20 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 		}
 	}
 
-	slot := ""
-	var cpmNode nodes.Node
-
-search:
-	for _, cn := range n.componentNodes {
-		switch cn.GetShortName()[len(cn.GetShortName())-1:] {
-		case "A":
-			slot = "A"
-			cpmNode = cn
-			// now we can break because the slot A is preffered, does not matter if B also exists
-			break search
-		case "B":
-			slot = "B"
-			cpmNode = cn
-			// we continue searching, because we prefere slot A
-		}
-	}
-	// if no Slot A or B found we have an issue
-	if slot == "" {
-		return fmt.Errorf("no cpm cards found for %s", n.GetShortName())
+	cpmSlot, err := n.cpmSlot()
+	if err != nil {
+		return err
 	}
 
 	// adjust general node to be represented as the cpm node
-	n.Cfg.ShortName = fmt.Sprintf("%s-%s", n.Cfg.ShortName, slot)
-	n.Cfg.LongName = fmt.Sprintf("%s-%s", n.Cfg.LongName, slot)
+	n.Cfg.ShortName = n.calcComponentName(n.Cfg.ShortName, cpmSlot)
+	n.Cfg.LongName = n.calcComponentName(n.Cfg.LongName, cpmSlot)
+	n.Cfg.Fqdn = n.calcComponentFqdn(cpmSlot)
 
-	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
-	n.Cfg.Fqdn = fmt.Sprintf("%s-%s%s", n.Cfg.Fqdn[:fqdnDotIndex], slot, n.Cfg.Fqdn[fqdnDotIndex:])
+	cpmNode, err := n.cpmNode()
+	if err != nil {
+		return err
+	}
 
 	// adjust also the mgmt IP addresses of the general node
 	contList, err := cpmNode.GetContainers(ctx)
@@ -378,6 +365,51 @@ search:
 	n.Cfg.MgmtIPv6Address = contList[0].GetContainerIPv6()
 
 	return nil
+}
+
+func (_ *sros) calcComponentName(name, slot string) string {
+	return fmt.Sprintf("%s-%s", name, slot)
+}
+
+func (n *sros) calcComponentFqdn(slot string) string {
+	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
+	result := fmt.Sprintf("%s-%s%s", n.Cfg.Fqdn[:fqdnDotIndex], slot, n.Cfg.Fqdn[fqdnDotIndex:])
+	return result
+}
+
+func (n *sros) cpmNode() (nodes.Node, error) {
+	defaultSlot, err := n.cpmSlot()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, cn := range n.componentNodes {
+		if cn.GetShortName()[len(cn.GetShortName())-1:] == defaultSlot {
+			return cn, nil
+		}
+	}
+	return nil, fmt.Errorf("Node %s: node for slot %s not found", n.GetShortName(), defaultSlot)
+}
+
+func (n *sros) cpmSlot() (string, error) {
+	slot := ""
+
+search:
+	for _, comp := range n.Cfg.Components {
+		switch comp.Slot {
+		case "A":
+			slot = "A"
+			// now we can break because the slot A is preffered, does not matter if B also exists
+			break search
+		case "B":
+			slot = "B"
+			// we continue searching, because we prefere slot A
+		}
+	}
+	if slot == "" {
+		return "", fmt.Errorf("Node %s: unable to determine default slot", n.GetShortName())
+	}
+	return slot, nil
 }
 
 func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) error {
@@ -718,6 +750,37 @@ func (n *sros) addPartialConfig() error {
 		}
 	}
 	return nil
+}
+
+func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
+
+	// if not a distributed setup call regular GetContainers
+	if len(n.Cfg.Components) <= 1 {
+		return n.DefaultNode.GetContainers(ctx)
+	}
+
+	cpmSlot, err := n.cpmSlot()
+	if err != nil {
+		return nil, err
+	}
+	containerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
+
+	cnts, err := n.Runtime.ListContainers(ctx, []*types.GenericFilter{
+		{
+			FilterType: "name",
+			Match:      containerName,
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	// check that we retrieved some container information
+	// otherwise throw ErrContainersNotFound error
+	if len(cnts) == 0 {
+		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(), nodes.ErrContainersNotFound)
+	}
+
+	return cnts, err
 }
 
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
