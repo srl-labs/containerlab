@@ -138,3 +138,119 @@ func TestIsHttpURL(t *testing.T) {
 		})
 	}
 }
+
+func TestIsS3URL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "Valid S3 URL",
+			url:  "s3://bucket/key/to/file.yaml",
+			want: true,
+		},
+		{
+			name: "Valid S3 URL with subdirectories",
+			url:  "s3://my-bucket/path/to/deep/file.cfg",
+			want: true,
+		},
+		{
+			name: "HTTP URL should not match",
+			url:  "https://example.com/file.yaml",
+			want: false,
+		},
+		{
+			name: "Local file path should not match",
+			url:  "/path/to/file.yaml",
+			want: false,
+		},
+		{
+			name: "Empty string should not match",
+			url:  "",
+			want: false,
+		},
+		{
+			name: "S3 without bucket/key should match",
+			url:  "s3://",
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsS3URL(tt.url); got != tt.want {
+				t.Errorf("IsS3URL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseS3URL(t *testing.T) {
+	tests := []struct {
+		name       string
+		s3URL      string
+		wantBucket string
+		wantKey    string
+		wantErr    bool
+	}{
+		{
+			name:       "Valid S3 URL",
+			s3URL:      "s3://my-bucket/path/to/file.yaml",
+			wantBucket: "my-bucket",
+			wantKey:    "path/to/file.yaml",
+			wantErr:    false,
+		},
+		{
+			name:       "Valid S3 URL with single file",
+			s3URL:      "s3://bucket/file.cfg",
+			wantBucket: "bucket",
+			wantKey:    "file.cfg",
+			wantErr:    false,
+		},
+		{
+			name:       "Invalid - not an S3 URL",
+			s3URL:      "https://example.com/file",
+			wantBucket: "",
+			wantKey:    "",
+			wantErr:    true,
+		},
+		{
+			name:       "Invalid - missing bucket",
+			s3URL:      "s3:///file.yaml",
+			wantBucket: "",
+			wantKey:    "",
+			wantErr:    true,
+		},
+		{
+			name:       "Invalid - missing key",
+			s3URL:      "s3://bucket/",
+			wantBucket: "",
+			wantKey:    "",
+			wantErr:    true,
+		},
+		{
+			name:       "Invalid - missing both bucket and key",
+			s3URL:      "s3://",
+			wantBucket: "",
+			wantKey:    "",
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotBucket, gotKey, err := ParseS3URL(tt.s3URL)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseS3URL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotBucket != tt.wantBucket {
+				t.Errorf("ParseS3URL() gotBucket = %v, want %v", gotBucket, tt.wantBucket)
+			}
+			if gotKey != tt.wantKey {
+				t.Errorf("ParseS3URL() gotKey = %v, want %v", gotKey, tt.wantKey)
+			}
+		})
+	}
+}

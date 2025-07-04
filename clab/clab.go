@@ -271,7 +271,7 @@ func WithTopoFromLab(labName string) ClabOption {
 }
 
 // ProcessTopoPath takes a topology path, which might be the path to a directory or a file
-// or stdin or a URL and returns the topology file name if found.
+// or stdin or a URL (HTTP/HTTPS/S3) and returns the topology file name if found.
 func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	var file string
 	var err error
@@ -286,6 +286,13 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	// if the path is not a local file and a URL, download the file and store it in the tmp dir
 	case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
 		log.Debugf("interpreting topo %q as remote URL", path)
+		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
+		if err != nil {
+			return "", err
+		}
+	// if the path is an S3 URL, download the file and store it in the tmp dir
+	case utils.IsS3URL(path):
+		log.Debugf("interpreting topo %q as S3 URL", path)
 		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
