@@ -30,7 +30,27 @@ If more than one file is found for directory-based path or when the flag is omit
 
 The local `--format` flag enables different output stylings. By default the table view will be used.
 
-Currently, the only other format option is `json` that will produce the output in the JSON format.
+Available format options are:
+
+- `json` - outputs the inspect data in JSON format
+- `csv` - outputs the inspect data as comma-separated values.
+
+The data is provided in the context of a container that belongs to a containerlab lab. Both output formats will provide you with the following data:
+
+| Field          | Description                                                                                              |
+|----------------|----------------------------------------------------------------------------------------------------------|
+| `lab_name`     | The name of the lab.                                                                                     |
+| `labPath`      | The relative path to the lab topology file.                                                              |
+| `absLabPath`   | The absolute path to the lab topology file.                                                              |
+| `name`         | The name of the container.                                                                               |
+| `container_id` | The unique ID of the container.                                                                          |
+| `image`        | The container's [image](../../manual/nodes.md#image).                                                    |
+| `kind`         | The container's [kind](../../manual/nodes.md#kind).                                                      |
+| `state`        | The container's state. ie. `created`, `restarting`, `running`, `removing`, `paused`, `exited`, or `dead` |
+| `status`       | The health status of the container. ie `starting`, `unhealthy`, `up` or `exited`.                        |
+| `ipv4_address` | The [IPv4 management address](../../manual/nodes#mgmt-ipv4) of the container.                            |
+| `ipv6_address` | The [IPv6 management address](../../manual/nodes#mgmt_ipv6) of the container.                            |
+| `owner`        | The [owner](../deploy#owner) of the lab.                                                                 |
 
 #### details
 
@@ -136,4 +156,15 @@ clab inspect --all --wide
     }
   ]
 }
+```
+
+#### Provide information about a specific running lab in csv format
+
+```bash
+❯ containerlab inspect --name vlan -f csv
+lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner
+vlan,srlinux-vlan-handling-lab/vlan.clab.yml,/root/srlinux-vlan-handling-lab/vlan.clab.yml,clab-vlan-client1,4a60ed6861ec,ghcr.io/srl-labs/alpine,linux,running,Up 47 seconds,172.20.20.7/24,3fff:172:20:20::7/64,root
+vlan,srlinux-vlan-handling-lab/vlan.clab.yml,/root/srlinux-vlan-handling-lab/vlan.clab.yml,clab-vlan-client2,77b34781d62e,ghcr.io/srl-labs/alpine,linux,running,Up 47 seconds,172.20.20.8/24,3fff:172:20:20::8/64,root
+vlan,srlinux-vlan-handling-lab/vlan.clab.yml,/root/srlinux-vlan-handling-lab/vlan.clab.yml,clab-vlan-srl1,2cedee35c8a2,ghcr.io/nokia/srlinux:24.10.1,nokia_srlinux,running,Up 47 seconds,172.20.20.6/24,3fff:172:20:20::6/64,root
+vlan,srlinux-vlan-handling-lab/vlan.clab.yml,/root/srlinux-vlan-handling-lab/vlan.clab.yml,clab-vlan-srl2,c8c66491e10c,ghcr.io/nokia/srlinux:24.10.1,nokia_srlinux,running,Up 47 seconds,172.20.20.9/24,3fff:172:20:20::9/64,root
 ```
