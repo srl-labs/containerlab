@@ -1,6 +1,6 @@
 Containerlab builds labs based on the topology information that users pass to it. This topology information is expressed as a code contained in the _topology definition file_ which structure is the prime focus of this document.
 
-<div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:4,&quot;zoom&quot;:1,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
+-{{diagram(url='srl-labs/containerlab/diagrams/containerlab.drawio', page='4', title='', zoom='1.5')}}-
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
@@ -382,7 +382,11 @@ Such interfaces are useful for testing and debugging purposes where we want to m
 
 It is useful to organise your topology, especially in cases where nodes of the same kind may require differing properties such as `type` or image version.
 
-Values inherited from `groups` will take precendence over `kinds` and `defaults`.
+Values inherited from `groups` will take precedence over `kinds` and `defaults`. In other words, the inheritance model is as follows (from most specific to less specific):
+
+```
+node -> group -> kind -> defaults
+```
 
 For example, the We create separate groups for debian and alpine clients, as well as a group for spines where the nodes will be of type `ixrd3l`.
 
@@ -420,9 +424,9 @@ topology:
 Now with the above example, we can notice:
 
 - The client nodes in the `alpine-clients` group will be `linux` kind and run the `alpine` image.
-- The client nodes in the `debian-clients` group will be `linux` kind and run the `debian` image. 
+- The client nodes in the `debian-clients` group will be `linux` kind and run the `debian` image.
 - The nodes in the `spines` group will be `ixrd3l` chassis, but still inherit the kind and image from defaults.
-- The `srl3` and `srl4` don't belong to any group, so they will inerit their properties from the `defaults`.
+- The `srl3` and `srl4` don't belong to any group, so they will inherit their properties from the `defaults`.
 
 #### Kinds
 
