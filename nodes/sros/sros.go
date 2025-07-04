@@ -27,6 +27,7 @@ import (
 
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
@@ -272,7 +273,6 @@ func (n *sros) Delete(ctx context.Context) error {
 	if !n.isDistributed() {
 		return n.Runtime.DeleteContainer(ctx, n.GetContainerName())
 	}
-
 	// if distributed, delete endpoints as does the DefaultNode implementation
 	for _, e := range n.Endpoints {
 		err := e.GetLink().Remove(ctx)
@@ -339,6 +339,13 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 		componentConfig.Env["NOKIA_SROS_SLOT"] = c.Slot
 		componentConfig.Env["NOKIA_SROS_CHASSIS"] = n.Cfg.NodeType
 		componentConfig.Env["NOKIA_SROS_SYSTEM_BASE_MAC"] = systemMac.MAC
+
+		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.NodeName)] = componentConfig.ShortName
+		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.LongName)] = componentConfig.LongName
+
+		// adjust labels
+		componentConfig.Labels[labels.NodeName] = componentConfig.ShortName
+		componentConfig.Labels[labels.LongName] = componentConfig.LongName
 
 		// init the component
 		err = componentNode.Init(componentConfig)
