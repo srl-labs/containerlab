@@ -53,12 +53,12 @@ func (t *Topology) GetKinds() map[string]*NodeDefinition {
 
 func (t *Topology) GetGroup(group string) *NodeDefinition {
 	if t.Groups == nil {
-		return new(NodeDefinition)
+		return nil
 	}
 	if gdef, ok := t.Groups[group]; ok {
 		return gdef
 	}
-	return new(NodeDefinition)
+	return nil
 }
 
 func (t *Topology) GetGroups() map[string]*NodeDefinition {
@@ -85,7 +85,7 @@ func (t *Topology) GetNodeKind(name string) string {
 				return k
 			}
 		}
-		// if no node kind is set, there is no way for us to look up the kind in the kind ... obviousely
+		// if no node kind is set, there is no way for us to look up the kind in the kind
 	}
 	return t.GetDefaults().GetKind()
 }
