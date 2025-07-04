@@ -29,6 +29,7 @@ import (
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -132,7 +133,8 @@ type sros struct {
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// software version SR-OS x node runs
-	swVersion *SrosVersion
+	swVersion      *SrosVersion
+	componentNodes []nodes.Node
 }
 
 func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -272,6 +274,134 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	return nil
 }
 
+func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployParams) error {
+	// Registry, because it is not a package Var
+	nr := nodes.NewNodeRegistry()
+	Register(nr)
+
+	// generate a system mac
+	systemMac := genMac(n.Cfg)
+
+	// loop through the components, creating them
+	for idx, c := range n.Cfg.Components {
+		// instantiate a new nokia_srsim instance
+		componentNode, err := nr.NewNodeOfKind("nokia_srsim")
+		if err != nil {
+			return err
+		}
+
+		// copy the original nodes NodeConfig
+		componentConfig := n.Cfg.Copy()
+
+		// the first node will create the namespace, so NetworkMode remains unchanged.
+		// all consecutive need to be attached to specifically that Namespace via NetworkMode
+		if idx > 0 {
+			componentConfig.NetworkMode = fmt.Sprintf("container:%s", n.componentNodes[0].GetShortName())
+		}
+
+		// adjust the config values from the original node
+		componentConfig.ShortName = fmt.Sprintf("%s-%s", componentConfig.ShortName, c.Slot)
+		componentConfig.LongName = fmt.Sprintf("%s-%s", componentConfig.LongName, c.Slot)
+		componentConfig.NodeType = n.Cfg.NodeType
+		componentConfig.Components = nil
+		fqdnDotIndex := strings.Index(componentConfig.Fqdn, ".")
+		componentConfig.Fqdn = fmt.Sprintf("%s-%s%s", componentConfig.Fqdn[:fqdnDotIndex], c.Slot, componentConfig.Fqdn[fqdnDotIndex:])
+		componentConfig.DNS = nil
+		componentConfig.Binds = nil
+
+		// add the component env to the componentConfig env
+		for k, v := range c.Env {
+			componentConfig.Env[k] = v
+		}
+
+		// set the type var if type is set
+		if c.Type != "" {
+			componentConfig.Env["NOKIA_SROS_CARD"] = c.Type
+		}
+
+		componentConfig.Env["NOKIA_SROS_SLOT"] = c.Slot
+		componentConfig.Env["NOKIA_SROS_CHASSIS"] = n.Cfg.NodeType
+		componentConfig.Env["NOKIA_SROS_SYSTEM_BASE_MAC"] = systemMac.MAC
+
+		// init the component
+		err = componentNode.Init(componentConfig)
+		if err != nil {
+			return err
+		}
+		// store the node in the componentNodes
+		n.componentNodes = append(n.componentNodes, componentNode)
+		// set the runtime by copying it from the general node
+		componentNode.WithRuntime(n.GetRuntime())
+
+		// deploy the component
+		err = componentNode.Deploy(ctx, deployParams)
+		if err != nil {
+			return err
+		}
+	}
+
+	slot := ""
+	var cpmNode nodes.Node
+
+search:
+	for _, cn := range n.componentNodes {
+		switch cn.GetShortName()[len(cn.GetShortName())-1:] {
+		case "A":
+			slot = "A"
+			cpmNode = cn
+			// now we can break because the slot A is preffered, does not matter if B also exists
+			break search
+		case "B":
+			slot = "B"
+			cpmNode = cn
+			// we continue searching, because we prefere slot A
+		}
+	}
+	// if no Slot A or B found we have an issue
+	if slot == "" {
+		return fmt.Errorf("no cpm cards found for %s", n.GetShortName())
+	}
+
+	// adjust general node to be represented as the cpm node
+	n.Cfg.ShortName = fmt.Sprintf("%s-%s", n.Cfg.ShortName, slot)
+	n.Cfg.LongName = fmt.Sprintf("%s-%s", n.Cfg.LongName, slot)
+
+	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
+	n.Cfg.Fqdn = fmt.Sprintf("%s-%s%s", n.Cfg.Fqdn[:fqdnDotIndex], slot, n.Cfg.Fqdn[fqdnDotIndex:])
+
+	// adjust also the mgmt IP addresses of the general node
+	contList, err := cpmNode.GetContainers(ctx)
+	if err != nil {
+		return err
+	}
+	n.Cfg.MgmtIPv4Address = contList[0].GetContainerIPv4()
+	n.Cfg.MgmtIPv6Address = contList[0].GetContainerIPv6()
+
+	return nil
+}
+
+func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) error {
+	// if it is a chassis with multiple cards
+	if len(n.Cfg.Components) > 1 {
+		err := n.deploy_fabric(ctx, deployParams)
+		if err != nil {
+			return err
+		}
+
+		// Update the nodes state
+		n.SetState(state.Deployed)
+		return nil
+	}
+
+	// if it is a regular node
+	err := n.DefaultNode.Deploy(ctx, deployParams)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Ready returns when the node boot sequence reached the stage when it is ready to accept config commands
 // returns an error if not ready by the expiry of the timer readyTimeout.
 func (n *sros) Ready(ctx context.Context) error {
@@ -329,14 +459,14 @@ func (*sros) checkKernelVersion() error {
 	return nil
 }
 
-func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
+func (n *sros) CheckDeploymentConditions(ctx context.Context, nodes map[string]nodes.Node) error {
 	// perform the sros specific kernel version check
 	err := n.checkKernelVersion()
 	if err != nil {
 		return err
 	}
 
-	return n.DefaultNode.CheckDeploymentConditions(ctx)
+	return n.DefaultNode.CheckDeploymentConditions(ctx, nodes)
 }
 
 func (n *sros) createSROSFiles() error {
@@ -580,8 +710,13 @@ func (n *sros) addPartialConfig() error {
 			if configContent.Len() == 0 {
 				log.Warnf("Buffer empty for PARTIAL config, Not parsed template data for node %q", n.Cfg.ShortName)
 			} else {
-				log.Debugf("Node %q additional PARTIAL config:\n%s", n.Cfg.ShortName, configContent.String())
-				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
+				log.Debugf("%s: not yet ready - %v", addr, err)
+				time.Sleep(5 * time.Second) // cool-off period
+				if strings.Contains(err.Error(), "ssh: handshake failed: ssh: unable to authenticate") {
+					// Handle authentication error
+					return fmt.Errorf("cannot apply partial config due to authentication failed, check the password: %w", err)
+				}
+
 			}
 		} else {
 			log.Warnf("Passed startup-config option but it will not have any effect for node %q", n.Cfg.ShortName)
@@ -676,9 +811,14 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 
 	log.Infof("saved %q running configuration\n", s.Cfg.LongName)
 
-	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
-	}
+	// if err != nil {
+	// 	return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
+	// }
+	// if len(execResult.GetStdErrString()) > 0 {
+	// 	return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, execResult.GetStdErrString())
+	// }
+
+	log.Infof("saved SR OS configuration from %s node", s.Cfg.ShortName)
 
 	return nil
 }
@@ -688,7 +828,12 @@ func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
-// Func that checks the Health status of a node
+// // nodeConfigExists returns true if a file at <labdir>/<node>/config/config.cfg exists.
+//
+//	func nodeConfigExists(labDir string) bool {
+//		_, err := os.Stat(filepath.Join(labDir, configCf3, startupCfgFName))
+//		return err == nil
+//	}
 func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
 	if !isCPM(n, "") {
 		return true, fmt.Errorf("node %q is not a CPM, healthcheck has no effect", n.Cfg.LongName)

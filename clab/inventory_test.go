@@ -5,6 +5,7 @@
 package clab
 
 import (
+	"os"
 	"strings"
 	"testing"
 

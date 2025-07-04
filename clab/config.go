@@ -205,6 +205,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
 		Aliases:         c.Config.Topology.GetNodeAliases(nodeName),
+		Components:      c.Config.Topology.GetComponents(nodeName),
 	}
 	var err error
 
@@ -325,7 +326,7 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 	for _, node := range c.Nodes {
-		err := node.CheckDeploymentConditions(ctx)
+		err := node.CheckDeploymentConditions(ctx, c.Nodes)
 		if err != nil {
 			return err
 		}

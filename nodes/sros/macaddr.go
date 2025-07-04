@@ -27,7 +27,6 @@ func genMac(cfg *types.NodeConfig) mac {
 
 	// set system Mac in NodeConfig
 	cfg.MacAddress = m
-	// fmt.Printf("MAC: %s", m)
 	return mac{
 		MAC: m,
 	}

@@ -97,7 +97,7 @@ func (d *DefaultNode) SaveConfig(_ context.Context) error {
 
 // CheckDeploymentConditions wraps individual functions that check if a node
 // satisfies deployment requirements.
-func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
+func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context, nodes map[string]Node) error {
 	err := d.OverwriteNode.VerifyHostRequirements()
 	if err != nil {
 		return err
@@ -554,7 +554,11 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 
 func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve nodes nspath
+<<<<<<< HEAD
 	nsp, err := d.OverwriteNode.GetNSPath(ctx)
+=======
+	nsp, err := d.GetNSPath(ctx)
+>>>>>>> 983e12b8 (introduce components and process them in sros kind)
 	if err != nil {
 		return err
 	}
