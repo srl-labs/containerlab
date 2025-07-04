@@ -136,6 +136,10 @@ type sros struct {
 	// software version SR-OS x node runs
 	swVersion      *SrosVersion
 	componentNodes []nodes.Node
+	// in distributed mode we rename the Cfg.LongName and Cfg.Shortname and Cfg.Fqdn attributes when deploying.
+	// e.g. inspect is either called after deploy or independently. Hence we need to differentiate if we need to perform the
+	// component cpm based rename or not. This field indicates just that
+	renameDone bool
 }
 
 func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -350,6 +354,7 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 	n.Cfg.ShortName = n.calcComponentName(n.Cfg.ShortName, cpmSlot)
 	n.Cfg.LongName = n.calcComponentName(n.Cfg.LongName, cpmSlot)
 	n.Cfg.Fqdn = n.calcComponentFqdn(cpmSlot)
+	n.renameDone = true
 
 	cpmNode, err := n.cpmNode()
 	if err != nil {
@@ -367,11 +372,39 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 	return nil
 }
 
-func (_ *sros) calcComponentName(name, slot string) string {
+func (n *sros) isDistributed() bool {
+	return len(n.Cfg.Components) > 1
+}
+
+func (n *sros) GetNSPath(ctx context.Context) (string, error) {
+	if !n.isDistributed() {
+		return n.DefaultNode.GetNSPath(ctx)
+	}
+	// calculate cpm container name
+	cpmSlot, err := n.cpmSlot()
+	if err != nil {
+		return "", err
+	}
+	cpmContainerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
+	nsp, err := n.Runtime.GetNSPath(ctx, cpmContainerName)
+	if err != nil {
+		log.Errorf("Unable to determine NetNS Path for node %s: %v", n.Cfg.ShortName, err)
+		return "", err
+	}
+	return nsp, err
+}
+
+func (n *sros) calcComponentName(name, slot string) string {
+	if n.renameDone {
+		return name
+	}
 	return fmt.Sprintf("%s-%s", name, slot)
 }
 
 func (n *sros) calcComponentFqdn(slot string) string {
+	if n.renameDone {
+		return n.Cfg.Fqdn
+	}
 	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
 	result := fmt.Sprintf("%s-%s%s", n.Cfg.Fqdn[:fqdnDotIndex], slot, n.Cfg.Fqdn[fqdnDotIndex:])
 	return result
@@ -927,15 +960,16 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 
 // Functions that tries to do a DNS lookup to resolve the IP for the container, in case it doesn't find it, it returns the address associated with the data structure of the container
 func ResolveClabContainer(s *sros) (string, error) {
-	if _, err := net.LookupHost(s.Cfg.LongName); err != nil {
-		if s.Cfg.MgmtIPv6Address != "" {
-			return s.Cfg.MgmtIPv6Address, nil
-		} else if s.Cfg.MgmtIPv4Address != "" {
-			return s.Cfg.MgmtIPv4Address, nil
-		} else {
-			return s.Cfg.LongName, err
-		}
+	// if _, err := net.LookupHost(s.Cfg.LongName); err != nil {
+	if s.Cfg.MgmtIPv4Address != "" {
+		return s.Cfg.MgmtIPv4Address, nil
+	} else if s.Cfg.MgmtIPv6Address != "" {
+		return s.Cfg.MgmtIPv6Address, nil
 	} else {
-		return s.Cfg.LongName, nil
+		// return s.Cfg.LongName, err
+		return s.Cfg.LongName, fmt.Errorf("")
 	}
+	// } else {
+	// 	return s.Cfg.LongName, nil
+	// }
 }

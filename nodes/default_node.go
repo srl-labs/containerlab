@@ -555,10 +555,14 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve nodes nspath
 <<<<<<< HEAD
+<<<<<<< HEAD
 	nsp, err := d.OverwriteNode.GetNSPath(ctx)
 =======
 	nsp, err := d.GetNSPath(ctx)
 >>>>>>> 983e12b8 (introduce components and process them in sros kind)
+=======
+	nsp, err := d.OverwriteNode.GetNSPath(ctx)
+>>>>>>> 350b9895 (fix node rename)
 	if err != nil {
 		return err
 	}
