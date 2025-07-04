@@ -279,6 +279,29 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	return nil
 }
 
+func (n *sros) Delete(ctx context.Context) error {
+	// if not distributed, follow default node implementation
+	if !n.isDistributed() {
+		return n.Runtime.DeleteContainer(ctx, n.GetContainerName())
+	}
+
+	// if distributed, delete endpoints as does the DefaultNode implementation
+	for _, e := range n.Endpoints {
+		err := e.GetLink().Remove(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	// Delete all the component containers
+	for _, components := range n.Cfg.Components {
+		err := n.Runtime.DeleteContainer(ctx, n.calcComponentName(n.GetContainerName(), components.Slot))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployParams) error {
 	// Registry, because it is not a package Var
 	nr := nodes.NewNodeRegistry()
@@ -447,7 +470,7 @@ search:
 
 func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) error {
 	// if it is a chassis with multiple cards
-	if len(n.Cfg.Components) > 1 {
+	if n.isDistributed() {
 		err := n.deploy_fabric(ctx, deployParams)
 		if err != nil {
 			return err
