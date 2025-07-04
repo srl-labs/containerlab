@@ -710,13 +710,8 @@ func (n *sros) addPartialConfig() error {
 			if configContent.Len() == 0 {
 				log.Warnf("Buffer empty for PARTIAL config, Not parsed template data for node %q", n.Cfg.ShortName)
 			} else {
-				log.Debugf("%s: not yet ready - %v", addr, err)
-				time.Sleep(5 * time.Second) // cool-off period
-				if strings.Contains(err.Error(), "ssh: handshake failed: ssh: unable to authenticate") {
-					// Handle authentication error
-					return fmt.Errorf("cannot apply partial config due to authentication failed, check the password: %w", err)
-				}
-
+				log.Debugf("Node %q additional PARTIAL config:\n%s", n.Cfg.ShortName, configContent.String())
+				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
 			}
 		} else {
 			log.Warnf("Passed startup-config option but it will not have any effect for node %q", n.Cfg.ShortName)
