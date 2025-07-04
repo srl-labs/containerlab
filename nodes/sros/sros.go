@@ -340,6 +340,7 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 		componentConfig.Env["NOKIA_SROS_CHASSIS"] = n.Cfg.NodeType
 		componentConfig.Env["NOKIA_SROS_SYSTEM_BASE_MAC"] = systemMac.MAC
 
+		// adjust label based env vars
 		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.NodeName)] = componentConfig.ShortName
 		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.LongName)] = componentConfig.LongName
 
