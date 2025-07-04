@@ -235,6 +235,52 @@ Inspect Lab Using Details Flag
     Should Be Equal As Integers    ${ipv4_check[0]}    0
     Should Contain    ${ipv4_check[1]}    172.20.20.100
 
+Inspect Lab Using CSV Format
+    [Documentation]    Verify inspect command with CSV format output using topology file.
+    # Run inspect command with CSV format
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --format csv
+    ...    shell=True
+    Log    ${output}
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Not Be Empty    ${output.stdout}
+
+    # Save CSV to aa temp file for processing
+    Create File    /tmp/clab_output.csv    ${output.stdout}
+
+    # Check the number of nodes
+    ${count_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.csv | wc -l
+    Log    ${count_check}
+    Should Be Equal As Integers    ${count_check[0]}    0
+    Should Contain    ${count_check[1]}    3
+
+    # Check node name
+    ${name_check} =    Run And Return Rc And Output
+    ...    awk -F',' 'NR==2 { print $4 }' /tmp/clab_output.csv
+    Log    ${name_check}
+    Should Be Equal As Integers    ${name_check[0]}    0
+    Should Contain    ${name_check[1]}    clab-${lab-name}-l1
+
+    # Check node kind
+    ${kind_check} =    Run And Return Rc And Output
+    ...    awk -F',' 'NR==2 { print $7 }' /tmp/clab_output.csv
+    Log    ${kind_check}
+    Should Be Equal As Integers    ${kind_check[0]}    0
+    Should Contain    ${kind_check[1]}    linux
+
+    # Skip IPv4 check for Podman
+    Skip If    '${runtime}' == 'podman'    Skipping IPv4 check for Podman
+
+    # Check IPv4 address
+    ${ip_check} =    Run And Return Rc And Output
+    ...    awk -F',' 'NR==3 { print $10 }' /tmp/clab_output.csv
+    Log    ${ip_check}
+    Should Be Equal As Integers    ${ip_check[0]}    0
+    Should Contain    ${ip_check[1]}    ${n2-ipv4}
+
 Define runtime exec command
     IF    "${runtime}" == "podman"
         Set Suite Variable    ${runtime-cli-exec-cmd}    sudo podman exec

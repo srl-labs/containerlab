@@ -44,7 +44,7 @@ var InspectCmd = &cobra.Command{
 func init() {
 	InspectCmd.Flags().BoolVarP(&details, "details", "", false,
 		"print all details of lab containers (JSON format, grouped by lab)")
-	InspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json]")
+	InspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json, csv]")
 	InspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
 	InspectCmd.Flags().BoolVarP(&wide, "wide", "w", false,
 		"also more details about a lab and its nodes")
@@ -56,8 +56,8 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// Format validation (only relevant if --details is NOT used)
-	if !details && inspectFormat != "table" && inspectFormat != "json" {
-		return fmt.Errorf("output format %q is not supported when --details is not used, use 'table' or 'json'", inspectFormat)
+	if !details && inspectFormat != "table" && inspectFormat != "json" && inspectFormat != "csv" {
+		return fmt.Errorf("output format %q is not supported when --details is not used, use 'table', 'json' or 'csv'", inspectFormat)
 	}
 	// If --details is used, the format is implicitly JSON.
 	if details {
@@ -103,9 +103,12 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 
 	// Handle empty results
 	if len(containers) == 0 {
-		if inspectFormat == "json" {
+		switch inspectFormat {
+		case "json":
 			fmt.Println("{}")
-		} else { // Table format
+		case "csv":
+			fmt.Println("lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner")
+		default: // Table format
 			log.Info("no containers found")
 		}
 		return err
@@ -391,7 +394,28 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 		table.AppendRows(tabData)
 		table.Render()
 		return nil
+
+	case "csv":
+		csv := "lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner\n"
+		for _, cd := range contDetails {
+			csv += fmt.Sprintf("%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
+				cd.LabName,
+				cd.LabPath,
+				cd.AbsLabPath,
+				cd.Name,
+				cd.ContainerID,
+				cd.Image,
+				cd.Kind,
+				cd.State,
+				cd.Status,
+				cd.IPv4Address,
+				cd.IPv6Address,
+				cd.Owner)
+		}
+		fmt.Print(csv)
+		return nil
 	}
+
 	// Should not be reached if format validation is correct
 	return fmt.Errorf("internal error: unhandled format %q", format)
 }
