@@ -6,6 +6,7 @@ package bridge
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -40,6 +41,9 @@ func Register(r *nodes.NodeRegistry) {
 
 type bridge struct {
 	nodes.DefaultNode
+	// store for the nodes of the topology, required to setup bridges within container namespaces.
+	nodesMap    map[string]nodes.Node
+	containerNs string
 }
 
 func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -50,11 +54,51 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-	s.Cfg.IsRootNamespaceBased = true
+	if s.Cfg.NetworkMode == "" || s.Cfg.NetworkMode == "host" {
+		s.Cfg.IsRootNamespaceBased = true
+	} else {
+		var err error
+		s.containerNs, err = utils.ContainerNameFromNetworkMode(s.Config().NetworkMode)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (n *bridge) Deploy(_ context.Context, _ *nodes.DeployParams) error {
+func (n *bridge) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
+	// if the NetworkMode is set, then the bridge is setup within a namespace, so it must be created.
+	if n.Config().NetworkMode != "" {
+		cntName, err := utils.ContainerNameFromNetworkMode(n.Config().NetworkMode)
+		if err != nil {
+			return err
+		}
+		err = n.nodesMap[cntName].ExecFunction(ctx, func(nn ns.NetNS) error {
+			// add the bridge
+			err := netlink.LinkAdd(&netlink.Bridge{
+				LinkAttrs: netlink.LinkAttrs{
+					Name: n.GetShortName(),
+				},
+			})
+			if err != nil {
+				return err
+			}
+			// retrieve link ref
+			netlinkLink, err := netlink.LinkByName(n.GetShortName())
+			if err != nil {
+				return err
+			}
+			// bring the link up
+			err = netlink.LinkSetUp(netlinkLink)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
 	n.SetState(state.Deployed)
 	return nil
 }
@@ -74,17 +118,43 @@ func (b *bridge) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error 
 	return b.installIPTablesBridgeFwdRule()
 }
 
-func (b *bridge) CheckDeploymentConditions(_ context.Context) error {
+func (b *bridge) GetNSPath(ctx context.Context) (string, error) {
+	if b.containerNs != "" {
+		node, ok := b.nodesMap[b.containerNs]
+		if !ok {
+			return "", fmt.Errorf("unable to find node %s", b.containerNs)
+		}
+		return node.GetNSPath(ctx)
+	}
+	curns, err := ns.GetCurrentNS()
+	if err != nil {
+		return "", err
+	}
+	return curns.Path(), nil
+}
+
+func (b *bridge) CheckDeploymentConditions(ctx context.Context, nodes map[string]nodes.Node) error {
+	// store nodes map for later use
+	b.nodesMap = nodes
+
 	err := b.VerifyHostRequirements()
 	if err != nil {
 		return err
 	}
-	// check bridge exists
-	_, err = utils.BridgeByName(b.Cfg.ShortName)
-	if err != nil {
-		return err
+
+	// check bridge exists only if host ns
+	if b.containerNs == "" {
+		err = b.ExecFunction(ctx, func(nn ns.NetNS) error {
+			// check bridge exists
+			_, err = utils.BridgeByName(b.Cfg.ShortName)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 	}
-	return nil
+
+	return err
 }
 
 func (*bridge) PullImage(_ context.Context) error { return nil }
@@ -98,11 +168,41 @@ func (*bridge) GetContainers(_ context.Context) ([]runtime.GenericContainer, err
 // RunExec is a noop for bridge kind.
 func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
-
 	return nil, cExec.ErrRunExecNotSupported
 }
 
 func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	if b.Cfg.NetworkMode != "" {
+		return b.addLinkToContainerNamespace(ctx, link, f)
+	}
+	return b.addLinkToContainerHost(ctx, link, f)
+}
+
+func (b *bridge) addLinkToContainerNamespace(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	cntName, err := utils.ContainerNameFromNetworkMode(b.Config().NetworkMode)
+	if err != nil {
+		return err
+	}
+	err = b.nodesMap[cntName].AddLinkToContainer(ctx, link, func(nn ns.NetNS) error {
+		// get the bridge as netlink.Link
+		br, err := netlink.LinkByName(b.Cfg.ShortName)
+		if err != nil {
+			return err
+		}
+
+		// assign the bridge to the link as master
+		err = netlink.LinkSetMaster(link, br)
+		if err != nil {
+			return err
+		}
+
+		// execute the given function
+		return f(nn)
+	})
+	return err
+}
+
+func (b *bridge) addLinkToContainerHost(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	ns, err := ns.GetCurrentNS()
 	if err != nil {
@@ -126,6 +226,9 @@ func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f fu
 }
 
 func (b *bridge) GetLinkEndpointType() links.LinkEndpointType {
+	if b.containerNs != "" {
+		return links.LinkEndpointTypeBridgeNS
+	}
 	return links.LinkEndpointTypeBridge
 }
 
