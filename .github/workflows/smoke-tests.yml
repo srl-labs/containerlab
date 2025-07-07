@@ -11,6 +11,9 @@ jobs:
   smoke-tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
     strategy:
       fail-fast: false
       matrix:
@@ -90,7 +93,7 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
+          ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - name: Upload test report

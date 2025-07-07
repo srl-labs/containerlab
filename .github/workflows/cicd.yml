@@ -151,6 +151,7 @@ jobs:
     uses: ./.github/workflows/smoke-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+    secrets: inherit
     needs:
       - file-changes
       - process-gitref
