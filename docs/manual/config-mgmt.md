@@ -124,7 +124,7 @@ If a config file exists in the lab directory for a given node, then it will take
 
 ### Remote
 
-It is possible to specify a remote `http(s)` location for a startup-config file. Simply provide a URL that can be accessed from the containerlab host.
+It is possible to specify a remote (`http(s)` or [S3](s3-usage-example.md)) location for a startup-config file. Simply provide a URL that can be accessed from the containerlab host.
 
 ```yaml
 topology:

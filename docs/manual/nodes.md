@@ -140,11 +140,11 @@ Some containerized NOSes require a license to operate or can leverage a license 
 
 ### startup-config
 
-It is possible to provide the startup configuration that the node applies on boot for most Containerlab kinds. The startup config can be provided in two ways:
+It is possible to provide the startup configuration that the node applies on boot for most Containerlab kinds. The startup config can be provided as:
 
-1. As a path to a file that is available on the host machine and contains the config blob that the node understands.
-2. As an embedded config blob that is provided as a multiline string.
-3. As an URL to a file that contains the config blob that the node can apply.
+1. A path to a file that is available on the host machine and contains the config blob that the node understands.
+2. An embedded config blob that is provided as a multiline string.
+3. An URL (http(s) or [S3](s3-usage-example.md)) to a file that contains the config blob that the node can apply.
 
 Read more about the usage of the startup configuration (and other ways to perform configuration management with Containerlab) in the [Configuration Management](config-mgmt.md) section.
 
