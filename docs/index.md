@@ -37,7 +37,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](manual/vrnetlab.md):
 
-* [Nokia virtual SR OS (vSim/VSR)](manual/kinds/vr-sros.md)
+* [Nokia virtual SR OS (vSIM)](manual/kinds/vr-sros.md)
 * [Juniper vMX](manual/kinds/vr-vmx.md)
 * [Juniper vQFX](manual/kinds/vr-vqfx.md)
 * [Juniper vSRX](manual/kinds/vr-vsrx.md)

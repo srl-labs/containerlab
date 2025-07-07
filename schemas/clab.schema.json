@@ -408,7 +408,6 @@
                                 "anyOf": [
                                     {
                                         "enum": [
-                                               "dms-1-24d",
                                                "ixr-10",
                                                "ixr-6",
                                                "ixr-e2c",

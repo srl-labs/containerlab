@@ -241,7 +241,7 @@ topology:
 
 A distributed SR-SIM node will consist on two or more containers with an specific role: CPM or IOM. The simulator will boot on either mode depending on the settings of the `NOKIA_SROS_SLOT` enviroment variable and the SR-SIM node type.
 There are serveral other variables that will modify the default settings for a simulated chassis (e.g. SFM, XIOM, MDA, etc.), so please check the Users' guide for a full list.
-Containerlab will allow to define the topology in a couple of ways: Using a separate containerlab node definition per linecard (standard topology) or a single node definition with the components grouped as a list (grouped topology).
+Containerlab will allow to define the topology in a couple of ways: Using a separate containerlab node definition per linecard ([standard topology](#standard-distributed-topology)), or a single node definition with the components grouped as a list (grouped topology). The latter function is currently a preview and future configuration might change.
 
 #### Standard distributed topology
 In these examples, there are several key elements to make sure the node will boot properly:
@@ -344,8 +344,14 @@ topology:
 ///
 
 
-#### Grouped distributed topology
+#### Grouped distributed topology (preview)
 
+/// admonition
+    type: warning
+:rotating_light: :rotating_light:
+This feature is a preview and should be implemented carefully in your lab
+:rotating_light: :rotating_light:
+///
 Users can simplify the topology file by using the `components` directive in the node definition as shown in the example below. In this case, every slice element in the `components` section will be a container emulating the corresponding slot. Similar to the standard topology, overrides are supported per container by setting the `env` directive for each component or per node.
 /// tab | Distributed grouped SR-SIM
 ```yaml
@@ -366,18 +372,18 @@ Users can simplify the topology file by using the `components` directive in the 
     sr-sim1:
       kind: nokia_srsim
       type: SR-7
-      env: 
-        NOKIA_SROS_SFM: m-sfm6-7/12
       components:
         - slot: A # Containers will be attached to this Linux NS
         - slot: B
         - slot: 1
-          env: 
-            NOKIA_SROS_CARD: iom5-e
+          type: iom5-e # equivalent to override NOKIA_SROS_CARD
+          env:
+            NOKIA_SROS_SFM: m-sfm6-7/12
             NOKIA_SROS_MDA_1: me6-100gb-qsfp28
             NOKIA_SROS_MDA_2: me3-400gb-qsfpdd
         - slot: 2
           env:
+            NOKIA_SROS_SFM: m-sfm6-7/12
             NOKIA_SROS_CARD: iom5-e 
             NOKIA_SROS_MDA_1: me6-100gb-qsfp28
             NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
