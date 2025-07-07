@@ -58,11 +58,16 @@ Ensure veth of client is attached to br01
 
 Ensure communication between client c1 and bridge br01 in container bp1
     [Documentation]    Ensure communication is possible from client to bp1.
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E docker exec -it clab-${lab-name}-c1 ping 192.168.0.1 -c 1
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    0% packet loss
+    ${result} =    Process.Run Process
+    ...    sudo -E docker exec clab-${lab-name}-c1 ping 192.168.0.1 -c 1
+    ...    shell=True
+    
+    Log    ${result.stdout}
+    Log    ${result.stderr}
+
+    Should Be Equal As Integers    ${result.rc}    0
+
+    Should Contain    ${result.stdout}    0% packet loss
 
 
 *** Keywords ***
