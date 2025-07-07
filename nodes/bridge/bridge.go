@@ -25,6 +25,8 @@ import (
 
 var kindNames = []string{"bridge"}
 
+// bridgeNodeSep is a separator used in the bridge name to distinguish
+// bridges attached to different namespaces in the topology.
 var bridgeNodeSep = "|"
 
 const (
@@ -68,10 +70,10 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-// bridgename for bridge in container, we can have bridges with the same name in the topology because they end up in
-// other namespaces. However in the topology definition they need to be names uniquely. This function removes the postfix
-// of the name, that is just used to unify the name per node.
-func (n *bridge) bridgename() string {
+// nameWithoutSeparatorSuffix returns the bridge name without the separator suffix
+// used to distinguish bridges attached to different namespaces in the topology.
+// For example, if the bridge name is "br0|ns1", it will return "br0".
+func (n *bridge) nameWithoutSeparatorSuffix() string {
 	s := n.GetShortName()
 	if idx := strings.Index(s, bridgeNodeSep); idx != -1 {
 		return s[:idx]
@@ -93,14 +95,14 @@ func (n *bridge) Deploy(ctx context.Context, dp *nodes.DeployParams) error {
 			// add the bridge
 			err := netlink.LinkAdd(&netlink.Bridge{
 				LinkAttrs: netlink.LinkAttrs{
-					Name: n.bridgename(),
+					Name: n.nameWithoutSeparatorSuffix(),
 				},
 			})
 			if err != nil {
 				return err
 			}
 			// retrieve link ref
-			netlinkLink, err := netlink.LinkByName(n.bridgename())
+			netlinkLink, err := netlink.LinkByName(n.nameWithoutSeparatorSuffix())
 			if err != nil {
 				return err
 			}
@@ -159,8 +161,8 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	}
 
 	if strings.HasPrefix(b.Cfg.NetworkMode, "container:") {
-		if b.Cfg.NetworkMode[10:] != b.GetShortName()[len(b.bridgename())+1:] {
-			return fmt.Errorf("container based bridge requires container name as suffix %s != %s", b.Cfg.NetworkMode[10:], b.GetShortName()[len(b.bridgename())+1:])
+		if b.Cfg.NetworkMode[10:] != b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:] {
+			return fmt.Errorf("container based bridge requires container name as suffix %s != %s", b.Cfg.NetworkMode[10:], b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:])
 		}
 	}
 
@@ -168,7 +170,7 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	if b.containerNs == "" {
 		err = b.ExecFunction(ctx, func(nn ns.NetNS) error {
 			// check bridge exists
-			_, err = utils.BridgeByName(b.bridgename())
+			_, err = utils.BridgeByName(b.nameWithoutSeparatorSuffix())
 			if err != nil {
 				return err
 			}
@@ -207,7 +209,7 @@ func (b *bridge) addLinkToContainerNamespace(ctx context.Context, link netlink.L
 	}
 	err = b.nodesMap[cntName].AddLinkToContainer(ctx, link, func(nn ns.NetNS) error {
 		// get the bridge as netlink.Link
-		br, err := netlink.LinkByName(b.bridgename())
+		br, err := netlink.LinkByName(b.nameWithoutSeparatorSuffix())
 		if err != nil {
 			return err
 		}
@@ -232,7 +234,7 @@ func (b *bridge) addLinkToContainerHost(_ context.Context, link netlink.Link, f 
 	}
 
 	// get the bridge as netlink.Link
-	br, err := netlink.LinkByName(b.bridgename())
+	br, err := netlink.LinkByName(b.nameWithoutSeparatorSuffix())
 	if err != nil {
 		return err
 	}
@@ -264,7 +266,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	log.Debugf("setting up bridge firewall rules using %s as the firewall interface", f.Name())
 
 	r := definitions.FirewallRule{
-		Interface: b.bridgename(),
+		Interface: b.nameWithoutSeparatorSuffix(),
 		Direction: definitions.InDirection,
 		Action:    definitions.AcceptAction,
 		Comment:   definitions.ContainerlabComment,
@@ -277,7 +279,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	}
 
 	r = definitions.FirewallRule{
-		Interface: b.bridgename(),
+		Interface: b.nameWithoutSeparatorSuffix(),
 		Direction: definitions.OutDirection,
 		Action:    definitions.AcceptAction,
 		Comment:   definitions.ContainerlabComment,
