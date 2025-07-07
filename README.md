@@ -18,10 +18,10 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 
 Containerlab focuses on the containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
-* [Nokia SR-Linux](https://containerlab.dev/manual/kinds/srl/)
+* [Nokia SR Linux](https://containerlab.dev/manual/kinds/srl/)
 * [Arista cEOS](https://containerlab.dev/manual/kinds/ceos/)
 * [Cisco XRd](https://containerlab.dev/manual/kinds/xrd/)
-* [Azure SONiC](https://containerlab.dev/manual/kinds/sonic-vs/)
+* [SONiC](https://containerlab.dev/manual/kinds/sonic-vs/)
 * [Juniper cRPD](https://containerlab.dev/manual/kinds/crpd/)
 * [Cumulus VX](https://containerlab.dev/manual/kinds/cvx/)
 * [Keysight IXIA-C](https://containerlab.dev/manual/kinds/keysight_ixia-c-one/)
