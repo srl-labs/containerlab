@@ -281,6 +281,30 @@
                     "type": "object",
                     "$ref": "#/definitions/healthcheck-config"
                 },
+                "components" : { 
+                    "type": "array",
+                     "items": {
+                        "type": "object",
+                        "properties": {
+                            "slot": {
+                                  "type": "string",
+                                   "description": "Set component physical position on a distributed chassis"
+                            },
+                            "type": {
+                                  "type": "string",
+                                   "description": "Set component type"
+                            },
+                            "env": {
+                                  "type": "object",
+                                  "$ref": "#/definitions/env"
+                                }
+                            },
+                        "additionalProperties": false
+                        },
+                        "uniqueItems": true,
+                        "description": "List of node components, used for multicontainer systems",
+                        "markdownDescription": "Dependency list for Components"
+                },
                 "aliases": {
                     "type": "array",
                     "description": "list of additional network aliases for the node",
@@ -421,7 +445,6 @@
                                                "ixr-s",
                                                "ixr-x3",
                                                "ixr-x",
-                                               "sar-1",
                                                "sr-1-24d",
                                                "sr-12e",
                                                "sr-12",
@@ -431,6 +454,7 @@
                                                "sr-1e",
                                                "sr-1se",
                                                "sr-1s",
+                                               "sr-1-48d",
                                                "sr-1x-48d",
                                                "sr-1x-92s",
                                                "sr-1",
@@ -442,9 +466,10 @@
                                                "sr-7",
                                                "sr-a4",
                                                "sr-a8",
-                                               "vsr-i",
                                                "xrs-20e",
-                                               "xrs-2"
+                                               "xrs-20",
+                                               "ess-7",
+                                               "ess-12"
                                         ]
                                     }
                                 ]

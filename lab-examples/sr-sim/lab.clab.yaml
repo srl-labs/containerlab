@@ -36,6 +36,11 @@ topology:
     - endpoints: ["sr-sim1:e1-1-c1-1", "sr-sim2-iom:e1-1-c1-1"]    
     - endpoints: ["sr-sim1:e1-1-c2-1", "sr-sim3-iom:e1-1-c1-1"]    
     - endpoints: ["sr-sim2-iom:e1-1-c22-1", "sr-sim3-iom:e1-1-c22-1"]
+    
+    # - endpoints: ["sr-sim1:e1-1-c1-1", "sr-sim2:e1-1-c1-1"]    
+    # - endpoints: ["sr-sim1:e1-1-c2-1", "sr-sim3:e1-1-c1-1"]    
+    # - endpoints: ["sr-sim2:e1-1-c22-1", "sr-sim3:e1-1-c22-1"]
+    
 
 
       ##    // the format of the interface name will be one of:

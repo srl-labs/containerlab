@@ -46,10 +46,6 @@ const (
 	retryTimer = time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName = "nokia_sros"
-	configStartup       = "config/startup"
-	configCf3           = "config/cf3"
-	configCf2           = "config/cf2"
-	configCf1           = "config/cf1"
 	startupCfgFName     = "config.cfg"
 )
 
@@ -83,6 +79,11 @@ var (
 	readyCmdCpm  = `/usr/bin/pidof cpm`
 	readyCmdBoth = `/usr/bin/pidof both`
 	readyCmdIom  = `/usr/bin/pidof iom`
+
+	configStartup = "config/startup"
+	configCf3     = "config/cf3"
+	configCf2     = "config/cf2"
+	configCf1     = "config/cf1"
 
 	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(utils.CreateFuncs()).
 			Parse(srosConfigCmdsTpl)
@@ -122,6 +123,7 @@ func Register(r *nodes.NodeRegistry) {
 	}, nrea)
 }
 
+// SR-SIM Kind structure
 type sros struct {
 	nodes.DefaultNode
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
@@ -142,6 +144,7 @@ type sros struct {
 	renameDone bool
 }
 
+// Init Function for SR-SIM kind
 func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
@@ -177,27 +180,9 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	maps.Copy(n.Cfg.Sysctls, srosSysctl)
-
-	if n.Cfg.License != "" {
-		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
-			filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
-	}
-
-	// mount config directory
-	if isCPM(n, "") {
-		cfgPath := filepath.Join(n.Cfg.LabDir, configStartup)
-		cf1Path := filepath.Join(n.Cfg.LabDir, configCf1)
-		cf2Path := filepath.Join(n.Cfg.LabDir, configCf2)
-		cf3Path := filepath.Join(n.Cfg.LabDir, configCf3)
-		log.Debugf("cf3Dir: %s", cf3Dir)
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
-			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
-			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
-			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
-		log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
-	} else {
-		log.Debugf("Skipping config mounts on node %q", n.Cfg.ShortName)
+	err := n.createCfgBindings()
+	if err != nil {
+		return err
 	}
 	/*
 		Commenting line because it  was generating some weird conditions related to default_node.go functions
@@ -214,9 +199,10 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
+// Pre Deploy func for SR-SIM kind
 func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	log.Debug("Running pre-deploy")
-
+	// Create Lab Dir
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 
 	// store provided pubkeys
@@ -230,9 +216,10 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 	return n.createSROSFiles()
 }
 
+// Post Deploy func for SR-SIM kind
 func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	var err error
-	// start waiting for initial commit and mgmt server ready
+	// start waiting for container ready (PID based check)
 	if err = n.Ready(ctx); err != nil {
 		return err
 	}
@@ -248,7 +235,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	if !isCPM(n, "A") {
 		return nil
 	}
-	//This code only runs on active CPM
+	//Execute SaveConfig after boot. This code should only  run on active CPM
 	for time.Now().Before(time.Now().Add(readyTimeout)) {
 		// Check if context is cancelled
 		if err := ctx.Err(); err != nil {
@@ -279,6 +266,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	return nil
 }
 
+// Delete func for SR-SIM kind
 func (n *sros) Delete(ctx context.Context) error {
 	// if not distributed, follow default node implementation
 	if !n.isDistributed() {
@@ -302,6 +290,7 @@ func (n *sros) Delete(ctx context.Context) error {
 	return nil
 }
 
+// Function that deploys the distributed SR-SIM when the `components` key is present
 func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployParams) error {
 	// Registry, because it is not a package Var
 	nr := nodes.NewNodeRegistry()
@@ -395,10 +384,12 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 	return nil
 }
 
+// Function that check if  SR-SIM is distributed: `components` key is present
 func (n *sros) isDistributed() bool {
 	return len(n.Cfg.Components) > 1
 }
 
+// Function that retrieves the Namespace Path
 func (n *sros) GetNSPath(ctx context.Context) (string, error) {
 	if !n.isDistributed() {
 		return n.DefaultNode.GetNSPath(ctx)
@@ -417,6 +408,7 @@ func (n *sros) GetNSPath(ctx context.Context) (string, error) {
 	return nsp, err
 }
 
+// Function that appends the linecard suffix to the given node name
 func (n *sros) calcComponentName(name, slot string) string {
 	if n.renameDone {
 		return name
@@ -424,6 +416,7 @@ func (n *sros) calcComponentName(name, slot string) string {
 	return fmt.Sprintf("%s-%s", name, slot)
 }
 
+// Function that computes the fqdn for a given slot
 func (n *sros) calcComponentFqdn(slot string) string {
 	if n.renameDone {
 		return n.Cfg.Fqdn
@@ -433,6 +426,7 @@ func (n *sros) calcComponentFqdn(slot string) string {
 	return result
 }
 
+// Function that returns a CPM Node (used when Distributed mode)
 func (n *sros) cpmNode() (nodes.Node, error) {
 	defaultSlot, err := n.cpmSlot()
 	if err != nil {
@@ -444,9 +438,10 @@ func (n *sros) cpmNode() (nodes.Node, error) {
 			return cn, nil
 		}
 	}
-	return nil, fmt.Errorf("Node %s: node for slot %s not found", n.GetShortName(), defaultSlot)
+	return nil, fmt.Errorf("node %s: node for slot %s not found", n.GetShortName(), defaultSlot)
 }
 
+// Function that returns the Slot of the preferred CPM Node (used when Distributed mode)
 func (n *sros) cpmSlot() (string, error) {
 	slot := ""
 
@@ -455,21 +450,22 @@ search:
 		switch comp.Slot {
 		case "A":
 			slot = "A"
-			// now we can break because the slot A is preffered, does not matter if B also exists
+			// now we can break because the slot A is prefered, does not matter if B also exists
 			break search
 		case "B":
 			slot = "B"
-			// we continue searching, because we prefere slot A
+			// we continue searching, because we prefer slot A
 		}
 	}
 	if slot == "" {
-		return "", fmt.Errorf("Node %s: unable to determine default slot", n.GetShortName())
+		return "", fmt.Errorf("node %s: unable to determine default slot", n.GetShortName())
 	}
 	return slot, nil
 }
 
+// Function that deploys the SR-SIM kind
 func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) error {
-	// if it is a chassis with multiple cards
+	// if it is a chassis with multiple cards (i.e. components)
 	if n.isDistributed() {
 		err := n.deploy_fabric(ctx, deployParams)
 		if err != nil {
@@ -557,6 +553,30 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context, nodes map[string]n
 	return n.DefaultNode.CheckDeploymentConditions(ctx, nodes)
 }
 
+func (n *sros) createCfgBindings() error {
+	if n.Cfg.License != "" {
+		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
+			filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
+	}
+	if isCPM(n, "") {
+		cfgPath := filepath.Join(n.Cfg.LabDir, configStartup)
+		cf1Path := filepath.Join(n.Cfg.LabDir, configCf1)
+		cf2Path := filepath.Join(n.Cfg.LabDir, configCf2)
+		cf3Path := filepath.Join(n.Cfg.LabDir, configCf3)
+		log.Debugf("cf3Dir: %s", cf3Dir)
+		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
+			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
+			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
+			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
+		log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
+	} else {
+		log.Debugf("Skipping config mounts on node %q", n.Cfg.ShortName)
+	}
+	return nil
+}
+
+// Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars
 func (n *sros) createSROSFiles() error {
 	log.Debugf("Creating directory structure for SR-OS container: %s", n.Cfg.ShortName)
 
@@ -594,6 +614,7 @@ func (n *sros) createSROSFiles() error {
 	return err
 }
 
+// Func that handles the config generation for the SR-SIM kind
 func (n *sros) createSROSFilesConfig() error {
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
@@ -992,7 +1013,4 @@ func ResolveClabContainer(s *sros) (string, error) {
 		// return s.Cfg.LongName, err
 		return s.Cfg.LongName, fmt.Errorf("")
 	}
-	// } else {
-	// 	return s.Cfg.LongName, nil
-	// }
 }
