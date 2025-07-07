@@ -326,7 +326,7 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 	for _, node := range c.Nodes {
-		err := node.CheckDeploymentConditions(ctx)
+		err := node.CheckDeploymentConditions(ctx, c.Nodes)
 		if err != nil {
 			return err
 		}

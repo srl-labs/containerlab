@@ -96,7 +96,7 @@ func (d *DefaultNode) SaveConfig(_ context.Context) error {
 
 // CheckDeploymentConditions wraps individual functions that check if a node
 // satisfies deployment requirements.
-func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
+func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context, _ map[string]Node) error {
 	err := d.OverwriteNode.VerifyHostRequirements()
 	if err != nil {
 		return err
@@ -168,7 +168,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 }
 
 // getNSPath retrieves the nodes nspath.
-func (d *DefaultNode) getNSPath(ctx context.Context) (string, error) {
+func (d *DefaultNode) GetNSPath(ctx context.Context) (string, error) {
 	var err error
 	nsp := ""
 
@@ -412,6 +412,7 @@ type NodeOverwrites interface {
 	GetContainerName() string
 	VerifyLicenseFileExists(context.Context) error
 	RunExec(context.Context, *exec.ExecCmd) (*exec.ExecResult, error)
+	GetNSPath(ctx context.Context) (string, error)
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
@@ -553,7 +554,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 
 func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve nodes nspath
-	nsp, err := d.getNSPath(ctx)
+	nsp, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {
 		return err
 	}
@@ -577,7 +578,7 @@ func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link,
 // ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
 	// retrieve nodes nspath
-	nspath, err := d.getNSPath(ctx)
+	nspath, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {
 		return err
 	}

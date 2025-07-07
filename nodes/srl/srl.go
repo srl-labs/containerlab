@@ -416,14 +416,14 @@ func (*srl) checkKernelVersion() error {
 	return nil
 }
 
-func (n *srl) CheckDeploymentConditions(ctx context.Context) error {
+func (n *srl) CheckDeploymentConditions(ctx context.Context, nodes map[string]nodes.Node) error {
 	// perform the srl specific kernel version check
 	err := n.checkKernelVersion()
 	if err != nil {
 		return err
 	}
 
-	return n.DefaultNode.CheckDeploymentConditions(ctx)
+	return n.DefaultNode.CheckDeploymentConditions(ctx, nodes)
 }
 
 func (n *srl) createSRLFiles() error {

@@ -48,7 +48,7 @@ func (n *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
+func (n *ovs) CheckDeploymentConditions(_ context.Context, _ map[string]nodes.Node) error {
 	// check if ovs bridge exists
 	c := goOvs.New()
 

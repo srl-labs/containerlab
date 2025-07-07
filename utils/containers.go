@@ -76,3 +76,12 @@ func DestinationBindMountExists(binds []string, dest string) bool {
 	}
 	return false
 }
+
+// ContainerNameFromNetworkMode takes the NetworkMode config string and returns the container name from it
+func ContainerNameFromNetworkMode(s string) (string, error) {
+	after, found := strings.CutPrefix(s, "container:")
+	if !found {
+		return "", fmt.Errorf("%s not a valid container reference", s)
+	}
+	return after, nil
+}
