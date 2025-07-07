@@ -42,6 +42,7 @@ topology:
 ## Authentication
 
 ### Environment Variables
+
 ```bash
 export AWS_ACCESS_KEY_ID=your-access-key
 export AWS_SECRET_ACCESS_KEY=your-secret-key
@@ -49,11 +50,12 @@ export AWS_REGION=us-east-1  # Optional, defaults to us-east-1
 ```
 
 ### AWS Credentials File
+
 Configure in `~/.aws/credentials`:
+
 ```ini
 [default]
 aws_access_key_id = your-access-key
 aws_secret_access_key = your-secret-key
 region = us-east-1
 ```
-
