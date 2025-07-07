@@ -142,7 +142,7 @@ Test lab downloaded from s3 url
 
     Should Be Equal As Integers    ${output.rc}    0
 
-    Should Contain    ${output.stdout}    clab-srl01-srl01
+    Should Contain    ${output.stdout}    clab-srl02-srl01
 
 Test deploy referencing folder as topo
     ${output_pre} =    Process.Run Process
