@@ -92,17 +92,17 @@ func (mr *MockNodeMockRecorder) CalculateInterfaceIndex(ifName any) *gomock.Call
 }
 
 // CheckDeploymentConditions mocks base method.
-func (m *MockNode) CheckDeploymentConditions(arg0 context.Context) error {
+func (m *MockNode) CheckDeploymentConditions(ctx context.Context, arg1 map[string]nodes.Node) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckDeploymentConditions", arg0)
+	ret := m.ctrl.Call(m, "CheckDeploymentConditions", ctx, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CheckDeploymentConditions indicates an expected call of CheckDeploymentConditions.
-func (mr *MockNodeMockRecorder) CheckDeploymentConditions(arg0 any) *gomock.Call {
+func (mr *MockNodeMockRecorder) CheckDeploymentConditions(ctx, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDeploymentConditions", reflect.TypeOf((*MockNode)(nil).CheckDeploymentConditions), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDeploymentConditions", reflect.TypeOf((*MockNode)(nil).CheckDeploymentConditions), ctx, arg1)
 }
 
 // CheckInterfaceName mocks base method.
@@ -286,6 +286,21 @@ func (m *MockNode) GetLinkEndpointType() links.LinkEndpointType {
 func (mr *MockNodeMockRecorder) GetLinkEndpointType() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLinkEndpointType", reflect.TypeOf((*MockNode)(nil).GetLinkEndpointType))
+}
+
+// GetNSPath mocks base method.
+func (m *MockNode) GetNSPath(ctx context.Context) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNSPath", ctx)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNSPath indicates an expected call of GetNSPath.
+func (mr *MockNodeMockRecorder) GetNSPath(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNSPath", reflect.TypeOf((*MockNode)(nil).GetNSPath), ctx)
 }
 
 // GetRuntime mocks base method.
