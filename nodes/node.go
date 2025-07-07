@@ -63,7 +63,9 @@ type PreDeployParams struct {
 }
 
 // DeployParams contains parameters for the Deploy function.
-type DeployParams struct{}
+type DeployParams struct {
+	Nodes map[string]Node
+}
 
 // PostDeployParams contains parameters for the PostDeploy function.
 type PostDeployParams struct {
@@ -78,7 +80,7 @@ type Node interface {
 	DeleteNetnsSymlink() (err error)
 	Config() *types.NodeConfig // Config returns the nodes configuration
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.
-	CheckDeploymentConditions(ctx context.Context, nodes map[string]Node) error
+	CheckDeploymentConditions(ctx context.Context) error
 	PreDeploy(ctx context.Context, params *PreDeployParams) error
 	Deploy(context.Context, *DeployParams) error // Deploy triggers the deployment of this node
 	PostDeploy(ctx context.Context, params *PostDeployParams) error

@@ -92,17 +92,17 @@ func (mr *MockNodeMockRecorder) CalculateInterfaceIndex(ifName any) *gomock.Call
 }
 
 // CheckDeploymentConditions mocks base method.
-func (m *MockNode) CheckDeploymentConditions(ctx context.Context, arg1 map[string]nodes.Node) error {
+func (m *MockNode) CheckDeploymentConditions(ctx context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckDeploymentConditions", ctx, arg1)
+	ret := m.ctrl.Call(m, "CheckDeploymentConditions", ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CheckDeploymentConditions indicates an expected call of CheckDeploymentConditions.
-func (mr *MockNodeMockRecorder) CheckDeploymentConditions(ctx, arg1 any) *gomock.Call {
+func (mr *MockNodeMockRecorder) CheckDeploymentConditions(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDeploymentConditions", reflect.TypeOf((*MockNode)(nil).CheckDeploymentConditions), ctx, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckDeploymentConditions", reflect.TypeOf((*MockNode)(nil).CheckDeploymentConditions), ctx)
 }
 
 // CheckInterfaceName mocks base method.

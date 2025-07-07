@@ -96,7 +96,7 @@ func (d *DefaultNode) SaveConfig(_ context.Context) error {
 
 // CheckDeploymentConditions wraps individual functions that check if a node
 // satisfies deployment requirements.
-func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context, _ map[string]Node) error {
+func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
 	err := d.OverwriteNode.VerifyHostRequirements()
 	if err != nil {
 		return err

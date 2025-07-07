@@ -705,7 +705,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				}
 
 				// Deploy
-				err = node.Deploy(ctx, &nodes.DeployParams{})
+				err = node.Deploy(ctx, &nodes.DeployParams{Nodes: c.Nodes})
 				if err != nil {
 					log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
 					continue

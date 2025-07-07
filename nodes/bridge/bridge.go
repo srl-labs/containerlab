@@ -44,9 +44,8 @@ func Register(r *nodes.NodeRegistry) {
 
 type bridge struct {
 	nodes.DefaultNode
-	// store for the nodes of the topology, required to setup bridges within container namespaces.
-	nodesMap    map[string]nodes.Node
 	containerNs string
+	nodesMap    map[string]nodes.Node
 }
 
 func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -80,14 +79,17 @@ func (n *bridge) bridgename() string {
 	return s
 }
 
-func (n *bridge) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
+func (n *bridge) Deploy(ctx context.Context, dp *nodes.DeployParams) error {
+	// store nodes map for later use
+	n.nodesMap = dp.Nodes
+
 	// if the NetworkMode is set, then the bridge is setup within a namespace, so it must be created.
 	if n.Config().NetworkMode != "" {
 		cntName, err := utils.ContainerNameFromNetworkMode(n.Config().NetworkMode)
 		if err != nil {
 			return err
 		}
-		err = n.nodesMap[cntName].ExecFunction(ctx, func(nn ns.NetNS) error {
+		err = dp.Nodes[cntName].ExecFunction(ctx, func(nn ns.NetNS) error {
 			// add the bridge
 			err := netlink.LinkAdd(&netlink.Bridge{
 				LinkAttrs: netlink.LinkAttrs{
@@ -150,10 +152,7 @@ func (b *bridge) GetNSPath(ctx context.Context) (string, error) {
 	return curns.Path(), nil
 }
 
-func (b *bridge) CheckDeploymentConditions(ctx context.Context, nodes map[string]nodes.Node) error {
-	// store nodes map for later use
-	b.nodesMap = nodes
-
+func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	err := b.VerifyHostRequirements()
 	if err != nil {
 		return err
