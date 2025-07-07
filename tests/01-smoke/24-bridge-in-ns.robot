@@ -17,7 +17,6 @@ ${runtime}                      docker
 
 
 *** Test Cases ***
-
 Deploy ${lab-name} lab
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}

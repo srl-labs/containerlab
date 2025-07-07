@@ -7,6 +7,7 @@ package bridge
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -23,6 +24,8 @@ import (
 )
 
 var kindNames = []string{"bridge"}
+
+var bridgeNodeSep = "|"
 
 const (
 	generateable     = true
@@ -66,6 +69,17 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
+// bridgename for bridge in container, we can have bridges with the same name in the topology because they end up in
+// other namespaces. However in the topology definition they need to be names uniquely. This function removes the postfix
+// of the name, that is just used to unify the name per node.
+func (n *bridge) bridgename() string {
+	s := n.GetShortName()
+	if idx := strings.Index(s, bridgeNodeSep); idx != -1 {
+		return s[:idx]
+	}
+	return s
+}
+
 func (n *bridge) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	// if the NetworkMode is set, then the bridge is setup within a namespace, so it must be created.
 	if n.Config().NetworkMode != "" {
@@ -77,14 +91,14 @@ func (n *bridge) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 			// add the bridge
 			err := netlink.LinkAdd(&netlink.Bridge{
 				LinkAttrs: netlink.LinkAttrs{
-					Name: n.GetShortName(),
+					Name: n.bridgename(),
 				},
 			})
 			if err != nil {
 				return err
 			}
 			// retrieve link ref
-			netlinkLink, err := netlink.LinkByName(n.GetShortName())
+			netlinkLink, err := netlink.LinkByName(n.bridgename())
 			if err != nil {
 				return err
 			}
@@ -115,6 +129,9 @@ func (*bridge) GetImages(_ context.Context) map[string]string { return map[strin
 func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
 func (b *bridge) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
+	if b.containerNs != "" {
+		return nil
+	}
 	return b.installIPTablesBridgeFwdRule()
 }
 
@@ -142,11 +159,17 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context, nodes map[string
 		return err
 	}
 
+	if strings.HasPrefix(b.Cfg.NetworkMode, "container:") {
+		if b.Cfg.NetworkMode[10:] != b.GetShortName()[len(b.bridgename())+1:] {
+			return fmt.Errorf("container based bridge requires container name as suffix %s != %s", b.Cfg.NetworkMode[10:], b.GetShortName()[len(b.bridgename())+1:])
+		}
+	}
+
 	// check bridge exists only if host ns
 	if b.containerNs == "" {
 		err = b.ExecFunction(ctx, func(nn ns.NetNS) error {
 			// check bridge exists
-			_, err = utils.BridgeByName(b.Cfg.ShortName)
+			_, err = utils.BridgeByName(b.bridgename())
 			if err != nil {
 				return err
 			}
@@ -185,7 +208,7 @@ func (b *bridge) addLinkToContainerNamespace(ctx context.Context, link netlink.L
 	}
 	err = b.nodesMap[cntName].AddLinkToContainer(ctx, link, func(nn ns.NetNS) error {
 		// get the bridge as netlink.Link
-		br, err := netlink.LinkByName(b.Cfg.ShortName)
+		br, err := netlink.LinkByName(b.bridgename())
 		if err != nil {
 			return err
 		}
@@ -210,7 +233,7 @@ func (b *bridge) addLinkToContainerHost(_ context.Context, link netlink.Link, f 
 	}
 
 	// get the bridge as netlink.Link
-	br, err := netlink.LinkByName(b.Cfg.ShortName)
+	br, err := netlink.LinkByName(b.bridgename())
 	if err != nil {
 		return err
 	}
@@ -242,7 +265,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	log.Debugf("setting up bridge firewall rules using %s as the firewall interface", f.Name())
 
 	r := definitions.FirewallRule{
-		Interface: b.Cfg.ShortName,
+		Interface: b.bridgename(),
 		Direction: definitions.InDirection,
 		Action:    definitions.AcceptAction,
 		Comment:   definitions.ContainerlabComment,
@@ -255,7 +278,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	}
 
 	r = definitions.FirewallRule{
-		Interface: b.Cfg.ShortName,
+		Interface: b.bridgename(),
 		Direction: definitions.OutDirection,
 		Action:    definitions.AcceptAction,
 		Comment:   definitions.ContainerlabComment,
