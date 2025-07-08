@@ -47,8 +47,6 @@ const (
 	retryTimer = 1 * time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName       = "nokia_sros"
-	startupCfgFName           = "config.cfg"
-	scrapliPlatformName       = "nokia_sros"
 	configStartup             = "config/startup"
 	configCf3                 = "config/cf3"
 	configCf2                 = "config/cf2"
@@ -90,11 +88,6 @@ var (
 	readyCmdCpm  = `/usr/bin/pidof cpm`
 	readyCmdBoth = `/usr/bin/pidof both`
 	readyCmdIom  = `/usr/bin/pidof iom`
-
-	configStartup = "config/startup"
-	configCf3     = "config/cf3"
-	configCf2     = "config/cf2"
-	configCf1     = "config/cf1"
 
 	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(utils.CreateFuncs()).
 			Parse(srosConfigCmdsTpl)
@@ -541,7 +534,7 @@ func (n *sros) Ready(ctx context.Context) error {
 				cmd, _ := exec.NewExecCmdFromString(cmd)
 				execResult, err := n.RunExec(ctx, cmd)
 				if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
-					logMsg := readyCmdsStrings[k] + " status check failed on " + n.Cfg.ShortName + " retrying. "
+					logMsg := fmt.Sprintf("status check %s failed on %s retrying", readyCmdsStrings[k], n.Cfg.ShortName)
 					if err != nil {
 						logMsg += fmt.Sprintf(" error: %v", err)
 					}
