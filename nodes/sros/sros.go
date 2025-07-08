@@ -237,6 +237,9 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 
 // Post Deploy func for SR-SIM kind
 func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+	log.Info("Running postdeploy actions",
+		"kind", n.Cfg.Kind,
+		"node", n.Cfg.ShortName)
 	var err error
 	// start waiting for container ready (PID based check)
 	if err = n.Ready(ctx); err != nil {
