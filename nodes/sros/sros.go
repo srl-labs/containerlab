@@ -44,7 +44,7 @@ const (
 	generateable     = true
 	generateIfFormat = "e%d-%d"
 
-	retryTimer = time.Second
+	retryTimer = 1 * time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName = "nokia_sros"
 	startupCfgFName     = "config.cfg"
@@ -512,24 +512,21 @@ func (n *sros) Ready(ctx context.Context) error {
 			for k, cmd := range readyCmds {
 				cmd, _ := exec.NewExecCmdFromString(cmd)
 				execResult, err := n.RunExec(ctx, cmd)
-				if err != nil || (execResult != nil && execResult.GetReturnCode() != 1) {
-					logMsg := readyCmdsStrings[k] + " status check failed on " + n.Cfg.ShortName + " retrying..."
-
+				if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
+					logMsg := readyCmdsStrings[k] + " status check failed on " + n.Cfg.ShortName + " retrying. "
 					if err != nil {
 						logMsg += fmt.Sprintf(" error: %v", err)
 					}
-
 					if execResult != nil && execResult.GetReturnCode() != 0 {
-						logMsg += fmt.Sprintf(", output: \n%s", execResult)
+						logMsg += fmt.Sprintf(", output:%s", strings.ReplaceAll(execResult.String(), "\n", "; "))
 					}
 					log.Debug(logMsg)
-					if execResult != nil && execResult.GetReturnCode() == 0 {
-						log.Debugf("Node %s is ready to be configured", n.Cfg.ShortName)
-						return nil
-					}
-					time.Sleep(retryTimer)
-
 				}
+				if execResult != nil && execResult.GetReturnCode() == 0 {
+					log.Debugf("Node %s is ready to be configured", n.Cfg.ShortName)
+					return nil
+				}
+				time.Sleep(retryTimer)
 			}
 
 		}
