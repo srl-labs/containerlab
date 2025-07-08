@@ -551,9 +551,33 @@ func (*sros) checkKernelVersion() error {
 	return nil
 }
 
+// checkComponentSlotsConfig check the sros component slot config for validaity
+func (n *sros) checkComponentSlotsConfig() error {
+	// check Slots are unique
+	componentNames := map[string]struct{}{}
+	for _, component := range n.Cfg.Components {
+		// convert slot to upper
+		slot := strings.ToUpper(component.Slot)
+		// check if slot exists
+		_, exists := componentNames[slot]
+		if exists {
+			return fmt.Errorf("node %s slot %s duplicate definition", n.GetShortName(), component.Slot)
+		}
+		// addd to component names map
+		componentNames[component.Slot] = struct{}{}
+	}
+	return nil
+}
+
 func (n *sros) CheckDeploymentConditions(ctx context.Context, nodes map[string]nodes.Node) error {
 	// perform the sros specific kernel version check
 	err := n.checkKernelVersion()
+	if err != nil {
+		return err
+	}
+
+	// check the sros component slot config for validaity
+	err = n.checkComponentSlotsConfig()
 	if err != nil {
 		return err
 	}
