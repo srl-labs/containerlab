@@ -249,6 +249,9 @@ func (t *Topology) GetComponents(name string) []*Component {
 		if v := ndef.GetComponents(); v != nil {
 			return v
 		}
+		if v := t.GetGroup(t.GetNodeGroup(name)).GetComponents(); v != nil {
+			return v
+		}
 		if v := t.GetKind(t.GetNodeKind(name)).GetComponents(); v != nil {
 			return v
 		}
