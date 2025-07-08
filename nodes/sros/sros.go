@@ -153,6 +153,8 @@ type sros struct {
 	// e.g. inspect is either called after deploy or independently. Hence we need to differentiate if we need to perform the
 	// component cpm based rename or not. This field indicates just that
 	renameDone bool
+
+	preDeployParams *nodes.PreDeployParams
 }
 
 // Init Function for SR-SIM kind
@@ -177,12 +179,6 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	if n.Cfg.NodeType == "" {
 		n.Cfg.NodeType = SrosDefaultType
-	}
-
-	if n.Cfg.Cmd == "" {
-		// set default Cmd if it was not provided by a user
-		// the additional touch is needed to support non docker runtimes
-		n.Cfg.Cmd = ""
 	}
 
 	// if user was not initialized to a value, use root
@@ -227,8 +223,10 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 // Pre Deploy func for SR-SIM kind
 func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	log.Debug("Running pre-deploy")
-	// Create Lab Dir
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	// store the preDeployParams
+	n.preDeployParams = params
+
+	n.InterfaceHelp = InterfaceHelp
 
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
@@ -384,6 +382,8 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 		n.componentNodes = append(n.componentNodes, componentNode)
 		// set the runtime by copying it from the general node
 		componentNode.WithRuntime(n.GetRuntime())
+
+		componentNode.PreDeploy(ctx, n.preDeployParams)
 
 		// deploy the component
 		err = componentNode.Deploy(ctx, deployParams)
