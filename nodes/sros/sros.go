@@ -348,8 +348,9 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 		componentConfig.Components = nil
 		fqdnDotIndex := strings.Index(componentConfig.Fqdn, ".")
 		componentConfig.Fqdn = fmt.Sprintf("%s-%s%s", componentConfig.Fqdn[:fqdnDotIndex], c.Slot, componentConfig.Fqdn[fqdnDotIndex:])
-		componentConfig.DNS = nil
-		componentConfig.Binds = nil
+		if idx != 0 {
+			componentConfig.DNS = nil
+		}
 
 		// add the component env to the componentConfig env
 		for k, v := range c.Env {
@@ -788,13 +789,15 @@ func (n *sros) addDefaultConfig() error {
 		IFaces:        map[string]tplIFace{},
 		MgmtMTU:       0,
 		MgmtIPMTU:     0,
-		DNSServers:    n.Config().DNS.Servers,
 		SystemConfig:  systemCfg,
 		SNMPConfig:    snmpv2Config,
 		GRPCConfig:    grpcConfig,
 		NetconfConfig: netconfConfig,
 		LoggingConfig: loggingConfig,
 		SSHConfig:     sshConfig,
+	}
+	if n.Config().DNS != nil {
+		tplData.DNSServers = append(tplData.DNSServers, n.Config().DNS.Servers...)
 	}
 
 	n.prepareSSHPubKeys(&tplData)
