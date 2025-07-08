@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-const banner = `................................................................\n:                  Welcome to Nokia SR-OS!                     :\n:                                                              :\n:                                                              :\n: YANG:          https://yang.labctl.net/                      :\n: Community:     https://containerlab.dev/community/           :\n: Discord:       https://discord.gg/vAyddtaEV9                 :\n................................................................\n`
+const banner = `................................................................\n:                  Welcome to Nokia SR-OS!                     :\n:                                                              :\n:                                                              :\n: YANG:          https://yang.labctl.net/                      :\n: Community:     https://containerlab.dev/community/           :\n: Discord:       https://containerlab.dev/discord/             :\n................................................................\n`
 
 // banner returns a banner string with a docs version filled in based on the version information queried from the node.
 func (n *sros) banner() (string, error) {
