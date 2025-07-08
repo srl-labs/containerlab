@@ -46,8 +46,18 @@ const (
 
 	retryTimer = 1 * time.Second
 	// additional config that clab adds on top of the factory config.
-	scrapliPlatformName = "nokia_sros"
-	startupCfgFName     = "config.cfg"
+	scrapliPlatformName       = "nokia_sros"
+	startupCfgFName           = "config.cfg"
+	scrapliPlatformName       = "nokia_sros"
+	configStartup             = "config/startup"
+	configCf3                 = "config/cf3"
+	configCf2                 = "config/cf2"
+	configCf1                 = "config/cf1"
+	startupCfgFName           = "config.cfg"
+	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
+	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
+	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
+	envNokiaSrosCard          = "NOKIA_SROS_CARD"
 )
 
 var (
@@ -71,10 +81,10 @@ var (
 	defaultCredentials = nodes.NewCredentials("admin", "NokiaSros1!")
 
 	srosEnv = map[string]string{
-		"SRSIM":                      "1",
-		"NOKIA_SROS_CHASSIS":         SrosDefaultType,     // fillers to be override
-		"NOKIA_SROS_SYSTEM_BASE_MAC": "fa:ac:ff:ff:10:00", // filler to be override
-		"NOKIA_SROS_SLOT":            "A",                 // filler to be override
+		"SRSIM":                   "1",
+		envNokiaSrosChassis:       SrosDefaultType,     // fillers to be override
+		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be override
+		envNokiaSrosSlot:          "A",                 // filler to be override
 	}
 
 	readyCmdCpm  = `/usr/bin/pidof cpm`
@@ -181,22 +191,36 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 
 	maps.Copy(n.Cfg.Sysctls, srosSysctl)
-	err := n.createCfgBindings()
-	if err != nil {
-		return err
+
+	// make sure we always have uppercase slot definition
+	for _, c := range n.Cfg.Components {
+		c.Slot = strings.ToUpper(c.Slot)
 	}
-	/*
-		Commenting line because it  was generating some weird conditions related to default_node.go functions
-		to check interface aliases... further debug required.
-		ERRO failed deploy links for node "srsim11-1": failed to rename link: file exists
-		ERRO failed deploy links for node "srsim10-1": file exists
-		Without setting this var it works OK
-		InterfaceRegexp  = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`)
-		n.InterfaceRegexp = InterfaceRegexp
 
-	*/
-	n.InterfaceHelp = InterfaceHelp
+	if !n.isDistributed() {
+		if n.Cfg.License != "" {
+			// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+			n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
+				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
+		}
+	}
 
+	// mount config directory
+	if !n.isDistributed() && n.isCPM("") {
+		slot := n.Cfg.Env[envNokiaSrosSlot]
+
+		// add the config specific mounts
+		cfgPath := filepath.Join(n.Cfg.LabDir, slot, configStartup)
+		cf1Path := filepath.Join(n.Cfg.LabDir, slot, configCf1)
+		cf2Path := filepath.Join(n.Cfg.LabDir, slot, configCf2)
+		cf3Path := filepath.Join(n.Cfg.LabDir, slot, configCf3)
+		n.Cfg.Binds = append(n.Cfg.Binds,
+			fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
+			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
+			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
+			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"),
+		)
+	}
 	return nil
 }
 
@@ -213,8 +237,11 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
 	n.cert = params.Cert
 	n.topologyName = params.TopologyName
-
-	return n.createSROSFiles()
+	if !n.isDistributed() && n.isCPM("") {
+		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0777)
+		return n.createSROSFiles()
+	}
+	return nil
 }
 
 // Post Deploy func for SR-SIM kind
@@ -233,7 +260,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	if err != nil {
 		return err
 	}
-	if !isCPM(n, "A") {
+	if !n.isCPM("A") {
 		return nil
 	}
 	//Execute SaveConfig after boot. This code should only  run on active CPM
@@ -333,12 +360,12 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 
 		// set the type var if type is set
 		if c.Type != "" {
-			componentConfig.Env["NOKIA_SROS_CARD"] = c.Type
+			componentConfig.Env[envNokiaSrosCard] = c.Type
 		}
 
-		componentConfig.Env["NOKIA_SROS_SLOT"] = c.Slot
-		componentConfig.Env["NOKIA_SROS_CHASSIS"] = n.Cfg.NodeType
-		componentConfig.Env["NOKIA_SROS_SYSTEM_BASE_MAC"] = systemMac.MAC
+		componentConfig.Env[envNokiaSrosSlot] = c.Slot
+		componentConfig.Env[envNokiaSrosChassis] = n.Cfg.NodeType
+		componentConfig.Env[envNokiaSrosSystemBaseMac] = systemMac.MAC
 
 		// adjust label based env vars
 		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.NodeName)] = componentConfig.ShortName
@@ -582,29 +609,6 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context, nodes map[string]n
 	return n.DefaultNode.CheckDeploymentConditions(ctx, nodes)
 }
 
-func (n *sros) createCfgBindings() error {
-	if n.Cfg.License != "" {
-		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
-			filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
-	}
-	if isCPM(n, "") {
-		cfgPath := filepath.Join(n.Cfg.LabDir, configStartup)
-		cf1Path := filepath.Join(n.Cfg.LabDir, configCf1)
-		cf2Path := filepath.Join(n.Cfg.LabDir, configCf2)
-		cf3Path := filepath.Join(n.Cfg.LabDir, configCf3)
-		log.Debugf("cf3Dir: %s", cf3Dir)
-		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
-			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
-			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
-			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"))
-		log.Debugf("n.Cfg.Binds: %+v", n.Cfg.Binds)
-	} else {
-		log.Debugf("Skipping config mounts on node %q", n.Cfg.ShortName)
-	}
-	return nil
-}
-
 // Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars
 func (n *sros) createSROSFiles() error {
 	log.Debugf("Creating directory structure for SR-OS container: %s", n.Cfg.ShortName)
@@ -622,21 +626,21 @@ func (n *sros) createSROSFiles() error {
 		log.Infof("CopyFile src %s -> dst %s succeeded", src, licPath)
 	}
 
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configCf1), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configCf2), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configCf3), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, configStartup), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0777)
 	// Override NodeType var with existing env
 	mac := genMac(n.Cfg)
 	if n.Cfg.NodeType != "" {
-		srosEnv["NOKIA_SROS_CHASSIS"] = n.Cfg.NodeType
-		srosEnv["NOKIA_SROS_SYSTEM_BASE_MAC"] = mac.MAC
+		srosEnv[envNokiaSrosChassis] = n.Cfg.NodeType
+		srosEnv[envNokiaSrosSystemBaseMac] = mac.MAC
 	}
 	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
 	log.Debugf("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
 	// Skip config if node is not CPM
-	if isCPM(n, "") {
+	if n.isCPM("") {
 		err = n.createSROSFilesConfig()
 	}
 
@@ -650,7 +654,7 @@ func (n *sros) createSROSFilesConfig() error {
 	// will be used as a template in GenerateConfig()
 	var cfgTemplate string
 	var err error
-	cfgPath := filepath.Join(n.Cfg.LabDir, configStartup, startupCfgFName)
+	cfgPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup, startupCfgFName)
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
 	if n.Cfg.StartupConfig != "" && !isPartial {
 		// User provides startup config
@@ -701,16 +705,16 @@ func SlotisInteger(s string) bool {
 }
 
 // Check if a container is a CPM
-func isCPM(n *sros, cpm string) bool {
+func (n *sros) isCPM(cpm string) bool {
 	// Check if container is a linecard
-	if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists && SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) {
+	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists && SlotisInteger(n.Cfg.Env[envNokiaSrosSlot]) {
 		return false
 	}
 	//check if container is the CPM given by the string cpm
 	if cpm != "" {
-		if _, exists := n.Cfg.Env["NOKIA_SROS_SLOT"]; exists &&
-			!SlotisInteger(n.Cfg.Env["NOKIA_SROS_SLOT"]) &&
-			!strings.EqualFold(n.Cfg.Env["NOKIA_SROS_SLOT"], cpm) {
+		if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
+			!SlotisInteger(n.Cfg.Env[envNokiaSrosSlot]) &&
+			!strings.EqualFold(n.Cfg.Env[envNokiaSrosSlot], cpm) {
 			return false
 		}
 	}
@@ -823,7 +827,7 @@ func (n *sros) addPartialConfig() error {
 		// b holds the configuration to be applied to the node
 		b := &bytes.Buffer{}
 		// apply partial configs if partial config is used
-		if isPartialConfigFile(n.Cfg.StartupConfig) && isCPM(n, "") {
+		if isPartialConfigFile(n.Cfg.StartupConfig) && n.isCPM("") {
 			log.Info("Adding configuration",
 				"node", n.Cfg.LongName,
 				"type", "partial",
@@ -861,7 +865,7 @@ func (n *sros) addPartialConfig() error {
 func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 
 	// if not a distributed setup call regular GetContainers
-	if len(n.Cfg.Components) <= 1 {
+	if !n.isDistributed() {
 		return n.DefaultNode.GetContainers(ctx)
 	}
 
@@ -999,7 +1003,7 @@ func isPartialConfigFile(c string) bool {
 //		return err == nil
 //	}
 func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
-	if !isCPM(n, "") {
+	if !n.isCPM("") {
 		return true, fmt.Errorf("node %q is not a CPM, healthcheck has no effect", n.Cfg.LongName)
 	}
 	addr, err := ResolveClabContainer(n)
