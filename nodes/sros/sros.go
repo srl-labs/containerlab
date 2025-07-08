@@ -194,7 +194,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	log.Infof("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
 
 	if !n.isDistributed() {
-		if n.Cfg.License != "" {
+		if n.Cfg.License != "" && n.isCPM("") {
 			// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
 			n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
@@ -629,7 +629,7 @@ func (n *sros) createSROSFiles() error {
 
 	var err error
 
-	if n.Cfg.License != "" {
+	if n.Cfg.License != "" && n.isCPM("") {
 		// copy license file to node specific directory in lab
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
 		if err := utils.CopyFile(n.Cfg.License, licPath, 0644); err != nil {
