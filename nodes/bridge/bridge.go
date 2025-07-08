@@ -6,6 +6,8 @@ package bridge
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -22,6 +24,10 @@ import (
 )
 
 var kindNames = []string{"bridge"}
+
+// bridgeNodeSep is a separator used in the bridge name to distinguish
+// bridges attached to different namespaces in the topology.
+var bridgeNodeSep = "|"
 
 const (
 	generateable     = true
@@ -40,6 +46,8 @@ func Register(r *nodes.NodeRegistry) {
 
 type bridge struct {
 	nodes.DefaultNode
+	containerNs string
+	nodesMap    map[string]nodes.Node
 }
 
 func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
@@ -50,11 +58,65 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, o := range opts {
 		o(s)
 	}
-	s.Cfg.IsRootNamespaceBased = true
+	if s.Cfg.NetworkMode == "" || s.Cfg.NetworkMode == "host" {
+		s.Cfg.IsRootNamespaceBased = true
+	} else {
+		var err error
+		s.containerNs, err = utils.ContainerNameFromNetworkMode(s.Config().NetworkMode)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (n *bridge) Deploy(_ context.Context, _ *nodes.DeployParams) error {
+// nameWithoutSeparatorSuffix returns the bridge name without the separator suffix
+// used to distinguish bridges attached to different namespaces in the topology.
+// For example, if the bridge name is "br0|ns1", it will return "br0".
+func (n *bridge) nameWithoutSeparatorSuffix() string {
+	s := n.GetShortName()
+	if idx := strings.Index(s, bridgeNodeSep); idx != -1 {
+		return s[:idx]
+	}
+	return s
+}
+
+func (n *bridge) Deploy(ctx context.Context, dp *nodes.DeployParams) error {
+	// store nodes map for later use
+	n.nodesMap = dp.Nodes
+
+	// if the NetworkMode is set, then the bridge is setup within a namespace, so it must be created.
+	if n.Config().NetworkMode != "" {
+		cntName, err := utils.ContainerNameFromNetworkMode(n.Config().NetworkMode)
+		if err != nil {
+			return err
+		}
+		err = dp.Nodes[cntName].ExecFunction(ctx, func(nn ns.NetNS) error {
+			// add the bridge
+			err := netlink.LinkAdd(&netlink.Bridge{
+				LinkAttrs: netlink.LinkAttrs{
+					Name: n.nameWithoutSeparatorSuffix(),
+				},
+			})
+			if err != nil {
+				return err
+			}
+			// retrieve link ref
+			netlinkLink, err := netlink.LinkByName(n.nameWithoutSeparatorSuffix())
+			if err != nil {
+				return err
+			}
+			// bring the link up
+			err = netlink.LinkSetUp(netlinkLink)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
 	n.SetState(state.Deployed)
 	return nil
 }
@@ -71,20 +133,52 @@ func (*bridge) GetImages(_ context.Context) map[string]string { return map[strin
 func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
 func (b *bridge) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
+	if b.containerNs != "" {
+		return nil
+	}
 	return b.installIPTablesBridgeFwdRule()
 }
 
-func (b *bridge) CheckDeploymentConditions(_ context.Context) error {
+func (b *bridge) GetNSPath(ctx context.Context) (string, error) {
+	if b.containerNs != "" {
+		node, ok := b.nodesMap[b.containerNs]
+		if !ok {
+			return "", fmt.Errorf("unable to find node %s", b.containerNs)
+		}
+		return node.GetNSPath(ctx)
+	}
+	curns, err := ns.GetCurrentNS()
+	if err != nil {
+		return "", err
+	}
+	return curns.Path(), nil
+}
+
+func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	err := b.VerifyHostRequirements()
 	if err != nil {
 		return err
 	}
-	// check bridge exists
-	_, err = utils.BridgeByName(b.Cfg.ShortName)
-	if err != nil {
-		return err
+
+	if strings.HasPrefix(b.Cfg.NetworkMode, "container:") {
+		if b.Cfg.NetworkMode[10:] != b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:] {
+			return fmt.Errorf("container based bridge requires container name as suffix %s != %s", b.Cfg.NetworkMode[10:], b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:])
+		}
 	}
-	return nil
+
+	// check bridge exists only if host ns
+	if b.containerNs == "" {
+		err = b.ExecFunction(ctx, func(nn ns.NetNS) error {
+			// check bridge exists
+			_, err = utils.BridgeByName(b.nameWithoutSeparatorSuffix())
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+	}
+
+	return err
 }
 
 func (*bridge) PullImage(_ context.Context) error { return nil }
@@ -98,11 +192,41 @@ func (*bridge) GetContainers(_ context.Context) ([]runtime.GenericContainer, err
 // RunExec is a noop for bridge kind.
 func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
-
 	return nil, cExec.ErrRunExecNotSupported
 }
 
 func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	if b.Cfg.NetworkMode != "" {
+		return b.addLinkToContainerNamespace(ctx, link, f)
+	}
+	return b.addLinkToContainerHost(ctx, link, f)
+}
+
+func (b *bridge) addLinkToContainerNamespace(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	cntName, err := utils.ContainerNameFromNetworkMode(b.Config().NetworkMode)
+	if err != nil {
+		return err
+	}
+	err = b.nodesMap[cntName].AddLinkToContainer(ctx, link, func(nn ns.NetNS) error {
+		// get the bridge as netlink.Link
+		br, err := netlink.LinkByName(b.nameWithoutSeparatorSuffix())
+		if err != nil {
+			return err
+		}
+
+		// assign the bridge to the link as master
+		err = netlink.LinkSetMaster(link, br)
+		if err != nil {
+			return err
+		}
+
+		// execute the given function
+		return f(nn)
+	})
+	return err
+}
+
+func (b *bridge) addLinkToContainerHost(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	ns, err := ns.GetCurrentNS()
 	if err != nil {
@@ -110,7 +234,7 @@ func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f fu
 	}
 
 	// get the bridge as netlink.Link
-	br, err := netlink.LinkByName(b.Cfg.ShortName)
+	br, err := netlink.LinkByName(b.nameWithoutSeparatorSuffix())
 	if err != nil {
 		return err
 	}
@@ -126,6 +250,9 @@ func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f fu
 }
 
 func (b *bridge) GetLinkEndpointType() links.LinkEndpointType {
+	if b.containerNs != "" {
+		return links.LinkEndpointTypeBridgeNS
+	}
 	return links.LinkEndpointTypeBridge
 }
 
@@ -139,7 +266,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	log.Debugf("setting up bridge firewall rules using %s as the firewall interface", f.Name())
 
 	r := definitions.FirewallRule{
-		Interface: b.Cfg.ShortName,
+		Interface: b.nameWithoutSeparatorSuffix(),
 		Direction: definitions.InDirection,
 		Action:    definitions.AcceptAction,
 		Comment:   definitions.ContainerlabComment,
@@ -152,7 +279,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	}
 
 	r = definitions.FirewallRule{
-		Interface: b.Cfg.ShortName,
+		Interface: b.nameWithoutSeparatorSuffix(),
 		Direction: definitions.OutDirection,
 		Action:    definitions.AcceptAction,
 		Comment:   definitions.ContainerlabComment,

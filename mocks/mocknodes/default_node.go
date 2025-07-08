@@ -129,6 +129,21 @@ func (mr *MockNodeOverwritesMockRecorder) GetMappedInterfaceName(ifName any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMappedInterfaceName", reflect.TypeOf((*MockNodeOverwrites)(nil).GetMappedInterfaceName), ifName)
 }
 
+// GetNSPath mocks base method.
+func (m *MockNodeOverwrites) GetNSPath(ctx context.Context) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNSPath", ctx)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNSPath indicates an expected call of GetNSPath.
+func (mr *MockNodeOverwritesMockRecorder) GetNSPath(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNSPath", reflect.TypeOf((*MockNodeOverwrites)(nil).GetNSPath), ctx)
+}
+
 // PullImage mocks base method.
 func (m *MockNodeOverwrites) PullImage(ctx context.Context) error {
 	m.ctrl.T.Helper()

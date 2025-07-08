@@ -56,7 +56,7 @@ When connecting other nodes to a bridge, the bridge endpoint must be present in 
 /// admonition
     type: subtle-note
 When choosing names of the interfaces that need to be connected to the bridge make sure that these names are not clashing with existing interfaces.  
-In the example above we named interfaces `eth1`, `eth2`, `eth3` accordingly and ensured that none of these interfaces existed before in the root netns.  
+In the example above we named interfaces `eth1`, `eth2`, `eth3` accordingly and ensured that none of these interfaces existed before in the root netns.
 ///
 
 As a result of such topology definition, you will see bridge `br-clab` with three interfaces attached to it:
@@ -89,3 +89,39 @@ grep "set by containerlab" | awk '{print $1}' \
 ///
 
 Check out ["External bridge"](../../lab-examples/ext-bridge.md) lab for a ready-made example on how to use bridges.
+
+## Bridges in container namespace
+
+It is possible to make Containerlab create bridges inside the container namespace and connect nodes to them. As opposed to the host-bound bridges, these bridges reside in a container namespace and therefore are isolated from the host.
+
+A practical use case for this is to create backplane bridges that are used for internal connectivity between nodes in a lab and should not be part of the host namespace. To defined a namespaced bridge, you need to use a namespace of another node, like this:
+
+```yaml
+name: "bridge-ns"
+topology:
+  nodes:
+     br01:
+       kind: bridge
+       network-mode: container:bp1
+     bp1:
+       kind: linux
+       image: alpine:latest
+     c1:
+       kind: linux
+       image: alpine:latest
+   links:
+     - endpoints: ["c1:eth1", "br01:c1eth1"]
+```
+
+In the example above, the bridge `br01` is created inside the container namespace of the `bp1` node. The bridge will be named `br01` inside the `bp1` container and will have an interface `c1eth1` connected to it from the `c1` node.
+
+Note, that while `br01` is created inside the `bp1` container, containerlab still counts it as a node and will not allow you to create another node with the same name in the same lab even if it is created in a different namespace. To overcome this, you can use a special naming convention for the same-named bridges in different namespaces, like `br01|bp1` and `br01|bp2`, which will allow you to create bridges with the same name in different namespaces.
+
+The extra `|bp1` suffix is used to distinguish the bridges and make them unique for containerlab, but this suffix will be dropped when the bridge is created inside the container namespace, so the bridge will still be named `br01` inside the `bp1` and `bp2` containers.
+
+```yaml
+  nodes:
+     br01|bp1:
+       kind: bridge
+       network-mode: container:bp1
+```
