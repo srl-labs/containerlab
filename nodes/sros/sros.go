@@ -170,10 +170,6 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		o(n)
 	}
 
-	if n.Cfg.NodeType == "" {
-		n.Cfg.NodeType = SrosDefaultType
-	}
-
 	// if user was not initialized to a value, use root
 	if n.Cfg.User == "" {
 		n.Cfg.User = "0:0"
@@ -185,6 +181,17 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, c := range n.Cfg.Components {
 		c.Slot = strings.ToUpper(c.Slot)
 	}
+	//Merge Enviroment
+	if n.Cfg.NodeType == "" {
+		n.Cfg.NodeType = SrosDefaultType
+	}
+	srosEnv[envNokiaSrosChassis] = n.Cfg.NodeType // Override NodeType var with existing env
+
+	mac := genMac(n.Cfg)
+	srosEnv[envNokiaSrosSystemBaseMac] = mac.MAC
+
+	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
+	log.Infof("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
 
 	if !n.isDistributed() {
 		if n.Cfg.License != "" {
@@ -193,11 +200,13 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 		}
 	}
-
+	// ATTENTION! this code is only intended to use by non-distributed SR-SIM
 	// mount config directory
 	if !n.isDistributed() && n.isCPM("") {
 		slot := n.Cfg.Env[envNokiaSrosSlot]
-
+		if slot == "" {
+			return fmt.Errorf("fail to init node because Env var %q is set to %q", envNokiaSrosSlot, n.Cfg.Env[envNokiaSrosSlot])
+		}
 		// add the config specific mounts
 		cfgPath := filepath.Join(n.Cfg.LabDir, slot, configStartup)
 		cf1Path := filepath.Join(n.Cfg.LabDir, slot, configCf1)
@@ -227,12 +236,15 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 	// store the certificate-related parameters
 	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
 	n.cert = params.Cert
+
 	n.topologyName = params.TopologyName
+
 	if !n.isDistributed() && n.isCPM("") {
 		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0777)
 		return n.createSROSFiles()
 	}
 	return nil
+	// return n.createSROSFiles()
 }
 
 // Post Deploy func for SR-SIM kind
@@ -303,7 +315,12 @@ func (n *sros) Delete(ctx context.Context) error {
 	}
 	// Delete all the component containers
 	for _, components := range n.Cfg.Components {
-		err := n.Runtime.DeleteContainer(ctx, n.calcComponentName(n.GetContainerName(), components.Slot))
+		componentName := n.calcComponentName(n.GetContainerName(), components.Slot)
+		err := n.Runtime.DeleteContainer(ctx, componentName)
+		if err != nil {
+			return err
+		}
+		err = utils.DeleteNetnsSymlink(componentName)
 		if err != nil {
 			return err
 		}
@@ -608,34 +625,25 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context, nodes map[string]n
 
 // Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars
 func (n *sros) createSROSFiles() error {
-	log.Debugf("Creating directory structure for SR-OS container: %s", n.Cfg.ShortName)
+	log.Infof("createSROSFiles Creating directory structure for SR-OS container: %s", n.Cfg.ShortName)
 
-	var src string
 	var err error
 
 	if n.Cfg.License != "" {
 		// copy license file to node specific directory in lab
-		src = n.Cfg.License
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(src, licPath, 0644); err != nil {
-			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
+		if err := utils.CopyFile(n.Cfg.License, licPath, 0644); err != nil {
+			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", n.Cfg.License, licPath, err)
 		}
-		log.Infof("CopyFile src %s -> dst %s succeeded", src, licPath)
+		log.Infof("CopyFile src %s -> dst %s succeeded", n.Cfg.License, licPath)
 	}
-
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0777)
-	// Override NodeType var with existing env
-	mac := genMac(n.Cfg)
-	if n.Cfg.NodeType != "" {
-		srosEnv[envNokiaSrosChassis] = n.Cfg.NodeType
-		srosEnv[envNokiaSrosSystemBaseMac] = mac.MAC
-	}
-	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
-	log.Debugf("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
+
 	// Skip config if node is not CPM
 	if n.isCPM("") {
 		err = n.createSROSFilesConfig()
@@ -649,6 +657,7 @@ func (n *sros) createSROSFilesConfig() error {
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
+
 	var cfgTemplate string
 	var err error
 	cfgPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup, startupCfgFName)
@@ -805,9 +814,10 @@ func (n *sros) addDefaultConfig() error {
 		return err
 	}
 	if buf.Len() == 0 {
-		log.Warnf("Buffer empty, Not parsed template data of type %T for node %q", tplData, n.Cfg.ShortName)
+		log.Warnf("Buffer empty, not parsed template %q for node %q", srosCfgTpl.Name(), n.Cfg.ShortName)
 	} else {
-		log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
+		// log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
+		log.Debugf("Node %q additional default config parsed from template %q", n.Cfg.ShortName, srosCfgTpl.Name())
 		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
 
 	}
