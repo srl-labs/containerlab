@@ -42,7 +42,7 @@ const (
 	readyTimeout = time.Minute * 1 // max wait time for node to boot
 
 	generateable     = true
-	generateIfFormat = "e%d-%d"
+	generateIfFormat = "%d/%d/%d"
 
 	retryTimer = 1 * time.Second
 	// additional config that clab adds on top of the factory config.
@@ -194,7 +194,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	srosEnv[envNokiaSrosSystemBaseMac] = mac.MAC
 
 	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
-	log.Infof("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
+	log.Debugf("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
 
 	err := n.setupComponentNodes()
 	if err != nil {
@@ -221,8 +221,8 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 
 	n.topologyName = params.TopologyName
 
-	// either the non-distributed or distributed ans is a CPM
-	if n.isStanaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
+	// either the non-distributed OR distributed AND is a CPM
+	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0777)
 		slot := n.Cfg.Env[envNokiaSrosSlot]
 		if slot == "" {
@@ -240,7 +240,7 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"),
 		)
 
-		if n.Cfg.License != "" && (n.isCPM("") || n.isStanaloneNode()) {
+		if n.Cfg.License != "" && (n.isCPM("") || n.isStandaloneNode()) {
 			// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
 			n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
@@ -307,7 +307,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 // Delete func for SR-SIM kind
 func (n *sros) Delete(ctx context.Context) error {
 	// if not distributed, follow default node implementation
-	if n.isStanaloneNode() || n.isDistributedCardNode() {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.Runtime.DeleteContainer(ctx, n.GetContainerName())
 	}
 
@@ -462,13 +462,13 @@ func (n *sros) isDistributedBaseNode() bool {
 	return len(n.Cfg.Components) > 1
 }
 
-func (n *sros) isStanaloneNode() bool {
+func (n *sros) isStandaloneNode() bool {
 	return !n.isDistributedBaseNode() && !n.isDistributedCardNode()
 }
 
 // Function that retrieves the Namespace Path
 func (n *sros) GetNSPath(ctx context.Context) (string, error) {
-	if n.isStanaloneNode() || n.isDistributedCardNode() {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetNSPath(ctx)
 	}
 	// calculate cpm container name
@@ -657,7 +657,7 @@ func (n *sros) createSROSFiles() error {
 
 	var err error
 
-	if n.Cfg.License != "" && (n.isCPM("") || n.isStanaloneNode()) {
+	if n.Cfg.License != "" && (n.isCPM("") || n.isStandaloneNode()) {
 		// copy license file to node specific directory in lab
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
 		if err := utils.CopyFile(n.Cfg.License, licPath, 0644); err != nil {
@@ -673,7 +673,7 @@ func (n *sros) createSROSFiles() error {
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0777)
 
 	// Skip config if node is not CPM
-	if n.isCPM("") || n.isStanaloneNode() {
+	if n.isCPM("") || n.isStandaloneNode() {
 		err = n.createSROSFilesConfig()
 		if err != nil {
 			return err
@@ -904,7 +904,7 @@ func (n *sros) addPartialConfig() error {
 func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 
 	// if not a distributed setup call regular GetContainers
-	if n.isStanaloneNode() || n.isDistributedCardNode() {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetContainers(ctx)
 	}
 
