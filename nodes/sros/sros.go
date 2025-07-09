@@ -163,6 +163,9 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	n.Cfg = cfg
 
+	n.InterfaceHelp = InterfaceHelp
+	n.InterfaceRegexp = InterfaceRegexp
+
 	// force cert creation for sros nodes as they by make use of tls certificate in the default config
 	n.Cfg.Certificate.Issue = utils.Pointer(true)
 
@@ -181,7 +184,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, c := range n.Cfg.Components {
 		c.Slot = strings.ToUpper(c.Slot)
 	}
-	//Merge Enviroment
+	// Merge Enviroment
 	if n.Cfg.NodeType == "" {
 		n.Cfg.NodeType = SrosDefaultType
 	}
@@ -193,32 +196,11 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
 	log.Infof("Merged env file: %+v for node %q", n.Cfg.Env, n.Cfg.ShortName)
 
-	if !n.isDistributed() {
-		if n.Cfg.License != "" && n.isCPM("") {
-			// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
-			n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
-				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
-		}
+	err := n.setupComponentNodes()
+	if err != nil {
+		return err
 	}
-	// ATTENTION! this code is only intended to use by non-distributed SR-SIM
-	// mount config directory
-	if !n.isDistributed() && n.isCPM("") {
-		slot := n.Cfg.Env[envNokiaSrosSlot]
-		if slot == "" {
-			return fmt.Errorf("fail to init node because Env var %q is set to %q", envNokiaSrosSlot, n.Cfg.Env[envNokiaSrosSlot])
-		}
-		// add the config specific mounts
-		cfgPath := filepath.Join(n.Cfg.LabDir, slot, configStartup)
-		cf1Path := filepath.Join(n.Cfg.LabDir, slot, configCf1)
-		cf2Path := filepath.Join(n.Cfg.LabDir, slot, configCf2)
-		cf3Path := filepath.Join(n.Cfg.LabDir, slot, configCf3)
-		n.Cfg.Binds = append(n.Cfg.Binds,
-			fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
-			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
-			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
-			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"),
-		)
-	}
+
 	return nil
 }
 
@@ -239,12 +221,34 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 
 	n.topologyName = params.TopologyName
 
-	if !n.isDistributed() && n.isCPM("") {
+	// either the non-distributed or distributed ans is a CPM
+	if n.isStanaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0777)
+		slot := n.Cfg.Env[envNokiaSrosSlot]
+		if slot == "" {
+			return fmt.Errorf("fail to init node because Env var %q is set to %q", envNokiaSrosSlot, n.Cfg.Env[envNokiaSrosSlot])
+		}
+		// add the config specific mounts
+		cfgPath := filepath.Join(n.Cfg.LabDir, slot, configStartup)
+		cf1Path := filepath.Join(n.Cfg.LabDir, slot, configCf1)
+		cf2Path := filepath.Join(n.Cfg.LabDir, slot, configCf2)
+		cf3Path := filepath.Join(n.Cfg.LabDir, slot, configCf3)
+		n.Cfg.Binds = append(n.Cfg.Binds,
+			fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
+			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
+			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
+			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"),
+		)
+
+		if n.Cfg.License != "" && (n.isCPM("") || n.isStanaloneNode()) {
+			// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+			n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
+				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
+		}
+
 		return n.createSROSFiles()
 	}
 	return nil
-	// return n.createSROSFiles()
 }
 
 // Post Deploy func for SR-SIM kind
@@ -303,24 +307,13 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 // Delete func for SR-SIM kind
 func (n *sros) Delete(ctx context.Context) error {
 	// if not distributed, follow default node implementation
-	if !n.isDistributed() {
+	if n.isStanaloneNode() || n.isDistributedCardNode() {
 		return n.Runtime.DeleteContainer(ctx, n.GetContainerName())
 	}
-	// if distributed, delete endpoints as does the DefaultNode implementation
-	for _, e := range n.Endpoints {
-		err := e.GetLink().Remove(ctx)
-		if err != nil {
-			return err
-		}
-	}
+
 	// Delete all the component containers
-	for _, components := range n.Cfg.Components {
-		componentName := n.calcComponentName(n.GetContainerName(), components.Slot)
-		err := n.Runtime.DeleteContainer(ctx, componentName)
-		if err != nil {
-			return err
-		}
-		err = utils.DeleteNetnsSymlink(componentName)
+	for _, componentNodes := range n.componentNodes {
+		err := componentNodes.Delete(ctx)
 		if err != nil {
 			return err
 		}
@@ -328,14 +321,30 @@ func (n *sros) Delete(ctx context.Context) error {
 	return nil
 }
 
-// Function that deploys the distributed SR-SIM when the `components` key is present
-func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployParams) error {
+// DeleteNetnsSymlink deletes the symlink file created for the container netns.
+func (n *sros) DeleteNetnsSymlink() error {
+	// if it is the base node, then we need to delete the symlink for all the components.
+	if n.isDistributedBaseNode() {
+		for _, componentNode := range n.componentNodes {
+			err := componentNode.DeleteNetnsSymlink()
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	return n.DefaultNode.DeleteNetnsSymlink()
+}
+
+func (n *sros) setupComponentNodes() error {
+	if !n.isDistributedBaseNode() {
+		return nil
+	}
+
 	// Registry, because it is not a package Var
 	nr := nodes.NewNodeRegistry()
 	Register(nr)
-
-	// generate a system mac
-	systemMac := genMac(n.Cfg)
 
 	// loop through the components, creating them
 	for idx, c := range n.Cfg.Components {
@@ -376,12 +385,14 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 		}
 
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
-		componentConfig.Env[envNokiaSrosChassis] = n.Cfg.NodeType
-		componentConfig.Env[envNokiaSrosSystemBaseMac] = systemMac.MAC
 
 		// adjust label based env vars
 		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.NodeName)] = componentConfig.ShortName
 		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.LongName)] = componentConfig.LongName
+
+		if componentConfig.Labels == nil {
+			componentConfig.Labels = map[string]string{}
+		}
 
 		// adjust labels
 		componentConfig.Labels[labels.NodeName] = componentConfig.ShortName
@@ -392,15 +403,21 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 		if err != nil {
 			return err
 		}
-		// store the node in the componentNodes
-		n.componentNodes = append(n.componentNodes, componentNode)
 		// set the runtime by copying it from the general node
 		componentNode.WithRuntime(n.GetRuntime())
+		// store the node in the componentNodes
+		n.componentNodes = append(n.componentNodes, componentNode)
+	}
+	return nil
+}
 
-		componentNode.PreDeploy(ctx, n.preDeployParams)
-
+// Function that deploys the distributed SR-SIM when the `components` key is present
+func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployParams) error {
+	// loop through the components, creating them
+	for _, c := range n.componentNodes {
+		c.PreDeploy(ctx, n.preDeployParams)
 		// deploy the component
-		err = componentNode.Deploy(ctx, deployParams)
+		err := c.Deploy(ctx, deployParams)
 		if err != nil {
 			return err
 		}
@@ -433,14 +450,25 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 	return nil
 }
 
-// Function that check if  SR-SIM is distributed: `components` key is present
-func (n *sros) isDistributed() bool {
+// isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a distributed setup
+func (n *sros) isDistributedCardNode() bool {
+	_, exists := n.Cfg.Env[envNokiaSrosSlot]
+	// is distributed if components is > 1 and the slot var exists.
+	return exists && !n.isDistributedBaseNode()
+}
+
+// check if SR-SIM is distributed: `components` key is present
+func (n *sros) isDistributedBaseNode() bool {
 	return len(n.Cfg.Components) > 1
+}
+
+func (n *sros) isStanaloneNode() bool {
+	return !n.isDistributedBaseNode() && !n.isDistributedCardNode()
 }
 
 // Function that retrieves the Namespace Path
 func (n *sros) GetNSPath(ctx context.Context) (string, error) {
-	if !n.isDistributed() {
+	if n.isStanaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetNSPath(ctx)
 	}
 	// calculate cpm container name
@@ -515,7 +543,7 @@ search:
 // Function that deploys the SR-SIM kind
 func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) error {
 	// if it is a chassis with multiple cards (i.e. components)
-	if n.isDistributed() {
+	if n.isDistributedBaseNode() {
 		err := n.deploy_fabric(ctx, deployParams)
 		if err != nil {
 			return err
@@ -629,7 +657,7 @@ func (n *sros) createSROSFiles() error {
 
 	var err error
 
-	if n.Cfg.License != "" && n.isCPM("") {
+	if n.Cfg.License != "" && (n.isCPM("") || n.isStanaloneNode()) {
 		// copy license file to node specific directory in lab
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
 		if err := utils.CopyFile(n.Cfg.License, licPath, 0644); err != nil {
@@ -645,11 +673,13 @@ func (n *sros) createSROSFiles() error {
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0777)
 
 	// Skip config if node is not CPM
-	if n.isCPM("") {
+	if n.isCPM("") || n.isStanaloneNode() {
 		err = n.createSROSFilesConfig()
+		if err != nil {
+			return err
+		}
 	}
-
-	return err
+	return nil
 }
 
 // Func that handles the config generation for the SR-SIM kind
@@ -874,7 +904,7 @@ func (n *sros) addPartialConfig() error {
 func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 
 	// if not a distributed setup call regular GetContainers
-	if !n.isDistributed() {
+	if n.isStanaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetContainers(ctx)
 	}
 
