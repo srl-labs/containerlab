@@ -139,6 +139,9 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
 	}
 
+	c.addDefaultLabels(nodeCfg)
+	labelsToEnvVars(nodeCfg)
+
 	// Init
 	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeRuntime]), nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
@@ -147,11 +150,6 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	}
 
 	c.Nodes[nodeName] = n
-
-	c.addDefaultLabels(n)
-
-	labelsToEnvVars(n.Config())
-
 	return nil
 }
 
@@ -553,8 +551,7 @@ func (c *CLab) HasKind(k string) bool {
 // addDefaultLabels adds default labels to node's config struct.
 // Update the addDefaultLabels function in clab/config.go
 // addDefaultLabels adds default labels to node's config struct.
-func (c *CLab) addDefaultLabels(n nodes.Node) {
-	cfg := n.Config()
+func (c *CLab) addDefaultLabels(cfg *types.NodeConfig) {
 	if cfg.Labels == nil {
 		cfg.Labels = map[string]string{}
 	}
