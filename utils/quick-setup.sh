@@ -14,10 +14,10 @@ function check_os {
             DISTRO_TYPE="ubuntu"
         elif [ "$ID" = "fedora" ]; then
             DISTRO_TYPE="fedora"
-        elif [[ "$ID" = "rocky" || "$ID" = "rhel" || "$ID" = "centos" ]]; then
+        elif [[ "$ID" = "rocky" || "$ID" = "rhel" || "$ID" = "centos" || "$ID" = "almalinux" ]]; then
             DISTRO_TYPE="rhel"
         else
-            echo "This is not a supported OS. (Debian, Ubuntu, Fedora, Rocky, CentOS, RHEL)"
+            echo "This is not a supported OS. (Debian, Ubuntu, Fedora, Rocky, CentOS, RHEL, AlmaLinux)"
         fi
     else
         echo "Cannot determine the operating system"
