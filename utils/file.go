@@ -178,6 +178,8 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 			return fmt.Errorf("%w: %s", errHTTPFetch, src)
 		}
 
+		defer resp.Body.Close()
+
 		in = resp.Body
 
 	case IsS3URL(src):
@@ -194,8 +196,8 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 
 		// Create credential chain that mimics AWS SDK behavior
 		credProviders := []credentials.Provider{
-			&credentials.EnvAWS{},                                              // 1. Environment variables
-			&credentials.FileAWSCredentials{},                                  // 2. ~/.aws/credentials (default profile)
+			&credentials.EnvAWS{},                                             // 1. Environment variables
+			&credentials.FileAWSCredentials{},                                 // 2. ~/.aws/credentials (default profile)
 			&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
 		}
 
@@ -413,6 +415,9 @@ func FilenameForURL(rawUrl string) string {
 		if err != nil {
 			return filepath.Base(u.Path)
 		}
+
+		defer resp.Body.Close()
+
 		if cd := resp.Header.Get("Content-Disposition"); cd != "" {
 			if _, params, err := mime.ParseMediaType(cd); err == nil {
 				return params["filename"]
