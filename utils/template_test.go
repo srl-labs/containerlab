@@ -218,58 +218,7 @@ func TestSubtract(t *testing.T) {
 		})
 	}
 }
-func TestAdd(t *testing.T) {
-	tests := map[string]struct {
-		a    int
-		b    int
-		want int
-	}{
-		"add positive numbers": {
-			a:    5,
-			b:    3,
-			want: 8,
-		},
-		"add negative numbers": {
-			a:    -2,
-			b:    -4,
-			want: -6,
-		},
-		"add positive and negative": {
-			a:    10,
-			b:    -5,
-			want: 5,
-		},
-		"add zero values": {
-			a:    0,
-			b:    0,
-			want: 0,
-		},
-		"add max int with small number": {
-			a:    2147483647,
-			b:    1,
-			want: 2147483648,
-		},
-		"add min int with small number": {
-			a:    -2147483648,
-			b:    -1,
-			want: -2147483649,
-		},
-		"add same numbers": {
-			a:    42,
-			b:    42,
-			want: 84,
-		},
-	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			got := add(tc.a, tc.b)
-			if !cmp.Equal(got, tc.want) {
-				t.Fatalf("wanted %v, got %v", tc.want, got)
-			}
-		})
-	}
-}
 func TestToJsonPretty(t *testing.T) {
 	tests := map[string]struct {
 		input  any
@@ -642,6 +591,532 @@ func TestConvFuncsToInt(t *testing.T) {
 			}
 			if !cmp.Equal(got, tc.want) {
 				t.Fatalf("wanted %v, got %v", tc.want, got)
+			}
+		})
+	}
+}
+func TestAddFunc(t *testing.T) {
+	tests := map[string]struct {
+		a, b   any
+		want   any
+		errStr string
+	}{
+		"add two ints": {
+			a:    2,
+			b:    3,
+			want: int64(5),
+		},
+		"add two int64": {
+			a:    int64(10),
+			b:    int64(20),
+			want: int64(30),
+		},
+		"add int and int64": {
+			a:    5,
+			b:    int64(7),
+			want: int64(12),
+		},
+		"add two float64": {
+			a:    1.5,
+			b:    2.5,
+			want: 4.0,
+		},
+		"add float and int": {
+			a:    1.5,
+			b:    2,
+			want: 3.5,
+		},
+		"add int and float": {
+			a:    2,
+			b:    1.5,
+			want: 3.5,
+		},
+		"add two float32": {
+			a:    float32(1.2),
+			b:    float32(2.3),
+			want: float64(3.5),
+		},
+		"add float32 and float64": {
+			a:    float64(1.2),
+			b:    float64(2.3),
+			want: float64(3.5),
+		},
+		"add string numbers": {
+			a:    "10",
+			b:    "5",
+			want: int64(15),
+		},
+		"add string float and int": {
+			a:    "2.5",
+			b:    2,
+			want: 4.5,
+		},
+		"add string int and float": {
+			a:    "2",
+			b:    2.5,
+			want: 4.5,
+		},
+		"add bool true and int": {
+			a:    true,
+			b:    2,
+			want: int64(3),
+		},
+		"add bool false and int": {
+			a:    false,
+			b:    2,
+			want: int64(2),
+		},
+		"add bool true and float": {
+			a:    true,
+			b:    2.5,
+			want: 3.5,
+		},
+		"add negative numbers": {
+			a:    -5,
+			b:    -3,
+			want: int64(-8),
+		},
+		"add zero": {
+			a:    0,
+			b:    0,
+			want: int64(0),
+		},
+		"add uint and int": {
+			a:    uint(2),
+			b:    3,
+			want: int64(5),
+		},
+		"add uint64 and int64": {
+			a:    uint64(2),
+			b:    int64(3),
+			want: int64(5),
+		},
+		"add zero values": {
+			a:    0,
+			b:    0,
+			want: int64(0),
+		},
+		"add max int with small number": {
+			a:    2147483647,
+			b:    1,
+			want: int64(2147483648),
+		},
+		"add min int with small number": {
+			a:    -2147483648,
+			b:    -1,
+			want: int64(-2147483649),
+		},
+		"add invalid string": {
+			a:      "foo",
+			b:      2,
+			errStr: "expected a number",
+		},
+		"add int and invalid string": {
+			a:      2,
+			b:      "bar",
+			errStr: "expected a number",
+		},
+		"add nil and int": {
+			a:      nil,
+			b:      2,
+			errStr: "expected a number",
+		},
+		"add int and nil": {
+			a:      2,
+			b:      nil,
+			errStr: "expected a number",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := add(tc.a, tc.b)
+			if tc.errStr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.errStr)
+				}
+				if !strings.Contains(err.Error(), tc.errStr) {
+					t.Fatalf("expected error containing %q, got %q", tc.errStr, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Fatalf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+func TestMulFunc(t *testing.T) {
+	tests := map[string]struct {
+		a, b   any
+		want   any
+		errStr string
+	}{
+		"multiply two ints": {
+			a:    2,
+			b:    3,
+			want: int64(6),
+		},
+		"multiply int and int64": {
+			a:    5,
+			b:    int64(7),
+			want: int64(35),
+		},
+		"multiply two float64": {
+			a:    1.5,
+			b:    2.0,
+			want: 3.0,
+		},
+		"multiply float and int": {
+			a:    1.5,
+			b:    2,
+			want: 3.0,
+		},
+		"multiply int and float": {
+			a:    2,
+			b:    1.5,
+			want: 3.0,
+		},
+		"multiply two float32": {
+			a:    float32(2.0),
+			b:    float32(3.5),
+			want: float64(7.0),
+		},
+		"multiply float32 and float64": {
+			a:    float32(2.0),
+			b:    float64(3.5),
+			want: float64(7.0),
+		},
+		"multiply string numbers": {
+			a:    "10",
+			b:    "5",
+			want: int64(50),
+		},
+		"multiply string float and int": {
+			a:    "2.5",
+			b:    2,
+			want: 5.0,
+		},
+		"multiply string int and float": {
+			a:    "2",
+			b:    2.5,
+			want: 5.0,
+		},
+		"multiply bool true and int": {
+			a:    true,
+			b:    2,
+			want: int64(2),
+		},
+		"multiply bool false and int": {
+			a:    false,
+			b:    2,
+			want: int64(0),
+		},
+		"multiply bool true and float": {
+			a:    true,
+			b:    2.5,
+			want: 2.5,
+		},
+		"multiply negative numbers": {
+			a:    -5,
+			b:    -3,
+			want: int64(15),
+		},
+		"multiply zero": {
+			a:    0,
+			b:    100,
+			want: int64(0),
+		},
+		"multiply uint and int": {
+			a:    uint(2),
+			b:    3,
+			want: int64(6),
+		},
+		"multiply uint64 and int64": {
+			a:    uint64(2),
+			b:    int64(3),
+			want: int64(6),
+		},
+		"multiply max int": {
+			a:    int64(math.MaxInt32),
+			b:    1,
+			want: int64(math.MaxInt32),
+		},
+		"multiply min int": {
+			a:    int64(math.MinInt32),
+			b:    1,
+			want: int64(math.MinInt32),
+		},
+		"multiply invalid string": {
+			a:      "foo",
+			b:      2,
+			errStr: "expected a number",
+		},
+		"multiply int and invalid string": {
+			a:      2,
+			b:      "bar",
+			errStr: "expected a number",
+		},
+		"multiply nil and int": {
+			a:      nil,
+			b:      2,
+			errStr: "expected a number",
+		},
+		"multiply int and nil": {
+			a:      2,
+			b:      nil,
+			errStr: "expected a number",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := mul(tc.a, tc.b)
+			if tc.errStr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.errStr)
+				}
+				if !strings.Contains(err.Error(), tc.errStr) {
+					t.Fatalf("expected error containing %q, got %q", tc.errStr, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Fatalf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+func TestDivFunc(t *testing.T) {
+	tests := map[string]struct {
+		a, b   any
+		want   any
+		errStr string
+	}{
+		"divide two ints": {
+			a:    10,
+			b:    2,
+			want: 5.0,
+		},
+		"divide int by float": {
+			a:    9,
+			b:    2.0,
+			want: 4.5,
+		},
+		"divide float by int": {
+			a:    9.0,
+			b:    2,
+			want: 4.5,
+		},
+		"divide two floats": {
+			a:    7.5,
+			b:    2.5,
+			want: 3.0,
+		},
+		"divide negative numbers": {
+			a:    -8,
+			b:    2,
+			want: -4.0,
+		},
+		"divide by negative": {
+			a:    8,
+			b:    -2,
+			want: -4.0,
+		},
+		"divide zero by number": {
+			a:    0,
+			b:    5,
+			want: 0.0,
+		},
+		"divide by zero": {
+			a:      5,
+			b:      0,
+			errStr: "division by 0",
+		},
+		"divide string numbers": {
+			a:    "10",
+			b:    "2",
+			want: 5.0,
+		},
+		"divide string float and int": {
+			a:    "9.0",
+			b:    3,
+			want: 3.0,
+		},
+		"divide int and string float": {
+			a:    9,
+			b:    "3.0",
+			want: 3.0,
+		},
+		"divide bool true and int": {
+			a:    true,
+			b:    2,
+			want: 0.5,
+		},
+		"divide int and bool true": {
+			a:    2,
+			b:    true,
+			want: 2.0,
+		},
+		"divide bool false and int": {
+			a:    false,
+			b:    2,
+			want: 0.0,
+		},
+		"divide int and bool false": {
+			a:      2,
+			b:      false,
+			errStr: "division by 0",
+		},
+		"divide invalid string": {
+			a:      "foo",
+			b:      2,
+			errStr: "expected a number",
+		},
+		"divide int and invalid string": {
+			a:      2,
+			b:      "bar",
+			errStr: "expected a number",
+		},
+		"divide nil and int": {
+			a:      nil,
+			b:      2,
+			errStr: "expected a number",
+		},
+		"divide int and nil": {
+			a:      2,
+			b:      nil,
+			errStr: "expected a number",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := div(tc.a, tc.b)
+			if tc.errStr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.errStr)
+				}
+				if !strings.Contains(err.Error(), tc.errStr) {
+					t.Fatalf("expected error containing %q, got %q", tc.errStr, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Fatalf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+func TestRemFunc(t *testing.T) {
+	tests := map[string]struct {
+		a, b   any
+		want   any
+		errStr string
+	}{
+		"remainder of two positive ints": {
+			a:    10,
+			b:    3,
+			want: int64(1),
+		},
+		"remainder of negative and positive": {
+			a:    -10,
+			b:    3,
+			want: int64(-1),
+		},
+		"remainder of positive and negative": {
+			a:    10,
+			b:    -3,
+			want: int64(1),
+		},
+		"remainder of two negatives": {
+			a:    -10,
+			b:    -3,
+			want: int64(-1),
+		},
+		"remainder zero dividend": {
+			a:    0,
+			b:    5,
+			want: int64(0),
+		},
+		"remainder zero divisor": {
+			a:      5,
+			b:      0,
+			errStr: "expected a number",
+		},
+		"remainder string numbers": {
+			a:    "10",
+			b:    "4",
+			want: int64(2),
+		},
+		"remainder float numbers": {
+			a:    10.9,
+			b:    3.1,
+			want: int64(1),
+		},
+		"remainder bool true and int": {
+			a:    true,
+			b:    2,
+			want: int64(1),
+		},
+		"remainder int and bool true": {
+			a:    3,
+			b:    true,
+			want: int64(0),
+		},
+		"remainder int and bool false": {
+			a:      3,
+			b:      false,
+			errStr: "expected a number",
+		},
+		"remainder invalid string": {
+			a:      "foo",
+			b:      2,
+			errStr: "expected a number",
+		},
+		"remainder int and invalid string": {
+			a:      2,
+			b:      "bar",
+			errStr: "expected a number",
+		},
+		"remainder nil and int": {
+			a:      nil,
+			b:      2,
+			errStr: "expected a number",
+		},
+		"remainder int and nil": {
+			a:      2,
+			b:      nil,
+			errStr: "expected a number",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := rem(tc.a, tc.b)
+			if tc.errStr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.errStr)
+				}
+				if !strings.Contains(err.Error(), tc.errStr) {
+					t.Fatalf("expected error containing %q, got %q", tc.errStr, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Fatalf("mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
