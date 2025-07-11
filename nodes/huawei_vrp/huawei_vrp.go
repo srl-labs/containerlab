@@ -5,13 +5,10 @@
 package huawei_vrp
 
 import (
-	"context"
 	"fmt"
 	"path"
 
-	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodeutils"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -77,30 +74,6 @@ func (n *huawei_vrp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName,
 		n.Cfg.Env["CONNECTION_MODE"])
-
-	return nil
-}
-
-func (s *huawei_vrp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0o777)
-	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
-	return nodes.LoadStartupConfigFileVr(s, configDirName, startupCfgFName)
-}
-
-func (n *huawei_vrp) SaveConfig(_ context.Context) error {
-	err := nodeutils.NetconfSaveConfig(n.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
-		scrapliPlatformName,
-	)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
 
 	return nil
 }

@@ -5,7 +5,6 @@
 package fortinet_fortigate
 
 import (
-	"context"
 	"fmt"
 	"path"
 	"regexp"
@@ -89,14 +88,4 @@ func (n *fortigate) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	n.InterfaceHelp = InterfaceHelp
 
 	return nil
-}
-
-func (n *fortigate) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
-
-	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
