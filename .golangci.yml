@@ -9,18 +9,14 @@ linters:
         - govet
         - ineffassign
         - nakedret
-        - nestif
-        - noctx
         - nolintlint
-        - prealloc
-        - revive
         - staticcheck
         - unconvert
         - unparam
         - unused
         - whitespace
     disable:
-        # disabling for *now* so ci can pass nicely, but these likely should be adressed
+        # disabling for *now* so ci can pass nicely, but (some?) of these likely should be adressed
         - dupl
         - errcheck
         - exhaustive
@@ -34,6 +30,10 @@ linters:
         - lll
         - misspell
         - mnd
+        - nestif
+        - noctx
+        - prealloc
+        - revive
         - wsl_v5
     settings:
         dupl:
