@@ -1,13 +1,13 @@
 name: golangci-lint
 on:
-  workflow_dispatch:
+    workflow_dispatch:
 jobs:
-  golangci:
-    name: lint
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v1.38
+    golangci:
+        name: lint
+        runs-on: ubuntu-20.04
+        steps:
+            - uses: actions/checkout@v4
+            - name: golangci-lint
+              uses: golangci/golangci-lint-action@v8
+              with:
+                  version: v2.2.1
