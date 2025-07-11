@@ -5,7 +5,6 @@
 package vr_ftosv
 
 import (
-	"context"
 	"fmt"
 	"path"
 
@@ -40,12 +39,12 @@ func Register(r *nodes.NodeRegistry) {
 }
 
 type vrFtosv struct {
-	nodes.DefaultNode
+	nodes.VRNode
 }
 
 func (n *vrFtosv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, n.ScrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -75,18 +74,4 @@ func (n *vrFtosv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
 
 	return nil
-}
-
-func (n *vrFtosv) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
-	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *vrFtosv) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }
