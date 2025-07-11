@@ -166,6 +166,10 @@ func rem(a, b any) (any, error) {
 		return nil, fmt.Errorf("expected a number: %w", err)
 	}
 
+	if ib == 0 {
+		return nil, fmt.Errorf("expected a number: divisor is zero")
+	}
+
 	return ia % ib, nil
 }
 
