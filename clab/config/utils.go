@@ -169,7 +169,7 @@ func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 }
 
 // Create a link name using the node names and optional link_num.
-func linkName(link *types.Link) (string, string, error) {
+func linkName(link *types.Link) (string, string, error) { //nolint: unparam
 	var linkNo string
 	if v, ok := link.Vars[vkLinkNum]; ok {
 		linkNo = fmt.Sprintf("_%v", v)

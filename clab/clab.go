@@ -818,7 +818,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 			workerFuncChWG.Add(1)
 			// start a func for all the containers, then will wait for their own waitgroups
 			// to be set to zero by their depending containers, then enqueue to the creation channel
-			go func(node *depMgr.DependencyNode, dm depMgr.DependencyManager,
+			go func(node *depMgr.DependencyNode, _ depMgr.DependencyManager,
 				workerChan chan<- *depMgr.DependencyNode, wfcwg *sync.WaitGroup,
 			) {
 				// we are entering the create stage here and not in the workerFunc

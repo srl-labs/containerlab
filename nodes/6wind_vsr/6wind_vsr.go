@@ -201,7 +201,7 @@ type vsrTemplateData struct {
 }
 
 // addDefaultConfig adds VSR default configuration.
-func (n *sixwind_vsr) addDefaultConfig(ctx context.Context) error {
+func (n *sixwind_vsr) addDefaultConfig(_ context.Context) error {
 	// tplData holds data used in templating of the default config snippet
 	tplData := vsrTemplateData{
 		Banner:     banner,
