@@ -384,11 +384,11 @@ func ResolvePath(p, base string) string {
 		return p
 	}
 
-	switch {
+	switch p[0] {
 	// resolve ~/ path
-	case p[0] == '~':
+	case '~':
 		p = ExpandHome(p)
-	case p[0] == '/':
+	case '/':
 		return p
 	default:
 		// join relative path with the base path

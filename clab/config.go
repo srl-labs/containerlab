@@ -159,11 +159,11 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	// default longName follows $prefix-$lab-$nodeName pattern
 	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
 
-	switch {
+	switch *c.Config.Prefix {
 	// when prefix is an empty string longName will match shortName/nodeName
-	case *c.Config.Prefix == "":
+	case "":
 		longName = nodeName
-	case *c.Config.Prefix == "__lab-name":
+	case "__lab-name":
 		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
 	}
 

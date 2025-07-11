@@ -93,6 +93,10 @@ linters:
             - linters:
                   - mnd
               path: _test\.go
+            - linters:
+                  - staticcheck
+              # its nice to be explicit, this feels less explicit
+              text: could remove embedded field
         paths:
             - third_party$
             - builtin$

@@ -303,7 +303,7 @@ func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
 			}
-			if !(parsedIndices[indexKey] >= 0) {
+			if parsedIndices[indexKey] < 0 {
 				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 0", ifName, indexKey, index)
 			}
 		} else {

@@ -237,7 +237,8 @@ func (n *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 				basename = utils.FilenameForURL(fullpath)
 			}
 			// enforce yml extension
-			if ext := filepath.Ext(basename); !(ext == ".yml" || ext == ".yaml") {
+			ext := filepath.Ext(basename)
+			if ext != ".yml" && ext != ".yaml" {
 				basename = basename + ".yml"
 			}
 
@@ -822,7 +823,7 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
 			}
-			if !(parsedIndices[indexKey] >= 1) {
+			if parsedIndices[indexKey] < 1 {
 				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 1", ifName, indexKey, index)
 			}
 		} else {

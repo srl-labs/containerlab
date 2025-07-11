@@ -324,7 +324,7 @@ func (d *DefaultNode) GetMappedInterfaceName(ifName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !(ifIndex >= d.FirstDataIfIndex) {
+	if ifIndex < d.FirstDataIfIndex {
 		return "", fmt.Errorf("extracted interface index for %q is out of bounds: %d ! >= %d", ifName, ifIndex, d.FirstDataIfIndex)
 	}
 	mappedIfName := fmt.Sprintf("%s%d", d.InterfaceMappedPrefix, ifIndex)
