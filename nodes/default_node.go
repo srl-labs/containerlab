@@ -28,7 +28,8 @@ import (
 )
 
 // DefaultNode implements the Node interface and is embedded to the structs of all other nodes.
-// It has common fields and methods that every node should typically have. Nodes can override methods if needed.
+// It has common fields and methods that every node should typically have. Nodes can override
+// methods if needed.
 type DefaultNode struct {
 	Cfg              *types.NodeConfig
 	Mgmt             *types.MgmtNet
@@ -350,9 +351,9 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 
 // GenerateConfig generates configuration for the nodes
 // out of the template `t` based on the node configuration and saves the result to dst.
-// If the config file is already present in the node dir
-// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
-// this will persist the changes that users make to a running config when booted from some startup config
+// If the config file is already present in the node dir we do not regenerate the config unless
+// EnforceStartupConfig is explicitly set to true and startup-config points to a file this will
+// persist the changes that users make to a running config when booted from some startup config.
 func (d *DefaultNode) GenerateConfig(dst, t string) error {
 	// Check for incompatible options
 	if d.Cfg.EnforceStartupConfig && d.Cfg.SuppressStartupConfig {

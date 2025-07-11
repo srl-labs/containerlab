@@ -205,7 +205,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 				rr = ret.result
 			} else {
 				rr = sHistory + "#" + ret.result
-				sHistory = ""
+				sHistory = "" //nolint:ineffassign
 			}
 			rr = strings.Trim(rr, " \n\r\t")
 

@@ -10,7 +10,7 @@ import (
 // when the containerlab management network (bridge) interface doesn't exist anymore.
 func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
-		return
+		return nil
 	}
 
 	f, err := firewall.NewFirewallClient()
@@ -59,12 +59,12 @@ func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 	if !*d.mgmt.ExternalAccess {
 		log.Debug("skipping setup of forwarding rules for the management network since External Access is disabled by a user")
-		return
+		return nil
 	}
 
 	if d.mgmt.Bridge == "" {
 		log.Debug("skipping setup of forwarding rules for non-bridged management network")
-		return
+		return nil
 	}
 
 	f, err := firewall.NewFirewallClient()

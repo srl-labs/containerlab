@@ -12,7 +12,7 @@ func init() {
 	toolsCmd.AddCommand(apiServerCmd)
 }
 
-// apiServerCmd represents the api-server command container
+// apiServerCmd represents the api-server command container.
 var apiServerCmd = &cobra.Command{
 	Use:   "api-server",
 	Short: "Containerlab API server operations",

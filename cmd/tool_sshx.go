@@ -29,7 +29,7 @@ import (
 
 const sshx string = "sshx"
 
-// Configuration variables for the SSHX commands
+// Configuration variables for the SSHX commands.
 var (
 	sshxLabName       string
 	sshxContainerName string
@@ -40,7 +40,7 @@ var (
 	sshxMountSSHDir   bool // New flag to control SSH directory mounting
 )
 
-// SSHXListItem defines the structure for SSHX container info in JSON output
+// SSHXListItem defines the structure for SSHX container info in JSON output.
 type SSHXListItem struct {
 	Name        string `json:"name"`
 	Network     string `json:"network"`
@@ -50,7 +50,7 @@ type SSHXListItem struct {
 	Owner       string `json:"owner"`
 }
 
-// SSHXNode implements runtime.Node interface for SSHX containers
+// SSHXNode implements runtime.Node interface for SSHX containers.
 type SSHXNode struct {
 	config *types.NodeConfig
 }
@@ -98,14 +98,14 @@ func init() {
 		"mount host user's SSH directory (~/.ssh) to the sshx container")
 }
 
-// sshxCmd represents the sshx command container
+// sshxCmd represents the sshx command container.
 var sshxCmd = &cobra.Command{
 	Use:   sshx,
 	Short: "SSHX terminal sharing operations",
 	Long:  "Attach or detach SSHX terminal sharing containers to labs",
 }
 
-// NewSSHXNode creates a new SSHX node configuration
+// NewSSHXNode creates a new SSHX node configuration.
 func NewSSHXNode(name, image, network, labName string, enableReaders bool, labels map[string]string, mountSSH bool) *SSHXNode {
 	log.Debugf("Creating SSHXNode: name=%s, image=%s, network=%s, enableReaders=%t, exposeSSH=%t",
 		name, image, network, enableReaders, mountSSH)
@@ -174,7 +174,7 @@ func (*SSHXNode) GetEndpoints() []links.Endpoint {
 	return nil
 }
 
-// getSSHXLink retrieves the SSHX link from the container
+// getSSHXLink retrieves the SSHX link from the container.
 func getSSHXLink(ctx context.Context, rt runtime.ContainerRuntime, containerName string) string {
 	execCmd, err := exec.NewExecCmdFromString("cat /tmp/sshx")
 	if err != nil {
@@ -194,7 +194,7 @@ func getSSHXLink(ctx context.Context, rt runtime.ContainerRuntime, containerName
 	return link
 }
 
-// sshxAttachCmd attaches SSHX terminal sharing to a lab
+// sshxAttachCmd attaches SSHX terminal sharing to a lab.
 var sshxAttachCmd = &cobra.Command{
 	Use:     "attach",
 	Short:   "attach SSHX terminal sharing to a lab",
@@ -315,7 +315,7 @@ var sshxAttachCmd = &cobra.Command{
 	},
 }
 
-// sshxDetachCmd detaches SSHX terminal sharing from a lab
+// sshxDetachCmd detaches SSHX terminal sharing from a lab.
 var sshxDetachCmd = &cobra.Command{
 	Use:     "detach",
 	Short:   "detach SSHX terminal sharing from a lab",
@@ -361,7 +361,7 @@ var sshxDetachCmd = &cobra.Command{
 	},
 }
 
-// sshxListCmd lists active SSHX containers
+// sshxListCmd lists active SSHX containers.
 var sshxListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list active SSHX containers",

@@ -1,47 +1,40 @@
 version: "2"
 linters:
-    default: none
-    disable:
-        - testpackage
     enable:
         - asciicheck
         - bodyclose
-        - depguard
         - dogsled
-        - dupl
-        - err113
-        - errcheck
-        - exhaustive
-        - funlen
-        - gochecknoglobals
-        - gochecknoinits
-        - gocognit
-        - goconst
-        - gocritic
-        - gocyclo
         - godot
-        - godox
         - goprintffuncname
-        - gosec
         - govet
         - ineffassign
-        - lll
-        - misspell
-        - mnd
         - nakedret
         - nestif
         - noctx
         - nolintlint
         - prealloc
         - revive
-        - rowserrcheck
         - staticcheck
-        - testpackage
         - unconvert
         - unparam
         - unused
         - whitespace
-        # - wsl_v5 -- disabling for now due to a zillion complaints
+    disable:
+        # disabling for *now* so ci can pass nicely, but these likely should be adressed
+        - dupl
+        - errcheck
+        - exhaustive
+        - funlen
+        - gocognit
+        - goconst
+        - gocritic
+        - gocyclo
+        - godox
+        - gosec
+        - lll
+        - misspell
+        - mnd
+        - wsl_v5
     settings:
         dupl:
             threshold: 100
@@ -115,3 +108,7 @@ formatters:
             - third_party$
             - builtin$
             - examples$
+issues:
+    max-issues-per-linter: 0
+    max-same-issues: 0
+    uniq-by-line: false

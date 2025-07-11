@@ -26,7 +26,7 @@ import (
 
 const gotty string = "gotty"
 
-// Configuration variables for the GoTTY commands
+// Configuration variables for the GoTTY commands.
 var (
 	gottyLabName       string
 	gottyContainerName string
@@ -39,7 +39,7 @@ var (
 	gottyOwner         string
 )
 
-// GoTTYListItem defines the structure for GoTTY container info in JSON output
+// GoTTYListItem defines the structure for GoTTY container info in JSON output.
 type GoTTYListItem struct {
 	Name        string `json:"name"`
 	Network     string `json:"network"`
@@ -50,7 +50,7 @@ type GoTTYListItem struct {
 	Owner       string `json:"owner"`
 }
 
-// GoTTYNode implements runtime.Node interface for GoTTY containers
+// GoTTYNode implements runtime.Node interface for GoTTY containers.
 type GoTTYNode struct {
 	config *types.NodeConfig
 }
@@ -83,11 +83,11 @@ func init() {
 	gottyAttachCmd.Flags().StringVarP(&gottyOwner, "owner", "o", "",
 		"lab owner name for the GoTTY container")
 
-	// Detach command flags
+	// Detach command flags.
 	gottyDetachCmd.Flags().StringVarP(&gottyLabName, "lab", "l", "",
 		"name of the lab where GoTTY container is attached")
 
-	// Reattach command flags
+	// Reattach command flags.
 	gottyReattachCmd.Flags().StringVarP(&gottyLabName, "lab", "l", "",
 		"name of the lab to reattach GoTTY container to")
 	gottyReattachCmd.Flags().StringVarP(&gottyContainerName, "name", "", "",
@@ -106,14 +106,14 @@ func init() {
 		"lab owner name for the GoTTY container")
 }
 
-// gottyCmd represents the gotty command container
+// gottyCmd represents the gotty command container.
 var gottyCmd = &cobra.Command{
 	Use:   gotty,
 	Short: "GoTTY web terminal operations",
 	Long:  "Attach or detach GoTTY web terminal containers to labs",
 }
 
-// NewGoTTYNode creates a new GoTTY node configuration
+// NewGoTTYNode creates a new GoTTY node configuration.
 func NewGoTTYNode(name, image, network string, port int, username, password, shell string, labels map[string]string) *GoTTYNode {
 	log.Debugf("Creating GoTTYNode: name=%s, image=%s, network=%s, port=%d, username=%s, shell=%s",
 		name, image, network, port, username, shell)
@@ -172,7 +172,7 @@ func (n *GoTTYNode) GetEndpoints() []links.Endpoint {
 	return nil
 }
 
-// Simplified version of getGoTTYStatus
+// Simplified version of getGoTTYStatus.
 func getGoTTYStatus(ctx context.Context, rt runtime.ContainerRuntime, containerName string, port int) (bool, string) {
 	// Pass the port parameter to the status command
 	statusCmd := fmt.Sprintf("gotty-service status %d", port)
@@ -200,7 +200,7 @@ func getGoTTYStatus(ctx context.Context, rt runtime.ContainerRuntime, containerN
 	return running, webURL
 }
 
-// gottyAttachCmd attaches GoTTY web terminal to a lab
+// gottyAttachCmd attaches GoTTY web terminal to a lab.
 var gottyAttachCmd = &cobra.Command{
 	Use:     "attach",
 	Short:   "attach GoTTY web terminal to a lab",
@@ -319,7 +319,7 @@ var gottyAttachCmd = &cobra.Command{
 	},
 }
 
-// gottyDetachCmd detaches GoTTY web terminal from a lab
+// gottyDetachCmd detaches GoTTY web terminal from a lab.
 var gottyDetachCmd = &cobra.Command{
 	Use:     "detach",
 	Short:   "detach GoTTY web terminal from a lab",
@@ -365,7 +365,7 @@ var gottyDetachCmd = &cobra.Command{
 	},
 }
 
-// gottyListCmd lists active GoTTY containers
+// gottyListCmd lists active GoTTY containers.
 var gottyListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list active GoTTY containers",

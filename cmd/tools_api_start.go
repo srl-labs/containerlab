@@ -124,12 +124,12 @@ func (n *APIServerNode) Config() *types.NodeConfig {
 	return n.config
 }
 
-// GetEndpoints implementation for the Node interface
+// GetEndpoints implementation for the Node interface.
 func (*APIServerNode) GetEndpoints() []links.Endpoint {
 	return nil
 }
 
-// getContainerlabBinaryPath determine the binary path of the running executable
+// getContainerlabBinaryPath determine the binary path of the running executable.
 func getContainerlabBinaryPath() (string, error) {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -143,7 +143,7 @@ func getContainerlabBinaryPath() (string, error) {
 	return absPath, nil
 }
 
-// createLabels creates container labels
+// createLabels creates container labels.
 func createAPIServerLabels(containerName, owner string, port int, labsDir, host, runtimeType string) map[string]string {
 	labels := map[string]string{
 		clabels.NodeName: containerName,
@@ -164,7 +164,7 @@ func createAPIServerLabels(containerName, owner string, port int, labsDir, host,
 	return labels
 }
 
-// getOwnerName gets owner name from flag or environment variables
+// getOwnerName gets owner name from flag or environment variables.
 func getOwnerName() string {
 	if apiServerOwner != "" {
 		return apiServerOwner
@@ -177,7 +177,7 @@ func getOwnerName() string {
 	return os.Getenv("USER")
 }
 
-// apiServerStartCmd starts API server container
+// apiServerStartCmd starts API server container.
 var apiServerStartCmd = &cobra.Command{
 	Use:     "start",
 	Short:   "start Containerlab API server container",

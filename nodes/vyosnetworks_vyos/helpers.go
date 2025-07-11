@@ -84,7 +84,7 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 // clab applies ACLs to the node directory based on the idea that the NOS
 // parses everything through a management system. While Vyos does have a
 // management system it does a bunch of stuff as a regular linux user so the
-// directory needs rw access for the vyattacfg group
+// directory needs rw access for the vyattacfg group.
 func (n *vyos) fixdirACL() error {
 	log.Debugf("Setting up %s ACLs", n.Cfg.LabDir)
 	a := &acls.ACL{}
@@ -106,7 +106,7 @@ func (n *vyos) fixdirACL() error {
 }
 
 // Convert the PKCS#1 formatted key that clab generates into a PKCS#8 that Vyos
-// requires
+// requires.
 func pkcs1To8(der []byte) ([]byte, error) {
 	// the key we get is a []byte but it's actually a pem string not the raw data
 	log.Debug("Converting PKCS#1 key to PKCS#8")
