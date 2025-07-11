@@ -21,6 +21,9 @@ func CreateFuncs() template.FuncMap {
 		"ToJSONPretty": toJsonPretty,
 		"add":          add,
 		"subtract":     subtract,
+		"mul":          mul,
+		"div":          div,
+		"rem":          rem,
 		"seq":          seq,
 	}
 	maps.Copy(f, CreateStringFuncs())
@@ -40,8 +43,64 @@ func toJsonPretty(v any, prefix, indent string) string {
 	return string(a)
 }
 
-func add(a, b int) int {
-	return a + b
+// add a to b
+// copy from gomplate.
+func add(a, b any) (any, error) {
+	if containsFloat(a, b) {
+		fa, err := ToFloat64(a)
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+
+		fb, err := ToFloat64(b)
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+
+		return fa + fb, nil
+	}
+
+	ia, err := ToInt64(a)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	ib, err := ToInt64(b)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	return ia + ib, nil
+}
+
+// multiply a by b
+// copy from gomplate.
+func mul(a, b any) (any, error) {
+	if containsFloat(a, b) {
+		fa, err := ToFloat64(a)
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+
+		fb, err := ToFloat64(b)
+		if err != nil {
+			return nil, fmt.Errorf("expected a number: %w", err)
+		}
+
+		return fa * fb, nil
+	}
+
+	ia, err := ToInt64(a)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	ib, err := ToInt64(b)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	return ia * ib, nil
 }
 
 // subtract b from a
@@ -72,6 +131,42 @@ func subtract(a, b any) (any, error) {
 	}
 
 	return ia - ib, nil
+}
+
+// divide a by b
+// copy from gomplate.
+func div(a, b any) (any, error) {
+	divisor, err := ToFloat64(a)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	dividend, err := ToFloat64(b)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	if dividend == 0 {
+		return 0, fmt.Errorf("error: division by 0")
+	}
+
+	return divisor / dividend, nil
+}
+
+// the remainder of a divided by b
+// copy from gomplate.
+func rem(a, b any) (any, error) {
+	ia, err := ToInt64(a)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	ib, err := ToInt64(b)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	return ia % ib, nil
 }
 
 // Generate number sequence
