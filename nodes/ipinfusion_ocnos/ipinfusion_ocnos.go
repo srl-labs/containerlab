@@ -9,8 +9,8 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodeutils"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -80,7 +80,7 @@ func (s *IPInfusionOcNOS) PreDeploy(_ context.Context, params *nodes.PreDeployPa
 }
 
 func (n *IPInfusionOcNOS) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(n.Cfg.LongName,
+	err := nodeutils.NetconfSaveConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
