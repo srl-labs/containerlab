@@ -43,7 +43,7 @@ type vrFtosv struct {
 }
 
 func (n *vrFtosv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init DefaultNode
+	// Init VRNode
 	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, n.ScrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true

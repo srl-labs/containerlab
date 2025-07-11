@@ -42,7 +42,7 @@ type IPInfusionOcNOS struct {
 }
 
 func (n *IPInfusionOcNOS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init DefaultNode
+	// Init VRNode
 	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
