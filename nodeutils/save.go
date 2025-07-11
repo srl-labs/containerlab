@@ -63,7 +63,7 @@ func GetConfig(addr, username, password, scrapliPlatform string) (string, error)
 		options.WithPort(22),
 	)
 	if err != nil {
-		return "", fmt.Errorf("could not create platform driver for %s: %+v", addr, err)
+		return "", fmt.Errorf("could not create or missing platform driver for %s: %+v", addr, err)
 	}
 
 	d, err := platform.GetNetworkDriver()
