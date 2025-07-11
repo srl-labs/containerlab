@@ -10,8 +10,8 @@ import (
 	"path"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
+	"github.com/srl-labs/containerlab/nodeutils"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -51,7 +51,7 @@ type huawei_vrp struct {
 
 func (n *huawei_vrp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n)
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -72,7 +72,7 @@ func (n *huawei_vrp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error
 	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))
 
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName,
@@ -91,7 +91,7 @@ func (s *huawei_vrp) PreDeploy(_ context.Context, params *nodes.PreDeployParams)
 }
 
 func (n *huawei_vrp) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(n.Cfg.LongName,
+	err := nodeutils.NetconfSaveConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,

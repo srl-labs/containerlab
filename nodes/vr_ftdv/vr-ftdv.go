@@ -5,7 +5,6 @@
 package vr_ftdv
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 
@@ -50,7 +49,7 @@ type vrFtdv struct {
 
 func (n *vrFtdv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n)
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -80,14 +79,5 @@ func (n *vrFtdv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.InterfaceOffset = InterfaceOffset
 	n.InterfaceHelp = InterfaceHelp
 
-	return nil
-}
-
-func (n *vrFtdv) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
 	return nil
 }
