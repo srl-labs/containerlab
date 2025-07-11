@@ -61,6 +61,7 @@ func TestStringsSplit(t *testing.T) {
 		})
 	}
 }
+
 func TestSeq(t *testing.T) {
 	tests := map[string]struct {
 		args []any
@@ -138,6 +139,7 @@ func TestSeq(t *testing.T) {
 		})
 	}
 }
+
 func TestSubtract(t *testing.T) {
 	tests := map[string]struct {
 		a    any
@@ -288,6 +290,7 @@ func TestToJsonPretty(t *testing.T) {
 		})
 	}
 }
+
 func TestToJson(t *testing.T) {
 	tests := map[string]struct {
 		input any
@@ -342,6 +345,7 @@ func TestToJson(t *testing.T) {
 		})
 	}
 }
+
 func TestStringsReplaceAll(t *testing.T) {
 	tests := map[string]struct {
 		old  string
@@ -415,6 +419,7 @@ func TestStringsReplaceAll(t *testing.T) {
 		})
 	}
 }
+
 func TestConvFuncsJoin(t *testing.T) {
 	tests := map[string]struct {
 		input any
@@ -501,6 +506,7 @@ func TestConvFuncsJoin(t *testing.T) {
 		})
 	}
 }
+
 func TestConvFuncsToInt(t *testing.T) {
 	tests := map[string]struct {
 		input any
@@ -595,6 +601,7 @@ func TestConvFuncsToInt(t *testing.T) {
 		})
 	}
 }
+
 func TestAddFunc(t *testing.T) {
 	tests := map[string]struct {
 		a, b   any
@@ -749,6 +756,7 @@ func TestAddFunc(t *testing.T) {
 		})
 	}
 }
+
 func TestMulFunc(t *testing.T) {
 	tests := map[string]struct {
 		a, b   any
@@ -893,6 +901,7 @@ func TestMulFunc(t *testing.T) {
 		})
 	}
 }
+
 func TestDivFunc(t *testing.T) {
 	tests := map[string]struct {
 		a, b   any
@@ -1017,6 +1026,7 @@ func TestDivFunc(t *testing.T) {
 		})
 	}
 }
+
 func TestRemFunc(t *testing.T) {
 	tests := map[string]struct {
 		a, b   any

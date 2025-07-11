@@ -213,7 +213,8 @@ var gottyAttachCmd = &cobra.Command{
 			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+			gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -272,7 +273,8 @@ var gottyAttachCmd = &cobra.Command{
 
 		// Create and start GoTTY container
 		log.Infof("Creating GoTTY container %s on network '%s'", gottyContainerName, networkName)
-		gottyNode := NewGoTTYNode(gottyContainerName, gottyImage, networkName, gottyPort, gottyUsername, gottyPassword, gottyShell, labelsMap)
+		gottyNode := NewGoTTYNode(gottyContainerName, gottyImage, networkName, gottyPort,
+			gottyUsername, gottyPassword, gottyShell, labelsMap)
 
 		id, err := rt.CreateContainer(ctx, gottyNode.Config())
 		if err != nil {
@@ -327,7 +329,8 @@ var gottyDetachCmd = &cobra.Command{
 		defer cancel()
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+			gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -501,7 +504,8 @@ var gottyReattachCmd = &cobra.Command{
 			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+			gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -561,7 +565,8 @@ var gottyReattachCmd = &cobra.Command{
 
 		// Create and start GoTTY container
 		log.Infof("Creating new GoTTY container %s on network '%s'", gottyContainerName, networkName)
-		gottyNode := NewGoTTYNode(gottyContainerName, gottyImage, networkName, gottyPort, gottyUsername, gottyPassword, gottyShell, labelsMap)
+		gottyNode := NewGoTTYNode(gottyContainerName, gottyImage, networkName, gottyPort,
+			gottyUsername, gottyPassword, gottyShell, labelsMap)
 
 		id, err := rt.CreateContainer(ctx, gottyNode.Config())
 		if err != nil {

@@ -299,7 +299,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 
 			log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
 			// download the file to tmp location
-			err := utils.CopyFileContents(p, absDestFile, 0755)
+			err := utils.CopyFileContents(p, absDestFile, 0o755)
 			if err != nil {
 				return err
 			}

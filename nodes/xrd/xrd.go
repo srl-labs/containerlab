@@ -91,7 +91,7 @@ func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (n *xrd) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
 	n.genInterfacesEnv()
 
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -139,7 +139,7 @@ func (n *xrd) SaveConfig(_ context.Context) error {
 func (n *xrd) createXRDFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate xr-storage directory
-	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"), 0777)
+	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"), 0o777)
 	// generate first-boot config
 	cfg := filepath.Join(n.Cfg.LabDir, "first-boot.cfg")
 	nodeCfg.ResStartupConfig = cfg
@@ -149,7 +149,7 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	// generate script file
 	if !utils.FileExists(mgmt_script_path) {
 		utils.CreateFile(mgmt_script_path, "")
-		os.Chmod(mgmt_script_path, 0775) // skipcq: GSC-G302
+		os.Chmod(mgmt_script_path, 0o775) // skipcq: GSC-G302
 	}
 
 	// set mgmt IPv4/IPv6 gateway as it is already known by now

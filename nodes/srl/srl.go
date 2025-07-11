@@ -220,14 +220,14 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if n.Cfg.Extras != nil && len(n.Cfg.Extras.SRLAgents) != 0 {
 		agents := n.Cfg.Extras.SRLAgents
 
 		appmgr := filepath.Join(n.Cfg.LabDir, "config", "appmgr")
-		utils.CreateDirectory(appmgr, 0777)
+		utils.CreateDirectory(appmgr, 0o777)
 
 		// process extras -> agents configurations
 		for _, fullpath := range agents {
@@ -243,7 +243,7 @@ func (n *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 			}
 
 			dst := filepath.Join(appmgr, basename)
-			if err := utils.CopyFile(fullpath, dst, 0644); err != nil {
+			if err := utils.CopyFile(fullpath, dst, 0o644); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
 			}
 		}
@@ -435,7 +435,7 @@ func (n *srl) createSRLFiles() error {
 		// copy license file to node specific directory in lab
 		src = n.Cfg.License
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(src, licPath, 0644); err != nil {
+		if err := utils.CopyFile(src, licPath, 0o644); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
@@ -447,7 +447,7 @@ func (n *srl) createSRLFiles() error {
 		return err
 	}
 
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0o777)
 
 	// create repository files (for yum/apt) that
 	// are mounted to srl container during the init phase
@@ -788,7 +788,7 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
 	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 
-	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666) // skipcq: GSC-G302
+	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0o666) // skipcq: GSC-G302
 	if err != nil {
 		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
 		return err

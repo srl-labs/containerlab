@@ -419,7 +419,7 @@ type NodeOverwrites interface {
 func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) error {
 	nodeCfg := node.Config()
 	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0777)
+	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0o777)
 
 	if nodeCfg.StartupConfig != "" {
 		// dstCfg is a path to a file on the clab host that will have rendered configuration

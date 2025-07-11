@@ -375,7 +375,7 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 		return "", err
 	}
 
-	err = utils.CopyFile(url, tmpFile.Name(), 0644)
+	err = utils.CopyFile(url, tmpFile.Name(), 0o644)
 
 	return tmpFile.Name(), err
 }
@@ -383,7 +383,9 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 // NewContainerlabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
 // or a lab name. It returns the initialized CLab structure with the
 // topology loaded.
-func NewContainerlabFromTopologyFileOrLabName(ctx context.Context, topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool) (*CLab, error) {
+func NewContainerlabFromTopologyFileOrLabName(ctx context.Context,
+	topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool,
+) (*CLab, error) {
 	if topoPath == "" && labName == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -967,13 +969,15 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 			return
 		}
 
-		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab", c.Config.Name, "count", len(containers))
+		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab",
+			c.Config.Name, "count", len(containers))
 
 		for _, container := range containers {
 			containerName := strings.TrimPrefix(container.Names[0], "/")
 			log.Info("Removing tool container", "tool", toolType, "container", containerName)
 			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
-				log.Error("Failed to remove tool container", "tool", toolType, "container", containerName, "error", err)
+				log.Error("Failed to remove tool container", "tool", toolType,
+					"container", containerName, "error", err)
 			} else {
 				log.Info("Tool container removed successfully", "tool", toolType, "container", containerName)
 			}
@@ -1162,7 +1166,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	}
 
 	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
 
 	if !options.skipLabDirFileACLs {
 		// adjust ACL for Labdir such that SUDO_UID Users will

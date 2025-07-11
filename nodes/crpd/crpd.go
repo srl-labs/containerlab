@@ -86,7 +86,7 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (s *crpd) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+	utils.CreateDirectory(s.Cfg.LabDir, 0o777)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -143,7 +143,7 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 
 	// path by which to save a config
 	confPath := s.Cfg.LabDir + "/config/juniper.conf"
-	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(), 0777) // skipcq: GO-S2306
+	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(), 0o777) // skipcq: GO-S2306
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.Cfg.ShortName, err)
 	}
@@ -155,8 +155,8 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 func createCRPDFiles(node nodes.Node) error {
 	nodeCfg := node.Config()
 	// create config and logs directory that will be bind mounted to crpd
-	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"), 0777)
-	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"), 0777)
+	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"), 0o777)
+	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"), 0o777)
 
 	// copy crpd config from default template or user-provided conf file
 	cfg := filepath.Join(nodeCfg.LabDir, "config", "juniper.conf")
@@ -195,11 +195,11 @@ func createCRPDFiles(node nodes.Node) error {
 		src := nodeCfg.License
 		dst = filepath.Join(nodeCfg.LabDir, licDir, licFile)
 
-		if err := os.MkdirAll(filepath.Join(nodeCfg.LabDir, licDir), 0777); err != nil { // skipcq: GSC-G301
+		if err := os.MkdirAll(filepath.Join(nodeCfg.LabDir, licDir), 0o777); err != nil { // skipcq: GSC-G301
 			return err
 		}
 
-		if err = utils.CopyFile(src, dst, 0644); err != nil {
+		if err = utils.CopyFile(src, dst, 0o644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

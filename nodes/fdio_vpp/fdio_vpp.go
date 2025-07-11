@@ -116,9 +116,9 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	nodeCfg := n.Config()
 
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	utils.CreateFile(n.ifWaitSrcPath, utils.IfWaitScript)
-	os.Chmod(n.ifWaitSrcPath, 0777)
+	os.Chmod(n.ifWaitSrcPath, 0o777)
 
 	// record pubkeys extracted by clab
 	// with the vpp struct

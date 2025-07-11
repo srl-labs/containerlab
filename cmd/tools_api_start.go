@@ -25,7 +25,8 @@ func init() {
 	apiServerCmd.AddCommand(apiServerStartCmd)
 
 	// Start command flags
-	apiServerStartCmd.Flags().StringVarP(&apiServerImage, "image", "i", "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
+	apiServerStartCmd.Flags().StringVarP(&apiServerImage, "image", "i",
+		"ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
 		"container image to use for API server")
 	apiServerStartCmd.Flags().StringVarP(&apiServerName, "name", "n", "clab-api-server",
 		"name of the API server container")
@@ -65,7 +66,9 @@ func init() {
 		"container runtime to use for API server")
 }
 
-func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRuntime, env map[string]string, labels map[string]string) (*APIServerNode, error) {
+func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRuntime,
+	env map[string]string, labels map[string]string,
+) (*APIServerNode, error) {
 	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s", name, image, labsDir, runtime)
 
 	// Set up binds based on the runtime

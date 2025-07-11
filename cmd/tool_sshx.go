@@ -143,7 +143,8 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 		sshDir := utils.ExpandHome("~/.ssh")
 		// Check if the directory exists
 		if _, err := os.Stat(sshDir); err == nil {
-			nodeConfig.Binds = append(nodeConfig.Binds, fmt.Sprintf("%s:/home/%s/.ssh:ro", sshDir, userName))
+			nodeConfig.Binds = append(nodeConfig.Binds,
+				fmt.Sprintf("%s:/home/%s/.ssh:ro", sshDir, userName))
 			log.Debugf("Mounting SSH directory: %s -> /home/%s/.ssh", sshDir, userName)
 		} else {
 			log.Warnf("User's SSH directory not found at %s, skipping mount", sshDir)
@@ -153,7 +154,8 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 	// mount lab ssh config
 	labSSHConfFile := fmt.Sprintf("/etc/ssh/ssh_config.d/clab-%s.conf", labName)
 	if _, err := os.Stat(labSSHConfFile); err == nil {
-		nodeConfig.Binds = append(nodeConfig.Binds, fmt.Sprintf("%s:/%s:ro", labSSHConfFile, labSSHConfFile))
+		nodeConfig.Binds = append(nodeConfig.Binds,
+			fmt.Sprintf("%s:/%s:ro", labSSHConfFile, labSSHConfFile))
 		log.Debugf("Mounting SSH directory: %s -> %s", labSSHConfFile, labSSHConfFile)
 	} else {
 		log.Warnf("Lab's SSH config file not found at %s, skipping the mount", labSSHConfFile)
@@ -205,7 +207,8 @@ var sshxAttachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+			sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -264,7 +267,8 @@ var sshxAttachCmd = &cobra.Command{
 
 		// Create and start SSHX container
 		log.Infof("Creating SSHX container %s on network '%s'", sshxContainerName, networkName)
-		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, labName, sshxEnableReaders, labelsMap, sshxMountSSHDir)
+		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, labName,
+			sshxEnableReaders, labelsMap, sshxMountSSHDir)
 
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
@@ -287,7 +291,8 @@ var sshxAttachCmd = &cobra.Command{
 			return nil
 		}
 
-		log.Info("SSHX successfully started", "link", link, "note", fmt.Sprintf("Inside the shared terminal, you can connect to lab nodes using SSH:\nssh admin@clab-%s-<node-name>", labName))
+		log.Info("SSHX successfully started", "link", link, "note",
+			fmt.Sprintf("Inside the shared terminal, you can connect to lab nodes using SSH:\nssh admin@clab-%s-<node-name>", labName))
 
 		// Display read-only link if enabled
 		if sshxEnableReaders {
@@ -320,7 +325,8 @@ var sshxDetachCmd = &cobra.Command{
 		defer cancel()
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+			sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -478,7 +484,8 @@ var sshxReattachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo, sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+			sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
 		}
@@ -538,7 +545,8 @@ var sshxReattachCmd = &cobra.Command{
 
 		// Create and start SSHX container
 		log.Infof("Creating new SSHX container %s on network '%s'", sshxContainerName, networkName)
-		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, labName, sshxEnableReaders, labelsMap, sshxMountSSHDir)
+		sshxNode := NewSSHXNode(sshxContainerName, sshxImage, networkName, labName,
+			sshxEnableReaders, labelsMap, sshxMountSSHDir)
 
 		id, err := rt.CreateContainer(ctx, sshxNode.Config())
 		if err != nil {
@@ -561,7 +569,8 @@ var sshxReattachCmd = &cobra.Command{
 			return nil
 		}
 
-		log.Info("SSHX successfully reattached", "link", link, "note", fmt.Sprintf("Inside the shared terminal, you can connect to lab nodes using SSH:\nssh admin@clab-%s-<node-name>", labName))
+		log.Info("SSHX successfully reattached", "link", link, "note",
+			fmt.Sprintf("Inside the shared terminal, you can connect to lab nodes using SSH:\nssh admin@clab-%s-<node-name>", labName))
 
 		// Display read-only link if enabled
 		if sshxEnableReaders {

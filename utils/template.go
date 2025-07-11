@@ -411,7 +411,8 @@ func printableValue(v reflect.Value) (any, bool) {
 	}
 
 	if !v.Type().Implements(errorType) && !v.Type().Implements(fmtStringerType) {
-		if v.CanAddr() && (reflect.PointerTo(v.Type()).Implements(errorType) || reflect.PointerTo(v.Type()).Implements(fmtStringerType)) {
+		if v.CanAddr() && (reflect.PointerTo(v.Type()).Implements(errorType) ||
+			reflect.PointerTo(v.Type()).Implements(fmtStringerType)) {
 			v = v.Addr()
 		} else {
 			switch v.Kind() {
@@ -456,8 +457,7 @@ func CreateStringFuncs() map[string]any {
 }
 
 // StringFuncs
-type StringFuncs struct {
-}
+type StringFuncs struct{}
 
 // Split slices input into the substrings separated by separator, returning a slice of the substrings between those separators. If input does not contain separator and separator is not empty, returns a single-element slice whose only element is input.
 // If separator is empty, it will split after each UTF-8 sequence. If both inputs are empty (i.e. strings.Split "" ""), it will return an empty slice.
@@ -489,8 +489,7 @@ func CreateConvFuncs() map[string]any {
 }
 
 // ConvFuncs
-type ConvFuncs struct {
-}
+type ConvFuncs struct{}
 
 // Join concatenates the elements of a to create a single string.
 // The separator string sep is placed between elements in the resulting string.

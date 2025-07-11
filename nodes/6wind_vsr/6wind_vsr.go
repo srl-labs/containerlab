@@ -67,11 +67,11 @@ func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *nodes.PreDeployPara
 
 	// If user-defined startup exists, copy it into the Consolidated config file
 	if utils.FileExists(n.UserStartupConfig) {
-		utils.CopyFile(n.UserStartupConfig, n.ConsolidatedConfig, 0644)
+		utils.CopyFile(n.UserStartupConfig, n.ConsolidatedConfig, 0o644)
 	} else {
 		if n.Cfg.StartupConfig != "" {
 			// Copy startup-config in the Labdir
-			utils.CopyFile(n.Cfg.StartupConfig, n.ConsolidatedConfig, 0644)
+			utils.CopyFile(n.Cfg.StartupConfig, n.ConsolidatedConfig, 0o644)
 		}
 		// Consolidate the startup config with the default template
 		if err := n.addDefaultConfig(ctx); err != nil {
@@ -115,10 +115,10 @@ func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) erro
 	)
 
 	// Creating if-wait script in lab dir
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	n.itfwaitpath = path.Join(n.Cfg.LabDir, "if-wait.sh")
 	utils.CreateFile(n.itfwaitpath, utils.IfWaitScript)
-	os.Chmod(n.itfwaitpath, 0777)
+	os.Chmod(n.itfwaitpath, 0o777)
 
 	// Adding if-wait.sh script to the filesystem
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.itfwaitpath, ":", ifWaitScriptContainerPath))
@@ -155,7 +155,7 @@ func (n *sixwind_vsr) SaveConfig(ctx context.Context) error {
 		return fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
 	}
 
-	err = os.WriteFile(n.UserStartupConfig, execResult.GetStdOutByteSlice(), 0777)
+	err = os.WriteFile(n.UserStartupConfig, execResult.GetStdOutByteSlice(), 0o777)
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v",
 			n.UserStartupConfig, n.Cfg.ShortName, err)
@@ -224,7 +224,7 @@ func (n *sixwind_vsr) addDefaultConfig(_ context.Context) error {
 
 	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
-	out, err := os.OpenFile(n.ConsolidatedConfig, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	out, err := os.OpenFile(n.ConsolidatedConfig, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err != nil {
 		log.Errorf("failed to open consolidated config file: %v", err)
 	}

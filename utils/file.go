@@ -236,7 +236,7 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 
 	// create directories if needed, since we promise to create the file
 	// if it doesn't exist
-	err = os.MkdirAll(filepath.Dir(dst), 0750)
+	err = os.MkdirAll(filepath.Dir(dst), 0o750)
 	if err != nil {
 		return err
 	}

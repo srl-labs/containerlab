@@ -128,7 +128,7 @@ func TestGenerateConfigs(t *testing.T) {
 			dstFile := filepath.Join(dstFolder, "config")
 
 			if tc.preExists {
-				err := os.WriteFile(dstFile, []byte(oldCfg), 0666)
+				err := os.WriteFile(dstFile, []byte(oldCfg), 0o666)
 				if err != nil {
 					tt.Errorf("Could not write existing config: %v", err)
 				}

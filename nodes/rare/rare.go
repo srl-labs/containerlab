@@ -57,7 +57,7 @@ func (n *rare) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -69,7 +69,7 @@ func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 func (n *rare) createRAREFiles() error {
 	nodeCfg := n.Config()
 	// create "run" directory that will be bind mounted to rare node
-	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0777)
+	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0o777)
 
 	return nil
 }

@@ -89,7 +89,7 @@ func (n *vyos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *vyos) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	if err := n.fixdirACL(); err != nil {
 		return err
 	}

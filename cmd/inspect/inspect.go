@@ -44,7 +44,8 @@ var InspectCmd = &cobra.Command{
 func init() {
 	InspectCmd.Flags().BoolVarP(&details, "details", "", false,
 		"print all details of lab containers (JSON format, grouped by lab)")
-	InspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table", "output format. One of [table, json, csv]")
+	InspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table",
+		"output format. One of [table, json, csv]")
 	InspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
 	InspectCmd.Flags().BoolVarP(&wide, "wide", "w", false,
 		"also more details about a lab and its nodes")
