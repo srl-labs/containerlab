@@ -802,7 +802,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	wg := new(sync.WaitGroup)
 
 	// start concurrent workers
-	wg.Add(int(maxWorkers))
+	wg.Add(maxWorkers)
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := 0; i < maxWorkers; i++ {

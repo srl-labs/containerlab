@@ -383,7 +383,7 @@ func (n *srl) Ready(ctx context.Context) error {
 			}
 
 			if execResult.GetStdErrString() != "" {
-				log.Debugf("readyForConfigCmd stderr: %s", string(execResult.GetStdErrString()))
+				log.Debugf("readyForConfigCmd stderr: %s", execResult.GetStdErrString())
 				time.Sleep(retryTimer)
 				continue
 			}
