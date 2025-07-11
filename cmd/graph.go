@@ -113,7 +113,6 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
 	})
 	for _, l := range c.Links {
-
 		eps := l.GetEndpoints()
 
 		ifaceDisplayNameA := eps[0].GetIfaceDisplayName()

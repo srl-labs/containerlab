@@ -103,7 +103,6 @@ func (c *CLab) parseTopology() error {
 		}
 
 		if rInit, ok := clabRuntimes.ContainerRuntimes[r]; ok {
-
 			newRuntime := rInit()
 			defaultConfig := c.Runtimes[c.globalRuntimeName].Config()
 			err := newRuntime.Init(

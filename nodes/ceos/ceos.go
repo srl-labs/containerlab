@@ -247,7 +247,6 @@ func setMgmtInterface(node *types.NodeConfig) error {
 			return err
 		}
 		mgmtInterface = intfMappingJson.ManagementIntf.Eth0
-
 	}
 	log.Debugf("Management interface for '%s' node is set to %s.", node.ShortName, mgmtInterface)
 	node.MgmtIntf = mgmtInterface

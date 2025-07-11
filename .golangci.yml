@@ -41,7 +41,7 @@ linters:
         - unparam
         - unused
         - whitespace
-        - wsl_v5
+        # - wsl_v5 -- disabling for now due to a zillion complaints
     settings:
         dupl:
             threshold: 100

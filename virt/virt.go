@@ -51,7 +51,6 @@ func VerifyVirtSupport() bool {
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "vmx") ||
 			strings.Contains(scanner.Text(), "svm") {
-
 			log.Debug("virtualization support found")
 
 			return true

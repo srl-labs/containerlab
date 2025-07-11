@@ -130,7 +130,6 @@ func (t *SSHTransport) InChannel() {
 			tmpS = string(buf[:n])
 		}
 		for err == nil {
-
 			if strings.Contains(tmpS, "#") {
 				parts := strings.Split(tmpS, "#")
 				li := len(parts) - 1
@@ -392,7 +391,6 @@ func (r *SSHReply) LogString(node string, linefeed, debug bool) string { // skip
 		if DebugCount > 3 { // add bytestring
 			s += fmt.Sprintf("%s| %v%s ? %v", prefix, []byte(r.result), prefix, []byte(r.prompt))
 		}
-
 	}
 	return s
 }

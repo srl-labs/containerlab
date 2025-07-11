@@ -371,7 +371,6 @@ func (d *DefaultNode) GenerateConfig(dst, t string) error {
 		log.Debug("Existing config found", "node", d.Cfg.ShortName, "path", dst)
 		return nil
 	} else {
-
 		log.Debug("Generating config", "node", d.Cfg.ShortName, "file", d.Cfg.StartupConfig)
 
 		cfgBuf, err := utils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)

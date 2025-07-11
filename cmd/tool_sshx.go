@@ -148,7 +148,6 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 		} else {
 			log.Warnf("User's SSH directory not found at %s, skipping mount", sshDir)
 		}
-
 	}
 
 	// mount lab ssh config

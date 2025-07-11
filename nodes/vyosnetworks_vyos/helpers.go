@@ -131,7 +131,6 @@ func pkcs1To8(der []byte) ([]byte, error) {
 	})
 
 	return p8Key, nil
-
 }
 
 func (n *vyos) authorizedKeyCmds() []string {

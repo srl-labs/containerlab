@@ -188,7 +188,6 @@ func (lr *LinkVxlanRaw) resolveLocalEndpoint(stitched bool, params *ResolveParam
 
 		// resolve local Endpoint
 		return vxlanRawEp.Resolve(params, link)
-
 	} else {
 		// resolve local Endpoint
 		return lr.Endpoint.Resolve(params, link)

@@ -190,7 +190,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	IntfRegExpr := regexp.MustCompile(`\d+`)
 
 	for _, intf := range n.Endpoints {
-
 		// get numeric interface number and cast to int
 		x, _ := strconv.Atoi(IntfRegExpr.FindString(intf.GetIfaceName()))
 
@@ -211,7 +210,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 				port,
 			},
 		)
-
 	}
 
 	// create IOUYAP and NETMAP file for interface mappings
@@ -366,7 +364,6 @@ func (n *iol) CheckInterfaceName() error {
 			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. %s",
 				n.Cfg.ShortName, IFaceName, IntfHelpMsg)
 		}
-
 	}
 
 	return nil

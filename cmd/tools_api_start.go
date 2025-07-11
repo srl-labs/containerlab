@@ -22,7 +22,6 @@ import (
 )
 
 func init() {
-
 	apiServerCmd.AddCommand(apiServerStartCmd)
 
 	// Start command flags

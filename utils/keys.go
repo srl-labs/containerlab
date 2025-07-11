@@ -28,7 +28,6 @@ func LoadSSHPubKeysFromFiles(paths []string) ([]ssh.PublicKey, error) {
 
 			keys = append(keys, pubKey)
 		}
-
 	}
 
 	return keys, nil

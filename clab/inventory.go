@@ -243,7 +243,6 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 					nornirSimpleInventoryKindProps.Platform = nodeRegEntry.PlatformAttrs().ScrapliPlatformName
 				}
 			}
-
 		}
 		for key, value := range n.Config().Labels {
 			if strings.HasPrefix(key, "nornir-group") {

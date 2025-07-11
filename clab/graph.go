@@ -98,7 +98,6 @@ func (c *CLab) GenerateDotGraph() error {
 			node.Config().ShortName, attr); err != nil {
 			return err
 		}
-
 	}
 
 	// Process the links inbetween Nodes

@@ -637,7 +637,6 @@ func (c *CLab) createStaticDynamicDependency() error {
 	for _, dynNode := range dynIPNodes {
 		// and add their wait group to the the static nodes, while increasing the waitgroup
 		for _, staticNode := range staticIPNodes {
-
 			err := staticNode.AddDepender(types.WaitForCreate, dynNode, types.WaitForCreate)
 			if err != nil {
 				return err
@@ -654,7 +653,6 @@ func (c *CLab) createWaitForDependency() error {
 		// add node's waitFor nodes to the dependency manager
 		for dependerStage, waitForNodes := range dependerNode.Config().Stages.GetWaitFor() {
 			for _, dependee := range waitForNodes {
-
 				dependeeNode, err := c.dependencyManager.GetNode(dependee.Node)
 				if err != nil {
 					return fmt.Errorf("dependee node %s not found", dependee.Node)

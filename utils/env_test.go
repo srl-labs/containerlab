@@ -230,6 +230,5 @@ func TestMergeStringSlices(t *testing.T) {
 		if !cmp.Equal(res, tc.want) {
 			t.Fatalf("wanted %q got %q", tc.want, res)
 		}
-
 	}
 }

@@ -45,7 +45,6 @@ func MarshalSSHPubKeys(in []ssh.PublicKey) []string {
 		// extract the keys in AuthorizedKeys format (e.g. "ssh-rsa <KEY>")
 		ks := bytes.TrimSpace(ssh.MarshalAuthorizedKey(k))
 		r = append(r, string(ks))
-
 	}
 
 	return r
