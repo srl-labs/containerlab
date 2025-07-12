@@ -491,6 +491,7 @@ jobs:
     runs-on: ubuntu-22.04
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
+      - golangci-lint
       - docs-test
       - unit-test
       - smoke-tests
