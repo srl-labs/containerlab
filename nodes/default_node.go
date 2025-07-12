@@ -28,7 +28,8 @@ import (
 )
 
 // DefaultNode implements the Node interface and is embedded to the structs of all other nodes.
-// It has common fields and methods that every node should typically have. Nodes can override methods if needed.
+// It has common fields and methods that every node should typically have. Nodes can override
+// methods if needed.
 type DefaultNode struct {
 	Cfg              *types.NodeConfig
 	Mgmt             *types.MgmtNet
@@ -324,7 +325,7 @@ func (d *DefaultNode) GetMappedInterfaceName(ifName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !(ifIndex >= d.FirstDataIfIndex) {
+	if ifIndex < d.FirstDataIfIndex {
 		return "", fmt.Errorf("extracted interface index for %q is out of bounds: %d ! >= %d", ifName, ifIndex, d.FirstDataIfIndex)
 	}
 	mappedIfName := fmt.Sprintf("%s%d", d.InterfaceMappedPrefix, ifIndex)
@@ -350,9 +351,9 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 
 // GenerateConfig generates configuration for the nodes
 // out of the template `t` based on the node configuration and saves the result to dst.
-// If the config file is already present in the node dir
-// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
-// this will persist the changes that users make to a running config when booted from some startup config
+// If the config file is already present in the node dir we do not regenerate the config unless
+// EnforceStartupConfig is explicitly set to true and startup-config points to a file this will
+// persist the changes that users make to a running config when booted from some startup config.
 func (d *DefaultNode) GenerateConfig(dst, t string) error {
 	// Check for incompatible options
 	if d.Cfg.EnforceStartupConfig && d.Cfg.SuppressStartupConfig {
@@ -371,7 +372,6 @@ func (d *DefaultNode) GenerateConfig(dst, t string) error {
 		log.Debug("Existing config found", "node", d.Cfg.ShortName, "path", dst)
 		return nil
 	} else {
-
 		log.Debug("Generating config", "node", d.Cfg.ShortName, "file", d.Cfg.StartupConfig)
 
 		cfgBuf, err := utils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
@@ -420,7 +420,7 @@ type NodeOverwrites interface {
 func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) error {
 	nodeCfg := node.Config()
 	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0777)
+	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0o777)
 
 	if nodeCfg.StartupConfig != "" {
 		// dstCfg is a path to a file on the clab host that will have rendered configuration

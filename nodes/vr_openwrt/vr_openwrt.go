@@ -53,6 +53,6 @@ func (n *vrOpenWrt) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 
 func (n *vrOpenWrt) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	// Ensure the overlay directory exists
-	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"), 0777)
+	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"), 0o777)
 	return nil
 }

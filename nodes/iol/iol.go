@@ -136,7 +136,7 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -190,7 +190,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	IntfRegExpr := regexp.MustCompile(`\d+`)
 
 	for _, intf := range n.Endpoints {
-
 		// get numeric interface number and cast to int
 		x, _ := strconv.Atoi(IntfRegExpr.FindString(intf.GetIfaceName()))
 
@@ -211,7 +210,6 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 				port,
 			},
 		)
-
 	}
 
 	// create IOUYAP and NETMAP file for interface mappings
@@ -305,7 +303,7 @@ func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
 			}
-			if !(parsedIndices[indexKey] >= 0) {
+			if parsedIndices[indexKey] < 0 {
 				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 0", ifName, indexKey, index)
 			}
 		} else {
@@ -366,7 +364,6 @@ func (n *iol) CheckInterfaceName() error {
 			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. %s",
 				n.Cfg.ShortName, IFaceName, IntfHelpMsg)
 		}
-
 	}
 
 	return nil

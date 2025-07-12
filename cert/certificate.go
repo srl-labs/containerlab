@@ -42,7 +42,6 @@ func NewCertificateFromFile(certFilePath, keyFilePath, csrFilePath string) (*Cer
 	// CSR
 	// The CSR might not be there, which is not an issue, just skip it
 	if csrFilePath != "" {
-
 		_, err = os.Stat(csrFilePath)
 		if err != nil {
 			log.Debugf("failed loading csr %s, continuing anyways", csrFilePath)

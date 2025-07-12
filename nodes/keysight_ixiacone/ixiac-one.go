@@ -22,7 +22,7 @@ var ixiacStatusConfig = struct {
 	statusSleepDuration time.Duration
 	readyFileName       string
 }{
-	statusSleepDuration: time.Duration(time.Second * 5),
+	statusSleepDuration: time.Second * 5,
 	readyFileName:       "/home/keysight/ixia-c-one/init-done",
 }
 

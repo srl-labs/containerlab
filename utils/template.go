@@ -411,7 +411,8 @@ func printableValue(v reflect.Value) (any, bool) {
 	}
 
 	if !v.Type().Implements(errorType) && !v.Type().Implements(fmtStringerType) {
-		if v.CanAddr() && (reflect.PointerTo(v.Type()).Implements(errorType) || reflect.PointerTo(v.Type()).Implements(fmtStringerType)) {
+		if v.CanAddr() && (reflect.PointerTo(v.Type()).Implements(errorType) ||
+			reflect.PointerTo(v.Type()).Implements(fmtStringerType)) {
 			v = v.Addr()
 		} else {
 			switch v.Kind() {
@@ -445,7 +446,7 @@ func ToString(in any) string {
 	return fmt.Sprint(in)
 }
 
-// CreateStringFuncs -
+// CreateStringFuncs.
 func CreateStringFuncs() map[string]any {
 	f := map[string]any{}
 
@@ -455,9 +456,8 @@ func CreateStringFuncs() map[string]any {
 	return f
 }
 
-// StringFuncs
-type StringFuncs struct {
-}
+// StringFuncs.
+type StringFuncs struct{}
 
 // Split slices input into the substrings separated by separator, returning a slice of the substrings between those separators. If input does not contain separator and separator is not empty, returns a single-element slice whose only element is input.
 // If separator is empty, it will split after each UTF-8 sequence. If both inputs are empty (i.e. strings.Split "" ""), it will return an empty slice.
@@ -478,7 +478,7 @@ func (sf *StringFuncs) ReplaceAll(old, new string, s any) string {
 	return strings.ReplaceAll(ToString(s), old, new)
 }
 
-// CreateConvFuncs -
+// CreateConvFuncs.
 func CreateConvFuncs() map[string]any {
 	f := map[string]any{}
 
@@ -488,15 +488,13 @@ func CreateConvFuncs() map[string]any {
 	return f
 }
 
-// ConvFuncs
-type ConvFuncs struct {
-}
+// ConvFuncs.
+type ConvFuncs struct{}
 
 // Join concatenates the elements of a to create a single string.
 // The separator string sep is placed between elements in the resulting string.
-//
 // This is functionally identical to strings.Join, except that each element is
-// coerced to a string first
+// coerced to a string first.
 func (ConvFuncs) Join(in any, sep string) (out string, err error) {
 	s, ok := in.([]string)
 	if ok {

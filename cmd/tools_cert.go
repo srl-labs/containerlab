@@ -121,7 +121,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	utils.CreateDirectory(path, 0777) // skipcq: GSC-G302
+	utils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
 
 	err = caCert.Write(
 		filepath.Join(path, caNamePrefix+types.CertFileSuffix),
@@ -194,7 +194,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	utils.CreateDirectory(path, 0777) // skipcq: GSC-G302
+	utils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
 
 	err = nodeCert.Write(
 		filepath.Join(path, certNamePrefix+types.CertFileSuffix),

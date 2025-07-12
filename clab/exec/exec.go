@@ -150,7 +150,7 @@ func (e *ExecResult) GetStdOutString() string {
 }
 
 func (e *ExecResult) GetStdErrString() string {
-	return string(e.Stderr)
+	return e.Stderr
 }
 
 func (e *ExecResult) GetStdOutByteSlice() []byte {

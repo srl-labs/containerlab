@@ -22,7 +22,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-// APIServerListItem defines the structure for API server container info in JSON output
+// APIServerListItem defines the structure for API server container info in JSON output.
 type APIServerListItem struct {
 	Name    string `json:"name"`
 	State   string `json:"state"`
@@ -39,7 +39,7 @@ func init() {
 		"output format for 'status' command (table, json)")
 }
 
-// apiServerStatusCmd shows status of active API server containers
+// apiServerStatusCmd shows status of active API server containers.
 var apiServerStatusCmd = &cobra.Command{
 	Use:     "status",
 	Short:   "show status of active Containerlab API server containers",

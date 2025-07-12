@@ -162,7 +162,8 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 
 	if strings.HasPrefix(b.Cfg.NetworkMode, "container:") {
 		if b.Cfg.NetworkMode[10:] != b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:] {
-			return fmt.Errorf("container based bridge requires container name as suffix %s != %s", b.Cfg.NetworkMode[10:], b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:])
+			return fmt.Errorf("container based bridge requires container name as suffix %s != %s",
+				b.Cfg.NetworkMode[10:], b.GetShortName()[len(b.nameWithoutSeparatorSuffix())+1:])
 		}
 	}
 

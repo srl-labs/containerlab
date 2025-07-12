@@ -175,7 +175,7 @@ func (t *TopoPaths) TopologyFilenameAbsPath() string {
 // Creates the directory if it does not exist.
 func (*TopoPaths) ClabTmpDir() string {
 	if !utils.DirExists(clabTmpDir) {
-		utils.CreateDirectory(clabTmpDir, 0755)
+		utils.CreateDirectory(clabTmpDir, 0o755)
 	}
 	return clabTmpDir
 }

@@ -82,7 +82,7 @@ func (n *sonic_vm) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *sonic_vm) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		log.Errorf("Error handling certifcate for %s: %v", n.Cfg.ShortName, err)

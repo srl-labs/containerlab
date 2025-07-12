@@ -123,7 +123,7 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+	utils.CreateDirectory(s.Cfg.LabDir, 0o777)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -224,7 +224,7 @@ func createVrSROSFiles(node nodes.Node) error {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
 		dst := filepath.Join(nodeCfg.LabDir, configDirName, licenseFName)
-		if err := utils.CopyFile(src, dst, 0644); err != nil {
+		if err := utils.CopyFile(src, dst, 0o644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

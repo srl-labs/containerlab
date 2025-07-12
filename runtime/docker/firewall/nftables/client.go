@@ -319,7 +319,6 @@ func (nftC *NftablesClient) ruleExists(rule definitions.FirewallRule, rules []*n
 		if nameMatch && commentMatch && actionMatch && directionMatch {
 			return true
 		}
-
 	}
 
 	return false

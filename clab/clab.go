@@ -375,7 +375,7 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 		return "", err
 	}
 
-	err = utils.CopyFile(url, tmpFile.Name(), 0644)
+	err = utils.CopyFile(url, tmpFile.Name(), 0o644)
 
 	return tmpFile.Name(), err
 }
@@ -383,7 +383,9 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 // NewContainerlabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
 // or a lab name. It returns the initialized CLab structure with the
 // topology loaded.
-func NewContainerlabFromTopologyFileOrLabName(ctx context.Context, topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool) (*CLab, error) {
+func NewContainerlabFromTopologyFileOrLabName(ctx context.Context,
+	topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool,
+) (*CLab, error) {
 	if topoPath == "" && labName == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -637,7 +639,6 @@ func (c *CLab) createStaticDynamicDependency() error {
 	for _, dynNode := range dynIPNodes {
 		// and add their wait group to the the static nodes, while increasing the waitgroup
 		for _, staticNode := range staticIPNodes {
-
 			err := staticNode.AddDepender(types.WaitForCreate, dynNode, types.WaitForCreate)
 			if err != nil {
 				return err
@@ -654,7 +655,6 @@ func (c *CLab) createWaitForDependency() error {
 		// add node's waitFor nodes to the dependency manager
 		for dependerStage, waitForNodes := range dependerNode.Config().Stages.GetWaitFor() {
 			for _, dependee := range waitForNodes {
-
 				dependeeNode, err := c.dependencyManager.GetNode(dependee.Node)
 				if err != nil {
 					return fmt.Errorf("dependee node %s not found", dependee.Node)
@@ -804,7 +804,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	wg := new(sync.WaitGroup)
 
 	// start concurrent workers
-	wg.Add(int(maxWorkers))
+	wg.Add(maxWorkers)
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := 0; i < maxWorkers; i++ {
@@ -820,7 +820,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 			workerFuncChWG.Add(1)
 			// start a func for all the containers, then will wait for their own waitgroups
 			// to be set to zero by their depending containers, then enqueue to the creation channel
-			go func(node *depMgr.DependencyNode, dm depMgr.DependencyManager,
+			go func(node *depMgr.DependencyNode, _ depMgr.DependencyManager,
 				workerChan chan<- *depMgr.DependencyNode, wfcwg *sync.WaitGroup,
 			) {
 				// we are entering the create stage here and not in the workerFunc
@@ -969,13 +969,15 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 			return
 		}
 
-		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab", c.Config.Name, "count", len(containers))
+		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab",
+			c.Config.Name, "count", len(containers))
 
 		for _, container := range containers {
 			containerName := strings.TrimPrefix(container.Names[0], "/")
 			log.Info("Removing tool container", "tool", toolType, "container", containerName)
 			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
-				log.Error("Failed to remove tool container", "tool", toolType, "container", containerName, "error", err)
+				log.Error("Failed to remove tool container", "tool", toolType,
+					"container", containerName, "error", err)
 			} else {
 				log.Info("Tool container removed successfully", "tool", toolType, "container", containerName)
 			}
@@ -1164,7 +1166,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	}
 
 	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
 
 	if !options.skipLabDirFileACLs {
 		// adjust ACL for Labdir such that SUDO_UID Users will

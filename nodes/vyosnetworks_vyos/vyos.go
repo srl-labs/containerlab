@@ -38,7 +38,7 @@ var (
 	cfgTemplate string
 
 	// The container CLI may become available while the init is still committing
-	// so the python makes it wait till commits are complete
+	// so the python makes it wait till commits are complete.
 	saveCmd = []string{
 		"sudo python3 -c \"import sys;sys.path.insert(1, '/usr/lib/python3/dist-packages/vyos/utils/');from commit import wait_for_commit_lock;wait_for_commit_lock()\"",
 		"commit",
@@ -89,7 +89,7 @@ func (n *vyos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *vyos) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	if err := n.fixdirACL(); err != nil {
 		return err
 	}

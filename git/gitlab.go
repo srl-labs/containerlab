@@ -65,11 +65,11 @@ func NewGitLabRepoFromURL(url *neturl.URL) (*GitLabRepo, error) {
 
 	r.GitBranch = splitPath[4]
 
-	switch {
+	switch splitPath[3] {
 	// path points to a file at a specific git ref
-	case splitPath[3] == "blob":
-		if !(strings.HasSuffix(r.URL.Path, ".yml") ||
-			strings.HasSuffix(r.URL.Path, ".yaml")) {
+	case "blob":
+		if !strings.HasSuffix(r.URL.Path, ".yml") &&
+			!strings.HasSuffix(r.URL.Path, ".yaml") {
 			return nil, fmt.Errorf("%w: topology file must have yml or yaml extension", errInvalidURL)
 		}
 
@@ -83,7 +83,7 @@ func NewGitLabRepoFromURL(url *neturl.URL) (*GitLabRepo, error) {
 		r.FileName = splitPath[len(splitPath)-1]
 
 	// path points to a git ref (branch or tag)
-	case splitPath[3] == "tree":
+	case "tree":
 		if len(splitPath) > 5 {
 			r.Path = splitPath[5:]
 		}

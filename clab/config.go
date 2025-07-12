@@ -103,7 +103,6 @@ func (c *CLab) parseTopology() error {
 		}
 
 		if rInit, ok := clabRuntimes.ContainerRuntimes[r]; ok {
-
 			newRuntime := rInit()
 			defaultConfig := c.Runtimes[c.globalRuntimeName].Config()
 			err := newRuntime.Init(
@@ -160,11 +159,11 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	// default longName follows $prefix-$lab-$nodeName pattern
 	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
 
-	switch {
+	switch *c.Config.Prefix {
 	// when prefix is an empty string longName will match shortName/nodeName
-	case *c.Config.Prefix == "":
+	case "":
 		longName = nodeName
-	case *c.Config.Prefix == "__lab-name":
+	case "__lab-name":
 		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
 	}
 
@@ -300,7 +299,7 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 
 			log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
 			// download the file to tmp location
-			err := utils.CopyFileContents(p, absDestFile, 0755)
+			err := utils.CopyFileContents(p, absDestFile, 0o755)
 			if err != nil {
 				return err
 			}

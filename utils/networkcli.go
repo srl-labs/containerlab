@@ -16,9 +16,9 @@ import (
 var (
 	// map of commands per platform which start a CLI app.
 	NetworkOSCLICmd = map[string][]string{
-		"arista_eos":    []string{"Cli"},
-		"nokia_srlinux": []string{"sr_cli"},
-		"vyatta_vyos":   []string{"su", "-", "admin"},
+		"arista_eos":    {"Cli"},
+		"nokia_srlinux": {"sr_cli"},
+		"vyatta_vyos":   {"su", "-", "admin"},
 	}
 
 	// map of the cli exec command and its argument per runtime

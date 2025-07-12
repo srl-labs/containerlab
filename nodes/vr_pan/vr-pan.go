@@ -89,7 +89,7 @@ func (n *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *vrPan) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil

@@ -44,7 +44,7 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 
 	// generate config dir
-	utils.CreateDirectory(n.configDir, 0777)
+	utils.CreateDirectory(n.configDir, 0o777)
 	log.Debugf("Chowning dir %s", n.configDir)
 	if err := os.Chown(n.Cfg.LabDir, 0, vyattacfg_gid); err != nil {
 		return err
@@ -70,11 +70,11 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	scriptDir := filepath.Join(n.configDir, "scripts")
 	preScript := filepath.Join(scriptDir, "vyos-preconfig-bootup.script")
 	postScript := filepath.Join(scriptDir, "vyos-postconfig-bootup.script")
-	utils.CreateDirectory(scriptDir, 0777)
+	utils.CreateDirectory(scriptDir, 0o777)
 
 	for _, s := range []string{preScript, postScript} {
 		utils.CreateFile(s, "#!/bin/sh")
-		os.Chmod(s, 0755)
+		os.Chmod(s, 0o755)
 		os.Chown(s, 0, vyattacfg_gid)
 	}
 
@@ -84,7 +84,7 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 // clab applies ACLs to the node directory based on the idea that the NOS
 // parses everything through a management system. While Vyos does have a
 // management system it does a bunch of stuff as a regular linux user so the
-// directory needs rw access for the vyattacfg group
+// directory needs rw access for the vyattacfg group.
 func (n *vyos) fixdirACL() error {
 	log.Debugf("Setting up %s ACLs", n.Cfg.LabDir)
 	a := &acls.ACL{}
@@ -106,7 +106,7 @@ func (n *vyos) fixdirACL() error {
 }
 
 // Convert the PKCS#1 formatted key that clab generates into a PKCS#8 that Vyos
-// requires
+// requires.
 func pkcs1To8(der []byte) ([]byte, error) {
 	// the key we get is a []byte but it's actually a pem string not the raw data
 	log.Debug("Converting PKCS#1 key to PKCS#8")
@@ -131,7 +131,6 @@ func pkcs1To8(der []byte) ([]byte, error) {
 	})
 
 	return p8Key, nil
-
 }
 
 func (n *vyos) authorizedKeyCmds() []string {

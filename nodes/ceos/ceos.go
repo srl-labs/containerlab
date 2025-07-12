@@ -119,7 +119,7 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *ceos) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -152,7 +152,7 @@ func (n *ceos) SaveConfig(ctx context.Context) error {
 func (n *ceos) createCEOSFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate config directory
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"), 0o777)
 	cfg := filepath.Join(n.Cfg.LabDir, "flash", "startup-config")
 	nodeCfg.ResStartupConfig = cfg
 
@@ -192,7 +192,7 @@ func (n *ceos) createCEOSFiles(_ context.Context) error {
 			dest := filepath.Join(flash, basename)
 
 			topoDir := filepath.Dir(filepath.Dir(nodeCfg.LabDir)) // topo dir is needed to resolve extrapaths
-			if err := utils.CopyFile(utils.ResolvePath(extrapath, topoDir), dest, 0644); err != nil {
+			if err := utils.CopyFile(utils.ResolvePath(extrapath, topoDir), dest, 0o644); err != nil {
 				return fmt.Errorf("extras: copy-to-flash %s -> %s failed %v", extrapath, dest, err)
 			}
 		}
@@ -214,7 +214,7 @@ func (n *ceos) createCEOSFiles(_ context.Context) error {
 	// adding if-wait.sh script to flash dir
 	ifScriptP := path.Join(nodeCfg.LabDir, "flash", "if-wait.sh")
 	utils.CreateFile(ifScriptP, utils.IfWaitScript)
-	os.Chmod(ifScriptP, 0777) // skipcq: GSC-G302
+	os.Chmod(ifScriptP, 0o777) // skipcq: GSC-G302
 
 	return err
 }
@@ -247,7 +247,6 @@ func setMgmtInterface(node *types.NodeConfig) error {
 			return err
 		}
 		mgmtInterface = intfMappingJson.ManagementIntf.Eth0
-
 	}
 	log.Debugf("Management interface for '%s' node is set to %s.", node.ShortName, mgmtInterface)
 	node.MgmtIntf = mgmtInterface

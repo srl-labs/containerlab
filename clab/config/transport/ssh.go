@@ -130,7 +130,6 @@ func (t *SSHTransport) InChannel() {
 			tmpS = string(buf[:n])
 		}
 		for err == nil {
-
 			if strings.Contains(tmpS, "#") {
 				parts := strings.Split(tmpS, "#")
 				li := len(parts) - 1
@@ -206,7 +205,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 				rr = ret.result
 			} else {
 				rr = sHistory + "#" + ret.result
-				sHistory = ""
+				sHistory = "" //nolint:ineffassign
 			}
 			rr = strings.Trim(rr, " \n\r\t")
 
@@ -392,7 +391,6 @@ func (r *SSHReply) LogString(node string, linefeed, debug bool) string { // skip
 		if DebugCount > 3 { // add bytestring
 			s += fmt.Sprintf("%s| %v%s ? %v", prefix, []byte(r.result), prefix, []byte(r.prompt))
 		}
-
 	}
 	return s
 }

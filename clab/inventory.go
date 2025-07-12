@@ -238,12 +238,13 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 			if nodeRegEntry.PlatformAttrs() != nil {
 				switch platformNameSchema {
 				case "napalm":
-					nornirSimpleInventoryKindProps.Platform = nodeRegEntry.PlatformAttrs().NapalmPlatformName
+					nornirSimpleInventoryKindProps.Platform =
+						nodeRegEntry.PlatformAttrs().NapalmPlatformName
 				case "scrapi":
-					nornirSimpleInventoryKindProps.Platform = nodeRegEntry.PlatformAttrs().ScrapliPlatformName
+					nornirSimpleInventoryKindProps.Platform =
+						nodeRegEntry.PlatformAttrs().ScrapliPlatformName
 				}
 			}
-
 		}
 		for key, value := range n.Config().Labels {
 			if strings.HasPrefix(key, "nornir-group") {

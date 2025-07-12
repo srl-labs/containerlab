@@ -18,7 +18,7 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-// Configuration variables for the API Server commands
+// Configuration variables for the API Server commands.
 var (
 	apiServerImage          string
 	apiServerName           string
@@ -42,12 +42,12 @@ var (
 	outputFormatAPI         string
 )
 
-// APIServerNode implements runtime.Node interface for API server containers
+// APIServerNode implements runtime.Node interface for API server containers.
 type APIServerNode struct {
 	config *types.NodeConfig
 }
 
-// generateRandomJWTSecret creates a random string for use as JWT secret
+// generateRandomJWTSecret creates a random string for use as JWT secret.
 func generateRandomJWTSecret() (string, error) {
 	// Generate 32 random bytes (256 bits)
 	bytes := make([]byte, 32)
