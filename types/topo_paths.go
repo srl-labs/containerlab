@@ -219,7 +219,7 @@ func (t *TopoPaths) TopologyFileIsSet() bool {
 	return t.topoFile != ""
 }
 
-// TopologyBakFileAbsPath returns the backup topology file name in ~/.clab with a timestamp prefix.
+// TopologyBakFileAbsPath returns the backup topology file name in /tmp/.clab directory with a timestamp prefix.
 func (t *TopoPaths) TopologyBakFileAbsPath() string {
 	ts := time.Now().Format("060102_150405") // YYMMDD_HHMMSS
 	return filepath.Join(t.ClabBakDir(), ts+"_"+t.TopologyFilenameBase())
