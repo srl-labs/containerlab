@@ -177,6 +177,7 @@ func (*TopoPaths) ClabTmpDir() string {
 	if !utils.DirExists(clabTmpDir) {
 		utils.CreateDirectory(clabTmpDir, 0o755)
 	}
+
 	return clabTmpDir
 }
 
@@ -185,10 +186,9 @@ func (*TopoPaths) ClabTmpDir() string {
 func (t *TopoPaths) ClabBakDir() string {
 	d := filepath.Join(t.ClabTmpDir(), backupDirName)
 	if !utils.DirExists(d) {
-		if err := utils.CreateDirectory(d, 0o755); err != nil {
-			fmt.Printf("Error creating directory %s: %v\n", d, err)
-		}
+		utils.CreateDirectory(d, 0o755)
 	}
+
 	return d
 }
 
