@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -19,8 +20,7 @@ const (
 	caDir                         = "ca"
 	graph                         = "graph"
 	labDirPrefix                  = "clab-"
-	backupFileSuffix              = ".bak"
-	backupFilePrefix              = "."
+	backupDirName                 = "bak"
 	CertFileSuffix                = ".pem"
 	KeyFileSuffix                 = ".key"
 	CSRFileSuffix                 = ".csr"
@@ -180,6 +180,16 @@ func (*TopoPaths) ClabTmpDir() string {
 	return clabTmpDir
 }
 
+// ClabBakDir returns the absolute path to the directory where clab stores backup files.
+// Creates the directory if it does not exist.
+func (t *TopoPaths) ClabBakDir() string {
+	d := filepath.Join(t.ClabTmpDir(), backupDirName)
+	if !utils.DirExists(d) {
+		utils.CreateDirectory(d, 0o755)
+	}
+	return d
+}
+
 // StartupConfigDownloadFileAbsPath returns the absolute path to the startup-config file
 // when it is downloaded from a remote location to the clab temp directory.
 func (t *TopoPaths) StartupConfigDownloadFileAbsPath(node, postfix string) string {
@@ -207,9 +217,10 @@ func (t *TopoPaths) TopologyFileIsSet() bool {
 	return t.topoFile != ""
 }
 
-// TopologyBakFileAbsPath returns the backup topology file name.
+// TopologyBakFileAbsPath returns the backup topology file name in ~/.clab with a timestamp prefix.
 func (t *TopoPaths) TopologyBakFileAbsPath() string {
-	return path.Join(t.TopologyFileDir(), backupFilePrefix+t.TopologyFilenameBase()+backupFileSuffix)
+	ts := time.Now().Format("060102_150405") // YYMMDD_HHMMSS
+	return path.Join(t.ClabBakDir(), ts+"_"+t.TopologyFilenameBase())
 }
 
 // TopologyFileDir returns the abs path to the topology file directory.
