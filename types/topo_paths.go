@@ -203,11 +203,14 @@ func (t *TopoPaths) TopologyFilenameBase() string {
 	return filepath.Base(t.topoFile)
 }
 
+// TopologyFileExt returns the file extension of the topology file, including the dot.
+func (t *TopoPaths) TopologyFileExt() string {
+	return filepath.Ext(t.TopologyFilenameBase())
+}
+
 // TopologyFilenameWithoutExt returns the topology file name without the file extension.
 func (t *TopoPaths) TopologyFilenameWithoutExt() string {
-	name := t.TopologyFilenameBase()
-
-	return name[:len(name)-len(filepath.Ext(name))]
+	return strings.TrimSuffix(t.TopologyFilenameBase(), t.TopologyFileExt())
 }
 
 func (t *TopoPaths) TopologyFileIsSet() bool {
