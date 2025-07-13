@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -87,7 +86,7 @@ func (t *TopoPaths) SetLabDirByPrefix(topologyName string) (err error) {
 		baseDir = t.TopologyFileDir()
 	}
 	// construct the path
-	t.labDir = path.Join(baseDir, labDirPrefix+topologyName)
+	t.labDir = filepath.Join(baseDir, labDirPrefix+topologyName)
 	return nil
 }
 
@@ -118,22 +117,22 @@ func (t *TopoPaths) SSHConfigPath() string {
 
 // TLSBaseDir returns the path of the TLS directory structure.
 func (t *TopoPaths) TLSBaseDir() string {
-	return path.Join(t.labDir, tlsDir)
+	return filepath.Join(t.labDir, tlsDir)
 }
 
 // NodeTLSDir returns the directory that contains the certificat data for the given node.
 func (t *TopoPaths) NodeTLSDir(nodename string) string {
-	return path.Join(t.TLSBaseDir(), nodename)
+	return filepath.Join(t.TLSBaseDir(), nodename)
 }
 
 // AuthorizedKeysFilename returns the path for the generated AuthorizedKeysFile.
 func (t *TopoPaths) AuthorizedKeysFilename() string {
-	return path.Join(t.labDir, authzKeysFileName)
+	return filepath.Join(t.labDir, authzKeysFileName)
 }
 
 // GraphDir returns the directory that takes the graphs.
 func (t *TopoPaths) GraphDir() string {
-	return path.Join(t.labDir, graph)
+	return filepath.Join(t.labDir, graph)
 }
 
 // GraphFilename returns the filename for a given graph file with the provided extension.
@@ -143,27 +142,27 @@ func (t *TopoPaths) GraphFilename(ext string) string {
 		ext = "." + ext
 	}
 
-	return path.Join(t.GraphDir(), t.TopologyFilenameWithoutExt()+ext)
+	return filepath.Join(t.GraphDir(), t.TopologyFilenameWithoutExt()+ext)
 }
 
 // NodeDir returns the directory in the labDir for the provided node.
 func (t *TopoPaths) NodeDir(nodeName string) string {
-	return path.Join(t.labDir, nodeName)
+	return filepath.Join(t.labDir, nodeName)
 }
 
 // TopoExportFile returns the path for the topology-export file.
 func (t *TopoPaths) TopoExportFile() string {
-	return path.Join(t.labDir, topologyExportDatFileName)
+	return filepath.Join(t.labDir, topologyExportDatFileName)
 }
 
 // AnsibleInventoryFileAbsPath returns the absolute path to the ansible-inventory file.
 func (t *TopoPaths) AnsibleInventoryFileAbsPath() string {
-	return path.Join(t.labDir, ansibleInventoryFileName)
+	return filepath.Join(t.labDir, ansibleInventoryFileName)
 }
 
 // NornirSimpleInventoryFileAbsPath returns the absolute path to the ansible-inventory file.
 func (t *TopoPaths) NornirSimpleInventoryFileAbsPath() string {
-	return path.Join(t.labDir, nornirSimpleInventoryFileName)
+	return filepath.Join(t.labDir, nornirSimpleInventoryFileName)
 }
 
 // TopologyFilenameAbsPath returns the absolute path to the topology file.
@@ -237,17 +236,17 @@ func (t *TopoPaths) TopologyLabDir() string {
 
 // NodeCertKeyAbsFilename returns the path to a key file for the given identifier.
 func (t *TopoPaths) NodeCertKeyAbsFilename(nodeName string) string {
-	return path.Join(t.NodeTLSDir(nodeName), nodeName+KeyFileSuffix)
+	return filepath.Join(t.NodeTLSDir(nodeName), nodeName+KeyFileSuffix)
 }
 
 // NodeCertAbsFilename returns the path to a cert file for the given identifier.
 func (t *TopoPaths) NodeCertAbsFilename(nodeName string) string {
-	return path.Join(t.NodeTLSDir(nodeName), nodeName+CertFileSuffix)
+	return filepath.Join(t.NodeTLSDir(nodeName), nodeName+CertFileSuffix)
 }
 
 // NodeCertCSRAbsFilename returns the path to a csr file for the given identifier.
 func (t *TopoPaths) NodeCertCSRAbsFilename(nodeName string) string {
-	return path.Join(t.NodeTLSDir(nodeName), nodeName+CSRFileSuffix)
+	return filepath.Join(t.NodeTLSDir(nodeName), nodeName+CSRFileSuffix)
 }
 
 // CaCertAbsFilename returns the path to the CA cert file.
