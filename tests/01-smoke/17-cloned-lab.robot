@@ -132,18 +132,6 @@ Test lab1 downloaded from https url
 
     Should Contain    ${output.stdout}    clab-alpine-l1
 
-Test lab downloaded from s3 url
-    ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${s3-url}
-    ...    shell=True
-
-    Log    ${output.stdout}
-    Log    ${output.stderr}
-
-    Should Be Equal As Integers    ${output.rc}    0
-
-    Should Contain    ${output.stdout}    clab-srl02-srl01
-
 Test deploy referencing folder as topo
     ${output_pre} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${single-topo-folder}
@@ -174,6 +162,17 @@ Test deploy referencing folder as topo
 
     Should Not Contain    ${output_post2.stdout}    clab-lab1-node1
 
+Test lab downloaded from s3 url
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${s3-url}
+    ...    shell=True
+
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+
+    Should Be Equal As Integers    ${output.rc}    0
+
+    Should Contain    ${output.stdout}    clab-srl02-srl01
 
 *** Keywords ***
 Cleanup
