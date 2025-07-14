@@ -41,12 +41,12 @@ func NewVRNode(n NodeOverwrites, creds *Credentials, scrapliPlatformName string)
 	return vr
 }
 
-// Init stub
+// Init stub function.
 func (n *VRNode) Init(cfg *types.NodeConfig, opts ...NodeOption) error {
 	return nil
 }
 
-// PreDeploy's default function: create lab directory, generate certificates, generate startup config file
+// PreDeploy default function: create lab directory, generate certificates, generate startup config file.
 func (n *VRNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)

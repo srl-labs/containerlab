@@ -168,7 +168,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	return nil
 }
 
-// getNSPath retrieves the nodes nspath.
+// GetNSPath retrieves the nodes nspath.
 func (d *DefaultNode) GetNSPath(ctx context.Context) (string, error) {
 	var err error
 	nsp := ""
