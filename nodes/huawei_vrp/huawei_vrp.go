@@ -21,9 +21,6 @@ var (
 const (
 	scrapliPlatformName = "huawei_vrp"
 
-	configDirName   = "config"
-	startupCfgFName = "startup-config.cfg"
-
 	generateable     = true
 	generateIfFormat = "eth%d"
 )
