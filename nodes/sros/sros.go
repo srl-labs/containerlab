@@ -635,7 +635,7 @@ func (n *sros) checkComponentSlotsConfig() error {
 	return nil
 }
 
-func (n *sros) CheckDeploymentConditions(ctx context.Context, nodes map[string]nodes.Node) error {
+func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 	// perform the sros specific kernel version check
 	err := n.checkKernelVersion()
 	if err != nil {
@@ -648,7 +648,7 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context, nodes map[string]n
 		return err
 	}
 
-	return n.DefaultNode.CheckDeploymentConditions(ctx, nodes)
+	return n.DefaultNode.CheckDeploymentConditions(ctx)
 }
 
 // Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars

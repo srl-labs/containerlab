@@ -77,12 +77,8 @@ func DestinationBindMountExists(binds []string, dest string) bool {
 	return false
 }
 
-<<<<<<< HEAD
 // ContainerNameFromNetworkMode takes the NetworkMode config string and returns the container name
 // from it.
-=======
-// ContainerNameFromNetworkMode takes the NetworkMode config string and returns the container name from it
->>>>>>> 983e12b8 (introduce components and process them in sros kind)
 func ContainerNameFromNetworkMode(s string) (string, error) {
 	after, found := strings.CutPrefix(s, "container:")
 	if !found {
