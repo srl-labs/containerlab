@@ -64,6 +64,47 @@ type CLab struct {
 	customOwner string
 }
 
+// NewContainerLab function defines a new container lab.
+func NewContainerLab(opts ...ClabOption) (*CLab, error) {
+	c := &CLab{
+		Config: &Config{
+			Mgmt:     new(types.MgmtNet),
+			Topology: types.NewTopology(),
+		},
+		m:               new(sync.RWMutex),
+		Nodes:           make(map[string]nodes.Node),
+		Links:           make(map[int]links.Link),
+		Runtimes:        make(map[string]runtime.ContainerRuntime),
+		Cert:            &cert.Cert{},
+		checkBindsPaths: true,
+	}
+
+	// init a new NodeRegistry
+	c.Reg = nodes.NewNodeRegistry()
+	c.RegisterNodes()
+
+	for _, opt := range opts {
+		err := opt(c)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var err error
+	if c.TopoPaths.TopologyFileIsSet() {
+		err = c.parseTopology()
+	}
+
+	// Extract the host systems DNS servers and populate the
+	// Nodes DNS Config with these if not specifically provided
+	fileSystem := os.DirFS("/")
+	if err := c.extractDNSServers(fileSystem); err != nil {
+		return nil, err
+	}
+
+	return c, err
+}
+
 // RuntimeInitializer returns a runtime initializer function for a provided runtime name.
 func RuntimeInitializer(name string) (string, runtime.Initializer, error) {
 	// define runtime name.
@@ -252,47 +293,6 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 	}
 
 	return nil
-}
-
-// NewContainerLab function defines a new container lab.
-func NewContainerLab(opts ...ClabOption) (*CLab, error) {
-	c := &CLab{
-		Config: &Config{
-			Mgmt:     new(types.MgmtNet),
-			Topology: types.NewTopology(),
-		},
-		m:               new(sync.RWMutex),
-		Nodes:           make(map[string]nodes.Node),
-		Links:           make(map[int]links.Link),
-		Runtimes:        make(map[string]runtime.ContainerRuntime),
-		Cert:            &cert.Cert{},
-		checkBindsPaths: true,
-	}
-
-	// init a new NodeRegistry
-	c.Reg = nodes.NewNodeRegistry()
-	c.RegisterNodes()
-
-	for _, opt := range opts {
-		err := opt(c)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var err error
-	if c.TopoPaths.TopologyFileIsSet() {
-		err = c.parseTopology()
-	}
-
-	// Extract the host systems DNS servers and populate the
-	// Nodes DNS Config with these if not specifically provided
-	fileSystem := os.DirFS("/")
-	if err := c.extractDNSServers(fileSystem); err != nil {
-		return nil, err
-	}
-
-	return c, err
 }
 
 // initMgmtNetwork sets management network config.
