@@ -18,16 +18,7 @@ var checkCmd = &cobra.Command{
 		defer cancel()
 
 		m := GetManager()
-
-		latestVer := m.GetLatestVersion(ctx)
-
-		if latestVer == nil {
-			fmt.Print("Failed fetching latest version information\n")
-		} else if latestVer.String() == "" {
-			fmt.Printf("You are on the latest version (%s)\n", Version)
-		} else {
-			printNewVersionInfo(latestVer.String())
-		}
+		m.DisplayNewVersionAvailable(ctx)
 
 		return nil
 	},

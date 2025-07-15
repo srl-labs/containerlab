@@ -144,9 +144,8 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// TODO
-	// log new version availability info if ready
-	// version.NewVerNotification(vCh)
+	m := version.GetManager()
+	m.DisplayNewVersionAvailable(cobraCmd.Context())
 
 	// print table summary
 	return inspect.PrintContainerInspect(containers, deployFormat)

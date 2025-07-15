@@ -58,6 +58,7 @@ func GetManager() Manager {
 // Manager is the config manager interface defining the version manager methods.
 type Manager interface {
 	GetLatestVersion(ctx context.Context) *gover.Version
+	DisplayNewVersionAvailable(ctx context.Context)
 }
 
 type manager struct {
@@ -91,6 +92,18 @@ func (m *manager) GetLatestVersion(ctx context.Context) *gover.Version {
 				return latestVer
 			}
 		}
+	}
+}
+
+func (m *manager) DisplayNewVersionAvailable(ctx context.Context) {
+	latestVersion := m.GetLatestVersion(ctx)
+
+	if latestVersion == nil {
+		fmt.Print("Failed fetching latest version information\n")
+	} else if latestVersion.GreaterThan(m.currentVersion) {
+		printNewVersionInfo(latestVersion.String())
+	} else {
+		fmt.Printf("You are on the latest version (%s)\n", Version)
 	}
 }
 
