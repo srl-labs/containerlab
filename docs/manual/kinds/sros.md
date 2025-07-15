@@ -60,7 +60,7 @@ $ docker logs -f clab-sros-sr-sim1
 NOKIA_SROS_CHASSIS=SR-1
 NOKIA_SROS_SYSTEM_BASE_MAC=1c:30:00:00:00:00
 
-** Container version: 0.0.I8161 (Built on Mon Jun 23 01:37:24 UTC 2025)
+** Container version: 25.7.R1 (Built on Mon July 16 00:00:00 UTC 2025)
 
 
 ** using configuration file: /etc/opt/nokia/sros.cfg
@@ -144,7 +144,7 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
-      image: nokia_srsim:25.10.R1
+      image: nokia_srsim:25.7.R1
   nodes:
     sr-sim10:
       kind: nokia_srsim
@@ -166,7 +166,7 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
-      image: nokia_srsim:25.10.R1
+      image: nokia_srsim:25.7.R1
   nodes: 
     sr-2s-a:  # CPM A
       kind: nokia_srsim
@@ -256,7 +256,7 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
-      image: nokia_srsim:25.10.R1
+      image: nokia_srsim:25.7.R1
   nodes:
     sr-sim: 
       kind: nokia_srsim
@@ -277,7 +277,7 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
-      image: nokia_srsim:25.10.R1
+      image: nokia_srsim:25.7.R1
   nodes:
     sros-14s-a:
       kind: nokia_srsim
@@ -327,7 +327,7 @@ topology:
         NOKIA_SROS_CARD: cpm-2se #override CPM
     sros-2se-1:
       kind: nokia_srsim
-      image: nokia_srsim:25.10.R1
+      image: nokia_srsim:25.7.R1
       type: sr-2se 
       license: license-sros25.txt
       network-mode: container:sr-2se-a
@@ -399,7 +399,7 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
-      image: nokia_srsim:25.10.R1
+      image: nokia_srsim:25.7.R1
   nodes: 
     sr-sim1:
       kind: nokia_srsim
@@ -503,7 +503,7 @@ topology:
 ```
 
 ###### Embedded partial files
-Users can also embed the partial config in the topology file itself, making it a hermetic artifact that can be shared with others. This can be done by using multiline string in YAML:
+Users can also embed the partial config in the topology file itself, making it an atomic artifact that can be shared with others. This can be done by using multiline string in YAML:
 
 ```yaml
 name: sros_lab

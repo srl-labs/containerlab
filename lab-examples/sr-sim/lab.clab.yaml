@@ -3,10 +3,13 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
-      image: nokia_srsim:25.10.R1
+      image: nokia_srsim:25.7.R1
   nodes:
     srsim1:
       kind: nokia_srsim
+      type: SR-1
+      env: 
+        NOKIA_SROS_CHASSIS: SR-1s
     srsim2: 
       kind: nokia_srsim
       type: SR-1x-92S
