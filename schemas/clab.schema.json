@@ -1336,6 +1336,7 @@
                         },
                         "fdio_vpp": {
                             "$ref": "#/definitions/node-config"
+                        },
                         "cjunosevolved": {
                             "ref": "#/definitions/node-config"
                         },
