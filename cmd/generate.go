@@ -56,7 +56,7 @@ var generateCmd = &cobra.Command{
 	Use:     "generate",
 	Aliases: []string{"gen"},
 	Short:   "generate a Clos topology file, based on provided flags",
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cobraCmd *cobra.Command, _ []string) error {
 		if common.Name == "" {
 			return errors.New("provide a lab name with --name flag")
 		}
@@ -111,7 +111,7 @@ var generateCmd = &cobra.Command{
 				os.Setenv("CLAB_OWNER", labOwner)
 			}
 
-			return deployCmd.RunE(deployCmd, nil)
+			return deployCmd.RunE(cobraCmd, nil)
 		}
 		if file == "" {
 			fmt.Println(string(b))
