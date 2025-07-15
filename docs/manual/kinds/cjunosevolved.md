@@ -27,6 +27,7 @@ The container image can be freely downloaded from the [Juniper support portal](h
 !!!note
     Containers with cJunosEvolved inside will take ~5min to boot to login prompt.
     You can monitor the progress with `docker logs -f <container-name>`.
+    Alternatively, you can also use the `docker exec -ti <container-name> cli` as shown in more detail below.
 !!!note
     The management port IP is assigned by containerlab and is merged into the cJunosEvolved startup config.
     Please refer to `docs/lab-examples/srl-cjunosevolved.md` for an example.
@@ -41,7 +42,20 @@ The container image can be freely downloaded from the [Juniper support portal](h
     cJunosEvolved has to be fully booted before this succeeds
     ```bash
     docker exec -ti <container-name> cli
+    A sample output of above command is shown here. Once the system is ready and configurable,
+    the CLI prompt will be shown and the user can then make login and make additional configuraion changes:
+    # docker exec -ti clab-srlcjunosevo-cevo cli
+      System is not yet ready...
+      System is not yet ready...
+      System is not yet ready...
+      System is not yet ready...
+      System is not yet ready...
+      System is not yet ready...
+      System is not yet ready...
+      Waiting for editing of configuration to be ready.
+      root@re0>
     ```
+
 
 === "NETCONF"
     NETCONF server is running over port 830
