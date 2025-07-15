@@ -34,14 +34,6 @@ var RootCmd = &cobra.Command{
 	Aliases:           []string{"clab"},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	if err := RootCmd.Execute(); err != nil {
-		os.Exit(1) // skipcq: RVV-A0003
-	}
-}
-
 func addSubcommands() {
 	RootCmd.AddCommand(inspect.InspectCmd)
 	RootCmd.AddCommand(version.VersionCmd)
@@ -65,7 +57,7 @@ func init() {
 	addSubcommands()
 }
 
-func preRunFn(cmd *cobra.Command, _ []string) error {
+func preRunFn(cobraCmd *cobra.Command, _ []string) error {
 	// setting log level
 	switch {
 	case debugCount > 0:
@@ -79,6 +71,10 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 		log.SetLevel(l)
 	}
 
+	// initializes the version manager that goes off and fetches current version in
+	// the background for us
+	version.InitManager(cobraCmd.Context())
+
 	// setting output to stderr, so that json outputs can be parsed
 	log.SetOutput(os.Stderr)
 
@@ -90,13 +86,13 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 	}
 	// Rootless operations only supported for Docker runtime
 	if common.Runtime != "" && common.Runtime != "docker" {
-		err := common.CheckAndGetRootPrivs(cmd, nil)
+		err := common.CheckAndGetRootPrivs(cobraCmd, nil)
 		if err != nil {
 			return err
 		}
 	}
 
-	return getTopoFilePath(cmd)
+	return getTopoFilePath(cobraCmd)
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory

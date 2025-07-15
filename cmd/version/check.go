@@ -3,12 +3,8 @@ package version
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"strings"
 	"time"
 
-	"github.com/charmbracelet/log"
-	gover "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 )
 
@@ -16,107 +12,25 @@ import (
 var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Check if a new version of containerlab is available",
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cobraCmd *cobra.Command, _ []string) error {
 		// We'll use a short 5-second timeout for the remote request
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(cobraCmd.Context(), 5*time.Second)
 		defer cancel()
 
-		// Version check function returns a channel
-		vCh := make(chan string, 1) // buffered to avoid potential goroutine leak
+		m := GetManager()
 
-		// perform the version check in the background
-		go getLatestVersion(ctx, vCh)
+		latestVer := m.GetLatestVersion(ctx)
 
-		// We want a *blocking* approach (we'll wait on vCh or a timeout)
-		// so let's call our "blocking" notification helper:
-		newVerNotificationWithTimeout(ctx, vCh)
+		if latestVer == nil {
+			fmt.Print("Failed fetching latest version information\n")
+		} else if latestVer.String() == "" {
+			fmt.Printf("You are on the latest version (%s)\n", Version)
+		} else {
+			printNewVersionInfo(latestVer.String())
+		}
 
 		return nil
 	},
-}
-
-// getLatestVersion fetches the latest containerlab release version from GitHub
-// and sends that version string to the vc channel if it's newer than local.
-func getLatestVersion(ctx context.Context, vc chan<- string) { // skipcq: RVV-A0006
-	defer close(vc)
-
-	client := &http.Client{
-		// Don’t follow redirects
-		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "HEAD",
-		fmt.Sprintf("%s/releases/latest", repoUrl), http.NoBody)
-	if err != nil {
-		log.Debugf("error occurred during latest version fetch: %v", err)
-		return
-	}
-
-	resp, err := client.Do(req)
-	if err != nil || resp == nil || resp.StatusCode != 302 {
-		if err == nil {
-			err = fmt.Errorf("unexpected status code %d", resp.StatusCode)
-		}
-		log.Debugf("error occurred during latest version fetch: %v", err)
-		return
-	}
-	defer resp.Body.Close() // skipcq: GO-S2307
-
-	loc := resp.Header.Get("Location")
-	split := strings.Split(loc, "releases/tag/")
-	if len(split) != 2 {
-		// can't parse version from redirect
-		return
-	}
-
-	vL, err := gover.NewVersion(split[1])
-	if err != nil {
-		return
-	}
-
-	// parse current version
-	vC, err := gover.NewVersion(Version)
-	if err != nil {
-		return
-	}
-
-	if vL.GreaterThan(vC) {
-		log.Debugf("Latest version %s is newer than current %s\n", vL.String(), vC.String())
-		vc <- vL.String()
-	}
-}
-
-// NewVerNotification non-blocking check that prints an INFO log if a new
-// version is available. Useful for "background" checks in long-running commands
-// (like "deploy") where we don't want to block the user.
-func NewVerNotification(vc <-chan string) {
-	select {
-	case ver, ok := <-vc:
-		if ok && ver != "" {
-			printNewVersionInfo(ver)
-		}
-	default:
-		// no new version found or channel not ready
-		return
-	}
-}
-
-// newVerNotificationWithTimeout a blocking check that waits for version info
-// or a context timeout. Suitable for subcommands like "check" that want to wait
-// for a definite result or a quick fallback if unreachable.
-func newVerNotificationWithTimeout(ctx context.Context, vc <-chan string) {
-	select {
-	case ver := <-vc:
-		if ver == "" {
-			fmt.Printf("You are on the latest version (%s)\n", Version)
-		} else {
-			printNewVersionInfo(ver)
-		}
-	case <-ctx.Done():
-		fmt.Println("Version check timed out or encountered an error.")
-	}
 }
 
 // printNewVersionInfo prints instructions about a

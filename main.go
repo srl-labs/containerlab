@@ -5,7 +5,6 @@
 package main
 
 import (
-	"context"
 	"os"
 
 	"github.com/charmbracelet/fang"
@@ -13,7 +12,12 @@ import (
 )
 
 func main() {
-	if err := fang.Execute(context.TODO(), cmd.RootCmd); err != nil {
+	ctx, _ := cmd.SignalHandledContext()
+
+	cmd.RootCmd.SetContext(ctx)
+
+	err := fang.Execute(ctx, cmd.RootCmd)
+	if err != nil {
 		os.Exit(1)
 	}
 }
