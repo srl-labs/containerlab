@@ -18,11 +18,11 @@ import (
 )
 
 var (
-	kindnames = []string{"cjunosevolved", "juniper_cjunosevolved"}
+	kindnames          = []string{"cjunosevolved", "juniper_cjunosevolved"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin@123")
-        InterfaceRegexp = regexp.MustCompile(`et-0/0/(?P<port>\d+)$`)
-	InterfaceOffset = 0
-	InterfaceHelp   = "(et-0/0/X (where X >= 0) or ethX (where X >= 4)"
+	InterfaceRegexp    = regexp.MustCompile(`et-0/0/(?P<port>\d+)$`)
+	InterfaceOffset    = 0
+	InterfaceHelp      = "(et-0/0/X (where X >= 0) or ethX (where X >= 4)"
 )
 
 const (
@@ -35,15 +35,15 @@ const (
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-        platformAttrs := &nodes.PlatformAttrs{
-	        ScrapliPlatformName: scrapliPlatformName,
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
 	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
 
 	r.Register(kindnames, func() nodes.Node {
-               return new(cjunosevolved)
+		return new(cjunosevolved)
 	}, nrea)
 }
 
@@ -52,7 +52,6 @@ type cjunosevolved struct {
 }
 
 func (n *cjunosevolved) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 
@@ -84,14 +83,13 @@ func (n *cjunosevolved) PreDeploy(_ context.Context, params *nodes.PreDeployPara
 }
 
 func (n *cjunosevolved) SaveConfig(_ context.Context) error {
-
 	err := netconf.SaveConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
 	)
 	if err != nil {
-	        log.Errorf("SaveConfig error %v", err)
+		log.Errorf("SaveConfig error %v", err)
 		return err
 	}
 
