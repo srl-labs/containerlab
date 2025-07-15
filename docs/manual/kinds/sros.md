@@ -8,7 +8,9 @@ kind_display_name: Nokia SR-SIM
 
 The [Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) containerized router is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is a fully containerized router that replaces the legacy virtual machine-based SR OS simulator or [vSIM](vr-sros.md).
 
-The containerized Service Router Simulator, known as SR-SIM, is a cloud-native version of the SR OS software that runs on hardware platforms. It is available to Nokia customers who have an active SR-SIM license. The SR-SIM container emulates various hardware routers: either pizza-box systems with integrated linecards or chassis-based systems with multiple linecards per chassis. Operators can model both types of devices. This tool is provided as a container image and is designed to run natively on x86 systems with common container runtimes such as Docker.
+The containerized Service Router Simulator, known as SR-SIM, is a cloud-native version of the SR OS software that runs on hardware platforms. It is available to Nokia customers who have an active SR-SIM license. The container image can be downloaded from the [Nokia Support Portal](https://customer.nokia.com/support/s/).  
+
+The SR-SIM container emulates various hardware routers: either pizza-box systems with integrated linecards or chassis-based systems with multiple linecards per chassis. Operators can model both types of devices. This tool is provided as a container image and is designed to run natively on x86 systems with common container runtimes such as Docker.
 
 Hardware elements (such as linecards, PSUs, fans, etc.) and software elements (such as interfaces, network protocols, and services) are emulated and configured just like physical SR OS platforms. Each linecard runs as a separate container for emulation of multi-linecard systems (distributed model). Pizza-box systems with integrated linecards run in an integrated model with one container per emulated system.
 
@@ -241,7 +243,7 @@ topology:
 
 A distributed SR-SIM node will consist on two or more containers with an specific role: CPM or IOM. The simulator will boot on either mode depending on the settings of the `NOKIA_SROS_SLOT` enviroment variable and the SR-SIM node type.
 There are serveral other variables that will modify the default settings for a simulated chassis (e.g. SFM, XIOM, MDA, etc.), so please check the Users' guide for a full list.
-Containerlab will allow to define the topology in a couple of ways: Using a separate containerlab node definition per linecard ([standard topology](#standard-distributed-topology)), or a single node definition with the components grouped as a list (grouped topology). The latter function is currently a preview and future configuration might change.
+Containerlab will allow to define the topology in a couple of ways: Using a separate containerlab node definition per linecard ([standard topology](#standard-distributed-topology)), or a single node definition with the components grouped as a list ([grouped topology](#grouped-distributed-topology)). The latter function is currently a preview and future configuration might change.
 
 #### Standard distributed topology
 In these examples, there are several key elements to make sure the node will boot properly:
@@ -344,12 +346,12 @@ topology:
 ///
 
 
-#### Grouped distributed topology (preview)
+#### Grouped distributed topology
 
 /// admonition
     type: warning
 :rotating_light: :rotating_light:
-This feature is a preview and should be implemented carefully in your lab
+This feature is a PREVIEW and should be implemented carefully in your lab
 :rotating_light: :rotating_light:
 ///
 Users can simplify the topology file by using the `components` directive in the node definition as shown in the example below. In this case, every slice element in the `components` section will be a container emulating the corresponding slot. Similar to the standard topology, overrides are supported per container by setting the `env` directive for each component or per node.
@@ -392,7 +394,7 @@ Users can simplify the topology file by using the `components` directive in the 
 
 When a SR-SIM node is defined this way, we need to take into account the following:
 
-  1. Individual containers will be attached to the namespace of the 1st element of the `components` slice.
+  1. Individual containers will be attached to the namespace of the 1st element of the `components` slice: CPM-A in the above examples.
   2. When changing a MDA or card type from its default value, the enviroment variables for card, SFM and MDA must be also included.
   3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
 /// tab | Distributed grouped SR-SIM with links
@@ -543,18 +545,85 @@ Some common BOF options can also be controlled using eviromental variables as sp
 
 #### SSH keys
 
-Containerlab supports SSH key injection into the Nokia SR OS nodes. First containerlab retrieves all public keys from `~/.ssh`[^5] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
+Containerlab supports SSH key injection into the Nokia SR OS nodes prior to deployment. First containerlab retrieves all public keys from `~/.ssh`[^5] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
 
-Next it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^6] at startup. This will enable key-based authentication when you connect to the node.
+Next, it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^6] at startup. This will enable key-based authentication when you connect to the node.
 
 
 ### License
 
 Path to a valid license must be provided for all Nokia SR OS nodes with a [`license`](../nodes.md#license) directive. If no valid license is included, the nodes will not deploy succesfully.
 
-### File mounts
+### Filesystem mounts
 
-When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For Nokia SR OS kind containerlab creates a node directory where the license file and the initial config will be copied. The filesystem for the flash cards that contain the system is mounted under the `config` directory.
+When the user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For the -{{ kind_display_name }}-  kind containerlab creates a node directory where the license file and the initial config will be copied. The filesystem for the flash cards that contain the system is mounted under the `config` directory. This same filesystem is visible inside the CPM containers `/home/sros/flashX` directory when logging in via SHELL or using the `file` command utility via SR OS CLI.
+
+/// tab | Host Filesystem View
+```bash
+$ tree srsim10
+srsim10
+├── A
+│   └── config
+│       ├── cf1
+│       ├── cf2
+│       ├── cf3
+│       │   ├── bof.cfg
+│       │   ├── bootlog.txt
+│       │   ├── config.cfg
+│       │   ├── config.cfg.1
+│       │   ├── i386-isa-aa.tim
+│       │   ├── license.txt
+│       │   ├── nvsys.info
+│       │   ├── restcntr.txt
+│       │   └── yang.tim
+│       └── startup
+│           └── config.cfg
+├── B
+│   └── config ...
+└── license.key
+```
+///
+
+/// tab | Container SHELL Filesystem View
+```bash
+$ docker exec -it clab-sros-srsim10-A tree /home/sros/flash3
+/home/sros/flash3
+|-- bof.cfg
+|-- bootlog.txt
+|-- config.cfg
+|-- config.cfg.1
+|-- i386-isa-aa.tim
+|-- license.txt
+|-- nvsys.info
+|-- restcntr.txt
+`-- yang.tim
+```
+
+///
+
+/// tab | SR OS CLI Filesystem View
+```
+[/]
+A:admin@srsim10-A# file list
+
+Volume in drive cf3 on slot A has no label.
+
+Directory of cf3:\
+
+07/15/2025  04:57p      <DIR>          .commit-history/
+07/15/2025  04:57p                 264 bof.cfg
+07/15/2025  04:57p                2498 bootlog.txt
+07/15/2025  04:57p               14649 config.cfg
+07/15/2025  04:57p               13722 config.cfg.1
+07/15/2025  04:57p             8009312 i386-isa-aa.tim
+07/15/2025  04:57p                1014 license.txt
+07/15/2025  04:57p                 321 nvsys.info
+07/15/2025  04:57p                   1 restcntr.txt
+07/15/2025  04:57p             7778672 yang.tim
+               9 File(s)               15820453 bytes.
+               1 Dir(s)            643914854400 bytes free.
+
+```
 
 ## Lab examples
 
@@ -563,7 +632,7 @@ The following labs feature Nokia SR OS (SR-SIM) node:
 * [SR Linux and SR OS](../../lab-examples/sr-sim.md)
 
 [^1]: There are some caveats to this, for instance, if the container referred by the `network-mode` directive is stopped for any reason, all the other depending containers will stop working properly.
-[^2]: If needed, switches can be created with `iproute2` commands. They can then be referred using the kind `bridge` in clab. MTU needs to be set to 9000 at least.
+[^2]: If needed, switches can be created using the clab kind `bridge` or using `iproute2` commands. MTU needs to be set to 9000 at least.
 [^3]: The word SHOULD is interpreted as [RFC2129](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC8174](https://datatracker.ietf.org/doc/html/rfc8174). Links will come up as long as they are attached to the same Linux namespace.
 [^4]: This is a change from the [Vrnetlab](../vrnetlab.md) based vSIM where linecards and MDAs were pre-provisioned for some cases.
 [^5]: `~` is the home directory of the user that runs containerlab.

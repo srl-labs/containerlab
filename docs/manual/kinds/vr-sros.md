@@ -5,18 +5,21 @@ kind_code_name: nokia_sros
 kind_display_name: Nokia SR OS
 ---
 # Nokia SR OS (VM-Based)
+!!! info
+    There is a newer and more flexible fully containerized simulator for SR-OS named [SR-SIM](sros.md), which is the new preferred way to emulate this system.
 
-[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) virtualized router is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format. Do not mistake with the fully containeraized version of SR OS named [SR-SIM](sros.md).
+[Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) vSIM router is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a QEMU VM packaged in a docker container format. Do not mistake with the fully containeraized version of SR OS named [SR-SIM](sros.md).
 
 Nokia SR OS nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
+
 
 ## Managing Nokia SR OS nodes
 
 !!!note
-    Containers with SR OS inside will take ~3min to fully boot.  
+    Containers with SR OS VMs inside will take ~3min to fully boot.  
     You can monitor the progress with `watch docker ps` waiting till the status will change to `healthy`.
 
-Nokia SR OS node launched with containerlab can be managed via the following interfaces:
+Nokia SR OS VM node launched with containerlab can be managed via the following interfaces:
 
 /// tab | bash
 to connect to a `bash` shell of a running Nokia SR OS container:
@@ -84,7 +87,7 @@ The interface naming convention is: `1/1/X`, where `X` is the port number.
 
 /// admonition
     type: warning
-Nokia SR OS nodes currently only support the simplified interface alias `1/1/X`, where X denotes the port number.  
+Nokia SR OS VM nodes currently only support the simplified interface alias `1/1/X`, where X denotes the port number.  
 Multi-chassis, multi-linecard setups, and channelized interfaces are not supported by interface aliasing at the moment, and you must fall back to the old `ethX`-based naming scheme ([see below](#custom-variants)) in these scenarios.
 
 Data port numbering starts at `1`, like one would normally expect in the NOS.
@@ -121,11 +124,11 @@ Interfaces can be defined in a non-sequential way, for example:
 
 ### Variants
 
-Virtual SR OS simulator can be run in multiple HW variants as explained in [the vSIM installation guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE15836AAADTQZZA01_V1_vSIM%20Installation%20and%20Setup%20Guide%2020.10.R1.pdf).
+vSIM SR OS simulator can be run in multiple HW variants as explained in [the vSIM installation guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE15836AAADTQZZA01_V1_vSIM%20Installation%20and%20Setup%20Guide%2020.10.R1.pdf).
 
-Nokia SR OS container images come with [pre-packaged SR OS variants](https://github.com/hellt/vrnetlab/tree/master/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/hellt/vrnetlab/tree/master/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. On the other hand, custom variants give users total flexibility in emulated hardware configuration, but cards and MDAs must be configured manually.
+Nokia SR OS VM container images come with [pre-packaged SR OS VM variants](https://github.com/hellt/vrnetlab/tree/master/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/hellt/vrnetlab/tree/master/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. On the other hand, custom variants give users total flexibility in emulated hardware configuration, but cards and MDAs must be configured manually.
 
-To make Nokia SR OS to boot in one of the packaged variants, set the type to one of the predefined variant values:
+To make Nokia SR OS VM to boot in one of the packaged variants, set the type to one of the predefined variant values:
 
 ```yaml
 topology:
@@ -211,11 +214,11 @@ type: "cpu=2 ram=4 slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-2
 
 ### Node configuration
 
-Nokia SR OS nodes come up with a basic "blank" configuration where only the card/mda are provisioned, as well as the management interfaces such as Netconf, SNMP, gNMI.
+Nokia SR OS VM nodes come up with a basic "blank" configuration where only the card/mda are provisioned, as well as the management interfaces such as Netconf, SNMP, gNMI.
 
 #### User-defined config
 
-SR OS nodes launched with [hellt/vrnetlab](https://github.com/hellt/vrnetlab) come up with some basic configuration that configures the management interfaces, line cards, mdas and power modules. This configuration is applied right after the node is booted.
+SR OS VM nodes launched with [hellt/vrnetlab](https://github.com/hellt/vrnetlab) come up with some basic configuration that configures the management interfaces, line cards, mdas and power modules. This configuration is applied right after the node is booted.
 
 Since this initial configuration is meant to provide a bare minimum configuration to make the node operational, users will likely want to apply their own configuration to the node to enable some features or to configure some interfaces. This can be done by providing a user-defined configuration file using [`startup-config`](../nodes.md#startup-config) property of the node/kind.
 
@@ -390,7 +393,7 @@ By combining file bindings and the automatic script execution of SROS it is poss
 
 #### SSH keys
 
-Containerlab v0.48.0+ supports SSH key injection into the Nokia SR OS nodes. First containerlab retrieves all public keys from `~/.ssh`[^1] directory and `~/.ssh/authorizde_keys` file, then it retrieves public keys from the ssh agent if one is running.
+Containerlab v0.48.0+ supports SSH key injection into the Nokia SR OS VM nodes. First containerlab retrieves all public keys from `~/.ssh`[^1] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
 
 Next it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^2]. This will enable key-based authentication next time you connect to the node.
 
