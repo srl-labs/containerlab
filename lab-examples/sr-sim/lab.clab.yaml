@@ -5,37 +5,37 @@ topology:
       license: /opt/nokia/sros/license.txt
       image: nokia_srsim:25.10.R1
   nodes:
-    sr-sim1:
+    srsim1:
       kind: nokia_srsim
-    sr-sim2: 
+    srsim2: 
       kind: nokia_srsim
       type: SR-1x-92S
       startup-config: configs/config.cfg
       env: 
          NOKIA_SROS_SLOT: A
-    sr-sim2-iom:
+    srsim2-iom:
       kind: nokia_srsim
       type: SR-1x-92S
-      network-mode: container:sr-sim2
+      network-mode: container:srsim2
       env:
         NOKIA_SROS_SLOT: 1 
-    sr-sim3:
+    srsim3:
       kind: nokia_srsim
       type: SR-1x-92S
       startup-config: configs/config.cfg
       env: 
          NOKIA_SROS_SLOT: A
-    sr-sim3-iom:
+    srsim3-iom:
       kind: nokia_srsim
       type: SR-1x-92S
-      network-mode: container:sr-sim3
+      network-mode: container:srsim3
       env: 
          NOKIA_SROS_SLOT: 1
   links:
     # Data Interfaces
-    - endpoints: ["sr-sim1:e1-1-c1-1", "sr-sim2-iom:e1-1-c1-1"]    
-    - endpoints: ["sr-sim1:e1-1-c2-1", "sr-sim3-iom:e1-1-c1-1"]    
-    - endpoints: ["sr-sim2-iom:e1-1-c22-1", "sr-sim3-iom:e1-1-c22-1"]
+    - endpoints: ["srsim1:e1-1-c1-1", "srsim2-iom:e1-1-c1-1"]    
+    - endpoints: ["srsim1:e1-1-c2-1", "srsim3-iom:e1-1-c1-1"]    
+    - endpoints: ["srsim2-iom:e1-1-c22-1", "srsim3-iom:e1-1-c22-1"]
     
 
 
