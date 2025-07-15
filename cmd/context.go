@@ -29,7 +29,7 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 
 		cancel()
 
-		<-sigs
+		sig = <-sigs
 		log.Infof("received signal '%s', exiting program", sig)
 
 		os.Exit(1)
