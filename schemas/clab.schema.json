@@ -92,7 +92,8 @@
                         "fortinet_fortigate",
                         "k8s-kind",
                         "fdio_vpp",
-                        "vyosnetworks_vyos"
+                        "vyosnetworks_vyos",
+                        "juniper_cjunosevolved"
                     ]
                 },
                 "license": {
@@ -1335,6 +1336,11 @@
                         },
                         "fdio_vpp": {
                             "$ref": "#/definitions/node-config"
+                        "cjunosevolved": {
+                            "ref": "#/definitions/node-config"
+                        },
+                        "juniper_cjunosevolved": {
+                            "ref": "#/definitions/node-config"
                         }
                     },
                     "additionalProperties": false

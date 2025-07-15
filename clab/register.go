@@ -10,6 +10,7 @@ import (
 	c8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
 	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
+	cjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
 	crpd "github.com/srl-labs/containerlab/nodes/crpd"
 	cvx "github.com/srl-labs/containerlab/nodes/cvx"
 	dell_sonic "github.com/srl-labs/containerlab/nodes/dell_sonic"
@@ -103,4 +104,5 @@ func (c *CLab) RegisterNodes() {
 	sixwind_vsr.Register(c.Reg)
 	fdio_vpp.Register(c.Reg)
 	vyosnetworks_vyos.Register(c.Reg)
+	cjunosevolved.Register(c.Reg)
 }
