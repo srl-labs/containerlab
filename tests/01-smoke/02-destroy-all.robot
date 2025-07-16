@@ -19,7 +19,6 @@ ${lab1-file}    01-linux-nodes.clab.yml
 ${lab1-name}    2-linux-nodes
 ${lab2-file}    01-linux-single-node.clab.yml
 ${lab2-name}    single-node
-# ${orig_dir}    ${EMPTY}
 
 
 *** Test Cases ***
@@ -102,7 +101,25 @@ Redeploy second lab
     Log    ${result.stdout}
     Log    ${result.stderr}
     Should Be Equal As Integers    ${result.rc}    0
-    Should Exist    ${CURDIR}/clab-single-node
+    Should Exist    ${CURDIR}/clab-${lab2-name}
+
+Destroy by the lab name
+    ${result} =    Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -c --name ${lab2-name}
+    ...    shell=True
+    Log    ${result.stdout}
+    Log    ${result.stderr}
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Not Exist    ${CURDIR}/clab-${lab2-name}
+
+Deploy ${lab2-name} lab again
+    ${result} =    Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab2-file}
+    ...    shell=True
+    Log    ${result.stdout}
+    Log    ${result.stderr}
+    Should Be Equal As Integers    ${result.rc}    0
+    Should Exist    ${CURDIR}/clab-${lab2-name}
 
 Destroy all labs
     ${rc}    ${output} =    Run And Return Rc And Output
