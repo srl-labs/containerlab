@@ -5,16 +5,12 @@
 package cjunosevolved
 
 import (
-	"context"
 	"fmt"
 	"path"
 	"regexp"
 
-	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -70,29 +66,5 @@ func (n *cjunosevolved) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) er
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
 
-	return nil
-}
-
-func (n *cjunosevolved) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
-	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-func (n *cjunosevolved) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(n.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
-		scrapliPlatformName,
-	)
-	if err != nil {
-		log.Errorf("SaveConfig error %v", err)
-		return err
-	}
-
-	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
 	return nil
 }
