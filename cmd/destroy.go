@@ -5,11 +5,13 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -271,12 +273,12 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 func promptToDestroyAll(topos map[string]string) error {
 	fmt.Println("The following labs will be removed:")
 	idx := 1
-	for topo, labdir := range topos {
-		fmt.Printf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labdir)
+	for topo, labDir := range topos {
+		fmt.Printf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labDir)
 		idx++
 	}
 
-	fmt.Print("Are you sure you want to remove ALL labs? Enter 'y', to confirm or ENTER to abort: ")
+	fmt.Print("Are you sure you want to remove all labs listed above? Enter 'y', to confirm or ENTER to abort: ")
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
