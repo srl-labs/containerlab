@@ -5,6 +5,7 @@ go 1.23.0
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/charmbracelet/fang v0.1.0
+	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/charmbracelet/log v0.4.1
 	github.com/containernetworking/plugins v1.6.2
 	github.com/containers/common v0.62.0
@@ -34,6 +35,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pmorjan/kmod v1.1.1
 	github.com/scrapli/scrapligo v1.3.3
+	github.com/scrapli/scrapligocfg v1.0.0
 	github.com/spf13/cobra v1.9.1
 	github.com/steiler/acls v0.1.1
 	github.com/stretchr/testify v1.10.0
@@ -59,7 +61,6 @@ require (
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/carlmontanari/difflibgo v0.0.0-20210718194309-31b9e131c298 // indirect
 	github.com/charmbracelet/colorprofile v0.3.0 // indirect
-	github.com/charmbracelet/lipgloss v1.0.0 // indirect
 	github.com/charmbracelet/lipgloss/v2 v2.0.0-beta.1 // indirect
 	github.com/charmbracelet/x/ansi v0.8.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
@@ -124,7 +125,6 @@ require (
 	github.com/pkg/sftp v1.13.7 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rs/xid v1.6.0 // indirect
-	github.com/scrapli/scrapligocfg v1.0.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0 // indirect
 	github.com/sigstore/fulcio v1.6.4 // indirect
 	github.com/sigstore/rekor v1.3.8 // indirect
