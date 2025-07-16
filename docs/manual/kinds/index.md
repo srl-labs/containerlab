@@ -74,6 +74,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **FD.io VPP**              | [`fdio_vpp`](fdio_vpp.md)                           | supported | container |
 | **Linux bridge**           | [`bridge`](bridge.md)                               | supported |    N/A    |
 | **Linux container**        | [`linux`](linux.md)                                 | supported | container |
+| **Generic VM**             | [`generic_vm`](generic_vm.md)                       | supported |    VM     |
 | **RARE/freeRtr**           | [`rare`](rare-freertr.md)                           | supported | container |
 | **Openvswitch bridge**     | [`ovs-bridge`](ovs-bridge.md)                       | supported |    N/A    |
 | **External container**     | [`ext-container`](ext-container.md)                 | supported | container |
