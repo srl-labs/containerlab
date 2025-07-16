@@ -6,6 +6,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -122,21 +123,9 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 
 	// Interactive confirmation prompt if running in a terminal
 	if utils.IsTerminal(os.Stdin.Fd()) {
-		fmt.Println("The following labs will be removed:")
-		idx := 1
-		for topo, labdir := range topos {
-			fmt.Printf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labdir)
-			idx++
-		}
-		fmt.Print("Are you sure you want to remove ALL labs? Type 'y', to confirm or 'n' to abort: ")
-		var answer string
-		_, err := fmt.Scanln(&answer)
+		err := promptToDestroyAll(topos)
 		if err != nil {
-			return fmt.Errorf("failed to read user input: %v", err)
-		}
-		if answer != "y" && answer != "Y" && answer != "yes" {
-			fmt.Println("Aborted by user.")
-			return nil
+			return err
 		}
 	}
 
@@ -277,4 +266,27 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 	}
 
 	return containers, nil
+}
+
+func promptToDestroyAll(topos map[string]string) error {
+	fmt.Println("The following labs will be removed:")
+	idx := 1
+	for topo, labdir := range topos {
+		fmt.Printf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labdir)
+		idx++
+	}
+
+	fmt.Print("Are you sure you want to remove ALL labs? Enter 'y', to confirm or ENTER to abort: ")
+
+	var answer string
+	_, err := fmt.Scanln(&answer)
+	if err != nil {
+		return fmt.Errorf("failed to read user input: %v", err)
+	}
+
+	if answer != "y" && answer != "Y" && answer != "yes" {
+		return errors.New("aborted by the user. No labs were removed")
+	}
+
+	return nil
 }
