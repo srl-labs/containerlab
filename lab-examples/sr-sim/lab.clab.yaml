@@ -36,16 +36,6 @@ topology:
          NOKIA_SROS_SLOT: 1
   links:
     # Data Interfaces
-    - endpoints: ["srsim1:e1-1-c1-1", "srsim2-iom:e1-1-c1-1"]    
-    - endpoints: ["srsim1:e1-1-c2-1", "srsim3-iom:e1-1-c1-1"]    
-    - endpoints: ["srsim2-iom:e1-1-c22-1", "srsim3-iom:e1-1-c22-1"]
-    
-
-
-
-      ##    // the format of the interface name will be one of:
-      ##    //   e1-2-3       -> card 1, mda 2, port 3
-      ##    //   e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
-      ##    //   e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
-      ##    //   e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
-
+    - endpoints: ["srsim1:1/1/c1/1", "srsim2-iom:1/1/c1/1"]
+    - endpoints: ["srsim1:1/1/c2/1", "srsim3-iom:1/1/c1/1"]
+    - endpoints: ["srsim2-iom:1/1/c22/1", "srsim3-iom:1/1/c22/1"]
