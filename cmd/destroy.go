@@ -140,6 +140,9 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		if keepMgmtNet {
 			opts = append(opts, clab.WithKeepMgmtNet())
 		}
+		if common.Name != "" {
+			opts = append(opts, clab.WithLabName(common.Name))
+		}
 
 		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
 		nc, err := clab.NewContainerLab(opts...)
@@ -173,7 +176,6 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-
 		labs = append(labs, nc)
 	}
 
