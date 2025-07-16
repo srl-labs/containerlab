@@ -185,13 +185,24 @@ func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
 		}
 
 		// Common fields
-		tabRow = append(tabRow,
-			d.Name,
-			fmt.Sprintf("%s\n%s", d.Kind, d.Image),
-			fmt.Sprintf("%s\n%s", d.State, d.Status),
-			fmt.Sprintf("%s\n%s",
-				ipWithoutPrefix(d.IPv4Address),
-				ipWithoutPrefix(d.IPv6Address)))
+		if wide {
+			// Print all fields on one line, no newlines
+			tabRow = append(tabRow,
+				d.Name,
+				fmt.Sprintf("%s %s", d.Kind, d.Image),
+				fmt.Sprintf("%s %s", d.State, d.Status),
+				fmt.Sprintf("%s %s",
+					ipWithoutPrefix(d.IPv4Address),
+					ipWithoutPrefix(d.IPv6Address)))
+		} else {
+			tabRow = append(tabRow,
+				d.Name,
+				fmt.Sprintf("%s\n%s", d.Kind, d.Image),
+				fmt.Sprintf("%s\n%s", d.State, d.Status),
+				fmt.Sprintf("%s\n%s",
+					ipWithoutPrefix(d.IPv4Address),
+					ipWithoutPrefix(d.IPv6Address)))
+		}
 
 		tabData = append(tabData, tabRow)
 	}
@@ -352,7 +363,7 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 			Header: text.Colors{text.Bold},
 		}
 
-		// Define base header structure (same as in the empty table case)
+		// For --wide, avoid AutoMerge and multi-line cells
 		headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
 		if wide {
 			headerBase = slices.Insert(headerBase, 0, "Owner")
@@ -363,23 +374,20 @@ func PrintContainerInspect(containers []runtime.GenericContainer, format string)
 
 		if all {
 			header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-				Number:    1,
-				AutoMerge: true, VAlign: text.VAlignMiddle,
-			})
-			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-				Number:    2,
-				AutoMerge: true, VAlign: text.VAlignMiddle,
-			})
-			if wide {
+			if !wide {
 				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-					Number:    3,
+					Number:    1,
+					AutoMerge: true, VAlign: text.VAlignMiddle,
+				})
+				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+					Number:    2,
 					AutoMerge: true, VAlign: text.VAlignMiddle,
 				})
 			}
+			// If wide, do not set AutoMerge for any columns
 		} else {
 			header = headerBase
-			if wide {
+			if !wide {
 				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
 					Number:    1,
 					AutoMerge: true, VAlign: text.VAlignMiddle,
