@@ -83,19 +83,28 @@ Looking for cf3:/bof.cfg ... OK, reading
 
 You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in -{{ kind_display_name }}-.
 
-The interface naming convention inside the SR OS command line is typically: `L/X/M/C/P`,  `L/M/C/P` or `L/M/P` where:
+ The interface naming convention inside the SR OS command line is typically: `L/xX/M/cC/P`, `L/xX/M/P`, `L/M/cC/P` or `L/M/P` where:
 
   * `L` : linecard number
   * `X` : xiom number (when present)
   * `M` : MDA position
   * `C` : cage or connector number
   * `P` : breakout port inside the port connector. 
-  
-  This mapping is represented in the containerlab topology file with the following Linux interface name conventions: `eL-xX-M-cC-P`, `eL-M-cC-P`, or `eL-M-P`. Note that the prefix `e` is added at the beginning of the port, and the forward slash `/` is replaced with a hyphen `-`. Some practical examples are shown below.
+
+SR OS interface names can be directly used in containerlab topology files, in the `links` section of the topology file. The interfaces can also be non-sequential, like in the example below.
+
+```yaml
+  links:
+    - endpoints: ["sr-sim1:1/1/c1/1", "sr-sim2:1/1/1"]                           #(1)!
+    - endpoints: ["sr-sim-dist-iom-1:1/1/c1/1", "sr-sim-dist-iom-2:2/x1/1/c1/1"] #(2)!
+    - endpoints: ["sr-sim-dist-iom-1:1/2/c1/1", "sr-sim-dist-iom3:3/1/c1/1"]     #(3)!
+```
+
+Inside the SR OS container, these interfaces are mapped so they follow Linux interface name conventions: `eL-xX-M-cC-P`, `eL-xX-M-P`, `eL-M-cC-P`, or `eL-M-P`. Note that the prefix `e` is added at the beginning of the port, and the forward slash `/` is replaced with a hyphen `-`. Some practical examples are shown below.
 
 /// admonition
     type: Port_Naming
-Nokia SR-SIM port naming convention examples
+Nokia SR-SIM port mapping examples
 ```
 e1-2-3       -> card 1, mda 2, port 3
 e1-2-c3-1    -> card 1, mda 2, connector 3, port 1
@@ -105,12 +114,12 @@ e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
 ```
 ///
 
-Interfaces can be defined non-sequentially in the `links` section of the topology file, as shown in the following example:
+The example above is the equivalent to the topology file below:
 
 ```yaml
   links:
-    - endpoints: ["sr-sim1:e1-1-c1-1", "sr-sim2:e1-1-1"]                          #(1)!
-    - endpoints: ["sr-sim-dist-iom-1:e1-1-c1-1", "srsim-dist-iom-2:e2-x1-1-c1-1"] #(2)!
+    - endpoints: ["sr-sim1:e1-1-c1-1", "sr-sim2:e1-1-1"]                           #(1)!
+    - endpoints: ["sr-sim-dist-iom-1:e1-1-c1-1", "sr-sim-dist-iom-2:e2-x1-1-c1-1"] #(2)!
     - endpoints: ["sr-sim-dist-iom-1:e1-2-c1-1", "sr-sim-dist-iom3:e3-1-c1-1"]     #(3)!
 
 ```

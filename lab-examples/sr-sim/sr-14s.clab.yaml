@@ -95,13 +95,5 @@ topology:
 
   links:   
     ## DATA LINKS
-    - endpoints: ["sr-14s-1:e1-1-c1-1", "sr-14s-2:e2-1-c1-1"]
-    - endpoints: ["sr-14s-1:e1-2-c1-1", "sr-14s-2:e3-1-c1-1"]
-
-
-      ##    // the format of the interface name will be one of:
-      ##    //   e1-2-3       -> card 1, mda 2, port 3
-      ##    //   e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
-      ##    //   e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
-      ##    //   e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
-
+    - endpoints: ["sr-14s-1:1/1/c1/1", "sr-14s-2:2/1/c1/1"]
+    - endpoints: ["sr-14s-1:1/2/c1/1", "sr-14s-2:3/1/c1/1"]

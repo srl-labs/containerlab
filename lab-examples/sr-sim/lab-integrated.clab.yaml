@@ -17,10 +17,5 @@ topology:
       startup-config: configs/srsim11.partial.cfg
   links:
     # Data Interfaces
-    - endpoints: ["sr-sim10:e1-1-c1-1", "sr-sim11:e1-1-c1-1"]    
-    - endpoints: ["sr-sim10:e1-1-c1-2", "sr-sim11:e1-1-c1-2"]    
-      ##    // the format of the interface name will be one of:
-      ##    //   e1-2-3       -> card 1, mda 2, port 3
-      ##    //   e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
-      ##    //   e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
-      ##    //   e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
+    - endpoints: ["sr-sim10:1/1/c1/1", "sr-sim11:1/1/c1/1"]
+    - endpoints: ["sr-sim10:1/1/c1/2", "sr-sim11:1/1/c1/2"]

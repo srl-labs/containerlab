@@ -104,8 +104,15 @@ var (
 	cf3Dir = "/home/sros/flash3" // Where the running config will be stored
 	licDir = "/nokia/license"
 
-	InterfaceRegexp = regexp.MustCompile(`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`)
-	InterfaceHelp   = `The format of the interface name need to be one of:
+	InterfaceRegexp       = regexp.MustCompile(`^(?P<card>\d+)/(?:x(?P<xiom>\d+)/)?(?P<mda>\d+)(?:/c(?P<connector>\d+))?/(?P<port>\d+)$`)
+	MappedInterfaceRegexp = regexp.MustCompile(`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`)
+	InterfaceHelp         = `The format of the interface name need to be one of:
+	  Regular SR OS interface names, that is:
+	  1/2/3       -> card 1, mda 2, port 3
+      1/2/c3/4    -> card 1, mda 2, connector 3, port 4
+      1/x2/3/4    -> card 1, xiom 2, mda 3, port 4
+      1/x2/3/c4/5 -> card 1, xiom 2, mda 3, connector 4, port 5
+	  The mapped Linux interface names, that is:
       e1-2-3       -> card 1, mda 2, port 3
       e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
       e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
@@ -979,6 +986,55 @@ func (n *sros) populateHosts(ctx context.Context, nodes map[string]nodes.Node) e
 	return file.Close()
 }
 
+func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
+	captureGroups, err := utils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
+	if err != nil {
+		return "", err
+	}
+
+	indexGroups := []string{"card", "xiom", "mda", "connector", "port"}
+	parsedIndices := make(map[string]int)
+	foundIndices := make(map[string]bool)
+
+	for _, indexKey := range indexGroups {
+		if index, found := captureGroups[indexKey]; found && index != "" {
+			foundIndices[indexKey] = true
+			parsedIndices[indexKey], err = strconv.Atoi(index)
+			if err != nil {
+				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
+			}
+			if parsedIndices[indexKey] < 1 {
+				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 1", ifName, indexKey, index)
+			}
+		} else {
+			foundIndices[indexKey] = false
+		}
+	}
+
+	// Card, MDA and port are present
+	if foundIndices["card"] && foundIndices["mda"] && foundIndices["port"] {
+		if foundIndices["xiom"] && foundIndices["connector"] {
+			// XIOM and connector are present, format will be: e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
+			return fmt.Sprintf("e%d-x%d-%d-c%d-%d", parsedIndices["card"],
+				parsedIndices["xiom"], parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"]), nil
+		} else if foundIndices["xiom"] {
+			// Only XIOM present, format will be: e1-x2-3-4 -> card 1, xiom 2, mda 3, port 4
+			return fmt.Sprintf("e%d-x%d-%d-%d", parsedIndices["card"],
+				parsedIndices["xiom"], parsedIndices["mda"], parsedIndices["port"]), nil
+		} else if foundIndices["connector"] {
+			// Only connector present, format will be: e1-2-c3-4 -> card 1, mda 2, connector 3, port 4
+			return fmt.Sprintf("e%d-%d-c%d-%d", parsedIndices["card"],
+				parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"]), nil
+		} else {
+			// No XIOM or connector present, format will be: e1-2-3 -> card 1, mda 2, port 3
+			return fmt.Sprintf("e%d-%d-%d", parsedIndices["card"],
+				parsedIndices["mda"], parsedIndices["port"]), nil
+		}
+	} else {
+		return "", fmt.Errorf("%q missing card, mda or port index", ifName)
+	}
+}
+
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *sros) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
@@ -989,7 +1045,7 @@ func (n *sros) CheckInterfaceName() error {
 	}
 
 	for _, e := range n.Endpoints {
-		if !InterfaceRegexp.MatchString(e.GetIfaceName()) {
+		if !MappedInterfaceRegexp.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("nokia SR-OS interface name %q doesn't match the required pattern: %s", e.GetIfaceName(), n.InterfaceHelp)
 		}
 

@@ -607,7 +607,7 @@ func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) 
 // AddEndpoint maps the endpoint name to before adding it to the node endpoints if it matches the interface alias regexp. Returns an error if the mapping goes wrong.
 func (d *DefaultNode) AddEndpoint(e links.Endpoint) error {
 	endpointName := e.GetIfaceName()
-	if d.InterfaceRegexp != nil && d.InterfaceRegexp.MatchString(endpointName) && strings.ToLower(d.Cfg.NetworkMode) == "none" {
+	if d.InterfaceRegexp != nil && d.InterfaceRegexp.MatchString(endpointName) {
 		mappedName, err := d.OverwriteNode.GetMappedInterfaceName(endpointName)
 		if err != nil {
 			return fmt.Errorf("%q interface name %q could not be mapped: %w", d.Cfg.ShortName, e.GetIfaceName(), err)
