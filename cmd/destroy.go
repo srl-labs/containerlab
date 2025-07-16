@@ -118,7 +118,28 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	log.Debugf("We got the following topos struct for destroy: %+v", topos)
+	log.Debugf("We got the following topologies for destroy: %+v", topos)
+
+	// Interactive confirmation prompt if running in a terminal
+	if utils.IsTerminal(os.Stdin.Fd()) {
+		fmt.Println("The following labs will be removed:")
+		idx := 1
+		for topo, labdir := range topos {
+			fmt.Printf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labdir)
+			idx++
+		}
+		fmt.Print("Are you sure you want to remove ALL labs? Type 'y', to confirm or 'n' to abort: ")
+		var answer string
+		_, err := fmt.Scanln(&answer)
+		if err != nil {
+			return fmt.Errorf("failed to read user input: %v", err)
+		}
+		if answer != "y" && answer != "Y" && answer != "yes" {
+			fmt.Println("Aborted by user.")
+			return nil
+		}
+	}
+
 	for topo, labdir := range topos {
 		opts := []clab.ClabOption{
 			clab.WithTimeout(common.Timeout),
