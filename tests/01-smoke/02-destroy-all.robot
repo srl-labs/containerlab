@@ -104,6 +104,7 @@ Redeploy second lab
     Should Exist    ${CURDIR}/clab-${lab2-name}
 
 Destroy by the lab name
+    Skip If    '${runtime}' != 'docker'
     ${result} =    Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} destroy -c --name ${lab2-name}
     ...    shell=True
@@ -113,6 +114,7 @@ Destroy by the lab name
     Should Not Exist    ${CURDIR}/clab-${lab2-name}
 
 Deploy ${lab2-name} lab again
+    Skip If    '${runtime}' != 'docker'
     ${result} =    Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab2-file}
     ...    shell=True

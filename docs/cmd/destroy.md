@@ -42,6 +42,10 @@ Do not try to remove the management network. Usually the management docker netwo
 
 Destroy command provided with `--all | -a` flag will perform the deletion of all the labs running on the container host. It will not touch containers launched manually.
 
+#### yes
+
+The `--yes | -y` flag can be used together with `--all` to auto-approve deletion of all labs, skipping the interactive confirmation prompt. This is useful for automation or scripting scenarios where manual confirmation is not desired.
+
 #### node-filter
 
 The local `--node-filter` flag allows users to specify a subset of topology nodes targeted by `destroy` command. The value of this flag is a comma-separated list of node names as they appear in the topology.
@@ -77,6 +81,12 @@ containerlab destroy
 
 ```bash
 containerlab destroy -a
+```
+
+#### Destroy all labs on the container host without confirmation prompt
+
+```bash
+containerlab destroy -a -y
 ```
 
 #### Destroy a lab using short flag names

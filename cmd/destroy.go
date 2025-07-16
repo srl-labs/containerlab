@@ -5,11 +5,15 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -25,6 +29,7 @@ var (
 	all         bool
 	cleanup     bool
 	keepMgmtNet bool
+	yes         bool
 )
 
 // destroyCmd represents the destroy command.
@@ -44,6 +49,7 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
 		"attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
+	destroyCmd.Flags().BoolVarP(&yes, "yes", "y", false, "auto-approve deletion when used with --all (skips confirmation prompt)")
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
@@ -118,7 +124,16 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	log.Debugf("We got the following topos struct for destroy: %+v", topos)
+	log.Debugf("We got the following topologies for destroy: %+v", topos)
+
+	// Interactive confirmation prompt if running in a terminal and --all is set
+	if all && !yes && utils.IsTerminal(os.Stdin.Fd()) {
+		err := promptToDestroyAll(topos)
+		if err != nil {
+			return err
+		}
+	}
+
 	for topo, labdir := range topos {
 		opts := []clab.ClabOption{
 			clab.WithTimeout(common.Timeout),
@@ -256,4 +271,35 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 	}
 
 	return containers, nil
+}
+
+func promptToDestroyAll(topos map[string]string) error {
+	var sb strings.Builder
+	idx := 1
+	for topo, labDir := range topos {
+		sb.WriteString(fmt.Sprintf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labDir))
+		idx++
+	}
+	log.Warn("The following labs will be removed:", "labs", sb.String())
+
+	warningStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1")) // red color (ansi code 1)
+	prompt := "Are you sure you want to remove all labs listed above? Enter 'y', to confirm or ENTER to abort: "
+	fmt.Print(warningStyle.Render(prompt))
+
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read user input: %v", err)
+	}
+
+	answer := strings.TrimSpace(input)
+	if answer == "" {
+		return errors.New("aborted by the user. No labs were removed")
+	}
+	answer = strings.ToLower(answer)
+	if answer != "y" && answer != "yes" {
+		return errors.New("aborted by the user. No labs were removed")
+	}
+
+	return nil
 }
