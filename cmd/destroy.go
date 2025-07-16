@@ -273,14 +273,15 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 }
 
 func promptToDestroyAll(topos map[string]string) error {
-	fmt.Println("The following labs will be removed:")
+	var sb strings.Builder
 	idx := 1
 	for topo, labDir := range topos {
-		fmt.Printf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labDir)
+		sb.WriteString(fmt.Sprintf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labDir))
 		idx++
 	}
+	log.Warn("The following labs will be removed:", "labs", sb.String())
 
-	fmt.Print("Are you sure you want to remove all labs listed above? Enter 'y', to confirm or ENTER to abort: ")
+	fmt.Print("\033[1mAre you sure you want to remove all labs listed above? Enter 'y', to confirm or ENTER to abort:\033[0m ")
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
