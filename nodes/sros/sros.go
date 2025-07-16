@@ -1007,7 +1007,7 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = netconf.SaveConfig(fmt.Sprintf("[%s]", addr),
+	err = netconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
