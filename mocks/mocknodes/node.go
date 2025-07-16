@@ -421,6 +421,20 @@ func (mr *MockNodeMockRecorder) PreDeploy(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, params)
 }
 
+// PullImage mocks base method.
+func (m *MockNode) PullImage(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PullImage", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PullImage indicates an expected call of PullImage.
+func (mr *MockNodeMockRecorder) PullImage(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullImage", reflect.TypeOf((*MockNode)(nil).PullImage), ctx)
+}
+
 // RunExec mocks base method.
 func (m *MockNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
 	m.ctrl.T.Helper()
