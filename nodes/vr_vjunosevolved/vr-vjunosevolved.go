@@ -5,13 +5,10 @@
 package vr_vjunosevolved
 
 import (
-	"context"
 	"fmt"
 	"path"
 	"regexp"
 
-	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -29,9 +26,6 @@ var (
 const (
 	scrapliPlatformName = "juniper_junos"
 	NapalmPlatformName  = "junos"
-
-	configDirName   = "config"
-	startupCfgFName = "startup-config.cfg"
 
 	generateable     = true
 	generateIfFormat = "et-0/0/%d"
@@ -58,7 +52,7 @@ type vrVJUNOSEVOLVED struct {
 
 func (n *vrVJUNOSEVOLVED) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n)
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -77,7 +71,7 @@ func (n *vrVJUNOSEVOLVED) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) 
 	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))
 
 	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
@@ -91,28 +85,5 @@ func (n *vrVJUNOSEVOLVED) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) 
 	n.InterfaceOffset = InterfaceOffset
 	n.InterfaceHelp = InterfaceHelp
 
-	return nil
-}
-
-func (n *vrVJUNOSEVOLVED) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
-	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
-}
-
-func (n *vrVJUNOSEVOLVED) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(n.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
-		scrapliPlatformName,
-	)
-	if err != nil {
-		return err
-	}
-
-	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
 	return nil
 }

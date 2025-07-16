@@ -123,7 +123,7 @@ func (n *xrd) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 }
 
 func (n *xrd) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(n.Cfg.LongName,
+	err := netconf.SaveRunningConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,

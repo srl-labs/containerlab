@@ -79,7 +79,7 @@ type vrSROS struct {
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.VRNode = *nodes.NewVRNode(s)
+	s.VRNode = *nodes.NewVRNode(s, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
 	s.LicensePolicy = types.LicensePolicyWarn
@@ -193,7 +193,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(s.Cfg.LongName,
+	err := netconf.SaveRunningConfig(s.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,

@@ -79,7 +79,7 @@ func (n *c8000) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) er
 }
 
 func (n *c8000) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(n.Cfg.LongName,
+	err := netconf.SaveRunningConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
