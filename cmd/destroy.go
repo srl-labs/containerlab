@@ -278,12 +278,16 @@ func promptToDestroyAll(topos map[string]string) error {
 
 	fmt.Print("Are you sure you want to remove ALL labs? Enter 'y', to confirm or ENTER to abort: ")
 
-	var answer string
-	_, err := fmt.Scanln(&answer)
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
 	if err != nil {
 		return fmt.Errorf("failed to read user input: %v", err)
 	}
 
+	answer := strings.TrimSpace(input)
+	if answer == "" {
+		return errors.New("aborted by the user. No labs were removed")
+	}
 	if answer != "y" && answer != "Y" && answer != "yes" {
 		return errors.New("aborted by the user. No labs were removed")
 	}
