@@ -288,7 +288,8 @@ func promptToDestroyAll(topos map[string]string) error {
 	if answer == "" {
 		return errors.New("aborted by the user. No labs were removed")
 	}
-	if answer != "y" && answer != "Y" && answer != "yes" {
+	answer = strings.ToLower(answer)
+	if answer != "y" && answer != "yes" {
 		return errors.New("aborted by the user. No labs were removed")
 	}
 
