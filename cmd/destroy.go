@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
@@ -281,7 +282,9 @@ func promptToDestroyAll(topos map[string]string) error {
 	}
 	log.Warn("The following labs will be removed:", "labs", sb.String())
 
-	fmt.Print("\033[1mAre you sure you want to remove all labs listed above? Enter 'y', to confirm or ENTER to abort:\033[0m ")
+	warningStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1")) // red color (ansi code 1)
+	prompt := "Are you sure you want to remove all labs listed above? Enter 'y', to confirm or ENTER to abort: "
+	fmt.Print(warningStyle.Render(prompt))
 
 	reader := bufio.NewReader(os.Stdin)
 	input, err := reader.ReadString('\n')
