@@ -28,6 +28,7 @@ var (
 	all         bool
 	cleanup     bool
 	keepMgmtNet bool
+	yes         bool
 )
 
 // destroyCmd represents the destroy command.
@@ -47,6 +48,7 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
 		"attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
+	destroyCmd.Flags().BoolVarP(&yes, "yes", "y", false, "auto-approve deletion when used with --all (skips confirmation prompt)")
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
@@ -123,8 +125,8 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 
 	log.Debugf("We got the following topologies for destroy: %+v", topos)
 
-	// Interactive confirmation prompt if running in a terminal
-	if utils.IsTerminal(os.Stdin.Fd()) {
+	// Interactive confirmation prompt if running in a terminal and --all is set
+	if all && !yes && utils.IsTerminal(os.Stdin.Fd()) {
 		err := promptToDestroyAll(topos)
 		if err != nil {
 			return err
