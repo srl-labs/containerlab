@@ -93,8 +93,8 @@ var (
 			Parse(srosConfigCmdsTpl)
 
 	requiredKernelVersion = &utils.KernelVersion{
-		Major:    4,
-		Minor:    10,
+		Major:    5,
+		Minor:    5,
 		Revision: 0,
 	}
 	// Internal directories inside SR-SIM container
