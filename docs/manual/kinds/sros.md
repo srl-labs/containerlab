@@ -8,7 +8,12 @@ kind_display_name: Nokia SR-SIM
 
 The [Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) containerized router is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is a fully containerized router that replaces the legacy virtual machine-based SR OS simulator or [vSIM](vr-sros.md) in ContainerLab from release 0.69.
 
-The containerized Service Router Simulator, known as SR-SIM, is a cloud-native version of the SR OS software that runs on hardware platforms. It is available to Nokia customers who have an active SR-SIM license. The container image can be downloaded from the [Nokia Support Portal](https://customer.nokia.com/support/s/).  
+The containerized Service Router Simulator, known as SR-SIM, is a cloud-native version of the SR OS software that runs on hardware platforms. It is available to Nokia customers who have an active SR-SIM license. The container image can be downloaded from the [Nokia Support Portal](https://customer.nokia.com/support/s/). Once downloaded, the image needs to be loaded to the host or pushed to a container registry:
+```bash
+docker image load -i srsim.tar.xz
+# docker image tag <IMAGE_ID> your.registry.tld/srsim:[TAG]
+# docker image push your.registry.tld/srsim:[TAG]
+```
 
 The SR-SIM container emulates various hardware routers: either pizza-box systems with integrated linecards or chassis-based systems with multiple linecards per chassis. Operators can model both types of devices. This tool is provided as a container image and is designed to run natively on x86 systems with common container runtimes such as Docker.
 

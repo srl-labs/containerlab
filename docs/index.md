@@ -22,7 +22,7 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 Containerlab focuses on the containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
 * [Nokia SR Linux](manual/kinds/srl.md)
-* [Nokia SR-OS (SR-SIM)](manual/kinds/sros.md)
+* :new: [Nokia SR-OS (SR-SIM)](manual/kinds/sros.md)
 * [Arista cEOS](manual/kinds/ceos.md)
 * [Cisco XRd](manual/kinds/xrd.md)
 * [SONiC](manual/kinds/sonic-vs.md)
@@ -37,7 +37,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](manual/vrnetlab.md):
 
-* [Nokia virtual SR OS (vSIM)](manual/kinds/vr-sros.md)
+* [Nokia SR OS (vSIM)](manual/kinds/vr-sros.md)
 * [Juniper vMX](manual/kinds/vr-vmx.md)
 * [Juniper vQFX](manual/kinds/vr-vqfx.md)
 * [Juniper vSRX](manual/kinds/vr-vsrx.md)
