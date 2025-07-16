@@ -2,8 +2,8 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-// Package netconf contains netconf-based and functions used in containerlab.
-package nodeutils
+// Package netconf contains netconf-based utility functions used in containerlab.
+package netconf
 
 import (
 	"fmt"
@@ -17,10 +17,10 @@ import (
 	"github.com/scrapli/scrapligocfg"
 )
 
-// NetconfSaveConfig saves the running config to the startup by means
+// SaveRunningConfig saves the running config to the startup by means
 // of invoking a netconf rpc <copy-config> from running to startup datastore
 // this method is used on the network elements that can't perform configuration save via other means.
-func NetconfSaveConfig(addr, username, password, _ string) error {
+func SaveRunningConfig(addr, username, password, _ string) error {
 	opts := []util.Option{
 		options.WithAuthNoStrictKey(),
 		options.WithAuthUsername(username),
@@ -51,7 +51,7 @@ func NetconfSaveConfig(addr, username, password, _ string) error {
 	return nil
 }
 
-// NetconfGetConfig retrieves the running configuration and returns it as a string.
+// GetConfig retrieves the running configuration and returns it as a string. It automatically picks the appropriate network driver for the provided Scrapli Platform.
 func GetConfig(addr, username, password, scrapliPlatform string) (string, error) {
 	platform, err := platform.NewPlatform(
 		scrapliPlatform,

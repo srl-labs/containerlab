@@ -9,7 +9,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodeutils"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -95,7 +95,7 @@ func (vr *VRNode) CheckInterfaceName() error {
 }
 
 func (n *VRNode) SaveConfig(_ context.Context) error {
-	config, err := nodeutils.GetConfig(n.Cfg.LongName,
+	config, err := netconf.GetConfig(n.Cfg.LongName,
 		n.Credentials.GetUsername(),
 		n.Credentials.GetPassword(),
 		n.ScrapliPlatformName,

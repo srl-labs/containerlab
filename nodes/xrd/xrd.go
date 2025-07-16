@@ -16,8 +16,8 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodeutils"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -123,7 +123,7 @@ func (n *xrd) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 }
 
 func (n *xrd) SaveConfig(_ context.Context) error {
-	err := nodeutils.NetconfSaveConfig(n.Cfg.LongName,
+	err := netconf.SaveRunningConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,

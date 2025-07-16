@@ -24,8 +24,8 @@ import (
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodeutils"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
@@ -193,7 +193,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
-	err := nodeutils.NetconfSaveConfig(s.Cfg.LongName,
+	err := netconf.SaveRunningConfig(s.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
