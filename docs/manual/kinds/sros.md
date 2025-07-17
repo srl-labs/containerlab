@@ -672,6 +672,8 @@ Directory of cf3:\
 
 ```
 
+///
+
 ## Lab examples
 
 The following labs feature Nokia SR OS (SR-SIM) node:
