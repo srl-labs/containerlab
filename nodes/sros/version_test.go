@@ -9,26 +9,30 @@ import (
 func TestParseVersionString(t *testing.T) {
 	n := &sros{}
 
-	tests := map[string]struct {
+	tests := []struct {
+		name string
 		s    string
 		want *SrosVersion
 	}{
-		"valid version string": {
+		{
+			name: "valid version string",
 			s:    "v25.3.R1",
 			want: &SrosVersion{"25", "3", "R1"},
 		},
-		"valid beta version string": {
+		{
+			name: "valid beta version string",
 			s:    "v24.7.1-330-gffc27e28d7-dirty",
 			want: &SrosVersion{"24", "7", "1"},
 		},
-		"invalid version string": {
+		{
+			name: "invalid version string",
 			s:    "invalid",
 			want: &SrosVersion{"0", "0", "0"},
 		},
 	}
 
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			got := n.parseVersionString(tt.s)
 			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Fatalf("parseVersionString() mismatch (-want +got):\n%s", diff)

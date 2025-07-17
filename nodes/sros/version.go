@@ -165,7 +165,7 @@ func (n *sros) RunningVersion(ctx context.Context) (*SrosVersion, error) {
 }
 
 func (*sros) parseVersionString(s string) *SrosVersion {
-	re, _ := regexp.Compile(`version: (\d{1,3})\.(\d{1,2})\.(\S+)`)
+	re, _ := regexp.Compile(`v(\d+)\.(\d+)\.([A-Za-z0-9]+)`)
 
 	v := re.FindStringSubmatch(s)
 	// 4 matches must be returned if all goes well
