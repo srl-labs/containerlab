@@ -139,7 +139,12 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
 	}
 
+	// adding default labels to the node config
+	// so that the labels are present in the node config
+	// and can be copied to the child components
+	// at the time of the node init
 	c.addDefaultLabels(nodeCfg)
+	labelsToEnvVars(nodeCfg)
 
 	// Init
 	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeRuntime]), nodes.WithMgmtNet(c.Config.Mgmt))
@@ -147,9 +152,13 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
-	labelsToEnvVars(nodeCfg)
 
 	c.Nodes[nodeName] = n
+	// adding default labels 2nd time in case node init
+	// overwrote original values for the default labels
+	c.addDefaultLabels(n.Config())
+	labelsToEnvVars(n.Config())
+
 	return nil
 }
 
