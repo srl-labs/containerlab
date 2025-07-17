@@ -83,7 +83,7 @@ $ docker logs -f clab-sros-sr-sim1
 NOKIA_SROS_CHASSIS=SR-1
 NOKIA_SROS_SYSTEM_BASE_MAC=1c:30:00:00:00:00
 
-** Container version: 25.7.R1 (Built on Mon July 16 00:00:00 UTC 2025)
+** Container version: 25.7.R1 (Built on Wed Jul 16 21:43:17 UTC 2025)
 
 
 ** using configuration file: /etc/opt/nokia/sros.cfg
