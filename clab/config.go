@@ -140,7 +140,6 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	}
 
 	c.addDefaultLabels(nodeCfg)
-	labelsToEnvVars(nodeCfg)
 
 	// Init
 	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeRuntime]), nodes.WithMgmtNet(c.Config.Mgmt))
@@ -148,6 +147,7 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
+	labelsToEnvVars(nodeCfg)
 
 	c.Nodes[nodeName] = n
 	return nil
