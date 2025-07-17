@@ -2,6 +2,7 @@ package sros
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	"github.com/charmbracelet/log"
@@ -178,10 +179,10 @@ func (*sros) parseVersionString(s string) *SrosVersion {
 
 // String returns a string representation of the version in a semver fashion (with leading v).
 func (v *SrosVersion) String() string {
-	return "v" + v.Major + "." + v.Minor + "." + v.Build
+	return fmt.Sprintf("v%s.%s.%s", v.Major, v.Minor, v.Build)
 }
 
 // MajorMinorSemverString returns a string representation of the major.minor version with a leading v.
 func (v *SrosVersion) MajorMinorSemverString() string {
-	return "v" + v.Major + "." + v.Minor
+	return fmt.Sprintf("v%s.%s", v.Major, v.Minor)
 }

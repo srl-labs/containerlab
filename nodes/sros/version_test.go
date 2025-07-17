@@ -42,22 +42,25 @@ func TestParseVersionString(t *testing.T) {
 }
 
 func TestSrosVersionString(t *testing.T) {
-	tests := map[string]struct {
+	tests := []struct {
+		name string
 		v    *SrosVersion
 		want string
 	}{
-		"all fields filled": {
+		{
+			name: "all fields filled",
 			v:    &SrosVersion{"24", "3", "1"},
-			want: "v24.3.1-154-gffc27e28d7",
+			want: "v24.3.1",
 		},
-		"all fields empty": {
+		{
+			name: "all fields empty",
 			v:    &SrosVersion{"0", "0", "0"},
-			want: "v0.0.0-0-0",
+			want: "v0.0.0",
 		},
 	}
 
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.v.String(); got != tt.want {
 				t.Errorf("SrosVersion.String() = %v, want %v", got, tt.want)
 			}
@@ -66,18 +69,20 @@ func TestSrosVersionString(t *testing.T) {
 }
 
 func TestMajorMinorSemverString(t *testing.T) {
-	tests := map[string]struct {
+	tests := []struct {
+		name string
 		v    *SrosVersion
 		want string
 	}{
-		"all fields filled": {
+		{
+			name: "all fields filled",
 			v:    &SrosVersion{"24", "3", "1"},
 			want: "v24.3",
 		},
 	}
 
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.v.MajorMinorSemverString(); got != tt.want {
 				t.Errorf("SrosVersion.String() = %v, want %v", got, tt.want)
 			}
