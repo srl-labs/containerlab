@@ -185,12 +185,3 @@ func (v *SrosVersion) String() string {
 func (v *SrosVersion) MajorMinorSemverString() string {
 	return "v" + v.Major + "." + v.Minor
 }
-
-// setVersionSpecificParams sets version specific parameters in the template data struct
-// to enable/disable version-specific configuration blocks in the config template
-// or prepares data to conform to the expected format per specific version.
-func (n *sros) setVersionSpecificParams(tplData *srosTemplateData) {
-	// v is in the vMajor.Minor format
-	v := n.swVersion.String()
-	log.Debugf("SR-OS node %s", v)
-}

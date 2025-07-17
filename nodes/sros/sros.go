@@ -805,7 +805,6 @@ func (n *sros) addDefaultConfig() error {
 		// log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 		log.Debugf("Node %q additional default config parsed from template %q", n.Cfg.ShortName, srosCfgTpl.Name())
 		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
-
 	}
 
 	err = n.addPartialConfig()
