@@ -669,7 +669,7 @@ func (n *sros) createSROSFiles() error {
 		if err := utils.CopyFile(n.Cfg.License, licPath, 0644); err != nil {
 			return fmt.Errorf("license copying src %s -> dst %s failed: %v", n.Cfg.License, licPath, err)
 		}
-		log.Debug("SRLicense copied", "src", n.Cfg.License, "dst", licPath)
+		log.Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)
 	}
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0777)
@@ -717,7 +717,7 @@ func (n *sros) createSROSFilesConfig() error {
 		// Use default clab config from embeded template
 		log.Debug("Rendering SR OS default containerlab startup config", "node", n.Cfg.ShortName)
 		err = n.addDefaultConfig()
-		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName, "startup-config", n.startupCliCfg)
+		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName, "startup-config", string(n.startupCliCfg))
 		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
 			return fmt.Errorf("failed to create startup-config file %s for node %s failed: %v", cfgPath, n.Cfg.ShortName, err)
 		}
