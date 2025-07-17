@@ -151,8 +151,6 @@ links:
 
 The management interface for the SR-SIM is typically mapped to `eth0` of the Linux namespace where the container is running.
 
-Interfaces of an integrated system are defined with an endpoint to the container node as usual.
-
 Distributed systems require certain settings given the nature of the SR-SIM simulator:
 
 1. Containers must all run in the same Linux namespace. This is currently achieved using the `network-mode` directive in clab[^2].
@@ -164,25 +162,22 @@ Example topologies for Integrated and Distributed nodes are shown below:
 /// tab | Integrated SR-SIM
 
 ```yaml
-name: "sros"
-mgmt:
-  network: srsim_mgmt
-  ipv4-subnet: 10.78.140.0/24
+name: sros
 topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
       image: nokia_srsim:25.7.R1
   nodes:
-    sr-sim10:
+    sr-sim1:
       kind: nokia_srsim
       type: SR-1 # Implicit default
-    sr-sim11: 
+    sr-sim2:
       kind: nokia_srsim
   links:
     # Datapath Interfaces
-    - endpoints: ["sr-sim10:e1-1-c1-1", "sr-sim11:e1-1-c1-1"]    
-    - endpoints: ["sr-sim10:e1-1-c1-2", "sr-sim11:e1-1-c1-2"]    
+    - endpoints: ["sr-sim1:1/1/c1/1", "sr-sim2:1/1/c1/1"]
+    - endpoints: ["sr-sim1:1/1/c1/2", "sr-sim2:1/1/c1/2"]
 ```
 
 ///
@@ -196,11 +191,11 @@ topology:
     nokia_srsim:
       license: /opt/nokia/sros/license.txt
       image: nokia_srsim:25.7.R1
-  nodes: 
+  nodes:
     sr-2s-a:  # CPM A
       kind: nokia_srsim
       type: SR-2s
-      env: 
+      env:
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # This must match on CPM A and B
     sr-2s-b: # CPM B
@@ -224,8 +219,8 @@ topology:
         NOKIA_SROS_SLOT: 2
   links:
     ## Datapath interfaces
-    - endpoints: ["sr-2s-1:e1-1-c1-1", "sr-2s-2:e2-1-c1-1"]
-    - endpoints: ["sr-2s-1:e1-1-c2-1", "sr-2s-2:e2-1-c2-1"]
+    - endpoints: ["sr-2s-1:1/1/c1/1", "sr-2s-2:2/1/c1/1"]
+    - endpoints: ["sr-2s-1:1/1/c2/1", "sr-2s-2:2/1/c2/1"]
 ```
 
 ///
@@ -261,7 +256,7 @@ topology:
       kind: nokia_srsim
       type: SR-1
       env: 
-        NOKIA_SROS_MDA_1: me12-100gb-qsfp28 #override default MDA on slot 1
+        NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # override default MDA on slot 1
 ```
 
 ///
@@ -292,7 +287,7 @@ topology:
       license: /opt/nokia/sros/license.txt
       image: nokia_srsim:25.7.R1
   nodes:
-    sr-sim: 
+    sr-sim:
       kind: nokia_srsim
       type: SR-1x-92S
       env: 
@@ -302,7 +297,7 @@ topology:
       type: SR-1x-92S
       network-mode: container:sr-sim
       env:
-        NOKIA_SROS_SLOT: 1 
+        NOKIA_SROS_SLOT: 1
 ```
 
 ///
@@ -322,23 +317,23 @@ topology:
       type: SR-14s
       network-mode: container:sr-14s-a
       env:
-        NOKIA_SROS_SLOT: A 
+        NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:56:07:00:03:01 
     sros-14s-b:
       kind: nokia_srsim
-      type: sr-14s 
+      type: sr-14s
       kind: nokia_srsim
       type: SR-14s
       network-mode: container:sr-14s-a
       env:
-        NOKIA_SROS_SLOT: B 
+        NOKIA_SROS_SLOT: B
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:56:07:00:03:01 
     sros-14s-1:
       kind: nokia_srsim
-      type: sr-14s 
+      type: sr-14s
       network-mode: container:sr-14s-a
       env:
-        NOKIA_SROS_SLOT: 1 
+        NOKIA_SROS_SLOT: 1
     sros-14s-2:
       kind: nokia_srsim
       type: sr-14s 
@@ -354,15 +349,15 @@ topology:
 
 ```yaml
 nodes:
-  sr-2se-a: 
+  sr-2se-a:
     kind: nokia_srsim
     type: SR-2se
-    env: 
+    env:
       NOKIA_SROS_SLOT: A
       NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # override Chassis MAC
       NOKIA_SROS_FABRIC_IF: eth1 # override fabric itf
       NOKIA_SROS_SFM: sfm-2se # override SFM
-      NOKIA_SROS_CARD: cpm-2se #override CPM
+      NOKIA_SROS_CARD: cpm-2se # override CPM
   sros-2se-1:
     kind: nokia_srsim
     image: nokia_srsim:25.7.R1
@@ -370,11 +365,11 @@ nodes:
     license: license-sros25.txt
     network-mode: container:sr-2se-a
     env:
-      NOKIA_SROS_SLOT: 1  
+      NOKIA_SROS_SLOT: 1
       NOKIA_SROS_FABRIC_IF: eth2 # override fabric itf
       NOKIA_SROS_SFM: sfm-2se # override SFM
-      NOKIA_SROS_CARD: xcm-2se #override IOM
-      NOKIA_SROS_MDA_1: x2-s36-800g-qsfpdd-18.0t #override MDA
+      NOKIA_SROS_CARD: xcm-2se # override IOM
+      NOKIA_SROS_MDA_1: x2-s36-800g-qsfpdd-18.0t # override MDA
 ```
 
 ///
@@ -391,7 +386,7 @@ Users can simplify the topology file by using the `components` directive in the 
 /// tab | Distributed grouped SR-SIM
 
 ```yaml
-nodes: 
+nodes:
   sr-sim1:
     kind: nokia_srsim
     type: SR-7
@@ -516,7 +511,7 @@ topology:
 The partial config can contain configuration in a MD-CLI syntax that is accepted in the configuration mode of the SR OS. The way partial config is applied appending the lines to the existing startup config.
 Both `flat`, `full-context` and normal syntax can be used in the partial config file. For example, the following partial config file adds a static route to the node in the regular CLI syntax:
 
-```bash
+```text
 configure {
     router "Base" {
         static-routes {
