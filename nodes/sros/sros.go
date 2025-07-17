@@ -85,9 +85,9 @@ var (
 		envNokiaSrosSlot:          "A",                 // filler to be override
 	}
 
-	readyCmdCpm  = `/usr/bin/pidof cpm`
-	readyCmdBoth = `/usr/bin/pidof both`
-	readyCmdIom  = `/usr/bin/pidof iom`
+	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
+	readyCmdBoth = `/usr/bin/pgrep ^both$`
+	readyCmdIom  = `/usr/bin/pgrep ^iom$`
 
 	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(utils.CreateFuncs()).
 			Parse(srosConfigCmdsTpl)
