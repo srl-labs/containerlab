@@ -6,7 +6,7 @@ topology:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
       type: ixrd3l
-      startup-config: | 
+      startup-config: |
         set / interface ethernet-1/1 admin-state enable
         set / interface ethernet-1/1 vlan-tagging false
         set / interface ethernet-1/1 subinterface 0 type routed
@@ -21,7 +21,7 @@ topology:
       kind: nokia_srsim
       image: nokia_srsim:25.7.R1
       type: sr-1
-      # Not included in the lab, ask your Nokia representative
+      # License is not provided with the lab, ask your Nokia representative
       license: /opt/nokia/sros/license-sros25.txt
       startup-config: |
         /configure card 1 card-type iom-1
