@@ -29,9 +29,10 @@ The SR-SIM container emulates various hardware routers: either pizza-box systems
 
 > Nokia SR-SIM is provided as a container image and is designed to run natively on x86_64 systems with common container runtimes such as Docker.
 
-Hardware elements (such as line cards, PSUs, fans, etc.) and software elements (such as interfaces, network protocols, and services) are emulated and configured just like physical SR OS platforms. Each line card runs as a separate container for emulation of multi-line card systems (distributed model). Pizza-box systems with integrated line cards run in an integrated model with one container per emulated system.
+Hardware elements (such as line cards, PSUs, fans, etc.) and software elements (such as interfaces, network protocols, and services) are emulated and configured just like physical SR OS platforms. Each line card runs as a separate container for emulation of multi-line card systems (distributed model).  
+Pizza-box systems with integrated line cards run in an integrated model with one container per emulated system.
 
-Nokia SR-SIM nodes launched with containerlab are pre-provisioned with SSH, SNMP, NETCONF, and gNMI services enabled. Note that the default `admin` password is changed.
+Nokia SR-SIM nodes launched with containerlab are pre-provisioned with SSH, SNMP, NETCONF, and gNMI services enabled.
 
 ## Managing Nokia SR OS nodes
 
@@ -66,10 +67,12 @@ capabilities
 
 ### Credentials
 
-Default admin credentials for the Nokia SR OS nodes are:
+Admin user credentials for the Nokia SR OS launched by Containerlab are:
 
 * username: `admin`
 * password: `NokiaSros1!`
+
+> Note: the admin password is changed by Containerlab from the default `admin:admin` combination.
 
 ### Logs
 
@@ -143,13 +146,10 @@ The example above is the equivalent to the topology file below:
     - endpoints: ["sr-sim1:e1-1-c1-1", "sr-sim2:e1-1-1"]                           #(1)!
     - endpoints: ["sr-sim-dist-iom-1:e1-1-c1-1", "sr-sim-dist-iom-2:e2-x1-1-c1-1"] #(2)!
     - endpoints: ["sr-sim-dist-iom-1:e1-2-c1-1", "sr-sim-dist-iom3:e3-1-c1-1"]     #(3)!
-
 ```
 
 1. sr-sim1 port 1/1/c1/1 on line card 1 is connected to sr-sim2 port 1/1/1 on line card 1
-
 2. sr-sim port 1/1/c1/1 on line card 1 is connected to sr-sim port 2/x1/1/c1/1 on line card 2
-
 3. sr-sim port 1/2/c1/1 on line card 1, MDA 2 is connected to sr-sim port 3/1/c1/1 on line card 3, MDA 1
 
 The management interface for the SR-SIM is typically mapped to `eth0` of the Linux namespace where the container is running.
@@ -157,10 +157,10 @@ The management interface for the SR-SIM is typically mapped to `eth0` of the Lin
 Interfaces of an integrated system are defined with an endpoint to the container node as usual.
 
 Distributed systems require certain settings given the nature of the SR-SIM simulator:
-  
-  1. Containers must all run in the same Linux namespace. This is currently achieved using the `network-mode` directive in clab[^2].
-  2. The containers sharing namespace are all bridged internally to an internally created switch, which is simply a Linux bridge with uniquely named interfaces. Users do not need to configure the switch unless they have a specific need to use the `NOKIA_SROS_FABRIC_IF` environment variable  to override the default interfaces [^3].
-  3. Datapath links for the SR-SIM node SHOULD[^4] be connected to the container emulating the specific line card.
+
+1. Containers must all run in the same Linux namespace. This is currently achieved using the `network-mode` directive in clab[^2].
+2. The containers sharing namespace are all bridged internally to an internally created switch, which is simply a Linux bridge with uniquely named interfaces. Users do not need to configure the switch unless they have a specific need to use the `NOKIA_SROS_FABRIC_IF` environment variable  to override the default interfaces [^3].
+3. Datapath links for the SR-SIM node SHOULD[^4] be connected to the container emulating the specific line card.
 
 Example topologies for Integrated and Distributed nodes are shown below:
 
@@ -356,28 +356,28 @@ topology:
 /// tab | Distributed SR-SIM with overrides
 
 ```yaml
-  nodes:
-    sr-2se-a: 
-      kind: nokia_srsim
-      type: SR-2se
-      env: 
-        NOKIA_SROS_SLOT: A
-        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # override Chassis MAC
-        NOKIA_SROS_FABRIC_IF: eth1 # override fabric itf
-        NOKIA_SROS_SFM: sfm-2se # override SFM
-        NOKIA_SROS_CARD: cpm-2se #override CPM
-    sros-2se-1:
-      kind: nokia_srsim
-      image: nokia_srsim:25.7.R1
-      type: sr-2se 
-      license: license-sros25.txt
-      network-mode: container:sr-2se-a
-      env:
-        NOKIA_SROS_SLOT: 1  
-        NOKIA_SROS_FABRIC_IF: eth2 # override fabric itf
-        NOKIA_SROS_SFM: sfm-2se # override SFM
-        NOKIA_SROS_CARD: xcm-2se #override IOM
-        NOKIA_SROS_MDA_1: x2-s36-800g-qsfpdd-18.0t #override MDA
+nodes:
+  sr-2se-a: 
+    kind: nokia_srsim
+    type: SR-2se
+    env: 
+      NOKIA_SROS_SLOT: A
+      NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # override Chassis MAC
+      NOKIA_SROS_FABRIC_IF: eth1 # override fabric itf
+      NOKIA_SROS_SFM: sfm-2se # override SFM
+      NOKIA_SROS_CARD: cpm-2se #override CPM
+  sros-2se-1:
+    kind: nokia_srsim
+    image: nokia_srsim:25.7.R1
+    type: sr-2se 
+    license: license-sros25.txt
+    network-mode: container:sr-2se-a
+    env:
+      NOKIA_SROS_SLOT: 1  
+      NOKIA_SROS_FABRIC_IF: eth2 # override fabric itf
+      NOKIA_SROS_SFM: sfm-2se # override SFM
+      NOKIA_SROS_CARD: xcm-2se #override IOM
+      NOKIA_SROS_MDA_1: x2-s36-800g-qsfpdd-18.0t #override MDA
 ```
 
 ///
@@ -394,40 +394,40 @@ Users can simplify the topology file by using the `components` directive in the 
 /// tab | Distributed grouped SR-SIM
 
 ```yaml
-  nodes: 
-    sr-sim1:
-      kind: nokia_srsim
-      type: SR-7
-      components:
-        - slot: A
-        - slot: B
-        - slot: 1
-        - slot: 2
+nodes: 
+  sr-sim1:
+    kind: nokia_srsim
+    type: SR-7
+    components:
+      - slot: A
+      - slot: B
+      - slot: 1
+      - slot: 2
 ```
 
 ///
 /// tab | Distributed grouped SR-SIM with overrides
 
 ```yaml
-  nodes: 
-    sr-sim1:
-      kind: nokia_srsim
-      type: SR-7
-      components:
-        - slot: A # Containers will be attached to this Linux NS
-        - slot: B
-        - slot: 1
-          type: iom5-e # equivalent to override NOKIA_SROS_CARD
-          env:
-            NOKIA_SROS_SFM: m-sfm6-7/12
-            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
-            NOKIA_SROS_MDA_2: me3-400gb-qsfpdd
-        - slot: 2
-          env:
-            NOKIA_SROS_SFM: m-sfm6-7/12
-            NOKIA_SROS_CARD: iom5-e 
-            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
-            NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
+nodes: 
+  sr-sim1:
+    kind: nokia_srsim
+    type: SR-7
+    components:
+      - slot: A # Containers will be attached to this Linux NS
+      - slot: B
+      - slot: 1
+        type: iom5-e # equivalent to override NOKIA_SROS_CARD
+        env:
+          NOKIA_SROS_SFM: m-sfm6-7/12
+          NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+          NOKIA_SROS_MDA_2: me3-400gb-qsfpdd
+      - slot: 2
+        env:
+          NOKIA_SROS_SFM: m-sfm6-7/12
+          NOKIA_SROS_CARD: iom5-e 
+          NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+          NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
 ```
 
 ///
