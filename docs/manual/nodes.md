@@ -455,17 +455,17 @@ nodes:
       mgmt-ipv4: 172.20.20.100
 ```
 
-### mgmt_ipv6
+### mgmt-ipv6
 
-To make a node to boot with a user-specified management IPv4 address, the `mgmt_ipv6` setting can be used. Note, that the static management IP address should be part of the subnet that is used within the lab.
+To make a node to boot with a user-specified management IPv4 address, the `mgmt-ipv6` setting can be used. Note, that the static management IP address should be part of the subnet that is used within the lab.
 
-Read more about user-defined management addresses [here](network.md#user-defined-addresses).
+Read more about user-defined management addresses in the [networking guide](network.md#user-defined-addresses).
 
 ```yaml
 nodes:
     r1:
       kind: nokia_srlinux
-      mgmt_ipv6: 3fff:172:20:20::100
+      mgmt-ipv6: 3fff:172:20:20::100
 ```
 
 ### DNS
