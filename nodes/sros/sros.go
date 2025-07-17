@@ -659,7 +659,7 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 
 // Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars.
 func (n *sros) createSROSFiles() error {
-	log.Infof("createSROSFiles Creating directory structure for SR-OS container: %s", n.Cfg.ShortName)
+	log.Infof("Creating directory structure for SR-OS container: %s", n.Cfg.ShortName)
 
 	var err error
 
@@ -669,7 +669,7 @@ func (n *sros) createSROSFiles() error {
 		if err := utils.CopyFile(n.Cfg.License, licPath, 0644); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", n.Cfg.License, licPath, err)
 		}
-		log.Infof("CopyFile src %s -> dst %s succeeded", n.Cfg.License, licPath)
+		log.Debugf("CopyFile src %s -> dst %s succeeded", n.Cfg.License, licPath)
 	}
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0777)
@@ -721,7 +721,7 @@ func (n *sros) createSROSFilesConfig() error {
 		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
 			return fmt.Errorf("CreateFile file %s failed %v", cfgPath, err)
 		}
-		log.Infof("CreateFile %s  succeeded", cfgPath)
+		log.Debugf("CreateFile %s succeeded", cfgPath)
 		if err != nil {
 			return err
 		}
