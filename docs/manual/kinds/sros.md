@@ -517,17 +517,17 @@ The partial config can contain configuration in a MD-CLI syntax that is accepted
 Both `flat`, `full-context` and normal syntax can be used in the partial config file. For example, the following partial config file adds a static route to the node in the regular CLI syntax:
 
 ```bash
-    configure {
-       router "Base" {
-           static-routes {
-               route 192.168.200.200/32 route-type unicast {
-                   next-hop "192.168.0.1" {
-                       admin-state enable
-                   }
-               }
-           }
-       }
+configure {
+    router "Base" {
+        static-routes {
+            route 192.168.200.200/32 route-type unicast {
+                next-hop "192.168.0.1" {
+                    admin-state enable
+                }
+            }
+        }
     }
+}
 ```
 
 ###### Remote partial files
