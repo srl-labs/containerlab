@@ -25,7 +25,6 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
-
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/runtime/ignite"
@@ -1003,11 +1002,13 @@ func (c *CLab) ListContainers(ctx context.Context, filter []*types.GenericFilter
 // ListNodesContainers lists all containers based on the nodes stored in clab instance.
 func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
 	var containers []runtime.GenericContainer
+
 	for _, n := range c.Nodes {
 		cts, err := n.GetContainers(ctx)
 		if err != nil {
 			return containers, fmt.Errorf("could not get container for node %s: %v", n.Config().LongName, err)
 		}
+
 		containers = append(containers, cts...)
 	}
 
