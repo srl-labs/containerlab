@@ -165,7 +165,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.HostRequirements.SSSE3 = true
 	n.HostRequirements.MinVCPU = 4
 	n.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
-	n.HostRequirements.MinAvailMemoryGb = 8
+	n.HostRequirements.MinAvailMemoryGb = 4
 	n.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
 
 	n.Cfg = cfg
