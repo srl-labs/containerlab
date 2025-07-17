@@ -439,8 +439,8 @@ func TestLabelsInit(t *testing.T) {
 
 			labels := c.Nodes[tc.node].Config().Labels
 
-			if !cmp.Equal(labels, tc.want) {
-				t.Errorf("failed at '%s', expected\n%v, got\n%+v", name, tc.want, labels)
+			if diff := cmp.Diff(tc.want, labels); diff != "" {
+				t.Errorf("failed at '%s', labels mismatch (-want +got):\n%s", name, diff)
 			}
 
 			// test that labels were propagated to env vars as CLAB_LABEL_<label-name>:<label-value>
