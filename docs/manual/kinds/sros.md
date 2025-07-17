@@ -231,7 +231,7 @@ Data interfaces need to be configured with IP addressing manually using the SR O
 
 ## Features and options
 
-The SR-SIM can be run in multiple hardware variants as explained in the [SR-SIM Installation, deployment and setup guide](TBD). These variants can be set using the `type` directive in the clab topology file or by overriding the different available environment variables such as the ones for the chassis (`NOKIA_SROS_CHASSIS`) or card (`NOKIA_SROS_CARD`). Users can then use environment variables to change the default behavior of a given container.  If there is a conflict between the `type` field in the topology file and an environment variable in the topology file, the environment variable will take precedence.
+The SR-SIM can be run in multiple hardware variants as explained in the [SR-SIM Installation, deployment and setup guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html). These variants can be set using the `type` directive in the clab topology file or by overriding the different available environment variables such as the ones for the chassis (`NOKIA_SROS_CHASSIS`) or card (`NOKIA_SROS_CARD`). Users can then use environment variables to change the default behavior of a given container.  If there is a conflict between the `type` field in the topology file and an environment variable in the topology file, the environment variable will take precedence.
 
 ### Integrated Variants
 
