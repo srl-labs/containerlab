@@ -97,7 +97,7 @@ var (
 		Minor:    5,
 		Revision: 0,
 	}
-	// Internal directories inside SR-SIM container
+	// Internal directories inside SR-SIM container.
 	cfgDir = "/nokia/config" // Where the startup config will be stored
 	cf1Dir = "/home/sros/flash1"
 	cf2Dir = "/home/sros/flash2"
@@ -134,7 +134,7 @@ func Register(r *nodes.NodeRegistry) {
 	}, nrea)
 }
 
-// SR-SIM Kind structure
+// sros SR-SIM Kind structure.
 type sros struct {
 	nodes.DefaultNode
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
@@ -157,7 +157,7 @@ type sros struct {
 	preDeployParams *nodes.PreDeployParams
 }
 
-// Init Function for SR-SIM kind
+// Init Function for SR-SIM kind.
 func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
@@ -211,7 +211,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-// Pre Deploy func for SR-SIM kind
+// Pre Deploy func for SR-SIM kind.
 func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	log.Debug("Running pre-deploy")
 	// store the preDeployParams
@@ -258,7 +258,7 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 	return nil
 }
 
-// Post Deploy func for SR-SIM kind
+// Post Deploy func for SR-SIM kind.
 func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
@@ -311,7 +311,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	return nil
 }
 
-// Delete func for SR-SIM kind
+// Delete func for SR-SIM kind.
 func (n *sros) Delete(ctx context.Context) error {
 	// if not distributed, follow default node implementation
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
@@ -418,7 +418,7 @@ func (n *sros) setupComponentNodes() error {
 	return nil
 }
 
-// Function that deploys the distributed SR-SIM when the `components` key is present
+// Function that deploys the distributed SR-SIM when the `components` key is present.
 func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployParams) error {
 	// loop through the components, creating them
 	for _, c := range n.componentNodes {
@@ -457,14 +457,14 @@ func (n *sros) deploy_fabric(ctx context.Context, deployParams *nodes.DeployPara
 	return nil
 }
 
-// isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a distributed setup
+// isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a distributed setup.
 func (n *sros) isDistributedCardNode() bool {
 	_, exists := n.Cfg.Env[envNokiaSrosSlot]
 	// is distributed if components is > 1 and the slot var exists.
 	return exists && !n.isDistributedBaseNode()
 }
 
-// check if SR-SIM is distributed: `components` key is present
+// check if SR-SIM is distributed: `components` key is present.
 func (n *sros) isDistributedBaseNode() bool {
 	return len(n.Cfg.Components) > 1
 }
@@ -473,7 +473,7 @@ func (n *sros) isStandaloneNode() bool {
 	return !n.isDistributedBaseNode() && !n.isDistributedCardNode()
 }
 
-// Function that retrieves the Namespace Path
+// Function that retrieves the Namespace Path.
 func (n *sros) GetNSPath(ctx context.Context) (string, error) {
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetNSPath(ctx)
@@ -492,7 +492,7 @@ func (n *sros) GetNSPath(ctx context.Context) (string, error) {
 	return nsp, err
 }
 
-// Function that appends the linecard suffix to the given node name
+// Function that appends the linecard suffix to the given node name.
 func (n *sros) calcComponentName(name, slot string) string {
 	if n.renameDone {
 		return name
@@ -500,7 +500,7 @@ func (n *sros) calcComponentName(name, slot string) string {
 	return fmt.Sprintf("%s-%s", name, slot)
 }
 
-// Function that computes the fqdn for a given slot
+// Function that computes the fqdn for a given slot.
 func (n *sros) calcComponentFqdn(slot string) string {
 	if n.renameDone {
 		return n.Cfg.Fqdn
@@ -510,7 +510,7 @@ func (n *sros) calcComponentFqdn(slot string) string {
 	return result
 }
 
-// Function that returns a CPM Node (used when Distributed mode)
+// Function that returns a CPM Node (used when Distributed mode).
 func (n *sros) cpmNode() (nodes.Node, error) {
 	defaultSlot, err := n.cpmSlot()
 	if err != nil {
@@ -525,7 +525,7 @@ func (n *sros) cpmNode() (nodes.Node, error) {
 	return nil, fmt.Errorf("node %s: node for slot %s not found", n.GetShortName(), defaultSlot)
 }
 
-// Function that returns the Slot of the preferred CPM Node (used when Distributed mode)
+// Function that returns the Slot of the preferred CPM Node (used when Distributed mode).
 func (n *sros) cpmSlot() (string, error) {
 	slot := ""
 
@@ -547,7 +547,7 @@ search:
 	return slot, nil
 }
 
-// Function that deploys the SR-SIM kind
+// Function that deploys the SR-SIM kind.
 func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) error {
 	// if it is a chassis with multiple cards (i.e. components)
 	if n.isDistributedBaseNode() {
@@ -604,7 +604,6 @@ func (n *sros) Ready(ctx context.Context) error {
 				}
 				time.Sleep(retryTimer)
 			}
-
 		}
 	}
 }
@@ -624,7 +623,7 @@ func (*sros) checkKernelVersion() error {
 	return nil
 }
 
-// checkComponentSlotsConfig check the sros component slot config for validaity
+// checkComponentSlotsConfig check the sros component slot config for validaity.
 func (n *sros) checkComponentSlotsConfig() error {
 	// check Slots are unique
 	componentNames := map[string]struct{}{}
@@ -658,7 +657,7 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 	return n.DefaultNode.CheckDeploymentConditions(ctx)
 }
 
-// Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars
+// Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars.
 func (n *sros) createSROSFiles() error {
 	log.Infof("createSROSFiles Creating directory structure for SR-OS container: %s", n.Cfg.ShortName)
 
@@ -689,7 +688,7 @@ func (n *sros) createSROSFiles() error {
 	return nil
 }
 
-// Func that handles the config generation for the SR-SIM kind
+// Func that handles the config generation for the SR-SIM kind.
 func (n *sros) createSROSFilesConfig() error {
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
@@ -741,13 +740,13 @@ func (n *sros) createSROSFilesConfig() error {
 	return err
 }
 
-// SlotisInteger checks if the slot string represents a valid integer
+// SlotisInteger checks if the slot string represents a valid integer.
 func SlotisInteger(s string) bool {
 	_, err := strconv.Atoi(s)
 	return err == nil
 }
 
-// Check if a container is a CPM
+// Check if a container is a CPM.
 func (n *sros) isCPM(cpm string) bool {
 	// Check if container is a linecard
 	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists && SlotisInteger(n.Cfg.Env[envNokiaSrosSlot]) {
@@ -763,56 +762,6 @@ func (n *sros) isCPM(cpm string) bool {
 	}
 	// None of the previous conditions are meet
 	return true
-}
-
-// srosTemplateData top level data struct.
-type srosTemplateData struct {
-	Name            string
-	TLSKey          string
-	TLSCert         string
-	TLSAnchor       string
-	Banner          string
-	IFaces          map[string]tplIFace
-	SSHPubKeysRSA   []string
-	SSHPubKeysECDSA []string
-	MgmtMTU         int
-	MgmtIPMTU       int
-	DNSServers      []string
-	// EnableGNMIUnixSockServices enables GNMI unix socket services
-	// for the node. This is needed for "23.10 <= ver < 24.3" versions
-	EnableGNMIUnixSockServices bool
-	// EnableCustomPrompt enables custom prompt with added newline
-	// before the prompt.
-	EnableCustomPrompt bool
-	CustomPrompt       string
-	// SNMPConfig is a string containing SNMP configuration
-	SNMPConfig string
-	// GRPCConfig is a string containing GRPC configuration
-	GRPCConfig string
-	// ACLConfig is a string containing ACL configuration
-	ACLConfig string
-	// NetconfConfig is a string containing Netconf server configuration
-	NetconfConfig string
-	// EDAConfig is a string containing EDA configuration
-	EDAConfig string
-	// OCServerConfig is a string containing OpenConfig server configuration
-	OCServerConfig string
-	// SystemConfig is a string containing System configuration
-	SystemConfig string
-	// LoggingConfig is a string containing Logging configuration
-	LoggingConfig string
-	// SSHConfig is a string containing SSH configuration
-	SSHConfig string
-	//PartialConfig
-	PartialConfig string
-}
-
-// tplIFace template interface struct.
-type tplIFace struct {
-	Slot       string
-	Port       string
-	BreakoutNo string
-	Mtu        int
 }
 
 // addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner, ssh keys.
@@ -909,7 +858,6 @@ func (n *sros) addPartialConfig() error {
 }
 
 func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
-
 	// if not a distributed setup call regular GetContainers
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetContainers(ctx)
@@ -1074,15 +1022,6 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 
 	log.Infof("saved %q running configuration\n", s.Cfg.LongName)
 
-	// if err != nil {
-	// 	return fmt.Errorf("%s: failed to execute cmd: %v", s.Cfg.ShortName, err)
-	// }
-	// if len(execResult.GetStdErrString()) > 0 {
-	// 	return fmt.Errorf("%s errors: %s", s.Cfg.ShortName, execResult.GetStdErrString())
-	// }
-
-	log.Infof("saved SR OS configuration from %s node", s.Cfg.ShortName)
-
 	return nil
 }
 
@@ -1091,12 +1030,6 @@ func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
-// // nodeConfigExists returns true if a file at <labdir>/<node>/config/config.cfg exists.
-//
-//	func nodeConfigExists(labDir string) bool {
-//		_, err := os.Stat(filepath.Join(labDir, configCf3, startupCfgFName))
-//		return err == nil
-//	}
 func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
 	if !n.isCPM("") {
 		return true, fmt.Errorf("node %q is not a CPM, healthcheck has no effect", n.Cfg.LongName)
@@ -1109,7 +1042,7 @@ func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
 	return CheckPortWithRetry(addr, 830, readyTimeout, 5, retryTimer)
 }
 
-// CheckPortWithRetry checks if a port is open with retry logic
+// CheckPortWithRetry checks if a port is open with retry logic.
 func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries int, retryDelay time.Duration) (bool, error) {
 	var lastErr error
 
@@ -1130,9 +1063,8 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 	return false, lastErr
 }
 
-// Functions that tries to do a DNS lookup to resolve the IP for the container, in case it doesn't find it, it returns the address associated with the data structure of the container
+// Functions that tries to do a DNS lookup to resolve the IP for the container, in case it doesn't find it, it returns the address associated with the data structure of the container.
 func ResolveClabContainer(s *sros) (string, error) {
-	// if _, err := net.LookupHost(s.Cfg.LongName); err != nil {
 	if s.Cfg.MgmtIPv4Address != "" {
 		return s.Cfg.MgmtIPv4Address, nil
 	} else if s.Cfg.MgmtIPv6Address != "" {
