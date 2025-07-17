@@ -11,7 +11,7 @@ import (
 // prepareSSHPubKeys maps the ssh pub keys into the SSH key type based slice
 // and checks that not more then 32 keys per type are present, otherwise truncates
 // the slices since SROS allows a max of 32 public keys per algorithm.
-func (s *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
+func (n *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 	// a map of supported SSH key algorithms and the template slices
 	// the keys should be added to.
 	// In mapSSHPubKeys we map supported SSH key algorithms to the template slices.
@@ -22,15 +22,15 @@ func (s *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 		ssh.KeyAlgoECDSA256: &tplData.SSHPubKeysECDSA,
 	}
 
-	s.mapSSHPubKeys(supportedSSHKeyAlgos)
+	n.mapSSHPubKeys(supportedSSHKeyAlgos)
 
 	if len(tplData.SSHPubKeysRSA) > 32 {
-		log.Warnf("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
+		log.Warn("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
 		tplData.SSHPubKeysRSA = tplData.SSHPubKeysRSA[:32]
 	}
 
 	if len(tplData.SSHPubKeysECDSA) > 32 {
-		log.Warnf("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
+		log.Warn("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
 		tplData.SSHPubKeysECDSA = tplData.SSHPubKeysECDSA[:32]
 	}
 }
@@ -41,11 +41,11 @@ func (s *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 // that is used to store the keys of the corresponding algorithm family.
 // Two slices are used to store RSA and ECDSA keys separately.
 // The slices are modified in place by reference, so no return values are needed.
-func (s *sros) mapSSHPubKeys(supportedSSHKeyAlgos map[string]*[]string) {
-	for _, k := range s.sshPubKeys {
+func (n *sros) mapSSHPubKeys(supportedSSHKeyAlgos map[string]*[]string) {
+	for _, k := range n.sshPubKeys {
 		sshKeys, ok := supportedSSHKeyAlgos[k.Type()]
 		if !ok {
-			log.Debugf("unsupported SSH Key Algo %q, skipping key", k.Type())
+			log.Debug("Unsupported SSH Key Algo, skipping key", "node", n.Cfg.ShortName, "key", k)
 			continue
 		}
 

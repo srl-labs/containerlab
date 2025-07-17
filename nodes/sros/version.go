@@ -159,8 +159,8 @@ func (n *sros) RunningVersion(ctx context.Context) (*SrosVersion, error) {
 		return nil, err
 	}
 
-	log.Debugf("SR-OS node %s extracted raw version. stdout: %s, stderr: %s",
-		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debug("Extracted raw SR OS version",
+		"node", n.Cfg.ShortName, "stdout", execResult.GetStdOutString(), "stderr", execResult.GetStdErrString())
 
 	return n.parseVersionString(execResult.GetStdOutString()), nil
 }
