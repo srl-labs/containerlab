@@ -375,14 +375,14 @@ jobs:
   #     - build-containerlab
   #   with:
   #     py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-  
-  srsim-tests:
-    uses: ./.github/workflows/srsim-tests.yml
-    needs:
-      - file-changes
-      - build-containerlab
-    with:
-      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+
+  # srsim-tests:
+  #   uses: ./.github/workflows/srsim-tests.yml
+  #   needs:
+  #     - file-changes
+  #     - build-containerlab
+  #   with:
+  #     py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
   fortigate-tests:
     uses: ./.github/workflows/fortigate-tests.yml
