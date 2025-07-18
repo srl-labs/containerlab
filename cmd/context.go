@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/charmbracelet/log"
 )
@@ -25,12 +26,19 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 
 	go func() {
 		sig := <-sigs
-		log.Infof("received signal '%s', canceling context", sig)
+		log.Errorf("received signal %q, canceling context and cleaning deployment...", sig)
 
 		cancel()
 
-		sig = <-sigs
-		log.Infof("received signal '%s', exiting program", sig)
+		destroyCtx, destroyCancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer destroyCancel()
+
+		destroyCmd.SetContext(destroyCtx)
+
+		err := destroyFn(destroyCmd, []string{})
+		if err != nil {
+			log.Errorf("failed destroying lab after cancellation signal: %v", err)
+		}
 
 		os.Exit(1)
 	}()
