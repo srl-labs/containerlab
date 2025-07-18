@@ -152,91 +152,24 @@ links:
 
 The management interface for the SR-SIM is mapped to `eth0` of the Linux namespace where the container is running.
 
-Distributed systems require certain settings given the nature of the SR-SIM simulator:
-
-1. Containers must all run in the same Linux namespace. This is currently achieved using the `network-mode` directive in clab[^2].
-2. The containers sharing namespace are all bridged internally to an internally created switch, which is simply a Linux bridge with uniquely named interfaces. Users do not need to configure the switch unless they have a specific need to use the `NOKIA_SROS_FABRIC_IF` environment variable  to override the default interfaces [^3].
-3. Datapath links for the SR-SIM node SHOULD[^4] be connected to the container emulating the specific line card.
-
-Example topologies for Integrated and Distributed nodes are shown below:
-
-/// tab | Integrated SR-SIM
-
-```yaml
-name: sros
-topology:
-  kinds:
-    nokia_srsim:
-      license: /opt/nokia/sros/license.txt
-      image: nokia_srsim:25.7.R1
-  nodes:
-    sr-sim1:
-      kind: nokia_srsim
-      type: SR-1 # Implicit default
-    sr-sim2:
-      kind: nokia_srsim
-  links:
-    # Datapath Interfaces
-    - endpoints: ["sr-sim1:1/1/c1/1", "sr-sim2:1/1/c1/1"]
-    - endpoints: ["sr-sim1:1/1/c1/2", "sr-sim2:1/1/c1/2"]
-```
-
-///
-
-/// tab | Distributed SR-SIM
-
-```yaml
-name: "sros"
-topology:
-  kinds:
-    nokia_srsim:
-      license: /opt/nokia/sros/license.txt
-      image: nokia_srsim:25.7.R1
-  nodes:
-    sr-2s-a:  # CPM A
-      kind: nokia_srsim
-      type: SR-2s
-      env:
-        NOKIA_SROS_SLOT: A
-        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # This must match on CPM A and B
-    sr-2s-b: # CPM B
-      kind: nokia_srsim
-      type: SR-2s
-      network-mode: container:sr-2s-a
-      env: 
-        NOKIA_SROS_SLOT: B
-        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # This must match on CPM A and B
-    sr-2s-1: # line card 1
-      kind: nokia_srsim
-      type: SR-2s
-      network-mode: container:sr-2s-a
-      env: 
-        NOKIA_SROS_SLOT: 1
-    sr-2s-2: # line card 2
-      kind: nokia_srsim
-      type: SR-2s
-      network-mode: container:sr-2s-a
-      env: 
-        NOKIA_SROS_SLOT: 2
-  links:
-    ## Datapath interfaces
-    - endpoints: ["sr-2s-1:1/1/c1/1", "sr-2s-2:2/1/c1/1"]
-    - endpoints: ["sr-2s-1:1/1/c2/1", "sr-2s-2:2/1/c2/1"]
-```
-
-///
-
 When containerlab launches the -{{ kind_display_name }}- node, the primary BOF interface gets an address provided by the container runtime's IPAM driver. This address will only be allocated to the active CPM.
 
 Data interfaces need to be configured with IP addressing manually using the SR OS CLI or other available management methods.
 
-## SR-SIM Variants
+## SR-SIM variants
 
-The SR-SIM can be run in multiple hardware variants as explained in the [SR-SIM Installation, deployment and setup guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html). These variants can be set using the `type` directive in the clab topology file or by overriding the different available environment variables such as the ones for the chassis (`NOKIA_SROS_CHASSIS`) or card (`NOKIA_SROS_CARD`). Users can then use environment variables to change the default behavior of a given container.  If there is a conflict between the `type` field in the topology file and an environment variable in the topology file, the environment variable will take precedence.
+The SR-SIM can emulate different hardware platforms as explained in the [SR-SIM Installation, deployment and setup guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html). These variants can be set using the `type` directive in the clab topology file or by overriding the different available environment variables such as the ones for the chassis (`NOKIA_SROS_CHASSIS`) or card (`NOKIA_SROS_CARD`).  
+Users can then use environment variables to change the default behavior of a given container. If there is a conflict between the `type` field in the topology file and an environment variable in the topology file, the environment variable will take precedence.
 
-### Integrated Variants
+> When `type` is not provided in the topology file, SR-SIM will start as `SR-1` platform.
 
-To make Nokia SR OS to boot in one of the packaged integrated variants, set the `type` to one of the predefined chassis types. You can then modify some of the default settings overriding the environment variables on a per-node basis.
+If the chosen platform is chassis-based, the SR-SIM deployment needs to be done in a [distributed variant](#distributed), where each CPM and line card is a separate container. Otherwise, the SR-SIM will run in an [integrated](#integrated) mode with a single container emulating the whole system.
+
+### Integrated
+
+We call non-chassis-based systems like SR-1, SR-1s integrated variants. As these systems have a fixed form factor, they run as a single container and are represented as a single node in the topology file.
+
+Besides setting the `type` to drive the platform selection, users can then modify some of the default settings on a per-node basis using the environment variables. For example, to change the default MDA, like shown in the example below.
 /// tab | Integrated SR-SIM
 
 ```yaml
@@ -244,7 +177,7 @@ topology:
   nodes:
     sr-sim:
       kind: nokia_srsim
-      type: SR-1s
+      type: SR-1s # overriding the default SR-1 type with SR-1s
 ```
 
 ///
@@ -257,27 +190,43 @@ topology:
       kind: nokia_srsim
       type: SR-1
       env: 
-        NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # override default MDA on slot 1
+        NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # override default MDA type in slot 1
 ```
 
 ///
 
-### Distributed variants
+### Distributed
 
-A distributed SR-SIM node will consist on two or more containers with an specific role: CPM or IOM. The simulator will boot on either mode depending on the settings of the `NOKIA_SROS_SLOT` environment variable and the SR-SIM node type.
-There are several other variables that will modify the default settings for a simulated chassis (e.g. SFM, XIOM, MDA, etc.), so please check the Users' guide for a full list.
-Containerlab will allow to define the topology in a couple of ways: Using a separate containerlab node definition per line card ([standard topology](#standard-distributed-topology)), or a single node definition with the components grouped as a list ([grouped topology](#grouped-distributed-topology)). The latter function is currently a preview and future configuration might change.
+When the emulated platform is chassis-based, like SR-7, SR-14s, etc., the SR-SIM node must be defined in a distributed mode in the topology file.
 
-#### Standard distributed topology
+A distributed SR-SIM node consists of two or more containers with a specific role: CPM or IOM. A node can boot in either mode depending on the settings of the `NOKIA_SROS_SLOT` environment variable and the SR-SIM node type.  
+There are several other variables that will modify the default settings for a simulated chassis (e.g. SFM, XIOM, MDA, etc.), so please check the [SR-SIM Installation guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html) for a full list of options.
 
-In these examples, there are several key elements to make sure the node will boot properly:
+Containerlab provides two ways to define the distributed variant:
+
+1. Using a separate containerlab node definition per line card ([standard topology](#standard-topology))
+2. With a single node definition with the components grouped as a list ([grouped topology](#grouped-topology)). This mode is currently in a preview and its configuration might change in the future.
+
+/// details | Distributed SR-SIM considerations
+Distributed systems require certain settings given the nature of the SR-SIM simulator:
+
+1. Containers must all run in the same Linux namespace. This is currently achieved using the `network-mode` directive in Containerlab[^2].
+2. The containers sharing namespace are all bridged internally to an internally created switch, which is simply a Linux bridge with uniquely named interfaces. Users do not need to configure the switch unless they have a specific need to use the `NOKIA_SROS_FABRIC_IF` environment variable  to override the default interfaces [^3].
+3. Datapath links for the SR-SIM node SHOULD[^4] be connected to the container emulating the specific line card.
+///
+
+#### Standard topology
+
+The standard distributed topology is defined by creating a separate node definition for each line card or CPM. This allows users to define the type of each line card and set the environment variables for each container individually.
+
+Below are the key requirements to satisfy in order for the nodes to boot successfully:
 
 1. The `type` for a single box must be the same.
 2. For a dual CPM chassis, the CPM containers need to have the `NOKIA_SROS_SYSTEM_BASE_MAC` set to the same value.
 3. The `NOKIA_SROS_SLOT` variable needs to be set uniquely for every SR-SIM container.
-4. For a particular SR-SIM node, all its containers must be attached to the same Linux namespace using the `network-mode: container:<container-name>` directive. In these examples, the container associated with the CPM-A is used.
-5. When a node uses multiple line cards, users should pay special attention to the way links are defined in the topology file. As explained in the [interface naming](#interface-naming) section, SR OS nodes SHOULD be mapped to the line card, XIOM, MDA or port they use.
-6. Similarly, if the users modify the management or fabric interfaces, they must put special care when creating the necessary wiring to such interfaces.
+4. For a particular SR-SIM node, all its containers must be attached to the same Linux namespace using the `network-mode: container:<container-name>` directive. In the below examples, the container associated with the CPM-A is used.
+5. When a node uses multiple line cards, users should pay attention to the way links are defined in the topology file. As explained in the [interface naming](#interface-naming) section, SR OS nodes SHOULD be mapped to a line card, XIOM, MDA or a port they use.
+6. Similarly, if the users modify the management or fabric interfaces, they must take special care when creating the necessary wiring to such interfaces.
 
 /// tab | Distributed SR-SIM
 
@@ -291,7 +240,7 @@ topology:
     sr-sim:
       kind: nokia_srsim
       type: SR-1x-92S
-      env: 
+      env:
          NOKIA_SROS_SLOT: A
     sr-sim-iom:
       kind: nokia_srsim
@@ -313,7 +262,7 @@ topology:
   nodes:
     sros-14s-a:
       kind: nokia_srsim
-      type: sr-14s 
+      type: sr-14s
       kind: nokia_srsim
       type: SR-14s
       network-mode: container:sr-14s-a
@@ -346,7 +295,7 @@ topology:
 
 ///
 
-/// tab | Distributed SR-SIM with overrides
+/// tab | with overrides
 
 ```yaml
 nodes:
@@ -375,14 +324,14 @@ nodes:
 
 ///
 
-#### Grouped distributed topology
+#### Grouped topology
 
 /// admonition
     type: warning
 This feature is a PREVIEW and should be implemented carefully in your lab
 ///
 
-Users can simplify the topology file by using the `components` directive in the node definition as shown in the example below. In this case, every slice element in the `components` section will be a container emulating the corresponding slot. Similar to the standard topology, overrides are supported per container by setting the `env` directive for each component or per node.
+Users can simplify the topology file with distributed SR-SIM nodes by using the `components` directive in the node definition. In this case, every member in the `components` section will result in a spawned container emulating the corresponding component type (CPM or IOM). Similar to the standard topology, overrides are supported per container by setting the `env` directive for each component or per node.
 
 /// tab | Distributed grouped SR-SIM
 
@@ -399,7 +348,7 @@ nodes:
 ```
 
 ///
-/// tab | Distributed grouped SR-SIM with overrides
+/// tab | with overrides
 
 ```yaml
 nodes: 
@@ -407,7 +356,7 @@ nodes:
     kind: nokia_srsim
     type: SR-7
     components:
-      - slot: A # Containers will be attached to this Linux NS
+      - slot: A # containers will be attached to this Linux NS
       - slot: B
       - slot: 1
         type: iom5-e # equivalent to override NOKIA_SROS_CARD
@@ -418,20 +367,15 @@ nodes:
       - slot: 2
         env:
           NOKIA_SROS_SFM: m-sfm6-7/12
-          NOKIA_SROS_CARD: iom5-e 
+          NOKIA_SROS_CARD: iom5-e # (1)!
           NOKIA_SROS_MDA_1: me6-100gb-qsfp28
           NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
 ```
 
+1. As an example, the card type is set here as an env var, instead of the `type` field like we did for slot 1.
+
 ///
-
-When a SR-SIM node is defined this way, we need to take into account the following:
-
-1. Individual containers will be attached to the namespace of the 1st element of the `components` slice: CPM-A in the above examples.
-2. When changing a MDA or card type from its default value, the environment variables for card, SFM and MDA must be also included.
-3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
-
-/// tab | Distributed grouped SR-SIM with links
+/// tab | with links
 
 ```yaml
 topology:
@@ -457,11 +401,19 @@ topology:
         - slot: 1
         - slot: 2
   links:
-    - endpoints: ["srsim1:e1-1-c1-1", "srsim2:e1-1-c1-1"]
+    - endpoints: ["srsim1:e1-1-c1-1", "srsim2:e1-1-c1-1"] #(1)!
     - endpoints: ["srsim1:e2-1-c1-1", "srsim2:e2-1-c1-1"]
-```  
+```
+
+1. As an example, we use here the Linux-compatible interface names. In Containerlab you could've also used the SR OS interface names, like `srsim1:1/1/c1/1`.
 
 ///
+
+When a distributed SR-SIM node is defined using `components`, we need to take into account the following:
+
+1. Individual containers will be attached to the namespace of the 1st element of the `components` list: CPM-A in the above examples.
+2. When changing a MDA or card type from its default value, the environment variables for card, SFM and MDA must be also included.
+3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
 
 ## Node configuration
 
