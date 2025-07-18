@@ -88,6 +88,7 @@ type Node interface {
 	PostDeploy(ctx context.Context, params *PostDeployParams) error
 	WithMgmtNet(*types.MgmtNet)           // WithMgmtNet provides the management network for the node
 	WithRuntime(runtime.ContainerRuntime) // WithRuntime provides the runtime for the node
+	PullImage(ctx context.Context) error  // PullImage pulls the image for the node
 	// CalculateInterfaceIndex returns with the interface index offset from the first valid dataplane interface based on the interface name. Errors otherwise.
 	CalculateInterfaceIndex(ifName string) (int, error)
 	// CheckInterfaceName checks if a name of the interface referenced in the topology file is correct for this node
