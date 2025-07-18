@@ -6,7 +6,7 @@ kind_display_name: Juniper cJunosEvolved
 ---
 # Juniper cJunosEvolved
 
-[Juniper cJunosEvolved](https://www.juniper.net/documentation/product/us/en/cjunosevolved/) is a containerized Junos OS Evolved router identified with `juniper_cjunosevolved` kind in the [topology file](../topo-def-file.md). It is a KVM based container that can emulate either of these PTX platforms:
+[Juniper cJunosEvolved](https://www.juniper.net/documentation/product/us/en/cjunosevolved/) is a containerized Junos OS Evolved router identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is a KVM-based container that can emulate either of these PTX platforms:
 
 * `PTX10002-36QDD`- A fixed form factor 800G transport router based on Juniper's Express 5 (aka BX) ASIC.
 * `PTX10001-36MR` - A fixed form factor 400G transport router based on Juniper's Express 4 (aka BT) ASIC.
@@ -24,13 +24,15 @@ The container image can be freely downloaded from the [Juniper support portal](h
 
 ## Managing Juniper cJunosEvolved nodes
 
-!!!note
+/// note
     Containers with cJunosEvolved inside will take ~5min to boot to login prompt.
     You can monitor the progress with `docker logs -f <container-name>`.
     Alternatively, you can also use the `docker exec -ti <container-name> cli` as shown in more detail below.
+///
 
-!!!note
+///note
     The management port IP is assigned by containerlab and is merged into the startup config by the cJunosEvolved container. The default startup config allows for SSH access with the default credentials below.
+///
 
 === "CLI via SSH"
     To connect to the cJunosEvolved CLI
@@ -89,8 +91,8 @@ The Linux `eth4 – eth39` interfaces correspond to the `et-0/0/0 – et-0/0/35`
 
 The Linux `eth4 – eth15` interfaces correspond to the `et-0/0/0 – et-0/0/11` interfaces in the JunosEvolved CLI configuration.
 
-When containerlab launches `juniper_cjunosevolved` it assigns an IP address to the container's `eth0` management interface.
-This interface is transparently stitched with the cJunosEvolved's `re0:mgmt-0` interface such that users can reach the management plane of the `juniper_cjunosevolved` using containerlab's assigned IP.
+When containerlab launches `-{{ kind_display_name }}-`, it assigns an IP address to the container's `eth0` management interface.
+This interface is transparently stitched with cJunosEvolved's `re0:mgmt-0` interface such that users can reach the management plane of the cJunosEvolved node using containerlab's assigned IP.
 
 The WAN interfaces need to be configured with IP addressing manually using CLI or other available management interfaces.
 You could also pass in a startup CLI configuration file that has the WAN interface addresses specified. For example,
@@ -124,7 +126,7 @@ With this knob containerlab is instructed to take a file `cjunosevo.cfg` from th
 
 If a user-provided startup-config is provided, it must contain the `FXP0ADDRESS` token where the management IP CIDR should be substituted in. If this token is not present in the user-provided startup-config, only direct CLI access can be used for management.
 
-Please refer to `docs/lab-examples/srl-cjunosevolved.md` for an example.
+Please refer to the [SR Linux and Juniper cJunosEvolved lab](../../lab-examples/srl-cjunosevolved.md) for an example.
 
 ## Lab examples
 
