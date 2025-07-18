@@ -25,49 +25,52 @@ The container image can be freely downloaded from the [Juniper support portal](h
 ## Managing Juniper cJunosEvolved nodes
 
 /// note
-    Containers with cJunosEvolved inside will take ~5min to boot to login prompt.
-    You can monitor the progress with `docker logs -f <container-name>`.
-    Alternatively, you can also use the `docker exec -ti <container-name> cli` as shown in more detail below.
+Containers with cJunosEvolved inside will take ~5min to boot to login prompt.
+You can monitor the progress with `docker logs -f <container-name>`.
+Alternatively, you can also use the `docker exec -ti <container-name> cli` as shown in more detail below.
 ///
 
-///note
-    The management port IP is assigned by containerlab and is merged into the startup config by the cJunosEvolved container. The default startup config allows for SSH access with the default credentials below.
+/// note
+The management port IP is assigned by containerlab and is merged into the startup config by the cJunosEvolved container. The default startup config allows for SSH access with the default credentials below.
 ///
 
-=== "CLI via SSH"
-    To connect to the cJunosEvolved CLI
-    ```bash
-    ssh admin@<container-name>
-    ```
+cJunosEvolved nodes launched with containerlab can be managed via the following interfaces:
 
-=== "Enter CLI directly"
-    cJunosEvolved has to be fully booted before this succeeds.
-    ```bash
-    docker exec -ti <container-name> cli
-    ```
-    A sample output of above command is shown here. Once the system is ready and configurable,
-    the CLI prompt will be shown and the user can then make login and make additional configuraion changes:
-    ```bash
-    # docker exec -ti clab-srlcjunosevo-cevo cli
-      System is not yet ready...
-      System is not yet ready...
-      System is not yet ready...
-      System is not yet ready...
-      System is not yet ready...
-      System is not yet ready...
-      System is not yet ready...
-      Waiting for editing of configuration to be ready.
-      root@HOSTNAME>
-    ```
+/// tab | SSH
+To connect to the cJunosEvolved CLI, simply SSH to the node:
+```bash
+ssh admin@<container-name>
+```
+///
+/// tab | CLI
+cJunosEvolved has to be fully booted before this succeeds.
+```bash
+docker exec -ti <container-name> cli
+```
+A sample output of above command is shown here. Once the system is ready and configurable,
+the CLI prompt will be shown and the user can then make login and make additional configuraion changes:
+```bash
+# docker exec -ti clab-srlcjunosevo-cevo cli
+  System is not yet ready...
+  System is not yet ready...
+  System is not yet ready...
+  System is not yet ready...
+  System is not yet ready...
+  System is not yet ready...
+  System is not yet ready...
+  Waiting for editing of configuration to be ready.
+  root@HOSTNAME>
+```
+///
+/// tab | NETCONF
+NETCONF server is running over port 830 if it is enabled in the provided startup-configuration.
+```bash
+ssh admin@<container-name> -p 830 -s netconf
+```
+///
 
-=== "NETCONF"
-    NETCONF server is running over port 830 if it is enabled in the provided startupconfiguration.
-    ```bash
-    ssh admin@<container-name> -p 830 -s netconf
-    ```
-
-!!!info
-    Default user credentials: `admin:admin@123`
+###  Credentials
+Default user credentials: `admin:admin@123`
 
 ## Interface naming
 
