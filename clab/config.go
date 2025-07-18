@@ -139,6 +139,13 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
 	}
 
+	// adding default labels to the node config
+	// so that the labels are present in the node config
+	// and can be copied to the child components
+	// at the time of the node init
+	c.addDefaultLabels(nodeCfg)
+	labelsToEnvVars(nodeCfg)
+
 	// Init
 	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeRuntime]), nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
@@ -147,9 +154,9 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	}
 
 	c.Nodes[nodeName] = n
-
-	c.addDefaultLabels(n)
-
+	// adding default labels 2nd time in case node init
+	// overwrote original values for the default labels
+	c.addDefaultLabels(n.Config())
 	labelsToEnvVars(n.Config())
 
 	return nil
@@ -205,6 +212,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
 		Aliases:         c.Config.Topology.GetNodeAliases(nodeName),
+		Components:      c.Config.Topology.GetComponents(nodeName),
 	}
 	var err error
 
@@ -552,8 +560,7 @@ func (c *CLab) HasKind(k string) bool {
 // addDefaultLabels adds default labels to node's config struct.
 // Update the addDefaultLabels function in clab/config.go
 // addDefaultLabels adds default labels to node's config struct.
-func (c *CLab) addDefaultLabels(n nodes.Node) {
-	cfg := n.Config()
+func (c *CLab) addDefaultLabels(cfg *types.NodeConfig) {
 	if cfg.Labels == nil {
 		cfg.Labels = map[string]string{}
 	}

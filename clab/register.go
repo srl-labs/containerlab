@@ -30,6 +30,7 @@ import (
 	sonic "github.com/srl-labs/containerlab/nodes/sonic"
 	vr_sonic "github.com/srl-labs/containerlab/nodes/sonic_vm"
 	srl "github.com/srl-labs/containerlab/nodes/srl"
+	sros "github.com/srl-labs/containerlab/nodes/sros"
 	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	vr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
 	vr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
@@ -71,6 +72,7 @@ func (c *CLab) RegisterNodes() {
 	ovs.Register(c.Reg)
 	sonic.Register(c.Reg)
 	srl.Register(c.Reg)
+	sros.Register(c.Reg)
 	vr_aoscx.Register(c.Reg)
 	vr_csr.Register(c.Reg)
 	vr_c8000v.Register(c.Reg)

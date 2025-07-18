@@ -244,6 +244,21 @@ func (t *Topology) GetNodeShmSize(name string) string {
 	return t.GetDefaults().GetNodeShmSize()
 }
 
+func (t *Topology) GetComponents(name string) []*Component {
+	if ndef, ok := t.Nodes[name]; ok {
+		if v := ndef.GetComponents(); v != nil {
+			return v
+		}
+		if v := t.GetGroup(t.GetNodeGroup(name)).GetComponents(); v != nil {
+			return v
+		}
+		if v := t.GetKind(t.GetNodeKind(name)).GetComponents(); v != nil {
+			return v
+		}
+	}
+	return t.GetDefaults().GetComponents()
+}
+
 func (t *Topology) GetNodeStartupConfig(name string) string {
 	if ndef, ok := t.Nodes[name]; ok {
 		if v := ndef.GetStartupConfig(); v != "" {
