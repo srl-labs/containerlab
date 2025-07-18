@@ -5,8 +5,8 @@ go 1.23.0
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/charmbracelet/fang v0.1.0
-	github.com/charmbracelet/lipgloss v1.0.0
-	github.com/charmbracelet/log v0.4.1
+	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/charmbracelet/log v0.4.2
 	github.com/containernetworking/plugins v1.6.2
 	github.com/containers/common v0.62.0
 	github.com/containers/podman/v5 v5.4.0
