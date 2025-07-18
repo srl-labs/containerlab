@@ -17,7 +17,7 @@ var (
 	kindnames          = []string{"cjunosevolved", "juniper_cjunosevolved"}
 	defaultCredentials = nodes.NewCredentials("admin", "admin@123")
 	InterfaceRegexp    = regexp.MustCompile(`et-0/0/(?P<port>\d+)$`)
-	InterfaceOffset    = 0
+	InterfaceOffset    = -3
 	InterfaceHelp      = "(et-0/0/X (where X >= 0) or ethX (where X >= 4)"
 )
 
@@ -44,12 +44,12 @@ func Register(r *nodes.NodeRegistry) {
 }
 
 type cjunosevolved struct {
-	nodes.DefaultNode
+	nodes.VRNode
 }
 
 func (n *cjunosevolved) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	// Init VRNode
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 
 	// cjunosevolved requires KVM support.
 	n.HostRequirements.VirtRequired = true
@@ -65,6 +65,10 @@ func (n *cjunosevolved) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) er
 
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
+
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceOffset = InterfaceOffset
+	n.InterfaceHelp = InterfaceHelp
 
 	return nil
 }
