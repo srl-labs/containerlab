@@ -351,3 +351,22 @@ div.highlight.code-scroll-sm pre>code {
 [dir="ltr"] .md-typeset blockquote {
   border-left: .1rem solid var(--md-default-fg-color--lightest);
 }
+
+/* quote styling */
+[dir="ltr"] .md-typeset blockquote {
+  position: relative;
+  padding-left: 1rem;
+  border: none;
+
+}
+
+[dir="ltr"] .md-typeset blockquote::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.1rem;
+  bottom: 0.1rem;
+  width: 0.15em;
+  border-radius: 0.25rem;
+  background: linear-gradient(to bottom, var(--md-default-fg-color--lighter), var(--md-accent-fg-color));
+}
