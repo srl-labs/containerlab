@@ -438,7 +438,7 @@ When a distributed SR-SIM node is defined using `components`, we need to take in
 
 ## Node configuration
 
-Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, gNMI[^5].
+Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, and gNMI are provisioned[^5].
 
 ### User-defined config
 
