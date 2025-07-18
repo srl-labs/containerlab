@@ -413,5 +413,5 @@ func (r *SSHReply) Debug(node, message string, t ...interface{}) {
 	_, fn, line, _ := runtime.Caller(1)
 	msg += fmt.Sprintf("(%s line %d)", fn, line)
 	msg += r.LogString(node, true, true)
-	log.Debugf(msg)
+	log.Debug(msg)
 }
