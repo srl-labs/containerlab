@@ -5,11 +5,8 @@
 package cmd
 
 import (
-	"context"
 	"net"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -84,15 +81,10 @@ func init() {
 }
 
 // deployFn function runs deploy sub command.
-func deployFn(_ *cobra.Command, _ []string) error {
+func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	var err error
 
 	log.Info("Containerlab started", "version", version.Version)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	setupCTRLCHandler(cancel)
 
 	// Check for owner from environment (set by generate command)
 	if labOwner == "" && os.Getenv("CLAB_OWNER") != "" {
@@ -136,9 +128,6 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// dispatch a version check that will run in background
-	vCh := version.GetLatestClabVersion(ctx)
-
 	deploymentOptions, err := clab.NewDeployOptions(maxWorkers)
 	if err != nil {
 		return err
@@ -150,36 +139,14 @@ func deployFn(_ *cobra.Command, _ []string) error {
 		SetSkipPostDeploy(skipPostDeploy).
 		SetSkipLabDirFileACLs(skipLabDirFileACLs)
 
-	containers, err := c.Deploy(ctx, deploymentOptions)
+	containers, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {
 		return err
 	}
 
-	// log new version availability info if ready
-	version.NewVerNotification(vCh)
+	m := version.GetManager()
+	m.DisplayNewVersionAvailable(cobraCmd.Context())
 
 	// print table summary
 	return inspect.PrintContainerInspect(containers, deployFormat)
-}
-
-// setupCTRLCHandler sets-up the handler for CTRL-C
-// The deployment will be stopped and a destroy action is
-// performed when interrupt signal is received.
-func setupCTRLCHandler(cancel context.CancelFunc) {
-	// handle CTRL-C signal
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sig
-		log.Errorf("Caught CTRL-C. Stopping deployment!")
-		cancel()
-
-		// when interrupted, destroy the interrupted lab deployment
-		cleanup = false
-		if err := destroyFn(destroyCmd, []string{}); err != nil {
-			log.Errorf("Failed to destroy lab: %v", err)
-		}
-
-		os.Exit(1) // skipcq: RVV-A0003
-	}()
 }

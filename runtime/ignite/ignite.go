@@ -387,7 +387,6 @@ func (ir *IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]runtime
 
 		for _, addr := range i.Status.Network.IPAddresses {
 			ctr.NetworkSettings.IPv4addr = addr.String()
-			// TODO: figure out what to do with this
 			ctr.NetworkSettings.IPv4pLen = 24
 
 			break

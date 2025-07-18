@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/user"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -65,121 +63,79 @@ type CLab struct {
 	customOwner string
 }
 
-// WithLabOwner sets the owner label for all nodes in the lab.
-// Only users in the clab_admins group can set a custom owner.
-func WithLabOwner(owner string) ClabOption {
-	return func(c *CLab) error {
-		currentUser, err := user.Current()
+// NewContainerLab function defines a new container lab.
+func NewContainerLab(opts ...ClabOption) (*CLab, error) {
+	c := &CLab{
+		Config: &Config{
+			Mgmt:     new(types.MgmtNet),
+			Topology: types.NewTopology(),
+		},
+		m:               new(sync.RWMutex),
+		Nodes:           make(map[string]nodes.Node),
+		Links:           make(map[int]links.Link),
+		Runtimes:        make(map[string]runtime.ContainerRuntime),
+		Cert:            &cert.Cert{},
+		checkBindsPaths: true,
+	}
+
+	// init a new NodeRegistry
+	c.Reg = nodes.NewNodeRegistry()
+	c.RegisterNodes()
+
+	for _, opt := range opts {
+		err := opt(c)
 		if err != nil {
-			log.Warn("Failed to get current user when trying to set the custom lab owner", "error", err)
-			return nil
+			return nil, err
 		}
-
-		if isClabAdmin, err := utils.UserInUnixGroup(currentUser.Username, "clab_admins"); err == nil && isClabAdmin {
-			c.customOwner = owner
-		} else if owner != "" {
-			log.Warn("Only users in clab_admins group can set custom owner. Using current user as owner.")
-		}
-		return nil
 	}
+
+	var err error
+	if c.TopoPaths.TopologyFileIsSet() {
+		err = c.parseTopology()
+	}
+
+	// Extract the host systems DNS servers and populate the
+	// Nodes DNS Config with these if not specifically provided
+	fileSystem := os.DirFS("/")
+	if err := c.extractDNSServers(fileSystem); err != nil {
+		return nil, err
+	}
+
+	return c, err
 }
 
-type ClabOption func(c *CLab) error
-
-func WithTimeout(dur time.Duration) ClabOption {
-	return func(c *CLab) error {
-		if dur <= 0 {
-			return errors.New("zero or negative timeouts are not allowed")
-		}
-		c.timeout = dur
-		return nil
-	}
-}
-
-// WithLabName sets the name of the lab
-// to the provided string.
-func WithLabName(n string) ClabOption {
-	return func(c *CLab) error {
-		c.Config.Name = n
-		return nil
-	}
-}
-
-// WithSkippedBindsPathsCheck skips the binds paths checks.
-func WithSkippedBindsPathsCheck() ClabOption {
-	return func(c *CLab) error {
-		c.checkBindsPaths = false
-		return nil
-	}
-}
-
-// WithManagementNetworkName sets the name of the
-// management network that is to be used.
-func WithManagementNetworkName(n string) ClabOption {
-	return func(c *CLab) error {
-		c.Config.Mgmt.Network = n
-		return nil
-	}
-}
-
-// WithManagementIpv4Subnet defined the IPv4 subnet
-// that will be used for the mgmt network.
-func WithManagementIpv4Subnet(s string) ClabOption {
-	return func(c *CLab) error {
-		c.Config.Mgmt.IPv4Subnet = s
-		return nil
-	}
-}
-
-// WithManagementIpv6Subnet defined the IPv6 subnet
-// that will be used for the mgmt network.
-func WithManagementIpv6Subnet(s string) ClabOption {
-	return func(c *CLab) error {
-		c.Config.Mgmt.IPv6Subnet = s
-		return nil
-	}
-}
-
-// WithDependencyManager adds Dependency Manager.
-func WithDependencyManager(dm depMgr.DependencyManager) ClabOption {
-	return func(c *CLab) error {
-		c.dependencyManager = dm
-		return nil
-	}
-}
-
-// WithDebug sets debug mode.
-func WithDebug(debug bool) ClabOption {
-	return func(c *CLab) error {
-		c.Config.Debug = debug
-		return nil
-	}
-}
-
-// WithRuntime option sets a container runtime to be used by containerlab.
-func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
-	return func(c *CLab) error {
-		name, rInit, err := RuntimeInitializer(name)
+// NewContainerlabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
+// or a lab name. It returns the initialized CLab structure with the
+// topology loaded.
+func NewContainerlabFromTopologyFileOrLabName(ctx context.Context,
+	topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool,
+) (*CLab, error) {
+	if topoPath == "" && labName == "" {
+		cwd, err := os.Getwd()
 		if err != nil {
-			return err
+			return nil, fmt.Errorf("failed to get current working directory and no topology path or lab name provided: %w", err)
 		}
-
-		c.globalRuntimeName = name
-
-		r := rInit()
-		log.Debugf("Running runtime.Init with params %+v and %+v", rtconfig, c.Config.Mgmt)
-		err = r.Init(
-			runtime.WithConfig(rtconfig),
-			runtime.WithMgmtNet(c.Config.Mgmt),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to init the container runtime: %v", err)
-		}
-
-		c.Runtimes[name] = r
-		log.Debugf("initialized a runtime with params %+v", r)
-		return nil
+		topoPath = cwd
 	}
+
+	opts := []ClabOption{
+		WithTimeout(timeout),
+		WithRuntime(runtimeName, &runtime.RuntimeConfig{
+			Debug:            debug,
+			Timeout:          timeout,
+			GracefulShutdown: graceful,
+		}),
+		WithDebug(debug),
+	}
+
+	switch {
+	case topoPath != "":
+		opts = append(opts, WithTopoPath(topoPath, varsFile))
+	case labName != "":
+		opts = append(opts, WithTopoFromLab(labName))
+	}
+
+	return NewContainerLab(opts...)
 }
 
 // RuntimeInitializer returns a runtime initializer function for a provided runtime name.
@@ -199,75 +155,6 @@ func RuntimeInitializer(name string) (string, runtime.Initializer, error) {
 		return name, rInit, nil
 	}
 	return name, nil, fmt.Errorf("unknown container runtime %q", name)
-}
-
-func WithKeepMgmtNet() ClabOption {
-	return func(c *CLab) error {
-		c.globalRuntime().WithKeepMgmtNet()
-		return nil
-	}
-}
-
-func WithTopoPath(path, varsFile string) ClabOption {
-	return func(c *CLab) error {
-		file, err := c.ProcessTopoPath(path)
-		if err != nil {
-			return err
-		}
-		if err := c.LoadTopologyFromFile(file, varsFile); err != nil {
-			return fmt.Errorf("failed to read topology file: %v", err)
-		}
-
-		return c.initMgmtNetwork()
-	}
-}
-
-// WithTopoFromLab loads the topology file path based on a running lab name.
-// The lab name is used to look up the container labels of a running lab and
-// derive the topology file location. It falls back to WithTopoPath once the
-// topology path is discovered.
-func WithTopoFromLab(labName string) ClabOption {
-	return func(c *CLab) error {
-		if labName == "" {
-			return fmt.Errorf("lab name is required to derive topology path")
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		filter := []*types.GenericFilter{
-			{
-				FilterType: "label",
-				Field:      clabels.Containerlab,
-				Operator:   "=",
-				Match:      labName,
-			},
-		}
-
-		containers, err := c.globalRuntime().ListContainers(ctx, filter)
-		if err != nil {
-			return fmt.Errorf("failed to list containers for lab '%s': %w", labName, err)
-		}
-
-		if len(containers) == 0 {
-			return fmt.Errorf("lab '%s' not found - no running containers", labName)
-		}
-
-		topoFile := containers[0].Labels[clabels.TopoFile]
-		if topoFile == "" {
-			return fmt.Errorf("could not determine topology file from container labels")
-		}
-
-		// Verify topology file exists and is accessible
-		if !utils.FileOrDirExists(topoFile) {
-			return fmt.Errorf("topology file '%s' referenced by lab '%s' does not exist or is not accessible",
-				topoFile, labName)
-		}
-
-		log.Debugf("found topology file for lab %s: %s", labName, topoFile)
-
-		return WithTopoPath(topoFile, "")(c)
-	}
 }
 
 // ProcessTopoPath takes a topology path, which might be the path to a directory or a file
@@ -311,120 +198,6 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	return file, nil
 }
 
-// FindTopoFileByPath takes a topology path, which might be the path to a directory
-// and returns the topology file name if found.
-func FindTopoFileByPath(path string) (string, error) {
-	finfo, err := os.Stat(path)
-	if err != nil {
-		return "", err
-	}
-
-	// by default we assume the path points to a clab file
-	file := path
-
-	// we might have gotten a dirname
-	// lets try to find a single *.clab.y*ml
-	if finfo.IsDir() {
-		matches, err := filepath.Glob(filepath.Join(path, "*.clab.y*ml"))
-		if err != nil {
-			return "", err
-		}
-
-		switch len(matches) {
-		case 1:
-			// single file found, using it
-			file = matches[0]
-		case 0:
-			// no files found
-			return "", fmt.Errorf("no topology files found in directory %q", path)
-		default:
-			// multiple files found
-			var filenames []string
-			// extract just filename -> no path
-			for _, match := range matches {
-				filenames = append(filenames, filepath.Base(match))
-			}
-
-			return "", fmt.Errorf("found multiple topology definitions [ %s ] in a given directory %q. Provide the specific filename", strings.Join(filenames, ", "), path)
-		}
-	}
-
-	return file, nil
-}
-
-// readFromStdin reads the topology file from stdin
-// creates a temp file with topology contents
-// and returns a path to the temp file.
-func readFromStdin(tempDir string) (string, error) {
-	tmpFile, err := os.CreateTemp(tempDir, "topo-*.clab.yml")
-	if err != nil {
-		return "", err
-	}
-
-	_, err = tmpFile.ReadFrom(os.Stdin)
-	if err != nil {
-		return "", err
-	}
-
-	return tmpFile.Name(), nil
-}
-
-func downloadTopoFile(url, tempDir string) (string, error) {
-	tmpFile, err := os.CreateTemp(tempDir, "topo-*.clab.yml")
-	if err != nil {
-		return "", err
-	}
-
-	err = utils.CopyFile(url, tmpFile.Name(), 0o644)
-
-	return tmpFile.Name(), err
-}
-
-// NewContainerlabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
-// or a lab name. It returns the initialized CLab structure with the
-// topology loaded.
-func NewContainerlabFromTopologyFileOrLabName(ctx context.Context,
-	topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool,
-) (*CLab, error) {
-	if topoPath == "" && labName == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get current working directory and no topology path or lab name provided: %w", err)
-		}
-		topoPath = cwd
-	}
-
-	opts := []ClabOption{
-		WithTimeout(timeout),
-		WithRuntime(runtimeName, &runtime.RuntimeConfig{
-			Debug:            debug,
-			Timeout:          timeout,
-			GracefulShutdown: graceful,
-		}),
-		WithDebug(debug),
-	}
-
-	switch {
-	case topoPath != "":
-		opts = append(opts, WithTopoPath(topoPath, varsFile))
-	case labName != "":
-		opts = append(opts, WithTopoFromLab(labName))
-	}
-
-	return NewContainerLab(opts...)
-}
-
-// WithNodeFilter option sets a filter for nodes to be deployed.
-// A filter is a list of node names to be deployed,
-// names are provided exactly as they are listed in the topology file.
-// Since this is altering the clab.config.Topology.[Nodes,Links] it must only
-// be called after WithTopoFile.
-func WithNodeFilter(nodeFilter []string) ClabOption {
-	return func(c *CLab) error {
-		return c.filterClabNodes(nodeFilter)
-	}
-}
-
 func (c *CLab) filterClabNodes(nodeFilter []string) error {
 	if len(nodeFilter) == 0 {
 		return nil
@@ -450,47 +223,6 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 	}
 
 	return nil
-}
-
-// NewContainerLab function defines a new container lab.
-func NewContainerLab(opts ...ClabOption) (*CLab, error) {
-	c := &CLab{
-		Config: &Config{
-			Mgmt:     new(types.MgmtNet),
-			Topology: types.NewTopology(),
-		},
-		m:               new(sync.RWMutex),
-		Nodes:           make(map[string]nodes.Node),
-		Links:           make(map[int]links.Link),
-		Runtimes:        make(map[string]runtime.ContainerRuntime),
-		Cert:            &cert.Cert{},
-		checkBindsPaths: true,
-	}
-
-	// init a new NodeRegistry
-	c.Reg = nodes.NewNodeRegistry()
-	c.RegisterNodes()
-
-	for _, opt := range opts {
-		err := opt(c)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	var err error
-	if c.TopoPaths.TopologyFileIsSet() {
-		err = c.parseTopology()
-	}
-
-	// Extract the host systems DNS servers and populate the
-	// Nodes DNS Config with these if not specifically provided
-	fileSystem := os.DirFS("/")
-	if err := c.extractDNSServers(fileSystem); err != nil {
-		return nil, err
-	}
-
-	return c, err
 }
 
 // initMgmtNetwork sets management network config.
