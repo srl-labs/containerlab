@@ -4,8 +4,7 @@ topology:
   nodes:
     srl:
       kind: nokia_srlinux
-      image: ghcr.io/nokia/srlinux
-      type: ixrd3l
+      image: ghcr.io/nokia/srlinux:25.7
       startup-config: |
         set / interface ethernet-1/1 admin-state enable
         set / interface ethernet-1/1 vlan-tagging false

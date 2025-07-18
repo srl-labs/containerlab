@@ -5,14 +5,14 @@ mgmt:
 topology:
   kinds:
     nokia_srsim:
-      license: /opt/nokia/sros/license.txt
+      license: /opt/nokia/sros/license-sros25.txt
       image: nokia_srsim:25.7.R1
   nodes:
     sr-sim10:
       kind: nokia_srsim
       type: SR-1 # Implicit default
       startup-config: configs/srsim10.partial.cfg
-    sr-sim11: 
+    sr-sim11:
       kind: nokia_srsim
       startup-config: configs/srsim11.partial.cfg
   links:
