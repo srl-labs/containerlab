@@ -6,24 +6,27 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	gotc "github.com/florianl/go-tc"
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/internal/tc"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 )
 
@@ -35,6 +38,7 @@ var (
 	netemLoss       float64
 	netemRate       uint64
 	netemCorruption float64
+	netemFormat     string
 )
 
 func init() {
@@ -58,6 +62,14 @@ func init() {
 
 	netemCmd.AddCommand(netemShowCmd)
 	netemShowCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
+	netemShowCmd.Flags().StringVarP(&netemFormat, "format", "f", "table", "output format (table, json)")
+
+	// Add reset command
+	netemCmd.AddCommand(netemResetCmd)
+	netemResetCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to reset impairment on")
+	netemResetCmd.Flags().StringVarP(&netemInterface, "interface", "i", "", "interface to reset impairment on")
+	netemResetCmd.MarkFlagRequired("node")
+	netemResetCmd.MarkFlagRequired("interface")
 }
 
 var netemCmd = &cobra.Command{
@@ -82,7 +94,20 @@ var netemShowCmd = &cobra.Command{
 	RunE:    netemShowFn,
 }
 
+var netemResetCmd = &cobra.Command{
+	Use:     "reset",
+	Short:   "reset link impairments",
+	Long:    `Reset network impairments by deleting the netem qdisc from the specified interface.`,
+	PreRunE: validateInputAndRoot,
+	RunE:    netemResetFn,
+}
+
 func netemSetFn(_ *cobra.Command, _ []string) error {
+	// Ensure that the sch_netem kernel module is loaded (for Fedora/RHEL compatibility)
+	if err := exec.Command("modprobe", "sch_netem").Run(); err != nil {
+		log.Warn("failed to load sch_netem kernel module (expected on OrbStack machines)", "err", err)
+	}
+
 	// Get the runtime initializer.
 	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
 	if err != nil {
@@ -249,6 +274,58 @@ func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 	}
 }
 
+// qdiscToJSONData converts the full qdisc object to a simplified view.
+func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
+	link, err := netlink.LinkByIndex(int(qdisc.Ifindex))
+	if err != nil {
+		log.Errorf("could not get netlink interface by index: %v", err)
+	}
+
+	var delay, jitter string
+	var loss, corruption float64
+	var rate int
+
+	ifDisplayName := link.Attrs().Name
+	if link.Attrs().Alias != "" {
+		ifDisplayName += fmt.Sprintf(" (%s)", link.Attrs().Alias)
+	}
+
+	// Return "N/A" values when netem is not set.
+	if qdisc.Netem == nil {
+		return types.ImpairmentData{
+			Interface: ifDisplayName,
+		}
+	}
+
+	if qdisc.Netem.Latency64 != nil && *qdisc.Netem.Latency64 != 0 {
+		delay = (time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond).String()
+	}
+	if qdisc.Netem.Jitter64 != nil && *qdisc.Netem.Jitter64 != 0 {
+		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
+	}
+	if qdisc.Netem.Rate != nil && int(qdisc.Netem.Rate.Rate) != 0 {
+		rate = int(qdisc.Netem.Rate.Rate * 8 / 1000)
+	}
+	if qdisc.Netem.Corrupt != nil && qdisc.Netem.Corrupt.Probability != 0 {
+		// round to 2 decimal places
+		corruption = math.Round((float64(qdisc.Netem.Corrupt.Probability)/
+			float64(math.MaxUint32)*100)*100) / 100
+	}
+	if qdisc.Netem.Qopt.Loss != 0 {
+		// round to 2 decimal places
+		loss = math.Round((float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100)*100) / 100
+	}
+
+	return types.ImpairmentData{
+		Interface:  ifDisplayName,
+		Delay:      delay,
+		Jitter:     jitter,
+		PacketLoss: loss,
+		Rate:       rate,
+		Corruption: corruption,
+	}
+}
+
 func netemShowFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
 	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
@@ -258,8 +335,6 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 
 	// init the runtime
 	rt := rinit()
-
-	// init runtime with timeout
 	err = rt.Init(
 		runtime.WithConfig(
 			&runtime.RuntimeConfig{
@@ -274,14 +349,13 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// retrieve the containers NSPath
+	// retrieve the container's NSPath
 	nodeNsPath, err := rt.GetNSPath(ctx, netemNode)
 	if err != nil {
 		return err
 	}
 
 	var nodeNs ns.NetNS
-
 	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
 		return err
 	}
@@ -290,10 +364,9 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-
 	defer func() {
 		if err := tcnl.Close(); err != nil {
-			log.Errorf("could not close rtnetlink socket: %v\n", err)
+			log.Errorf("could not close rtnetlink socket: %v", err)
 		}
 	}()
 
@@ -303,8 +376,91 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
-		printImpairments(qdiscs)
+		if netemFormat == "json" {
+			var impairments []types.ImpairmentData
+			for _, q := range qdiscs {
+				if q.Attribute.Kind != "netem" {
+					continue // skip clsact or other qdisc types
+				}
+				impairments = append(impairments, qdiscToJSONData(q))
+			}
+			// Structure output as a map keyed by the node name.
+			outputData := map[string][]types.ImpairmentData{
+				netemNode: impairments,
+			}
+			jsonData, err := json.MarshalIndent(outputData, "", "  ")
+			if err != nil {
+				return fmt.Errorf("error marshalling JSON: %v", err)
+			}
+			fmt.Println(string(jsonData))
+		} else {
+			printImpairments(qdiscs)
+		}
 
+		return nil
+	})
+
+	return err
+}
+
+func netemResetFn(_ *cobra.Command, _ []string) error {
+	// Get the runtime initializer.
+	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+	if err != nil {
+		return err
+	}
+
+	// init the runtime
+	rt := rinit()
+	err = rt.Init(
+		runtime.WithConfig(
+			&runtime.RuntimeConfig{
+				Timeout: common.Timeout,
+			},
+		),
+	)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// retrieve the container's NSPath
+	nodeNsPath, err := rt.GetNSPath(ctx, netemNode)
+	if err != nil {
+		return err
+	}
+
+	var nodeNs ns.NetNS
+	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
+		return err
+	}
+
+	tcnl, err := tc.NewTC(int(nodeNs.Fd()))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := tcnl.Close(); err != nil {
+			log.Errorf("could not close rtnetlink socket: %v\n", err)
+		}
+	}()
+
+	err = nodeNs.Do(func(_ ns.NetNS) error {
+		netemIfLink, err := netlink.LinkByName(links.SanitiseInterfaceName(netemInterface))
+		if err != nil {
+			return err
+		}
+		// Retrieve the standard net.Interface from the netlink.Link name.
+		netemIfIface, err := net.InterfaceByName(netemIfLink.Attrs().Name)
+		if err != nil {
+			return err
+		}
+		if err := tc.DeleteImpairments(tcnl, netemIfIface); err != nil {
+			return err
+		}
+		fmt.Printf("Reset impairments on node %q, interface %q\n", netemNode, netemIfLink.Attrs().Name)
 		return nil
 	})
 

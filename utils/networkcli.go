@@ -1,22 +1,24 @@
 package utils
 
 import (
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/util"
 
+	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/options"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
 	// map of commands per platform which start a CLI app.
-	NetworkOSCLICmd = map[string]string{
-		"arista_eos":    "Cli",
-		"nokia_srlinux": "sr_cli",
+	NetworkOSCLICmd = map[string][]string{
+		"arista_eos":    {"Cli"},
+		"nokia_srlinux": {"sr_cli"},
+		"vyatta_vyos":   {"su", "-", "admin"},
 	}
 
 	// map of the cli exec command and its argument per runtime
@@ -40,9 +42,9 @@ func SpawnCLIviaExec(platformName, contName, runtime string) (*network.Driver, e
 		options.WithAuthBypass(),
 		options.WithSystemTransportOpenBin(CLIExecCommand[runtime]["exec"]),
 		options.WithSystemTransportOpenArgsOverride(
-			append(
+			slices.Concat(
 				strings.Split(CLIExecCommand[runtime]["open"], " "),
-				contName,
+				[]string{contName},
 				NetworkOSCLICmd[platformName],
 			),
 		),

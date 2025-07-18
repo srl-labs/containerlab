@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -41,7 +41,7 @@ func (c *CLab) createAuthzKeysFile() error {
 	}
 
 	// ensure authz_keys will have the permissions allowing it to be read by anyone
-	return os.Chmod(clabAuthzKeysFPath, 0644) // skipcq: GSC-G302
+	return os.Chmod(clabAuthzKeysFPath, 0o644) // skipcq: GSC-G302
 }
 
 // RetrieveSSHPubKeysFromFiles retrieves public keys from the ~/.ssh/*.authorized_keys

@@ -10,7 +10,7 @@ import (
 	"path"
 	"regexp"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -36,7 +36,7 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(vrFreeBSD)
@@ -49,7 +49,7 @@ type vrFreeBSD struct {
 
 func (n *vrFreeBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n)
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, "")
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -68,7 +68,7 @@ func (n *vrFreeBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support config backup functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))
 
 	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
@@ -86,7 +86,7 @@ func (n *vrFreeBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 }
 
 func (n *vrFreeBSD) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil

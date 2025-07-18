@@ -9,8 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/docker/go-connections/nat"
-	log "github.com/sirupsen/logrus"
+	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -47,14 +48,15 @@ type MgmtNet struct {
 	Network string `yaml:"network,omitempty" json:"network,omitempty"` // container runtime network name
 	Bridge  string `yaml:"bridge,omitempty" json:"bridge,omitempty"`
 	// linux bridge backing the runtime network
-	IPv4Subnet     string `yaml:"ipv4-subnet,omitempty" json:"ipv4-subnet,omitempty"`
-	IPv4Gw         string `yaml:"ipv4-gw,omitempty" json:"ipv4-gw,omitempty"`
-	IPv4Range      string `yaml:"ipv4-range,omitempty" json:"ipv4-range,omitempty"`
-	IPv6Subnet     string `yaml:"ipv6-subnet,omitempty" json:"ipv6-subnet,omitempty"`
-	IPv6Gw         string `yaml:"ipv6-gw,omitempty" json:"ipv6-gw,omitempty"`
-	IPv6Range      string `yaml:"ipv6-range,omitempty" json:"ipv6-range,omitempty"`
-	MTU            int    `yaml:"mtu,omitempty" json:"mtu,omitempty"`
-	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
+	IPv4Subnet     string            `yaml:"ipv4-subnet,omitempty" json:"ipv4-subnet,omitempty"`
+	IPv4Gw         string            `yaml:"ipv4-gw,omitempty" json:"ipv4-gw,omitempty"`
+	IPv4Range      string            `yaml:"ipv4-range,omitempty" json:"ipv4-range,omitempty"`
+	IPv6Subnet     string            `yaml:"ipv6-subnet,omitempty" json:"ipv6-subnet,omitempty"`
+	IPv6Gw         string            `yaml:"ipv6-gw,omitempty" json:"ipv6-gw,omitempty"`
+	IPv6Range      string            `yaml:"ipv6-range,omitempty" json:"ipv6-range,omitempty"`
+	MTU            int               `yaml:"mtu,omitempty" json:"mtu,omitempty"`
+	ExternalAccess *bool             `yaml:"external-access,omitempty" json:"external-access,omitempty"`
+	DriverOpts     map[string]string `yaml:"driver-opts,omitempty" json:"driver-opts,omitempty"`
 }
 
 // Interface compliance.
@@ -119,22 +121,26 @@ type NodeConfig struct {
 	// path to config file that is actually mounted to the container and is a result of templation
 	ResStartupConfig string            `json:"startup-config-abs-path,omitempty"`
 	Config           *ConfigDispatcher `json:"config,omitempty"`
-	// path to config file that is actually mounted to the container and is a result of templation
-	ResConfig       string            `json:"config-abs-path,omitempty"`
-	NodeType        string            `json:"type,omitempty"`
-	Position        string            `json:"position,omitempty"`
-	License         string            `json:"license,omitempty"`
-	Image           string            `json:"image,omitempty"`
-	ImagePullPolicy PullPolicyValue   `json:"image-pull-policy,omitempty"`
-	Sysctls         map[string]string `json:"sysctls,omitempty"`
-	User            string            `json:"user,omitempty"`
-	Entrypoint      string            `json:"entrypoint,omitempty"`
-	Cmd             string            `json:"cmd,omitempty"`
+	NodeType         string            `json:"type,omitempty"`
+	Position         string            `json:"position,omitempty"`
+	License          string            `json:"license,omitempty"`
+	Image            string            `json:"image,omitempty"`
+	ImagePullPolicy  PullPolicyValue   `json:"image-pull-policy,omitempty"`
+	Sysctls          map[string]string `json:"sysctls,omitempty"`
+	User             string            `json:"user,omitempty"`
+	Entrypoint       string            `json:"entrypoint,omitempty"`
+	Cmd              string            `json:"cmd,omitempty"`
 	// Exec is a list of commands to execute inside the container backing the node.
 	Exec []string          `json:"exec,omitempty"`
 	Env  map[string]string `json:"env,omitempty"`
 	// Bind mounts strings (src:dest:options).
 	Binds []string `json:"binds,omitempty"`
+	// Devices to map in the container
+	Devices []string `json:"devices,omitempty"`
+	// Capabilities required by the container (if not run in privileged mode)
+	CapAdd []string `json:"cap-add,omitempty"`
+	// Size of the shared memory allocated to the container
+	ShmSize string `json:"shm-size,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
 	PortBindings nat.PortMap `json:"portbindings,omitempty"`
 	// ResultingPortBindings is a list of port bindings that are actually applied to the container
@@ -144,6 +150,7 @@ type NodeConfig struct {
 	// NetworkMode defines container networking mode.
 	// If set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `json:"networkmode,omitempty"`
+	PidMode     string `json:"pidmode,omitempty"`
 	// MgmtNet is the name of the docker network this node is connected to with its first interface
 	MgmtNet string `json:"mgmt-net,omitempty"`
 	// MgmtIntf can be used to be rendered by the default node template
@@ -192,6 +199,42 @@ type NodeConfig struct {
 	// Introduced to prevent the check from running with ext-containers, since
 	// they should be present by definition.
 	SkipUniquenessCheck bool
+	Components          []*Component
+}
+
+func (n *NodeConfig) Copy() *NodeConfig {
+	if n == nil {
+		return nil
+	}
+
+	copyConfig := *n
+
+	// Deep copy maps
+	copyConfig.Sysctls = utils.CopyMap(n.Sysctls)
+	copyConfig.Env = utils.CopyMap(n.Env)
+	copyConfig.Labels = utils.CopyMap(n.Labels)
+
+	// Deep copy slices
+	copyConfig.Exec = utils.CopySlice(n.Exec)
+	copyConfig.Binds = utils.CopySlice(n.Binds)
+	copyConfig.Devices = utils.CopySlice(n.Devices)
+	copyConfig.CapAdd = utils.CopySlice(n.CapAdd)
+	copyConfig.Aliases = utils.CopySlice(n.Aliases)
+	copyConfig.ExtraHosts = utils.CopySlice(n.ExtraHosts)
+	copyConfig.ResultingPortBindings = utils.CopyObjectSlice(n.ResultingPortBindings)
+	copyConfig.Components = utils.CopyObjectSlice(n.Components)
+
+	// Deep copy pointers
+	// copyConfig.Config = n.Config.Copy()
+	// copyConfig.Certificate = n.Certificate.Copy()
+	copyConfig.Healthcheck = n.Healthcheck.Copy()
+	copyConfig.Extras = n.Extras.Copy()
+	copyConfig.DNS = n.DNS.Copy()
+	// copyConfig.Stages = n.Stages.Copy()
+	// copyConfig.PortBindings = n.PortBindings.Copy()
+	// copyConfig.PortSet = n.PortSet.Copy()
+
+	return &copyConfig
 }
 
 type GenericFilter struct {
@@ -257,9 +300,37 @@ type Extras struct {
 	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
 }
 
+func (e *Extras) Copy() *Extras {
+	if e == nil {
+		return nil
+	}
+
+	srlAgentsCopy := append([]string(nil), e.SRLAgents...)
+	ceosCopyToFlashCopy := append([]string(nil), e.CeosCopyToFlash...)
+
+	var k8sKindCopy *K8sKindExtras
+	if e.K8sKind != nil {
+		k8sKindCopy = e.K8sKind.Copy() // assumes K8sKindExtras has a Copy() method
+	}
+
+	return &Extras{
+		SRLAgents:       srlAgentsCopy,
+		MysocketProxy:   e.MysocketProxy,
+		CeosCopyToFlash: ceosCopyToFlashCopy,
+		K8sKind:         k8sKindCopy,
+	}
+}
+
 // K8sKindExtras represents the k8s-kind-specific extra options.
 type K8sKindExtras struct {
 	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
+}
+
+func (k *K8sKindExtras) Copy() *K8sKindExtras {
+	copy := &K8sKindExtras{
+		Deploy: k.Deploy.Copy(),
+	}
+	return copy
 }
 
 // K8sKindDeployExtras represents the options used for the kind cluster creation.
@@ -269,16 +340,25 @@ type K8sKindDeployExtras struct {
 	Wait *string `yaml:"wait,omitempty"`
 }
 
+func (k *K8sKindDeployExtras) Copy() *K8sKindDeployExtras {
+	copy := *k
+	return &copy
+}
+
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
 type ContainerDetails struct {
-	LabName     string                `json:"lab_name,omitempty"`
-	LabPath     string                `json:"labPath,omitempty"`
-	Name        string                `json:"name,omitempty"`
-	ContainerID string                `json:"container_id,omitempty"`
-	Image       string                `json:"image,omitempty"`
-	Kind        string                `json:"kind,omitempty"`
-	Group       string                `json:"group,omitempty"`
-	State       string                `json:"state,omitempty"`
+	LabName     string `json:"lab_name,omitempty"`
+	LabPath     string `json:"labPath,omitempty"`
+	AbsLabPath  string `json:"absLabPath,omitempty"`
+	Name        string `json:"name,omitempty"`
+	ContainerID string `json:"container_id,omitempty"`
+	Image       string `json:"image,omitempty"`
+	Kind        string `json:"kind,omitempty"`
+	Group       string `json:"group,omitempty"`
+	State       string `json:"state,omitempty"`
+	// Status is the container's status, such as "Up"/"Exited"
+	// and if health is available it shows "(healthy)" or "(unhealthy)" instead.
+	Status      string                `json:"status,omitempty"`
 	IPv4Address string                `json:"ipv4_address,omitempty"`
 	IPv6Address string                `json:"ipv6_address,omitempty"`
 	Ports       []*GenericPortBinding `json:"ports,omitempty"`
@@ -321,6 +401,11 @@ func (p *GenericPortBinding) String() string {
 	return result
 }
 
+func (p *GenericPortBinding) Copy() *GenericPortBinding {
+	copy := *p
+	return &copy
+}
+
 type LabData struct {
 	Containers []ContainerDetails `json:"containers"`
 }
@@ -333,6 +418,22 @@ type DNSConfig struct {
 	Options []string `yaml:"options,omitempty"`
 	// DNS Search Domains
 	Search []string `yaml:"search,omitempty"`
+}
+
+func (d *DNSConfig) Copy() *DNSConfig {
+	if d == nil {
+		return nil
+	}
+
+	serversCopy := append([]string(nil), d.Servers...)
+	optionsCopy := append([]string(nil), d.Options...)
+	searchCopy := append([]string(nil), d.Search...)
+
+	return &DNSConfig{
+		Servers: serversCopy,
+		Options: optionsCopy,
+		Search:  searchCopy,
+	}
 }
 
 // CertificateConfig represents TLS parameters set for a node.
@@ -414,6 +515,23 @@ type HealthcheckConfig struct {
 	StartPeriod int `yaml:"start-period,omitempty"`
 }
 
+func (h *HealthcheckConfig) Copy() *HealthcheckConfig {
+	if h == nil {
+		return nil
+	}
+
+	// Copy the slice manually to avoid shared references
+	testCopy := append([]string(nil), h.Test...)
+
+	return &HealthcheckConfig{
+		Test:        testCopy,
+		Interval:    h.Interval,
+		Timeout:     h.Timeout,
+		Retries:     h.Retries,
+		StartPeriod: h.StartPeriod,
+	}
+}
+
 // GetIntervalDuration returns the interval as time.Duration.
 func (h *HealthcheckConfig) GetIntervalDuration() time.Duration {
 	return time.Duration(h.Interval) * time.Second
@@ -427,4 +545,13 @@ func (h *HealthcheckConfig) GetTimeoutDuration() time.Duration {
 // GetStartPeriodDuration returns the start period as time.Duration.
 func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
 	return time.Duration(h.StartPeriod) * time.Second
+}
+
+type ImpairmentData struct {
+	Interface  string  `json:"interface"`
+	Delay      string  `json:"delay"`
+	Jitter     string  `json:"jitter"`
+	PacketLoss float64 `json:"packet_loss"`
+	Rate       int     `json:"rate"`
+	Corruption float64 `json:"corruption"`
 }

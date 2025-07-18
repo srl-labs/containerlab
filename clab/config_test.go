@@ -439,8 +439,8 @@ func TestLabelsInit(t *testing.T) {
 
 			labels := c.Nodes[tc.node].Config().Labels
 
-			if !cmp.Equal(labels, tc.want) {
-				t.Errorf("failed at '%s', expected\n%v, got\n%+v", name, tc.want, labels)
+			if diff := cmp.Diff(tc.want, labels); diff != "" {
+				t.Errorf("failed at '%s', labels mismatch (-want +got):\n%s", name, diff)
 			}
 
 			// test that labels were propagated to env vars as CLAB_LABEL_<label-name>:<label-value>
@@ -650,7 +650,8 @@ func TestEnvFileInit(t *testing.T) {
 			// check all the want key/values are there
 			for k, v := range tc.want {
 				// check keys defined in tc.want exist and values are equal
-				if val, exists := env[k]; !(exists && val == v) {
+				val, exists := env[k]
+				if exists && val != v {
 					t.Fatalf("wanted %q to be contained in env, but got %q", tc.want, env)
 				}
 			}

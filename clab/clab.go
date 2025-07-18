@@ -10,16 +10,18 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/cert"
 	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/clab/exec"
 	errs "github.com/srl-labs/containerlab/errors"
+	clabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -59,6 +61,27 @@ type CLab struct {
 	// checkBindsPaths toggle enables or disables binds paths checks
 	// when set to true, bind sources are verified to exist on the host.
 	checkBindsPaths bool
+	// customOwner is the user-specified owner label for the lab
+	customOwner string
+}
+
+// WithLabOwner sets the owner label for all nodes in the lab.
+// Only users in the clab_admins group can set a custom owner.
+func WithLabOwner(owner string) ClabOption {
+	return func(c *CLab) error {
+		currentUser, err := user.Current()
+		if err != nil {
+			log.Warn("Failed to get current user when trying to set the custom lab owner", "error", err)
+			return nil
+		}
+
+		if isClabAdmin, err := utils.UserInUnixGroup(currentUser.Username, "clab_admins"); err == nil && isClabAdmin {
+			c.customOwner = owner
+		} else if owner != "" {
+			log.Warn("Only users in clab_admins group can set custom owner. Using current user as owner.")
+		}
+		return nil
+	}
 }
 
 type ClabOption func(c *CLab) error
@@ -199,20 +222,77 @@ func WithTopoPath(path, varsFile string) ClabOption {
 	}
 }
 
+// WithTopoFromLab loads the topology file path based on a running lab name.
+// The lab name is used to look up the container labels of a running lab and
+// derive the topology file location. It falls back to WithTopoPath once the
+// topology path is discovered.
+func WithTopoFromLab(labName string) ClabOption {
+	return func(c *CLab) error {
+		if labName == "" {
+			return fmt.Errorf("lab name is required to derive topology path")
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		filter := []*types.GenericFilter{
+			{
+				FilterType: "label",
+				Field:      clabels.Containerlab,
+				Operator:   "=",
+				Match:      labName,
+			},
+		}
+
+		containers, err := c.globalRuntime().ListContainers(ctx, filter)
+		if err != nil {
+			return fmt.Errorf("failed to list containers for lab '%s': %w", labName, err)
+		}
+
+		if len(containers) == 0 {
+			return fmt.Errorf("lab '%s' not found - no running containers", labName)
+		}
+
+		topoFile := containers[0].Labels[clabels.TopoFile]
+		if topoFile == "" {
+			return fmt.Errorf("could not determine topology file from container labels")
+		}
+
+		// Verify topology file exists and is accessible
+		if !utils.FileOrDirExists(topoFile) {
+			return fmt.Errorf("topology file '%s' referenced by lab '%s' does not exist or is not accessible",
+				topoFile, labName)
+		}
+
+		log.Debugf("found topology file for lab %s: %s", labName, topoFile)
+
+		return WithTopoPath(topoFile, "")(c)
+	}
+}
+
 // ProcessTopoPath takes a topology path, which might be the path to a directory or a file
-// or stdin or a URL and returns the topology file name if found.
+// or stdin or a URL (HTTP/HTTPS/S3) and returns the topology file name if found.
 func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	var file string
 	var err error
 
 	switch {
 	case path == "-" || path == "stdin":
+		log.Debugf("interpreting topo %q as stdin", path)
 		file, err = readFromStdin(c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
 		}
 	// if the path is not a local file and a URL, download the file and store it in the tmp dir
 	case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
+		log.Debugf("interpreting topo %q as remote URL", path)
+		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
+		if err != nil {
+			return "", err
+		}
+	// if the path is an S3 URL, download the file and store it in the tmp dir
+	case utils.IsS3URL(path):
+		log.Debugf("interpreting topo %q as S3 URL", path)
 		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
@@ -222,6 +302,7 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 		return "", fmt.Errorf("provide a path to the clab topology file")
 
 	default:
+		log.Debugf("interpreting topo %q as file path", path)
 		file, err = FindTopoFileByPath(path)
 		if err != nil {
 			return "", err
@@ -294,9 +375,43 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 		return "", err
 	}
 
-	err = utils.CopyFile(url, tmpFile.Name(), 0644)
+	err = utils.CopyFile(url, tmpFile.Name(), 0o644)
 
 	return tmpFile.Name(), err
+}
+
+// NewContainerlabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
+// or a lab name. It returns the initialized CLab structure with the
+// topology loaded.
+func NewContainerlabFromTopologyFileOrLabName(ctx context.Context,
+	topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool,
+) (*CLab, error) {
+	if topoPath == "" && labName == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current working directory and no topology path or lab name provided: %w", err)
+		}
+		topoPath = cwd
+	}
+
+	opts := []ClabOption{
+		WithTimeout(timeout),
+		WithRuntime(runtimeName, &runtime.RuntimeConfig{
+			Debug:            debug,
+			Timeout:          timeout,
+			GracefulShutdown: graceful,
+		}),
+		WithDebug(debug),
+	}
+
+	switch {
+	case topoPath != "":
+		opts = append(opts, WithTopoPath(topoPath, varsFile))
+	case labName != "":
+		opts = append(opts, WithTopoFromLab(labName))
+	}
+
+	return NewContainerLab(opts...)
 }
 
 // WithNodeFilter option sets a filter for nodes to be deployed.
@@ -524,7 +639,6 @@ func (c *CLab) createStaticDynamicDependency() error {
 	for _, dynNode := range dynIPNodes {
 		// and add their wait group to the the static nodes, while increasing the waitgroup
 		for _, staticNode := range staticIPNodes {
-
 			err := staticNode.AddDepender(types.WaitForCreate, dynNode, types.WaitForCreate)
 			if err != nil {
 				return err
@@ -541,7 +655,6 @@ func (c *CLab) createWaitForDependency() error {
 		// add node's waitFor nodes to the dependency manager
 		for dependerStage, waitForNodes := range dependerNode.Config().Stages.GetWaitFor() {
 			for _, dependee := range waitForNodes {
-
 				dependeeNode, err := c.dependencyManager.GetNode(dependee.Node)
 				if err != nil {
 					return fmt.Errorf("dependee node %s not found", dependee.Node)
@@ -599,7 +712,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				}
 
 				// Deploy
-				err = node.Deploy(ctx, &nodes.DeployParams{})
+				err = node.Deploy(ctx, &nodes.DeployParams{Nodes: c.Nodes})
 				if err != nil {
 					log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
 					continue
@@ -691,7 +804,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	wg := new(sync.WaitGroup)
 
 	// start concurrent workers
-	wg.Add(int(maxWorkers))
+	wg.Add(maxWorkers)
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := 0; i < maxWorkers; i++ {
@@ -707,7 +820,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 			workerFuncChWG.Add(1)
 			// start a func for all the containers, then will wait for their own waitgroups
 			// to be set to zero by their depending containers, then enqueue to the creation channel
-			go func(node *depMgr.DependencyNode, dm depMgr.DependencyManager,
+			go func(node *depMgr.DependencyNode, _ depMgr.DependencyManager,
 				workerChan chan<- *depMgr.DependencyNode, wfcwg *sync.WaitGroup,
 			) {
 				// we are entering the create stage here and not in the workerFunc
@@ -824,6 +937,52 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	}
 
 	wg.Wait()
+}
+
+func (c *CLab) deleteToolContainers(ctx context.Context) {
+	toolTypes := []string{"sshx", "gotty"}
+
+	for _, toolType := range toolTypes {
+		toolFilter := []*types.GenericFilter{
+			{
+				FilterType: "label",
+				Field:      clabels.ToolType,
+				Operator:   "=",
+				Match:      toolType,
+			},
+			{
+				FilterType: "label",
+				Field:      clabels.Containerlab,
+				Operator:   "=",
+				Match:      c.Config.Name,
+			},
+		}
+
+		containers, err := c.globalRuntime().ListContainers(ctx, toolFilter)
+		if err != nil {
+			log.Error("Failed to list tool containers", "tool", toolType, "error", err)
+			return
+		}
+
+		if len(containers) == 0 {
+			log.Debug("No tool containers found for lab", "tool", toolType, "lab", c.Config.Name)
+			return
+		}
+
+		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab",
+			c.Config.Name, "count", len(containers))
+
+		for _, container := range containers {
+			containerName := strings.TrimPrefix(container.Names[0], "/")
+			log.Info("Removing tool container", "tool", toolType, "container", containerName)
+			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
+				log.Error("Failed to remove tool container", "tool", toolType,
+					"container", containerName, "error", err)
+			} else {
+				log.Info("Tool container removed successfully", "tool", toolType, "container", containerName)
+			}
+		}
+	}
 }
 
 // ListContainers lists all containers using provided filter.
@@ -982,7 +1141,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	log.Debugf("lab Conf: %+v", c.Config)
 	if options.reconfigure {
 		_ = c.Destroy(ctx, uint(len(c.Nodes)), true)
-		log.Infof("Removing %s directory...", c.TopoPaths.TopologyLabDir())
+		log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return nil, err
 		}
@@ -1006,8 +1165,8 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	log.Info("Creating lab directory: ", c.TopoPaths.TopologyLabDir())
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
+	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
 
 	if !options.skipLabDirFileACLs {
 		// adjust ACL for Labdir such that SUDO_UID Users will
@@ -1022,6 +1181,14 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 	_, err = os.Create(ansibleInvFPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// create an empty nornir simple inventory file that will get populated later
+	// we create it here first, so that bind mounts of nornir-simple-inventory.yml file could work
+	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
+	_, err = os.Create(nornirSimpleInvFPath)
 	if err != nil {
 		return nil, err
 	}
@@ -1110,13 +1277,13 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	log.Info("Adding containerlab host entries to /etc/hosts file")
+	log.Info("Adding host entries", "path", "/etc/hosts")
 	err = c.appendHostsFileEntries(ctx)
 	if err != nil {
 		log.Errorf("failed to create hosts file: %v", err)
 	}
 
-	log.Info("Adding ssh config for containerlab nodes")
+	log.Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
 	err = c.addSSHConfig()
 	if err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
@@ -1212,16 +1379,18 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		maxWorkers = 1
 	}
 
-	log.Infof("Destroying lab: %s", c.Config.Name)
+	log.Info("Destroying lab", "name", c.Config.Name)
 	c.deleteNodes(ctx, maxWorkers, serialNodes)
 
-	log.Info("Removing containerlab host entries from /etc/hosts file")
+	c.deleteToolContainers(ctx)
+
+	log.Info("Removing host entries", "path", "/etc/hosts")
 	err = c.DeleteEntriesFromHostsFile()
 	if err != nil {
 		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
 	}
 
-	log.Info("Removing ssh config for containerlab nodes")
+	log.Info("Removing SSH config", "path", c.TopoPaths.SSHConfigPath())
 	err = c.RemoveSSHConfig(c.TopoPaths)
 	if err != nil {
 		log.Errorf("failed to remove ssh config file: %v", err)

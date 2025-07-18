@@ -1,2 +1,0 @@
-robotframework==6.1.1
-robotframework-sshlibrary==3.8.0

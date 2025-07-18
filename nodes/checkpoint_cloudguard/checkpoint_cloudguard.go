@@ -5,7 +5,6 @@
 package checkpoint_cloudguard
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/srl-labs/containerlab/nodes"
@@ -14,25 +13,26 @@ import (
 )
 
 var (
-	kindnames          = []string{"checkpoint_cloudguard"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	kindnames           = []string{"checkpoint_cloudguard"}
+	defaultCredentials  = nodes.NewCredentials("admin", "admin")
+	scrapliPlatformName = "notsupported"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil)
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, nil)
 	r.Register(kindnames, func() nodes.Node {
 		return new(CheckpointCloudguard)
 	}, nrea)
 }
 
 type CheckpointCloudguard struct {
-	nodes.DefaultNode
+	nodes.VRNode
 }
 
 func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
-	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	// Init VRNode
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -54,18 +54,4 @@ func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOpt
 		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
 
 	return nil
-}
-
-func (n *CheckpointCloudguard) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
-	return nil
-}
-
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *CheckpointCloudguard) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

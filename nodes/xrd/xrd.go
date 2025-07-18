@@ -15,7 +15,7 @@ import (
 	"strings"
 	"text/template"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -34,7 +34,7 @@ var (
 	//go:embed mgmt_intf_v6_addr.sh.tmpl
 	scriptTemplate string
 
-	xrdMgmtScriptTpl, _ = template.New("clab-xrd-mgmt-ipv6-script").Funcs(utils.TemplateFuncs).Parse(scriptTemplate)
+	xrdMgmtScriptTpl, _ = template.New("clab-xrd-mgmt-ipv6-script").Funcs(utils.CreateFuncs()).Parse(scriptTemplate)
 
 	//go:embed xrd.cfg
 	cfgTemplate string
@@ -45,12 +45,18 @@ const (
 	generateIfFormat = "eth%d"
 
 	scrapliPlatformName = "cisco_iosxr"
+	NapalmPlatformName  = "iosxr"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+		NapalmPlatformName:  NapalmPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(xrd)
@@ -85,7 +91,7 @@ func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (n *xrd) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
 	n.genInterfacesEnv()
 
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -117,7 +123,7 @@ func (n *xrd) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 }
 
 func (n *xrd) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(n.Cfg.LongName,
+	err := netconf.SaveRunningConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -133,7 +139,7 @@ func (n *xrd) SaveConfig(_ context.Context) error {
 func (n *xrd) createXRDFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate xr-storage directory
-	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"), 0777)
+	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"), 0o777)
 	// generate first-boot config
 	cfg := filepath.Join(n.Cfg.LabDir, "first-boot.cfg")
 	nodeCfg.ResStartupConfig = cfg
@@ -143,7 +149,7 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	// generate script file
 	if !utils.FileExists(mgmt_script_path) {
 		utils.CreateFile(mgmt_script_path, "")
-		os.Chmod(mgmt_script_path, 0775) // skipcq: GSC-G302
+		os.Chmod(mgmt_script_path, 0o775) // skipcq: GSC-G302
 	}
 
 	// set mgmt IPv4/IPv6 gateway as it is already known by now

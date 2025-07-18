@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
 name: vxlan-stitch
 
 mgmt:
@@ -51,3 +52,4 @@ topology:
         interface: e1-1
       remote: 172.20.25.23
       vni: 101
+      udp-port: 14789

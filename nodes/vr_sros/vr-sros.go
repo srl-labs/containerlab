@@ -16,13 +16,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/options"
 	scraplilogging "github.com/scrapli/scrapligo/logging"
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
@@ -60,7 +60,12 @@ type SROSTemplateData struct {
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+
 	r.Register(kindNames, func() nodes.Node {
 		return new(vrSROS)
 	}, nrea)
@@ -74,7 +79,7 @@ type vrSROS struct {
 
 func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
-	s.VRNode = *nodes.NewVRNode(s)
+	s.VRNode = *nodes.NewVRNode(s, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
 	s.LicensePolicy = types.LicensePolicyWarn
@@ -118,7 +123,7 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+	utils.CreateDirectory(s.Cfg.LabDir, 0o777)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -136,7 +141,10 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 
 	// apply partial configs if partial config is used and existing node config does not exist
 	if isPartialConfigFile(s.Cfg.StartupConfig) && !nodeConfigExists(s.Cfg.LabDir) {
-		log.Infof("%s: adding config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
+		log.Info("Adding configuration",
+			"node", s.Cfg.LongName,
+			"type", "partial",
+			"source", s.Cfg.StartupConfig)
 
 		r, err := os.Open(s.Cfg.StartupConfig)
 		if err != nil {
@@ -157,7 +165,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
 
 	if len(s.sshPubKeys) > 0 && !skipSSHKeyCfg {
-		log.Infof("%s: adding public keys configuration", s.Cfg.LongName)
+		log.Info("Adding public keys configuration", "node", s.Cfg.LongName)
 
 		sshConf, err := s.generateSSHPublicKeysConfig()
 		if err != nil {
@@ -185,7 +193,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(s.Cfg.LongName,
+	err := netconf.SaveRunningConfig(s.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -216,7 +224,7 @@ func createVrSROSFiles(node nodes.Node) error {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
 		dst := filepath.Join(nodeCfg.LabDir, configDirName, licenseFName)
-		if err := utils.CopyFile(src, dst, 0644); err != nil {
+		if err := utils.CopyFile(src, dst, 0o644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
@@ -257,19 +265,23 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	var err error
 	var d *network.Driver
 
-	configContent, err := io.ReadAll(config)
+	configContent, err := utils.SubstituteEnvsAndTemplate(config, s.Cfg)
 	if err != nil {
 		return err
 	}
 
-	configContentStr := string(configContent)
+	configContentStr := configContent.String()
 
 	// check file contains content, otherwise exit early
 	if strings.TrimSpace(configContentStr) == "" {
 		return nil
 	}
 
-	log.Infof("Waiting for %[1]s to be ready. This may take a while. Monitor boot log with `sudo docker logs -f %[1]s`", s.Cfg.LongName)
+	log.Info("Waiting for node to be ready. This may take a while",
+		"node", s.Cfg.LongName,
+		"log", fmt.Sprintf("docker logs -f %[1]s", s.Cfg.LongName),
+	)
+
 	for loop := true; loop; {
 		if !s.isHealthy(ctx) {
 			time.Sleep(5 * time.Second) // cool-off period
@@ -281,9 +293,12 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		case <-ctx.Done():
 			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
 		default:
+			sl := log.StandardLog(log.StandardLogOptions{
+				ForceLevel: log.DebugLevel,
+			})
 			li, err := scraplilogging.NewInstance(
 				scraplilogging.WithLevel("debug"),
-				scraplilogging.WithLogger(log.Debugln))
+				scraplilogging.WithLogger(sl.Print))
 			if err != nil {
 				return err
 			}

@@ -88,12 +88,6 @@ The `--skip-post-deploy` flag can be used to skip the post-deploy phase of the l
 
 The local `--export-template` flag allows a user to specify a custom Go template that will be used for exporting topology data into `topology-data.json` file under the lab directory.
 
-#### node-filter
-
-The local `--node-filter` flag allows users to specify a subset of topology nodes targeted by `redeploy` command. The value of this flag is a comma-separated list of node names as they appear in the topology.
-
-When a subset of nodes is specified, containerlab will only redeploy those nodes and their links and ignore the rest.
-
 #### skip-labdir-acl
 
 The `--skip-labdir-acl` flag can be used to skip the lab directory access control list (ACL) provisioning during the deploy phase.
@@ -124,10 +118,4 @@ containerlab redeploy
 
 ```bash
 clab rdep -t mylab.clab.yml
-```
-
-#### Redeploy specific nodes in a lab
-
-```bash
-containerlab redeploy -t mylab.clab.yml --node-filter "node1,node2"
 ```

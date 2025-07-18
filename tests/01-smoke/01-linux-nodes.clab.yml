@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
 # Copyright 2020 Nokia
 # Licensed under the BSD 3-Clause License.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -20,8 +21,8 @@ topology:
         - cat /etc/os-release
       cpu: 1.5
       memory: 1G
-      mgmt_ipv4: 172.20.20.99 # test deprecated mgmt_ipv4 still works
-      mgmt_ipv6: 3fff:172:20:20::99 # test deprecated mgmt_ipv6 still works
+      mgmt-ipv4: 172.20.20.99
+      mgmt-ipv6: 3fff:172:20:20::99
       healthcheck:
         test:
           - CMD-SHELL
@@ -68,18 +69,21 @@ topology:
         - node: l2
           interface: eth3
           mac: 02:00:00:00:00:01
+
     - type: host
       host-interface: l2eth4
       endpoint:
         node: l2
         interface: eth4
         mac: 02:00:00:00:00:04
+
     - type: mgmt-net
       host-interface: l2eth5mgmt
       endpoint:
         node: l2
         interface: eth5
         mac: 02:00:00:00:00:05
+
     - type: dummy
       endpoint:
         node: l2

@@ -5,7 +5,6 @@
 package vr_ros
 
 import (
-	"context"
 	"fmt"
 	"path"
 	"regexp"
@@ -27,11 +26,18 @@ var (
 const (
 	configDirName   = "ftpboot"
 	startupCfgFName = "config.auto.rsc"
+
+	scrapliPlatformName = "mikrotik_routeros"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(vrRos)
 	}, nrea)
@@ -43,7 +49,9 @@ type vrRos struct {
 
 func (n *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n)
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
+	n.ConfigDirName = configDirName
+	n.StartupCfgFName = startupCfgFName
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -75,13 +83,4 @@ func (n *vrRos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.InterfaceHelp = InterfaceHelp
 
 	return nil
-}
-
-func (n *vrRos) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
-	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }

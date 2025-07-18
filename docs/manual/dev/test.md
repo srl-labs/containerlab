@@ -3,7 +3,7 @@
 Containerlab's test program largely consists of:
 
 - Go-based unit tests
-- RobotFramework-based integration tests
+- [RobotFramework](https://robotframework.org/)-based integration tests
 
 ## Integration Tests
 
@@ -11,22 +11,24 @@ The integration tests are written in RobotFramework and are located in the [`tes
 
 ### Local execution
 
-To execute the integration tests locally you have to install the python environment with the required dependencies. If you're using `pyenv` you can use the following commands:
+To execute the integration tests locally you have to install the python environment with the required dependencies. Containerlab uses [`uv`](https://docs.astral.sh/uv/) for all things Python, so getting the venv dialed in as as simple as:
 
-1. Create a venv and activate it
+```
+uv sync
+```
 
-    ```bash
-    pyenv virtualenv 3.11 clab-rf
-    pyenv shell clab-rf
-    ```
-
-2. Install the dependencies
-
-    ```bash
-    pip install -r tests/requirements.txt
-    ```
+To make the Python venv setup with `uv` active in your current shell, you can source the following commands[^1]:
 
 Usually you would run the tests using the locally built containerlab binary that contains the unreleased changes. The typical workflow then starts with building the containerlab binary:
+
+```bash
+export VIRTUAL_ENV=.venv
+export PATH=$VIRTUAL_ENV/bin:~/sdk/go1.23.10/bin:$PATH #(1)!
+```
+
+1. `~/sdk/go1.23.10/bin` is the path to the matching Go SDK version [installed](https://go.dev/dl/).
+
+To build the containerlab binary from the source code run:
 
 ```bash
 make build
@@ -69,3 +71,5 @@ RobotFramework generates a detailed report in HTML and XML formats that can be f
 [tests-dir]: https://github.com/srl-labs/containerlab/tree/main/tests
 [rf-run]: https://github.com/srl-labs/containerlab/blob/main/tests/rf-run.sh
 [01-smoke-dir]: https://github.com/srl-labs/containerlab/tree/main/tests/01-smoke
+
+[^1]: Tip: use direnv project to automatically set it when entering the directory.

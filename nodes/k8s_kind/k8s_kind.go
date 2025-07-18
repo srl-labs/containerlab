@@ -10,8 +10,9 @@ import (
 	"os"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker"
@@ -125,7 +126,7 @@ func (n *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContaine
 			cnt.Labels[key] = v
 		}
 		// we need to overwrite the nodename label
-		cnt.Labels["clab-node-name"] = cnt.Names[0]
+		cnt.Labels[labels.NodeName] = cnt.Names[0]
 	}
 
 	return containeList, nil

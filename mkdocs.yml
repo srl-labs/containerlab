@@ -11,7 +11,8 @@ nav:
           - manual/kinds/index.md
           - Nokia:
               - Nokia SR Linux: manual/kinds/srl.md
-              - Nokia SR OS: manual/kinds/vr-sros.md
+              - Nokia SR OS (SR-SIM): manual/kinds/sros.md
+              - Nokia SR OS (vSIM): manual/kinds/vr-sros.md
           - Arista:
               - Arista cEOS: manual/kinds/ceos.md
               - Arista vEOS: manual/kinds/vr-veos.md
@@ -34,6 +35,7 @@ nav:
               - Juniper vJunos-router: manual/kinds/vr-vjunosrouter.md
               - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
               - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
+              - Juniper cJunosEvolved: manual/kinds/cjunosevolved.md
           - Cumulus VX: manual/kinds/cvx.md
           - Aruba AOS-CX: manual/kinds/vr-aoscx.md
           - SONiC:
@@ -45,6 +47,7 @@ nav:
           - MikroTik RouterOS: manual/kinds/vr-ros.md
           - Huawei VRP: manual/kinds/huawei_vrp.md
           - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
+          - VyOS Networks VyOS: manual/kinds/vyosnetworks_vyos.md
           - OpenBSD: manual/kinds/openbsd.md
           - FreeBSD: manual/kinds/freebsd.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
@@ -52,6 +55,8 @@ nav:
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
           - Palo Alto PAN: manual/kinds/vr-pan.md
+          - 6WIND VSR: manual/kinds/6wind_vsr.md
+          - FD.io VPP: manual/kinds/fdio_vpp.md
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
@@ -77,6 +82,8 @@ nav:
       - Labs and Codespaces: manual/codespaces.md
       - VS Code Extension: manual/vsc-extension.md
       - Link Impairments: manual/impairments.md
+      - Share lab access: manual/share-access.md
+      - Configuration management: manual/config-mgmt.md
       - Developers guide:
           - manual/dev/index.md
           - Documentation: manual/dev/doc.md
@@ -106,7 +113,22 @@ nav:
               - sign: cmd/tools/cert/sign.md
           - netem:
               - set: cmd/tools/netem/set.md
+              - reset: cmd/tools/netem/reset.md
               - show: cmd/tools/netem/show.md
+          - api-server:
+              - start: cmd/tools/api-server/start.md
+              - stop: cmd/tools/api-server/stop.md
+              - status: cmd/tools/api-server/status.md
+          - sshx:
+              - attach: cmd/tools/sshx/attach.md
+              - detach: cmd/tools/sshx/detach.md
+              - reattach: cmd/tools/sshx/reattach.md
+              - list: cmd/tools/sshx/list.md
+          - gotty:
+              - attach: cmd/tools/gotty/attach.md
+              - detach: cmd/tools/gotty/detach.md
+              - reattach: cmd/tools/gotty/reattach.md
+              - list: cmd/tools/gotty/list.md
       - version:
           - cmd/version/index.md
           - check: cmd/version/check.md
@@ -123,7 +145,7 @@ nav:
       - External bridge capability: lab-examples/ext-bridge.md
       - WAN topology: lab-examples/wan.md
       - Peering lab: lab-examples/peering-lab.md
-      - Nokia SR Linux and Nokia SR OS: lab-examples/vr-sros.md
+      - Nokia SR Linux and Nokia SR OS: lab-examples/sr-sim.md
       - Nokia SR Linux and Juniper vMX: lab-examples/vr-vmx.md
       - Nokia SR Linux and Cisco XRd: lab-examples/srl-xrd.md
       - Nokia SR Linux and Cisco XRv9k: lab-examples/vr-xrv9k.md
@@ -131,6 +153,7 @@ nav:
       - Nokia SR Linux and FRR: lab-examples/srl-frr.md
       - Nokia SR Linux and Juniper vJunos-switch: lab-examples/srl-vjunos-switch.md
       - Nokia SR Linux and Juniper vJunosEvolved: lab-examples/srl-vjunosevolved.md
+      - Nokia SR Linux and Juniper cJunosEvolved: lab-examples/srl-cjunosevolved.md
       - FRR: lab-examples/frr01.md
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
@@ -147,6 +170,11 @@ nav:
           - 5-stage Clos topology: lab-examples/templated02.md
       - Generic VM: lab-examples/generic_vm01.md
   - Release notes:
+      - "0.69": rn/0.69.md
+      - "0.68": rn/0.68.md
+      - "0.67": rn/0.67.md
+      - "0.66": rn/0.66.md
+      - "0.65": rn/0.65.md
       - "0.64": rn/0.64.md
       - "0.63": rn/0.63.md
       - "0.62": rn/0.62.md
@@ -192,19 +220,19 @@ nav:
       - "0.22": rn/0.22.md
       - "0.21": rn/0.21.md
       - "0.20": rn/0.20.md
-      - 0.19: rn/0.19.md
-      - 0.18: rn/0.18.md
-      - 0.17: rn/0.17.md
-      - 0.16: rn/0.16.md
-      - 0.15: rn/0.15.md
-      - 0.14.4: rn/0.14.4.md
-      - 0.14.3: rn/0.14.3.md
-      - 0.14.2: rn/0.14.2.md
-      - 0.14.1: rn/0.14.1.md
-      - 0.14.0: rn/0.14.0.md
-      - 0.13.0: rn/0.13.0.md
-      - 0.12.0: rn/0.12.0.md
-      - 0.11.0: rn/0.11.0.md
+      - "0.19": rn/0.19.md
+      - "0.18": rn/0.18.md
+      - "0.17": rn/0.17.md
+      - "0.16": rn/0.16.md
+      - "0.15": rn/0.15.md
+      - "0.14.4": rn/0.14.4.md
+      - "0.14.3": rn/0.14.3.md
+      - "0.14.2": rn/0.14.2.md
+      - "0.14.1": rn/0.14.1.md
+      - "0.14.0": rn/0.14.0.md
+      - "0.13.0": rn/0.13.0.md
+      - "0.12.0": rn/0.12.0.md
+      - "0.11.0": rn/0.11.0.md
   - Community: community.md
 
 site_author: Roman Dodin
@@ -234,7 +262,6 @@ theme:
     - search.suggest
     - content.code.annotate
     - content.code.copy
-    - content.code.select
     - content.action.edit
     - toc.follow
     - content.tooltips

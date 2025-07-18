@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/types"
@@ -121,7 +121,7 @@ func createCA(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	utils.CreateDirectory(path, 0777) // skipcq: GSC-G302
+	utils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
 
 	err = caCert.Write(
 		filepath.Join(path, caNamePrefix+types.CertFileSuffix),
@@ -165,8 +165,14 @@ func signCert(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	log.Infof("Creating and signing certificate: Hosts=%q, CN=%s, C=%s, L=%s, O=%s, OU=%s",
-		certHosts, commonName, country, locality, organization, organizationUnit)
+	log.Info("Creating and signing certificate",
+		"Hosts", certHosts,
+		"CN", commonName,
+		"C", country,
+		"L", locality,
+		"O", organization,
+		"OU", organizationUnit,
+	)
 
 	expDuration, err := time.ParseDuration(expiry)
 	if err != nil {
@@ -188,7 +194,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	utils.CreateDirectory(path, 0777) // skipcq: GSC-G302
+	utils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
 
 	err = nodeCert.Write(
 		filepath.Join(path, certNamePrefix+types.CertFileSuffix),

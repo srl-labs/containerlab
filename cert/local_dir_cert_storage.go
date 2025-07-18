@@ -36,7 +36,7 @@ func (c *LocalDirCertStorage) LoadNodeCert(nodeName string) (*Certificate, error
 func (c *LocalDirCertStorage) StoreCaCert(cert *Certificate) error {
 	// CA cert/key/csr can only be stored in the labdir/.tls/ca dir,
 	// so we need to create it if it does not exist.
-	utils.CreateDirectory(filepath.Dir(c.paths.CaCertAbsFilename()), 0777)
+	utils.CreateDirectory(filepath.Dir(c.paths.CaCertAbsFilename()), 0o777)
 
 	return cert.Write(c.paths.CaCertAbsFilename(), c.paths.CaKeyAbsFilename(), c.paths.CaCSRAbsFilename())
 }
@@ -44,7 +44,7 @@ func (c *LocalDirCertStorage) StoreCaCert(cert *Certificate) error {
 // StoreNodeCert stores the given certificate in a file in the baseFolder.
 func (c *LocalDirCertStorage) StoreNodeCert(nodeName string, cert *Certificate) error {
 	// create a folder for the node if it does not exist
-	utils.CreateDirectory(c.paths.NodeTLSDir(nodeName), 0777)
+	utils.CreateDirectory(c.paths.NodeTLSDir(nodeName), 0o777)
 
 	// write cert files
 	return cert.Write(c.paths.NodeCertAbsFilename(nodeName),

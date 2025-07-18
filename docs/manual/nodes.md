@@ -5,7 +5,7 @@ search:
 
 # Nodes
 
-Node object is one of the containerlab' pillars. Essentially, it is nodes and links what constitute the lab topology. To let users build flexible and customizable labs the nodes are meant to be configurable.
+Node object is one of the containerlab' pillars. Essentially, it is nodes and links that constitute the lab topology. To let users build flexible and customizable labs the nodes are meant to be configurable.
 
 The node configuration is part of the [topology definition file](topo-def-file.md) and **may** consist of the following fields that we explain in details below.
 
@@ -54,19 +54,39 @@ Other nodes might treat `type` field differently, that will depend on the kind o
 
 ### group
 
-`group` is a freeform string that denotes which group a node belongs to. The grouping is currently only used to sort topology elements on a [graph](../cmd/graph.md#layout-and-sorting).
+`group` is a freeform string that denotes which group a node belongs to. This can be used to inherit values from the [groups](./topo-def-file.md#groups) container.
+
+The grouping is also used to sort topology elements on a [graph](../cmd/graph.md#layout-and-sorting).
+
+The inheritance model is as follows (from most specific to less specific):
+
+```
+node -> group -> kind -> defaults
+```
 
 ### image
 
-The common `image` attribute sets the container image name that will be used to start the node. The image name should be provided in a well-known format of `repository(:tag)`.
+The `image` attribute sets the container image name that the container node will use. The image name should be provided in a well-known format of the `[registry]/repository[:tag]`.
 
-We use `<repository>` image name throughout the docs articles. This means that the image with `<repository>:latest` name will be looked up. A user will need to add the latest tag if they want to use the same loose-tag naming:
+For example, consider the following possible image definitions:
 
-```bash
-# tagging srlinux:20.6.1-286 as srlinux:latest
-# after this change it's possible to use `srlinux:latest` or `srlinux` image name
-docker tag srlinux:20.6.1-286 srlinux:latest
-```
+- `ghcr.io/nokia/srlinux:24.10` where:
+    - registry: `ghcr.io`
+    - repository: `nokia`
+    - image: `srlinux`
+    - tag: `24.10`
+
+- `ghcr.io/nokia/srlinux`, where:
+    - registry: `ghcr.io`
+    - repository: `nokia`
+    - image: `srlinux`
+    - tag: `latest` (default tag, if not specified)
+
+- `alpine:3`, where:
+    - registry: `docker.io` (default registry, if not specified)
+    - repository: `library` (default repository, if not specified)
+    - image: `alpine`
+    - tag: `3`
 
 ### image-pull-policy
 
@@ -120,126 +140,13 @@ Some containerized NOSes require a license to operate or can leverage a license 
 
 ### startup-config
 
-For all Network OS kinds, it's possible to provide startup configuration that the node applies on boot. The startup config can be provided in two ways:
+It is possible to provide the startup configuration that the node applies on boot for most Containerlab kinds. The startup config can be provided as:
 
-1. As a path to a file that is available on the host machine and contains the config blob that the node understands.
-2. As an embedded config blob that is provided as a multiline string.
+1. A path to a file that is available on the host machine and contains the config blob that the node understands.
+2. An embedded config blob that is provided as a multiline string.
+3. An URL (http(s) or [S3](s3-usage-example.md)) to a file that contains the config blob that the node can apply.
 
-#### path to a startup-config file
-
-When a path to a startup-config file is provided, containerlab either mounts the file to the container by a path that NOS expects to have its startup-config file, or it will apply the config via using the NOS-dependent method.
-
-```yaml
-topology:
-  nodes:
-    srl:
-      startup-config: ./some/path/to/startup-config.cfg
-```
-
-Check the particular kind documentation to see if the startup-config is supported and how it is applied.
-
-???info "Startup-config path variable"
-    By default, the startup-config references are either provided as an absolute or a relative (to the current working dir) path to the file to be used.
-
-    Consider a two-node lab `mylab.clab.yml` with seed configs that the user may wish to use in their lab. A user could create a directory for such files similar to this:
-
-    ```
-    .
-    ├── cfgs
-    │   ├── node1.partial.cfg
-    │   └── node2.partial.cfg
-    └── mylab.clab.yml
-
-    2 directories, 3 files
-    ```
-
-    Then to leverage these configs, the node could be configured with startup-config references like this:
-
-    ```yaml
-    name: mylab
-    topology:
-      nodes:
-        node1:
-          startup-config: cfgs/node1.partial.cfg
-        node2:
-          startup-config: cfgs/node2.partial.cfg
-    ```
-
-    while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can use a special variable `__clabNodeName__` in their startup-config paths. This variable will expand to the node-name for the parent node that the startup-config reference falls under.
-
-    ```yaml
-    name: mylab
-    topology:
-      nodes:
-        node1:
-          startup-config: cfg/__clabNodeName__.partial.cfg
-        node2:
-          startup-config: cfgs/__clabNodeName__.partial.cfg
-    ```
-
-    The `__clabNodeName__` variable can also be used in the kind and default sections of the config.  Using the same directory structure from the example above, the following shows how to use the magic variable for a kind.
-
-    ```yaml
-    name: mylab
-    topology:
-      defaults:
-        kind: nokia_srlinux
-      kinds:
-        nokia_srlinux:
-          startup-config: cfgs/__clabNodeName__.partial.cfg
-      nodes:
-        node1:
-        node2:
-    ``` 
-
-    The following example shows how one would do it using defaults.
-
-    ```yaml
-    name: mylab
-    topology:
-      defaults:
-        kind: nokia_srlinux
-        startup-config: cfgs/__clabNodeName__.partial.cfg
-      nodes:
-        node1:
-        node2:
-    ```
-
-#### embedded startup-config
-
-It is possible to embed the startup configuration in the topology file itself. This is done by providing the startup-config as a multiline string.
-
-```yaml
-topology:
-  nodes:
-    srl:
-      startup-config: |
-        system information location "I am embedded config"
-```
-
-!!!note
-    If a config file exists in the lab directory for a given node, then it will take preference over the startup config passed with this setting. If it is desired to discard the previously saved config and use the startup config instead, use the `enforce-startup-config` setting or deploy a lab with the [`reconfigure`](../cmd/deploy.md#reconfigure) flag.
-
-#### remote startup-config
-
-It is possible to specify a remote `http(s)` location for a startup-config file. Simply provide a URL that can be accessed from the containerlab host.
-
-```yaml
-topology:
-  kinds:
-    nokia_srlinux:
-      type: ixrd3
-      image: ghcr.io/nokia/srlinux
-      startup-config: https://raw.githubusercontent.com/srl-labs/containerlab/main/tests/02-basic-srl/srl2-startup.cli
-```
-
-The remote file will be downloaded to the containerlab's temp directory at `$TMP/.clab/<filename>` path and provided to the node as a locally available startup-config file. The filename will have a generated name that follows the pattern `<lab-name>-<node-name>-<filename-from-url>`, where `<filename-from-url>` is the last element of the URL path.
-
-!!!note
-
-    * Upon deletion of a lab, the downloaded startup-config files will not be removed. A manual cleanup should be performed if required.
-    * If a lab is redeployed with the lab name and startup-config paths unchanged, the local file will be overwritten.
-    * For https locations the certificates won't be verified to allow fetching artifacts from servers with self-signed certificates.
+Read more about the usage of the startup configuration (and other ways to perform configuration management with Containerlab) in the [Configuration Management](config-mgmt.md) section.
 
 ### enforce-startup-config
 
@@ -287,82 +194,84 @@ topology:
 4. The `~` char will be expanded to a user's home directory.
 5. mount an anonymous volume to a container under `/var/run/somedir` (implicit RW mode)
 
-???info "Bind variables"
-    By default, binds are either provided as an absolute or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
+/// details | Bind variables
+By default, binds are either provided as an absolute or a relative (to the current working dir) path. Although the majority of cases can be very well covered with this, there are situations in which it is desirable to use a path that is relative to the node-specific example.
 
-    Consider a two-node lab `mylab.clab.yml` with node-specific files, such as state information or additional configuration artifacts. A user could create a directory for such files similar to that:
+Consider a two-node lab `mylab.clab.yml` with node-specific files, such as state information or additional configuration artifacts. A user could create a directory for such files similar to that:
 
-    ```
-    .
-    ├── cfgs
-    │   ├── n1
-    │   │   └── conf
-    │   └── n2
-    │       └── conf
-    └── mylab.clab.yml
+```
+.
+├── cfgs
+│   ├── n1
+│   │   └── conf
+│   └── n2
+│       └── conf
+└── mylab.clab.yml
 
-    3 directories, 3 files
-    ```
+3 directories, 3 files
+```
 
-    Then to mount those files to the nodes, the nodes would have been configured with binds like that:
+Then to mount those files to the nodes, the nodes would have been configured with binds like that:
 
-    ```yaml
-    name: mylab
-    topology:
-      nodes:
-        n1:
-          binds:
-            - cfgs/n1/conf:/conf
-        n2:
-          binds:
-            - cfgs/n2/conf:/conf
-    ```
+```yaml
+name: mylab
+topology:
+  nodes:
+    n1:
+      binds:
+        - cfgs/n1/conf:/conf
+    n2:
+      binds:
+        - cfgs/n2/conf:/conf
+```
 
-    while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can use a special variable `__clabNodeDir__` in their bind paths. This variable will expand to the node-specific directory that containerlab creates for each node.
+while this configuration is correct, it might be considered verbose as the number of nodes grows. To remove this verbosity, the users can use a special variable `__clabNodeDir__` in their bind paths. This variable will expand to the node-specific directory that containerlab creates for each node.
 
-    This means that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
+This means that you can create a directory structure that containerlab will create anyhow and put the needed files over there. With the lab named `mylab` and the nodes named `n1` and `n2` the structure containerlab uses is as follows:
 
-    ```
-    .
-    ├── clab-mylab
-    │   ├── n1
-    │   │   └── conf
-    │   └── n2
-    │       └── conf
-    └── mylab.clab.yml
+```
+.
+├── clab-mylab
+│   ├── n1
+│   │   └── conf
+│   └── n2
+│       └── conf
+└── mylab.clab.yml
 
-    3 directories, 3 files
-    ```
+3 directories, 3 files
+```
 
-    With this structure in place, the clab file can leverage the `__clabNodeDir__` variable:
+With this structure in place, the clab file can leverage the `__clabNodeDir__` variable:
 
-    ```yaml
-    name: mylab
-    topology:
-      nodes:
-        n1:
-          binds:
-            - __clabNodeDir__/conf:/conf
-        n2:
-          binds:
-            - __clabNodeDir__/conf:/conf
-    ```
+```yaml
+name: mylab
+topology:
+  nodes:
+    n1:
+      binds:
+        - __clabNodeDir__/conf:/conf
+    n2:
+      binds:
+        - __clabNodeDir__/conf:/conf
+```
 
-    Notice how `__clabNodeDir__` hides the directory structure and node names and removes the verbosity of the previous approach.
+Notice how `__clabNodeDir__` hides the directory structure and node names and removes the verbosity of the previous approach.
 
-    Another special variable the containerlab topology file can use is `__clabDir__`. In the example above, it would expand into `clab-mylab` folder. With `__clabDir__` variable it becomes convenient to bind files like `ansible-inventory.yml` or `topology-data.json` that containerlab automatically creates:
+Another special variable the containerlab topology file can use is `__clabDir__`. In the example above, it would expand into `clab-mylab` folder. With `__clabDir__` variable it becomes convenient to bind files like `ansible-inventory.yml` or `topology-data.json` that containerlab automatically creates:
 
-    ```yaml
-    name: mylab
-    topology:
-      nodes:
-        ansible:
-          binds:
-            - __clabDir__/ansible-inventory.yml:/ansible-inventory.yml:ro
-        graphite:
-          binds:
-            - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
-    ```
+```yaml
+name: mylab
+topology:
+  nodes:
+    ansible:
+      binds:
+        - __clabDir__/ansible-inventory.yml:/ansible-inventory.yml:ro
+    graphite:
+      binds:
+        - __clabDir__/topology-data.json:/htdocs/clab/topology-data.json:ro
+```
+
+///
 
 Binds defined on multiple levels (defaults -> kind -> node) will be merged with the duplicated values removed (the lowest level takes precedence).
 
@@ -379,7 +288,7 @@ ports:
   - 55554:43554/tcp
 ```
 
-The list of port bindings consists of strings in the same format that is acceptable by `docker run` command's [`-p/--export` flag](https://docs.docker.com/engine/reference/commandline/run/#publish-or-expose-port--p---expose).
+The list of port bindings consists of strings in the same format that is acceptable by `docker run` command's [`-p/--expose` flag](https://docs.docker.com/reference/cli/docker/container/run/#publish).
 
 This option is only configurable under the node level.
 
@@ -546,17 +455,17 @@ nodes:
       mgmt-ipv4: 172.20.20.100
 ```
 
-### mgmt_ipv6
+### mgmt-ipv6
 
-To make a node to boot with a user-specified management IPv4 address, the `mgmt_ipv6` setting can be used. Note, that the static management IP address should be part of the subnet that is used within the lab.
+To make a node to boot with a user-specified management IPv4 address, the `mgmt-ipv6` setting can be used. Note, that the static management IP address should be part of the subnet that is used within the lab.
 
-Read more about user-defined management addresses [here](network.md#user-defined-addresses).
+Read more about user-defined management addresses in the [networking guide](network.md#user-defined-addresses).
 
 ```yaml
 nodes:
     r1:
       kind: nokia_srlinux
-      mgmt_ipv6: 3fff:172:20:20::100
+      mgmt-ipv6: 3fff:172:20:20::100
 ```
 
 ### DNS
@@ -725,6 +634,51 @@ my-node:
   image: alpine:3
   kind: linux
   cpu-set: 0-1,4-5
+```
+
+### shm-size
+
+The `shm-size` parameter can be used to customize the the shared memory size limit allocated to the container.
+By default, this limit is 64MB with docker runtime.
+
+```yaml
+# my-node will be allocated 256MB of shared memory.
+my-node:
+  image: alpine:3
+  kind: linux
+  shm-size: 256MB
+```
+
+Supported memory suffixes (case insensitive): `b`, `kib`, `kb`, `mib`, `mb`, `gib`, `gb`.
+
+### devices
+
+The `devices` parameter can be used to add host devices to the container.
+
+```yaml
+# my-node will be able to access the host /dev/ppp and /dev/net/tun devices.
+my-node:
+  image: alpine:3
+  kind: linux
+  devices:
+    - /dev/ppp
+    - /dev/net/tun
+```
+
+### cap-add
+
+The `cap-add` parameter can be used to add capabilities to the container.
+Docker containers are currently executed in privileged mode, so this should not be needed.
+If this becomes configurable, specifying the capabilities required for a container will be useful.
+
+```yaml
+# my-node will be given the NET_ADMIN and the SYS_ADMIN capabilities
+my-node:
+  image: alpine:3
+  kind: linux
+  cap-add:
+    - NET_ADMIN
+    - SYS_ADMIN
 ```
 
 ### sysctls

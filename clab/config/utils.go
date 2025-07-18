@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -50,7 +50,7 @@ func PrepareVars(c *clab.CLab) map[string]*NodeConfig {
 		// Init array for this node
 		for key, val := range nodeCfg.Config.Vars {
 			if key == vkNodes || key == vkNodeName {
-				log.Warningf("the variable %s on %s will be ignored, it hides other nodes", vkNodes, name)
+				log.Warnf("the variable %s on %s will be ignored, it hides other nodes", vkNodes, name)
 				continue
 			}
 			vars[key] = val
@@ -169,7 +169,7 @@ func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 }
 
 // Create a link name using the node names and optional link_num.
-func linkName(link *types.Link) (string, string, error) {
+func linkName(link *types.Link) (string, string, error) { //nolint: unparam
 	var linkNo string
 	if v, ok := link.Vars[vkLinkNum]; ok {
 		linkNo = fmt.Sprintf("_%v", v)

@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -34,6 +33,12 @@ type NodeDefinition struct {
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
+	// list of devices to map in the container
+	Devices []string `yaml:"devices,omitempty"`
+	// List of capabilities to add for the container
+	CapAdd []string `yaml:"cap-add,omitempty"`
+	// Set the shared memory size allocated to the container
+	ShmSize string `yaml:"shm-size,omitempty"`
 	// list of port bindings
 	Ports []string `yaml:"ports,omitempty"`
 	// user-defined IPv4 address in the management network
@@ -74,21 +79,24 @@ type NodeDefinition struct {
 	// Healthcheck configuration
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
 	// Network aliases
-	Aliases []string `yaml:"aliases,omitempty"`
+	Aliases    []string     `yaml:"aliases,omitempty"`
+	Components []*Component `yaml:"components,omitempty"`
 }
 
 // Interface compliance.
 var _ yaml.Unmarshaler = &NodeDefinition{}
 
-// UnmarshalYAML is a custom unmarshaller for NodeDefinition type that allows to map old attributes to new ones.
-func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// define an alias type to avoid recursion during unmarshalling
+// UnmarshalYAML is a custom unmarshaler for NodeDefinition type that allows to map old attributes to new ones.
+func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
+	// define an alias type to avoid recursion during unmarshaling
 	type NodeDefinitionAlias NodeDefinition
 
+	// NodeDefinitionWithDeprecatedFields can contain fields that are deprecated
+	// but still supported for backward compatibility.
+	// see https://github.com/srl-labs/containerlab/blob/6eb44ca5a64cb427a5c43e31c35ac50145a8397f/types/node_definition.go#L96
+	// for how it was used.
 	type NodeDefinitionWithDeprecatedFields struct {
 		NodeDefinitionAlias `yaml:",inline"`
-		DeprecatedMgmtIPv4  string `yaml:"mgmt_ipv4,omitempty"`
-		DeprecatedMgmtIPv6  string `yaml:"mgmt_ipv6,omitempty"`
 	}
 
 	nd := &NodeDefinitionWithDeprecatedFields{}
@@ -96,17 +104,6 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error 
 	nd.NodeDefinitionAlias = (NodeDefinitionAlias)(*n)
 	if err := unmarshal(nd); err != nil {
 		return err
-	}
-
-	// process deprecated fields and use their values for new fields if new fields are not set
-	if len(nd.DeprecatedMgmtIPv4) > 0 && len(nd.MgmtIPv4) == 0 {
-		log.Warnf("Attribute \"mgmt_ipv4\" is deprecated and will be removed in future. Change it to \"mgmt-ipv4\"")
-		nd.MgmtIPv4 = nd.DeprecatedMgmtIPv4
-	}
-
-	if len(nd.DeprecatedMgmtIPv6) > 0 && len(nd.MgmtIPv6) == 0 {
-		log.Warnf("Attribute \"mgmt_ipv6\" is deprecated and will be removed in future. Change it to \"mgmt-ipv6\"")
-		nd.MgmtIPv6 = nd.DeprecatedMgmtIPv6
 	}
 
 	*n = (NodeDefinition)(nd.NodeDefinitionAlias)
@@ -231,6 +228,34 @@ func (n *NodeDefinition) GetBinds() []string {
 		return nil
 	}
 	return n.Binds
+}
+
+func (n *NodeDefinition) GetDevices() []string {
+	if n == nil {
+		return nil
+	}
+	return n.Devices
+}
+
+func (n *NodeDefinition) GetCapAdd() []string {
+	if n == nil {
+		return nil
+	}
+	return n.CapAdd
+}
+
+func (n *NodeDefinition) GetComponents() []*Component {
+	if n == nil {
+		return nil
+	}
+	return n.Components
+}
+
+func (n *NodeDefinition) GetNodeShmSize() string {
+	if n == nil {
+		return ""
+	}
+	return n.ShmSize
 }
 
 func (n *NodeDefinition) GetPorts() []string {
@@ -388,7 +413,7 @@ func (n *NodeDefinition) GetAliases() []string {
 	return n.Aliases
 }
 
-// ImportEnvs imports all environment variales defined in the shell
+// ImportEnvs imports all environment variables defined in the shell
 // if __IMPORT_ENVS is set to true.
 func (n *NodeDefinition) ImportEnvs() {
 	if n == nil || n.Env == nil {

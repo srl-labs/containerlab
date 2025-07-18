@@ -1,13 +1,42 @@
 name: golangci-lint
 on:
+  workflow_call:
+    inputs:
+      go_ver:
+        required: true
+        type: string
   workflow_dispatch:
+    inputs:
+      go_ver:
+        description: "Go version"
+        required: false
+        default: "1.23.7"
 jobs:
   golangci:
     name: lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+      - uses: WillAbides/setup-go-faster@v1.14.0
         with:
-          version: v1.38
+          go-version: ${{ inputs.go_ver }}
+
+      - name: Cache go modules
+        uses: actions/cache@v4
+        with:
+          # In order:
+          # * Module download cache
+          # * Build cache (Linux)
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: install and run the linters
+        run: |
+          curl -sSfL \
+            https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh |
+            sh -s -- -b $(go env GOPATH)/bin v2.2.1
+          make lint

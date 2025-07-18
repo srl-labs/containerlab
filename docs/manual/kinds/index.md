@@ -37,6 +37,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | -------------------------- | --------------------------------------------------- | --------- | :-------: |
 | **Nokia SR Linux**         | [`nokia_srlinux`](srl.md)                           | supported | container |
 | **Nokia SR OS**            | [`nokia_sros`](vr-sros.md)                          | supported |    VM     |
+| **Nokia SR OS**            | [`nokia_srsim`](sros.md)                            | supported | container |
 | **Arista cEOS**            | [`arista_ceos`](ceos.md)                            | supported | container |
 | **Arista vEOS**            | [`arista_veos`](vr-veos.md)                         | supported |    VM     |
 | **Juniper cRPD**           | [`juniper_crpd`](crpd.md)                           | supported | container |
@@ -70,8 +71,11 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Check Point Cloudguard** | [`checkpoint_cloudguard`](checkpoint_cloudguard.md) | supported |    VM     |
 | **Fortinet Fortigate**     | [`fortinet_fortigate`](fortinet_fortigate.md)       | supported |    VM     |
 | **Palo Alto PAN**          | [`paloalto_panos`](vr-pan.md)                       | supported |    VM     |
+| **6WIND VSR**              | [`6wind_vsr`](6wind_vsr.md)                         | supported | container |
+| **FD.io VPP**              | [`fdio_vpp`](fdio_vpp.md)                           | supported | container |
 | **Linux bridge**           | [`bridge`](bridge.md)                               | supported |    N/A    |
 | **Linux container**        | [`linux`](linux.md)                                 | supported | container |
+| **Generic VM**             | [`generic_vm`](generic_vm.md)                       | supported |    VM     |
 | **RARE/freeRtr**           | [`rare`](rare-freertr.md)                           | supported | container |
 | **Openvswitch bridge**     | [`ovs-bridge`](ovs-bridge.md)                       | supported |    N/A    |
 | **External container**     | [`ext-container`](ext-container.md)                 | supported | container |

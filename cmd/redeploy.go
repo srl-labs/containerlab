@@ -19,7 +19,7 @@ var redeployCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(redeployCmd) // Add to rootCmd
+	RootCmd.AddCommand(redeployCmd) // Add to rootCmd
 
 	// Add destroy flags
 	redeployCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
@@ -29,8 +29,6 @@ func init() {
 	redeployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers creating/deleting nodes")
 	redeployCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
-	redeployCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include")
 
 	// Add deploy flags
 	redeployCmd.Flags().BoolVarP(&common.Graph, "graph", "g", false, "generate topology graph")

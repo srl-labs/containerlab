@@ -11,6 +11,9 @@ jobs:
   smoke-tests:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,6 +41,11 @@ jobs:
           - "18*.robot"
           - "19*.robot"
           - "20*.robot"
+          - "21*.robot"
+          - "22*.robot"
+          - "23*.robot"
+          - "24*.robot"
+
     # allow podman job to fail, since it started to fail on github actions
     continue-on-error: ${{ matrix.runtime == 'podman' }}
     steps:
@@ -57,15 +65,21 @@ jobs:
         if: matrix.runtime == 'podman'
         run: sudo bash ./.github/workflows/install-podman.sh
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          # Install a specific version of uv.
+          version: "0.5.28"
+          enable-cache: true
+
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.py_ver }}
-          cache: pip
-          cache-dependency-path: "tests/requirements.txt"
+          # cache: pip
+          # cache-dependency-path: "tests/requirements.txt"
+          python-version-file: "pyproject.toml"
 
-      - name: Install robotframework
-        run: |
-          pip install -r tests/requirements.txt
+      - name: Install the project
+        run: uv sync --all-extras --dev
 
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
@@ -73,9 +87,14 @@ jobs:
       # - name: setup tmate session
       #   uses: mxschmitt/action-tmate@v3
 
+      - name: Activate virtualenv
+        run: |
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
       - name: Run smoke tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
+          ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - name: Upload test report

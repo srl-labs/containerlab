@@ -39,7 +39,7 @@ Verify links in node switch
     Should Contain    ${output}    172.20.20.
     Should Contain    ${output}    up
 
-Verify parital startup configuration on router2
+Verify partial startup configuration on router2
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-router2 show running-config interface Loopback0
     Log    ${output}

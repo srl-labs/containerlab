@@ -6,7 +6,7 @@ import (
 	"path"
 	"text/template"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"
@@ -89,7 +89,7 @@ func (c *CLab) addSSHConfig() error {
 		return err
 	}
 
-	f, err := os.OpenFile(c.TopoPaths.SSHConfigPath(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(c.TopoPaths.SSHConfigPath(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return err
 	}

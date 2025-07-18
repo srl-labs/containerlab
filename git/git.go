@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/log"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -213,7 +213,7 @@ func (g *GoGit) cloneNonExisting() error {
 		co.ReferenceName = plumbing.NewBranchReferenceName(branchName)
 	}
 	// pre-create the repo directory and adjust the ACLs
-	utils.CreateDirectory(g.gitRepo.GetName(), 0755)
+	utils.CreateDirectory(g.gitRepo.GetName(), 0o755)
 	err = utils.AdjustFileACLs(g.gitRepo.GetName())
 	if err != nil {
 		log.Warnf("failed to adjust repository (%s) ACLs. continuin anyways", g.gitRepo.GetName())

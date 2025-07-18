@@ -11,7 +11,7 @@ import (
 	"html/template"
 	"sort"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
@@ -113,7 +113,6 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
 	})
 	for _, l := range c.Links {
-
 		eps := l.GetEndpoints()
 
 		ifaceDisplayNameA := eps[0].GetIfaceDisplayName()
@@ -142,7 +141,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 }
 
 func init() {
-	rootCmd.AddCommand(graphCmd)
+	RootCmd.AddCommand(graphCmd)
 	graphCmd.Flags().StringVarP(&srv, "srv", "s", "0.0.0.0:50080",
 		"HTTP server address serving the topology view")
 	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false,

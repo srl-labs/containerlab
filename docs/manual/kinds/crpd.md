@@ -8,6 +8,13 @@ search:
 
 cRPD nodes launched with containerlab comes up pre-provisioned with SSH service enabled, `root` user created and NETCONF enabled.
 
+Once downloaded, load the Docker image:
+
+```bash
+# load cRPD container image, shows up as crpd:24.2R1.14 in docker images
+sudo docker load -i junos-routing-crpd-docker-24.2R1.14.tgz
+```
+
 ## Managing cRPD nodes
 
 Juniper cRPD node launched with containerlab can be managed via the following interfaces:

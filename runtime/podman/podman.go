@@ -6,14 +6,16 @@ package podman
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/containers/podman/v5/pkg/api/handlers"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/bindings/network"
 	dockerTypes "github.com/docker/docker/api/types"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
@@ -170,7 +172,7 @@ func (r *PodmanRuntime) PullImage(ctx context.Context, image string, pullPolicy 
 	}
 
 	// Pull the image if it doesn't exist
-	if !ex {
+	if !ex || pullPolicy == types.PullPolicyAlways {
 		_, err = images.Pull(ctx, canonicalImage, &images.PullOptions{})
 	}
 	return err
@@ -419,4 +421,21 @@ func (r *PodmanRuntime) CheckConnection(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (r *PodmanRuntime) GetRuntimeSocket() (string, error) {
+	socket := "/run/podman/podman.sock"
+
+	// For rootless podman, check if XDG_RUNTIME_DIR is set
+	if os.Getenv("XDG_RUNTIME_DIR") != "" {
+		userID := os.Getenv("UID")
+		if userID == "" {
+			userID = strconv.Itoa(os.Getuid())
+		}
+		nonRootSocket := fmt.Sprintf("/run/user/%s/podman/podman.sock", userID)
+		if _, err := os.Stat(nonRootSocket); err == nil {
+			socket = nonRootSocket
+		}
+	}
+	return socket, nil
 }

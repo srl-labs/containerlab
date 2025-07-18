@@ -11,9 +11,17 @@ Suite Teardown      Run Keyword    Teardown
 
 
 *** Variables ***
-${lab-file}     stages.clab.yml
-${lab-name}     stages
-${runtime}      docker
+${lab-file}                     stages.clab.yml
+${lab-name}                     stages
+${runtime}                      docker
+${n4-exec-output}               SEPARATOR=\n
+...                             Executed command node=node4 command="uname -n"
+...                             ${SPACE}${SPACE}stdout=
+...                             ${SPACE}${SPACE}│ node4
+${n4-exec-healthy-output}       SEPARATOR=\n
+...                             Executed command node=node4 command="echo hey I am exiting healthy stage"
+...                             ${SPACE}${SPACE}stdout=
+...                             ${SPACE}${SPACE}│ hey I am exiting healthy stage
 
 
 *** Test Cases ***
@@ -31,8 +39,8 @@ Deploy ${lab-name} lab
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     ...    shell=True
 
-    Log    ${output.stdout}
-    Log    ${output.stderr}
+    Log    stdout:${\n}${output.stdout}    console=${True}
+    Log    stderr:${\n}${output.stderr}    console=${True}
 
     Should Be Equal As Integers    ${output.rc}    0
 
@@ -61,36 +69,42 @@ Ensure node3 started after node4
     Should Be True    ${n3} > ${n4}
 
 Ensure node4 executed on-exit commands for its create-links stage and this output contains all interfaces
-    ${match} =    Find Substring in Text
+    Should Contain
     ...    ${deploylog.stderr}
-    ...    Executed command \\"ls /sys/class/net/\\" on the node \\"node4\\". stdout:\\neth0\\neth2\\neth3\\nlo\\n
+    ...    ${n4-exec-output}
 
-    Log    ${match}
-
-Ensure node4 executed on-exit commands for its heathy stage
-    ${match} =    Find Substring in Text
+Ensure node4 executed on-exit commands for its healthy stage
+    Should Contain
     ...    ${deploylog.stderr}
-    ...    Executed command \\"echo hey I am existing healthy stage\\" on the node \\"node4\\". stdout:\\nhey I am existing healthy stage\\n
-
-    Log    ${match}
+    ...    ${n4-exec-healthy-output}
 
 Ensure node3 executed on-exit commands for its create stage and this output doesn't contain any non eth0/lo interfaces
-    ${match} =    Find Substring in Text
+    ${extracted_text} =    Extract Text Between Markers
     ...    ${deploylog.stderr}
-    ...    Executed command \\"ls /sys/class/net/\\" on the node \\"node3\\". stdout:\\neth0\\nlo\\n
+    ...    INFO Executed command node=node3 command="ls /sys/class/net/"
 
-    Should Not Contain    ${match}    eth1
+    Log    extracted node3 output is${\n}${extracted_text}    console=${True}
 
-    Log    ${match}
+    Should Contain
+    ...    ${extracted_text}
+    ...    lo
+
+    Should Contain
+    ...    ${extracted_text}
+    ...    eth0
+
+    Should Not Contain    ${extracted_text}    eth1
 
 Ensure node1 executed on-enter commands for its create-links stage and this output doesn't contain any non eth0/lo interfaces
-    ${match} =    Find Substring in Text
+    ${extracted_text} =    Extract Text Between Markers
     ...    ${deploylog.stderr}
-    ...    Executed command \\"ls /sys/class/net/\\" on the node \\"node1\\". stdout:\\neth0\\nlo\\n
+    ...    INFO Executed command node=node1 command="ls /sys/class/net/"
 
-    Should Not Contain    ${match}    eth1
+    Log    ${extracted_text}    console=${True}
 
-    Log    ${match}
+    Should Not Contain    ${extracted_text}    eth1
+
+    Log    ${extracted_text}
 
 Ensure host-exec file is created with the right content
     ${content} =    Get File    /tmp/host-exec-test
@@ -160,3 +174,25 @@ Find Substring in Text
     Should Not Be Empty    ${match}
 
     RETURN    ${match}
+
+Extract Text Between Markers
+    # this fuckery is to get the output of the node3 exec. It captures the text between the INFO Executed command command="ls /sys/class/net/" node=node3 and the next INFO line
+    [Arguments]    ${text}    ${start_marker}
+    ${lines} =    String.Split To Lines    ${text}
+    ${start_index} =    Set Variable    -1
+    ${end_index} =    Set Variable    -1
+
+    FOR    ${index}    ${line}    IN ENUMERATE    @{lines}
+        IF    '${start_marker}' in '${line}'
+            ${start_index} =    Set Variable    ${index}
+            CONTINUE
+        END
+        ${start_index_int} =    Convert To Integer    ${start_index}
+        IF    $start_index_int != -1 and 'INFO' in '${line.strip()}'
+            ${end_index} =    Set Variable    ${index}
+            BREAK
+        END
+    END
+
+    ${extracted_text} =    Catenate    SEPARATOR=\n    @{lines}[${start_index}:${end_index}]
+    RETURN    ${extracted_text}

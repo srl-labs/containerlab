@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/types"
 	"golang.org/x/crypto/ssh"
 )
@@ -86,7 +86,7 @@ func HostKeyCallback(callback ...ssh.HostKeyCallback) SSHTransportOption {
 
 func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SSHTransport, error) {
 	switch node.Kind {
-	case "vr-sros", "srl", "nokia_sros", "nokia_srlinux":
+	case "vr-sros", "srl", "nokia_sros", "nokia_srsim", "nokia_srlinux":
 		c := &SSHTransport{}
 		c.SSHConfig = &ssh.ClientConfig{}
 
@@ -101,6 +101,8 @@ func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SS
 		switch node.Kind {
 		case "vr-sros", "nokia_sros":
 			c.K = &VrSrosSSHKind{}
+		case "nokia_srsim", "srsim":
+			c.K = &SrosSSHKind{}
 		case "srl", "nokia_srlinux":
 			c.K = &SrlSSHKind{}
 		}
@@ -130,7 +132,6 @@ func (t *SSHTransport) InChannel() {
 			tmpS = string(buf[:n])
 		}
 		for err == nil {
-
 			if strings.Contains(tmpS, "#") {
 				parts := strings.Split(tmpS, "#")
 				li := len(parts) - 1
@@ -206,7 +207,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 				rr = ret.result
 			} else {
 				rr = sHistory + "#" + ret.result
-				sHistory = ""
+				sHistory = "" //nolint:ineffassign
 			}
 			rr = strings.Trim(rr, " \n\r\t")
 
@@ -392,7 +393,6 @@ func (r *SSHReply) LogString(node string, linefeed, debug bool) string { // skip
 		if DebugCount > 3 { // add bytestring
 			s += fmt.Sprintf("%s| %v%s ? %v", prefix, []byte(r.result), prefix, []byte(r.prompt))
 		}
-
 	}
 	return s
 }
@@ -413,5 +413,5 @@ func (r *SSHReply) Debug(node, message string, t ...interface{}) {
 	_, fn, line, _ := runtime.Caller(1)
 	msg += fmt.Sprintf("(%s line %d)", fn, line)
 	msg += r.LogString(node, true, true)
-	log.Debugf(msg)
+	log.Debug(msg)
 }

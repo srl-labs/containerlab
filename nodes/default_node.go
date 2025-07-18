@@ -5,7 +5,6 @@
 package nodes
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -13,11 +12,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
-	"text/template"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
@@ -29,7 +28,8 @@ import (
 )
 
 // DefaultNode implements the Node interface and is embedded to the structs of all other nodes.
-// It has common fields and methods that every node should typically have. Nodes can override methods if needed.
+// It has common fields and methods that every node should typically have. Nodes can override
+// methods if needed.
 type DefaultNode struct {
 	Cfg              *types.NodeConfig
 	Mgmt             *types.MgmtNet
@@ -144,9 +144,10 @@ func (d *DefaultNode) VerifyHostRequirements() error {
 }
 
 func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
-	// Set the "CLAB_INTFS" variable to the number of interfaces
-	// Which is required by vrnetlab to determine if all configured interfaces are present
-	// such that the internal VM can be started with these interfaces assigned.
+	// Set the "CLAB_INTFS" variable to the number of interfaces (endpoints) a node has.
+	// This env var does not count in the eth0 interface that is automatically created by the container runtime.
+	// This env var is used by some containers (e.g. vrnetlab systems) to postpone the startup until all interfaces
+	// have been added to the container namespace.
 	d.Config().Env[types.CLAB_ENV_INTFS] = strconv.Itoa(len(d.GetEndpoints()))
 
 	// create the container
@@ -167,8 +168,8 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	return nil
 }
 
-// getNSPath retrieves the nodes nspath.
-func (d *DefaultNode) getNSPath(ctx context.Context) (string, error) {
+// GetNSPath retrieves the nodes nspath.
+func (d *DefaultNode) GetNSPath(ctx context.Context) (string, error) {
 	var err error
 	nsp := ""
 
@@ -324,7 +325,7 @@ func (d *DefaultNode) GetMappedInterfaceName(ifName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !(ifIndex >= d.FirstDataIfIndex) {
+	if ifIndex < d.FirstDataIfIndex {
 		return "", fmt.Errorf("extracted interface index for %q is out of bounds: %d ! >= %d", ifName, ifIndex, d.FirstDataIfIndex)
 	}
 	mappedIfName := fmt.Sprintf("%s%d", d.InterfaceMappedPrefix, ifIndex)
@@ -349,49 +350,49 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 }
 
 // GenerateConfig generates configuration for the nodes
-// out of the template based on the node configuration and saves the result to dst.
-func (d *DefaultNode) GenerateConfig(dst, templ string) error {
-	// If the config file is already present in the node dir
-	// we do not regenerate the config unless EnforceStartupConfig is explicitly set to true and startup-config points to a file
-	// this will persist the changes that users make to a running config when booted from some startup config
+// out of the template `t` based on the node configuration and saves the result to dst.
+// If the config file is already present in the node dir we do not regenerate the config unless
+// EnforceStartupConfig is explicitly set to true and startup-config points to a file this will
+// persist the changes that users make to a running config when booted from some startup config.
+func (d *DefaultNode) GenerateConfig(dst, t string) error {
+	// Check for incompatible options
+	if d.Cfg.EnforceStartupConfig && d.Cfg.SuppressStartupConfig {
+		return ErrIncompatibleOptions
+	}
+	if d.Cfg.EnforceStartupConfig && d.Cfg.StartupConfig == "" {
+		return ErrNoStartupConfig
+	}
+
 	if d.Cfg.SuppressStartupConfig {
-		log.Infof("Startup config generation for '%s' node suppressed", d.Cfg.ShortName)
-		return nil
-	} else if d.Cfg.EnforceStartupConfig {
-		log.Infof("Startup config for '%s' node enforced: '%s'", d.Cfg.ShortName, dst)
-		// continue with config generation
-	} else if utils.FileExists(dst) && d.Cfg.StartupConfig == "" {
-		log.Infof("config file '%s' for node '%s' already exists and will not be generated/reset", dst, d.Cfg.ShortName)
+		log.Info("Startup config generation suppressed", "node", d.Cfg.ShortName)
 		return nil
 	}
 
-	log.Debugf("generating config for node %s from file %s", d.Cfg.ShortName, d.Cfg.StartupConfig)
+	if !d.Cfg.EnforceStartupConfig && utils.FileExists(dst) {
+		log.Debug("Existing config found", "node", d.Cfg.ShortName, "path", dst)
+		return nil
+	} else {
+		log.Debug("Generating config", "node", d.Cfg.ShortName, "file", d.Cfg.StartupConfig)
 
-	tpl, err := template.New(filepath.Base(d.Cfg.StartupConfig)).Funcs(utils.TemplateFuncs).Parse(templ)
-	if err != nil {
-		return err
+		cfgBuf, err := utils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
+		if err != nil {
+			return err
+		}
+		log.Debug("Generated config", "node", d.Cfg.ShortName, "content", cfgBuf.String())
+
+		f, err := os.Create(dst)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = f.Write(cfgBuf.Bytes())
+		if err != nil {
+			return err
+		}
 	}
 
-	dstBytes := new(bytes.Buffer)
-
-	err = tpl.Execute(dstBytes, d.Cfg)
-	if err != nil {
-		return err
-	}
-	log.Debugf("node '%s' generated config: %s", d.Cfg.ShortName, dstBytes.String())
-
-	f, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
-	_, err = f.Write(dstBytes.Bytes())
-	if err != nil {
-		f.Close()
-		return err
-	}
-
-	return f.Close()
+	return nil
 }
 
 // NodeOverwrites is an interface that every node implements.
@@ -411,6 +412,7 @@ type NodeOverwrites interface {
 	GetContainerName() string
 	VerifyLicenseFileExists(context.Context) error
 	RunExec(context.Context, *exec.ExecCmd) (*exec.ExecResult, error)
+	GetNSPath(ctx context.Context) (string, error)
 }
 
 // LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
@@ -418,7 +420,7 @@ type NodeOverwrites interface {
 func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) error {
 	nodeCfg := node.Config()
 	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0777)
+	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0o777)
 
 	if nodeCfg.StartupConfig != "" {
 		// dstCfg is a path to a file on the clab host that will have rendered configuration
@@ -552,7 +554,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 
 func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve nodes nspath
-	nsp, err := d.getNSPath(ctx)
+	nsp, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {
 		return err
 	}
@@ -576,7 +578,7 @@ func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link,
 // ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
 	// retrieve nodes nspath
-	nspath, err := d.getNSPath(ctx)
+	nspath, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ package utils
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -22,15 +23,19 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/steiler/acls"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 )
 
 var (
 	errNonRegularFile = errors.New("non-regular file")
 	errHTTPFetch      = errors.New("failed to fetch http(s) resource")
+	errS3Fetch        = errors.New("failed to fetch s3 resource")
 )
 
 // FileExists returns true if a file referenced by filename exists & accessible.
@@ -61,7 +66,7 @@ func DirExists(filename string) bool {
 // mode is the desired target file permissions, e.g. "0644".
 func CopyFile(src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if !IsHttpURL(src, false) {
+	if !IsHttpURL(src, false) && !IsS3URL(src) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -104,9 +109,20 @@ func IsHttpURL(s string, allowSchemaless bool) bool {
 		return false
 	}
 
-	//
+	// if schemaless is not allowed and the string does not contain a schema, it is not an URL
 	if !allowSchemaless && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
 		return false
+	}
+
+	// if schemaless is allowed and the string does not contain a schema, but contains a dot
+	// in any a non-domain portion then it is not a valid URL
+	if allowSchemaless && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		split := strings.SplitN(s, "/", 2)
+		if len(split) > 1 {
+			if strings.Contains(split[1], ".") {
+				return false
+			}
+		}
 	}
 
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
@@ -118,15 +134,42 @@ func IsHttpURL(s string, allowSchemaless bool) bool {
 	return err == nil && u.Host != ""
 }
 
+// IsS3URL checks if the URL is an S3 URL (s3://bucket/key format).
+func IsS3URL(s string) bool {
+	return strings.HasPrefix(s, "s3://")
+}
+
+// ParseS3URL parses an S3 URL and returns the bucket and key.
+func ParseS3URL(s3URL string) (bucket, key string, err error) {
+	if !IsS3URL(s3URL) {
+		return "", "", fmt.Errorf("not an S3 URL: %s", s3URL)
+	}
+
+	u, err := url.Parse(s3URL)
+	if err != nil {
+		return "", "", err
+	}
+
+	bucket = u.Host
+	key = strings.TrimPrefix(u.Path, "/")
+
+	if bucket == "" || key == "" {
+		return "", "", fmt.Errorf("invalid S3 URL format: %s", s3URL)
+	}
+
+	return bucket, key, nil
+}
+
 // CopyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
-// src can be an http(s) URL as well.
+// src can be an http(s) URL or an S3 URL.
 func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
-	if IsHttpURL(src, false) {
+	switch {
+	case IsHttpURL(src, false):
 		client := NewHTTPClient()
 
 		// download using client
@@ -135,8 +178,55 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 			return fmt.Errorf("%w: %s", errHTTPFetch, src)
 		}
 
+		defer resp.Body.Close()
+
 		in = resp.Body
-	} else {
+
+	case IsS3URL(src):
+		bucket, key, err := ParseS3URL(src)
+		if err != nil {
+			return err
+		}
+
+		// Get region from environment, default to us-east-1
+		region := os.Getenv("AWS_REGION")
+		if region == "" {
+			region = "us-east-1"
+		}
+
+		// Create credential chain that mimics AWS SDK behavior
+		credProviders := []credentials.Provider{
+			&credentials.EnvAWS{},                                             // 1. Environment variables
+			&credentials.FileAWSCredentials{},                                 // 2. ~/.aws/credentials (default profile)
+			&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
+		}
+
+		// Create MinIO client with chained credentials
+		client, err := minio.New("s3.amazonaws.com", &minio.Options{
+			Creds:  credentials.NewChainCredentials(credProviders),
+			Secure: true,
+			Region: region,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create S3 client: %w", err)
+		}
+
+		// Get object from S3
+		object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
+		if err != nil {
+			return fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
+		}
+
+		// Verify object exists by reading its stats
+		_, err = object.Stat()
+		if err != nil {
+			object.Close()
+			return fmt.Errorf("%w: %s: object not found or access denied: %v", errS3Fetch, src, err)
+		}
+
+		in = object
+
+	default:
 		in, err = os.Open(src)
 		if err != nil {
 			return err
@@ -146,7 +236,7 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 
 	// create directories if needed, since we promise to create the file
 	// if it doesn't exist
-	err = os.MkdirAll(filepath.Dir(dst), 0750)
+	err = os.MkdirAll(filepath.Dir(dst), 0o750)
 	if err != nil {
 		return err
 	}
@@ -294,11 +384,11 @@ func ResolvePath(p, base string) string {
 		return p
 	}
 
-	switch {
+	switch p[0] {
 	// resolve ~/ path
-	case p[0] == '~':
+	case '~':
 		p = ExpandHome(p)
-	case p[0] == '/':
+	case '/':
 		return p
 	default:
 		// join relative path with the base path
@@ -325,6 +415,9 @@ func FilenameForURL(rawUrl string) string {
 		if err != nil {
 			return filepath.Base(u.Path)
 		}
+
+		defer resp.Body.Close()
+
 		if cd := resp.Header.Get("Content-Disposition"); cd != "" {
 			if _, params, err := mime.ParseMediaType(cd); err == nil {
 				return params["filename"]
@@ -374,7 +467,7 @@ func NewHTTPClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-func getRealUserIDs() (int, int, error) {
+func GetRealUserIDs() (int, int, error) {
 	// Here we check whether SUDO set the SUDO_UID and SUDO_GID variables
 	var userUID, userGID int
 	var err error
@@ -404,7 +497,7 @@ func getRealUserIDs() (int, int, error) {
 // AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds ACL rules:
 // rwx for the real UID user and r-x for the real GID group.
 func AdjustFileACLs(fsPath string) error {
-	userUID, userGID, err := getRealUserIDs()
+	userUID, userGID, err := GetRealUserIDs()
 	if err != nil {
 		return fmt.Errorf("unable to retrieve real user UID and GID: %v", err)
 	}
@@ -452,7 +545,7 @@ func AdjustFileACLs(fsPath string) error {
 // SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from getRealUserIDs,
 // which should reflect the non-root user's UID and GID.
 func SetUIDAndGID(fsPath string) error {
-	userUID, userGID, err := getRealUserIDs()
+	userUID, userGID, err := GetRealUserIDs()
 	if err != nil {
 		return fmt.Errorf("unable to retrieve real user UID and GID: %v", err)
 	}

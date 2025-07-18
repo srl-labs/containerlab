@@ -205,7 +205,7 @@ As you can see, containerlab fits this bill quite nicely. Dave goes on to [expla
 
 ### Powering up your Netbox labs with Containerlab
 
-<small>:material-text: [Blog](https://netboxlabs.com/blog/network-configuration-assurance-with-netbox-and-ansible/) by [Rich Bibby](https://netboxlabs.com/author/richard-bibby/) · :material-calendar: 2024-03-20</small>
+<small>:material-text: [Blog](https://netboxlabs.com/blog/network-configuration-assurance-with-netbox-and-ansible/) by Rich Bibby · :material-calendar: 2024-03-20</small>
 
 Our friends at NetboxLabs have authored a nice blog post - Network Configuration Assurance With NetBox and Ansible - and they have used containerlab to create a lab environment to present their solution.
 

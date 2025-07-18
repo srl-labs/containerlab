@@ -18,19 +18,23 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 
 Containerlab focuses on the containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
-* [Nokia SR-Linux](https://containerlab.dev/manual/kinds/srl/)
+* [Nokia SR Linux](https://containerlab.dev/manual/kinds/srl/)
+* [Nokia virtual SR OS (SR-SIM)](https://containerlab.dev/manual/kinds/sros/)
 * [Arista cEOS](https://containerlab.dev/manual/kinds/ceos/)
 * [Cisco XRd](https://containerlab.dev/manual/kinds/xrd/)
-* [Azure SONiC](https://containerlab.dev/manual/kinds/sonic-vs/)
+* [SONiC](https://containerlab.dev/manual/kinds/sonic-vs/)
 * [Juniper cRPD](https://containerlab.dev/manual/kinds/crpd/)
 * [Cumulus VX](https://containerlab.dev/manual/kinds/cvx/)
 * [Keysight IXIA-C](https://containerlab.dev/manual/kinds/keysight_ixia-c-one/)
 * [RARE/FreeRtr](https://containerlab.dev/manual/kinds/rare-freertr/)
 * [Ostinato](https://containerlab.dev/manual/kinds/ostinato/)
+* [6WIND VSR](https://containerlab.dev/manual/kinds/6wind_vsr/)
+* [FD.io VPP](https://containerlab.dev/manual/kinds/fdio_vpp/)
+* [VyOS Networks VyOS](https://containerlab.dev/manual/kinds/vyosnetworks_vyos/)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](https://containerlab.dev/manual/vrnetlab/):
 
-* [Nokia virtual SR OS (vSim/VSR)](https://containerlab.dev/manual/kinds/vr-sros/)
+* [Nokia virtual SR OS (vSim)](https://containerlab.dev/manual/kinds/vr-sros/)
 * [Juniper vMX](https://containerlab.dev/manual/kinds/vr-vmx/)
 * [Juniper vQFX](https://containerlab.dev/manual/kinds/vr-vqfx/)
 * [Juniper vSRX](https://containerlab.dev/manual/kinds/vr-vsrx/)
@@ -51,6 +55,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Huawei VRP](https://containerlab.dev/manual/kinds/huawei_vrp)
 * [OpenBSD](https://containerlab.dev/manual/kinds/openbsd)
 * [FreeBSD](https://containerlab.dev/manual/kinds/freebsd)
+* [OpenWRT](https://containerlab.dev/manual/kinds/openwrt/)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span contain all the needed variants of nodes:
 

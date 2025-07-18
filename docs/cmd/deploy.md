@@ -65,6 +65,10 @@ The following URL formats are supported:
 
 Containerlab distinct HTTP URLs from GitHub/GitLab by checking if github.com or gitlab.com is present in the URL. If not, it will treat the URL as a plain HTTP(S) URL.
 
+###### S3
+
+Containerlab supports using S3 URLs to retrieve topology files and startup configurations for network devices. Check out the documentation on [S3 usage](../manual/s3-usage-example.md) for more details.
+
 #### name
 
 With the global `--name | -n` flag a user sets a lab name. This value will override the lab name value passed in the topology definition file.
@@ -142,6 +146,18 @@ The `--skip-labdir-acl` flag can be used to skip the lab directory access contro
 The extended File ACLs are provisioned for the lab directory by default, unless this flag is set. Extended File ACLs allow a sudo user to access the files in the lab directory that might be created by the `root` user from within the container node.
 
 While this is useful in most cases, sometimes extended File ACLs might prevent your lab from working, especially when your lab directory end up being mounted from the network filesystem (NFS, CIFS, etc.). In such cases, you can use this flag to skip the ACL provisioning.
+
+#### owner
+
+The local `--owner` flag allows you to specify a custom owner for the lab. This value will be applied as the owner label for all nodes in the lab.
+
+This flag is designed for multi-user environments where you need to track ownership of lab resources. Only users who are members of the `clab_admins` group can set a custom owner. If a non-admin user attempts to set an owner, the flag will be ignored with a warning, and the current user will be used as the owner instead.
+
+Example:
+
+```bash
+containerlab deploy -t mylab.clab.yml --owner alice
+```
 
 ### Environment variables
 

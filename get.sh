@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # The install script is based off of the Apache 2.0 script from Helm,
 # https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
 
@@ -10,6 +12,7 @@
 : ${REPO_NAME:="srl-labs/containerlab"}
 : ${REPO_URL:="https://github.com/$REPO_NAME"}
 : ${PROJECT_URL:="https://containerlab.dev"}
+: ${LATEST_VERSION_URL:="${REPO_URL}/releases/latest"}
 
 # detectArch discovers the architecture for this system.
 detectArch() {
@@ -95,49 +98,44 @@ verifyOpenssl() {
         fi
     fi
 }
+# Handle version retrieval error
+handleVersionError() {
+    echo "Failed to retrieve latest containerlab version"
+    exit 1
+}
+
+# Process version into tags
+processVersion() {
+    local version=$1
+    [ -z "$version" ] && handleVersionError
+    TAG_WO_VER=$(echo "${version}" | cut -c 2-)
+    TAG="${version}"
+}
 
 # setDesiredVersion sets the desired version either to an explicit version provided by a user
 # or to the latest release available on github releases
 setDesiredVersion() {
     if [ "x$DESIRED_VERSION" == "x" ]; then
-        # check if GITHUB_TOKEN env var is set and use it for API calls
-        local gh_token=${GITHUB_TOKEN:-}
-        if [ ! -z "$gh_token" ]; then
-            local curl_auth_header=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
-            local wget_auth_header=(--header="Authorization: Bearer ${GITHUB_TOKEN}")
-        fi
         # when desired version is not provided
-        # get latest tag from the gh releases
+        # get latest tag from the <repo>/internal/versions.yml
         if type "curl" &>/dev/null; then
-            local latest_release_url=$(curl -s "${curl_auth_header[@]}" https://api.github.com/repos/$REPO_NAME/releases/latest | sed '5q;d' | cut -d '"' -f 4)
-            if [ -z "$latest_release_url" ]; then
-                echo "Failed to retrieve latest release URL due to rate limiting. Please provide env var GITHUB_TOKEN with your GitHub personal access token."
-                exit 1
-            fi
-            TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')
-            # tag with stripped `v` prefix
-            TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
+            local latest_version=$(curl -s -I ${LATEST_VERSION_URL} | grep -i "location:" | awk -F'/' '{print $NF}' | tr -cd '[:alnum:].-')
+            processVersion "$latest_version"
         elif type "wget" &>/dev/null; then
-            # get latest release info and get 5th line out of the response to get the URL
-            local latest_release_url=$(wget -q "${wget_auth_header[@]}" https://api.github.com/repos/$REPO_NAME/releases/latest -O- | sed '5q;d' | cut -d '"' -f 4)
-            if [ -z "$latest_release_url" ]; then
-                echo "Failed to retrieve latest release URL due to rate limiting. Please provide env var GITHUB_TOKEN with your GitHub personal access token."
-                exit 1
-            fi
-            TAG=$(echo $latest_release_url | cut -d '"' -f 2 | awk -F "/" '{print $NF}')
-            TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
+            local latest_version=$(wget -qO- -S --spider ${LATEST_VERSION_URL} 2>&1 | grep -i "location:" | awk -F'/' '{print $NF}' | tr -cd '[:alnum:].-')
+            processVersion "$latest_version"
         fi
     else
         TAG=$DESIRED_VERSION
         TAG_WO_VER=$(echo "${TAG}" | cut -c 2-)
 
         if type "curl" &>/dev/null; then
-            if ! curl -s -o /dev/null --fail https://api.github.com/repos/$REPO_NAME/releases/tags/$DESIRED_VERSION; then
+            if ! curl -s -o /dev/null --fail https://github.com/srl-labs/containerlab/releases/tag/$DESIRED_VERSION; then
                 echo "release $DESIRED_VERSION not found"
                 exit 1
             fi
         elif type "wget" &>/dev/null; then
-            if ! wget -q https://api.github.com/repos/$REPO_NAME/releases/tags/$DESIRED_VERSION; then
+            if ! wget -q https://github.com/srl-labs/containerlab/releases/tag/$DESIRED_VERSION; then
                 echo "release $DESIRED_VERSION not found"
                 exit 1
             fi
@@ -224,7 +222,7 @@ downloadFile() {
     CHECKSUM_URL="${REPO_URL}/releases/download/${TAG}/checksums.txt"
     TMP_FILE="$TMP_ROOT/$ARCHIVE"
     SUM_FILE="$TMP_ROOT/checksums.txt"
-    echo "Downloading $DOWNLOAD_URL"
+    echo "Downloading ${DOWNLOAD_URL}"
     if type "curl" &>/dev/null; then
         curl -SsL "$CHECKSUM_URL" -o "$SUM_FILE"
         curl -SsL "$DOWNLOAD_URL" -o "$TMP_FILE"
@@ -256,7 +254,7 @@ installFile() {
         runAsRoot install -m 4755 "$TMP_ROOT/$BINARY_NAME" "$BIN_INSTALL_DIR/$BINARY_NAME"
         # Add clab admins group and add current user to it
         runAsRoot groupadd -r clab_admins
-        runAsRoot usermod -aG "$SUDO_USER" clab_admins
+        runAsRoot usermod -aG clab_admins "$SUDO_USER"
         runAsRoot touch /etc/containerlab/suid_setup_done
     fi
     echo "$BINARY_NAME installed into $BIN_INSTALL_DIR/$BINARY_NAME"
@@ -332,7 +330,7 @@ help() {
     echo -e "\t[--verify-checksum]  ->> verify checksum of the downloaded file"
 }
 
-# removes temporary directory used to download artefacts
+# removes temporary directory used to download artifacts
 cleanup() {
     if [[ -d "${TMP_ROOT:-}" ]]; then
         rm -rf "$TMP_ROOT"

@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -188,7 +188,6 @@ func (lr *LinkVxlanRaw) resolveLocalEndpoint(stitched bool, params *ResolveParam
 
 		// resolve local Endpoint
 		return vxlanRawEp.Resolve(params, link)
-
 	} else {
 		// resolve local Endpoint
 		return lr.Endpoint.Resolve(params, link)

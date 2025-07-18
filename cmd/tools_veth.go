@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
@@ -143,7 +143,7 @@ func createNodes(_ context.Context, c *clab.CLab, AEnd, BEnd parsedEndpoint, rt 
 				return err
 			}
 
-		case links.LinkEndpointTypeBridge:
+		case links.LinkEndpointTypeBridge, links.LinkEndpointTypeBridgeNS:
 			err := createFakeNode(c, "bridge", &types.NodeConfig{
 				ShortName: epDefinition.Node,
 				LongName:  epDefinition.Node,
@@ -208,6 +208,8 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 		switch arr[0] {
 		case "bridge", "ovs-bridge":
 			kind = links.LinkEndpointTypeBridge
+		case "bridge-ns":
+			kind = links.LinkEndpointTypeBridgeNS
 		default:
 			kind = links.LinkEndpointTypeVeth
 		}

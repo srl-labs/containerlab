@@ -11,6 +11,10 @@ CVX nodes launched with containerlab come up with:
 * the management interface `eth0` is configured with IPv4/6 addresses as assigned by either the container runtime or DHCP
 * `root` user created with password `root`
 
+!!! note
+    Cumulus VX has been **discontinued** and the last version is v5.12.1. This change has been announced in the [Cumulus Linux 5.13 documentation](https://docs.nvidia.com/networking-ethernet-software/cumulus-linux-513/Whats-New/#cumulus-vx):
+    > NVIDIA no longer releases Cumulus VX as a standalone image. To simulate a Cumulus Linux switch, use NVIDIA AIR.
+
 ## Mode of operation
 
 CVX supports two modes of operation:

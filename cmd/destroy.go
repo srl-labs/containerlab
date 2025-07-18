@@ -5,12 +5,16 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
@@ -18,12 +22,14 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	all         bool
 	cleanup     bool
 	keepMgmtNet bool
+	yes         bool
 )
 
 // destroyCmd represents the destroy command.
@@ -37,11 +43,13 @@ var destroyCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(destroyCmd)
-	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
+	RootCmd.AddCommand(destroyCmd)
+	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false,
+		"delete lab directory. Cannot be used with node-filter")
 	destroyCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
 		"attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
+	destroyCmd.Flags().BoolVarP(&yes, "yes", "y", false, "auto-approve deletion when used with --all (skips confirmation prompt)")
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
@@ -50,6 +58,11 @@ func init() {
 }
 
 func destroyFn(_ *cobra.Command, _ []string) error {
+	// cleanup doesn't make sense with node-filter
+	if len(common.NodeFilter) != 0 && cleanup {
+		return fmt.Errorf("cleanup cannot be used with node-filter")
+	}
+
 	var err error
 	var labs []*clab.CLab
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,13 +74,34 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 
 	switch {
 	case !all:
+		log.Debug("topology file", "file", common.Topo)
 		cnts, err := listContainers(ctx, common.Topo)
 		if err != nil {
 			return err
 		}
 
 		if len(cnts) == 0 {
-			log.Info("no containerlab containers found")
+			log.Info("No containerlab containers found")
+			if cleanup {
+				// do our best to find a labdir
+				var labDirs []string
+				if common.Topo != "" {
+					topoDir := filepath.Dir(common.Topo)
+					log.Debug("Looking for lab directory next to topology file", "path", topoDir)
+					labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
+				} else if len(labDirs) == 0 {
+					// Look in the current directory
+					log.Debug("Looking for lab directory in current directory")
+					labDirs, _ = filepath.Glob("clab-*")
+				}
+				if len(labDirs) != 0 {
+					// we only really care about the first found
+					log.Info("Removing lab directory", "path", labDirs[0])
+					if err := os.RemoveAll(labDirs[0]); err != nil {
+						log.Errorf("error deleting lab directory: %v", err)
+					}
+				}
+			}
 			return nil
 		}
 
@@ -90,7 +124,16 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	log.Debugf("We got the following topos struct for destroy: %+v", topos)
+	log.Debugf("We got the following topologies for destroy: %+v", topos)
+
+	// Interactive confirmation prompt if running in a terminal and --all is set
+	if all && !yes && utils.IsTerminal(os.Stdin.Fd()) {
+		err := promptToDestroyAll(topos)
+		if err != nil {
+			return err
+		}
+	}
+
 	for topo, labdir := range topos {
 		opts := []clab.ClabOption{
 			clab.WithTimeout(common.Timeout),
@@ -112,6 +155,9 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		if keepMgmtNet {
 			opts = append(opts, clab.WithKeepMgmtNet())
 		}
+		if common.Name != "" {
+			opts = append(opts, clab.WithLabName(common.Name))
+		}
 
 		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
 		nc, err := clab.NewContainerLab(opts...)
@@ -119,7 +165,8 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
-		if labdir != "" {
+		// check if labdir exists and is a directory
+		if labdir != "" && utils.FileOrDirExists(labdir) {
 			// adjust the labdir. Usually we take the PWD. but now on destroy time,
 			// we might be in a different Dir.
 			err = nc.TopoPaths.SetLabDir(labdir)
@@ -144,7 +191,6 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-
 		labs = append(labs, nc)
 	}
 
@@ -225,4 +271,35 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 	}
 
 	return containers, nil
+}
+
+func promptToDestroyAll(topos map[string]string) error {
+	var sb strings.Builder
+	idx := 1
+	for topo, labDir := range topos {
+		sb.WriteString(fmt.Sprintf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labDir))
+		idx++
+	}
+	log.Warn("The following labs will be removed:", "labs", sb.String())
+
+	warningStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1")) // red color (ansi code 1)
+	prompt := "Are you sure you want to remove all labs listed above? Enter 'y', to confirm or ENTER to abort: "
+	fmt.Print(warningStyle.Render(prompt))
+
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read user input: %v", err)
+	}
+
+	answer := strings.TrimSpace(input)
+	if answer == "" {
+		return errors.New("aborted by the user. No labs were removed")
+	}
+	answer = strings.ToLower(answer)
+	if answer != "y" && answer != "yes" {
+		return errors.New("aborted by the user. No labs were removed")
+	}
+
+	return nil
 }

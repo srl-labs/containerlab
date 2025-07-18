@@ -11,7 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/clab/dependency_manager"
@@ -47,6 +47,9 @@ var deployFormat string
 // skipLabDirFileACLs skips provisioning of extended File ACLs for the Lab directory.
 var skipLabDirFileACLs bool
 
+// labOwner flag for setting the owner label.
+var labOwner string
+
 // deployCmd represents the deploy command.
 var deployCmd = &cobra.Command{
 	Use:          "deploy",
@@ -59,7 +62,7 @@ var deployCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(deployCmd)
+	RootCmd.AddCommand(deployCmd)
 	deployCmd.Flags().BoolVarP(&common.Graph, "graph", "g", false, "generate topology graph")
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
@@ -76,18 +79,25 @@ func init() {
 		"comma separated list of nodes to include")
 	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
 		"skip the lab directory extended ACLs provisioning")
+	deployCmd.Flags().StringVarP(&labOwner, "owner", "", "",
+		"lab owner name (only for users in clab_admins group)")
 }
 
 // deployFn function runs deploy sub command.
 func deployFn(_ *cobra.Command, _ []string) error {
 	var err error
 
-	log.Infof("Containerlab v%s started", version.Version)
+	log.Info("Containerlab started", "version", version.Version)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	setupCTRLCHandler(cancel)
+
+	// Check for owner from environment (set by generate command)
+	if labOwner == "" && os.Getenv("CLAB_OWNER") != "" {
+		labOwner = os.Getenv("CLAB_OWNER")
+	}
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(common.Timeout),
@@ -107,6 +117,9 @@ func deployFn(_ *cobra.Command, _ []string) error {
 	// process optional settings
 	if common.Name != "" {
 		opts = append(opts, clab.WithLabName(common.Name))
+	}
+	if labOwner != "" {
+		opts = append(opts, clab.WithLabOwner(labOwner))
 	}
 	if mgmtNetName != "" {
 		opts = append(opts, clab.WithManagementNetworkName(mgmtNetName))

@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -36,7 +36,7 @@ func parseSSHVersion(in string) string {
 	return match[1]
 }
 
-// MarshalSSHPubKeys marshales the ssh public keys
+// MarshalSSHPubKeys marshals the ssh public keys
 // and a string slice that contains string representations of the keys.
 func MarshalSSHPubKeys(in []ssh.PublicKey) []string {
 	r := []string{}
@@ -45,7 +45,6 @@ func MarshalSSHPubKeys(in []ssh.PublicKey) []string {
 		// extract the keys in AuthorizedKeys format (e.g. "ssh-rsa <KEY>")
 		ks := bytes.TrimSpace(ssh.MarshalAuthorizedKey(k))
 		r = append(r, string(ks))
-
 	}
 
 	return r

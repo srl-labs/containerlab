@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/host"
@@ -114,7 +114,6 @@ func (d *DependencyNode) runExecs(ctx context.Context, execPhase types.ExecPhase
 	var execResult *exec.ExecResult
 	var hostname string
 	for _, exec := range execs {
-
 		execCmd, err := exec.GetExecCmd()
 		if err != nil {
 			log.Errorf("%s stage %s error parsing command: %s", d.GetShortName(), stage, exec.String())

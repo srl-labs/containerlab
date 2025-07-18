@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	api "github.com/weaveworks/ignite/pkg/apis/ignite"
 	meta "github.com/weaveworks/ignite/pkg/apis/meta/v1alpha1"
 	igniteConstants "github.com/weaveworks/ignite/pkg/constants"
@@ -472,7 +472,7 @@ func (*IgniteRuntime) IsHealthy(_ context.Context, _ string) (bool, error) {
 	return true, nil
 }
 
-func (*IgniteRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error {
+func (*IgniteRuntime) WriteToStdinNoWait(_ context.Context, cID string, data []byte) error {
 	log.Infof("WriteToStdinNoWait is not yet implemented for Ignite runtime")
 	return nil
 }
@@ -483,5 +483,13 @@ func (*IgniteRuntime) CheckConnection(_ context.Context) error {
 		return fmt.Errorf("cannot find %q: %s", kvmPath, err)
 	}
 
+	return nil
+}
+
+func (*IgniteRuntime) GetRuntimeSocket() (string, error) {
+	return "", fmt.Errorf("GetRuntimeSocket() is unimplemented for ignite runtime")
+}
+
+func (*IgniteRuntime) GetCooCBindMounts() types.Binds {
 	return nil
 }

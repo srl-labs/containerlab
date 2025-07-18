@@ -22,15 +22,18 @@ var upgradeCmd = &cobra.Command{
 	Use:     "upgrade",
 	Short:   "upgrade containerlab to latest available version",
 	PreRunE: common.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		f, err := os.CreateTemp("", "containerlab")
 		defer os.Remove(f.Name())
 		if err != nil {
 			return fmt.Errorf("failed to create temp file: %w", err)
 		}
-		_ = downloadFile(downloadURL, f)
+		err = downloadFile(downloadURL, f)
+		if err != nil {
+			return fmt.Errorf("failed to download upgrade script: %w", err)
+		}
 
-		c := exec.Command("sudo", "bash", f.Name())
+		c := exec.Command("sudo", "-E", "bash", f.Name())
 		// pass the environment variables to the upgrade script
 		// so that GITHUB_TOKEN is available
 		c.Env = os.Environ()
@@ -48,8 +51,15 @@ var upgradeCmd = &cobra.Command{
 
 // downloadFile will download a file from a URL and write its content to a file.
 func downloadFile(url string, file *os.File) error {
+	// Create an HTTP client with specific transport
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+	}
+
 	// Get the data
-	resp, err := http.Get(url)
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}

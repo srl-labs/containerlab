@@ -95,7 +95,7 @@ func (c *CLab) DeleteEntriesFromHostsFile() error {
 		return errors.New("missing containerlab name")
 	}
 
-	f, err := os.OpenFile(clabHostsFilename, os.O_RDWR, 0644) // skipcq: GSC-G302
+	f, err := os.OpenFile(clabHostsFilename, os.O_RDWR, 0o644) // skipcq: GSC-G302
 	if err != nil {
 		return err
 	}

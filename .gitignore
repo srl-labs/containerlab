@@ -48,3 +48,7 @@ tests/out
 # readd test labDir files
 !clab/test_data/clab-*
 __pycache__
+
+.env
+
+.zed

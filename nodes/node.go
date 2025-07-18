@@ -36,8 +36,14 @@ var (
 
 	// ErrCommandExecError is an error returned when a command is failed to execute on a given node.
 	ErrCommandExecError = errors.New("command execution error")
-	// ErrContainersNotFound indicated that for a given node no containers where found in the runtime.
+	// ErrContainersNotFound indicated that for a given node no containers where found in the
+	// runtime.
 	ErrContainersNotFound = errors.New("containers not found")
+	// ErrNoStartupConfig indicates that we are supposed to enforce a startup config but none are
+	// provided.
+	ErrNoStartupConfig = errors.New("no startup-config provided")
+	// ErrIncompatibleOptions for options that are mutually exclusive.
+	ErrIncompatibleOptions = errors.New("incompatible options")
 )
 
 // SetNonDefaultRuntimePerKind sets a non default runtime for kinds that requires that (see cvx).
@@ -59,7 +65,9 @@ type PreDeployParams struct {
 }
 
 // DeployParams contains parameters for the Deploy function.
-type DeployParams struct{}
+type DeployParams struct {
+	Nodes map[string]Node
+}
 
 // PostDeployParams contains parameters for the PostDeploy function.
 type PostDeployParams struct {
@@ -74,7 +82,7 @@ type Node interface {
 	DeleteNetnsSymlink() (err error)
 	Config() *types.NodeConfig // Config returns the nodes configuration
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.
-	CheckDeploymentConditions(context.Context) error
+	CheckDeploymentConditions(ctx context.Context) error
 	PreDeploy(ctx context.Context, params *PreDeployParams) error
 	Deploy(context.Context, *DeployParams) error // Deploy triggers the deployment of this node
 	PostDeploy(ctx context.Context, params *PostDeployParams) error
@@ -113,6 +121,7 @@ type Node interface {
 	RunExecFromConfig(context.Context, *exec.ExecCollection) error
 	IsHealthy(ctx context.Context) (bool, error)
 	GetContainerStatus(ctx context.Context) runtime.ContainerStatus
+	GetNSPath(ctx context.Context) (string, error)
 }
 
 type NodeOption func(Node)

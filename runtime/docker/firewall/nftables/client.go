@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/charmbracelet/log"
 	"github.com/google/nftables"
 	"github.com/google/nftables/expr"
 	"github.com/google/nftables/xt"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -319,7 +319,6 @@ func (nftC *NftablesClient) ruleExists(rule definitions.FirewallRule, rules []*n
 		if nameMatch && commentMatch && actionMatch && directionMatch {
 			return true
 		}
-
 	}
 
 	return false

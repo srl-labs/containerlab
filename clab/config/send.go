@@ -15,7 +15,8 @@ func Send(cs *NodeConfig, _ string) error {
 		ct = "ssh"
 	}
 
-	if ct == "ssh" {
+	switch ct {
+	case "ssh":
 		ssh_cred := cs.Credentials
 		if err != nil {
 			return err
@@ -35,9 +36,9 @@ func Send(cs *NodeConfig, _ string) error {
 		if err != nil {
 			return err
 		}
-	} else if ct == "grpc" {
+	case "grpc":
 		// NewGRPCTransport
-	} else {
+	default:
 		return fmt.Errorf("unknown transport: %s", ct)
 	}
 

@@ -5,7 +5,6 @@
 package vr_ftdv
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 
@@ -26,12 +25,18 @@ var (
 const (
 	generateable     = true
 	generateIfFormat = "eth%d"
+
+	scrapliPlatformName = "cisco_ftd"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
 	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
 	r.Register(kindNames, func() nodes.Node {
 		return new(vrFtdv)
@@ -44,7 +49,7 @@ type vrFtdv struct {
 
 func (n *vrFtdv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n)
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -74,14 +79,5 @@ func (n *vrFtdv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.InterfaceOffset = InterfaceOffset
 	n.InterfaceHelp = InterfaceHelp
 
-	return nil
-}
-
-func (n *vrFtdv) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
 	return nil
 }

@@ -20,6 +20,7 @@ import (
 	"github.com/docker/go-units"
 	"golang.org/x/sys/unix"
 
+	"github.com/charmbracelet/log"
 	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -28,13 +29,13 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/mod/semver"
 )
 
 const (
@@ -44,7 +45,18 @@ const (
 	rLimitMaxValue = 1048576
 	// defaultDockerNetwork is a name of a docker network that docker uses by default when creating containers.
 	defaultDockerNetwork = "bridge"
+
+	natUnprotectedValue         = "nat-unprotected"
+	bridgeGatewayModeIPv4Option = "com.docker.network.bridge.gateway_mode_ipv4"
+	bridgeGatewayModeIPv6Option = "com.docker.network.bridge.gateway_mode_ipv6"
 )
+
+// DeviceMapping represents the device mapping between the host and the container.
+type DeviceMapping struct {
+	PathOnHost        string
+	PathInContainer   string
+	CgroupPermissions string
+}
 
 func init() {
 	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
@@ -55,9 +67,10 @@ func init() {
 }
 
 type DockerRuntime struct {
-	config runtime.RuntimeConfig
-	Client *dockerC.Client
-	mgmt   *types.MgmtNet
+	config  runtime.RuntimeConfig
+	Client  *dockerC.Client
+	mgmt    *types.MgmtNet
+	version string
 }
 
 func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
@@ -71,6 +84,16 @@ func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 		o(d)
 	}
 	d.config.VerifyLinkParams = links.NewVerifyLinkParams()
+
+	// Retrieve Docker version to determine whether to apply certain overrides
+	dockerVersion, err := d.Client.ServerVersion(context.Background())
+	if err != nil {
+		return err
+	}
+
+	// Needs to be proper SemVer for comparison
+	d.version = "v" + dockerVersion.Version
+
 	return nil
 }
 
@@ -193,9 +216,12 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 // skipcq: GO-R1005
 func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string) (string, error) {
 	var err error
-	log.Debugf("Network %q does not exist", d.mgmt.Network)
-	log.Infof("Creating docker network: Name=%q, IPv4Subnet=%q, IPv6Subnet=%q, MTU=%d",
-		d.mgmt.Network, d.mgmt.IPv4Subnet, d.mgmt.IPv6Subnet, d.mgmt.MTU)
+	log.Debug("Network does not exist", "name", d.mgmt.Network)
+	log.Info("Creating docker network",
+		"name", d.mgmt.Network,
+		"IPv4 subnet", d.mgmt.IPv4Subnet,
+		"IPv6 subnet", d.mgmt.IPv6Subnet,
+		"MTU", d.mgmt.MTU)
 
 	enableIPv6 := false
 	var ipamConfig []networkapi.IPAMConfig
@@ -264,6 +290,20 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 
 	if bridgeName != "" {
 		netwOpts["com.docker.network.bridge.name"] = bridgeName
+	}
+
+	// nat-unprotected mode is needed starting in Docker release 28 to access all ports without exposing them explicitly
+	// see https://github.com/srl-labs/containerlab/issues/2638
+	if semver.Compare(d.version, "v28.0.0") > 0 {
+		log.Debug("Using Docker version 28 or later, enabling NAT unprotected mode on bridge")
+		netwOpts[bridgeGatewayModeIPv4Option] = natUnprotectedValue
+		netwOpts[bridgeGatewayModeIPv6Option] = natUnprotectedValue
+	}
+
+	// Merge in bridge network driver options from topology file
+	for k, v := range d.mgmt.DriverOpts {
+		log.Debug("Adding bridge network driver option", "option", k, "value", v)
+		netwOpts[k] = v
 	}
 
 	opts := networkapi.CreateOptions{
@@ -344,7 +384,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	log.Debugf("Enable LLDP on the linux bridge %s", d.mgmt.Bridge)
 	file := "/sys/class/net/" + d.mgmt.Bridge + "/bridge/group_fwd_mask"
 
-	err = os.WriteFile(file, []byte(strconv.Itoa(16384)), 0640) // skipcq: GO-S2306
+	err = os.WriteFile(file, []byte(strconv.Itoa(16384)), 0o640) // skipcq: GO-S2306
 	if err != nil {
 		log.Warnf("failed to enable LLDP on docker bridge: %v", err)
 	}
@@ -411,7 +451,7 @@ func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 
 // CreateContainer creates a docker container (but does not start it).
 func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { // skipcq: GO-R1005
-	log.Infof("Creating container: %q", node.ShortName)
+	log.Info("Creating container", "name", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
@@ -477,6 +517,16 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	if rlimit.Max > rLimitMaxValue {
 		rlimit.Max = rLimitMaxValue
 	}
+	// Iterate through each Device
+	for _, str := range node.Devices {
+		// Perform your action on each string
+		mappings := container.DeviceMapping{}
+		mappings.PathOnHost = str
+		mappings.PathInContainer = str
+		mappings.CgroupPermissions = "rwm"
+		resources.Devices = append(resources.Devices, mappings)
+	}
+
 	ulimit := units.Ulimit{
 		Name: "nofile",
 		Hard: int64(rlimit.Max),
@@ -488,6 +538,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
 		Privileged:   true,
+		PidMode:      "",
 		// Network mode will be defined below via switch
 		NetworkMode: "",
 		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
@@ -503,7 +554,23 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 
 	containerNetworkingConfig := &networkapi.NetworkingConfig{}
 
+	if node.ShmSize != "" {
+		shmsize, err := humanize.ParseBytes(node.ShmSize)
+		if err != nil {
+			return "", err
+		}
+		containerHostConfig.ShmSize = int64(shmsize)
+	}
+
+	if len(node.CapAdd) > 0 {
+		containerHostConfig.CapAdd = append(containerHostConfig.CapAdd, node.CapAdd...)
+	}
+
 	if err := d.processNetworkMode(ctx, containerNetworkingConfig, containerHostConfig, containerConfig, node); err != nil {
+		return "", err
+	}
+
+	if err := d.processPidMode(node, containerHostConfig); err != nil {
 		return "", err
 	}
 
@@ -795,6 +862,12 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 			}
 		}
 
+		if bridgeName != "" {
+			ctr.NetworkName = bridgeName
+		} else {
+			ctr.NetworkName = "unknown"
+		}
+
 		if ifcfg, ok := i.NetworkSettings.Networks[bridgeName]; ok {
 			ctr.NetworkSettings.IPv4addr = ifcfg.IPAddress
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
@@ -907,7 +980,7 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 	force := !d.config.GracefulShutdown
 	if d.config.GracefulShutdown {
 		log.Infof("Stopping container: %s", cID)
-		timeout := int(d.config.Timeout)
+		timeout := int(d.config.Timeout.Seconds())
 		err = d.Client.ContainerStop(ctx, cID, container.StopOptions{Timeout: &timeout})
 		if err != nil {
 			log.Errorf("could not stop container %q: %v", cID, err)
@@ -919,13 +992,14 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Removed container: %s", cID)
+	log.Info("Removed container", "name", cID)
+
 	return nil
 }
 
 // setSysctl writes sysctl data by writing to a specific file.
 func setSysctl(sysctl string, newVal int) error {
-	return os.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0600)
+	return os.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0o600)
 }
 
 func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {
@@ -941,6 +1015,17 @@ func (d *DockerRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 	hostsPath := inspect.HostsPath
 	log.Debugf("Method GetHostsPath was called with a resulting path %q", hostsPath)
 	return hostsPath, nil
+}
+
+func (*DockerRuntime) processPidMode(node *types.NodeConfig, containerHostConfig *container.HostConfig) error {
+	pidMode := container.PidMode(node.PidMode)
+	if !pidMode.Valid() {
+		return fmt.Errorf("pid mode %q invalid", node.PidMode)
+	}
+
+	containerHostConfig.PidMode = pidMode
+
+	return nil
 }
 
 func (d *DockerRuntime) processNetworkMode(
@@ -1083,4 +1168,15 @@ func (d *DockerRuntime) CheckConnection(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (*DockerRuntime) GetRuntimeSocket() (string, error) {
+	return "/var/run/docker.sock", nil
+}
+
+func (*DockerRuntime) GetCooCBindMounts() types.Binds {
+	return types.Binds{
+		types.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
+		types.NewBind("/run/netns", "/run/netns", ""),
+	}
 }

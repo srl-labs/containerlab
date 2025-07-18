@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/pmorjan/kmod"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
@@ -52,7 +52,7 @@ type Config struct {
 
 // ParseTopology parses the lab topology.
 func (c *CLab) parseTopology() error {
-	log.Infof("Parsing & checking topology file: %s", c.TopoPaths.TopologyFilenameBase())
+	log.Info("Parsing & checking topology", "file", c.TopoPaths.TopologyFilenameBase())
 
 	err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name)
 	if err != nil {
@@ -103,7 +103,6 @@ func (c *CLab) parseTopology() error {
 		}
 
 		if rInit, ok := clabRuntimes.ContainerRuntimes[r]; ok {
-
 			newRuntime := rInit()
 			defaultConfig := c.Runtimes[c.globalRuntimeName].Config()
 			err := newRuntime.Init(
@@ -140,6 +139,13 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
 	}
 
+	// adding default labels to the node config
+	// so that the labels are present in the node config
+	// and can be copied to the child components
+	// at the time of the node init
+	c.addDefaultLabels(nodeCfg)
+	labelsToEnvVars(nodeCfg)
+
 	// Init
 	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeRuntime]), nodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
@@ -148,9 +154,9 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *types.NodeDefiniti
 	}
 
 	c.Nodes[nodeName] = n
-
-	c.addDefaultLabels(n)
-
+	// adding default labels 2nd time in case node init
+	// overwrote original values for the default labels
+	c.addDefaultLabels(n.Config())
 	labelsToEnvVars(n.Config())
 
 	return nil
@@ -160,11 +166,11 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 	// default longName follows $prefix-$lab-$nodeName pattern
 	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
 
-	switch {
+	switch *c.Config.Prefix {
 	// when prefix is an empty string longName will match shortName/nodeName
-	case *c.Config.Prefix == "":
+	case "":
 		longName = nodeName
-	case *c.Config.Prefix == "__lab-name":
+	case "__lab-name":
 		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
 	}
 
@@ -192,6 +198,9 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
+		Devices:         c.Config.Topology.GetNodeDevices(nodeName),
+		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
+		ShmSize:         c.Config.Topology.GetNodeShmSize(nodeName),
 		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
 		CPUSet:          c.Config.Topology.GetNodeCPUSet(nodeName),
 		Memory:          c.Config.Topology.GetNodeMemory(nodeName),
@@ -203,6 +212,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
 		Aliases:         c.Config.Topology.GetNodeAliases(nodeName),
+		Components:      c.Config.Topology.GetComponents(nodeName),
 	}
 	var err error
 
@@ -258,8 +268,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *types.NodeDefinition, idx
 }
 
 // processStartupConfig processes the raw path of the startup-config as it is defined in the topology file.
-// It handles remote files, local files and embedded configs.
-// Returns an absolute path to the startup-config file.
+// It handles remote files (HTTP/HTTPS/S3), local files and embedded configs.
+// As a result the `nodeCfg.StartupConfig` will be set to an absPath of the startup config file.
 func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name
 	r := c.magicVarReplacer(nodeCfg.ShortName)
@@ -268,8 +278,8 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 	// embedded config is a config that is defined as a multi-line string in the topology file
 	// it contains at least one newline
 	isEmbeddedConfig := strings.Count(p, "\n") >= 1
-	// downloadable config starts with http(s)://
-	isDownloadableConfig := utils.IsHttpURL(p, false)
+	// downloadable config starts with http(s):// or s3://
+	isDownloadableConfig := utils.IsHttpURL(p, false) || utils.IsS3URL(p)
 
 	if isEmbeddedConfig || isDownloadableConfig {
 		switch {
@@ -297,12 +307,12 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 
 			log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
 			// download the file to tmp location
-			err := utils.CopyFileContents(p, absDestFile, 0755)
+			err := utils.CopyFileContents(p, absDestFile, 0o755)
 			if err != nil {
 				return err
 			}
 
-			// adjust the nodeconfig by pointing startup-config to the local downloaded file
+			// adjust the NodeConfig by pointing startup-config to the local downloaded file
 			p = absDestFile
 		}
 	}
@@ -331,10 +341,8 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyDuplicateAddresses(); err != nil {
 		return err
 	}
-	if err = c.verifyContainersUniqueness(ctx); err != nil {
-		return err
-	}
-	return nil
+
+	return c.verifyContainersUniqueness(ctx)
 }
 
 // verifyRootNetNSLinks makes sure, that there will be no overlap in
@@ -376,7 +384,8 @@ func (c *CLab) verifyRootNetNSLinks() error {
 // appear only once.
 func (c *CLab) verifyLinks(ctx context.Context) error {
 	var err error
-	verificationErrors := []error{}
+	var verificationErrors []error
+
 	for _, e := range c.Endpoints {
 		err = e.Verify(ctx, c.globalRuntime().Config().VerifyLinkParams)
 		if err != nil {
@@ -468,7 +477,7 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 		return nil
 	}
 
-	dups := []string{}
+	var dups []string
 	for _, n := range c.Nodes {
 		if n.Config().SkipUniquenessCheck {
 			continue
@@ -549,8 +558,9 @@ func (c *CLab) HasKind(k string) bool {
 }
 
 // addDefaultLabels adds default labels to node's config struct.
-func (c *CLab) addDefaultLabels(n nodes.Node) {
-	cfg := n.Config()
+// Update the addDefaultLabels function in clab/config.go
+// addDefaultLabels adds default labels to node's config struct.
+func (c *CLab) addDefaultLabels(cfg *types.NodeConfig) {
 	if cfg.Labels == nil {
 		cfg.Labels = map[string]string{}
 	}
@@ -563,9 +573,14 @@ func (c *CLab) addDefaultLabels(n nodes.Node) {
 	cfg.Labels[labels.NodeGroup] = cfg.Group
 	cfg.Labels[labels.NodeLabDir] = cfg.LabDir
 	cfg.Labels[labels.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
-	owner := os.Getenv("SUDO_USER")
+
+	// Use custom owner if set, otherwise use current user
+	owner := c.customOwner
 	if owner == "" {
-		owner = os.Getenv("USER")
+		owner = os.Getenv("SUDO_USER")
+		if owner == "" {
+			owner = os.Getenv("USER")
+		}
 	}
 	cfg.Labels[labels.Owner] = owner
 }

@@ -22,6 +22,7 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 Containerlab focuses on the containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
 * [Nokia SR Linux](manual/kinds/srl.md)
+* [Nokia SR-OS (SR-SIM)](manual/kinds/sros.md)
 * [Arista cEOS](manual/kinds/ceos.md)
 * [Cisco XRd](manual/kinds/xrd.md)
 * [SONiC](manual/kinds/sonic-vs.md)
@@ -30,10 +31,13 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Keysight IXIA-C](manual/kinds/keysight_ixia-c-one.md)
 * [RARE/freeRtr](manual/kinds/rare-freertr.md)
 * [Ostinato](manual/kinds/ostinato.md)
+* [6WIND VSR](manual/kinds/6wind_vsr.md)
+* [FD.io VPP](manual/kinds/fdio_vpp.md)
+* [VyOS Networks VyOS](manual/kinds/vyosnetworks_vyos.md)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](manual/vrnetlab.md):
 
-* [Nokia virtual SR OS (vSim/VSR)](manual/kinds/vr-sros.md)
+* [Nokia SR OS (vSIM)](manual/kinds/vr-sros.md)[^1]
 * [Juniper vMX](manual/kinds/vr-vmx.md)
 * [Juniper vQFX](manual/kinds/vr-vqfx.md)
 * [Juniper vSRX](manual/kinds/vr-vsrx.md)
@@ -57,6 +61,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [OpenBSD](manual/kinds/openbsd.md)
 * [FreeBSD](manual/kinds/freebsd.md)
 * [SONiC](manual/kinds/sonic-vm.md)
+* [OpenWRT](manual/kinds/openwrt.md)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span all the needed variants of nodes:
 
@@ -112,3 +117,5 @@ This short clip briefly demonstrates containerlab features and explains its purp
 Have questions, ideas, bug reports or just want to chat? Come join [our discord server](https://discord.gg/vAyddtaEV9).
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
+
+[^1]: Nokia released a native containerized version of SR OS simulator called [SR-SIM](manual/kinds/sros.md) which is a preferred way to run SR OS labs with containerlab.

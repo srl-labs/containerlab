@@ -57,6 +57,7 @@ const (
 	LinkTypeVxlan       LinkType = "vxlan"
 	LinkTypeVxlanStitch LinkType = "vxlan-stitch"
 	LinkTypeDummy       LinkType = "dummy"
+	LinkTypeBridge      LinkType = "bridge"
 
 	// LinkTypeBrief is a link definition where link types
 	// are encoded in the endpoint definition as string and allow users
@@ -393,9 +394,10 @@ type Node interface {
 type LinkEndpointType string
 
 const (
-	LinkEndpointTypeVeth   = "veth"
-	LinkEndpointTypeBridge = "bridge"
-	LinkEndpointTypeHost   = "host"
+	LinkEndpointTypeVeth     = "veth"
+	LinkEndpointTypeBridge   = "bridge"
+	LinkEndpointTypeBridgeNS = "bridge-ns"
+	LinkEndpointTypeHost     = "host"
 )
 
 // SetNameMACAndUpInterface is a helper function that will bind interface name and Mac

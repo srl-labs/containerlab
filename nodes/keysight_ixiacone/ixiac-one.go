@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -22,7 +22,7 @@ var ixiacStatusConfig = struct {
 	statusSleepDuration time.Duration
 	readyFileName       string
 }{
-	statusSleepDuration: time.Duration(time.Second * 5),
+	statusSleepDuration: time.Second * 5,
 	readyFileName:       "/home/keysight/ixia-c-one/init-done",
 }
 

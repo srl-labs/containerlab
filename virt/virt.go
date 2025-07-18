@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/klauspost/cpuid/v2"
-	log "github.com/sirupsen/logrus"
 )
 
 // VerifySSSE3Support check if SSSE3 is supported on the host.
@@ -51,7 +51,6 @@ func VerifyVirtSupport() bool {
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "vmx") ||
 			strings.Contains(scanner.Text(), "svm") {
-
 			log.Debug("virtualization support found")
 
 			return true

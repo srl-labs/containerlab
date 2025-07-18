@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -195,7 +195,7 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	l.DeploymentState = LinkDeploymentStateFullDeployed
 
 	if len(l.Endpoints) == 2 {
-		log.Infof("Created link: %s <--> %s", l.Endpoints[0], l.Endpoints[1])
+		log.Infof("Created link: %s ▪┄┄▪ %s", l.Endpoints[0], l.Endpoints[1])
 	}
 
 	return nil

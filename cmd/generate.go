@@ -8,10 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
@@ -103,6 +104,13 @@ var generateCmd = &cobra.Command{
 				}
 			}
 			common.Topo = file
+
+			// Pass owner to deploy command if specified
+			if labOwner != "" {
+				// This will be picked up by the deploy command
+				os.Setenv("CLAB_OWNER", labOwner)
+			}
+
 			return deployCmd.RunE(deployCmd, nil)
 		}
 		if file == "" {
@@ -120,7 +128,7 @@ func init() {
 	reg = c.Reg
 
 	generateNodesAttributes := reg.GetGenerateNodeAttributes()
-	supportedKinds := []string{}
+	var supportedKinds []string
 
 	// prepare list of generateable node kinds
 	for k, v := range generateNodesAttributes {
@@ -129,7 +137,7 @@ func init() {
 		}
 	}
 
-	rootCmd.AddCommand(generateCmd)
+	RootCmd.AddCommand(generateCmd)
 	generateCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
@@ -148,6 +156,9 @@ func init() {
 		"deploy a fabric based on the generated topology file")
 	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers creating nodes and virtual wires")
+	// Add the owner flag to generate command
+	generateCmd.Flags().StringVarP(&labOwner, "owner", "", "",
+		"lab owner name (only for users in clab_admins group)")
 }
 
 func generateTopologyConfig(name, network, ipv4range, ipv6range string,

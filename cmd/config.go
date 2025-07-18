@@ -12,7 +12,7 @@ import (
 	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/nodes"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 )
 
 // Node Filter for config.
@@ -116,7 +116,7 @@ func configRun(_ *cobra.Command, args []string) error {
 	wg.Add(len(configFilter))
 	for _, node := range configFilter {
 		// On debug this will not be executed concurrently
-		if log.IsLevelEnabled(log.DebugLevel) {
+		if log.GetLevel() == (log.DebugLevel) {
 			deploy(node)
 		} else {
 			go deploy(node)
@@ -134,7 +134,8 @@ func validateFilter(nodes map[string]nodes.Node) error {
 		}
 		return nil
 	}
-	mis := []string{}
+
+	var mis []string
 	for _, nn := range configFilter {
 		if _, ok := nodes[nn]; !ok {
 			mis = append(mis, nn)
@@ -147,7 +148,7 @@ func validateFilter(nodes map[string]nodes.Node) error {
 }
 
 func init() {
-	rootCmd.AddCommand(configCmd)
+	RootCmd.AddCommand(configCmd)
 	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{},
 		"comma separated list of paths to search for templates")
 	_ = configCmd.MarkFlagDirname("template-path")

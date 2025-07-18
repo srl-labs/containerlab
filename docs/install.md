@@ -108,12 +108,6 @@ bash -c "$(wget -qO - https://get.containerlab.dev)"
 
 ///
 
-Since the installation script uses GitHub API, users may hit the rate limit imposed by GitHub. To avoid this, users can pass their personal GitHub token as an env var to the installation script:
-
-```bash
-GITHUB_TOKEN=<your token> bash -c "$(curl -sL https://get.containerlab.dev)"
-```
-
 ## Package managers
 
 It is possible to install official containerlab releases via public APT/YUM repository.
@@ -351,7 +345,7 @@ sudo chmod u+s `which containerlab`
 # Create clab_admins Unix group
 sudo groupadd -r clab_admins
 # Add current user to clab_admins group
-sudo usermod -aG "$USER" clab_admins
+sudo usermod -aG clab_admins "$USER"
 ```
 
 Users who manage their Containerlab installation via `deb/yum/dnf` package managers will have the sudo-less functionality automatically enabled during the first upgrade from pre-`0.63.0` versions.

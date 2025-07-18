@@ -5,7 +5,6 @@
 package vr_pan
 
 import (
-	"context"
 	"fmt"
 	"path"
 	"regexp"
@@ -25,13 +24,17 @@ var (
 )
 
 const (
-	configDirName   = "config"
-	startupCfgFName = "startup-config.cfg"
+	scrapliPlatformName = "paloalto_panos"
 )
 
 // Register registers the node in the NodeRegistry.
 func Register(r *nodes.NodeRegistry) {
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil)
+	platformAttrs := &nodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
+
 	r.Register(kindnames, func() nodes.Node {
 		return new(vrPan)
 	}, nrea)
@@ -43,7 +46,7 @@ type vrPan struct {
 
 func (n *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n)
+	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -64,7 +67,7 @@ func (n *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))
 
 	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
@@ -79,13 +82,4 @@ func (n *vrPan) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.InterfaceHelp = InterfaceHelp
 
 	return nil
-}
-
-func (n *vrPan) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
-	}
-	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }

@@ -19,8 +19,8 @@ import (
 	"syscall"
 
 	"github.com/awalterschulze/gographviz"
+	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
-	log "github.com/sirupsen/logrus"
 	e "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/internal/mermaid"
 	"github.com/srl-labs/containerlab/labels"
@@ -98,7 +98,6 @@ func (c *CLab) GenerateDotGraph() error {
 			node.Config().ShortName, attr); err != nil {
 			return err
 		}
-
 	}
 
 	// Process the links inbetween Nodes
@@ -121,8 +120,8 @@ func (c *CLab) GenerateDotGraph() error {
 	}
 
 	// create graph directory
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
-	utils.CreateDirectory(c.TopoPaths.GraphDir(), 0755)
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
+	utils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
 
 	// create graph filename
 	dotfile := c.TopoPaths.GraphFilename(".dot")
@@ -242,8 +241,8 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	}
 
 	// create graph directory
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0755)
-	utils.CreateDirectory(c.TopoPaths.GraphDir(), 0755)
+	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
+	utils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
 
 	// create graph filename
 	fname := c.TopoPaths.GraphFilename(".mermaid")

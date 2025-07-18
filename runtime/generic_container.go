@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -19,6 +19,7 @@ type GenericContainer struct {
 	Status          string
 	Labels          map[string]string
 	Pid             int
+	NetworkName     string
 	NetworkSettings GenericMgmtIPs
 	Mounts          []ContainerMount
 	runtime         ContainerRuntime

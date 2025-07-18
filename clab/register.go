@@ -5,14 +5,17 @@
 package clab
 
 import (
+	sixwind_vsr "github.com/srl-labs/containerlab/nodes/6wind_vsr"
 	bridge "github.com/srl-labs/containerlab/nodes/bridge"
 	c8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	ceos "github.com/srl-labs/containerlab/nodes/ceos"
 	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
+	cjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
 	crpd "github.com/srl-labs/containerlab/nodes/crpd"
 	cvx "github.com/srl-labs/containerlab/nodes/cvx"
 	dell_sonic "github.com/srl-labs/containerlab/nodes/dell_sonic"
 	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
+	fdio_vpp "github.com/srl-labs/containerlab/nodes/fdio_vpp"
 	fortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
 	generic_vm "github.com/srl-labs/containerlab/nodes/generic_vm"
 	host "github.com/srl-labs/containerlab/nodes/host"
@@ -27,6 +30,7 @@ import (
 	sonic "github.com/srl-labs/containerlab/nodes/sonic"
 	vr_sonic "github.com/srl-labs/containerlab/nodes/sonic_vm"
 	srl "github.com/srl-labs/containerlab/nodes/srl"
+	sros "github.com/srl-labs/containerlab/nodes/sros"
 	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	vr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
 	vr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
@@ -36,6 +40,7 @@ import (
 	vr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
 	vr_n9kv "github.com/srl-labs/containerlab/nodes/vr_n9kv"
 	vr_openbsd "github.com/srl-labs/containerlab/nodes/vr_openbsd"
+	vr_openwrt "github.com/srl-labs/containerlab/nodes/vr_openwrt"
 	vr_pan "github.com/srl-labs/containerlab/nodes/vr_pan"
 	vr_ros "github.com/srl-labs/containerlab/nodes/vr_ros"
 	vr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
@@ -47,6 +52,7 @@ import (
 	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
+	vyosnetworks_vyos "github.com/srl-labs/containerlab/nodes/vyosnetworks_vyos"
 	xrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
@@ -66,6 +72,7 @@ func (c *CLab) RegisterNodes() {
 	ovs.Register(c.Reg)
 	sonic.Register(c.Reg)
 	srl.Register(c.Reg)
+	sros.Register(c.Reg)
 	vr_aoscx.Register(c.Reg)
 	vr_csr.Register(c.Reg)
 	vr_c8000v.Register(c.Reg)
@@ -89,10 +96,15 @@ func (c *CLab) RegisterNodes() {
 	vr_xrv9k.Register(c.Reg)
 	vr_sonic.Register(c.Reg)
 	vr_cat9kv.Register(c.Reg)
+	vr_openwrt.Register(c.Reg)
 	xrd.Register(c.Reg)
 	rare.Register(c.Reg)
 	c8000.Register(c.Reg)
 	k8s_kind.Register(c.Reg)
 	cisco_iol.Register(c.Reg)
 	huawei_vrp.Register(c.Reg)
+	sixwind_vsr.Register(c.Reg)
+	fdio_vpp.Register(c.Reg)
+	vyosnetworks_vyos.Register(c.Reg)
+	cjunosevolved.Register(c.Reg)
 }

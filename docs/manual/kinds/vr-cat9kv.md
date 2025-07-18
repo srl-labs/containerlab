@@ -143,8 +143,8 @@ topology:
     node1:
       kind: cisco_cat9kv
       image: vrnetlab/vr-cat9kv:17.12.01p
-    binds:
-      - /path/to/vswitch.xml:/vswitch.xml
+      binds:
+        - /path/to/vswitch.xml:/vswitch.xml
 ```
 
 /// note
@@ -164,7 +164,7 @@ topology:
     node1:
       kind: cisco_cat9kv
       image: vrnetlab/vr-cat9kv:17.12.01p
-    env:
-     VCPU: 6
-     RAM: 20480
+      env:
+        VCPU: 6
+        RAM: 20480
 ```
