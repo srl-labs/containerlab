@@ -152,7 +152,7 @@ links:
 
 The management interface for the SR-SIM is mapped to `eth0` of the Linux namespace where the container is running.
 
-When containerlab launches the -{{ kind_display_name }}- node, the primary BOF interface gets an address provided by the container runtime's IPAM driver. This address will only be allocated to the active CPM.
+When containerlab launches the `-{{ kind_display_name }}-` node, the primary BOF interface gets an address provided by the container runtime's IPAM driver. This address will only be allocated to the active CPM.
 
 Data interfaces need to be configured with IP addressing manually using the SR OS CLI or other available management methods.
 
@@ -177,7 +177,9 @@ topology:
   nodes:
     sr-sim:
       kind: nokia_srsim
+      image: nokia_srsim:25.7.R1
       type: SR-1s # overriding the default SR-1 type with SR-1s
+      license: /opt/nokia/sros/license.txt
 ```
 
 ///
@@ -188,8 +190,10 @@ topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
+      image: nokia_srsim:25.7.R1
       type: SR-1
-      env: 
+      license: /opt/nokia/sros/license.txt
+      env:
         NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # override default MDA type in slot 1
 ```
 
@@ -251,7 +255,9 @@ topology:
 ```
 
 ///
-/// tab | Distributed SR-SIM variant
+/// tab | with links
+
+Note, how in the `links` section the particular SR-SIM's line card node (sros-14s-1) is used as an endpoint.
 
 ```yaml
 topology:
@@ -263,8 +269,6 @@ topology:
     sros-14s-a:
       kind: nokia_srsim
       type: sr-14s
-      kind: nokia_srsim
-      type: SR-14s
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: A
@@ -272,8 +276,6 @@ topology:
     sros-14s-b:
       kind: nokia_srsim
       type: sr-14s
-      kind: nokia_srsim
-      type: SR-14s
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: B
@@ -287,10 +289,16 @@ topology:
     sros-14s-2:
       kind: nokia_srsim
       type: sr-14s 
-      license: license-sros25.txt
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: 2
+
+    cpe:
+      kind: linux
+      image: alpine:3
+
+  links:
+    - endpoints: ["cpe:eth1", "sros-14s-1:1/1/c1/1"]
 ```
 
 ///
@@ -298,28 +306,31 @@ topology:
 /// tab | with overrides
 
 ```yaml
-nodes:
-  sr-2se-a:
-    kind: nokia_srsim
-    type: SR-2se
-    env:
-      NOKIA_SROS_SLOT: A
-      NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # override Chassis MAC
-      NOKIA_SROS_FABRIC_IF: eth1 # override fabric itf
-      NOKIA_SROS_SFM: sfm-2se # override SFM
-      NOKIA_SROS_CARD: cpm-2se # override CPM
-  sros-2se-1:
-    kind: nokia_srsim
-    image: nokia_srsim:25.7.R1
-    type: sr-2se 
-    license: license-sros25.txt
-    network-mode: container:sr-2se-a
-    env:
-      NOKIA_SROS_SLOT: 1
-      NOKIA_SROS_FABRIC_IF: eth2 # override fabric itf
-      NOKIA_SROS_SFM: sfm-2se # override SFM
-      NOKIA_SROS_CARD: xcm-2se # override IOM
-      NOKIA_SROS_MDA_1: x2-s36-800g-qsfpdd-18.0t # override MDA
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-2se-a:
+      kind: nokia_srsim
+      type: SR-2se
+      env:
+        NOKIA_SROS_SLOT: A
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # override Chassis MAC
+        NOKIA_SROS_FABRIC_IF: eth1 # override fabric itf
+        NOKIA_SROS_SFM: sfm-2se # override SFM
+        NOKIA_SROS_CARD: cpm-2se # override CPM
+    sros-2se-1:
+      kind: nokia_srsim
+      type: SR-2se
+      network-mode: container:sr-2se-a
+      env:
+        NOKIA_SROS_SLOT: 1
+        NOKIA_SROS_FABRIC_IF: eth2 # override fabric itf
+        NOKIA_SROS_SFM: sfm-2se # override SFM
+        NOKIA_SROS_CARD: xcm-2se # override IOM
+        NOKIA_SROS_MDA_1: x2-s36-800g-qsfpdd-18.0t # override MDA
 ```
 
 ///
@@ -336,40 +347,50 @@ Users can simplify the topology file with distributed SR-SIM nodes by using the 
 /// tab | Distributed grouped SR-SIM
 
 ```yaml
-nodes:
-  sr-sim1:
-    kind: nokia_srsim
-    type: SR-7
-    components:
-      - slot: A
-      - slot: B
-      - slot: 1
-      - slot: 2
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-sim1:
+      kind: nokia_srsim
+      type: SR-7
+      components:
+        - slot: A
+        - slot: B
+        - slot: 1
+        - slot: 2
 ```
 
 ///
 /// tab | with overrides
 
 ```yaml
-nodes: 
-  sr-sim1:
-    kind: nokia_srsim
-    type: SR-7
-    components:
-      - slot: A # containers will be attached to this Linux NS
-      - slot: B
-      - slot: 1
-        type: iom5-e # equivalent to override NOKIA_SROS_CARD
-        env:
-          NOKIA_SROS_SFM: m-sfm6-7/12
-          NOKIA_SROS_MDA_1: me6-100gb-qsfp28
-          NOKIA_SROS_MDA_2: me3-400gb-qsfpdd
-      - slot: 2
-        env:
-          NOKIA_SROS_SFM: m-sfm6-7/12
-          NOKIA_SROS_CARD: iom5-e # (1)!
-          NOKIA_SROS_MDA_1: me6-100gb-qsfp28
-          NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-sim1:
+      kind: nokia_srsim
+      type: SR-7
+      components:
+        - slot: A # containers will be attached to this Linux NS
+        - slot: B
+        - slot: 1
+          type: iom5-e # equivalent to override NOKIA_SROS_CARD
+          env:
+            NOKIA_SROS_SFM: m-sfm6-7/12
+            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+            NOKIA_SROS_MDA_2: me3-400gb-qsfpdd
+        - slot: 2
+          env:
+            NOKIA_SROS_SFM: m-sfm6-7/12
+            NOKIA_SROS_CARD: iom5-e # (1)!
+            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+            NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
 ```
 
 1. As an example, the card type is set here as an env var, instead of the `type` field like we did for slot 1.
