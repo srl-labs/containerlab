@@ -2,7 +2,7 @@ module ixiac01
 
 go 1.23.0
 
-require github.com/open-traffic-generator/snappi/gosnappi v1.32.0
+require github.com/open-traffic-generator/snappi/gosnappi v1.33.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
