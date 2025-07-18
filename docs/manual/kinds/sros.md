@@ -230,7 +230,7 @@ When containerlab launches the -{{ kind_display_name }}- node, the primary BOF i
 
 Data interfaces need to be configured with IP addressing manually using the SR OS CLI or other available management methods.
 
-## Features and options
+## SR-SIM Variants
 
 The SR-SIM can be run in multiple hardware variants as explained in the [SR-SIM Installation, deployment and setup guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html). These variants can be set using the `type` directive in the clab topology file or by overriding the different available environment variables such as the ones for the chassis (`NOKIA_SROS_CHASSIS`) or card (`NOKIA_SROS_CARD`). Users can then use environment variables to change the default behavior of a given container.  If there is a conflict between the `type` field in the topology file and an environment variable in the topology file, the environment variable will take precedence.
 
@@ -463,11 +463,11 @@ topology:
 
 ///
 
-### Node configuration
+## Node configuration
 
 Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, gNMI[^5].
 
-#### User-defined config
+### User-defined config
 
 SR-SIM nodes are launched with a basic configuration that provisions the management interfaces, and adds SSH keys.  This initial configuration is applied after boot along with some partial startup config, when present.
 
@@ -477,7 +477,7 @@ Since this configuration is intended to provide the bare minimum to make the nod
 Configuration text can contain Go template logic as well as make use of [environment variables](../topo-def-file.md#environment-variables) allowing for runtime customization of the configuration.
 ///
 
-##### Full startup-config
+#### Full startup-config
 
 When a user provides a path to a file that has a complete configuration for the node, containerlab will copy that file to the lab directory for that specific node under the `<node>/config/cf3/config.cfg` name and mount that directory to the container. This will result in this config to act as a startup-config for the node:
 
@@ -494,7 +494,7 @@ topology:
 With the above configuration, the node will boot with the configuration specified in `myconfig.txt`, no other configuration will be applied. You must provision interfaces, cards, power-shelves, etc. yourself. Also, if the default node password is changed, the `save` command will fail.
 ///
 
-##### Partial startup-config
+#### Partial startup-config
 
 Quite often it is beneficial to have a partial configuration that will be applied on top of the default configuration that containerlab applies. For example, users might want to add card configuration and some services on top of the default configuration provided by containerlab and do not want to manage the full configuration file.
 
@@ -526,7 +526,7 @@ configure {
 }
 ```
 
-###### Remote partial files
+##### Remote partial files
 
 It is possible to provide a partial config file that is located on a remote HTTP(S) server. This can be done by providing a URL to the file. The URL must start with `http://` or `https://` and must point to a file that is accessible from the containerlab host.
 
@@ -543,7 +543,7 @@ topology:
       startup-config: https://gist.com/<somehash>/staticroute.partial.cfg
 ```
 
-###### Embedded partial files
+##### Embedded partial files
 
 Users can also embed the partial config in the topology file itself, making it an atomic artifact that can be shared with others. This can be done by using multiline string in YAML:
 
@@ -561,7 +561,7 @@ topology:
 
 Embedded partial configs will persist on containerlab's host and use the same directory as the [remote startup-config](../config-mgmt.md#remote) files.
 
-#### Configuration save
+### Configuration save
 
 Containerlab's [`save`](../../cmd/save.md) command will perform a configuration save for Nokia SR OS nodes via NETCONF. The configuration will be saved under `config.cfg` file and can be found at the node's directory inside the lab parent directory:
 
@@ -571,7 +571,7 @@ Containerlab's [`save`](../../cmd/save.md) command will perform a configuration 
 cat clab-cert01/sr/config/cf3/config.cfg
 ```
 
-#### Boot Options File
+### Boot Options File
 
 By default `nokia_srsim` nodes boot up with a pre-defined "Boot Options File" (BOF). This file includes boot settings including:
 
@@ -580,17 +580,17 @@ By default `nokia_srsim` nodes boot up with a pre-defined "Boot Options File" (B
 
 Some common BOF options can also be controlled using environmental variables as specified in the SR-SIM user's guide.
 
-#### SSH keys
+### SSH keys
 
 Containerlab supports SSH key injection into the Nokia SR OS nodes prior to deployment. First containerlab retrieves all public keys from `~/.ssh`[^6] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
 
 Next, it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^7] at startup. This will enable key-based authentication when you connect to the node.
 
-### License
+## License
 
-Path to a valid license must be provided for all Nokia SR OS nodes with a [`license`](../nodes.md#license) directive. If no valid license is included, the nodes will not deploy successfully.
+Path to a valid license must be provided for all Nokia SR OS nodes with a [`license`](../nodes.md#license) directive. If no valid license is provided, the nodes will not complete the deployment phase.
 
-### Filesystem mounts
+## Filesystem mounts
 
 When the user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For the -{{ kind_display_name }}-  kind containerlab creates a node directory where the license file and the initial config will be copied. The filesystem for the flash cards that contain the system is mounted under the `config` directory. This same filesystem is visible inside the CPM containers `/home/sros/flashX` directory when logging in via SHELL or using the `file` command utility via SR OS CLI.
 
