@@ -201,7 +201,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	srosEnv[envNokiaSrosChassis] = n.Cfg.NodeType // Override NodeType var with existing env
 
 	mac := genMac(n.Cfg)
-	srosEnv[envNokiaSrosSystemBaseMac] = mac.MAC
+	srosEnv[envNokiaSrosSystemBaseMac] = mac
 
 	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
 	log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)

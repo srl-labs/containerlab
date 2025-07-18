@@ -8,12 +8,8 @@ import (
 	"github.com/srl-labs/containerlab/types"
 )
 
-type mac struct {
-	MAC string
-}
-
 // genMac returns a struct with a generated MAC address string to use in SR-OS Node.
-func genMac(cfg *types.NodeConfig) mac {
+func genMac(cfg *types.NodeConfig) string {
 	// Generated MAC address conforms to the following addressing scheme
 	// first byte  - `1c` - fixed for easy identification of SR-OS Mac addresses
 	// second byte - random, to distinguish projects
@@ -27,7 +23,6 @@ func genMac(cfg *types.NodeConfig) mac {
 
 	// set system Mac in NodeConfig
 	cfg.MacAddress = m
-	return mac{
-		MAC: m,
-	}
+
+	return m
 }
