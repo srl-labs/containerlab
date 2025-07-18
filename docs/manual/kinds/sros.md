@@ -10,9 +10,9 @@ kind_display_name: Nokia SR-SIM
 
 The [Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) containerized router is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is a fully containerized router that replaces the legacy virtual machine-based SR OS simulator or [vSIM](vr-sros.md)[^1].
 
-The containerized Service Router Simulator, known as SR-SIM, is a cloud-native version of the SR OS software that runs on hardware platforms. It is available to Nokia customers who have an active SR-SIM license.
+The containerized Service Router Simulator, known as SR-SIM, is a cloud-native version of the SR OS software that runs on hardware platforms. The image can be downloaded from the [Nokia Support Portal](https://customer.nokia.com/support/s/) and requires an active SR-SIM license to operate.
 
-The container image can be downloaded from the [Nokia Support Portal](https://customer.nokia.com/support/s/). Once downloaded, the image needs to be loaded to the container runtime:
+Once downloaded, the image needs to be loaded to the container runtime:
 
 ```bash
 docker image load -i srsim.tar.xz #(1)!
@@ -25,9 +25,12 @@ docker image load -i srsim.tar.xz #(1)!
     docker push your.registry.tld/nokia_srsim:[version]
     ```
 
+When loaded, the image will be available as `nokia_srsim:[version]` in the local image store.
+
 The SR-SIM container emulates various hardware routers: either pizza-box systems with integrated line cards or chassis-based systems with multiple line cards per chassis. Operators can model both types of devices.
 
-> Nokia SR-SIM is provided as a container image and is designed to run natively on x86_64 systems with common container runtimes such as Docker.
+> :material-cpu-64-bit: Nokia SR-SIM is provided as a container image and is designed to run natively on x86_64 systems with the common container runtimes such as Docker.  
+> :material-apple: The SR-SIM image runs on macOS with arm64 architecture using Rosetta virtualization.
 
 Hardware elements (such as line cards, PSUs, fans, etc.) and software elements (such as interfaces, network protocols, and services) are emulated and configured just like physical SR OS platforms. Each line card runs as a separate container for emulation of multi-line card systems (distributed model).  
 Pizza-box systems with integrated line cards run in an integrated model with one container per emulated system.
