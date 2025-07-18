@@ -35,11 +35,9 @@ The SR-SIM container emulates various hardware routers: either pizza-box systems
 Hardware elements (such as line cards, PSUs, fans, etc.) and software elements (such as interfaces, network protocols, and services) are emulated and configured just like physical SR OS platforms. Each line card runs as a separate container for emulation of multi-line card systems (distributed model).  
 Pizza-box systems with integrated line cards run in an integrated model with one container per emulated system.
 
-Nokia SR-SIM nodes launched with containerlab are pre-provisioned with SSH, SNMP, NETCONF, and gNMI services enabled.
-
 ## Managing Nokia SR OS nodes
 
-A Nokia SR OS node launched with containerlab can be managed via the following interfaces:
+Nokia SR-SIM nodes launched with containerlab are pre-provisioned with SSH, SNMP, NETCONF, and gNMI services enabled.
 
 /// tab | CLI
 Connect to the SR OS CLI:
@@ -107,8 +105,7 @@ Looking for cf3:/bof.cfg ... OK, reading
 
 ## Interface naming
 
-You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in -{{ kind_display_name }}-.
-
+Containerlab' [interface alias](../topo-def-file.md#interface-naming) feature allows operators to use the interface names in the topology file in the same format as they appear in -{{ kind_display_name }}- configuration.  
 The interface naming convention inside the SR OS command line is typically: `L/xX/M/cC/P`, `L/xX/M/P`, `L/M/cC/P` or `L/M/P` where:
 
 * `L` : line card number
@@ -141,7 +138,8 @@ links:
 3. sr-sim port 1/2/c1/1 on line card 1, MDA 2 is connected to sr-sim port 3/1/c1/1 on line card 3, MDA 1
 
 > Inside the SR OS container, the interfaces are converted to match the Linux interface name conventions: `eL-xX-M-cC-P`, `eL-xX-M-P`, `eL-M-cC-P`, or `eL-M-P`.  
-> Note that the prefix `e` is added at the beginning of the port, and the forward slash `/` is replaced with a hyphen `-`.
+> Note that the prefix `e` is added at the beginning of the port, and the forward slash `/` is replaced with a hyphen `-`.  
+> You would see these Linux-compatible interface names used when SR-SIM is launched outside of Containerlab, for example, with Docker Compose or Kubernetes.
 
 The interfaces can also be non-sequential, like in the example below.
 
@@ -152,7 +150,7 @@ links:
   - endpoints: ["sr-sim-dist-iom-1:1/2/c1/1", "sr-sim-dist-iom3:3/1/c1/1"]
 ```
 
-The management interface for the SR-SIM is typically mapped to `eth0` of the Linux namespace where the container is running.
+The management interface for the SR-SIM is mapped to `eth0` of the Linux namespace where the container is running.
 
 Distributed systems require certain settings given the nature of the SR-SIM simulator:
 
