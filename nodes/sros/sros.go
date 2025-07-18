@@ -44,6 +44,9 @@ const (
 	generateable     = true
 	generateIfFormat = "%d/%d/%d"
 
+	slotAName = "A"
+	slotBName = "B"
+
 	retryTimer = 1 * time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName       = "nokia_sros"
@@ -82,7 +85,7 @@ var (
 		"SRSIM":                   "1",
 		envNokiaSrosChassis:       SrosDefaultType,     // fillers to be override
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be override
-		envNokiaSrosSlot:          "A",                 // filler to be override
+		envNokiaSrosSlot:          slotAName,           // filler to be override
 	}
 
 	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
@@ -277,7 +280,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	if err != nil {
 		return err
 	}
-	if !n.isCPM("A") {
+	if !n.isCPM(slotAName) {
 		return nil
 	}
 	//Execute SaveConfig after boot. This code should only  run on active CPM
@@ -497,7 +500,7 @@ func (n *sros) calcComponentName(name, slot string) string {
 	if n.renameDone {
 		return name
 	}
-	return fmt.Sprintf("%s-%s", name, slot)
+	return fmt.Sprintf("%s-%s", name, strings.ToLower(slot))
 }
 
 // calcComponentFqdn computes the FQDN for a given slot.
@@ -506,7 +509,7 @@ func (n *sros) calcComponentFqdn(slot string) string {
 		return n.Cfg.Fqdn
 	}
 	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
-	result := fmt.Sprintf("%s-%s%s", n.Cfg.Fqdn[:fqdnDotIndex], slot, n.Cfg.Fqdn[fqdnDotIndex:])
+	result := fmt.Sprintf("%s-%s%s", n.Cfg.Fqdn[:fqdnDotIndex], strings.ToLower(slot), n.Cfg.Fqdn[fqdnDotIndex:])
 	return result
 }
 
@@ -532,12 +535,12 @@ func (n *sros) cpmSlot() (string, error) {
 search:
 	for _, comp := range n.Cfg.Components {
 		switch comp.Slot {
-		case "A":
-			slot = "A"
+		case slotAName:
+			slot = slotAName
 			// now we can break because the slot A is prefered, does not matter if B also exists
 			break search
-		case "B":
-			slot = "B"
+		case slotBName:
+			slot = slotBName
 			// we continue searching, because we prefer slot A
 		}
 	}
