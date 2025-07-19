@@ -16,7 +16,7 @@ func main() {
 
 	cmd.RootCmd.SetContext(ctx)
 
-	err := fang.Execute(ctx, cmd.RootCmd)
+	err := fang.Execute(ctx, cmd.RootCmd, fang.WithoutVersion())
 	if err != nil {
 		os.Exit(1)
 	}
