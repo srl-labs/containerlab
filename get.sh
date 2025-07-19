@@ -244,7 +244,7 @@ downloadFile() {
 }
 
 # installFile verifies the SHA256 for the file, then unpacks and
-# installs it. By default, the installation is done from .tar.gz archive, that can be overriden with --use-pkg flag
+# installs it. By default, the installation is done from .tar.gz archive, that can be overridden with --use-pkg flag
 installFile() {
     tar xf "$TMP_FILE" -C "$TMP_ROOT"
     echo "Preparing to install $BINARY_NAME ${TAG_WO_VER} into ${BIN_INSTALL_DIR}"
