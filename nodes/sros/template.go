@@ -28,7 +28,7 @@ type srosTemplateData struct {
 	LoggingConfig string
 	// SSHConfig is a string containing SSH configuration
 	SSHConfig string
-	//PartialConfig
+	// PartialConfig
 	PartialConfig string
 }
 
