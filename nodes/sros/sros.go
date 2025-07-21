@@ -83,9 +83,9 @@ var (
 
 	srosEnv = map[string]string{
 		"SRSIM":                   "1",
-		envNokiaSrosChassis:       SrosDefaultType,     // fillers to be override
-		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be override
-		envNokiaSrosSlot:          slotAName,           // filler to be override
+		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
+		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
+		envNokiaSrosSlot:          slotAName,           // filler to be overridden
 	}
 
 	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
@@ -283,7 +283,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	if !n.isCPM(slotAName) {
 		return nil
 	}
-	//Execute SaveConfig after boot. This code should only  run on active CPM
+	// Execute SaveConfig after boot. This code should only run on active CPM
 	for time.Now().Before(time.Now().Add(readyTimeout)) {
 		// Check if context is cancelled
 		if err := ctx.Err(); err != nil {
@@ -587,7 +587,7 @@ func (n *sros) Ready(ctx context.Context) error {
 		case <-ctx.Done():
 			return fmt.Errorf("timed out waiting for SR OS node %s to boot: %v", n.Cfg.ShortName, err)
 		default:
-			//  check if cpm is running
+			// check if cpm is running
 			for k, cmd := range readyCmds {
 				cmd, _ := exec.NewExecCmdFromString(cmd)
 				execResult, err := n.RunExec(ctx, cmd)
@@ -759,7 +759,7 @@ func (n *sros) isCPM(cpm string) bool {
 	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists && SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) {
 		return false
 	}
-	//check if container is the CPM given by the string cpm
+	// check if container is the CPM given by the string cpm
 	if cpm != "" {
 		if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
 			!SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) &&
@@ -1016,9 +1016,9 @@ func (n *sros) CheckInterfaceName() error {
 	return nil
 }
 
-func (s *sros) SaveConfig(ctx context.Context) error {
+func (n *sros) SaveConfig(_ context.Context) error {
 	// s.Cfg.MgmtIPv4Address
-	addr, err := ResolveClabContainer(s)
+	addr, err := n.MgmtIPAddr()
 	if err != nil {
 		return err
 	}
@@ -1031,7 +1031,7 @@ func (s *sros) SaveConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Saved running configuration", "node", s.Cfg.LongName)
+	log.Info("Saved running configuration", "node", n.Cfg.LongName)
 
 	return nil
 }
@@ -1041,11 +1041,11 @@ func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
-func (n *sros) IsHealthy(ctx context.Context) (bool, error) {
+func (n *sros) IsHealthy(_ context.Context) (bool, error) {
 	if !n.isCPM("") {
 		return true, fmt.Errorf("node %q is not a CPM, healthcheck has no effect", n.Cfg.LongName)
 	}
-	addr, err := ResolveClabContainer(n)
+	addr, err := n.MgmtIPAddr()
 	if err != nil {
 		return false, err
 	}
@@ -1074,14 +1074,14 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 	return false, lastErr
 }
 
-// ResolveClabContainer tries to do a DNS lookup to resolve the IP for the container, in case it doesn't find it, it returns the address associated with the data structure of the container.
-func ResolveClabContainer(s *sros) (string, error) {
-	if s.Cfg.MgmtIPv4Address != "" {
-		return s.Cfg.MgmtIPv4Address, nil
-	} else if s.Cfg.MgmtIPv6Address != "" {
-		return s.Cfg.MgmtIPv6Address, nil
+// MgmtIPAddr returns ipv4 or ipv6 management IP address of the node.
+// It returns an error if neither is set in the node config.
+func (n *sros) MgmtIPAddr() (string, error) {
+	if n.Cfg.MgmtIPv4Address != "" {
+		return n.Cfg.MgmtIPv4Address, nil
+	} else if n.Cfg.MgmtIPv6Address != "" {
+		return n.Cfg.MgmtIPv6Address, nil
 	} else {
-		// return s.Cfg.LongName, err
-		return s.Cfg.LongName, fmt.Errorf("")
+		return n.Cfg.LongName, fmt.Errorf("no management IP address (IPv4 or IPv6) configured for node %q", n.Cfg.LongName)
 	}
 }
