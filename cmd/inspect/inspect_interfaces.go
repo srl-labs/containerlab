@@ -45,7 +45,7 @@ func init() {
 	inspectInterfacesCmd.Flags().StringVarP(&interfacesNodeName, "node", "n", "", "node to inspect")
 }
 
-func inspectInterfacesFn(_ *cobra.Command, _ []string) error {
+func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 	if common.Name == "" && common.Topo == "" {
 		fmt.Println("provide either a lab name (--name) or a topology file path (--topo)")
 		return nil
@@ -54,9 +54,6 @@ func inspectInterfacesFn(_ *cobra.Command, _ []string) error {
 	if interfacesFormat != "table" && interfacesFormat != "json" {
 		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", interfacesFormat)
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(common.Timeout),
@@ -82,7 +79,7 @@ func inspectInterfacesFn(_ *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
 
-	err = c.CheckConnectivity(ctx)
+	err = c.CheckConnectivity(cobraCmd.Context())
 	if err != nil {
 		return err
 	}
@@ -111,7 +108,7 @@ func inspectInterfacesFn(_ *cobra.Command, _ []string) error {
 		})
 	}
 
-	containers, err = c.ListContainers(ctx, glabels)
+	containers, err = c.ListContainers(cobraCmd.Context(), glabels)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %s", err)
 	}
@@ -121,7 +118,7 @@ func inspectInterfacesFn(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	err = printContainerInterfaces(ctx, containers, interfacesFormat)
+	err = printContainerInterfaces(cobraCmd.Context(), containers, interfacesFormat)
 	return err
 }
 

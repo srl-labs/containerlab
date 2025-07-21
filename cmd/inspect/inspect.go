@@ -51,7 +51,7 @@ func init() {
 		"also more details about a lab and its nodes")
 }
 
-func inspectFn(_ *cobra.Command, _ []string) error {
+func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 	if common.Name == "" && common.Topo == "" && !all {
 		return fmt.Errorf("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
 	}
@@ -64,9 +64,6 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 	if details {
 		inspectFormat = "json" // Force JSON format if details are requested
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	opts := []clab.ClabOption{
 		clab.WithTimeout(common.Timeout),
@@ -92,12 +89,12 @@ func inspectFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	err = c.CheckConnectivity(ctx)
+	err = c.CheckConnectivity(cobraCmd.Context())
 	if err != nil {
 		return err
 	}
 
-	containers, err := listContainers(ctx, c)
+	containers, err := listContainers(cobraCmd.Context(), c)
 	if err != nil {
 		return err
 	}
