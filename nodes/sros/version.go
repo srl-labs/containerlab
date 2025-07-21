@@ -20,7 +20,11 @@ configure    system management-interface snmp streaming admin-state enable
 configure    system security user-params local-user user "admin" access grpc true
 configure    system grpc allow-unsecure-connection
 configure    system grpc gnmi auto-config-save true
-configure    system grpc rib-api admin-state enable
+`
+	grpcConfigIXR = `configure    system grpc admin-state enable
+configure    system security user-params local-user user "admin" access grpc true
+configure    system grpc allow-unsecure-connection
+configure    system grpc gnmi auto-config-save true
 `
 
 	netconfConfig = `configure    system security user-params local-user user "admin" access netconf true
@@ -112,7 +116,66 @@ configure system security user-params local-user user "admin" password "NokiaSro
 configure system security user-params local-user user "admin" access console true
 configure system security user-params local-user user "admin" console member ["administrative"]
 configure system security user-params attempts count 64`
-	// ocServerConfig = `set / system management openconfig admin-state enable`.
+	systemCfgIXR = `configure system security aaa local-profiles profile "administrative" default-action permit-all
+ configure system security aaa local-profiles profile "administrative" entry 10 match "configure system security"
+ configure system security aaa local-profiles profile "administrative" entry 10 action permit
+ configure system security aaa local-profiles profile "administrative" entry 20 match "show system security"
+ configure system security aaa local-profiles profile "administrative" entry 20 action permit
+ configure system security aaa local-profiles profile "administrative" entry 30 match "tools perform security"
+ configure system security aaa local-profiles profile "administrative" entry 30 action permit
+ configure system security aaa local-profiles profile "administrative" entry 40 match "tools dump security"
+ configure system security aaa local-profiles profile "administrative" entry 40 action permit
+ configure system security aaa local-profiles profile "administrative" entry 42 match "tools dump system security"
+ configure system security aaa local-profiles profile "administrative" entry 42 action permit
+ configure system security aaa local-profiles profile "administrative" entry 50 match "admin system security"
+ configure system security aaa local-profiles profile "administrative" entry 50 action permit
+ configure system security aaa local-profiles profile "default" entry 60 match "show config"
+configure system security aaa local-profiles profile "default" entry 60 action deny
+configure system security aaa local-profiles profile "default" entry 65 match "show li"
+configure system security aaa local-profiles profile "default" entry 65 action deny
+configure system security aaa local-profiles profile "default" entry 66 match "clear li"
+configure system security aaa local-profiles profile "default" entry 66 action deny
+configure system security aaa local-profiles profile "default" entry 67 match "tools dump li"
+configure system security aaa local-profiles profile "default" entry 67 action deny
+# configure system security aaa local-profiles profile "default" entry 68 match "state li"
+# configure system security aaa local-profiles profile "default" entry 68 action deny
+configure system security aaa local-profiles profile "default" entry 70 match "show"
+configure system security aaa local-profiles profile "default" entry 70 action permit
+configure system security aaa local-profiles profile "default" entry 75 match "state"
+configure system security aaa local-profiles profile "default" entry 75 action permit
+configure system security aaa local-profiles profile "default" entry 80 match "enable-admin"
+configure system security aaa local-profiles profile "default" entry 80 action permit
+configure system security aaa local-profiles profile "default" entry 90 match "enable"
+configure system security aaa local-profiles profile "default" entry 90 action permit
+ configure system security aaa local-profiles profile "administrative" entry 100 match "configure li"
+ configure system security aaa local-profiles profile "administrative" entry 100 action deny
+ configure system security aaa local-profiles profile "administrative" entry 110 match "show li"
+ configure system security aaa local-profiles profile "administrative" entry 110 action deny
+ configure system security aaa local-profiles profile "administrative" entry 111 match "clear li"
+ configure system security aaa local-profiles profile "administrative" entry 111 action deny
+ configure system security aaa local-profiles profile "administrative" entry 112 match "tools dump li"
+ configure system security aaa local-profiles profile "administrative" entry 112 action deny
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization action true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization cancel-commit true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization close-session true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization commit true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization copy-config true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization create-subscription true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization delete-config true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization discard-changes true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization edit-config true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get-config true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get-data true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get-schema true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization kill-session true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization lock true
+ configure system security aaa local-profiles profile "administrative" netconf base-op-authorization validate true
+ configure system security user-params local-user user "admin" restricted-to-home false
+ configure system security user-params local-user user "admin" password "NokiaSros1!"
+ configure system security user-params local-user user "admin" access console true
+ configure system security user-params local-user user "admin" console member ["administrative"]
+ configure system security user-params attempts count 64`
 	sshConfig = `configure system security ssh server-cipher-list-v2 cipher 190 name aes256-ctr
 configure system security ssh server-cipher-list-v2 cipher 192 name aes192-ctr
 configure system security ssh server-cipher-list-v2 cipher 194 name aes128-ctr

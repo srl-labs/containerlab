@@ -718,7 +718,7 @@ func (n *sros) createSROSFilesConfig() error {
 		cfgTemplate = cBuf.String()
 	} else {
 		// Use default clab config from embeded template
-		log.Debug("Rendering SR OS default containerlab startup config", "node", n.Cfg.ShortName)
+		log.Debug("Rendering SR OS default containerlab startup config", "node", n.Cfg.ShortName, "type", n.Cfg.NodeType)
 		err = n.addDefaultConfig()
 		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName, "startup-config", string(n.startupCliCfg))
 		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
@@ -789,7 +789,13 @@ func (n *sros) addDefaultConfig() error {
 		NetconfConfig: netconfConfig,
 		LoggingConfig: loggingConfig,
 		SSHConfig:     sshConfig,
+		NodeType:      strings.ToLower(n.Cfg.NodeType),
 	}
+	if strings.Contains(tplData.NodeType, "ixr-") {
+		tplData.GRPCConfig = grpcConfigIXR
+		tplData.SystemConfig = systemCfgIXR
+	}
+
 	if n.Config().DNS != nil {
 		tplData.DNSServers = append(tplData.DNSServers, n.Config().DNS.Servers...)
 	}

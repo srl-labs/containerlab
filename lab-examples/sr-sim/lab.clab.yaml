@@ -8,8 +8,6 @@ topology:
     srsim1:
       kind: nokia_srsim
       type: SR-1
-      env:
-        NOKIA_SROS_CHASSIS: SR-1s
     srsim2:
       kind: nokia_srsim
       type: SR-1x-92S
