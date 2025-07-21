@@ -731,7 +731,6 @@ func (n *sros) createSROSFilesConfig() error {
 		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
 			return fmt.Errorf("failed to create startup-config file %s for node %s failed: %v", cfgPath, n.Cfg.ShortName, err)
 		}
-
 	}
 
 	if cfgTemplate == "" {
