@@ -1082,6 +1082,6 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	} else if n.Cfg.MgmtIPv6Address != "" {
 		return n.Cfg.MgmtIPv6Address, nil
 	} else {
-		return n.Cfg.LongName, fmt.Errorf("failed to find IP address for %q", n.Cfg.LongName)
+		return n.Cfg.LongName, fmt.Errorf("no management IP address (IPv4 or IPv6) configured for node %q", n.Cfg.LongName)
 	}
 }
