@@ -75,7 +75,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	switch {
 	case !all:
 		log.Debug("topology file", "file", common.Topo)
-		cnts, err := listContainers(ctx, common.Topo)
+		cnts, err := listContainers(ctx, common.Topo, common.Name)
 		if err != nil {
 			return err
 		}
@@ -109,7 +109,10 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			filepath.Dir(cnts[0].Labels[labels.NodeLabDir])
 
 	case all:
-		containers, err := listContainers(ctx, common.Topo)
+		if common.Name != "" {
+			return fmt.Errorf("--all and --name should not be used together")
+		}
+		containers, err := listContainers(ctx, common.Topo, common.Name)
 		if err != nil {
 			return err
 		}
@@ -195,6 +198,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	}
 
 	var errs []error
+
 	for _, clab := range labs {
 		err = destroyLab(ctx, clab)
 		if err != nil {
@@ -221,9 +225,9 @@ func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
 	return c.Destroy(ctx, maxWorkers, keepMgmtNet)
 }
 
-// listContainers lists containers belonging to a certain topo if topo file path is specified
+// listContainers lists containers belonging to a certain topo or to a certain lab name if topo file path of lab name is specified
 // otherwise lists all containerlab containers.
-func listContainers(ctx context.Context, topo string) ([]runtime.GenericContainer, error) {
+func listContainers(ctx context.Context, topo, name string) ([]runtime.GenericContainer, error) {
 	runtimeConfig := &runtime.RuntimeConfig{
 		Debug:            common.Debug,
 		Timeout:          common.Timeout,
@@ -238,15 +242,6 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 		clab.WithSkippedBindsPathsCheck(),
 	}
 
-	// filter to list all containerlab containers
-	// it is overwritten if topo file is provided
-	filter := []*types.GenericFilter{{
-		FilterType: "label",
-		Field:      labels.Containerlab,
-		Operator:   "exists",
-	}}
-
-	// when topo file is provided, filter containers by lab name
 	if topo != "" {
 		opts = append(opts, clab.WithTopoPath(topo, common.VarsFile))
 	}
@@ -255,13 +250,28 @@ func listContainers(ctx context.Context, topo string) ([]runtime.GenericContaine
 	if err != nil {
 		return nil, err
 	}
-
+	// filter to list all containerlab containers
+	// it is overwritten if topo file or lab name is provided
+	// when topo file or lab name is provided, filter containers by lab name
+	filter := []*types.GenericFilter{{
+		FilterType: "label",
+		Field:      labels.Containerlab,
+		Operator:   "exists",
+	}}
+	// topology takes precedence (same as with inspect)
 	if topo != "" {
 		filter = []*types.GenericFilter{{
 			FilterType: "label",
 			Field:      labels.Containerlab,
 			Operator:   "=",
 			Match:      c.Config.Name,
+		}}
+	} else if name != "" {
+		filter = []*types.GenericFilter{{
+			FilterType: "label",
+			Field:      labels.Containerlab,
+			Operator:   "=",
+			Match:      name,
 		}}
 	}
 
