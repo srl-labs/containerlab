@@ -699,6 +699,7 @@ func (n *sros) createSROSFilesConfig() error {
 
 	var cfgTemplate string
 	var err error
+
 	cfgPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup, startupCfgFName)
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
 	if n.Cfg.StartupConfig != "" && !isPartial {
@@ -717,16 +718,20 @@ func (n *sros) createSROSFilesConfig() error {
 
 		cfgTemplate = cBuf.String()
 	} else {
-		// Use default clab config from embeded template
+		// Use default clab config from the embedded template
 		log.Debug("Rendering SR OS default containerlab startup config", "node", n.Cfg.ShortName, "type", n.Cfg.NodeType)
+
 		err = n.addDefaultConfig()
-		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName, "startup-config", string(n.startupCliCfg))
-		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
-			return fmt.Errorf("failed to create startup-config file %s for node %s failed: %v", cfgPath, n.Cfg.ShortName, err)
-		}
 		if err != nil {
 			return err
 		}
+
+		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName, "startup-config", string(n.startupCliCfg))
+
+		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
+			return fmt.Errorf("failed to create startup-config file %s for node %s failed: %v", cfgPath, n.Cfg.ShortName, err)
+		}
+
 	}
 
 	if cfgTemplate == "" {
@@ -743,8 +748,8 @@ func (n *sros) createSROSFilesConfig() error {
 	return nil
 }
 
-// SlotisInteger checks if the slot string represents a valid integer.
-func SlotisInteger(s string) bool {
+// SlotIsInteger checks if the slot string represents a valid integer.
+func SlotIsInteger(s string) bool {
 	_, err := strconv.Atoi(s)
 	return err == nil
 }
@@ -752,13 +757,13 @@ func SlotisInteger(s string) bool {
 // Check if a container is a CPM.
 func (n *sros) isCPM(cpm string) bool {
 	// Check if container is a linecard
-	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists && SlotisInteger(n.Cfg.Env[envNokiaSrosSlot]) {
+	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists && SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) {
 		return false
 	}
 	//check if container is the CPM given by the string cpm
 	if cpm != "" {
 		if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
-			!SlotisInteger(n.Cfg.Env[envNokiaSrosSlot]) &&
+			!SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) &&
 			!strings.EqualFold(n.Cfg.Env[envNokiaSrosSlot], cpm) {
 			return false
 		}
