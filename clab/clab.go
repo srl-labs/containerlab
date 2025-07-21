@@ -139,11 +139,11 @@ func NewContainerlabFromTopologyFileOrLabName(ctx context.Context,
 }
 
 // RuntimeInitializer returns a runtime initializer function for a provided runtime name.
+// Order of preference: cli flag -> env var -> default value of docker.
 func RuntimeInitializer(name string) (string, runtime.Initializer, error) {
-	// define runtime name.
-	// order of preference: cli flag -> env var -> default value of docker
 	envN := os.Getenv("CLAB_RUNTIME")
 	log.Debugf("env runtime var value is %v", envN)
+
 	switch {
 	case name != "":
 	case envN != "":
@@ -151,10 +151,13 @@ func RuntimeInitializer(name string) (string, runtime.Initializer, error) {
 	default:
 		name = docker.RuntimeName
 	}
-	if rInit, ok := runtime.ContainerRuntimes[name]; ok {
-		return name, rInit, nil
+
+	runtimeInitializer, ok := runtime.ContainerRuntimes[name]
+	if !ok {
+		return name, nil, fmt.Errorf("unknown container runtime %q", name)
 	}
-	return name, nil, fmt.Errorf("unknown container runtime %q", name)
+
+	return name, runtimeInitializer, nil
 }
 
 // ProcessTopoPath takes a topology path, which might be the path to a directory or a file

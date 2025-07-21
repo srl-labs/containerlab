@@ -49,7 +49,8 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
 		"attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	destroyCmd.Flags().BoolVarP(&yes, "yes", "y", false, "auto-approve deletion when used with --all (skips confirmation prompt)")
+	destroyCmd.Flags().BoolVarP(&yes, "yes", "y", false,
+		"auto-approve deletion when used with --all (skips confirmation prompt)")
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
