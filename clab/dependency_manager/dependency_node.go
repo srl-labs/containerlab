@@ -131,8 +131,9 @@ func (d *DependencyNode) runExecs(ctx context.Context, execPhase types.ExecPhase
 		}
 		if err != nil {
 			log.Errorf("error on exec in node %s for stage %s: %v", d.GetShortName(), stage, err)
+		} else {
+			execResultCollection.Add(hostname, execResult)
 		}
-		execResultCollection.Add(hostname, execResult)
 	}
 	execResultCollection.Log()
 }
