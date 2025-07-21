@@ -20,6 +20,7 @@ configure    system management-interface snmp streaming admin-state enable
 configure    system security user-params local-user user "admin" access grpc true
 configure    system grpc allow-unsecure-connection
 configure    system grpc gnmi auto-config-save true
+configure    system grpc rib-api admin-state enable
 `
 	grpcConfigIXR = `configure    system grpc admin-state enable
 configure    system security user-params local-user user "admin" access grpc true
