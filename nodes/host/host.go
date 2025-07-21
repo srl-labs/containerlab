@@ -7,6 +7,7 @@ package host
 import (
 	"bytes"
 	"context"
+	"errors"
 
 	osexec "os/exec"
 
@@ -105,7 +106,8 @@ func RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult, error) {
 
 	// execute the command synchronously
 	err := cmd.Run()
-	if err != nil {
+	exerr := &osexec.ExitError{}
+	if err != nil && !errors.As(err, &exerr) {
 		return nil, err
 	}
 
