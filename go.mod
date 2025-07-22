@@ -2,8 +2,6 @@ module github.com/srl-labs/containerlab
 
 go 1.24.0
 
-toolchain go1.24.5
-
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/charmbracelet/fang v0.3.0
@@ -248,7 +246,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	golang.org/x/mod v0.23.0
 	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sync v0.14.0
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect

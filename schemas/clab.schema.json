@@ -3,6 +3,26 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Containerlab topology definition file",
     "definitions": {
+        "env": {
+            "type": "object",
+            "description": "environment variables",
+            "markdownDescription": "[environment variables](https://containerlab.dev/manual/nodes/#env)",
+            "patternProperties": {
+                ".+": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "number"
+                        },
+                        {
+                            "type": "boolean"
+                        }
+                    ]
+                }
+            }
+        },
         "node-config": {
             "type": "object",
             "description": "topology node configuration container",
@@ -164,23 +184,7 @@
                 },
                 "env": {
                     "type": "object",
-                    "description": "environment variables",
-                    "markdownDescription": "[environment variables](https://containerlab.dev/manual/nodes/#env)",
-                    "patternProperties": {
-                        ".+": {
-                            "anyOf": [
-                                {
-                                    "type": "string"
-                                },
-                                {
-                                    "type": "number"
-                                },
-                                {
-                                    "type": "boolean"
-                                }
-                            ]
-                        }
-                    }
+                    "$ref": "#/definitions/env"
                 },
                 "user": {
                     "description": "user to use within the container",
@@ -281,29 +285,29 @@
                     "type": "object",
                     "$ref": "#/definitions/healthcheck-config"
                 },
-                "components" : { 
+                "components": {
                     "type": "array",
-                     "items": {
+                    "items": {
                         "type": "object",
                         "properties": {
                             "slot": {
-                                  "type": "string",
-                                   "description": "Set component physical position on a distributed chassis"
+                                "type": "string",
+                                "description": "Set component physical position on a distributed chassis"
                             },
                             "type": {
-                                  "type": "string",
-                                   "description": "Set component type"
+                                "type": "string",
+                                "description": "Set component type"
                             },
                             "env": {
-                                  "type": "object",
-                                  "$ref": "#/definitions/env"
-                                }
-                            },
-                        "additionalProperties": false
+                                "type": "object",
+                                "$ref": "#/definitions/env"
+                            }
                         },
-                        "uniqueItems": true,
-                        "description": "List of node components, used for multicontainer systems",
-                        "markdownDescription": "Dependency list for Components"
+                        "additionalProperties": false
+                    },
+                    "uniqueItems": true,
+                    "description": "List of node components, used for multicontainer systems",
+                    "markdownDescription": "Dependency list for Components"
                 },
                 "aliases": {
                     "type": "array",
@@ -414,7 +418,7 @@
                         }
                     }
                 },
-                                {
+                {
                     "if": {
                         "properties": {
                             "kind": {
@@ -432,44 +436,44 @@
                                 "anyOf": [
                                     {
                                         "enum": [
-                                               "ixr-10",
-                                               "ixr-6",
-                                               "ixr-e2c",
-                                               "ixr-e2",
-                                               "ixr-ec",
-                                               "ixr-e",
-                                               "ixr-r4",
-                                               "ixr-r6dl",
-                                               "ixr-r6d",
-                                               "ixr-r6",
-                                               "ixr-s",
-                                               "ixr-x3",
-                                               "ixr-x",
-                                               "sr-1-24d",
-                                               "sr-12e",
-                                               "sr-12",
-                                               "sr-1-46s",
-                                               "sr-14s",
-                                               "sr-1-92s",
-                                               "sr-1e",
-                                               "sr-1se",
-                                               "sr-1s",
-                                               "sr-1-48d",
-                                               "sr-1x-48d",
-                                               "sr-1x-92s",
-                                               "sr-1",
-                                               "sr-2e",
-                                               "sr-2se",
-                                               "sr-2s",
-                                               "sr-3e",
-                                               "sr-7s",
-                                               "sr-7",
-                                               "sr-a4",
-                                               "sr-a8",
-                                               "xrs-20e",
-                                               "xrs-20",
-                                               "ess-7",
-                                               "ess-12"
+                                            "ixr-10",
+                                            "ixr-6",
+                                            "ixr-e2c",
+                                            "ixr-e2",
+                                            "ixr-ec",
+                                            "ixr-e",
+                                            "ixr-r4",
+                                            "ixr-r6dl",
+                                            "ixr-r6d",
+                                            "ixr-r6",
+                                            "ixr-s",
+                                            "ixr-x3",
+                                            "ixr-x",
+                                            "sr-1-24d",
+                                            "sr-12e",
+                                            "sr-12",
+                                            "sr-1-46s",
+                                            "sr-14s",
+                                            "sr-1-92s",
+                                            "sr-1e",
+                                            "sr-1se",
+                                            "sr-1s",
+                                            "sr-1-48d",
+                                            "sr-1x-48d",
+                                            "sr-1x-92s",
+                                            "sr-1",
+                                            "sr-2e",
+                                            "sr-2se",
+                                            "sr-2s",
+                                            "sr-3e",
+                                            "sr-7s",
+                                            "sr-7",
+                                            "sr-a4",
+                                            "sr-a8",
+                                            "xrs-20e",
+                                            "xrs-20",
+                                            "ess-7",
+                                            "ess-12"
                                         ]
                                     }
                                 ]

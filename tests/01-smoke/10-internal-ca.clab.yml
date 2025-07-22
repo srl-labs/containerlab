@@ -6,14 +6,14 @@ name: internal-ca
 
 settings:
   certificate-authority:
-    key-size: 512
+    key-size: 1024
     validity-duration: 5h
 
 topology:
   defaults:
     certificate:
       issue: true
-      key-size: 512
+      key-size: 1024
   nodes:
     l1:
       kind: linux
@@ -26,7 +26,7 @@ topology:
       image: alpine:3
       certificate:
         issue: true
-        key-size: 1024
+        key-size: 2048
         sans:
           - 192.168.33.44
           - my.text.fqdn
