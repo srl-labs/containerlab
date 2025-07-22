@@ -10,11 +10,11 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/clab/dependency_manager"
 	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/cmd/inspect"
 	"github.com/srl-labs/containerlab/cmd/version"
+	"github.com/srl-labs/containerlab/core"
+	"github.com/srl-labs/containerlab/core/dependency_manager"
 	"github.com/srl-labs/containerlab/runtime"
 )
 
@@ -91,45 +91,46 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 		labOwner = os.Getenv("CLAB_OWNER")
 	}
 
-	opts := []clab.ClabOption{
-		clab.WithTimeout(common.Timeout),
-		clab.WithTopoPath(common.Topo, common.VarsFile),
-		clab.WithTopoBackup(common.Topo),
-		clab.WithNodeFilter(common.NodeFilter),
-		clab.WithRuntime(common.Runtime,
+	opts := []core.ClabOption{
+		core.WithTimeout(common.Timeout),
+		core.WithTopoPath(common.Topo, common.VarsFile),
+		core.WithTopoBackup(common.Topo),
+		core.WithNodeFilter(common.NodeFilter),
+		core.WithRuntime(
+			common.Runtime,
 			&runtime.RuntimeConfig{
 				Debug:            common.Debug,
 				Timeout:          common.Timeout,
 				GracefulShutdown: common.Graceful,
 			},
 		),
-		clab.WithDependencyManager(dependency_manager.NewDependencyManager()),
-		clab.WithDebug(common.Debug),
+		core.WithDependencyManager(dependency_manager.NewDependencyManager()),
+		core.WithDebug(common.Debug),
 	}
 
 	// process optional settings
 	if common.Name != "" {
-		opts = append(opts, clab.WithLabName(common.Name))
+		opts = append(opts, core.WithLabName(common.Name))
 	}
 	if labOwner != "" {
-		opts = append(opts, clab.WithLabOwner(labOwner))
+		opts = append(opts, core.WithLabOwner(labOwner))
 	}
 	if mgmtNetName != "" {
-		opts = append(opts, clab.WithManagementNetworkName(mgmtNetName))
+		opts = append(opts, core.WithManagementNetworkName(mgmtNetName))
 	}
 	if v4 := mgmtIPv4Subnet.String(); v4 != "<nil>" {
-		opts = append(opts, clab.WithManagementIpv4Subnet(v4))
+		opts = append(opts, core.WithManagementIpv4Subnet(v4))
 	}
 	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
-		opts = append(opts, clab.WithManagementIpv6Subnet(v6))
+		opts = append(opts, core.WithManagementIpv6Subnet(v6))
 	}
 
-	c, err := clab.NewContainerLab(opts...)
+	c, err := core.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
 
-	deploymentOptions, err := clab.NewDeployOptions(maxWorkers)
+	deploymentOptions, err := core.NewDeployOptions(maxWorkers)
 	if err != nil {
 		return err
 	}

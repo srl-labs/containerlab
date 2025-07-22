@@ -21,8 +21,8 @@ import (
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/internal/tc"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
@@ -109,7 +109,7 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// Get the runtime initializer.
-	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+	_, rinit, err := core.RuntimeInitializer(common.Runtime)
 	if err != nil {
 		return err
 	}
@@ -328,7 +328,7 @@ func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 
 func netemShowFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
-	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+	_, rinit, err := core.RuntimeInitializer(common.Runtime)
 	if err != nil {
 		return err
 	}
@@ -405,7 +405,7 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 
 func netemResetFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
-	_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+	_, rinit, err := core.RuntimeInitializer(common.Runtime)
 	if err != nil {
 		return err
 	}

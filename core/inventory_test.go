@@ -2,13 +2,14 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package clab
+package core
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"gopkg.in/yaml.v2"
 )
 
 func TestGenerateAnsibleInventory(t *testing.T) {
@@ -131,20 +132,20 @@ node1:
     username: admin
     password: admin
     platform: arista_eos
-    hostname: 
+    hostname:
 node2:
     username: admin
     password: admin
     platform: arista_eos
-    hostname: 
+    hostname:
 node3:
     username: admin
     password: admin
     platform: arista_eos
-    hostname: 
+    hostname:
 node4:
-    username: 
-    password: 
+    username:
+    password:
     platform: linux
     hostname: `,
 		},
@@ -156,20 +157,20 @@ node1:
     username: admin
     password: admin
     platform: eos
-    hostname: 
+    hostname:
 node2:
     username: admin
     password: admin
     platform: eos
-    hostname: 
+    hostname:
 node3:
     username: admin
     password: admin
     platform: eos
-    hostname: 
+    hostname:
 node4:
-    username: 
-    password: 
+    username:
+    password:
     platform: linux
     hostname: `,
 		},
@@ -178,8 +179,8 @@ node4:
 			clab_nornir_platform_name_schema: "",
 			want: `---
 node4:
-    username: 
-    password: 
+    username:
+    password:
     platform: linux
     hostname: 172.100.100.14
 node1:
@@ -226,7 +227,21 @@ node3:
 				t.Fatal(err)
 			}
 
-			if diff := cmp.Diff(tc.want, s.String()); diff != "" {
+			// compare "real" objects so we dont have to faff w/ whitespace or having editors
+			// add/remove trailing whitespace in the want strings in the test table
+			var gotData, wantData map[string]any
+
+			err = yaml.Unmarshal([]byte(s.String()), &gotData)
+			if err != nil {
+				t.Fatalf("failed to unmarshal got YAML: %v", err)
+			}
+
+			err = yaml.Unmarshal([]byte(tc.want), &wantData)
+			if err != nil {
+				t.Fatalf("failed to unmarshal want YAML: %v", err)
+			}
+
+			if diff := cmp.Diff(wantData, gotData); diff != "" {
 				t.Errorf("failed at '%s', diff: (-want +got)\n%s", name, diff)
 			}
 		})

@@ -8,7 +8,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/nodes/host"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,7 +29,8 @@ func TestRunExec(t *testing.T) {
 	}
 
 	// Run a command that does not exist
-	out, err = host.RunExec(context.TODO(), exec.NewExecCmdFromSlice([]string{"unknown-command-foobar"}))
+	out, err = host.RunExec(context.TODO(),
+		exec.NewExecCmdFromSlice([]string{"unknown-command-foobar"}))
 	assert.Error(t, err, "Exec should have failed")
 	assert.Nil(t, out, "The exec result should be nil")
 }

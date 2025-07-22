@@ -1,4 +1,4 @@
-package clab
+package core
 
 import "github.com/srl-labs/containerlab/types"
 

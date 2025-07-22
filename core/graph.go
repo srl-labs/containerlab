@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package clab
+package core
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 	"github.com/awalterschulze/gographviz"
 	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
-	e "github.com/srl-labs/containerlab/errors"
+	containerlaberrors "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/internal/mermaid"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
@@ -271,7 +271,7 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 	} else if utils.FileExists(tmpl) {
 		t = template.Must(template.ParseFiles(tmpl))
 	} else {
-		return fmt.Errorf("%w. Path %s", e.ErrFileNotFound, tmpl)
+		return fmt.Errorf("%w. Path %s", containerlaberrors.ErrFileNotFound, tmpl)
 	}
 
 	if staticDir != "" && tmpl == "" {
