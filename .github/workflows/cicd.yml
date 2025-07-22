@@ -509,7 +509,7 @@ jobs:
       - ixiac-one-basic-tests
       - ext-container-tests
       - vxlan-tests
-      - kind-test
+      - kind-tests
       - srsim-tests
       - cisco_iol-tests
       - fortigate-tests
