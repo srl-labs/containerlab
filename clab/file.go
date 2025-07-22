@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"text/template"
 
 	"github.com/hellt/envsubst"
@@ -57,14 +56,6 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 		return fmt.Errorf("failed to execute template: %v", err)
 	}
 
-	// create a hidden file that will contain the rendered topology
-	if !strings.HasPrefix(c.TopoPaths.TopologyFilenameBase(), ".") {
-		backupFPath := c.TopoPaths.TopologyBakFileAbsPath()
-		err = utils.CreateFile(backupFPath, buf.String())
-		if err != nil {
-			log.Warnf("Could not write rendered topology: %v", err)
-		}
-	}
 	log.Debugf("topology:\n%s\n", buf.String())
 
 	// expand env vars if any
