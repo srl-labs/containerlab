@@ -9,6 +9,11 @@ on:
       - "v*"
   pull_request:
   workflow_dispatch:
+    inputs:
+      runtime:
+        description: "Runtime to use for the tests"
+        required: false
+        default: "docker"
 
 env:
   GO_VER: "1.24.5"
@@ -132,6 +137,7 @@ jobs:
     uses: ./.github/workflows/smoke-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ inputs.runtime }}
     secrets: inherit
     needs:
       - file-changes
@@ -275,6 +281,7 @@ jobs:
     uses: ./.github/workflows/srlinux-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ inputs.runtime }}
     needs:
       - file-changes
       - process-gitref
@@ -346,6 +353,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ inputs.runtime }}
 
   kind-tests:
     uses: ./.github/workflows/kind-tests.yml
@@ -355,6 +363,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ inputs.runtime }}
 
   # sros-tests:
   #   uses: ./.github/workflows/sros-tests.yml
@@ -380,6 +389,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ inputs.runtime }}
 
   cisco_iol-tests:
     uses: ./.github/workflows/cisco_iol-tests.yml
@@ -389,6 +399,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ inputs.runtime }}
 
   fdio_vpp-tests:
     uses: ./.github/workflows/fdio_vpp-tests.yml
@@ -398,6 +409,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ inputs.runtime }}
 
   vyosnetworks_vyos-tests:
     uses: ./.github/workflows/vyosnetworks_vyos-tests.yml
@@ -407,6 +419,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ inputs.runtime }}
 
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
