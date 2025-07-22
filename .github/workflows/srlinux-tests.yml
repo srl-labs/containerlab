@@ -6,20 +6,20 @@ name: srlinux-tests
       py_ver:
         required: true
         type: string
+      runtime:
+        type: string
+        default: "docker"
 
 jobs:
   srlinux-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        runtime:
-          - "docker"
-          - "podman"
         test-suite:
           - "01*.robot"
           - "03*.robot"
     # allow podman job to fail, since it started to fail on github actions
-    continue-on-error: ${{ matrix.runtime == 'podman' }}
+    continue-on-error: ${{ inputs.runtime == 'podman' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Setup Podman
-        if: matrix.runtime == 'podman'
+        if: inputs.runtime == 'podman'
         # check http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04/amd64/
         # for available podman releases
         run: sudo bash ./.github/workflows/install-podman.sh
@@ -68,14 +68,14 @@ jobs:
 
       - name: Run srlinux tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/02-basic-srl/${{ matrix.test-suite }}
+          bash ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/02-basic-srl/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - name: Upload test logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 02-basic-srl-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 02-basic-srl-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -84,6 +84,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-srlinux-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-srlinux-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7

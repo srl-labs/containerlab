@@ -6,6 +6,9 @@ name: smoke-tests
       py_ver:
         required: true
         type: string
+      runtime:
+        type: string
+        default: "docker"
 
 jobs:
   smoke-tests:
@@ -17,9 +20,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runtime:
-          - "docker"
-          - "podman"
         test-suite:
           - "01*.robot"
           - "02*.robot"
@@ -47,7 +47,7 @@ jobs:
           - "24*.robot"
 
     # allow podman job to fail, since it started to fail on github actions
-    continue-on-error: ${{ matrix.runtime == 'podman' }}
+    continue-on-error: ${{ inputs.runtime == 'podman' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Setup Podman
-        if: matrix.runtime == 'podman'
+        if: inputs.runtime == 'podman'
         run: sudo bash ./.github/workflows/install-podman.sh
 
       - name: Install uv
@@ -94,14 +94,14 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
+          ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/01-smoke/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - name: Upload test report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 01-smoke-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 01-smoke-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -110,6 +110,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-smoke-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-smoke-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
