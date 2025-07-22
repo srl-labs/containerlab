@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/host"
 	"github.com/srl-labs/containerlab/types"

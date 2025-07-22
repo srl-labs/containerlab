@@ -26,7 +26,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
@@ -233,10 +233,11 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 
 	// either the non-distributed OR distributed AND is a CPM
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
-		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0777)
+		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
 		slot := n.Cfg.Env[envNokiaSrosSlot]
 		if slot == "" {
-			return fmt.Errorf("fail to init node because Env var %q is set to %q", envNokiaSrosSlot, n.Cfg.Env[envNokiaSrosSlot])
+			return fmt.Errorf("fail to init node because Env var %q is set to %q",
+				envNokiaSrosSlot, n.Cfg.Env[envNokiaSrosSlot])
 		}
 		// add the config specific mounts
 		cfgPath := filepath.Join(n.Cfg.LabDir, slot, configStartup)
@@ -379,7 +380,8 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.NodeType = n.Cfg.NodeType
 		componentConfig.Components = nil
 		fqdnDotIndex := strings.Index(componentConfig.Fqdn, ".")
-		componentConfig.Fqdn = fmt.Sprintf("%s-%s%s", componentConfig.Fqdn[:fqdnDotIndex], c.Slot, componentConfig.Fqdn[fqdnDotIndex:])
+		componentConfig.Fqdn = fmt.Sprintf("%s-%s%s", componentConfig.Fqdn[:fqdnDotIndex],
+			c.Slot, componentConfig.Fqdn[fqdnDotIndex:])
 		if idx != 0 {
 			componentConfig.DNS = nil
 		}
@@ -669,17 +671,17 @@ func (n *sros) createSROSFiles() error {
 	if n.Cfg.License != "" && (n.isCPM("") || n.isStandaloneNode()) {
 		// copy license file to node specific directory in lab
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(n.Cfg.License, licPath, 0644); err != nil {
+		if err := utils.CopyFile(n.Cfg.License, licPath, 0o644); err != nil {
 			return fmt.Errorf("license copying src %s -> dst %s failed: %v", n.Cfg.License, licPath, err)
 		}
 		log.Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)
 	}
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0o777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0o777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0o777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0o777)
+	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0o777)
 
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
@@ -704,7 +706,8 @@ func (n *sros) createSROSFilesConfig() error {
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
 	if n.Cfg.StartupConfig != "" && !isPartial {
 		// User provides startup config
-		log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config", n.Cfg.StartupConfig, "isPartial", isPartial)
+		log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
+			n.Cfg.StartupConfig, "isPartial", isPartial)
 
 		c, err := os.ReadFile(n.Cfg.StartupConfig)
 		if err != nil {
@@ -719,14 +722,16 @@ func (n *sros) createSROSFilesConfig() error {
 		cfgTemplate = cBuf.String()
 	} else {
 		// Use default clab config from the embedded template
-		log.Debug("Rendering SR OS default containerlab startup config", "node", n.Cfg.ShortName, "type", n.Cfg.NodeType)
+		log.Debug("Rendering SR OS default containerlab startup config", "node",
+			n.Cfg.ShortName, "type", n.Cfg.NodeType)
 
 		err = n.addDefaultConfig()
 		if err != nil {
 			return err
 		}
 
-		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName, "startup-config", string(n.startupCliCfg))
+		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName,
+			"startup-config", string(n.startupCliCfg))
 
 		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
 			return fmt.Errorf("failed to create startup-config file %s for node %s failed: %v", cfgPath, n.Cfg.ShortName, err)
@@ -739,7 +744,6 @@ func (n *sros) createSROSFilesConfig() error {
 	}
 
 	err = n.GenerateConfig(cfgPath, cfgTemplate)
-
 	if err != nil {
 		return fmt.Errorf("failed to generate config for node %q: %v", n.Cfg.ShortName, err)
 	}
@@ -756,7 +760,8 @@ func SlotIsInteger(s string) bool {
 // Check if a container is a CPM.
 func (n *sros) isCPM(cpm string) bool {
 	// Check if container is a linecard
-	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists && SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) {
+	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
+		SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) {
 		return false
 	}
 	// check if container is the CPM given by the string cpm
@@ -858,7 +863,8 @@ func (n *sros) addPartialConfig() error {
 			if configContent.Len() == 0 {
 				log.Warn("Buffer empty, PARTIAL config template parsing error", "node", n.Cfg.ShortName)
 			} else {
-				log.Debug("Additional PARTIAL config parsed", "node", n.Cfg.ShortName, "partial-config", configContent.String())
+				log.Debug("Additional PARTIAL config parsed", "node",
+					n.Cfg.ShortName, "partial-config", configContent.String())
 				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
 			}
 		} else {
@@ -927,7 +933,7 @@ func (n *sros) populateHosts(ctx context.Context, nodes map[string]nodes.Node) e
 	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
 	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 
-	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0666) // skipcq: GSC-G302
+	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0o666) // skipcq: GSC-G302
 	if err != nil {
 		log.Warn("Unable to open SR OS node /etc/hosts file", "node", n.Cfg.ShortName, "err", err)
 		return err

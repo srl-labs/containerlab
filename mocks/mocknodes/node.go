@@ -14,7 +14,7 @@ import (
 	reflect "reflect"
 
 	ns "github.com/containernetworking/plugins/pkg/ns"
-	exec "github.com/srl-labs/containerlab/clab/exec"
+	exec "github.com/srl-labs/containerlab/exec"
 	links "github.com/srl-labs/containerlab/links"
 	nodes "github.com/srl-labs/containerlab/nodes"
 	state "github.com/srl-labs/containerlab/nodes/state"

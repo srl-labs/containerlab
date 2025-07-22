@@ -1,4 +1,4 @@
-package clab
+package core
 
 import (
 	_ "embed"
@@ -29,7 +29,7 @@ type SSHConfigNodeTmpl struct {
 
 // sshConfigTemplate is the SSH config template.
 //
-//go:embed ssh_config.go.tpl
+//go:embed assets/ssh_config.go.tpl
 var sshConfigTemplate string
 
 // RemoveSSHConfig removes the lab specific ssh config file.

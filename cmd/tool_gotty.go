@@ -14,10 +14,10 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/cmd/common"
-	clabels "github.com/srl-labs/containerlab/labels"
+	"github.com/srl-labs/containerlab/core"
+	"github.com/srl-labs/containerlab/exec"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -213,7 +213,7 @@ var gottyAttachCmd = &cobra.Command{
 			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
 			gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
@@ -234,7 +234,7 @@ var gottyAttachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(common.Runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
 		}
@@ -329,7 +329,7 @@ var gottyDetachCmd = &cobra.Command{
 		defer cancel()
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
 			gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
@@ -344,7 +344,7 @@ var gottyDetachCmd = &cobra.Command{
 		log.Debugf("Container name for deletion: %s", containerName)
 
 		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(common.Runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
@@ -374,7 +374,7 @@ var gottyListCmd = &cobra.Command{
 		defer cancel()
 
 		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(common.Runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
@@ -389,7 +389,7 @@ var gottyListCmd = &cobra.Command{
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      clabels.ToolType,
+				Field:      containerlablabels.ToolType,
 				Operator:   "=",
 				Match:      gotty,
 			},
@@ -420,7 +420,7 @@ var gottyListCmd = &cobra.Command{
 
 			// Get owner from container labels
 			owner := "N/A"
-			if ownerVal, exists := c.Labels[clabels.Owner]; exists && ownerVal != "" {
+			if ownerVal, exists := c.Labels[containerlablabels.Owner]; exists && ownerVal != "" {
 				owner = ownerVal
 			}
 
@@ -504,7 +504,7 @@ var gottyReattachCmd = &cobra.Command{
 			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
 			gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
@@ -525,7 +525,7 @@ var gottyReattachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(common.Runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
 		}
