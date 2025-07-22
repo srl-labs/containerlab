@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	exec "github.com/srl-labs/containerlab/clab/exec"
+	exec "github.com/srl-labs/containerlab/exec"
 	runtime "github.com/srl-labs/containerlab/runtime"
 	gomock "go.uber.org/mock/gomock"
 )

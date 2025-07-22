@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -22,7 +22,7 @@ type GenericContainer struct {
 	NetworkName     string
 	NetworkSettings GenericMgmtIPs
 	Mounts          []ContainerMount
-	runtime         ContainerRuntime
+	Runtime         ContainerRuntime
 	Ports           []*types.GenericPortBinding
 }
 
@@ -33,13 +33,13 @@ type ContainerMount struct {
 
 // SetRuntime sets the runtime for this GenericContainer.
 func (ctr *GenericContainer) SetRuntime(r ContainerRuntime) {
-	ctr.runtime = r
+	ctr.Runtime = r
 }
 
 // RunExec executes a single command for a GenericContainer.
 func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
 	containerName := gc.Names[0]
-	execResult, err := gc.runtime.Exec(ctx, containerName, execCmd)
+	execResult, err := gc.Runtime.Exec(ctx, containerName, execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v", containerName, execCmd.GetCmdString(), err)
 		return nil, err

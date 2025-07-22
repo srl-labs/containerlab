@@ -9,6 +9,7 @@ linters:
     - goprintffuncname
     - govet
     - ineffassign
+    - importas
     - nakedret
     - nolintlint
     - staticcheck
@@ -67,8 +68,16 @@ linters:
             - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
             - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
             - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+    importas:
+      alias:
+        # we can add more layers here (containerlab$1$2 etc.) as we tidy/get more consistent
+        - pkg: github.com/srl-labs/containerlab/(\w+)
+          alias: containerlab$1
+      # both of these are quite nice for ensuring consistency, but... will require some work!
+      # no-unaliased: true
+      # no-extra-aliases: true
     lll:
-      line-length: 150
+      line-length: 100
     misspell:
       locale: US
     nolintlint:

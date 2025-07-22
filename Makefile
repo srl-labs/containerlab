@@ -91,7 +91,7 @@ mocks-gen: mocks-rm ## Generate mocks for all the defined interfaces.
 	mockgen -package=mocks -source=clab/dependency_manager/dependency_manager.go -destination=$(MOCKDIR)/dependency_manager.go
 	mockgen -package=mockruntime -source=runtime/runtime.go -destination=$(MOCKDIR)/mockruntime/runtime.go
 	mockgen -package=mocknodes -source=nodes/default_node.go -destination=$(MOCKDIR)/mocknodes/default_node.go
-	mockgen -package=mocks -source=clab/exec/exec.go -destination=$(MOCKDIR)/exec.go
+	mockgen -package=mocks -source=clab/exec.go -destination=$(MOCKDIR)/exec.go
 
 .PHONY: mocks-rm
 mocks-rm: ## remove generated mocks

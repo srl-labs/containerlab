@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 )
 
 const (

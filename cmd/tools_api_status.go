@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
-	clabels "github.com/srl-labs/containerlab/labels"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -82,7 +82,7 @@ var apiServerStatusCmd = &cobra.Command{
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      clabels.ToolType,
+				Field:      containerlablabels.ToolType,
 				Operator:   "=",
 				Match:      "api-server",
 			},
@@ -135,7 +135,7 @@ var apiServerStatusCmd = &cobra.Command{
 
 			// Get owner from container labels
 			owner := "N/A"
-			if ownerVal, exists := c.Labels[clabels.Owner]; exists && ownerVal != "" {
+			if ownerVal, exists := c.Labels[containerlablabels.Owner]; exists && ownerVal != "" {
 				owner = ownerVal
 			}
 

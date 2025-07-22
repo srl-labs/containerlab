@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	errs "github.com/srl-labs/containerlab/errors"
+	containerlaberrors "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/mocks/mocknodes"
 	"github.com/srl-labs/containerlab/mocks/mockruntime"
 	"github.com/srl-labs/containerlab/nodes"
@@ -297,7 +297,7 @@ func Test_filterClabNodes(t *testing.T) {
 			nodesFilter: []string{"wrongName"},
 			wantNodes:   []string{"node1", "node2"},
 			wantErr:     true,
-			err:         errs.ErrIncorrectInput,
+			err:         containerlaberrors.ErrIncorrectInput,
 		},
 	}
 

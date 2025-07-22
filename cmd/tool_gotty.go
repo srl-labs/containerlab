@@ -15,9 +15,9 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/cmd/common"
-	clabels "github.com/srl-labs/containerlab/labels"
+	"github.com/srl-labs/containerlab/exec"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -389,7 +389,7 @@ var gottyListCmd = &cobra.Command{
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      clabels.ToolType,
+				Field:      containerlablabels.ToolType,
 				Operator:   "=",
 				Match:      gotty,
 			},
@@ -420,7 +420,7 @@ var gottyListCmd = &cobra.Command{
 
 			// Get owner from container labels
 			owner := "N/A"
-			if ownerVal, exists := c.Labels[clabels.Owner]; exists && ownerVal != "" {
+			if ownerVal, exists := c.Labels[containerlablabels.Owner]; exists && ownerVal != "" {
 				owner = ownerVal
 			}
 

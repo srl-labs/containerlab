@@ -11,7 +11,7 @@ import (
 
 	osexec "os/exec"
 
-	cExec "github.com/srl-labs/containerlab/clab/exec"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
@@ -86,11 +86,11 @@ func (h *host) GetContainers(_ context.Context) ([]runtime.GenericContainer, err
 }
 
 // RunExec runs commands on the container host.
-func (*host) RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult, error) {
+func (*host) RunExec(ctx context.Context, e *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
 	return RunExec(ctx, e)
 }
 
-func RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult, error) {
+func RunExec(ctx context.Context, e *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
 	// retireve the command with its arguments
 	command := e.GetCmd()
 
@@ -112,7 +112,7 @@ func RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult, error) {
 	}
 
 	// create result struct
-	execResult := cExec.NewExecResult(e)
+	execResult := containerlabexec.NewExecResult(e)
 	// set the result fields in the exec struct
 	execResult.SetReturnCode(cmd.ProcessState.ExitCode())
 	execResult.SetStdOut(outBuf.Bytes())

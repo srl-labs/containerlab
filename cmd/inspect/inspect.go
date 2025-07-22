@@ -21,7 +21,7 @@ import (
 	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -68,7 +68,7 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 	opts := []clab.ClabOption{
 		clab.WithTimeout(common.Timeout),
 		clab.WithRuntime(common.Runtime,
-			&runtime.RuntimeConfig{
+			&containerlabruntime.RuntimeConfig{
 				Debug:            common.Debug,
 				Timeout:          common.Timeout,
 				GracefulShutdown: common.Graceful,
@@ -85,11 +85,6 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	c, err := clab.NewContainerLab(opts...)
-	if err != nil {
-		return err
-	}
-
-	err = c.CheckConnectivity(cobraCmd.Context())
 	if err != nil {
 		return err
 	}
@@ -123,8 +118,8 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 }
 
 // listContainers handles listing containers based on different criteria (topology or labels).
-func listContainers(ctx context.Context, c *clab.CLab) ([]runtime.GenericContainer, error) {
-	var containers []runtime.GenericContainer
+func listContainers(ctx context.Context, c *clab.CLab) ([]containerlabruntime.GenericContainer, error) {
+	var containers []containerlabruntime.GenericContainer
 	var err error
 	var gLabels []*types.GenericFilter
 
@@ -231,8 +226,8 @@ func getShortestTopologyPath(p string) (string, error) {
 }
 
 // printContainerDetailsJSON handles the detailed JSON output of containers grouped by lab name.
-func printContainerDetailsJSON(containers []runtime.GenericContainer) error {
-	groupedDetails := make(map[string][]runtime.GenericContainer)
+func printContainerDetailsJSON(containers []containerlabruntime.GenericContainer) error {
+	groupedDetails := make(map[string][]containerlabruntime.GenericContainer)
 	// Sort containers first by lab name, then by container name for consistent output
 	sort.Slice(containers, func(i, j int) bool {
 		labNameI := containers[i].Labels[labels.Containerlab]
@@ -273,7 +268,7 @@ func printContainerDetailsJSON(containers []runtime.GenericContainer) error {
 }
 
 // PrintContainerInspect handles non-details output (table or grouped JSON summary).
-func PrintContainerInspect(containers []runtime.GenericContainer, format string) error {
+func PrintContainerInspect(containers []containerlabruntime.GenericContainer, format string) error {
 	contDetails := make([]types.ContainerDetails, 0, len(containers))
 
 	// Gather summary details of each container

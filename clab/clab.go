@@ -17,9 +17,9 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/cert"
 	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
-	"github.com/srl-labs/containerlab/clab/exec"
-	errs "github.com/srl-labs/containerlab/errors"
-	clabels "github.com/srl-labs/containerlab/labels"
+	containerlaberrors "github.com/srl-labs/containerlab/errors"
+	"github.com/srl-labs/containerlab/exec"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
@@ -211,7 +211,8 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 	// ensure that the node filter is a subset of the nodes in the topology
 	for _, n := range nodeFilter {
 		if _, ok := c.Config.Topology.Nodes[n]; !ok {
-			return fmt.Errorf("%w: node %q is not present in the topology", errs.ErrIncorrectInput, n)
+			return fmt.Errorf("%w: node %q is not present in the topology",
+				containerlaberrors.ErrIncorrectInput, n)
 		}
 	}
 
@@ -261,51 +262,6 @@ func (c *CLab) GetNode(name string) (nodes.Node, error) {
 		return node, nil
 	}
 	return nil, fmt.Errorf("%w: %s", ErrNodeNotFound, name)
-}
-
-// createNodes schedules nodes creation and returns a waitgroup for all nodes
-// with the exec collection created from the exec config of each node.
-// The exec collection is returned to the caller to ensure that the execution log
-// is printed after the nodes are created.
-// Nodes interdependencies are created in this function.
-func (c *CLab) createNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection, error) {
-	for _, node := range c.Nodes {
-		c.dependencyManager.AddNode(node)
-	}
-
-	// nodes with static mgmt IP should be scheduled before the dynamic ones
-	err := c.createStaticDynamicDependency()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// create user-defined node dependencies done with `wait-for` property of the deployment stage
-	err = c.createWaitForDependency()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// create a set of dependencies, that makes the ignite nodes start one after the other
-	err = c.createIgniteSerialDependency()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// make network namespace shared containers start in the right order
-	c.createNamespaceSharingDependency()
-
-	// Add possible additional dependencies here
-
-	// make sure that there are no unresolvable dependencies, which would deadlock.
-	err = c.dependencyManager.CheckAcyclicity()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// start scheduling
-	NodesWg, execCollection := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy)
-
-	return NodesWg, execCollection, nil
 }
 
 // create a set of dependencies, that makes the ignite nodes start one after the other.
@@ -681,13 +637,13 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 		toolFilter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      clabels.ToolType,
+				Field:      containerlablabels.ToolType,
 				Operator:   "=",
 				Match:      toolType,
 			},
 			{
 				FilterType: "label",
-				Field:      clabels.Containerlab,
+				Field:      containerlablabels.Containerlab,
 				Operator:   "=",
 				Match:      c.Config.Name,
 			},
@@ -718,51 +674,6 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 			}
 		}
 	}
-}
-
-// ListContainers lists all containers using provided filter.
-func (c *CLab) ListContainers(ctx context.Context, filter []*types.GenericFilter) ([]runtime.GenericContainer, error) {
-	var containers []runtime.GenericContainer
-
-	for _, r := range c.Runtimes {
-		ctrs, err := r.ListContainers(ctx, filter)
-		if err != nil {
-			return containers, fmt.Errorf("could not list containers: %v", err)
-		}
-		containers = append(containers, ctrs...)
-	}
-	return containers, nil
-}
-
-// ListNodesContainers lists all containers based on the nodes stored in clab instance.
-func (c *CLab) ListNodesContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
-	var containers []runtime.GenericContainer
-
-	for _, n := range c.Nodes {
-		cts, err := n.GetContainers(ctx)
-		if err != nil {
-			return containers, fmt.Errorf("could not get container for node %s: %v", n.Config().LongName, err)
-		}
-
-		containers = append(containers, cts...)
-	}
-
-	return containers, nil
-}
-
-// ListNodesContainersIgnoreNotFound lists all containers based on the nodes stored in clab instance, ignoring errors for non found containers.
-func (c *CLab) ListNodesContainersIgnoreNotFound(ctx context.Context) ([]runtime.GenericContainer, error) {
-	var containers []runtime.GenericContainer
-
-	for _, n := range c.Nodes {
-		cts, err := n.GetContainers(ctx)
-		if err != nil {
-			continue
-		}
-		containers = append(containers, cts...)
-	}
-
-	return containers, nil
 }
 
 // GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes - host and mgmt-net.
@@ -861,345 +772,6 @@ func (c *CLab) extractDNSServers(filesys fs.FS) error {
 	}
 
 	return nil
-}
-
-// Deploy the given topology.
-// skipcq: GO-R1005
-func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.GenericContainer, error) {
-	var err error
-
-	err = c.ResolveLinks()
-	if err != nil {
-		return nil, err
-	}
-
-	log.Debugf("lab Conf: %+v", c.Config)
-	if options.reconfigure {
-		_ = c.Destroy(ctx, uint(len(c.Nodes)), true)
-		log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
-		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
-			return nil, err
-		}
-	}
-
-	// create management network or use existing one
-	if err = c.CreateNetwork(ctx); err != nil {
-		return nil, err
-	}
-
-	err = links.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = c.checkTopologyDefinition(ctx); err != nil {
-		return nil, err
-	}
-
-	if err = c.loadKernelModules(); err != nil {
-		return nil, err
-	}
-
-	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
-
-	if !options.skipLabDirFileACLs {
-		// adjust ACL for Labdir such that SUDO_UID Users will
-		// also have access to lab directory files
-		err = utils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
-		if err != nil {
-			log.Infof("unable to adjust Labdir file ACLs: %v", err)
-		}
-	}
-
-	// create an empty ansible inventory file that will get populated later
-	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
-	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
-	_, err = os.Create(ansibleInvFPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// create an empty nornir simple inventory file that will get populated later
-	// we create it here first, so that bind mounts of nornir-simple-inventory.yml file could work
-	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
-	_, err = os.Create(nornirSimpleInvFPath)
-	if err != nil {
-		return nil, err
-	}
-
-	// in an similar fashion, create an empty topology data file
-	topoDataFPath := c.TopoPaths.TopoExportFile()
-	topoDataF, err := os.Create(topoDataFPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := c.certificateAuthoritySetup(); err != nil {
-		return nil, err
-	}
-
-	c.SSHPubKeys, err = c.RetrieveSSHPubKeys()
-	if err != nil {
-		log.Warn(err)
-	}
-
-	if err := c.createAuthzKeysFile(); err != nil {
-		return nil, err
-	}
-
-	// extraHosts holds host entries for nodes with static IPv4/6 addresses
-	// these entries will be used by container runtime to populate /etc/hosts file
-	extraHosts := make([]string, 0, len(c.Nodes))
-
-	for _, n := range c.Nodes {
-		if n.Config().MgmtIPv4Address != "" {
-			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s",
-				n.Config().ShortName, n.Config().MgmtIPv4Address)
-			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
-		}
-
-		if n.Config().MgmtIPv6Address != "" {
-			log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s",
-				n.Config().ShortName, n.Config().MgmtIPv6Address)
-			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
-		}
-	}
-
-	for _, n := range c.Nodes {
-		n.Config().ExtraHosts = extraHosts
-	}
-
-	nodesWg, execCollection, err := c.createNodes(ctx, options.maxWorkers, options.skipPostDeploy)
-	if err != nil {
-		return nil, err
-	}
-
-	// also call deploy on the special nodes endpoints (only host is required for the
-	// vxlan stitched endpoints)
-	eps := c.getSpecialLinkNodes()["host"].GetEndpoints()
-	for _, ep := range eps {
-		err = ep.Deploy(ctx)
-		if err != nil {
-			log.Warnf("failed deploying endpoint %s", ep)
-		}
-	}
-
-	if nodesWg != nil {
-		nodesWg.Wait()
-	}
-
-	// write to log
-	execCollection.Log()
-
-	if err := c.GenerateInventories(); err != nil {
-		return nil, err
-	}
-
-	if err := c.GenerateExports(ctx, topoDataF, options.exportTemplate); err != nil {
-		return nil, err
-	}
-
-	// generate graph of the lab topology
-	if options.graph {
-		if err = c.GenerateDotGraph(); err != nil {
-			log.Error(err)
-		}
-	}
-
-	containers, err := c.ListNodesContainers(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Info("Adding host entries", "path", "/etc/hosts")
-	err = c.appendHostsFileEntries(ctx)
-	if err != nil {
-		log.Errorf("failed to create hosts file: %v", err)
-	}
-
-	log.Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
-	err = c.addSSHConfig()
-	if err != nil {
-		log.Errorf("failed to create ssh config file: %v", err)
-	}
-
-	return containers, nil
-}
-
-// certificateAuthoritySetup sets up the certificate authority parameters.
-func (c *CLab) certificateAuthoritySetup() error {
-	// init the Cert storage and CA
-	c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-	c.Cert.CA = cert.NewCA()
-
-	s := c.Config.Settings
-
-	// Set defaults for the CA parameters
-	keySize := 2048
-	validityDuration := time.Until(time.Now().AddDate(1, 0, 0)) // 1 year as default
-
-	// check that Settings.CertificateAuthority exists.
-	if s != nil && s.CertificateAuthority != nil {
-		// if ValidityDuration is set use the value
-		if s.CertificateAuthority.ValidityDuration != 0 {
-			validityDuration = s.CertificateAuthority.ValidityDuration
-		}
-
-		// if KeyLength is set use the value
-		if s.CertificateAuthority.KeySize != 0 {
-			keySize = s.CertificateAuthority.KeySize
-		}
-
-		// if external CA cert and and key are set, propagate to topopaths
-		extCACert := s.CertificateAuthority.Cert
-		extCAKey := s.CertificateAuthority.Key
-
-		// override external ca and key from env vars
-		if v := os.Getenv("CLAB_CA_KEY_FILE"); v != "" {
-			extCAKey = v
-		}
-
-		if v := os.Getenv("CLAB_CA_CERT_FILE"); v != "" {
-			extCACert = v
-		}
-
-		if extCACert != "" && extCAKey != "" {
-			err := c.TopoPaths.SetExternalCaFiles(extCACert, extCAKey)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	// define the attributes used to generate the CA Cert
-	caCertInput := &cert.CACSRInput{
-		CommonName:   c.Config.Name + " lab CA",
-		Country:      "US",
-		Expiry:       validityDuration,
-		Organization: "containerlab",
-		KeySize:      keySize,
-	}
-
-	return c.LoadOrGenerateCA(caCertInput)
-}
-
-// Destroy the given topology.
-func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
-	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
-	if err != nil {
-		return err
-	}
-
-	if len(containers) == 0 {
-		return nil
-	}
-
-	if maxWorkers == 0 {
-		maxWorkers = uint(len(c.Nodes))
-	}
-
-	// a set of workers that do not support concurrency
-	serialNodes := make(map[string]struct{})
-	for _, n := range c.Nodes {
-		if n.GetRuntime().GetName() == ignite.RuntimeName {
-			serialNodes[n.Config().LongName] = struct{}{}
-			// decreasing the num of maxWorkers as they are used for concurrent nodes
-			maxWorkers = maxWorkers - 1
-		}
-	}
-
-	// Serializing ignite workers due to busy device error
-	if _, ok := c.Runtimes[ignite.RuntimeName]; ok {
-		maxWorkers = 1
-	}
-
-	log.Info("Destroying lab", "name", c.Config.Name)
-	c.deleteNodes(ctx, maxWorkers, serialNodes)
-
-	c.deleteToolContainers(ctx)
-
-	log.Info("Removing host entries", "path", "/etc/hosts")
-	err = c.DeleteEntriesFromHostsFile()
-	if err != nil {
-		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
-	}
-
-	log.Info("Removing SSH config", "path", c.TopoPaths.SSHConfigPath())
-	err = c.RemoveSSHConfig(c.TopoPaths)
-	if err != nil {
-		log.Errorf("failed to remove ssh config file: %v", err)
-	}
-
-	// delete container network namespaces symlinks
-	for _, node := range c.Nodes {
-		err = node.DeleteNetnsSymlink()
-		if err != nil {
-			return fmt.Errorf("error while deleting netns symlinks: %w", err)
-		}
-	}
-
-	// delete lab management network
-	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
-		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
-		if err = c.globalRuntime().DeleteNet(ctx); err != nil {
-			// do not log error message if deletion error simply says that such network doesn't exist
-			if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
-				log.Error(err)
-			}
-		}
-	}
-	return nil
-}
-
-// Exec execute commands on running topology nodes.
-func (c *CLab) Exec(ctx context.Context, cmds []string, options *ExecOptions) (*exec.ExecCollection, error) {
-	err := links.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
-	if err != nil {
-		return nil, err
-	}
-
-	cnts, err := c.ListContainers(ctx, options.filters)
-	if err != nil {
-		return nil, err
-	}
-
-	// make sure filter returned containers
-	if len(cnts) == 0 {
-		return nil, fmt.Errorf("filter did not match any containers")
-	}
-
-	// prepare the exec collection and the exec command
-	resultCollection := exec.NewExecCollection()
-
-	// build execs from the string input
-	var execCmds []*exec.ExecCmd
-	for _, execCmdStr := range cmds {
-		execCmd, err := exec.NewExecCmdFromString(execCmdStr)
-		if err != nil {
-			return nil, err
-		}
-		execCmds = append(execCmds, execCmd)
-	}
-
-	// run the exec commands on all the containers matching the filter
-	for _, cnt := range cnts {
-		// iterate over the commands
-		for _, execCmd := range execCmds {
-			// execute the commands
-			execResult, err := cnt.RunExec(ctx, execCmd)
-			if err != nil {
-				// skip nodes that do not support exec
-				if err == exec.ErrRunExecNotSupported {
-					continue
-				}
-			}
-
-			resultCollection.Add(cnt.Names[0], execResult)
-		}
-	}
-
-	return resultCollection, nil
 }
 
 // CheckConnectivity checks the connectivity to all container runtimes, returns an error if it encounters any, otherwise nil.

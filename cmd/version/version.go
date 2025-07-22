@@ -30,7 +30,7 @@ func init() {
 // https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
 // https://patorjk.com/software/taag/#p=display&f=Ivrit&t=CONTAINERlab
 //
-//go:embed logo.txt
+//go:embed assets/logo.txt
 var projASCIILogo string
 
 // VersionCmd defines the version command.

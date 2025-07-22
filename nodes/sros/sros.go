@@ -26,7 +26,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/netconf"
 	"github.com/srl-labs/containerlab/nodes"
