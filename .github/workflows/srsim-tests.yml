@@ -66,9 +66,12 @@ jobs:
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
-      - name: Run sros tests
+      - name: Pull srsim image
+        run: docker pull ghcr.io/srl-labs/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/nokia_srsim:25.7.R1 nokia_srsim:25.7.R1
+
+      - name: Run sros-srsim tests
         run: |
-          stat ./tests/13-srsim/sros_license.txt
+          stat ./tests/13-srsim/sros_license.txt -c %s
           ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
       # upload test reports as a zip file
       - name: Upload test logs
