@@ -722,14 +722,16 @@ func (n *sros) createSROSFilesConfig() error {
 		cfgTemplate = cBuf.String()
 	} else {
 		// Use default clab config from the embedded template
-		log.Debug("Rendering SR OS default containerlab startup config", "node", n.Cfg.ShortName, "type", n.Cfg.NodeType)
+		log.Debug("Rendering SR OS default containerlab startup config", "node",
+			n.Cfg.ShortName, "type", n.Cfg.NodeType)
 
 		err = n.addDefaultConfig()
 		if err != nil {
 			return err
 		}
 
-		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName, "startup-config", string(n.startupCliCfg))
+		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName,
+			"startup-config", string(n.startupCliCfg))
 
 		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
 			return fmt.Errorf("failed to create startup-config file %s for node %s failed: %v", cfgPath, n.Cfg.ShortName, err)
@@ -758,12 +760,8 @@ func SlotIsInteger(s string) bool {
 // Check if a container is a CPM.
 func (n *sros) isCPM(cpm string) bool {
 	// Check if container is a linecard
-<<<<<<< HEAD
-	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists && SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) {
-=======
 	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
-		SlotisInteger(n.Cfg.Env[envNokiaSrosSlot]) {
->>>>>>> 93ea5391 (chore: re-gofumpt things, tidy runtime initializer bits)
+		SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) {
 		return false
 	}
 	// check if container is the CPM given by the string cpm
