@@ -378,6 +378,7 @@ jobs:
 
   srsim-tests:
     uses: ./.github/workflows/srsim-tests.yml
+    secrets: inherit
     needs:
       - file-changes
       - build-containerlab
@@ -432,7 +433,7 @@ jobs:
       - ixiac-one-basic-tests
       - vxlan-tests
       - kind-tests
-      # - sros-tests
+      - srsim-tests
       - fortigate-tests
       - cisco_iol-tests
       - fdio_vpp-tests
@@ -508,7 +509,8 @@ jobs:
       - ixiac-one-basic-tests
       - ext-container-tests
       - vxlan-tests
-      - kind-tests
+      - kind-test
+      - srsim-tests
       - cisco_iol-tests
       - fortigate-tests
       - fdio_vpp-tests
