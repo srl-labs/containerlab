@@ -34,10 +34,13 @@ jobs:
 
       - name: Create license file from env vars
         run: |
+          export SRSIM_TEST
+          export SRSIM_LICENSE
           echo $SRSIM_TEST > ./tests/13-srsim/sros_test.txt
           echo $SRSIM_LICENSE > ./tests/13-srsim/sros_license.txt
           stat ./tests/13-srsim/sros_test.txt
           cat ./tests/13-srsim/sros_test.txt
+          
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -68,7 +71,7 @@ jobs:
       - name: Run sros tests
         run: |
           stat ./tests/13-srsim/sros_license.txt
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
+          ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
       # upload test reports as a zip file
       - name: Upload test logs
         uses: actions/upload-artifact@v4
