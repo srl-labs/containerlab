@@ -164,7 +164,7 @@ func WithTopoBackup(path string) ClabOption {
 			log.Warn("Could not create topology backup", "topology path", path, "backup path", backupFPath, "error", err)
 		}
 
-		return err
+		return nil
 	}
 }
 
