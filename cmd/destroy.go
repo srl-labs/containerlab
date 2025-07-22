@@ -16,8 +16,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
@@ -65,7 +65,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	}
 
 	var err error
-	var labs []*clab.CLab
+	var labs []*core.CLab
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -139,32 +139,32 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	}
 
 	for topo, labdir := range topos {
-		opts := []clab.ClabOption{
-			clab.WithTimeout(common.Timeout),
-			clab.WithTopoPath(topo, common.VarsFile),
-			clab.WithNodeFilter(common.NodeFilter),
-			clab.WithRuntime(common.Runtime,
+		opts := []core.ClabOption{
+			core.WithTimeout(common.Timeout),
+			core.WithTopoPath(topo, common.VarsFile),
+			core.WithNodeFilter(common.NodeFilter),
+			core.WithRuntime(common.Runtime,
 				&runtime.RuntimeConfig{
 					Debug:            common.Debug,
 					Timeout:          common.Timeout,
 					GracefulShutdown: common.Graceful,
 				},
 			),
-			clab.WithDebug(common.Debug),
+			core.WithDebug(common.Debug),
 			// during destroy we don't want to check bind paths
 			// as it is irrelevant for this command.
-			clab.WithSkippedBindsPathsCheck(),
+			core.WithSkippedBindsPathsCheck(),
 		}
 
 		if keepMgmtNet {
-			opts = append(opts, clab.WithKeepMgmtNet())
+			opts = append(opts, core.WithKeepMgmtNet())
 		}
 		if common.Name != "" {
-			opts = append(opts, clab.WithLabName(common.Name))
+			opts = append(opts, core.WithLabName(common.Name))
 		}
 
 		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
-		nc, err := clab.NewContainerLab(opts...)
+		nc, err := core.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
+func destroyLab(ctx context.Context, c *core.CLab) (err error) {
 	return c.Destroy(ctx, maxWorkers, keepMgmtNet)
 }
 
@@ -235,19 +235,19 @@ func listContainers(ctx context.Context, topo, name string) ([]runtime.GenericCo
 		GracefulShutdown: common.Graceful,
 	}
 
-	opts := []clab.ClabOption{
-		clab.WithRuntime(common.Runtime, runtimeConfig),
-		clab.WithTimeout(common.Timeout),
+	opts := []core.ClabOption{
+		core.WithRuntime(common.Runtime, runtimeConfig),
+		core.WithTimeout(common.Timeout),
 		// when listing containers we don't care if binds are accurate
 		// since this function is used in the destroy process
-		clab.WithSkippedBindsPathsCheck(),
+		core.WithSkippedBindsPathsCheck(),
 	}
 
 	if topo != "" {
-		opts = append(opts, clab.WithTopoPath(topo, common.VarsFile))
+		opts = append(opts, core.WithTopoPath(topo, common.VarsFile))
 	}
 
-	c, err := clab.NewContainerLab(opts...)
+	c, err := core.NewContainerLab(opts...)
 	if err != nil {
 		return nil, err
 	}

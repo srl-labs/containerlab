@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/clab"
+	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -33,7 +33,7 @@ const (
 type Dict map[string]interface{}
 
 // PrepareVars variables for all nodes. This will also prepare all variables for the links.
-func PrepareVars(c *clab.CLab) map[string]*NodeConfig {
+func PrepareVars(c *core.CLab) map[string]*NodeConfig {
 	res := make(map[string]*NodeConfig)
 
 	// preparing all nodes vars

@@ -1,4 +1,4 @@
-package clab
+package core
 
 import (
 	"github.com/charmbracelet/log"

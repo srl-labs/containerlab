@@ -18,8 +18,8 @@ import (
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -65,26 +65,26 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 		inspectFormat = "json" // Force JSON format if details are requested
 	}
 
-	opts := []clab.ClabOption{
-		clab.WithTimeout(common.Timeout),
-		clab.WithRuntime(common.Runtime,
+	opts := []core.ClabOption{
+		core.WithTimeout(common.Timeout),
+		core.WithRuntime(common.Runtime,
 			&containerlabruntime.RuntimeConfig{
 				Debug:            common.Debug,
 				Timeout:          common.Timeout,
 				GracefulShutdown: common.Graceful,
 			},
 		),
-		clab.WithDebug(common.Debug),
+		core.WithDebug(common.Debug),
 	}
 
 	if common.Topo != "" {
 		opts = append(opts,
-			clab.WithTopoPath(common.Topo, common.VarsFile),
-			clab.WithNodeFilter(common.NodeFilter),
+			core.WithTopoPath(common.Topo, common.VarsFile),
+			core.WithNodeFilter(common.NodeFilter),
 		)
 	}
 
-	c, err := clab.NewContainerLab(opts...)
+	c, err := core.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 }
 
 // listContainers handles listing containers based on different criteria (topology or labels).
-func listContainers(ctx context.Context, c *clab.CLab) ([]containerlabruntime.GenericContainer, error) {
+func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.GenericContainer, error) {
 	var containers []containerlabruntime.GenericContainer
 	var err error
 	var gLabels []*types.GenericFilter

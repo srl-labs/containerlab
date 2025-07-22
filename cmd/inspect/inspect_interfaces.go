@@ -11,8 +11,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
-	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -50,9 +50,9 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", interfacesFormat)
 	}
 
-	opts := []clab.ClabOption{
-		clab.WithTimeout(common.Timeout),
-		clab.WithRuntime(
+	opts := []core.ClabOption{
+		core.WithTimeout(common.Timeout),
+		core.WithRuntime(
 			common.Runtime,
 			&containerlabruntime.RuntimeConfig{
 				Debug:            common.Debug,
@@ -60,17 +60,17 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 				GracefulShutdown: common.Graceful,
 			},
 		),
-		clab.WithDebug(common.Debug),
+		core.WithDebug(common.Debug),
 	}
 
 	if common.Topo != "" {
 		opts = append(opts,
-			clab.WithTopoPath(common.Topo, common.VarsFile),
-			clab.WithNodeFilter(common.NodeFilter),
+			core.WithTopoPath(common.Topo, common.VarsFile),
+			core.WithNodeFilter(common.NodeFilter),
 		)
 	}
 
-	c, err := clab.NewContainerLab(opts...)
+	c, err := core.NewContainerLab(opts...)
 	if err != nil {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}

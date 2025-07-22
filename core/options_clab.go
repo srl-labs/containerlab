@@ -1,4 +1,4 @@
-package clab
+package core
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
+	depMgr "github.com/srl-labs/containerlab/core/dependency_manager"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -165,7 +165,8 @@ func WithTopoBackup(path string) ClabOption {
 
 		err := utils.CopyFile(path, backupFPath, 0o644)
 		if err != nil {
-			log.Warn("Could not create topology backup", "topology path", path, "backup path", backupFPath, "error", err)
+			log.Warn("Could not create topology backup", "topology path", path,
+				"backup path", backupFPath, "error", err)
 		}
 
 		return nil

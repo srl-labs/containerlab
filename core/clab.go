@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package clab
+package core
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/cert"
-	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
+	depMgr "github.com/srl-labs/containerlab/core/dependency_manager"
 	containerlaberrors "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/exec"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
