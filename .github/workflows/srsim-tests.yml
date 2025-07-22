@@ -10,6 +10,9 @@ name: srsim-tests
 jobs:
   srsim-tests:
     runs-on: ubuntu-24.04
+    env: 
+      SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
+      SRSIM_TEST: ${{ secrets.SRSIM_TEST }}
     strategy:
       matrix:
         runtime:
@@ -29,6 +32,12 @@ jobs:
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
+      - name: Create license file from env vars
+        run: |
+          echo $SRSIM_TEST > ./tests/13-srsim/sros_test.txt
+          echo $SRSIM_LICENSE > ./tests/13-srsim/sros_license.txt
+          stat ./tests/13-srsim/sros_test.txt
+          cat ./tests/13-srsim/sros_test.txt
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -57,14 +66,8 @@ jobs:
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
       - name: Run sros tests
-        env: 
-          SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
-          SRSIM_TEST: ${{ secrets.SRSIM_TEST }}
         run: |
-          export SRSIM_TEST
-          echo $SRSIM_TEST > ./tests/13-srsim/sros_test.txt
-          stat ./tests/13-srsim/sros_test.txt
-          cat ./tests/13-srsim/sros_test.txt
+          stat ./tests/13-srsim/sros_license.txt
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
       # upload test reports as a zip file
       - name: Upload test logs
