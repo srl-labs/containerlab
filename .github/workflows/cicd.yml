@@ -374,13 +374,14 @@ jobs:
   #   with:
   #     py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
-  # srsim-tests:
-  #   uses: ./.github/workflows/srsim-tests.yml
-  #   needs:
-  #     - file-changes
-  #     - build-containerlab
-  #   with:
-  #     py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+  srsim-tests:
+    uses: ./.github/workflows/srsim-tests.yml
+    secrets: inherit
+    needs:
+      - file-changes
+      - build-containerlab
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
   fortigate-tests:
     uses: ./.github/workflows/fortigate-tests.yml
@@ -434,7 +435,7 @@ jobs:
       - ixiac-one-basic-tests
       - vxlan-tests
       - kind-tests
-      # - sros-tests
+      - srsim-tests
       - fortigate-tests
       - cisco_iol-tests
       - fdio_vpp-tests
@@ -511,6 +512,7 @@ jobs:
       - ext-container-tests
       - vxlan-tests
       - kind-tests
+      - srsim-tests
       - cisco_iol-tests
       - fortigate-tests
       - fdio_vpp-tests

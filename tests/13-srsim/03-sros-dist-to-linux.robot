@@ -7,8 +7,8 @@ Suite Teardown      Run Keyword    Cleanup
 
 
 *** Variables ***
-${lab-name}         sr02
-${lab-file-name}    02-srsim.clab.yml
+${lab-name}         sr03
+${lab-file-name}    03-srsim-dist.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
 
@@ -31,7 +31,7 @@ Deploy ${lab-name} lab
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
-    ...    address=clab-${lab-name}-sros
+    ...    address=clab-${lab-name}-sros-a
     ...    username=admin
     ...    password=NokiaSros1!
     ...    try_for=10
@@ -43,8 +43,8 @@ Verify links in node l1
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
-Ensure l1 can ping sros over 1/1/c1/1 interface
-    Sleep    5s    give some time for networking stack to settle
+Ensure l1 can ping sros over 1/1/1 interface
+    Sleep    30s    give some time for linecards to come up
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping 10.0.0.2 -c2 -w 3"
     Log    ${output}
