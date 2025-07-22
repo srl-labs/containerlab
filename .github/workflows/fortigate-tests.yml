@@ -6,6 +6,9 @@ name: fortigate-test
       py_ver:
         required: true
         type: string
+      runtime:
+        type: string
+        default: "docker"
 
 jobs:
   fortigate-tests:
@@ -65,13 +68,13 @@ jobs:
 
       - name: Run tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/09-fortigate/${{ matrix.test-suite }}
+          bash ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/09-fortigate/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 09-fortigate-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 09-fortigate-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -80,6 +83,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-fortigate-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-fortigate-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7

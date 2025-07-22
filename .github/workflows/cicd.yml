@@ -140,10 +140,6 @@ jobs:
 
   ext-container-tests:
     runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        runtime:
-          - "docker"
     needs:
       - build-containerlab
     steps:
@@ -189,13 +185,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Run tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/06-ext-container
+          bash ./tests/rf-run.sh docker ./tests/06-ext-container
       # upload test reports as a zip file
       - name: Upload test reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 06-ext-container-log-${{ matrix.runtime }}
+          name: 06-ext-container-log-docker
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -204,16 +200,12 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-ext-container-test-${{ matrix.runtime }}
+          name: coverage-ext-container-test-docker
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
   ceos-basic-tests:
     runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        runtime:
-          - "docker"
     needs:
       - build-containerlab
     steps:
@@ -261,12 +253,12 @@ jobs:
         run: docker pull ghcr.io/srl-labs/ceos:4.32.0F && docker tag ghcr.io/srl-labs/ceos:4.32.0F ceos:4.32.0F
       - name: Run ceos tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/03-basic-ceos
+          bash ./tests/rf-run.sh docker ./tests/03-basic-ceos
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 03-basic-ceos-log-${{ matrix.runtime }}
+          name: 03-basic-ceos-log-docker
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -275,7 +267,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-ceos-tests-${{ matrix.runtime }}
+          name: coverage-ceos-tests-docker
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
@@ -290,10 +282,6 @@ jobs:
 
   ixiac-one-basic-tests:
     runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        runtime:
-          - "docker"
     needs:
       - build-containerlab
     steps:
@@ -332,12 +320,12 @@ jobs:
 
       - name: Run keysight_ixia-c-one tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/04-basic-ixiacone
+          bash ./tests/rf-run.sh docker ./tests/04-basic-ixiacone
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 04-basic-ixiacone-log-${{ matrix.runtime }}
+          name: 04-basic-ixiacone-log-docker
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -346,7 +334,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-ixiac-one-tests-${{ matrix.runtime }}
+          name: coverage-ixiac-one-tests-docker
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
 

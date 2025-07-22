@@ -6,14 +6,15 @@ name: vxlan-test
       py_ver:
         required: true
         type: string
+      runtime:
+        type: string
+        default: "docker"
 
 jobs:
   vxlan-tests:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        runtime:
-          - "docker"
         test-suite:
           - "01*.robot"
           - "02*.robot"
@@ -64,7 +65,7 @@ jobs:
 
       - name: Run tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/08-vxlan/${{ matrix.test-suite }}
+          bash ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/08-vxlan/${{ matrix.test-suite }}
 
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
@@ -73,7 +74,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 08-vxlan-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 08-vxlan-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -82,6 +83,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-vxlan-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-vxlan-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
