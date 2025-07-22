@@ -15,7 +15,7 @@ env:
 
 jobs:
   get-tag:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       git_tag: ${{ steps.git_tag.outputs.git_tag }}
     steps:
@@ -32,7 +32,7 @@ jobs:
   build-and-release:
     needs: get-tag
     if: ${{ needs.get-tag.outputs.git_tag != '' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,7 +61,7 @@ jobs:
 
   publish-docs:
     needs: build-and-release
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: contains(github.ref, '-') != true # do not publish docs for beta releases which will have something like v0.0.0-0.33.0-beta
     steps:
       - name: Checkout

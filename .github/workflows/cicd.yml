@@ -19,7 +19,7 @@ env:
 
 jobs:
   process-gitref:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       source_name: ${{ steps.set-outputs.outputs.SOURCE_NAME }}
       source_branch: ${{ steps.set-outputs.outputs.SOURCE_BRANCH }}
@@ -37,7 +37,7 @@ jobs:
           echo "SOURCE_TAG_NO_PREFIX=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
   file-changes:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: process-gitref
     outputs:
       code: ${{ steps.filter.outputs.code }}
@@ -94,7 +94,7 @@ jobs:
       go_ver: ${{ needs.process-gitref.outputs.go_ver }}
 
   unit-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -139,7 +139,7 @@ jobs:
       - build-containerlab
 
   ext-container-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         runtime:
@@ -209,7 +209,7 @@ jobs:
           retention-days: 7
 
   ceos-basic-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         runtime:
@@ -289,7 +289,7 @@ jobs:
       - build-containerlab
 
   ixiac-one-basic-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         runtime:
@@ -463,7 +463,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   docs-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: file-changes
     if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
     steps:
@@ -496,7 +496,7 @@ jobs:
           config: docs/htmltest.yml
 
   build-and-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - golangci-lint
@@ -556,7 +556,7 @@ jobs:
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
 
   publish-docs:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') != true
     needs: build-and-release
     steps:
@@ -587,7 +587,7 @@ jobs:
   # it skips the code build/release and proceeds with docs publishing
   # the intended usage is to provide fixes/updates to docs, which do not require code changes
   update-docs:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/docs-publish'
     needs: docs-test
     steps:
