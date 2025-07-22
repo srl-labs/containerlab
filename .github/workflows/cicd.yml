@@ -21,6 +21,7 @@ env:
   MKDOCS_INS_VER: 9.6.12-insiders-4.53.16-hellt
   GORELEASER_VER: v2.6.1
   PY_VER: "3.10"
+  RUNTIME: ${{ inputs.runtime || 'docker' }}
 
 jobs:
   process-gitref:
@@ -137,7 +138,7 @@ jobs:
     uses: ./.github/workflows/smoke-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ inputs.runtime }}
+      runtime: ${{ env.RUNTIME }}
     secrets: inherit
     needs:
       - file-changes
@@ -281,7 +282,7 @@ jobs:
     uses: ./.github/workflows/srlinux-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ inputs.runtime }}
+      runtime: ${{ env.RUNTIME }}
     needs:
       - file-changes
       - process-gitref
@@ -353,7 +354,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ inputs.runtime }}
+      runtime: ${{ env.RUNTIME }}
 
   kind-tests:
     uses: ./.github/workflows/kind-tests.yml
@@ -363,7 +364,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ inputs.runtime }}
+      runtime: ${{ env.RUNTIME }}
 
   # sros-tests:
   #   uses: ./.github/workflows/sros-tests.yml
@@ -389,7 +390,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ inputs.runtime }}
+      runtime: ${{ env.RUNTIME }}
 
   cisco_iol-tests:
     uses: ./.github/workflows/cisco_iol-tests.yml
@@ -399,7 +400,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ inputs.runtime }}
+      runtime: ${{ env.RUNTIME }}
 
   fdio_vpp-tests:
     uses: ./.github/workflows/fdio_vpp-tests.yml
@@ -409,7 +410,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ inputs.runtime }}
+      runtime: ${{ env.RUNTIME }}
 
   vyosnetworks_vyos-tests:
     uses: ./.github/workflows/vyosnetworks_vyos-tests.yml
@@ -419,7 +420,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ inputs.runtime }}
+      runtime: ${{ env.RUNTIME }}
 
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
