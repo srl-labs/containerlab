@@ -94,6 +94,7 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	opts := []clab.ClabOption{
 		clab.WithTimeout(common.Timeout),
 		clab.WithTopoPath(common.Topo, common.VarsFile),
+		clab.WithTopoBackup(common.Topo),
 		clab.WithNodeFilter(common.NodeFilter),
 		clab.WithRuntime(common.Runtime,
 			&runtime.RuntimeConfig{

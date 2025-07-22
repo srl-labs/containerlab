@@ -153,6 +153,21 @@ func WithTopoPath(path, varsFile string) ClabOption {
 	}
 }
 
+// WithTopoBackup creates a backup of the topology file.
+func WithTopoBackup(path string) ClabOption {
+	return func(c *CLab) error {
+		// create a backup file for the topology file
+		backupFPath := c.TopoPaths.TopologyBakFileAbsPath()
+
+		err := utils.CopyFile(path, backupFPath, 0o755)
+		if err != nil {
+			log.Warn("Could not create topology backup", "topology path", path, "backup path", backupFPath, "error", err)
+		}
+
+		return nil
+	}
+}
+
 // WithTopoFromLab loads the topology file path based on a running lab name.
 // The lab name is used to look up the container labels of a running lab and
 // derive the topology file location. It falls back to WithTopoPath once the
