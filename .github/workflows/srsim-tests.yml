@@ -12,13 +12,13 @@ jobs:
     runs-on: ubuntu-24.04
     env: 
       SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
-      SRSIM_TEST: ${{ secrets.SRSIM_TEST }}
     strategy:
       matrix:
         runtime:
           - "docker"
         test-suite:
           - "01*.robot"
+          - "02*.robot"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,12 +33,8 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Create license file from env vars
-        run: |
-          echo $SRSIM_TEST > ./tests/13-srsim/sros_test.txt
-          echo $SRSIM_LICENSE > ./tests/13-srsim/sros_license.txt
-          stat ./tests/13-srsim/sros_test.txt
-          cat ./tests/13-srsim/sros_test.txt
-
+        run: echo $SRSIM_LICENSE > /opt/nokia/sros/license-sros25.txt
+       
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -73,12 +69,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Pull srsim image
-        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 nokia_srsim:25.7.R1
+      - name: Pull and re-tag srsim image
+        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 registry.srlinux.dev/pub/nokia_srsim:25.7.R1
 
       - name: Run sros-srsim tests
         run: |
-          stat ./tests/13-srsim/sros_license.txt -c %s
           ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
       # upload test reports as a zip file
       - name: Upload test logs
