@@ -7,7 +7,7 @@ Suite Teardown      Run Keyword    Cleanup
 
 
 *** Variables ***
-${lab-name}         13-01-sros-to-linux
+${lab-name}         sr02
 ${lab-file-name}    02-srsim.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
@@ -21,10 +21,6 @@ Set key-path Variable
 Create SSH keypair - RSA
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ssh-keygen -t rsa -N "" -f ${key-path}-rsa
-
-Test env for SROS License
-    ${lic_key} =    Get Environment Variable    SRSIM_LICENSE
-    Skip If    '${lic_key}' == ''
 
 Deploy ${lab-name} lab
     Log    ${CURDIR}
