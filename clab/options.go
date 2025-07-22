@@ -159,7 +159,7 @@ func WithTopoBackup(path string) ClabOption {
 		// create a backup file for the topology file
 		backupFPath := c.TopoPaths.TopologyBakFileAbsPath()
 
-		err := utils.CopyFile(path, backupFPath, 0o755)
+		err := utils.CopyFile(path, backupFPath, 0o644)
 		if err != nil {
 			log.Warn("Could not create topology backup", "topology path", path, "backup path", backupFPath, "error", err)
 		}
