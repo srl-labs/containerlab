@@ -33,7 +33,9 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Create license file from env vars
-        run: echo $SRSIM_LICENSE > /opt/nokia/sros/license-sros25.txt
+        run: | 
+             sudo mkdir -p /opt/nokia/sros/
+             echo $SRSIM_LICENSE > /opt/nokia/sros/license-sros25.txt
        
       - name: Install uv
         uses: astral-sh/setup-uv@v6
