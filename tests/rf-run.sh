@@ -15,6 +15,9 @@ fi
 
 export AWS_ACCESS_KEY_ID
 export AWS_SECRET_ACCESS_KEY
+export SRSIM_LICENSE    
+echo $SRSIM_LICENSE > ./tests/13-srsim/sros_license.txt
+
 
 echo "Running tests with containerlab binary at $(which ${CLAB_BIN}) path and selected runtime: $1"
 

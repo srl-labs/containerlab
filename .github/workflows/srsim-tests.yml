@@ -61,9 +61,8 @@ jobs:
           SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
           SRSIM_TEST: ${{ secrets.SRSIM_TEST }}
         run: |
-          echo $SRSIM_LICENSE > ./tests/13-srsim/sros_license.txt
+          export SRSIM_TEST
           echo $SRSIM_TEST > ./tests/13-srsim/sros_test.txt
-          stat ./tests/13-srsim/sros_license.txt
           stat ./tests/13-srsim/sros_test.txt
           cat ./tests/13-srsim/sros_test.txt
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
