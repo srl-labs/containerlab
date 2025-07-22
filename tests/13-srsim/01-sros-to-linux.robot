@@ -22,6 +22,10 @@ Create SSH keypair - RSA
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ssh-keygen -t rsa -N "" -f ${key-path}-rsa
 
+Test env for SROS License
+    ${lic_key} =    Get Environment Variable    SRSIM_LICENSE
+    Skip If    '${lic_key}' == ''
+
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output

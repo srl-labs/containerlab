@@ -34,13 +34,11 @@ jobs:
 
       - name: Create license file from env vars
         run: |
-          export SRSIM_TEST
-          export SRSIM_LICENSE
           echo $SRSIM_TEST > ./tests/13-srsim/sros_test.txt
           echo $SRSIM_LICENSE > ./tests/13-srsim/sros_license.txt
           stat ./tests/13-srsim/sros_test.txt
           cat ./tests/13-srsim/sros_test.txt
-          
+
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
