@@ -178,11 +178,10 @@ Inspect Lab Using JSON Format
     Should Be Equal As Integers    ${ip_check[0]}    0
     Should Contain    ${ip_check[1]}    ${n2-ipv4}
 
-
 Inspect Lab Using Details Flag
     [Documentation]    Verify inspect command with --details flag outputs detailed grouped JSON per lab.
     # Run inspect command with --details flag
-    ${output}=    Process.Run Process
+    ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --details
     ...    shell=True
     Log    ${output.stdout}
@@ -194,42 +193,42 @@ Inspect Lab Using Details Flag
     Create File    /tmp/clab_details_output.json    ${output.stdout}
 
     # Check the key for our lab name is present and is a non-empty array
-    ${count_check}=    Run And Return Rc And Output
+    ${count_check} =    Run And Return Rc And Output
     ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}" | length'
     Log    ${count_check}
     Should Be Equal As Integers    ${count_check[0]}    0
     Should Contain    ${count_check[1]}    3
 
     # Check that containers have the expected fields in details view
-    ${field_check}=    Run And Return Rc And Output
+    ${field_check} =    Run And Return Rc And Output
     ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0] | has("Names") and has("Image") and has("State") and has("Labels")'
     Log    ${field_check}
     Should Be Equal As Integers    ${field_check[0]}    0
     Should Contain    ${field_check[1]}    true
 
     # Check that the container name matches expected pattern
-    ${name_check}=    Run And Return Rc And Output
+    ${name_check} =    Run And Return Rc And Output
     ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0].Names[0]'
     Log    ${name_check}
     Should Be Equal As Integers    ${name_check[0]}    0
     Should Contain    ${name_check[1]}    clab-${lab-name}-l1
 
     # Check that the State is "running"
-    ${state_check}=    Run And Return Rc And Output
+    ${state_check} =    Run And Return Rc And Output
     ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0].State'
     Log    ${state_check}
     Should Be Equal As Integers    ${state_check[0]}    0
     Should Contain    ${state_check[1]}    running
 
     # Check that the Labels map includes clab-node-name
-    ${label_check}=    Run And Return Rc And Output
+    ${label_check} =    Run And Return Rc And Output
     ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0].Labels["clab-node-name"]'
     Log    ${label_check}
     Should Be Equal As Integers    ${label_check[0]}    0
     Should Contain    ${label_check[1]}    l1
 
     # Check that IP addresses are present
-    ${ipv4_check}=    Run And Return Rc And Output
+    ${ipv4_check} =    Run And Return Rc And Output
     ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[1].NetworkSettings.IPv4addr'
     Log    ${ipv4_check}
     Should Be Equal As Integers    ${ipv4_check[0]}    0
@@ -555,7 +554,7 @@ Verify Exec rc != 0 on no containers match
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
     Log    ${output}
     Should Not Contain    ${output}    test
-    Should Contain    ${output}    Filter did not match any containers
+    Should Contain    ${output}    filter did not match any containers
     Should Not Be Equal As Integers    ${rc}    0
 
 Verify l1 node is healthy
