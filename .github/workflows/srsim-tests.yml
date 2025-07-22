@@ -76,11 +76,7 @@ jobs:
 
       - name: Run sros-srsim tests
         run: |
-<<<<<<< HEAD
-          ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
-=======
           ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
->>>>>>> public/main
       # upload test reports as a zip file
       - name: Upload test logs
         uses: actions/upload-artifact@v4
