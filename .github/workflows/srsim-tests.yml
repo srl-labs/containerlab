@@ -60,7 +60,8 @@ jobs:
         env: 
           SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
         run: |
-          echo "$SRSIM_LICENSE" > ./tests/sros_license.txt
+          echo ${{ secrets.SRSIM_LICENSE }} > ./tests/sros_license.txt
+          stat ./tests/sros_license.txt
           bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
       # upload test reports as a zip file
       - name: Upload test logs
