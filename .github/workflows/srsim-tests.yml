@@ -66,6 +66,13 @@ jobs:
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Pull srsim image
         run: docker pull ghcr.io/srl-labs/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/nokia_srsim:25.7.R1 nokia_srsim:25.7.R1
 
