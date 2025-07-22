@@ -15,7 +15,7 @@ topology:
       kind: nokia_srsim
       image: nokia_srsim:25.7.R1
       type: sr-1
-      license: /opt/nokia/sros/license-sros25.txt
+      license: sros_license.txt
       startup-config: |
         /configure card 1 card-type iom-1
         /configure card 1 mda 1 mda-type me6-100gb-qsfp28
