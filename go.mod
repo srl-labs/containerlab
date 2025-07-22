@@ -1,6 +1,6 @@
 module github.com/srl-labs/containerlab
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
