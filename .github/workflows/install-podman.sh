@@ -1,5 +1,7 @@
 #!/bin/bash
 
+sudo apt purge -y podman
+
 # Roman: copied from https://github.com/containers/podman/discussions/25582#discussioncomment-12803424
 
 # Must be run as root
@@ -37,3 +39,7 @@ echo "Updating APT package list..."
 apt update
 
 echo "Plucky pinning setup complete."
+
+sudo apt-get -qq -y install podman
+sudo systemctl start podman
+sudo mkdir -p /var/run/netns
