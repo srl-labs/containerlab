@@ -6,6 +6,9 @@ name: srsim-tests
       py_ver:
         required: true
         type: string
+      runtime:
+        type: string
+        default: "docker"
 
 jobs:
   srsim-tests:
@@ -14,8 +17,6 @@ jobs:
       SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
     strategy:
       matrix:
-        runtime:
-          - "docker"
         test-suite:
           - "01*.robot"
           - "03*.robot"
@@ -75,13 +76,17 @@ jobs:
 
       - name: Run sros-srsim tests
         run: |
+<<<<<<< HEAD
           ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
+=======
+          ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
+>>>>>>> public/main
       # upload test reports as a zip file
       - name: Upload test logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 13-srsim-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 13-srsim-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -90,6 +95,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-srsim-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-srsim-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7

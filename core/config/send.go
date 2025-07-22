@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 
-	"github.com/srl-labs/containerlab/clab/config/transport"
+	"github.com/srl-labs/containerlab/core/config/transport"
 )
 
 func Send(cs *NodeConfig, _ string) error {

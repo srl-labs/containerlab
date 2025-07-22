@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package clab
+package core
 
 import (
 	_ "embed"
@@ -18,7 +18,7 @@ import (
 
 const NornirPlatformNameSchemaEnvVar = "CLAB_NORNIR_PLATFORM_NAME_SCHEMA"
 
-//go:embed inventory_ansible.go.tpl
+//go:embed assets/inventory_ansible.go.tpl
 var ansibleInvT string
 
 // AnsibleInventoryNode represents the data structure used to generate the ansible inventory file.
@@ -171,7 +171,7 @@ func (n *AnsibleKindProps) setAnsibleConnection(kind string) {
 // Nornir Simple Inventory
 // https://nornir.readthedocs.io/en/latest/tutorial/inventory.html
 
-//go:embed inventory_nornir_simple.go.tpl
+//go:embed assets/inventory_nornir_simple.go.tpl
 var nornirSimpleInvT string
 
 // NornirSimpleInventoryKindProps is the kind properties structure used to generate the nornir simple inventory file.

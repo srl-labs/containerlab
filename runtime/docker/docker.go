@@ -29,7 +29,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 )
 
 func (n *srl) setCustomPrompt(tplData *srlTemplateData) {

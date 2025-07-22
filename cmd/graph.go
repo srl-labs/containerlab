@@ -13,8 +13,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -44,20 +44,20 @@ var graphCmd = &cobra.Command{
 func graphFn(_ *cobra.Command, _ []string) error {
 	var err error
 
-	opts := []clab.ClabOption{
-		clab.WithTimeout(common.Timeout),
-		clab.WithTopoPath(common.Topo, common.VarsFile),
-		clab.WithNodeFilter(common.NodeFilter),
-		clab.WithRuntime(common.Runtime,
+	opts := []core.ClabOption{
+		core.WithTimeout(common.Timeout),
+		core.WithTopoPath(common.Topo, common.VarsFile),
+		core.WithNodeFilter(common.NodeFilter),
+		core.WithRuntime(common.Runtime,
 			&runtime.RuntimeConfig{
 				Debug:            common.Debug,
 				Timeout:          common.Timeout,
 				GracefulShutdown: common.Graceful,
 			},
 		),
-		clab.WithDebug(common.Debug),
+		core.WithDebug(common.Debug),
 	}
-	c, err := clab.NewContainerLab(opts...)
+	c, err := core.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
@@ -79,9 +79,9 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		return c.GenerateDrawioDiagram(drawioVersion, drawioArgs)
 	}
 
-	gtopo := clab.GraphTopo{
+	gtopo := core.GraphTopo{
 		Nodes: make([]types.ContainerDetails, 0, len(c.Nodes)),
-		Links: make([]clab.Link, 0, len(c.Links)),
+		Links: make([]core.Link, 0, len(c.Links)),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -118,7 +118,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		ifaceDisplayNameA := eps[0].GetIfaceDisplayName()
 		ifaceDisplayNameB := eps[1].GetIfaceDisplayName()
 
-		gtopo.Links = append(gtopo.Links, clab.Link{
+		gtopo.Links = append(gtopo.Links, core.Link{
 			Source:         eps[0].GetNode().GetShortName(),
 			SourceEndpoint: ifaceDisplayNameA,
 			Target:         eps[1].GetNode().GetShortName(),
@@ -132,7 +132,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	}
 
 	log.Debugf("generating graph using data: %s", string(b))
-	topoD := clab.TopoData{
+	topoD := core.TopoData{
 		Name: c.Config.Name,
 		Data: template.JS(string(b)), // skipcq: GSC-G203
 	}

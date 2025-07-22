@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	exec "github.com/srl-labs/containerlab/clab/exec"
+	exec "github.com/srl-labs/containerlab/exec"
 	links "github.com/srl-labs/containerlab/links"
 	runtime "github.com/srl-labs/containerlab/runtime"
 	types "github.com/srl-labs/containerlab/types"

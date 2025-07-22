@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package clab
+package core
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
-	clabRuntimes "github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -102,11 +102,11 @@ func (c *CLab) parseTopology() error {
 			continue
 		}
 
-		if rInit, ok := clabRuntimes.ContainerRuntimes[r]; ok {
+		if rInit, ok := containerlabruntime.ContainerRuntimes[r]; ok {
 			newRuntime := rInit()
 			defaultConfig := c.Runtimes[c.globalRuntimeName].Config()
 			err := newRuntime.Init(
-				clabRuntimes.WithConfig(&defaultConfig),
+				containerlabruntime.WithConfig(&defaultConfig),
 			)
 			if err != nil {
 				return fmt.Errorf("failed to init the container runtime: %s", err)

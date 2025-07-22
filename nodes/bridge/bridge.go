@@ -11,7 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	cExec "github.com/srl-labs/containerlab/clab/exec"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
@@ -191,9 +191,9 @@ func (*bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil
 func (*bridge) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) { return nil, nil }
 
 // RunExec is a noop for bridge kind.
-func (b *bridge) RunExec(_ context.Context, _ *cExec.ExecCmd) (*cExec.ExecResult, error) {
+func (b *bridge) RunExec(_ context.Context, _ *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
-	return nil, cExec.ErrRunExecNotSupported
+	return nil, containerlabexec.ErrRunExecNotSupported
 }
 
 func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {

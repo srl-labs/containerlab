@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/clab/config"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/core"
+	"github.com/srl-labs/containerlab/core/config"
 )
 
 // Show the template variable s.
@@ -22,10 +22,10 @@ var configTemplateCmd = &cobra.Command{
 
 		config.DebugCount = debugCount
 
-		c, err := clab.NewContainerLab(
-			clab.WithTimeout(common.Timeout),
-			clab.WithTopoPath(common.Topo, common.VarsFile),
-			clab.WithDebug(common.Debug),
+		c, err := core.NewContainerLab(
+			core.WithTimeout(common.Timeout),
+			core.WithTopoPath(common.Topo, common.VarsFile),
+			core.WithDebug(common.Debug),
 		)
 		if err != nil {
 			return err

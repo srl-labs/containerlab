@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package clab
+package core
 
 import (
 	sixwind_vsr "github.com/srl-labs/containerlab/nodes/6wind_vsr"

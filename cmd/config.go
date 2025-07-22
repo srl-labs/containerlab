@@ -6,10 +6,10 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/clab/config"
-	"github.com/srl-labs/containerlab/clab/config/transport"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/core"
+	"github.com/srl-labs/containerlab/core/config"
+	"github.com/srl-labs/containerlab/core/config/transport"
 	"github.com/srl-labs/containerlab/nodes"
 
 	"github.com/charmbracelet/log"
@@ -59,11 +59,11 @@ func configRun(_ *cobra.Command, args []string) error {
 	transport.DebugCount = debugCount
 	config.DebugCount = debugCount
 
-	c, err := clab.NewContainerLab(
-		clab.WithTimeout(common.Timeout),
-		clab.WithTopoPath(common.Topo, common.VarsFile),
-		clab.WithNodeFilter(common.NodeFilter),
-		clab.WithDebug(common.Debug),
+	c, err := core.NewContainerLab(
+		core.WithTimeout(common.Timeout),
+		core.WithTopoPath(common.Topo, common.VarsFile),
+		core.WithNodeFilter(common.NodeFilter),
+		core.WithDebug(common.Debug),
 	)
 	if err != nil {
 		return err

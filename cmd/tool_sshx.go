@@ -17,10 +17,10 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/clab/exec"
 	"github.com/srl-labs/containerlab/cmd/common"
-	clabels "github.com/srl-labs/containerlab/labels"
+	"github.com/srl-labs/containerlab/core"
+	"github.com/srl-labs/containerlab/exec"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -207,7 +207,7 @@ var sshxAttachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
 			sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
@@ -228,7 +228,7 @@ var sshxAttachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(common.Runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
 		}
@@ -325,7 +325,7 @@ var sshxDetachCmd = &cobra.Command{
 		defer cancel()
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
 			sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
@@ -340,7 +340,7 @@ var sshxDetachCmd = &cobra.Command{
 		log.Debugf("Container name for deletion: %s", containerName)
 
 		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(common.Runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
@@ -370,7 +370,7 @@ var sshxListCmd = &cobra.Command{
 		defer cancel()
 
 		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(common.Runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
@@ -385,7 +385,7 @@ var sshxListCmd = &cobra.Command{
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      clabels.ToolType,
+				Field:      containerlablabels.ToolType,
 				Operator:   "=",
 				Match:      sshx,
 			},
@@ -416,7 +416,7 @@ var sshxListCmd = &cobra.Command{
 
 			// Get owner from container labels
 			owner := "N/A"
-			if ownerVal, exists := c.Labels[clabels.Owner]; exists && ownerVal != "" {
+			if ownerVal, exists := c.Labels[containerlablabels.Owner]; exists && ownerVal != "" {
 				owner = ownerVal
 			}
 
@@ -484,7 +484,7 @@ var sshxReattachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, common.Topo, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := clab.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
+		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
 			sshxLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
 		if err != nil {
 			return err
@@ -505,7 +505,7 @@ var sshxReattachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(common.Runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
 		}

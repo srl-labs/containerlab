@@ -1,4 +1,4 @@
-package clab
+package core
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	depMgr "github.com/srl-labs/containerlab/clab/dependency_manager"
-	clabels "github.com/srl-labs/containerlab/labels"
+	depMgr "github.com/srl-labs/containerlab/core/dependency_manager"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -117,7 +117,9 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 		c.globalRuntimeName = name
 
 		r := rInit()
+
 		log.Debugf("Running runtime.Init with params %+v and %+v", rtconfig, c.Config.Mgmt)
+
 		err = r.Init(
 			runtime.WithConfig(rtconfig),
 			runtime.WithMgmtNet(c.Config.Mgmt),
@@ -127,7 +129,9 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 		}
 
 		c.Runtimes[name] = r
+
 		log.Debugf("initialized a runtime with params %+v", r)
+
 		return nil
 	}
 }
@@ -161,7 +165,8 @@ func WithTopoBackup(path string) ClabOption {
 
 		err := utils.CopyFile(path, backupFPath, 0o644)
 		if err != nil {
-			log.Warn("Could not create topology backup", "topology path", path, "backup path", backupFPath, "error", err)
+			log.Warn("Could not create topology backup", "topology path", path,
+				"backup path", backupFPath, "error", err)
 		}
 
 		return nil
@@ -184,7 +189,7 @@ func WithTopoFromLab(labName string) ClabOption {
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      clabels.Containerlab,
+				Field:      containerlablabels.Containerlab,
 				Operator:   "=",
 				Match:      labName,
 			},
@@ -199,7 +204,7 @@ func WithTopoFromLab(labName string) ClabOption {
 			return fmt.Errorf("lab '%s' not found - no running containers", labName)
 		}
 
-		topoFile := containers[0].Labels[clabels.TopoFile]
+		topoFile := containers[0].Labels[containerlablabels.TopoFile]
 		if topoFile == "" {
 			return fmt.Errorf("could not determine topology file from container labels")
 		}

@@ -12,9 +12,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
-	clabels "github.com/srl-labs/containerlab/labels"
+	"github.com/srl-labs/containerlab/core"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -146,19 +146,19 @@ func getContainerlabBinaryPath() (string, error) {
 // createLabels creates container labels.
 func createAPIServerLabels(containerName, owner string, port int, labsDir, host, runtimeType string) map[string]string {
 	labels := map[string]string{
-		clabels.NodeName: containerName,
-		clabels.NodeKind: "linux",
-		clabels.NodeType: "tool",
-		clabels.ToolType: "api-server",
-		"clab-api-port":  fmt.Sprintf("%d", port),
-		"clab-api-host":  host,
-		"clab-labs-dir":  labsDir,
-		"clab-runtime":   runtimeType,
+		containerlablabels.NodeName: containerName,
+		containerlablabels.NodeKind: "linux",
+		containerlablabels.NodeType: "tool",
+		containerlablabels.ToolType: "api-server",
+		"clab-api-port":             fmt.Sprintf("%d", port),
+		"clab-api-host":             host,
+		"clab-labs-dir":             labsDir,
+		"clab-runtime":              runtimeType,
 	}
 
 	// Add owner label if available
 	if owner != "" {
-		labels[clabels.Owner] = owner
+		labels[containerlablabels.Owner] = owner
 	}
 
 	return labels
@@ -205,7 +205,7 @@ var apiServerStartCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := clab.RuntimeInitializer(runtimeName)
+		_, rinit, err := core.RuntimeInitializer(runtimeName)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtimeName, err)
 		}
