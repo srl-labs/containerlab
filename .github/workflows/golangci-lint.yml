@@ -10,7 +10,7 @@ on:
       go_ver:
         description: "Go version"
         required: false
-        default: "1.23.7"
+        default: "1.24.5"
 jobs:
   golangci:
     name: lint
