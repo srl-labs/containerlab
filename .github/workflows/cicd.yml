@@ -34,6 +34,7 @@ jobs:
       # exporting env vars to be used in invoked workflows
       py_ver: ${{ env.PY_VER }}
       go_ver: ${{ env.GO_VER }}
+      runtime: ${{ env.RUNTIME }}
     steps:
       - id: set-outputs
         run: |
@@ -138,7 +139,7 @@ jobs:
     uses: ./.github/workflows/smoke-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ env.RUNTIME }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
     secrets: inherit
     needs:
       - file-changes
@@ -282,7 +283,7 @@ jobs:
     uses: ./.github/workflows/srlinux-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ env.RUNTIME }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
     needs:
       - file-changes
       - process-gitref
@@ -354,7 +355,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ env.RUNTIME }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   kind-tests:
     uses: ./.github/workflows/kind-tests.yml
@@ -364,7 +365,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ env.RUNTIME }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   # sros-tests:
   #   uses: ./.github/workflows/sros-tests.yml
@@ -391,7 +392,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ env.RUNTIME }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   cisco_iol-tests:
     uses: ./.github/workflows/cisco_iol-tests.yml
@@ -401,7 +402,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ env.RUNTIME }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   fdio_vpp-tests:
     uses: ./.github/workflows/fdio_vpp-tests.yml
@@ -411,7 +412,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ env.RUNTIME }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   vyosnetworks_vyos-tests:
     uses: ./.github/workflows/vyosnetworks_vyos-tests.yml
@@ -421,7 +422,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
-      runtime: ${{ env.RUNTIME }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
