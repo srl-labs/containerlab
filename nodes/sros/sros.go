@@ -374,12 +374,11 @@ func (n *sros) setupComponentNodes() error {
 		}
 
 		// adjust the config values from the original node
-		componentConfig.ShortName = fmt.Sprintf("%s-%s", componentConfig.ShortName, c.Slot)
-		componentConfig.LongName = fmt.Sprintf("%s-%s", componentConfig.LongName, c.Slot)
+		componentConfig.ShortName = n.calcComponentName(componentConfig.ShortName, c.Slot)
+		componentConfig.LongName = n.calcComponentName(componentConfig.LongName, c.Slot)
 		componentConfig.NodeType = n.Cfg.NodeType
 		componentConfig.Components = nil
-		fqdnDotIndex := strings.Index(componentConfig.Fqdn, ".")
-		componentConfig.Fqdn = fmt.Sprintf("%s-%s%s", componentConfig.Fqdn[:fqdnDotIndex], c.Slot, componentConfig.Fqdn[fqdnDotIndex:])
+		componentConfig.Fqdn = n.calcComponentFqdn(c.Slot)
 		if idx != 0 {
 			componentConfig.DNS = nil
 		}
@@ -519,7 +518,7 @@ func (n *sros) cpmNode() (nodes.Node, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	defaultSlot = strings.ToLower(defaultSlot)
 	for _, cn := range n.componentNodes {
 		if cn.GetShortName()[len(cn.GetShortName())-1:] == defaultSlot {
 			return cn, nil

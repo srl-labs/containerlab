@@ -1,0 +1,33 @@
+name: sr05
+
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - >
+          ash -c '
+          apk add iproute2 &&
+          ip l set dev eth1 up &&
+          ip addr add dev eth1 10.0.0.1/30'
+    sros:
+      kind: nokia_srsim
+      type: sr-1-92s
+      components: 
+        - slot: A
+        - slot: 1
+      startup-config: |
+        /configure port 1/1/c23 connector breakout c4-100g
+        /configure port 1/1/c23 admin-state enable
+        /configure port 1/1/c23/4 ethernet mode hybrid
+        /configure port 1/1/c23/4 admin-state enable
+        /configure router "Base" interface "to-linux" port 1/1/c23/4:0
+        /configure router "Base" interface "to-linux" ipv4 primary address 10.0.0.2
+        /configure router "Base" interface "to-linux" ipv4 primary prefix-length 24
+  links:
+    - endpoints: ["l1:eth1", "sros:1/1/c23/4"]

@@ -19,6 +19,7 @@ jobs:
         test-suite:
           - "01*.robot"
           - "03*.robot"
+          - "05*.robot"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
