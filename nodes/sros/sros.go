@@ -707,7 +707,7 @@ func (n *sros) createSROSFilesConfig() error {
 	var err error
 	// Path pointing to config file under cf3dir
 	cf3CfgFile := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, startupCfgName)
-	//Path pointing to config file under startup dir
+	// Path pointing to config file under startup dir
 	cfgStartupFile := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup, startupCfgName)
 
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
