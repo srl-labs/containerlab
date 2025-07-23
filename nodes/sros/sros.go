@@ -717,10 +717,9 @@ func (n *sros) createSROSFilesConfig() error {
 		if err := utils.CopyFile(cf3CfgFile, cfgStartupFile, 0o644); err != nil {
 			return fmt.Errorf("startupCfg copying src %s -> dst %s failed: %v", cf3CfgFile, cfgStartupFile, err)
 		}
-	} else {
-		// Use startup folder to generate config and use that to boot node
-		if n.Cfg.StartupConfig != "" && !isPartial {
-			// User provides startup config
+	} else { // Use startup folder to generate config and use that to boot node
+		if n.Cfg.StartupConfig != "" && !isPartial { // User provides startup config
+
 			log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
 				n.Cfg.StartupConfig, "isPartial", isPartial)
 
@@ -735,9 +734,7 @@ func (n *sros) createSROSFilesConfig() error {
 			}
 
 			cfgTemplate = cBuf.String()
-
-		} else {
-			// Use default clab config from the embedded template
+		} else { // Use default clab config from the embedded template
 			log.Debug("Rendering SR OS default containerlab startup config", "node",
 				n.Cfg.ShortName, "type", n.Cfg.NodeType)
 
