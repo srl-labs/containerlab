@@ -257,7 +257,7 @@ topology:
 ///
 /// tab | with links
 
-Note, how in the `links` section the particular SR-SIM's line card node (sros-14s-1) is used as an endpoint.
+Note, how in the `links` section the particular SR-SIM's line card node (sr-14s-1) is used as an endpoint.
 
 ```yaml
 topology:
@@ -266,27 +266,26 @@ topology:
       license: /opt/nokia/sros/license.txt
       image: nokia_srsim:25.7.R1
   nodes:
-    sros-14s-a:
+    sr-14s-a:
       kind: nokia_srsim
       type: sr-14s
-      network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:56:07:00:03:01 
-    sros-14s-b:
+    sr-14s-b:
       kind: nokia_srsim
       type: sr-14s
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: B
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:56:07:00:03:01 
-    sros-14s-1:
+    sr-14s-1:
       kind: nokia_srsim
       type: sr-14s
       network-mode: container:sr-14s-a
       env:
         NOKIA_SROS_SLOT: 1
-    sros-14s-2:
+    sr-14s-2:
       kind: nokia_srsim
       type: sr-14s 
       network-mode: container:sr-14s-a
@@ -298,7 +297,7 @@ topology:
       image: alpine:3
 
   links:
-    - endpoints: ["cpe:eth1", "sros-14s-1:1/1/c1/1"]
+    - endpoints: ["cpe:eth1", "sr-14s-1:1/1/c1/1"]
 ```
 
 ///
