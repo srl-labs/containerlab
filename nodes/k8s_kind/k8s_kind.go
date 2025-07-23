@@ -11,18 +11,26 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker"
 	"github.com/srl-labs/containerlab/types"
+	"golang.org/x/sync/semaphore"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
 	"sigs.k8s.io/kind/pkg/cluster"
 )
 
 var kindnames = []string{"k8s-kind"}
+
+// serializeDelete is used to serialize the deletion of KinD clusters. This is
+// to prevent errors along the lines of "failed to update kubeconfig: failed to
+// lock config file: open ...: file exists" caused by each cluster deletion
+// racing trying acquiring the lock file. The same issue does not exist at
+// deployment time, as the KinD library does perform retries in that case.
+var serializeDelete = semaphore.NewWeighted(1)
 
 // Register registers the node in the global Node map.
 func Register(r *nodes.NodeRegistry) {
@@ -132,14 +140,19 @@ func (n *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContaine
 	return containeList, nil
 }
 
-func (n *k8s_kind) Delete(_ context.Context) error {
+func (n *k8s_kind) Delete(ctx context.Context) error {
 	// create the Provider with the above runtime based options
 	kindProvider, err := n.getProvider()
 	if err != nil {
 		return err
 	}
-	log.Infof("Deleting kind cluster %q", n.Cfg.ShortName)
 
+	if err := serializeDelete.Acquire(ctx, 1); err != nil {
+		return fmt.Errorf("failed deleting kind cluster %q: %w", n.Cfg.ShortName, err)
+	}
+	defer serializeDelete.Release(1)
+
+	log.Infof("Deleting kind cluster %q", n.Cfg.ShortName)
 	return kindProvider.Delete(n.Cfg.ShortName, "")
 }
 

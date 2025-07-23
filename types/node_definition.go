@@ -79,7 +79,8 @@ type NodeDefinition struct {
 	// Healthcheck configuration
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
 	// Network aliases
-	Aliases []string `yaml:"aliases,omitempty"`
+	Aliases    []string     `yaml:"aliases,omitempty"`
+	Components []*Component `yaml:"components,omitempty"`
 }
 
 // Interface compliance.
@@ -241,6 +242,13 @@ func (n *NodeDefinition) GetCapAdd() []string {
 		return nil
 	}
 	return n.CapAdd
+}
+
+func (n *NodeDefinition) GetComponents() []*Component {
+	if n == nil {
+		return nil
+	}
+	return n.Components
 }
 
 func (n *NodeDefinition) GetNodeShmSize() string {

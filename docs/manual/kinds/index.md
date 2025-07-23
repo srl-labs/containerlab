@@ -37,6 +37,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | -------------------------- | --------------------------------------------------- | --------- | :-------: |
 | **Nokia SR Linux**         | [`nokia_srlinux`](srl.md)                           | supported | container |
 | **Nokia SR OS**            | [`nokia_sros`](vr-sros.md)                          | supported |    VM     |
+| **Nokia SR OS**            | [`nokia_srsim`](sros.md)                            | supported | container |
 | **Arista cEOS**            | [`arista_ceos`](ceos.md)                            | supported | container |
 | **Arista vEOS**            | [`arista_veos`](vr-veos.md)                         | supported |    VM     |
 | **Juniper cRPD**           | [`juniper_crpd`](crpd.md)                           | supported | container |

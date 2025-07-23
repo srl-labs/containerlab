@@ -215,7 +215,7 @@ node2:
 
 ///
 
-The `platform` field can be influenced to support Napalm/Netmiko or scrapi compliant names.  To influence the platform used set the `CLAB_NORNIR_PLATFORM_NAME_SCHEMA` env variable to either `napalm` or `scrapi` as the value. By default the platform will be set to the `kind`.  Further reading is available below:
+The `platform` field can be influenced to support Napalm/Netmiko or Scrapli compliant names.  To influence the platform used set the `CLAB_NORNIR_PLATFORM_NAME_SCHEMA` env variable to either `napalm` or `scrapi` as the value. By default the platform will be set to the `kind`.  Further reading is available below:
 [scrapli core](https://carlmontanari.github.io/scrapli/reference/driver/core/)  
 [scrapli community](https://github.com/scrapli/scrapli_community)  
 [napalm drivers](https://napalm.readthedocs.io/en/latest/support/index.html#general-support-matrix)
@@ -229,7 +229,7 @@ Every time a user runs a `deploy` command, containerlab automatically exports in
 Containerlab internal data that is submitted for export via the template, has the following structure:
 
 ```golang
---8<-- "clab/export.go:37:44"
+--8<-- "core/export.go:37:44"
 ```
 
 To get the full list of fields available for export, you can export topology data with the following template `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.

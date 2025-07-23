@@ -48,9 +48,9 @@ The data is provided in the context of a container that belongs to a containerla
 | `kind`         | The container's [kind](../../manual/nodes.md#kind).                                                      |
 | `state`        | The container's state. ie. `created`, `restarting`, `running`, `removing`, `paused`, `exited`, or `dead` |
 | `status`       | The health status of the container. ie `starting`, `unhealthy`, `up` or `exited`.                        |
-| `ipv4_address` | The [IPv4 management address](../../manual/nodes#mgmt-ipv4) of the container.                            |
-| `ipv6_address` | The [IPv6 management address](../../manual/nodes#mgmt_ipv6) of the container.                            |
-| `owner`        | The [owner](../deploy#owner) of the lab.                                                                 |
+| `ipv4_address` | The [IPv4 management address](../../manual/nodes.md#mgmt-ipv4) of the container.                            |
+| `ipv6_address` | The [IPv6 management address](../../manual/nodes.md#mgmt-ipv6) of the container.                            |
+| `owner`        | The [owner](../deploy.md#owner) of the lab.                                                                 |
 
 #### details
 

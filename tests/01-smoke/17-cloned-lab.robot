@@ -1,25 +1,27 @@
 *** Settings ***
 Library             Process
+Library             OperatingSystem
+Library             BuiltIn
 Resource            ../common.robot
 
-Test Teardown      Cleanup
+Test Teardown       Cleanup
 
 
 *** Variables ***
-${lab1-url}             https://github.com/hellt/clab-test-repo
-${lab1-shorturl}        hellt/clab-test-repo
-${lab1-url2}            https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml
-${lab2-url}             https://github.com/hellt/clab-test-repo/tree/branch1
+${lab1-url}                 https://github.com/hellt/clab-test-repo
+${lab1-shorturl}            hellt/clab-test-repo
+${lab1-url2}                https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml
+${lab2-url}                 https://github.com/hellt/clab-test-repo/tree/branch1
 
-${lab1-gitlab-url}      https://github.com/hellt/clab-test-repo
-${lab1-gitlab-url2}     https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml
-${lab2-gitlab-url}      https://github.com/hellt/clab-test-repo/tree/branch1
-${http-lab-url}         https://gist.githubusercontent.com/hellt/66a5d8fca7bf526b46adae9008a5e04b/raw/034a542c3fbb17333afd20e6e7d21869fee6aeb5/linux.clab.yml
-${single-topo-folder}   tests/01-smoke/single-topo-folder
+${lab1-gitlab-url}          https://github.com/hellt/clab-test-repo
+${lab1-gitlab-url2}         https://github.com/hellt/clab-test-repo/blob/main/lab1.clab.yml
+${lab2-gitlab-url}          https://github.com/hellt/clab-test-repo/tree/branch1
+${http-lab-url}             https://gist.githubusercontent.com/hellt/66a5d8fca7bf526b46adae9008a5e04b/raw/034a542c3fbb17333afd20e6e7d21869fee6aeb5/linux.clab.yml
+${single-topo-folder}       tests/01-smoke/single-topo-folder
 
-${s3-url}               s3://clab-integration/srl02-s3.clab.yml
+${s3-url}                   s3://clab-integration/srl02-s3.clab.yml
 
-${runtime}              docker
+${runtime}                  docker
 
 
 *** Test Cases ***
@@ -36,7 +38,6 @@ Test lab1 with Github
     # check that node3 was filtered and not present in the lab output
     Should Contain    ${output.stdout}    clab-lab1-node1
 
-
 Test lab1 with Gitlab
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-gitlab-url}
@@ -49,7 +50,6 @@ Test lab1 with Gitlab
 
     # check that node3 was filtered and not present in the lab output
     Should Contain    ${output.stdout}    clab-lab1-node1
-
 
 Test lab2 with Github
     ${output} =    Process.Run Process
@@ -64,7 +64,6 @@ Test lab2 with Github
     # check that node3 was filtered and not present in the lab output
     Should Contain    ${output.stdout}    clab-lab1-node1
 
-
 Test lab2 with Gitlab
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-gitlab-url2}
@@ -77,7 +76,6 @@ Test lab2 with Gitlab
 
     # check that node3 was filtered and not present in the lab output
     Should Contain    ${output.stdout}    clab-lab1-node1
-
 
 Test lab3 with Github
     ${output} =    Process.Run Process
@@ -92,7 +90,6 @@ Test lab3 with Github
     # check that node3 was filtered and not present in the lab output
     Should Contain    ${output.stdout}    clab-lab2-node1
 
-
 Test lab3 with Gitlab
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab2-gitlab-url}
@@ -106,7 +103,6 @@ Test lab3 with Gitlab
     # check that node3 was filtered and not present in the lab output
     Should Contain    ${output.stdout}    clab-lab2-node1
 
-
 Test lab1 with short github url
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab1-shorturl}
@@ -118,7 +114,6 @@ Test lab1 with short github url
     Should Be Equal As Integers    ${output.rc}    0
 
     Should Contain    ${output.stdout}    clab-lab1-node1
-
 
 Test lab1 downloaded from https url
     ${output} =    Process.Run Process
@@ -142,20 +137,19 @@ Test deploy referencing folder as topo
 
     Should Be Equal As Integers    ${output_pre.rc}    0
 
-    ## double check deletion via runtime ps 
+    ## double check deletion via runtime ps
     ${output_post2} =    Process.Run Process
     ...    sudo -E ${runtime} ps
     ...    shell=True
 
     Should Contain    ${output_post2.stdout}    clab-lab1-node1
 
-
     ## destroy with just a reference to a folder
     ${output_post1} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${single-topo-folder}
     ...    shell=True
 
-    ## double check deletion via runtime ps 
+    ## double check deletion via runtime ps
     ${output_post2} =    Process.Run Process
     ...    sudo -E ${runtime} ps
     ...    shell=True
@@ -163,6 +157,9 @@ Test deploy referencing folder as topo
     Should Not Contain    ${output_post2.stdout}    clab-lab1-node1
 
 Test lab downloaded from s3 url
+    ${aws_key} =    Get Environment Variable    AWS_ACCESS_KEY_ID
+    Skip If    '${aws_key}' == ''
+
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${s3-url}
     ...    shell=True
@@ -173,6 +170,7 @@ Test lab downloaded from s3 url
     Should Be Equal As Integers    ${output.rc}    0
 
     Should Contain    ${output.stdout}    clab-srl02-srl01
+
 
 *** Keywords ***
 Cleanup

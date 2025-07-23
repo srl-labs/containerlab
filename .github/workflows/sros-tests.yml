@@ -6,6 +6,9 @@ name: sros-test
       py_ver:
         required: true
         type: string
+      runtime:
+        type: string
+        default: "docker"
 
 jobs:
   sros-tests:
@@ -13,8 +16,6 @@ jobs:
       group: Default
     strategy:
       matrix:
-        runtime:
-          - "docker"
         test-suite:
           - "01*.robot"
     steps:
@@ -59,13 +60,13 @@ jobs:
 
       - name: Run tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/07-sros/${{ matrix.test-suite }}
+          bash ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/07-sros/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 07-sros-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 07-sros-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -74,6 +75,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-sros-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-sros-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7

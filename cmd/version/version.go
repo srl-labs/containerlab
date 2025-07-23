@@ -5,13 +5,9 @@
 package version
 
 import (
-	"context"
 	_ "embed"
 	"fmt"
-	"os"
-	"strings"
 
-	"github.com/charmbracelet/log"
 	gover "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +30,7 @@ func init() {
 // https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
 // https://patorjk.com/software/taag/#p=display&f=Ivrit&t=CONTAINERlab
 //
-//go:embed logo.txt
+//go:embed assets/logo.txt
 var projASCIILogo string
 
 // VersionCmd defines the version command.
@@ -72,23 +68,4 @@ func docsLinkFromVer(ver string) string {
 		relSlug += fmt.Sprintf("#%d%d%d", maj, min, patch)
 	}
 	return relSlug
-}
-
-// GetLatestClabVersion optional function for a background check. It respects
-// CLAB_VERSION_CHECK="disable" to skip remote calls. Typically used in your
-// "deploy" or other commands if you want a background version check.
-func GetLatestClabVersion(ctx context.Context) chan string {
-	vCh := make(chan string, 1)
-
-	// check if version check is disabled
-	versionCheckStatus := os.Getenv("CLAB_VERSION_CHECK")
-	log.Debugf("Env: CLAB_VERSION_CHECK=%s", versionCheckStatus)
-
-	if strings.Contains(strings.ToLower(versionCheckStatus), "disable") {
-		close(vCh)
-		return vCh
-	}
-
-	go getLatestVersion(ctx, vCh)
-	return vCh
 }

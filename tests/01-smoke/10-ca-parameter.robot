@@ -10,10 +10,10 @@ Suite Teardown      Run Keyword    Teardown
 *** Variables ***
 ${lab-name}                 internal-ca
 ${topo}                     ${CURDIR}/10-${lab-name}.clab.yml
-${ca-keysize}               512
-${l1-keysize}               512
+${ca-keysize}               1024
+${l1-keysize}               1024
 ${l1-validity-duration}     25 hours
-${l2-keysize}               1024
+${l2-keysize}               2048
 ${ca-validity-duration}     5 hours
 
 # cert files
@@ -103,6 +103,7 @@ Verify l2 extra SANs
     ...    openssl x509 -in ${l2-cert} -text
     Should Contain    ${certificate_output}    DNS:my.text.fqdn
     Should Contain    ${certificate_output}    IP Address:192.168.33.44
+
 
 *** Keywords ***
 Teardown

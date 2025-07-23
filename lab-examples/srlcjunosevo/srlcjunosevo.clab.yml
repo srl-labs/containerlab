@@ -9,7 +9,7 @@ topology:
 
     cevo:
       kind: juniper_cjunosevolved
-      image: cjunosevolved:25.2R1.3-EVO
+      image: cjunosevolved:25.2R1.8-EVO
       startup-config: cjunosevo.cfg
       env:
         # To start the BT flavor, change "BX" to "BT" below

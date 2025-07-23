@@ -11,7 +11,8 @@ nav:
           - manual/kinds/index.md
           - Nokia:
               - Nokia SR Linux: manual/kinds/srl.md
-              - Nokia SR OS: manual/kinds/vr-sros.md
+              - Nokia SR OS (SR-SIM): manual/kinds/sros.md
+              - Nokia SR OS (vSIM): manual/kinds/vr-sros.md
           - Arista:
               - Arista cEOS: manual/kinds/ceos.md
               - Arista vEOS: manual/kinds/vr-veos.md
@@ -144,7 +145,7 @@ nav:
       - External bridge capability: lab-examples/ext-bridge.md
       - WAN topology: lab-examples/wan.md
       - Peering lab: lab-examples/peering-lab.md
-      - Nokia SR Linux and Nokia SR OS: lab-examples/vr-sros.md
+      - Nokia SR Linux and Nokia SR OS: lab-examples/sr-sim.md
       - Nokia SR Linux and Juniper vMX: lab-examples/vr-vmx.md
       - Nokia SR Linux and Cisco XRd: lab-examples/srl-xrd.md
       - Nokia SR Linux and Cisco XRv9k: lab-examples/vr-xrv9k.md
@@ -169,6 +170,7 @@ nav:
           - 5-stage Clos topology: lab-examples/templated02.md
       - Generic VM: lab-examples/generic_vm01.md
   - Release notes:
+      - "0.69": rn/0.69.md
       - "0.68": rn/0.68.md
       - "0.67": rn/0.67.md
       - "0.66": rn/0.66.md

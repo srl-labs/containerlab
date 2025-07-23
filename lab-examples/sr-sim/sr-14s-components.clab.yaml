@@ -1,0 +1,115 @@
+name: "sros"
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-14s:
+      kind: nokia_srsim
+      type: SR-14s
+      components:
+        - slot: A
+        - slot: B
+        - slot: 1
+        - slot: 2
+        - slot: 3
+        - slot: 4
+        - slot: 5
+        - slot: 6
+      startup-config: |
+        /configure    sfm 1 sfm-type sfm2-s
+        /configure    sfm 2 sfm-type sfm2-s
+        /configure    sfm 3 sfm-type sfm2-s
+        /configure    sfm 4 sfm-type sfm2-s
+        /configure    sfm 5 sfm-type sfm2-s
+        /configure    sfm 6 sfm-type sfm2-s
+
+        /configure    card 1 card-type xcm2-14s
+        /configure    card 2 card-type xcm2-14s
+        /configure    card 3 card-type xcm2-14s
+        /configure    card 4 card-type xcm2-14s
+        /configure    card 5 card-type xcm2-14s
+        /configure    card 6 card-type xcm2-14s
+
+        /configure    card 1 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 2 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 3 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 4 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 5 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 6 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+
+        /configure    chassis router chassis-number 1 power-shelf 1 power-shelf-type ps-b10-shelf-ac/hv
+        /configure    chassis router chassis-number 1 power-shelf 1 power-module 1 power-module-type ps-b-ac/hv-6000
+        /configure    chassis router chassis-number 1 power-shelf 1 power-module 3 power-module-type ps-b-ac/hv-6000
+        /configure    chassis router chassis-number 1 power-shelf 1 power-module 4 power-module-type ps-b-ac/hv-6000
+
+
+        /configure    system name "sr-14s-a"
+        /configure    system grpc admin-state enable
+        /configure    system grpc allow-unsecure-connection
+        /configure    system grpc gnmi auto-config-save true
+        /configure    system grpc rib-api admin-state enable
+        /configure    system management-interface netconf auto-config-save true
+        /configure    system management-interface snmp packet-size 9216
+        /configure    system management-interface snmp streaming admin-state enable
+        /configure    system power-management power-zone 1 mode none
+        /configure    system power-management power-zone 1 power-safety-level 0
+
+        /configure port 1/1/c1 connector breakout c1-800g
+        /configure port 2/1/c1 connector breakout c1-800g
+        /configure port 3/1/c1 connector breakout c1-800g
+        /configure port 4/1/c1 connector breakout c1-800g
+        /configure port 5/1/c1 connector breakout c1-800g
+        /configure port 6/1/c1 connector breakout c1-800g
+
+        /configure port 1/1/c1 admin-state enable
+        /configure port 2/1/c1 admin-state enable
+        /configure port 3/1/c1 admin-state enable
+        /configure port 4/1/c1 admin-state enable
+        /configure port 5/1/c1 admin-state enable
+        /configure port 6/1/c1 admin-state enable
+
+        /configure port 1/1/c1/1 ethernet mode hybrid
+        /configure port 2/1/c1/1 ethernet mode hybrid
+        /configure port 3/1/c1/1 ethernet mode hybrid
+        /configure port 4/1/c1/1 ethernet mode hybrid
+        /configure port 5/1/c1/1 ethernet mode hybrid
+        /configure port 6/1/c1/1 ethernet mode hybrid
+
+        /configure port 1/1/c1/1 admin-state enable
+        /configure port 2/1/c1/1 admin-state enable
+        /configure port 3/1/c1/1 admin-state enable
+        /configure port 4/1/c1/1 admin-state enable
+        /configure port 5/1/c1/1 admin-state enable
+        /configure port 6/1/c1/1 admin-state enable
+
+
+
+        /configure router "Base" interface "lc1" admin-state enable
+        /configure router "Base" interface "lc1" ipv6 address 2001:1::a prefix-length 96
+        /configure router "Base" interface "lc1" port 1/1/c1/1:1
+        /configure router "Base" interface "lc2" admin-state enable
+        /configure router "Base" interface "lc2" ipv6 address 2001:2::a prefix-length 96
+        /configure router "Base" interface "lc2" port 2/1/c1/1:2
+        /configure router "Base" interface "lc3" admin-state enable
+        /configure router "Base" interface "lc3" ipv6 address 2001:3::a prefix-length 96
+        /configure router "Base" interface "lc3" port 3/1/c1/1:3
+
+        /configure service vprn "l3" service-id 1 customer "1" admin-state enable
+
+        /configure service vprn "l3" interface "lc4" admin-state enable
+        /configure service vprn "l3" interface "lc4" ipv6 address 2001:1::b prefix-length 96
+        /configure service vprn "l3" interface "lc4" sap 4/1/c1/1:1
+        /configure service vprn "l3" interface "lc5" admin-state enable
+        /configure service vprn "l3" interface "lc5" ipv6 address 2001:2::b prefix-length 96
+        /configure service vprn "l3" interface "lc5" sap 5/1/c1/1:2
+        /configure service vprn "l3" interface "lc6" admin-state enable
+        /configure service vprn "l3" interface "lc6" ipv6 address 2001:3::b prefix-length 96
+        /configure service vprn "l3" interface "lc6" sap 6/1/c1/1:3
+
+  links:
+    ## DATA LINKS
+    - endpoints: ["sr-14s:1/1/c1/1", "sr-14s:4/1/c1/1"]
+    - endpoints: ["sr-14s:2/1/c1/1", "sr-14s:5/1/c1/1"]
+    - endpoints: ["sr-14s:3/1/c1/1", "sr-14s:6/1/c1/1"]

@@ -118,7 +118,7 @@ function install-docker-rhel {
 
 function install-docker-fedora {
     # using instructions from:
-    # https://docs.docker.com/engine/install/rhel/#install-using-the-repository
+    # https://docs.docker.com/engine/install/fedora/
     sudo dnf remove -y docker \
                   docker-client \
                   docker-client-latest \
@@ -131,7 +131,17 @@ function install-docker-fedora {
                   docker-engine
 
     sudo dnf install -y dnf-plugins-core
-    sudo dnf config-manager -y --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+
+    if (( VERSION_ID >= 37 )); then
+        sudo dnf-3 config-manager -y --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+    else
+        sudo dnf config-manager -y --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+    fi
+
+    if (( VERSION_ID >= 42 )); then
+        # For compatability purposes
+        DOCKER_VERSION="28.2.2"
+    fi
 
     DOCKER_PKG_NAME=$(dnf list docker-ce --showduplicates | awk '{ print $2 }' | grep ${DOCKER_VERSION} | head -n 1)
     DOCKER_CLI_PKG_NAME=$(dnf list docker-ce-cli --showduplicates | awk '{ print $2 }' | grep ${DOCKER_VERSION} | head -n 1)

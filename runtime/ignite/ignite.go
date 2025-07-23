@@ -22,7 +22,7 @@ import (
 	igniteRuntimes "github.com/weaveworks/ignite/pkg/runtime"
 	"github.com/weaveworks/ignite/pkg/util"
 
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -387,7 +387,6 @@ func (ir *IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]runtime
 
 		for _, addr := range i.Status.Network.IPAddresses {
 			ctr.NetworkSettings.IPv4addr = addr.String()
-			// TODO: figure out what to do with this
 			ctr.NetworkSettings.IPv4pLen = 24
 
 			break
