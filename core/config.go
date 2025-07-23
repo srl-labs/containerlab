@@ -11,6 +11,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/charmbracelet/log"
 	"github.com/pmorjan/kmod"
@@ -350,9 +351,19 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 
 	// Concurrently pull images for all nodes
 	errCh := make(chan error, len(c.Nodes))
+	var wg sync.WaitGroup
 
 	for _, node := range c.Nodes {
+		wg.Add(1)
 		go func(n nodes.Node) {
+			defer wg.Done()
+			select {
+			case <-ctx.Done():
+				errCh <- ctx.Err()
+				return
+			default:
+			}
+
 			if err := n.PullImage(ctx); err != nil {
 				errCh <- err
 				return
@@ -361,12 +372,23 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 		}(node)
 	}
 
-	// Wait for all PullImage calls to finish
-	for i := 0; i < len(c.Nodes); i++ {
-		err := <-errCh
+	// Close the error channel when all goroutines are done
+	go func() {
+		wg.Wait()
+		close(errCh)
+	}()
+
+	// Collect all errors
+	var errors []error
+	for err := range errCh {
 		if err != nil {
-			return err
+			errors = append(errors, err)
 		}
+	}
+
+	// Return the first error if any occurred
+	if len(errors) > 0 {
+		return errors[0]
 	}
 
 	return nil
