@@ -10,13 +10,13 @@ topology:
   nodes:
     leaf1:
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
     leaf2:
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
     spine:
       kind: nokia_srlinux
-      type: ixrd3l
+      type: ixr-d3l
     client1:
       kind: linux
     client2:

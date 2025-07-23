@@ -134,7 +134,7 @@ func TestTypeInit(t *testing.T) {
 		"undefined_type_returns_default": {
 			got:  "test_data/topo1.yml",
 			node: "node2",
-			want: "ixrd2l",
+			want: "ixr-d2l",
 		},
 		"node_type_override_kind_type": {
 			got:  "test_data/topo2.yml",
@@ -366,7 +366,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeName:     "node1",
 				labels.LongName:     "clab-topo1-node1",
 				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixrd2l",
+				labels.NodeType:     "ixr-d2l",
 				labels.NodeGroup:    "",
 				labels.NodeLabDir:   "./clab-topo1/node1",
 				labels.TopoFile:     "topo1.yml",
@@ -381,7 +381,7 @@ func TestLabelsInit(t *testing.T) {
 				labels.NodeName:     "node2",
 				labels.LongName:     "clab-topo1-node2",
 				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixrd2l",
+				labels.NodeType:     "ixr-d2l",
 				labels.NodeGroup:    "",
 				labels.NodeLabDir:   "./clab-topo1/node2",
 				labels.TopoFile:     "topo1.yml",

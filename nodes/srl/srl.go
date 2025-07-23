@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	SRLinuxDefaultType = "ixrd2l" // default srl node type
+	SRLinuxDefaultType = "ixr-d2l" // default srl node type
 
 	readyTimeout = time.Minute * 5 // max wait time for node to boot
 
@@ -68,30 +68,54 @@ var (
 	defaultCredentials = nodes.NewCredentials("admin", "NokiaSrl1!")
 
 	srlTypes = map[string]string{
-		"ixsa1":    "7215IXSA1.yml",
-		"ixrd1":    "7220IXRD1.yml",
-		"ixrd2":    "7220IXRD2.yml",
-		"ixrd3":    "7220IXRD3.yml",
-		"ixrd2l":   "7220IXRD2L.yml",
-		"ixrd3l":   "7220IXRD3L.yml",
-		"ixrd4":    "7220IXRD4.yml",
-		"ixrd5":    "7220IXRD5.yml",
-		"ixrh2":    "7220IXRH2.yml",
-		"ixrh3":    "7220IXRH3.yml",
-		"ixrh4":    "7220IXRH4.yml",
-		"ixrh432d": "7220IXRH4-32D.yml",
-		"ixrh5":    "7220IXRH5-32D.yml",
-		"ixrh564d": "7220IXRH5-64D.yml",
-		"ixrh564o": "7220IXRH5-64O.yml",
-		"ixr6":     "7250IXR6.yml",
-		"ixr6e":    "7250IXR6e.yml",
-		"ixr10":    "7250IXR10.yml",
-		"ixr10e":   "7250IXR10e.yml",
-		"ixr18e":   "7250IXR18e.yml",
-		"sxr1x44s": "7730SXR-1x-44s.yml",
-		"sxr1d32d": "7730SXR-1d-32d.yml",
-		"ixrx1b":   "7250IXRX1b.yml",
-		"ixrx3b":   "7250IXRX3b.yml",
+		"ixsa1":      "7215IXSA1.yml",
+		"ixs-a1":     "7215IXSA1.yml",
+		"ixrd1":      "7220IXRD1.yml",
+		"ixr-d1":     "7220IXRD1.yml",
+		"ixrd2":      "7220IXRD2.yml",
+		"ixr-d2":     "7220IXRD2.yml",
+		"ixrd3":      "7220IXRD3.yml",
+		"ixr-d3":     "7220IXRD3.yml",
+		"ixrd2l":     "7220IXRD2L.yml",
+		"ixr-d2l":    "7220IXRD2L.yml",
+		"ixrd3l":     "7220IXRD3L.yml",
+		"ixr-d3l":    "7220IXRD3L.yml",
+		"ixrd4":      "7220IXRD4.yml",
+		"ixr-d4":     "7220IXRD4.yml",
+		"ixrd5":      "7220IXRD5.yml",
+		"ixr-d5":     "7220IXRD5.yml",
+		"ixrh2":      "7220IXRH2.yml",
+		"ixr-h2":     "7220IXRH2.yml",
+		"ixrh3":      "7220IXRH3.yml",
+		"ixr-h3":     "7220IXRH3.yml",
+		"ixrh4":      "7220IXRH4.yml",
+		"ixr-h4":     "7220IXRH4.yml",
+		"ixrh432d":   "7220IXRH4-32D.yml",
+		"ixr-h4-32d": "7220IXRH4-32D.yml",
+		"ixrh532d":   "7220IXRH5-32D.yml",
+		"ixr-h5-32d": "7220IXRH5-32D.yml",
+		"ixrh564d":   "7220IXRH5-64D.yml",
+		"ixr-h5-64d": "7220IXRH5-64D.yml",
+		"ixrh564o":   "7220IXRH5-64O.yml",
+		"ixr-h5-64o": "7220IXRH5-64O.yml",
+		"ixr6":       "7250IXR6.yml",
+		"ixr-6":      "7250IXR6.yml",
+		"ixr6e":      "7250IXR6e.yml",
+		"ixr-6e":     "7250IXR6e.yml",
+		"ixr10":      "7250IXR10.yml",
+		"ixr-10":     "7250IXR10.yml",
+		"ixr10e":     "7250IXR10e.yml",
+		"ixr-10e":    "7250IXR10e.yml",
+		"ixr18e":     "7250IXR18e.yml",
+		"ixr-18e":    "7250IXR18e.yml",
+		"sxr1x44s":   "7730SXR-1x-44s.yml",
+		"sxr-1x-44s": "7730SXR-1x-44s.yml",
+		"sxr1d32d":   "7730SXR-1d-32d.yml",
+		"sxr-1d-32d": "7730SXR-1d-32d.yml",
+		"ixrx1b":     "7250IXRX1b.yml",
+		"ixr-x1b":    "7250IXRX1b.yml",
+		"ixrx3b":     "7250IXRX3b.yml",
+		"ixr-x3b":    "7250IXRX3b.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -163,6 +187,10 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	for _, o := range opts {
 		o(n)
+	}
+
+	if !strings.Contains(n.Cfg.NodeType, "-") {
+		log.Warn("Deprecation notice", "notice", "You use a deprecated node type format. Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\nDeprecated type format will be removed after January 2026", "used type", n.Cfg.NodeType)
 	}
 
 	if n.Cfg.NodeType == "" {
