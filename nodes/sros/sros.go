@@ -719,7 +719,6 @@ func (n *sros) createSROSFilesConfig() error {
 		}
 	} else { // Use startup folder to generate config and use that to boot node
 		if n.Cfg.StartupConfig != "" && !isPartial { // User provides startup config
-
 			log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
 				n.Cfg.StartupConfig, "isPartial", isPartial)
 
