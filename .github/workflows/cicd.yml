@@ -9,17 +9,23 @@ on:
       - "v*"
   pull_request:
   workflow_dispatch:
+    inputs:
+      runtime:
+        description: "Runtime to use for the tests"
+        required: false
+        default: "docker"
 
 env:
-  GO_VER: "1.23.7"
+  GO_VER: "1.24.5"
   CGO_ENABLED: 0
-  MKDOCS_INS_VER: 9.6.1-insiders-4.53.15-hellt
+  MKDOCS_INS_VER: 9.6.12-insiders-4.53.16-hellt
   GORELEASER_VER: v2.6.1
   PY_VER: "3.10"
+  RUNTIME: ${{ inputs.runtime || 'docker' }}
 
 jobs:
   process-gitref:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     outputs:
       source_name: ${{ steps.set-outputs.outputs.SOURCE_NAME }}
       source_branch: ${{ steps.set-outputs.outputs.SOURCE_BRANCH }}
@@ -28,6 +34,7 @@ jobs:
       # exporting env vars to be used in invoked workflows
       py_ver: ${{ env.PY_VER }}
       go_ver: ${{ env.GO_VER }}
+      runtime: ${{ env.RUNTIME }}
     steps:
       - id: set-outputs
         run: |
@@ -37,7 +44,7 @@ jobs:
           echo "SOURCE_TAG_NO_PREFIX=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
   file-changes:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: process-gitref
     outputs:
       code: ${{ steps.filter.outputs.code }}
@@ -94,7 +101,7 @@ jobs:
       go_ver: ${{ needs.process-gitref.outputs.go_ver }}
 
   unit-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -132,6 +139,7 @@ jobs:
     uses: ./.github/workflows/smoke-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
     secrets: inherit
     needs:
       - file-changes
@@ -139,11 +147,7 @@ jobs:
       - build-containerlab
 
   ext-container-tests:
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        runtime:
-          - "docker"
+    runs-on: ubuntu-24.04
     needs:
       - build-containerlab
     steps:
@@ -189,13 +193,13 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Run tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/06-ext-container
+          bash ./tests/rf-run.sh docker ./tests/06-ext-container
       # upload test reports as a zip file
       - name: Upload test reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 06-ext-container-log-${{ matrix.runtime }}
+          name: 06-ext-container-log-docker
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -204,16 +208,12 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-ext-container-test-${{ matrix.runtime }}
+          name: coverage-ext-container-test-docker
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
   ceos-basic-tests:
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        runtime:
-          - "docker"
+    runs-on: ubuntu-24.04
     needs:
       - build-containerlab
     steps:
@@ -261,12 +261,12 @@ jobs:
         run: docker pull ghcr.io/srl-labs/ceos:4.32.0F && docker tag ghcr.io/srl-labs/ceos:4.32.0F ceos:4.32.0F
       - name: Run ceos tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/03-basic-ceos
+          bash ./tests/rf-run.sh docker ./tests/03-basic-ceos
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 03-basic-ceos-log-${{ matrix.runtime }}
+          name: 03-basic-ceos-log-docker
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -275,7 +275,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-ceos-tests-${{ matrix.runtime }}
+          name: coverage-ceos-tests-docker
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
@@ -283,17 +283,14 @@ jobs:
     uses: ./.github/workflows/srlinux-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
     needs:
       - file-changes
       - process-gitref
       - build-containerlab
 
   ixiac-one-basic-tests:
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        runtime:
-          - "docker"
+    runs-on: ubuntu-24.04
     needs:
       - build-containerlab
     steps:
@@ -332,12 +329,12 @@ jobs:
 
       - name: Run keysight_ixia-c-one tests
         run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/04-basic-ixiacone
+          bash ./tests/rf-run.sh docker ./tests/04-basic-ixiacone
       # upload test reports as a zip file
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 04-basic-ixiacone-log-${{ matrix.runtime }}
+          name: 04-basic-ixiacone-log-docker
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -346,7 +343,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-ixiac-one-tests-${{ matrix.runtime }}
+          name: coverage-ixiac-one-tests-docker
           path: /tmp/clab-tests/coverage/*
           retention-days: 7
 
@@ -358,6 +355,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   kind-tests:
     uses: ./.github/workflows/kind-tests.yml
@@ -367,6 +365,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   # sros-tests:
   #   uses: ./.github/workflows/sros-tests.yml
@@ -376,13 +375,14 @@ jobs:
   #   with:
   #     py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
-  # srsim-tests:
-  #   uses: ./.github/workflows/srsim-tests.yml
-  #   needs:
-  #     - file-changes
-  #     - build-containerlab
-  #   with:
-  #     py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+  srsim-tests:
+    uses: ./.github/workflows/srsim-tests.yml
+    secrets: inherit
+    needs:
+      - file-changes
+      - build-containerlab
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
   fortigate-tests:
     uses: ./.github/workflows/fortigate-tests.yml
@@ -392,6 +392,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   cisco_iol-tests:
     uses: ./.github/workflows/cisco_iol-tests.yml
@@ -401,6 +402,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   fdio_vpp-tests:
     uses: ./.github/workflows/fdio_vpp-tests.yml
@@ -410,6 +412,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   vyosnetworks_vyos-tests:
     uses: ./.github/workflows/vyosnetworks_vyos-tests.yml
@@ -419,6 +422,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
@@ -432,7 +436,7 @@ jobs:
       - ixiac-one-basic-tests
       - vxlan-tests
       - kind-tests
-      # - sros-tests
+      - srsim-tests
       - fortigate-tests
       - cisco_iol-tests
       - fdio_vpp-tests
@@ -463,7 +467,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   docs-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs: file-changes
     if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
     steps:
@@ -496,7 +500,7 @@ jobs:
           config: docs/htmltest.yml
 
   build-and-release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - golangci-lint
@@ -509,6 +513,7 @@ jobs:
       - ext-container-tests
       - vxlan-tests
       - kind-tests
+      - srsim-tests
       - cisco_iol-tests
       - fortigate-tests
       - fdio_vpp-tests
@@ -556,7 +561,7 @@ jobs:
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
 
   publish-docs:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') != true
     needs: build-and-release
     steps:
@@ -587,7 +592,7 @@ jobs:
   # it skips the code build/release and proceeds with docs publishing
   # the intended usage is to provide fixes/updates to docs, which do not require code changes
   update-docs:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/docs-publish'
     needs: docs-test
     steps:

@@ -13,7 +13,7 @@ topology:
           ip addr add dev eth1 10.0.0.1/30'
     sros:
       kind: nokia_srsim
-      image: nokia_srsim:25.7.R1
+      image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
       type: sr-1
       license: /opt/nokia/sros/license-sros25.txt
       startup-config: |

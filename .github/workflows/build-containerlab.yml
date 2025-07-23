@@ -9,7 +9,7 @@ name: build-clab
 
 jobs:
   build-clab:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: WillAbides/setup-go-faster@v1.14.0

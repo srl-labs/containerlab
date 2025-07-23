@@ -45,7 +45,8 @@ func (n *sros) mapSSHPubKeys(supportedSSHKeyAlgos map[string]*[]string) {
 	for _, k := range n.sshPubKeys {
 		sshKeys, ok := supportedSSHKeyAlgos[k.Type()]
 		if !ok {
-			log.Debug("Unsupported SSH Key Algo, skipping key", "node", n.Cfg.ShortName, "key", string(ssh.MarshalAuthorizedKey(k)))
+			log.Debug("Unsupported SSH Key Algo, skipping key", "node", n.Cfg.ShortName,
+				"key", string(ssh.MarshalAuthorizedKey(k)))
 			continue
 		}
 

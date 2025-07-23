@@ -7,7 +7,7 @@ Suite Teardown      Run Keyword    Cleanup
 
 
 *** Variables ***
-${lab-name}         13-01-sros-to-linux
+${lab-name}         sr02
 ${lab-file-name}    02-srsim.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
@@ -36,7 +36,7 @@ Ensure sros is reachable over ssh
     ...    password=NokiaSros1!
     ...    try_for=10
 
-Verify links in node srl1
+Verify links in node l1
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ip link show eth1"
     Log    ${output}

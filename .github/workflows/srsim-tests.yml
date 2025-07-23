@@ -6,16 +6,21 @@ name: srsim-tests
       py_ver:
         required: true
         type: string
+      runtime:
+        type: string
+        default: "docker"
 
 jobs:
   srsim-tests:
     runs-on: ubuntu-24.04
+    env: 
+      SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
     strategy:
       matrix:
-        runtime:
-          - "docker"
         test-suite:
-          - "13*.robot"
+          - "01*.robot"
+          - "03*.robot"
+          - "05*.robot"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,6 +33,9 @@ jobs:
 
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
+
+      - name: Create license file from env vars
+        run: sudo mkdir -p /opt/nokia/sros/ && echo $SRSIM_LICENSE > /opt/nokia/sros/license-sros25.txt
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -56,16 +64,25 @@ jobs:
       - name: Sanitize test-suite name
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
-      - name: Run sros tests
-        run: |
-          bash ./tests/rf-run.sh ${{ matrix.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Pull and re-tag srsim image
+        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 registry.srlinux.dev/pub/nokia_srsim:25.7.R1
 
+      - name: Run sros-srsim tests
+        run: |
+          ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
       # upload test reports as a zip file
       - name: Upload test logs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: 13-srsim-log-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: 13-srsim-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: ./tests/out/*.html
 
       # upload coverage report from unit tests, as they are then
@@ -74,6 +91,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: coverage-srsim-tests-${{ env.TEST_SUITE }}-${{ matrix.runtime }}
+          name: coverage-srsim-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: /tmp/clab-tests/coverage/*
           retention-days: 7

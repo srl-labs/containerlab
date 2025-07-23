@@ -15,9 +15,9 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
-	clabels "github.com/srl-labs/containerlab/labels"
+	"github.com/srl-labs/containerlab/core"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -55,19 +55,19 @@ var apiServerStatusCmd = &cobra.Command{
 		}
 
 		// Initialize containerlab with runtime using the same approach as inspect command
-		opts := []clab.ClabOption{
-			clab.WithTimeout(common.Timeout),
-			clab.WithRuntime(runtimeName,
+		opts := []core.ClabOption{
+			core.WithTimeout(common.Timeout),
+			core.WithRuntime(runtimeName,
 				&runtime.RuntimeConfig{
 					Debug:            common.Debug,
 					Timeout:          common.Timeout,
 					GracefulShutdown: common.Graceful,
 				},
 			),
-			clab.WithDebug(common.Debug),
+			core.WithDebug(common.Debug),
 		}
 
-		c, err := clab.NewContainerLab(opts...)
+		c, err := core.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}
@@ -82,7 +82,7 @@ var apiServerStatusCmd = &cobra.Command{
 		filter := []*types.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      clabels.ToolType,
+				Field:      containerlablabels.ToolType,
 				Operator:   "=",
 				Match:      "api-server",
 			},
@@ -135,7 +135,7 @@ var apiServerStatusCmd = &cobra.Command{
 
 			// Get owner from container labels
 			owner := "N/A"
-			if ownerVal, exists := c.Labels[clabels.Owner]; exists && ownerVal != "" {
+			if ownerVal, exists := c.Labels[containerlablabels.Owner]; exists && ownerVal != "" {
 				owner = ownerVal
 			}
 

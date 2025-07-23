@@ -16,8 +16,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
@@ -49,7 +49,8 @@ func init() {
 	destroyCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
 		"attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	destroyCmd.Flags().BoolVarP(&yes, "yes", "y", false, "auto-approve deletion when used with --all (skips confirmation prompt)")
+	destroyCmd.Flags().BoolVarP(&yes, "yes", "y", false,
+		"auto-approve deletion when used with --all (skips confirmation prompt)")
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
@@ -64,7 +65,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	}
 
 	var err error
-	var labs []*clab.CLab
+	var labs []*core.CLab
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -75,7 +76,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	switch {
 	case !all:
 		log.Debug("topology file", "file", common.Topo)
-		cnts, err := listContainers(ctx, common.Topo)
+		cnts, err := listContainers(ctx, common.Topo, common.Name)
 		if err != nil {
 			return err
 		}
@@ -109,7 +110,10 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			filepath.Dir(cnts[0].Labels[labels.NodeLabDir])
 
 	case all:
-		containers, err := listContainers(ctx, common.Topo)
+		if common.Name != "" {
+			return fmt.Errorf("--all and --name should not be used together")
+		}
+		containers, err := listContainers(ctx, common.Topo, common.Name)
 		if err != nil {
 			return err
 		}
@@ -135,32 +139,32 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	}
 
 	for topo, labdir := range topos {
-		opts := []clab.ClabOption{
-			clab.WithTimeout(common.Timeout),
-			clab.WithTopoPath(topo, common.VarsFile),
-			clab.WithNodeFilter(common.NodeFilter),
-			clab.WithRuntime(common.Runtime,
+		opts := []core.ClabOption{
+			core.WithTimeout(common.Timeout),
+			core.WithTopoPath(topo, common.VarsFile),
+			core.WithNodeFilter(common.NodeFilter),
+			core.WithRuntime(common.Runtime,
 				&runtime.RuntimeConfig{
 					Debug:            common.Debug,
 					Timeout:          common.Timeout,
 					GracefulShutdown: common.Graceful,
 				},
 			),
-			clab.WithDebug(common.Debug),
+			core.WithDebug(common.Debug),
 			// during destroy we don't want to check bind paths
 			// as it is irrelevant for this command.
-			clab.WithSkippedBindsPathsCheck(),
+			core.WithSkippedBindsPathsCheck(),
 		}
 
 		if keepMgmtNet {
-			opts = append(opts, clab.WithKeepMgmtNet())
+			opts = append(opts, core.WithKeepMgmtNet())
 		}
 		if common.Name != "" {
-			opts = append(opts, clab.WithLabName(common.Name))
+			opts = append(opts, core.WithLabName(common.Name))
 		}
 
 		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
-		nc, err := clab.NewContainerLab(opts...)
+		nc, err := core.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}
@@ -195,6 +199,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	}
 
 	var errs []error
+
 	for _, clab := range labs {
 		err = destroyLab(ctx, clab)
 		if err != nil {
@@ -217,51 +222,57 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
+func destroyLab(ctx context.Context, c *core.CLab) (err error) {
 	return c.Destroy(ctx, maxWorkers, keepMgmtNet)
 }
 
-// listContainers lists containers belonging to a certain topo if topo file path is specified
+// listContainers lists containers belonging to a certain topo or to a certain lab name if topo file path of lab name is specified
 // otherwise lists all containerlab containers.
-func listContainers(ctx context.Context, topo string) ([]runtime.GenericContainer, error) {
+func listContainers(ctx context.Context, topo, name string) ([]runtime.GenericContainer, error) {
 	runtimeConfig := &runtime.RuntimeConfig{
 		Debug:            common.Debug,
 		Timeout:          common.Timeout,
 		GracefulShutdown: common.Graceful,
 	}
 
-	opts := []clab.ClabOption{
-		clab.WithRuntime(common.Runtime, runtimeConfig),
-		clab.WithTimeout(common.Timeout),
+	opts := []core.ClabOption{
+		core.WithRuntime(common.Runtime, runtimeConfig),
+		core.WithTimeout(common.Timeout),
 		// when listing containers we don't care if binds are accurate
 		// since this function is used in the destroy process
-		clab.WithSkippedBindsPathsCheck(),
+		core.WithSkippedBindsPathsCheck(),
 	}
 
+	if topo != "" {
+		opts = append(opts, core.WithTopoPath(topo, common.VarsFile))
+	}
+
+	c, err := core.NewContainerLab(opts...)
+	if err != nil {
+		return nil, err
+	}
 	// filter to list all containerlab containers
-	// it is overwritten if topo file is provided
+	// it is overwritten if topo file or lab name is provided
+	// when topo file or lab name is provided, filter containers by lab name
 	filter := []*types.GenericFilter{{
 		FilterType: "label",
 		Field:      labels.Containerlab,
 		Operator:   "exists",
 	}}
-
-	// when topo file is provided, filter containers by lab name
-	if topo != "" {
-		opts = append(opts, clab.WithTopoPath(topo, common.VarsFile))
-	}
-
-	c, err := clab.NewContainerLab(opts...)
-	if err != nil {
-		return nil, err
-	}
-
+	// topology takes precedence (same as with inspect)
 	if topo != "" {
 		filter = []*types.GenericFilter{{
 			FilterType: "label",
 			Field:      labels.Containerlab,
 			Operator:   "=",
 			Match:      c.Config.Name,
+		}}
+	} else if name != "" {
+		filter = []*types.GenericFilter{{
+			FilterType: "label",
+			Field:      labels.Containerlab,
+			Operator:   "=",
+			Match:      name,
 		}}
 	}
 

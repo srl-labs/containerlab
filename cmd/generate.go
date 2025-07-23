@@ -14,8 +14,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
@@ -56,7 +56,7 @@ var generateCmd = &cobra.Command{
 	Use:     "generate",
 	Aliases: []string{"gen"},
 	Short:   "generate a Clos topology file, based on provided flags",
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cobraCmd *cobra.Command, _ []string) error {
 		if common.Name == "" {
 			return errors.New("provide a lab name with --name flag")
 		}
@@ -111,7 +111,7 @@ var generateCmd = &cobra.Command{
 				os.Setenv("CLAB_OWNER", labOwner)
 			}
 
-			return deployCmd.RunE(deployCmd, nil)
+			return deployCmd.RunE(cobraCmd, nil)
 		}
 		if file == "" {
 			fmt.Println(string(b))
@@ -121,7 +121,7 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
-	c := &clab.CLab{}
+	c := &core.CLab{}
 	c.Reg = nodes.NewNodeRegistry()
 	c.RegisterNodes()
 
@@ -165,7 +165,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 	images, licenses map[string]string, nodes ...nodesDef,
 ) ([]byte, error) {
 	numStages := len(nodes)
-	config := &clab.Config{
+	config := &core.Config{
 		Name: name,
 		Mgmt: new(types.MgmtNet),
 		Topology: &types.Topology{
