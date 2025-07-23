@@ -58,71 +58,64 @@ func init() {
 		"comma separated list of nodes to include")
 }
 
-func destroyFn(_ *cobra.Command, _ []string) error {
-	// cleanup doesn't make sense with node-filter
-	if len(common.NodeFilter) != 0 && cleanup {
+func destroyFn(cobraCmd *cobra.Command, _ []string) error {
+	if cleanup && len(common.NodeFilter) != 0 {
 		return fmt.Errorf("cleanup cannot be used with node-filter")
 	}
 
-	var err error
-	var labs []*core.CLab
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	if all && common.Name != "" {
+		return fmt.Errorf("--all and --name should not be used together")
+	}
 
-	// topo will hold the reference to the topology file
-	// as the key and the respective lab directory as the referenced value
-	topos := map[string]string{}
+	log.Debug("topology file", "file", common.Topo)
 
-	switch {
-	case !all:
-		log.Debug("topology file", "file", common.Topo)
-		cnts, err := listContainers(ctx, common.Topo, common.Name)
-		if err != nil {
-			return err
-		}
+	containers, err := listContainers(cobraCmd.Context(), common.Topo, common.Name)
+	if err != nil {
+		return err
+	}
 
-		if len(cnts) == 0 {
+	if len(containers) == 0 {
+		if !all {
 			log.Info("No containerlab containers found")
+
 			if cleanup {
 				// do our best to find a labdir
 				var labDirs []string
+
 				if common.Topo != "" {
 					topoDir := filepath.Dir(common.Topo)
 					log.Debug("Looking for lab directory next to topology file", "path", topoDir)
 					labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
 				} else if len(labDirs) == 0 {
-					// Look in the current directory
 					log.Debug("Looking for lab directory in current directory")
 					labDirs, _ = filepath.Glob("clab-*")
 				}
+
 				if len(labDirs) != 0 {
-					// we only really care about the first found
 					log.Info("Removing lab directory", "path", labDirs[0])
 					if err := os.RemoveAll(labDirs[0]); err != nil {
 						log.Errorf("error deleting lab directory: %v", err)
 					}
 				}
 			}
+
 			return nil
-		}
-
-		topos[cnts[0].Labels[labels.TopoFile]] =
-			filepath.Dir(cnts[0].Labels[labels.NodeLabDir])
-
-	case all:
-		if common.Name != "" {
-			return fmt.Errorf("--all and --name should not be used together")
-		}
-		containers, err := listContainers(ctx, common.Topo, common.Name)
-		if err != nil {
-			return err
-		}
-
-		if len(containers) == 0 {
+		} else {
 			return fmt.Errorf("no containerlab labs found")
 		}
-		// get unique topo files from all labs
-		for i := range containers {
+	}
+
+	// topo will hold the reference to the topology file
+	// as the key and the respective lab directory as the referenced value
+	topos := map[string]string{}
+
+	// we always want the zeroith if we get to this point
+	topos[containers[0].Labels[labels.TopoFile]] =
+		filepath.Dir(containers[0].Labels[labels.NodeLabDir])
+
+	if all {
+		// if all, we obviously want all of them...
+		for i := range containers[1:] {
 			topos[containers[i].Labels[labels.TopoFile]] =
 				filepath.Dir(containers[i].Labels[labels.NodeLabDir])
 		}
@@ -137,6 +130,8 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 	}
+
+	var clabs []*core.CLab
 
 	for topo, labdir := range topos {
 		opts := []core.ClabOption{
@@ -159,12 +154,18 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		if keepMgmtNet {
 			opts = append(opts, core.WithKeepMgmtNet())
 		}
+
 		if common.Name != "" {
 			opts = append(opts, core.WithLabName(common.Name))
 		}
 
-		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
-		nc, err := core.NewContainerLab(opts...)
+		log.Debugf(
+			"going through extracted topos for destroy, got topo file %v and generated opts %+v",
+			topo,
+			opts,
+		)
+
+		clab, err := core.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}
@@ -173,13 +174,13 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		if labdir != "" && utils.FileOrDirExists(labdir) {
 			// adjust the labdir. Usually we take the PWD. but now on destroy time,
 			// we might be in a different Dir.
-			err = nc.TopoPaths.SetLabDir(labdir)
+			err = clab.TopoPaths.SetLabDir(labdir)
 			if err != nil {
 				return err
 			}
 		}
 
-		err = links.SetMgmtNetUnderlyingBridge(nc.Config.Mgmt.Bridge)
+		err = links.SetMgmtNetUnderlyingBridge(clab.Config.Mgmt.Bridge)
 		if err != nil {
 			return err
 		}
@@ -187,21 +188,22 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 		// create management network or use existing one
 		// we call this to populate the nc.cfg.mgmt.bridge variable
 		// which is needed for the removal of the iptables rules
-		if err = nc.CreateNetwork(ctx); err != nil {
+		if err = clab.CreateNetwork(cobraCmd.Context()); err != nil {
 			return err
 		}
 
-		err = nc.ResolveLinks()
+		err = clab.ResolveLinks()
 		if err != nil {
 			return err
 		}
-		labs = append(labs, nc)
+
+		clabs = append(clabs, clab)
 	}
 
 	var errs []error
 
-	for _, clab := range labs {
-		err = destroyLab(ctx, clab)
+	for _, clab := range clabs {
+		err = clab.Destroy(cobraCmd.Context(), maxWorkers, keepMgmtNet)
 		if err != nil {
 			log.Errorf("Error occurred during the %s lab deletion: %v", clab.Config.Name, err)
 			errs = append(errs, err)
@@ -222,12 +224,8 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func destroyLab(ctx context.Context, c *core.CLab) (err error) {
-	return c.Destroy(ctx, maxWorkers, keepMgmtNet)
-}
-
-// listContainers lists containers belonging to a certain topo or to a certain lab name if topo file path of lab name is specified
-// otherwise lists all containerlab containers.
+// listContainers lists containers belonging to a certain topo or to a certain lab name if topo
+// file path of lab name is specified otherwise lists all containerlab containers.
 func listContainers(ctx context.Context, topo, name string) ([]runtime.GenericContainer, error) {
 	runtimeConfig := &runtime.RuntimeConfig{
 		Debug:            common.Debug,
@@ -251,6 +249,7 @@ func listContainers(ctx context.Context, topo, name string) ([]runtime.GenericCo
 	if err != nil {
 		return nil, err
 	}
+
 	// filter to list all containerlab containers
 	// it is overwritten if topo file or lab name is provided
 	// when topo file or lab name is provided, filter containers by lab name
@@ -259,6 +258,7 @@ func listContainers(ctx context.Context, topo, name string) ([]runtime.GenericCo
 		Field:      labels.Containerlab,
 		Operator:   "exists",
 	}}
+
 	// topology takes precedence (same as with inspect)
 	if topo != "" {
 		filter = []*types.GenericFilter{{
