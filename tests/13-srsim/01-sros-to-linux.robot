@@ -74,7 +74,7 @@ Redeploy ${lab-name} lab to check startup config persistency
     Should Be Equal As Integers    ${rc}    0
 
 
-Test gRPC making a SET using gNMIc and see if config changes are persistent
+Do a gNMI GET and see if config changes after redeploy are persistent
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
      ...    sudo docker run --network host --rm ghcr.io/openconfig/gnmic get --username admin --password NokiaSros1! --insecure --address clab-${lab-name}-sros --path /state/system/oper-name --values-only
