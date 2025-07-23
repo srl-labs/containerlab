@@ -71,8 +71,8 @@ jobs:
       - name: Pull and re-tag srsim image
         run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 registry.srlinux.dev/pub/nokia_srsim:25.7.R1
 
-      - name: setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      # - name: setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
 
       - name: Run sros-srsim tests
         run: |
