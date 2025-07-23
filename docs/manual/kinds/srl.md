@@ -172,7 +172,7 @@ The available Nokia 7220 IXR models support the following types: `ixr-d1`, `ixr-
 
 Nokia 7250 IXR chassis identified with types `ixr-6e`, `ixr-10e`, `ixr-18e`, `ixr-x3b` and `ixr-x1b` require a valid license to operate.
 
-If type is not set in the clab file `ixr-d2` value will be used by containerlab.
+If type is not set in the clab file `ixr-d2l` value will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
 
