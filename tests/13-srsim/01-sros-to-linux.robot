@@ -58,6 +58,30 @@ Ensure l1 can ping sros over 1/1/c1/1 interface
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
 
+Test gRPC making a SET using gNMIc
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+     ...    sudo docker run --network host --rm ghcr.io/openconfig/gnmic set --username admin --password NokiaSros1! --insecure --address clab-${lab-name}-sros --update-path /configure/system/name --update-value thisismynewname
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+
+Redeploy ${lab-name} lab to check startup config persistency
+    Log    ${CURDIR}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} redeploy -t ${CURDIR}/${lab-file-name}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+
+Test gRPC making a SET using gNMIc and see if config changes are persistent
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+     ...    sudo docker run --network host --rm ghcr.io/openconfig/gnmic get --username admin --password NokiaSros1! --insecure --address clab-${lab-name}-sros --path /state/system/oper-name --values-only
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    thisismynewname
+
 
 *** Keywords ***
 Cleanup
