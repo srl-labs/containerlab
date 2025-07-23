@@ -349,14 +349,29 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 
-	// Concurrently pull images for all nodes
+	// Pull images for all nodes concurrently
+	return c.pullImagesForNodes(ctx)
+}
+
+// pullImagesForNodes concurrently pulls images for all nodes, avoiding duplicate pulls for the same image.
+func (c *CLab) pullImagesForNodes(ctx context.Context) error {
 	errCh := make(chan error, len(c.Nodes))
 	var wg sync.WaitGroup
+
+	// Track ongoing image pulls to avoid duplicates
+	type pullResult struct {
+		done chan struct{}
+		err  error
+	}
+
+	var pullMutex sync.Mutex
+	ongoingPulls := make(map[string]*pullResult)
 
 	for _, node := range c.Nodes {
 		wg.Add(1)
 		go func(n nodes.Node) {
 			defer wg.Done()
+
 			select {
 			case <-ctx.Done():
 				errCh <- ctx.Err()
@@ -364,10 +379,47 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 			default:
 			}
 
-			if err := n.PullImage(ctx); err != nil {
-				errCh <- err
-				return
+			// Get all images for this node
+			images := n.GetImages(ctx)
+
+			for imageKey, imageName := range images {
+				if imageName == "" {
+					errCh <- fmt.Errorf("missing required %q attribute for node %q", imageKey, n.Config().ShortName)
+					return
+				}
+
+				// Create a unique key for the image and pull policy combination
+				imageKey := fmt.Sprintf("%s:%s", imageName, n.Config().ImagePullPolicy)
+
+				pullMutex.Lock()
+				if existing, found := ongoingPulls[imageKey]; found {
+					// Image is already being pulled, wait for it to complete
+					pullMutex.Unlock()
+					<-existing.done
+					if existing.err != nil {
+						errCh <- existing.err
+						return
+					}
+				} else {
+					// Start a new pull for this image
+					result := &pullResult{
+						done: make(chan struct{}),
+					}
+					ongoingPulls[imageKey] = result
+					pullMutex.Unlock()
+
+					// Perform the actual pull
+					err := n.GetRuntime().PullImage(ctx, imageName, n.Config().ImagePullPolicy)
+					result.err = err
+					close(result.done)
+
+					if err != nil {
+						errCh <- err
+						return
+					}
+				}
 			}
+
 			errCh <- nil
 		}(node)
 	}
