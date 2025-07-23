@@ -168,11 +168,11 @@ The breakout interfaces will have the mapped Linux interface name `eX-Y-Z` where
 
 For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that this node will emulate.
 
-The available Nokia 7220 IXR models support the following types: `ixrd1`, `ixrd2`, `ixrd3`, `ixrd2l`, `ixrd3l`, `ixrd4`, `ixrd5`, `ixrh2`, `ixrh3`, `ixrh4`, `ixrh432d`,`ixrh5`, `ixrh564d`,`ixrh564o`.
+The available Nokia 7220 IXR models support the following types: `ixr-d1`, `ixr-d2`, `ixr-d3`, `ixr-d2l`, `ixr-d3l`, `ixr-d4`, `ixr-d5`, `ixr-h2`, `ixr-h3`, `ixr-h4`, `ixr-h4-32d`,`ixr-h5-32d`, `ixr-h5-64d`,`ixr-h5-64o`.
 
-Nokia 7250 IXR chassis identified with types `ixr6e`, `ixr10e`, `ixr18e`, `ixrx3b` and `ixrx1b` require a valid license to operate.
+Nokia 7250 IXR chassis identified with types `ixr-6e`, `ixr-10e`, `ixr-18e`, `ixr-x3b` and `ixr-x1b` require a valid license to operate.
 
-If type is not set in the clab file `ixrd2` value will be used by containerlab.
+If type is not set in the clab file `ixr-d2l` value will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
 
@@ -193,7 +193,7 @@ topology:
   nodes:
     srl1:
       kind: nokia_srlinux
-      type: ixrd3
+      type: ixr-d3
 ```
 
 The rendered config can be found at `/tmp/clab-default-config` path on SR Linux filesystem and will be saved by the path `clab-<lab_name>/<node-name>/config/config.json`. Using the example topology presented above, the exact path to the config will be `clab-srl_lab/srl1/config/config.json`.
@@ -275,7 +275,7 @@ topology:
   nodes:
     srl1:
       kind: nokia_srlinux
-      type: ixrd3
+      type: ixr-d3
       image: ghcr.io/nokia/srlinux
       # a path to the partial config in CLI format relative to the current working directory
       startup-config: myconfig.cli
@@ -293,7 +293,7 @@ topology:
   nodes:
     srl1:
       kind: nokia_srlinux
-      type: ixrd3
+      type: ixr-d3
       image: ghcr.io/nokia/srlinux
       # a path to the full config in JSON format relative to the current working directory
       startup-config: myconfig.json

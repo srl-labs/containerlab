@@ -15,7 +15,7 @@ topology:
   nodes:
     node1:  # node name
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       image: ghcr.io/nokia/srlinux
       startup-config: /root/mylab/node1.cfg
       binds:
@@ -48,7 +48,7 @@ The `kind` property selects which kind this node is of. Kinds are essentially a 
 
 ### type
 
-With `type` the user sets a type of the node. Types work in combination with the kinds, such as the type value of `ixrd2l` sets the chassis type for SR Linux node, thus this value only makes sense to nodes of kind `nokia_srlinux`.
+With `type` the user sets a type of the node. Types work in combination with the kinds, such as the type value of `ixr-d2l` sets the chassis type for SR Linux node, thus this value only makes sense to nodes of kind `nokia_srlinux`.
 
 Other nodes might treat `type` field differently, that will depend on the kind of the node. The `type` values and effects defined in the documentation for a specific kind.
 
