@@ -18,7 +18,7 @@ topology:
     node1:
       # node1 is of nokia_srlinux kind
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       image: ghcr.io/nokia/srlinux
     node2:
       # node2 is of ceos kind

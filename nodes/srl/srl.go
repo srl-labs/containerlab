@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	SRLinuxDefaultType = "ixrd2l" // default srl node type
+	SRLinuxDefaultType = "ixr-d2l" // default srl node type
 
 	readyTimeout = time.Minute * 5 // max wait time for node to boot
 
@@ -508,6 +508,13 @@ func (n *srl) createSRLFiles() error {
 
 func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
+
+	// if the node type was provided in the documented format (with dashes)
+	// we remove the dashes to match the map key
+	if strings.Contains(cfg.NodeType, "-") {
+		// replace dashes with empty string
+		cfg.NodeType = strings.ReplaceAll(cfg.NodeType, "-", "")
+	}
 
 	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
 	if err != nil {
