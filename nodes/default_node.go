@@ -118,11 +118,6 @@ func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
 		return err
 	}
 
-	err = d.OverwriteNode.PullImage(ctx)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

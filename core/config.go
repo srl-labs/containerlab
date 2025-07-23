@@ -332,6 +332,8 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 	if err = c.verifyRootNetNSLinks(); err != nil {
 		return err
 	}
+
+	// Check deployment conditions for all nodes (sequentially)
 	for _, node := range c.Nodes {
 		err := node.CheckDeploymentConditions(ctx)
 		if err != nil {
@@ -342,7 +344,12 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 		return err
 	}
 
-	return c.verifyContainersUniqueness(ctx)
+	if err = c.verifyContainersUniqueness(ctx); err != nil {
+		return err
+	}
+
+	// Pull images for all nodes concurrently
+	return c.pullImagesForNodes(ctx)
 }
 
 // verifyRootNetNSLinks makes sure, that there will be no overlap in

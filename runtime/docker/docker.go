@@ -619,17 +619,17 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 }
 
 // PullImage pulls the container image using the provided image pull policy value.
-func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpolicy types.PullPolicyValue) error {
+func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullPolicy types.PullPolicyValue) error {
 	log.Debugf("Looking up %s Docker image", imageName)
 
 	canonicalImageName := utils.GetCanonicalImageName(imageName)
 
 	_, b, _ := d.Client.ImageInspectWithRaw(ctx, canonicalImageName)
-	switch pullpolicy {
+	switch pullPolicy {
 	case types.PullPolicyNever:
 		if b == nil {
 			// image not found but pull policy = never
-			return fmt.Errorf("image %s not found locally, and image-pull-policy=%s prevents containerlab from pulling it", imageName, pullpolicy)
+			return fmt.Errorf("image %s not found locally, and image-pull-policy=%s prevents containerlab from pulling it", imageName, pullPolicy)
 		}
 		// image present, all good
 		log.Debugf("Image %s present, skip pulling", imageName)
@@ -642,7 +642,7 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpol
 		}
 	}
 
-	// If Image doesn't exist or pullpolicy=always, we need to pull it
+	// If Image doesn't exist or pullPolicy=always, we need to pull it
 	authString := ""
 
 	// get docker config based on an empty path (default docker config path will be assumed)
@@ -656,7 +656,7 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpol
 		}
 	}
 
-	log.Infof("Pulling %s Docker image", canonicalImageName)
+	log.Info("Pulling image", "image", canonicalImageName)
 	reader, err := d.Client.ImagePull(ctx, canonicalImageName, image.PullOptions{
 		RegistryAuth: authString,
 	})
@@ -666,7 +666,7 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullpol
 
 	// must read from reader, otherwise image is not properly pulled
 	_, _ = io.Copy(io.Discard, reader)
-	log.Infof("Done pulling %s", canonicalImageName)
+	log.Info("Done pulling image", "image", canonicalImageName)
 
 	return reader.Close()
 }
