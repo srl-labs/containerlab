@@ -57,6 +57,7 @@ jobs:
           filters: |
             code:
               - 'clab/**'
+              - 'core/**'
               - 'runtime/**'
               - 'cmd/**'
               - 'tests/**'
@@ -72,7 +73,7 @@ jobs:
               - 'virt/**'
               - 'git/**'
               - 'border0_api/**'
-              - '.github/workflows/cicd.yml'
+              - '.github/workflows/**'
               - 'go.mod'
               - 'Makefile'
             docs:

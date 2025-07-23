@@ -13,7 +13,7 @@ name: srsim-tests
 jobs:
   srsim-tests:
     runs-on: ubuntu-24.04
-    env: 
+    env:
       SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
     strategy:
       matrix:
@@ -53,9 +53,6 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
 
-      # - name: setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
-
       - name: Activate virtualenv
         run: |
           . .venv/bin/activate
@@ -70,9 +67,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Pull and re-tag srsim image
         run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+
+      # - name: setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
 
       - name: Run sros-srsim tests
         run: |
