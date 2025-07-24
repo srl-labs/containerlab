@@ -1038,7 +1038,6 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-
 		}
 		return nil
 	case n.isDistributedCardNode():
