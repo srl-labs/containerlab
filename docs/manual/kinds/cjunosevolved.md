@@ -22,6 +22,13 @@ Juniper cJunosEvolved nodes launched with containerlab can be provisioned to ena
 
 The container image can be freely downloaded from the [Juniper support portal](https://support.juniper.net/support/downloads/?p=cjunos-evolved) without a Juniper account. Type cJunosEvolved in the `Find a Product` search box.
 
+Once downloaded, load the Docker image:
+
+```bash
+# load cJunosEvolved container image, shows up as cjunosevolved:25.2R1.8-EVO in docker images
+sudo docker load -i cJunosEvolved-25.2R1.8-EVO.tar.gz
+```
+
 ## Managing Juniper cJunosEvolved nodes
 
 /// note
