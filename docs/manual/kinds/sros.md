@@ -575,18 +575,16 @@ srsim10
 │   └── config
 │       ├── cf1
 │       ├── cf2
-│       ├── cf3
-│       │   ├── bof.cfg
-│       │   ├── bootlog.txt
-│       │   ├── config.cfg
-│       │   ├── config.cfg.1
-│       │   ├── i386-isa-aa.tim
-│       │   ├── license.txt
-│       │   ├── nvsys.info
-│       │   ├── restcntr.txt
-│       │   └── yang.tim
-│       └── startup
-│           └── config.cfg
+│       └── cf3
+│           ├── bof.cfg
+│           ├── bootlog.txt
+│           ├── config.cfg
+│           ├── config.cfg.1
+│           ├── i386-isa-aa.tim
+│           ├── license.txt
+│           ├── nvsys.info
+│           ├── restcntr.txt
+│           └── yang.tim
 ├── B
 │   └── config ...
 └── license.key

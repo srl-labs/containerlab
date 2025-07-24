@@ -50,11 +50,10 @@ const (
 	retryTimer = 1 * time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName       = "nokia_sros"
-	configStartup             = "config/startup"
 	configCf3                 = "config/cf3"
 	configCf2                 = "config/cf2"
 	configCf1                 = "config/cf1"
-	startupCfgFName           = "config.cfg"
+	startupCfgName            = "config.cfg"
 	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
 	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
 	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
@@ -101,7 +100,6 @@ var (
 		Revision: 0,
 	}
 	// Internal directories inside SR-SIM container.
-	cfgDir = "/nokia/config" // Where the startup config will be stored
 	cf1Dir = "/home/sros/flash1"
 	cf2Dir = "/home/sros/flash2"
 	cf3Dir = "/home/sros/flash3" // Where the running config will be stored
@@ -240,12 +238,10 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 				envNokiaSrosSlot, n.Cfg.Env[envNokiaSrosSlot])
 		}
 		// add the config specific mounts
-		cfgPath := filepath.Join(n.Cfg.LabDir, slot, configStartup)
 		cf1Path := filepath.Join(n.Cfg.LabDir, slot, configCf1)
 		cf2Path := filepath.Join(n.Cfg.LabDir, slot, configCf2)
 		cf3Path := filepath.Join(n.Cfg.LabDir, slot, configCf3)
 		n.Cfg.Binds = append(n.Cfg.Binds,
-			fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
 			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
 			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
 			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"),
@@ -679,11 +675,9 @@ func (n *sros) createSROSFiles() error {
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0o777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0o777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0o777)
-
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
-		err = n.createSROSFilesConfig()
+		err = n.createSROSConfigFiles()
 		if err != nil {
 			return err
 		}
@@ -692,21 +686,21 @@ func (n *sros) createSROSFiles() error {
 }
 
 // Func that handles the config generation for the SR-SIM kind.
-func (n *sros) createSROSFilesConfig() error {
+func (n *sros) createSROSConfigFiles() error {
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
 
 	var cfgTemplate string
 	var err error
-
-	cfgPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup, startupCfgFName)
+	// Path pointing to the target config file under configCf3 dir
+	cf3CfgFile := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, startupCfgName)
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
-	if n.Cfg.StartupConfig != "" && !isPartial {
-		// User provides startup config
-		log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
-			n.Cfg.StartupConfig, "isPartial", isPartial)
 
+	// generate config and use that to boot node
+	log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
+		n.Cfg.StartupConfig, "isPartial", isPartial)
+	if n.Cfg.StartupConfig != "" && !isPartial { // User provides startup config
 		c, err := os.ReadFile(n.Cfg.StartupConfig)
 		if err != nil {
 			return err
@@ -718,22 +712,17 @@ func (n *sros) createSROSFilesConfig() error {
 		}
 
 		cfgTemplate = cBuf.String()
-	} else {
-		// Use default clab config from the embedded template
-		log.Debug("Rendering SR OS default containerlab startup config", "node",
-			n.Cfg.ShortName, "type", n.Cfg.NodeType)
-
+	} else { // Cases default config or default+partial
 		err = n.addDefaultConfig()
 		if err != nil {
 			return err
 		}
-
-		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName,
-			"startup-config", string(n.startupCliCfg))
-
-		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
-			return fmt.Errorf("failed to create startup-config file %s for node %s failed: %v", cfgPath, n.Cfg.ShortName, err)
+		// Adds partial config if present
+		err = n.addPartialConfig()
+		if err != nil {
+			return err
 		}
+		cfgTemplate = string(n.startupCliCfg)
 	}
 
 	if cfgTemplate == "" {
@@ -741,7 +730,7 @@ func (n *sros) createSROSFilesConfig() error {
 		return nil
 	}
 
-	err = n.GenerateConfig(cfgPath, cfgTemplate)
+	err = n.GenerateConfig(cf3CfgFile, cfgTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to generate config for node %q: %v", n.Cfg.ShortName, err)
 	}
@@ -822,11 +811,6 @@ func (n *sros) addDefaultConfig() error {
 		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
 	}
 
-	err = n.addPartialConfig()
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -866,7 +850,7 @@ func (n *sros) addPartialConfig() error {
 				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
 			}
 		} else {
-			log.Warn("Passed startup-config optio, but it will not have any effect", "node", n.Cfg.ShortName)
+			log.Warn("Passed startup-config option, but it will not have any effect", "node", n.Cfg.ShortName)
 		}
 	}
 	return nil
