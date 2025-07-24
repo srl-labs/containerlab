@@ -88,6 +88,6 @@ To load `clab` and `containerlab` completions for each session, execute once:
 
 ```
 containerlab completion fish > ~/.config/fish/completions/containerlab.fish
-echo "complete --command clab --wraps containerlab" > ~/.config/fish/completions/clab.fish \
-&& fish_update_completions
+echo "complete --command clab --wraps containerlab" > ~/.config/fish/completions/clab.fish
+fish_update_completions
 ```
