@@ -1020,13 +1020,36 @@ func (n *sros) CheckInterfaceName() error {
 	return nil
 }
 
-func (n *sros) SaveConfig(_ context.Context) error {
-	// s.Cfg.MgmtIPv4Address
-	addr, err := n.MgmtIPAddr()
-	if err != nil {
-		return err
+func (n *sros) SaveConfig(ctx context.Context) error {
+	fqdn := ""
+	switch {
+	case n.isStandaloneNode():
+		// check if it is a cpm node. return without error if not
+		if !n.isCPM("") {
+			return nil
+		}
+		// if it is a standalone node use the fqdn
+		fqdn = n.Cfg.Fqdn
+	case n.isDistributedBaseNode():
+		// if it is the
+		for _, cn := range n.componentNodes {
+			// delegate
+			err := cn.SaveConfig(ctx)
+			if err != nil {
+				return err
+			}
+
+		}
+		return nil
+	case n.isDistributedCardNode():
+		// check if it is a cpm node. return without error if not
+		if !n.isCPM("") {
+			return nil
+		}
+		fqdn = n.calcComponentFqdn(n.Cfg.Env[envNokiaSrosSlot])
 	}
-	err = netconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
+
+	err := netconf.SaveRunningConfig(fqdn,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -1035,7 +1058,7 @@ func (n *sros) SaveConfig(_ context.Context) error {
 		return err
 	}
 
-	log.Info("Saved running configuration", "node", n.Cfg.LongName)
+	log.Info("Saved running configuration", "node", fqdn)
 
 	return nil
 }
