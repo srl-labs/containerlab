@@ -1046,7 +1046,7 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 		if !n.isCPM("") {
 			return nil
 		}
-		fqdn = n.calcComponentFqdn(n.Cfg.Env[envNokiaSrosSlot])
+		fqdn = n.Cfg.LongName
 	}
 
 	err := netconf.SaveRunningConfig(fqdn,
