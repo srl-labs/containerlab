@@ -50,7 +50,6 @@ const (
 	retryTimer = 1 * time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName       = "nokia_sros"
-	configStartup             = "config/startup"
 	configCf3                 = "config/cf3"
 	configCf2                 = "config/cf2"
 	configCf1                 = "config/cf1"
@@ -676,7 +675,6 @@ func (n *sros) createSROSFiles() error {
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0o777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0o777)
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0o777)
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
 		err = n.createSROSConfigFiles()
