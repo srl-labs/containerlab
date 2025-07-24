@@ -58,7 +58,7 @@ Ensure l1 can ping sros over 1/1/c1/1 interface
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
 
-Test gRPC making a SET using gNMIc
+Do gNMI SET to change system name
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo docker run --network host --rm ghcr.io/openconfig/gnmic:0.41.0 set --username admin --password NokiaSros1! --insecure --address clab-${lab-name}-sros --update-path /configure/system/name --update-value thisismynewname

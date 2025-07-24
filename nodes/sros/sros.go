@@ -697,8 +697,6 @@ func (n *sros) createSROSConfigFiles() error {
 	var err error
 	// Path pointing to the target config file under configCf3 dir
 	cf3CfgFile := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, startupCfgName)
-	// Path pointing to the file containing the default and partial configs
-	cfgStartupFile := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup, startupCfgName)
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
 
 	// generate config and use that to boot node
@@ -726,22 +724,7 @@ func (n *sros) createSROSConfigFiles() error {
 		if err != nil {
 			return err
 		}
-		// Creates a file with the startup config
-		if err := utils.CreateFile(cfgStartupFile, string(n.startupCliCfg)); err != nil {
-			return fmt.Errorf("failed to create startup-config file %s for node %s failed: %v", cfgStartupFile, n.Cfg.ShortName, err)
-		}
-		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName,
-			"startup-config-file", cfgStartupFile)
-		// Overwrite cf3CfgFile only if it doesn't exists,
-		// In the case of re-deploy, the existing cf3CfgFile
-		// Will take precedence
-		if utils.FileExists(cf3CfgFile) {
-			log.Debug("Found init cfg", "node", n.Cfg.ShortName, "init-cfg", cf3CfgFile)
-		} else {
-			if err = utils.CopyFile(cfgStartupFile, cf3CfgFile, 0o644); err != nil {
-				return fmt.Errorf("startup cfg copying src %s -> dst %s failed: %v", cfgStartupFile, cf3CfgFile, err)
-			}
-		}
+		cfgTemplate = string(n.startupCliCfg)
 	}
 
 	if cfgTemplate == "" {
