@@ -1052,7 +1052,7 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 	return n.saveConfig(ctx, fqdn)
 }
 
-func (n *sros) saveConfig(ctx context.Context, addr string) error {
+func (n *sros) saveConfig(_ context.Context, addr string) error {
 	err := netconf.SaveRunningConfig(addr,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
