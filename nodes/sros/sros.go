@@ -679,7 +679,7 @@ func (n *sros) createSROSFiles() error {
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0o777)
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
-		err = n.createSROSFilesConfig()
+		err = n.createSROSConfigFiles()
 		if err != nil {
 			return err
 		}
@@ -688,7 +688,7 @@ func (n *sros) createSROSFiles() error {
 }
 
 // Func that handles the config generation for the SR-SIM kind.
-func (n *sros) createSROSFilesConfig() error {
+func (n *sros) createSROSConfigFiles() error {
 	// generate a startup config file
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
