@@ -297,7 +297,11 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 		}
 
 		if isHealthy {
-			err = n.SaveConfig(ctx)
+			addr, err := n.MgmtIPAddr()
+			if err != nil {
+				return err
+			}
+			err = n.saveConfig(ctx, addr)
 			if err != nil {
 				return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
 			}
@@ -326,7 +330,7 @@ func (n *sros) Delete(ctx context.Context) error {
 	for _, componentNodes := range n.componentNodes {
 		err := componentNodes.Delete(ctx)
 		if err != nil {
-			return err
+			log.Warn(err)
 		}
 	}
 	return nil
@@ -1032,14 +1036,12 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 		fqdn = n.Cfg.Fqdn
 	case n.isDistributedBaseNode():
 		// if it is the
-		for _, cn := range n.componentNodes {
-			// delegate
-			err := cn.SaveConfig(ctx)
-			if err != nil {
-				return err
-			}
+		cmpNode, err := n.cpmNode()
+		if err != nil {
+			return err
 		}
-		return nil
+		// delegate to cpm node
+		return cmpNode.SaveConfig(ctx)
 	case n.isDistributedCardNode():
 		// check if it is a cpm node. return without error if not
 		if !n.isCPM("") {
@@ -1047,8 +1049,11 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 		}
 		fqdn = n.Cfg.LongName
 	}
+	return n.saveConfig(ctx, fqdn)
+}
 
-	err := netconf.SaveRunningConfig(fqdn,
+func (n *sros) saveConfig(ctx context.Context, addr string) error {
+	err := netconf.SaveRunningConfig(addr,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -1057,7 +1062,7 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Info("Saved running configuration", "node", fqdn)
+	log.Info("Saved running configuration", "node", addr)
 
 	return nil
 }
