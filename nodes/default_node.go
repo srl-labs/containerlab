@@ -547,6 +547,28 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 	return nodeCert, nil
 }
 
+func (d *DefaultNode) GetHostsEntries(ctx context.Context) (types.HostEntries, error) {
+	containers, err := d.OverwriteNode.GetContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := types.HostEntries{}
+
+	for _, cont := range containers {
+		if len(cont.Names) == 0 {
+			continue
+		}
+		if cont.NetworkSettings.IPv4addr != "" {
+			result = append(result, types.NewHostEntry(cont.NetworkSettings.IPv4addr, cont.Names[0], types.IpVersionV4).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+		}
+		if cont.NetworkSettings.IPv6addr != "" {
+			result = append(result, types.NewHostEntry(cont.NetworkSettings.IPv6addr, cont.Names[0], types.IpVersionV6).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+		}
+	}
+	return result, nil
+}
+
 func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve nodes nspath
 	nsp, err := d.OverwriteNode.GetNSPath(ctx)

@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -37,15 +37,15 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 		return err
 	}
 
-	containers, err := c.ListNodesContainers(ctx)
-	if err != nil {
-		return err
+	hostEntries := make(types.HostEntries, 0, len(c.Nodes)*2)
+	for _, n := range c.Nodes {
+		nodeHostEntries, err := n.GetHostsEntries(ctx)
+		if err != nil {
+			return err
+		}
+		hostEntries.Merge(nodeHostEntries)
 	}
 
-	data := generateHostsEntries(containers, c.Config.Name)
-	if len(data) == 0 {
-		return nil
-	}
 	var f *os.File
 
 	f, err = os.OpenFile(clabHostsFilename, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
@@ -55,39 +55,20 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 
 	defer f.Close() // skipcq: GO-S2307
 
-	_, err = f.Write(data)
+	content := &bytes.Buffer{}
+	fmt.Fprintf(content, clabHostEntryPrefix, c.Config.Name)
+	fmt.Fprint(content, "\n")
+	fmt.Fprint(content, hostEntries.ToHostsConfig(types.IpVersionV4))
+	fmt.Fprint(content, hostEntries.ToHostsConfig(types.IpVersionV6))
+	fmt.Fprintf(content, clabHostEntryPostfix, c.Config.Name)
+	fmt.Fprint(content, "\n")
+
+	_, err = f.ReadFrom(content)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-// generateHostsEntries builds an /etc/hosts compliant text blob (as []byte]) for containers ipv4/6 address<->name pairs.
-func generateHostsEntries(containers []runtime.GenericContainer, labname string) []byte {
-	entries := bytes.Buffer{}
-	v6entries := bytes.Buffer{}
-
-	fmt.Fprintf(&entries, clabHostEntryPrefix, labname)
-	entries.WriteByte('\n')
-
-	for _, cont := range containers {
-		if len(cont.Names) == 0 {
-			continue
-		}
-		if cont.NetworkSettings.IPv4addr != "" {
-			fmt.Fprintf(&entries, "%s\t%s\n", cont.NetworkSettings.IPv4addr, cont.Names[0])
-		}
-		if cont.NetworkSettings.IPv6addr != "" {
-			fmt.Fprintf(&v6entries, "%s\t%s\n", cont.NetworkSettings.IPv6addr, cont.Names[0])
-		}
-	}
-
-	entries.Write(v6entries.Bytes())
-	fmt.Fprintf(&entries, clabHostEntryPostfix, labname)
-	entries.WriteByte('\n')
-
-	return entries.Bytes()
 }
 
 func (c *CLab) DeleteEntriesFromHostsFile() error {
