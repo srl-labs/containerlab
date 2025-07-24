@@ -39,7 +39,7 @@ func (h HostEntries) ToHostsConfig(ipv IpVersion) string {
 	sb := strings.Builder{}
 	for _, he := range h {
 		// if not the requested version is any or the entry matches the requested version, continue
-		if !(ipv == IpVersionAny || ipv == he.ipversion) {
+		if !(ipv == IpVersionAny) && !(ipv == he.ipversion) { // NOT (A OR B) is equivalent to (NOT A) AND (NOT B)
 			continue
 		}
 		sb.WriteString(he.ToHostEntryString())
