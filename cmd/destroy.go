@@ -75,34 +75,30 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	if len(containers) == 0 {
-		if !all {
-			log.Info("No containerlab containers found")
+		log.Info("no containerlab containers found")
 
-			if cleanup {
-				// do our best to find a labdir
-				var labDirs []string
+		// TODO this should (maybe?) be merged into destroy/destroy all too, see todo below
+		if !all && cleanup {
+			var labDirs []string
 
-				if common.Topo != "" {
-					topoDir := filepath.Dir(common.Topo)
-					log.Debug("Looking for lab directory next to topology file", "path", topoDir)
-					labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
-				} else if len(labDirs) == 0 {
-					log.Debug("Looking for lab directory in current directory")
-					labDirs, _ = filepath.Glob("clab-*")
-				}
-
-				if len(labDirs) != 0 {
-					log.Info("Removing lab directory", "path", labDirs[0])
-					if err := os.RemoveAll(labDirs[0]); err != nil {
-						log.Errorf("error deleting lab directory: %v", err)
-					}
-				}
+			if common.Topo != "" {
+				topoDir := filepath.Dir(common.Topo)
+				log.Debug("Looking for lab directory next to topology file", "path", topoDir)
+				labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
+			} else if len(labDirs) == 0 {
+				log.Debug("Looking for lab directory in current directory")
+				labDirs, _ = filepath.Glob("clab-*")
 			}
 
-			return nil
-		} else {
-			return fmt.Errorf("no containerlab labs found")
+			if len(labDirs) != 0 {
+				log.Info("Removing lab directory", "path", labDirs[0])
+				if err := os.RemoveAll(labDirs[0]); err != nil {
+					log.Errorf("error deleting lab directory: %v", err)
+				}
+			}
 		}
+
+		return nil
 	}
 
 	// topo will hold the reference to the topology file
@@ -121,7 +117,7 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	log.Debugf("We got the following topologies for destroy: %+v", topos)
+	log.Debugf("got the following topologies for destroy: %+v", topos)
 
 	// Interactive confirmation prompt if running in a terminal and --all is set
 	if all && !yes && utils.IsTerminal(os.Stdin.Fd()) {
@@ -131,6 +127,7 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 		}
 	}
 
+	// TODO from here till end of this func should go to DestroyAll or something in core
 	var clabs []*core.CLab
 
 	for topo, labdir := range topos {

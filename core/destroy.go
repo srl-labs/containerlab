@@ -80,6 +80,7 @@ func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -111,7 +112,7 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	// start concurrent workers
 	wg.Add(int(workers))
 
-	for i := uint(0); i < workers; i++ {
+	for i := range workers {
 		go workerFunc(i, concurrentChan, wg)
 	}
 

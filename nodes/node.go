@@ -123,7 +123,8 @@ type Node interface {
 	IsHealthy(ctx context.Context) (bool, error)
 	GetContainerStatus(ctx context.Context) runtime.ContainerStatus
 	GetNSPath(ctx context.Context) (string, error)
-	GetHostsEntries(ctx context.Context) (types.HostEntries, error) // Generate the host entries for this node
+	GetHostsEntries(ctx context.Context) (types.HostEntries, error)
+	// Generate the host entries for this node
 }
 
 type NodeOption func(Node)
