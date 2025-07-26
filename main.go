@@ -12,7 +12,8 @@ import (
 )
 
 func main() {
-	ctx, _ := cmd.SignalHandledContext()
+	ctx, cancel := cmd.SignalHandledContext()
+	defer cancel()
 
 	cmd.RootCmd.SetContext(ctx)
 

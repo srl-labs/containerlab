@@ -5,8 +5,10 @@
 package cmd
 
 import (
+	"context"
 	"net"
 	"os"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -146,8 +148,14 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	// historically i think this was 5s, but we will already have had at least some time for
+	// the manager to have gone off and fetched the version, so 3s max to wrap that up and print
+	// seems reasonable
+	versionCheckContext, cancel := context.WithTimeout(cobraCmd.Context(), 3*time.Second)
+	defer cancel()
+
 	m := version.GetManager()
-	m.DisplayNewVersionAvailable(cobraCmd.Context())
+	m.DisplayNewVersionAvailable(versionCheckContext)
 
 	// print table summary
 	return inspect.PrintContainerInspect(containers, deployFormat)
