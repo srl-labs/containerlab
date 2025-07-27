@@ -298,6 +298,18 @@ In the explorer you can expand running labs and containers to view all the disco
 
 Packet capture relies on the [Edgeshark integration](wireshark.md#edgeshark-integration). Install Edgeshark first, and then use the context menu or the fin icon next to the interface name.
 
+#### Integrated Wireshark
+
+If you are unable to install the cshargextcap plugin on your system, or prefer to lab completely inside VS Code then you should take advantage of the integrated Wireshark packet capture.
+
+Edgeshark is still used, but instead the Wireshark window is inside of a container on your Containerlab host, the Wireshark window gets streamed via VNC directly into your VS Code window. When using Remote-SSH, no extra ports are exposed on your host system, everything is tunnelled over the single Remote-SSH connection.
+
+!!! question "Can I import/export captures?"
+    Yes, from within Wireshark you may save your captures into the `/pcaps` directory. The capture files will then be found in your [lab directory](./conf-artifacts.md).
+
+![](../images/vscode_wireshark_vnc.gif)
+
+
 ## Settings reference
 
 Below is a reference to the available settings that can be modified in the Containerlab VS Code extension.
@@ -413,3 +425,54 @@ The port to use when using the 'Connect (Telnet)' command. The telnet command is
 | Type      | Default |
 | --------- | ------- |
 | `number`  |  `5000` |
+
+### `containerlab.extras.fcli.extraDockerArgs`
+
+Extra arguments to pass to the `docker run` command for fcli.
+
+| Type     | Default     |
+| -------- | ----------- |
+| `string` | `undefined` |
+
+### `containerlab.capture.preferredAction`
+
+The capture method that should be used for the capture quick action (the shark icon on an interface item in the tree). Options are:
+
+- `Edgeshark`
+- `Wireshark VNC`
+
+When the setting is undefined, the default logic will be used to determine whether a `tcpdump` capture + pipe into Wireshark can be used (only when the extension is running in a WSL or Linux environment without using Remote-SSH).
+
+| Type     | Default     |
+| -------- | ----------- |
+| `string` | `undefined` |
+
+### `containerlab.capture.dockerImage`
+
+Override the docker image used for the integrated Wireshark VNC based capture method.
+
+| Type      | Default                                          |
+| --------- | ------------------------------------------------ |
+| `string`  |  `ghcr.io/kaelemc/wireshark-vnc-docker:latest`   |
+
+### `containerlab.capture.wireshark.extraDockerArgs`
+
+Extra arguments to pass to the `docker run` command for the integrated Wireshark VNC based capture.
+
+Useful for bind mounts, extra environment variables etc.
+
+| Type     | Default     |
+| -------- | ----------- |
+| `string` | `undefined` |
+
+### `containerlab.capture.wireshark.theme`
+
+The default theme of the Wireshark application when using the integrated Wireshark VNC based capture. Options are:
+
+- `Follow VS Code theme` (Selects dark or light mode based on your current VS Code theme)
+- `Dark`
+- `Light`
+
+| Type      | Default                   |
+| --------- | ------------------------- |
+| `string`  |  `Follow VS Code theme`   |
