@@ -304,8 +304,10 @@ If you are unable to install the cshargextcap plugin on your system, or prefer t
 
 Edgeshark is still used, but instead the Wireshark window is inside of a container on your Containerlab host, the Wireshark window gets streamed via VNC directly into your VS Code window. When using Remote-SSH, no extra ports are exposed on your host system, everything is tunnelled over the single Remote-SSH connection.
 
-!!! question "Can I import/export captures?"
-    Yes, from within Wireshark you may save your captures into the `/pcaps` directory. The capture files will then be found in your [lab directory](./conf-artifacts.md).
+/// admonition | Can I import/export captures
+    type: question
+Yes, from within Wireshark you may save your captures into the `/pcaps` directory. The capture files will then be found in your [lab directory](./conf-artifacts.md).
+///
 
 ![integrated-wireshark](https://gitlab.com/rdodin/pics/-/wikis/uploads/752c161fe4e66750a35e0031e7e7d2f7/vscode_wireshark_vnc.gif)
 
