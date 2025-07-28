@@ -307,7 +307,7 @@ Edgeshark is still used, but instead the Wireshark window is inside of a contain
 !!! question "Can I import/export captures?"
     Yes, from within Wireshark you may save your captures into the `/pcaps` directory. The capture files will then be found in your [lab directory](./conf-artifacts.md).
 
-![](../images/vscode_wireshark_vnc.gif)
+![integrated-wireshark](https://gitlab.com/rdodin/pics/-/wikis/uploads/752c161fe4e66750a35e0031e7e7d2f7/vscode_wireshark_vnc.gif)
 
 
 ## Settings reference
