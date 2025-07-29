@@ -316,7 +316,14 @@ Yes, from within Wireshark you may save your captures into the `/pcaps` director
 
 Below is a reference to the available settings that can be modified in the Containerlab VS Code extension.
 
-### `containerlab.defaultSshUser`
+
+/// note
+If editing JSON settings directly, please ensure you prepend `containerlab.` to any of the bellow setting paths.
+
+For example: `defaultSshUser` -> `containerlab.defaultSshUser`.
+///
+
+### `defaultSshUser`
 
 The default username used to connect to a node via SSH.
 
@@ -324,7 +331,7 @@ The default username used to connect to a node via SSH.
 | -------- | ------- |
 | `string` | `admin` |
 
-### `containerlab.sudoEnabledByDefault`
+### `sudoEnabledByDefault`
 
 Whether or not to prepend `sudo` to any commands executed by the extension.
 
@@ -332,7 +339,7 @@ Whether or not to prepend `sudo` to any commands executed by the extension.
 | --------- | ------- |
 | `boolean` | `true`  |
 
-### `containerlab.refreshInterval`
+### `refreshInterval`
 
 The time interval (in milliseconds) for which the extension automatically refreshes.
 
@@ -344,7 +351,7 @@ By default this is 10 seconds.
 | -------- | ------- |
 | `number` | `10000` |
 
-### `containerlab.node.execCommandMapping`
+### `node.execCommandMapping`
 
 The a mapping between the node kind and command executed on the 'node attach' action.
 
@@ -366,7 +373,7 @@ By default this setting is empty, it should be used to override the [default map
 
 In the settings UI, simply set the 'Item' field to the kind and the 'Value' field to `nokia_srl` and the command to `sr_cli`.
 
-### `containerlab.wsl.wiresharkPath`
+### `wsl.wiresharkPath`
 
 The linux path to the Wireshark executable on the Windows System.
 
@@ -376,7 +383,7 @@ The default Wireshark install location on Windows is `C:\Program Files\Wireshark
 | -------- | ---------------------------------------------- |
 | `string` | `/mnt/c/Program Files/Wireshark/wireshark.exe` |
 
-### `containerlab.remote.hostname`
+### `remote.hostname`
 
 An override to set the target hostname or IP address of the system.
 
@@ -386,7 +393,7 @@ This is useful in cases where you need to change the hostname used to initiate p
 | -------- | ----------- |
 | `string` | `undefined` |
 
-### `containerlab.drawioDefaultTheme`
+### `drawioDefaultTheme`
 
 The default theme to be used for the draw.io graph functions. Options are:
 
@@ -398,7 +405,7 @@ The default theme to be used for the draw.io graph functions. Options are:
 | -------- | -------------- |
 | `string` | `nokia_modern` |
 
-### `containerlab.runtime`
+### `runtime`
 
 Used to set the runtime that containerlab is using in the system. Options are:
 
@@ -412,7 +419,7 @@ It is not recommended to change this unless you know what you are doing.
 | -------- | -------- |
 | `string` | `docker` |
 
-### `containerlab.skipCleanupWarning`
+### `skipCleanupWarning`
 
 Whether to hide the confirmation message when doing a cleanup operation on your lab.
 
@@ -420,7 +427,7 @@ Whether to hide the confirmation message when doing a cleanup operation on your 
 | --------- | ------- |
 | `boolean` | `false` |
 
-### `containerlab.node.telnetPort`
+### `node.telnetPort`
 
 The port to use when using the 'Connect (Telnet)' command. The telnet command is executed inside the container via `docker exec -it <node> telnet 127.0.0.1 <port>`, where `<port>` is the value this setting modifies.
 
@@ -428,7 +435,7 @@ The port to use when using the 'Connect (Telnet)' command. The telnet command is
 | --------- | ------- |
 | `number`  |  `5000` |
 
-### `containerlab.extras.fcli.extraDockerArgs`
+### `extras.fcli.extraDockerArgs`
 
 Extra arguments to pass to the `docker run` command for fcli.
 
@@ -436,7 +443,7 @@ Extra arguments to pass to the `docker run` command for fcli.
 | -------- | ----------- |
 | `string` | `undefined` |
 
-### `containerlab.capture.preferredAction`
+### `capture.preferredAction`
 
 The capture method that should be used for the capture quick action (the shark icon on an interface item in the tree). Options are:
 
@@ -449,7 +456,7 @@ When the setting is undefined, the default logic will be used to determine wheth
 | -------- | ----------- |
 | `string` | `undefined` |
 
-### `containerlab.capture.wireshark.dockerImage`
+### `capture.wireshark.dockerImage`
 
 Override the docker image used for the integrated Wireshark VNC based capture method.
 
@@ -457,7 +464,7 @@ Override the docker image used for the integrated Wireshark VNC based capture me
 | --------- | ------------------------------------------------ |
 | `string`  |  `ghcr.io/kaelemc/wireshark-vnc-docker:latest`   |
 
-### `containerlab.capture.wireshark.pullPolicy`
+### `capture.wireshark.pullPolicy`
 
 The pull policy to use for the integrated Wireshark VNC docker image. Options are:
 
@@ -471,7 +478,7 @@ This setting should be used if a custom docker image is being used. Refer to the
 | -------- | ----------- |
 | `string` | `always`    |
 
-### `containerlab.capture.wireshark.extraDockerArgs`
+### `capture.wireshark.extraDockerArgs`
 
 Extra arguments to pass to the `docker run` command for the integrated Wireshark VNC based capture.
 
@@ -481,7 +488,7 @@ Useful for bind mounts, extra environment variables etc.
 | -------- | ----------- |
 | `string` | `undefined` |
 
-### `containerlab.capture.wireshark.theme`
+### `capture.wireshark.theme`
 
 The default theme of the Wireshark application when using the integrated Wireshark VNC based capture. Options are:
 
