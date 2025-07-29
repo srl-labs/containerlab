@@ -449,13 +449,27 @@ When the setting is undefined, the default logic will be used to determine wheth
 | -------- | ----------- |
 | `string` | `undefined` |
 
-### `containerlab.capture.dockerImage`
+### `containerlab.capture.wireshark.dockerImage`
 
 Override the docker image used for the integrated Wireshark VNC based capture method.
 
 | Type      | Default                                          |
 | --------- | ------------------------------------------------ |
 | `string`  |  `ghcr.io/kaelemc/wireshark-vnc-docker:latest`   |
+
+### `containerlab.capture.wireshark.pullPolicy`
+
+The pull policy to use for the integrated Wireshark VNC docker image. Options are:
+
+- `always`
+- `missing`
+- `never`
+
+This setting should be used if a custom docker image is being used. Refer to the [docker documentation.](https://docs.docker.com/reference/cli/docker/container/run/#pull)
+
+| Type     | Default     |
+| -------- | ----------- |
+| `string` | `always`    |
 
 ### `containerlab.capture.wireshark.extraDockerArgs`
 
