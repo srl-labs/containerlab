@@ -55,7 +55,7 @@ cJunosEvolved has to be fully booted before this succeeds.
 docker exec -ti <container-name> cli
 ```
 A sample output of above command is shown here. Once the system is ready and configurable,
-the CLI prompt will be shown and the user can then make login and make additional configuraion changes:
+the CLI prompt will be shown and the user can then make login and make additional configuration changes:
 ```bash
 # docker exec -ti clab-srlcjunosevo-cevo cli
   System is not yet ready...
