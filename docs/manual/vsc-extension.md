@@ -499,3 +499,15 @@ The default theme of the Wireshark application when using the integrated Wiresha
 | Type      | Default                   |
 | --------- | ------------------------- |
 | `string`  |  `Follow VS Code theme`   |
+
+### `capture.wireshark.stayOpenInBackground`
+
+Whether to keep the VNC connection alive in the background when a Wireshark capture tab loses focus.
+
+/// warning
+When enabling this setting there will be increased memory consumption for both the containerlab host, as well as the VS Code client.
+///
+
+| Type      | Default   |
+| --------- | --------- |
+| `boolean` |  `true`   |
