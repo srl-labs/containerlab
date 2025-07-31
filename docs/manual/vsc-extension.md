@@ -300,9 +300,9 @@ Packet capture relies on the [Edgeshark integration](wireshark.md#edgeshark-inte
 
 #### Integrated Wireshark
 
-If you are unable to install the cshargextcap plugin on your system, or prefer to lab completely inside VS Code then you should take advantage of the integrated Wireshark packet capture.
+If you are unable (or don't want) to install the cshargextcap plugin from the [Edgeshark integration](../manual/wireshark.md#edgeshark-integration) on your system, or prefer to lab completely inside VS Code then you should take advantage of the integrated Wireshark packet capture.
 
-Edgeshark is still used, but instead the Wireshark window is inside of a container on your Containerlab host, the Wireshark window gets streamed via VNC directly into your VS Code window. When using Remote-SSH, no extra ports are exposed on your host system, everything is tunnelled over the single Remote-SSH connection.
+Edgeshark is still used on the Containerlab host, but the Wireshark client with the capture plugin is fully hosted inside of a container on your Containerlab host, the Wireshark window gets streamed via VNC directly into your VS Code window. When using Remote-SSH, no extra ports are exposed on your host system, everything is tunnelled over the single Remote-SSH connection.
 
 /// admonition | Can I import/export captures
     type: question
@@ -311,11 +311,11 @@ Yes, from within Wireshark you may save your captures into the `/pcaps` director
 
 ![integrated-wireshark](https://gitlab.com/rdodin/pics/-/wikis/uploads/752c161fe4e66750a35e0031e7e7d2f7/vscode_wireshark_vnc.gif)
 
+This option is perfect for users who occasionally need to capture packets but can not install the Edgeshark capture plugin on their system. An ideal case for managed labs or instructor-led workshops where attendees may not have the necessary permissions to install software.
 
 ## Settings reference
 
 Below is a reference to the available settings that can be modified in the Containerlab VS Code extension.
-
 
 /// note
 If editing JSON settings directly, please ensure you prepend `containerlab.` to any of the bellow setting paths.
