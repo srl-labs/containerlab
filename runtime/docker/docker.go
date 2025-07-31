@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"strconv"
@@ -26,9 +25,11 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	networkapi "github.com/docker/docker/api/types/network"
 	dockerC "github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
+	"github.com/moby/term"
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
@@ -664,8 +665,10 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullPol
 		return err
 	}
 
-	// must read from reader, otherwise image is not properly pulled
-	_, _ = io.Copy(io.Discard, reader)
+	// show pull progress in term
+	terminalFd, isTerminal := term.GetFdInfo(os.Stdout)
+	_ = jsonmessage.DisplayJSONMessagesStream(reader, os.Stdout, terminalFd, isTerminal, nil)
+
 	log.Info("Done pulling image", "image", canonicalImageName)
 
 	return reader.Close()
