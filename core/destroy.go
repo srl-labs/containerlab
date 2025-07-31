@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/cmd/common"
+	"github.com/srl-labs/containerlab/labels"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
@@ -33,10 +34,32 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 
 	var err error
 
+	// TODO this listing logic is obviously super redundant throughout clab and should be clearer
+	// and simplified. and maybe more automatic. like the clab instance will know if it has a name
+	// or filters or w/e set
 	if opts.all {
 		containers, err = c.ListContainers(ctx, nil)
-	} else {
+	} else if common.Topo != "" {
 		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
+	} else {
+		// TODO murder kill common entirely. these can/should be things passed to a clab instance
+		// where we are not importing like this (even in cmd it just feels lazy)
+		// List containers based on labels (--name or --all)
+		var gLabels []*types.GenericFilter
+		if common.Name != "" {
+			// Filter by specific lab name
+			gLabels = []*types.GenericFilter{{
+				FilterType: "label", Match: common.Name,
+				Field: labels.Containerlab, Operator: "=",
+			}}
+		} else { // --all case
+			// Filter for any containerlab container
+			gLabels = []*types.GenericFilter{{
+				FilterType: "label",
+				Field:      labels.Containerlab, Operator: "exists",
+			}}
+		}
+		containers, err = c.ListContainers(ctx, gLabels)
 	}
 
 	if err != nil {
@@ -77,9 +100,13 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 	// as the key and the respective lab directory as the referenced value
 	topos := map[string]string{}
 
-	for i := range containers {
-		topos[containers[i].Labels[containerlablabels.TopoFile]] =
-			filepath.Dir(containers[i].Labels[containerlablabels.NodeLabDir])
+	for _, container := range containers {
+		topoFile, ok := container.Labels[containerlablabels.TopoFile]
+		if !ok {
+			continue
+		}
+
+		topos[topoFile] = filepath.Dir(container.Labels[containerlablabels.NodeLabDir])
 	}
 
 	log.Debugf("got the following topologies for destroy: %+v", topos)
