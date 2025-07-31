@@ -149,6 +149,7 @@ func WithTopoPath(path, varsFile string) ClabOption {
 		if err != nil {
 			return err
 		}
+
 		if err := c.LoadTopologyFromFile(file, varsFile); err != nil {
 			return fmt.Errorf("failed to read topology file: %v", err)
 		}
