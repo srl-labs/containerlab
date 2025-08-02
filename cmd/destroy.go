@@ -16,6 +16,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/labels"
@@ -54,6 +55,10 @@ func init() {
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
+	// Bind Cobra flag to Viper key
+	viper.BindPFlag("keep-mgmt-net", destroyCmd.Flags().Lookup("keep-mgmt-net"))
+	// Bind environment variable CLAB_KEEP_MGMT_NET to same key
+	viper.BindEnv("keep-mgmt-net", "CLAB_KEEP_MGMT_NET")
 	destroyCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 }
@@ -156,7 +161,7 @@ func destroyFn(_ *cobra.Command, _ []string) error {
 			core.WithSkippedBindsPathsCheck(),
 		}
 
-		if keepMgmtNet {
+		if viper.GetBool("keep-mgmt-net") {
 			opts = append(opts, core.WithKeepMgmtNet())
 		}
 		if common.Name != "" {
