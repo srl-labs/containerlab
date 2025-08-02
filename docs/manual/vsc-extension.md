@@ -373,15 +373,6 @@ By default this setting is empty, it should be used to override the [default map
 
 In the settings UI, simply set the 'Item' field to the kind and the 'Value' field to `nokia_srl` and the command to `sr_cli`.
 
-### `wsl.wiresharkPath`
-
-The linux path to the Wireshark executable on the Windows System.
-
-The default Wireshark install location on Windows is `C:\Program Files\Wireshark\wireshark.exe`. This maps into a WSL/Linux path of `/mnt/c/Program Files/Wireshark/wireshark.exe`.
-
-| Type     | Default                                        |
-| -------- | ---------------------------------------------- |
-| `string` | `/mnt/c/Program Files/Wireshark/wireshark.exe` |
 
 ### `remote.hostname`
 
@@ -450,11 +441,9 @@ The capture method that should be used for the capture quick action (the shark i
 - `Edgeshark`
 - `Wireshark VNC`
 
-When the setting is undefined, the default logic will be used to determine whether a `tcpdump` capture + pipe into Wireshark can be used (only when the extension is running in a WSL or Linux environment without using Remote-SSH).
-
-| Type     | Default     |
-| -------- | ----------- |
-| `string` | `undefined` |
+| Type     | Default         |
+| -------- | --------------- |
+| `string` | `Wireshark VNC` |
 
 ### `capture.wireshark.dockerImage`
 
