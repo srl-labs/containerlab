@@ -659,6 +659,9 @@ func (d *DockerRuntime) postCreateMacvlanActions() error {
 func (d *DockerRuntime) createHostMacvlanInterface() error {
 	hostIfName := d.mgmt.Network + "-host"
 	
+	log.Debugf("Creating host macvlan interface: name=%s, parent=%s, mode=%s", 
+		hostIfName, d.mgmt.MacvlanParent, d.mgmt.MacvlanMode)
+	
 	// Check if interface already exists
 	if existingLink, err := netlink.LinkByName(hostIfName); err == nil {
 		log.Debugf("Host macvlan interface %s already exists", hostIfName)
@@ -685,35 +688,68 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 		return fmt.Errorf("parent interface %s not found: %w", d.mgmt.MacvlanParent, err)
 	}
 	
-	log.Debugf("Creating macvlan interface %s on parent %s (index %d)", 
-		hostIfName, d.mgmt.MacvlanParent, parentLink.Attrs().Index)
+	log.Debugf("Parent interface details: name=%s, index=%d, mtu=%d, state=%s", 
+		parentLink.Attrs().Name, 
+		parentLink.Attrs().Index, 
+		parentLink.Attrs().MTU,
+		parentLink.Attrs().OperState)
 	
-	// Create macvlan link
+	// Determine macvlan mode
+	mode := netlink.MACVLAN_MODE_BRIDGE
+	if d.mgmt.MacvlanMode != "" && d.mgmt.MacvlanMode != "bridge" {
+		switch d.mgmt.MacvlanMode {
+		case "vepa":
+			mode = netlink.MACVLAN_MODE_VEPA
+		case "private":
+			mode = netlink.MACVLAN_MODE_PRIVATE
+		case "passthru":
+			mode = netlink.MACVLAN_MODE_PASSTHRU
+		default:
+			log.Warnf("Unknown macvlan mode %s, using bridge", d.mgmt.MacvlanMode)
+		}
+	}
+	
+	log.Debugf("Creating macvlan with mode=%d (0=private, 1=vepa, 2=bridge, 3=passthru)", mode)
+	
+	// Create macvlan link with minimal attributes first
 	macvlan := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:        hostIfName,
 			ParentIndex: parentLink.Attrs().Index,
-			MTU:         parentLink.Attrs().MTU, // Inherit MTU from parent
 		},
-		Mode: netlink.MACVLAN_MODE_BRIDGE,
+		Mode: mode,
 	}
 	
-	// Parse mode if specified differently
-	if d.mgmt.MacvlanMode != "" && d.mgmt.MacvlanMode != "bridge" {
-		switch d.mgmt.MacvlanMode {
-		case "vepa":
-			macvlan.Mode = netlink.MACVLAN_MODE_VEPA
-		case "private":
-			macvlan.Mode = netlink.MACVLAN_MODE_PRIVATE
-		case "passthru":
-			macvlan.Mode = netlink.MACVLAN_MODE_PASSTHRU
-		}
+	// Log the structure before creation
+	log.Debugf("Macvlan struct: Name=%s, ParentIndex=%d, Mode=%d", 
+		macvlan.LinkAttrs.Name, 
+		macvlan.LinkAttrs.ParentIndex, 
+		macvlan.Mode)
+	
+	// Try to create using command line as a test
+	cmd := exec.Command("ip", "link", "add", hostIfName, "link", d.mgmt.MacvlanParent, "type", "macvlan", "mode", "bridge")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		log.Debugf("Command line test failed: %v, output: %s", err, string(output))
+		// Don't return here, continue with netlink
+	} else {
+		log.Debug("Command line creation succeeded, removing to use netlink")
+		// Remove it so we can create via netlink
+		delCmd := exec.Command("ip", "link", "del", hostIfName)
+		delCmd.Run()
 	}
 	
-	// Create the interface
+	// Create the interface via netlink
 	if err := netlink.LinkAdd(macvlan); err != nil {
+		// Try to get more error details
+		if strings.Contains(err.Error(), "numerical result") {
+			log.Errorf("Netlink error details - this often indicates an issue with the parent interface index or mode value")
+			log.Errorf("Parent index: %d, Mode: %d", parentLink.Attrs().Index, mode)
+		}
 		return fmt.Errorf("failed to create macvlan interface: %w", err)
 	}
+	
+	// Rest of the function remains the same...
+	log.Debug("Macvlan interface created successfully via netlink")
 	
 	// Get the created interface
 	link, err := netlink.LinkByName(hostIfName)
@@ -750,7 +786,7 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 	
 	log.Infof("Created host macvlan interface %s with IP %s", hostIfName, d.mgmt.MacvlanAux)
 	
-	// Add route to the subnet via the aux address
+	// Add route to the subnet
 	_, ipnet, err := net.ParseCIDR(d.mgmt.IPv4Subnet)
 	if err != nil {
 		log.Warnf("Failed to parse subnet for route: %v", err)
@@ -758,11 +794,10 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 	}
 	
 	// For the route, we need to use the macvlan interface as the output device
-	// The route should be: <subnet> dev <macvlan-interface> scope link
 	route := &netlink.Route{
 		LinkIndex: link.Attrs().Index,
 		Dst:       ipnet,
-		Scope:     netlink.SCOPE_LINK, // Use SCOPE_LINK for local subnet
+		Scope:     netlink.SCOPE_LINK,
 	}
 	
 	if err := netlink.RouteAdd(route); err != nil {
