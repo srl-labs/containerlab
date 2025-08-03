@@ -727,14 +727,14 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 		macvlan.Mode)
 	
 	// Try to create using command line as a test
-	cmd := exec.Command("ip", "link", "add", hostIfName, "link", d.mgmt.MacvlanParent, "type", "macvlan", "mode", "bridge")
+	cmd := osexec.Command("ip", "link", "add", hostIfName, "link", d.mgmt.MacvlanParent, "type", "macvlan", "mode", "bridge")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		log.Debugf("Command line test failed: %v, output: %s", err, string(output))
 		// Don't return here, continue with netlink
 	} else {
 		log.Debug("Command line creation succeeded, removing to use netlink")
 		// Remove it so we can create via netlink
-		delCmd := exec.Command("ip", "link", "del", hostIfName)
+		delCmd := osexec.Command("ip", "link", "del", hostIfName)
 		delCmd.Run()
 	}
 	
