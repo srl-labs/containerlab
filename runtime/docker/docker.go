@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 	"net"
+	"regexp"
 
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-units"
@@ -655,9 +656,15 @@ func (d *DockerRuntime) postCreateMacvlanActions() error {
 	return nil
 }
 
+func sanitizeAlphanumeric(input string) string {
+    re := regexp.MustCompile(`[^a-zA-Z0-9]+`)
+    return re.ReplaceAllString(input, "")
+}
+
 // createHostMacvlanInterface creates a macvlan interface on the host for container communication
 func (d *DockerRuntime) createHostMacvlanInterface() error {
-	hostIfName := d.mgmt.Network + "-host"
+	hostIfNameNonAlpha := d.mgmt.Network + "-host"
+	hostIfName := sanitizeAlphanumeric(hostIfNameNonAlpha)
 	
 	log.Debugf("Creating host macvlan interface: name=%s, parent=%s, mode=%s", 
 		hostIfName, d.mgmt.MacvlanParent, d.mgmt.MacvlanMode)
