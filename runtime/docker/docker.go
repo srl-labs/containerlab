@@ -169,7 +169,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	defer cancel()
 
 	// Determine the driver to use (default to bridge if not specified)
-	driver := d.mgmt.MacvlanDriver
+	driver := d.mgmt.Driver
 	if driver == "" {
 		driver = "bridge"
 	}
@@ -562,7 +562,7 @@ func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (string
 // postCreateNetActions performs additional actions after the network has been created.
 func (d *DockerRuntime) postCreateNetActions() (err error) {
 	// Skip all post-creation actions for macvlan networks
-	if d.mgmt.MacvlanDriver == "macvlan" {
+	if d.mgmt.Driver == "macvlan" {
 		log.Debug("Skipping post-creation actions for macvlan network")
 		return nil
 	}
@@ -601,6 +601,9 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 
 // postCreateMacvlanActions performs macvlan-specific post-creation actions
 func (d *DockerRuntime) postCreateMacvlanActions() error {
+	//debugging
+	log.Info("Starting macvlan post-creation actions")
+	log.Debugf("MacvlanAux: %s, IPv4Subnet: %s", d.mgmt.MacvlanAux, d.mgmt.IPv4Subnet)
 	// 1. Verify parent interface exists and is UP
 	parentLink, err := netlink.LinkByName(d.mgmt.MacvlanParent)
 	if err != nil {
@@ -901,7 +904,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	}
 	
 	// For macvlan networks, cleanup host interface first
-	if d.mgmt.MacvlanDriver == "macvlan" {
+	if d.mgmt.Driver == "macvlan" {
 		if err := d.cleanupMacvlanPostActions(); err != nil {
 			log.Warnf("Failed to cleanup macvlan post-actions: %v", err)
 		}
@@ -913,7 +916,7 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	}
 
 	// Only run bridge-specific cleanup for bridge networks
-	if d.mgmt.MacvlanDriver != "macvlan" {
+	if d.mgmt.Driver != "macvlan" {
 		err = d.deleteMgmtNetworkFwdRule()
 		if err != nil {
 			log.Warnf("errors during iptables rules removal: %v", err)
