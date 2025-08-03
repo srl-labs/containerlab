@@ -694,20 +694,24 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 		parentLink.Attrs().MTU,
 		parentLink.Attrs().OperState)
 	
-	// Determine macvlan mode
-	mode := netlink.MACVLAN_MODE_BRIDGE
-	if d.mgmt.MacvlanMode != "" && d.mgmt.MacvlanMode != "bridge" {
-		switch d.mgmt.MacvlanMode {
-		case "vepa":
-			mode = netlink.MACVLAN_MODE_VEPA
-		case "private":
-			mode = netlink.MACVLAN_MODE_PRIVATE
-		case "passthru":
-			mode = netlink.MACVLAN_MODE_PASSTHRU
-		default:
-			log.Warnf("Unknown macvlan mode %s, using bridge", d.mgmt.MacvlanMode)
-		}
+
+	// Determine macvlan mode - explicitly handle all cases
+	var mode netlink.MacvlanMode
+	switch d.mgmt.MacvlanMode {
+	case "", "bridge": // default to bridge if empty
+		mode = netlink.MACVLAN_MODE_BRIDGE
+	case "vepa":
+		mode = netlink.MACVLAN_MODE_VEPA
+	case "private":
+		mode = netlink.MACVLAN_MODE_PRIVATE
+	case "passthru":
+		mode = netlink.MACVLAN_MODE_PASSTHRU
+	default:
+		log.Warnf("Unknown macvlan mode %s, defaulting to bridge", d.mgmt.MacvlanMode)
+		mode = netlink.MACVLAN_MODE_BRIDGE
 	}
+	
+	log.Debugf("Creating macvlan with mode='%s' value=%d", d.mgmt.MacvlanMode, mode)
 	
 	log.Debugf("Creating macvlan with mode=%d (0=private, 1=vepa, 2=bridge, 3=passthru)", mode)
 	
