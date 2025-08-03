@@ -721,7 +721,7 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 			Name:        hostIfName,
 			ParentIndex: parentLink.Attrs().Index,
 		},
-		Mode: mode,
+		Mode: netlink.MACVLAN_MODE_BRIDGE,
 	}
 	
 	// Log the structure before creation
