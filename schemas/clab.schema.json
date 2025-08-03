@@ -1291,6 +1291,26 @@
                     "description": "MTU for the custom network",
                     "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
                     "$ref": "#/definitions/mtu"
+                },
+                "macvlan-parent": {
+                    "description": "MTU for the custom network",
+                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
+                    "$ref": "#/definitions/mtu"
+                },
+                "macvlan-mode": {
+                    "description": "MTU for the custom network",
+                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
+                    "$ref": "#/definitions/mtu"
+                },
+                "macvlan-driver": {
+                    "description": "MTU for the custom network",
+                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
+                    "$ref": "#/definitions/mtu"
+                },
+                "macvlan-aux": {
+                    "description": "MTU for the custom network",
+                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
+                    "$ref": "#/definitions/mtu"
                 }
             },
             "minProperties": 1,
