@@ -660,9 +660,23 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 	hostIfName := d.mgmt.Network + "-host"
 	
 	// Check if interface already exists
-	if _, err := netlink.LinkByName(hostIfName); err == nil {
-		log.Debugf("Host macvlan interface %s already exists, skipping creation", hostIfName)
-		return nil
+	if existingLink, err := netlink.LinkByName(hostIfName); err == nil {
+		log.Debugf("Host macvlan interface %s already exists", hostIfName)
+		// Check if it has the correct IP
+		addrs, err := netlink.AddrList(existingLink, netlink.FAMILY_V4)
+		if err == nil {
+			for _, addr := range addrs {
+				if addr.IP.String() == d.mgmt.MacvlanAux {
+					log.Debugf("Interface %s already has IP %s", hostIfName, d.mgmt.MacvlanAux)
+					return nil
+				}
+			}
+		}
+		// Interface exists but might not have the right IP, delete and recreate
+		log.Debugf("Removing existing interface %s to recreate with correct settings", hostIfName)
+		if err := netlink.LinkDel(existingLink); err != nil {
+			log.Warnf("Failed to delete existing interface: %v", err)
+		}
 	}
 	
 	// Get parent link
@@ -671,11 +685,15 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 		return fmt.Errorf("parent interface %s not found: %w", d.mgmt.MacvlanParent, err)
 	}
 	
+	log.Debugf("Creating macvlan interface %s on parent %s (index %d)", 
+		hostIfName, d.mgmt.MacvlanParent, parentLink.Attrs().Index)
+	
 	// Create macvlan link
 	macvlan := &netlink.Macvlan{
 		LinkAttrs: netlink.LinkAttrs{
 			Name:        hostIfName,
 			ParentIndex: parentLink.Attrs().Index,
+			MTU:         parentLink.Attrs().MTU, // Inherit MTU from parent
 		},
 		Mode: netlink.MACVLAN_MODE_BRIDGE,
 	}
@@ -700,15 +718,21 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 	// Get the created interface
 	link, err := netlink.LinkByName(hostIfName)
 	if err != nil {
+		// Cleanup on failure
+		netlink.LinkDel(macvlan)
 		return fmt.Errorf("failed to get created interface: %w", err)
 	}
 	
 	// Parse and add IP address
-	addr, err := netlink.ParseAddr(d.mgmt.MacvlanAux + "/" + getSubnetPrefix(d.mgmt.IPv4Subnet))
+	// Use /32 for the host interface to avoid subnet conflicts
+	addrStr := d.mgmt.MacvlanAux + "/32"
+	log.Debugf("Adding IP address %s to interface %s", addrStr, hostIfName)
+	
+	addr, err := netlink.ParseAddr(addrStr)
 	if err != nil {
 		// Cleanup on failure
 		netlink.LinkDel(link)
-		return fmt.Errorf("failed to parse IP address %s: %w", d.mgmt.MacvlanAux, err)
+		return fmt.Errorf("failed to parse IP address %s: %w", addrStr, err)
 	}
 	
 	if err := netlink.AddrAdd(link, addr); err != nil {
@@ -724,33 +748,30 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 		return fmt.Errorf("failed to bring interface up: %w", err)
 	}
 	
+	log.Infof("Created host macvlan interface %s with IP %s", hostIfName, d.mgmt.MacvlanAux)
+	
 	// Add route to the subnet via the aux address
 	_, ipnet, err := net.ParseCIDR(d.mgmt.IPv4Subnet)
 	if err != nil {
 		log.Warnf("Failed to parse subnet for route: %v", err)
-		// Don't fail entirely, the interface is still useful
 		return nil
 	}
 	
-	// Parse the aux address to use as gateway
-	auxIP := net.ParseIP(d.mgmt.MacvlanAux)
-	if auxIP == nil {
-		log.Warnf("Failed to parse aux IP for route: %s", d.mgmt.MacvlanAux)
-		return nil
-	}
-	
+	// For the route, we need to use the macvlan interface as the output device
+	// The route should be: <subnet> dev <macvlan-interface> scope link
 	route := &netlink.Route{
 		LinkIndex: link.Attrs().Index,
 		Dst:       ipnet,
-		Gw:        auxIP,
-		Scope:     netlink.Scope(0),
+		Scope:     netlink.SCOPE_LINK, // Use SCOPE_LINK for local subnet
 	}
 	
 	if err := netlink.RouteAdd(route); err != nil {
-		// This might fail if route already exists, which is ok
-		log.Debugf("Failed to add route (might already exist): %v", err)
+		// Check if route already exists
+		if !strings.Contains(err.Error(), "file exists") {
+			log.Warnf("Failed to add route %s dev %s: %v", d.mgmt.IPv4Subnet, hostIfName, err)
+		}
 	} else {
-		log.Infof("Added route %s via %s dev %s", d.mgmt.IPv4Subnet, d.mgmt.MacvlanAux, hostIfName)
+		log.Infof("Added route %s dev %s", d.mgmt.IPv4Subnet, hostIfName)
 	}
 	
 	return nil
