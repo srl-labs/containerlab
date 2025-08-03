@@ -10,11 +10,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	osexec "os/exec"
 	"path"
 	"strconv"
 	"strings"
 	"time"
-	"os/exec"
 	"net"
 
 	"github.com/docker/docker/api/types/image"
@@ -151,7 +151,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	if d.mgmt.Bridge == "" && d.mgmt.Network != "" {
 		// fetch the network by the name set in the topo and populate the bridge name used by this network
 		netRes, err := d.Client.NetworkInspect(context.TODO(), d.mgmt.Network, networkapi.InspectOptions{})
-		// if the network is succesfully found, set the bridge used by it
+		// if the network is successfully found, set the bridge used by it
 		if err == nil {
 			if name, exists := netRes.Options["com.docker.network.bridge.name"]; exists {
 				d.mgmt.Bridge = name
@@ -240,7 +240,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 		// get management bridge v4/6 addresses and save it under mgmt struct
 		// so that nodes can use this information prior to being deployed
-		// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
+		// this was added to allow mgmt network gw ip to be available in a startup config template step (ceos)
 		d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, netResource)
 		if err != nil {
 			return err
@@ -551,7 +551,7 @@ func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (string
 		}
 	}
 
-	// didnt find any gateways, fallthrough to returning the error
+	// didn't find any gateways, fallthrough to returning the error
 	if v4 == "" && v6 == "" {
 		return "", "", err
 	}
@@ -740,7 +740,7 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 		LinkIndex: link.Attrs().Index,
 		Dst:       ipnet,
 		Gw:        auxIP,
-		Scope:     netlink.SCOPE_UNIVERSE,
+		Scope:     netlink.Scope(0),
 	}
 	
 	if err := netlink.RouteAdd(route); err != nil {
@@ -771,7 +771,7 @@ func (d *DockerRuntime) cleanupMacvlanPostActions() error {
 			auxIP := net.ParseIP(d.mgmt.MacvlanAux)
 			if auxIP != nil {
 				// Find and delete the route
-				routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+				routes, err := netlink.RouteList(nil, getIPv4Family())
 				if err == nil {
 					for _, route := range routes {
 						if route.Dst != nil && route.Dst.String() == ipnet.String() && 
@@ -836,7 +836,7 @@ func (d *DockerRuntime) cleanupMacvlanPostActions() error {
 // enablePromiscuousMode enables promiscuous mode on an interface
 func enablePromiscuousMode(ifName string) error {
 	// Try using exec to run ip command as a fallback
-	cmd := exec.Command("ip", "link", "set", ifName, "promisc", "on")
+	cmd := osexec.Command("ip", "link", "set", ifName, "promisc", "on")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to enable promiscuous mode: %w", err)
 	}
@@ -846,7 +846,7 @@ func enablePromiscuousMode(ifName string) error {
 // disablePromiscuousMode disables promiscuous mode on an interface
 func disablePromiscuousMode(ifName string) error {
 	// Try using exec to run ip command as a fallback
-	cmd := exec.Command("ip", "link", "set", ifName, "promisc", "off")
+	cmd := osexec.Command("ip", "link", "set", ifName, "promisc", "off")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to disable promiscuous mode: %w", err)
 	}
