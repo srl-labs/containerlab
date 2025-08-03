@@ -728,7 +728,7 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 			Name:        hostIfName,
 			ParentIndex: parentLink.Attrs().Index,
 		},
-		Mode: netlink.MACVLAN_MODE_BRIDGE,
+		Mode: mode,
 	}
 	
 	// Log the structure before creation
@@ -841,7 +841,7 @@ func (d *DockerRuntime) cleanupMacvlanPostActions() error {
 			auxIP := net.ParseIP(d.mgmt.MacvlanAux)
 			if auxIP != nil {
 				// Find and delete the route
-				routes, err := netlink.RouteList(nil, getIPv4Family())
+				routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
 				if err == nil {
 					for _, route := range routes {
 						if route.Dst != nil && route.Dst.String() == ipnet.String() && 
@@ -929,8 +929,9 @@ func (d *DockerRuntime) cleanupHostMacvlanInterface() error {
 		return nil
 	}
 	
-	hostIfName := d.mgmt.Network + "-host"
-	
+    hostIfNameNonAlpha := d.mgmt.Network + "-host"
+    hostIfName := sanitizeAlphanumeric(hostIfNameNonAlpha)
+
 	link, err := netlink.LinkByName(hostIfName)
 	if err != nil {
 		// Interface doesn't exist, nothing to clean up
