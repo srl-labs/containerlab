@@ -1292,25 +1292,23 @@
                     "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
                     "$ref": "#/definitions/mtu"
                 },
+                "driver": {
+                "type": "string",
+                "enum": ["bridge", "macvlan"],
+                "description": "Network driver type (bridge or macvlan)"
+                },
                 "macvlan-parent": {
-                    "description": "MTU for the custom network",
-                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
-                    "$ref": "#/definitions/mtu"
+                "type": "string",
+                "description": "Parent interface for macvlan network"
                 },
                 "macvlan-mode": {
-                    "description": "MTU for the custom network",
-                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
-                    "$ref": "#/definitions/mtu"
-                },
-                "macvlan-driver": {
-                    "description": "MTU for the custom network",
-                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
-                    "$ref": "#/definitions/mtu"
+                "type": "string",
+                "enum": ["bridge", "vepa", "private", "passthru"],
+                "description": "Macvlan mode (bridge, vepa, private, or passthru)"
                 },
                 "macvlan-aux": {
-                    "description": "MTU for the custom network",
-                    "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
-                    "$ref": "#/definitions/mtu"
+                "type": "string",
+                "description": "Auxiliary IP address for host macvlan interface"
                 }
             },
             "minProperties": 1,

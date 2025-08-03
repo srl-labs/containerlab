@@ -60,7 +60,7 @@ type MgmtNet struct {
 	// Macvlan specific options
     MacvlanParent string `yaml:"macvlan-parent,omitempty" json:"macvlan-parent,omitempty"`	// Parent interface for macvlan	
     MacvlanMode   string `yaml:"macvlan-mode,omitempty" json:"macvlan-mode,omitempty"`		// bridge, vepa, passthru, private
-	MacvlanDriver string `yaml:"macvlan-driver,omitempty" json:"macvlan-driver,omitempty"`	// "bridge" or "macvlan"
+	Driver 		  string `yaml:"macvlan-driver,omitempty" json:"macvlan-driver,omitempty"`	// "bridge" or "macvlan"
 	MacvlanAux    string `yaml:"macvlan-aux,omitempty" json:"macvlan-aux,omitempty"`		// Reserved IP Address for containerlab host connectivity
 }
 
