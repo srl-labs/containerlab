@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"os/exec"
+	"net"
 
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-units"
@@ -166,52 +168,239 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
-	// linux bridge name that is used by docker network
+	// Determine the driver to use (default to bridge if not specified)
+	driver := d.mgmt.MacvlanDriver
+	if driver == "" {
+		driver = "bridge"
+	}
+
+	// linux bridge name that is used by docker network (only relevant for bridge driver)
 	bridgeName := d.mgmt.Bridge
 
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
 	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+	
 	switch {
 	case dockerC.IsErrNotFound(err):
-		bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
-		if err != nil {
-			return err
-		}
-	case err == nil:
-		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
-		if len(netResource.ID) < 12 {
-			return fmt.Errorf("could not get bridge ID")
-		}
-		switch d.mgmt.Network {
+		// Network doesn't exist, create it based on driver type
+		switch driver {
 		case "bridge":
-			bridgeName = "docker0"
+			bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
+			if err != nil {
+				return err
+			}
+			
+		case "macvlan":
+			err = d.createMgmtMacvlan(nctx)
+			if err != nil {
+				return err
+			}
+			// For macvlan, we don't need to track a bridge name
+			bridgeName = ""
+			
 		default:
-			if netResource.Options["com.docker.network.bridge.name"] != "" {
-				bridgeName = netResource.Options["com.docker.network.bridge.name"]
-			} else {
-				bridgeName = "br-" + netResource.ID[:12]
+			return fmt.Errorf("unsupported network driver: %s", driver)
+		}
+		
+	case err == nil:
+		// Network exists, validate it matches expected driver
+		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
+		if netResource.Driver != driver {
+			return fmt.Errorf("existing network %q has driver %q but configuration specifies %q", 
+				d.mgmt.Network, netResource.Driver, driver)
+		}
+		
+		// Handle existing network based on driver type
+		if driver == "bridge" {
+			if len(netResource.ID) < 12 {
+				return fmt.Errorf("could not get bridge ID")
+			}
+			switch d.mgmt.Network {
+			case "bridge":
+				bridgeName = "docker0"
+			default:
+				if netResource.Options["com.docker.network.bridge.name"] != "" {
+					bridgeName = netResource.Options["com.docker.network.bridge.name"]
+				} else {
+					bridgeName = "br-" + netResource.ID[:12]
+				}
 			}
 		}
-
+		// For macvlan, we just reuse the existing network without any special handling
+		
 	default:
 		return err
 	}
 
-	if d.mgmt.Bridge == "" {
-		d.mgmt.Bridge = bridgeName
+	// Only set bridge name for bridge driver
+	if driver == "bridge" {
+		if d.mgmt.Bridge == "" {
+			d.mgmt.Bridge = bridgeName
+		}
+
+		// get management bridge v4/6 addresses and save it under mgmt struct
+		// so that nodes can use this information prior to being deployed
+		// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
+		d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, netResource)
+		if err != nil {
+			return err
+		}
+
+		log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
+		return d.postCreateNetActions()
 	}
 
-	// get management bridge v4/6 addresses and save it under mgmt struct
-	// so that nodes can use this information prior to being deployed
-	// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
-	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, netResource)
+	// For macvlan networks
+	if driver == "macvlan" {
+		// Re-inspect to get gateway information if network was just created
+		if dockerC.IsErrNotFound(err) {
+			netResource, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to inspect newly created macvlan network: %w", err)
+			}
+		}
+		
+		// Extract gateway IPs from IPAM config for macvlan
+		for _, ipamConfig := range netResource.IPAM.Config {
+			if ipamConfig.Gateway != "" {
+				// Determine if it's IPv4 or IPv6 based on the address format
+				if strings.Count(ipamConfig.Gateway, ".") == 3 {
+					d.mgmt.IPv4Gw = ipamConfig.Gateway
+				} else if strings.Contains(ipamConfig.Gateway, ":") {
+					d.mgmt.IPv6Gw = ipamConfig.Gateway
+				}
+			}
+		}
+		
+		log.Debugf("Docker macvlan network %q created/reused with parent interface %q", d.mgmt.Network, d.mgmt.MacvlanParent)
+		return d.postCreateMacvlanActions()
+	}
+
+	return nil
+}
+
+// createMgmtMacvlan creates a macvlan network for management
+func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
+	// Validate parent interface is specified
+	if d.mgmt.MacvlanParent == "" {
+		return fmt.Errorf("macvlan-parent interface must be specified for macvlan driver")
+	}
+	
+	// Check if parent interface exists
+	if _, err := netlink.LinkByName(d.mgmt.MacvlanParent); err != nil {
+		return fmt.Errorf("parent interface %q not found: %v", d.mgmt.MacvlanParent, err)
+	}
+	
+	log.Info("Creating macvlan network",
+		"name", d.mgmt.Network,
+		"parent", d.mgmt.MacvlanParent,
+		"IPv4 subnet", d.mgmt.IPv4Subnet,
+		"IPv6 subnet", d.mgmt.IPv6Subnet,
+		"mode", d.mgmt.MacvlanMode,
+		"aux-address", d.mgmt.MacvlanAux)
+
+	// Prepare IPAM configuration
+	var ipamConfig []networkapi.IPAMConfig
+	
+	// Handle IPv4 configuration
+	if d.mgmt.IPv4Subnet != "" && d.mgmt.IPv4Subnet != "auto" {
+		ipamCfg := networkapi.IPAMConfig{
+			Subnet: d.mgmt.IPv4Subnet,
+		}
+		if d.mgmt.IPv4Gw != "" {
+			ipamCfg.Gateway = d.mgmt.IPv4Gw
+		}
+		if d.mgmt.IPv4Range != "" {
+			ipamCfg.IPRange = d.mgmt.IPv4Range
+		}
+		// Add aux address if specified
+		if d.mgmt.MacvlanAux != "" {
+			ipamCfg.AuxAddress = map[string]string{
+				"host": d.mgmt.MacvlanAux,
+			}
+		}
+		ipamConfig = append(ipamConfig, ipamCfg)
+	}
+	
+	// Handle IPv6 configuration
+	var enableIPv6 bool
+	var ipv6_subnet string
+	
+	if d.mgmt.IPv6Subnet == "auto" {
+		var err error
+		ipv6_subnet, err = utils.GenerateIPv6ULASubnet()
+		if err != nil {
+			return err
+		}
+	} else {
+		ipv6_subnet = d.mgmt.IPv6Subnet
+	}
+	
+	if ipv6_subnet != "" {
+		ipamCfg := networkapi.IPAMConfig{
+			Subnet: ipv6_subnet,
+		}
+		if d.mgmt.IPv6Gw != "" {
+			ipamCfg.Gateway = d.mgmt.IPv6Gw
+		}
+		if d.mgmt.IPv6Range != "" {
+			ipamCfg.IPRange = d.mgmt.IPv6Range
+		}
+		ipamConfig = append(ipamConfig, ipamCfg)
+		enableIPv6 = true
+	}
+	
+	// Prepare network options
+	netwOpts := map[string]string{
+		"parent": d.mgmt.MacvlanParent,
+	}
+	
+	// Set macvlan mode (default to bridge if not specified)
+	macvlanMode := d.mgmt.MacvlanMode
+	if macvlanMode == "" {
+		macvlanMode = "bridge"
+	}
+	netwOpts["macvlan_mode"] = macvlanMode
+	
+	// Add any additional driver options from config
+	for k, v := range d.mgmt.DriverOpts {
+		log.Debug("Adding macvlan network driver option", "option", k, "value", v)
+		netwOpts[k] = v
+	}
+	
+	// Create the network
+	opts := networkapi.CreateOptions{
+		Driver:     "macvlan",
+		EnableIPv6: utils.Pointer(enableIPv6),
+		IPAM: &networkapi.IPAM{
+			Driver: "default",
+			Config: ipamConfig,
+		},
+		Internal:   false,
+		Attachable: false,
+		Labels: map[string]string{
+			"containerlab": "",
+		},
+		Options: netwOpts,
+	}
+	
+	_, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create macvlan network: %w", err)
 	}
-
-	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
-
-	return d.postCreateNetActions()
+	
+	log.Info("Macvlan network created successfully", "name", d.mgmt.Network)
+	
+	// If aux address was specified, provide instructions for creating host macvlan interface
+	if d.mgmt.MacvlanAux != "" {
+		log.Info("To enable host communication with containers, create a macvlan interface on the host:")
+		log.Infof("  sudo ip link add %s-host link %s type macvlan mode bridge", d.mgmt.Network, d.mgmt.MacvlanParent)
+		log.Infof("  sudo ip addr add %s/32 dev %s-host", d.mgmt.MacvlanAux, d.mgmt.Network)
+		log.Infof("  sudo ip link set %s-host up", d.mgmt.Network)
+		log.Infof("  sudo ip route add %s dev %s-host", d.mgmt.IPv4Subnet, d.mgmt.Network)
+	}
+	
+	return nil
 }
 
 // skipcq: GO-R1005
@@ -372,6 +561,13 @@ func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (string
 
 // postCreateNetActions performs additional actions after the network has been created.
 func (d *DockerRuntime) postCreateNetActions() (err error) {
+	// Skip all post-creation actions for macvlan networks
+	if d.mgmt.MacvlanDriver == "macvlan" {
+		log.Debug("Skipping post-creation actions for macvlan network")
+		return nil
+	}
+	
+	// Original bridge-specific actions below...
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
 	if err != nil {
@@ -403,7 +599,283 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	return nil
 }
 
-// DeleteNet deletes a docker bridge.
+// postCreateMacvlanActions performs macvlan-specific post-creation actions
+func (d *DockerRuntime) postCreateMacvlanActions() error {
+	// 1. Verify parent interface exists and is UP
+	parentLink, err := netlink.LinkByName(d.mgmt.MacvlanParent)
+	if err != nil {
+		return fmt.Errorf("failed to get parent interface %s: %w", d.mgmt.MacvlanParent, err)
+	}
+	
+	// Check if interface is UP
+	if parentLink.Attrs().OperState != netlink.OperUp {
+		log.Warnf("Parent interface %s is not UP (state: %s), containers may not have connectivity", 
+			d.mgmt.MacvlanParent, parentLink.Attrs().OperState)
+	}
+	
+	// 2. Check promiscuous mode
+	if parentLink.Attrs().Promisc == 0 {
+		log.Debugf("Parent interface %s is not in promiscuous mode, enabling it for better macvlan compatibility", 
+			d.mgmt.MacvlanParent)
+		// Enable promiscuous mode using command execution as a fallback
+		if err := enablePromiscuousMode(d.mgmt.MacvlanParent); err != nil {
+			log.Warnf("failed to enable promiscuous mode on %s: %v", d.mgmt.MacvlanParent, err)
+		}
+	}
+	
+	// 3. Log MTU information
+	parentMTU := parentLink.Attrs().MTU
+	log.Debugf("Parent interface %s has MTU %d, macvlan interfaces will inherit this", 
+		d.mgmt.MacvlanParent, parentMTU)
+	
+	// 4. Create host macvlan interface if aux address is specified
+	if d.mgmt.MacvlanAux != "" {
+		if err := d.createHostMacvlanInterface(); err != nil {
+			// Don't fail the entire operation, just warn
+			log.Warnf("Failed to create host macvlan interface: %v", err)
+			log.Info("You can manually create it with:")
+			log.Infof("  sudo ip link add %s-host link %s type macvlan mode bridge", 
+				d.mgmt.Network, d.mgmt.MacvlanParent)
+			log.Infof("  sudo ip addr add %s/%s dev %s-host", 
+				d.mgmt.MacvlanAux, getSubnetPrefix(d.mgmt.IPv4Subnet), d.mgmt.Network)
+			log.Infof("  sudo ip link set %s-host up", d.mgmt.Network)
+		} else {
+			log.Infof("Created host macvlan interface %s-host with IP %s", 
+				d.mgmt.Network, d.mgmt.MacvlanAux)
+		}
+	} else {
+		// Still warn about the limitation
+		log.Info("Note: Host cannot directly communicate with macvlan containers due to kernel limitations. " +
+			"Consider setting 'macvlan-aux' to create a host interface.")
+	}
+	
+	return nil
+}
+
+// createHostMacvlanInterface creates a macvlan interface on the host for container communication
+func (d *DockerRuntime) createHostMacvlanInterface() error {
+	hostIfName := d.mgmt.Network + "-host"
+	
+	// Check if interface already exists
+	if _, err := netlink.LinkByName(hostIfName); err == nil {
+		log.Debugf("Host macvlan interface %s already exists, skipping creation", hostIfName)
+		return nil
+	}
+	
+	// Get parent link
+	parentLink, err := netlink.LinkByName(d.mgmt.MacvlanParent)
+	if err != nil {
+		return fmt.Errorf("parent interface %s not found: %w", d.mgmt.MacvlanParent, err)
+	}
+	
+	// Create macvlan link
+	macvlan := &netlink.Macvlan{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:        hostIfName,
+			ParentIndex: parentLink.Attrs().Index,
+		},
+		Mode: netlink.MACVLAN_MODE_BRIDGE,
+	}
+	
+	// Parse mode if specified differently
+	if d.mgmt.MacvlanMode != "" && d.mgmt.MacvlanMode != "bridge" {
+		switch d.mgmt.MacvlanMode {
+		case "vepa":
+			macvlan.Mode = netlink.MACVLAN_MODE_VEPA
+		case "private":
+			macvlan.Mode = netlink.MACVLAN_MODE_PRIVATE
+		case "passthru":
+			macvlan.Mode = netlink.MACVLAN_MODE_PASSTHRU
+		}
+	}
+	
+	// Create the interface
+	if err := netlink.LinkAdd(macvlan); err != nil {
+		return fmt.Errorf("failed to create macvlan interface: %w", err)
+	}
+	
+	// Get the created interface
+	link, err := netlink.LinkByName(hostIfName)
+	if err != nil {
+		return fmt.Errorf("failed to get created interface: %w", err)
+	}
+	
+	// Parse and add IP address
+	addr, err := netlink.ParseAddr(d.mgmt.MacvlanAux + "/" + getSubnetPrefix(d.mgmt.IPv4Subnet))
+	if err != nil {
+		// Cleanup on failure
+		netlink.LinkDel(link)
+		return fmt.Errorf("failed to parse IP address %s: %w", d.mgmt.MacvlanAux, err)
+	}
+	
+	if err := netlink.AddrAdd(link, addr); err != nil {
+		// Cleanup on failure
+		netlink.LinkDel(link)
+		return fmt.Errorf("failed to add IP address: %w", err)
+	}
+	
+	// Bring the interface up
+	if err := netlink.LinkSetUp(link); err != nil {
+		// Cleanup on failure
+		netlink.LinkDel(link)
+		return fmt.Errorf("failed to bring interface up: %w", err)
+	}
+	
+	// Add route to the subnet via the aux address
+	_, ipnet, err := net.ParseCIDR(d.mgmt.IPv4Subnet)
+	if err != nil {
+		log.Warnf("Failed to parse subnet for route: %v", err)
+		// Don't fail entirely, the interface is still useful
+		return nil
+	}
+	
+	// Parse the aux address to use as gateway
+	auxIP := net.ParseIP(d.mgmt.MacvlanAux)
+	if auxIP == nil {
+		log.Warnf("Failed to parse aux IP for route: %s", d.mgmt.MacvlanAux)
+		return nil
+	}
+	
+	route := &netlink.Route{
+		LinkIndex: link.Attrs().Index,
+		Dst:       ipnet,
+		Gw:        auxIP,
+		Scope:     netlink.SCOPE_UNIVERSE,
+	}
+	
+	if err := netlink.RouteAdd(route); err != nil {
+		// This might fail if route already exists, which is ok
+		log.Debugf("Failed to add route (might already exist): %v", err)
+	} else {
+		log.Infof("Added route %s via %s dev %s", d.mgmt.IPv4Subnet, d.mgmt.MacvlanAux, hostIfName)
+	}
+	
+	return nil
+}
+
+// getSubnetPrefix extracts the prefix length from a CIDR notation
+func getSubnetPrefix(subnet string) string {
+	parts := strings.Split(subnet, "/")
+	if len(parts) == 2 {
+		return parts[1]
+	}
+	return "24" // default
+}
+
+// cleanupMacvlanPostActions reverses the changes made in postCreateMacvlanActions
+func (d *DockerRuntime) cleanupMacvlanPostActions() error {
+	// First, remove the static route if it exists
+	if d.mgmt.MacvlanAux != "" && d.mgmt.IPv4Subnet != "" {
+		_, ipnet, err := net.ParseCIDR(d.mgmt.IPv4Subnet)
+		if err == nil {
+			auxIP := net.ParseIP(d.mgmt.MacvlanAux)
+			if auxIP != nil {
+				// Find and delete the route
+				routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+				if err == nil {
+					for _, route := range routes {
+						if route.Dst != nil && route.Dst.String() == ipnet.String() && 
+						   route.Gw != nil && route.Gw.Equal(auxIP) {
+							if err := netlink.RouteDel(&route); err != nil {
+								log.Debugf("Failed to delete route %s via %s: %v", 
+									d.mgmt.IPv4Subnet, d.mgmt.MacvlanAux, err)
+							} else {
+								log.Infof("Removed route %s via %s", 
+									d.mgmt.IPv4Subnet, d.mgmt.MacvlanAux)
+							}
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	// Then cleanup the host interface (this might also remove associated routes)
+	if err := d.cleanupHostMacvlanInterface(); err != nil {
+		log.Warnf("Failed to cleanup host macvlan interface: %v", err)
+	}
+	
+	// Disable promiscuous mode on parent interface
+	parentLink, err := netlink.LinkByName(d.mgmt.MacvlanParent)
+	if err != nil {
+		// Parent interface might not exist anymore
+		log.Debugf("Parent interface %s not found during cleanup: %v", d.mgmt.MacvlanParent, err)
+		return nil
+	}
+	
+	// Check if there are other macvlan interfaces using this parent
+	links, err := netlink.LinkList()
+	if err == nil {
+		otherMacvlans := false
+		for _, link := range links {
+			if macvlan, ok := link.(*netlink.Macvlan); ok {
+				if macvlan.ParentIndex == parentLink.Attrs().Index && 
+				   macvlan.Name != d.mgmt.Network+"-host" {
+					otherMacvlans = true
+					break
+				}
+			}
+		}
+		
+		// Only disable promiscuous mode if no other macvlans are using this parent
+		if !otherMacvlans {
+			if err := disablePromiscuousMode(d.mgmt.MacvlanParent); err != nil {
+				log.Warnf("Failed to disable promiscuous mode on %s: %v", d.mgmt.MacvlanParent, err)
+			} else {
+				log.Debugf("Disabled promiscuous mode on %s", d.mgmt.MacvlanParent)
+			}
+		} else {
+			log.Debugf("Other macvlan interfaces exist on %s, keeping promiscuous mode enabled", d.mgmt.MacvlanParent)
+		}
+	}
+	
+	return nil
+}
+
+// enablePromiscuousMode enables promiscuous mode on an interface
+func enablePromiscuousMode(ifName string) error {
+	// Try using exec to run ip command as a fallback
+	cmd := exec.Command("ip", "link", "set", ifName, "promisc", "on")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to enable promiscuous mode: %w", err)
+	}
+	return nil
+}
+
+// disablePromiscuousMode disables promiscuous mode on an interface
+func disablePromiscuousMode(ifName string) error {
+	// Try using exec to run ip command as a fallback
+	cmd := exec.Command("ip", "link", "set", ifName, "promisc", "off")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to disable promiscuous mode: %w", err)
+	}
+	return nil
+}
+
+// cleanupHostMacvlanInterface removes the host macvlan interface if it exists
+func (d *DockerRuntime) cleanupHostMacvlanInterface() error {
+	if d.mgmt.MacvlanAux == "" {
+		return nil
+	}
+	
+	hostIfName := d.mgmt.Network + "-host"
+	
+	link, err := netlink.LinkByName(hostIfName)
+	if err != nil {
+		// Interface doesn't exist, nothing to clean up
+		return nil
+	}
+	
+	if err := netlink.LinkDel(link); err != nil {
+		return fmt.Errorf("failed to delete host macvlan interface: %w", err)
+	}
+	
+	log.Infof("Removed host macvlan interface %s", hostIfName)
+	return nil
+}
+
+// DeleteNet deletes a docker bridge or macvlan network.
 func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := d.mgmt.Network
 	if network == "bridge" || d.config.KeepMgmtNet {
@@ -427,14 +899,25 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		}
 		return nil
 	}
+	
+	// For macvlan networks, cleanup host interface first
+	if d.mgmt.MacvlanDriver == "macvlan" {
+		if err := d.cleanupMacvlanPostActions(); err != nil {
+			log.Warnf("Failed to cleanup macvlan post-actions: %v", err)
+		}
+	}
+	
 	err = d.Client.NetworkRemove(nctx, network)
 	if err != nil {
 		return err
 	}
 
-	err = d.deleteMgmtNetworkFwdRule()
-	if err != nil {
-		log.Warnf("errors during iptables rules removal: %v", err)
+	// Only run bridge-specific cleanup for bridge networks
+	if d.mgmt.MacvlanDriver != "macvlan" {
+		err = d.deleteMgmtNetworkFwdRule()
+		if err != nil {
+			log.Warnf("errors during iptables rules removal: %v", err)
+		}
 	}
 
 	return nil
