@@ -15,11 +15,11 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // APIServerListItem defines the structure for API server container info in JSON output.
@@ -43,28 +43,28 @@ func init() {
 var apiServerStatusCmd = &cobra.Command{
 	Use:     "status",
 	Short:   "show status of active Containerlab API server containers",
-	PreRunE: common.CheckAndGetRootPrivs,
+	PreRunE: utils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		// Use common.Runtime for consistency with other commands
-		runtimeName := common.Runtime
+		runtimeName := runtime
 		if runtimeName == "" {
 			runtimeName = apiServerRuntime
 		}
 
 		// Initialize containerlab with runtime using the same approach as inspect command
 		opts := []core.ClabOption{
-			core.WithTimeout(common.Timeout),
+			core.WithTimeout(timeout),
 			core.WithRuntime(runtimeName,
-				&runtime.RuntimeConfig{
-					Debug:            common.Debug,
-					Timeout:          common.Timeout,
-					GracefulShutdown: common.Graceful,
+				&containerlabruntime.RuntimeConfig{
+					Debug:            debug,
+					Timeout:          timeout,
+					GracefulShutdown: gracefulShutdown,
 				},
 			),
-			core.WithDebug(common.Debug),
+			core.WithDebug(debug),
 		}
 
 		c, err := core.NewContainerLab(opts...)

@@ -12,8 +12,6 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/cmd/common"
-	"github.com/srl-labs/containerlab/labels"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
@@ -34,41 +32,15 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 
 	var err error
 
-	// TODO this listing logic is obviously super redundant throughout clab and should be clearer
-	// and simplified. and maybe more automatic. like the clab instance will know if it has a name
-	// or filters or w/e set
 	if opts.all {
 		containers, err = c.ListContainers(ctx, nil)
-	} else if common.Topo != "" {
-		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
 	} else {
-		// TODO murder kill common entirely. these can/should be things passed to a clab instance
-		// where we are not importing like this (even in cmd it just feels lazy)
-		// List containers based on labels (--name or --all)
-		var gLabels []*types.GenericFilter
-		if common.Name != "" {
-			// Filter by specific lab name
-			gLabels = []*types.GenericFilter{{
-				FilterType: "label", Match: common.Name,
-				Field: labels.Containerlab, Operator: "=",
-			}}
-		} else { // --all case
-			// Filter for any containerlab container
-			gLabels = []*types.GenericFilter{{
-				FilterType: "label",
-				Field:      labels.Containerlab, Operator: "exists",
-			}}
-		}
-		containers, err = c.ListContainers(ctx, gLabels)
+		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
 	}
 
 	if err != nil {
 		return err
 	}
-
-	// TOOD second thing can be nil, but these are same/same when -t flag used
-	// fmt.Println("COMMON.TOPO >>> ", common.Topo)
-	// fmt.Println("C.TOPOPATHS.TOPOLIGYFILENAME >>> ", c.TopoPaths.TopologyFilenameAbsPath())
 
 	if len(containers) == 0 {
 		log.Info("no containerlab containers found")
@@ -76,8 +48,10 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 		if opts.cleanup && !opts.all {
 			var labDirs []string
 
-			if common.Topo != "" {
-				topoDir := filepath.Dir(common.Topo)
+			foundTopo := c.TopoPaths.TopologyFilenameAbsPath()
+
+			if foundTopo != "" {
+				topoDir := filepath.Dir(foundTopo)
 				log.Debug("Looking for lab directory next to topology file", "path", topoDir)
 				labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
 			} else if len(labDirs) == 0 {
@@ -111,7 +85,7 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 
 	log.Debugf("got the following topologies for destroy: %+v", topos)
 
-	// if all and cli doesnt have --yes flag and in a terminal, prompt user confirmation
+	// if all, and cli doesnt have --yes flag, and in a terminal -- prompt user confirmation
 	if opts.all && opts.terminalPrompt && utils.IsTerminal(os.Stdin.Fd()) {
 		err := cliPromptToDestroyAll(topos)
 		if err != nil {
@@ -124,16 +98,17 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 	for topo, labdir := range topos {
 		cOpts := []ClabOption{
 			WithTimeout(c.timeout),
-			WithTopoPath(topo, common.VarsFile),
+			WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()),
 			WithNodeFilter(opts.nodeFilter),
 			// during destroy we don't want to check bind paths
 			// as it is irrelevant for this command.
 			WithSkippedBindsPathsCheck(),
-			WithRuntime(common.Runtime,
+			WithRuntime(
+				c.globalRuntimeName,
 				&runtime.RuntimeConfig{
-					Debug:            common.Debug,
-					Timeout:          common.Timeout,
-					GracefulShutdown: common.Graceful,
+					Debug:            c.Config.Debug,
+					Timeout:          c.timeout,
+					GracefulShutdown: opts.graceful,
 				},
 			),
 		}
@@ -141,10 +116,6 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 		// TODO i think if we copy the runtimes this should be already set for us...?
 		if opts.keepMgmtNet {
 			cOpts = append(cOpts, WithKeepMgmtNet())
-		}
-
-		if common.Name != "" {
-			cOpts = append(cOpts, WithLabName(common.Name))
 		}
 
 		log.Debugf(

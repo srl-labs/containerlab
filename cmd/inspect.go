@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package inspect
+package cmd
 
 import (
 	"context"
@@ -18,7 +18,6 @@ import (
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
@@ -28,7 +27,6 @@ import (
 var (
 	inspectFormat string
 	details       bool
-	all           bool
 	wide          bool
 )
 
@@ -52,7 +50,7 @@ func init() {
 }
 
 func inspectFn(cobraCmd *cobra.Command, _ []string) error {
-	if common.Name == "" && common.Topo == "" && !all {
+	if labName == "" && topoFile == "" && !all {
 		return fmt.Errorf("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
 	}
 
@@ -66,21 +64,22 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	opts := []core.ClabOption{
-		core.WithTimeout(common.Timeout),
-		core.WithRuntime(common.Runtime,
+		core.WithTimeout(timeout),
+		core.WithRuntime(
+			runtime,
 			&containerlabruntime.RuntimeConfig{
-				Debug:            common.Debug,
-				Timeout:          common.Timeout,
-				GracefulShutdown: common.Graceful,
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(common.Debug),
+		core.WithDebug(debug),
 	}
 
-	if common.Topo != "" {
+	if topoFile != "" {
 		opts = append(opts,
-			core.WithTopoPath(common.Topo, common.VarsFile),
-			core.WithNodeFilter(common.NodeFilter),
+			core.WithTopoPath(topoFile, varsFile),
+			core.WithNodeFilter(nodeFilter),
 		)
 	}
 
@@ -123,7 +122,7 @@ func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.Ge
 	var err error
 	var gLabels []*types.GenericFilter
 
-	if common.Topo != "" {
+	if topoFile != "" {
 		// List containers defined in the topology file
 		containers, err = c.ListNodesContainers(ctx)
 		if err != nil {
@@ -131,10 +130,10 @@ func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.Ge
 		}
 	} else {
 		// List containers based on labels (--name or --all)
-		if common.Name != "" {
+		if labName != "" {
 			// Filter by specific lab name
 			gLabels = []*types.GenericFilter{{
-				FilterType: "label", Match: common.Name,
+				FilterType: "label", Match: labName,
 				Field: labels.Containerlab, Operator: "=",
 			}}
 		} else { // --all case

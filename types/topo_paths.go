@@ -33,6 +33,7 @@ var clabTmpDir = filepath.Join(os.TempDir(), ".clab")
 // generally all these paths are deduced from two main paths. The topology file path and the lab dir path.
 type TopoPaths struct {
 	topoFile           string
+	varsFile           string
 	labDir             string
 	topoName           string
 	externalCACertFile string // if an external CA certificate is used the path to the Cert file is stored here
@@ -40,9 +41,15 @@ type TopoPaths struct {
 }
 
 // NewTopoPaths constructs a new TopoPaths instance.
-func NewTopoPaths(topologyFile string) (*TopoPaths, error) {
+func NewTopoPaths(topologyFile, varsFile string) (*TopoPaths, error) {
 	t := &TopoPaths{}
+
 	err := t.SetTopologyFilePath(topologyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	err = t.SetTopologyVarsFilePath(varsFile)
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +71,28 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	}
 
 	t.topoFile = absTopoFile
+
+	return nil
+}
+
+// SetTopologyFilePath sets the topology file path.
+func (t *TopoPaths) SetTopologyVarsFilePath(varsFile string) error {
+	if varsFile == "" {
+		return nil
+	}
+
+	absVarsFile, err := filepath.Abs(varsFile)
+	if err != nil {
+		return err
+	}
+
+	// make sure vars file exists
+	_, err = os.Stat(absVarsFile)
+	if err != nil {
+		return err
+	}
+
+	t.varsFile = absVarsFile
 
 	return nil
 }
@@ -168,6 +197,11 @@ func (t *TopoPaths) NornirSimpleInventoryFileAbsPath() string {
 // TopologyFilenameAbsPath returns the absolute path to the topology file.
 func (t *TopoPaths) TopologyFilenameAbsPath() string {
 	return t.topoFile
+}
+
+// VarsFilenameAbsPath returns the absolute path to the topology vars file.
+func (t *TopoPaths) VarsFilenameAbsPath() string {
+	return t.varsFile
 }
 
 // ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or downloaded files.

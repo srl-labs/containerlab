@@ -12,12 +12,11 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
-	"github.com/srl-labs/containerlab/cmd/inspect"
 	"github.com/srl-labs/containerlab/cmd/version"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/core/dependency_manager"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // name of the container management network.
@@ -56,13 +55,13 @@ var deployCmd = &cobra.Command{
 	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
-	PreRunE:      common.CheckAndGetRootPrivs,
+	PreRunE:      utils.CheckAndGetRootPrivs,
 	RunE:         deployFn,
 }
 
 func init() {
 	RootCmd.AddCommand(deployCmd)
-	deployCmd.Flags().BoolVarP(&common.Graph, "graph", "g", false, "generate topology graph")
+	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
 	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
 	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
@@ -74,7 +73,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
 	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "",
 		"", "template file for topology data export")
-	deployCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
+	deployCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
 		"skip the lab directory extended ACLs provisioning")
@@ -94,25 +93,25 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	opts := []core.ClabOption{
-		core.WithTimeout(common.Timeout),
-		core.WithTopoPath(common.Topo, common.VarsFile),
-		core.WithTopoBackup(common.Topo),
-		core.WithNodeFilter(common.NodeFilter),
+		core.WithTimeout(timeout),
+		core.WithTopoPath(topoFile, varsFile),
+		core.WithTopoBackup(topoFile),
+		core.WithNodeFilter(nodeFilter),
 		core.WithRuntime(
-			common.Runtime,
-			&runtime.RuntimeConfig{
-				Debug:            common.Debug,
-				Timeout:          common.Timeout,
-				GracefulShutdown: common.Graceful,
+			runtime,
+			&containerlabruntime.RuntimeConfig{
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: gracefulShutdown,
 			},
 		),
 		core.WithDependencyManager(dependency_manager.NewDependencyManager()),
-		core.WithDebug(common.Debug),
+		core.WithDebug(debug),
 	}
 
 	// process optional settings
-	if common.Name != "" {
-		opts = append(opts, core.WithLabName(common.Name))
+	if labName != "" {
+		opts = append(opts, core.WithLabName(labName))
 	}
 	if labOwner != "" {
 		opts = append(opts, core.WithLabOwner(labOwner))
@@ -139,7 +138,7 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 
 	deploymentOptions.SetExportTemplate(exportTemplate).
 		SetReconfigure(reconfigure).
-		SetGraph(common.Graph).
+		SetGraph(graph).
 		SetSkipPostDeploy(skipPostDeploy).
 		SetSkipLabDirFileACLs(skipLabDirFileACLs)
 
@@ -158,5 +157,5 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	m.DisplayNewVersionAvailable(versionCheckContext)
 
 	// print table summary
-	return inspect.PrintContainerInspect(containers, deployFormat)
+	return PrintContainerInspect(containers, deployFormat)
 }

@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -26,7 +26,7 @@ var destroyCmd = &cobra.Command{
 	Short:   "destroy a lab",
 	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
 	Aliases: []string{"des"},
-	PreRunE: common.CheckAndGetRootPrivs,
+	PreRunE: utils.CheckAndGetRootPrivs,
 	RunE:    destroyFn,
 }
 
@@ -34,7 +34,7 @@ func init() {
 	RootCmd.AddCommand(destroyCmd)
 	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false,
 		"delete lab directory. Cannot be used with node-filter")
-	destroyCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
+	destroyCmd.Flags().BoolVarP(&gracefulShutdown, "graceful", "", false,
 		"attempt to stop containers before removing")
 	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
 	destroyCmd.Flags().BoolVarP(&yes, "yes", "y", false,
@@ -42,37 +42,38 @@ func init() {
 	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers deleting nodes")
 	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
-	destroyCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
+	destroyCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 }
 
 func destroyFn(cobraCmd *cobra.Command, _ []string) error {
-	if cleanup && len(common.NodeFilter) != 0 {
+	if cleanup && len(nodeFilter) != 0 {
 		return fmt.Errorf("cleanup cannot be used with node-filter")
 	}
 
-	if all && common.Name != "" {
+	if all && labName != "" {
 		return fmt.Errorf("--all and --name should not be used together")
 	}
 
 	opts := []core.ClabOption{
-		core.WithTimeout(common.Timeout),
-		core.WithLabName(common.Name),
-		core.WithRuntime(common.Runtime,
-			&runtime.RuntimeConfig{
-				Debug:            common.Debug,
-				Timeout:          common.Timeout,
-				GracefulShutdown: common.Graceful,
+		core.WithTimeout(timeout),
+		core.WithLabName(labName),
+		core.WithRuntime(
+			runtime,
+			&containerlabruntime.RuntimeConfig{
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(common.Debug),
+		core.WithDebug(debug),
 		// during destroy we don't want to check bind paths
 		// as it is irrelevant for this command.
 		core.WithSkippedBindsPathsCheck(),
 	}
 
-	if common.Topo != "" {
-		opts = append(opts, core.WithTopoPath(common.Topo, common.VarsFile))
+	if topoFile != "" {
+		opts = append(opts, core.WithTopoPath(topoFile, varsFile))
 	}
 
 	if keepMgmtNet {
@@ -86,7 +87,7 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 
 	destroyOptions := []core.DestroyOption{
 		core.WithDestroyMaxWorkers(maxWorkers),
-		core.WithDestroyNodeFilter(common.NodeFilter),
+		core.WithDestroyNodeFilter(nodeFilter),
 	}
 
 	if keepMgmtNet {
@@ -103,7 +104,7 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 		)
 	}
 
-	if common.Graceful {
+	if gracefulShutdown {
 		destroyOptions = append(
 			destroyOptions,
 			core.WithDestroyGraceful(),

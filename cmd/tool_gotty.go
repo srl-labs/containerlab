@@ -14,12 +14,11 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/exec"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -173,7 +172,7 @@ func (n *GoTTYNode) GetEndpoints() []links.Endpoint {
 }
 
 // Simplified version of getGoTTYStatus.
-func getGoTTYStatus(ctx context.Context, rt runtime.ContainerRuntime, containerName string, port int) (bool, string) {
+func getGoTTYStatus(ctx context.Context, rt containerlabruntime.ContainerRuntime, containerName string, port int) (bool, string) {
 	// Pass the port parameter to the status command
 	statusCmd := fmt.Sprintf("gotty-service status %d", port)
 	execCmd, err := exec.NewExecCmdFromString(statusCmd)
@@ -204,17 +203,17 @@ func getGoTTYStatus(ctx context.Context, rt runtime.ContainerRuntime, containerN
 var gottyAttachCmd = &cobra.Command{
 	Use:     "attach",
 	Short:   "attach GoTTY web terminal to a lab",
-	PreRunE: common.CheckAndGetRootPrivs,
+	PreRunE: utils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		log.Debugf("gotty attach called with flags: labName='%s', containerName='%s', port=%d, username='%s', password='%s', shell='%s', image='%s', topo='%s'",
-			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
+			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, topoFile)
 
 		// Get lab topology information
-		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
-			gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
+			gottyLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
 		if err != nil {
 			return err
 		}
@@ -222,9 +221,6 @@ var gottyAttachCmd = &cobra.Command{
 		networkName := clabInstance.Config.Mgmt.Network
 		if networkName == "" {
 			networkName = "clab-" + labName
-		}
-		if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
-			common.Topo = clabInstance.TopoPaths.TopologyFilenameAbsPath()
 		}
 
 		// Set container name if not provided
@@ -234,15 +230,15 @@ var gottyAttachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(runtime)
 		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
+			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtime, err)
 		}
 
 		rt := rinit()
 		err = rt.Init(
-			runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}),
-			runtime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
+			containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}),
+			containerlabruntime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
@@ -269,7 +265,14 @@ var gottyAttachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabelsMap(labName, gottyContainerName, owner, gotty)
+
+		labelsMap := createLabelsMap(
+			clabInstance.TopoPaths.TopologyFilenameAbsPath(),
+			labName,
+			gottyContainerName,
+			owner,
+			gotty,
+		)
 
 		// Create and start GoTTY container
 		log.Infof("Creating GoTTY container %s on network '%s'", gottyContainerName, networkName)
@@ -323,20 +326,20 @@ var gottyAttachCmd = &cobra.Command{
 var gottyDetachCmd = &cobra.Command{
 	Use:     "detach",
 	Short:   "detach GoTTY web terminal from a lab",
-	PreRunE: common.CheckAndGetRootPrivs,
+	PreRunE: utils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		// Get lab topology information
-		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
-			gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
+			gottyLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
 		if err != nil {
 			return err
 		}
 		labName := clabInstance.Config.Name
 		if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
-			common.Topo = clabInstance.TopoPaths.TopologyFilenameAbsPath()
+			topoFile = clabInstance.TopoPaths.TopologyFilenameAbsPath()
 		}
 
 		// Form the container name
@@ -344,13 +347,13 @@ var gottyDetachCmd = &cobra.Command{
 		log.Debugf("Container name for deletion: %s", containerName)
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
 
 		rt := rinit()
-		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
+		err = rt.Init(containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}))
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}
@@ -374,13 +377,13 @@ var gottyListCmd = &cobra.Command{
 		defer cancel()
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
 
 		rt := rinit()
-		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
+		err = rt.Init(containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}))
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}
@@ -495,17 +498,17 @@ var gottyListCmd = &cobra.Command{
 var gottyReattachCmd = &cobra.Command{
 	Use:     "reattach",
 	Short:   "detach and reattach GoTTY web terminal to a lab",
-	PreRunE: common.CheckAndGetRootPrivs,
+	PreRunE: utils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		log.Debugf("gotty reattach called with flags: labName='%s', containerName='%s', port=%d, username='%s', password='%s', shell='%s', image='%s', topo='%s'",
-			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, common.Topo)
+			gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, topoFile)
 
 		// Get lab topology information
-		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, common.Topo,
-			gottyLabName, common.VarsFile, common.Runtime, common.Debug, common.Timeout, common.Graceful)
+		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
+			gottyLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
 		if err != nil {
 			return err
 		}
@@ -515,7 +518,7 @@ var gottyReattachCmd = &cobra.Command{
 			networkName = "clab-" + labName
 		}
 		if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
-			common.Topo = clabInstance.TopoPaths.TopologyFilenameAbsPath()
+			topoFile = clabInstance.TopoPaths.TopologyFilenameAbsPath()
 		}
 
 		// Set container name if not provided
@@ -525,15 +528,15 @@ var gottyReattachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(common.Runtime)
+		_, rinit, err := core.RuntimeInitializer(runtime)
 		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer for '%s': %w", common.Runtime, err)
+			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtime, err)
 		}
 
 		rt := rinit()
 		err = rt.Init(
-			runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}),
-			runtime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
+			containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}),
+			containerlabruntime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
@@ -561,7 +564,14 @@ var gottyReattachCmd = &cobra.Command{
 		if owner == "" {
 			owner = utils.GetOwner()
 		}
-		labelsMap := common.CreateLabelsMap(labName, gottyContainerName, owner, gotty)
+
+		labelsMap := createLabelsMap(
+			clabInstance.TopoPaths.TopologyFilenameAbsPath(),
+			labName,
+			gottyContainerName,
+			owner,
+			gotty,
+		)
 
 		// Create and start GoTTY container
 		log.Infof("Creating new GoTTY container %s on network '%s'", gottyContainerName, networkName)

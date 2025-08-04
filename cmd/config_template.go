@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/core/config"
 )
@@ -23,9 +22,9 @@ var configTemplateCmd = &cobra.Command{
 		config.DebugCount = debugCount
 
 		c, err := core.NewContainerLab(
-			core.WithTimeout(common.Timeout),
-			core.WithTopoPath(common.Topo, common.VarsFile),
-			core.WithDebug(common.Debug),
+			core.WithTimeout(timeout),
+			core.WithTopoPath(topoFile, varsFile),
+			core.WithDebug(debug),
 		)
 		if err != nil {
 			return err

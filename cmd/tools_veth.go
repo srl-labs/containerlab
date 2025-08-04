@@ -12,12 +12,11 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -46,7 +45,7 @@ var vethCmd = &cobra.Command{
 var vethCreateCmd = &cobra.Command{
 	Use:     "create",
 	Short:   "Create a veth interface and attach its sides to the specified containers",
-	PreRunE: common.CheckAndGetRootPrivs,
+	PreRunE: utils.CheckAndGetRootPrivs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 
@@ -61,15 +60,16 @@ var vethCreateCmd = &cobra.Command{
 		}
 
 		opts := []core.ClabOption{
-			core.WithTimeout(common.Timeout),
-			core.WithRuntime(common.Runtime,
-				&runtime.RuntimeConfig{
-					Debug:            common.Debug,
-					Timeout:          common.Timeout,
-					GracefulShutdown: common.Graceful,
+			core.WithTimeout(timeout),
+			core.WithRuntime(
+				runtime,
+				&containerlabruntime.RuntimeConfig{
+					Debug:            debug,
+					Timeout:          timeout,
+					GracefulShutdown: gracefulShutdown,
 				},
 			),
-			core.WithDebug(common.Debug),
+			core.WithDebug(debug),
 		}
 		c, err := core.NewContainerLab(opts...)
 		if err != nil {
@@ -79,7 +79,7 @@ var vethCreateCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		rtName, _, err := core.RuntimeInitializer(common.Runtime)
+		rtName, _, err := core.RuntimeInitializer(runtime)
 		if err != nil {
 			return err
 		}

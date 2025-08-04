@@ -1,4 +1,4 @@
-package inspect
+package cmd
 
 import (
 	"encoding/json"
@@ -11,11 +11,11 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -30,7 +30,7 @@ var inspectInterfacesCmd = &cobra.Command{
 	Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
 	Aliases: []string{"int", "intf"},
 	RunE:    inspectInterfacesFn,
-	PreRunE: common.CheckAndGetRootPrivs,
+	PreRunE: utils.CheckAndGetRootPrivs,
 }
 
 func init() {
@@ -41,7 +41,7 @@ func init() {
 }
 
 func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
-	if common.Name == "" && common.Topo == "" {
+	if labName == "" && topoFile == "" {
 		fmt.Println("provide either a lab name (--name) or a topology file path (--topo)")
 		return nil
 	}
@@ -51,22 +51,22 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	opts := []core.ClabOption{
-		core.WithTimeout(common.Timeout),
+		core.WithTimeout(timeout),
 		core.WithRuntime(
-			common.Runtime,
+			runtime,
 			&containerlabruntime.RuntimeConfig{
-				Debug:            common.Debug,
-				Timeout:          common.Timeout,
-				GracefulShutdown: common.Graceful,
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(common.Debug),
+		core.WithDebug(debug),
 	}
 
-	if common.Topo != "" {
+	if topoFile != "" {
 		opts = append(opts,
-			core.WithTopoPath(common.Topo, common.VarsFile),
-			core.WithNodeFilter(common.NodeFilter),
+			core.WithTopoPath(topoFile, varsFile),
+			core.WithNodeFilter(nodeFilter),
 		)
 	}
 
@@ -78,17 +78,17 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 	var containers []containerlabruntime.GenericContainer
 	var glabels []*types.GenericFilter
 
-	labName := ""
-	if common.Name != "" {
-		labName = common.Name
+	labNameFilterLabel := ""
+	if labName != "" {
+		labNameFilterLabel = labName
 	} else if c.Config.Name != "" {
-		labName = c.Config.Name
+		labNameFilterLabel = c.Config.Name
 	} else {
 		return fmt.Errorf("could not find topology")
 	}
 
 	glabels = append(glabels, &types.GenericFilter{
-		FilterType: "label", Match: labName,
+		FilterType: "label", Match: labNameFilterLabel,
 		Field: labels.Containerlab, Operator: "=",
 	})
 

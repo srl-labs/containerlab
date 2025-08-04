@@ -1,4 +1,4 @@
-package common
+package utils
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 	"os/user"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/utils"
 	"golang.org/x/sys/unix"
 
 	"github.com/charmbracelet/log"
@@ -26,7 +25,7 @@ func CheckAndGetRootPrivs(_ *cobra.Command, _ []string) error {
 
 	// If we are not running directly as root, and SUID is properly set, attempt to get root privileges
 	if euid != 0 && suid == 0 {
-		clabGroupExists, err := utils.UnixGroupExists(CLAB_AUTHORISED_GROUP)
+		clabGroupExists, err := UnixGroupExists(CLAB_AUTHORISED_GROUP)
 		if err != nil {
 			return fmt.Errorf("failed to lookup containerlab admin group: %w", err)
 		}
@@ -37,7 +36,7 @@ func CheckAndGetRootPrivs(_ *cobra.Command, _ []string) error {
 				return fmt.Errorf("failed to retrieve current user details: %w", err)
 			}
 
-			userInClabGroup, err := utils.UserInUnixGroup(currentEffUser.Username, CLAB_AUTHORISED_GROUP)
+			userInClabGroup, err := UserInUnixGroup(currentEffUser.Username, CLAB_AUTHORISED_GROUP)
 			if err != nil {
 				return fmt.Errorf("failed to check containerlab admin group membership: %w", err)
 			}

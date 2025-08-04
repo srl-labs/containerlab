@@ -11,11 +11,10 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 // saveCmd represents the save command.
@@ -25,21 +24,22 @@ var saveCmd = &cobra.Command{
 	Long: `save performs a configuration save. The exact command that is used to save the config depends on the node kind.
 Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact command used per node's kind`,
 	RunE: func(_ *cobra.Command, _ []string) error {
-		if common.Name == "" && common.Topo == "" {
+		if labName == "" && topoFile == "" {
 			return fmt.Errorf("provide topology file path  with --topo flag")
 		}
 		opts := []core.ClabOption{
-			core.WithTimeout(common.Timeout),
-			core.WithTopoPath(common.Topo, common.VarsFile),
-			core.WithNodeFilter(common.NodeFilter),
-			core.WithRuntime(common.Runtime,
-				&runtime.RuntimeConfig{
-					Debug:            common.Debug,
-					Timeout:          common.Timeout,
-					GracefulShutdown: common.Graceful,
+			core.WithTimeout(timeout),
+			core.WithTopoPath(topoFile, varsFile),
+			core.WithNodeFilter(nodeFilter),
+			core.WithRuntime(
+				runtime,
+				&containerlabruntime.RuntimeConfig{
+					Debug:            debug,
+					Timeout:          timeout,
+					GracefulShutdown: gracefulShutdown,
 				},
 			),
-			core.WithDebug(common.Debug),
+			core.WithDebug(debug),
 		}
 		c, err := core.NewContainerLab(opts...)
 		if err != nil {
@@ -73,7 +73,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 }
 
 func init() {
-	saveCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
+	saveCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 	RootCmd.AddCommand(saveCmd)
 }

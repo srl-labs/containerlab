@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/core/config"
 	"github.com/srl-labs/containerlab/core/config/transport"
@@ -60,10 +59,10 @@ func configRun(_ *cobra.Command, args []string) error {
 	config.DebugCount = debugCount
 
 	c, err := core.NewContainerLab(
-		core.WithTimeout(common.Timeout),
-		core.WithTopoPath(common.Topo, common.VarsFile),
-		core.WithNodeFilter(common.NodeFilter),
-		core.WithDebug(common.Debug),
+		core.WithTimeout(timeout),
+		core.WithTopoPath(topoFile, varsFile),
+		core.WithNodeFilter(nodeFilter),
+		core.WithDebug(debug),
 	)
 	if err != nil {
 		return err
@@ -158,7 +157,7 @@ func init() {
 		"comma separated list of nodes to include")
 	configCmd.Flags().SortFlags = false
 
-	configCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
+	configCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 
 	configCmd.AddCommand(configSendCmd)
