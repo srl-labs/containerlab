@@ -725,7 +725,7 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 	
 	log.Debugf("Creating macvlan with mode='%s' value=%d", d.mgmt.MacvlanMode, mode)
 	
-	log.Debugf("Creating macvlan with mode=%d (0=private, 1=vepa, 2=bridge, 3=passthru)", mode)
+	log.Debugf("Creating macvlan with mode=%d (0=private, 1=vepa, 2=passthru, 3=bridge)", mode)
 	
 	// Create macvlan link with minimal attributes first
 	macvlan := &netlink.Macvlan{
@@ -742,17 +742,17 @@ func (d *DockerRuntime) createHostMacvlanInterface() error {
 		macvlan.LinkAttrs.ParentIndex, 
 		macvlan.Mode)
 	
-	// Try to create using command line as a test
-	cmd := osexec.Command("ip", "link", "add", hostIfName, "link", d.mgmt.MacvlanParent, "type", "macvlan", "mode", "bridge")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		log.Debugf("Command line test failed: %v, output: %s", err, string(output))
-		// Don't return here, continue with netlink
-	} else {
-		log.Debug("Command line creation succeeded, removing to use netlink")
-		// Remove it so we can create via netlink
-		delCmd := osexec.Command("ip", "link", "del", hostIfName)
-		delCmd.Run()
-	}
+	// // Try to create using command line as a test
+	// cmd := osexec.Command("ip", "link", "add", hostIfName, "link", d.mgmt.MacvlanParent, "type", "macvlan", "mode", "bridge")
+	// if output, err := cmd.CombinedOutput(); err != nil {
+	// 	log.Debugf("Command line test failed: %v, output: %s", err, string(output))
+	// 	// Don't return here, continue with netlink
+	// } else {
+	// 	log.Debug("Command line creation succeeded, removing to use netlink")
+	// 	// Remove it so we can create via netlink
+	// 	delCmd := osexec.Command("ip", "link", "del", hostIfName)
+	// 	delCmd.Run()
+	// }
 	
 	// Create the interface via netlink
 	if err := netlink.LinkAdd(macvlan); err != nil {
