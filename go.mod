@@ -43,7 +43,7 @@ require (
 	github.com/vishvananda/netlink v1.3.1
 	github.com/weaveworks/ignite v0.10.0
 	go.uber.org/mock v0.5.0
-	golang.org/x/crypto v0.39.0
+	golang.org/x/crypto v0.40.0
 	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329
 	golang.org/x/sys v0.34.0
 	golang.org/x/term v0.33.0
@@ -218,7 +218,7 @@ require (
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/sys/signal v0.7.0 // indirect
-	github.com/moby/term v0.5.2 // indirect
+	github.com/moby/term v0.5.2
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nightlyone/lockfile v1.0.0 // indirect
@@ -249,10 +249,10 @@ require (
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	golang.org/x/mod v0.25.0
 	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sync v0.15.0
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/sync v0.16.0
+	golang.org/x/text v0.27.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
-	golang.org/x/tools v0.33.0 // indirect
+	golang.org/x/tools v0.34.0 // indirect
 	google.golang.org/genproto v0.0.0-20241118233622-e639e219e697 // indirect
 	google.golang.org/grpc v1.69.4 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
