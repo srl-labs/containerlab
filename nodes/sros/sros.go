@@ -301,7 +301,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 			if err != nil {
 				return err
 			}
-			err = n.saveConfig(ctx, addr)
+			err = n.saveConfigWithAddr(ctx, addr)
 			if err != nil {
 				return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
 			}
@@ -1037,11 +1037,12 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 		}
 		fqdn = n.Cfg.LongName
 	}
-	return n.saveConfig(ctx, fqdn)
+	return n.saveConfigWithAddr(ctx, fqdn)
 }
 
-func (n *sros) saveConfig(_ context.Context, addr string) error {
-	err := netconf.SaveRunningConfig(addr,
+// saveConfigWithAddr will use the addr string to try to save the config of the node
+func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
+	err := netconf.SaveRunningConfig(fmt.Sprintf("[%s]",addr),
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -1096,11 +1097,11 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 // MgmtIPAddr returns ipv4 or ipv6 management IP address of the node.
 // It returns an error if neither is set in the node config.
 func (n *sros) MgmtIPAddr() (string, error) {
-	if n.Cfg.MgmtIPv4Address != "" {
-		return n.Cfg.MgmtIPv4Address, nil
-	} else if n.Cfg.MgmtIPv6Address != "" {
+	if n.Cfg.MgmtIPv6Address != "" {
 		return n.Cfg.MgmtIPv6Address, nil
+	} else if n.Cfg.MgmtIPv4Address != "" {
+		return n.Cfg.MgmtIPv4Address, nil
 	} else {
-		return n.Cfg.LongName, fmt.Errorf("no management IP address (IPv4 or IPv6) configured for node %q", n.Cfg.LongName)
+		return n.Cfg.LongName, fmt.Errorf("no management IP address (IPv6 or IPv4) configured for node %q", n.Cfg.LongName)
 	}
 }
