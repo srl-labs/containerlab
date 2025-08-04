@@ -1040,7 +1040,7 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 	return n.saveConfigWithAddr(ctx, fqdn)
 }
 
-// saveConfigWithAddr will use the addr string to try to save the config of the node
+// saveConfigWithAddr will use the addr string to try to save the config of the node.
 func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
 	err := netconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
 		defaultCredentials.GetUsername(),
