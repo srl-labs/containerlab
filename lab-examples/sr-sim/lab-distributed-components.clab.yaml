@@ -12,6 +12,7 @@ topology:
       kind: nokia_srsim
       type: SR-7
       startup-config: configs/srsim10.distributed.partial.cfg
+      mgmt-ipv4: 10.78.140.2
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 02:f3:00:00:00:00
       components:
@@ -29,6 +30,7 @@ topology:
       kind: nokia_srsim
       type: SR-7
       startup-config: configs/srsim11.distributed.partial.cfg
+      mgmt-ipv4: 10.78.140.3
       components:
         - slot: A
         - slot: B

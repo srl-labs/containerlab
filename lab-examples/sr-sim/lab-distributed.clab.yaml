@@ -11,6 +11,7 @@ topology:
     srsim10-a:
       kind: nokia_srsim
       type: SR-7
+      mgmt-ipv4: 10.78.140.2
       startup-config: configs/srsim10.distributed.partial.cfg
       env:
         NOKIA_SROS_SLOT: A
@@ -42,6 +43,7 @@ topology:
     srsim11-a:
       kind: nokia_srsim
       type: SR-7
+      mgmt-ipv4: 10.78.140.3
       startup-config: configs/srsim11.distributed.partial.cfg
       env:
         NOKIA_SROS_SLOT: A
