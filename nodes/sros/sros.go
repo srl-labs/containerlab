@@ -229,6 +229,10 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 
 	n.topologyName = params.TopologyName
 
+	if strings.HasPrefix(n.Cfg.NetworkMode, "container:") {
+		n.Cfg.ExtraHosts = nil
+	}
+
 	// either the non-distributed OR distributed AND is a CPM
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
