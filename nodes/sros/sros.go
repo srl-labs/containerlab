@@ -150,7 +150,7 @@ type sros struct {
 	// software version SR OS x node runs
 	swVersion      *SrosVersion
 	componentNodes []nodes.Node
-	// in distributed mode we rename the Cfg.LongName and Cfg.Shortname and Cfg.Fqdn attributes when deploying.
+	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when deploying.
 	// e.g. inspect is either called after deploy or independently. Hence we need to differentiate if we need to perform the
 	// component cpm based rename or not. This field indicates just that
 	renameDone bool
@@ -1050,7 +1050,7 @@ func (n *sros) saveConfig(_ context.Context, addr string) error {
 		return err
 	}
 
-	log.Info("Saved running configuration", "node", addr)
+	log.Info("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr)
 
 	return nil
 }
