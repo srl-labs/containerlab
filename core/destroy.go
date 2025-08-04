@@ -34,8 +34,28 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 
 	if opts.all {
 		containers, err = c.ListContainers(ctx, nil)
-	} else {
+	} else if c.TopoPaths.TopologyFilenameAbsPath() != "" {
 		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
+	} else {
+		// TODO this filter behavior is common and duplicated a bunch, should be some standard
+		// setting/setup/function to do this
+		var gLabels []*types.GenericFilter
+		if c.Config.Name != "" {
+			gLabels = []*types.GenericFilter{
+				{
+					FilterType: "label", Match: c.Config.Name,
+					Field: containerlablabels.Containerlab, Operator: "=",
+				},
+			}
+		} else {
+			gLabels = []*types.GenericFilter{
+				{
+					FilterType: "label",
+					Field:      containerlablabels.Containerlab, Operator: "exists",
+				},
+			}
+		}
+		containers, err = c.ListContainers(ctx, gLabels)
 	}
 
 	if err != nil {
@@ -48,10 +68,10 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 		if opts.cleanup && !opts.all {
 			var labDirs []string
 
-			foundTopo := c.TopoPaths.TopologyFilenameAbsPath()
+			topoPath := c.TopoPaths.TopologyFilenameAbsPath()
 
-			if foundTopo != "" {
-				topoDir := filepath.Dir(foundTopo)
+			if topoPath != "" {
+				topoDir := filepath.Dir(topoPath)
 				log.Debug("Looking for lab directory next to topology file", "path", topoDir)
 				labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
 			} else if len(labDirs) == 0 {

@@ -69,6 +69,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 			Mgmt:     new(types.MgmtNet),
 			Topology: types.NewTopology(),
 		},
+		TopoPaths:       &types.TopoPaths{},
 		m:               new(sync.RWMutex),
 		Nodes:           make(map[string]nodes.Node),
 		Links:           make(map[int]links.Link),
