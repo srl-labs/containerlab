@@ -180,7 +180,8 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
 	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
-	
+
+	var networkCreated bool
 	switch {
 	case dockerC.IsErrNotFound(err):
 		// Network doesn't exist, create it based on driver type
@@ -192,6 +193,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			}
 			
 		case "macvlan":
+			networkCreated = true
 			err = d.createMgmtMacvlan(nctx)
 			if err != nil {
 				return err
@@ -205,6 +207,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		
 	case err == nil:
 		// Network exists, validate it matches expected driver
+		networkCreated = false
 		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
 		if netResource.Driver != driver {
 			return fmt.Errorf("existing network %q has driver %q but configuration specifies %q", 
@@ -274,7 +277,9 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		}
 		
 		log.Debugf("Docker macvlan network %q created/reused with parent interface %q", d.mgmt.Network, d.mgmt.MacvlanParent)
-		return d.postCreateMacvlanActions()
+		if networkCreated {
+        	return d.postCreateMacvlanActions()
+    	}
 	}
 
 	return nil
@@ -835,25 +840,32 @@ func getSubnetPrefix(subnet string) string {
 // cleanupMacvlanPostActions reverses the changes made in postCreateMacvlanActions
 func (d *DockerRuntime) cleanupMacvlanPostActions() error {
 	// First, remove the static route if it exists
+	// In cleanupMacvlanPostActions(), fix the route cleanup:
 	if d.mgmt.MacvlanAux != "" && d.mgmt.IPv4Subnet != "" {
+		// Get the sanitized host interface name
+		hostIfNameNonAlpha := d.mgmt.Network + "-host"
+		hostIfName := sanitizeAlphanumeric(hostIfNameNonAlpha)
+		
 		_, ipnet, err := net.ParseCIDR(d.mgmt.IPv4Subnet)
 		if err == nil {
-			auxIP := net.ParseIP(d.mgmt.MacvlanAux)
-			if auxIP != nil {
-				// Find and delete the route
-				routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
-				if err == nil {
-					for _, route := range routes {
-						if route.Dst != nil && route.Dst.String() == ipnet.String() && 
-						   route.Gw != nil && route.Gw.Equal(auxIP) {
-							if err := netlink.RouteDel(&route); err != nil {
-								log.Debugf("Failed to delete route %s via %s: %v", 
-									d.mgmt.IPv4Subnet, d.mgmt.MacvlanAux, err)
-							} else {
-								log.Infof("Removed route %s via %s", 
-									d.mgmt.IPv4Subnet, d.mgmt.MacvlanAux)
+			// Find and delete routes associated with this interface
+			routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+			if err == nil {
+				for _, route := range routes {
+					// Check if this route is for our subnet and uses our interface
+					if route.Dst != nil && route.Dst.String() == ipnet.String() {
+						// Get the link to check if it's our interface
+						if route.LinkIndex > 0 {
+							link, err := netlink.LinkByIndex(route.LinkIndex)
+							if err == nil && link.Attrs().Name == hostIfName {
+								if err := netlink.RouteDel(&route); err != nil {
+									log.Debugf("Failed to delete route %s dev %s: %v", 
+										route.Dst.String(), hostIfName, err)
+								} else {
+									log.Infof("Removed route %s dev %s", 
+										route.Dst.String(), hostIfName)
+								}
 							}
-							break
 						}
 					}
 				}
