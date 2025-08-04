@@ -28,7 +28,7 @@ require (
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/kellerza/template v0.0.6
 	github.com/klauspost/cpuid/v2 v2.2.11
-	github.com/mackerelio/go-osstat v0.2.5
+	github.com/mackerelio/go-osstat v0.2.6
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/opencontainers/runtime-spec v1.2.0
@@ -218,7 +218,7 @@ require (
 	github.com/moby/locker v1.0.1 // indirect
 	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/sys/signal v0.7.0 // indirect
-	github.com/moby/term v0.5.2 // indirect
+	github.com/moby/term v0.5.2
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/nightlyone/lockfile v1.0.0 // indirect
