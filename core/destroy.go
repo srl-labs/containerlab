@@ -21,7 +21,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
+func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) error {
 	opts := NewDestroyOptions()
 
 	for _, opt := range options {
@@ -185,9 +185,7 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 	var errs []error
 
 	for _, clab := range clabs {
-		// TODO this method can probably become "Destroy" and the current one just goes to some
-		// private internal method i assume...?
-		err = clab.Destroy(ctx, opts.maxWorkers, opts.keepMgmtNet)
+		err = clab.destroy(ctx, opts.maxWorkers, opts.keepMgmtNet)
 		if err != nil {
 			log.Errorf("Error occurred during the %s lab deletion: %v", clab.Config.Name, err)
 			errs = append(errs, err)
@@ -210,8 +208,7 @@ func (c *CLab) DestroyNew(ctx context.Context, options ...DestroyOption) error {
 	return nil
 }
 
-// Destroy the given topology.
-func (c *CLab) Destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
+func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
 	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
 	if err != nil {
 		return err

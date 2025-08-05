@@ -125,5 +125,5 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	return clab.DestroyNew(cobraCmd.Context(), destroyOptions...)
+	return clab.Destroy(cobraCmd.Context(), destroyOptions...)
 }
