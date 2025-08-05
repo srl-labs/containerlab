@@ -35,25 +35,15 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	} else if c.TopoPaths.TopologyFilenameAbsPath() != "" {
 		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
 	} else {
-		// TODO this filter behavior is common and duplicated a bunch, should be some standard
-		// setting/setup/function to do this
-		var gLabels []*types.GenericFilter
+		var listOpts []ListOption
+
 		if c.Config.Name != "" {
-			gLabels = []*types.GenericFilter{
-				{
-					FilterType: "label", Match: c.Config.Name,
-					Field: containerlablabels.Containerlab, Operator: "=",
-				},
-			}
+			listOpts = []ListOption{WithListLabName(c.Config.Name)}
 		} else {
-			gLabels = []*types.GenericFilter{
-				{
-					FilterType: "label",
-					Field:      containerlablabels.Containerlab, Operator: "exists",
-				},
-			}
+			listOpts = []ListOption{WithListContainerlabLabelExists()}
 		}
-		containers, err = c.ListContainers(ctx, gLabels)
+
+		containers, err = c.ListContainers(ctx, listOpts...)
 	}
 
 	if err != nil {

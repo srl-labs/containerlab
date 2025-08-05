@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -75,9 +74,6 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
 
-	var containers []containerlabruntime.GenericContainer
-	var glabels []*types.GenericFilter
-
 	labNameFilterLabel := ""
 	if labName != "" {
 		labNameFilterLabel = labName
@@ -87,19 +83,18 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not find topology")
 	}
 
-	glabels = append(glabels, &types.GenericFilter{
-		FilterType: "label", Match: labNameFilterLabel,
-		Field: labels.Containerlab, Operator: "=",
-	})
-
-	if interfacesNodeName != "" {
-		glabels = append(glabels, &types.GenericFilter{
-			FilterType: "label", Match: interfacesNodeName,
-			Field: labels.LongName, Operator: "=",
-		})
+	listOpts := []core.ListOption{
+		core.WithListLabName(labNameFilterLabel),
 	}
 
-	containers, err = c.ListContainers(cobraCmd.Context(), glabels)
+	if interfacesNodeName != "" {
+		listOpts = append(
+			listOpts,
+			core.WithListNodeName(interfacesNodeName),
+		)
+	}
+
+	containers, err := c.ListContainers(cobraCmd.Context(), listOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %s", err)
 	}

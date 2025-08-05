@@ -120,7 +120,6 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.GenericContainer, error) {
 	var containers []containerlabruntime.GenericContainer
 	var err error
-	var gLabels []*types.GenericFilter
 
 	if topoFile != "" {
 		// List containers defined in the topology file
@@ -129,22 +128,16 @@ func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.Ge
 			return nil, fmt.Errorf("failed to list containers based on topology: %s", err)
 		}
 	} else {
+		var listOptions []core.ListOption
+
 		// List containers based on labels (--name or --all)
 		if labName != "" {
-			// Filter by specific lab name
-			gLabels = []*types.GenericFilter{{
-				FilterType: "label", Match: labName,
-				Field: labels.Containerlab, Operator: "=",
-			}}
-		} else { // --all case
-			// Filter for any containerlab container
-			gLabels = []*types.GenericFilter{{
-				FilterType: "label",
-				Field:      labels.Containerlab, Operator: "exists",
-			}}
+			listOptions = append(listOptions, core.WithListLabName(labName))
+		} else {
+			listOptions = append(listOptions, core.WithListContainerlabLabelExists())
 		}
 
-		containers, err = c.ListContainers(ctx, gLabels)
+		containers, err = c.ListContainers(ctx, listOptions...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list containers based on labels: %s", err)
 		}

@@ -14,7 +14,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
@@ -90,11 +89,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	var containers []containerlabruntime.GenericContainer
 	// if offline mode is not enforced, list containers matching lab name
 	if !offline {
-		labels := []*types.GenericFilter{{
-			FilterType: "label", Match: c.Config.Name,
-			Field: labels.Containerlab, Operator: "=",
-		}}
-		containers, err = c.ListContainers(ctx, labels)
+		containers, err = c.ListContainers(ctx, core.WithListLabName(c.Config.Name))
 		if err != nil {
 			return err
 		}

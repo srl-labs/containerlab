@@ -28,9 +28,6 @@ func WithDestroyMaxWorkers(
 	}
 }
 
-// TODO i think this can/should be able to be copied from the root clab instance on destroy things
-// and it really shouldnt ever have been needed to be passed around -- etiher the runtime should
-// respect it and we dont need to pass, or we always need to pass... investigate more
 // WithDestroyKeepMgmtNet retains the mgmt network on destroy.
 func WithDestroyKeepMgmtNet() DestroyOption {
 	return func(o *DestroyOptions) {

@@ -12,9 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
 )
 
 var (
@@ -79,18 +77,18 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	var filters []*types.GenericFilter
-
-	if len(labelsFilter) != 0 {
-		filters = types.FilterFromLabelStrings(labelsFilter)
+	listOptions := []core.ListOption{
+		core.WithListFromCliArgs(labelsFilter),
 	}
 
 	if topoFile != "" {
-		labFilter := []string{fmt.Sprintf("%s=%s", labels.Containerlab, c.Config.Name)}
-		filters = append(filters, types.FilterFromLabelStrings(labFilter)...)
+		listOptions = append(
+			listOptions,
+			core.WithListLabName(c.Config.Name),
+		)
 	}
 
-	resultCollection, err := c.Exec(ctx, execCommands, core.NewExecOptions(filters))
+	resultCollection, err := c.Exec(ctx, execCommands, listOptions...)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,6 @@ import (
 	"github.com/srl-labs/containerlab/core"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -78,17 +77,7 @@ var apiServerStatusCmd = &cobra.Command{
 			return err
 		}
 
-		// Filter only by API server label
-		filter := []*types.GenericFilter{
-			{
-				FilterType: "label",
-				Field:      containerlablabels.ToolType,
-				Operator:   "=",
-				Match:      "api-server",
-			},
-		}
-
-		containers, err := c.ListContainers(ctx, filter)
+		containers, err := c.ListContainers(ctx, core.WithListToolType("api-server"))
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %w", err)
 		}
