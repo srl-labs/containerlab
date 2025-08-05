@@ -21,7 +21,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) error {
+func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error) {
 	opts := NewDestroyOptions()
 
 	for _, opt := range options {
@@ -29,8 +29,6 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) error {
 	}
 
 	var containers []runtime.GenericContainer
-
-	var err error
 
 	if opts.all {
 		containers, err = c.ListContainers(ctx, nil)
@@ -62,34 +60,6 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) error {
 		return err
 	}
 
-	if len(containers) == 0 {
-		log.Info("no containerlab containers found")
-
-		if opts.cleanup && !opts.all {
-			var labDirs []string
-
-			topoPath := c.TopoPaths.TopologyFilenameAbsPath()
-
-			if topoPath != "" {
-				topoDir := filepath.Dir(topoPath)
-				log.Debug("Looking for lab directory next to topology file", "path", topoDir)
-				labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
-			} else if len(labDirs) == 0 {
-				log.Debug("Looking for lab directory in current directory")
-				labDirs, _ = filepath.Glob("clab-*")
-			}
-
-			if len(labDirs) != 0 {
-				log.Info("Removing lab directory", "path", labDirs[0])
-				if err := os.RemoveAll(labDirs[0]); err != nil {
-					log.Errorf("error deleting lab directory: %v", err)
-				}
-			}
-		}
-
-		return nil
-	}
-
 	// topo will hold the reference to the topology file
 	// as the key and the respective lab directory as the referenced value
 	topos := map[string]string{}
@@ -103,6 +73,14 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) error {
 		topos[topoFile] = filepath.Dir(container.Labels[containerlablabels.NodeLabDir])
 	}
 
+	defer func() {
+		err = c.destroyLabDirs(topos, opts.all)
+	}()
+
+	if len(topos) == 0 {
+		return nil
+	}
+
 	log.Debugf("got the following topologies for destroy: %+v", topos)
 
 	// if all, and cli doesnt have --yes flag, and in a terminal -- prompt user confirmation
@@ -113,96 +91,128 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) error {
 		}
 	}
 
-	var clabs []*CLab
-
-	for topo, labdir := range topos {
-		cOpts := []ClabOption{
-			WithTimeout(c.timeout),
-			WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()),
-			WithNodeFilter(opts.nodeFilter),
-			// during destroy we don't want to check bind paths
-			// as it is irrelevant for this command.
-			WithSkippedBindsPathsCheck(),
-			WithRuntime(
-				c.globalRuntimeName,
-				&runtime.RuntimeConfig{
-					Debug:            c.Config.Debug,
-					Timeout:          c.timeout,
-					GracefulShutdown: opts.graceful,
-				},
-			),
-		}
-
-		// TODO i think if we copy the runtimes this should be already set for us...?
-		if opts.keepMgmtNet {
-			cOpts = append(cOpts, WithKeepMgmtNet())
-		}
-
-		log.Debugf(
-			"going through extracted topos for destroy, got topo file %v and generated opts %+v",
-			topo,
-			cOpts,
-		)
-
-		clab, err := NewContainerLab(cOpts...)
-		if err != nil {
-			return err
-		}
-
-		clab.Config.Debug = c.Config.Debug
-
-		// check if labdir exists and is a directory
-		if labdir != "" && utils.FileOrDirExists(labdir) {
-			// adjust the labdir. Usually we take the PWD. but now on destroy time,
-			// we might be in a different Dir.
-			err = clab.TopoPaths.SetLabDir(labdir)
-			if err != nil {
-				return err
-			}
-		}
-
-		err = links.SetMgmtNetUnderlyingBridge(clab.Config.Mgmt.Bridge)
-		if err != nil {
-			return err
-		}
-
-		// create management network or use existing one
-		// we call this to populate the nc.cfg.mgmt.bridge variable
-		// which is needed for the removal of the iptables rules
-		err = clab.CreateNetwork(ctx)
-		if err != nil {
-			return err
-		}
-
-		err = clab.ResolveLinks()
-		if err != nil {
-			return err
-		}
-
-		clabs = append(clabs, clab)
-	}
-
 	var errs []error
 
-	for _, clab := range clabs {
-		err = clab.destroy(ctx, opts.maxWorkers, opts.keepMgmtNet)
+	for topo, labdir := range topos {
+		cc, err := c.cloneForDestroy(ctx, topo, labdir)
 		if err != nil {
-			log.Errorf("Error occurred during the %s lab deletion: %v", clab.Config.Name, err)
-			errs = append(errs, err)
+			log.Errorf("error creating clab instance for topo %q: %v", topo, err)
+
+			return err
 		}
 
-		// TODO see note above -- do we just have a defer cleanup (probably cant because of topos
-		// not existing yet, unless we var topos way up top which seems reasonable...)
-		if opts.cleanup {
-			err = os.RemoveAll(clab.TopoPaths.TopologyLabDir())
-			if err != nil {
-				log.Errorf("error deleting lab directory: %v", err)
-			}
+		err = cc.destroy(ctx, opts.maxWorkers, opts.keepMgmtNet)
+		if err != nil {
+			log.Errorf("Error occurred during the %s lab deletion: %v", cc.Config.Name, err)
+			errs = append(errs, err)
 		}
 	}
 
 	if len(errs) != 0 {
 		return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
+	}
+
+	return err
+}
+
+// creates a mostly cloned version of the current c but set to the new topology, and with the
+// necessary steps (mgmt network things) handled preparing the new CLab for destruction.
+func (c *CLab) cloneForDestroy(ctx context.Context, newTopo, newLabDir string) (*CLab, error) {
+	cc := &CLab{
+		Config: &Config{
+			Mgmt:     new(types.MgmtNet),
+			Topology: types.NewTopology(),
+		},
+		TopoPaths:         &types.TopoPaths{},
+		m:                 c.m,
+		Nodes:             make(map[string]nodes.Node),
+		Links:             make(map[int]links.Link),
+		Runtimes:          c.Runtimes,
+		Cert:              c.Cert,
+		checkBindsPaths:   c.checkBindsPaths,
+		Reg:               c.Reg,
+		globalRuntimeName: c.globalRuntimeName,
+		timeout:           c.timeout,
+	}
+
+	err := cc.LoadTopologyFromFile(newTopo, c.TopoPaths.VarsFilenameAbsPath())
+	if err != nil {
+		return nil, err
+	}
+
+	if newLabDir != "" && utils.FileOrDirExists(newLabDir) {
+		// adjust the labdir. Usually we take the PWD. but now on destroy time,
+		// we might be in a different Dir.
+		err = cc.TopoPaths.SetLabDir(newLabDir)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = cc.parseTopology()
+	if err != nil {
+		return nil, err
+	}
+
+	err = links.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
+	if err != nil {
+		return nil, err
+	}
+
+	// create management network or use existing one
+	// we call this to populate the nc.cfg.mgmt.bridge variable
+	// which is needed for the removal of the iptables rules
+	err = cc.CreateNetwork(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	err = cc.ResolveLinks()
+	if err != nil {
+		return nil, err
+	}
+
+	return cc, nil
+}
+
+func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
+	if len(topos) == 0 {
+		log.Info("no containerlab containers found")
+
+		if !all {
+			var labDirs []string
+
+			topoPath := c.TopoPaths.TopologyFilenameAbsPath()
+
+			if topoPath != "" {
+				topoDir := filepath.Dir(topoPath)
+				log.Debug("Looking for lab directory next to topology file", "path", topoDir)
+				labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
+			} else {
+				log.Debug("Looking for lab directory in current directory")
+				labDirs, _ = filepath.Glob("clab-*")
+			}
+
+			if len(labDirs) != 0 {
+				log.Info("Removing lab directory", "path", labDirs[0])
+
+				err := os.RemoveAll(labDirs[0])
+				if err != nil {
+					log.Errorf("error deleting lab directory: %v", err)
+
+					return err
+				}
+			}
+		}
+
+		return nil
+	}
+
+	for _, labdir := range topos {
+		err := os.RemoveAll(labdir)
+		if err != nil {
+			log.Errorf("error deleting lab directory: %v", err)
+		}
 	}
 
 	return nil
