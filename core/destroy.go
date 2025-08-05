@@ -31,7 +31,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	var containers []runtime.GenericContainer
 
 	if opts.all {
-		containers, err = c.ListContainers(ctx, nil)
+		containers, err = c.ListContainers(ctx)
 	} else if c.TopoPaths.TopologyFilenameAbsPath() != "" {
 		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
 	} else {
@@ -84,7 +84,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	var errs []error
 
 	for topo, labdir := range topos {
-		cc, err := c.cloneForDestroy(ctx, topo, labdir)
+		cc, err := c.cloneForDestroy(ctx, topo, labdir, *opts)
 		if err != nil {
 			log.Errorf("error creating clab instance for topo %q: %v", topo, err)
 
@@ -107,41 +107,40 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 
 // creates a mostly cloned version of the current c but set to the new topology, and with the
 // necessary steps (mgmt network things) handled preparing the new CLab for destruction.
-func (c *CLab) cloneForDestroy(ctx context.Context, newTopo, newLabDir string) (*CLab, error) {
-	cc := &CLab{
-		Config: &Config{
-			Mgmt:     new(types.MgmtNet),
-			Topology: types.NewTopology(),
-		},
-		TopoPaths:         &types.TopoPaths{},
-		m:                 c.m,
-		Nodes:             make(map[string]nodes.Node),
-		Links:             make(map[int]links.Link),
-		Runtimes:          c.Runtimes,
-		Cert:              c.Cert,
-		checkBindsPaths:   c.checkBindsPaths,
-		Reg:               c.Reg,
-		globalRuntimeName: c.globalRuntimeName,
-		timeout:           c.timeout,
+func (c *CLab) cloneForDestroy(ctx context.Context, topo, labDir string, opts DestroyOptions) (*CLab, error) {
+	newOpts := []ClabOption{
+		WithTimeout(c.timeout),
+		WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()),
+		WithNodeFilter(opts.nodeFilter),
+		// during destroy we don't want to check bind paths
+		// as it is irrelevant for this command.
+		WithSkippedBindsPathsCheck(),
+		WithRuntime(
+			c.globalRuntimeName,
+			&runtime.RuntimeConfig{
+				Debug:            c.Config.Debug,
+				Timeout:          c.timeout,
+				GracefulShutdown: opts.graceful,
+			},
+		),
 	}
 
-	err := cc.LoadTopologyFromFile(newTopo, c.TopoPaths.VarsFilenameAbsPath())
+	if opts.keepMgmtNet {
+		newOpts = append(newOpts, WithKeepMgmtNet())
+	}
+
+	cc, err := NewContainerLab(newOpts...)
 	if err != nil {
 		return nil, err
 	}
 
-	if newLabDir != "" && utils.FileOrDirExists(newLabDir) {
+	if labDir != "" && utils.FileOrDirExists(labDir) {
 		// adjust the labdir. Usually we take the PWD. but now on destroy time,
 		// we might be in a different Dir.
-		err = cc.TopoPaths.SetLabDir(newLabDir)
+		err = cc.TopoPaths.SetLabDir(labDir)
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	err = cc.parseTopology()
-	if err != nil {
-		return nil, err
 	}
 
 	err = links.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
