@@ -7,8 +7,8 @@ Suite Teardown      Run Keyword    Cleanup
 
 
 *** Variables ***
-${lab-name}         sr02
-${lab-file-name}    02-srsim.clab.yml
+${lab-name}         sr01
+${lab-file-name}    01-srsim.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
 

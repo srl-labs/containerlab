@@ -150,7 +150,7 @@ type sros struct {
 	// software version SR OS x node runs
 	swVersion      *SrosVersion
 	componentNodes []nodes.Node
-	// in distributed mode we rename the Cfg.LongName and Cfg.Shortname and Cfg.Fqdn attributes when deploying.
+	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when deploying.
 	// e.g. inspect is either called after deploy or independently. Hence we need to differentiate if we need to perform the
 	// component cpm based rename or not. This field indicates just that
 	renameDone bool
@@ -229,6 +229,10 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 
 	n.topologyName = params.TopologyName
 
+	if strings.HasPrefix(n.Cfg.NetworkMode, "container:") {
+		n.Cfg.ExtraHosts = nil
+	}
+
 	// either the non-distributed OR distributed AND is a CPM
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
@@ -297,7 +301,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 			if err != nil {
 				return err
 			}
-			err = n.saveConfig(ctx, addr)
+			err = n.saveConfigWithAddr(ctx, addr)
 			if err != nil {
 				return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
 			}
@@ -1033,11 +1037,12 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 		}
 		fqdn = n.Cfg.LongName
 	}
-	return n.saveConfig(ctx, fqdn)
+	return n.saveConfigWithAddr(ctx, fqdn)
 }
 
-func (n *sros) saveConfig(_ context.Context, addr string) error {
-	err := netconf.SaveRunningConfig(addr,
+// saveConfigWithAddr will use the addr string to try to save the config of the node.
+func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
+	err := netconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -1046,7 +1051,7 @@ func (n *sros) saveConfig(_ context.Context, addr string) error {
 		return err
 	}
 
-	log.Info("Saved running configuration", "node", addr)
+	log.Info("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr)
 
 	return nil
 }
@@ -1092,11 +1097,11 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 // MgmtIPAddr returns ipv4 or ipv6 management IP address of the node.
 // It returns an error if neither is set in the node config.
 func (n *sros) MgmtIPAddr() (string, error) {
-	if n.Cfg.MgmtIPv4Address != "" {
-		return n.Cfg.MgmtIPv4Address, nil
-	} else if n.Cfg.MgmtIPv6Address != "" {
+	switch {
+	case n.Cfg.MgmtIPv6Address != "":
 		return n.Cfg.MgmtIPv6Address, nil
-	} else {
-		return n.Cfg.LongName, fmt.Errorf("no management IP address (IPv4 or IPv6) configured for node %q", n.Cfg.LongName)
+	case n.Cfg.MgmtIPv4Address != "":
+		return n.Cfg.MgmtIPv4Address, nil
 	}
+	return n.Cfg.LongName, fmt.Errorf("no management IP address (IPv4 or IPv6) configured for node %q", n.Cfg.LongName)
 }
