@@ -10,19 +10,6 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-package hostnet
-
-import (
-	"fmt"
-	"net"
-	osexec "os/exec"
-	"regexp"
-	"strings"
-
-	"github.com/charmbracelet/log"
-	"github.com/vishvananda/netlink"
-)
-
 // MacvlanConfig contains all the configuration needed for macvlan operations
 type MacvlanConfig struct {
 	NetworkName    string
