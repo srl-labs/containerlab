@@ -236,6 +236,10 @@ There was a tiny gap in MacOS support, but we contributed the necessary piece[^3
 
 With these steps done[^5], you should be able to click on the "fin" icon next to the interface name and see the Wireshark UI opening up and starting the capture.
 
+## VS Code extension
+
+The [Containerlab's VS Code extension](../manual/vsc-extension.md#integrated-wireshark) takes the packet capture experience to the next level by offering the convenience of Edgeshark without requiring you to install the capture plugins or configure the system to handle the `packetflix://` URL schema. The extension takes care of all the setup process and packages the components in the containers that will be run by the extension, all you need to do is to select the interface to capture from.
+
 ## Examples
 
 Lets take the first diagram of this article and see which commands are used to sniff from the highlighted interfaces.
