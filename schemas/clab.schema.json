@@ -1447,6 +1447,9 @@
                         "freebsd": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "openwrt": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "huawei_vrp": {
                             "$ref": "#/definitions/node-config"
                         },
