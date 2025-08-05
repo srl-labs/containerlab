@@ -51,27 +51,93 @@ func PostCreateMacvlanActions(cfg *MacvlanConfig) error {
 		cfg.ParentIface, parentMTU)
 	
 	// 4. Create host macvlan interface if aux address is specified
-	if cfg.AuxAddress != "" {
-		if err := CreateHostMacvlanInterface(cfg); err != nil {
-			// Don't fail the entire operation, just warn
-			log.Warnf("Failed to create host macvlan interface: %v", err)
-			log.Info("You can manually create it with:")
-			log.Infof("  sudo ip link add %s-host link %s type macvlan mode bridge", 
-				cfg.NetworkName, cfg.ParentIface)
-			log.Infof("  sudo ip addr add %s/%s dev %s-host", 
-				cfg.AuxAddress, getSubnetPrefix(cfg.IPv4Subnet), cfg.NetworkName)
-			log.Infof("  sudo ip link set %s-host up", cfg.NetworkName)
-		} else {
-			log.Infof("Created host macvlan interface %s-host with IP %s", 
-				cfg.NetworkName, cfg.AuxAddress)
-		}
-	} else {
-		// Still warn about the limitation
-		log.Info("Note: Host cannot directly communicate with macvlan containers due to kernel limitations. " +
-			"Consider setting 'macvlan-aux' to create a host interface.")
-	}
+    if cfg.AuxAddress != "" {
+        // Check for potential subnet conflicts
+        if err := checkSubnetConflicts(cfg); err != nil {
+            log.Warnf("Subnet configuration warning: %v", err)
+            log.Info("")
+            log.Info("=== MACVLAN SUBNET CONFIGURATION GUIDANCE ===")
+            log.Info("When the macvlan subnet matches your host's subnet, you have three options:")
+            log.Info("")
+            log.Info("Option 1: Use a smaller subnet for container routes")
+            log.Info("  - If host is on 192.168.1.0/24, use a /26 or /27 for containers")
+            log.Info("  - Example: ipv4-subnet: 192.168.1.128/26")
+            log.Info("  - This allows 62 container IPs while avoiding route conflicts")
+            log.Info("")
+            log.Info("Option 2: Use a different subnet with proper routing")
+            log.Info("  - Use a completely different subnet (e.g., 10.100.0.0/24)")
+            log.Info("  - Configure routing on your network to reach this subnet")
+            log.Info("  - Containers won't be on the same L2 segment as other devices")
+            log.Info("")
+            log.Info("Option 3: Accept no host-to-container connectivity")
+            log.Info("  - Don't set macvlan-aux (no host interface)")
+            log.Info("  - Containers can reach external networks")
+            log.Info("  - Host cannot directly communicate with containers")
+            log.Info("=============================================")
+            log.Info("")
+        }
+        
+        if err := CreateHostMacvlanInterface(cfg); err != nil {
+            // Don't fail the entire operation, just warn
+            log.Warnf("Failed to create host macvlan interface: %v", err)
+            // ... rest of manual instructions ...
+        } else {
+            log.Infof("Created host macvlan interface %s-host with IP %s", 
+                cfg.NetworkName, cfg.AuxAddress)
+        }
+    } else {
+        // Still warn about the limitation
+        log.Info("Note: Host cannot directly communicate with macvlan containers due to kernel limitations. " +
+            "Consider setting 'macvlan-aux' to create a host interface.")
+    }
 	
 	return nil
+}
+
+// checkSubnetConflicts checks if the macvlan subnet conflicts with existing routes
+func checkSubnetConflicts(cfg *MacvlanConfig) error {
+    _, macvlanNet, err := net.ParseCIDR(cfg.IPv4Subnet)
+    if err != nil {
+        return fmt.Errorf("invalid subnet: %w", err)
+    }
+    
+    // Get existing routes
+    routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+    if err != nil {
+        return fmt.Errorf("failed to list routes: %w", err)
+    }
+    
+    // Check for conflicts
+    for _, route := range routes {
+        if route.Dst != nil {
+            // Skip default route
+            if route.Dst.String() == "0.0.0.0/0" {
+                continue
+            }
+            
+            // Check if macvlan subnet overlaps with existing route
+            if netsOverlap(macvlanNet, route.Dst) {
+                // Get the interface name for the route
+                var ifaceName string
+                if route.LinkIndex > 0 {
+                    link, err := netlink.LinkByIndex(route.LinkIndex)
+                    if err == nil {
+                        ifaceName = link.Attrs().Name
+                    }
+                }
+                
+                return fmt.Errorf("macvlan subnet %s conflicts with existing route %s on interface %s", 
+                    cfg.IPv4Subnet, route.Dst.String(), ifaceName)
+            }
+        }
+    }
+    
+    return nil
+}
+
+// netsOverlap checks if two networks overlap
+func netsOverlap(n1, n2 *net.IPNet) bool {
+    return n1.Contains(n2.IP) || n2.Contains(n1.IP)
 }
 
 // CreateHostMacvlanInterface creates a macvlan interface on the host for container communication
@@ -155,28 +221,32 @@ func CreateHostMacvlanInterface(cfg *MacvlanConfig) error {
 		return fmt.Errorf("failed to bring interface up: %w", err)
 	}
 	
-	// Add route to the subnet
-	_, ipnet, err := net.ParseCIDR(cfg.IPv4Subnet)
-	if err != nil {
-		log.Warnf("Failed to parse subnet for route: %v", err)
-		return nil
-	}
-	
-	route := &netlink.Route{
-		LinkIndex: link.Attrs().Index,
-		Dst:       ipnet,
-		Scope:     netlink.SCOPE_LINK,
-	}
-	
-	if err := netlink.RouteAdd(route); err != nil {
-		if !strings.Contains(err.Error(), "file exists") {
-			log.Warnf("Failed to add route %s dev %s: %v", cfg.IPv4Subnet, hostIfName, err)
-		}
-	} else {
-		log.Infof("Added route %s dev %s", cfg.IPv4Subnet, hostIfName)
-	}
-	
-	return nil
+    // Add route to the subnet with better error handling
+    _, ipnet, err := net.ParseCIDR(cfg.IPv4Subnet)
+    if err != nil {
+        log.Warnf("Failed to parse subnet for route: %v", err)
+        return nil
+    }
+    
+    route := &netlink.Route{
+        LinkIndex: link.Attrs().Index,
+        Dst:       ipnet,
+        Scope:     netlink.SCOPE_LINK,
+    }
+    
+    if err := netlink.RouteAdd(route); err != nil {
+        if strings.Contains(err.Error(), "file exists") {
+            log.Warnf("Route %s already exists - this usually means the subnet overlaps with your host network", cfg.IPv4Subnet)
+            log.Info("Consider using a smaller subnet (e.g., /26 or /27) for the macvlan network")
+        } else {
+            log.Warnf("Failed to add route %s dev %s: %v", cfg.IPv4Subnet, hostIfName, err)
+        }
+    } else {
+        log.Infof("Added route %s dev %s", cfg.IPv4Subnet, hostIfName)
+    }
+    
+    return nil
+
 }
 
 // CleanupMacvlanPostActions reverses the changes made in PostCreateMacvlanActions
