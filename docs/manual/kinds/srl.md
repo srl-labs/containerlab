@@ -170,7 +170,7 @@ For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that 
 
 The available Nokia 7220 IXR models support the following types: `ixr-d1`, `ixr-d2`, `ixr-d3`, `ixr-d2l`, `ixr-d3l`, `ixr-d4`, `ixr-d5`, `ixr-h2`, `ixr-h3`, `ixr-h4`, `ixr-h4-32d`,`ixr-h5-32d`, `ixr-h5-64d`,`ixr-h5-64o`.
 
-Nokia 7250 IXR chassis identified with types `ixr-6e`, `ixr-10e`, `ixr-18e`, `ixr-x3b` and `ixr-x1b` require a valid license to operate.
+Nokia 7250 IXR chassis-based systems have types `ixr-6e`, `ixr-10e`, `ixr-18e`, `ixr-x1b` and `ixr-x3b`. The chassis-based systems require a license file. Check with your Nokia representative for eligibility.
 
 If type is not set in the clab file `ixr-d2l` value will be used by containerlab.
 
