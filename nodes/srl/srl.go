@@ -189,8 +189,8 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		o(n)
 	}
 
-	if !strings.Contains(n.Cfg.NodeType, "-") {
-		log.Warn("Deprecation notice", "notice", "You use a deprecated node type format. Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\nDeprecated type format will be removed after January 2026", "used type", n.Cfg.NodeType)
+	if n.Cfg.NodeType != "" && !strings.Contains(n.Cfg.NodeType, "-") {
+		log.Warn("Deprecation notice", "notice", "You are using a deprecated SR Linux node type name. Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\nDeprecated type format will be removed after January 2026", "deprecated type", n.Cfg.NodeType)
 	}
 
 	if n.Cfg.NodeType == "" {
