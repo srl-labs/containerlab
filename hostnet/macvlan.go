@@ -137,7 +137,7 @@ func CreateHostMacvlanInterface(cfg *MacvlanConfig) error {
 	}
 	
 	// Parse and add IP address
-	addrStr := cfg.AuxAddress + "/32"
+	addrStr := cfg.AuxAddress + "/26"
 	addr, err := netlink.ParseAddr(addrStr)
 	if err != nil {
 		netlink.LinkDel(link)
