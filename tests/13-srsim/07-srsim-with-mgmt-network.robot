@@ -60,7 +60,7 @@ Check the number of hosts entries should be Equal to 8:
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep -c clab-${lab-name} 
     Should Be Equal As Integers    ${rc}    0
-    Should Be Equal As Integers ${output}    8
+    Should Be Equal As Integers    ${output}    8
     
 
 *** Keywords ***
