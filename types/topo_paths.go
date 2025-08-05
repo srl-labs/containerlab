@@ -75,7 +75,7 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	return nil
 }
 
-// SetTopologyFilePath sets the topology file path.
+// SetTopologyVarsFilePath sets the topology vars path.
 func (t *TopoPaths) SetTopologyVarsFilePath(varsFile string) error {
 	if varsFile == "" {
 		return nil

@@ -79,7 +79,7 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 			cliArgParts := strings.Split(cliArg, "=")
 
 			if len(cliArgParts) != 2 {
-				// silently ignorning for safety
+				// silently ignoring for safety
 				continue
 			}
 
