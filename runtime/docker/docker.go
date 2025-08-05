@@ -423,15 +423,6 @@ func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
 	
 	log.Info("Macvlan network created successfully", "name", d.mgmt.Network)
 	
-	// If aux address was specified, provide instructions for creating host macvlan interface
-	if d.mgmt.MacvlanAux != "" {
-		log.Info("To enable host communication with containers, create a macvlan interface on the host:")
-		log.Infof("  sudo ip link add %shost link %s type macvlan mode bridge", hostnet.SanitizeInterfaceName(d.mgmt.Network), d.mgmt.MacvlanParent)
-		log.Infof("  sudo ip addr add %s/<subnet> dev %shost", d.mgmt.MacvlanAux, hostnet.SanitizeInterfaceName(d.mgmt.Network))
-		log.Infof("  sudo ip link set %shost up", hostnet.SanitizeInterfaceName(d.mgmt.Network))
-		log.Infof("  sudo ip route add %s dev %shost", d.mgmt.IPv4Subnet, hostnet.SanitizeInterfaceName(d.mgmt.Network))
-	}
-	
 	return nil
 }
 
