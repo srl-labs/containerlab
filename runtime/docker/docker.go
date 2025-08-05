@@ -10,13 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	osexec "os/exec"
 	"path"
 	"strconv"
 	"strings"
 	"time"
-	"net"
-	"regexp"
 
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-units"
@@ -38,6 +35,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/srl-labs/containerlab/hostnet"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/mod/semver"
 )
@@ -283,6 +281,17 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	}
 
 	return nil
+}
+
+func (d *DockerRuntime) postCreateMacvlanActions() error {
+    cfg := &hostnet.MacvlanConfig{
+        NetworkName:  d.mgmt.Network,
+        ParentIface:  d.mgmt.MacvlanParent,
+        MacvlanMode:  d.mgmt.MacvlanMode,
+        AuxAddress:   d.mgmt.MacvlanAux,
+        IPv4Subnet:   d.mgmt.IPv4Subnet,
+    }
+    return hostnet.PostCreateMacvlanActions(cfg)
 }
 
 // createMgmtMacvlan creates a macvlan network for management
@@ -605,359 +614,6 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	return nil
 }
 
-// postCreateMacvlanActions performs macvlan-specific post-creation actions
-func (d *DockerRuntime) postCreateMacvlanActions() error {
-	//debugging
-	log.Info("Starting macvlan post-creation actions")
-	log.Debugf("MacvlanAux: %s, IPv4Subnet: %s", d.mgmt.MacvlanAux, d.mgmt.IPv4Subnet)
-	// 1. Verify parent interface exists and is UP
-	parentLink, err := netlink.LinkByName(d.mgmt.MacvlanParent)
-	if err != nil {
-		return fmt.Errorf("failed to get parent interface %s: %w", d.mgmt.MacvlanParent, err)
-	}
-	
-	// Check if interface is UP
-	if parentLink.Attrs().OperState != netlink.OperUp {
-		log.Warnf("Parent interface %s is not UP (state: %s), containers may not have connectivity", 
-			d.mgmt.MacvlanParent, parentLink.Attrs().OperState)
-	}
-	
-	// 2. Check promiscuous mode
-	if parentLink.Attrs().Promisc == 0 {
-		log.Debugf("Parent interface %s is not in promiscuous mode, enabling it for better macvlan compatibility", 
-			d.mgmt.MacvlanParent)
-		// Enable promiscuous mode using command execution as a fallback
-		if err := enablePromiscuousMode(d.mgmt.MacvlanParent); err != nil {
-			log.Warnf("failed to enable promiscuous mode on %s: %v", d.mgmt.MacvlanParent, err)
-		}
-	}
-	
-	// 3. Log MTU information
-	parentMTU := parentLink.Attrs().MTU
-	log.Debugf("Parent interface %s has MTU %d, macvlan interfaces will inherit this", 
-		d.mgmt.MacvlanParent, parentMTU)
-	
-	// 4. Create host macvlan interface if aux address is specified
-	if d.mgmt.MacvlanAux != "" {
-		if err := d.createHostMacvlanInterface(); err != nil {
-			// Don't fail the entire operation, just warn
-			log.Warnf("Failed to create host macvlan interface: %v", err)
-			log.Info("You can manually create it with:")
-			log.Infof("  sudo ip link add %s-host link %s type macvlan mode bridge", 
-				d.mgmt.Network, d.mgmt.MacvlanParent)
-			log.Infof("  sudo ip addr add %s/%s dev %s-host", 
-				d.mgmt.MacvlanAux, getSubnetPrefix(d.mgmt.IPv4Subnet), d.mgmt.Network)
-			log.Infof("  sudo ip link set %s-host up", d.mgmt.Network)
-		} else {
-			log.Infof("Created host macvlan interface %s-host with IP %s", 
-				d.mgmt.Network, d.mgmt.MacvlanAux)
-		}
-	} else {
-		// Still warn about the limitation
-		log.Info("Note: Host cannot directly communicate with macvlan containers due to kernel limitations. " +
-			"Consider setting 'macvlan-aux' to create a host interface.")
-	}
-	
-	return nil
-}
-
-func sanitizeAlphanumeric(input string) string {
-    re := regexp.MustCompile(`[^a-zA-Z0-9]+`)
-    return re.ReplaceAllString(input, "")
-}
-
-// createHostMacvlanInterface creates a macvlan interface on the host for container communication
-func (d *DockerRuntime) createHostMacvlanInterface() error {
-	hostIfNameNonAlpha := d.mgmt.Network + "-host"
-	hostIfName := sanitizeAlphanumeric(hostIfNameNonAlpha)
-	
-	log.Debugf("Creating host macvlan interface: name=%s, parent=%s, mode=%s", 
-		hostIfName, d.mgmt.MacvlanParent, d.mgmt.MacvlanMode)
-	
-	// Check if interface already exists
-	if existingLink, err := netlink.LinkByName(hostIfName); err == nil {
-		log.Debugf("Host macvlan interface %s already exists", hostIfName)
-		// Check if it has the correct IP
-		addrs, err := netlink.AddrList(existingLink, netlink.FAMILY_V4)
-		if err == nil {
-			for _, addr := range addrs {
-				if addr.IP.String() == d.mgmt.MacvlanAux {
-					log.Debugf("Interface %s already has IP %s", hostIfName, d.mgmt.MacvlanAux)
-					return nil
-				}
-			}
-		}
-		// Interface exists but might not have the right IP, delete and recreate
-		log.Debugf("Removing existing interface %s to recreate with correct settings", hostIfName)
-		if err := netlink.LinkDel(existingLink); err != nil {
-			log.Warnf("Failed to delete existing interface: %v", err)
-		}
-	}
-	
-	// Get parent link
-	parentLink, err := netlink.LinkByName(d.mgmt.MacvlanParent)
-	if err != nil {
-		return fmt.Errorf("parent interface %s not found: %w", d.mgmt.MacvlanParent, err)
-	}
-	
-	log.Debugf("Parent interface details: name=%s, index=%d, mtu=%d, state=%s", 
-		parentLink.Attrs().Name, 
-		parentLink.Attrs().Index, 
-		parentLink.Attrs().MTU,
-		parentLink.Attrs().OperState)
-	
-
-	// Determine macvlan mode - explicitly handle all cases
-	var mode netlink.MacvlanMode
-	switch d.mgmt.MacvlanMode {
-	case "", "bridge": // default to bridge if empty
-		mode = netlink.MACVLAN_MODE_BRIDGE
-	case "vepa":
-		mode = netlink.MACVLAN_MODE_VEPA
-	case "private":
-		mode = netlink.MACVLAN_MODE_PRIVATE
-	case "passthru":
-		mode = netlink.MACVLAN_MODE_PASSTHRU
-	default:
-		log.Warnf("Unknown macvlan mode %s, defaulting to bridge", d.mgmt.MacvlanMode)
-		mode = netlink.MACVLAN_MODE_BRIDGE
-	}
-	
-	log.Debugf("Creating macvlan with mode='%s' value=%d", d.mgmt.MacvlanMode, mode)
-	
-	log.Debugf("Creating macvlan with mode=%d (0=private, 1=vepa, 2=passthru, 3=bridge)", mode)
-	
-	// Create macvlan link with minimal attributes first
-	macvlan := &netlink.Macvlan{
-		LinkAttrs: netlink.LinkAttrs{
-			Name:        hostIfName,
-			ParentIndex: parentLink.Attrs().Index,
-		},
-		Mode: mode,
-	}
-	
-	// Log the structure before creation
-	log.Debugf("Macvlan struct: Name=%s, ParentIndex=%d, Mode=%d", 
-		macvlan.LinkAttrs.Name, 
-		macvlan.LinkAttrs.ParentIndex, 
-		macvlan.Mode)
-	
-	// // Try to create using command line as a test
-	// cmd := osexec.Command("ip", "link", "add", hostIfName, "link", d.mgmt.MacvlanParent, "type", "macvlan", "mode", "bridge")
-	// if output, err := cmd.CombinedOutput(); err != nil {
-	// 	log.Debugf("Command line test failed: %v, output: %s", err, string(output))
-	// 	// Don't return here, continue with netlink
-	// } else {
-	// 	log.Debug("Command line creation succeeded, removing to use netlink")
-	// 	// Remove it so we can create via netlink
-	// 	delCmd := osexec.Command("ip", "link", "del", hostIfName)
-	// 	delCmd.Run()
-	// }
-	
-	// Create the interface via netlink
-	if err := netlink.LinkAdd(macvlan); err != nil {
-		// Try to get more error details
-		if strings.Contains(err.Error(), "numerical result") {
-			log.Errorf("Netlink error details - this often indicates an issue with the parent interface index or mode value")
-			log.Errorf("Parent index: %d, Mode: %d", parentLink.Attrs().Index, mode)
-		}
-		return fmt.Errorf("failed to create macvlan interface: %w", err)
-	}
-	
-	// Rest of the function remains the same...
-	log.Debug("Macvlan interface created successfully via netlink")
-	
-	// Get the created interface
-	link, err := netlink.LinkByName(hostIfName)
-	if err != nil {
-		// Cleanup on failure
-		netlink.LinkDel(macvlan)
-		return fmt.Errorf("failed to get created interface: %w", err)
-	}
-	
-	// Parse and add IP address
-	// Use /32 for the host interface to avoid subnet conflicts
-	addrStr := d.mgmt.MacvlanAux + "/32"
-	log.Debugf("Adding IP address %s to interface %s", addrStr, hostIfName)
-	
-	addr, err := netlink.ParseAddr(addrStr)
-	if err != nil {
-		// Cleanup on failure
-		netlink.LinkDel(link)
-		return fmt.Errorf("failed to parse IP address %s: %w", addrStr, err)
-	}
-	
-	if err := netlink.AddrAdd(link, addr); err != nil {
-		// Cleanup on failure
-		netlink.LinkDel(link)
-		return fmt.Errorf("failed to add IP address: %w", err)
-	}
-	
-	// Bring the interface up
-	if err := netlink.LinkSetUp(link); err != nil {
-		// Cleanup on failure
-		netlink.LinkDel(link)
-		return fmt.Errorf("failed to bring interface up: %w", err)
-	}
-	
-	log.Infof("Created host macvlan interface %s with IP %s", hostIfName, d.mgmt.MacvlanAux)
-	
-	// Add route to the subnet
-	_, ipnet, err := net.ParseCIDR(d.mgmt.IPv4Subnet)
-	if err != nil {
-		log.Warnf("Failed to parse subnet for route: %v", err)
-		return nil
-	}
-	
-	// For the route, we need to use the macvlan interface as the output device
-	route := &netlink.Route{
-		LinkIndex: link.Attrs().Index,
-		Dst:       ipnet,
-		Scope:     netlink.SCOPE_LINK,
-	}
-	
-	if err := netlink.RouteAdd(route); err != nil {
-		// Check if route already exists
-		if !strings.Contains(err.Error(), "file exists") {
-			log.Warnf("Failed to add route %s dev %s: %v", d.mgmt.IPv4Subnet, hostIfName, err)
-		}
-	} else {
-		log.Infof("Added route %s dev %s", d.mgmt.IPv4Subnet, hostIfName)
-	}
-	
-	return nil
-}
-
-// getSubnetPrefix extracts the prefix length from a CIDR notation
-func getSubnetPrefix(subnet string) string {
-	parts := strings.Split(subnet, "/")
-	if len(parts) == 2 {
-		return parts[1]
-	}
-	return "24" // default
-}
-
-// cleanupMacvlanPostActions reverses the changes made in postCreateMacvlanActions
-func (d *DockerRuntime) cleanupMacvlanPostActions() error {
-	// First, remove the static route if it exists
-	// In cleanupMacvlanPostActions(), fix the route cleanup:
-	if d.mgmt.MacvlanAux != "" && d.mgmt.IPv4Subnet != "" {
-		// Get the sanitized host interface name
-		hostIfNameNonAlpha := d.mgmt.Network + "-host"
-		hostIfName := sanitizeAlphanumeric(hostIfNameNonAlpha)
-		
-		_, ipnet, err := net.ParseCIDR(d.mgmt.IPv4Subnet)
-		if err == nil {
-			// Find and delete routes associated with this interface
-			routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
-			if err == nil {
-				for _, route := range routes {
-					// Check if this route is for our subnet and uses our interface
-					if route.Dst != nil && route.Dst.String() == ipnet.String() {
-						// Get the link to check if it's our interface
-						if route.LinkIndex > 0 {
-							link, err := netlink.LinkByIndex(route.LinkIndex)
-							if err == nil && link.Attrs().Name == hostIfName {
-								if err := netlink.RouteDel(&route); err != nil {
-									log.Debugf("Failed to delete route %s dev %s: %v", 
-										route.Dst.String(), hostIfName, err)
-								} else {
-									log.Infof("Removed route %s dev %s", 
-										route.Dst.String(), hostIfName)
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	
-	// Then cleanup the host interface (this might also remove associated routes)
-	if err := d.cleanupHostMacvlanInterface(); err != nil {
-		log.Warnf("Failed to cleanup host macvlan interface: %v", err)
-	}
-	
-	// Disable promiscuous mode on parent interface
-	parentLink, err := netlink.LinkByName(d.mgmt.MacvlanParent)
-	if err != nil {
-		// Parent interface might not exist anymore
-		log.Debugf("Parent interface %s not found during cleanup: %v", d.mgmt.MacvlanParent, err)
-		return nil
-	}
-	
-	// Check if there are other macvlan interfaces using this parent
-	links, err := netlink.LinkList()
-	if err == nil {
-		otherMacvlans := false
-		for _, link := range links {
-			if macvlan, ok := link.(*netlink.Macvlan); ok {
-				if macvlan.ParentIndex == parentLink.Attrs().Index && 
-				   macvlan.Name != d.mgmt.Network+"-host" {
-					otherMacvlans = true
-					break
-				}
-			}
-		}
-		
-		// Only disable promiscuous mode if no other macvlans are using this parent
-		if !otherMacvlans {
-			if err := disablePromiscuousMode(d.mgmt.MacvlanParent); err != nil {
-				log.Warnf("Failed to disable promiscuous mode on %s: %v", d.mgmt.MacvlanParent, err)
-			} else {
-				log.Debugf("Disabled promiscuous mode on %s", d.mgmt.MacvlanParent)
-			}
-		} else {
-			log.Debugf("Other macvlan interfaces exist on %s, keeping promiscuous mode enabled", d.mgmt.MacvlanParent)
-		}
-	}
-	
-	return nil
-}
-
-// enablePromiscuousMode enables promiscuous mode on an interface
-func enablePromiscuousMode(ifName string) error {
-	// Try using exec to run ip command as a fallback
-	cmd := osexec.Command("ip", "link", "set", ifName, "promisc", "on")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to enable promiscuous mode: %w", err)
-	}
-	return nil
-}
-
-// disablePromiscuousMode disables promiscuous mode on an interface
-func disablePromiscuousMode(ifName string) error {
-	// Try using exec to run ip command as a fallback
-	cmd := osexec.Command("ip", "link", "set", ifName, "promisc", "off")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to disable promiscuous mode: %w", err)
-	}
-	return nil
-}
-
-// cleanupHostMacvlanInterface removes the host macvlan interface if it exists
-func (d *DockerRuntime) cleanupHostMacvlanInterface() error {
-	if d.mgmt.MacvlanAux == "" {
-		return nil
-	}
-	
-    hostIfNameNonAlpha := d.mgmt.Network + "-host"
-    hostIfName := sanitizeAlphanumeric(hostIfNameNonAlpha)
-
-	link, err := netlink.LinkByName(hostIfName)
-	if err != nil {
-		// Interface doesn't exist, nothing to clean up
-		return nil
-	}
-	
-	if err := netlink.LinkDel(link); err != nil {
-		return fmt.Errorf("failed to delete host macvlan interface: %w", err)
-	}
-	
-	log.Infof("Removed host macvlan interface %s", hostIfName)
-	return nil
-}
-
 // DeleteNet deletes a docker bridge or macvlan network.
 func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := d.mgmt.Network
@@ -1004,6 +660,17 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	}
 
 	return nil
+}
+
+func (d *DockerRuntime) cleanupMacvlanPostActions() error {
+    cfg := &hostnet.MacvlanConfig{
+        NetworkName:  d.mgmt.Network,
+        ParentIface:  d.mgmt.MacvlanParent,
+        MacvlanMode:  d.mgmt.MacvlanMode,
+        AuxAddress:   d.mgmt.MacvlanAux,
+        IPv4Subnet:   d.mgmt.IPv4Subnet,
+    }
+    return hostnet.CleanupMacvlanPostActions(cfg)
 }
 
 // PauseContainer Pauses a container identified by its name.
