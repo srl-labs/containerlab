@@ -1098,10 +1098,10 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 // It returns an error if neither is set in the node config.
 func (n *sros) MgmtIPAddr() (string, error) {
 	switch {
-	case n.Cfg.MgmtIPv4Address != "":
-		return n.Cfg.MgmtIPv4Address, nil
 	case n.Cfg.MgmtIPv6Address != "":
 		return n.Cfg.MgmtIPv6Address, nil
+	case n.Cfg.MgmtIPv4Address != "":
+		return n.Cfg.MgmtIPv4Address, nil
 	}
 	return n.Cfg.LongName, fmt.Errorf("no management IP address (IPv4 or IPv6) configured for node %q", n.Cfg.LongName)
 }
