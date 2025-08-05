@@ -56,7 +56,7 @@ Ensure l1 can ping l2 via sr-sim network
     Should Contain    ${output}    0% packet loss
     Should Contain    ${output}    2 received
 
-Check the number of hosts entries should be Equal to 8:
+Check the number of hosts entries should be Equal to 4xIPv4 and 4xIPv6
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep -c clab-${lab-name} 
     Should Be Equal As Integers    ${rc}    0
