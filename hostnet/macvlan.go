@@ -15,8 +15,8 @@ type MacvlanConfig struct {
 	NetworkName    string
 	ParentIface    string
 	MacvlanMode    string
-	AuxAddress     string
-	IPv4Subnet     string
+	AuxAddress     string  // Can be IP or IP/CIDR
+	IPv4Subnet     string  // The main macvlan network subnet
 }
 
 // PostCreateMacvlanActions performs macvlan-specific post-creation actions
@@ -82,7 +82,7 @@ func PostCreateMacvlanActions(cfg *MacvlanConfig) error {
             log.Warnf("Failed to create host macvlan interface: %v", err)
             // ... rest of manual instructions ...
         } else {
-            log.Infof("Created host macvlan interface %s-host with IP %s", 
+            log.Infof("Created host macvlan interface %shost with IP %s", 
                 cfg.NetworkName, cfg.AuxAddress)
         }
     } else {
@@ -92,6 +92,27 @@ func PostCreateMacvlanActions(cfg *MacvlanConfig) error {
     }
 	
 	return nil
+}
+
+// parseAuxAddress extracts IP and subnet from aux address
+// Returns: IP address, subnet CIDR, error
+func parseAuxAddress(auxAddr string, defaultSubnet string) (string, string, error) {
+	// Check if it contains CIDR notation
+	if strings.Contains(auxAddr, "/") {
+		// Parse as CIDR
+		ip, ipnet, err := net.ParseCIDR(auxAddr)
+		if err != nil {
+			return "", "", fmt.Errorf("invalid CIDR notation in aux address: %w", err)
+		}
+		return ip.String(), ipnet.String(), nil
+	}
+	
+	// Just an IP address - use the default subnet
+	ip := net.ParseIP(auxAddr)
+	if ip == nil {
+		return "", "", fmt.Errorf("invalid IP address: %s", auxAddr)
+	}
+	return ip.String(), defaultSubnet, nil
 }
 
 // checkSubnetConflicts checks if the macvlan subnet conflicts with existing routes
@@ -142,11 +163,17 @@ func netsOverlap(n1, n2 *net.IPNet) bool {
 
 // CreateHostMacvlanInterface creates a macvlan interface on the host for container communication
 func CreateHostMacvlanInterface(cfg *MacvlanConfig) error {
-	hostIfNameNonAlpha := cfg.NetworkName + "-host"
+	hostIfNameNonAlpha := cfg.NetworkName + "host"
 	hostIfName := SanitizeInterfaceName(hostIfNameNonAlpha)
 	
-	log.Debugf("Creating host macvlan interface: name=%s, parent=%s, mode=%s", 
-		hostIfName, cfg.ParentIface, cfg.MacvlanMode)
+	// Parse aux address to get IP and route subnet
+	auxIP, routeSubnet, err := parseAuxAddress(cfg.AuxAddress, cfg.IPv4Subnet)
+	if err != nil {
+		return fmt.Errorf("failed to parse aux address: %w", err)
+	}
+	
+	log.Debugf("Creating host macvlan interface: name=%s, parent=%s, mode=%s, IP=%s, route=%s", 
+		hostIfName, cfg.ParentIface, cfg.MacvlanMode, auxIP, routeSubnet)
 	
 	// Check if interface already exists
 	if existingLink, err := netlink.LinkByName(hostIfName); err == nil {
@@ -155,8 +182,8 @@ func CreateHostMacvlanInterface(cfg *MacvlanConfig) error {
 		addrs, err := netlink.AddrList(existingLink, netlink.FAMILY_V4)
 		if err == nil {
 			for _, addr := range addrs {
-				if addr.IP.String() == cfg.AuxAddress {
-					log.Debugf("Interface %s already has IP %s", hostIfName, cfg.AuxAddress)
+				if addr.IP.String() == auxIP {
+					log.Debugf("Interface %s already has IP %s", hostIfName, auxIP)
 					return nil
 				}
 			}
@@ -202,8 +229,8 @@ func CreateHostMacvlanInterface(cfg *MacvlanConfig) error {
 		return fmt.Errorf("failed to get created interface: %w", err)
 	}
 	
-	// Parse and add IP address
-	addrStr := cfg.AuxAddress + "/26"
+	// Parse and add IP address (always use /32 for the interface itself)
+	addrStr := auxIP + "/32"
 	addr, err := netlink.ParseAddr(addrStr)
 	if err != nil {
 		netlink.LinkDel(link)
@@ -221,56 +248,66 @@ func CreateHostMacvlanInterface(cfg *MacvlanConfig) error {
 		return fmt.Errorf("failed to bring interface up: %w", err)
 	}
 	
-    // Add route to the subnet with better error handling
-    _, ipnet, err := net.ParseCIDR(cfg.IPv4Subnet)
-    if err != nil {
-        log.Warnf("Failed to parse subnet for route: %v", err)
-        return nil
-    }
-    
-    route := &netlink.Route{
-        LinkIndex: link.Attrs().Index,
-        Dst:       ipnet,
-        Scope:     netlink.SCOPE_LINK,
-    }
-    
-    if err := netlink.RouteAdd(route); err != nil {
-        if strings.Contains(err.Error(), "file exists") {
-            log.Warnf("Route %s already exists - this usually means the subnet overlaps with your host network", cfg.IPv4Subnet)
-            log.Info("Consider using a smaller subnet (e.g., /26 or /27) for the macvlan network")
-        } else {
-            log.Warnf("Failed to add route %s dev %s: %v", cfg.IPv4Subnet, hostIfName, err)
-        }
-    } else {
-        log.Infof("Added route %s dev %s", cfg.IPv4Subnet, hostIfName)
-    }
-    
-    return nil
+	log.Infof("Created host macvlan interface %s with IP %s", hostIfName, auxIP)
+	
+	// Add route using the specified or default subnet
+	_, ipnet, err := net.ParseCIDR(routeSubnet)
+	if err != nil {
+		log.Warnf("Failed to parse subnet for route: %v", err)
+		return nil
+	}
+	
+	route := &netlink.Route{
+		LinkIndex: link.Attrs().Index,
+		Dst:       ipnet,
+		Scope:     netlink.SCOPE_LINK,
+	}
+	
+	if err := netlink.RouteAdd(route); err != nil {
+		if strings.Contains(err.Error(), "file exists") {
+			log.Warnf("Route %s already exists - this usually means the subnet overlaps with your host network", routeSubnet)
+			if routeSubnet == cfg.IPv4Subnet {
+				log.Info("Consider using CIDR notation in macvlan-aux (e.g., 192.168.1.129/26) to specify a smaller route subnet")
+			}
+		} else {
+			log.Warnf("Failed to add route %s dev %s: %v", routeSubnet, hostIfName, err)
+		}
+	} else {
+		log.Infof("Added route %s dev %s", routeSubnet, hostIfName)
+		if routeSubnet != cfg.IPv4Subnet {
+			log.Infof("Note: Using route subnet %s (from aux CIDR) instead of full network %s", routeSubnet, cfg.IPv4Subnet)
+		}
+	}
 
+    return nil
 }
 
 // CleanupMacvlanPostActions reverses the changes made in PostCreateMacvlanActions
 func CleanupMacvlanPostActions(cfg *MacvlanConfig) error {
 	// First, remove the static route if it exists
 	if cfg.AuxAddress != "" && cfg.IPv4Subnet != "" {
-		hostIfNameNonAlpha := cfg.NetworkName + "-host"
+		hostIfNameNonAlpha := cfg.NetworkName + "host"
 		hostIfName := SanitizeInterfaceName(hostIfNameNonAlpha)
 		
-		_, ipnet, err := net.ParseCIDR(cfg.IPv4Subnet)
+		// Parse aux address to get the route subnet
+		_, routeSubnet, err := parseAuxAddress(cfg.AuxAddress, cfg.IPv4Subnet)
 		if err == nil {
-			routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+			_, ipnet, err := net.ParseCIDR(routeSubnet)
 			if err == nil {
-				for _, route := range routes {
-					if route.Dst != nil && route.Dst.String() == ipnet.String() {
-						if route.LinkIndex > 0 {
-							link, err := netlink.LinkByIndex(route.LinkIndex)
-							if err == nil && link.Attrs().Name == hostIfName {
-								if err := netlink.RouteDel(&route); err != nil {
-									log.Debugf("Failed to delete route %s dev %s: %v", 
-										route.Dst.String(), hostIfName, err)
-								} else {
-									log.Infof("Removed route %s dev %s", 
-										route.Dst.String(), hostIfName)
+				routes, err := netlink.RouteList(nil, netlink.FAMILY_V4)
+				if err == nil {
+					for _, route := range routes {
+						if route.Dst != nil && route.Dst.String() == ipnet.String() {
+							if route.LinkIndex > 0 {
+								link, err := netlink.LinkByIndex(route.LinkIndex)
+								if err == nil && link.Attrs().Name == hostIfName {
+									if err := netlink.RouteDel(&route); err != nil {
+										log.Debugf("Failed to delete route %s dev %s: %v", 
+											route.Dst.String(), hostIfName, err)
+									} else {
+										log.Infof("Removed route %s dev %s", 
+											route.Dst.String(), hostIfName)
+									}
 								}
 							}
 						}
@@ -296,7 +333,7 @@ func CleanupMacvlanPostActions(cfg *MacvlanConfig) error {
 	links, err := netlink.LinkList()
 	if err == nil {
 		otherMacvlans := false
-		hostIfName := SanitizeInterfaceName(cfg.NetworkName + "-host")
+		hostIfName := SanitizeInterfaceName(cfg.NetworkName + "host")
 		for _, link := range links {
 			if macvlan, ok := link.(*netlink.Macvlan); ok {
 				if macvlan.ParentIndex == parentLink.Attrs().Index && 
@@ -328,7 +365,7 @@ func CleanupHostMacvlanInterface(cfg *MacvlanConfig) error {
 		return nil
 	}
 	
-	hostIfNameNonAlpha := cfg.NetworkName + "-host"
+	hostIfNameNonAlpha := cfg.NetworkName + "host"
 	hostIfName := SanitizeInterfaceName(hostIfNameNonAlpha)
 
 	link, err := netlink.LinkByName(hostIfName)
