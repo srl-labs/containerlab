@@ -28,7 +28,7 @@ Deploy ${lab-name} lab
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
-    ...    address=clab-${lab-name}-sros-a
+    ...    address=clab-${lab-name}-srsim10-a
     ...    username=admin
     ...    password=NokiaSros1!
     ...    try_for=10
@@ -54,12 +54,13 @@ Ensure l1 can ping l2 via sr-sim network
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
+    Should Contain    ${output}    2 received
 
 Check the number of hosts entries should be Equal to 8:
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep -c clab-${lab-name} 
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    8
+    Should Be Equal As Integers ${output}    8
     
 
 *** Keywords ***

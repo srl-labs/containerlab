@@ -48,7 +48,7 @@ topology:
         /configure router "Base" isis 0 advertise-passive-only true
         /configure router "Base" isis 0 interface "ptp1" { }
         /configure router "Base" isis 0 interface "ptp2" { }
-        /configure router "Base" isis 0 interface "l1" { }
+        /configure router "Base" isis 0 interface "l1" passive true
         /configure router "Base" isis 0 interface "system" passive true
       mgmt-ipv4: 10.78.140.2
       mgmt-ipv6: fd00:10:78:140::2
@@ -103,7 +103,7 @@ topology:
         /configure router "Base" isis 0 advertise-passive-only true
         /configure router "Base" isis 0 interface "ptp1" { }
         /configure router "Base" isis 0 interface "ptp2" { }
-        /configure router "Base" isis 0 interface "l2" { }
+        /configure router "Base" isis 0 interface "l2" passive true
         /configure router "Base" isis 0 interface "system" passive true
       mgmt-ipv4: 10.78.140.3
       mgmt-ipv6: fd00:10:78:140::3
