@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net"
 
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-units"
@@ -330,8 +331,24 @@ func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
 		}
 		// Add aux address if specified
 		if d.mgmt.MacvlanAux != "" {
+			// Extract IP address from either IP or CIDR format
+			auxIP := d.mgmt.MacvlanAux
+			if strings.Contains(auxIP, "/") {
+				// It's a CIDR, extract just the IP part
+				ip, _, err := net.ParseCIDR(auxIP)
+				if err != nil {
+					return fmt.Errorf("invalid CIDR format for MacvlanAux: %v", err)
+				}
+				auxIP = ip.String()
+			} else {
+				// It's just an IP, validate it
+				if net.ParseIP(auxIP) == nil {
+					return fmt.Errorf("invalid IP address format for MacvlanAux: %s", auxIP)
+				}
+			}
+			
 			ipamCfg.AuxAddress = map[string]string{
-				"host": d.mgmt.MacvlanAux,
+				"host": auxIP,
 			}
 		}
 		ipamConfig = append(ipamConfig, ipamCfg)
