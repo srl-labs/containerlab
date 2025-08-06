@@ -33,6 +33,15 @@ Ensure sros is reachable over ssh
     ...    password=NokiaSros1!
     ...    try_for=10
 
+Ensure sros is reachable over ssh with mapped port
+    Login via SSH with username and password
+    ...    address=localhost
+    ...    port=10022
+    ...    username=admin
+    ...    password=NokiaSros1!
+    ...    try_for=10
+
+
 Verify links in node l1
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ip link show eth1"

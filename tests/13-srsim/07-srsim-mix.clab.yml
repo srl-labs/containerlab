@@ -54,6 +54,8 @@ topology:
       mgmt-ipv6: fd00:10:78:140::2
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 02:f3:00:00:00:00
+      ports: 
+        - 10022:22
       components:
         - slot: A
         - slot: B
