@@ -19,7 +19,7 @@ type ListOptions struct {
 	cliArgs                 []string
 }
 
-// NewListOptions returns a new destroy options object.
+// NewListOptions returns a new list options object.
 func NewListOptions() *ListOptions {
 	return &ListOptions{}
 }
