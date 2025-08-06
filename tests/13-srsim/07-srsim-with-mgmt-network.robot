@@ -35,8 +35,7 @@ Ensure sros is reachable over ssh
 
 Ensure sros is reachable over ssh with mapped port
     Login via SSH with username and password
-    ...    address=localhost
-    ...    port=10022
+    ...    address=localhost:10022
     ...    username=admin
     ...    password=NokiaSros1!
     ...    try_for=10
