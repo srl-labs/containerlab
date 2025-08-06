@@ -386,6 +386,8 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.Fqdn = n.calcComponentFqdn(c.Slot)
 		if idx != 0 {
 			componentConfig.DNS = nil
+			componentConfig.PortBindings = nil
+			componentConfig.PortSet = nil
 		}
 
 		// add the component env to the componentConfig env
