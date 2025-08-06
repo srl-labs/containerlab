@@ -64,7 +64,9 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	}
 
 	defer func() {
-		err = c.destroyLabDirs(topos, opts.all)
+		if opts.cleanup {
+			err = c.destroyLabDirs(topos, opts.all)
+		}
 	}()
 
 	if len(topos) == 0 {
