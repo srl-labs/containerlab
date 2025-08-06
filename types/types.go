@@ -58,8 +58,8 @@ type MgmtNet struct {
 	ExternalAccess *bool             `yaml:"external-access,omitempty" json:"external-access,omitempty"`
 	DriverOpts     map[string]string `yaml:"driver-opts,omitempty" json:"driver-opts,omitempty"`
 	// Macvlan specific options
-    MacvlanParent string `yaml:"macvlan-parent,omitempty" json:"macvlan-parent,omitempty"`	// Parent interface for macvlan	
-    MacvlanMode   string `yaml:"macvlan-mode,omitempty" json:"macvlan-mode,omitempty"`		// bridge, vepa, passthru, private
+	MacvlanParent string `yaml:"macvlan-parent,omitempty" json:"macvlan-parent,omitempty"`	// Parent interface for macvlan	
+	MacvlanMode   string `yaml:"macvlan-mode,omitempty" json:"macvlan-mode,omitempty"`		// bridge, vepa, passthru, private
 	Driver 		  string `yaml:"driver,omitempty" json:"driver,omitempty"`	// "bridge" or "macvlan"
 	MacvlanAux    string `yaml:"macvlan-aux,omitempty" json:"macvlan-aux,omitempty"`		// Reserved IP Address for containerlab host connectivity
 }
