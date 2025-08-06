@@ -408,14 +408,6 @@ func SanitizeInterfaceName(input string) string {
 
 // Helper functions
 
-func getSubnetPrefix(subnet string) string {
-	parts := strings.Split(subnet, "/")
-	if len(parts) == 2 {
-		return parts[1]
-	}
-	return "24" // default
-}
-
 func parseMacvlanMode(mode string) netlink.MacvlanMode {
 	switch mode {
 	case "", "bridge":
