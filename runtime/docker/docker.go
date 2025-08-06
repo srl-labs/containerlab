@@ -179,8 +179,8 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
 	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
-
 	var networkCreated bool
+
 	switch {
 	case dockerC.IsErrNotFound(err):
 		// Network doesn't exist, create it based on driver type
@@ -256,11 +256,9 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	// For macvlan networks
 	if driver == "macvlan" {
 		// Re-inspect to get gateway information if network was just created
-		if dockerC.IsErrNotFound(err) {
-			netResource, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
-			if err != nil {
-				return fmt.Errorf("failed to inspect newly created macvlan network: %w", err)
-			}
+		netResource, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to inspect newly created macvlan network: %w", err)
 		}
 		
 		// Extract gateway IPs from IPAM config for macvlan
