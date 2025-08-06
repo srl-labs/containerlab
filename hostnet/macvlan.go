@@ -215,9 +215,14 @@ func CreateHostMacvlanInterface(cfg *MacvlanConfig) error {
 	
 	// Create the interface via netlink
 	if err := netlink.LinkAdd(macvlan); err != nil {
-		if strings.Contains(err.Error(), "numerical result") {
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "numerical result") {
 			log.Errorf("Netlink error details - this often indicates an issue with the parent interface index or mode value")
 			log.Errorf("Parent index: %d, Mode: %d", parentLink.Attrs().Index, mode)
+		} else if strings.Contains(errMsg, "permission denied") {
+			log.Errorf("Permission denied while creating macvlan interface. Are you running as root or with sufficient privileges?")
+		} else if strings.Contains(errMsg, "file exists") {
+			log.Errorf("The macvlan interface %s already exists.", hostIfName)
 		}
 		return fmt.Errorf("failed to create macvlan interface: %w", err)
 	}
