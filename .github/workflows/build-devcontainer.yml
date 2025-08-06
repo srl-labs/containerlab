@@ -70,21 +70,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # https://github.com/devcontainers/ci/issues/268#issuecomment-1976014578
-      - name: remove existing skopeo
-        run: |
-          sudo rm -rf $(which skopeo)
-
-      - name: Update skopeo
-        run: |
-          REPO_URL="https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/unstable/xUbuntu_22.04"
-          sudo sh -c "echo 'deb ${REPO_URL}/ /' > /etc/apt/sources.list.d/skopeo.list"
-          curl -fsSL ${REPO_URL}/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/skopeo.gpg > /dev/null
-
-          sudo apt update
-          sudo apt install skopeo
-          skopeo --version
-
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
