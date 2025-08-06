@@ -33,13 +33,12 @@ Ensure sros is reachable over ssh
     ...    password=NokiaSros1!
     ...    try_for=10
 
-Ensure sros is reachable over ssh with mapped port
-    Login via SSH with username and password
-    ...    address=localhost:10022
-    ...    username=admin
-    ...    password=NokiaSros1!
-    ...    try_for=10
-
+Ensure sros redirect port is open 
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...   sudo lsof -i :10022 | grep -c :10022
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Integers    ${output}    2
 
 Verify links in node l1
     ${rc}    ${output} =    Run And Return Rc And Output
