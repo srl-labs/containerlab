@@ -156,6 +156,12 @@ When containerlab launches the `-{{ kind_display_name }}-` node, the primary BOF
 
 Data interfaces need to be configured with IP addressing manually using the SR OS CLI or other available management methods.
 
+## Packet Captures
+/// warning
+Currently, a packet capture on the interfaces of the  `-{{ kind_display_name }}-` will only show traffic at the ingress direction
+///
+In order to capture traffic on an  `-{{ kind_display_name }}-`, the best way is to create a [mirror](https://documentation.nokia.com/sr/25-7/7750-sr/books/oam-diagnostics/mirror-services.html) using the SR OS CLI[^2].
+
 ## SR-SIM variants
 
 The SR-SIM can emulate different hardware platforms as explained in the [SR-SIM Installation, deployment and setup guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html). These variants can be set using the `type` directive in the clab topology file or by overriding the different available environment variables such as the ones for the chassis (`NOKIA_SROS_CHASSIS`) or card (`NOKIA_SROS_CARD`).  
@@ -214,9 +220,9 @@ Containerlab provides two ways to define the distributed variant:
 /// details | Distributed SR-SIM considerations
 Distributed systems require certain settings given the nature of the SR-SIM simulator:
 
-1. Containers must all run in the same Linux namespace. This is currently achieved using the `network-mode` directive in Containerlab[^2].
-2. The containers sharing namespace are all bridged internally to an internally created switch, which is simply a Linux bridge with uniquely named interfaces. Users do not need to configure the switch unless they have a specific need to use the `NOKIA_SROS_FABRIC_IF` environment variable  to override the default interfaces [^3].
-3. Datapath links for the SR-SIM node SHOULD[^4] be connected to the container emulating the specific line card.
+1. Containers must all run in the same Linux namespace. This is currently achieved using the `network-mode` directive in Containerlab[^3].
+2. The containers sharing namespace are all bridged internally to an internally created switch, which is simply a Linux bridge with uniquely named interfaces. Users do not need to configure the switch unless they have a specific need to use the `NOKIA_SROS_FABRIC_IF` environment variable  to override the default interfaces [^4].
+3. Datapath links for the SR-SIM node SHOULD[^5] be connected to the container emulating the specific line card.
 ///
 
 #### Standard topology
@@ -437,7 +443,7 @@ When a distributed SR-SIM node is defined using `components`, we need to take in
 
 ## Node configuration
 
-Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, and gNMI are provisioned[^5].
+Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, and gNMI are provisioned[^6].
 
 ### User-defined config
 
@@ -554,9 +560,9 @@ Some common BOF options can also be controlled using environmental variables as 
 
 ### SSH keys
 
-Containerlab supports SSH key injection into the Nokia SR OS nodes prior to deployment. First containerlab retrieves all public keys from `~/.ssh`[^6] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
+Containerlab supports SSH key injection into the Nokia SR OS nodes prior to deployment. First containerlab retrieves all public keys from `~/.ssh`[^7] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
 
-Next, it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^7] at startup. This will enable key-based authentication when you connect to the node.
+Next, it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^8] at startup. This will enable key-based authentication when you connect to the node.
 
 ## License
 
@@ -644,9 +650,10 @@ The following labs feature Nokia SR OS (SR-SIM) node:
 * [SR Linux and SR OS](../../lab-examples/sr-sim.md)
 
 [^1]: Support for the containerized SR-SIM is first introduced in containerlab v0.69.0.
-[^2]: There are some caveats to this, for instance, if the container referred by the `network-mode` directive is stopped for any reason, all the other depending containers will stop working properly.
-[^3]: If needed, switches can be created using the clab kind `bridge` or using `iproute2` commands. MTU needs to be set to 9000 at least.
-[^4]: The word SHOULD is interpreted as [RFC2129](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC8174](https://datatracker.ietf.org/doc/html/rfc8174). Links will come up as long as they are attached to the same Linux namespace.
-[^5]: This is a change from the [Vrnetlab](../vrnetlab.md) based vSIM where line cards and MDAs were pre-provisioned for some cases.
-[^6]: `~` is the home directory of the user that runs containerlab.
-[^7]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
+[^2]: See Github issue [#2741](https://github.com/srl-labs/containerlab/issues/2741)
+[^3]: There are some caveats to this, for instance, if the container referred by the `network-mode` directive is stopped for any reason, all the other depending containers will stop working properly.
+[^4]: If needed, switches can be created using the clab kind `bridge` or using `iproute2` commands. MTU needs to be set to 9000 at least.
+[^5]: The word SHOULD is interpreted as [RFC2129](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC8174](https://datatracker.ietf.org/doc/html/rfc8174). Links will come up as long as they are attached to the same Linux namespace.
+[^6]: This is a change from the [Vrnetlab](../vrnetlab.md) based vSIM where line cards and MDAs were pre-provisioned for some cases.
+[^7]: `~` is the home directory of the user that runs containerlab.
+[^8]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
