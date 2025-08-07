@@ -158,9 +158,69 @@ Data interfaces need to be configured with IP addressing manually using the SR O
 
 ## Packet Captures
 /// warning
-Currently, a packet capture on the interfaces of the  `-{{ kind_display_name }}-` will only show traffic at the ingress direction
+Currently, a packet capture directly on the interfaces of the  `-{{ kind_display_name }}-` will only show traffic at the ingress direction.
 ///
-In order to capture traffic on an  `-{{ kind_display_name }}-`, the best way is to create a [mirror](https://documentation.nokia.com/sr/25-7/7750-sr/books/oam-diagnostics/mirror-services.html) using the SR OS CLI[^2].
+In order to capture traffic bidirectionally on a  `-{{ kind_display_name }}-`, the best way is to create a [mirror](https://documentation.nokia.com/sr/25-7/7750-sr/books/oam-diagnostics/mirror-services.html) using the SR OS CLI[^2]. A simple example topology using [bridges in container namespace](bridge.md/#bridges-in-container-namespace) and mirror configuration is provided below for convenience.
+
+/// tab | Clab with mirror
+```yaml
+name: "sros"
+mgmt:
+  network: srsim_mgmt
+  ipv4-subnet: 10.78.140.0/24
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-sim10:
+      kind: nokia_srsim
+      type: SR-1 # Implicit default
+    sr-sim11:
+      kind: nokia_srsim
+    # In-namespace bridges for mirroring:
+    mirror|sr-sim10:
+      kind: bridge
+      network-mode: container:sr-sim10
+    mirror|sr-sim11:
+      kind: bridge
+      network-mode: container:sr-sim11
+  links:
+    # Data Interfaces
+    - endpoints: ["sr-sim10:1/1/c1/1", "sr-sim11:1/1/c1/1"]
+    - endpoints: ["sr-sim10:1/1/c1/2", "sr-sim11:1/1/c1/2"]
+    # Mirror port mapped to in-namespace bridge:
+    - endpoints: ["sr-sim10:1/1/c1/3", "mirror|sr-sim10:mirror0"]
+    - endpoints: ["sr-sim11:1/1/c1/3", "mirror|sr-sim11:mirror0"]
+
+```
+///
+/// tab | SR OS Mirror configuration
+```
+/configure port 1/1/c1/3 admin-state enable
+/configure port 1/1/c1/3 ethernet mode hybrid
+/configure mirror mirror-dest "mirror0" admin-state enable
+/configure mirror mirror-dest "mirror0" service-id 999
+/configure mirror mirror-dest "mirror0" { sap 1/1/c1/3:0 }
+/configure mirror mirror-source "mirror0" admin-state enable
+/configure mirror mirror-source "mirror0" port 1/1/c1/1 ingress true
+/configure mirror mirror-source "mirror0" port 1/1/c1/1 egress true
+/configure mirror mirror-source "mirror0" port 1/1/c1/2 ingress true
+/configure mirror mirror-source "mirror0" port 1/1/c1/2 egress true
+```
+///
+
+/// tab | tcpdump example
+```bash
+$ sudo ip netns exec  clab-sros-sr-sim10  tcpdump -nnei mirror0 icmp
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on mirror0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+
+10:00:40.281090 aa:c1:ab:0b:55:94 > aa:c1:ab:d7:6e:ae, ethertype IPv4 (0x0800), length 98: 10.0.0.10 > 10.0.0.11: ICMP echo request, id 251, seq 16385, length 64
+10:00:40.282415 aa:c1:ab:d7:6e:ae > aa:c1:ab:0b:55:94, ethertype IPv4 (0x0800), length 98: 10.0.0.11 > 10.0.0.10: ICMP echo reply, id 251, seq 16385, length 64
+```
+///
 
 ## SR-SIM variants
 
