@@ -96,7 +96,7 @@ func PostCreateMacvlanActions(cfg *MacvlanConfig) error {
 
 // parseAuxAddress extracts IP and subnet from aux address
 // Returns: IP address, subnet CIDR, error
-func parseAuxAddress(auxAddr string, defaultSubnet string) (string, string, error) {
+func parseAuxAddress(auxAddr, defaultSubnet string) (string, string, error) {
 	// Check if it contains CIDR notation
 	if strings.Contains(auxAddr, "/") {
 		// Parse as CIDR

@@ -338,11 +338,9 @@ func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
 					return fmt.Errorf("invalid CIDR format for MacvlanAux: %v", err)
 				}
 				auxIP = ip.String()
-			} else {
+			} else if net.ParseIP(auxIP) == nil {
 				// It's just an IP, validate it
-				if net.ParseIP(auxIP) == nil {
-					return fmt.Errorf("invalid IP address format for MacvlanAux: %s", auxIP)
-				}
+				return fmt.Errorf("invalid IP address format for MacvlanAux: %s", auxIP)
 			}
 			
 			ipamCfg.AuxAddress = map[string]string{

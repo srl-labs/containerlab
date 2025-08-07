@@ -85,12 +85,12 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	// process deprecated fields and use their values for new fields if new fields are not set
-	if len(mn.DeprecatedIPv4Subnet) > 0 && len(mn.IPv4Subnet) == 0 {
+	if mn.DeprecatedIPv4Subnet != "" && mn.IPv4Subnet == "" {
 		log.Warnf("Attribute \"ipv4_subnet\" is deprecated and will be removed in the future. Change it to \"ipv4-subnet\"")
 		mn.IPv4Subnet = mn.DeprecatedIPv4Subnet
 	}
 	// map old to new if old defined but new not
-	if len(mn.DeprecatedIPv6Subnet) > 0 && len(mn.IPv6Subnet) == 0 {
+	if mn.DeprecatedIPv6Subnet != "" && mn.IPv6Subnet == "" {
 		log.Warnf("Attribute \"ipv6_subnet\" is deprecated and will be removed in the future. Change it to \"ipv6-subnet\"")
 		mn.IPv6Subnet = mn.DeprecatedIPv6Subnet
 	}
@@ -332,10 +332,10 @@ type K8sKindExtras struct {
 }
 
 func (k *K8sKindExtras) Copy() *K8sKindExtras {
-	copy := &K8sKindExtras{
+	clone := &K8sKindExtras{
 		Deploy: k.Deploy.Copy(),
 	}
-	return copy
+	return clone
 }
 
 // K8sKindDeployExtras represents the options used for the kind cluster creation.
@@ -346,8 +346,8 @@ type K8sKindDeployExtras struct {
 }
 
 func (k *K8sKindDeployExtras) Copy() *K8sKindDeployExtras {
-	copy := *k
-	return &copy
+	clone := *k
+	return &clone
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
@@ -407,8 +407,8 @@ func (p *GenericPortBinding) String() string {
 }
 
 func (p *GenericPortBinding) Copy() *GenericPortBinding {
-	copy := *p
-	return &copy
+	clone := *p
+	return &clone
 }
 
 type LabData struct {
