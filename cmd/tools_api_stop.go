@@ -12,10 +12,10 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 )
 
 // Configuration variables for the API Server commands.
@@ -71,7 +71,7 @@ func init() {
 var apiServerStopCmd = &cobra.Command{
 	Use:     "stop",
 	Short:   "stop Containerlab API server container",
-	PreRunE: common.CheckAndGetRootPrivs,
+	PreRunE: utils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -79,7 +79,7 @@ var apiServerStopCmd = &cobra.Command{
 		log.Debugf("Container name for deletion: %s", apiServerName)
 
 		// Use common.Runtime if available, otherwise use the api-server flag
-		runtimeName := common.Runtime
+		runtimeName := runtime
 		if runtimeName == "" {
 			runtimeName = apiServerRuntime
 		}
@@ -91,7 +91,7 @@ var apiServerStopCmd = &cobra.Command{
 		}
 
 		rt := rinit()
-		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
+		err = rt.Init(containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}))
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}

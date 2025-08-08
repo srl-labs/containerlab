@@ -29,7 +29,7 @@ const (
 func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	var err error
 
-	c.TopoPaths, err = types.NewTopoPaths(topo)
+	c.TopoPaths, err = types.NewTopoPaths(topo, varsFile)
 	if err != nil {
 		return err
 	}

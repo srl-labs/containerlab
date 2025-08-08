@@ -14,7 +14,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
@@ -57,7 +56,7 @@ var generateCmd = &cobra.Command{
 	Aliases: []string{"gen"},
 	Short:   "generate a Clos topology file, based on provided flags",
 	RunE: func(cobraCmd *cobra.Command, _ []string) error {
-		if common.Name == "" {
+		if labName == "" {
 			return errors.New("provide a lab name with --name flag")
 		}
 		licenses, err := parseFlag(kind, license)
@@ -78,7 +77,7 @@ var generateCmd = &cobra.Command{
 		}
 		log.Debugf("parsed nodes definitions: %+v", nodeDefs)
 
-		b, err := generateTopologyConfig(common.Name, mgmtNetName, mgmtIPv4Subnet.String(),
+		b, err := generateTopologyConfig(labName, mgmtNetName, mgmtIPv4Subnet.String(),
 			mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
 		if err != nil {
 			return err
@@ -91,19 +90,19 @@ var generateCmd = &cobra.Command{
 			}
 		}
 		if deploy {
-			err = common.CheckAndGetRootPrivs(nil, nil)
+			err = utils.CheckAndGetRootPrivs(nil, nil)
 			if err != nil {
 				return err
 			}
 			reconfigure = true
 			if file == "" {
-				file = fmt.Sprintf("%s.clab.yml", common.Name)
+				file = fmt.Sprintf("%s.clab.yml", labName)
 				err = utils.CreateFile(file, string(b))
 				if err != nil {
 					return err
 				}
 			}
-			common.Topo = file
+			topoFile = file
 
 			// Pass owner to deploy command if specified
 			if labOwner != "" {

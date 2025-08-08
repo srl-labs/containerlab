@@ -26,7 +26,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 
 	log.Debugf("lab Conf: %+v", c.Config)
 	if options.reconfigure {
-		_ = c.Destroy(ctx, uint(len(c.Nodes)), true)
+		_ = c.destroy(ctx, uint(len(c.Nodes)), true)
 		log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return nil, err

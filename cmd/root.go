@@ -14,16 +14,23 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
-	"github.com/srl-labs/containerlab/cmd/inspect"
 	"github.com/srl-labs/containerlab/cmd/version"
 	"github.com/srl-labs/containerlab/git"
 	"github.com/srl-labs/containerlab/utils"
 )
 
 var (
-	debugCount int
-	logLevel   string
+	debugCount       int
+	logLevel         string
+	debug            bool
+	timeout          time.Duration
+	topoFile         string
+	varsFile         string
+	graph            bool
+	runtime          string
+	nodeFilter       []string
+	labName          string
+	gracefulShutdown bool
 )
 
 // RootCmd represents the base command when called without any subcommands.
@@ -35,22 +42,22 @@ var RootCmd = &cobra.Command{
 }
 
 func addSubcommands() {
-	RootCmd.AddCommand(inspect.InspectCmd)
+	RootCmd.AddCommand(InspectCmd)
 	RootCmd.AddCommand(version.VersionCmd)
 }
 
 func init() {
 	RootCmd.SilenceUsage = true
 	RootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
-	RootCmd.PersistentFlags().StringVarP(&common.Topo, "topo", "t", "",
+	RootCmd.PersistentFlags().StringVarP(&topoFile, "topo", "t", "",
 		"path to the topology definition file, a directory containing one, 'stdin', or a URL")
-	RootCmd.PersistentFlags().StringVarP(&common.VarsFile, "vars", "", "",
+	RootCmd.PersistentFlags().StringVarP(&varsFile, "vars", "", "",
 		"path to the topology template variables file")
 	_ = RootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
-	RootCmd.PersistentFlags().StringVarP(&common.Name, "name", "", "", "lab name")
-	RootCmd.PersistentFlags().DurationVarP(&common.Timeout, "timeout", "", 120*time.Second,
+	RootCmd.PersistentFlags().StringVarP(&labName, "name", "", "", "lab name")
+	RootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second,
 		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
-	RootCmd.PersistentFlags().StringVarP(&common.Runtime, "runtime", "r", "", "container runtime")
+	RootCmd.PersistentFlags().StringVarP(&runtime, "runtime", "r", "", "container runtime")
 	RootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info",
 		"logging level; one of [trace, debug, info, warning, error, fatal]")
 
@@ -80,13 +87,13 @@ func preRunFn(cobraCmd *cobra.Command, _ []string) error {
 
 	log.SetTimeFormat(time.TimeOnly)
 
-	err := common.DropRootPrivs()
+	err := utils.DropRootPrivs()
 	if err != nil {
 		return err
 	}
 	// Rootless operations only supported for Docker runtime
-	if common.Runtime != "" && common.Runtime != "docker" {
-		err := common.CheckAndGetRootPrivs(cobraCmd, nil)
+	if runtime != "" && runtime != "docker" {
+		err := utils.CheckAndGetRootPrivs(cobraCmd, nil)
 		if err != nil {
 			return err
 		}
@@ -119,24 +126,24 @@ func getTopoFilePath(cmd *cobra.Command) error { // skipcq: GO-R1005
 
 	var err error
 	// perform topology clone/fetch if the topo file is not available locally
-	if !utils.FileOrDirExists(common.Topo) {
+	if !utils.FileOrDirExists(topoFile) {
 		switch {
-		case git.IsGitHubOrGitLabURL(common.Topo) || git.IsGitHubShortURL(common.Topo):
-			common.Topo, err = processGitTopoFile(common.Topo)
+		case git.IsGitHubOrGitLabURL(topoFile) || git.IsGitHubShortURL(topoFile):
+			topoFile, err = processGitTopoFile(topoFile)
 			if err != nil {
 				return err
 			}
-		case utils.IsHttpURL(common.Topo, true):
+		case utils.IsHttpURL(topoFile, true):
 			// canonize the passed topo as URL by adding https schema if it was missing
-			if !strings.HasPrefix(common.Topo, "http://") &&
-				!strings.HasPrefix(common.Topo, "https://") {
-				common.Topo = "https://" + common.Topo
+			if !strings.HasPrefix(topoFile, "http://") &&
+				!strings.HasPrefix(topoFile, "https://") {
+				topoFile = "https://" + topoFile
 			}
 		}
 	}
 
 	// if topo or name flags have been provided, don't try to derive the topo file
-	if common.Topo != "" || common.Name != "" {
+	if topoFile != "" || labName != "" {
 		return nil
 	}
 
@@ -152,7 +159,7 @@ func getTopoFilePath(cmd *cobra.Command) error { // skipcq: GO-R1005
 		return fmt.Errorf("more than one topology file matching the pattern *.clab.yml or *.clab.yaml found, can't pick one: %q", files)
 	}
 
-	common.Topo = files[0]
+	topoFile = files[0]
 
 	log.Debugf("topology file found: %s", files[0])
 
