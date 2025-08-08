@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"net"
 
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-units"
@@ -35,6 +36,7 @@ import (
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
+	"github.com/srl-labs/containerlab/hostnet"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/mod/semver"
 )
@@ -149,7 +151,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	if d.mgmt.Bridge == "" && d.mgmt.Network != "" {
 		// fetch the network by the name set in the topo and populate the bridge name used by this network
 		netRes, err := d.Client.NetworkInspect(context.TODO(), d.mgmt.Network, networkapi.InspectOptions{})
-		// if the network is succesfully found, set the bridge used by it
+		// if the network is successfully found, set the bridge used by it
 		if err == nil {
 			if name, exists := netRes.Options["com.docker.network.bridge.name"]; exists {
 				d.mgmt.Bridge = name
@@ -166,52 +168,258 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
-	// linux bridge name that is used by docker network
+	// Determine the driver to use (default to bridge if not specified)
+	driver := d.mgmt.Driver
+	if driver == "" {
+		driver = "bridge"
+	}
+
+	// linux bridge name that is used by docker network (only relevant for bridge driver)
 	bridgeName := d.mgmt.Bridge
 
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
 	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+	var networkCreated bool
+
 	switch {
 	case dockerC.IsErrNotFound(err):
-		bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
-		if err != nil {
-			return err
-		}
-	case err == nil:
-		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
-		if len(netResource.ID) < 12 {
-			return fmt.Errorf("could not get bridge ID")
-		}
-		switch d.mgmt.Network {
+		// Network doesn't exist, create it based on driver type
+		switch driver {
 		case "bridge":
-			bridgeName = "docker0"
+			bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
+			if err != nil {
+				return err
+			}
+			
+		case "macvlan":
+			networkCreated = true
+			err = d.createMgmtMacvlan(nctx)
+			if err != nil {
+				return err
+			}
+			// For macvlan, we don't need to track a bridge name
+			bridgeName = ""
+			
 		default:
-			if netResource.Options["com.docker.network.bridge.name"] != "" {
-				bridgeName = netResource.Options["com.docker.network.bridge.name"]
-			} else {
-				bridgeName = "br-" + netResource.ID[:12]
+			return fmt.Errorf("unsupported network driver: %s", driver)
+		}
+		
+	case err == nil:
+		// Network exists, validate it matches expected driver
+		networkCreated = false
+		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
+		if netResource.Driver != driver {
+			return fmt.Errorf("existing network %q has driver %q but configuration specifies %q", 
+				d.mgmt.Network, netResource.Driver, driver)
+		}
+		
+		// Handle existing network based on driver type
+		if driver == "bridge" {
+			if len(netResource.ID) < 12 {
+				return fmt.Errorf("could not get bridge ID")
+			}
+			switch d.mgmt.Network {
+			case "bridge":
+				bridgeName = "docker0"
+			default:
+				if netResource.Options["com.docker.network.bridge.name"] != "" {
+					bridgeName = netResource.Options["com.docker.network.bridge.name"]
+				} else {
+					bridgeName = "br-" + netResource.ID[:12]
+				}
 			}
 		}
-
+		// For macvlan, we just reuse the existing network without any special handling
+		
 	default:
 		return err
 	}
 
-	if d.mgmt.Bridge == "" {
-		d.mgmt.Bridge = bridgeName
+	// Only set bridge name for bridge driver
+	if driver == "bridge" {
+		if d.mgmt.Bridge == "" {
+			d.mgmt.Bridge = bridgeName
+		}
+
+		// get management bridge v4/6 addresses and save it under mgmt struct
+		// so that nodes can use this information prior to being deployed
+		// this was added to allow mgmt network gw ip to be available in a startup config template step (ceos)
+		d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, netResource)
+		if err != nil {
+			return err
+		}
+
+		log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
+		return d.postCreateNetActions()
 	}
 
-	// get management bridge v4/6 addresses and save it under mgmt struct
-	// so that nodes can use this information prior to being deployed
-	// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
-	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, netResource)
+	// For macvlan networks
+	if driver == "macvlan" {
+		// Re-inspect to get gateway information if network was just created
+		netResource, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to inspect newly created macvlan network: %w", err)
+		}
+		
+		// Extract gateway IPs from IPAM config for macvlan
+		for _, ipamConfig := range netResource.IPAM.Config {
+			if ipamConfig.Gateway != "" {
+				// Determine if it's IPv4 or IPv6 based on the address format
+				if strings.Count(ipamConfig.Gateway, ".") == 3 {
+					d.mgmt.IPv4Gw = ipamConfig.Gateway
+				} else if strings.Contains(ipamConfig.Gateway, ":") {
+					d.mgmt.IPv6Gw = ipamConfig.Gateway
+				}
+			}
+		}
+		
+		log.Debugf("Docker macvlan network %q created/reused with parent interface %q", d.mgmt.Network, d.mgmt.MacvlanParent)
+		if networkCreated {
+        	return d.postCreateMacvlanActions()
+    	}
+	}
+
+	return nil
+}
+
+func (d *DockerRuntime) postCreateMacvlanActions() error {
+    cfg := &hostnet.MacvlanConfig{
+        NetworkName:  d.mgmt.Network,
+        ParentIface:  d.mgmt.MacvlanParent,
+        MacvlanMode:  d.mgmt.MacvlanMode,
+        AuxAddress:   d.mgmt.MacvlanAux,
+        IPv4Subnet:   d.mgmt.IPv4Subnet,
+    }
+    return hostnet.PostCreateMacvlanActions(cfg)
+}
+
+// createMgmtMacvlan creates a macvlan network for management
+func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
+	// Validate parent interface is specified
+	if d.mgmt.MacvlanParent == "" {
+		return fmt.Errorf("macvlan-parent interface must be specified for macvlan driver")
+	}
+	
+	// Check if parent interface exists
+	if _, err := netlink.LinkByName(d.mgmt.MacvlanParent); err != nil {
+		return fmt.Errorf("parent interface %q not found: %v", d.mgmt.MacvlanParent, err)
+	}
+	
+	log.Info("Creating macvlan network",
+		"name", d.mgmt.Network,
+		"parent", d.mgmt.MacvlanParent,
+		"IPv4 subnet", d.mgmt.IPv4Subnet,
+		"IPv6 subnet", d.mgmt.IPv6Subnet,
+		"mode", d.mgmt.MacvlanMode,
+		"aux-address", d.mgmt.MacvlanAux)
+
+	// Prepare IPAM configuration
+	var ipamConfig []networkapi.IPAMConfig
+	
+	// Handle IPv4 configuration
+	if d.mgmt.IPv4Subnet != "" && d.mgmt.IPv4Subnet != "auto" {
+		ipamCfg := networkapi.IPAMConfig{
+			Subnet: d.mgmt.IPv4Subnet,
+		}
+		if d.mgmt.IPv4Gw != "" {
+			ipamCfg.Gateway = d.mgmt.IPv4Gw
+		}
+		if d.mgmt.IPv4Range != "" {
+			ipamCfg.IPRange = d.mgmt.IPv4Range
+		}
+		// Add aux address if specified
+		if d.mgmt.MacvlanAux != "" {
+			// Extract IP address from either IP or CIDR format
+			auxIP := d.mgmt.MacvlanAux
+			if strings.Contains(auxIP, "/") {
+				// It's a CIDR, extract just the IP part
+				ip, _, err := net.ParseCIDR(auxIP)
+				if err != nil {
+					return fmt.Errorf("invalid CIDR format for MacvlanAux: %v", err)
+				}
+				auxIP = ip.String()
+			} else if net.ParseIP(auxIP) == nil {
+				// It's just an IP, validate it
+				return fmt.Errorf("invalid IP address format for MacvlanAux: %s", auxIP)
+			}
+			
+			ipamCfg.AuxAddress = map[string]string{
+				"host": auxIP,
+			}
+		}
+		ipamConfig = append(ipamConfig, ipamCfg)
+	}
+	
+	// Handle IPv6 configuration
+	var enableIPv6 bool
+	var ipv6_subnet string
+	
+	if d.mgmt.IPv6Subnet == "auto" {
+		var err error
+		ipv6_subnet, err = utils.GenerateIPv6ULASubnet()
+		if err != nil {
+			return err
+		}
+	} else {
+		ipv6_subnet = d.mgmt.IPv6Subnet
+	}
+	
+	if ipv6_subnet != "" {
+		ipamCfg := networkapi.IPAMConfig{
+			Subnet: ipv6_subnet,
+		}
+		if d.mgmt.IPv6Gw != "" {
+			ipamCfg.Gateway = d.mgmt.IPv6Gw
+		}
+		if d.mgmt.IPv6Range != "" {
+			ipamCfg.IPRange = d.mgmt.IPv6Range
+		}
+		ipamConfig = append(ipamConfig, ipamCfg)
+		enableIPv6 = true
+	}
+	
+	// Prepare network options
+	netwOpts := map[string]string{
+		"parent": d.mgmt.MacvlanParent,
+	}
+	
+	// Set macvlan mode (default to bridge if not specified)
+	macvlanMode := d.mgmt.MacvlanMode
+	if macvlanMode == "" {
+		macvlanMode = "bridge"
+	}
+	netwOpts["macvlan_mode"] = macvlanMode
+	
+	// Add any additional driver options from config
+	for k, v := range d.mgmt.DriverOpts {
+		log.Debug("Adding macvlan network driver option", "option", k, "value", v)
+		netwOpts[k] = v
+	}
+	
+	// Create the network
+	opts := networkapi.CreateOptions{
+		Driver:     "macvlan",
+		EnableIPv6: utils.Pointer(enableIPv6),
+		IPAM: &networkapi.IPAM{
+			Driver: "default",
+			Config: ipamConfig,
+		},
+		Internal:   false,
+		Attachable: false,
+		Labels: map[string]string{
+			"containerlab": "",
+		},
+		Options: netwOpts,
+	}
+	
+	_, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create macvlan network: %w", err)
 	}
-
-	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
-
-	return d.postCreateNetActions()
+	
+	log.Info("Macvlan network created successfully", "name", d.mgmt.Network)
+	
+	return nil
 }
 
 // skipcq: GO-R1005
@@ -362,7 +570,7 @@ func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (string
 		}
 	}
 
-	// didnt find any gateways, fallthrough to returning the error
+	// didn't find any gateways, fallthrough to returning the error
 	if v4 == "" && v6 == "" {
 		return "", "", err
 	}
@@ -372,6 +580,13 @@ func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (string
 
 // postCreateNetActions performs additional actions after the network has been created.
 func (d *DockerRuntime) postCreateNetActions() (err error) {
+	// Skip all post-creation actions for macvlan networks
+	if d.mgmt.Driver == "macvlan" {
+		log.Debug("Skipping post-creation actions for macvlan network")
+		return nil
+	}
+	
+	// Original bridge-specific actions below...
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
 	if err != nil {
@@ -403,7 +618,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	return nil
 }
 
-// DeleteNet deletes a docker bridge.
+// DeleteNet deletes a docker bridge or macvlan network.
 func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	network := d.mgmt.Network
 	if network == "bridge" || d.config.KeepMgmtNet {
@@ -427,17 +642,39 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 		}
 		return nil
 	}
+	
+	// For macvlan networks, cleanup host interface first
+	if d.mgmt.Driver == "macvlan" {
+		if err := d.cleanupMacvlanPostActions(); err != nil {
+			log.Warnf("Failed to cleanup macvlan post-actions: %v", err)
+		}
+	}
+	
 	err = d.Client.NetworkRemove(nctx, network)
 	if err != nil {
 		return err
 	}
 
-	err = d.deleteMgmtNetworkFwdRule()
-	if err != nil {
-		log.Warnf("errors during iptables rules removal: %v", err)
+	// Only run bridge-specific cleanup for bridge networks
+	if d.mgmt.Driver != "macvlan" {
+		err = d.deleteMgmtNetworkFwdRule()
+		if err != nil {
+			log.Warnf("errors during iptables rules removal: %v", err)
+		}
 	}
 
 	return nil
+}
+
+func (d *DockerRuntime) cleanupMacvlanPostActions() error {
+    cfg := &hostnet.MacvlanConfig{
+        NetworkName:  d.mgmt.Network,
+        ParentIface:  d.mgmt.MacvlanParent,
+        MacvlanMode:  d.mgmt.MacvlanMode,
+        AuxAddress:   d.mgmt.MacvlanAux,
+        IPv4Subnet:   d.mgmt.IPv4Subnet,
+    }
+    return hostnet.CleanupMacvlanPostActions(cfg)
 }
 
 // PauseContainer Pauses a container identified by its name.
