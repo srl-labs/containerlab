@@ -108,7 +108,7 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 	return filters
 }
 
-// WithLabName filters the list operation to the given lab name.
+// WithListLabName filters the list operation to the given lab name.
 func WithListLabName(
 	s string,
 ) ListOption {
