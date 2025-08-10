@@ -86,7 +86,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	var errs []error
 
 	for topo, labdir := range topos {
-		cc, err := c.cloneForDestroy(ctx, topo, labdir, *opts)
+		cc, err := c.makeCopyForDestroy(ctx, topo, labdir, *opts)
 		if err != nil {
 			log.Errorf("error creating clab instance for topo %q: %v", topo, err)
 
@@ -109,7 +109,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 
 // creates a mostly cloned version of the current c but set to the new topology, and with the
 // necessary steps (mgmt network things) handled preparing the new CLab for destruction.
-func (c *CLab) cloneForDestroy(ctx context.Context, topo, labDir string, opts DestroyOptions) (*CLab, error) {
+func (c *CLab) makeCopyForDestroy(ctx context.Context, topo, labDir string, opts DestroyOptions) (*CLab, error) {
 	newOpts := []ClabOption{
 		WithTimeout(c.timeout),
 		WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()),
