@@ -301,10 +301,10 @@ type K8sKindExtras struct {
 }
 
 func (k *K8sKindExtras) Copy() *K8sKindExtras {
-	copy := &K8sKindExtras{
+	cp := &K8sKindExtras{
 		Deploy: k.Deploy.Copy(),
 	}
-	return copy
+	return cp
 }
 
 // K8sKindDeployExtras represents the options used for the kind cluster creation.
@@ -315,8 +315,8 @@ type K8sKindDeployExtras struct {
 }
 
 func (k *K8sKindDeployExtras) Copy() *K8sKindDeployExtras {
-	copy := *k
-	return &copy
+	cp := *k
+	return &cp
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
@@ -376,8 +376,8 @@ func (p *GenericPortBinding) String() string {
 }
 
 func (p *GenericPortBinding) Copy() *GenericPortBinding {
-	copy := *p
-	return &copy
+	cp := *p
+	return &cp
 }
 
 type LabData struct {
