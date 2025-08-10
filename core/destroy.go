@@ -85,8 +85,8 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 
 	var errs []error
 
-	for topo, labdir := range topos {
-		cc, err := c.makeCopyForDestroy(ctx, topo, labdir, *opts)
+	for topo, labDir := range topos {
+		cc, err := c.makeCopyForDestroy(ctx, topo, labDir, *opts)
 		if err != nil {
 			log.Errorf("error creating clab instance for topo %q: %v", topo, err)
 
