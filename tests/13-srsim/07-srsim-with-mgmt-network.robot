@@ -18,7 +18,6 @@ Set key-path Variable
     ${key-path} =    OperatingSystem.Normalize Path    ~/.ssh/${key-name}
     Set Suite Variable    ${key-path}
 
-
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -47,6 +46,10 @@ Verify links in node l2
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
+Sleep for 10 seconds
+    [Documentation]    Give some time for datapath cards to come up
+    Sleep    10s
+
 Ensure l1 can ping l2 via sr-sim network
     Sleep    30s    give some time for linecards to come up
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -58,10 +61,10 @@ Ensure l1 can ping l2 via sr-sim network
 
 Check the number of hosts entries should be Equal to 4xIPv4 and 4xIPv6
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    cat /etc/hosts | grep -c clab-${lab-name} 
+    ...    cat /etc/hosts | grep -c clab-${lab-name}
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal As Integers    ${output}    8
-    
+
 
 *** Keywords ***
 Cleanup
