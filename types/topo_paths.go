@@ -167,7 +167,7 @@ func (t *TopoPaths) GraphDir() string {
 // GraphFilename returns the filename for a given graph file with the provided extension.
 func (t *TopoPaths) GraphFilename(ext string) string {
 	// add `.` to the extension if not provided
-	if len(ext) > 0 && !strings.HasPrefix(ext, ".") {
+	if ext != "" && !strings.HasPrefix(ext, ".") {
 		ext = "." + ext
 	}
 
