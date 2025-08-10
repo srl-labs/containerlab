@@ -35,23 +35,6 @@ func (c *CLab) ListContainers(
 	return containers, nil
 }
 
-// ListContainers lists all containers using provided filter.
-func (c *CLab) ListContainersOLD(
-	ctx context.Context,
-	filter []*types.GenericFilter,
-) ([]runtime.GenericContainer, error) {
-	var containers []runtime.GenericContainer
-
-	for _, r := range c.Runtimes {
-		ctrs, err := r.ListContainers(ctx, filter)
-		if err != nil {
-			return containers, fmt.Errorf("could not list containers: %v", err)
-		}
-		containers = append(containers, ctrs...)
-	}
-	return containers, nil
-}
-
 // ListNodesContainers lists all containers based on the nodes stored in clab instance.
 func (c *CLab) ListNodesContainers(
 	ctx context.Context,
