@@ -24,12 +24,13 @@ func NewListOptions() *ListOptions {
 	return &ListOptions{}
 }
 
+// ToFilters converts the list options to a slice of generic filters.
 func (o *ListOptions) ToFilters() []*types.GenericFilter {
-	var labels []*types.GenericFilter
+	var filters []*types.GenericFilter
 
 	if o.labName != "" {
-		labels = append(
-			labels,
+		filters = append(
+			filters,
 			&types.GenericFilter{
 				FilterType: "label",
 				Field:      containerlablabels.Containerlab,
@@ -40,8 +41,8 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 	}
 
 	if o.nodeName != "" {
-		labels = append(
-			labels,
+		filters = append(
+			filters,
 			&types.GenericFilter{
 				FilterType: "label",
 				Field:      containerlablabels.LongName,
@@ -52,8 +53,8 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 	}
 
 	if o.toolType != "" {
-		labels = append(
-			labels,
+		filters = append(
+			filters,
 			&types.GenericFilter{
 				FilterType: "label",
 				Field:      containerlablabels.ToolType,
@@ -64,8 +65,8 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 	}
 
 	if o.containerlabLabelExists {
-		labels = append(
-			labels,
+		filters = append(
+			filters,
 			&types.GenericFilter{
 				FilterType: "label",
 				Field:      containerlablabels.Containerlab,
@@ -83,8 +84,8 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 				continue
 			}
 
-			labels = append(
-				labels,
+			filters = append(
+				filters,
 				&types.GenericFilter{
 					FilterType: "label",
 					Field:      cliArgParts[0],
@@ -93,8 +94,8 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 				},
 			)
 		} else {
-			labels = append(
-				labels,
+			filters = append(
+				filters,
 				&types.GenericFilter{
 					FilterType: "label",
 					Field:      strings.TrimSpace(cliArg),
@@ -104,7 +105,7 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 		}
 	}
 
-	return labels
+	return filters
 }
 
 // WithLabName filters the list operation to the given lab name.
