@@ -13,10 +13,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 )
 
@@ -45,17 +43,18 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	var err error
 
 	opts := []core.ClabOption{
-		core.WithTimeout(common.Timeout),
-		core.WithTopoPath(common.Topo, common.VarsFile),
-		core.WithNodeFilter(common.NodeFilter),
-		core.WithRuntime(common.Runtime,
-			&runtime.RuntimeConfig{
-				Debug:            common.Debug,
-				Timeout:          common.Timeout,
-				GracefulShutdown: common.Graceful,
+		core.WithTimeout(timeout),
+		core.WithTopoPath(topoFile, varsFile),
+		core.WithNodeFilter(nodeFilter),
+		core.WithRuntime(
+			runtime,
+			&containerlabruntime.RuntimeConfig{
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(common.Debug),
+		core.WithDebug(debug),
 	}
 	c, err := core.NewContainerLab(opts...)
 	if err != nil {
@@ -87,14 +86,10 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var containers []runtime.GenericContainer
+	var containers []containerlabruntime.GenericContainer
 	// if offline mode is not enforced, list containers matching lab name
 	if !offline {
-		labels := []*types.GenericFilter{{
-			FilterType: "label", Match: c.Config.Name,
-			Field: labels.Containerlab, Operator: "=",
-		}}
-		containers, err = c.ListContainers(ctx, labels)
+		containers, err = c.ListContainers(ctx, core.WithListLabName(c.Config.Name))
 		if err != nil {
 			return err
 		}
@@ -158,7 +153,7 @@ func init() {
 		"Go html template used to generate the graph")
 	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", "",
 		"Serve static files from the specified directory")
-	graphCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
+	graphCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 	graphCmd.MarkFlagsMutuallyExclusive("dot", "mermaid", "drawio")
 }

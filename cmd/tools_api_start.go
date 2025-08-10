@@ -12,11 +12,10 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -66,7 +65,7 @@ func init() {
 		"container runtime to use for API server")
 }
 
-func NewAPIServerNode(name, image, labsDir string, runtime runtime.ContainerRuntime,
+func NewAPIServerNode(name, image, labsDir string, runtime containerlabruntime.ContainerRuntime,
 	env map[string]string, labels map[string]string,
 ) (*APIServerNode, error) {
 	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s", name, image, labsDir, runtime)
@@ -181,7 +180,7 @@ func getOwnerName() string {
 var apiServerStartCmd = &cobra.Command{
 	Use:     "start",
 	Short:   "start Containerlab API server container",
-	PreRunE: common.CheckAndGetRootPrivs,
+	PreRunE: utils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -199,7 +198,7 @@ var apiServerStartCmd = &cobra.Command{
 			log.Infof("Generated random JWT secret for API server")
 		}
 
-		runtimeName := common.Runtime
+		runtimeName := runtime
 		if runtimeName == "" {
 			runtimeName = apiServerRuntime
 		}
@@ -211,7 +210,7 @@ var apiServerStartCmd = &cobra.Command{
 		}
 
 		rt := rinit()
-		err = rt.Init(runtime.WithConfig(&runtime.RuntimeConfig{Timeout: common.Timeout}))
+		err = rt.Init(containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}))
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}

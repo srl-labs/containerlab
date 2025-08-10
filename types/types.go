@@ -80,12 +80,12 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	// process deprecated fields and use their values for new fields if new fields are not set
-	if len(mn.DeprecatedIPv4Subnet) > 0 && len(mn.IPv4Subnet) == 0 {
+	if mn.DeprecatedIPv4Subnet != "" && mn.IPv4Subnet == "" {
 		log.Warnf("Attribute \"ipv4_subnet\" is deprecated and will be removed in the future. Change it to \"ipv4-subnet\"")
 		mn.IPv4Subnet = mn.DeprecatedIPv4Subnet
 	}
 	// map old to new if old defined but new not
-	if len(mn.DeprecatedIPv6Subnet) > 0 && len(mn.IPv6Subnet) == 0 {
+	if mn.DeprecatedIPv6Subnet != "" && mn.IPv6Subnet == "" {
 		log.Warnf("Attribute \"ipv6_subnet\" is deprecated and will be removed in the future. Change it to \"ipv6-subnet\"")
 		mn.IPv6Subnet = mn.DeprecatedIPv6Subnet
 	}
@@ -248,32 +248,6 @@ type GenericFilter struct {
 	Match string
 }
 
-// FilterFromLabelStrings creates a GenericFilter based on the list of label=value pairs or just label entries.
-// A filter of type `label` is created.
-// For each label=value input label, a filter with the Field matching the label and Match matching the value is created.
-// For each standalone label, a filter with Operator=exists and Field matching the label is created.
-func FilterFromLabelStrings(labels []string) []*GenericFilter {
-	var gfl []*GenericFilter
-	var gf *GenericFilter
-	for _, s := range labels {
-		gf = &GenericFilter{
-			FilterType: "label",
-		}
-		if strings.Contains(s, "=") {
-			gf.Operator = "="
-			subs := strings.Split(s, "=")
-			gf.Field = strings.TrimSpace(subs[0])
-			gf.Match = strings.TrimSpace(subs[1])
-		} else {
-			gf.Operator = "exists"
-			gf.Field = strings.TrimSpace(s)
-		}
-
-		gfl = append(gfl, gf)
-	}
-	return gfl
-}
-
 // ConfigDispatcher represents the config of a configuration machine
 // that is responsible to execute configuration commands on the nodes
 // after they started.
@@ -327,10 +301,10 @@ type K8sKindExtras struct {
 }
 
 func (k *K8sKindExtras) Copy() *K8sKindExtras {
-	copy := &K8sKindExtras{
+	cp := &K8sKindExtras{
 		Deploy: k.Deploy.Copy(),
 	}
-	return copy
+	return cp
 }
 
 // K8sKindDeployExtras represents the options used for the kind cluster creation.
@@ -341,8 +315,8 @@ type K8sKindDeployExtras struct {
 }
 
 func (k *K8sKindDeployExtras) Copy() *K8sKindDeployExtras {
-	copy := *k
-	return &copy
+	cp := *k
+	return &cp
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
@@ -402,8 +376,8 @@ func (p *GenericPortBinding) String() string {
 }
 
 func (p *GenericPortBinding) Copy() *GenericPortBinding {
-	copy := *p
-	return &copy
+	cp := *p
+	return &cp
 }
 
 type LabData struct {

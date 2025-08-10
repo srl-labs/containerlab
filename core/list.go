@@ -15,12 +15,18 @@ import (
 // ListContainers lists all containers using provided filter.
 func (c *CLab) ListContainers(
 	ctx context.Context,
-	filter []*types.GenericFilter,
+	options ...ListOption,
 ) ([]runtime.GenericContainer, error) {
+	opts := NewListOptions()
+
+	for _, opt := range options {
+		opt(opts)
+	}
+
 	var containers []runtime.GenericContainer
 
 	for _, r := range c.Runtimes {
-		ctrs, err := r.ListContainers(ctx, filter)
+		ctrs, err := r.ListContainers(ctx, opts.ToFilters())
 		if err != nil {
 			return containers, fmt.Errorf("could not list containers: %v", err)
 		}

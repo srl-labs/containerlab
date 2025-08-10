@@ -21,12 +21,12 @@ import (
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/internal/tc"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
+	"github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -109,7 +109,7 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// Get the runtime initializer.
-	_, rinit, err := core.RuntimeInitializer(common.Runtime)
+	_, rinit, err := core.RuntimeInitializer(runtime)
 	if err != nil {
 		return err
 	}
@@ -119,9 +119,9 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 
 	// init runtime with timeout
 	err = rt.Init(
-		runtime.WithConfig(
-			&runtime.RuntimeConfig{
-				Timeout: common.Timeout,
+		containerlabruntime.WithConfig(
+			&containerlabruntime.RuntimeConfig{
+				Timeout: timeout,
 			},
 		),
 	)
@@ -189,7 +189,7 @@ func validateInputAndRoot(c *cobra.Command, args []string) error {
 		return fmt.Errorf("jitter cannot be set without setting delay")
 	}
 
-	common.CheckAndGetRootPrivs(c, args)
+	utils.CheckAndGetRootPrivs(c, args)
 
 	return nil
 }
@@ -328,7 +328,7 @@ func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 
 func netemShowFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
-	_, rinit, err := core.RuntimeInitializer(common.Runtime)
+	_, rinit, err := core.RuntimeInitializer(runtime)
 	if err != nil {
 		return err
 	}
@@ -336,9 +336,9 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	// init the runtime
 	rt := rinit()
 	err = rt.Init(
-		runtime.WithConfig(
-			&runtime.RuntimeConfig{
-				Timeout: common.Timeout,
+		containerlabruntime.WithConfig(
+			&containerlabruntime.RuntimeConfig{
+				Timeout: timeout,
 			},
 		),
 	)
@@ -405,7 +405,7 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 
 func netemResetFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
-	_, rinit, err := core.RuntimeInitializer(common.Runtime)
+	_, rinit, err := core.RuntimeInitializer(runtime)
 	if err != nil {
 		return err
 	}
@@ -413,9 +413,9 @@ func netemResetFn(_ *cobra.Command, _ []string) error {
 	// init the runtime
 	rt := rinit()
 	err = rt.Init(
-		runtime.WithConfig(
-			&runtime.RuntimeConfig{
-				Timeout: common.Timeout,
+		containerlabruntime.WithConfig(
+			&containerlabruntime.RuntimeConfig{
+				Timeout: timeout,
 			},
 		),
 	)

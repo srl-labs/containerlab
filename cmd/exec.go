@@ -10,12 +10,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
 	"github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 var (
@@ -27,7 +24,7 @@ var (
 // execCmd represents the exec command.
 var execCmd = &cobra.Command{
 	Use:   "exec",
-	Short: "execute a command on one or multiple containers",
+	Short: "execute a command in one or multiple containers",
 	RunE:  execFn,
 }
 
@@ -49,24 +46,25 @@ func execFn(_ *cobra.Command, _ []string) error {
 	// exec can work with or without a topology file
 	// when topology file is provided we need to parse it
 	// when topo file is not provided, we rely on labels to perform the filtering
-	if common.Topo != "" {
-		opts = append(opts, core.WithTopoPath(common.Topo, common.VarsFile))
+	if topoFile != "" {
+		opts = append(opts, core.WithTopoPath(topoFile, varsFile))
 	}
 
 	opts = append(opts,
-		core.WithTimeout(common.Timeout),
-		core.WithRuntime(common.Runtime,
-			&runtime.RuntimeConfig{
-				Debug:            common.Debug,
-				Timeout:          common.Timeout,
-				GracefulShutdown: common.Graceful,
+		core.WithTimeout(timeout),
+		core.WithRuntime(
+			runtime,
+			&containerlabruntime.RuntimeConfig{
+				Debug:            debug,
+				Timeout:          timeout,
+				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(common.Debug),
+		core.WithDebug(debug),
 	)
 
-	if common.Name != "" {
-		opts = append(opts, core.WithLabName(common.Name))
+	if labName != "" {
+		opts = append(opts, core.WithLabName(labName))
 	}
 
 	c, err := core.NewContainerLab(opts...)
@@ -79,18 +77,18 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	var filters []*types.GenericFilter
-
-	if len(labelsFilter) != 0 {
-		filters = types.FilterFromLabelStrings(labelsFilter)
+	listOptions := []core.ListOption{
+		core.WithListFromCliArgs(labelsFilter),
 	}
 
-	if common.Topo != "" {
-		labFilter := []string{fmt.Sprintf("%s=%s", labels.Containerlab, c.Config.Name)}
-		filters = append(filters, types.FilterFromLabelStrings(labFilter)...)
+	if topoFile != "" {
+		listOptions = append(
+			listOptions,
+			core.WithListLabName(c.Config.Name),
+		)
 	}
 
-	resultCollection, err := c.Exec(ctx, execCommands, core.NewExecOptions(filters))
+	resultCollection, err := c.Exec(ctx, execCommands, listOptions...)
 	if err != nil {
 		return err
 	}
