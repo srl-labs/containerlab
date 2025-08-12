@@ -91,7 +91,7 @@ func (*host) RunExec(ctx context.Context, e *containerlabexec.ExecCmd) (*contain
 }
 
 func RunExec(ctx context.Context, e *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
-	// retireve the command with its arguments
+	// retrieve the command with its arguments
 	command := e.GetCmd()
 
 	// execute the command along with the context

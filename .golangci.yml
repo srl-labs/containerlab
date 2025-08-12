@@ -11,6 +11,7 @@ linters:
     - govet
     - ineffassign
     - importas
+    - misspell
     - nakedret
     - noctx
     - nolintlint
@@ -30,7 +31,6 @@ linters:
     - gocyclo
     - gosec
     - lll
-    - misspell
     - mnd
     - nestif
     - prealloc

@@ -9,7 +9,7 @@ Login via SSH with username and password
     ...    ${port}=22
     ...    ${username}=${None}
     ...    ${password}=${None}
-    # seconds to try and succesfully login
+    # seconds to try and successfully login
     ...    ${try_for}=4
     ...    ${conn_timeout}=3
     FOR    ${i}    IN RANGE    ${try_for}
@@ -29,7 +29,7 @@ Login via SSH with public key
     ...    ${port}=22
     ...    ${username}=${None}
     ...    ${keyfile}=~/.ssh/id_rsa
-    # seconds to try and succesfully login
+    # seconds to try and successfully login
     ...    ${try_for}=4
     ...    ${conn_timeout}=3
     Log    ${keyfile}

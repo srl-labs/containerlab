@@ -18,7 +18,7 @@ func genMac(cfg *types.NodeConfig) string {
 	projID, _ := rand.Int(rand.Reader, big.NewInt(256))
 	macPrefix := fmt.Sprintf("1c:%02x", projID)
 
-	// labs up to 256 nodes are supported, behaviour is undefined when more nodes are defined
+	// labs up to 256 nodes are supported, behavior is undefined when more nodes are defined
 	m := fmt.Sprintf("%s:%02x:00:00:00", macPrefix, cfg.Index%256)
 
 	// set system Mac in NodeConfig

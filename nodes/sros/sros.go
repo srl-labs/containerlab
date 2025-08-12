@@ -192,7 +192,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, c := range n.Cfg.Components {
 		c.Slot = strings.ToUpper(c.Slot)
 	}
-	// Merge Enviroment
+	// Merge Environment
 	if n.Cfg.NodeType == "" {
 		n.Cfg.NodeType = SrosDefaultType
 	}
@@ -286,9 +286,9 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	}
 	// Execute SaveConfig after boot. This code should only run on active CPM
 	for time.Now().Before(time.Now().Add(readyTimeout)) {
-		// Check if context is cancelled
+		// Check if context is canceled
 		if err := ctx.Err(); err != nil {
-			return fmt.Errorf("context cancelled: %w", err)
+			return fmt.Errorf("context canceled: %w", err)
 		}
 
 		isHealthy, err := n.IsHealthy(ctx)
@@ -543,7 +543,7 @@ search:
 		switch comp.Slot {
 		case slotAName:
 			slot = slotAName
-			// now we can break because the slot A is prefered, does not matter if B also exists
+			// now we can break because the slot A is preferred, does not matter if B also exists
 			break search
 		case slotBName:
 			slot = slotBName

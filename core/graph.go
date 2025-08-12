@@ -100,7 +100,7 @@ func (c *CLab) GenerateDotGraph() error {
 		}
 	}
 
-	// Process the links inbetween Nodes
+	// Process the links between Nodes
 	for _, link := range c.Links {
 		attr = make(map[string]string)
 		attr["color"] = "black"

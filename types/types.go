@@ -64,7 +64,7 @@ var _ yaml.Unmarshaler = &MgmtNet{}
 
 // UnmarshalYAML is a custom unmarshaller for MgmtNet that allows to map old attributes to new ones.
 func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// define an alias type to avoid recursion during unmarshalling
+	// define an alias type to avoid recursion during unmarshaling
 	type MgmtNetAlias MgmtNet
 
 	type MgmtNetWithDeprecatedFields struct {

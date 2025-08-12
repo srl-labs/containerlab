@@ -92,7 +92,7 @@ func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) erro
 		n.Cfg.ShmSize = "512M"
 	}
 
-	// Containers are run in priviledge mode so it should not matter now
+	// Containers are run in privileged mode so it should not matter now
 	// If it changes, add the capabilities to run 6WIND VSR
 	n.Cfg.CapAdd = append(n.Cfg.CapAdd,
 		"NET_ADMIN",

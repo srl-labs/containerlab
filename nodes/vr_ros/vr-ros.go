@@ -27,7 +27,7 @@ const (
 	configDirName   = "ftpboot"
 	startupCfgFName = "config.auto.rsc"
 
-	scrapliPlatformName = "mikrotik_routeros"
+	scrapliPlatformName = "mikrotik_routeros" //nolint: misspell
 )
 
 // Register registers the node in the NodeRegistry.

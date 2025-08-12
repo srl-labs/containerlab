@@ -66,7 +66,7 @@ func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 		return fmt.Errorf("cannot find %q: %s", kvmPath, err)
 	}
 
-	// ensure firecracker directroy
+	// ensure firecracker directory
 	for _, path := range runtimePaths {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			if err := os.MkdirAll(path, os.ModeDir); err != nil {

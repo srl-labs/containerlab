@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	CLAB_AUTHORISED_GROUP = "clab_admins"
+	CLAB_AUTHORIZED_GROUP = "clab_admins"
 	ROOT_UID              = 0
 	NOMODIFY              = -1
 )
@@ -25,7 +25,7 @@ func CheckAndGetRootPrivs(_ *cobra.Command, _ []string) error {
 
 	// If we are not running directly as root, and SUID is properly set, attempt to get root privileges
 	if euid != 0 && suid == 0 {
-		clabGroupExists, err := UnixGroupExists(CLAB_AUTHORISED_GROUP)
+		clabGroupExists, err := UnixGroupExists(CLAB_AUTHORIZED_GROUP)
 		if err != nil {
 			return fmt.Errorf("failed to lookup containerlab admin group: %w", err)
 		}
@@ -36,7 +36,7 @@ func CheckAndGetRootPrivs(_ *cobra.Command, _ []string) error {
 				return fmt.Errorf("failed to retrieve current user details: %w", err)
 			}
 
-			userInClabGroup, err := UserInUnixGroup(currentEffUser.Username, CLAB_AUTHORISED_GROUP)
+			userInClabGroup, err := UserInUnixGroup(currentEffUser.Username, CLAB_AUTHORIZED_GROUP)
 			if err != nil {
 				return fmt.Errorf("failed to check containerlab admin group membership: %w", err)
 			}

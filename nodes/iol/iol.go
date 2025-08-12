@@ -319,7 +319,7 @@ func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 	}
 }
 
-// AddEndpoint override maps the endpoint name to an ethX-based naming where neccesary, before adding it to the node endpoints. Returns an error if the mapping goes wrong or if the
+// AddEndpoint override maps the endpoint name to an ethX-based naming where necessary, before adding it to the node endpoints. Returns an error if the mapping goes wrong or if the
 // interface name is NOT allowed.
 func (n *iol) AddEndpoint(e links.Endpoint) error {
 	endpointName := e.GetIfaceName()

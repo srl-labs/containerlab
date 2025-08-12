@@ -454,7 +454,7 @@ func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec
 }
 
 // RunExecNotWait executes a command for a node, and doesn't block waiting for the output.
-// Should be overriden if the nodes implementation differs.
+// Should be overridden if the nodes implementation differs.
 func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {

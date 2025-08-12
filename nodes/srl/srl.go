@@ -747,7 +747,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 // commitConfig commits and saves default+overlay config to the startup-config file.
 func (n *srl) commitConfig(ctx context.Context) error {
-	log.Debugf("Node %q: commiting configuration", n.Cfg.ShortName)
+	log.Debugf("Node %q: committing configuration", n.Cfg.ShortName)
 
 	cmd, err := exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
 	if err != nil {

@@ -149,7 +149,7 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	if d.mgmt.Bridge == "" && d.mgmt.Network != "" {
 		// fetch the network by the name set in the topo and populate the bridge name used by this network
 		netRes, err := d.Client.NetworkInspect(context.TODO(), d.mgmt.Network, networkapi.InspectOptions{})
-		// if the network is succesfully found, set the bridge used by it
+		// if the network is successfully found, set the bridge used by it
 		if err == nil {
 			if name, exists := netRes.Options["com.docker.network.bridge.name"]; exists {
 				d.mgmt.Bridge = name

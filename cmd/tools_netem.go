@@ -156,7 +156,7 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	}()
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		netemIfLink, err := netlink.LinkByName(links.SanitiseInterfaceName(netemInterface))
+		netemIfLink, err := netlink.LinkByName(links.SanitizeInterfaceName(netemInterface))
 		if err != nil {
 			return err
 		}
@@ -390,7 +390,7 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 			}
 			jsonData, err := json.MarshalIndent(outputData, "", "  ")
 			if err != nil {
-				return fmt.Errorf("error marshalling JSON: %v", err)
+				return fmt.Errorf("error marshaling JSON: %v", err)
 			}
 			fmt.Println(string(jsonData))
 		} else {
@@ -448,7 +448,7 @@ func netemResetFn(_ *cobra.Command, _ []string) error {
 	}()
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		netemIfLink, err := netlink.LinkByName(links.SanitiseInterfaceName(netemInterface))
+		netemIfLink, err := netlink.LinkByName(links.SanitizeInterfaceName(netemInterface))
 		if err != nil {
 			return err
 		}

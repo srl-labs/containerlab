@@ -163,7 +163,7 @@ var topologyTestSet = map[string]struct {
 				CPU:  1,
 				Binds: []string{
 					"x:z",
-					"m:n", // overriden by node
+					"m:n", // overridden by node
 				},
 			},
 			Kinds: map[string]*NodeDefinition{
@@ -458,7 +458,7 @@ var topologyTestSet = map[string]struct {
 					CPU:  1,
 					Binds: []string{
 						"x:z",
-						"m:n", // overriden by group
+						"m:n", // overridden by group
 					},
 				},
 			},
@@ -559,12 +559,12 @@ var topologyTestSet = map[string]struct {
 	"node_group_default": {
 		input: &Topology{
 			Defaults: &NodeDefinition{
-				Kind: "linux", // overriden by group
+				Kind: "linux", // overridden by group
 				User: "user1",
 				CPU:  1,
 				Binds: []string{
 					"x:z",
-					"m:n", // overriden by node
+					"m:n", // overridden by node
 				},
 			},
 			Groups: map[string]*NodeDefinition{

@@ -71,7 +71,7 @@ func (e *extcont) GetContainers(ctx context.Context) ([]runtime.GenericContainer
 		return nil, err
 	}
 
-	// we need to artifically add the Node Kind Label
+	// we need to artificially add the Node Kind Label
 	// this label data is e.g. used in the table printed after deployment
 	for _, c := range cnts {
 		c.Labels[labels.NodeKind] = kindnames[0]

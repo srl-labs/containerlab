@@ -104,7 +104,7 @@ var _ yaml.Unmarshaler = (*LinkDefinition)(nil)
 func (ld *LinkDefinition) UnmarshalYAML( //nolint: funlen
 	unmarshal func(any) error,
 ) error { // skipcq: GO-R1005
-	// struct to avoid recursion when unmarshalling
+	// struct to avoid recursion when unmarshaling
 	// used only to unmarshal the type field.
 	var a struct {
 		Type string `yaml:"type"`
@@ -315,7 +315,7 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 
 // RawLink is an interface that all raw link types must implement.
 // Raw link types define the links as they are defined in the topology file
-// and solely a product of unmarshalling.
+// and solely a product of unmarshaling.
 // Raw links are later "resolved" to concrete link types (e.g LinkVeth).
 type RawLink interface {
 	Resolve(params *ResolveParams) (Link, error)
@@ -415,8 +415,8 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			}
 		} else {
 			// when the name is too long, we add a sanitized interface name as AltName
-			sanitisedIfaceName := SanitiseInterfaceName(endpt.GetIfaceName())
-			err := netlink.LinkAddAltName(l, sanitisedIfaceName)
+			sanitizedIfaceName := SanitizeInterfaceName(endpt.GetIfaceName())
+			err := netlink.LinkAddAltName(l, sanitizedIfaceName)
 			if err != nil {
 				return fmt.Errorf(
 					"failed to add altname: %v", err)
@@ -436,9 +436,9 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			if err != nil {
 				return err
 			}
-			// Set a sanitised altname for ease of access. '/', and ' ' are changed to '-'
-			sanitisedIfaceName := SanitiseInterfaceName(endpt.GetIfaceAlias())
-			err = netlink.LinkAddAltName(l, sanitisedIfaceName)
+			// Set a sanitized altname for ease of access. '/', and ' ' are changed to '-'
+			sanitizedIfaceName := SanitizeInterfaceName(endpt.GetIfaceAlias())
+			err = netlink.LinkAddAltName(l, sanitizedIfaceName)
 			if err != nil {
 				return err
 			}
@@ -499,9 +499,9 @@ func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
 	return true
 }
 
-// SanitiseInterfaceName sanitises the interface name by replacing '/' and ' ' with '-'.
+// SanitizeInterfaceName sanitizes the interface name by replacing '/' and ' ' with '-'.
 // Making it suitable to write as AltName for the interface.
-func SanitiseInterfaceName(ifaceName string) string {
+func SanitizeInterfaceName(ifaceName string) string {
 	var sb strings.Builder
 	sb.Grow(len(ifaceName))
 
