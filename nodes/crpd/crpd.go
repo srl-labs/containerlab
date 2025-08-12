@@ -103,7 +103,7 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error 
 		return err
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
+	if execResult.GetStdErrString() != "" {
 		// If "ssh: unrecognized service" appears in the output we are probably
 		// on Junos >=23.4, where the SSH service was renamed to junos-ssh and
 		// is fully managed by MGD
@@ -121,7 +121,7 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error 
 			return err
 		}
 
-		if len(execResult.GetStdErrString()) > 0 {
+		if execResult.GetStdErrString() != "" {
 			return fmt.Errorf("crpd post-deploy license add failed: %s", execResult.GetStdErrString())
 		}
 		log.Debugf("crpd post-deploy license add result: %s", execResult.GetStdOutString())
@@ -137,7 +137,7 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 		return err
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
 	}
 

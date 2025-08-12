@@ -63,7 +63,7 @@ type MgmtNet struct {
 var _ yaml.Unmarshaler = &MgmtNet{}
 
 // UnmarshalYAML is a custom unmarshaller for MgmtNet that allows to map old attributes to new ones.
-func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (m *MgmtNet) UnmarshalYAML(unmarshal func(any) error) error {
 	// define an alias type to avoid recursion during unmarshaling
 	type MgmtNetAlias MgmtNet
 
@@ -74,7 +74,7 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	mn := &MgmtNetWithDeprecatedFields{}
 
-	mn.MgmtNetAlias = (MgmtNetAlias)(*m)
+	mn.MgmtNetAlias = MgmtNetAlias(*m)
 	if err := unmarshal(mn); err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		mn.IPv6Subnet = mn.DeprecatedIPv6Subnet
 	}
 
-	*m = (MgmtNet)(mn.MgmtNetAlias)
+	*m = MgmtNet(mn.MgmtNetAlias)
 
 	return nil
 }

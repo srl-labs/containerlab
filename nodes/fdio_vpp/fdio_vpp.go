@@ -158,7 +158,7 @@ func (n *fdio_vpp) SaveConfig(ctx context.Context) error {
 		return err
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
 	}
 

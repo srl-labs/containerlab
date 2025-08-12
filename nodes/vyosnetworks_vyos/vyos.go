@@ -129,7 +129,7 @@ func (n *vyos) SaveConfig(ctx context.Context) error {
 	}
 	defer cli.Close()
 
-	if err = n.save(ctx, cli); err != nil {
+	if err := n.save(ctx, cli); err != nil {
 		return err
 	}
 
@@ -188,7 +188,7 @@ func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	} else if resp.Failed != nil {
 		return errors.New("failed to configure management interface")
 	}
-	if err = n.save(ctx, cli); err != nil {
+	if err := n.save(ctx, cli); err != nil {
 		return err
 	}
 	log.Info("PostDeploy complete", "node", n.Cfg.ShortName)

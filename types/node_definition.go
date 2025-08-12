@@ -101,12 +101,12 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 
 	nd := &NodeDefinitionWithDeprecatedFields{}
 
-	nd.NodeDefinitionAlias = (NodeDefinitionAlias)(*n)
+	nd.NodeDefinitionAlias = NodeDefinitionAlias(*n)
 	if err := unmarshal(nd); err != nil {
 		return err
 	}
 
-	*n = (NodeDefinition)(nd.NodeDefinitionAlias)
+	*n = NodeDefinition(nd.NodeDefinitionAlias)
 
 	return nil
 }

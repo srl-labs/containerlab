@@ -111,7 +111,7 @@ func addKeyToBuffer(b *bytes.Buffer, key string) {
 // RetrieveSSHAgentKeys retrieves public keys registered with the ssh-agent.
 func RetrieveSSHAgentKeys() ([]ssh.PublicKey, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
-	if len(socket) == 0 {
+	if socket == "" {
 		log.Debug("SSH_AUTH_SOCK not set, skipping pubkey fetching")
 		return nil, nil
 	}

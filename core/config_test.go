@@ -428,8 +428,10 @@ func TestLabelsInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			tc.want[containerlablabels.NodeLabDir] = utils.ResolvePath(tc.want[containerlablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
-			tc.want[containerlablabels.TopoFile] = utils.ResolvePath(tc.want[containerlablabels.TopoFile], c.TopoPaths.TopologyFileDir())
+			tc.want[containerlablabels.NodeLabDir] =
+				utils.ResolvePath(tc.want[containerlablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
+			tc.want[containerlablabels.TopoFile] =
+				utils.ResolvePath(tc.want[containerlablabels.TopoFile], c.TopoPaths.TopologyFileDir())
 
 			labels := c.Nodes[tc.node].Config().Labels
 

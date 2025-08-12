@@ -583,7 +583,7 @@ func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link,
 		return err
 	}
 	// move veth endpoint to namespace
-	if err = netlink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
+	if err := netlink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
 		return err
 	}
 	// execute the given function

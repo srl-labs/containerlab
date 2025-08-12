@@ -89,7 +89,8 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	var containers []containerlabruntime.GenericContainer
 	// if offline mode is not enforced, list containers matching lab name
 	if !offline {
-		containers, err = c.ListContainers(ctx, containerlabcore.WithListLabName(c.Config.Name))
+		containers, err = c.ListContainers(ctx,
+			containerlabcore.WithListLabName(c.Config.Name))
 		if err != nil {
 			return err
 		}

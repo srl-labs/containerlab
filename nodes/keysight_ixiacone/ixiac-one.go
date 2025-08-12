@@ -64,7 +64,7 @@ func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if len(execResult.GetStdErrString()) > 0 {
+		if execResult.GetStdErrString() != "" {
 			msg := strings.TrimSuffix(execResult.GetStdErrString(), "\n")
 			if msg != statusInProgressMsg {
 				return err

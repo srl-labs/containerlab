@@ -267,16 +267,18 @@ func (n *sros) PostDeploy(ctx context.Context, params *containerlabnodes.PostDep
 	log.Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
 		"node", n.Cfg.ShortName)
-	var err error
+
 	// start waiting for container ready (PID based check)
-	if err = n.Ready(ctx); err != nil {
+	if err := n.Ready(ctx); err != nil {
 		return err
 	}
 
 	// Populate /etc/hosts for service discovery on mgmt interface
-	if err = n.populateHosts(ctx, params.Nodes); err != nil {
+	if err := n.populateHosts(ctx, params.Nodes); err != nil {
 		log.Warn("Unable to populate hosts list", "node", n.Cfg.ShortName, "err", err)
 	}
+
+	var err error
 	n.swVersion, err = n.RunningVersion(ctx)
 	if err != nil {
 		return err
@@ -890,7 +892,8 @@ func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, e
 	// check that we retrieved some container information
 	// otherwise throw ErrContainersNotFound error
 	if len(cnts) == 0 {
-		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(), containerlabnodes.ErrContainersNotFound)
+		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(),
+			containerlabnodes.ErrContainersNotFound)
 	}
 
 	return cnts, err

@@ -325,11 +325,10 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 // checkTopologyDefinition runs topology checks and returns any errors found.
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
-	var err error
-	if err = c.verifyLinks(ctx); err != nil {
+	if err := c.verifyLinks(ctx); err != nil {
 		return err
 	}
-	if err = c.verifyRootNetNSLinks(); err != nil {
+	if err := c.verifyRootNetNSLinks(); err != nil {
 		return err
 	}
 
@@ -340,11 +339,11 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 			return err
 		}
 	}
-	if err = c.verifyDuplicateAddresses(); err != nil {
+	if err := c.verifyDuplicateAddresses(); err != nil {
 		return err
 	}
 
-	if err = c.verifyContainersUniqueness(ctx); err != nil {
+	if err := c.verifyContainersUniqueness(ctx); err != nil {
 		return err
 	}
 

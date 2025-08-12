@@ -37,7 +37,7 @@ func (c *CLab) Deploy( //nolint: funlen
 	}
 
 	// create management network or use existing one
-	if err = c.CreateNetwork(ctx); err != nil {
+	if err := c.CreateNetwork(ctx); err != nil {
 		return nil, err
 	}
 
@@ -46,11 +46,11 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	if err = c.checkTopologyDefinition(ctx); err != nil {
+	if err := c.checkTopologyDefinition(ctx); err != nil {
 		return nil, err
 	}
 
-	if err = c.loadKernelModules(); err != nil {
+	if err := c.loadKernelModules(); err != nil {
 		return nil, err
 	}
 

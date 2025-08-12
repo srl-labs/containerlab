@@ -102,7 +102,7 @@ func (n *vrFreeBSD) SaveConfig(ctx context.Context) error {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 

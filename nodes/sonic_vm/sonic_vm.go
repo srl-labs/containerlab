@@ -104,7 +104,7 @@ func (n *sonic_vm) SaveConfig(ctx context.Context) error {
 		return fmt.Errorf("%s: failed to execute cmd: %w", n.Cfg.ShortName, err)
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
