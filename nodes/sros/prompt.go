@@ -8,7 +8,7 @@ import (
 // getPrompt returns the prompt value from a string blob containing the prompt.
 // The s is the output of the "environment show | grep -A 2 prompt" command.
 func getPrompt(s string) (string, error) {
-	re, _ := regexp.Compile(`value\s+=\s+"(.+)"`)
+	re := regexp.MustCompile(`value\s+=\s+"(.+)"`)
 	v := re.FindStringSubmatch(s)
 
 	if len(v) != 2 {

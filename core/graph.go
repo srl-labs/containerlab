@@ -116,7 +116,6 @@ func (c *CLab) GenerateDotGraph() error {
 		if err := g.AddEdge(ANodeName, BNodeName, false, attr); err != nil {
 			return err
 		}
-		// log.Info(link.A.Node.ShortName, " <-> ", link.B.Node.ShortName)
 	}
 
 	// create graph directory

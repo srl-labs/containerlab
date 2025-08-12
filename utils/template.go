@@ -446,7 +446,7 @@ func ToString(in any) string {
 	return fmt.Sprint(in)
 }
 
-// CreateStringFuncs.
+// CreateStringFuncs returns a new mapping of template StringFuncs.
 func CreateStringFuncs() map[string]any {
 	f := map[string]any{}
 
@@ -456,7 +456,7 @@ func CreateStringFuncs() map[string]any {
 	return f
 }
 
-// StringFuncs.
+// StringFuncs holds string related functions for templates.
 type StringFuncs struct{}
 
 // Split slices input into the substrings separated by separator, returning a slice of the substrings between those separators. If input does not contain separator and separator is not empty, returns a single-element slice whose only element is input.
@@ -468,17 +468,17 @@ func (sf *StringFuncs) Split(sep string, s any) []string {
 }
 
 // ReplaceAll replaces all occurrences of a given string with another.
-func (sf *StringFuncs) ReplaceAll(old, new string, s any) string {
+func (sf *StringFuncs) ReplaceAll(old, replacement string, s any) string {
 	if old == "" {
 		return ToString(s)
 	}
 	if s == nil {
 		return ""
 	}
-	return strings.ReplaceAll(ToString(s), old, new)
+	return strings.ReplaceAll(ToString(s), old, replacement)
 }
 
-// CreateConvFuncs.
+// CreateConvFuncs returns a new mapping of template ConvFuncs.
 func CreateConvFuncs() map[string]any {
 	f := map[string]any{}
 
@@ -488,7 +488,7 @@ func CreateConvFuncs() map[string]any {
 	return f
 }
 
-// ConvFuncs.
+// ConvFuncs holds conversion related functions for templates.
 type ConvFuncs struct{}
 
 // Join concatenates the elements of a to create a single string.

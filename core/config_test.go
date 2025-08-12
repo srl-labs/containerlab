@@ -241,10 +241,7 @@ func TestEnvInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// nodeCfg := c.Config.Topology.Nodes[tc.node]
-			// kind := strings.ToLower(c.kindInitialization(nodeCfg))
 			env := c.Config.Topology.GetNodeEnv(tc.node)
-			// env := c.envInit(nodeCfg, kind)
 			if !reflect.DeepEqual(env, tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, env)
 			}
@@ -290,10 +287,7 @@ func TestUserInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// nodeCfg := c.Config.Topology.Nodes[tc.node]
-			// kind := strings.ToLower(c.kindInitialization(nodeCfg))
 			user := c.Config.Topology.GetNodeUser(tc.node)
-			// user := c.userInit(nodeCfg, kind)
 			if user != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, user)
 			}

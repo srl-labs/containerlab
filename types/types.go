@@ -224,15 +224,9 @@ func (n *NodeConfig) Copy() *NodeConfig {
 	copyConfig.ResultingPortBindings = utils.CopyObjectSlice(n.ResultingPortBindings)
 	copyConfig.Components = utils.CopyObjectSlice(n.Components)
 
-	// Deep copy pointers
-	// copyConfig.Config = n.Config.Copy()
-	// copyConfig.Certificate = n.Certificate.Copy()
 	copyConfig.Healthcheck = n.Healthcheck.Copy()
 	copyConfig.Extras = n.Extras.Copy()
 	copyConfig.DNS = n.DNS.Copy()
-	// copyConfig.Stages = n.Stages.Copy()
-	// copyConfig.PortBindings = n.PortBindings.Copy()
-	// copyConfig.PortSet = n.PortSet.Copy()
 
 	return &copyConfig
 }

@@ -5,6 +5,7 @@ linters:
     - bodyclose
     - dogsled
     - funlen
+    - gocritic
     - godot
     - godox
     - goprintffuncname
@@ -27,7 +28,6 @@ linters:
     - exhaustive
     - gocognit
     - goconst
-    - gocritic
     - gocyclo
     - gosec
     - lll

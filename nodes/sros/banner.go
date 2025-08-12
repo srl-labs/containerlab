@@ -7,6 +7,5 @@ func (n *sros) banner() (string, error) {
 	// if minor is a single digit value, we need to add extra space to patch version
 	// to have banner table aligned nicely
 
-	// b := fmt.Sprintf(banner)
 	return banner, nil
 }

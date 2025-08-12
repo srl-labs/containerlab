@@ -136,7 +136,7 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 }
 
 func (*srl) parseVersionString(s string) *SrlVersion {
-	re, _ := regexp.Compile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
+	re := regexp.MustCompile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
 
 	v := re.FindStringSubmatch(s)
 	// 6 matches must be returned if all goes well

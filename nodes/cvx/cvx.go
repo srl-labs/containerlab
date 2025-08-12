@@ -119,7 +119,7 @@ func (c *cvx) GetImages(_ context.Context) map[string]string {
 func (c *cvx) CheckInterfaceName() error {
 	// allow swpX interface names
 	// https://regex101.com/r/SV0k1J/1
-	ifRe := regexp.MustCompile(`swp[\d\.]+$`)
+	ifRe := regexp.MustCompile(`swp[\d.]+$`)
 	for _, e := range c.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as swpX, where X is >=0", c.Cfg.ShortName, e.GetIfaceName())

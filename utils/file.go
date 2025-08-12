@@ -218,7 +218,7 @@ func CopyFileContents(ctx context.Context, src, dst string, mode os.FileMode) (e
 		client := NewHTTPClient()
 
 		// download using client
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, http.NoBody)
 		if err != nil {
 			return err
 		}
@@ -424,7 +424,7 @@ func FilenameForURL(ctx context.Context, rawUrl string) string {
 	if IsHttpURL(rawUrl, false) {
 		client := NewHTTPClient()
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodHead, rawUrl, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, rawUrl, http.NoBody)
 		if err != nil {
 			return filepath.Base(u.Path)
 		}

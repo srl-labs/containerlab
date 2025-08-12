@@ -14,7 +14,7 @@ import (
 	"github.com/srl-labs/containerlab/utils"
 )
 
-var VMInterfaceRegexp = regexp.MustCompile(`eth[1-9][0-9]*$`) // skipcq: GO-C4007
+var VMInterfaceRegexp = regexp.MustCompile(`eth[1-9]\d*$`) // skipcq: GO-C4007
 
 type VRNode struct {
 	DefaultNode

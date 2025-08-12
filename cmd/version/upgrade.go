@@ -60,7 +60,7 @@ func downloadFile(ctx context.Context, url string, file *os.File) error {
 	}
 
 	// Get the data
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return err
 	}
