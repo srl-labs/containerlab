@@ -172,7 +172,12 @@ func (n *GoTTYNode) GetEndpoints() []links.Endpoint {
 }
 
 // Simplified version of getGoTTYStatus.
-func getGoTTYStatus(ctx context.Context, rt containerlabruntime.ContainerRuntime, containerName string, port int) (bool, string) {
+func getGoTTYStatus(
+	ctx context.Context,
+	rt containerlabruntime.ContainerRuntime,
+	containerName string,
+	port int,
+) (running bool, webURL string) {
 	// Pass the port parameter to the status command
 	statusCmd := fmt.Sprintf("gotty-service status %d", port)
 	execCmd, err := exec.NewExecCmdFromString(statusCmd)
@@ -190,13 +195,7 @@ func getGoTTYStatus(ctx context.Context, rt containerlabruntime.ContainerRuntime
 	output := execResult.GetStdOutString()
 	log.Debugf("GoTTY status output for port %d: %s", port, output)
 
-	// Check if service is running based on output
-	running := strings.Contains(output, "GoTTY service is running")
-
-	// Simply return a fixed format URL with HOST_IP placeholder
-	webURL := fmt.Sprintf("http://HOST_IP:%d", port)
-
-	return running, webURL
+	return strings.Contains(output, "GoTTY service is running"), fmt.Sprintf("http://HOST_IP:%d", port)
 }
 
 // gottyAttachCmd attaches GoTTY web terminal to a lab.

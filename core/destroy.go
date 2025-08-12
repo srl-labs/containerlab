@@ -230,7 +230,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		if n.GetRuntime().GetName() == ignite.RuntimeName {
 			serialNodes[n.Config().LongName] = struct{}{}
 			// decreasing the num of maxWorkers as they are used for concurrent nodes
-			maxWorkers = maxWorkers - 1
+			maxWorkers--
 		}
 	}
 

@@ -141,7 +141,7 @@ func (c *CLab) GenerateDotGraph() error {
 }
 
 // generatePngFromDot generated PNG from the provided dot file.
-func generatePngFromDot(dotfile string, outfile string) (err error) {
+func generatePngFromDot(dotfile, outfile string) (err error) {
 	_, err = exec.Command("dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
 	if err != nil {
 		log.Errorf("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)

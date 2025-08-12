@@ -230,7 +230,7 @@ func TestEnvInit(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			for k, v := range tc.envvar {
 				os.Setenv(k, v)
-				defer os.Unsetenv(k)
+				t.Cleanup(func() { os.Unsetenv(k) })
 			}
 
 			opts := []ClabOption{

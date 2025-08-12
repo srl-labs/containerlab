@@ -13,11 +13,14 @@ import (
 
 func main() {
 	ctx, cancel := cmd.SignalHandledContext()
-	defer cancel()
 
 	cmd.RootCmd.SetContext(ctx)
 
 	err := fang.Execute(ctx, cmd.RootCmd, fang.WithoutVersion())
+
+	// ensure cancel is *always* called (os.Exit bypasses)
+	cancel()
+
 	if err != nil {
 		os.Exit(1)
 	}

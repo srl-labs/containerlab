@@ -16,11 +16,11 @@ type EndpointRaw struct {
 }
 
 // NewEndpointRaw creates a new EndpointRaw struct.
-func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
+func NewEndpointRaw(node, nodeIf, mac string) *EndpointRaw {
 	return &EndpointRaw{
 		Node:  node,
 		Iface: nodeIf,
-		MAC:   Mac,
+		MAC:   mac,
 	}
 }
 

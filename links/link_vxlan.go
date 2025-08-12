@@ -127,7 +127,7 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 		log.Debugf("looked up hostname %s, received IP addresses [%s]", lr.Remote, sb.String()[2:])
 
 		// always use the first address
-		if len(ips) <= 0 {
+		if len(ips) == 0 {
 			return nil, fmt.Errorf("unable to resolve %s", lr.Remote)
 		}
 		ip = ips[0]

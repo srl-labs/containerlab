@@ -307,11 +307,9 @@ func Test_filterClabNodes(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Log("hey", tt.c.Config.Topology.Nodes)
 				t.Fatalf("filterClabNodes() error = %v, wantErr %v", err, tt.wantErr)
-			} else {
-				if !errors.Is(err, tt.err) {
-					t.Log("hey", tt.c.Config.Topology.Nodes)
-					t.Fatalf("filterClabNodes() error = %v, wantErr %v", err, tt.err)
-				}
+			} else if !errors.Is(err, tt.err) {
+				t.Log("hey", tt.c.Config.Topology.Nodes)
+				t.Fatalf("filterClabNodes() error = %v, wantErr %v", err, tt.err)
 			}
 
 			filteredNodes := make([]string, 0, len(tt.c.Config.Topology.Nodes))

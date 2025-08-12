@@ -485,11 +485,8 @@ func NewHTTPClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-func GetRealUserIDs() (int, int, error) {
+func GetRealUserIDs() (userUID, userGID int, err error) {
 	// Here we check whether SUDO set the SUDO_UID and SUDO_GID variables
-	var userUID, userGID int
-	var err error
-
 	sudoUID, isSudoUIDSet := os.LookupEnv("SUDO_UID")
 	if isSudoUIDSet {
 		userUID, err = strconv.Atoi(sudoUID)

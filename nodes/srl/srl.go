@@ -267,7 +267,7 @@ func (n *srl) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeploy
 			// enforce yml extension
 			ext := filepath.Ext(basename)
 			if ext != ".yml" && ext != ".yaml" {
-				basename = basename + ".yml"
+				basename += ".yml"
 			}
 
 			dst := filepath.Join(appmgr, basename)

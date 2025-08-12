@@ -155,7 +155,7 @@ func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 }
 
 // Create a link name using the node names and optional link_num.
-func linkName(link *types.Link) (string, string, error) { //nolint: unparam
+func linkName(link *types.Link) (string, string, error) { //nolint: unparam,gocritic
 	var linkNo string
 	if v, ok := link.Vars[vkLinkNum]; ok {
 		linkNo = fmt.Sprintf("_%v", v)
@@ -165,7 +165,7 @@ func linkName(link *types.Link) (string, string, error) { //nolint: unparam
 }
 
 // Calculate link IP from the system IPs at both ends.
-func linkIP(link *types.Link) (string, string, error) {
+func linkIP(link *types.Link) (string, string, error) { //nolint: gocritic
 	var ipA netip.Prefix
 	var err error
 	//

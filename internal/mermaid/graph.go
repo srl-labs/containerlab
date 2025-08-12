@@ -41,7 +41,7 @@ func (fc *FlowChart) SetDirection(direction string) error {
 	return nil
 }
 
-func (fc *FlowChart) AddEdge(nodeA string, nodeB string) {
+func (fc *FlowChart) AddEdge(nodeA, nodeB string) {
 	fc.edges = append(fc.edges, Edge{nodeA: nodeA, nodeB: nodeB})
 }
 

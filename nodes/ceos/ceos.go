@@ -203,7 +203,7 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	m[5] = m[5] + 1
+	m[5]++
 
 	sysMacPath := path.Join(nodeCfg.LabDir, "flash", "system_mac_address")
 

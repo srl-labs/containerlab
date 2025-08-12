@@ -339,9 +339,7 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 }
 
 // getMgmtBridgeIPs gets the management bridge v4/6 addresses.
-func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (string, string, error) {
-	var err error
-	var v4, v6 string
+func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (v4, v6 string, err error) {
 	if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
 		log.Warn(
 			"failed gleaning v4 and/or v6 addresses from bridge via netlink," +
