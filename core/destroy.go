@@ -13,12 +13,12 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/runtime/ignite"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	containerlabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error) {
@@ -28,7 +28,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		opt(opts)
 	}
 
-	var containers []runtime.GenericContainer
+	var containers []containerlabruntime.GenericContainer
 
 	if opts.all {
 		containers, err = c.ListContainers(ctx)
@@ -76,7 +76,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	log.Debugf("got the following topologies for destroy: %+v", topos)
 
 	// if all, and cli doesnt have --yes flag, and in a terminal -- prompt user confirmation
-	if opts.all && opts.terminalPrompt && utils.IsTerminal(os.Stdin.Fd()) {
+	if opts.all && opts.terminalPrompt && containerlabutils.IsTerminal(os.Stdin.Fd()) {
 		err := cliPromptToDestroyAll(topos)
 		if err != nil {
 			return err
@@ -119,7 +119,7 @@ func (c *CLab) makeCopyForDestroy(ctx context.Context, topo, labDir string, opts
 		WithSkippedBindsPathsCheck(),
 		WithRuntime(
 			c.globalRuntimeName,
-			&runtime.RuntimeConfig{
+			&containerlabruntime.RuntimeConfig{
 				Debug:            c.Config.Debug,
 				Timeout:          c.timeout,
 				GracefulShutdown: opts.graceful,
@@ -136,7 +136,7 @@ func (c *CLab) makeCopyForDestroy(ctx context.Context, topo, labDir string, opts
 		return nil, err
 	}
 
-	if labDir != "" && utils.FileOrDirExists(labDir) {
+	if labDir != "" && containerlabutils.FileOrDirExists(labDir) {
 		// adjust the labdir. Usually we take the PWD. but now on destroy time,
 		// we might be in a different Dir.
 		err = cc.TopoPaths.SetLabDir(labDir)
@@ -145,7 +145,7 @@ func (c *CLab) makeCopyForDestroy(ctx context.Context, topo, labDir string, opts
 		}
 	}
 
-	err = links.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
+	err = containerlablinks.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	serialNodes := make(map[string]struct{})
 
 	for _, n := range c.Nodes {
-		if n.GetRuntime().GetName() == ignite.RuntimeName {
+		if n.GetRuntime().GetName() == containerlabruntimeignite.RuntimeName {
 			serialNodes[n.Config().LongName] = struct{}{}
 			// decreasing the num of maxWorkers as they are used for concurrent nodes
 			maxWorkers--
@@ -235,7 +235,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	// Serializing ignite workers due to busy device error
-	if _, ok := c.Runtimes[ignite.RuntimeName]; ok {
+	if _, ok := c.Runtimes[containerlabruntimeignite.RuntimeName]; ok {
 		maxWorkers = 1
 	}
 
@@ -282,10 +282,10 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
 	wg := new(sync.WaitGroup)
 
-	concurrentChan := make(chan nodes.Node)
-	serialChan := make(chan nodes.Node)
+	concurrentChan := make(chan containerlabnodes.Node)
+	serialChan := make(chan containerlabnodes.Node)
 
-	workerFunc := func(i uint, input chan nodes.Node, wg *sync.WaitGroup) {
+	workerFunc := func(i uint, input chan containerlabnodes.Node, wg *sync.WaitGroup) {
 		defer wg.Done()
 		for {
 			select {
@@ -345,7 +345,7 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 	toolTypes := []string{"sshx", "gotty"}
 
 	for _, toolType := range toolTypes {
-		toolFilter := []*types.GenericFilter{
+		toolFilter := []*containerlabtypes.GenericFilter{
 			{
 				FilterType: "label",
 				Field:      containerlablabels.ToolType,

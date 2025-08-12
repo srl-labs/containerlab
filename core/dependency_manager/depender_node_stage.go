@@ -3,17 +3,17 @@ package dependency_manager
 import (
 	"fmt"
 
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // dependerNodeStage is used to keep track of waitgroups that should be decreased (unblocked)
 // as soon as a certain delpoy stage is reached.
 type dependerNodeStage struct {
-	depender *DependencyNode    // reference to the node
-	stage    types.WaitForStage // reference to the nodes wg that is to be decremented
+	depender *DependencyNode                // reference to the node
+	stage    containerlabtypes.WaitForStage // reference to the nodes wg that is to be decremented
 }
 
-func newDependerNodeStage(node *DependencyNode, stage types.WaitForStage) *dependerNodeStage {
+func newDependerNodeStage(node *DependencyNode, stage containerlabtypes.WaitForStage) *dependerNodeStage {
 	return &dependerNodeStage{
 		depender: node,
 		stage:    stage,

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -84,7 +84,7 @@ func HostKeyCallback(callback ...ssh.HostKeyCallback) SSHTransportOption {
 	}
 }
 
-func NewSSHTransport(node *types.NodeConfig, options ...SSHTransportOption) (*SSHTransport, error) {
+func NewSSHTransport(node *containerlabtypes.NodeConfig, options ...SSHTransportOption) (*SSHTransport, error) {
 	switch node.Kind {
 	case "vr-sros", "srl", "nokia_sros", "nokia_srsim", "nokia_srlinux":
 		c := &SSHTransport{}

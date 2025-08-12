@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // ListOption is a type used for functional options for the Clab List method.
@@ -25,13 +25,13 @@ func NewListOptions() *ListOptions {
 }
 
 // ToFilters converts the list options to a slice of generic filters.
-func (o *ListOptions) ToFilters() []*types.GenericFilter {
-	var filters []*types.GenericFilter
+func (o *ListOptions) ToFilters() []*containerlabtypes.GenericFilter {
+	var filters []*containerlabtypes.GenericFilter
 
 	if o.labName != "" {
 		filters = append(
 			filters,
-			&types.GenericFilter{
+			&containerlabtypes.GenericFilter{
 				FilterType: "label",
 				Field:      containerlablabels.Containerlab,
 				Operator:   "=",
@@ -43,7 +43,7 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 	if o.nodeName != "" {
 		filters = append(
 			filters,
-			&types.GenericFilter{
+			&containerlabtypes.GenericFilter{
 				FilterType: "label",
 				Field:      containerlablabels.LongName,
 				Operator:   "=",
@@ -55,7 +55,7 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 	if o.toolType != "" {
 		filters = append(
 			filters,
-			&types.GenericFilter{
+			&containerlabtypes.GenericFilter{
 				FilterType: "label",
 				Field:      containerlablabels.ToolType,
 				Operator:   "=",
@@ -67,7 +67,7 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 	if o.containerlabLabelExists {
 		filters = append(
 			filters,
-			&types.GenericFilter{
+			&containerlabtypes.GenericFilter{
 				FilterType: "label",
 				Field:      containerlablabels.Containerlab,
 				Operator:   "exists",
@@ -86,7 +86,7 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 
 			filters = append(
 				filters,
-				&types.GenericFilter{
+				&containerlabtypes.GenericFilter{
 					FilterType: "label",
 					Field:      cliArgParts[0],
 					Operator:   "=",
@@ -96,7 +96,7 @@ func (o *ListOptions) ToFilters() []*types.GenericFilter {
 		} else {
 			filters = append(
 				filters,
-				&types.GenericFilter{
+				&containerlabtypes.GenericFilter{
 					FilterType: "label",
 					Field:      strings.TrimSpace(cliArg),
 					Operator:   "exists",

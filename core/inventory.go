@@ -13,7 +13,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 const NornirPlatformNameSchemaEnvVar = "CLAB_NORNIR_PLATFORM_NAME_SCHEMA"
@@ -25,7 +25,7 @@ var ansibleInvT string
 // It embeds the NodeConfig struct and adds the Username and Password fields extracted from
 // the node registry.
 type AnsibleInventoryNode struct {
-	*types.NodeConfig
+	*containerlabtypes.NodeConfig
 }
 
 // AnsibleKindProps is the kind properties structure used to generate the ansible inventory file.
@@ -185,7 +185,7 @@ type NornirSimpleInventoryKindProps struct {
 // It embeds the NodeConfig struct and adds the Username and Password fields extracted from
 // the node registry.
 type NornirSimpleInventoryNode struct {
-	*types.NodeConfig
+	*containerlabtypes.NodeConfig
 	NornirGroups []string
 }
 

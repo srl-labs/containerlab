@@ -6,8 +6,8 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 )
@@ -16,14 +16,14 @@ import (
 func (c *CLab) ListContainers(
 	ctx context.Context,
 	options ...ListOption,
-) ([]runtime.GenericContainer, error) {
+) ([]containerlabruntime.GenericContainer, error) {
 	opts := NewListOptions()
 
 	for _, opt := range options {
 		opt(opts)
 	}
 
-	var containers []runtime.GenericContainer
+	var containers []containerlabruntime.GenericContainer
 
 	for _, r := range c.Runtimes {
 		ctrs, err := r.ListContainers(ctx, opts.ToFilters())
@@ -38,8 +38,8 @@ func (c *CLab) ListContainers(
 // ListNodesContainers lists all containers based on the nodes stored in clab instance.
 func (c *CLab) ListNodesContainers(
 	ctx context.Context,
-) ([]runtime.GenericContainer, error) {
-	var containers []runtime.GenericContainer
+) ([]containerlabruntime.GenericContainer, error) {
+	var containers []containerlabruntime.GenericContainer
 
 	for _, n := range c.Nodes {
 		cts, err := n.GetContainers(ctx)
@@ -60,8 +60,8 @@ func (c *CLab) ListNodesContainers(
 // instance, ignoring errors for non found containers.
 func (c *CLab) ListNodesContainersIgnoreNotFound(
 	ctx context.Context,
-) ([]runtime.GenericContainer, error) {
-	var containers []runtime.GenericContainer
+) ([]containerlabruntime.GenericContainer, error) {
+	var containers []containerlabruntime.GenericContainer
 
 	for _, n := range c.Nodes {
 		cts, err := n.GetContainers(ctx)
@@ -77,9 +77,9 @@ func (c *CLab) ListNodesContainersIgnoreNotFound(
 // ListContainerInterfaces list interfaces of the given container.
 func (c *CLab) ListContainerInterfaces(
 	ctx context.Context,
-	container *runtime.GenericContainer,
-) (*types.ContainerInterfaces, error) {
-	containerInterfaces := types.ContainerInterfaces{}
+	container *containerlabruntime.GenericContainer,
+) (*containerlabtypes.ContainerInterfaces, error) {
+	containerInterfaces := containerlabtypes.ContainerInterfaces{}
 
 	if len(container.Names) > 0 {
 		containerInterfaces.ContainerName = container.Names[0]
@@ -108,7 +108,7 @@ func (c *CLab) ListContainerInterfaces(
 		}
 	} else {
 		log.Warnf("Container %v has no namespace set, skipping!", containerInterfaces.ContainerName)
-		containerInterfaces.Interfaces = make([]*types.ContainerInterfaceDetails, 0)
+		containerInterfaces.Interfaces = make([]*containerlabtypes.ContainerInterfaceDetails, 0)
 		return &containerInterfaces, nil
 	}
 
@@ -123,10 +123,10 @@ func (c *CLab) ListContainerInterfaces(
 		return nil, fmt.Errorf("unable to list network interfaces: %w", err)
 	}
 
-	containerInterfaces.Interfaces = make([]*types.ContainerInterfaceDetails, 0, len(interfaces))
+	containerInterfaces.Interfaces = make([]*containerlabtypes.ContainerInterfaceDetails, 0, len(interfaces))
 
 	for _, iface := range interfaces {
-		ifaceDetails := types.ContainerInterfaceDetails{}
+		ifaceDetails := containerlabtypes.ContainerInterfaceDetails{}
 		ifaceDetails.InterfaceName = iface.Attrs().Name
 		ifaceDetails.InterfaceAlias = iface.Attrs().Alias
 		ifaceDetails.InterfaceMTU = iface.Attrs().MTU
@@ -146,9 +146,9 @@ func (c *CLab) ListContainerInterfaces(
 // ListContainersInterfaces list interfaces of all given containers.
 func (c *CLab) ListContainersInterfaces(
 	ctx context.Context,
-	containers []runtime.GenericContainer,
-) ([]*types.ContainerInterfaces, error) {
-	containerInterfaces := make([]*types.ContainerInterfaces, 0, len(containers))
+	containers []containerlabruntime.GenericContainer,
+) ([]*containerlabtypes.ContainerInterfaces, error) {
+	containerInterfaces := make([]*containerlabtypes.ContainerInterfaces, 0, len(containers))
 
 	for idx := range containers {
 		cIfs, err := c.ListContainerInterfaces(ctx, &containers[idx])

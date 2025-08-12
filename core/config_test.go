@@ -15,11 +15,11 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/mocks/mockruntime"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/runtime/docker"
-	"github.com/srl-labs/containerlab/utils"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	containerlabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -108,7 +108,7 @@ func TestBindsInit(t *testing.T) {
 			binds := c.Nodes["node1"].Config().Binds
 
 			// expand env vars in bind paths, this is done during topology file load by clab
-			utils.ExpandEnvVarsInStrSlice(tc.want)
+			containerlabutils.ExpandEnvVarsInStrSlice(tc.want)
 
 			// resolve wanted paths as the binds paths are resolved as part of the c.ParseTopology
 			err = c.resolveBindPaths(tc.want, c.Nodes["node1"].Config().LabDir)
@@ -316,9 +316,9 @@ func TestVerifyLinks(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
-				WithRuntime(docker.RuntimeName,
-					&runtime.RuntimeConfig{
-						VerifyLinkParams: links.NewVerifyLinkParams(),
+				WithRuntime(containerlabruntimedocker.RuntimeName,
+					&containerlabruntime.RuntimeConfig{
+						VerifyLinkParams: containerlablinks.NewVerifyLinkParams(),
 					},
 				),
 			}
@@ -429,9 +429,9 @@ func TestLabelsInit(t *testing.T) {
 			}
 
 			tc.want[containerlablabels.NodeLabDir] =
-				utils.ResolvePath(tc.want[containerlablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
+				containerlabutils.ResolvePath(tc.want[containerlablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
 			tc.want[containerlablabels.TopoFile] =
-				utils.ResolvePath(tc.want[containerlablabels.TopoFile], c.TopoPaths.TopologyFileDir())
+				containerlabutils.ResolvePath(tc.want[containerlablabels.TopoFile], c.TopoPaths.TopologyFileDir())
 
 			labels := c.Nodes[tc.node].Config().Labels
 
@@ -444,7 +444,7 @@ func TestLabelsInit(t *testing.T) {
 			fmt.Printf("%v\n", env)
 			for k, v := range tc.want {
 				// sanitize label key to be used as an env key
-				sk := utils.ToEnvKey(k)
+				sk := containerlabutils.ToEnvKey(k)
 				// fail if env vars map doesn't have env var with key CLAB_LABEL_<label-name> and label value matches env value
 				if val, exists := env["CLAB_LABEL_"+sk]; !exists || val != v {
 					t.Errorf("env var %q promoted from a label %q was not found", "CLAB_LABEL_"+sk, k)
@@ -505,7 +505,7 @@ func TestVerifyRootNetNSLinks(t *testing.T) {
 func TestVerifyContainersUniqueness(t *testing.T) {
 	tests := map[string]struct {
 		mockResult struct {
-			c []runtime.GenericContainer
+			c []containerlabruntime.GenericContainer
 			e error
 		}
 		topo      string
@@ -513,10 +513,10 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 	}{
 		"no dups": {
 			mockResult: struct {
-				c []runtime.GenericContainer
+				c []containerlabruntime.GenericContainer
 				e error
 			}{
-				c: []runtime.GenericContainer{
+				c: []containerlabruntime.GenericContainer{
 					{
 						Names:  []string{"some node"},
 						Labels: map[string]string{},
@@ -533,10 +533,10 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 		},
 		"dups": {
 			mockResult: struct {
-				c []runtime.GenericContainer
+				c []containerlabruntime.GenericContainer
 				e error
 			}{
-				c: []runtime.GenericContainer{
+				c: []containerlabruntime.GenericContainer{
 					{
 						Names:  []string{"clab-topo1-node1"},
 						Labels: map[string]string{},
@@ -553,10 +553,10 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 		},
 		"ext-container": {
 			mockResult: struct {
-				c []runtime.GenericContainer
+				c []containerlabruntime.GenericContainer
 				e error
 			}{
-				c: []runtime.GenericContainer{
+				c: []containerlabruntime.GenericContainer{
 					{
 						Names:  []string{"node1"},
 						Labels: map[string]string{},
@@ -588,7 +588,7 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			}
 
 			// set mockRuntime parameters
-			mockRuntime := mockruntime.NewMockContainerRuntime(ctrl)
+			mockRuntime := containerlabmocksmockruntime.NewMockContainerRuntime(ctrl)
 			c.Runtimes[rtName] = mockRuntime
 			c.globalRuntimeName = rtName
 

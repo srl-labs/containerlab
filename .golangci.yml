@@ -92,21 +92,30 @@ linters:
       - legacy
       - std-error-handling
     rules:
-      # currently only enforcing on cmd package, for now!
+      # temporarily disabling importas on some packages to slowly roll this out
       - linters:
           - importas
-        path-except: cmd/
+        path: nodes/
       - linters:
-          # we *care* about tests, but... like less :P
+          - importas
+        path: types/
+      - linters:
+          - importas
+        path: runtime/
+      - linters:
+          - importas
+        path: links/
+      # we *care* about tests, but... like less :P
+      - linters:
           - mnd
           - dupl
           - lll
           - goconst
           - funlen
         path: _test\.go
+      # its nice to be explicit, this feels less explicit
       - linters:
           - staticcheck
-        # its nice to be explicit, this feels less explicit
         text: could remove embedded field
     paths:
       - third_party$

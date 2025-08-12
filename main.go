@@ -8,15 +8,15 @@ import (
 	"os"
 
 	"github.com/charmbracelet/fang"
-	"github.com/srl-labs/containerlab/cmd"
+	containerlabcmd "github.com/srl-labs/containerlab/cmd"
 )
 
 func main() {
-	ctx, cancel := cmd.SignalHandledContext()
+	ctx, cancel := containerlabcmd.SignalHandledContext()
 
-	cmd.RootCmd.SetContext(ctx)
+	containerlabcmd.RootCmd.SetContext(ctx)
 
-	err := fang.Execute(ctx, cmd.RootCmd, fang.WithoutVersion())
+	err := fang.Execute(ctx, containerlabcmd.RootCmd, fang.WithoutVersion())
 
 	// ensure cancel is *always* called (os.Exit bypasses)
 	cancel()

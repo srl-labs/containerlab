@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	depMgr "github.com/srl-labs/containerlab/core/dependency_manager"
+	containerlabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 type ClabOption func(c *CLab) error
@@ -27,7 +27,8 @@ func WithLabOwner(owner string) ClabOption {
 			return nil
 		}
 
-		if isClabAdmin, err := utils.UserInUnixGroup(currentUser.Username, "clab_admins"); err == nil && isClabAdmin {
+		if isClabAdmin, err := containerlabutils.UserInUnixGroup(currentUser.Username,
+			"clab_admins"); err == nil && isClabAdmin {
 			c.customOwner = owner
 		} else if owner != "" {
 			log.Warn("Only users in clab_admins group can set custom owner. Using current user as owner.")
@@ -91,7 +92,7 @@ func WithManagementIpv6Subnet(s string) ClabOption {
 }
 
 // WithDependencyManager adds Dependency Manager.
-func WithDependencyManager(dm depMgr.DependencyManager) ClabOption {
+func WithDependencyManager(dm containerlabcoredependency_manager.DependencyManager) ClabOption {
 	return func(c *CLab) error {
 		c.dependencyManager = dm
 		return nil
@@ -107,7 +108,7 @@ func WithDebug(debug bool) ClabOption {
 }
 
 // WithRuntime option sets a container runtime to be used by containerlab.
-func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
+func WithRuntime(name string, rtconfig *containerlabruntime.RuntimeConfig) ClabOption {
 	return func(c *CLab) error {
 		name, rInit, err := RuntimeInitializer(name)
 		if err != nil {
@@ -121,8 +122,8 @@ func WithRuntime(name string, rtconfig *runtime.RuntimeConfig) ClabOption {
 		log.Debugf("Running runtime.Init with params %+v and %+v", rtconfig, c.Config.Mgmt)
 
 		err = r.Init(
-			runtime.WithConfig(rtconfig),
-			runtime.WithMgmtNet(c.Config.Mgmt),
+			containerlabruntime.WithConfig(rtconfig),
+			containerlabruntime.WithMgmtNet(c.Config.Mgmt),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to init the container runtime: %v", err)
@@ -164,7 +165,7 @@ func WithTopoBackup(path string) ClabOption {
 		// create a backup file for the topology file
 		backupFPath := c.TopoPaths.TopologyBakFileAbsPath()
 
-		err := utils.CopyFile(context.Background(), path, backupFPath, 0o644)
+		err := containerlabutils.CopyFile(context.Background(), path, backupFPath, 0o644)
 		if err != nil {
 			log.Warn("Could not create topology backup", "topology path", path,
 				"backup path", backupFPath, "error", err)
@@ -187,7 +188,7 @@ func WithTopoFromLab(labName string) ClabOption {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		filter := []*types.GenericFilter{
+		filter := []*containerlabtypes.GenericFilter{
 			{
 				FilterType: "label",
 				Field:      containerlablabels.Containerlab,
@@ -211,7 +212,7 @@ func WithTopoFromLab(labName string) ClabOption {
 		}
 
 		// Verify topology file exists and is accessible
-		if !utils.FileOrDirExists(topoFile) {
+		if !containerlabutils.FileOrDirExists(topoFile) {
 			return fmt.Errorf("topology file '%s' referenced by lab '%s' does not exist or is not accessible",
 				topoFile, labName)
 		}

@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
@@ -36,7 +36,7 @@ func (c *CLab) createAuthzKeysFile() error {
 	}
 
 	clabAuthzKeysFPath := c.TopoPaths.AuthorizedKeysFilename()
-	if err := utils.CreateFile(clabAuthzKeysFPath, b.String()); err != nil {
+	if err := containerlabutils.CreateFile(clabAuthzKeysFPath, b.String()); err != nil {
 		return err
 	}
 
@@ -48,21 +48,21 @@ func (c *CLab) createAuthzKeysFile() error {
 // and ~/.ssh/*.pub files.
 func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
 	var keys []ssh.PublicKey
-	p := utils.ResolvePath(pubKeysGlob, "")
+	p := containerlabutils.ResolvePath(pubKeysGlob, "")
 
 	all, err := filepath.Glob(p)
 	if err != nil {
 		return nil, fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	f := utils.ResolvePath(authzKeysFPath, "")
+	f := containerlabutils.ResolvePath(authzKeysFPath, "")
 
-	if utils.FileExists(f) {
+	if containerlabutils.FileExists(f) {
 		log.Debugf("%s found, adding it to the list of files to get public keys from", f)
 		all = append(all, f)
 	}
 
-	keys, err = utils.LoadSSHPubKeysFromFiles(all)
+	keys, err = containerlabutils.LoadSSHPubKeysFromFiles(all)
 	if err != nil {
 		return nil, err
 	}

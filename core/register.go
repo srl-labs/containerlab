@@ -5,106 +5,106 @@
 package core
 
 import (
-	sixwind_vsr "github.com/srl-labs/containerlab/nodes/6wind_vsr"
-	bridge "github.com/srl-labs/containerlab/nodes/bridge"
-	c8000 "github.com/srl-labs/containerlab/nodes/c8000"
-	ceos "github.com/srl-labs/containerlab/nodes/ceos"
-	checkpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
-	cjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
-	crpd "github.com/srl-labs/containerlab/nodes/crpd"
-	cvx "github.com/srl-labs/containerlab/nodes/cvx"
-	dell_sonic "github.com/srl-labs/containerlab/nodes/dell_sonic"
-	ext_container "github.com/srl-labs/containerlab/nodes/ext_container"
-	fdio_vpp "github.com/srl-labs/containerlab/nodes/fdio_vpp"
-	fortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
-	generic_vm "github.com/srl-labs/containerlab/nodes/generic_vm"
-	host "github.com/srl-labs/containerlab/nodes/host"
-	huawei_vrp "github.com/srl-labs/containerlab/nodes/huawei_vrp"
-	cisco_iol "github.com/srl-labs/containerlab/nodes/iol"
-	ipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
-	k8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
-	keysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
-	linux "github.com/srl-labs/containerlab/nodes/linux"
-	ovs "github.com/srl-labs/containerlab/nodes/ovs"
-	rare "github.com/srl-labs/containerlab/nodes/rare"
-	sonic "github.com/srl-labs/containerlab/nodes/sonic"
-	vr_sonic "github.com/srl-labs/containerlab/nodes/sonic_vm"
-	srl "github.com/srl-labs/containerlab/nodes/srl"
-	sros "github.com/srl-labs/containerlab/nodes/sros"
-	vr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
-	vr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
-	vr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
-	vr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
-	vr_freebsd "github.com/srl-labs/containerlab/nodes/vr_freebsd"
-	vr_ftdv "github.com/srl-labs/containerlab/nodes/vr_ftdv"
-	vr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
-	vr_n9kv "github.com/srl-labs/containerlab/nodes/vr_n9kv"
-	vr_openbsd "github.com/srl-labs/containerlab/nodes/vr_openbsd"
-	vr_openwrt "github.com/srl-labs/containerlab/nodes/vr_openwrt"
-	vr_pan "github.com/srl-labs/containerlab/nodes/vr_pan"
-	vr_ros "github.com/srl-labs/containerlab/nodes/vr_ros"
-	vr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
-	vr_veos "github.com/srl-labs/containerlab/nodes/vr_veos"
-	vr_vjunosevolved "github.com/srl-labs/containerlab/nodes/vr_vjunosevolved"
-	vr_vjunosswitch "github.com/srl-labs/containerlab/nodes/vr_vjunosswitch"
-	vr_vmx "github.com/srl-labs/containerlab/nodes/vr_vmx"
-	vr_vqfx "github.com/srl-labs/containerlab/nodes/vr_vqfx"
-	vr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
-	vr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
-	vr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
-	vyosnetworks_vyos "github.com/srl-labs/containerlab/nodes/vyosnetworks_vyos"
-	xrd "github.com/srl-labs/containerlab/nodes/xrd"
+	containerlabnodes6wind_vsr "github.com/srl-labs/containerlab/nodes/6wind_vsr"
+	containerlabnodesbridge "github.com/srl-labs/containerlab/nodes/bridge"
+	containerlabnodesc8000 "github.com/srl-labs/containerlab/nodes/c8000"
+	containerlabnodesceos "github.com/srl-labs/containerlab/nodes/ceos"
+	containerlabnodescheckpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
+	containerlabnodescjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
+	containerlabnodescrpd "github.com/srl-labs/containerlab/nodes/crpd"
+	containerlabnodescvx "github.com/srl-labs/containerlab/nodes/cvx"
+	containerlabnodesdell_sonic "github.com/srl-labs/containerlab/nodes/dell_sonic"
+	containerlabnodesext_container "github.com/srl-labs/containerlab/nodes/ext_container"
+	containerlabnodesfdio_vpp "github.com/srl-labs/containerlab/nodes/fdio_vpp"
+	containerlabnodesfortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
+	containerlabnodesgeneric_vm "github.com/srl-labs/containerlab/nodes/generic_vm"
+	containerlabnodeshost "github.com/srl-labs/containerlab/nodes/host"
+	containerlabnodeshuawei_vrp "github.com/srl-labs/containerlab/nodes/huawei_vrp"
+	containerlabnodesiol "github.com/srl-labs/containerlab/nodes/iol"
+	containerlabnodesipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
+	containerlabnodesk8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
+	containerlabnodeskeysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
+	containerlabnodeslinux "github.com/srl-labs/containerlab/nodes/linux"
+	containerlabnodesovs "github.com/srl-labs/containerlab/nodes/ovs"
+	containerlabnodesrare "github.com/srl-labs/containerlab/nodes/rare"
+	containerlabnodessonic "github.com/srl-labs/containerlab/nodes/sonic"
+	containerlabnodessonic_vm "github.com/srl-labs/containerlab/nodes/sonic_vm"
+	containerlabnodessrl "github.com/srl-labs/containerlab/nodes/srl"
+	containerlabnodessros "github.com/srl-labs/containerlab/nodes/sros"
+	containerlabnodesvr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
+	containerlabnodesvr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
+	containerlabnodesvr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
+	containerlabnodesvr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
+	containerlabnodesvr_freebsd "github.com/srl-labs/containerlab/nodes/vr_freebsd"
+	containerlabnodesvr_ftdv "github.com/srl-labs/containerlab/nodes/vr_ftdv"
+	containerlabnodesvr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
+	containerlabnodesvr_n9kv "github.com/srl-labs/containerlab/nodes/vr_n9kv"
+	containerlabnodesvr_openbsd "github.com/srl-labs/containerlab/nodes/vr_openbsd"
+	containerlabnodesvr_openwrt "github.com/srl-labs/containerlab/nodes/vr_openwrt"
+	containerlabnodesvr_pan "github.com/srl-labs/containerlab/nodes/vr_pan"
+	containerlabnodesvr_ros "github.com/srl-labs/containerlab/nodes/vr_ros"
+	containerlabnodesvr_sros "github.com/srl-labs/containerlab/nodes/vr_sros"
+	containerlabnodesvr_veos "github.com/srl-labs/containerlab/nodes/vr_veos"
+	containerlabnodesvr_vjunosevolved "github.com/srl-labs/containerlab/nodes/vr_vjunosevolved"
+	containerlabnodesvr_vjunosswitch "github.com/srl-labs/containerlab/nodes/vr_vjunosswitch"
+	containerlabnodesvr_vmx "github.com/srl-labs/containerlab/nodes/vr_vmx"
+	containerlabnodesvr_vqfx "github.com/srl-labs/containerlab/nodes/vr_vqfx"
+	containerlabnodesvr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
+	containerlabnodesvr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
+	containerlabnodesvr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
+	containerlabnodesvyosnetworks_vyos "github.com/srl-labs/containerlab/nodes/vyosnetworks_vyos"
+	containerlabnodesxrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
 
 // RegisterNodes registers all the nodes/kinds supported by containerlab.
 func (c *CLab) RegisterNodes() {
-	bridge.Register(c.Reg)
-	ceos.Register(c.Reg)
-	checkpoint_cloudguard.Register(c.Reg)
-	crpd.Register(c.Reg)
-	cvx.Register(c.Reg)
-	ext_container.Register(c.Reg)
-	fortinet_fortigate.Register(c.Reg)
-	host.Register(c.Reg)
-	ipinfusion_ocnos.Register(c.Reg)
-	keysight_ixiacone.Register(c.Reg)
-	linux.Register(c.Reg)
-	ovs.Register(c.Reg)
-	sonic.Register(c.Reg)
-	srl.Register(c.Reg)
-	sros.Register(c.Reg)
-	vr_aoscx.Register(c.Reg)
-	vr_csr.Register(c.Reg)
-	vr_c8000v.Register(c.Reg)
-	vr_freebsd.Register(c.Reg)
-	generic_vm.Register(c.Reg)
-	dell_sonic.Register(c.Reg)
-	vr_ftosv.Register(c.Reg)
-	vr_n9kv.Register(c.Reg)
-	vr_pan.Register(c.Reg)
-	vr_openbsd.Register(c.Reg)
-	vr_ftdv.Register(c.Reg)
-	vr_ros.Register(c.Reg)
-	vr_sros.Register(c.Reg)
-	vr_veos.Register(c.Reg)
-	vr_vmx.Register(c.Reg)
-	vr_vsrx.Register(c.Reg)
-	vr_vqfx.Register(c.Reg)
-	vr_vjunosswitch.Register(c.Reg)
-	vr_vjunosevolved.Register(c.Reg)
-	vr_xrv.Register(c.Reg)
-	vr_xrv9k.Register(c.Reg)
-	vr_sonic.Register(c.Reg)
-	vr_cat9kv.Register(c.Reg)
-	vr_openwrt.Register(c.Reg)
-	xrd.Register(c.Reg)
-	rare.Register(c.Reg)
-	c8000.Register(c.Reg)
-	k8s_kind.Register(c.Reg)
-	cisco_iol.Register(c.Reg)
-	huawei_vrp.Register(c.Reg)
-	sixwind_vsr.Register(c.Reg)
-	fdio_vpp.Register(c.Reg)
-	vyosnetworks_vyos.Register(c.Reg)
-	cjunosevolved.Register(c.Reg)
+	containerlabnodesbridge.Register(c.Reg)
+	containerlabnodesceos.Register(c.Reg)
+	containerlabnodescheckpoint_cloudguard.Register(c.Reg)
+	containerlabnodescrpd.Register(c.Reg)
+	containerlabnodescvx.Register(c.Reg)
+	containerlabnodesext_container.Register(c.Reg)
+	containerlabnodesfortinet_fortigate.Register(c.Reg)
+	containerlabnodeshost.Register(c.Reg)
+	containerlabnodesipinfusion_ocnos.Register(c.Reg)
+	containerlabnodeskeysight_ixiacone.Register(c.Reg)
+	containerlabnodeslinux.Register(c.Reg)
+	containerlabnodesovs.Register(c.Reg)
+	containerlabnodessonic.Register(c.Reg)
+	containerlabnodessrl.Register(c.Reg)
+	containerlabnodessros.Register(c.Reg)
+	containerlabnodesvr_aoscx.Register(c.Reg)
+	containerlabnodesvr_csr.Register(c.Reg)
+	containerlabnodesvr_c8000v.Register(c.Reg)
+	containerlabnodesvr_freebsd.Register(c.Reg)
+	containerlabnodesgeneric_vm.Register(c.Reg)
+	containerlabnodesdell_sonic.Register(c.Reg)
+	containerlabnodesvr_ftosv.Register(c.Reg)
+	containerlabnodesvr_n9kv.Register(c.Reg)
+	containerlabnodesvr_pan.Register(c.Reg)
+	containerlabnodesvr_openbsd.Register(c.Reg)
+	containerlabnodesvr_ftdv.Register(c.Reg)
+	containerlabnodesvr_ros.Register(c.Reg)
+	containerlabnodesvr_sros.Register(c.Reg)
+	containerlabnodesvr_veos.Register(c.Reg)
+	containerlabnodesvr_vmx.Register(c.Reg)
+	containerlabnodesvr_vsrx.Register(c.Reg)
+	containerlabnodesvr_vqfx.Register(c.Reg)
+	containerlabnodesvr_vjunosswitch.Register(c.Reg)
+	containerlabnodesvr_vjunosevolved.Register(c.Reg)
+	containerlabnodesvr_xrv.Register(c.Reg)
+	containerlabnodesvr_xrv9k.Register(c.Reg)
+	containerlabnodessonic_vm.Register(c.Reg)
+	containerlabnodesvr_cat9kv.Register(c.Reg)
+	containerlabnodesvr_openwrt.Register(c.Reg)
+	containerlabnodesxrd.Register(c.Reg)
+	containerlabnodesrare.Register(c.Reg)
+	containerlabnodesc8000.Register(c.Reg)
+	containerlabnodesk8s_kind.Register(c.Reg)
+	containerlabnodesiol.Register(c.Reg)
+	containerlabnodeshuawei_vrp.Register(c.Reg)
+	containerlabnodes6wind_vsr.Register(c.Reg)
+	containerlabnodesfdio_vpp.Register(c.Reg)
+	containerlabnodesvyosnetworks_vyos.Register(c.Reg)
+	containerlabnodescjunosevolved.Register(c.Reg)
 }
