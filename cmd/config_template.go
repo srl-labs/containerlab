@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/core/config"
+	containerlabcoreconfig "github.com/srl-labs/containerlab/core/config"
 )
 
 // Show the template variable s.
@@ -19,7 +19,7 @@ var configTemplateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 
-		config.DebugCount = debugCount
+		containerlabcoreconfig.DebugCount = debugCount
 
 		c, err := containerlabcore.NewContainerLab(
 			containerlabcore.WithTimeout(timeout),
@@ -35,7 +35,7 @@ var configTemplateCmd = &cobra.Command{
 			return err
 		}
 
-		allConfig := config.PrepareVars(c)
+		allConfig := containerlabcoreconfig.PrepareVars(c)
 		if templateVarOnly {
 			for _, n := range configFilter {
 				conf := allConfig[n]
@@ -44,7 +44,7 @@ var configTemplateCmd = &cobra.Command{
 			return nil
 		}
 
-		err = config.RenderAll(allConfig)
+		err = containerlabcoreconfig.RenderAll(allConfig)
 		if err != nil {
 			return err
 		}

@@ -14,8 +14,8 @@ import (
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // Configuration variables for the API Server commands.
@@ -44,7 +44,7 @@ var (
 
 // APIServerNode implements runtime.Node interface for API server containers.
 type APIServerNode struct {
-	config *types.NodeConfig
+	config *containerlabtypes.NodeConfig
 }
 
 // generateRandomJWTSecret creates a random string for use as JWT secret.
@@ -71,7 +71,7 @@ func init() {
 var apiServerStopCmd = &cobra.Command{
 	Use:     "stop",
 	Short:   "stop Containerlab API server container",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var cntName string
@@ -21,7 +21,7 @@ var disableTxOffloadCmd = &cobra.Command{
 	Use:   "disable-tx-offload",
 	Short: "disables tx checksum offload on eth0 interface of a container",
 
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 
@@ -47,7 +47,7 @@ var disableTxOffloadCmd = &cobra.Command{
 			return err
 		}
 
-		err = node.ExecFunction(ctx, utils.NSEthtoolTXOff(cntName, "eth0"))
+		err = node.ExecFunction(ctx, containerlabutils.NSEthtoolTXOff(cntName, "eth0"))
 		if err != nil {
 			return err
 		}

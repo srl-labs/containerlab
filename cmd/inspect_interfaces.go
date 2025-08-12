@@ -13,8 +13,8 @@ import (
 
 	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -29,7 +29,7 @@ var inspectInterfacesCmd = &cobra.Command{
 	Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
 	Aliases: []string{"int", "intf"},
 	RunE:    inspectInterfacesFn,
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 }
 
 func init() {
@@ -113,7 +113,7 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 	return err
 }
 
-func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) *[]tableWriter.Row {
+func interfacesToTableData(contInterfaces []*containerlabtypes.ContainerInterfaces) *[]tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0)
 	for _, container := range contInterfaces {
 		for _, iface := range container.Interfaces {
@@ -141,7 +141,7 @@ func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) *[]table
 }
 
 func printContainerInterfaces(
-	containerInterfaces []*types.ContainerInterfaces,
+	containerInterfaces []*containerlabtypes.ContainerInterfaces,
 	format string,
 ) error {
 	switch format {

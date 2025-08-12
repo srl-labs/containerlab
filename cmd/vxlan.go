@@ -11,8 +11,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/utils"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -56,7 +56,7 @@ var vxlanCmd = &cobra.Command{
 var vxlanCreateCmd = &cobra.Command{
 	Use:     "create",
 	Short:   "create vxlan interface",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx := context.Background()
 
@@ -67,7 +67,7 @@ var vxlanCreateCmd = &cobra.Command{
 		// if vxlan device was not set specifically, we will use
 		// the device that is reported by `ip route get $remote`
 		if parentDev == "" {
-			r, err := utils.GetRouteForIP(net.ParseIP(vxlanRemote))
+			r, err := containerlabutils.GetRouteForIP(net.ParseIP(vxlanRemote))
 			if err != nil {
 				return fmt.Errorf("failed to find a route to VxLAN remote address %s", vxlanRemote)
 			}
@@ -75,25 +75,25 @@ var vxlanCreateCmd = &cobra.Command{
 			parentDev = r.Interface.Name
 		}
 
-		vxlraw := &links.LinkVxlanRaw{
+		vxlraw := &containerlablinks.LinkVxlanRaw{
 			Remote:          vxlanRemote,
 			VNI:             vxlanID,
 			ParentInterface: parentDev,
-			LinkCommonParams: links.LinkCommonParams{
+			LinkCommonParams: containerlablinks.LinkCommonParams{
 				MTU: vxlanMTU,
 			},
 			UDPPort:  vxlanUDPPort,
-			LinkType: links.LinkTypeVxlanStitch,
-			Endpoint: *links.NewEndpointRaw(
+			LinkType: containerlablinks.LinkTypeVxlanStitch,
+			Endpoint: *containerlablinks.NewEndpointRaw(
 				"host",
 				cntLink,
 				"",
 			),
 		}
 
-		rp := &links.ResolveParams{
-			Nodes: map[string]links.Node{
-				"host": links.GetHostLinkNode(),
+		rp := &containerlablinks.ResolveParams{
+			Nodes: map[string]containerlablinks.Node{
+				"host": containerlablinks.GetHostLinkNode(),
 			},
 			VxlanIfaceNameOverwrite: cntLink,
 		}
@@ -103,9 +103,9 @@ var vxlanCreateCmd = &cobra.Command{
 			return err
 		}
 
-		var vxl *links.VxlanStitched
+		var vxl *containerlablinks.VxlanStitched
 		var ok bool
-		if vxl, ok = link.(*links.VxlanStitched); !ok {
+		if vxl, ok = link.(*containerlablinks.VxlanStitched); !ok {
 			return fmt.Errorf("not a VxlanStitched link")
 		}
 
@@ -121,12 +121,12 @@ var vxlanCreateCmd = &cobra.Command{
 var vxlanDeleteCmd = &cobra.Command{
 	Use:     "delete",
 	Short:   "delete vxlan interface",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		var ls []netlink.Link
 		var err error
 
-		ls, err = utils.GetLinksByNamePrefix(delPrefix)
+		ls, err = containerlabutils.GetLinksByNamePrefix(delPrefix)
 		if err != nil {
 			return err
 		}

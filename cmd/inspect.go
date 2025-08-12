@@ -19,9 +19,9 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/labels"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var (
@@ -146,7 +146,7 @@ func listContainers(ctx context.Context, c *containerlabcore.CLab) ([]containerl
 	return containers, nil
 }
 
-func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
+func toTableData(contDetails []containerlabtypes.ContainerDetails) []tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0, len(contDetails))
 
 	for i := range contDetails {
@@ -222,8 +222,8 @@ func printContainerDetailsJSON(containers []containerlabruntime.GenericContainer
 	groupedDetails := make(map[string][]containerlabruntime.GenericContainer)
 	// Sort containers first by lab name, then by container name for consistent output
 	sort.Slice(containers, func(i, j int) bool {
-		labNameI := containers[i].Labels[labels.Containerlab]
-		labNameJ := containers[j].Labels[labels.Containerlab]
+		labNameI := containers[i].Labels[containerlablabels.Containerlab]
+		labNameJ := containers[j].Labels[containerlablabels.Containerlab]
 		if labNameI == labNameJ {
 			// Use the first name if available
 			nameI := ""
@@ -241,7 +241,7 @@ func printContainerDetailsJSON(containers []containerlabruntime.GenericContainer
 
 	// Group the sorted containers
 	for idx := range containers {
-		labName := containers[idx].Labels[labels.Containerlab]
+		labName := containers[idx].Labels[containerlablabels.Containerlab]
 		// Ensure labName exists, default to a placeholder if missing (shouldn't happen with filters)
 		if labName == "" {
 			labName = "_unknown_lab_"
@@ -259,10 +259,10 @@ func printContainerDetailsJSON(containers []containerlabruntime.GenericContainer
 	return nil
 }
 
-func printContainerInspectJSON(contDetails []types.ContainerDetails) error {
+func printContainerInspectJSON(contDetails []containerlabtypes.ContainerDetails) error {
 	// Group summary results by LabName
 	// Use a map where keys are lab names and values are slices of container details
-	groupedLabs := make(map[string][]types.ContainerDetails)
+	groupedLabs := make(map[string][]containerlabtypes.ContainerDetails)
 	for idx := range contDetails {
 		labName := contDetails[idx].LabName
 		if labName == "" {
@@ -282,7 +282,7 @@ func printContainerInspectJSON(contDetails []types.ContainerDetails) error {
 	return nil
 }
 
-func printContainerInspectTable(contDetails []types.ContainerDetails) {
+func printContainerInspectTable(contDetails []containerlabtypes.ContainerDetails) {
 	// Generate and render table using the summary data (which uses relative LabPath)
 	tabData := toTableData(contDetails)
 	table := tableWriter.NewWriter()
@@ -339,7 +339,7 @@ func printContainerInspectTable(contDetails []types.ContainerDetails) {
 	table.Render()
 }
 
-func printContainerInspectCSV(contDetails []types.ContainerDetails) {
+func printContainerInspectCSV(contDetails []containerlabtypes.ContainerDetails) {
 	csv := "lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner\n"
 	for idx := range contDetails {
 		csv += fmt.Sprintf("%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
@@ -361,11 +361,11 @@ func printContainerInspectCSV(contDetails []types.ContainerDetails) {
 
 // PrintContainerInspect handles non-details output (table or grouped JSON summary).
 func PrintContainerInspect(containers []containerlabruntime.GenericContainer, format string) error {
-	contDetails := make([]types.ContainerDetails, 0, len(containers))
+	contDetails := make([]containerlabtypes.ContainerDetails, 0, len(containers))
 
 	// Gather summary details of each container
 	for idx := range containers {
-		absPath := containers[idx].Labels[labels.TopoFile]
+		absPath := containers[idx].Labels[containerlablabels.TopoFile]
 		shortPath, err := getShortestTopologyPath(absPath)
 		if err != nil {
 			log.Warnf("failed to get relative topology path for container %s: %v, using raw path %q", containers[idx].Names[0], err, absPath)
@@ -374,8 +374,8 @@ func PrintContainerInspect(containers []containerlabruntime.GenericContainer, fo
 
 		status := parseStatus(containers[idx].Status)
 
-		cdet := types.ContainerDetails{
-			LabName:     containers[idx].Labels[labels.Containerlab],
+		cdet := containerlabtypes.ContainerDetails{
+			LabName:     containers[idx].Labels[containerlablabels.Containerlab],
 			LabPath:     shortPath, // Relative or shortest path for table view
 			AbsLabPath:  absPath,   // Absolute path for JSON view
 			Image:       containers[idx].Image,
@@ -389,13 +389,13 @@ func PrintContainerInspect(containers []containerlabruntime.GenericContainer, fo
 		if len(containers[idx].Names) > 0 {
 			cdet.Name = containers[idx].Names[0]
 		}
-		if group, ok := containers[idx].Labels[labels.NodeGroup]; ok {
+		if group, ok := containers[idx].Labels[containerlablabels.NodeGroup]; ok {
 			cdet.Group = group
 		}
-		if kind, ok := containers[idx].Labels[labels.NodeKind]; ok {
+		if kind, ok := containers[idx].Labels[containerlablabels.NodeKind]; ok {
 			cdet.Kind = kind
 		}
-		if owner, ok := containers[idx].Labels[labels.Owner]; ok {
+		if owner, ok := containers[idx].Labels[containerlablabels.Owner]; ok {
 			cdet.Owner = owner
 		}
 

@@ -73,9 +73,9 @@ linters:
         # we can add more layers here (containerlab$1$2 etc.) as we tidy/get more consistent
         - pkg: github.com/srl-labs/containerlab/(\w+)
           alias: containerlab$1
-      # imo this should be enforced as well, and anything we want to alias should be defined
-      # here for consistency
-      # no-extra-aliases: true
+        - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)
+          alias: containerlab$1$2
+      no-unaliased: true
     lll:
       line-length: 100
     misspell:
@@ -92,6 +92,10 @@ linters:
       - legacy
       - std-error-handling
     rules:
+      # currently only enforcing on cmd package, for now!
+      - linters:
+          - importas
+        path-except: cmd/
       - linters:
           # we *care* about tests, but... like less :P
           - mnd

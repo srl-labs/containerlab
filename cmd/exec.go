@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/exec"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -36,7 +36,7 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return errors.New("provide command to execute")
 	}
 
-	outputFormat, err := exec.ParseExecOutputFormat(execFormat)
+	outputFormat, err := containerlabexec.ParseExecOutputFormat(execFormat)
 	if err != nil {
 		return err
 	}
@@ -94,9 +94,9 @@ func execFn(_ *cobra.Command, _ []string) error {
 	}
 
 	switch outputFormat {
-	case exec.ExecFormatPlain:
+	case containerlabexec.ExecFormatPlain:
 		resultCollection.Log()
-	case exec.ExecFormatJSON:
+	case containerlabexec.ExecFormatJSON:
 		out, err := resultCollection.Dump(outputFormat)
 		if err != nil {
 			return fmt.Errorf("failed to print the results collection: %v", err)

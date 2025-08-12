@@ -15,10 +15,10 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/links"
+	containerlablinks "github.com/srl-labs/containerlab/links"
 	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -84,20 +84,20 @@ var generateCmd = &cobra.Command{
 		}
 		log.Debugf("generated topo: %s", string(b))
 		if file != "" {
-			err = utils.CreateFile(file, string(b))
+			err = containerlabutils.CreateFile(file, string(b))
 			if err != nil {
 				return err
 			}
 		}
 		if deploy {
-			err = utils.CheckAndGetRootPrivs(nil, nil)
+			err = containerlabutils.CheckAndGetRootPrivs(nil, nil)
 			if err != nil {
 				return err
 			}
 			reconfigure = true
 			if file == "" {
 				file = fmt.Sprintf("%s.clab.yml", labName)
-				err = utils.CreateFile(file, string(b))
+				err = containerlabutils.CreateFile(file, string(b))
 				if err != nil {
 					return err
 				}
@@ -166,10 +166,10 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 	numStages := len(nodes)
 	config := &containerlabcore.Config{
 		Name: name,
-		Mgmt: new(types.MgmtNet),
-		Topology: &types.Topology{
-			Kinds: make(map[string]*types.NodeDefinition),
-			Nodes: make(map[string]*types.NodeDefinition),
+		Mgmt: new(containerlabtypes.MgmtNet),
+		Topology: &containerlabtypes.Topology{
+			Kinds: make(map[string]*containerlabtypes.NodeDefinition),
+			Nodes: make(map[string]*containerlabtypes.NodeDefinition),
 		},
 	}
 	config.Mgmt.Network = network
@@ -180,7 +180,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 		config.Mgmt.IPv6Subnet = ipv6range
 	}
 	for k, img := range images {
-		config.Topology.Kinds[k] = &types.NodeDefinition{Image: img}
+		config.Topology.Kinds[k] = &containerlabtypes.NodeDefinition{Image: img}
 	}
 	for k, lic := range licenses {
 		if knd, ok := config.Topology.Kinds[k]; ok {
@@ -188,13 +188,13 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 			config.Topology.Kinds[k] = knd
 			continue
 		}
-		config.Topology.Kinds[k] = &types.NodeDefinition{License: lic}
+		config.Topology.Kinds[k] = &containerlabtypes.NodeDefinition{License: lic}
 	}
 	if numStages == 1 {
 		for j := uint(0); j < nodes[0].numNodes; j++ {
 			node1 := fmt.Sprintf("%s1-%d", nodePrefix, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
-				config.Topology.Nodes[node1] = &types.NodeDefinition{
+				config.Topology.Nodes[node1] = &containerlabtypes.NodeDefinition{
 					Group: fmt.Sprintf("%s-1", groupPrefix),
 					Kind:  nodes[0].kind,
 					Type:  nodes[0].typ,
@@ -213,7 +213,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 		for j := uint(0); j < nodes[i].numNodes; j++ {
 			node1 := fmt.Sprintf("%s%d-%d", nodePrefix, i+1, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
-				config.Topology.Nodes[node1] = &types.NodeDefinition{
+				config.Topology.Nodes[node1] = &containerlabtypes.NodeDefinition{
 					Group: fmt.Sprintf("%s-%d", groupPrefix, i+1),
 					Kind:  nodes[i].kind,
 					Type:  nodes[i].typ,
@@ -222,7 +222,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 			for k := uint(0); k < nodes[i+1].numNodes; k++ {
 				node2 := fmt.Sprintf("%s%d-%d", nodePrefix, i+2, k+1)
 				if _, ok := config.Topology.Nodes[node2]; !ok {
-					config.Topology.Nodes[node2] = &types.NodeDefinition{
+					config.Topology.Nodes[node2] = &containerlabtypes.NodeDefinition{
 						Group: fmt.Sprintf("%s-%d", groupPrefix, i+2),
 						Kind:  nodes[i+1].kind,
 						Type:  nodes[i+1].typ,
@@ -230,17 +230,17 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 				}
 
 				// create a raw veth link
-				l := &links.LinkVEthRaw{
-					Endpoints: []*links.EndpointRaw{
-						links.NewEndpointRaw(node1, fmt.Sprintf(
+				l := &containerlablinks.LinkVEthRaw{
+					Endpoints: []*containerlablinks.EndpointRaw{
+						containerlablinks.NewEndpointRaw(node1, fmt.Sprintf(
 							generateNodesAttributes[nodes[i].kind].GetInterfaceFormat(), k+1+interfaceOffset), ""),
-						links.NewEndpointRaw(node2, fmt.Sprintf(
+						containerlablinks.NewEndpointRaw(node2, fmt.Sprintf(
 							generateNodesAttributes[nodes[i+1].kind].GetInterfaceFormat(), j+1), ""),
 					},
 				}
 
 				// encapsulate the brief rawlink in a linkdefinition
-				ld := &links.LinkDefinition{
+				ld := &containerlablinks.LinkDefinition{
 					Link: l.ToLinkBriefRaw(),
 				}
 

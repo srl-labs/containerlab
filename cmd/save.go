@@ -12,8 +12,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -46,7 +46,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 			return err
 		}
 
-		err = links.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+		err = containerlablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 		var wg sync.WaitGroup
 		wg.Add(len(c.Nodes))
 		for _, node := range c.Nodes {
-			go func(node nodes.Node) {
+			go func(node containerlabnodes.Node) {
 				defer wg.Done()
 
 				err := node.SaveConfig(ctx)

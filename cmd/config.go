@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/core/config"
+	containerlabcoreconfig "github.com/srl-labs/containerlab/core/config"
 	"github.com/srl-labs/containerlab/core/config/transport"
 	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 
@@ -56,7 +56,7 @@ func configRun(_ *cobra.Command, args []string) error {
 	var err error
 
 	transport.DebugCount = debugCount
-	config.DebugCount = debugCount
+	containerlabcoreconfig.DebugCount = debugCount
 
 	c, err := containerlabcore.NewContainerLab(
 		containerlabcore.WithTimeout(timeout),
@@ -73,9 +73,9 @@ func configRun(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	allConfig := config.PrepareVars(c)
+	allConfig := containerlabcoreconfig.PrepareVars(c)
 
-	err = config.RenderAll(allConfig)
+	err = containerlabcoreconfig.RenderAll(allConfig)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func configRun(_ *cobra.Command, args []string) error {
 			return
 		}
 
-		err = config.Send(cs, action)
+		err = containerlabcoreconfig.Send(cs, action)
 		if err != nil {
 			log.Warnf("%s: %s", cs.TargetNode.ShortName, err)
 		}
@@ -148,10 +148,10 @@ func validateFilter(nodes map[string]containerlabnodes.Node) error {
 
 func init() {
 	RootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{},
+	configCmd.Flags().StringSliceVarP(&containerlabcoreconfig.TemplatePaths, "template-path", "p", []string{},
 		"comma separated list of paths to search for templates")
 	_ = configCmd.MarkFlagDirname("template-path")
-	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{},
+	configCmd.Flags().StringSliceVarP(&containerlabcoreconfig.TemplateNames, "template-list", "l", []string{},
 		"comma separated list of template names to render")
 	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{},
 		"comma separated list of nodes to include")

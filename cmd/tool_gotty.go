@@ -15,12 +15,12 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/exec"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
+	containerlablinks "github.com/srl-labs/containerlab/links"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const gotty string = "gotty"
@@ -51,7 +51,7 @@ type GoTTYListItem struct {
 
 // GoTTYNode implements runtime.Node interface for GoTTY containers.
 type GoTTYNode struct {
-	config *types.NodeConfig
+	config *containerlabtypes.NodeConfig
 }
 
 func init() {
@@ -123,7 +123,7 @@ func NewGoTTYNode(name, image, network string, port int, username, password, she
 		port, username, password, shell, port,
 	)
 
-	_, gid, _ := utils.GetRealUserIDs()
+	_, gid, _ := containerlabutils.GetRealUserIDs()
 
 	// user `user` is a sudo user in srl-labs/network-multitool
 	userName := "root"
@@ -144,7 +144,7 @@ func NewGoTTYNode(name, image, network string, port int, username, password, she
 		nat.Port(portStr): struct{}{},
 	}
 
-	nodeConfig := &types.NodeConfig{
+	nodeConfig := &containerlabtypes.NodeConfig{
 		LongName:     name,
 		ShortName:    name,
 		Image:        image,
@@ -163,11 +163,11 @@ func NewGoTTYNode(name, image, network string, port int, username, password, she
 	}
 }
 
-func (n *GoTTYNode) Config() *types.NodeConfig {
+func (n *GoTTYNode) Config() *containerlabtypes.NodeConfig {
 	return n.config
 }
 
-func (n *GoTTYNode) GetEndpoints() []links.Endpoint {
+func (n *GoTTYNode) GetEndpoints() []containerlablinks.Endpoint {
 	return nil
 }
 
@@ -180,7 +180,7 @@ func getGoTTYStatus(
 ) (running bool, webURL string) {
 	// Pass the port parameter to the status command
 	statusCmd := fmt.Sprintf("gotty-service status %d", port)
-	execCmd, err := exec.NewExecCmdFromString(statusCmd)
+	execCmd, err := containerlabexec.NewExecCmdFromString(statusCmd)
 	if err != nil {
 		log.Debugf("Failed to create exec cmd: %v", err)
 		return false, ""
@@ -202,7 +202,7 @@ func getGoTTYStatus(
 var gottyAttachCmd = &cobra.Command{
 	Use:     "attach",
 	Short:   "attach GoTTY web terminal to a lab",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -237,14 +237,14 @@ var gottyAttachCmd = &cobra.Command{
 		rt := rinit()
 		err = rt.Init(
 			containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}),
-			containerlabruntime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
+			containerlabruntime.WithMgmtNet(&containerlabtypes.MgmtNet{Network: networkName}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}
 
 		// Check if container already exists
-		filter := []*types.GenericFilter{{FilterType: "name", Match: gottyContainerName}}
+		filter := []*containerlabtypes.GenericFilter{{FilterType: "name", Match: gottyContainerName}}
 		containers, err := rt.ListContainers(ctx, filter)
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %w", err)
@@ -255,14 +255,14 @@ var gottyAttachCmd = &cobra.Command{
 
 		// Pull the container image
 		log.Infof("Pulling image %s...", gottyImage)
-		if err := rt.PullImage(ctx, gottyImage, types.PullPolicyAlways); err != nil {
+		if err := rt.PullImage(ctx, gottyImage, containerlabtypes.PullPolicyAlways); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", gottyImage, err)
 		}
 
 		// Create container labels
 		owner := gottyOwner
 		if owner == "" {
-			owner = utils.GetOwner()
+			owner = containerlabutils.GetOwner()
 		}
 
 		labelsMap := createLabelsMap(
@@ -325,7 +325,7 @@ var gottyAttachCmd = &cobra.Command{
 var gottyDetachCmd = &cobra.Command{
 	Use:     "detach",
 	Short:   "detach GoTTY web terminal from a lab",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -388,7 +388,7 @@ var gottyListCmd = &cobra.Command{
 		}
 
 		// Filter only by GoTTY label
-		filter := []*types.GenericFilter{
+		filter := []*containerlabtypes.GenericFilter{
 			{
 				FilterType: "label",
 				Field:      containerlablabels.ToolType,
@@ -497,7 +497,7 @@ var gottyListCmd = &cobra.Command{
 var gottyReattachCmd = &cobra.Command{
 	Use:     "reattach",
 	Short:   "detach and reattach GoTTY web terminal to a lab",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -535,7 +535,7 @@ var gottyReattachCmd = &cobra.Command{
 		rt := rinit()
 		err = rt.Init(
 			containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}),
-			containerlabruntime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
+			containerlabruntime.WithMgmtNet(&containerlabtypes.MgmtNet{Network: networkName}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
@@ -554,14 +554,14 @@ var gottyReattachCmd = &cobra.Command{
 		// Step 2: Create and attach new GoTTY container
 		// Pull the container image
 		log.Infof("Pulling image %s...", gottyImage)
-		if err := rt.PullImage(ctx, gottyImage, types.PullPolicyAlways); err != nil {
+		if err := rt.PullImage(ctx, gottyImage, containerlabtypes.PullPolicyAlways); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", gottyImage, err)
 		}
 
 		// Create container labels
 		owner := gottyOwner
 		if owner == "" {
-			owner = utils.GetOwner()
+			owner = containerlabutils.GetOwner()
 		}
 
 		labelsMap := createLabelsMap(
@@ -602,7 +602,9 @@ var gottyReattachCmd = &cobra.Command{
 
 		// Get container IP if webURL is empty
 		if webURL == "" {
-			filter := []*types.GenericFilter{{FilterType: "name", Match: gottyContainerName}}
+			filter := []*containerlabtypes.GenericFilter{{
+				FilterType: "name", Match: gottyContainerName,
+			}}
 			containers, err := rt.ListContainers(ctx, filter)
 			if err == nil && len(containers) > 0 {
 				webURL = fmt.Sprintf("http://%s:%d", containers[0].NetworkSettings.IPv4addr, gottyPort)

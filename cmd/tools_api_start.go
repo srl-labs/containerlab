@@ -14,10 +14,10 @@ import (
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
+	containerlablinks "github.com/srl-labs/containerlab/links"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 func init() {
@@ -71,16 +71,16 @@ func NewAPIServerNode(name, image, labsDir string, runtime containerlabruntime.C
 	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s", name, image, labsDir, runtime)
 
 	// Set up binds based on the runtime
-	binds := types.Binds{
+	binds := containerlabtypes.Binds{
 		//	types.NewBind(netnsPath, netnsPath, ""),
-		types.NewBind("/etc/passwd", "/etc/passwd", "ro"),
-		types.NewBind("/etc/shadow", "/etc/shadow", "ro"),
-		types.NewBind("/etc/group", "/etc/group", "ro"),
-		types.NewBind("/home", "/home", ""),
+		containerlabtypes.NewBind("/etc/passwd", "/etc/passwd", "ro"),
+		containerlabtypes.NewBind("/etc/shadow", "/etc/shadow", "ro"),
+		containerlabtypes.NewBind("/etc/group", "/etc/group", "ro"),
+		containerlabtypes.NewBind("/home", "/home", ""),
 	}
 	// if /etc/gshadow exists, add it to the binds
-	if utils.FileExists("/etc/gshadow") {
-		binds = append(binds, types.NewBind("/etc/gshadow", "/etc/gshadow", "ro"))
+	if containerlabutils.FileExists("/etc/gshadow") {
+		binds = append(binds, containerlabtypes.NewBind("/etc/gshadow", "/etc/gshadow", "ro"))
 	}
 
 	// get the runtime socket path
@@ -91,7 +91,7 @@ func NewAPIServerNode(name, image, labsDir string, runtime containerlabruntime.C
 
 	// build the bindmount for the socket, path sound be the same in the container as is on the host
 	// append the socket to the binds
-	binds = append(binds, types.NewBind(rtSocket, rtSocket, ""))
+	binds = append(binds, containerlabtypes.NewBind(rtSocket, rtSocket, ""))
 
 	// append the mounts required for container out of container operation
 	binds = append(binds, runtime.GetCooCBindMounts()...)
@@ -101,9 +101,9 @@ func NewAPIServerNode(name, image, labsDir string, runtime containerlabruntime.C
 	if err != nil {
 		return nil, fmt.Errorf("could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH", err)
 	}
-	binds = append(binds, types.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
+	binds = append(binds, containerlabtypes.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
 
-	nodeConfig := &types.NodeConfig{
+	nodeConfig := &containerlabtypes.NodeConfig{
 		LongName:    name,
 		ShortName:   name,
 		Image:       image,
@@ -119,12 +119,12 @@ func NewAPIServerNode(name, image, labsDir string, runtime containerlabruntime.C
 	}, nil
 }
 
-func (n *APIServerNode) Config() *types.NodeConfig {
+func (n *APIServerNode) Config() *containerlabtypes.NodeConfig {
 	return n.config
 }
 
 // GetEndpoints implementation for the Node interface.
-func (*APIServerNode) GetEndpoints() []links.Endpoint {
+func (*APIServerNode) GetEndpoints() []containerlablinks.Endpoint {
 	return nil
 }
 
@@ -180,7 +180,7 @@ func getOwnerName() string {
 var apiServerStartCmd = &cobra.Command{
 	Use:     "start",
 	Short:   "start Containerlab API server container",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -216,7 +216,7 @@ var apiServerStartCmd = &cobra.Command{
 		}
 
 		// Check if container already exists
-		filter := []*types.GenericFilter{{FilterType: "name", Match: apiServerName}}
+		filter := []*containerlabtypes.GenericFilter{{FilterType: "name", Match: apiServerName}}
 		containers, err := rt.ListContainers(ctx, filter)
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %w", err)
@@ -227,7 +227,7 @@ var apiServerStartCmd = &cobra.Command{
 
 		// Pull the container image
 		log.Infof("Pulling image %s...", apiServerImage)
-		if err := rt.PullImage(ctx, apiServerImage, types.PullPolicyAlways); err != nil {
+		if err := rt.PullImage(ctx, apiServerImage, containerlabtypes.PullPolicyAlways); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", apiServerImage, err)
 		}
 

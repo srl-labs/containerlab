@@ -13,18 +13,18 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	AEnd = ""
 	BEnd = ""
-	MTU  = links.DefaultLinkMTU
+	MTU  = containerlablinks.DefaultLinkMTU
 )
 
 func init() {
@@ -45,7 +45,7 @@ var vethCmd = &cobra.Command{
 var vethCreateCmd = &cobra.Command{
 	Use:     "create",
 	Short:   "Create a veth interface and attach its sides to the specified containers",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 
@@ -91,12 +91,12 @@ var vethCreateCmd = &cobra.Command{
 		}
 
 		// now create link brief as if the link was passed via topology file
-		linkBrief := &links.LinkBriefRaw{
+		linkBrief := &containerlablinks.LinkBriefRaw{
 			Endpoints: []string{
 				fmt.Sprintf("%s:%s", parsedAEnd.Node, parsedAEnd.Iface),
 				fmt.Sprintf("%s:%s", parsedBEnd.Node, parsedBEnd.Iface),
 			},
-			LinkCommonParams: links.LinkCommonParams{
+			LinkCommonParams: containerlablinks.LinkCommonParams{
 				MTU: MTU,
 			},
 		}
@@ -108,12 +108,12 @@ var vethCreateCmd = &cobra.Command{
 
 		// we need to copy nodes.Nodes to links.Nodes since two interfaces
 		// are not identical, but a subset
-		resolveNodes := make(map[string]links.Node, len(c.Nodes))
+		resolveNodes := make(map[string]containerlablinks.Node, len(c.Nodes))
 		for k, v := range c.Nodes {
 			resolveNodes[k] = v
 		}
 
-		link, err := linkRaw.Resolve(&links.ResolveParams{Nodes: resolveNodes})
+		link, err := linkRaw.Resolve(&containerlablinks.ResolveParams{Nodes: resolveNodes})
 		if err != nil {
 			return err
 		}
@@ -133,8 +133,8 @@ var vethCreateCmd = &cobra.Command{
 func createNodes(_ context.Context, c *containerlabcore.CLab, aEnd, bEnd parsedEndpoint, rt string) error {
 	for _, epDefinition := range []parsedEndpoint{aEnd, bEnd} {
 		switch epDefinition.Kind {
-		case links.LinkEndpointTypeHost:
-			err := createFakeNode(c, "host", &types.NodeConfig{
+		case containerlablinks.LinkEndpointTypeHost:
+			err := createFakeNode(c, "host", &containerlabtypes.NodeConfig{
 				ShortName: epDefinition.Node,
 				LongName:  epDefinition.Node,
 				Runtime:   rt,
@@ -143,8 +143,9 @@ func createNodes(_ context.Context, c *containerlabcore.CLab, aEnd, bEnd parsedE
 				return err
 			}
 
-		case links.LinkEndpointTypeBridge, links.LinkEndpointTypeBridgeNS:
-			err := createFakeNode(c, "bridge", &types.NodeConfig{
+		case containerlablinks.LinkEndpointTypeBridge,
+			containerlablinks.LinkEndpointTypeBridgeNS:
+			err := createFakeNode(c, "bridge", &containerlabtypes.NodeConfig{
 				ShortName: epDefinition.Node,
 				LongName:  epDefinition.Node,
 				Runtime:   rt,
@@ -158,7 +159,7 @@ func createNodes(_ context.Context, c *containerlabcore.CLab, aEnd, bEnd parsedE
 			// its namespace path.
 			// techinically we don't care which node this is, as long as it uses
 			// standard veth interface attachment process.
-			err := createFakeNode(c, "linux", &types.NodeConfig{
+			err := createFakeNode(c, "linux", &containerlabtypes.NodeConfig{
 				ShortName: epDefinition.Node,
 				LongName:  epDefinition.Node,
 				Runtime:   rt,
@@ -176,7 +177,7 @@ func createNodes(_ context.Context, c *containerlabcore.CLab, aEnd, bEnd parsedE
 type parsedEndpoint struct {
 	Node  string
 	Iface string
-	Kind  links.LinkEndpointType
+	Kind  containerlablinks.LinkEndpointType
 }
 
 // parseVethEndpoint parses the veth endpoint definition as passed in the veth create command.
@@ -187,31 +188,31 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 
 	arr := strings.Split(s, ":")
 
-	var kind links.LinkEndpointType
+	var kind containerlablinks.LinkEndpointType
 
 	switch len(arr) {
 	case 2:
-		ep.Kind = links.LinkEndpointTypeVeth
+		ep.Kind = containerlablinks.LinkEndpointTypeVeth
 
 		if arr[0] == "host" {
-			ep.Kind = links.LinkEndpointTypeHost
+			ep.Kind = containerlablinks.LinkEndpointTypeHost
 		}
 
 		ep.Node = arr[0]
 		ep.Iface = arr[1]
 
 	case 3:
-		if _, ok := utils.StringInSlice([]string{"ovs-bridge", "bridge"}, arr[0]); !ok {
+		if _, ok := containerlabutils.StringInSlice([]string{"ovs-bridge", "bridge"}, arr[0]); !ok {
 			return ep, fmt.Errorf("only bride and ovs-bridge can be used as a first block in the link definition. Got: %s", arr[0])
 		}
 
 		switch arr[0] {
 		case "bridge", "ovs-bridge":
-			kind = links.LinkEndpointTypeBridge
+			kind = containerlablinks.LinkEndpointTypeBridge
 		case "bridge-ns":
-			kind = links.LinkEndpointTypeBridgeNS
+			kind = containerlablinks.LinkEndpointTypeBridgeNS
 		default:
-			kind = links.LinkEndpointTypeVeth
+			kind = containerlablinks.LinkEndpointTypeVeth
 		}
 
 		ep.Kind = kind
@@ -227,7 +228,7 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 }
 
 // createFakeNode creates a fake node in c.Nodes map using the provided node kind and its config.
-func createFakeNode(c *containerlabcore.CLab, kind string, nodeCfg *types.NodeConfig) error {
+func createFakeNode(c *containerlabcore.CLab, kind string, nodeCfg *containerlabtypes.NodeConfig) error {
 	name := nodeCfg.ShortName
 	// construct node
 	n, err := c.Reg.NewNodeOfKind(kind)
@@ -236,13 +237,13 @@ func createFakeNode(c *containerlabcore.CLab, kind string, nodeCfg *types.NodeCo
 	}
 
 	// Init
-	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeCfg.Runtime]))
+	err = n.Init(nodeCfg, containerlabnodes.WithRuntime(c.Runtimes[nodeCfg.Runtime]))
 	if err != nil {
 		return fmt.Errorf("failed to initialize node %s: %v", name, err)
 	}
 
 	// fake node is always assumed to be deployed in case of tools veth command
-	n.SetState(state.Deployed)
+	n.SetState(containerlabnodesstate.Deployed)
 
 	c.Nodes[name] = n
 

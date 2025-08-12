@@ -12,11 +12,11 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/version"
+	containerlabcmdversion "github.com/srl-labs/containerlab/cmd/version"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/core/dependency_manager"
+	containerlabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // name of the container management network.
@@ -55,7 +55,7 @@ var deployCmd = &cobra.Command{
 	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
-	PreRunE:      utils.CheckAndGetRootPrivs,
+	PreRunE:      containerlabutils.CheckAndGetRootPrivs,
 	RunE:         deployFn,
 }
 
@@ -85,7 +85,7 @@ func init() {
 func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	var err error
 
-	log.Info("Containerlab started", "version", version.Version)
+	log.Info("Containerlab started", "version", containerlabcmdversion.Version)
 
 	// Check for owner from environment (set by generate command)
 	if labOwner == "" && os.Getenv("CLAB_OWNER") != "" {
@@ -105,7 +105,7 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		containerlabcore.WithDependencyManager(dependency_manager.NewDependencyManager()),
+		containerlabcore.WithDependencyManager(containerlabcoredependency_manager.NewDependencyManager()),
 		containerlabcore.WithDebug(debug),
 	}
 
@@ -153,7 +153,7 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	versionCheckContext, cancel := context.WithTimeout(cobraCmd.Context(), 3*time.Second)
 	defer cancel()
 
-	m := version.GetManager()
+	m := containerlabcmdversion.GetManager()
 	m.DisplayNewVersionAvailable(versionCheckContext)
 
 	// print table summary

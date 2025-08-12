@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -26,7 +26,7 @@ var destroyCmd = &cobra.Command{
 	Short:   "destroy a lab",
 	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
 	Aliases: []string{"des"},
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE:    destroyFn,
 }
 

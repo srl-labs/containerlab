@@ -18,12 +18,12 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/exec"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
+	containerlablinks "github.com/srl-labs/containerlab/links"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const sshx string = "sshx"
@@ -51,7 +51,7 @@ type SSHXListItem struct {
 
 // SSHXNode implements runtime.Node interface for SSHX containers.
 type SSHXNode struct {
-	config *types.NodeConfig
+	config *containerlabtypes.NodeConfig
 }
 
 func init() {
@@ -119,12 +119,12 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 		enableReadersFlag,
 	)
 
-	_, gid, _ := utils.GetRealUserIDs()
+	_, gid, _ := containerlabutils.GetRealUserIDs()
 
 	// user `user` is a sudo user in srl-labs/network-multitool
 	userName := "user"
 
-	nodeConfig := &types.NodeConfig{
+	nodeConfig := &containerlabtypes.NodeConfig{
 		LongName:   name,
 		ShortName:  name,
 		Image:      image,
@@ -139,7 +139,7 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 	// Add SSH directory mount if enabled
 	if mountSSH {
 		// Get user's home directory
-		sshDir := utils.ExpandHome("~/.ssh")
+		sshDir := containerlabutils.ExpandHome("~/.ssh")
 		// Check if the directory exists
 		if _, err := os.Stat(sshDir); err == nil {
 			nodeConfig.Binds = append(nodeConfig.Binds,
@@ -165,17 +165,17 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 	}
 }
 
-func (n *SSHXNode) Config() *types.NodeConfig {
+func (n *SSHXNode) Config() *containerlabtypes.NodeConfig {
 	return n.config
 }
 
-func (*SSHXNode) GetEndpoints() []links.Endpoint {
+func (*SSHXNode) GetEndpoints() []containerlablinks.Endpoint {
 	return nil
 }
 
 // getSSHXLink retrieves the SSHX link from the container.
 func getSSHXLink(ctx context.Context, rt containerlabruntime.ContainerRuntime, containerName string) string {
-	execCmd, err := exec.NewExecCmdFromString("cat /tmp/sshx")
+	execCmd, err := containerlabexec.NewExecCmdFromString("cat /tmp/sshx")
 	if err != nil {
 		return ""
 	}
@@ -197,7 +197,7 @@ func getSSHXLink(ctx context.Context, rt containerlabruntime.ContainerRuntime, c
 var sshxAttachCmd = &cobra.Command{
 	Use:     "attach",
 	Short:   "attach SSHX terminal sharing to a lab",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -235,14 +235,14 @@ var sshxAttachCmd = &cobra.Command{
 
 		err = rt.Init(
 			containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}),
-			containerlabruntime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
+			containerlabruntime.WithMgmtNet(&containerlabtypes.MgmtNet{Network: networkName}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}
 
 		// Check if container already exists
-		filter := []*types.GenericFilter{{FilterType: "name", Match: sshxContainerName}}
+		filter := []*containerlabtypes.GenericFilter{{FilterType: "name", Match: sshxContainerName}}
 
 		containers, err := rt.ListContainers(ctx, filter)
 		if err != nil {
@@ -255,14 +255,14 @@ var sshxAttachCmd = &cobra.Command{
 
 		// Pull the container image
 		log.Infof("Pulling image %s...", sshxImage)
-		if err := rt.PullImage(ctx, sshxImage, types.PullPolicyAlways); err != nil {
+		if err := rt.PullImage(ctx, sshxImage, containerlabtypes.PullPolicyAlways); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", sshxImage, err)
 		}
 
 		// Create container labels
 		owner := sshxOwner
 		if owner == "" {
-			owner = utils.GetOwner()
+			owner = containerlabutils.GetOwner()
 		}
 
 		labelsMap := createLabelsMap(
@@ -326,7 +326,7 @@ var sshxAttachCmd = &cobra.Command{
 var sshxDetachCmd = &cobra.Command{
 	Use:     "detach",
 	Short:   "detach SSHX terminal sharing from a lab",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -389,7 +389,7 @@ var sshxListCmd = &cobra.Command{
 		}
 
 		// Filter only by SSHX label
-		filter := []*types.GenericFilter{
+		filter := []*containerlabtypes.GenericFilter{
 			{
 				FilterType: "label",
 				Field:      containerlablabels.ToolType,
@@ -482,7 +482,7 @@ var sshxListCmd = &cobra.Command{
 var sshxReattachCmd = &cobra.Command{
 	Use:     "reattach",
 	Short:   "detach and reattach SSHX terminal sharing to a lab",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: containerlabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -520,7 +520,7 @@ var sshxReattachCmd = &cobra.Command{
 		rt := rinit()
 		err = rt.Init(
 			containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}),
-			containerlabruntime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
+			containerlabruntime.WithMgmtNet(&containerlabtypes.MgmtNet{Network: networkName}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
@@ -539,14 +539,14 @@ var sshxReattachCmd = &cobra.Command{
 		// Step 2: Create and attach new SSHX container
 		// Pull the container image
 		log.Infof("Pulling image %s...", sshxImage)
-		if err := rt.PullImage(ctx, sshxImage, types.PullPolicyAlways); err != nil {
+		if err := rt.PullImage(ctx, sshxImage, containerlabtypes.PullPolicyAlways); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", sshxImage, err)
 		}
 
 		// Create container labels
 		owner := sshxOwner
 		if owner == "" {
-			owner = utils.GetOwner()
+			owner = containerlabutils.GetOwner()
 		}
 
 		labelsMap := createLabelsMap(

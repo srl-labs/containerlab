@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/cobra"
 	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var (
@@ -79,7 +79,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	}
 
 	gtopo := containerlabcore.GraphTopo{
-		Nodes: make([]types.ContainerDetails, 0, len(c.Nodes)),
+		Nodes: make([]containerlabtypes.ContainerDetails, 0, len(c.Nodes)),
 		Links: make([]containerlabcore.Link, 0, len(c.Links)),
 	}
 
