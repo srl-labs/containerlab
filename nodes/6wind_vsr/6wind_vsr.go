@@ -67,11 +67,11 @@ func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *nodes.PreDeployPara
 
 	// If user-defined startup exists, copy it into the Consolidated config file
 	if utils.FileExists(n.UserStartupConfig) {
-		utils.CopyFile(n.UserStartupConfig, n.ConsolidatedConfig, 0o644)
+		utils.CopyFile(ctx, n.UserStartupConfig, n.ConsolidatedConfig, 0o644)
 	} else {
 		if n.Cfg.StartupConfig != "" {
 			// Copy startup-config in the Labdir
-			utils.CopyFile(n.Cfg.StartupConfig, n.ConsolidatedConfig, 0o644)
+			utils.CopyFile(ctx, n.Cfg.StartupConfig, n.ConsolidatedConfig, 0o644)
 		}
 		// Consolidate the startup config with the default template
 		if err := n.addDefaultConfig(ctx); err != nil {

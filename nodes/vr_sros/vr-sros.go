@@ -224,7 +224,7 @@ func createVrSROSFiles(node nodes.Node) error {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
 		dst := filepath.Join(nodeCfg.LabDir, configDirName, licenseFName)
-		if err := utils.CopyFile(src, dst, 0o644); err != nil {
+		if err := utils.CopyFile(context.Background(), src, dst, 0o644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

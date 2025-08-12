@@ -149,7 +149,7 @@ func (n *ceos) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-func (n *ceos) createCEOSFiles(_ context.Context) error {
+func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	nodeCfg := n.Config()
 	// generate config directory
 	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"), 0o777)
@@ -192,7 +192,7 @@ func (n *ceos) createCEOSFiles(_ context.Context) error {
 			dest := filepath.Join(flash, basename)
 
 			topoDir := filepath.Dir(filepath.Dir(nodeCfg.LabDir)) // topo dir is needed to resolve extrapaths
-			if err := utils.CopyFile(utils.ResolvePath(extrapath, topoDir), dest, 0o644); err != nil {
+			if err := utils.CopyFile(ctx, utils.ResolvePath(extrapath, topoDir), dest, 0o644); err != nil {
 				return fmt.Errorf("extras: copy-to-flash %s -> %s failed %v", extrapath, dest, err)
 			}
 		}

@@ -300,14 +300,14 @@ func (c *CLab) processStartupConfig(nodeCfg *types.NodeConfig) error {
 		case isDownloadableConfig:
 			log.Debugf("Node %q startup-config is a downloadable config %q", nodeCfg.ShortName, p)
 			// get file name from an URL
-			fname := utils.FilenameForURL(p)
+			fname := utils.FilenameForURL(context.Background(), p)
 
 			// Deduce the absolute destination filename for the downloaded content
 			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
 
 			log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
 			// download the file to tmp location
-			err := utils.CopyFileContents(p, absDestFile, 0o755)
+			err := utils.CopyFileContents(context.Background(), p, absDestFile, 0o755)
 			if err != nil {
 				return err
 			}

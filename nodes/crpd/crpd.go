@@ -199,7 +199,7 @@ func createCRPDFiles(node nodes.Node) error {
 			return err
 		}
 
-		if err = utils.CopyFile(src, dst, 0o644); err != nil {
+		if err = utils.CopyFile(context.Background(), src, dst, 0o644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

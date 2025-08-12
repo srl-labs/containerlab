@@ -675,7 +675,7 @@ func (n *sros) createSROSFiles() error {
 	if n.Cfg.License != "" && (n.isCPM("") || n.isStandaloneNode()) {
 		// copy license file to node specific directory in lab
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(n.Cfg.License, licPath, 0o644); err != nil {
+		if err := utils.CopyFile(context.Background(), n.Cfg.License, licPath, 0o644); err != nil {
 			return fmt.Errorf("license copying src %s -> dst %s failed: %v", n.Cfg.License, licPath, err)
 		}
 		log.Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)

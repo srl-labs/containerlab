@@ -247,7 +247,7 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *srl) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
@@ -262,7 +262,7 @@ func (n *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 			basename := filepath.Base(fullpath)
 			// if it is a url extract filename from url or content-disposition header
 			if utils.IsHttpURL(fullpath, false) {
-				basename = utils.FilenameForURL(fullpath)
+				basename = utils.FilenameForURL(ctx, fullpath)
 			}
 			// enforce yml extension
 			ext := filepath.Ext(basename)
@@ -271,7 +271,7 @@ func (n *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 			}
 
 			dst := filepath.Join(appmgr, basename)
-			if err := utils.CopyFile(fullpath, dst, 0o644); err != nil {
+			if err := utils.CopyFile(ctx, fullpath, dst, 0o644); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
 			}
 		}
@@ -463,7 +463,7 @@ func (n *srl) createSRLFiles() error {
 		// copy license file to node specific directory in lab
 		src = n.Cfg.License
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(src, licPath, 0o644); err != nil {
+		if err := utils.CopyFile(context.Background(), src, licPath, 0o644); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)

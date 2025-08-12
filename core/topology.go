@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -56,7 +57,7 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 		return "", err
 	}
 
-	err = utils.CopyFile(url, tmpFile.Name(), 0o644)
+	err = utils.CopyFile(context.Background(), url, tmpFile.Name(), 0o644)
 
 	return tmpFile.Name(), err
 }

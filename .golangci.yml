@@ -11,6 +11,7 @@ linters:
     - ineffassign
     - importas
     - nakedret
+    - noctx
     - nolintlint
     - staticcheck
     - unconvert
@@ -32,7 +33,6 @@ linters:
     - misspell
     - mnd
     - nestif
-    - noctx
     - prealloc
     - revive
     - wsl_v5

@@ -5,6 +5,7 @@
 package version
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,13 +23,13 @@ var upgradeCmd = &cobra.Command{
 	Use:     "upgrade",
 	Short:   "upgrade containerlab to latest available version",
 	PreRunE: utils.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cobraCmd *cobra.Command, _ []string) error {
 		f, err := os.CreateTemp("", "containerlab")
 		defer os.Remove(f.Name())
 		if err != nil {
 			return fmt.Errorf("failed to create temp file: %w", err)
 		}
-		err = downloadFile(downloadURL, f)
+		err = downloadFile(cobraCmd.Context(), downloadURL, f)
 		if err != nil {
 			return fmt.Errorf("failed to download upgrade script: %w", err)
 		}
@@ -50,7 +51,7 @@ var upgradeCmd = &cobra.Command{
 }
 
 // downloadFile will download a file from a URL and write its content to a file.
-func downloadFile(url string, file *os.File) error {
+func downloadFile(ctx context.Context, url string, file *os.File) error {
 	// Create an HTTP client with specific transport
 	client := &http.Client{
 		Transport: &http.Transport{
@@ -59,10 +60,16 @@ func downloadFile(url string, file *os.File) error {
 	}
 
 	// Get the data
-	resp, err := client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
 	defer resp.Body.Close() // skipcq: GO-S2307
 
 	// Write the body to file

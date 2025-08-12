@@ -64,7 +64,7 @@ func DirExists(filename string) bool {
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherwise, copy the file contents from src to dst.
 // mode is the desired target file permissions, e.g. "0644".
-func CopyFile(src, dst string, mode os.FileMode) (err error) {
+func CopyFile(ctx context.Context, src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
 	if !IsHttpURL(src, false) && !IsS3URL(src) {
 		sfi, err = os.Stat(src)
@@ -95,7 +95,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		}
 	}
 
-	return CopyFileContents(src, dst, mode)
+	return CopyFileContents(ctx, src, dst, mode)
 }
 
 // IsHttpURL checks if the url is a downloadable HTTP URL.
@@ -165,7 +165,7 @@ func ParseS3URL(s3URL string) (bucket, key string, err error) {
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
 // src can be an http(s) URL or an S3 URL.
-func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
+func CopyFileContents(ctx context.Context, src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
 	switch {
@@ -173,7 +173,12 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		client := NewHTTPClient()
 
 		// download using client
-		resp, err := client.Get(src)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, nil)
+		if err != nil {
+			return err
+		}
+
+		resp, err := client.Do(req)
 		if err != nil || resp.StatusCode != 200 {
 			return fmt.Errorf("%w: %s", errHTTPFetch, src)
 		}
@@ -403,7 +408,7 @@ const (
 
 // FilenameForURL extracts a filename from a given url
 // returns "undefined" when unsuccessful.
-func FilenameForURL(rawUrl string) string {
+func FilenameForURL(ctx context.Context, rawUrl string) string {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
 		return UndefinedFileName
@@ -411,7 +416,14 @@ func FilenameForURL(rawUrl string) string {
 
 	// try extracting the filename from "content-disposition" header
 	if IsHttpURL(rawUrl, false) {
-		resp, err := http.Head(rawUrl)
+		client := NewHTTPClient()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, rawUrl, nil)
+		if err != nil {
+			return filepath.Base(u.Path)
+		}
+
+		resp, err := client.Do(req)
 		if err != nil {
 			return filepath.Base(u.Path)
 		}
