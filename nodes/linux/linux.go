@@ -7,10 +7,13 @@ package linux
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/log"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime/ignite"
@@ -94,6 +97,47 @@ func (n *linux) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error
 	err := n.ExecFunction(ctx, utils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
 	if err != nil {
 		log.Error(err)
+	}
+
+	if n.Cfg.StartupConfig != "" {
+		log.Debugf("Running user-specified startup config for Linux '%s' node", n.Cfg.ShortName)
+
+		startupConfigFilename := path.Base(n.Cfg.StartupConfig)
+
+		// read the startup config file from the host disk.
+		c, err := os.ReadFile(n.Cfg.StartupConfig)
+		if err != nil {
+			return err
+		}
+
+		// copy startup config file to Linux-based node.
+		cmd := exec.NewExecCmdFromSlice([]string{
+			"bash", "-c",
+			fmt.Sprintf("echo '%s' > %s", c, fmt.Sprintf("/tmp/%s", startupConfigFilename)),
+		})
+
+		execResult, err := n.RunExec(ctx, cmd)
+		if err != nil {
+			return fmt.Errorf("%s: failed to copy the startup config to the node: %v", n.Cfg.ShortName, err)
+		}
+
+		if len(execResult.GetStdErrString()) > 0 {
+			return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+		}
+
+		// now that the startup configuration is on the node, execute it.
+		cmd, err = exec.NewExecCmdFromString(fmt.Sprintf("bash /tmp/%s", startupConfigFilename))
+		if err != nil {
+			return fmt.Errorf("%s: failed to build the command to execute the startup configuration on the node: %v", n.Cfg.ShortName, err)
+		}
+		execResult, err = n.RunExec(ctx, cmd)
+		if err != nil {
+			return fmt.Errorf("%s: failed to execute the startup configuration: %v", n.Cfg.ShortName, err)
+		}
+
+		if len(execResult.GetStdErrString()) > 0 {
+			return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+		}
 	}
 
 	// when ignite runtime is in use
