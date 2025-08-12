@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/exp/slices"
 )
 
@@ -19,14 +19,14 @@ var topologyTestSet = map[string]struct {
 					Kind:       "nokia_srlinux",
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: utils.Pointer(true),
+					AutoRemove: containerlabutils.Pointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
 						Options: []string{"someopt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: utils.Pointer(true),
+						Issue: containerlabutils.Pointer(true),
 					},
 				},
 			},
@@ -36,14 +36,14 @@ var topologyTestSet = map[string]struct {
 				Kind:       "nokia_srlinux",
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: utils.Pointer(true),
+				AutoRemove: containerlabutils.Pointer(true),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(true),
+					Issue: containerlabutils.Pointer(true),
 				},
 			},
 		},
@@ -81,14 +81,14 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: utils.Pointer(true),
+					AutoRemove: containerlabutils.Pointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: utils.Pointer(true),
+						Issue: containerlabutils.Pointer(true),
 					},
 				},
 			},
@@ -102,7 +102,7 @@ var topologyTestSet = map[string]struct {
 						"label2": "notv2",
 					},
 					Memory:     "2G",
-					AutoRemove: utils.Pointer(false),
+					AutoRemove: containerlabutils.Pointer(false),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
@@ -143,14 +143,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: utils.Pointer(false),
+				AutoRemove: containerlabutils.Pointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(true),
+					Issue: containerlabutils.Pointer(true),
 				},
 			},
 		},
@@ -253,7 +253,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: containerlabutils.Pointer(false),
 				},
 			},
 		},
@@ -331,14 +331,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: utils.Pointer(false),
+				AutoRemove: containerlabutils.Pointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: containerlabutils.Pointer(false),
 				},
 			},
 		},
@@ -376,14 +376,14 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: utils.Pointer(true),
+					AutoRemove: containerlabutils.Pointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: utils.Pointer(true),
+						Issue: containerlabutils.Pointer(true),
 					},
 				},
 			},
@@ -397,7 +397,7 @@ var topologyTestSet = map[string]struct {
 						"label2": "notv2",
 					},
 					Memory:     "2G",
-					AutoRemove: utils.Pointer(false),
+					AutoRemove: containerlabutils.Pointer(false),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
@@ -438,14 +438,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: utils.Pointer(false),
+				AutoRemove: containerlabutils.Pointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(true),
+					Issue: containerlabutils.Pointer(true),
 				},
 			},
 		},
@@ -551,7 +551,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: containerlabutils.Pointer(false),
 				},
 			},
 		},
@@ -655,7 +655,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: containerlabutils.Pointer(false),
 				},
 			},
 		},

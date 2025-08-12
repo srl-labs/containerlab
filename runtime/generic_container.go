@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/types"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // GenericContainer stores generic container data.
@@ -23,7 +23,7 @@ type GenericContainer struct {
 	NetworkSettings GenericMgmtIPs
 	Mounts          []ContainerMount
 	Runtime         ContainerRuntime
-	Ports           []*types.GenericPortBinding
+	Ports           []*containerlabtypes.GenericPortBinding
 }
 
 type ContainerMount struct {
@@ -37,7 +37,7 @@ func (ctr *GenericContainer) SetRuntime(r ContainerRuntime) {
 }
 
 // RunExec executes a single command for a GenericContainer.
-func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
+func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
 	containerName := gc.Names[0]
 	execResult, err := gc.Runtime.Exec(ctx, containerName, execCmd)
 	if err != nil {
@@ -46,17 +46,6 @@ func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *exec.ExecCmd) 
 	}
 	return execResult, nil
 }
-
-// // RunExecTypeWoWait is the final function that calls the runtime to execute a type.Exec on a GenericContainer
-// func (gc *GenericContainer) RunExecTypeWoWait(ctx context.Context, execCmd *exec.ExecCmd) error {
-// 	containerName := gc.Names[0]
-// 	err := gc.runtime.ExecNotWait(ctx, containerName, execCmd)
-// 	if err != nil {
-// 		log.Errorf("%s: failed to execute cmd: %q with error %v", containerName, execCmd.GetCmdString(), err)
-// 		return err
-// 	}
-// 	return nil
-// }
 
 func (ctr *GenericContainer) GetContainerIPv4() string {
 	if ctr.NetworkSettings.IPv4addr == "" {

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/nodes/state"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
 
@@ -52,10 +52,10 @@ func (g *GenericLinkNode) GetEndpoints() []Endpoint {
 	return g.endpoints
 }
 
-func (*GenericLinkNode) GetState() state.NodeState {
+func (*GenericLinkNode) GetState() containerlabnodesstate.NodeState {
 	// The GenericLinkNode is the basis for Mgmt-Bridge and Host fake node.
 	// Both of these do generally exist. Hence the Deployed state in generally returned
-	return state.Deployed
+	return containerlabnodesstate.Deployed
 }
 
 func (g *GenericLinkNode) Delete(ctx context.Context) error {

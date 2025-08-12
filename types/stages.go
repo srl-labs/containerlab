@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 
-	"github.com/srl-labs/containerlab/exec"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
 )
 
 const (
@@ -160,8 +160,8 @@ func (c *Exec) InitDefaults() {
 	}
 }
 
-func (c *Exec) GetExecCmd() (*exec.ExecCmd, error) {
-	return exec.NewExecCmdFromString(c.Command)
+func (c *Exec) GetExecCmd() (*containerlabexec.ExecCmd, error) {
+	return containerlabexec.NewExecCmdFromString(c.Command)
 }
 
 func (c *Exec) String() string {

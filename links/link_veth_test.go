@@ -6,7 +6,7 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/go-cmp/cmp"
-	"github.com/srl-labs/containerlab/nodes/state"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
 
@@ -202,7 +202,7 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 type fakeNode struct {
 	Name      string
 	Endpoints []Endpoint
-	State     state.NodeState
+	State     containerlabnodesstate.NodeState
 	Links     []Link
 }
 
@@ -241,7 +241,7 @@ func (*fakeNode) ExecFunction(_ context.Context, _ func(ns.NetNS) error) error {
 	panic("not implemented")
 }
 
-func (f *fakeNode) GetState() state.NodeState {
+func (f *fakeNode) GetState() containerlabnodesstate.NodeState {
 	return f.State
 }
 

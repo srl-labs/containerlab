@@ -10,7 +10,7 @@ import (
 	"github.com/google/nftables/expr"
 	"github.com/google/nftables/xt"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const nfTables = "nf_tables"
@@ -121,7 +121,7 @@ func (c *NftablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) e
 	// we are not deleting the rule if the bridge still exists
 	// it happens when bridge is either still in use by docker network
 	// or it is managed externally (created manually)
-	_, err = utils.BridgeByName(rule.Interface)
+	_, err = containerlabutils.BridgeByName(rule.Interface)
 	if err == nil {
 		log.Debugf("bridge %s is still in use, not removing the forwarding rule", iface)
 		return nil

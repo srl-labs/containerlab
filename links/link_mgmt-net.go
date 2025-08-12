@@ -6,7 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -50,7 +50,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	bridgeEp := NewEndpointBridge(NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link), true)
 
 	var err error
-	bridgeEp.MAC, err = utils.GenMac(ClabOUI)
+	bridgeEp.MAC, err = containerlabutils.GenMac(ClabOUI)
 	if err != nil {
 		return nil, err
 	}

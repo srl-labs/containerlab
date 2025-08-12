@@ -96,15 +96,6 @@ linters:
       - linters:
           - importas
         path: nodes/
-      - linters:
-          - importas
-        path: types/
-      - linters:
-          - importas
-        path: runtime/
-      - linters:
-          - importas
-        path: links/
       # we *care* about tests, but... like less :P
       - linters:
           - mnd

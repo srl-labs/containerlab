@@ -22,10 +22,10 @@ import (
 	igniteRuntimes "github.com/weaveworks/ignite/pkg/runtime"
 	"github.com/weaveworks/ignite/pkg/util"
 
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -46,21 +46,21 @@ var runtimePaths = []string{
 }
 
 type IgniteRuntime struct {
-	config     runtime.RuntimeConfig
+	config     containerlabruntime.RuntimeConfig
 	baseVM     *api.VM
-	mgmt       *types.MgmtNet
-	ctrRuntime runtime.ContainerRuntime
+	mgmt       *containerlabtypes.MgmtNet
+	ctrRuntime containerlabruntime.ContainerRuntime
 }
 
 func init() {
-	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
+	containerlabruntime.Register(RuntimeName, func() containerlabruntime.ContainerRuntime {
 		return &IgniteRuntime{
-			mgmt: &types.MgmtNet{},
+			mgmt: &containerlabtypes.MgmtNet{},
 		}
 	})
 }
 
-func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
+func (c *IgniteRuntime) Init(opts ...containerlabruntime.RuntimeOption) error {
 	// check that /dev/kvm exists
 	if _, err := os.Stat(kvmPath); err != nil {
 		return fmt.Errorf("cannot find %q: %s", kvmPath, err)
@@ -95,7 +95,7 @@ func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 
 	c.baseVM = vm
 
-	rInit, ok := runtime.ContainerRuntimes[defaultContainerRuntime.String()]
+	rInit, ok := containerlabruntime.ContainerRuntimes[defaultContainerRuntime.String()]
 	if !ok {
 		return fmt.Errorf("failed to initialize %q runtime", defaultContainerRuntime)
 	}
@@ -109,12 +109,12 @@ func (c *IgniteRuntime) Init(opts ...runtime.RuntimeOption) error {
 	return nil
 }
 
-func (c *IgniteRuntime) Mgmt() *types.MgmtNet { return c.mgmt }
+func (c *IgniteRuntime) Mgmt() *containerlabtypes.MgmtNet { return c.mgmt }
 
-func (*IgniteRuntime) GetName() string                 { return RuntimeName }
-func (c *IgniteRuntime) Config() runtime.RuntimeConfig { return c.config }
+func (*IgniteRuntime) GetName() string                             { return RuntimeName }
+func (c *IgniteRuntime) Config() containerlabruntime.RuntimeConfig { return c.config }
 
-func (c *IgniteRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
+func (c *IgniteRuntime) WithConfig(cfg *containerlabruntime.RuntimeConfig) {
 	c.config.Timeout = cfg.Timeout
 	c.config.Debug = cfg.Debug
 	c.config.GracefulShutdown = cfg.GracefulShutdown
@@ -127,7 +127,7 @@ func (c *IgniteRuntime) WithKeepMgmtNet() {
 	c.ctrRuntime.WithKeepMgmtNet()
 }
 
-func (c *IgniteRuntime) WithMgmtNet(n *types.MgmtNet) {
+func (c *IgniteRuntime) WithMgmtNet(n *containerlabtypes.MgmtNet) {
 	c.mgmt = n
 }
 
@@ -141,7 +141,7 @@ func (c *IgniteRuntime) DeleteNet(ctx context.Context) error {
 
 // PullImage pulls the provided image name if it does not exist.
 // Ignite does ignore the pullPolicy though.
-func (*IgniteRuntime) PullImage(_ context.Context, imageName string, _ types.PullPolicyValue) error {
+func (*IgniteRuntime) PullImage(_ context.Context, imageName string, _ containerlabtypes.PullPolicyValue) error {
 	ociRef, err := meta.NewOCIImageRef(imageName)
 	if err != nil {
 		return fmt.Errorf("failed to parse OCI image ref %q: %s", imageName, err)
@@ -159,7 +159,7 @@ func (*IgniteRuntime) PullImage(_ context.Context, imageName string, _ types.Pul
 func (c *IgniteRuntime) StartContainer( //nolint: funlen
 	ctx context.Context,
 	_ string,
-	node runtime.Node,
+	node containerlabruntime.Node,
 ) (interface{}, error) {
 	vm := c.baseVM.DeepCopy()
 
@@ -275,30 +275,30 @@ func (c *IgniteRuntime) StartContainer( //nolint: funlen
 	if err != nil {
 		return nil, err
 	}
-	return vmChans, utils.LinkContainerNS(nspath, nodecfg.LongName)
+	return vmChans, containerlabutils.LinkContainerNS(nspath, nodecfg.LongName)
 }
 
-func (*IgniteRuntime) CreateContainer(_ context.Context, node *types.NodeConfig) (string, error) {
+func (*IgniteRuntime) CreateContainer(_ context.Context, node *containerlabtypes.NodeConfig) (string, error) {
 	// this is a no-op
 	return node.LongName, nil
 }
 
 func (*IgniteRuntime) PauseContainer(_ context.Context, cID string) error {
-	pid, err := utils.ContainerNSToPID(cID)
+	pid, err := containerlabutils.ContainerNSToPID(cID)
 	if err != nil {
 		return err
 	}
 
-	return utils.PauseProcessGroup(pid)
+	return containerlabutils.PauseProcessGroup(pid)
 }
 
 func (*IgniteRuntime) UnpauseContainer(_ context.Context, cID string) error {
-	pid, err := utils.ContainerNSToPID(cID)
+	pid, err := containerlabutils.ContainerNSToPID(cID)
 	if err != nil {
 		return err
 	}
 
-	return utils.UnpauseProcessGroup(pid)
+	return containerlabutils.UnpauseProcessGroup(pid)
 }
 
 func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
@@ -306,8 +306,8 @@ func (*IgniteRuntime) StopContainer(_ context.Context, _ string) error {
 	return nil
 }
 
-func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
-	var result []runtime.GenericContainer
+func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*containerlabtypes.GenericFilter) ([]containerlabruntime.GenericContainer, error) {
+	var result []containerlabruntime.GenericContainer
 
 	var metaFilters []string
 	for _, gf := range gfilters {
@@ -348,8 +348,8 @@ func (c *IgniteRuntime) ListContainers(_ context.Context, gfilters []*types.Gene
 	return c.produceGenericContainerList(filteredVMs)
 }
 
-func (c *IgniteRuntime) GetContainer(_ context.Context, containerID string) (*runtime.GenericContainer, error) {
-	var result *runtime.GenericContainer
+func (c *IgniteRuntime) GetContainer(_ context.Context, containerID string) (*containerlabruntime.GenericContainer, error) {
+	var result *containerlabruntime.GenericContainer
 	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
 	if err != nil {
 		return result, err
@@ -367,17 +367,17 @@ func (c *IgniteRuntime) GetContainer(_ context.Context, containerID string) (*ru
 }
 
 // Transform docker-specific to generic container format.
-func (ir *IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]runtime.GenericContainer, error) {
-	var result []runtime.GenericContainer
+func (ir *IgniteRuntime) produceGenericContainerList(input []*api.VM) ([]containerlabruntime.GenericContainer, error) {
+	var result []containerlabruntime.GenericContainer
 
 	for _, i := range input {
-		ctr := runtime.GenericContainer{
+		ctr := containerlabruntime.GenericContainer{
 			Names:           []string{i.Name},
 			ID:              i.GetUID().String(),
 			ShortID:         i.PrefixedID(),
 			Labels:          i.Labels,
 			Image:           i.Spec.Image.OCI.Normalized(),
-			NetworkSettings: runtime.GenericMgmtIPs{},
+			NetworkSettings: containerlabruntime.GenericMgmtIPs{},
 		}
 		ctr.SetRuntime(ir)
 
@@ -410,12 +410,12 @@ func (c *IgniteRuntime) GetNSPath(ctx context.Context, vmName string) (string, e
 	return c.ctrRuntime.GetNSPath(ctx, vm.PrefixedID())
 }
 
-func (*IgniteRuntime) Exec(_ context.Context, _ string, _ *exec.ExecCmd) (*exec.ExecResult, error) {
+func (*IgniteRuntime) Exec(_ context.Context, _ string, _ *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
 	log.Infof("Exec is not yet implemented for Ignite runtime")
 	return nil, nil
 }
 
-func (*IgniteRuntime) ExecNotWait(_ context.Context, _ string, _ *exec.ExecCmd) error {
+func (*IgniteRuntime) ExecNotWait(_ context.Context, _ string, _ *containerlabexec.ExecCmd) error {
 	log.Infof("ExecNotWait is not yet implemented for Ignite runtime")
 	return nil
 }
@@ -432,7 +432,7 @@ func (c *IgniteRuntime) DeleteContainer(ctx context.Context, containerID string)
 		// due to device-mapper being busy (container may be running but VM is not)
 		// In order to work around that, we delete the runtime containers first
 		// this will clean up any device-mapper files and ensure DeleteVM succeeds
-		gFilter := []*types.GenericFilter{
+		gFilter := []*containerlabtypes.GenericFilter{
 			{FilterType: "label", Field: "ignite.name", Operator: "=", Match: containerID},
 		}
 		runtimeCtrs, err := c.ctrRuntime.ListContainers(ctx, gFilter)
@@ -458,15 +458,15 @@ func (*IgniteRuntime) GetHostsPath(context.Context, string) (string, error) {
 }
 
 // GetContainerStatus retrieves the ContainerStatus of the named container.
-func (*IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) runtime.ContainerStatus {
+func (*IgniteRuntime) GetContainerStatus(_ context.Context, containerID string) containerlabruntime.ContainerStatus {
 	vm, err := providers.Client.VMs().Find(filter.NewVMFilter(containerID))
 	if err != nil {
-		return runtime.NotFound
+		return containerlabruntime.NotFound
 	}
 	if vm.Status.Running {
-		return runtime.Running
+		return containerlabruntime.Running
 	}
-	return runtime.Stopped
+	return containerlabruntime.Stopped
 }
 
 // IsHealthy returns true is the container is reported as being healthy, false otherwise.
@@ -493,6 +493,6 @@ func (*IgniteRuntime) GetRuntimeSocket() (string, error) {
 	return "", fmt.Errorf("GetRuntimeSocket() is unimplemented for ignite runtime")
 }
 
-func (*IgniteRuntime) GetCooCBindMounts() types.Binds {
+func (*IgniteRuntime) GetCooCBindMounts() containerlabtypes.Binds {
 	return nil
 }

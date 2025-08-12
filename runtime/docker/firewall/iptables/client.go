@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -36,12 +36,12 @@ type IpTablesClient struct {
 
 // NewIpTablesClient returns a new IpTablesClient.
 func NewIpTablesClient() (*IpTablesClient, error) {
-	v4ModLoaded, err := utils.IsKernelModuleLoaded("ip_tables")
+	v4ModLoaded, err := containerlabutils.IsKernelModuleLoaded("ip_tables")
 	if err != nil {
 		return nil, err
 	}
 
-	v6ModLoaded, _ := utils.IsKernelModuleLoaded("ip6_tables")
+	v6ModLoaded, _ := containerlabutils.IsKernelModuleLoaded("ip6_tables")
 
 	if !v4ModLoaded {
 		log.Debug("ip_tables kernel module not available")
@@ -145,7 +145,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule *definitions
 	// we are not deleting the rule if the bridge still exists
 	// it happens when bridge is either still in use by docker network
 	// or it is managed externally (created manually)
-	_, err = utils.BridgeByName(iface)
+	_, err = containerlabutils.BridgeByName(iface)
 	if err == nil {
 		log.Debugf("bridge %s is still in use, not removing the forwarding rule", iface)
 		return nil
