@@ -217,15 +217,15 @@ func printImpairments(qdiscs []gotc.Object) {
 
 	var rows []tableWriter.Row
 
-	for _, qdisc := range qdiscs {
-		rows = append(rows, qdiscToTableData(qdisc))
+	for idx := range qdiscs {
+		rows = append(rows, qdiscToTableData(&qdiscs[idx]))
 	}
 
 	table.AppendRows(rows)
 	table.Render()
 }
 
-func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
+func qdiscToTableData(qdisc *gotc.Object) tableWriter.Row {
 	link, err := netlink.LinkByIndex(int(qdisc.Ifindex))
 	if err != nil {
 		log.Errorf("could not get netlink interface by index: %v", err)
@@ -275,7 +275,7 @@ func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 }
 
 // qdiscToJSONData converts the full qdisc object to a simplified view.
-func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
+func qdiscToJSONData(qdisc *gotc.Object) types.ImpairmentData {
 	link, err := netlink.LinkByIndex(int(qdisc.Ifindex))
 	if err != nil {
 		log.Errorf("could not get netlink interface by index: %v", err)
@@ -378,11 +378,11 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 
 		if netemFormat == "json" {
 			var impairments []types.ImpairmentData
-			for _, q := range qdiscs {
-				if q.Attribute.Kind != "netem" {
+			for idx := range qdiscs {
+				if qdiscs[idx].Attribute.Kind != "netem" {
 					continue // skip clsact or other qdisc types
 				}
-				impairments = append(impairments, qdiscToJSONData(q))
+				impairments = append(impairments, qdiscToJSONData(&qdiscs[idx]))
 			}
 			// Structure output as a map keyed by the node name.
 			outputData := map[string][]types.ImpairmentData{

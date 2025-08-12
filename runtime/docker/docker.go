@@ -204,7 +204,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	// get management bridge v4/6 addresses and save it under mgmt struct
 	// so that nodes can use this information prior to being deployed
 	// this was added to allow mgmt network gw ip to be available in a startup config templation step (ceos)
-	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, netResource)
+	d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, &netResource)
 	if err != nil {
 		return err
 	}
@@ -339,7 +339,7 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 }
 
 // getMgmtBridgeIPs gets the management bridge v4/6 addresses.
-func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (v4, v6 string, err error) {
+func getMgmtBridgeIPs(bridgeName string, netResource *networkapi.Inspect) (v4, v6 string, err error) {
 	if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
 		log.Warn(
 			"failed gleaning v4 and/or v6 addresses from bridge via netlink," +

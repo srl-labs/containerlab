@@ -116,7 +116,7 @@ func (n *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 }
 
 func (n *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
-	containeList, err := n.Runtime.ListContainers(ctx, []*types.GenericFilter{
+	containers, err := n.Runtime.ListContainers(ctx, []*types.GenericFilter{
 		{
 			FilterType: "label",
 			Field:      "io.x-k8s.kind.cluster",
@@ -127,17 +127,17 @@ func (n *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContaine
 	if err != nil {
 		return nil, err
 	}
-	for _, cnt := range containeList {
+	for idx := range containers {
 		// fake fill the returned labels with the configured once.
 		// Some of the displayed information is read from labels (e.g Kind)
 		for key, v := range n.Cfg.Labels {
-			cnt.Labels[key] = v
+			containers[idx].Labels[key] = v
 		}
 		// we need to overwrite the nodename label
-		cnt.Labels[labels.NodeName] = cnt.Names[0]
+		containers[idx].Labels[labels.NodeName] = containers[idx].Names[0]
 	}
 
-	return containeList, nil
+	return containers, nil
 }
 
 func (n *k8s_kind) Delete(ctx context.Context) error {

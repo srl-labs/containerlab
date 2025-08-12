@@ -77,7 +77,7 @@ func (c *CLab) ListNodesContainersIgnoreNotFound(
 // ListContainerInterfaces list interfaces of the given container.
 func (c *CLab) ListContainerInterfaces(
 	ctx context.Context,
-	container runtime.GenericContainer,
+	container *runtime.GenericContainer,
 ) (*types.ContainerInterfaces, error) {
 	containerInterfaces := types.ContainerInterfaces{}
 
@@ -150,8 +150,8 @@ func (c *CLab) ListContainersInterfaces(
 ) ([]*types.ContainerInterfaces, error) {
 	containerInterfaces := make([]*types.ContainerInterfaces, 0, len(containers))
 
-	for _, cont := range containers {
-		cIfs, err := c.ListContainerInterfaces(ctx, cont)
+	for idx := range containers {
+		cIfs, err := c.ListContainerInterfaces(ctx, &containers[idx])
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error getting container interfaces for %v: %w",

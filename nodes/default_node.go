@@ -555,17 +555,19 @@ func (d *DefaultNode) GetHostsEntries(ctx context.Context) (types.HostEntries, e
 
 	result := types.HostEntries{}
 
-	for _, cont := range containers {
-		if len(cont.Names) == 0 {
+	for idx := range containers {
+		if len(containers[idx].Names) == 0 {
 			continue
 		}
-		if cont.NetworkSettings.IPv4addr != "" {
-			result = append(result, types.NewHostEntry(cont.NetworkSettings.IPv4addr,
-				cont.Names[0], types.IpVersionV4).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+		if containers[idx].NetworkSettings.IPv4addr != "" {
+			result = append(result, types.NewHostEntry(
+				containers[idx].NetworkSettings.IPv4addr,
+				containers[idx].Names[0], types.IpVersionV4).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
 		}
-		if cont.NetworkSettings.IPv6addr != "" {
-			result = append(result, types.NewHostEntry(cont.NetworkSettings.IPv6addr,
-				cont.Names[0], types.IpVersionV6).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+		if containers[idx].NetworkSettings.IPv6addr != "" {
+			result = append(result, types.NewHostEntry(
+				containers[idx].NetworkSettings.IPv6addr,
+				containers[idx].Names[0], types.IpVersionV6).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
 		}
 	}
 	return result, nil

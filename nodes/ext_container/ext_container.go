@@ -66,15 +66,15 @@ func (e *extcont) GetContainerName() string {
 }
 
 func (e *extcont) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
-	cnts, err := e.DefaultNode.GetContainers(ctx)
+	containers, err := e.DefaultNode.GetContainers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// we need to artificially add the Node Kind Label
 	// this label data is e.g. used in the table printed after deployment
-	for _, c := range cnts {
-		c.Labels[labels.NodeKind] = kindnames[0]
+	for idx := range containers {
+		containers[idx].Labels[labels.NodeKind] = kindnames[0]
 	}
-	return cnts, nil
+	return containers, nil
 }

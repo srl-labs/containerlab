@@ -61,7 +61,7 @@ func (*IpTablesClient) Name() string {
 
 // InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the provided
 // input or output interface and chain.
-func (c *IpTablesClient) InstallForwardingRules(rule definitions.FirewallRule) error {
+func (c *IpTablesClient) InstallForwardingRules(rule *definitions.FirewallRule) error {
 	err := c.InstallForwardingRulesForAF(v4AF, rule)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (c *IpTablesClient) InstallForwardingRules(rule definitions.FirewallRule) e
 }
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family.
-func (c *IpTablesClient) InstallForwardingRulesForAF(af string, rule definitions.FirewallRule) error {
+func (c *IpTablesClient) InstallForwardingRulesForAF(af string, rule *definitions.FirewallRule) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
@@ -107,7 +107,7 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(af string, rule definitions
 }
 
 // DeleteForwardingRules deletes the forwarding rules for v4 and v6 address families.
-func (c *IpTablesClient) DeleteForwardingRules(rule definitions.FirewallRule) error {
+func (c *IpTablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) error {
 	err := c.DeleteForwardingRulesForAF(v4AF, rule)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func (c *IpTablesClient) DeleteForwardingRules(rule definitions.FirewallRule) er
 }
 
 // DeleteForwardingRulesForAF deletes the forwarding rules for a specified AF.
-func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule definitions.FirewallRule) error {
+func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule *definitions.FirewallRule) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
@@ -171,7 +171,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule definitions.
 }
 
 // ruleExists checks if an allow rule for the provided `rule` exists.
-func (c *IpTablesClient) ruleExists(af string, rule definitions.FirewallRule) bool {
+func (c *IpTablesClient) ruleExists(af string, rule *definitions.FirewallRule) bool {
 	iptCmd := iptablesCmd[af]
 
 	res, err := exec.Command(iptCmd, strings.Split(iptCheckArgs, " ")...).CombinedOutput()

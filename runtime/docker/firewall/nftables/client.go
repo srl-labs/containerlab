@@ -80,7 +80,7 @@ func (*NftablesClient) Name() string {
 }
 
 // DeleteForwardingRules deletes the forwarding rules for in or out interface in a given chain.
-func (c *NftablesClient) DeleteForwardingRules(rule definitions.FirewallRule) error {
+func (c *NftablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) error {
 	iface := rule.Interface
 	if iface == "docker0" {
 		log.Debug("skipping deletion of iptables forwarding rule for non-bridged or default management network")
@@ -140,7 +140,7 @@ func (c *NftablesClient) DeleteForwardingRules(rule definitions.FirewallRule) er
 }
 
 // InstallForwardingRules installs the firewall `rule` for v4 and v6 address families.
-func (c *NftablesClient) InstallForwardingRules(rule definitions.FirewallRule) error {
+func (c *NftablesClient) InstallForwardingRules(rule *definitions.FirewallRule) error {
 	defer c.close()
 
 	err := c.InstallForwardingRulesForAF(nftables.TableFamilyIPv4, rule)
@@ -164,7 +164,7 @@ func (c *NftablesClient) InstallForwardingRules(rule definitions.FirewallRule) e
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family
 // input interface and chain.
-func (c *NftablesClient) InstallForwardingRulesForAF(af nftables.TableFamily, rule definitions.FirewallRule) error {
+func (c *NftablesClient) InstallForwardingRulesForAF(af nftables.TableFamily, rule *definitions.FirewallRule) error {
 	iface := rule.Interface
 
 	rules, err := c.getRules(rule.Chain, rule.Table, af)
@@ -284,7 +284,7 @@ func (nftC *NftablesClient) close() {
 
 // ruleExists checks if a `rule` exists in the list of fetched `rules`.
 // We check if the interface name, direction, action and comment match.
-func (nftC *NftablesClient) ruleExists(rule definitions.FirewallRule, rules []*nftables.Rule) bool {
+func (nftC *NftablesClient) ruleExists(rule *definitions.FirewallRule, rules []*nftables.Rule) bool {
 	for _, nfRule := range rules {
 		nameMatch := false
 		commentMatch := false

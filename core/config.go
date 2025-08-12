@@ -484,13 +484,13 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	}
 
 	var dups []string
-	for _, n := range c.Nodes {
-		if n.Config().SkipUniquenessCheck {
+	for idx := range c.Nodes {
+		if c.Nodes[idx].Config().SkipUniquenessCheck {
 			continue
 		}
-		for _, cnt := range containers {
-			if n.Config().LongName == cnt.Names[0] {
-				dups = append(dups, n.Config().LongName)
+		for cIdx := range containers {
+			if c.Nodes[idx].Config().LongName == containers[cIdx].Names[0] {
+				dups = append(dups, c.Nodes[idx].Config().LongName)
 			}
 		}
 	}
@@ -501,8 +501,8 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	// check that none of the existing containers has a label that matches
 	// the lab name of a currently deploying lab
 	// this ensures lab uniqueness
-	for _, cnt := range containers {
-		if cnt.Labels[labels.Containerlab] == c.Config.Name {
+	for idx := range containers {
+		if containers[idx].Labels[labels.Containerlab] == c.Config.Name {
 			return fmt.Errorf("the '%s' lab has already been deployed. Destroy the lab before deploying a lab with the same name", c.Config.Name)
 		}
 	}

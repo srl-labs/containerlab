@@ -274,7 +274,7 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 		Table:     definitions.FilterTable,
 		Chain:     definitions.ForwardChain,
 	}
-	err = f.InstallForwardingRules(r)
+	err = f.InstallForwardingRules(&r)
 	if err != nil {
 		return err
 	}
@@ -288,5 +288,5 @@ func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 		Chain:     definitions.ForwardChain,
 	}
 
-	return f.InstallForwardingRules(r)
+	return f.InstallForwardingRules(&r)
 }

@@ -54,13 +54,13 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	// as the key and the respective lab directory as the referenced value
 	topos := map[string]string{}
 
-	for _, container := range containers {
-		topoFile, ok := container.Labels[containerlablabels.TopoFile]
+	for idx := range containers {
+		topoFile, ok := containers[idx].Labels[containerlablabels.TopoFile]
 		if !ok {
 			continue
 		}
 
-		topos[topoFile] = filepath.Dir(container.Labels[containerlablabels.NodeLabDir])
+		topos[topoFile] = filepath.Dir(containers[idx].Labels[containerlablabels.NodeLabDir])
 	}
 
 	defer func() {
@@ -374,8 +374,8 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab",
 			c.Config.Name, "count", len(containers))
 
-		for _, container := range containers {
-			containerName := strings.TrimPrefix(container.Names[0], "/")
+		for idx := range containers {
+			containerName := strings.TrimPrefix(containers[idx].Names[0], "/")
 			log.Info("Removing tool container", "tool", toolType, "container", containerName)
 			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
 				log.Error("Failed to remove tool container", "tool", toolType,
