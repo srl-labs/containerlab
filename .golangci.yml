@@ -4,6 +4,7 @@ linters:
     - asciicheck
     - bodyclose
     - dogsled
+    - funlen
     - godot
     - godox
     - goprintffuncname
@@ -23,7 +24,6 @@ linters:
     - dupl
     - errcheck
     - exhaustive
-    - funlen
     - gocognit
     - goconst
     - gocritic
@@ -93,7 +93,12 @@ linters:
       - std-error-handling
     rules:
       - linters:
+          # we *care* about tests, but... like less :P
           - mnd
+          - dupl
+          - lll
+          - goconst
+          - funlen
         path: _test\.go
       - linters:
           - staticcheck

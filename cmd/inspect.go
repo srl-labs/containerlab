@@ -259,6 +259,103 @@ func printContainerDetailsJSON(containers []containerlabruntime.GenericContainer
 	return nil
 }
 
+func printContainerInspectJSON(contDetails []types.ContainerDetails) error {
+	// Group summary results by LabName
+	// Use a map where keys are lab names and values are slices of container details
+	groupedLabs := make(map[string][]types.ContainerDetails)
+	for _, cd := range contDetails {
+		labName := cd.LabName
+		if labName == "" {
+			labName = "_unknown_lab_" // Should not happen if filters work correctly
+		}
+		// Assign the *entire* ContainerDetails struct (including AbsLabPath)
+		groupedLabs[labName] = append(groupedLabs[labName], cd)
+	}
+
+	b, err := json.MarshalIndent(groupedLabs, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal grouped container summary: %v", err)
+	}
+
+	fmt.Println(string(b))
+
+	return nil
+}
+
+func printContainerInspectTable(contDetails []types.ContainerDetails) {
+	// Generate and render table using the summary data (which uses relative LabPath)
+	tabData := toTableData(contDetails)
+	table := tableWriter.NewWriter()
+	table.SetOutputMirror(os.Stdout)
+	table.SetStyle(tableWriter.StyleRounded)
+	table.Style().Format.Header = text.FormatTitle
+	table.Style().Format.HeaderAlign = text.AlignCenter
+	table.Style().Options.SeparateRows = true
+	table.Style().Color = tableWriter.ColorOptions{
+		Header: text.Colors{text.Bold},
+	}
+
+	// For --wide, avoid AutoMerge and multi-line cells
+	headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
+	if wide {
+		headerBase = slices.Insert(headerBase, 0, "Owner")
+	}
+
+	var header tableWriter.Row
+	colConfigs := []tableWriter.ColumnConfig{}
+
+	if all {
+		header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
+		if !wide {
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    1,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			})
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    2,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			})
+		}
+		// If wide, do not set AutoMerge for any columns
+	} else {
+		header = headerBase
+		if !wide {
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    1,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			})
+		}
+	}
+
+	table.AppendHeader(header)
+	if len(colConfigs) > 0 {
+		table.SetColumnConfigs(colConfigs)
+	}
+
+	table.AppendRows(tabData)
+	table.Render()
+}
+
+func printContainerInspectCSV(contDetails []types.ContainerDetails) {
+	csv := "lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner\n"
+	for _, cd := range contDetails {
+		csv += fmt.Sprintf("%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
+			cd.LabName,
+			cd.LabPath,
+			cd.AbsLabPath,
+			cd.Name,
+			cd.ContainerID,
+			cd.Image,
+			cd.Kind,
+			cd.State,
+			cd.Status,
+			cd.IPv4Address,
+			cd.IPv6Address,
+			cd.Owner)
+	}
+	fmt.Print(csv)
+}
+
 // PrintContainerInspect handles non-details output (table or grouped JSON summary).
 func PrintContainerInspect(containers []containerlabruntime.GenericContainer, format string) error {
 	contDetails := make([]types.ContainerDetails, 0, len(containers))
@@ -310,107 +407,21 @@ func PrintContainerInspect(containers []containerlabruntime.GenericContainer, fo
 		return contDetails[i].LabName < contDetails[j].LabName
 	})
 
-	// --- Output based on format ---
 	switch format {
 	case "json":
-		// Group summary results by LabName
-		// Use a map where keys are lab names and values are slices of container details
-		groupedLabs := make(map[string][]types.ContainerDetails)
-		for _, cd := range contDetails {
-			labName := cd.LabName
-			if labName == "" {
-				labName = "_unknown_lab_" // Should not happen if filters work correctly
-			}
-			// Assign the *entire* ContainerDetails struct (including AbsLabPath)
-			groupedLabs[labName] = append(groupedLabs[labName], cd)
-		}
-
-		b, err := json.MarshalIndent(groupedLabs, "", "  ")
+		err := printContainerInspectJSON(contDetails)
 		if err != nil {
-			return fmt.Errorf("failed to marshal grouped container summary: %v", err)
+			return err
 		}
-
-		fmt.Println(string(b))
-
-		return err
-
 	case "table":
-		// Generate and render table using the summary data (which uses relative LabPath)
-		tabData := toTableData(contDetails)
-		table := tableWriter.NewWriter()
-		table.SetOutputMirror(os.Stdout)
-		table.SetStyle(tableWriter.StyleRounded)
-		table.Style().Format.Header = text.FormatTitle
-		table.Style().Format.HeaderAlign = text.AlignCenter
-		table.Style().Options.SeparateRows = true
-		table.Style().Color = tableWriter.ColorOptions{
-			Header: text.Colors{text.Bold},
-		}
-
-		// For --wide, avoid AutoMerge and multi-line cells
-		headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
-		if wide {
-			headerBase = slices.Insert(headerBase, 0, "Owner")
-		}
-
-		var header tableWriter.Row
-		colConfigs := []tableWriter.ColumnConfig{}
-
-		if all {
-			header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
-			if !wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-					Number:    1,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				})
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-					Number:    2,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				})
-			}
-			// If wide, do not set AutoMerge for any columns
-		} else {
-			header = headerBase
-			if !wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-					Number:    1,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				})
-			}
-		}
-
-		table.AppendHeader(header)
-		if len(colConfigs) > 0 {
-			table.SetColumnConfigs(colConfigs)
-		}
-
-		table.AppendRows(tabData)
-		table.Render()
-		return nil
-
+		printContainerInspectTable(contDetails)
 	case "csv":
-		csv := "lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner\n"
-		for _, cd := range contDetails {
-			csv += fmt.Sprintf("%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
-				cd.LabName,
-				cd.LabPath,
-				cd.AbsLabPath,
-				cd.Name,
-				cd.ContainerID,
-				cd.Image,
-				cd.Kind,
-				cd.State,
-				cd.Status,
-				cd.IPv4Address,
-				cd.IPv6Address,
-				cd.Owner)
-		}
-		fmt.Print(csv)
-		return nil
+		printContainerInspectCSV(contDetails)
+	default:
+		return fmt.Errorf("internal error: unhandled format %q", format)
 	}
 
-	// Should not be reached if format validation is correct
-	return fmt.Errorf("internal error: unhandled format %q", format)
+	return nil
 }
 
 // parseStatus extracts a simpler status string, focusing on health states.

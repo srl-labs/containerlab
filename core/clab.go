@@ -362,131 +362,130 @@ func (c *CLab) createWaitForDependency() error {
 	return nil
 }
 
+func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
+	ctx context.Context,
+	i int,
+	input chan *depMgr.DependencyNode,
+	wg *sync.WaitGroup,
+	skipPostDeploy bool,
+	execCollection *exec.ExecCollection,
+) {
+	defer wg.Done()
+
+	for {
+		select {
+		case node, ok := <-input:
+			if node == nil || !ok {
+				log.Debugf("Worker %d terminating...", i)
+				return
+			}
+
+			log.Debugf("Worker %d received node: %+v", i, node.Config())
+
+			delay := node.Config().StartupDelay
+			if delay > 0 {
+				log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
+				time.Sleep(time.Duration(delay) * time.Second)
+			}
+
+			err := node.PreDeploy(
+				ctx,
+				&nodes.PreDeployParams{
+					Cert:         c.Cert,
+					TopologyName: c.Config.Name,
+					TopoPaths:    c.TopoPaths,
+					SSHPubKeys:   c.SSHPubKeys,
+				},
+			)
+			if err != nil {
+				log.Errorf("failed pre-deploy stage for node %q: %v", node.Config().ShortName, err)
+				continue
+			}
+
+			err = node.Deploy(ctx, &nodes.DeployParams{Nodes: c.Nodes})
+			if err != nil {
+				log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
+				continue
+			}
+
+			// we need to update the node's state with runtime info (e.g. the mgmt net ip addresses)
+			// before continuing with the post-deploy stage (for e.g. certificate creation)
+			err = node.UpdateConfigWithRuntimeInfo(ctx)
+			if err != nil {
+				log.Errorf("failed to update node runtime information for node %s: %v", node.Config().ShortName, err)
+			}
+
+			node.Done(ctx, types.WaitForCreate)
+
+			node.EnterStage(ctx, types.WaitForCreateLinks)
+
+			// Deploy the Nodes link endpoints
+			err = node.DeployEndpoints(ctx)
+			if err != nil {
+				log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
+				continue
+			}
+
+			node.Done(ctx, types.WaitForCreateLinks)
+			node.EnterStage(ctx, types.WaitForConfigure)
+
+			if !skipPostDeploy {
+				err = node.PostDeploy(ctx, &nodes.PostDeployParams{Nodes: c.Nodes})
+				if err != nil {
+					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
+				}
+			}
+
+			node.Done(ctx, types.WaitForConfigure)
+
+			err = node.RunExecFromConfig(ctx, execCollection)
+			if err != nil {
+				log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
+			}
+
+			if node.MustWait(types.WaitForHealthy) {
+				node.EnterStage(ctx, types.WaitForHealthy)
+				// if there is a dependecy on the healthy state of this node, enter the checking procedure
+				for {
+					healthy, err := node.IsHealthy(ctx)
+					if err != nil {
+						log.Errorf("error checking for node health %v. Continuing deployment anyways", err)
+						break
+					}
+					if healthy {
+						log.Infof("node %q turned healthy, continuing", node.GetShortName())
+						node.Done(ctx, types.WaitForHealthy)
+						break
+					}
+					time.Sleep(time.Second)
+				}
+			}
+
+			if node.MustWait(types.WaitForExit) {
+				node.EnterStage(ctx, types.WaitForExit)
+				// if there is a dependency on the healthy state of this node, enter the checking procedure
+				for {
+					status := node.GetContainerStatus(ctx)
+					if status == runtime.Stopped {
+						log.Infof("node %q stopped", node.GetShortName())
+						node.Done(ctx, types.WaitForExit)
+						break
+					}
+					time.Sleep(time.Second)
+				}
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 // skipcq: GO-R1005
 func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection) {
 	concurrentChan := make(chan *depMgr.DependencyNode)
 
 	execCollection := exec.NewExecCollection()
-
-	workerFunc := func(i int, input chan *depMgr.DependencyNode, wg *sync.WaitGroup) {
-		defer wg.Done()
-		for {
-			select {
-			case node, ok := <-input:
-				if node == nil || !ok {
-					log.Debugf("Worker %d terminating...", i)
-					return
-				}
-
-				log.Debugf("Worker %d received node: %+v", i, node.Config())
-
-				// Apply startup delay
-				delay := node.Config().StartupDelay
-				if delay > 0 {
-					log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
-					time.Sleep(time.Duration(delay) * time.Second)
-				}
-
-				// Pre-deploy stage
-				err := node.PreDeploy(
-					ctx,
-					&nodes.PreDeployParams{
-						Cert:         c.Cert,
-						TopologyName: c.Config.Name,
-						TopoPaths:    c.TopoPaths,
-						SSHPubKeys:   c.SSHPubKeys,
-					},
-				)
-				if err != nil {
-					log.Errorf("failed pre-deploy stage for node %q: %v", node.Config().ShortName, err)
-					continue
-				}
-
-				// Deploy
-				err = node.Deploy(ctx, &nodes.DeployParams{Nodes: c.Nodes})
-				if err != nil {
-					log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
-					continue
-				}
-
-				// we need to update the node's state with runtime info (e.g. the mgmt net ip addresses)
-				// before continuing with the post-deploy stage (for e.g. certificate creation)
-				err = node.UpdateConfigWithRuntimeInfo(ctx)
-				if err != nil {
-					log.Errorf("failed to update node runtime information for node %s: %v", node.Config().ShortName, err)
-				}
-
-				node.Done(ctx, types.WaitForCreate)
-
-				node.EnterStage(ctx, types.WaitForCreateLinks)
-
-				// Deploy the Nodes link endpoints
-				err = node.DeployEndpoints(ctx)
-				if err != nil {
-					log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
-					continue
-				}
-
-				node.Done(ctx, types.WaitForCreateLinks)
-
-				// start config stage
-				node.EnterStage(ctx, types.WaitForConfigure)
-
-				// if postdeploy should be skipped we do not call it
-				if !skipPostDeploy {
-					err = node.PostDeploy(ctx, &nodes.PostDeployParams{Nodes: c.Nodes})
-					if err != nil {
-						log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
-					}
-				}
-
-				node.Done(ctx, types.WaitForConfigure)
-
-				// run execs
-				err = node.RunExecFromConfig(ctx, execCollection)
-				if err != nil {
-					log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
-				}
-
-				// health state processing
-				if node.MustWait(types.WaitForHealthy) {
-					node.EnterStage(ctx, types.WaitForHealthy)
-					// if there is a dependecy on the healthy state of this node, enter the checking procedure
-					for {
-						healthy, err := node.IsHealthy(ctx)
-						if err != nil {
-							log.Errorf("error checking for node health %v. Continuing deployment anyways", err)
-							break
-						}
-						if healthy {
-							log.Infof("node %q turned healthy, continuing", node.GetShortName())
-							node.Done(ctx, types.WaitForHealthy)
-							break
-						}
-						time.Sleep(time.Second)
-					}
-				}
-
-				// exit state processing
-				if node.MustWait(types.WaitForExit) {
-					node.EnterStage(ctx, types.WaitForExit)
-					// if there is a dependency on the healthy state of this node, enter the checking procedure
-					for {
-						status := node.GetContainerStatus(ctx)
-						if status == runtime.Stopped {
-							log.Infof("node %q stopped", node.GetShortName())
-							node.Done(ctx, types.WaitForExit)
-							break
-						}
-						time.Sleep(time.Second)
-					}
-				}
-
-			case <-ctx.Done():
-				return
-			}
-		}
-	}
 
 	numScheduledNodes := len(c.Nodes)
 	if numScheduledNodes < maxWorkers {
@@ -499,7 +498,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := 0; i < maxWorkers; i++ {
-		go workerFunc(i, concurrentChan, wg)
+		go c.scheduleNodeWorkerF(ctx, i, concurrentChan, wg, skipPostDeploy, execCollection)
 	}
 
 	// Waitgroup protects the channel towards the workers of being closed too early

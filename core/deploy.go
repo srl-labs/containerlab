@@ -16,7 +16,10 @@ import (
 
 // Deploy the given topology.
 // skipcq: GO-R1005
-func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.GenericContainer, error) {
+func (c *CLab) Deploy( //nolint: funlen
+	ctx context.Context,
+	options *DeployOptions,
+) ([]runtime.GenericContainer, error) {
 	var err error
 
 	err = c.ResolveLinks()
@@ -140,7 +143,6 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		nodesWg.Wait()
 	}
 
-	// write to log
 	execCollection.Log()
 
 	if err := c.GenerateInventories(); err != nil {

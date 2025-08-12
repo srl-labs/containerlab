@@ -215,7 +215,10 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 }
 
 // skipcq: GO-R1005
-func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string) (string, error) {
+func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
+	nctx context.Context,
+	bridgeName string,
+) (string, error) {
 	var err error
 	log.Debug("Network does not exist", "name", d.mgmt.Network)
 	log.Info("Creating docker network",
@@ -451,7 +454,10 @@ func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 }
 
 // CreateContainer creates a docker container (but does not start it).
-func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { // skipcq: GO-R1005
+func (d *DockerRuntime) CreateContainer( //nolint: funlen
+	ctx context.Context,
+	node *types.NodeConfig,
+) (string, error) { // skipcq: GO-R1005
 	log.Info("Creating container", "name", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()

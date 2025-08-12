@@ -306,7 +306,7 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 
 // GenerateDrawioDiagram pulls (if needed) and runs the "clab-io-draw" container in interactive TTY mode.
 // The container is removed automatically when the TUI session ends.
-func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error {
+func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { //nolint: funlen
 	client, err := dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Errorf("Failed to create Docker client: %v", err)

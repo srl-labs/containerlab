@@ -160,6 +160,51 @@ func ParseS3URL(s3URL string) (bucket, key string, err error) {
 	return bucket, key, nil
 }
 
+func copyFileContentsS3(src string) (io.ReadCloser, error) {
+	bucket, key, err := ParseS3URL(src)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get region from environment, default to us-east-1
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	// Create credential chain that mimics AWS SDK behavior
+	credProviders := []credentials.Provider{
+		&credentials.EnvAWS{},                                             // 1. Environment variables
+		&credentials.FileAWSCredentials{},                                 // 2. ~/.aws/credentials (default profile)
+		&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
+	}
+
+	// Create MinIO client with chained credentials
+	client, err := minio.New("s3.amazonaws.com", &minio.Options{
+		Creds:  credentials.NewChainCredentials(credProviders),
+		Secure: true,
+		Region: region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create S3 client: %w", err)
+	}
+
+	// Get object from S3
+	object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
+	}
+
+	// Verify object exists by reading its stats
+	_, err = object.Stat()
+	if err != nil {
+		object.Close()
+		return nil, fmt.Errorf("%w: %s: object not found or access denied: %v", errS3Fetch, src, err)
+	}
+
+	return object, nil
+}
+
 // CopyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
@@ -188,49 +233,10 @@ func CopyFileContents(ctx context.Context, src, dst string, mode os.FileMode) (e
 		in = resp.Body
 
 	case IsS3URL(src):
-		bucket, key, err := ParseS3URL(src)
+		in, err = copyFileContentsS3(src)
 		if err != nil {
 			return err
 		}
-
-		// Get region from environment, default to us-east-1
-		region := os.Getenv("AWS_REGION")
-		if region == "" {
-			region = "us-east-1"
-		}
-
-		// Create credential chain that mimics AWS SDK behavior
-		credProviders := []credentials.Provider{
-			&credentials.EnvAWS{},                                             // 1. Environment variables
-			&credentials.FileAWSCredentials{},                                 // 2. ~/.aws/credentials (default profile)
-			&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
-		}
-
-		// Create MinIO client with chained credentials
-		client, err := minio.New("s3.amazonaws.com", &minio.Options{
-			Creds:  credentials.NewChainCredentials(credProviders),
-			Secure: true,
-			Region: region,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create S3 client: %w", err)
-		}
-
-		// Get object from S3
-		object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
-		if err != nil {
-			return fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
-		}
-
-		// Verify object exists by reading its stats
-		_, err = object.Stat()
-		if err != nil {
-			object.Close()
-			return fmt.Errorf("%w: %s: object not found or access denied: %v", errS3Fetch, src, err)
-		}
-
-		in = object
-
 	default:
 		in, err = os.Open(src)
 		if err != nil {

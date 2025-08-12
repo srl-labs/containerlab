@@ -156,7 +156,11 @@ func (*IgniteRuntime) PullImage(_ context.Context, imageName string, _ types.Pul
 
 // StartContainer starts a container with the provided node configuration.
 // skipcq: GO-R1005
-func (c *IgniteRuntime) StartContainer(ctx context.Context, _ string, node runtime.Node) (interface{}, error) {
+func (c *IgniteRuntime) StartContainer( //nolint: funlen
+	ctx context.Context,
+	_ string,
+	node runtime.Node,
+) (interface{}, error) {
 	vm := c.baseVM.DeepCopy()
 
 	nodecfg := node.Config()
