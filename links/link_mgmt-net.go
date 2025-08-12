@@ -112,7 +112,7 @@ func (*mgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 
 func (b *mgmtBridgeLinkNode) AddLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
-	ns, err := ns.GetCurrentNS()
+	curNamespace, err := ns.GetCurrentNS()
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (b *mgmtBridgeLinkNode) AddLinkToContainer(_ context.Context, link netlink.
 	}
 
 	// execute the given function
-	return ns.Do(f)
+	return curNamespace.Do(f)
 }
 
 func getMgmtBrLinkNode() *mgmtBridgeLinkNode {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
@@ -27,11 +27,11 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 		if labName == "" && topoFile == "" {
 			return fmt.Errorf("provide topology file path  with --topo flag")
 		}
-		opts := []core.ClabOption{
-			core.WithTimeout(timeout),
-			core.WithTopoPath(topoFile, varsFile),
-			core.WithNodeFilter(nodeFilter),
-			core.WithRuntime(
+		opts := []containerlabcore.ClabOption{
+			containerlabcore.WithTimeout(timeout),
+			containerlabcore.WithTopoPath(topoFile, varsFile),
+			containerlabcore.WithNodeFilter(nodeFilter),
+			containerlabcore.WithRuntime(
 				runtime,
 				&containerlabruntime.RuntimeConfig{
 					Debug:            debug,
@@ -39,9 +39,9 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 					GracefulShutdown: gracefulShutdown,
 				},
 			),
-			core.WithDebug(debug),
+			containerlabcore.WithDebug(debug),
 		}
-		c, err := core.NewContainerLab(opts...)
+		c, err := containerlabcore.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}

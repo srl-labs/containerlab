@@ -12,7 +12,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
@@ -204,7 +204,7 @@ var apiServerStartCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtimeName)
+		_, rinit, err := containerlabcore.RuntimeInitializer(runtimeName)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtimeName, err)
 		}

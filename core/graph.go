@@ -23,7 +23,7 @@ import (
 	"github.com/google/shlex"
 	containerlaberrors "github.com/srl-labs/containerlab/errors"
 	"github.com/srl-labs/containerlab/internal/mermaid"
-	"github.com/srl-labs/containerlab/labels"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -203,8 +203,8 @@ func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []runtime.GenericContainer) {
 	containerNames := make(map[string]struct{})
 	for _, cont := range containers {
-		log.Debugf("looking for node name %s", cont.Labels[labels.NodeName])
-		if node, ok := c.Nodes[cont.Labels[labels.NodeName]]; ok {
+		log.Debugf("looking for node name %s", cont.Labels[containerlablabels.NodeName])
+		if node, ok := c.Nodes[cont.Labels[containerlablabels.NodeName]]; ok {
 			containerNames[node.Config().ShortName] = struct{}{}
 			g.Nodes = append(g.Nodes, types.ContainerDetails{
 				Name:        node.Config().ShortName,
@@ -291,8 +291,8 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 		staticFS = http.Dir(staticDir)
 	}
 
-	fs := http.FileServer(noListFs{staticFS})
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	svr := http.FileServer(noListFs{staticFS})
+	http.Handle("/static/", http.StripPrefix("/static/", svr))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_ = t.Execute(w, topoD)

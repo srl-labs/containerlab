@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	"github.com/srl-labs/containerlab/cmd/version"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/core/dependency_manager"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
@@ -92,12 +92,12 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 		labOwner = os.Getenv("CLAB_OWNER")
 	}
 
-	opts := []core.ClabOption{
-		core.WithTimeout(timeout),
-		core.WithTopoPath(topoFile, varsFile),
-		core.WithTopoBackup(topoFile),
-		core.WithNodeFilter(nodeFilter),
-		core.WithRuntime(
+	opts := []containerlabcore.ClabOption{
+		containerlabcore.WithTimeout(timeout),
+		containerlabcore.WithTopoPath(topoFile, varsFile),
+		containerlabcore.WithTopoBackup(topoFile),
+		containerlabcore.WithNodeFilter(nodeFilter),
+		containerlabcore.WithRuntime(
 			runtime,
 			&containerlabruntime.RuntimeConfig{
 				Debug:            debug,
@@ -105,33 +105,33 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDependencyManager(dependency_manager.NewDependencyManager()),
-		core.WithDebug(debug),
+		containerlabcore.WithDependencyManager(dependency_manager.NewDependencyManager()),
+		containerlabcore.WithDebug(debug),
 	}
 
 	// process optional settings
 	if labName != "" {
-		opts = append(opts, core.WithLabName(labName))
+		opts = append(opts, containerlabcore.WithLabName(labName))
 	}
 	if labOwner != "" {
-		opts = append(opts, core.WithLabOwner(labOwner))
+		opts = append(opts, containerlabcore.WithLabOwner(labOwner))
 	}
 	if mgmtNetName != "" {
-		opts = append(opts, core.WithManagementNetworkName(mgmtNetName))
+		opts = append(opts, containerlabcore.WithManagementNetworkName(mgmtNetName))
 	}
 	if v4 := mgmtIPv4Subnet.String(); v4 != "<nil>" {
-		opts = append(opts, core.WithManagementIpv4Subnet(v4))
+		opts = append(opts, containerlabcore.WithManagementIpv4Subnet(v4))
 	}
 	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
-		opts = append(opts, core.WithManagementIpv6Subnet(v6))
+		opts = append(opts, containerlabcore.WithManagementIpv6Subnet(v6))
 	}
 
-	c, err := core.NewContainerLab(opts...)
+	c, err := containerlabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
 
-	deploymentOptions, err := core.NewDeployOptions(maxWorkers)
+	deploymentOptions, err := containerlabcore.NewDeployOptions(maxWorkers)
 	if err != nil {
 		return err
 	}

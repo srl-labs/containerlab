@@ -6,10 +6,10 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/core/config"
 	"github.com/srl-labs/containerlab/core/config/transport"
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 
 	"github.com/charmbracelet/log"
 )
@@ -58,11 +58,11 @@ func configRun(_ *cobra.Command, args []string) error {
 	transport.DebugCount = debugCount
 	config.DebugCount = debugCount
 
-	c, err := core.NewContainerLab(
-		core.WithTimeout(timeout),
-		core.WithTopoPath(topoFile, varsFile),
-		core.WithNodeFilter(nodeFilter),
-		core.WithDebug(debug),
+	c, err := containerlabcore.NewContainerLab(
+		containerlabcore.WithTimeout(timeout),
+		containerlabcore.WithTopoPath(topoFile, varsFile),
+		containerlabcore.WithNodeFilter(nodeFilter),
+		containerlabcore.WithDebug(debug),
 	)
 	if err != nil {
 		return err
@@ -126,7 +126,7 @@ func configRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func validateFilter(nodes map[string]nodes.Node) error {
+func validateFilter(nodes map[string]containerlabnodes.Node) error {
 	if len(configFilter) == 0 {
 		for n := range nodes {
 			configFilter = append(configFilter, n)

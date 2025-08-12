@@ -229,7 +229,7 @@ func (b *bridge) addLinkToContainerNamespace(ctx context.Context, link netlink.L
 
 func (b *bridge) addLinkToContainerHost(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
-	ns, err := ns.GetCurrentNS()
+	curNamespace, err := ns.GetCurrentNS()
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func (b *bridge) addLinkToContainerHost(_ context.Context, link netlink.Link, f 
 	}
 
 	// execute the given function
-	return ns.Do(f)
+	return curNamespace.Do(f)
 }
 
 func (b *bridge) GetLinkEndpointType() links.LinkEndpointType {

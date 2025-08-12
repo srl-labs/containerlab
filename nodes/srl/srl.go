@@ -25,7 +25,7 @@ import (
 	"github.com/srl-labs/containerlab/cert"
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -65,7 +65,7 @@ var (
 		"net.ipv6.conf.all.autoconf":       "0",
 		"net.ipv6.conf.default.autoconf":   "0",
 	}
-	defaultCredentials = nodes.NewCredentials("admin", "NokiaSrl1!")
+	defaultCredentials = containerlabnodes.NewCredentials("admin", "NokiaSrl1!")
 
 	srlTypes = map[string]string{
 		"ixsa1":      "7215IXSA1.yml",
@@ -142,21 +142,21 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformOpts := &nodes.PlatformAttrs{
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformOpts := &containerlabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() containerlabnodes.Node {
 		return new(srl)
 	}, nrea)
 }
 
 type srl struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
 	startupCliCfg []byte
 
@@ -170,9 +170,9 @@ type srl struct {
 	swVersion *SrlVersion
 }
 
-func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *srl) Init(cfg *types.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.SSSE3 = true
 	n.HostRequirements.MinVCPU = 2
@@ -247,7 +247,7 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *srl) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
+func (n *srl) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeployParams) error {
 	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
@@ -288,7 +288,7 @@ func (n *srl) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 	return n.createSRLFiles()
 }
 
-func (n *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *srl) PostDeploy(ctx context.Context, params *containerlabnodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
 		"node", n.Cfg.ShortName)
@@ -737,7 +737,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+		return fmt.Errorf("%w:%s", containerlabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
@@ -759,7 +759,7 @@ func (n *srl) commitConfig(ctx context.Context) error {
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+		return fmt.Errorf("%w:%s", containerlabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
@@ -779,7 +779,7 @@ func (n *srl) generateCheckpoint(ctx context.Context) error {
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+		return fmt.Errorf("%w:%s", containerlabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
@@ -790,7 +790,7 @@ func (n *srl) generateCheckpoint(ctx context.Context) error {
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
-func (n *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
+func (n *srl) populateHosts(ctx context.Context, nodes map[string]containerlabnodes.Node) error {
 	hosts, err := n.Runtime.GetHostsPath(ctx, n.Cfg.LongName)
 	if err != nil {
 		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)

@@ -18,7 +18,7 @@ import (
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -63,9 +63,9 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 		inspectFormat = "json" // Force JSON format if details are requested
 	}
 
-	opts := []core.ClabOption{
-		core.WithTimeout(timeout),
-		core.WithRuntime(
+	opts := []containerlabcore.ClabOption{
+		containerlabcore.WithTimeout(timeout),
+		containerlabcore.WithRuntime(
 			runtime,
 			&containerlabruntime.RuntimeConfig{
 				Debug:            debug,
@@ -73,17 +73,17 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(debug),
+		containerlabcore.WithDebug(debug),
 	}
 
 	if topoFile != "" {
 		opts = append(opts,
-			core.WithTopoPath(topoFile, varsFile),
-			core.WithNodeFilter(nodeFilter),
+			containerlabcore.WithTopoPath(topoFile, varsFile),
+			containerlabcore.WithNodeFilter(nodeFilter),
 		)
 	}
 
-	c, err := core.NewContainerLab(opts...)
+	c, err := containerlabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 }
 
 // listContainers handles listing containers based on different criteria (topology or labels).
-func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.GenericContainer, error) {
+func listContainers(ctx context.Context, c *containerlabcore.CLab) ([]containerlabruntime.GenericContainer, error) {
 	var containers []containerlabruntime.GenericContainer
 	var err error
 
@@ -128,13 +128,13 @@ func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.Ge
 			return nil, fmt.Errorf("failed to list containers based on topology: %s", err)
 		}
 	} else {
-		var listOptions []core.ListOption
+		var listOptions []containerlabcore.ListOption
 
 		// List containers based on labels (--name or --all)
 		if labName != "" {
-			listOptions = append(listOptions, core.WithListLabName(labName))
+			listOptions = append(listOptions, containerlabcore.WithListLabName(labName))
 		} else {
-			listOptions = append(listOptions, core.WithListContainerlabLabelExists())
+			listOptions = append(listOptions, containerlabcore.WithListContainerlabLabelExists())
 		}
 
 		containers, err = c.ListContainers(ctx, listOptions...)

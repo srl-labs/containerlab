@@ -12,10 +12,10 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/exec"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/crypto/ssh"
@@ -78,7 +78,7 @@ type PostDeployParams struct {
 type Node interface {
 	Init(*types.NodeConfig, ...NodeOption) error
 	// GetContainers returns a pointer to GenericContainer that the node uses.
-	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
+	GetContainers(ctx context.Context) ([]containerlabruntime.GenericContainer, error)
 	DeleteNetnsSymlink() (err error)
 	Config() *types.NodeConfig // Config returns the nodes configuration
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.
@@ -86,24 +86,24 @@ type Node interface {
 	PreDeploy(ctx context.Context, params *PreDeployParams) error
 	Deploy(context.Context, *DeployParams) error // Deploy triggers the deployment of this node
 	PostDeploy(ctx context.Context, params *PostDeployParams) error
-	WithMgmtNet(*types.MgmtNet)           // WithMgmtNet provides the management network for the node
-	WithRuntime(runtime.ContainerRuntime) // WithRuntime provides the runtime for the node
-	PullImage(ctx context.Context) error  // PullImage pulls the image for the node
+	WithMgmtNet(*types.MgmtNet)                       // WithMgmtNet provides the management network for the node
+	WithRuntime(containerlabruntime.ContainerRuntime) // WithRuntime provides the runtime for the node
+	PullImage(ctx context.Context) error              // PullImage pulls the image for the node
 	// CalculateInterfaceIndex returns with the interface index offset from the first valid dataplane interface based on the interface name. Errors otherwise.
 	CalculateInterfaceIndex(ifName string) (int, error)
 	// CheckInterfaceName checks if a name of the interface referenced in the topology file is correct for this node
 	CheckInterfaceName() error
 	// VerifyStartupConfig checks for existence of the referenced file and maybe performs additional config checks
 	VerifyStartupConfig(topoDir string) error
-	SaveConfig(context.Context) error            // SaveConfig saves the nodes configuration to an external file
-	Delete(context.Context) error                // Delete triggers the deletion of this node
-	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
-	GetRuntime() runtime.ContainerRuntime        // GetRuntime returns the nodes assigned runtime
-	GenerateConfig(dst, templ string) error      // Generate the nodes configuration
+	SaveConfig(context.Context) error                 // SaveConfig saves the nodes configuration to an external file
+	Delete(context.Context) error                     // Delete triggers the deletion of this node
+	GetImages(context.Context) map[string]string      // GetImages returns the images used for this kind
+	GetRuntime() containerlabruntime.ContainerRuntime // GetRuntime returns the nodes assigned runtime
+	GenerateConfig(dst, templ string) error           // Generate the nodes configuration
 	// UpdateConfigWithRuntimeInfo updates node config with runtime info like IP addresses assigned by runtime
 	UpdateConfigWithRuntimeInfo(context.Context) error
 	// RunExec execute a single command for a given node.
-	RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error)
+	RunExec(ctx context.Context, execCmd *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error)
 	// Adds the given link to the Node (container). After adding the Link to the node,
 	// the given function f is called within the Nodes namespace to setup the link.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
@@ -119,9 +119,9 @@ type Node interface {
 	SetState(state.NodeState)
 	GetSSHConfig() *types.SSHConfig
 	// RunExecFromConfig executes the topologyfile defined exec commands
-	RunExecFromConfig(context.Context, *exec.ExecCollection) error
+	RunExecFromConfig(context.Context, *containerlabexec.ExecCollection) error
 	IsHealthy(ctx context.Context) (bool, error)
-	GetContainerStatus(ctx context.Context) runtime.ContainerStatus
+	GetContainerStatus(ctx context.Context) containerlabruntime.ContainerStatus
 	GetNSPath(ctx context.Context) (string, error)
 	// Generate the host entries for this node
 	GetHostsEntries(ctx context.Context) (types.HostEntries, error)
@@ -139,7 +139,7 @@ func WithMgmtNet(mgmt *types.MgmtNet) NodeOption {
 	}
 }
 
-func WithRuntime(r runtime.ContainerRuntime) NodeOption {
+func WithRuntime(r containerlabruntime.ContainerRuntime) NodeOption {
 	return func(n Node) {
 		n.WithRuntime(r)
 	}

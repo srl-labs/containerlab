@@ -17,7 +17,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/exec"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
@@ -206,7 +206,7 @@ var sshxAttachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, topoFile, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
+		clabInstance, err := containerlabcore.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
 			sshxLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
 		if err != nil {
 			return err
@@ -226,7 +226,7 @@ var sshxAttachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtime)
+		_, rinit, err := containerlabcore.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtime, err)
 		}
@@ -332,7 +332,7 @@ var sshxDetachCmd = &cobra.Command{
 		defer cancel()
 
 		// Get lab topology information
-		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
+		clabInstance, err := containerlabcore.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
 			sshxLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
 		if err != nil {
 			return err
@@ -347,7 +347,7 @@ var sshxDetachCmd = &cobra.Command{
 		log.Debugf("Container name for deletion: %s", containerName)
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtime)
+		_, rinit, err := containerlabcore.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
@@ -377,7 +377,7 @@ var sshxListCmd = &cobra.Command{
 		defer cancel()
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtime)
+		_, rinit, err := containerlabcore.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
@@ -491,7 +491,7 @@ var sshxReattachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, topoFile, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
+		clabInstance, err := containerlabcore.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
 			sshxLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
 		if err != nil {
 			return err
@@ -512,7 +512,7 @@ var sshxReattachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtime)
+		_, rinit, err := containerlabcore.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtime, err)
 		}

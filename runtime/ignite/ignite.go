@@ -432,10 +432,10 @@ func (c *IgniteRuntime) DeleteContainer(ctx context.Context, containerID string)
 		// due to device-mapper being busy (container may be running but VM is not)
 		// In order to work around that, we delete the runtime containers first
 		// this will clean up any device-mapper files and ensure DeleteVM succeeds
-		filter := []*types.GenericFilter{
+		gFilter := []*types.GenericFilter{
 			{FilterType: "label", Field: "ignite.name", Operator: "=", Match: containerID},
 		}
-		runtimeCtrs, err := c.ctrRuntime.ListContainers(ctx, filter)
+		runtimeCtrs, err := c.ctrRuntime.ListContainers(ctx, gFilter)
 		if err != nil {
 			return fmt.Errorf("failed to list runtime containers: %s", err)
 		}

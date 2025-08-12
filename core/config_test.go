@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/srl-labs/containerlab/labels"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/mocks/mockruntime"
 	"github.com/srl-labs/containerlab/runtime"
@@ -356,64 +356,64 @@ func TestLabelsInit(t *testing.T) {
 			got:  "test_data/topo1.yml",
 			node: "node1",
 			want: map[string]string{
-				labels.Containerlab: "topo1",
-				labels.NodeName:     "node1",
-				labels.LongName:     "clab-topo1-node1",
-				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixr-d2l",
-				labels.NodeGroup:    "",
-				labels.NodeLabDir:   "./clab-topo1/node1",
-				labels.TopoFile:     "topo1.yml",
-				labels.Owner:        owner,
+				containerlablabels.Containerlab: "topo1",
+				containerlablabels.NodeName:     "node1",
+				containerlablabels.LongName:     "clab-topo1-node1",
+				containerlablabels.NodeKind:     "nokia_srlinux",
+				containerlablabels.NodeType:     "ixr-d2l",
+				containerlablabels.NodeGroup:    "",
+				containerlablabels.NodeLabDir:   "./clab-topo1/node1",
+				containerlablabels.TopoFile:     "topo1.yml",
+				containerlablabels.Owner:        owner,
 			},
 		},
 		"custom_node_label": {
 			got:  "test_data/topo1.yml",
 			node: "node2",
 			want: map[string]string{
-				labels.Containerlab: "topo1",
-				labels.NodeName:     "node2",
-				labels.LongName:     "clab-topo1-node2",
-				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixr-d2l",
-				labels.NodeGroup:    "",
-				labels.NodeLabDir:   "./clab-topo1/node2",
-				labels.TopoFile:     "topo1.yml",
-				"node-label":        "value",
-				labels.Owner:        owner,
-				"with-dollar-sign":  "some$value",
+				containerlablabels.Containerlab: "topo1",
+				containerlablabels.NodeName:     "node2",
+				containerlablabels.LongName:     "clab-topo1-node2",
+				containerlablabels.NodeKind:     "nokia_srlinux",
+				containerlablabels.NodeType:     "ixr-d2l",
+				containerlablabels.NodeGroup:    "",
+				containerlablabels.NodeLabDir:   "./clab-topo1/node2",
+				containerlablabels.TopoFile:     "topo1.yml",
+				"node-label":                    "value",
+				containerlablabels.Owner:        owner,
+				"with-dollar-sign":              "some$value",
 			},
 		},
 		"custom_kind_label": {
 			got:  "test_data/topo2.yml",
 			node: "node1",
 			want: map[string]string{
-				labels.Containerlab: "topo2",
-				labels.NodeName:     "node1",
-				labels.LongName:     "clab-topo2-node1",
-				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixrd2l",
-				labels.NodeGroup:    "",
-				labels.NodeLabDir:   "./clab-topo2/node1",
-				labels.TopoFile:     "topo2.yml",
-				"kind-label":        "value",
-				labels.Owner:        owner,
+				containerlablabels.Containerlab: "topo2",
+				containerlablabels.NodeName:     "node1",
+				containerlablabels.LongName:     "clab-topo2-node1",
+				containerlablabels.NodeKind:     "nokia_srlinux",
+				containerlablabels.NodeType:     "ixrd2l",
+				containerlablabels.NodeGroup:    "",
+				containerlablabels.NodeLabDir:   "./clab-topo2/node1",
+				containerlablabels.TopoFile:     "topo2.yml",
+				"kind-label":                    "value",
+				containerlablabels.Owner:        owner,
 			},
 		},
 		"custom_default_label": {
 			got:  "test_data/topo3.yml",
 			node: "node2",
 			want: map[string]string{
-				labels.Containerlab: "topo3",
-				labels.NodeName:     "node2",
-				labels.LongName:     "clab-topo3-node2",
-				labels.NodeKind:     "nokia_srlinux",
-				labels.NodeType:     "ixrd2l",
-				labels.NodeGroup:    "",
-				labels.NodeLabDir:   "./clab-topo3/node2",
-				labels.TopoFile:     "topo3.yml",
-				"default-label":     "value",
-				labels.Owner:        owner,
+				containerlablabels.Containerlab: "topo3",
+				containerlablabels.NodeName:     "node2",
+				containerlablabels.LongName:     "clab-topo3-node2",
+				containerlablabels.NodeKind:     "nokia_srlinux",
+				containerlablabels.NodeType:     "ixrd2l",
+				containerlablabels.NodeGroup:    "",
+				containerlablabels.NodeLabDir:   "./clab-topo3/node2",
+				containerlablabels.TopoFile:     "topo3.yml",
+				"default-label":                 "value",
+				containerlablabels.Owner:        owner,
 			},
 		},
 	}
@@ -428,8 +428,8 @@ func TestLabelsInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			tc.want[labels.NodeLabDir] = utils.ResolvePath(tc.want[labels.NodeLabDir], c.TopoPaths.TopologyFileDir())
-			tc.want[labels.TopoFile] = utils.ResolvePath(tc.want[labels.TopoFile], c.TopoPaths.TopologyFileDir())
+			tc.want[containerlablabels.NodeLabDir] = utils.ResolvePath(tc.want[containerlablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
+			tc.want[containerlablabels.TopoFile] = utils.ResolvePath(tc.want[containerlablabels.TopoFile], c.TopoPaths.TopologyFileDir())
 
 			labels := c.Nodes[tc.node].Config().Labels
 

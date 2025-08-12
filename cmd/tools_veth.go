@@ -12,7 +12,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
@@ -59,9 +59,9 @@ var vethCreateCmd = &cobra.Command{
 			return err
 		}
 
-		opts := []core.ClabOption{
-			core.WithTimeout(timeout),
-			core.WithRuntime(
+		opts := []containerlabcore.ClabOption{
+			containerlabcore.WithTimeout(timeout),
+			containerlabcore.WithRuntime(
 				runtime,
 				&containerlabruntime.RuntimeConfig{
 					Debug:            debug,
@@ -69,9 +69,9 @@ var vethCreateCmd = &cobra.Command{
 					GracefulShutdown: gracefulShutdown,
 				},
 			),
-			core.WithDebug(debug),
+			containerlabcore.WithDebug(debug),
 		}
-		c, err := core.NewContainerLab(opts...)
+		c, err := containerlabcore.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ var vethCreateCmd = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		rtName, _, err := core.RuntimeInitializer(runtime)
+		rtName, _, err := containerlabcore.RuntimeInitializer(runtime)
 		if err != nil {
 			return err
 		}
@@ -130,7 +130,7 @@ var vethCreateCmd = &cobra.Command{
 
 // createNodes creates fake nodes in c.Nodes map to make link resolve work.
 // It checks which endpoint type is set by a user and creates a node that matches the type.
-func createNodes(_ context.Context, c *core.CLab, AEnd, BEnd parsedEndpoint, rt string) error {
+func createNodes(_ context.Context, c *containerlabcore.CLab, AEnd, BEnd parsedEndpoint, rt string) error {
 	for _, epDefinition := range []parsedEndpoint{AEnd, BEnd} {
 		switch epDefinition.Kind {
 		case links.LinkEndpointTypeHost:
@@ -227,7 +227,7 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 }
 
 // createFakeNode creates a fake node in c.Nodes map using the provided node kind and its config.
-func createFakeNode(c *core.CLab, kind string, nodeCfg *types.NodeConfig) error {
+func createFakeNode(c *containerlabcore.CLab, kind string, nodeCfg *types.NodeConfig) error {
 	name := nodeCfg.ShortName
 	// construct node
 	n, err := c.Reg.NewNodeOfKind(kind)

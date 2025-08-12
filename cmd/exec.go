@@ -10,7 +10,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/exec"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 )
@@ -41,18 +41,18 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	opts := make([]core.ClabOption, 0, 5)
+	opts := make([]containerlabcore.ClabOption, 0, 5)
 
 	// exec can work with or without a topology file
 	// when topology file is provided we need to parse it
 	// when topo file is not provided, we rely on labels to perform the filtering
 	if topoFile != "" {
-		opts = append(opts, core.WithTopoPath(topoFile, varsFile))
+		opts = append(opts, containerlabcore.WithTopoPath(topoFile, varsFile))
 	}
 
 	opts = append(opts,
-		core.WithTimeout(timeout),
-		core.WithRuntime(
+		containerlabcore.WithTimeout(timeout),
+		containerlabcore.WithRuntime(
 			runtime,
 			&containerlabruntime.RuntimeConfig{
 				Debug:            debug,
@@ -60,14 +60,14 @@ func execFn(_ *cobra.Command, _ []string) error {
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(debug),
+		containerlabcore.WithDebug(debug),
 	)
 
 	if labName != "" {
-		opts = append(opts, core.WithLabName(labName))
+		opts = append(opts, containerlabcore.WithLabName(labName))
 	}
 
-	c, err := core.NewContainerLab(opts...)
+	c, err := containerlabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
@@ -77,14 +77,14 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	listOptions := []core.ListOption{
-		core.WithListFromCliArgs(labelsFilter),
+	listOptions := []containerlabcore.ListOption{
+		containerlabcore.WithListFromCliArgs(labelsFilter),
 	}
 
 	if topoFile != "" {
 		listOptions = append(
 			listOptions,
-			core.WithListLabName(c.Config.Name),
+			containerlabcore.WithListLabName(c.Config.Name),
 		)
 	}
 

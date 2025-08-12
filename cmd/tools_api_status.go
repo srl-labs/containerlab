@@ -15,7 +15,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlablabels "github.com/srl-labs/containerlab/labels"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
@@ -54,19 +54,19 @@ var apiServerStatusCmd = &cobra.Command{
 		}
 
 		// Initialize containerlab with runtime using the same approach as inspect command
-		opts := []core.ClabOption{
-			core.WithTimeout(timeout),
-			core.WithRuntime(runtimeName,
+		opts := []containerlabcore.ClabOption{
+			containerlabcore.WithTimeout(timeout),
+			containerlabcore.WithRuntime(runtimeName,
 				&containerlabruntime.RuntimeConfig{
 					Debug:            debug,
 					Timeout:          timeout,
 					GracefulShutdown: gracefulShutdown,
 				},
 			),
-			core.WithDebug(debug),
+			containerlabcore.WithDebug(debug),
 		}
 
-		c, err := core.NewContainerLab(opts...)
+		c, err := containerlabcore.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}
@@ -77,7 +77,7 @@ var apiServerStatusCmd = &cobra.Command{
 			return err
 		}
 
-		containers, err := c.ListContainers(ctx, core.WithListToolType("api-server"))
+		containers, err := c.ListContainers(ctx, containerlabcore.WithListToolType("api-server"))
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %w", err)
 		}

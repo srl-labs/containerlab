@@ -9,7 +9,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -25,9 +25,9 @@ var disableTxOffloadCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 
-		opts := []core.ClabOption{
-			core.WithTimeout(timeout),
-			core.WithRuntime(
+		opts := []containerlabcore.ClabOption{
+			containerlabcore.WithTimeout(timeout),
+			containerlabcore.WithRuntime(
 				runtime,
 				&containerlabruntime.RuntimeConfig{
 					Debug:            debug,
@@ -35,9 +35,9 @@ var disableTxOffloadCmd = &cobra.Command{
 					GracefulShutdown: gracefulShutdown,
 				},
 			),
-			core.WithDebug(debug),
+			containerlabcore.WithDebug(debug),
 		}
-		c, err := core.NewContainerLab(opts...)
+		c, err := containerlabcore.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}

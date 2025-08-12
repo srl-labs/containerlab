@@ -18,7 +18,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/exec"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
@@ -221,9 +221,9 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericConta
 	return cnts, err
 }
 
-func (d *DefaultNode) RunExecFromConfig(ctx context.Context, ec *exec.ExecCollection) error {
+func (d *DefaultNode) RunExecFromConfig(ctx context.Context, ec *containerlabexec.ExecCollection) error {
 	for _, e := range d.Config().Exec {
-		exec, err := exec.NewExecCmdFromString(e)
+		exec, err := containerlabexec.NewExecCmdFromString(e)
 		if err != nil {
 			log.Warnf("Failed to parse the command string: %s, %v", e, err)
 		}
@@ -406,7 +406,7 @@ type NodeOverwrites interface {
 	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
 	GetContainerName() string
 	VerifyLicenseFileExists(context.Context) error
-	RunExec(context.Context, *exec.ExecCmd) (*exec.ExecResult, error)
+	RunExec(context.Context, *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error)
 	GetNSPath(ctx context.Context) (string, error)
 }
 
@@ -443,7 +443,7 @@ func (d *DefaultNode) GetContainerName() string {
 }
 
 // RunExec executes a single command for a node.
-func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
+func (d *DefaultNode) RunExec(ctx context.Context, execCmd *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
 	execResult, err := d.GetRuntime().Exec(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v",
@@ -455,7 +455,7 @@ func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec
 
 // RunExecNotWait executes a command for a node, and doesn't block waiting for the output.
 // Should be overridden if the nodes implementation differs.
-func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd) error {
+func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *containerlabexec.ExecCmd) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v",

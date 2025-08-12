@@ -14,9 +14,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
@@ -41,7 +41,7 @@ var (
 	groupPrefix string
 	file        string
 	deploy      bool
-	reg         *nodes.NodeRegistry
+	reg         *containerlabnodes.NodeRegistry
 )
 
 type nodesDef struct {
@@ -120,8 +120,8 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
-	c := &core.CLab{}
-	c.Reg = nodes.NewNodeRegistry()
+	c := &containerlabcore.CLab{}
+	c.Reg = containerlabnodes.NewNodeRegistry()
 	c.RegisterNodes()
 
 	reg = c.Reg
@@ -164,7 +164,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 	images, licenses map[string]string, nodes ...nodesDef,
 ) ([]byte, error) {
 	numStages := len(nodes)
-	config := &core.Config{
+	config := &containerlabcore.Config{
 		Name: name,
 		Mgmt: new(types.MgmtNet),
 		Topology: &types.Topology{

@@ -11,7 +11,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -49,9 +49,9 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", interfacesFormat)
 	}
 
-	opts := []core.ClabOption{
-		core.WithTimeout(timeout),
-		core.WithRuntime(
+	opts := []containerlabcore.ClabOption{
+		containerlabcore.WithTimeout(timeout),
+		containerlabcore.WithRuntime(
 			runtime,
 			&containerlabruntime.RuntimeConfig{
 				Debug:            debug,
@@ -59,17 +59,17 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(debug),
+		containerlabcore.WithDebug(debug),
 	}
 
 	if topoFile != "" {
 		opts = append(opts,
-			core.WithTopoPath(topoFile, varsFile),
-			core.WithNodeFilter(nodeFilter),
+			containerlabcore.WithTopoPath(topoFile, varsFile),
+			containerlabcore.WithNodeFilter(nodeFilter),
 		)
 	}
 
-	c, err := core.NewContainerLab(opts...)
+	c, err := containerlabcore.NewContainerLab(opts...)
 	if err != nil {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
@@ -83,14 +83,14 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not find topology")
 	}
 
-	listOpts := []core.ListOption{
-		core.WithListLabName(labNameFilterLabel),
+	listOpts := []containerlabcore.ListOption{
+		containerlabcore.WithListLabName(labNameFilterLabel),
 	}
 
 	if interfacesNodeName != "" {
 		listOpts = append(
 			listOpts,
-			core.WithListNodeName(interfacesNodeName),
+			containerlabcore.WithListNodeName(interfacesNodeName),
 		)
 	}
 

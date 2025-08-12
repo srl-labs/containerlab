@@ -104,13 +104,13 @@ func (n *ovs) RunExec(_ context.Context, _ *containerlabexec.ExecCmd) (*containe
 
 func (n *ovs) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
-	ns, err := ns.GetCurrentNS()
+	curNamespace, err := ns.GetCurrentNS()
 	if err != nil {
 		return err
 	}
 
 	// execute the given function
-	err = ns.Do(f)
+	err = curNamespace.Do(f)
 	if err != nil {
 		return err
 	}

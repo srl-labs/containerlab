@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
+	containerlabcore "github.com/srl-labs/containerlab/core"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/utils"
 )
@@ -55,10 +55,10 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("--all and --name should not be used together")
 	}
 
-	opts := []core.ClabOption{
-		core.WithTimeout(timeout),
-		core.WithLabName(labName),
-		core.WithRuntime(
+	opts := []containerlabcore.ClabOption{
+		containerlabcore.WithTimeout(timeout),
+		containerlabcore.WithLabName(labName),
+		containerlabcore.WithRuntime(
 			runtime,
 			&containerlabruntime.RuntimeConfig{
 				Debug:            debug,
@@ -66,61 +66,61 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(debug),
+		containerlabcore.WithDebug(debug),
 		// during destroy we don't want to check bind paths
 		// as it is irrelevant for this command.
-		core.WithSkippedBindsPathsCheck(),
+		containerlabcore.WithSkippedBindsPathsCheck(),
 	}
 
 	if topoFile != "" {
-		opts = append(opts, core.WithTopoPath(topoFile, varsFile))
+		opts = append(opts, containerlabcore.WithTopoPath(topoFile, varsFile))
 	}
 
 	if keepMgmtNet {
-		opts = append(opts, core.WithKeepMgmtNet())
+		opts = append(opts, containerlabcore.WithKeepMgmtNet())
 	}
 
-	clab, err := core.NewContainerLab(opts...)
+	clab, err := containerlabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
 
-	destroyOptions := []core.DestroyOption{
-		core.WithDestroyMaxWorkers(maxWorkers),
-		core.WithDestroyNodeFilter(nodeFilter),
+	destroyOptions := []containerlabcore.DestroyOption{
+		containerlabcore.WithDestroyMaxWorkers(maxWorkers),
+		containerlabcore.WithDestroyNodeFilter(nodeFilter),
 	}
 
 	if keepMgmtNet {
 		destroyOptions = append(
 			destroyOptions,
-			core.WithDestroyKeepMgmtNet(),
+			containerlabcore.WithDestroyKeepMgmtNet(),
 		)
 	}
 
 	if cleanup {
 		destroyOptions = append(
 			destroyOptions,
-			core.WithDestroyCleanup(),
+			containerlabcore.WithDestroyCleanup(),
 		)
 	}
 
 	if gracefulShutdown {
 		destroyOptions = append(
 			destroyOptions,
-			core.WithDestroyGraceful(),
+			containerlabcore.WithDestroyGraceful(),
 		)
 	}
 
 	if all {
 		destroyOptions = append(
 			destroyOptions,
-			core.WithDestroyAll(),
+			containerlabcore.WithDestroyAll(),
 		)
 
 		if !yes {
 			destroyOptions = append(
 				destroyOptions,
-				core.WithDestroyTerminalPrompt(),
+				containerlabcore.WithDestroyTerminalPrompt(),
 			)
 		}
 	}

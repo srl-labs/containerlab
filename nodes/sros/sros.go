@@ -29,7 +29,7 @@ import (
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/labels"
 	"github.com/srl-labs/containerlab/netconf"
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -78,7 +78,7 @@ var (
 		"net.ipv6.conf.default.accept_ra":    "0",
 		"net.ipv4.conf.default.rp_filter":    "0",
 	}
-	defaultCredentials = nodes.NewCredentials("admin", "NokiaSros1!")
+	defaultCredentials = containerlabnodes.NewCredentials("admin", "NokiaSros1!")
 
 	srosEnv = map[string]string{
 		"SRSIM":                   "1",
@@ -122,22 +122,22 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformOpts := &nodes.PlatformAttrs{
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformOpts := &containerlabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() containerlabnodes.Node {
 		return new(sros)
 	}, nrea)
 }
 
 // sros SR-SIM Kind structure.
 type sros struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
 	startupCliCfg []byte
 
@@ -149,19 +149,19 @@ type sros struct {
 	sshPubKeys []ssh.PublicKey
 	// software version SR OS x node runs
 	swVersion      *SrosVersion
-	componentNodes []nodes.Node
+	componentNodes []containerlabnodes.Node
 	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when deploying.
 	// e.g. inspect is either called after deploy or independently. Hence we need to differentiate if we need to perform the
 	// component cpm based rename or not. This field indicates just that
 	renameDone bool
 
-	preDeployParams *nodes.PreDeployParams
+	preDeployParams *containerlabnodes.PreDeployParams
 }
 
 // Init Function for SR-SIM kind.
-func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *sros) Init(cfg *types.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.SSSE3 = true
 	n.HostRequirements.MinVCPU = 4
@@ -213,7 +213,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 // Pre Deploy func for SR-SIM kind.
-func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *sros) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
 	log.Debug("Running pre-deploy")
 	// store the preDeployParams
 	n.preDeployParams = params
@@ -263,7 +263,7 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 }
 
 // Post Deploy func for SR-SIM kind.
-func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *sros) PostDeploy(ctx context.Context, params *containerlabnodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
 		"node", n.Cfg.ShortName)
@@ -358,7 +358,7 @@ func (n *sros) setupComponentNodes() error {
 	}
 
 	// Registry, because it is not a package Var
-	nr := nodes.NewNodeRegistry()
+	nr := containerlabnodes.NewNodeRegistry()
 	Register(nr)
 
 	// loop through the components, creating them
@@ -428,7 +428,7 @@ func (n *sros) setupComponentNodes() error {
 }
 
 // deployFabric deploys the distributed SR-SIM when the `components` key is present.
-func (n *sros) deployFabric(ctx context.Context, deployParams *nodes.DeployParams) error {
+func (n *sros) deployFabric(ctx context.Context, deployParams *containerlabnodes.DeployParams) error {
 	// loop through the components, creating them
 	for _, c := range n.componentNodes {
 		c.PreDeploy(ctx, n.preDeployParams)
@@ -520,7 +520,7 @@ func (n *sros) calcComponentFqdn(slot string) string {
 }
 
 // cpmNode returns a CPM Node (used in Distributed mode).
-func (n *sros) cpmNode() (nodes.Node, error) {
+func (n *sros) cpmNode() (containerlabnodes.Node, error) {
 	defaultSlot, err := n.cpmSlot()
 	if err != nil {
 		return nil, err
@@ -557,7 +557,7 @@ search:
 }
 
 // Deploy deploys the SR-SIM kind.
-func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) error {
+func (n *sros) Deploy(ctx context.Context, deployParams *containerlabnodes.DeployParams) error {
 	// if it is a chassis with multiple cards (i.e. components)
 	if n.isDistributedBaseNode() {
 		err := n.deployFabric(ctx, deployParams)
@@ -890,7 +890,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, e
 	// check that we retrieved some container information
 	// otherwise throw ErrContainersNotFound error
 	if len(cnts) == 0 {
-		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(), nodes.ErrContainersNotFound)
+		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(), containerlabnodes.ErrContainersNotFound)
 	}
 
 	return cnts, err
@@ -899,7 +899,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, e
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
-func (n *sros) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
+func (n *sros) populateHosts(ctx context.Context, nodes map[string]containerlabnodes.Node) error {
 	hosts, err := n.Runtime.GetHostsPath(ctx, n.Cfg.LongName)
 	if err != nil {
 		log.Warn("Unable to locate SR OS node /etc/hosts file", "node", n.Cfg.ShortName, "err", err)
