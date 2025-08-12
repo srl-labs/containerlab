@@ -16,7 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes/state"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/crypto/ssh"
 )
@@ -60,7 +60,7 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 type PreDeployParams struct {
 	Cert         *cert.Cert
 	TopologyName string
-	TopoPaths    *types.TopoPaths
+	TopoPaths    *containerlabtypes.TopoPaths
 	SSHPubKeys   []ssh.PublicKey
 }
 
@@ -76,17 +76,17 @@ type PostDeployParams struct {
 
 // Node is an interface that defines the behavior of a node.
 type Node interface {
-	Init(*types.NodeConfig, ...NodeOption) error
+	Init(*containerlabtypes.NodeConfig, ...NodeOption) error
 	// GetContainers returns a pointer to GenericContainer that the node uses.
 	GetContainers(ctx context.Context) ([]containerlabruntime.GenericContainer, error)
 	DeleteNetnsSymlink() (err error)
-	Config() *types.NodeConfig // Config returns the nodes configuration
+	Config() *containerlabtypes.NodeConfig // Config returns the nodes configuration
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.
 	CheckDeploymentConditions(ctx context.Context) error
 	PreDeploy(ctx context.Context, params *PreDeployParams) error
 	Deploy(context.Context, *DeployParams) error // Deploy triggers the deployment of this node
 	PostDeploy(ctx context.Context, params *PostDeployParams) error
-	WithMgmtNet(*types.MgmtNet)                       // WithMgmtNet provides the management network for the node
+	WithMgmtNet(*containerlabtypes.MgmtNet)           // WithMgmtNet provides the management network for the node
 	WithRuntime(containerlabruntime.ContainerRuntime) // WithRuntime provides the runtime for the node
 	PullImage(ctx context.Context) error              // PullImage pulls the image for the node
 	// CalculateInterfaceIndex returns with the interface index offset from the first valid dataplane interface based on the interface name. Errors otherwise.
@@ -117,22 +117,22 @@ type Node interface {
 	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() state.NodeState
 	SetState(state.NodeState)
-	GetSSHConfig() *types.SSHConfig
+	GetSSHConfig() *containerlabtypes.SSHConfig
 	// RunExecFromConfig executes the topologyfile defined exec commands
 	RunExecFromConfig(context.Context, *containerlabexec.ExecCollection) error
 	IsHealthy(ctx context.Context) (bool, error)
 	GetContainerStatus(ctx context.Context) containerlabruntime.ContainerStatus
 	GetNSPath(ctx context.Context) (string, error)
 	// Generate the host entries for this node
-	GetHostsEntries(ctx context.Context) (types.HostEntries, error)
+	GetHostsEntries(ctx context.Context) (containerlabtypes.HostEntries, error)
 }
 
 type NodeOption func(Node)
 
-func WithMgmtNet(mgmt *types.MgmtNet) NodeOption {
+func WithMgmtNet(mgmt *containerlabtypes.MgmtNet) NodeOption {
 	return func(n Node) {
 		if mgmt == nil {
-			n.WithMgmtNet(new(types.MgmtNet))
+			n.WithMgmtNet(new(containerlabtypes.MgmtNet))
 			return
 		}
 		n.WithMgmtNet(mgmt)

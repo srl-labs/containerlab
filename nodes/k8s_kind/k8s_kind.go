@@ -16,7 +16,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 	"golang.org/x/sync/semaphore"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
@@ -43,7 +43,7 @@ type k8s_kind struct {
 	nodes.DefaultNode
 }
 
-func (n *k8s_kind) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *k8s_kind) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -116,7 +116,7 @@ func (n *k8s_kind) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 }
 
 func (n *k8s_kind) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
-	containers, err := n.Runtime.ListContainers(ctx, []*types.GenericFilter{
+	containers, err := n.Runtime.ListContainers(ctx, []*containerlabtypes.GenericFilter{
 		{
 			FilterType: "label",
 			Field:      "io.x-k8s.kind.cluster",

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 type mac struct {
@@ -14,7 +14,7 @@ type mac struct {
 
 // genMac returns a struct with a generated MAC address string to use in SR Linux
 // topology file.
-func genMac(cfg *types.NodeConfig) mac {
+func genMac(cfg *containerlabtypes.NodeConfig) mac {
 	// Generated MAC address conforms to the following addressing scheme
 	// first byte  - `1a` - fixed for easy identification of SRL Mac addresses
 	// second byte - random, to distinguish projects

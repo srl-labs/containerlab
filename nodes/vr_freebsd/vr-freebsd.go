@@ -13,8 +13,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -47,7 +47,7 @@ type vrFreeBSD struct {
 	nodes.VRNode
 }
 
-func (n *vrFreeBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrFreeBSD) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
 	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, "")
 	// set virtualization requirement
@@ -65,7 +65,7 @@ func (n *vrFreeBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = containerlabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support config backup functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))
@@ -86,7 +86,7 @@ func (n *vrFreeBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 }
 
 func (n *vrFreeBSD) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil

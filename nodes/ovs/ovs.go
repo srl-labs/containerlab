@@ -17,7 +17,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 )
 
@@ -34,7 +34,7 @@ type ovs struct {
 	nodes.DefaultNode
 }
 
-func (n *ovs) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *ovs) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 

@@ -8,14 +8,14 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames          = []string{"dell_ftosv", "vr-ftosv", "vr-dell_ftosv"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin")
 )
 
 const (
@@ -26,25 +26,25 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *containerlabnodes.NodeRegistry) {
+	platformAttrs := &containerlabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindnames, func() containerlabnodes.Node {
 		return new(vrFtosv)
 	}, nrea)
 }
 
 type vrFtosv struct {
-	nodes.VRNode
+	containerlabnodes.VRNode
 }
 
-func (n *vrFtosv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrFtosv) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, n.ScrapliPlatformName)
+	n.VRNode = *containerlabnodes.NewVRNode(n, defaultCredentials, n.ScrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -54,13 +54,13 @@ func (n *vrFtosv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    containerlabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = containerlabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestGenerateConfigs(t *testing.T) {
@@ -19,7 +19,7 @@ func TestGenerateConfigs(t *testing.T) {
 	newCfg := "new config"
 
 	tests := map[string]struct {
-		cfg        *types.NodeConfig
+		cfg        *containerlabtypes.NodeConfig
 		err        error
 		preExists  bool
 		postExists bool
@@ -27,7 +27,7 @@ func TestGenerateConfigs(t *testing.T) {
 		out        string
 	}{
 		"suppress-true-first-start": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				SuppressStartupConfig: true,
 			},
 			err:        nil,
@@ -36,7 +36,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   defCfg,
 		},
 		"suppress-true-existing-lab": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				SuppressStartupConfig: true,
 			},
 			err:        nil,
@@ -46,7 +46,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   defCfg,
 		},
 		"suppress-false-first-start": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				SuppressStartupConfig: false,
 			},
 			err:        nil,
@@ -56,7 +56,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   defCfg,
 		},
 		"suppress-false-existing-lab": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				SuppressStartupConfig: false,
 			},
 			err:        nil,
@@ -66,7 +66,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   defCfg,
 		},
 		"startup-config-first-start": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				StartupConfig: "other",
 			},
 			err:        nil,
@@ -76,7 +76,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   newCfg,
 		},
 		"startup-config-existing-lab": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				StartupConfig: "other",
 			},
 			err:        nil,
@@ -86,7 +86,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   newCfg,
 		},
 		"enforce-startup-config-first-start": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				StartupConfig:        "other",
 				EnforceStartupConfig: true,
 			},
@@ -97,7 +97,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   newCfg,
 		},
 		"enforce-startup-config-existing-lab": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				StartupConfig:        "other",
 				EnforceStartupConfig: true,
 			},
@@ -108,13 +108,13 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   newCfg,
 		},
 		"enforce-startup-config-no-startup": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				EnforceStartupConfig: true,
 			},
 			err: ErrNoStartupConfig,
 		},
 		"enforce-and-suppress-startup-config": {
-			cfg: &types.NodeConfig{
+			cfg: &containerlabtypes.NodeConfig{
 				EnforceStartupConfig:  true,
 				SuppressStartupConfig: true,
 			},
@@ -184,7 +184,7 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &types.NodeConfig{
+				Cfg: &containerlabtypes.NodeConfig{
 					ShortName: "juniper",
 				},
 				InterfaceRegexp: regexp.MustCompile(`(?:et|xe|ge)-0/0/(?P<port>\d+)$`),
@@ -215,7 +215,7 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &types.NodeConfig{
+				Cfg: &containerlabtypes.NodeConfig{
 					ShortName: "cisco",
 				},
 				InterfaceRegexp:  regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`),
@@ -247,7 +247,7 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &types.NodeConfig{
+				Cfg: &containerlabtypes.NodeConfig{
 					ShortName: "cisco-original",
 				},
 				InterfaceRegexp: regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`),
@@ -273,7 +273,7 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &types.NodeConfig{
+				Cfg: &containerlabtypes.NodeConfig{
 					ShortName: "juniper-overlap",
 				},
 				InterfaceRegexp: regexp.MustCompile(`(?:et|xe|ge)-0/0/(?P<port>\d+)$`),
@@ -292,7 +292,7 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &types.NodeConfig{
+				Cfg: &containerlabtypes.NodeConfig{
 					ShortName: "cisco-oob",
 				},
 				InterfaceRegexp:  regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`),
@@ -312,7 +312,7 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &types.NodeConfig{
+				Cfg: &containerlabtypes.NodeConfig{
 					ShortName: "cisco-noregexpgroup",
 				},
 				InterfaceRegexp: regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(\d+)$`),

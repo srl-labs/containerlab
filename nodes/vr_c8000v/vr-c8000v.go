@@ -10,8 +10,8 @@ import (
 	"regexp"
 
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -48,7 +48,7 @@ type vrC8000v struct {
 	nodes.VRNode
 }
 
-func (n *vrC8000v) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrC8000v) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
 	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
@@ -66,7 +66,7 @@ func (n *vrC8000v) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = containerlabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))

@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var kindnames = []string{"keysight_ixia-c-one"}
@@ -37,7 +37,7 @@ type ixiacOne struct {
 	nodes.DefaultNode
 }
 
-func (l *ixiacOne) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (l *ixiacOne) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	l.DefaultNode = *nodes.NewDefaultNode(l)
 

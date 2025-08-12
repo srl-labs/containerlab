@@ -14,9 +14,9 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -32,7 +32,7 @@ const (
 
 var (
 	KindNames          = []string{"vyosnetworks_vyos"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin")
 
 	//go:embed vyos.config.boot
 	cfgTemplate string
@@ -47,32 +47,32 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
+func Register(r *containerlabnodes.NodeRegistry) {
 	log.Debug("Registering vyos ")
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &containerlabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
-	r.Register(KindNames, func() nodes.Node {
+	r.Register(KindNames, func() containerlabnodes.Node {
 		return new(vyos)
 	}, nrea)
 }
 
 type vyos struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 	configDir  string
 	SSHPubKeys []ssh.PublicKey
-	creds      *nodes.Credentials
+	creds      *containerlabnodes.Credentials
 }
 
-func (n *vyos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vyos) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
 	log.Debug("Initializating Vyos node")
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -88,14 +88,14 @@ func (n *vyos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vyos) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *vyos) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeployParams) error {
+	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	if err := n.fixdirACL(); err != nil {
 		return err
 	}
 
 	issueTrue := true
-	n.Cfg.Certificate = &types.CertificateConfig{
+	n.Cfg.Certificate = &containerlabtypes.CertificateConfig{
 		Issue: &issueTrue,
 	}
 	cert, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
@@ -136,7 +136,7 @@ func (n *vyos) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *vyos) PostDeploy(ctx context.Context, params *containerlabnodes.PostDeployParams) error {
 	nodeCfg := n.Config()
 	cli, err := n.newCli()
 	if err != nil {

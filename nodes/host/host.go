@@ -16,8 +16,8 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var kindnames = []string{"host"}
@@ -33,7 +33,7 @@ type host struct {
 	nodes.DefaultNode
 }
 
-func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *host) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 
@@ -53,14 +53,14 @@ func (n *host) Deploy(_ context.Context, _ *nodes.DeployParams) error {
 func (*host) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 func (*host) PullImage(_ context.Context) error             { return nil }
 func (*host) Delete(_ context.Context) error                { return nil }
-func (*host) WithMgmtNet(*types.MgmtNet)                    {}
+func (*host) WithMgmtNet(*containerlabtypes.MgmtNet)        {}
 
 // UpdateConfigWithRuntimeInfo is a noop for hosts.
 func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers returns a basic skeleton of a container to enable graphing of hosts kinds.
 func (h *host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) {
-	image := utils.GetOSRelease()
+	image := containerlabutils.GetOSRelease()
 
 	return []runtime.GenericContainer{
 		{

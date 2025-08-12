@@ -9,15 +9,15 @@ import (
 	"path"
 	"regexp"
 
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames          = []string{"cisco_n9kv", "vr-n9kv", "vr-cisco_n9kv"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:Ethernet|Et)\s?1/(?P<port>\d+)`)
 	InterfaceOffset = 1
@@ -30,26 +30,26 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *containerlabnodes.NodeRegistry) {
+	platformAttrs := &containerlabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindnames, func() containerlabnodes.Node {
 		return new(vrN9kv)
 	}, nrea)
 }
 
 type vrN9kv struct {
-	nodes.VRNode
+	containerlabnodes.VRNode
 }
 
-func (n *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrN9kv) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
+	n.VRNode = *containerlabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -59,13 +59,13 @@ func (n *vrN9kv) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    containerlabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = containerlabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))

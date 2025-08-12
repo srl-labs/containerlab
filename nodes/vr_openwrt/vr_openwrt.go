@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var kindNames = []string{"openwrt"}
@@ -21,22 +21,22 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() containerlabnodes.Node {
 		return new(vrOpenWrt)
 	}, nrea)
 }
 
 type vrOpenWrt struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 }
 
-func (n *vrOpenWrt) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrOpenWrt) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -51,8 +51,8 @@ func (n *vrOpenWrt) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	return nil
 }
 
-func (n *vrOpenWrt) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *vrOpenWrt) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
 	// Ensure the overlay directory exists
-	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"), 0o777)
+	containerlabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"), 0o777)
 	return nil
 }

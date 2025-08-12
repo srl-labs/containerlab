@@ -32,8 +32,8 @@ import (
 	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -91,10 +91,10 @@ var (
 	readyCmdBoth = `/usr/bin/pgrep ^both$`
 	readyCmdIom  = `/usr/bin/pgrep ^iom$`
 
-	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(utils.CreateFuncs()).
+	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(containerlabutils.CreateFuncs()).
 			Parse(srosConfigCmdsTpl)
 
-	requiredKernelVersion = &utils.KernelVersion{
+	requiredKernelVersion = &containerlabutils.KernelVersion{
 		Major:    5,
 		Minor:    5,
 		Revision: 0,
@@ -159,15 +159,15 @@ type sros struct {
 }
 
 // Init Function for SR-SIM kind.
-func (n *sros) Init(cfg *types.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *sros) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.SSSE3 = true
 	n.HostRequirements.MinVCPU = 4
-	n.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
+	n.HostRequirements.MinVCPUFailAction = containerlabtypes.FailBehaviourError
 	n.HostRequirements.MinAvailMemoryGb = 4
-	n.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
+	n.HostRequirements.MinAvailMemoryGbFailAction = containerlabtypes.FailBehaviourLog
 
 	n.Cfg = cfg
 
@@ -175,7 +175,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...containerlabnodes.NodeOption)
 	n.InterfaceRegexp = InterfaceRegexp
 
 	// force cert creation for sros nodes as they by make use of tls certificate in the default config
-	n.Cfg.Certificate.Issue = utils.Pointer(true)
+	n.Cfg.Certificate.Issue = containerlabutils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
@@ -201,7 +201,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...containerlabnodes.NodeOption)
 	mac := genMac(n.Cfg)
 	srosEnv[envNokiaSrosSystemBaseMac] = mac
 
-	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
+	n.Cfg.Env = containerlabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
 	log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
 
 	err := n.setupComponentNodes()
@@ -235,7 +235,7 @@ func (n *sros) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployP
 
 	// either the non-distributed OR distributed AND is a CPM
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
-		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
+		containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
 		slot := n.Cfg.Env[envNokiaSrosSlot]
 		if slot == "" {
 			return fmt.Errorf("fail to init node because Env var %q is set to %q",
@@ -405,8 +405,8 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
 
 		// adjust label based env vars
-		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.NodeName)] = componentConfig.ShortName
-		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.LongName)] = componentConfig.LongName
+		componentConfig.Env["CLAB_LABEL_"+containerlabutils.ToEnvKey(labels.NodeName)] = componentConfig.ShortName
+		componentConfig.Env["CLAB_LABEL_"+containerlabutils.ToEnvKey(labels.LongName)] = componentConfig.LongName
 
 		if componentConfig.Labels == nil {
 			componentConfig.Labels = map[string]string{}
@@ -622,7 +622,7 @@ func (n *sros) Ready(ctx context.Context) error {
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
 func (*sros) checkKernelVersion() error {
 	// retrieve running kernel version
-	kv, err := utils.GetKernelVersion()
+	kv, err := containerlabutils.GetKernelVersion()
 	if err != nil {
 		return err
 	}
@@ -677,16 +677,16 @@ func (n *sros) createSROSFiles() error {
 	if n.Cfg.License != "" && (n.isCPM("") || n.isStandaloneNode()) {
 		// copy license file to node specific directory in lab
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(context.Background(), n.Cfg.License, licPath, 0o644); err != nil {
+		if err := containerlabutils.CopyFile(context.Background(), n.Cfg.License, licPath, 0o644); err != nil {
 			return fmt.Errorf("license copying src %s -> dst %s failed: %v", n.Cfg.License, licPath, err)
 		}
 		log.Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)
 	}
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0o777)
+	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
+	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0o777)
+	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0o777)
+	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0o777)
+	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0o777)
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
 		err = n.createSROSConfigFiles()
@@ -718,7 +718,7 @@ func (n *sros) createSROSConfigFiles() error {
 			return err
 		}
 
-		cBuf, err := utils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		cBuf, err := containerlabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
 		if err != nil {
 			return err
 		}
@@ -850,7 +850,7 @@ func (n *sros) addPartialConfig() error {
 				return err
 			}
 
-			configContent, err := utils.SubstituteEnvsAndTemplate(b, n.Cfg)
+			configContent, err := containerlabutils.SubstituteEnvsAndTemplate(b, n.Cfg)
 			if err != nil {
 				return err
 			}
@@ -880,7 +880,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, e
 	}
 	containerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
 
-	cnts, err := n.Runtime.ListContainers(ctx, []*types.GenericFilter{
+	cnts, err := n.Runtime.ListContainers(ctx, []*containerlabtypes.GenericFilter{
 		{
 			FilterType: "name",
 			Match:      containerName,
@@ -947,7 +947,7 @@ func (n *sros) populateHosts(ctx context.Context, nodes map[string]containerlabn
 }
 
 func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
-	captureGroups, err := utils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
+	captureGroups, err := containerlabutils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
 	if err != nil {
 		return "", err
 	}

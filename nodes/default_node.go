@@ -17,13 +17,13 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/cert"
+	containerlabcert "github.com/srl-labs/containerlab/cert"
 	containerlabexec "github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -31,19 +31,19 @@ import (
 // It has common fields and methods that every node should typically have. Nodes can override
 // methods if needed.
 type DefaultNode struct {
-	Cfg              *types.NodeConfig
-	Mgmt             *types.MgmtNet
-	Runtime          runtime.ContainerRuntime
-	HostRequirements *types.HostRequirements
+	Cfg              *containerlabtypes.NodeConfig
+	Mgmt             *containerlabtypes.MgmtNet
+	Runtime          containerlabruntime.ContainerRuntime
+	HostRequirements *containerlabtypes.HostRequirements
 	// SSHConfig is the SSH client configuration that a clab node requires.
-	SSHConfig *types.SSHConfig
+	SSHConfig *containerlabtypes.SSHConfig
 	// Indicates that the node should not start without no license file defined
-	LicensePolicy types.LicensePolicy
+	LicensePolicy containerlabtypes.LicensePolicy
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
 	// List of link endpoints that are connected to the node.
-	Endpoints []links.Endpoint
+	Endpoints []containerlablinks.Endpoint
 	// Interface aliasing-related variables
 	InterfaceRegexp       *regexp.Regexp
 	InterfaceMappedPrefix string
@@ -51,7 +51,7 @@ type DefaultNode struct {
 	InterfaceHelp         string
 	FirstDataIfIndex      int
 	// State of the node
-	state      state.NodeState
+	state      containerlabnodesstate.NodeState
 	statemutex sync.RWMutex
 }
 
@@ -60,10 +60,10 @@ type DefaultNode struct {
 // This allows DefaultNode to access fields of the specific node struct in the methods defined for DefaultNode.
 func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	dn := &DefaultNode{
-		HostRequirements: types.NewHostRequirements(),
+		HostRequirements: containerlabtypes.NewHostRequirements(),
 		OverwriteNode:    n,
-		LicensePolicy:    types.LicensePolicyNone,
-		SSHConfig:        types.NewSSHConfig(),
+		LicensePolicy:    containerlabtypes.LicensePolicyNone,
+		SSHConfig:        containerlabtypes.NewSSHConfig(),
 	}
 
 	dn.InterfaceMappedPrefix = "eth"
@@ -73,10 +73,10 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	return dn
 }
 
-func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                       { d.Mgmt = mgmt }
-func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)                { d.Runtime = r }
-func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                  { return d.Runtime }
-func (d *DefaultNode) Config() *types.NodeConfig                             { return d.Cfg }
+func (d *DefaultNode) WithMgmtNet(mgmt *containerlabtypes.MgmtNet)           { d.Mgmt = mgmt }
+func (d *DefaultNode) WithRuntime(r containerlabruntime.ContainerRuntime)    { d.Runtime = r }
+func (d *DefaultNode) GetRuntime() containerlabruntime.ContainerRuntime      { return d.Runtime }
+func (d *DefaultNode) Config() *containerlabtypes.NodeConfig                 { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
@@ -143,7 +143,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	// This env var does not count in the eth0 interface that is automatically created by the container runtime.
 	// This env var is used by some containers (e.g. vrnetlab systems) to postpone the startup until all interfaces
 	// have been added to the container namespace.
-	d.Config().Env[types.CLAB_ENV_INTFS] = strconv.Itoa(len(d.GetEndpoints()))
+	d.Config().Env[containerlabtypes.CLAB_ENV_INTFS] = strconv.Itoa(len(d.GetEndpoints()))
 
 	// create the container
 	cID, err := d.Runtime.CreateContainer(ctx, d.Cfg)
@@ -158,7 +158,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	}
 
 	// Update the nodes state
-	d.SetState(state.Deployed)
+	d.SetState(containerlabnodesstate.Deployed)
 
 	return nil
 }
@@ -202,8 +202,8 @@ func (d *DefaultNode) GetImages(_ context.Context) map[string]string {
 	}
 }
 
-func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
-	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
+func (d *DefaultNode) GetContainers(ctx context.Context) ([]containerlabruntime.GenericContainer, error) {
+	cnts, err := d.Runtime.ListContainers(ctx, []*containerlabtypes.GenericFilter{
 		{
 			FilterType: "name",
 			Match:      d.OverwriteNode.GetContainerName(),
@@ -269,11 +269,11 @@ func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
 func (d *DefaultNode) DeleteNetnsSymlink() error {
 	log.Debugf("Deleting %s network namespace", d.OverwriteNode.GetContainerName())
-	return utils.DeleteNetnsSymlink(d.OverwriteNode.GetContainerName())
+	return containerlabutils.DeleteNetnsSymlink(d.OverwriteNode.GetContainerName())
 }
 
 func (d *DefaultNode) CheckInterfaceOverlap() error {
-	var seenEps []links.Endpoint
+	var seenEps []containerlablinks.Endpoint
 
 	for _, ep := range d.Endpoints {
 		ifName := ep.GetIfaceName()
@@ -297,7 +297,7 @@ func (d *DefaultNode) CheckInterfaceName() error {
 // CalculateInterfaceIndex parses the supplied interface name with the InterfaceRegexp.
 // Using the the port offset, it calculates the mapped interface index based on the InterfaceOffset and the first data interface index.
 func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
-	captureGroups, err := utils.GetRegexpCaptureGroups(d.InterfaceRegexp, ifName)
+	captureGroups, err := containerlabutils.GetRegexpCaptureGroups(d.InterfaceRegexp, ifName)
 	if err != nil {
 		return 0, err
 	}
@@ -335,8 +335,8 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 		return nil
 	}
 
-	rcfg := utils.ResolvePath(cfg, topoDir)
-	if !utils.FileExists(rcfg) {
+	rcfg := containerlabutils.ResolvePath(cfg, topoDir)
+	if !containerlabutils.FileExists(rcfg) {
 		return fmt.Errorf("node %q startup-config file not found by the path %s",
 			d.OverwriteNode.GetContainerName(), rcfg)
 	}
@@ -363,13 +363,13 @@ func (d *DefaultNode) GenerateConfig(dst, t string) error {
 		return nil
 	}
 
-	if !d.Cfg.EnforceStartupConfig && utils.FileExists(dst) {
+	if !d.Cfg.EnforceStartupConfig && containerlabutils.FileExists(dst) {
 		log.Debug("Existing config found", "node", d.Cfg.ShortName, "path", dst)
 		return nil
 	} else {
 		log.Debug("Generating config", "node", d.Cfg.ShortName, "file", d.Cfg.StartupConfig)
 
-		cfgBuf, err := utils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
+		cfgBuf, err := containerlabutils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
 		if err != nil {
 			return err
 		}
@@ -403,7 +403,7 @@ type NodeOverwrites interface {
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
-	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
+	GetContainers(ctx context.Context) ([]containerlabruntime.GenericContainer, error)
 	GetContainerName() string
 	VerifyLicenseFileExists(context.Context) error
 	RunExec(context.Context, *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error)
@@ -415,7 +415,7 @@ type NodeOverwrites interface {
 func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) error {
 	nodeCfg := node.Config()
 	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0o777)
+	containerlabutils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0o777)
 
 	if nodeCfg.StartupConfig != "" {
 		// dstCfg is a path to a file on the clab host that will have rendered configuration
@@ -470,13 +470,13 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 	if d.Config().License == "" {
 		switch d.LicensePolicy {
 		// if a license is required by the kind but not provided
-		case types.LicensePolicyRequired:
+		case containerlabtypes.LicensePolicyRequired:
 			return fmt.Errorf("node %s of kind %s requires a license. Provide one via 'license' knob in the topology file", d.Config().ShortName, d.Cfg.Kind)
-		case types.LicensePolicyWarn:
+		case containerlabtypes.LicensePolicyWarn:
 			// just warn when no license is provided
 			log.Warnf("node %s of kind %s requires a license. Make sure to provide it in some way (e.g. license knob or baked into image)", d.Config().ShortName, d.Cfg.Kind)
 			return nil
-		case types.LicensePolicyNone:
+		case containerlabtypes.LicensePolicyNone:
 			// license is not required
 			return nil
 		default:
@@ -485,8 +485,8 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 		}
 	}
 	// if license is provided check path exists
-	rlic := utils.ResolvePath(d.Config().License, d.Cfg.LabDir)
-	if !utils.FileExists(rlic) {
+	rlic := containerlabutils.ResolvePath(d.Config().License, d.Cfg.LabDir)
+	if !containerlabutils.FileExists(rlic) {
 		return fmt.Errorf("license file for node %q is not found by the path %s", d.Config().ShortName, rlic)
 	}
 
@@ -495,7 +495,7 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 
 // LoadOrGenerateCertificate loads a certificate using a certificate storage provider
 // provided in certInfra or generates a new one if it does not exist.
-func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName string) (nodeCert *cert.Certificate, err error) {
+func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *containerlabcert.Cert, topoName string) (nodeCert *containerlabcert.Certificate, err error) {
 	// early return if certificate generation is not required
 	if d.Cfg.Certificate == nil || !*d.Cfg.Certificate.Issue {
 		return nil, nil
@@ -523,7 +523,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 			}
 		}
 
-		certInput := &cert.NodeCSRInput{
+		certInput := &containerlabcert.NodeCSRInput{
 			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
 			Hosts:        hosts,
 			Organization: "containerlab",
@@ -547,27 +547,27 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 	return nodeCert, nil
 }
 
-func (d *DefaultNode) GetHostsEntries(ctx context.Context) (types.HostEntries, error) {
+func (d *DefaultNode) GetHostsEntries(ctx context.Context) (containerlabtypes.HostEntries, error) {
 	containers, err := d.OverwriteNode.GetContainers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result := types.HostEntries{}
+	result := containerlabtypes.HostEntries{}
 
 	for idx := range containers {
 		if len(containers[idx].Names) == 0 {
 			continue
 		}
 		if containers[idx].NetworkSettings.IPv4addr != "" {
-			result = append(result, types.NewHostEntry(
+			result = append(result, containerlabtypes.NewHostEntry(
 				containers[idx].NetworkSettings.IPv4addr,
-				containers[idx].Names[0], types.IpVersionV4).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+				containers[idx].Names[0], containerlabtypes.IpVersionV4).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
 		}
 		if containers[idx].NetworkSettings.IPv6addr != "" {
-			result = append(result, types.NewHostEntry(
+			result = append(result, containerlabtypes.NewHostEntry(
 				containers[idx].NetworkSettings.IPv6addr,
-				containers[idx].Names[0], types.IpVersionV6).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+				containers[idx].Names[0], containerlabtypes.IpVersionV6).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
 		}
 	}
 	return result, nil
@@ -626,7 +626,7 @@ func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) 
 }
 
 // AddEndpoint maps the endpoint name to before adding it to the node endpoints if it matches the interface alias regexp. Returns an error if the mapping goes wrong.
-func (d *DefaultNode) AddEndpoint(e links.Endpoint) error {
+func (d *DefaultNode) AddEndpoint(e containerlablinks.Endpoint) error {
 	endpointName := e.GetIfaceName()
 	if d.InterfaceRegexp != nil && d.InterfaceRegexp.MatchString(endpointName) {
 		mappedName, err := d.OverwriteNode.GetMappedInterfaceName(endpointName)
@@ -642,14 +642,14 @@ func (d *DefaultNode) AddEndpoint(e links.Endpoint) error {
 	return nil
 }
 
-func (d *DefaultNode) GetEndpoints() []links.Endpoint {
+func (d *DefaultNode) GetEndpoints() []containerlablinks.Endpoint {
 	return d.Endpoints
 }
 
 // GetLinkEndpointType returns a veth link endpoint type for default nodes.
 // The LinkEndpointTypeVeth indicates a veth endpoint which doesn't require special handling.
-func (*DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
-	return links.LinkEndpointTypeVeth
+func (*DefaultNode) GetLinkEndpointType() containerlablinks.LinkEndpointType {
+	return containerlablinks.LinkEndpointTypeVeth
 }
 
 func (d *DefaultNode) GetShortName() string {
@@ -669,23 +669,23 @@ func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 	return nil
 }
 
-func (d *DefaultNode) GetState() state.NodeState {
+func (d *DefaultNode) GetState() containerlabnodesstate.NodeState {
 	d.statemutex.RLock()
 	defer d.statemutex.RUnlock()
 	return d.state
 }
 
-func (d *DefaultNode) SetState(s state.NodeState) {
+func (d *DefaultNode) SetState(s containerlabnodesstate.NodeState) {
 	d.statemutex.Lock()
 	defer d.statemutex.Unlock()
 	d.state = s
 }
 
-func (d *DefaultNode) GetSSHConfig() *types.SSHConfig {
+func (d *DefaultNode) GetSSHConfig() *containerlabtypes.SSHConfig {
 	return d.SSHConfig
 }
 
-func (d *DefaultNode) GetContainerStatus(ctx context.Context) runtime.ContainerStatus {
+func (d *DefaultNode) GetContainerStatus(ctx context.Context) containerlabruntime.ContainerStatus {
 	return d.Runtime.GetContainerStatus(ctx, d.GetContainerName())
 }
 

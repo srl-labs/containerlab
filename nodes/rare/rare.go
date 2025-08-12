@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var kindNames = []string{"rare"}
@@ -35,7 +35,7 @@ type rare struct {
 	nodes.DefaultNode
 }
 
-func (n *rare) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *rare) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 
@@ -57,7 +57,7 @@ func (n *rare) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -69,7 +69,7 @@ func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 func (n *rare) createRAREFiles() error {
 	nodeCfg := n.Config()
 	// create "run" directory that will be bind mounted to rare node
-	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0o777)
+	containerlabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0o777)
 
 	return nil
 }

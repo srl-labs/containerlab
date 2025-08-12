@@ -12,14 +12,14 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	containerlabexec "github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -35,24 +35,24 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() containerlabnodes.Node {
 		return new(bridge)
 	}, nrea)
 }
 
 type bridge struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 	containerNs string
-	nodesMap    map[string]nodes.Node
+	nodesMap    map[string]containerlabnodes.Node
 }
 
-func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (s *bridge) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	s.DefaultNode = *containerlabnodes.NewDefaultNode(s)
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -62,7 +62,7 @@ func (s *bridge) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.Cfg.IsRootNamespaceBased = true
 	} else {
 		var err error
-		s.containerNs, err = utils.ContainerNameFromNetworkMode(s.Config().NetworkMode)
+		s.containerNs, err = containerlabutils.ContainerNameFromNetworkMode(s.Config().NetworkMode)
 		if err != nil {
 			return err
 		}
@@ -81,13 +81,13 @@ func (n *bridge) nameWithoutSeparatorSuffix() string {
 	return s
 }
 
-func (n *bridge) Deploy(ctx context.Context, dp *nodes.DeployParams) error {
+func (n *bridge) Deploy(ctx context.Context, dp *containerlabnodes.DeployParams) error {
 	// store nodes map for later use
 	n.nodesMap = dp.Nodes
 
 	// if the NetworkMode is set, then the bridge is setup within a namespace, so it must be created.
 	if n.Config().NetworkMode != "" {
-		cntName, err := utils.ContainerNameFromNetworkMode(n.Config().NetworkMode)
+		cntName, err := containerlabutils.ContainerNameFromNetworkMode(n.Config().NetworkMode)
 		if err != nil {
 			return err
 		}
@@ -117,7 +117,7 @@ func (n *bridge) Deploy(ctx context.Context, dp *nodes.DeployParams) error {
 			return err
 		}
 	}
-	n.SetState(state.Deployed)
+	n.SetState(containerlabnodesstate.Deployed)
 	return nil
 }
 
@@ -132,7 +132,7 @@ func (*bridge) GetImages(_ context.Context) map[string]string { return map[strin
 // DeleteNetnsSymlink is a noop for bridge nodes.
 func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
-func (b *bridge) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
+func (b *bridge) PostDeploy(_ context.Context, _ *containerlabnodes.PostDeployParams) error {
 	if b.containerNs != "" {
 		return nil
 	}
@@ -171,7 +171,7 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	if b.containerNs == "" {
 		err = b.ExecFunction(ctx, func(nn ns.NetNS) error {
 			// check bridge exists
-			_, err = utils.BridgeByName(b.nameWithoutSeparatorSuffix())
+			_, err = containerlabutils.BridgeByName(b.nameWithoutSeparatorSuffix())
 			if err != nil {
 				return err
 			}
@@ -188,7 +188,9 @@ func (*bridge) PullImage(_ context.Context) error { return nil }
 func (*bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers is a noop for bridges.
-func (*bridge) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) { return nil, nil }
+func (*bridge) GetContainers(_ context.Context) ([]containerlabruntime.GenericContainer, error) {
+	return nil, nil
+}
 
 // RunExec is a noop for bridge kind.
 func (b *bridge) RunExec(_ context.Context, _ *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
@@ -204,7 +206,7 @@ func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f fu
 }
 
 func (b *bridge) addLinkToContainerNamespace(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
-	cntName, err := utils.ContainerNameFromNetworkMode(b.Config().NetworkMode)
+	cntName, err := containerlabutils.ContainerNameFromNetworkMode(b.Config().NetworkMode)
 	if err != nil {
 		return err
 	}
@@ -250,11 +252,11 @@ func (b *bridge) addLinkToContainerHost(_ context.Context, link netlink.Link, f 
 	return curNamespace.Do(f)
 }
 
-func (b *bridge) GetLinkEndpointType() links.LinkEndpointType {
+func (b *bridge) GetLinkEndpointType() containerlablinks.LinkEndpointType {
 	if b.containerNs != "" {
-		return links.LinkEndpointTypeBridgeNS
+		return containerlablinks.LinkEndpointTypeBridgeNS
 	}
-	return links.LinkEndpointTypeBridge
+	return containerlablinks.LinkEndpointTypeBridge
 }
 
 // installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed in and out of the bridge

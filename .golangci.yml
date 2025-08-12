@@ -92,10 +92,10 @@ linters:
       - legacy
       - std-error-handling
     rules:
-      # temporarily disabling importas on some packages to slowly roll this out
-      - linters:
-          - importas
-        path: nodes/
+      # # temporarily disabling importas on some packages to slowly roll this out
+      # - linters:
+      #     - importas
+      #   path: nodes/
       # we *care* about tests, but... like less :P
       - linters:
           - mnd

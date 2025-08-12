@@ -14,8 +14,8 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime/ignite"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/weaveworks/ignite/pkg/operations"
 )
 
@@ -41,7 +41,7 @@ type linux struct {
 	vmChans *operations.VMChannels
 }
 
-func (n *linux) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *linux) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	n.Cfg = cfg
@@ -71,7 +71,7 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 	// Set the "CLAB_INTFS" variable to the number of interfaces
 	// Which is required by vrnetlab to determine if all configured interfaces are present
 	// such that the internal VM can be started with these interfaces assigned.
-	n.Config().Env[types.CLAB_ENV_INTFS] = strconv.Itoa(len(n.GetEndpoints()))
+	n.Config().Env[containerlabtypes.CLAB_ENV_INTFS] = strconv.Itoa(len(n.GetEndpoints()))
 
 	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
 	if err != nil {
@@ -91,7 +91,7 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 func (n *linux) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
 
-	err := n.ExecFunction(ctx, utils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
+	err := n.ExecFunction(ctx, containerlabutils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
 	if err != nil {
 		log.Error(err)
 	}

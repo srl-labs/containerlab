@@ -16,15 +16,15 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/netconf"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabnetconf "github.com/srl-labs/containerlab/netconf"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindNames          = []string{"xrd", "cisco_xrd"}
-	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
+	defaultCredentials = containerlabnodes.NewCredentials("clab", "clab@123")
 	xrdEnv             = map[string]string{
 		"XR_FIRST_BOOT_CONFIG": "/etc/xrd/first-boot.cfg",
 		"XR_MGMT_INTERFACES":   "linux:eth0,xr_name=Mg0/RP0/CPU0/0,chksum,snoop_v4,snoop_v6",
@@ -34,7 +34,8 @@ var (
 	//go:embed mgmt_intf_v6_addr.sh.tmpl
 	scriptTemplate string
 
-	xrdMgmtScriptTpl, _ = template.New("clab-xrd-mgmt-ipv6-script").Funcs(utils.CreateFuncs()).Parse(scriptTemplate)
+	xrdMgmtScriptTpl, _ = template.New("clab-xrd-mgmt-ipv6-script").Funcs(
+		containerlabutils.CreateFuncs()).Parse(scriptTemplate)
 
 	//go:embed xrd.cfg
 	cfgTemplate string
@@ -49,27 +50,27 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &containerlabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() containerlabnodes.Node {
 		return new(xrd)
 	}, nrea)
 }
 
 type xrd struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 }
 
-func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *xrd) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -88,10 +89,10 @@ func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *xrd) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
+func (n *xrd) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeployParams) error {
 	n.genInterfacesEnv()
 
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -101,7 +102,7 @@ func (n *xrd) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 	return n.createXRDFiles(ctx)
 }
 
-func (n *xrd) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
+func (n *xrd) PostDeploy(_ context.Context, _ *containerlabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco XRd '%s' node", n.Cfg.ShortName)
 
 	// create interface script template
@@ -117,13 +118,13 @@ func (n *xrd) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 		return err
 	}
 	// write it to disk
-	utils.CreateFile(filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh"), buf.String())
+	containerlabutils.CreateFile(filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh"), buf.String())
 
 	return err
 }
 
 func (n *xrd) SaveConfig(_ context.Context) error {
-	err := netconf.SaveRunningConfig(n.Cfg.LongName,
+	err := containerlabnetconf.SaveRunningConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -139,7 +140,7 @@ func (n *xrd) SaveConfig(_ context.Context) error {
 func (n *xrd) createXRDFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate xr-storage directory
-	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"), 0o777)
+	containerlabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"), 0o777)
 	// generate first-boot config
 	cfg := filepath.Join(n.Cfg.LabDir, "first-boot.cfg")
 	nodeCfg.ResStartupConfig = cfg
@@ -147,8 +148,8 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	mgmt_script_path := filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh")
 
 	// generate script file
-	if !utils.FileExists(mgmt_script_path) {
-		utils.CreateFile(mgmt_script_path, "")
+	if !containerlabutils.FileExists(mgmt_script_path) {
+		containerlabutils.CreateFile(mgmt_script_path, "")
 		os.Chmod(mgmt_script_path, 0o775) // skipcq: GSC-G302
 	}
 
@@ -189,7 +190,7 @@ func (n *xrd) genInterfacesEnv() {
 
 	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvVar}
 
-	n.Cfg.Env = utils.MergeStringMaps(xrdEnv, interfaceEnv, n.Cfg.Env)
+	n.Cfg.Env = containerlabutils.MergeStringMaps(xrdEnv, interfaceEnv, n.Cfg.Env)
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.

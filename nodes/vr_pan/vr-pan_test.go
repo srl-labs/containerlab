@@ -3,39 +3,39 @@ package vr_pan
 import (
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestPANInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*links.EndpointVeth
+		endpoints []*containerlablinks.EndpointVeth
 		node      *vrPan
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "Ethernet1/1",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "Ethernet1/3",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "Ethernet1/5",
 					},
 				},
 			},
 			node: &vrPan{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: containerlabnodes.VRNode{
+					DefaultNode: containerlabnodes.DefaultNode{
+						Cfg: &containerlabtypes.NodeConfig{
 							ShortName: "pan",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -48,27 +48,27 @@ func TestPANInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},
 			},
 			node: &vrPan{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: containerlabnodes.VRNode{
+					DefaultNode: containerlabnodes.DefaultNode{
+						Cfg: &containerlabtypes.NodeConfig{
 							ShortName: "pan",
 						},
 						InterfaceRegexp: InterfaceRegexp,

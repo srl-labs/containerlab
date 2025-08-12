@@ -13,10 +13,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -40,34 +40,34 @@ var (
 	//go:embed sshd_config
 	sshdCfg string
 
-	defaultCredentials = nodes.NewCredentials("root", "clab123")
+	defaultCredentials = containerlabnodes.NewCredentials("root", "clab123")
 
 	saveCmd       = "cli show conf"
 	sshRestartCmd = "service ssh restart"
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformOpts := &nodes.PlatformAttrs{
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformOpts := &containerlabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() containerlabnodes.Node {
 		return new(crpd)
 	}, nrea)
 }
 
 type crpd struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 }
 
-func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (s *crpd) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	s.DefaultNode = *containerlabnodes.NewDefaultNode(s)
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -85,8 +85,8 @@ func (s *crpd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *crpd) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0o777)
+func (s *crpd) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
+	containerlabutils.CreateDirectory(s.Cfg.LabDir, 0o777)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -94,10 +94,10 @@ func (s *crpd) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 	return createCRPDFiles(s)
 }
 
-func (s *crpd) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+func (s *crpd) PostDeploy(ctx context.Context, _ *containerlabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for CRPD %q node", s.Cfg.ShortName)
 
-	cmd, _ := exec.NewExecCmdFromString(sshRestartCmd)
+	cmd, _ := containerlabexec.NewExecCmdFromString(sshRestartCmd)
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -115,7 +115,8 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error 
 	}
 
 	if s.Config().License != "" {
-		cmd, _ = exec.NewExecCmdFromString(fmt.Sprintf("cli request system license add %s", filepath.Join(licDir, licFile)))
+		cmd, _ = containerlabexec.NewExecCmdFromString(
+			fmt.Sprintf("cli request system license add %s", filepath.Join(licDir, licFile)))
 		execResult, err = s.RunExec(ctx, cmd)
 		if err != nil {
 			return err
@@ -131,7 +132,7 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error 
 }
 
 func (s *crpd) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	cmd, _ := containerlabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -152,11 +153,11 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-func createCRPDFiles(node nodes.Node) error {
+func createCRPDFiles(node containerlabnodes.Node) error {
 	nodeCfg := node.Config()
 	// create config and logs directory that will be bind mounted to crpd
-	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"), 0o777)
-	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"), 0o777)
+	containerlabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"), 0o777)
+	containerlabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"), 0o777)
 
 	// copy crpd config from default template or user-provided conf file
 	cfg := filepath.Join(nodeCfg.LabDir, "config", "juniper.conf")
@@ -184,7 +185,7 @@ func createCRPDFiles(node nodes.Node) error {
 	// versions the config file is placed in /var/etc/sshd_config and is owned
 	// by MGD.
 	dst := filepath.Join(nodeCfg.LabDir, "config", "sshd_config")
-	err = utils.CreateFile(dst, sshdCfg)
+	err = containerlabutils.CreateFile(dst, sshdCfg)
 	if err != nil {
 		return fmt.Errorf("failed to write sshd_config file %v", err)
 	}
@@ -199,7 +200,7 @@ func createCRPDFiles(node nodes.Node) error {
 			return err
 		}
 
-		if err = utils.CopyFile(context.Background(), src, dst, 0o644); err != nil {
+		if err = containerlabutils.CopyFile(context.Background(), src, dst, 0o644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

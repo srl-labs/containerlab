@@ -26,8 +26,8 @@ import (
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -128,10 +128,10 @@ var (
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
-	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(utils.CreateFuncs()).
+	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(containerlabutils.CreateFuncs()).
 			Parse(srlConfigCmdsTpl)
 
-	requiredKernelVersion = &utils.KernelVersion{
+	requiredKernelVersion = &containerlabutils.KernelVersion{
 		Major:    4,
 		Minor:    10,
 		Revision: 0,
@@ -170,20 +170,20 @@ type srl struct {
 	swVersion *SrlVersion
 }
 
-func (n *srl) Init(cfg *types.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *srl) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.SSSE3 = true
 	n.HostRequirements.MinVCPU = 2
-	n.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
+	n.HostRequirements.MinVCPUFailAction = containerlabtypes.FailBehaviourError
 	n.HostRequirements.MinAvailMemoryGb = 2
-	n.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
+	n.HostRequirements.MinAvailMemoryGbFailAction = containerlabtypes.FailBehaviourLog
 
 	n.Cfg = cfg
 
 	// force cert creation for srlinux nodes as they by make use of tls certificate in the default config
-	n.Cfg.Certificate.Issue = utils.Pointer(true)
+	n.Cfg.Certificate.Issue = containerlabutils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
@@ -212,7 +212,7 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...containerlabnodes.NodeOption) 
 		n.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
-	n.Cfg.Env = utils.MergeStringMaps(srlEnv, n.Cfg.Env)
+	n.Cfg.Env = containerlabutils.MergeStringMaps(srlEnv, n.Cfg.Env)
 
 	// if user was not initialized to a value, use root
 	if n.Cfg.User == "" {
@@ -237,7 +237,7 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...containerlabnodes.NodeOption) 
 	dstTopoPath := "/tmp/topology.yml"
 	// if a user provided a topology file, it means that they want to use a custom srl topology file
 	// in that case we do not need to mount the one for the provided type
-	if !utils.DestinationBindMountExists(n.Cfg.Binds, dstTopoPath) {
+	if !containerlabutils.DestinationBindMountExists(n.Cfg.Binds, dstTopoPath) {
 		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(srcTopoPath, ":", dstTopoPath, ":ro"))
 	}
 
@@ -248,21 +248,21 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...containerlabnodes.NodeOption) 
 }
 
 func (n *srl) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if n.Cfg.Extras != nil && len(n.Cfg.Extras.SRLAgents) != 0 {
 		agents := n.Cfg.Extras.SRLAgents
 
 		appmgr := filepath.Join(n.Cfg.LabDir, "config", "appmgr")
-		utils.CreateDirectory(appmgr, 0o777)
+		containerlabutils.CreateDirectory(appmgr, 0o777)
 
 		// process extras -> agents configurations
 		for _, fullpath := range agents {
 			basename := filepath.Base(fullpath)
 			// if it is a url extract filename from url or content-disposition header
-			if utils.IsHttpURL(fullpath, false) {
-				basename = utils.FilenameForURL(ctx, fullpath)
+			if containerlabutils.IsHttpURL(fullpath, false) {
+				basename = containerlabutils.FilenameForURL(ctx, fullpath)
 			}
 			// enforce yml extension
 			ext := filepath.Ext(basename)
@@ -271,7 +271,7 @@ func (n *srl) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeploy
 			}
 
 			dst := filepath.Join(appmgr, basename)
-			if err := utils.CopyFile(ctx, fullpath, dst, 0o644); err != nil {
+			if err := containerlabutils.CopyFile(ctx, fullpath, dst, 0o644); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
 			}
 		}
@@ -321,7 +321,7 @@ func (n *srl) PostDeploy(ctx context.Context, params *containerlabnodes.PostDepl
 	// return if config file is found in the lab directory.
 	// This can be either if the startup-config has been mounted by that path
 	// or the config has been previously generated and saved
-	if utils.FileExists(filepath.Join(n.Cfg.LabDir, "config", "config.json")) {
+	if containerlabutils.FileExists(filepath.Join(n.Cfg.LabDir, "config", "config.json")) {
 		return nil
 	}
 
@@ -433,7 +433,7 @@ func (n *srl) Ready(ctx context.Context) error {
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
 func (*srl) checkKernelVersion() error {
 	// retrieve running kernel version
-	kv, err := utils.GetKernelVersion()
+	kv, err := containerlabutils.GetKernelVersion()
 	if err != nil {
 		return err
 	}
@@ -463,7 +463,7 @@ func (n *srl) createSRLFiles() error {
 		// copy license file to node specific directory in lab
 		src = n.Cfg.License
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(context.Background(), src, licPath, 0o644); err != nil {
+		if err := containerlabutils.CopyFile(context.Background(), src, licPath, 0o644); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
@@ -475,7 +475,7 @@ func (n *srl) createSRLFiles() error {
 		return err
 	}
 
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0o777)
+	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0o777)
 
 	// create repository files (for yum/apt) that
 	// are mounted to srl container during the init phase
@@ -497,7 +497,7 @@ func (n *srl) createSRLFiles() error {
 			return err
 		}
 
-		cBuf, err := utils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		cBuf, err := containerlabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
 		if err != nil {
 			return err
 		}
@@ -534,7 +534,7 @@ func (n *srl) createSRLFiles() error {
 	return err
 }
 
-func generateSRLTopologyFile(cfg *types.NodeConfig) error {
+func generateSRLTopologyFile(cfg *containerlabtypes.NodeConfig) error {
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
 	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
@@ -835,7 +835,7 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]containerlabno
 }
 
 func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
-	captureGroups, err := utils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
+	captureGroups, err := containerlabutils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
 	if err != nil {
 		return "", err
 	}
@@ -907,13 +907,13 @@ gpgcheck=0`
 	aptRepo := `deb [trusted=yes] https://srlinux.fury.site/apt/ /`
 
 	yumPath := n.Cfg.LabDir + "/yum.repo"
-	err := utils.CreateFile(yumPath, yumRepo)
+	err := containerlabutils.CreateFile(yumPath, yumRepo)
 	if err != nil {
 		return err
 	}
 
 	aptPath := n.Cfg.LabDir + "/apt.list"
-	err = utils.CreateFile(aptPath, aptRepo)
+	err = containerlabutils.CreateFile(aptPath, aptRepo)
 	if err != nil {
 		return err
 	}

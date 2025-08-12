@@ -3,31 +3,31 @@ package vr_freebsd
 import (
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
+	containerlablinks "github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
 
 func TestFreeBSDInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*links.EndpointVeth
+		endpoints []*containerlablinks.EndpointVeth
 		node      *vrFreeBSD
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "vtnet1",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "vtnet3",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "vtnet5",
 					},
 				},
@@ -48,19 +48,19 @@ func TestFreeBSDInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},

@@ -14,8 +14,8 @@ import (
 
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -52,7 +52,7 @@ type sonic_vm struct {
 	nodes.DefaultNode
 }
 
-func (n *sonic_vm) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *sonic_vm) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	// set virtualization requirement
@@ -70,7 +70,7 @@ func (n *sonic_vm) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = containerlabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
@@ -82,7 +82,7 @@ func (n *sonic_vm) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (n *sonic_vm) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		log.Errorf("Error handling certifcate for %s: %v", n.Cfg.ShortName, err)

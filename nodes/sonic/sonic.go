@@ -11,8 +11,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -42,7 +42,7 @@ type sonic struct {
 	nodes.DefaultNode
 }
 
-func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (s *sonic) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	s.DefaultNode = *nodes.NewDefaultNode(s)
 
@@ -57,7 +57,7 @@ func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 }
 
 func (s *sonic) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0o777)
+	containerlabutils.CreateDirectory(s.Cfg.LabDir, 0o777)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil

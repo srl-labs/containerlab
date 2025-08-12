@@ -17,10 +17,10 @@ import (
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -35,24 +35,24 @@ var (
 	vsrConfigCmdsTpl string
 
 	kindnames          = []string{"6wind_vsr"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
-	vsrCfgTpl, _       = template.New("clab-vsr-default-config").Funcs(utils.CreateFuncs()).
+	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin")
+	vsrCfgTpl, _       = template.New("clab-vsr-default-config").Funcs(containerlabutils.CreateFuncs()).
 				Parse(vsrConfigCmdsTpl)
 	saveCmd = `bash -c "echo 'show config nodefault fullpath' | nc-cli"`
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindnames, func() containerlabnodes.Node {
 		return new(sixwind_vsr)
 	}, nrea)
 }
 
 type sixwind_vsr struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
@@ -61,17 +61,17 @@ type sixwind_vsr struct {
 	UserStartupConfig  string
 }
 
-func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
+func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeployParams) error {
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
 
 	// If user-defined startup exists, copy it into the Consolidated config file
-	if utils.FileExists(n.UserStartupConfig) {
-		utils.CopyFile(ctx, n.UserStartupConfig, n.ConsolidatedConfig, 0o644)
+	if containerlabutils.FileExists(n.UserStartupConfig) {
+		containerlabutils.CopyFile(ctx, n.UserStartupConfig, n.ConsolidatedConfig, 0o644)
 	} else {
 		if n.Cfg.StartupConfig != "" {
 			// Copy startup-config in the Labdir
-			utils.CopyFile(ctx, n.Cfg.StartupConfig, n.ConsolidatedConfig, 0o644)
+			containerlabutils.CopyFile(ctx, n.Cfg.StartupConfig, n.ConsolidatedConfig, 0o644)
 		}
 		// Consolidate the startup config with the default template
 		if err := n.addDefaultConfig(ctx); err != nil {
@@ -82,9 +82,9 @@ func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *nodes.PreDeployPara
 	return nil
 }
 
-func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *sixwind_vsr) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
 	// Default value for 6WIND VSR
@@ -115,9 +115,9 @@ func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) erro
 	)
 
 	// Creating if-wait script in lab dir
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	n.itfwaitpath = path.Join(n.Cfg.LabDir, "if-wait.sh")
-	utils.CreateFile(n.itfwaitpath, utils.IfWaitScript)
+	containerlabutils.CreateFile(n.itfwaitpath, containerlabutils.IfWaitScript)
 	os.Chmod(n.itfwaitpath, 0o777)
 
 	// Adding if-wait.sh script to the filesystem
@@ -145,7 +145,7 @@ func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) erro
 }
 
 func (n *sixwind_vsr) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	cmd, _ := containerlabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -205,7 +205,7 @@ func (n *sixwind_vsr) addDefaultConfig(_ context.Context) error {
 	// tplData holds data used in templating of the default config snippet
 	tplData := vsrTemplateData{
 		Banner:     banner,
-		SSHPubKeys: utils.MarshalSSHPubKeys(n.sshPubKeys),
+		SSHPubKeys: containerlabutils.MarshalSSHPubKeys(n.sshPubKeys),
 	}
 
 	if n.Cfg.License != "" {

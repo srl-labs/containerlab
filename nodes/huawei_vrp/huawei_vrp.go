@@ -9,8 +9,8 @@ import (
 	"path"
 
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -43,7 +43,7 @@ type huawei_vrp struct {
 	nodes.VRNode
 }
 
-func (n *huawei_vrp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *huawei_vrp) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init VRNode
 	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
@@ -63,7 +63,7 @@ func (n *huawei_vrp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error
 		"VCPU":               "2",
 		"RAM":                "2048",
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = containerlabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))

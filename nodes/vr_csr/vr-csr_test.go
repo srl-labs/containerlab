@@ -3,31 +3,31 @@ package vr_csr
 import (
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
+	containerlablinks "github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/types"
 )
 
 func TestCSRInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*links.EndpointVeth
+		endpoints []*containerlablinks.EndpointVeth
 		node      *vrCsr
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "Gi2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet 6",
 					},
 				},
@@ -48,19 +48,19 @@ func TestCSRInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},

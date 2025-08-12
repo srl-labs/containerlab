@@ -17,8 +17,8 @@ import (
 
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -66,7 +66,7 @@ type fdio_vpp struct {
 	vppCfgSrcPath string
 }
 
-func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *fdio_vpp) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *nodes.NewDefaultNode(n)
 	n.Cfg = cfg
@@ -116,8 +116,8 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
 	nodeCfg := n.Config()
 
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
-	utils.CreateFile(n.ifWaitSrcPath, utils.IfWaitScript)
+	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	containerlabutils.CreateFile(n.ifWaitSrcPath, containerlabutils.IfWaitScript)
 	os.Chmod(n.ifWaitSrcPath, 0o777)
 
 	// record pubkeys extracted by clab
@@ -183,7 +183,7 @@ func (n *fdio_vpp) PostDeploy(ctx context.Context, params *nodes.PostDeployParam
 	// add public keys extracted by containerlab from the host
 	// to the vpp's root linux user authorized keys
 	// to enable passwordless ssh
-	keys := strings.Join(utils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
+	keys := strings.Join(containerlabutils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
 	execCmd := exec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", keys, targetAuthzKeysPath),

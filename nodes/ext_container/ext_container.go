@@ -11,7 +11,7 @@ import (
 	"github.com/srl-labs/containerlab/nodes"
 	"github.com/srl-labs/containerlab/nodes/state"
 	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var kindnames = []string{"ext-container"}
@@ -27,7 +27,7 @@ type extcont struct {
 	nodes.DefaultNode
 }
 
-func (s *extcont) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (s *extcont) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
 	s.DefaultNode = *nodes.NewDefaultNode(s)
 	s.Cfg = cfg
 	for _, o := range opts {

@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/netconf"
-	"github.com/srl-labs/containerlab/types"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
 )
 
@@ -42,7 +42,7 @@ func NewVRNode(n NodeOverwrites, creds *Credentials, scrapliPlatformName string)
 }
 
 // Init stub function.
-func (n *VRNode) Init(cfg *types.NodeConfig, opts ...NodeOption) error {
+func (n *VRNode) Init(cfg *containerlabtypes.NodeConfig, opts ...NodeOption) error {
 	return nil
 }
 
