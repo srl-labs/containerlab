@@ -4,17 +4,17 @@ import (
 	"strings"
 
 	"github.com/docker/go-connections/nat"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // Topology represents a lab topology.
 type Topology struct {
-	Defaults *NodeDefinition                     `yaml:"defaults,omitempty"`
-	Kinds    map[string]*NodeDefinition          `yaml:"kinds,omitempty"`
-	Nodes    map[string]*NodeDefinition          `yaml:"nodes,omitempty"`
-	Links    []*containerlablinks.LinkDefinition `yaml:"links,omitempty"`
-	Groups   map[string]*NodeDefinition          `yaml:"groups,omitempty"`
+	Defaults *NodeDefinition             `yaml:"defaults,omitempty"`
+	Kinds    map[string]*NodeDefinition  `yaml:"kinds,omitempty"`
+	Nodes    map[string]*NodeDefinition  `yaml:"nodes,omitempty"`
+	Links    []*clablinks.LinkDefinition `yaml:"links,omitempty"`
+	Groups   map[string]*NodeDefinition  `yaml:"groups,omitempty"`
 }
 
 // NewTopology creates a new Topology instance with initialized fields.
@@ -23,7 +23,7 @@ func NewTopology() *Topology {
 		Defaults: new(NodeDefinition),
 		Kinds:    make(map[string]*NodeDefinition),
 		Nodes:    make(map[string]*NodeDefinition),
-		Links:    make([]*containerlablinks.LinkDefinition, 0),
+		Links:    make([]*clablinks.LinkDefinition, 0),
 		Groups:   make(map[string]*NodeDefinition),
 	}
 }
@@ -162,8 +162,8 @@ func (t *Topology) GetNodePorts(name string) (nat.PortSet, nat.PortMap, error) {
 
 func (t *Topology) GetNodeEnv(name string) map[string]string {
 	if ndef, ok := t.Nodes[name]; ok {
-		return containerlabutils.MergeStringMaps(
-			containerlabutils.MergeStringMaps(t.GetDefaults().GetEnv(),
+		return clabutils.MergeStringMaps(
+			clabutils.MergeStringMaps(t.GetDefaults().GetEnv(),
 				t.GetKind(t.GetNodeKind(name)).GetEnv(),
 				t.GetGroup(t.GetNodeGroup(name)).GetEnv()),
 			ndef.GetEnv())
@@ -173,8 +173,8 @@ func (t *Topology) GetNodeEnv(name string) map[string]string {
 
 func (t *Topology) GetNodeEnvFiles(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-		return containerlabutils.MergeStringSlices(
-			containerlabutils.MergeStringSlices(t.GetDefaults().GetEnvFiles(),
+		return clabutils.MergeStringSlices(
+			clabutils.MergeStringSlices(t.GetDefaults().GetEnvFiles(),
 				t.GetKind(t.GetNodeKind(name)).GetEnvFiles(),
 				t.GetGroup(t.GetNodeGroup(name)).GetEnvFiles()),
 			ndef.GetEnvFiles())
@@ -184,7 +184,7 @@ func (t *Topology) GetNodeEnvFiles(name string) []string {
 
 func (t *Topology) GetNodeLabels(name string) map[string]string {
 	if ndef, ok := t.Nodes[name]; ok {
-		return containerlabutils.MergeStringMaps(t.Defaults.GetLabels(),
+		return clabutils.MergeStringMaps(t.Defaults.GetLabels(),
 			t.GetKind(t.GetNodeKind(name)).GetLabels(),
 			t.GetGroup(t.GetNodeGroup(name)).GetLabels(),
 			ndef.GetLabels())
@@ -194,7 +194,7 @@ func (t *Topology) GetNodeLabels(name string) map[string]string {
 
 func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 	if ndef, ok := t.Nodes[name]; ok {
-		vars := containerlabutils.MergeMaps(t.Defaults.GetConfigDispatcher().GetVars(),
+		vars := clabutils.MergeMaps(t.Defaults.GetConfigDispatcher().GetVars(),
 			t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars(),
 			t.GetGroup(t.GetNodeGroup(name)).GetConfigDispatcher().GetVars(),
 			ndef.GetConfigDispatcher().GetVars())
@@ -209,8 +209,8 @@ func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
 
 func (t *Topology) GetNodeDevices(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-		return containerlabutils.MergeStringSlices(
-			containerlabutils.MergeStringSlices(t.GetDefaults().GetDevices(),
+		return clabutils.MergeStringSlices(
+			clabutils.MergeStringSlices(t.GetDefaults().GetDevices(),
 				t.GetKind(t.GetNodeKind(name)).GetDevices(),
 				t.GetGroup(t.GetNodeGroup(name)).GetDevices()),
 			ndef.GetDevices())
@@ -220,8 +220,8 @@ func (t *Topology) GetNodeDevices(name string) []string {
 
 func (t *Topology) GetNodeCapAdd(name string) []string {
 	if ndef, ok := t.Nodes[name]; ok {
-		return containerlabutils.MergeStringSlices(
-			containerlabutils.MergeStringSlices(t.GetDefaults().GetCapAdd(),
+		return clabutils.MergeStringSlices(
+			clabutils.MergeStringSlices(t.GetDefaults().GetCapAdd(),
 				t.GetKind(t.GetNodeKind(name)).GetCapAdd(),
 				t.GetGroup(t.GetNodeGroup(name)).GetCapAdd()),
 			ndef.GetCapAdd())
@@ -613,8 +613,8 @@ func (t *Topology) GetNodeMemory(name string) string {
 // GetSysCtl return the Sysctl configuration for the given node.
 func (t *Topology) GetSysCtl(name string) map[string]string {
 	if ndef, ok := t.Nodes[name]; ok {
-		return containerlabutils.MergeStringMaps(
-			containerlabutils.MergeStringMaps(t.GetDefaults().GetSysctls(),
+		return clabutils.MergeStringMaps(
+			clabutils.MergeStringMaps(t.GetDefaults().GetSysctls(),
 				t.GetKind(t.GetNodeKind(name)).GetSysctls(),
 				t.GetGroup(t.GetNodeGroup(name)).GetSysctls()),
 			ndef.GetSysctls())
@@ -723,7 +723,7 @@ func (t *Topology) GetNodeDns(name string) *DNSConfig {
 func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
 	// default for issuing node certificates is false
 	cc := &CertificateConfig{
-		Issue: containerlabutils.Pointer(false),
+		Issue: clabutils.Pointer(false),
 	}
 
 	// merge defaults, kind and node certificate config into the default certificate config

@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 )
 
 type DependencyManager interface {
 	// AddNode adds a node to the dependency manager.
-	AddNode(node containerlabnodes.Node)
+	AddNode(node clabnodes.Node)
 	// GetNode gets a dependency node registered with the dependency manager.
 	GetNode(name string) (*DependencyNode, error)
 	// CheckAcyclicity checks if dependencies contain cycles.
@@ -35,7 +35,7 @@ func NewDependencyManager() DependencyManager {
 }
 
 // AddNode adds a node to the dependency manager.
-func (dm *defaultDependencyManager) AddNode(node containerlabnodes.Node) {
+func (dm *defaultDependencyManager) AddNode(node clabnodes.Node) {
 	dm.nodes[node.GetShortName()] = NewDependencyNode(node)
 }
 

@@ -3,39 +3,39 @@ package vr_vjunosswitch
 import (
 	"testing"
 
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestVJUNOSSWITCHInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*containerlablinks.EndpointVeth
+		endpoints []*clablinks.EndpointVeth
 		node      *vrVJUNOSSWITCH
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/2",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/4",
 					},
 				},
 			},
 			node: &vrVJUNOSSWITCH{
-				VRNode: containerlabnodes.VRNode{
-					DefaultNode: containerlabnodes.DefaultNode{
-						Cfg: &containerlabtypes.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "vjunosswitch",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -48,27 +48,27 @@ func TestVJUNOSSWITCHInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},
 			},
 			node: &vrVJUNOSSWITCH{
-				VRNode: containerlabnodes.VRNode{
-					DefaultNode: containerlabnodes.DefaultNode{
-						Cfg: &containerlabtypes.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "vjunosswitch",
 						},
 						InterfaceRegexp: InterfaceRegexp,

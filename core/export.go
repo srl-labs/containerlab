@@ -12,8 +12,8 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // GenerateExports generates various export files and writes it to a file in the lab directory.
@@ -39,8 +39,8 @@ type TopologyExport struct {
 	Type string `json:"type"`
 	Clab *CLab  `json:"clab,omitempty"`
 	// SSHPubKeys is a list of string representations of SSH public keys.
-	SSHPubKeys  []string                                 `json:"SSHPubKeys,omitempty"`
-	NodeConfigs map[string]*containerlabtypes.NodeConfig `json:"nodeconfigs,omitempty"`
+	SSHPubKeys  []string                         `json:"SSHPubKeys,omitempty"`
+	NodeConfigs map[string]*clabtypes.NodeConfig `json:"nodeconfigs,omitempty"`
 }
 
 //go:embed export_templates/auto.tmpl
@@ -57,7 +57,7 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 	}
 
 	t := template.New(name).
-		Funcs(containerlabutils.CreateFuncs())
+		Funcs(clabutils.CreateFuncs())
 
 	var err error
 
@@ -78,8 +78,8 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 		Name:        c.Config.Name,
 		Type:        "clab",
 		Clab:        c,
-		SSHPubKeys:  containerlabutils.MarshalSSHPubKeys(c.SSHPubKeys),
-		NodeConfigs: make(map[string]*containerlabtypes.NodeConfig),
+		SSHPubKeys:  clabutils.MarshalSSHPubKeys(c.SSHPubKeys),
+		NodeConfigs: make(map[string]*clabtypes.NodeConfig),
 	}
 
 	for _, n := range c.Nodes {

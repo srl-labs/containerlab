@@ -15,10 +15,10 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	containerlabcore "github.com/srl-labs/containerlab/core"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // APIServerListItem defines the structure for API server container info in JSON output.
@@ -42,7 +42,7 @@ func init() {
 var apiServerStatusCmd = &cobra.Command{
 	Use:     "status",
 	Short:   "show status of active Containerlab API server containers",
-	PreRunE: containerlabutils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -54,19 +54,19 @@ var apiServerStatusCmd = &cobra.Command{
 		}
 
 		// Initialize containerlab with runtime using the same approach as inspect command
-		opts := []containerlabcore.ClabOption{
-			containerlabcore.WithTimeout(timeout),
-			containerlabcore.WithRuntime(runtimeName,
-				&containerlabruntime.RuntimeConfig{
+		opts := []clabcore.ClabOption{
+			clabcore.WithTimeout(timeout),
+			clabcore.WithRuntime(runtimeName,
+				&clabruntime.RuntimeConfig{
 					Debug:            debug,
 					Timeout:          timeout,
 					GracefulShutdown: gracefulShutdown,
 				},
 			),
-			containerlabcore.WithDebug(debug),
+			clabcore.WithDebug(debug),
 		}
 
-		c, err := containerlabcore.NewContainerLab(opts...)
+		c, err := clabcore.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}
@@ -77,7 +77,7 @@ var apiServerStatusCmd = &cobra.Command{
 			return err
 		}
 
-		containers, err := c.ListContainers(ctx, containerlabcore.WithListToolType("api-server"))
+		containers, err := c.ListContainers(ctx, clabcore.WithListToolType("api-server"))
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %w", err)
 		}
@@ -124,7 +124,7 @@ var apiServerStatusCmd = &cobra.Command{
 
 			// Get owner from container labels
 			owner := "N/A"
-			if ownerVal, exists := c.Labels[containerlablabels.Owner]; exists && ownerVal != "" {
+			if ownerVal, exists := c.Labels[clablabels.Owner]; exists && ownerVal != "" {
 				owner = ownerVal
 			}
 

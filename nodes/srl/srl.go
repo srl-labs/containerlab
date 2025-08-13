@@ -22,12 +22,12 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 
-	containerlabcert "github.com/srl-labs/containerlab/cert"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -65,7 +65,7 @@ var (
 		"net.ipv6.conf.all.autoconf":       "0",
 		"net.ipv6.conf.default.autoconf":   "0",
 	}
-	defaultCredentials = containerlabnodes.NewCredentials("admin", "NokiaSrl1!")
+	defaultCredentials = clabnodes.NewCredentials("admin", "NokiaSrl1!")
 
 	srlTypes = map[string]string{
 		"ixsa1":      "7215IXSA1.yml",
@@ -128,10 +128,10 @@ var (
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
-	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(containerlabutils.CreateFuncs()).
+	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(clabutils.CreateFuncs()).
 			Parse(srlConfigCmdsTpl)
 
-	requiredKernelVersion = &containerlabutils.KernelVersion{
+	requiredKernelVersion = &clabutils.KernelVersion{
 		Major:    4,
 		Minor:    10,
 		Revision: 0,
@@ -142,27 +142,27 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformOpts := &containerlabnodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
 
-	r.Register(kindNames, func() containerlabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(srl)
 	}, nrea)
 }
 
 type srl struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
 	startupCliCfg []byte
 
 	// Params provided in Pre-Deploy, that srl uses in Post-Deploy phase
 	// to generate certificates
-	cert         *containerlabcert.Cert
+	cert         *clabcert.Cert
 	topologyName string
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
@@ -170,20 +170,20 @@ type srl struct {
 	swVersion *SrlVersion
 }
 
-func (n *srl) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.SSSE3 = true
 	n.HostRequirements.MinVCPU = 2
-	n.HostRequirements.MinVCPUFailAction = containerlabtypes.FailBehaviourError
+	n.HostRequirements.MinVCPUFailAction = clabtypes.FailBehaviourError
 	n.HostRequirements.MinAvailMemoryGb = 2
-	n.HostRequirements.MinAvailMemoryGbFailAction = containerlabtypes.FailBehaviourLog
+	n.HostRequirements.MinAvailMemoryGbFailAction = clabtypes.FailBehaviourLog
 
 	n.Cfg = cfg
 
 	// force cert creation for srlinux nodes as they by make use of tls certificate in the default config
-	n.Cfg.Certificate.Issue = containerlabutils.Pointer(true)
+	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
@@ -212,7 +212,7 @@ func (n *srl) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.
 		n.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
-	n.Cfg.Env = containerlabutils.MergeStringMaps(srlEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(srlEnv, n.Cfg.Env)
 
 	// if user was not initialized to a value, use root
 	if n.Cfg.User == "" {
@@ -237,7 +237,7 @@ func (n *srl) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.
 	dstTopoPath := "/tmp/topology.yml"
 	// if a user provided a topology file, it means that they want to use a custom srl topology file
 	// in that case we do not need to mount the one for the provided type
-	if !containerlabutils.DestinationBindMountExists(n.Cfg.Binds, dstTopoPath) {
+	if !clabutils.DestinationBindMountExists(n.Cfg.Binds, dstTopoPath) {
 		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(srcTopoPath, ":", dstTopoPath, ":ro"))
 	}
 
@@ -247,22 +247,22 @@ func (n *srl) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.
 	return nil
 }
 
-func (n *srl) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeployParams) error {
-	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if n.Cfg.Extras != nil && len(n.Cfg.Extras.SRLAgents) != 0 {
 		agents := n.Cfg.Extras.SRLAgents
 
 		appmgr := filepath.Join(n.Cfg.LabDir, "config", "appmgr")
-		containerlabutils.CreateDirectory(appmgr, 0o777)
+		clabutils.CreateDirectory(appmgr, 0o777)
 
 		// process extras -> agents configurations
 		for _, fullpath := range agents {
 			basename := filepath.Base(fullpath)
 			// if it is a url extract filename from url or content-disposition header
-			if containerlabutils.IsHttpURL(fullpath, false) {
-				basename = containerlabutils.FilenameForURL(ctx, fullpath)
+			if clabutils.IsHttpURL(fullpath, false) {
+				basename = clabutils.FilenameForURL(ctx, fullpath)
 			}
 			// enforce yml extension
 			ext := filepath.Ext(basename)
@@ -271,7 +271,7 @@ func (n *srl) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeploy
 			}
 
 			dst := filepath.Join(appmgr, basename)
-			if err := containerlabutils.CopyFile(ctx, fullpath, dst, 0o644); err != nil {
+			if err := clabutils.CopyFile(ctx, fullpath, dst, 0o644); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
 			}
 		}
@@ -288,7 +288,7 @@ func (n *srl) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeploy
 	return n.createSRLFiles()
 }
 
-func (n *srl) PostDeploy(ctx context.Context, params *containerlabnodes.PostDeployParams) error {
+func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
 		"node", n.Cfg.ShortName)
@@ -321,7 +321,7 @@ func (n *srl) PostDeploy(ctx context.Context, params *containerlabnodes.PostDepl
 	// return if config file is found in the lab directory.
 	// This can be either if the startup-config has been mounted by that path
 	// or the config has been previously generated and saved
-	if containerlabutils.FileExists(filepath.Join(n.Cfg.LabDir, "config", "config.json")) {
+	if clabutils.FileExists(filepath.Join(n.Cfg.LabDir, "config", "config.json")) {
 		return nil
 	}
 
@@ -342,7 +342,7 @@ func (n *srl) PostDeploy(ctx context.Context, params *containerlabnodes.PostDepl
 }
 
 func (n *srl) SaveConfig(ctx context.Context) error {
-	cmd, _ := containerlabexec.NewExecCmdFromString(saveCmd)
+	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
@@ -371,7 +371,7 @@ func (n *srl) Ready(ctx context.Context) error {
 			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", n.Cfg.ShortName, err)
 		default:
 			// two commands are checked, first if the mgmt_server is running
-			cmd, _ := containerlabexec.NewExecCmdFromString(mgmtServerRdyCmd)
+			cmd, _ := clabexec.NewExecCmdFromString(mgmtServerRdyCmd)
 			execResult, err := n.RunExec(ctx, cmd)
 			if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
 				logMsg := "mgmt_server status check failed"
@@ -403,7 +403,7 @@ func (n *srl) Ready(ctx context.Context) error {
 
 			// once mgmt server is running, we need to check if it is ready to accept configuration commands
 			// this is done with checking readyForConfigCmd
-			cmd, _ = containerlabexec.NewExecCmdFromString(readyForConfigCmd)
+			cmd, _ = clabexec.NewExecCmdFromString(readyForConfigCmd)
 			execResult, err = n.RunExec(ctx, cmd)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
@@ -433,7 +433,7 @@ func (n *srl) Ready(ctx context.Context) error {
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
 func (*srl) checkKernelVersion() error {
 	// retrieve running kernel version
-	kv, err := containerlabutils.GetKernelVersion()
+	kv, err := clabutils.GetKernelVersion()
 	if err != nil {
 		return err
 	}
@@ -463,7 +463,7 @@ func (n *srl) createSRLFiles() error {
 		// copy license file to node specific directory in lab
 		src = n.Cfg.License
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := containerlabutils.CopyFile(context.Background(), src, licPath, 0o644); err != nil {
+		if err := clabutils.CopyFile(context.Background(), src, licPath, 0o644); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
@@ -475,7 +475,7 @@ func (n *srl) createSRLFiles() error {
 		return err
 	}
 
-	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0o777)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0o777)
 
 	// create repository files (for yum/apt) that
 	// are mounted to srl container during the init phase
@@ -497,7 +497,7 @@ func (n *srl) createSRLFiles() error {
 			return err
 		}
 
-		cBuf, err := containerlabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		cBuf, err := clabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
 		if err != nil {
 			return err
 		}
@@ -534,7 +534,7 @@ func (n *srl) createSRLFiles() error {
 	return err
 }
 
-func generateSRLTopologyFile(cfg *containerlabtypes.NodeConfig) error {
+func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
 	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
@@ -637,7 +637,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		if ifName == "mgmt0" {
 			// if the endpoint has a custom MTU set, use it in the template logic
 			// otherwise we don't set the mtu as srlinux will use the default max value 9232
-			if m := e.GetLink().GetMTU(); m != containerlablinks.DefaultLinkMTU {
+			if m := e.GetLink().GetMTU(); m != clablinks.DefaultLinkMTU {
 				tplData.MgmtMTU = m
 				// MgmtMTU seems to be only set when we use macvlan interface
 				// with network-mode: none. For this super narrow use case
@@ -663,7 +663,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 		// if the endpoint has a custom MTU set, use it in the template logic
 		// otherwise we don't set the mtu as srlinux will use the default max value 9232
-		if m := e.GetLink().GetMTU(); m != containerlablinks.DefaultLinkMTU {
+		if m := e.GetLink().GetMTU(); m != clablinks.DefaultLinkMTU {
 			iface.Mtu = m
 		}
 
@@ -679,7 +679,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
-	execCmd := containerlabexec.NewExecCmdFromSlice([]string{
+	execCmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", buf.String(), defaultCfgPath),
 	})
@@ -691,7 +691,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	// su to admin user to apply the default config
 	// to make sure that the 'environment save' command will create
 	// files with correct permissions
-	cmd := containerlabexec.NewExecCmdFromSlice([]string{
+	cmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", defaultCfgPath),
 	})
@@ -718,7 +718,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", n.Cfg.ShortName, n.Cfg.StartupConfig, cfgStr)
 
-	cmd := containerlabexec.NewExecCmdFromSlice([]string{
+	cmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", cfgStr, overlayCfgPath),
 	})
@@ -727,7 +727,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 		return err
 	}
 
-	cmd = containerlabexec.NewExecCmdFromSlice([]string{
+	cmd = clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", overlayCfgPath),
 	})
@@ -737,7 +737,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%w:%s", containerlabnodes.ErrCommandExecError, execResult.GetStdErrString())
+		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
@@ -749,7 +749,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 func (n *srl) commitConfig(ctx context.Context) error {
 	log.Debugf("Node %q: committing configuration", n.Cfg.ShortName)
 
-	cmd, err := containerlabexec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
+	cmd, err := clabexec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
 	if err != nil {
 		return err
 	}
@@ -759,7 +759,7 @@ func (n *srl) commitConfig(ctx context.Context) error {
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%w:%s", containerlabnodes.ErrCommandExecError, execResult.GetStdErrString())
+		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
@@ -768,7 +768,7 @@ func (n *srl) commitConfig(ctx context.Context) error {
 }
 
 func (n *srl) generateCheckpoint(ctx context.Context) error {
-	cmd, err := containerlabexec.NewExecCmdFromString(`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
+	cmd, err := clabexec.NewExecCmdFromString(`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
 	if err != nil {
 		return err
 	}
@@ -779,7 +779,7 @@ func (n *srl) generateCheckpoint(ctx context.Context) error {
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%w:%s", containerlabnodes.ErrCommandExecError, execResult.GetStdErrString())
+		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
 	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
@@ -790,7 +790,7 @@ func (n *srl) generateCheckpoint(ctx context.Context) error {
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
-func (n *srl) populateHosts(ctx context.Context, nodes map[string]containerlabnodes.Node) error {
+func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node) error {
 	hosts, err := n.Runtime.GetHostsPath(ctx, n.Cfg.LongName)
 	if err != nil {
 		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
@@ -835,7 +835,7 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]containerlabno
 }
 
 func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
-	captureGroups, err := containerlabutils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
+	captureGroups, err := clabutils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
 	if err != nil {
 		return "", err
 	}
@@ -907,13 +907,13 @@ gpgcheck=0`
 	aptRepo := `deb [trusted=yes] https://srlinux.fury.site/apt/ /`
 
 	yumPath := n.Cfg.LabDir + "/yum.repo"
-	err := containerlabutils.CreateFile(yumPath, yumRepo)
+	err := clabutils.CreateFile(yumPath, yumRepo)
 	if err != nil {
 		return err
 	}
 
 	aptPath := n.Cfg.LabDir + "/apt.list"
-	err = containerlabutils.CreateFile(aptPath, aptRepo)
+	err = clabutils.CreateFile(aptPath, aptRepo)
 	if err != nil {
 		return err
 	}

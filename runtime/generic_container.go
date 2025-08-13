@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // GenericContainer stores generic container data.
@@ -23,7 +23,7 @@ type GenericContainer struct {
 	NetworkSettings GenericMgmtIPs
 	Mounts          []ContainerMount
 	Runtime         ContainerRuntime
-	Ports           []*containerlabtypes.GenericPortBinding
+	Ports           []*clabtypes.GenericPortBinding
 }
 
 type ContainerMount struct {
@@ -37,7 +37,7 @@ func (ctr *GenericContainer) SetRuntime(r ContainerRuntime) {
 }
 
 // RunExec executes a single command for a GenericContainer.
-func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
+func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 	containerName := gc.Names[0]
 	execResult, err := gc.Runtime.Exec(ctx, containerName, execCmd)
 	if err != nil {

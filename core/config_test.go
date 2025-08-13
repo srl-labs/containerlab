@@ -14,12 +14,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -108,7 +108,7 @@ func TestBindsInit(t *testing.T) {
 			binds := c.Nodes["node1"].Config().Binds
 
 			// expand env vars in bind paths, this is done during topology file load by clab
-			containerlabutils.ExpandEnvVarsInStrSlice(tc.want)
+			clabutils.ExpandEnvVarsInStrSlice(tc.want)
 
 			// resolve wanted paths as the binds paths are resolved as part of the c.ParseTopology
 			err = c.resolveBindPaths(tc.want, c.Nodes["node1"].Config().LabDir)
@@ -316,9 +316,9 @@ func TestVerifyLinks(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
-				WithRuntime(containerlabruntimedocker.RuntimeName,
-					&containerlabruntime.RuntimeConfig{
-						VerifyLinkParams: containerlablinks.NewVerifyLinkParams(),
+				WithRuntime(clabruntimedocker.RuntimeName,
+					&clabruntime.RuntimeConfig{
+						VerifyLinkParams: clablinks.NewVerifyLinkParams(),
 					},
 				),
 			}
@@ -356,64 +356,64 @@ func TestLabelsInit(t *testing.T) {
 			got:  "test_data/topo1.yml",
 			node: "node1",
 			want: map[string]string{
-				containerlablabels.Containerlab: "topo1",
-				containerlablabels.NodeName:     "node1",
-				containerlablabels.LongName:     "clab-topo1-node1",
-				containerlablabels.NodeKind:     "nokia_srlinux",
-				containerlablabels.NodeType:     "ixr-d2l",
-				containerlablabels.NodeGroup:    "",
-				containerlablabels.NodeLabDir:   "./clab-topo1/node1",
-				containerlablabels.TopoFile:     "topo1.yml",
-				containerlablabels.Owner:        owner,
+				clablabels.Containerlab: "topo1",
+				clablabels.NodeName:     "node1",
+				clablabels.LongName:     "clab-topo1-node1",
+				clablabels.NodeKind:     "nokia_srlinux",
+				clablabels.NodeType:     "ixr-d2l",
+				clablabels.NodeGroup:    "",
+				clablabels.NodeLabDir:   "./clab-topo1/node1",
+				clablabels.TopoFile:     "topo1.yml",
+				clablabels.Owner:        owner,
 			},
 		},
 		"custom_node_label": {
 			got:  "test_data/topo1.yml",
 			node: "node2",
 			want: map[string]string{
-				containerlablabels.Containerlab: "topo1",
-				containerlablabels.NodeName:     "node2",
-				containerlablabels.LongName:     "clab-topo1-node2",
-				containerlablabels.NodeKind:     "nokia_srlinux",
-				containerlablabels.NodeType:     "ixr-d2l",
-				containerlablabels.NodeGroup:    "",
-				containerlablabels.NodeLabDir:   "./clab-topo1/node2",
-				containerlablabels.TopoFile:     "topo1.yml",
-				"node-label":                    "value",
-				containerlablabels.Owner:        owner,
-				"with-dollar-sign":              "some$value",
+				clablabels.Containerlab: "topo1",
+				clablabels.NodeName:     "node2",
+				clablabels.LongName:     "clab-topo1-node2",
+				clablabels.NodeKind:     "nokia_srlinux",
+				clablabels.NodeType:     "ixr-d2l",
+				clablabels.NodeGroup:    "",
+				clablabels.NodeLabDir:   "./clab-topo1/node2",
+				clablabels.TopoFile:     "topo1.yml",
+				"node-label":            "value",
+				clablabels.Owner:        owner,
+				"with-dollar-sign":      "some$value",
 			},
 		},
 		"custom_kind_label": {
 			got:  "test_data/topo2.yml",
 			node: "node1",
 			want: map[string]string{
-				containerlablabels.Containerlab: "topo2",
-				containerlablabels.NodeName:     "node1",
-				containerlablabels.LongName:     "clab-topo2-node1",
-				containerlablabels.NodeKind:     "nokia_srlinux",
-				containerlablabels.NodeType:     "ixrd2l",
-				containerlablabels.NodeGroup:    "",
-				containerlablabels.NodeLabDir:   "./clab-topo2/node1",
-				containerlablabels.TopoFile:     "topo2.yml",
-				"kind-label":                    "value",
-				containerlablabels.Owner:        owner,
+				clablabels.Containerlab: "topo2",
+				clablabels.NodeName:     "node1",
+				clablabels.LongName:     "clab-topo2-node1",
+				clablabels.NodeKind:     "nokia_srlinux",
+				clablabels.NodeType:     "ixrd2l",
+				clablabels.NodeGroup:    "",
+				clablabels.NodeLabDir:   "./clab-topo2/node1",
+				clablabels.TopoFile:     "topo2.yml",
+				"kind-label":            "value",
+				clablabels.Owner:        owner,
 			},
 		},
 		"custom_default_label": {
 			got:  "test_data/topo3.yml",
 			node: "node2",
 			want: map[string]string{
-				containerlablabels.Containerlab: "topo3",
-				containerlablabels.NodeName:     "node2",
-				containerlablabels.LongName:     "clab-topo3-node2",
-				containerlablabels.NodeKind:     "nokia_srlinux",
-				containerlablabels.NodeType:     "ixrd2l",
-				containerlablabels.NodeGroup:    "",
-				containerlablabels.NodeLabDir:   "./clab-topo3/node2",
-				containerlablabels.TopoFile:     "topo3.yml",
-				"default-label":                 "value",
-				containerlablabels.Owner:        owner,
+				clablabels.Containerlab: "topo3",
+				clablabels.NodeName:     "node2",
+				clablabels.LongName:     "clab-topo3-node2",
+				clablabels.NodeKind:     "nokia_srlinux",
+				clablabels.NodeType:     "ixrd2l",
+				clablabels.NodeGroup:    "",
+				clablabels.NodeLabDir:   "./clab-topo3/node2",
+				clablabels.TopoFile:     "topo3.yml",
+				"default-label":         "value",
+				clablabels.Owner:        owner,
 			},
 		},
 	}
@@ -428,10 +428,10 @@ func TestLabelsInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			tc.want[containerlablabels.NodeLabDir] =
-				containerlabutils.ResolvePath(tc.want[containerlablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
-			tc.want[containerlablabels.TopoFile] =
-				containerlabutils.ResolvePath(tc.want[containerlablabels.TopoFile], c.TopoPaths.TopologyFileDir())
+			tc.want[clablabels.NodeLabDir] =
+				clabutils.ResolvePath(tc.want[clablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
+			tc.want[clablabels.TopoFile] =
+				clabutils.ResolvePath(tc.want[clablabels.TopoFile], c.TopoPaths.TopologyFileDir())
 
 			labels := c.Nodes[tc.node].Config().Labels
 
@@ -444,7 +444,7 @@ func TestLabelsInit(t *testing.T) {
 			fmt.Printf("%v\n", env)
 			for k, v := range tc.want {
 				// sanitize label key to be used as an env key
-				sk := containerlabutils.ToEnvKey(k)
+				sk := clabutils.ToEnvKey(k)
 				// fail if env vars map doesn't have env var with key CLAB_LABEL_<label-name> and label value matches env value
 				if val, exists := env["CLAB_LABEL_"+sk]; !exists || val != v {
 					t.Errorf("env var %q promoted from a label %q was not found", "CLAB_LABEL_"+sk, k)
@@ -505,7 +505,7 @@ func TestVerifyRootNetNSLinks(t *testing.T) {
 func TestVerifyContainersUniqueness(t *testing.T) {
 	tests := map[string]struct {
 		mockResult struct {
-			c []containerlabruntime.GenericContainer
+			c []clabruntime.GenericContainer
 			e error
 		}
 		topo      string
@@ -513,10 +513,10 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 	}{
 		"no dups": {
 			mockResult: struct {
-				c []containerlabruntime.GenericContainer
+				c []clabruntime.GenericContainer
 				e error
 			}{
-				c: []containerlabruntime.GenericContainer{
+				c: []clabruntime.GenericContainer{
 					{
 						Names:  []string{"some node"},
 						Labels: map[string]string{},
@@ -533,10 +533,10 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 		},
 		"dups": {
 			mockResult: struct {
-				c []containerlabruntime.GenericContainer
+				c []clabruntime.GenericContainer
 				e error
 			}{
-				c: []containerlabruntime.GenericContainer{
+				c: []clabruntime.GenericContainer{
 					{
 						Names:  []string{"clab-topo1-node1"},
 						Labels: map[string]string{},
@@ -553,10 +553,10 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 		},
 		"ext-container": {
 			mockResult: struct {
-				c []containerlabruntime.GenericContainer
+				c []clabruntime.GenericContainer
 				e error
 			}{
-				c: []containerlabruntime.GenericContainer{
+				c: []clabruntime.GenericContainer{
 					{
 						Names:  []string{"node1"},
 						Labels: map[string]string{},
@@ -588,7 +588,7 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			}
 
 			// set mockRuntime parameters
-			mockRuntime := containerlabmocksmockruntime.NewMockContainerRuntime(ctrl)
+			mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 			c.Runtimes[rtName] = mockRuntime
 			c.globalRuntimeName = rtName
 

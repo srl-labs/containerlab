@@ -5,44 +5,44 @@ import (
 	"strings"
 	"testing"
 
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestSRLInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints        []*containerlablinks.EndpointVeth
+		endpoints        []*clablinks.EndpointVeth
 		node             *srl
 		checkErrContains string
 		resultEps        []string
 	}{
 		"alias-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ethernet-1/1",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ethernet-3/2",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ethernet-2/3/4",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ethernet-1/5",
 					},
 				},
 			},
 			node: &srl{
-				DefaultNode: containerlabnodes.DefaultNode{
-					Cfg: &containerlabtypes.NodeConfig{
+				DefaultNode: clabnodes.DefaultNode{
+					Cfg: &clabtypes.NodeConfig{
 						ShortName: "srl",
 					},
 					InterfaceRegexp: InterfaceRegexp,
@@ -54,31 +54,31 @@ func TestSRLInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "e1-2",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "e1-2-4",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "e3-6",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "mgmt0",
 					},
 				},
 			},
 			node: &srl{
-				DefaultNode: containerlabnodes.DefaultNode{
-					Cfg: &containerlabtypes.NodeConfig{
+				DefaultNode: clabnodes.DefaultNode{
+					Cfg: &clabtypes.NodeConfig{
 						ShortName:   "srl",
 						NetworkMode: "none",
 					},
@@ -91,16 +91,16 @@ func TestSRLInterfaceParsing(t *testing.T) {
 			},
 		},
 		"parse-fail": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth0",
 					},
 				},
 			},
 			node: &srl{
-				DefaultNode: containerlabnodes.DefaultNode{
-					Cfg: &containerlabtypes.NodeConfig{
+				DefaultNode: clabnodes.DefaultNode{
+					Cfg: &clabtypes.NodeConfig{
 						ShortName: "srl",
 					},
 					InterfaceRegexp: InterfaceRegexp,

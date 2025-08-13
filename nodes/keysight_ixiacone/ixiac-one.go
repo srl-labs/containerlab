@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var kindnames = []string{"keysight_ixia-c-one"}
@@ -27,19 +27,19 @@ var ixiacStatusConfig = struct {
 }
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	r.Register(kindnames, func() containerlabnodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(ixiacOne)
 	}, nil)
 }
 
 type ixiacOne struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (l *ixiacOne) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (l *ixiacOne) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	l.DefaultNode = *containerlabnodes.NewDefaultNode(l)
+	l.DefaultNode = *clabnodes.NewDefaultNode(l)
 
 	l.Cfg = cfg
 	for _, o := range opts {
@@ -49,7 +49,7 @@ func (l *ixiacOne) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabn
 	return nil
 }
 
-func (l *ixiacOne) PostDeploy(ctx context.Context, _ *containerlabnodes.PostDeployParams) error {
+func (l *ixiacOne) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for keysight_ixia-c-one '%s' node", l.Cfg.ShortName)
 	return l.ixiacPostDeploy(ctx)
 }
@@ -59,7 +59,7 @@ func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
 	ixiacOneCmd := fmt.Sprintf("bash -c 'ls %s'", ixiacStatusConfig.readyFileName)
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
-		cmd, _ := containerlabexec.NewExecCmdFromString(ixiacOneCmd)
+		cmd, _ := clabexec.NewExecCmdFromString(ixiacOneCmd)
 		execResult, err := l.RunExec(ctx, cmd)
 		if err != nil {
 			return err

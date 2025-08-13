@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	"golang.org/x/sync/semaphore"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
@@ -33,18 +33,18 @@ var kindnames = []string{"k8s-kind"}
 var serializeDelete = semaphore.NewWeighted(1)
 
 // Register registers the node in the global Node map.
-func Register(r *containerlabnodes.NodeRegistry) {
-	r.Register(kindnames, func() containerlabnodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(k8s_kind)
 	}, nil)
 }
 
 type k8s_kind struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *k8s_kind) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+func (n *k8s_kind) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 	for _, o := range opts {
 		o(n)
@@ -60,7 +60,7 @@ func (n *k8s_kind) PullImage(_ context.Context) error             { return nil }
 // DeleteNetnsSymlink is a noop since kind takes care of the Netlinks.
 func (n *k8s_kind) DeleteNetnsSymlink() (err error) { return nil }
 
-func (n *k8s_kind) Deploy(_ context.Context, _ *containerlabnodes.DeployParams) error {
+func (n *k8s_kind) Deploy(_ context.Context, _ *clabnodes.DeployParams) error {
 	// create the Provider with the above runtime based options
 	kindProvider, err := n.getProvider()
 	if err != nil {
@@ -115,8 +115,8 @@ func (n *k8s_kind) Deploy(_ context.Context, _ *containerlabnodes.DeployParams) 
 	return err
 }
 
-func (n *k8s_kind) GetContainers(ctx context.Context) ([]containerlabruntime.GenericContainer, error) {
-	containers, err := n.Runtime.ListContainers(ctx, []*containerlabtypes.GenericFilter{
+func (n *k8s_kind) GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error) {
+	containers, err := n.Runtime.ListContainers(ctx, []*clabtypes.GenericFilter{
 		{
 			FilterType: "label",
 			Field:      "io.x-k8s.kind.cluster",
@@ -134,7 +134,7 @@ func (n *k8s_kind) GetContainers(ctx context.Context) ([]containerlabruntime.Gen
 			containers[idx].Labels[key] = v
 		}
 		// we need to overwrite the nodename label
-		containers[idx].Labels[containerlablabels.NodeName] = containers[idx].Names[0]
+		containers[idx].Labels[clablabels.NodeName] = containers[idx].Names[0]
 	}
 
 	return containers, nil
@@ -161,7 +161,7 @@ func (n *k8s_kind) getProvider() (*cluster.Provider, error) {
 	var kindProviderOptions cluster.ProviderOption
 	// instantiate the Provider which is runtime dependent
 	switch n.Runtime.GetName() {
-	case containerlabruntimedocker.RuntimeName:
+	case clabruntimedocker.RuntimeName:
 		kindProviderOptions = cluster.ProviderWithDocker()
 	case "podman": // this is an ugly workaround because podman is generally excluded via golang tags ... should be "podman.RuntimeName"
 		kindProviderOptions = cluster.ProviderWithPodman()
@@ -205,15 +205,15 @@ func readClusterConfig(configfile string) (*v1alpha4.Cluster, error) {
 }
 
 // RunExec is not implemented for this kind.
-func (n *k8s_kind) RunExec(_ context.Context, _ *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
+func (n *k8s_kind) RunExec(_ context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 
-	return nil, containerlabexec.ErrRunExecNotSupported
+	return nil, clabexec.ErrRunExecNotSupported
 }
 
 // RunExecNotWait is not implemented for this kind.
-func (n *k8s_kind) RunExecNotWait(_ context.Context, _ *containerlabexec.ExecCmd) error {
+func (n *k8s_kind) RunExecNotWait(_ context.Context, _ *clabexec.ExecCmd) error {
 	log.Warnf("RunExecNotWait operation is not implemented for kind %q", n.Config().Kind)
 
-	return containerlabexec.ErrRunExecNotSupported
+	return clabexec.ErrRunExecNotSupported
 }

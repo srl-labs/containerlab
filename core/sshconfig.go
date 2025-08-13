@@ -7,8 +7,8 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"
 )
 
@@ -24,7 +24,7 @@ type SSHConfigTmpl struct {
 type SSHConfigNodeTmpl struct {
 	Name      string
 	Username  string
-	SSHConfig *containerlabtypes.SSHConfig
+	SSHConfig *clabtypes.SSHConfig
 }
 
 // sshConfigTemplate is the SSH config template.
@@ -33,7 +33,7 @@ type SSHConfigNodeTmpl struct {
 var sshConfigTemplate string
 
 // RemoveSSHConfig removes the lab specific ssh config file.
-func (c *CLab) RemoveSSHConfig(topoPaths *containerlabtypes.TopoPaths) error {
+func (c *CLab) RemoveSSHConfig(topoPaths *clabtypes.TopoPaths) error {
 	err := os.Remove(topoPaths.SSHConfigPath())
 	// if there is an error, thats not "Not Exists", then return it
 	if err != nil && !os.IsNotExist(err) {
@@ -45,7 +45,7 @@ func (c *CLab) RemoveSSHConfig(topoPaths *containerlabtypes.TopoPaths) error {
 // addSSHConfig adds the lab specific ssh config file.
 func (c *CLab) addSSHConfig() error {
 	sshConfigDir := path.Dir(c.TopoPaths.SSHConfigPath())
-	if !containerlabutils.FileOrDirExists(sshConfigDir) {
+	if !clabutils.FileOrDirExists(sshConfigDir) {
 		log.Debugf("ssh config directory %s does not exist, skipping ssh config generation", sshConfigDir)
 		return nil
 	}
@@ -59,7 +59,7 @@ func (c *CLab) addSSHConfig() error {
 	// to use the PubkeyAuthentication=unbound
 	// which is only available in OpenSSH 8.9+
 	// if we fail to parse the version the return value is going to be empty
-	sshVersion := containerlabutils.GetSSHVersion()
+	sshVersion := clabutils.GetSSHVersion()
 
 	// add the data for all nodes to the template input
 	for _, n := range c.Nodes {
@@ -78,7 +78,7 @@ func (c *CLab) addSSHConfig() error {
 		// we set it to empty string since it is not supported by the SSH client
 		if (sshVersion == "" || semver.Compare("v"+sshVersion, "v8.9") < 0) &&
 			nodeData.SSHConfig.PubkeyAuthentication ==
-				containerlabtypes.PubkeyAuthValueUnbound {
+				clabtypes.PubkeyAuthValueUnbound {
 			nodeData.SSHConfig.PubkeyAuthentication = ""
 		}
 

@@ -13,15 +13,15 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	containerlabnetconf "github.com/srl-labs/containerlab/netconf"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabnetconf "github.com/srl-labs/containerlab/netconf"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames          = []string{"c8000", "cisco_c8000"}
-	defaultCredentials = containerlabnodes.NewCredentials("cisco", "cisco123")
+	defaultCredentials = clabnodes.NewCredentials("cisco", "cisco123")
 
 	//go:embed c8000.cfg
 	cfgTemplate string
@@ -33,26 +33,26 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	platformOpts := &containerlabnodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformOpts)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformOpts)
 
-	r.Register(kindnames, func() containerlabnodes.Node {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(c8000)
 	}, nrea)
 }
 
 type c8000 struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *c8000) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *c8000) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -67,8 +67,8 @@ func (n *c8000) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnode
 	return nil
 }
 
-func (n *c8000) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeployParams) error {
-	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *c8000) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -79,7 +79,7 @@ func (n *c8000) PreDeploy(ctx context.Context, params *containerlabnodes.PreDepl
 }
 
 func (n *c8000) SaveConfig(_ context.Context) error {
-	err := containerlabnetconf.SaveRunningConfig(n.Cfg.LongName,
+	err := clabnetconf.SaveRunningConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
+	clabexec "github.com/srl-labs/containerlab/exec"
 )
 
 func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
@@ -33,7 +33,7 @@ func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
 
 // currentPrompt returns the current prompt extracted from the environment.
 func (n *srl) currentPrompt(ctx context.Context) (string, error) {
-	cmd, _ := containerlabexec.NewExecCmdFromString(`sr_cli -d "environment show | grep -A 2 prompt"`)
+	cmd, _ := clabexec.NewExecCmdFromString(`sr_cli -d "environment show | grep -A 2 prompt"`)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {

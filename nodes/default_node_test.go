@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestGenerateConfigs(t *testing.T) {
@@ -19,7 +19,7 @@ func TestGenerateConfigs(t *testing.T) {
 	newCfg := "new config"
 
 	tests := map[string]struct {
-		cfg        *containerlabtypes.NodeConfig
+		cfg        *clabtypes.NodeConfig
 		err        error
 		preExists  bool
 		postExists bool
@@ -27,7 +27,7 @@ func TestGenerateConfigs(t *testing.T) {
 		out        string
 	}{
 		"suppress-true-first-start": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				SuppressStartupConfig: true,
 			},
 			err:        nil,
@@ -36,7 +36,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   defCfg,
 		},
 		"suppress-true-existing-lab": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				SuppressStartupConfig: true,
 			},
 			err:        nil,
@@ -46,7 +46,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   defCfg,
 		},
 		"suppress-false-first-start": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				SuppressStartupConfig: false,
 			},
 			err:        nil,
@@ -56,7 +56,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   defCfg,
 		},
 		"suppress-false-existing-lab": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				SuppressStartupConfig: false,
 			},
 			err:        nil,
@@ -66,7 +66,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   defCfg,
 		},
 		"startup-config-first-start": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				StartupConfig: "other",
 			},
 			err:        nil,
@@ -76,7 +76,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   newCfg,
 		},
 		"startup-config-existing-lab": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				StartupConfig: "other",
 			},
 			err:        nil,
@@ -86,7 +86,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   newCfg,
 		},
 		"enforce-startup-config-first-start": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				StartupConfig:        "other",
 				EnforceStartupConfig: true,
 			},
@@ -97,7 +97,7 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   newCfg,
 		},
 		"enforce-startup-config-existing-lab": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				StartupConfig:        "other",
 				EnforceStartupConfig: true,
 			},
@@ -108,13 +108,13 @@ func TestGenerateConfigs(t *testing.T) {
 			template:   newCfg,
 		},
 		"enforce-startup-config-no-startup": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				EnforceStartupConfig: true,
 			},
 			err: ErrNoStartupConfig,
 		},
 		"enforce-and-suppress-startup-config": {
-			cfg: &containerlabtypes.NodeConfig{
+			cfg: &clabtypes.NodeConfig{
 				EnforceStartupConfig:  true,
 				SuppressStartupConfig: true,
 			},
@@ -159,32 +159,32 @@ func TestGenerateConfigs(t *testing.T) {
 
 func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 	tests := map[string]struct {
-		endpoints           []*containerlablinks.EndpointVeth
+		endpoints           []*clablinks.EndpointVeth
 		node                *DefaultNode
 		endpointErrContains string
 		checkErrContains    string
 		resultEps           []string
 	}{
 		"basic-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/2",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/4",
 					},
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &containerlabtypes.NodeConfig{
+				Cfg: &clabtypes.NodeConfig{
 					ShortName: "juniper",
 				},
 				InterfaceRegexp: regexp.MustCompile(`(?:et|xe|ge)-0/0/(?P<port>\d+)$`),
@@ -197,25 +197,25 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			},
 		},
 		"parse-offset": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet2",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "Gi3",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet 5",
 					},
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &containerlabtypes.NodeConfig{
+				Cfg: &clabtypes.NodeConfig{
 					ShortName: "cisco",
 				},
 				InterfaceRegexp:  regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`),
@@ -229,25 +229,25 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			},
 		},
 		"skip-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth1",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &containerlabtypes.NodeConfig{
+				Cfg: &clabtypes.NodeConfig{
 					ShortName: "cisco-original",
 				},
 				InterfaceRegexp: regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`),
@@ -260,20 +260,20 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			},
 		},
 		"overlap": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/1",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth1",
 					},
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &containerlabtypes.NodeConfig{
+				Cfg: &clabtypes.NodeConfig{
 					ShortName: "juniper-overlap",
 				},
 				InterfaceRegexp: regexp.MustCompile(`(?:et|xe|ge)-0/0/(?P<port>\d+)$`),
@@ -284,15 +284,15 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			resultEps:           []string{},
 		},
 		"out-of-bounds-index": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "Gi1",
 					},
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &containerlabtypes.NodeConfig{
+				Cfg: &clabtypes.NodeConfig{
 					ShortName: "cisco-oob",
 				},
 				InterfaceRegexp:  regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`),
@@ -304,15 +304,15 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			resultEps:           []string{},
 		},
 		"regexp-no-group": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "Gi2",
 					},
 				},
 			},
 			node: &DefaultNode{
-				Cfg: &containerlabtypes.NodeConfig{
+				Cfg: &clabtypes.NodeConfig{
 					ShortName: "cisco-noregexpgroup",
 				},
 				InterfaceRegexp: regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(\d+)$`),

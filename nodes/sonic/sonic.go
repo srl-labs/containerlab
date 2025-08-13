@@ -9,10 +9,10 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -25,26 +25,26 @@ const (
 var kindNames = []string{"sonic-vs"}
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &containerlabnodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, platformAttrs)
 
-	r.Register(kindNames, func() containerlabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(sonic)
 	}, nrea)
 }
 
 type sonic struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (s *sonic) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (s *sonic) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *containerlabnodes.NewDefaultNode(s)
+	s.DefaultNode = *clabnodes.NewDefaultNode(s)
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -56,8 +56,8 @@ func (s *sonic) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnode
 	return nil
 }
 
-func (s *sonic) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
-	containerlabutils.CreateDirectory(s.Cfg.LabDir, 0o777)
+func (s *sonic) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(s.Cfg.LabDir, 0o777)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -65,16 +65,16 @@ func (s *sonic) PreDeploy(_ context.Context, params *containerlabnodes.PreDeploy
 	return nil
 }
 
-func (s *sonic) PostDeploy(ctx context.Context, _ *containerlabnodes.PostDeployParams) error {
+func (s *sonic) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
 
-	cmd, _ := containerlabexec.NewExecCmdFromString("supervisord")
+	cmd, _ := clabexec.NewExecCmdFromString("supervisord")
 	err := s.RunExecNotWait(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)
 	}
 
-	cmd, _ = containerlabexec.NewExecCmdFromString("supervisorctl start bgpd")
+	cmd, _ = clabexec.NewExecCmdFromString("supervisorctl start bgpd")
 	err = s.RunExecNotWait(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)

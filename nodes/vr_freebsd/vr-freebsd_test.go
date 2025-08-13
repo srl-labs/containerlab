@@ -3,39 +3,39 @@ package vr_freebsd
 import (
 	"testing"
 
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestFreeBSDInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*containerlablinks.EndpointVeth
+		endpoints []*clablinks.EndpointVeth
 		node      *vrFreeBSD
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "vtnet1",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "vtnet3",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "vtnet5",
 					},
 				},
 			},
 			node: &vrFreeBSD{
-				VRNode: containerlabnodes.VRNode{
-					DefaultNode: containerlabnodes.DefaultNode{
-						Cfg: &containerlabtypes.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "freebsd",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -48,27 +48,27 @@ func TestFreeBSDInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},
 			},
 			node: &vrFreeBSD{
-				VRNode: containerlabnodes.VRNode{
-					DefaultNode: containerlabnodes.DefaultNode{
-						Cfg: &containerlabtypes.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "freebsd",
 						},
 						InterfaceRegexp: InterfaceRegexp,

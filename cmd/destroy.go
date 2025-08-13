@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	containerlabcore "github.com/srl-labs/containerlab/core"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -26,7 +26,7 @@ var destroyCmd = &cobra.Command{
 	Short:   "destroy a lab",
 	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
 	Aliases: []string{"des"},
-	PreRunE: containerlabutils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 	RunE:    destroyFn,
 }
 
@@ -55,72 +55,72 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("--all and --name should not be used together")
 	}
 
-	opts := []containerlabcore.ClabOption{
-		containerlabcore.WithTimeout(timeout),
-		containerlabcore.WithLabName(labName),
-		containerlabcore.WithRuntime(
+	opts := []clabcore.ClabOption{
+		clabcore.WithTimeout(timeout),
+		clabcore.WithLabName(labName),
+		clabcore.WithRuntime(
 			runtime,
-			&containerlabruntime.RuntimeConfig{
+			&clabruntime.RuntimeConfig{
 				Debug:            debug,
 				Timeout:          timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		containerlabcore.WithDebug(debug),
+		clabcore.WithDebug(debug),
 		// during destroy we don't want to check bind paths
 		// as it is irrelevant for this command.
-		containerlabcore.WithSkippedBindsPathsCheck(),
+		clabcore.WithSkippedBindsPathsCheck(),
 	}
 
 	if topoFile != "" {
-		opts = append(opts, containerlabcore.WithTopoPath(topoFile, varsFile))
+		opts = append(opts, clabcore.WithTopoPath(topoFile, varsFile))
 	}
 
 	if keepMgmtNet {
-		opts = append(opts, containerlabcore.WithKeepMgmtNet())
+		opts = append(opts, clabcore.WithKeepMgmtNet())
 	}
 
-	clab, err := containerlabcore.NewContainerLab(opts...)
+	clab, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
 
-	destroyOptions := []containerlabcore.DestroyOption{
-		containerlabcore.WithDestroyMaxWorkers(maxWorkers),
-		containerlabcore.WithDestroyNodeFilter(nodeFilter),
+	destroyOptions := []clabcore.DestroyOption{
+		clabcore.WithDestroyMaxWorkers(maxWorkers),
+		clabcore.WithDestroyNodeFilter(nodeFilter),
 	}
 
 	if keepMgmtNet {
 		destroyOptions = append(
 			destroyOptions,
-			containerlabcore.WithDestroyKeepMgmtNet(),
+			clabcore.WithDestroyKeepMgmtNet(),
 		)
 	}
 
 	if cleanup {
 		destroyOptions = append(
 			destroyOptions,
-			containerlabcore.WithDestroyCleanup(),
+			clabcore.WithDestroyCleanup(),
 		)
 	}
 
 	if gracefulShutdown {
 		destroyOptions = append(
 			destroyOptions,
-			containerlabcore.WithDestroyGraceful(),
+			clabcore.WithDestroyGraceful(),
 		)
 	}
 
 	if all {
 		destroyOptions = append(
 			destroyOptions,
-			containerlabcore.WithDestroyAll(),
+			clabcore.WithDestroyAll(),
 		)
 
 		if !yes {
 			destroyOptions = append(
 				destroyOptions,
-				containerlabcore.WithDestroyTerminalPrompt(),
+				clabcore.WithDestroyTerminalPrompt(),
 			)
 		}
 	}

@@ -11,10 +11,10 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	containerlabcore "github.com/srl-labs/containerlab/core"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 // saveCmd represents the save command.
@@ -27,26 +27,26 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 		if labName == "" && topoFile == "" {
 			return fmt.Errorf("provide topology file path  with --topo flag")
 		}
-		opts := []containerlabcore.ClabOption{
-			containerlabcore.WithTimeout(timeout),
-			containerlabcore.WithTopoPath(topoFile, varsFile),
-			containerlabcore.WithNodeFilter(nodeFilter),
-			containerlabcore.WithRuntime(
+		opts := []clabcore.ClabOption{
+			clabcore.WithTimeout(timeout),
+			clabcore.WithTopoPath(topoFile, varsFile),
+			clabcore.WithNodeFilter(nodeFilter),
+			clabcore.WithRuntime(
 				runtime,
-				&containerlabruntime.RuntimeConfig{
+				&clabruntime.RuntimeConfig{
 					Debug:            debug,
 					Timeout:          timeout,
 					GracefulShutdown: gracefulShutdown,
 				},
 			),
-			containerlabcore.WithDebug(debug),
+			clabcore.WithDebug(debug),
 		}
-		c, err := containerlabcore.NewContainerLab(opts...)
+		c, err := clabcore.NewContainerLab(opts...)
 		if err != nil {
 			return err
 		}
 
-		err = containerlablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+		err = clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 		var wg sync.WaitGroup
 		wg.Add(len(c.Nodes))
 		for _, node := range c.Nodes {
-			go func(node containerlabnodes.Node) {
+			go func(node clabnodes.Node) {
 				defer wg.Done()
 
 				err := node.SaveConfig(ctx)

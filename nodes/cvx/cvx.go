@@ -6,10 +6,10 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
-	containerlabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	meta "github.com/weaveworks/ignite/pkg/apis/meta/v1alpha1"
 	"github.com/weaveworks/ignite/pkg/operations"
 )
@@ -26,21 +26,21 @@ var memoryReqs = map[string]string{
 }
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	r.Register(kindnames, func() containerlabnodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(cvx)
 	}, nil)
-	containerlabnodes.SetNonDefaultRuntimePerKind(kindnames, containerlabruntimeignite.RuntimeName)
+	clabnodes.SetNonDefaultRuntimePerKind(kindnames, clabruntimeignite.RuntimeName)
 }
 
 type cvx struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 	vmChans *operations.VMChannels
 }
 
-func (c *cvx) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (c *cvx) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	c.DefaultNode = *containerlabnodes.NewDefaultNode(c)
+	c.DefaultNode = *clabnodes.NewDefaultNode(c)
 
 	c.Cfg = cfg
 	for _, o := range opts {
@@ -74,7 +74,7 @@ func (c *cvx) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.
 	return nil
 }
 
-func (c *cvx) Deploy(ctx context.Context, _ *containerlabnodes.DeployParams) error {
+func (c *cvx) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 	// CreateContainer is no-op in case of ignite runtime
 	cID, err := c.Runtime.CreateContainer(ctx, c.Cfg)
 	if err != nil {
@@ -88,12 +88,12 @@ func (c *cvx) Deploy(ctx context.Context, _ *containerlabnodes.DeployParams) err
 		c.vmChans = vmChans
 	}
 
-	c.SetState(containerlabnodesstate.Deployed)
+	c.SetState(clabnodesstate.Deployed)
 
 	return nil
 }
 
-func (c *cvx) PostDeploy(_ context.Context, _ *containerlabnodes.PostDeployParams) error {
+func (c *cvx) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for cvx '%s' node", c.Cfg.ShortName)
 	if c.vmChans == nil {
 		return nil
@@ -104,14 +104,14 @@ func (c *cvx) PostDeploy(_ context.Context, _ *containerlabnodes.PostDeployParam
 
 func (c *cvx) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
-	images[containerlabnodes.ImageKey] = c.Cfg.Image
+	images[clabnodes.ImageKey] = c.Cfg.Image
 
-	if c.Runtime.GetName() != containerlabruntimeignite.RuntimeName {
+	if c.Runtime.GetName() != clabruntimeignite.RuntimeName {
 		return images
 	}
 
-	images[containerlabnodes.KernelKey] = c.Cfg.Kernel
-	images[containerlabnodes.SandboxKey] = c.Cfg.Sandbox
+	images[clabnodes.KernelKey] = c.Cfg.Kernel
+	images[clabnodes.SandboxKey] = c.Cfg.Sandbox
 	return images
 }
 

@@ -13,7 +13,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/network"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/steiler/acls"
 )
 
@@ -30,7 +30,7 @@ func (n *vyos) save(_ context.Context, cli *network.Driver) error {
 }
 
 func (n *vyos) newCli() (*network.Driver, error) {
-	cli, err := containerlabutils.SpawnCLIviaExec(
+	cli, err := clabutils.SpawnCLIviaExec(
 		scrapliPlatformName,
 		n.Cfg.LongName,
 		n.Runtime.GetName())
@@ -44,7 +44,7 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 
 	// generate config dir
-	containerlabutils.CreateDirectory(n.configDir, 0o777)
+	clabutils.CreateDirectory(n.configDir, 0o777)
 	log.Debugf("Chowning dir %s", n.configDir)
 	if err := os.Chown(n.Cfg.LabDir, 0, vyattacfg_gid); err != nil {
 		return err
@@ -70,10 +70,10 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	scriptDir := filepath.Join(n.configDir, "scripts")
 	preScript := filepath.Join(scriptDir, "vyos-preconfig-bootup.script")
 	postScript := filepath.Join(scriptDir, "vyos-postconfig-bootup.script")
-	containerlabutils.CreateDirectory(scriptDir, 0o777)
+	clabutils.CreateDirectory(scriptDir, 0o777)
 
 	for _, s := range []string{preScript, postScript} {
-		containerlabutils.CreateFile(s, "#!/bin/sh")
+		clabutils.CreateFile(s, "#!/bin/sh")
 		os.Chmod(s, 0o755)
 		os.Chown(s, 0, vyattacfg_gid)
 	}

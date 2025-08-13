@@ -3,39 +3,39 @@ package vr_sros
 import (
 	"testing"
 
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestAosCXInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*containerlablinks.EndpointVeth
+		endpoints []*clablinks.EndpointVeth
 		node      *vrSROS
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "1/1/1",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "1/1/3",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "1/1/5",
 					},
 				},
 			},
 			node: &vrSROS{
-				VRNode: containerlabnodes.VRNode{
-					DefaultNode: containerlabnodes.DefaultNode{
-						Cfg: &containerlabtypes.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "sros",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -48,27 +48,27 @@ func TestAosCXInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*containerlablinks.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: containerlablinks.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},
 			},
 			node: &vrSROS{
-				VRNode: containerlabnodes.VRNode{
-					DefaultNode: containerlabnodes.DefaultNode{
-						Cfg: &containerlabtypes.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "sros",
 						},
 						InterfaceRegexp: InterfaceRegexp,

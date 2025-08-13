@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/spf13/cobra"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // redeployCmd represents the redeploy command.
@@ -13,7 +13,7 @@ var redeployCmd = &cobra.Command{
 	Short:        "destroy and redeploy a lab",
 	Long:         "destroy a lab and deploy it again based on the topology definition file\nreference: https://containerlab.dev/cmd/redeploy/",
 	Aliases:      []string{"rdep"},
-	PreRunE:      containerlabutils.CheckAndGetRootPrivs,
+	PreRunE:      clabutils.CheckAndGetRootPrivs,
 	SilenceUsage: true,
 	RunE:         redeployFn,
 }

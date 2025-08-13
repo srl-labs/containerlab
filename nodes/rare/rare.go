@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var kindNames = []string{"rare"}
@@ -22,22 +22,22 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() containerlabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(rare)
 	}, nrea)
 }
 
 type rare struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *rare) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *rare) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -56,8 +56,8 @@ func (n *rare) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes
 	return nil
 }
 
-func (n *rare) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
-	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *rare) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -69,7 +69,7 @@ func (n *rare) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployP
 func (n *rare) createRAREFiles() error {
 	nodeCfg := n.Config()
 	// create "run" directory that will be bind mounted to rare node
-	containerlabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0o777)
+	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0o777)
 
 	return nil
 }

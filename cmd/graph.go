@@ -13,9 +13,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	containerlabcore "github.com/srl-labs/containerlab/core"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var (
@@ -42,21 +42,21 @@ var graphCmd = &cobra.Command{
 func graphFn(_ *cobra.Command, _ []string) error {
 	var err error
 
-	opts := []containerlabcore.ClabOption{
-		containerlabcore.WithTimeout(timeout),
-		containerlabcore.WithTopoPath(topoFile, varsFile),
-		containerlabcore.WithNodeFilter(nodeFilter),
-		containerlabcore.WithRuntime(
+	opts := []clabcore.ClabOption{
+		clabcore.WithTimeout(timeout),
+		clabcore.WithTopoPath(topoFile, varsFile),
+		clabcore.WithNodeFilter(nodeFilter),
+		clabcore.WithRuntime(
 			runtime,
-			&containerlabruntime.RuntimeConfig{
+			&clabruntime.RuntimeConfig{
 				Debug:            debug,
 				Timeout:          timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		containerlabcore.WithDebug(debug),
+		clabcore.WithDebug(debug),
 	}
-	c, err := containerlabcore.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
@@ -78,19 +78,19 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		return c.GenerateDrawioDiagram(drawioVersion, drawioArgs)
 	}
 
-	gtopo := containerlabcore.GraphTopo{
-		Nodes: make([]containerlabtypes.ContainerDetails, 0, len(c.Nodes)),
-		Links: make([]containerlabcore.Link, 0, len(c.Links)),
+	gtopo := clabcore.GraphTopo{
+		Nodes: make([]clabtypes.ContainerDetails, 0, len(c.Nodes)),
+		Links: make([]clabcore.Link, 0, len(c.Links)),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var containers []containerlabruntime.GenericContainer
+	var containers []clabruntime.GenericContainer
 	// if offline mode is not enforced, list containers matching lab name
 	if !offline {
 		containers, err = c.ListContainers(ctx,
-			containerlabcore.WithListLabName(c.Config.Name))
+			clabcore.WithListLabName(c.Config.Name))
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		ifaceDisplayNameA := eps[0].GetIfaceDisplayName()
 		ifaceDisplayNameB := eps[1].GetIfaceDisplayName()
 
-		gtopo.Links = append(gtopo.Links, containerlabcore.Link{
+		gtopo.Links = append(gtopo.Links, clabcore.Link{
 			Source:         eps[0].GetNode().GetShortName(),
 			SourceEndpoint: ifaceDisplayNameA,
 			Target:         eps[1].GetNode().GetShortName(),
@@ -128,7 +128,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	}
 
 	log.Debugf("generating graph using data: %s", string(b))
-	topoD := containerlabcore.TopoData{
+	topoD := clabcore.TopoData{
 		Name: c.Config.Name,
 		Data: template.JS(string(b)), // skipcq: GSC-G203
 	}

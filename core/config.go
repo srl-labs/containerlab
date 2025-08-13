@@ -14,12 +14,12 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/pmorjan/kmod"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -40,11 +40,11 @@ const (
 
 // Config defines lab configuration as it is provided in the YAML file.
 type Config struct {
-	Name     string                      `json:"name,omitempty"`
-	Prefix   *string                     `json:"prefix,omitempty"`
-	Mgmt     *containerlabtypes.MgmtNet  `json:"mgmt,omitempty"`
-	Settings *containerlabtypes.Settings `json:"settings,omitempty"`
-	Topology *containerlabtypes.Topology `json:"topology,omitempty"`
+	Name     string              `json:"name,omitempty"`
+	Prefix   *string             `json:"prefix,omitempty"`
+	Mgmt     *clabtypes.MgmtNet  `json:"mgmt,omitempty"`
+	Settings *clabtypes.Settings `json:"settings,omitempty"`
+	Topology *clabtypes.Topology `json:"topology,omitempty"`
 	// the debug flag value as passed via cli
 	// may be used by other packages to enable debug logging
 	Debug bool `json:"debug"`
@@ -65,8 +65,8 @@ func (c *CLab) parseTopology() error {
 	}
 
 	// initialize Nodes and Links variable
-	c.Nodes = make(map[string]containerlabnodes.Node)
-	c.Links = make(map[int]containerlablinks.Link)
+	c.Nodes = make(map[string]clabnodes.Node)
+	c.Links = make(map[int]clablinks.Link)
 
 	// initialize the Node information from the topology map
 	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))
@@ -86,7 +86,7 @@ func (c *CLab) parseTopology() error {
 		}
 
 		// this case if for non-default runtimes overriding the global default
-		if r, ok := containerlabnodes.NonDefaultRuntimes[topologyNode.GetKind()]; ok {
+		if r, ok := clabnodes.NonDefaultRuntimes[topologyNode.GetKind()]; ok {
 			nodeRuntimes[nodeName] = r
 			continue
 		}
@@ -102,11 +102,11 @@ func (c *CLab) parseTopology() error {
 			continue
 		}
 
-		if rInit, ok := containerlabruntime.ContainerRuntimes[r]; ok {
+		if rInit, ok := clabruntime.ContainerRuntimes[r]; ok {
 			newRuntime := rInit()
 			defaultConfig := c.Runtimes[c.globalRuntimeName].Config()
 			err := newRuntime.Init(
-				containerlabruntime.WithConfig(&defaultConfig),
+				clabruntime.WithConfig(&defaultConfig),
 			)
 			if err != nil {
 				return fmt.Errorf("failed to init the container runtime: %s", err)
@@ -127,7 +127,7 @@ func (c *CLab) parseTopology() error {
 }
 
 // NewNode initializes a new node object.
-func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *containerlabtypes.NodeDefinition, idx int) error {
+func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *clabtypes.NodeDefinition, idx int) error {
 	nodeCfg, err := c.createNodeCfg(nodeName, nodeDef, idx)
 	if err != nil {
 		return err
@@ -147,8 +147,8 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *containerlabtypes.
 	labelsToEnvVars(nodeCfg)
 
 	// Init
-	err = n.Init(nodeCfg, containerlabnodes.WithRuntime(c.Runtimes[nodeRuntime]),
-		containerlabnodes.WithMgmtNet(c.Config.Mgmt))
+	err = n.Init(nodeCfg, clabnodes.WithRuntime(c.Runtimes[nodeRuntime]),
+		clabnodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
@@ -163,7 +163,7 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *containerlabtypes.
 	return nil
 }
 
-func (c *CLab) createNodeCfg(nodeName string, nodeDef *containerlabtypes.NodeDefinition, idx int) (*containerlabtypes.NodeConfig, error) {
+func (c *CLab) createNodeCfg(nodeName string, nodeDef *clabtypes.NodeDefinition, idx int) (*clabtypes.NodeConfig, error) {
 	// default longName follows $prefix-$lab-$nodeName pattern
 	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
 
@@ -175,7 +175,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *containerlabtypes.NodeDef
 		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
 	}
 
-	nodeCfg := &containerlabtypes.NodeConfig{
+	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:       nodeName, // just the node name as seen in the topo file
 		LongName:        longName, // by default clab-$labName-$nodeName
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
@@ -242,7 +242,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *containerlabtypes.NodeDef
 	// initialize license field
 	p := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
 	// resolve the lic path to an abs path
-	nodeCfg.License = containerlabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
+	nodeCfg.License = clabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	// initialize bind mounts
 	binds, err := c.Config.Topology.GetNodeBinds(nodeName)
@@ -271,7 +271,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *containerlabtypes.NodeDef
 // processStartupConfig processes the raw path of the startup-config as it is defined in the topology file.
 // It handles remote files (HTTP/HTTPS/S3), local files and embedded configs.
 // As a result the `nodeCfg.StartupConfig` will be set to an absPath of the startup config file.
-func (c *CLab) processStartupConfig(nodeCfg *containerlabtypes.NodeConfig) error {
+func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name
 	r := c.magicVarReplacer(nodeCfg.ShortName)
 	p := r.Replace(c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName))
@@ -280,7 +280,7 @@ func (c *CLab) processStartupConfig(nodeCfg *containerlabtypes.NodeConfig) error
 	// it contains at least one newline
 	isEmbeddedConfig := strings.Count(p, "\n") >= 1
 	// downloadable config starts with http(s):// or s3://
-	isDownloadableConfig := containerlabutils.IsHttpURL(p, false) || containerlabutils.IsS3URL(p)
+	isDownloadableConfig := clabutils.IsHttpURL(p, false) || clabutils.IsS3URL(p)
 
 	if isEmbeddedConfig || isDownloadableConfig {
 		switch {
@@ -291,7 +291,7 @@ func (c *CLab) processStartupConfig(nodeCfg *containerlabtypes.NodeConfig) error
 			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(
 				nodeCfg.ShortName, "embedded.partial.cfg")
 
-			err := containerlabutils.CreateFile(absDestFile, p)
+			err := clabutils.CreateFile(absDestFile, p)
 			if err != nil {
 				return err
 			}
@@ -301,14 +301,14 @@ func (c *CLab) processStartupConfig(nodeCfg *containerlabtypes.NodeConfig) error
 		case isDownloadableConfig:
 			log.Debugf("Node %q startup-config is a downloadable config %q", nodeCfg.ShortName, p)
 			// get file name from an URL
-			fname := containerlabutils.FilenameForURL(context.Background(), p)
+			fname := clabutils.FilenameForURL(context.Background(), p)
 
 			// Deduce the absolute destination filename for the downloaded content
 			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
 
 			log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
 			// download the file to tmp location
-			err := containerlabutils.CopyFileContents(context.Background(), p, absDestFile, 0o755)
+			err := clabutils.CopyFileContents(context.Background(), p, absDestFile, 0o755)
 			if err != nil {
 				return err
 			}
@@ -318,7 +318,7 @@ func (c *CLab) processStartupConfig(nodeCfg *containerlabtypes.NodeConfig) error
 		}
 	}
 	// resolve the startup config path to an abs path
-	nodeCfg.StartupConfig = containerlabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
+	nodeCfg.StartupConfig = clabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	return nil
 }
@@ -373,9 +373,9 @@ func (c *CLab) verifyRootNetNSLinks() error {
 	}
 
 	// we also need to take the two special nodes host and mgmt-br into account
-	for _, n := range []containerlablinks.Node{
-		containerlablinks.GetHostLinkNode(),
-		containerlablinks.GetMgmtBrLinkNode(),
+	for _, n := range []clablinks.Node{
+		clablinks.GetHostLinkNode(),
+		clablinks.GetMgmtBrLinkNode(),
 	} {
 		// if so, add their ep names to the list of rootEpNames
 		for _, e := range n.GetEndpoints() {
@@ -412,10 +412,10 @@ func (c *CLab) verifyLinks(ctx context.Context) error {
 func (*CLab) loadKernelModules() error {
 	modules := []string{"ip_tables", "ip6_tables"}
 	opts := []kmod.Option{
-		kmod.SetInitFunc(containerlabutils.ModInitFunc),
+		kmod.SetInitFunc(clabutils.ModInitFunc),
 	}
 	for _, m := range modules {
-		isLoaded, err := containerlabutils.IsKernelModuleLoaded(m)
+		isLoaded, err := clabutils.IsKernelModuleLoaded(m)
 		if err != nil {
 			return err
 		}
@@ -506,7 +506,7 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	// the lab name of a currently deploying lab
 	// this ensures lab uniqueness
 	for idx := range containers {
-		if containers[idx].Labels[containerlablabels.Containerlab] == c.Config.Name {
+		if containers[idx].Labels[clablabels.Containerlab] == c.Config.Name {
 			return fmt.Errorf("the '%s' lab has already been deployed. Destroy the lab before deploying a lab with the same name", c.Config.Name)
 		}
 	}
@@ -536,7 +536,7 @@ func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 		// replace special variables
 		r := c.magicVarReplacer(nodeName)
 		hp := r.Replace(elems[0])
-		hp = containerlabutils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
+		hp = clabutils.ResolvePath(hp, c.TopoPaths.TopologyFileDir())
 
 		_, err := os.Stat(hp)
 		if err != nil {
@@ -570,19 +570,19 @@ func (c *CLab) HasKind(k string) bool {
 // addDefaultLabels adds default labels to node's config struct.
 // Update the addDefaultLabels function in clab/config.go
 // addDefaultLabels adds default labels to node's config struct.
-func (c *CLab) addDefaultLabels(cfg *containerlabtypes.NodeConfig) {
+func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 	if cfg.Labels == nil {
 		cfg.Labels = map[string]string{}
 	}
 
-	cfg.Labels[containerlablabels.Containerlab] = c.Config.Name
-	cfg.Labels[containerlablabels.NodeName] = cfg.ShortName
-	cfg.Labels[containerlablabels.LongName] = cfg.LongName
-	cfg.Labels[containerlablabels.NodeKind] = cfg.Kind
-	cfg.Labels[containerlablabels.NodeType] = cfg.NodeType
-	cfg.Labels[containerlablabels.NodeGroup] = cfg.Group
-	cfg.Labels[containerlablabels.NodeLabDir] = cfg.LabDir
-	cfg.Labels[containerlablabels.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
+	cfg.Labels[clablabels.Containerlab] = c.Config.Name
+	cfg.Labels[clablabels.NodeName] = cfg.ShortName
+	cfg.Labels[clablabels.LongName] = cfg.LongName
+	cfg.Labels[clablabels.NodeKind] = cfg.Kind
+	cfg.Labels[clablabels.NodeType] = cfg.NodeType
+	cfg.Labels[clablabels.NodeGroup] = cfg.Group
+	cfg.Labels[clablabels.NodeLabDir] = cfg.LabDir
+	cfg.Labels[clablabels.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
 
 	// Use custom owner if set, otherwise use current user
 	owner := c.customOwner
@@ -592,32 +592,32 @@ func (c *CLab) addDefaultLabels(cfg *containerlabtypes.NodeConfig) {
 			owner = os.Getenv("USER")
 		}
 	}
-	cfg.Labels[containerlablabels.Owner] = owner
+	cfg.Labels[clablabels.Owner] = owner
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
 // and labels value sanitized.
-func labelsToEnvVars(n *containerlabtypes.NodeConfig) {
+func labelsToEnvVars(n *clabtypes.NodeConfig) {
 	if n.Env == nil {
 		n.Env = map[string]string{}
 	}
 
 	for k, v := range n.Labels {
 		// add the value to the node env with a prefixed and special chars cleaned up key
-		n.Env["CLAB_LABEL_"+containerlabutils.ToEnvKey(k)] = v
+		n.Env["CLAB_LABEL_"+clabutils.ToEnvKey(k)] = v
 	}
 }
 
 // addEnvVarsToNodeCfg adds env vars that come from different sources to node config struct.
-func addEnvVarsToNodeCfg(c *CLab, nodeCfg *containerlabtypes.NodeConfig) error {
+func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	// Load content of the EnvVarFiles
-	envFileContent, err := containerlabutils.LoadEnvVarFiles(c.TopoPaths.TopologyFileDir(),
+	envFileContent, err := clabutils.LoadEnvVarFiles(c.TopoPaths.TopologyFileDir(),
 		c.Config.Topology.GetNodeEnvFiles(nodeCfg.ShortName))
 	if err != nil {
 		return err
 	}
 	// Merge EnvVarFiles content and the existing env variable
-	nodeCfg.Env = containerlabutils.MergeStringMaps(envFileContent, nodeCfg.Env)
+	nodeCfg.Env = clabutils.MergeStringMaps(envFileContent, nodeCfg.Env)
 
 	// Default set of no_proxy entries
 	noProxyDefaults := []string{"localhost", "127.0.0.1", "::1", "*.local"}
@@ -678,7 +678,7 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *containerlabtypes.NodeConfig) error {
 }
 
 // processNodeExecs replaces (in place) magic variables in node execs.
-func (c *CLab) processNodeExecs(nodeCfg *containerlabtypes.NodeConfig) {
+func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
 	for i, e := range nodeCfg.Exec {
 		r := c.magicVarReplacer(nodeCfg.ShortName)
 		nodeCfg.Exec[i] = r.Replace(e)

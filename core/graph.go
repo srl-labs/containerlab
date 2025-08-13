@@ -21,13 +21,13 @@ import (
 	"github.com/awalterschulze/gographviz"
 	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
-	containerlaberrors "github.com/srl-labs/containerlab/errors"
-	containerlabinternalmermaid "github.com/srl-labs/containerlab/internal/mermaid"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	claberrors "github.com/srl-labs/containerlab/errors"
+	clabinternalmermaid "github.com/srl-labs/containerlab/internal/mermaid"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
@@ -36,8 +36,8 @@ import (
 )
 
 type GraphTopo struct {
-	Nodes []containerlabtypes.ContainerDetails `json:"nodes,omitempty"`
-	Links []Link                               `json:"links,omitempty"`
+	Nodes []clabtypes.ContainerDetails `json:"nodes,omitempty"`
+	Links []Link                       `json:"links,omitempty"`
 }
 
 type Link struct {
@@ -119,12 +119,12 @@ func (c *CLab) GenerateDotGraph() error {
 	}
 
 	// create graph directory
-	containerlabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
-	containerlabutils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
 
 	// create graph filename
 	dotfile := c.TopoPaths.GraphFilename(".dot")
-	containerlabutils.CreateFile(dotfile, g.String())
+	clabutils.CreateFile(dotfile, g.String())
 	log.Infof("Created %s", dotfile)
 
 	pngfile := c.TopoPaths.GraphFilename(".png")
@@ -181,8 +181,8 @@ func (nfs noListFs) Open(name string) (result http.File, err error) {
 	return f, nil
 }
 
-func buildGraphNode(node containerlabnodes.Node) containerlabtypes.ContainerDetails {
-	return containerlabtypes.ContainerDetails{
+func buildGraphNode(node clabnodes.Node) clabtypes.ContainerDetails {
+	return clabtypes.ContainerDetails{
 		Name:        node.Config().ShortName,
 		Kind:        node.Config().Kind,
 		Image:       node.Config().Image,
@@ -200,13 +200,13 @@ func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 	}
 }
 
-func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []containerlabruntime.GenericContainer) {
+func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []clabruntime.GenericContainer) {
 	containerNames := make(map[string]struct{})
 	for idx := range containers {
-		log.Debugf("looking for node name %s", containers[idx].Labels[containerlablabels.NodeName])
-		if node, ok := c.Nodes[containers[idx].Labels[containerlablabels.NodeName]]; ok {
+		log.Debugf("looking for node name %s", containers[idx].Labels[clablabels.NodeName])
+		if node, ok := c.Nodes[containers[idx].Labels[clablabels.NodeName]]; ok {
 			containerNames[node.Config().ShortName] = struct{}{}
-			g.Nodes = append(g.Nodes, containerlabtypes.ContainerDetails{
+			g.Nodes = append(g.Nodes, clabtypes.ContainerDetails{
 				Name:        node.Config().ShortName,
 				Kind:        node.Config().Kind,
 				Image:       node.Config().Image,
@@ -225,7 +225,7 @@ func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []containerlab
 }
 
 func (c *CLab) GenerateMermaidGraph(direction string) error {
-	fc := containerlabinternalmermaid.NewFlowChart()
+	fc := clabinternalmermaid.NewFlowChart()
 
 	fc.SetTitle(c.Config.Name)
 
@@ -240,8 +240,8 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	}
 
 	// create graph directory
-	containerlabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
-	containerlabutils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
 
 	// create graph filename
 	fname := c.TopoPaths.GraphFilename(".mermaid")
@@ -249,7 +249,7 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	// Generate graph
 	var w strings.Builder
 	fc.Generate(&w)
-	containerlabutils.CreateFile(fname, w.String())
+	clabutils.CreateFile(fname, w.String())
 
 	log.Infof("Created mermaid diagram file: %s", fname)
 
@@ -267,10 +267,10 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 
 	if tmpl == "" {
 		t = template.Must(template.New("nextui.html").Parse(defaultTemplate))
-	} else if containerlabutils.FileExists(tmpl) {
+	} else if clabutils.FileExists(tmpl) {
 		t = template.Must(template.ParseFiles(tmpl))
 	} else {
-		return fmt.Errorf("%w. Path %s", containerlaberrors.ErrFileNotFound, tmpl)
+		return fmt.Errorf("%w. Path %s", claberrors.ErrFileNotFound, tmpl)
 	}
 
 	if staticDir != "" && tmpl == "" {

@@ -9,14 +9,14 @@ import (
 	"path"
 	"regexp"
 
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames          = []string{"mikrotik_ros", "vr-ros", "vr-mikrotik_ros"}
-	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`ether(?P<port>\d+)`)
 	InterfaceOffset = 2
@@ -31,25 +31,25 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	platformAttrs := &containerlabnodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
 
-	r.Register(kindnames, func() containerlabnodes.Node {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(vrRos)
 	}, nrea)
 }
 
 type vrRos struct {
-	containerlabnodes.VRNode
+	clabnodes.VRNode
 }
 
-func (n *vrRos) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *containerlabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
+	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	n.ConfigDirName = configDirName
 	n.StartupCfgFName = startupCfgFName
 	// set virtualization requirement
@@ -60,13 +60,13 @@ func (n *vrRos) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnode
 		o(n)
 	}
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    containerlabnodes.VrDefConnMode,
+		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = containerlabutils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, "ftpboot"), ":/ftpboot"))
 

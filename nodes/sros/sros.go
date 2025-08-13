@@ -25,15 +25,15 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	containerlabcert "github.com/srl-labs/containerlab/cert"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	containerlabnetconf "github.com/srl-labs/containerlab/netconf"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clabnetconf "github.com/srl-labs/containerlab/netconf"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -78,7 +78,7 @@ var (
 		"net.ipv6.conf.default.accept_ra":    "0",
 		"net.ipv4.conf.default.rp_filter":    "0",
 	}
-	defaultCredentials = containerlabnodes.NewCredentials("admin", "NokiaSros1!")
+	defaultCredentials = clabnodes.NewCredentials("admin", "NokiaSros1!")
 
 	srosEnv = map[string]string{
 		"SRSIM":                   "1",
@@ -91,10 +91,10 @@ var (
 	readyCmdBoth = `/usr/bin/pgrep ^both$`
 	readyCmdIom  = `/usr/bin/pgrep ^iom$`
 
-	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(containerlabutils.CreateFuncs()).
+	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(clabutils.CreateFuncs()).
 			Parse(srosConfigCmdsTpl)
 
-	requiredKernelVersion = &containerlabutils.KernelVersion{
+	requiredKernelVersion = &clabutils.KernelVersion{
 		Major:    5,
 		Minor:    5,
 		Revision: 0,
@@ -122,52 +122,52 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformOpts := &containerlabnodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
 
-	r.Register(kindNames, func() containerlabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(sros)
 	}, nrea)
 }
 
 // sros SR-SIM Kind structure.
 type sros struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
 	startupCliCfg []byte
 
 	// Params provided in Pre-Deploy, that sros uses in Post-Deploy phase
 	// to generate certificates
-	cert         *containerlabcert.Cert
+	cert         *clabcert.Cert
 	topologyName string
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// software version SR OS x node runs
 	swVersion      *SrosVersion
-	componentNodes []containerlabnodes.Node
+	componentNodes []clabnodes.Node
 	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when deploying.
 	// e.g. inspect is either called after deploy or independently. Hence we need to differentiate if we need to perform the
 	// component cpm based rename or not. This field indicates just that
 	renameDone bool
 
-	preDeployParams *containerlabnodes.PreDeployParams
+	preDeployParams *clabnodes.PreDeployParams
 }
 
 // Init Function for SR-SIM kind.
-func (n *sros) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.SSSE3 = true
 	n.HostRequirements.MinVCPU = 4
-	n.HostRequirements.MinVCPUFailAction = containerlabtypes.FailBehaviourError
+	n.HostRequirements.MinVCPUFailAction = clabtypes.FailBehaviourError
 	n.HostRequirements.MinAvailMemoryGb = 4
-	n.HostRequirements.MinAvailMemoryGbFailAction = containerlabtypes.FailBehaviourLog
+	n.HostRequirements.MinAvailMemoryGbFailAction = clabtypes.FailBehaviourLog
 
 	n.Cfg = cfg
 
@@ -175,7 +175,7 @@ func (n *sros) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes
 	n.InterfaceRegexp = InterfaceRegexp
 
 	// force cert creation for sros nodes as they by make use of tls certificate in the default config
-	n.Cfg.Certificate.Issue = containerlabutils.Pointer(true)
+	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
@@ -201,7 +201,7 @@ func (n *sros) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes
 	mac := genMac(n.Cfg)
 	srosEnv[envNokiaSrosSystemBaseMac] = mac
 
-	n.Cfg.Env = containerlabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
 	log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
 
 	err := n.setupComponentNodes()
@@ -213,7 +213,7 @@ func (n *sros) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes
 }
 
 // Pre Deploy func for SR-SIM kind.
-func (n *sros) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
+func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	log.Debug("Running pre-deploy")
 	// store the preDeployParams
 	n.preDeployParams = params
@@ -235,7 +235,7 @@ func (n *sros) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployP
 
 	// either the non-distributed OR distributed AND is a CPM
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
-		containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
+		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
 		slot := n.Cfg.Env[envNokiaSrosSlot]
 		if slot == "" {
 			return fmt.Errorf("fail to init node because Env var %q is set to %q",
@@ -263,7 +263,7 @@ func (n *sros) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployP
 }
 
 // Post Deploy func for SR-SIM kind.
-func (n *sros) PostDeploy(ctx context.Context, params *containerlabnodes.PostDeployParams) error {
+func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
 		"node", n.Cfg.ShortName)
@@ -360,7 +360,7 @@ func (n *sros) setupComponentNodes() error {
 	}
 
 	// Registry, because it is not a package Var
-	nr := containerlabnodes.NewNodeRegistry()
+	nr := clabnodes.NewNodeRegistry()
 	Register(nr)
 
 	// loop through the components, creating them
@@ -405,16 +405,16 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
 
 		// adjust label based env vars
-		componentConfig.Env["CLAB_LABEL_"+containerlabutils.ToEnvKey(containerlablabels.NodeName)] = componentConfig.ShortName
-		componentConfig.Env["CLAB_LABEL_"+containerlabutils.ToEnvKey(containerlablabels.LongName)] = componentConfig.LongName
+		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clablabels.NodeName)] = componentConfig.ShortName
+		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clablabels.LongName)] = componentConfig.LongName
 
 		if componentConfig.Labels == nil {
 			componentConfig.Labels = map[string]string{}
 		}
 
 		// adjust labels
-		componentConfig.Labels[containerlablabels.NodeName] = componentConfig.ShortName
-		componentConfig.Labels[containerlablabels.LongName] = componentConfig.LongName
+		componentConfig.Labels[clablabels.NodeName] = componentConfig.ShortName
+		componentConfig.Labels[clablabels.LongName] = componentConfig.LongName
 
 		// init the component
 		err = componentNode.Init(componentConfig)
@@ -430,7 +430,7 @@ func (n *sros) setupComponentNodes() error {
 }
 
 // deployFabric deploys the distributed SR-SIM when the `components` key is present.
-func (n *sros) deployFabric(ctx context.Context, deployParams *containerlabnodes.DeployParams) error {
+func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
 	// loop through the components, creating them
 	for _, c := range n.componentNodes {
 		c.PreDeploy(ctx, n.preDeployParams)
@@ -522,7 +522,7 @@ func (n *sros) calcComponentFqdn(slot string) string {
 }
 
 // cpmNode returns a CPM Node (used in Distributed mode).
-func (n *sros) cpmNode() (containerlabnodes.Node, error) {
+func (n *sros) cpmNode() (clabnodes.Node, error) {
 	defaultSlot, err := n.cpmSlot()
 	if err != nil {
 		return nil, err
@@ -559,7 +559,7 @@ search:
 }
 
 // Deploy deploys the SR-SIM kind.
-func (n *sros) Deploy(ctx context.Context, deployParams *containerlabnodes.DeployParams) error {
+func (n *sros) Deploy(ctx context.Context, deployParams *clabnodes.DeployParams) error {
 	// if it is a chassis with multiple cards (i.e. components)
 	if n.isDistributedBaseNode() {
 		err := n.deployFabric(ctx, deployParams)
@@ -568,7 +568,7 @@ func (n *sros) Deploy(ctx context.Context, deployParams *containerlabnodes.Deplo
 		}
 
 		// Update the nodes state
-		n.SetState(containerlabnodesstate.Deployed)
+		n.SetState(clabnodesstate.Deployed)
 		return nil
 	}
 
@@ -597,7 +597,7 @@ func (n *sros) Ready(ctx context.Context) error {
 		default:
 			// check if cpm is running
 			for k, cmd := range readyCmds {
-				cmd, _ := containerlabexec.NewExecCmdFromString(cmd)
+				cmd, _ := clabexec.NewExecCmdFromString(cmd)
 				execResult, err := n.RunExec(ctx, cmd)
 				if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
 					logMsg := fmt.Sprintf("status check %s failed on %s retrying", readyCmdsStrings[k], n.Cfg.ShortName)
@@ -622,7 +622,7 @@ func (n *sros) Ready(ctx context.Context) error {
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
 func (*sros) checkKernelVersion() error {
 	// retrieve running kernel version
-	kv, err := containerlabutils.GetKernelVersion()
+	kv, err := clabutils.GetKernelVersion()
 	if err != nil {
 		return err
 	}
@@ -677,16 +677,16 @@ func (n *sros) createSROSFiles() error {
 	if n.Cfg.License != "" && (n.isCPM("") || n.isStandaloneNode()) {
 		// copy license file to node specific directory in lab
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := containerlabutils.CopyFile(context.Background(), n.Cfg.License, licPath, 0o644); err != nil {
+		if err := clabutils.CopyFile(context.Background(), n.Cfg.License, licPath, 0o644); err != nil {
 			return fmt.Errorf("license copying src %s -> dst %s failed: %v", n.Cfg.License, licPath, err)
 		}
 		log.Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)
 	}
-	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
-	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0o777)
-	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0o777)
-	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0o777)
-	containerlabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0o777)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0o777)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0o777)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0o777)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0o777)
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
 		err = n.createSROSConfigFiles()
@@ -718,7 +718,7 @@ func (n *sros) createSROSConfigFiles() error {
 			return err
 		}
 
-		cBuf, err := containerlabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		cBuf, err := clabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
 		if err != nil {
 			return err
 		}
@@ -850,7 +850,7 @@ func (n *sros) addPartialConfig() error {
 				return err
 			}
 
-			configContent, err := containerlabutils.SubstituteEnvsAndTemplate(b, n.Cfg)
+			configContent, err := clabutils.SubstituteEnvsAndTemplate(b, n.Cfg)
 			if err != nil {
 				return err
 			}
@@ -868,7 +868,7 @@ func (n *sros) addPartialConfig() error {
 	return nil
 }
 
-func (n *sros) GetContainers(ctx context.Context) ([]containerlabruntime.GenericContainer, error) {
+func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error) {
 	// if not a distributed setup call regular GetContainers
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetContainers(ctx)
@@ -880,7 +880,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]containerlabruntime.Generic
 	}
 	containerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
 
-	cnts, err := n.Runtime.ListContainers(ctx, []*containerlabtypes.GenericFilter{
+	cnts, err := n.Runtime.ListContainers(ctx, []*clabtypes.GenericFilter{
 		{
 			FilterType: "name",
 			Match:      containerName,
@@ -893,7 +893,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]containerlabruntime.Generic
 	// otherwise throw ErrContainersNotFound error
 	if len(cnts) == 0 {
 		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(),
-			containerlabnodes.ErrContainersNotFound)
+			clabnodes.ErrContainersNotFound)
 	}
 
 	return cnts, err
@@ -902,7 +902,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]containerlabruntime.Generic
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
-func (n *sros) populateHosts(ctx context.Context, nodes map[string]containerlabnodes.Node) error {
+func (n *sros) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node) error {
 	hosts, err := n.Runtime.GetHostsPath(ctx, n.Cfg.LongName)
 	if err != nil {
 		log.Warn("Unable to locate SR OS node /etc/hosts file", "node", n.Cfg.ShortName, "err", err)
@@ -947,7 +947,7 @@ func (n *sros) populateHosts(ctx context.Context, nodes map[string]containerlabn
 }
 
 func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
-	captureGroups, err := containerlabutils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
+	captureGroups, err := clabutils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
 	if err != nil {
 		return "", err
 	}
@@ -1047,7 +1047,7 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 
 // saveConfigWithAddr will use the addr string to try to save the config of the node.
 func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
-	err := containerlabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
+	err := clabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,

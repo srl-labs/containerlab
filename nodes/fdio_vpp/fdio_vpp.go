@@ -15,10 +15,10 @@ import (
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -35,7 +35,7 @@ const (
 
 var (
 	kindNames          = []string{"fdio_vpp"}
-	defaultCredentials = containerlabnodes.NewCredentials("root", "vpp")
+	defaultCredentials = clabnodes.NewCredentials("root", "vpp")
 	saveCmd            = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
 
 	// vppStartupConfigTpl is the template for the vpp startup config itself
@@ -45,17 +45,17 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() containerlabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(fdio_vpp)
 	}, nrea)
 }
 
 type fdio_vpp struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
@@ -66,9 +66,9 @@ type fdio_vpp struct {
 	vppCfgSrcPath string
 }
 
-func (n *fdio_vpp) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *fdio_vpp) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
 	// Containers are run in privileged mode so it should not matter now
@@ -113,11 +113,11 @@ func (n *fdio_vpp) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabn
 	return nil
 }
 
-func (n *fdio_vpp) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
+func (n *fdio_vpp) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	nodeCfg := n.Config()
 
-	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
-	containerlabutils.CreateFile(n.ifWaitSrcPath, containerlabutils.IfWaitScript)
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	clabutils.CreateFile(n.ifWaitSrcPath, clabutils.IfWaitScript)
 	os.Chmod(n.ifWaitSrcPath, 0o777)
 
 	// record pubkeys extracted by clab
@@ -152,7 +152,7 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *containerlabnodes.PreDep
 }
 
 func (n *fdio_vpp) SaveConfig(ctx context.Context) error {
-	cmd, _ := containerlabexec.NewExecCmdFromString(saveCmd)
+	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -179,12 +179,12 @@ func (n *fdio_vpp) CheckInterfaceName() error {
 	return nil
 }
 
-func (n *fdio_vpp) PostDeploy(ctx context.Context, params *containerlabnodes.PostDeployParams) error {
+func (n *fdio_vpp) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	// add public keys extracted by containerlab from the host
 	// to the vpp's root linux user authorized keys
 	// to enable passwordless ssh
-	keys := strings.Join(containerlabutils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
-	execCmd := containerlabexec.NewExecCmdFromSlice([]string{
+	keys := strings.Join(clabutils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
+	execCmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", keys, targetAuthzKeysPath),
 	})

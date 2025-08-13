@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/charmbracelet/log"
-	containerlabvirt "github.com/srl-labs/containerlab/virt"
+	clabvirt "github.com/srl-labs/containerlab/virt"
 )
 
 type HostRequirements struct {
@@ -39,11 +39,11 @@ func NewHostRequirements() *HostRequirements {
 // Verify runs verification checks against the host requirements set for a node.
 func (h *HostRequirements) Verify(kindName, nodeName string) error {
 	// check virtualization Support
-	if h.VirtRequired && !containerlabvirt.VerifyVirtSupport() {
+	if h.VirtRequired && !clabvirt.VerifyVirtSupport() {
 		return fmt.Errorf("CPU virtualization support is required for node %q (%s)", nodeName, kindName)
 	}
 	// check SSSE3 support on amd64 arch only as it is an x86_64 instruction
-	if runtime.GOARCH == "amd64" && h.SSSE3 && !containerlabvirt.VerifySSSE3Support() {
+	if runtime.GOARCH == "amd64" && h.SSSE3 && !clabvirt.VerifySSSE3Support() {
 		return fmt.Errorf("SSSE3 CPU feature is required for node %q (%s)", nodeName, kindName)
 	}
 	// check minimum vCPUs
@@ -73,7 +73,7 @@ func (h *HostRequirements) Verify(kindName, nodeName string) error {
 // verifyMinAvailMemory verifies that the node requirement for minimum free memory is met.
 // It returns a bool indicating if the requirement is met and the amount of available memory in GB.
 func (h *HostRequirements) verifyMinAvailMemory() (result bool, availMemGB uint64) {
-	availMemGB = containerlabvirt.GetSysMemory(containerlabvirt.MemoryTypeAvailable) / 1024 / 1024 / 1024
+	availMemGB = clabvirt.GetSysMemory(clabvirt.MemoryTypeAvailable) / 1024 / 1024 / 1024
 
 	// if the MinFreeMemory amount is 0, there is no requirement defined, so result is true
 	if h.MinAvailMemoryGb == 0 {

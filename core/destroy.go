@@ -12,13 +12,13 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error) {
@@ -28,7 +28,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		opt(opts)
 	}
 
-	var containers []containerlabruntime.GenericContainer
+	var containers []clabruntime.GenericContainer
 
 	if opts.all {
 		containers, err = c.ListContainers(ctx)
@@ -40,7 +40,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		if c.Config.Name != "" {
 			listOpts = []ListOption{WithListLabName(c.Config.Name)}
 		} else {
-			listOpts = []ListOption{WithListContainerlabLabelExists()}
+			listOpts = []ListOption{WithListclabLabelExists()}
 		}
 
 		containers, err = c.ListContainers(ctx, listOpts...)
@@ -55,12 +55,12 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	topos := map[string]string{}
 
 	for idx := range containers {
-		topoFile, ok := containers[idx].Labels[containerlablabels.TopoFile]
+		topoFile, ok := containers[idx].Labels[clablabels.TopoFile]
 		if !ok {
 			continue
 		}
 
-		topos[topoFile] = filepath.Dir(containers[idx].Labels[containerlablabels.NodeLabDir])
+		topos[topoFile] = filepath.Dir(containers[idx].Labels[clablabels.NodeLabDir])
 	}
 
 	defer func() {
@@ -76,7 +76,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	log.Debugf("got the following topologies for destroy: %+v", topos)
 
 	// if all, and cli doesnt have --yes flag, and in a terminal -- prompt user confirmation
-	if opts.all && opts.terminalPrompt && containerlabutils.IsTerminal(os.Stdin.Fd()) {
+	if opts.all && opts.terminalPrompt && clabutils.IsTerminal(os.Stdin.Fd()) {
 		err := cliPromptToDestroyAll(topos)
 		if err != nil {
 			return err
@@ -119,7 +119,7 @@ func (c *CLab) makeCopyForDestroy(ctx context.Context, topo, labDir string, opts
 		WithSkippedBindsPathsCheck(),
 		WithRuntime(
 			c.globalRuntimeName,
-			&containerlabruntime.RuntimeConfig{
+			&clabruntime.RuntimeConfig{
 				Debug:            c.Config.Debug,
 				Timeout:          c.timeout,
 				GracefulShutdown: opts.graceful,
@@ -136,7 +136,7 @@ func (c *CLab) makeCopyForDestroy(ctx context.Context, topo, labDir string, opts
 		return nil, err
 	}
 
-	if labDir != "" && containerlabutils.FileOrDirExists(labDir) {
+	if labDir != "" && clabutils.FileOrDirExists(labDir) {
 		// adjust the labdir. Usually we take the PWD. but now on destroy time,
 		// we might be in a different Dir.
 		err = cc.TopoPaths.SetLabDir(labDir)
@@ -145,7 +145,7 @@ func (c *CLab) makeCopyForDestroy(ctx context.Context, topo, labDir string, opts
 		}
 	}
 
-	err = containerlablinks.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
+	err = clablinks.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	serialNodes := make(map[string]struct{})
 
 	for _, n := range c.Nodes {
-		if n.GetRuntime().GetName() == containerlabruntimeignite.RuntimeName {
+		if n.GetRuntime().GetName() == clabruntimeignite.RuntimeName {
 			serialNodes[n.Config().LongName] = struct{}{}
 			// decreasing the num of maxWorkers as they are used for concurrent nodes
 			maxWorkers--
@@ -235,7 +235,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	// Serializing ignite workers due to busy device error
-	if _, ok := c.Runtimes[containerlabruntimeignite.RuntimeName]; ok {
+	if _, ok := c.Runtimes[clabruntimeignite.RuntimeName]; ok {
 		maxWorkers = 1
 	}
 
@@ -282,10 +282,10 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
 	wg := new(sync.WaitGroup)
 
-	concurrentChan := make(chan containerlabnodes.Node)
-	serialChan := make(chan containerlabnodes.Node)
+	concurrentChan := make(chan clabnodes.Node)
+	serialChan := make(chan clabnodes.Node)
 
-	workerFunc := func(i uint, input chan containerlabnodes.Node, wg *sync.WaitGroup) {
+	workerFunc := func(i uint, input chan clabnodes.Node, wg *sync.WaitGroup) {
 		defer wg.Done()
 		for {
 			select {
@@ -345,16 +345,16 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 	toolTypes := []string{"sshx", "gotty"}
 
 	for _, toolType := range toolTypes {
-		toolFilter := []*containerlabtypes.GenericFilter{
+		toolFilter := []*clabtypes.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      containerlablabels.ToolType,
+				Field:      clablabels.ToolType,
 				Operator:   "=",
 				Match:      toolType,
 			},
 			{
 				FilterType: "label",
-				Field:      containerlablabels.Containerlab,
+				Field:      clablabels.Containerlab,
 				Operator:   "=",
 				Match:      c.Config.Name,
 			},

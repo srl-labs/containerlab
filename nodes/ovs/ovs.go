@@ -11,32 +11,32 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	goOvs "github.com/digitalocean/go-openvswitch/ovs"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlabinternalslices "github.com/srl-labs/containerlab/internal/slices"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabinternalslices "github.com/srl-labs/containerlab/internal/slices"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 )
 
 var kindNames = []string{"ovs-bridge"}
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	r.Register(kindNames, func() containerlabnodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(ovs)
 	}, nil)
 }
 
 type ovs struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *ovs) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *ovs) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -59,15 +59,15 @@ func (n *ovs) CheckDeploymentConditions(_ context.Context) error {
 	if err != nil {
 		return fmt.Errorf("error while listing ovs bridges: %v", err)
 	}
-	if !containerlabinternalslices.Contains(bridges, n.Cfg.ShortName) {
+	if !clabinternalslices.Contains(bridges, n.Cfg.ShortName) {
 		return fmt.Errorf("could not find ovs bridge %q", n.Cfg.ShortName)
 	}
 
 	return nil
 }
 
-func (n *ovs) Deploy(_ context.Context, _ *containerlabnodes.DeployParams) error {
-	n.SetState(containerlabnodesstate.Deployed)
+func (n *ovs) Deploy(_ context.Context, _ *clabnodes.DeployParams) error {
+	n.SetState(clabnodesstate.Deployed)
 	return nil
 }
 
@@ -93,15 +93,15 @@ func (*ovs) DeleteNetnsSymlink() (err error) { return nil }
 func (*ovs) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers is a noop for bridges.
-func (*ovs) GetContainers(_ context.Context) ([]containerlabruntime.GenericContainer, error) {
+func (*ovs) GetContainers(_ context.Context) ([]clabruntime.GenericContainer, error) {
 	return nil, nil
 }
 
 // RunExec is noop for ovs kind.
-func (n *ovs) RunExec(_ context.Context, _ *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
+func (n *ovs) RunExec(_ context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", n.Config().Kind)
 
-	return nil, containerlabexec.ErrRunExecNotSupported
+	return nil, clabexec.ErrRunExecNotSupported
 }
 
 func (n *ovs) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
@@ -133,6 +133,6 @@ func (n *ovs) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(
 	return nil
 }
 
-func (m *ovs) GetLinkEndpointType() containerlablinks.LinkEndpointType {
-	return containerlablinks.LinkEndpointTypeBridge
+func (m *ovs) GetLinkEndpointType() clablinks.LinkEndpointType {
+	return clablinks.LinkEndpointTypeBridge
 }

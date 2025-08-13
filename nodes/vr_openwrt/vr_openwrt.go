@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var kindNames = []string{"openwrt"}
@@ -21,22 +21,22 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() containerlabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrOpenWrt)
 	}, nrea)
 }
 
 type vrOpenWrt struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *vrOpenWrt) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *vrOpenWrt) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -51,8 +51,8 @@ func (n *vrOpenWrt) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlab
 	return nil
 }
 
-func (n *vrOpenWrt) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
+func (n *vrOpenWrt) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	// Ensure the overlay directory exists
-	containerlabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"), 0o777)
+	clabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"), 0o777)
 	return nil
 }

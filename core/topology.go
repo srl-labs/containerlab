@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // FindTopoFileByPath takes a topology path, which might be the path to a directory
@@ -57,7 +57,7 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 		return "", err
 	}
 
-	err = containerlabutils.CopyFile(context.Background(), url, tmpFile.Name(), 0o644)
+	err = clabutils.CopyFile(context.Background(), url, tmpFile.Name(), 0o644)
 
 	return tmpFile.Name(), err
 }

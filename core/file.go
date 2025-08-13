@@ -14,8 +14,8 @@ import (
 	"github.com/hellt/envsubst"
 
 	"github.com/charmbracelet/log"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -29,13 +29,13 @@ const (
 func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	var err error
 
-	c.TopoPaths, err = containerlabtypes.NewTopoPaths(topo, varsFile)
+	c.TopoPaths, err = clabtypes.NewTopoPaths(topo, varsFile)
 	if err != nil {
 		return err
 	}
 
 	// load the topology file/template
-	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameBase()).Funcs(containerlabutils.CreateFuncs()).
+	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameBase()).Funcs(clabutils.CreateFuncs()).
 		ParseFiles(c.TopoPaths.TopologyFilenameAbsPath())
 	if err != nil {
 		return err

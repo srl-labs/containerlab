@@ -13,7 +13,7 @@ import (
 	"os/exec"
 
 	"github.com/spf13/cobra"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
@@ -22,7 +22,7 @@ const downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
 var upgradeCmd = &cobra.Command{
 	Use:     "upgrade",
 	Short:   "upgrade containerlab to latest available version",
-	PreRunE: containerlabutils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 	RunE: func(cobraCmd *cobra.Command, _ []string) error {
 		f, err := os.CreateTemp("", "containerlab")
 		defer os.Remove(f.Name())

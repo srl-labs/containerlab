@@ -9,13 +9,13 @@ import (
 	"path"
 	"regexp"
 
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var (
 	kindnames          = []string{"cjunosevolved", "juniper_cjunosevolved"}
-	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin@123")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin@123")
 	InterfaceRegexp    = regexp.MustCompile(`et-0/0/(?P<port>\d+)$`)
 	InterfaceOffset    = -3
 	InterfaceHelp      = "(et-0/0/X (where X >= 0) or ethX (where X >= 4)"
@@ -30,33 +30,33 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	platformAttrs := &containerlabnodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
 
-	r.Register(kindnames, func() containerlabnodes.Node {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(cjunosevolved)
 	}, nrea)
 }
 
 type cjunosevolved struct {
-	containerlabnodes.VRNode
+	clabnodes.VRNode
 }
 
-func (n *cjunosevolved) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *cjunosevolved) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *containerlabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
+	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 
 	// cjunosevolved requires KVM support.
 	n.HostRequirements.VirtRequired = true
 	n.HostRequirements.MinVCPU = 4
-	n.HostRequirements.MinVCPUFailAction = containerlabtypes.FailBehaviourError
+	n.HostRequirements.MinVCPUFailAction = clabtypes.FailBehaviourError
 	n.HostRequirements.MinAvailMemoryGb = 8
-	n.HostRequirements.MinAvailMemoryGbFailAction = containerlabtypes.FailBehaviourLog
+	n.HostRequirements.MinAvailMemoryGbFailAction = clabtypes.FailBehaviourLog
 
 	n.Cfg = cfg
 	for _, o := range opts {

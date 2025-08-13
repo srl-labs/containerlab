@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 )
 
 // pullResult tracks the status of an ongoing image pull operation.
@@ -52,7 +52,7 @@ func (c *CLab) pullImagesForNodes(ctx context.Context) error {
 // pullNodeImages pulls all images for a single node, coordinating with other goroutines
 // to avoid duplicate pulls of the same image.
 func (c *CLab) pullNodeImages(
-	ctx context.Context, node containerlabnodes.Node, wg *sync.WaitGroup,
+	ctx context.Context, node clabnodes.Node, wg *sync.WaitGroup,
 	errCh chan<- error, pullMutex *sync.Mutex, ongoingPulls map[string]*pullResult,
 ) {
 	defer wg.Done()

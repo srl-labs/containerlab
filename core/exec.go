@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlablinks "github.com/srl-labs/containerlab/links"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
 )
 
 // Exec execute commands on running topology nodes.
-func (c *CLab) Exec(ctx context.Context, cmds []string, listOptions ...ListOption) (*containerlabexec.ExecCollection, error) {
-	err := containerlablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+func (c *CLab) Exec(ctx context.Context, cmds []string, listOptions ...ListOption) (*clabexec.ExecCollection, error) {
+	err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
 	}
@@ -26,12 +26,12 @@ func (c *CLab) Exec(ctx context.Context, cmds []string, listOptions ...ListOptio
 	}
 
 	// prepare the exec collection and the exec command
-	resultCollection := containerlabexec.NewExecCollection()
+	resultCollection := clabexec.NewExecCollection()
 
 	// build execs from the string input
-	var execCmds []*containerlabexec.ExecCmd
+	var execCmds []*clabexec.ExecCmd
 	for _, execCmdStr := range cmds {
-		execCmd, err := containerlabexec.NewExecCmdFromString(execCmdStr)
+		execCmd, err := clabexec.NewExecCmdFromString(execCmdStr)
 		if err != nil {
 			return nil, err
 		}
@@ -46,7 +46,7 @@ func (c *CLab) Exec(ctx context.Context, cmds []string, listOptions ...ListOptio
 			execResult, err := containers[idx].RunExec(ctx, execCmd)
 			if err != nil {
 				// skip nodes that do not support exec
-				if err == containerlabexec.ErrRunExecNotSupported {
+				if err == clabexec.ErrRunExecNotSupported {
 					continue
 				}
 			}

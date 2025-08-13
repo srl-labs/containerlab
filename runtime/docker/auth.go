@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/distribution/reference"
 	"github.com/docker/docker/api/types/registry"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -47,7 +47,7 @@ func getImageDomainName(imageName string) string {
 
 func getDockerConfigPath(configPath string) string {
 	if configPath == "" {
-		configPath = containerlabutils.ResolvePath(
+		configPath = clabutils.ResolvePath(
 			filepath.Join("~", dockerDefaultConfigDir, dockerDefaultConfigFile), "")
 	}
 

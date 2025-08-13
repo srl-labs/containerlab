@@ -3,8 +3,8 @@ package core
 import (
 	"strings"
 
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // ListOption is a type used for functional options for the Clab List method.
@@ -12,11 +12,11 @@ type ListOption func(o *ListOptions)
 
 // ListOptions represents the options for listing containers.
 type ListOptions struct {
-	labName                 string
-	nodeName                string
-	toolType                string
-	containerlabLabelExists bool
-	cliArgs                 []string
+	labName         string
+	nodeName        string
+	toolType        string
+	clabLabelExists bool
+	cliArgs         []string
 }
 
 // NewListOptions returns a new list options object.
@@ -25,15 +25,15 @@ func NewListOptions() *ListOptions {
 }
 
 // ToFilters converts the list options to a slice of generic filters.
-func (o *ListOptions) ToFilters() []*containerlabtypes.GenericFilter {
-	var filters []*containerlabtypes.GenericFilter
+func (o *ListOptions) ToFilters() []*clabtypes.GenericFilter {
+	var filters []*clabtypes.GenericFilter
 
 	if o.labName != "" {
 		filters = append(
 			filters,
-			&containerlabtypes.GenericFilter{
+			&clabtypes.GenericFilter{
 				FilterType: "label",
-				Field:      containerlablabels.Containerlab,
+				Field:      clablabels.Containerlab,
 				Operator:   "=",
 				Match:      o.labName,
 			},
@@ -43,9 +43,9 @@ func (o *ListOptions) ToFilters() []*containerlabtypes.GenericFilter {
 	if o.nodeName != "" {
 		filters = append(
 			filters,
-			&containerlabtypes.GenericFilter{
+			&clabtypes.GenericFilter{
 				FilterType: "label",
-				Field:      containerlablabels.LongName,
+				Field:      clablabels.LongName,
 				Operator:   "=",
 				Match:      o.nodeName,
 			},
@@ -55,21 +55,21 @@ func (o *ListOptions) ToFilters() []*containerlabtypes.GenericFilter {
 	if o.toolType != "" {
 		filters = append(
 			filters,
-			&containerlabtypes.GenericFilter{
+			&clabtypes.GenericFilter{
 				FilterType: "label",
-				Field:      containerlablabels.ToolType,
+				Field:      clablabels.ToolType,
 				Operator:   "=",
 				Match:      o.toolType,
 			},
 		)
 	}
 
-	if o.containerlabLabelExists {
+	if o.clabLabelExists {
 		filters = append(
 			filters,
-			&containerlabtypes.GenericFilter{
+			&clabtypes.GenericFilter{
 				FilterType: "label",
-				Field:      containerlablabels.Containerlab,
+				Field:      clablabels.Containerlab,
 				Operator:   "exists",
 			},
 		)
@@ -86,7 +86,7 @@ func (o *ListOptions) ToFilters() []*containerlabtypes.GenericFilter {
 
 			filters = append(
 				filters,
-				&containerlabtypes.GenericFilter{
+				&clabtypes.GenericFilter{
 					FilterType: "label",
 					Field:      cliArgParts[0],
 					Operator:   "=",
@@ -96,7 +96,7 @@ func (o *ListOptions) ToFilters() []*containerlabtypes.GenericFilter {
 		} else {
 			filters = append(
 				filters,
-				&containerlabtypes.GenericFilter{
+				&clabtypes.GenericFilter{
 					FilterType: "label",
 					Field:      strings.TrimSpace(cliArg),
 					Operator:   "exists",
@@ -135,11 +135,11 @@ func WithListToolType(
 	}
 }
 
-// WithListContainerlabLabelExists filters the list to any containers that include a containerlab
+// WithListclabLabelExists filters the list to any containers that include a containerlab
 // label.
-func WithListContainerlabLabelExists() ListOption {
+func WithListclabLabelExists() ListOption {
 	return func(o *ListOptions) {
-		o.containerlabLabelExists = true
+		o.clabLabelExists = true
 	}
 }
 

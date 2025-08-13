@@ -11,7 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/docker/go-connections/nat"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -210,19 +210,19 @@ func (n *NodeConfig) Copy() *NodeConfig {
 	copyConfig := *n
 
 	// Deep copy maps
-	copyConfig.Sysctls = containerlabutils.CopyMap(n.Sysctls)
-	copyConfig.Env = containerlabutils.CopyMap(n.Env)
-	copyConfig.Labels = containerlabutils.CopyMap(n.Labels)
+	copyConfig.Sysctls = clabutils.CopyMap(n.Sysctls)
+	copyConfig.Env = clabutils.CopyMap(n.Env)
+	copyConfig.Labels = clabutils.CopyMap(n.Labels)
 
 	// Deep copy slices
-	copyConfig.Exec = containerlabutils.CopySlice(n.Exec)
-	copyConfig.Binds = containerlabutils.CopySlice(n.Binds)
-	copyConfig.Devices = containerlabutils.CopySlice(n.Devices)
-	copyConfig.CapAdd = containerlabutils.CopySlice(n.CapAdd)
-	copyConfig.Aliases = containerlabutils.CopySlice(n.Aliases)
-	copyConfig.ExtraHosts = containerlabutils.CopySlice(n.ExtraHosts)
-	copyConfig.ResultingPortBindings = containerlabutils.CopyObjectSlice(n.ResultingPortBindings)
-	copyConfig.Components = containerlabutils.CopyObjectSlice(n.Components)
+	copyConfig.Exec = clabutils.CopySlice(n.Exec)
+	copyConfig.Binds = clabutils.CopySlice(n.Binds)
+	copyConfig.Devices = clabutils.CopySlice(n.Devices)
+	copyConfig.CapAdd = clabutils.CopySlice(n.CapAdd)
+	copyConfig.Aliases = clabutils.CopySlice(n.Aliases)
+	copyConfig.ExtraHosts = clabutils.CopySlice(n.ExtraHosts)
+	copyConfig.ResultingPortBindings = clabutils.CopyObjectSlice(n.ResultingPortBindings)
+	copyConfig.Components = clabutils.CopyObjectSlice(n.Components)
 
 	copyConfig.Healthcheck = n.Healthcheck.Copy()
 	copyConfig.Extras = n.Extras.Copy()

@@ -30,11 +30,11 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
 	"github.com/moby/term"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/mod/semver"
 )
@@ -60,21 +60,21 @@ type DeviceMapping struct {
 }
 
 func init() {
-	containerlabruntime.Register(RuntimeName, func() containerlabruntime.ContainerRuntime {
+	clabruntime.Register(RuntimeName, func() clabruntime.ContainerRuntime {
 		return &DockerRuntime{
-			mgmt: new(containerlabtypes.MgmtNet),
+			mgmt: new(clabtypes.MgmtNet),
 		}
 	})
 }
 
 type DockerRuntime struct {
-	config  containerlabruntime.RuntimeConfig
+	config  clabruntime.RuntimeConfig
 	Client  *dockerC.Client
-	mgmt    *containerlabtypes.MgmtNet
+	mgmt    *clabtypes.MgmtNet
 	version string
 }
 
-func (d *DockerRuntime) Init(opts ...containerlabruntime.RuntimeOption) error {
+func (d *DockerRuntime) Init(opts ...clabruntime.RuntimeOption) error {
 	var err error
 	log.Debug("Runtime: Docker")
 	d.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
@@ -84,7 +84,7 @@ func (d *DockerRuntime) Init(opts ...containerlabruntime.RuntimeOption) error {
 	for _, o := range opts {
 		o(d)
 	}
-	d.config.VerifyLinkParams = containerlablinks.NewVerifyLinkParams()
+	d.config.VerifyLinkParams = clablinks.NewVerifyLinkParams()
 
 	// Retrieve Docker version to determine whether to apply certain overrides
 	dockerVersion, err := d.Client.ServerVersion(context.Background())
@@ -101,13 +101,13 @@ func (d *DockerRuntime) Init(opts ...containerlabruntime.RuntimeOption) error {
 func (d *DockerRuntime) WithKeepMgmtNet() {
 	d.config.KeepMgmtNet = true
 }
-func (*DockerRuntime) GetName() string                             { return RuntimeName }
-func (d *DockerRuntime) Config() containerlabruntime.RuntimeConfig { return d.config }
+func (*DockerRuntime) GetName() string                     { return RuntimeName }
+func (d *DockerRuntime) Config() clabruntime.RuntimeConfig { return d.config }
 
 // Mgmt return management network struct of a runtime.
-func (d *DockerRuntime) Mgmt() *containerlabtypes.MgmtNet { return d.mgmt }
+func (d *DockerRuntime) Mgmt() *clabtypes.MgmtNet { return d.mgmt }
 
-func (d *DockerRuntime) WithConfig(cfg *containerlabruntime.RuntimeConfig) {
+func (d *DockerRuntime) WithConfig(cfg *clabruntime.RuntimeConfig) {
 	d.config.Timeout = cfg.Timeout
 	d.config.Debug = cfg.Debug
 	d.config.GracefulShutdown = cfg.GracefulShutdown
@@ -116,7 +116,7 @@ func (d *DockerRuntime) WithConfig(cfg *containerlabruntime.RuntimeConfig) {
 	}
 }
 
-func (d *DockerRuntime) WithMgmtNet(n *containerlabtypes.MgmtNet) {
+func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	d.mgmt = n
 	// return if MTU value was set by a user via config file
 	if n.MTU != 0 {
@@ -233,7 +233,7 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 	var v4gw, v6gw string
 	// check if IPv4/6 addr are assigned to a mgmt bridge
 	if d.mgmt.Bridge != "" {
-		v4gw, v6gw, err = containerlabutils.FirstLinkIPs(d.mgmt.Bridge)
+		v4gw, v6gw, err = clabutils.FirstLinkIPs(d.mgmt.Bridge)
 		if err != nil {
 			// only return error if the error is not about link not found
 			// we will create the bridge if it doesn't exist
@@ -260,7 +260,7 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 
 	var ipv6_subnet string
 	if d.mgmt.IPv6Subnet == "auto" {
-		ipv6_subnet, err = containerlabutils.GenerateIPv6ULASubnet()
+		ipv6_subnet, err = clabutils.GenerateIPv6ULASubnet()
 		if err != nil {
 			return "", err
 		}
@@ -312,7 +312,7 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 
 	opts := networkapi.CreateOptions{
 		Driver:     "bridge",
-		EnableIPv6: containerlabutils.Pointer(enableIPv6),
+		EnableIPv6: clabutils.Pointer(enableIPv6),
 		IPAM:       ipam,
 		Internal:   false,
 		Attachable: false,
@@ -340,7 +340,7 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 
 // getMgmtBridgeIPs gets the management bridge v4/6 addresses.
 func getMgmtBridgeIPs(bridgeName string, netResource *networkapi.Inspect) (v4, v6 string, err error) {
-	if v4, v6, err = containerlabutils.FirstLinkIPs(bridgeName); err != nil {
+	if v4, v6, err = clabutils.FirstLinkIPs(bridgeName); err != nil {
 		log.Warn(
 			"failed gleaning v4 and/or v6 addresses from bridge via netlink," +
 				" falling back to docker network inspect data",
@@ -392,7 +392,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	}
 
 	log.Debugf("Disabling TX checksum offloading for the %s bridge interface...", d.mgmt.Bridge)
-	err = containerlabutils.EthtoolTXOff(d.mgmt.Bridge)
+	err = clabutils.EthtoolTXOff(d.mgmt.Bridge)
 	if err != nil {
 		log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", d.mgmt.Bridge, err)
 	}
@@ -454,7 +454,7 @@ func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 // CreateContainer creates a docker container (but does not start it).
 func (d *DockerRuntime) CreateContainer( //nolint: funlen
 	ctx context.Context,
-	node *containerlabtypes.NodeConfig,
+	node *clabtypes.NodeConfig,
 ) (string, error) { // skipcq: GO-R1005
 	log.Info("Creating container", "name", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
@@ -477,7 +477,7 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		Image:        node.Image,
 		Entrypoint:   entrypoint,
 		Cmd:          cmd,
-		Env:          containerlabutils.ConvertEnvs(node.Env),
+		Env:          clabutils.ConvertEnvs(node.Env),
 		AttachStdout: true,
 		AttachStderr: true,
 		Hostname:     node.ShortName,
@@ -624,14 +624,14 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 }
 
 // PullImage pulls the container image using the provided image pull policy value.
-func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullPolicy containerlabtypes.PullPolicyValue) error {
+func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullPolicy clabtypes.PullPolicyValue) error {
 	log.Debugf("Looking up %s Docker image", imageName)
 
-	canonicalImageName := containerlabutils.GetCanonicalImageName(imageName)
+	canonicalImageName := clabutils.GetCanonicalImageName(imageName)
 
 	_, b, _ := d.Client.ImageInspectWithRaw(ctx, canonicalImageName)
 	switch pullPolicy {
-	case containerlabtypes.PullPolicyNever:
+	case clabtypes.PullPolicyNever:
 		if b == nil {
 			// image not found but pull policy = never
 			return fmt.Errorf("image %s not found locally, and image-pull-policy=%s prevents containerlab from pulling it", imageName, pullPolicy)
@@ -639,7 +639,7 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullPol
 		// image present, all good
 		log.Debugf("Image %s present, skip pulling", imageName)
 		return nil
-	case containerlabtypes.PullPolicyIfNotPresent:
+	case clabtypes.PullPolicyIfNotPresent:
 		if b != nil {
 			// pull policy == IfNotPresent and image is present
 			log.Debugf("Image %s present, skip pulling", imageName)
@@ -679,7 +679,7 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullPol
 }
 
 // StartContainer starts a docker container.
-func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node containerlabruntime.Node) (interface{}, error) {
+func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node clabruntime.Node) (interface{}, error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
@@ -702,19 +702,19 @@ func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node con
 }
 
 // postStartActions performs misc. tasks that are needed after the container starts.
-func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *containerlabtypes.NodeConfig) error {
+func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *clabtypes.NodeConfig) error {
 	nspath, err := d.GetNSPath(ctx, cID)
 	if err != nil {
 		return err
 	}
-	err = containerlabutils.LinkContainerNS(nspath, node.LongName)
+	err = clabutils.LinkContainerNS(nspath, node.LongName)
 	return err
 }
 
 // ListContainers lists all containers using the provided filters.
 func (d *DockerRuntime) ListContainers(ctx context.Context,
-	gfilters []*containerlabtypes.GenericFilter,
-) ([]containerlabruntime.GenericContainer, error) {
+	gfilters []*clabtypes.GenericFilter,
+) ([]clabruntime.GenericContainer, error) {
 	ctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
@@ -763,8 +763,8 @@ func (d *DockerRuntime) ListContainers(ctx context.Context,
 	return d.produceGenericContainerList(ctx, ctrs, nr)
 }
 
-func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*containerlabruntime.GenericContainer, error) {
-	ctrs, err := d.ListContainers(ctx, []*containerlabtypes.GenericFilter{
+func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*clabruntime.GenericContainer, error) {
+	ctrs, err := d.ListContainers(ctx, []*clabtypes.GenericFilter{
 		{
 			FilterType: "name",
 			Match:      cID,
@@ -781,7 +781,7 @@ func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*containe
 	return &ctrs[0], nil
 }
 
-func (*DockerRuntime) buildFilterString(gFilters []*containerlabtypes.GenericFilter) filters.Args {
+func (*DockerRuntime) buildFilterString(gFilters []*clabtypes.GenericFilter) filters.Args {
 	filter := filters.NewArgs()
 	for _, gF := range gFilters {
 		filterStr := ""
@@ -803,8 +803,8 @@ func (*DockerRuntime) buildFilterString(gFilters []*containerlabtypes.GenericFil
 // Transform docker-specific to generic container format.
 func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputContainers []dockerTypes.Container,
 	inputNetworkResources []networkapi.Inspect,
-) ([]containerlabruntime.GenericContainer, error) {
-	var result []containerlabruntime.GenericContainer
+) ([]clabruntime.GenericContainer, error) {
+	var result []clabruntime.GenericContainer
 
 	for idx := range inputContainers {
 		i := inputContainers[idx]
@@ -816,7 +816,7 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 			names = append(names, strings.TrimLeft(n, "/"))
 		}
 
-		ctr := containerlabruntime.GenericContainer{
+		ctr := clabruntime.GenericContainer{
 			Names:           names,
 			ID:              i.ID,
 			ShortID:         i.ID[:12],
@@ -824,10 +824,10 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 			State:           i.State,
 			Status:          i.Status,
 			Labels:          i.Labels,
-			NetworkSettings: containerlabruntime.GenericMgmtIPs{},
+			NetworkSettings: clabruntime.GenericMgmtIPs{},
 		}
 
-		ctr.Ports = make([]*containerlabtypes.GenericPortBinding, len(i.Ports))
+		ctr.Ports = make([]*clabtypes.GenericPortBinding, len(i.Ports))
 		for x, p := range i.Ports {
 			ctr.Ports[x] = genericPortFromDockerPort(p)
 		}
@@ -887,7 +887,7 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 		}
 
 		// populating mounts information
-		var mount containerlabruntime.ContainerMount
+		var mount clabruntime.ContainerMount
 		for _, m := range i.Mounts {
 			mount.Source = m.Source
 			mount.Destination = m.Destination
@@ -900,8 +900,8 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 	return result, nil
 }
 
-func genericPortFromDockerPort(p dockerTypes.Port) *containerlabtypes.GenericPortBinding {
-	return &containerlabtypes.GenericPortBinding{
+func genericPortFromDockerPort(p dockerTypes.Port) *clabtypes.GenericPortBinding {
+	return &clabtypes.GenericPortBinding{
 		HostIP:        p.IP,
 		HostPort:      int(p.PublicPort),
 		ContainerPort: int(p.PrivatePort),
@@ -910,7 +910,7 @@ func genericPortFromDockerPort(p dockerTypes.Port) *containerlabtypes.GenericPor
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error.
-func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
+func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 	cont, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
 		return nil, err
@@ -958,7 +958,7 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *container
 		return nil, err
 	}
 
-	execResult := containerlabexec.NewExecResult(execCmd)
+	execResult := clabexec.NewExecResult(execCmd)
 
 	// set the result fields in the exec struct
 	execResult.SetReturnCode(execInspect.ExitCode)
@@ -968,7 +968,7 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *container
 }
 
 // ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err.
-func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, execCmd *containerlabexec.ExecCmd) error {
+func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, execCmd *clabexec.ExecCmd) error {
 	execConfig := container.ExecOptions{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: execCmd.GetCmd()}
 	respID, err := d.Client.ContainerExecCreate(context.Background(), cID, execConfig)
 	if err != nil {
@@ -1026,7 +1026,7 @@ func (d *DockerRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 	return hostsPath, nil
 }
 
-func (*DockerRuntime) processPidMode(node *containerlabtypes.NodeConfig, containerHostConfig *container.HostConfig) error {
+func (*DockerRuntime) processPidMode(node *clabtypes.NodeConfig, containerHostConfig *container.HostConfig) error {
 	pidMode := container.PidMode(node.PidMode)
 	if !pidMode.Valid() {
 		return fmt.Errorf("pid mode %q invalid", node.PidMode)
@@ -1042,7 +1042,7 @@ func (d *DockerRuntime) processNetworkMode(
 	containerNetworkingConfig *networkapi.NetworkingConfig,
 	containerHostConfig *container.HostConfig,
 	containerConfig *container.Config,
-	node *containerlabtypes.NodeConfig,
+	node *clabtypes.NodeConfig,
 ) error {
 	netMode := strings.SplitN(node.NetworkMode, ":", 2)
 
@@ -1109,18 +1109,18 @@ func (d *DockerRuntime) processNetworkMode(
 }
 
 // GetContainerStatus retrieves the ContainerStatus of the named container.
-func (d *DockerRuntime) GetContainerStatus(ctx context.Context, cID string) containerlabruntime.ContainerStatus {
+func (d *DockerRuntime) GetContainerStatus(ctx context.Context, cID string) clabruntime.ContainerStatus {
 	inspect, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
-		return containerlabruntime.NotFound
+		return clabruntime.NotFound
 	}
 	switch inspect.State.Status {
 	case "running":
-		return containerlabruntime.Running
+		return clabruntime.Running
 	case "created", "paused", "restarting", "removing", "exited", "dead":
-		return containerlabruntime.Stopped
+		return clabruntime.Stopped
 	}
-	return containerlabruntime.NotFound
+	return clabruntime.NotFound
 }
 
 // containerPid returns the pid of a container by its ID using inspect.
@@ -1183,9 +1183,9 @@ func (*DockerRuntime) GetRuntimeSocket() (string, error) {
 	return "/var/run/docker.sock", nil
 }
 
-func (*DockerRuntime) GetCooCBindMounts() containerlabtypes.Binds {
-	return containerlabtypes.Binds{
-		containerlabtypes.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
-		containerlabtypes.NewBind("/run/netns", "/run/netns", ""),
+func (*DockerRuntime) GetCooCBindMounts() clabtypes.Binds {
+	return clabtypes.Binds{
+		clabtypes.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
+		clabtypes.NewBind("/run/netns", "/run/netns", ""),
 	}
 }

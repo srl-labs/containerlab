@@ -10,15 +10,15 @@ import (
 	"path"
 
 	"github.com/charmbracelet/log"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindNames          = []string{"dell_sonic"}
-	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 	generateable       = true
 	generateIfFormat   = "eth%d"
 )
@@ -32,26 +32,26 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &containerlabnodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
-	r.Register(kindNames, func() containerlabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(dell_sonic)
 	}, nrea)
 }
 
 type dell_sonic struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *dell_sonic) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *dell_sonic) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -61,13 +61,13 @@ func (n *dell_sonic) Init(cfg *containerlabtypes.NodeConfig, opts ...containerla
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    containerlabnodes.VrDefConnMode,
+		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = containerlabutils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
@@ -78,17 +78,17 @@ func (n *dell_sonic) Init(cfg *containerlabtypes.NodeConfig, opts ...containerla
 	return nil
 }
 
-func (n *dell_sonic) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
-	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *dell_sonic) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
 	}
-	return containerlabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
+	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
 func (n *dell_sonic) SaveConfig(ctx context.Context) error {
-	cmd, err := containerlabexec.NewExecCmdFromString(saveCmd)
+	cmd, err := clabexec.NewExecCmdFromString(saveCmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to create execute cmd: %w", n.Cfg.ShortName, err)
 	}
@@ -110,5 +110,5 @@ func (n *dell_sonic) SaveConfig(ctx context.Context) error {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file is correct.
 func (n *dell_sonic) CheckInterfaceName() error {
-	return containerlabnodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
+	return clabnodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

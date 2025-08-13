@@ -10,9 +10,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	containerlabcore "github.com/srl-labs/containerlab/core"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 var (
@@ -36,38 +36,38 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return errors.New("provide command to execute")
 	}
 
-	outputFormat, err := containerlabexec.ParseExecOutputFormat(execFormat)
+	outputFormat, err := clabexec.ParseExecOutputFormat(execFormat)
 	if err != nil {
 		return err
 	}
 
-	opts := make([]containerlabcore.ClabOption, 0, 5)
+	opts := make([]clabcore.ClabOption, 0, 5)
 
 	// exec can work with or without a topology file
 	// when topology file is provided we need to parse it
 	// when topo file is not provided, we rely on labels to perform the filtering
 	if topoFile != "" {
-		opts = append(opts, containerlabcore.WithTopoPath(topoFile, varsFile))
+		opts = append(opts, clabcore.WithTopoPath(topoFile, varsFile))
 	}
 
 	opts = append(opts,
-		containerlabcore.WithTimeout(timeout),
-		containerlabcore.WithRuntime(
+		clabcore.WithTimeout(timeout),
+		clabcore.WithRuntime(
 			runtime,
-			&containerlabruntime.RuntimeConfig{
+			&clabruntime.RuntimeConfig{
 				Debug:            debug,
 				Timeout:          timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		containerlabcore.WithDebug(debug),
+		clabcore.WithDebug(debug),
 	)
 
 	if labName != "" {
-		opts = append(opts, containerlabcore.WithLabName(labName))
+		opts = append(opts, clabcore.WithLabName(labName))
 	}
 
-	c, err := containerlabcore.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
@@ -77,14 +77,14 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	listOptions := []containerlabcore.ListOption{
-		containerlabcore.WithListFromCliArgs(labelsFilter),
+	listOptions := []clabcore.ListOption{
+		clabcore.WithListFromCliArgs(labelsFilter),
 	}
 
 	if topoFile != "" {
 		listOptions = append(
 			listOptions,
-			containerlabcore.WithListLabName(c.Config.Name),
+			clabcore.WithListLabName(c.Config.Name),
 		)
 	}
 
@@ -94,9 +94,9 @@ func execFn(_ *cobra.Command, _ []string) error {
 	}
 
 	switch outputFormat {
-	case containerlabexec.ExecFormatPlain:
+	case clabexec.ExecFormatPlain:
 		resultCollection.Log()
-	case containerlabexec.ExecFormatJSON:
+	case clabexec.ExecFormatJSON:
 		out, err := resultCollection.Dump(outputFormat)
 		if err != nil {
 			return fmt.Errorf("failed to print the results collection: %v", err)

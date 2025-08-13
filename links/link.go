@@ -8,8 +8,8 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
-	containerlabinternalslices "github.com/srl-labs/containerlab/internal/slices"
-	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabinternalslices "github.com/srl-labs/containerlab/internal/slices"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
@@ -389,7 +389,7 @@ type Node interface {
 	GetShortName() string
 	GetEndpoints() []Endpoint
 	ExecFunction(context.Context, func(ns.NetNS) error) error
-	GetState() containerlabnodesstate.NodeState
+	GetState() clabnodesstate.NodeState
 	Delete(ctx context.Context) error
 }
 
@@ -491,7 +491,7 @@ func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
 	}
 
 	for _, e := range endpoints {
-		if !containerlabinternalslices.Contains(params.NodesFilter, e.Node) {
+		if !clabinternalslices.Contains(params.NodesFilter, e.Node) {
 			return false
 		}
 	}

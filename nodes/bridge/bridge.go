@@ -11,15 +11,15 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -35,24 +35,24 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() containerlabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(bridge)
 	}, nrea)
 }
 
 type bridge struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 	containerNs string
-	nodesMap    map[string]containerlabnodes.Node
+	nodesMap    map[string]clabnodes.Node
 }
 
-func (s *bridge) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (s *bridge) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *containerlabnodes.NewDefaultNode(s)
+	s.DefaultNode = *clabnodes.NewDefaultNode(s)
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -62,7 +62,7 @@ func (s *bridge) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnod
 		s.Cfg.IsRootNamespaceBased = true
 	} else {
 		var err error
-		s.containerNs, err = containerlabutils.ContainerNameFromNetworkMode(s.Config().NetworkMode)
+		s.containerNs, err = clabutils.ContainerNameFromNetworkMode(s.Config().NetworkMode)
 		if err != nil {
 			return err
 		}
@@ -81,13 +81,13 @@ func (n *bridge) nameWithoutSeparatorSuffix() string {
 	return s
 }
 
-func (n *bridge) Deploy(ctx context.Context, dp *containerlabnodes.DeployParams) error {
+func (n *bridge) Deploy(ctx context.Context, dp *clabnodes.DeployParams) error {
 	// store nodes map for later use
 	n.nodesMap = dp.Nodes
 
 	// if the NetworkMode is set, then the bridge is setup within a namespace, so it must be created.
 	if n.Config().NetworkMode != "" {
-		cntName, err := containerlabutils.ContainerNameFromNetworkMode(n.Config().NetworkMode)
+		cntName, err := clabutils.ContainerNameFromNetworkMode(n.Config().NetworkMode)
 		if err != nil {
 			return err
 		}
@@ -117,7 +117,7 @@ func (n *bridge) Deploy(ctx context.Context, dp *containerlabnodes.DeployParams)
 			return err
 		}
 	}
-	n.SetState(containerlabnodesstate.Deployed)
+	n.SetState(clabnodesstate.Deployed)
 	return nil
 }
 
@@ -132,7 +132,7 @@ func (*bridge) GetImages(_ context.Context) map[string]string { return map[strin
 // DeleteNetnsSymlink is a noop for bridge nodes.
 func (b *bridge) DeleteNetnsSymlink() (err error) { return nil }
 
-func (b *bridge) PostDeploy(_ context.Context, _ *containerlabnodes.PostDeployParams) error {
+func (b *bridge) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error {
 	if b.containerNs != "" {
 		return nil
 	}
@@ -171,7 +171,7 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 	if b.containerNs == "" {
 		err = b.ExecFunction(ctx, func(nn ns.NetNS) error {
 			// check bridge exists
-			_, err = containerlabutils.BridgeByName(b.nameWithoutSeparatorSuffix())
+			_, err = clabutils.BridgeByName(b.nameWithoutSeparatorSuffix())
 			if err != nil {
 				return err
 			}
@@ -188,14 +188,14 @@ func (*bridge) PullImage(_ context.Context) error { return nil }
 func (*bridge) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers is a noop for bridges.
-func (*bridge) GetContainers(_ context.Context) ([]containerlabruntime.GenericContainer, error) {
+func (*bridge) GetContainers(_ context.Context) ([]clabruntime.GenericContainer, error) {
 	return nil, nil
 }
 
 // RunExec is a noop for bridge kind.
-func (b *bridge) RunExec(_ context.Context, _ *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
+func (b *bridge) RunExec(_ context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 	log.Warnf("Exec operation is not implemented for kind %q", b.Config().Kind)
-	return nil, containerlabexec.ErrRunExecNotSupported
+	return nil, clabexec.ErrRunExecNotSupported
 }
 
 func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
@@ -206,7 +206,7 @@ func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f fu
 }
 
 func (b *bridge) addLinkToContainerNamespace(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
-	cntName, err := containerlabutils.ContainerNameFromNetworkMode(b.Config().NetworkMode)
+	cntName, err := clabutils.ContainerNameFromNetworkMode(b.Config().NetworkMode)
 	if err != nil {
 		return err
 	}
@@ -252,11 +252,11 @@ func (b *bridge) addLinkToContainerHost(_ context.Context, link netlink.Link, f 
 	return curNamespace.Do(f)
 }
 
-func (b *bridge) GetLinkEndpointType() containerlablinks.LinkEndpointType {
+func (b *bridge) GetLinkEndpointType() clablinks.LinkEndpointType {
 	if b.containerNs != "" {
-		return containerlablinks.LinkEndpointTypeBridgeNS
+		return clablinks.LinkEndpointTypeBridgeNS
 	}
-	return containerlablinks.LinkEndpointTypeBridge
+	return clablinks.LinkEndpointTypeBridge
 }
 
 // installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed in and out of the bridge

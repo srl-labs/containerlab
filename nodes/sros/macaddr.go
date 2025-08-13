@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"math/big"
 
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // genMac returns a struct with a generated MAC address string to use in SR-OS Node.
-func genMac(cfg *containerlabtypes.NodeConfig) string {
+func genMac(cfg *clabtypes.NodeConfig) string {
 	// Generated MAC address conforms to the following addressing scheme
 	// first byte  - `1c` - fixed for easy identification of SR-OS Mac addresses
 	// second byte - random, to distinguish projects

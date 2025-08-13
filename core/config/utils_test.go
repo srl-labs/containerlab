@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestFarEndIP(t *testing.T) {
@@ -67,22 +67,22 @@ func TestIPLastOctect(t *testing.T) {
 	}
 }
 
-func gettestLink() *containerlabtypes.Link {
-	return &containerlabtypes.Link{
-		A: &containerlabtypes.Endpoint{
-			Node: &containerlabtypes.NodeConfig{
+func gettestLink() *clabtypes.Link {
+	return &clabtypes.Link{
+		A: &clabtypes.Endpoint{
+			Node: &clabtypes.NodeConfig{
 				ShortName: "a",
-				Config: &containerlabtypes.ConfigDispatcher{
+				Config: &clabtypes.ConfigDispatcher{
 					Vars: map[string]interface{}{
 						vkSystemIP: "10.0.0.1/32",
 					},
 				},
 			},
 		},
-		B: &containerlabtypes.Endpoint{
-			Node: &containerlabtypes.NodeConfig{
+		B: &clabtypes.Endpoint{
+			Node: &clabtypes.NodeConfig{
 				ShortName: "b",
-				Config: &containerlabtypes.ConfigDispatcher{
+				Config: &clabtypes.ConfigDispatcher{
 					Vars: map[string]interface{}{
 						vkSystemIP: "10.0.0.2/32",
 					},

@@ -7,32 +7,32 @@ package checkpoint_cloudguard
 import (
 	"fmt"
 
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames           = []string{"checkpoint_cloudguard"}
-	defaultCredentials  = containerlabnodes.NewCredentials("admin", "admin")
+	defaultCredentials  = clabnodes.NewCredentials("admin", "admin")
 	scrapliPlatformName = "notsupported"
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, nil)
-	r.Register(kindnames, func() containerlabnodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, nil)
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(CheckpointCloudguard)
 	}, nrea)
 }
 
 type CheckpointCloudguard struct {
-	containerlabnodes.VRNode
+	clabnodes.VRNode
 }
 
-func (n *CheckpointCloudguard) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *CheckpointCloudguard) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *containerlabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
+	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -42,13 +42,13 @@ func (n *CheckpointCloudguard) Init(cfg *containerlabtypes.NodeConfig, opts ...c
 	}
 	// env vars are used to set startup arguments in boxen container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    containerlabnodes.VrDefConnMode,
+		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = containerlabutils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])

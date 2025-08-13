@@ -10,155 +10,155 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	containerlaberrors "github.com/srl-labs/containerlab/errors"
-	containerlabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
-	containerlabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	claberrors "github.com/srl-labs/containerlab/errors"
+	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
+	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	"go.uber.org/mock/gomock"
 	"golang.org/x/exp/slices"
 )
 
 // getNodeMap return a map of nodes for testing purpose.
-func getNodeMap(mockCtrl *gomock.Controller) map[string]containerlabnodes.Node {
+func getNodeMap(mockCtrl *gomock.Controller) map[string]clabnodes.Node {
 	// instantiate Mock Node 1
-	mockNode1 := containerlabmocksmocknodes.NewMockNode(mockCtrl)
+	mockNode1 := clabmocksmocknodes.NewMockNode(mockCtrl)
 	mockNode1.EXPECT().Config().Return(
-		&containerlabtypes.NodeConfig{
+		&clabtypes.NodeConfig{
 			Image:     "alpine:3",
 			ShortName: "node1",
-			Stages:    containerlabtypes.NewStages(),
+			Stages:    clabtypes.NewStages(),
 		},
 	).AnyTimes()
 
 	// instantiate Mock Node 2
-	mockNode2 := containerlabmocksmocknodes.NewMockNode(mockCtrl)
+	mockNode2 := clabmocksmocknodes.NewMockNode(mockCtrl)
 	mockNode2.EXPECT().Config().Return(
-		&containerlabtypes.NodeConfig{
+		&clabtypes.NodeConfig{
 			Image:     "alpine:3",
 			ShortName: "node2",
-			Stages: &containerlabtypes.Stages{
-				Create: &containerlabtypes.StageCreate{
-					StageBase: containerlabtypes.StageBase{
-						WaitFor: containerlabtypes.WaitForList{
-							&containerlabtypes.WaitFor{
+			Stages: &clabtypes.Stages{
+				Create: &clabtypes.StageCreate{
+					StageBase: clabtypes.StageBase{
+						WaitFor: clabtypes.WaitForList{
+							&clabtypes.WaitFor{
 								Node:  "node1",
-								Stage: containerlabtypes.WaitForCreate,
+								Stage: clabtypes.WaitForCreate,
 							},
 						},
 					},
 				},
-				CreateLinks: &containerlabtypes.StageCreateLinks{
-					StageBase: containerlabtypes.StageBase{},
+				CreateLinks: &clabtypes.StageCreateLinks{
+					StageBase: clabtypes.StageBase{},
 				},
-				Configure: &containerlabtypes.StageConfigure{
-					StageBase: containerlabtypes.StageBase{},
+				Configure: &clabtypes.StageConfigure{
+					StageBase: clabtypes.StageBase{},
 				},
-				Healthy: &containerlabtypes.StageHealthy{
-					StageBase: containerlabtypes.StageBase{},
+				Healthy: &clabtypes.StageHealthy{
+					StageBase: clabtypes.StageBase{},
 				},
-				Exit: &containerlabtypes.StageExit{
-					StageBase: containerlabtypes.StageBase{},
+				Exit: &clabtypes.StageExit{
+					StageBase: clabtypes.StageBase{},
 				},
 			},
 		},
 	).AnyTimes()
 
 	// instantiate Mock Node 3
-	mockNode3 := containerlabmocksmocknodes.NewMockNode(mockCtrl)
+	mockNode3 := clabmocksmocknodes.NewMockNode(mockCtrl)
 	mockNode3.EXPECT().Config().Return(
-		&containerlabtypes.NodeConfig{
+		&clabtypes.NodeConfig{
 			Image:       "alpine:3",
 			NetworkMode: "container:node2",
 			ShortName:   "node3",
-			Stages: &containerlabtypes.Stages{
-				Create: &containerlabtypes.StageCreate{
-					StageBase: containerlabtypes.StageBase{
-						WaitFor: containerlabtypes.WaitForList{
-							&containerlabtypes.WaitFor{
+			Stages: &clabtypes.Stages{
+				Create: &clabtypes.StageCreate{
+					StageBase: clabtypes.StageBase{
+						WaitFor: clabtypes.WaitForList{
+							&clabtypes.WaitFor{
 								Node:  "node1",
-								Stage: containerlabtypes.WaitForCreate,
+								Stage: clabtypes.WaitForCreate,
 							},
-							&containerlabtypes.WaitFor{
+							&clabtypes.WaitFor{
 								Node:  "node2",
-								Stage: containerlabtypes.WaitForCreate,
+								Stage: clabtypes.WaitForCreate,
 							},
 						},
 					},
 				},
-				CreateLinks: &containerlabtypes.StageCreateLinks{
-					StageBase: containerlabtypes.StageBase{},
+				CreateLinks: &clabtypes.StageCreateLinks{
+					StageBase: clabtypes.StageBase{},
 				},
-				Configure: &containerlabtypes.StageConfigure{
-					StageBase: containerlabtypes.StageBase{},
+				Configure: &clabtypes.StageConfigure{
+					StageBase: clabtypes.StageBase{},
 				},
-				Healthy: &containerlabtypes.StageHealthy{
-					StageBase: containerlabtypes.StageBase{},
+				Healthy: &clabtypes.StageHealthy{
+					StageBase: clabtypes.StageBase{},
 				},
-				Exit: &containerlabtypes.StageExit{
-					StageBase: containerlabtypes.StageBase{},
+				Exit: &clabtypes.StageExit{
+					StageBase: clabtypes.StageBase{},
 				},
 			},
 		},
 	).AnyTimes()
 
 	// instantiate Mock Node 4
-	mockNode4 := containerlabmocksmocknodes.NewMockNode(mockCtrl)
+	mockNode4 := clabmocksmocknodes.NewMockNode(mockCtrl)
 	mockNode4.EXPECT().Config().Return(
-		&containerlabtypes.NodeConfig{
+		&clabtypes.NodeConfig{
 			Image:           "alpine:3",
 			MgmtIPv4Address: "172.10.10.1",
 			ShortName:       "node4",
 			NetworkMode:     "container:foobar",
-			Stages:          containerlabtypes.NewStages(),
+			Stages:          clabtypes.NewStages(),
 		},
 	).AnyTimes()
 
 	// instantiate Mock Node 5
-	mockNode5 := containerlabmocksmocknodes.NewMockNode(mockCtrl)
+	mockNode5 := clabmocksmocknodes.NewMockNode(mockCtrl)
 	mockNode5.EXPECT().Config().Return(
-		&containerlabtypes.NodeConfig{
+		&clabtypes.NodeConfig{
 			Image:           "alpine:3",
 			MgmtIPv4Address: "172.10.10.2",
 			ShortName:       "node5",
-			Stages: &containerlabtypes.Stages{
-				Create: &containerlabtypes.StageCreate{
-					StageBase: containerlabtypes.StageBase{
-						WaitFor: containerlabtypes.WaitForList{
-							&containerlabtypes.WaitFor{
+			Stages: &clabtypes.Stages{
+				Create: &clabtypes.StageCreate{
+					StageBase: clabtypes.StageBase{
+						WaitFor: clabtypes.WaitForList{
+							&clabtypes.WaitFor{
 								Node:  "node3",
-								Stage: containerlabtypes.WaitForCreate,
+								Stage: clabtypes.WaitForCreate,
 							},
-							&containerlabtypes.WaitFor{
+							&clabtypes.WaitFor{
 								Node:  "node4",
-								Stage: containerlabtypes.WaitForCreate,
+								Stage: clabtypes.WaitForCreate,
 							},
 						},
 					},
 				},
-				CreateLinks: &containerlabtypes.StageCreateLinks{
-					StageBase: containerlabtypes.StageBase{},
+				CreateLinks: &clabtypes.StageCreateLinks{
+					StageBase: clabtypes.StageBase{},
 				},
-				Configure: &containerlabtypes.StageConfigure{
-					StageBase: containerlabtypes.StageBase{},
+				Configure: &clabtypes.StageConfigure{
+					StageBase: clabtypes.StageBase{},
 				},
-				Healthy: &containerlabtypes.StageHealthy{
-					StageBase: containerlabtypes.StageBase{},
+				Healthy: &clabtypes.StageHealthy{
+					StageBase: clabtypes.StageBase{},
 				},
-				Exit: &containerlabtypes.StageExit{
-					StageBase: containerlabtypes.StageBase{},
+				Exit: &clabtypes.StageExit{
+					StageBase: clabtypes.StageBase{},
 				},
 			},
 		},
 	).AnyTimes()
 
 	// nodeMap used for testing
-	nodeMap := map[string]containerlabnodes.Node{}
+	nodeMap := map[string]clabnodes.Node{}
 
 	// nodemap is created with the node definition
-	for _, x := range []containerlabnodes.Node{mockNode1, mockNode2, mockNode3, mockNode4, mockNode5} {
+	for _, x := range []clabnodes.Node{mockNode1, mockNode2, mockNode3, mockNode4, mockNode5} {
 		// add node to nodemap
 		nodeMap[x.Config().ShortName] = x
 		// add node to dependencyManager
@@ -172,7 +172,7 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 	defer mockCtrl.Finish()
 
 	// init a ContainerRuntime mock
-	crMock := containerlabmocksmockruntime.NewMockContainerRuntime(mockCtrl)
+	crMock := clabmocksmockruntime.NewMockContainerRuntime(mockCtrl)
 
 	// context parameter
 	ctx := context.TODO()
@@ -181,12 +181,12 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 	counterMax := 3
 	// setup the container runtime mock
 	crMock.EXPECT().GetContainerStatus(ctx, "foobar").DoAndReturn(
-		func(_ context.Context, _ string) containerlabruntime.ContainerStatus {
+		func(_ context.Context, _ string) clabruntime.ContainerStatus {
 			counter++
 			if counter >= counterMax {
-				return containerlabruntime.Running
+				return clabruntime.Running
 			}
-			return containerlabruntime.Stopped
+			return clabruntime.Stopped
 		},
 	).Times(counterMax)
 
@@ -194,7 +194,7 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 	c := CLab{
 		Nodes:             getNodeMap(mockCtrl),
 		globalRuntimeName: "mock",
-		Runtimes: map[string]containerlabruntime.ContainerRuntime{
+		Runtimes: map[string]clabruntime.ContainerRuntime{
 			"mock": crMock,
 		},
 	}
@@ -247,8 +247,8 @@ func Test_filterClabNodes(t *testing.T) {
 		"two nodes, one filter node": {
 			c: &CLab{
 				Config: &Config{
-					Topology: &containerlabtypes.Topology{
-						Nodes: map[string]*containerlabtypes.NodeDefinition{
+					Topology: &clabtypes.Topology{
+						Nodes: map[string]*clabtypes.NodeDefinition{
 							"node1": {
 								Kind: "linux",
 							},
@@ -266,8 +266,8 @@ func Test_filterClabNodes(t *testing.T) {
 		"one node, empty node filter": {
 			c: &CLab{
 				Config: &Config{
-					Topology: &containerlabtypes.Topology{
-						Nodes: map[string]*containerlabtypes.NodeDefinition{
+					Topology: &clabtypes.Topology{
+						Nodes: map[string]*clabtypes.NodeDefinition{
 							"node1": {
 								Kind: "linux",
 							},
@@ -282,8 +282,8 @@ func Test_filterClabNodes(t *testing.T) {
 		"two nodes, one filter node with a wrong name": {
 			c: &CLab{
 				Config: &Config{
-					Topology: &containerlabtypes.Topology{
-						Nodes: map[string]*containerlabtypes.NodeDefinition{
+					Topology: &clabtypes.Topology{
+						Nodes: map[string]*clabtypes.NodeDefinition{
 							"node1": {
 								Kind: "linux",
 							},
@@ -297,7 +297,7 @@ func Test_filterClabNodes(t *testing.T) {
 			nodesFilter: []string{"wrongName"},
 			wantNodes:   []string{"node1", "node2"},
 			wantErr:     true,
-			err:         containerlaberrors.ErrIncorrectInput,
+			err:         claberrors.ErrIncorrectInput,
 		},
 	}
 

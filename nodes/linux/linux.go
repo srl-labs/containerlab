@@ -11,11 +11,11 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
-	containerlabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/weaveworks/ignite/pkg/operations"
 )
 
@@ -27,23 +27,23 @@ const (
 var kindnames = []string{"linux"}
 
 // Register registers the node in the NodeRegistry.
-func Register(r *containerlabnodes.NodeRegistry) {
-	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
-	r.Register(kindnames, func() containerlabnodes.Node {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(linux)
 	}, nrea)
 }
 
 type linux struct {
-	containerlabnodes.DefaultNode
+	clabnodes.DefaultNode
 	vmChans *operations.VMChannels
 }
 
-func (n *linux) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+func (n *linux) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
 	// linux kind uses `always` as a default restart policy
@@ -67,11 +67,11 @@ func (n *linux) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnode
 	return nil
 }
 
-func (n *linux) Deploy(ctx context.Context, _ *containerlabnodes.DeployParams) error {
+func (n *linux) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 	// Set the "CLAB_INTFS" variable to the number of interfaces
 	// Which is required by vrnetlab to determine if all configured interfaces are present
 	// such that the internal VM can be started with these interfaces assigned.
-	n.Config().Env[containerlabtypes.CLAB_ENV_INTFS] = strconv.Itoa(len(n.GetEndpoints()))
+	n.Config().Env[clabtypes.CLAB_ENV_INTFS] = strconv.Itoa(len(n.GetEndpoints()))
 
 	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
 	if err != nil {
@@ -83,15 +83,15 @@ func (n *linux) Deploy(ctx context.Context, _ *containerlabnodes.DeployParams) e
 		n.vmChans = vmChans
 	}
 
-	n.SetState(containerlabnodesstate.Deployed)
+	n.SetState(clabnodesstate.Deployed)
 
 	return err
 }
 
-func (n *linux) PostDeploy(ctx context.Context, _ *containerlabnodes.PostDeployParams) error {
+func (n *linux) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
 
-	err := n.ExecFunction(ctx, containerlabutils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
+	err := n.ExecFunction(ctx, clabutils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
 	if err != nil {
 		log.Error(err)
 	}
@@ -106,14 +106,14 @@ func (n *linux) PostDeploy(ctx context.Context, _ *containerlabnodes.PostDeployP
 
 func (n *linux) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
-	images[containerlabnodes.ImageKey] = n.Cfg.Image
+	images[clabnodes.ImageKey] = n.Cfg.Image
 
 	// ignite runtime additionally needs a kernel and sandbox image
-	if n.Runtime.GetName() != containerlabruntimeignite.RuntimeName {
+	if n.Runtime.GetName() != clabruntimeignite.RuntimeName {
 		return images
 	}
-	images[containerlabnodes.KernelKey] = n.Cfg.Kernel
-	images[containerlabnodes.SandboxKey] = n.Cfg.Sandbox
+	images[clabnodes.KernelKey] = n.Cfg.Kernel
+	images[clabnodes.SandboxKey] = n.Cfg.Sandbox
 	return images
 }
 

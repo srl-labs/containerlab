@@ -8,7 +8,7 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -24,7 +24,7 @@ func (s *vrSROS) generateSSHPublicKeysConfig() (io.Reader, error) {
 
 	s.prepareSSHPubKeys(&tplData)
 
-	t, err := template.New("SSHKeys").Funcs(containerlabutils.CreateFuncs()).Parse(SROSSSHKeysTemplate)
+	t, err := template.New("SSHKeys").Funcs(clabutils.CreateFuncs()).Parse(SROSSSHKeysTemplate)
 	if err != nil {
 		return nil, err
 	}

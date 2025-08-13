@@ -8,10 +8,10 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabnetconf "github.com/srl-labs/containerlab/netconf"
-	containerlabtypes "github.com/srl-labs/containerlab/types"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnetconf "github.com/srl-labs/containerlab/netconf"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var VMInterfaceRegexp = regexp.MustCompile(`eth[1-9]\d*$`) // skipcq: GO-C4007
@@ -42,13 +42,13 @@ func NewVRNode(n NodeOverwrites, creds *Credentials, scrapliPlatformName string)
 }
 
 // Init stub function.
-func (n *VRNode) Init(cfg *containerlabtypes.NodeConfig, opts ...NodeOption) error {
+func (n *VRNode) Init(cfg *clabtypes.NodeConfig, opts ...NodeOption) error {
 	return nil
 }
 
 // PreDeploy default function: create lab directory, generate certificates, generate startup config file.
 func (n *VRNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
-	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -57,7 +57,7 @@ func (n *VRNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
 }
 
 // AddEndpoint override version maps the endpoint name to an ethX-based name before adding it to the node endpoints. Returns an error if the mapping goes wrong.
-func (vr *VRNode) AddEndpoint(e containerlablinks.Endpoint) error {
+func (vr *VRNode) AddEndpoint(e clablinks.Endpoint) error {
 	endpointName := e.GetIfaceName()
 	// Slightly modified check: if it doesn't match the VMInterfaceRegexp, pass it to GetMappedInterfaceName. If it fails, then the interface name is wrong.
 	if vr.InterfaceRegexp != nil && !(VMInterfaceRegexp.MatchString(endpointName)) {
@@ -95,7 +95,7 @@ func (vr *VRNode) CheckInterfaceName() error {
 }
 
 func (n *VRNode) SaveConfig(_ context.Context) error {
-	config, err := containerlabnetconf.GetConfig(n.Cfg.LongName,
+	config, err := clabnetconf.GetConfig(n.Cfg.LongName,
 		n.Credentials.GetUsername(),
 		n.Credentials.GetPassword(),
 		n.ScrapliPlatformName,

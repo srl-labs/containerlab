@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	containerlabcert "github.com/srl-labs/containerlab/cert"
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	containerlablinks "github.com/srl-labs/containerlab/links"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	containerlabutils "github.com/srl-labs/containerlab/utils"
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // Deploy the given topology.
@@ -19,7 +19,7 @@ import (
 func (c *CLab) Deploy( //nolint: funlen
 	ctx context.Context,
 	options *DeployOptions,
-) ([]containerlabruntime.GenericContainer, error) {
+) ([]clabruntime.GenericContainer, error) {
 	var err error
 
 	err = c.ResolveLinks()
@@ -41,7 +41,7 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	err = containerlablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+	err = clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
 	}
@@ -55,12 +55,12 @@ func (c *CLab) Deploy( //nolint: funlen
 	}
 
 	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
-	containerlabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
 
 	if !options.skipLabDirFileACLs {
 		// adjust ACL for Labdir such that SUDO_UID Users will
 		// also have access to lab directory files
-		err = containerlabutils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
+		err = clabutils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
 		if err != nil {
 			log.Infof("unable to adjust Labdir file ACLs: %v", err)
 		}
@@ -183,8 +183,8 @@ func (c *CLab) Deploy( //nolint: funlen
 // certificateAuthoritySetup sets up the certificate authority parameters.
 func (c *CLab) certificateAuthoritySetup() error {
 	// init the Cert storage and CA
-	c.Cert.CertStorage = containerlabcert.NewLocalDirCertStorage(c.TopoPaths)
-	c.Cert.CA = containerlabcert.NewCA()
+	c.Cert.CertStorage = clabcert.NewLocalDirCertStorage(c.TopoPaths)
+	c.Cert.CA = clabcert.NewCA()
 
 	s := c.Config.Settings
 
@@ -226,7 +226,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 	}
 
 	// define the attributes used to generate the CA Cert
-	caCertInput := &containerlabcert.CACSRInput{
+	caCertInput := &clabcert.CACSRInput{
 		CommonName:   c.Config.Name + " lab CA",
 		Country:      "US",
 		Expiry:       validityDuration,
@@ -242,7 +242,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 // The exec collection is returned to the caller to ensure that the execution log
 // is printed after the nodes are created.
 // Nodes interdependencies are created in this function.
-func (c *CLab) createNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *containerlabexec.ExecCollection, error) {
+func (c *CLab) createNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *clabexec.ExecCollection, error) {
 	for _, node := range c.Nodes {
 		c.dependencyManager.AddNode(node)
 	}
