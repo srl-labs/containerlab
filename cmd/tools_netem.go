@@ -21,12 +21,12 @@ import (
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/internal/tc"
-	"github.com/srl-labs/containerlab/links"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabinternaltc "github.com/srl-labs/containerlab/internal/tc"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -109,7 +109,7 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	}
 
 	// Get the runtime initializer.
-	_, rinit, err := core.RuntimeInitializer(runtime)
+	_, rinit, err := clabcore.RuntimeInitializer(runtime)
 	if err != nil {
 		return err
 	}
@@ -119,8 +119,8 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 
 	// init runtime with timeout
 	err = rt.Init(
-		containerlabruntime.WithConfig(
-			&containerlabruntime.RuntimeConfig{
+		clabruntime.WithConfig(
+			&clabruntime.RuntimeConfig{
 				Timeout: timeout,
 			},
 		),
@@ -144,7 +144,7 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	tcnl, err := tc.NewTC(int(nodeNs.Fd()))
+	tcnl, err := clabinternaltc.NewTC(int(nodeNs.Fd()))
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,8 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	}()
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		netemIfLink, err := netlink.LinkByName(links.SanitiseInterfaceName(netemInterface))
+		netemIfLink, err := netlink.LinkByName(
+			clablinks.SanitizeInterfaceName(netemInterface))
 		if err != nil {
 			return err
 		}
@@ -167,7 +168,8 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 			return err
 		}
 
-		qdisc, err := tc.SetImpairments(tcnl, netemNode, link, netemDelay, netemJitter, netemLoss, netemRate, netemCorruption)
+		qdisc, err := clabinternaltc.SetImpairments(tcnl, netemNode, link,
+			netemDelay, netemJitter, netemLoss, netemRate, netemCorruption)
 		if err != nil {
 			return err
 		}
@@ -189,7 +191,7 @@ func validateInputAndRoot(c *cobra.Command, args []string) error {
 		return fmt.Errorf("jitter cannot be set without setting delay")
 	}
 
-	utils.CheckAndGetRootPrivs(c, args)
+	clabutils.CheckAndGetRootPrivs(c, args)
 
 	return nil
 }
@@ -217,15 +219,15 @@ func printImpairments(qdiscs []gotc.Object) {
 
 	var rows []tableWriter.Row
 
-	for _, qdisc := range qdiscs {
-		rows = append(rows, qdiscToTableData(qdisc))
+	for idx := range qdiscs {
+		rows = append(rows, qdiscToTableData(&qdiscs[idx]))
 	}
 
 	table.AppendRows(rows)
 	table.Render()
 }
 
-func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
+func qdiscToTableData(qdisc *gotc.Object) tableWriter.Row {
 	link, err := netlink.LinkByIndex(int(qdisc.Ifindex))
 	if err != nil {
 		log.Errorf("could not get netlink interface by index: %v", err)
@@ -275,7 +277,7 @@ func qdiscToTableData(qdisc gotc.Object) tableWriter.Row {
 }
 
 // qdiscToJSONData converts the full qdisc object to a simplified view.
-func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
+func qdiscToJSONData(qdisc *gotc.Object) clabtypes.ImpairmentData {
 	link, err := netlink.LinkByIndex(int(qdisc.Ifindex))
 	if err != nil {
 		log.Errorf("could not get netlink interface by index: %v", err)
@@ -292,7 +294,7 @@ func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 
 	// Return "N/A" values when netem is not set.
 	if qdisc.Netem == nil {
-		return types.ImpairmentData{
+		return clabtypes.ImpairmentData{
 			Interface: ifDisplayName,
 		}
 	}
@@ -316,7 +318,7 @@ func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 		loss = math.Round((float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100)*100) / 100
 	}
 
-	return types.ImpairmentData{
+	return clabtypes.ImpairmentData{
 		Interface:  ifDisplayName,
 		Delay:      delay,
 		Jitter:     jitter,
@@ -328,7 +330,7 @@ func qdiscToJSONData(qdisc gotc.Object) types.ImpairmentData {
 
 func netemShowFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
-	_, rinit, err := core.RuntimeInitializer(runtime)
+	_, rinit, err := clabcore.RuntimeInitializer(runtime)
 	if err != nil {
 		return err
 	}
@@ -336,8 +338,8 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	// init the runtime
 	rt := rinit()
 	err = rt.Init(
-		containerlabruntime.WithConfig(
-			&containerlabruntime.RuntimeConfig{
+		clabruntime.WithConfig(
+			&clabruntime.RuntimeConfig{
 				Timeout: timeout,
 			},
 		),
@@ -360,7 +362,7 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	tcnl, err := tc.NewTC(int(nodeNs.Fd()))
+	tcnl, err := clabinternaltc.NewTC(int(nodeNs.Fd()))
 	if err != nil {
 		return err
 	}
@@ -371,26 +373,26 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	}()
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		qdiscs, err := tc.Impairments(tcnl)
+		qdiscs, err := clabinternaltc.Impairments(tcnl)
 		if err != nil {
 			return err
 		}
 
 		if netemFormat == "json" {
-			var impairments []types.ImpairmentData
-			for _, q := range qdiscs {
-				if q.Attribute.Kind != "netem" {
+			var impairments []clabtypes.ImpairmentData
+			for idx := range qdiscs {
+				if qdiscs[idx].Attribute.Kind != "netem" {
 					continue // skip clsact or other qdisc types
 				}
-				impairments = append(impairments, qdiscToJSONData(q))
+				impairments = append(impairments, qdiscToJSONData(&qdiscs[idx]))
 			}
 			// Structure output as a map keyed by the node name.
-			outputData := map[string][]types.ImpairmentData{
+			outputData := map[string][]clabtypes.ImpairmentData{
 				netemNode: impairments,
 			}
 			jsonData, err := json.MarshalIndent(outputData, "", "  ")
 			if err != nil {
-				return fmt.Errorf("error marshalling JSON: %v", err)
+				return fmt.Errorf("error marshaling JSON: %v", err)
 			}
 			fmt.Println(string(jsonData))
 		} else {
@@ -405,7 +407,7 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 
 func netemResetFn(_ *cobra.Command, _ []string) error {
 	// Get the runtime initializer.
-	_, rinit, err := core.RuntimeInitializer(runtime)
+	_, rinit, err := clabcore.RuntimeInitializer(runtime)
 	if err != nil {
 		return err
 	}
@@ -413,8 +415,8 @@ func netemResetFn(_ *cobra.Command, _ []string) error {
 	// init the runtime
 	rt := rinit()
 	err = rt.Init(
-		containerlabruntime.WithConfig(
-			&containerlabruntime.RuntimeConfig{
+		clabruntime.WithConfig(
+			&clabruntime.RuntimeConfig{
 				Timeout: timeout,
 			},
 		),
@@ -437,7 +439,7 @@ func netemResetFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	tcnl, err := tc.NewTC(int(nodeNs.Fd()))
+	tcnl, err := clabinternaltc.NewTC(int(nodeNs.Fd()))
 	if err != nil {
 		return err
 	}
@@ -448,7 +450,8 @@ func netemResetFn(_ *cobra.Command, _ []string) error {
 	}()
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		netemIfLink, err := netlink.LinkByName(links.SanitiseInterfaceName(netemInterface))
+		netemIfLink, err := netlink.LinkByName(
+			clablinks.SanitizeInterfaceName(netemInterface))
 		if err != nil {
 			return err
 		}
@@ -457,7 +460,7 @@ func netemResetFn(_ *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		if err := tc.DeleteImpairments(tcnl, netemIfIface); err != nil {
+		if err := clabinternaltc.DeleteImpairments(tcnl, netemIfIface); err != nil {
 			return err
 		}
 		fmt.Printf("Reset impairments on node %q, interface %q\n", netemNode, netemIfLink.Attrs().Name)

@@ -9,14 +9,14 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames          = []string{"generic_vm"}
-	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
+	defaultCredentials = clabnodes.NewCredentials("clab", "clab@123")
 )
 
 const (
@@ -26,22 +26,22 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(genericVM)
 	}, nrea)
 }
 
 type genericVM struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *genericVM) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *genericVM) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -51,13 +51,13 @@ func (n *genericVM) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support config backup functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
@@ -73,8 +73,8 @@ func (n *genericVM) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	return nil
 }
 
-func (n *genericVM) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *genericVM) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -85,5 +85,5 @@ func (n *genericVM) PreDeploy(_ context.Context, params *nodes.PreDeployParams) 
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *genericVM) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
+	return clabnodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

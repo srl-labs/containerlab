@@ -4,13 +4,17 @@ linters:
     - asciicheck
     - bodyclose
     - dogsled
+    - funlen
+    - gocritic
     - godot
     - godox
     - goprintffuncname
     - govet
     - ineffassign
     - importas
+    - misspell
     - nakedret
+    - noctx
     - nolintlint
     - staticcheck
     - unconvert
@@ -22,17 +26,13 @@ linters:
     - dupl
     - errcheck
     - exhaustive
-    - funlen
     - gocognit
     - goconst
-    - gocritic
     - gocyclo
     - gosec
     - lll
-    - misspell
     - mnd
     - nestif
-    - noctx
     - prealloc
     - revive
     - wsl_v5
@@ -70,12 +70,11 @@ linters:
             - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
     importas:
       alias:
-        # we can add more layers here (containerlab$1$2 etc.) as we tidy/get more consistent
         - pkg: github.com/srl-labs/containerlab/(\w+)
-          alias: containerlab$1
-      # imo this should be enforced as well, and anything we want to alias should be defined
-      # here for consistency
-      # no-extra-aliases: true
+          alias: clab$1
+        - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)
+          alias: clab$1$2
+      no-unaliased: true
     lll:
       line-length: 100
     misspell:
@@ -92,12 +91,17 @@ linters:
       - legacy
       - std-error-handling
     rules:
+      # we *care* about tests, but... like less :P
       - linters:
           - mnd
+          - dupl
+          - lll
+          - goconst
+          - funlen
         path: _test\.go
+      # its nice to be explicit, this feels less explicit
       - linters:
           - staticcheck
-        # its nice to be explicit, this feels less explicit
         text: could remove embedded field
     paths:
       - third_party$

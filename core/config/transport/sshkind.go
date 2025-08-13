@@ -28,7 +28,7 @@ type VrSrosSSHKind struct{}
 
 func (*VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // skipcq: RVV-A0005
 	s.PromptChar = "#" // ensure it's '#'
-	// s.debug = true
+
 	r := s.Run("/environment more false", 5)
 	if r.result != "" {
 		log.Warnf("%s Are you in MD-Mode?%s", s.Target, r.LogString(s.Target, true, false))
@@ -66,7 +66,7 @@ type SrosSSHKind struct{}
 
 func (*SrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // skipcq: RVV-A0005
 	s.PromptChar = "#" // ensure it's '#'
-	// s.debug = true
+
 	r := s.Run("/environment more false", 5)
 	if r.result != "" {
 		log.Warnf("%s Are you in MD-Mode?%s", s.Target, r.LogString(s.Target, true, false))

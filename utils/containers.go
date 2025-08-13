@@ -37,7 +37,7 @@ func GetCanonicalImageName(imageName string) string {
 	}
 	// append latest tag if no tag was provided
 	if !strings.Contains(canonicalImageName, ":") {
-		canonicalImageName = canonicalImageName + ":latest"
+		canonicalImageName += ":latest"
 	}
 
 	return canonicalImageName

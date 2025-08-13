@@ -11,15 +11,15 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindNames          = []string{"openbsd"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 	saveCmd            = "sh -c \"/backup.sh -u $USERNAME -p $PASSWORD backup\""
 
 	InterfaceRegexp = regexp.MustCompile(`vio(?P<port>\d+)`)
@@ -35,22 +35,22 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrOpenBSD)
 	}, nrea)
 }
 
 type vrOpenBSD struct {
-	nodes.VRNode
+	clabnodes.VRNode
 }
 
-func (n *vrOpenBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrOpenBSD) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, "")
+	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, "")
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -60,13 +60,13 @@ func (n *vrOpenBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support config backup functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))
@@ -86,8 +86,8 @@ func (n *vrOpenBSD) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	return nil
 }
 
-func (n *vrOpenBSD) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *vrOpenBSD) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -97,13 +97,13 @@ func (n *vrOpenBSD) PreDeploy(_ context.Context, params *nodes.PreDeployParams) 
 }
 
 func (n *vrOpenBSD) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 

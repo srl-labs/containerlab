@@ -59,13 +59,13 @@ func docsLinkFromVer(ver string) string {
 		return "" // fallback
 	}
 	segments := v.Segments()
-	maj := segments[0]
-	min := segments[1]
+	major := segments[0]
+	minor := segments[1]
 	patch := segments[2]
 
-	relSlug := fmt.Sprintf("%d.%d/", maj, min)
+	relSlug := fmt.Sprintf("%d.%d/", major, minor)
 	if patch != 0 {
-		relSlug += fmt.Sprintf("#%d%d%d", maj, min, patch)
+		relSlug += fmt.Sprintf("#%d%d%d", major, minor, patch)
 	}
 	return relSlug
 }

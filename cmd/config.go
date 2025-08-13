@@ -6,10 +6,10 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/core/config"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabcoreconfig "github.com/srl-labs/containerlab/core/config"
 	"github.com/srl-labs/containerlab/core/config/transport"
-	"github.com/srl-labs/containerlab/nodes"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 
 	"github.com/charmbracelet/log"
 )
@@ -56,13 +56,13 @@ func configRun(_ *cobra.Command, args []string) error {
 	var err error
 
 	transport.DebugCount = debugCount
-	config.DebugCount = debugCount
+	clabcoreconfig.DebugCount = debugCount
 
-	c, err := core.NewContainerLab(
-		core.WithTimeout(timeout),
-		core.WithTopoPath(topoFile, varsFile),
-		core.WithNodeFilter(nodeFilter),
-		core.WithDebug(debug),
+	c, err := clabcore.NewContainerLab(
+		clabcore.WithTimeout(timeout),
+		clabcore.WithTopoPath(topoFile, varsFile),
+		clabcore.WithNodeFilter(nodeFilter),
+		clabcore.WithDebug(debug),
 	)
 	if err != nil {
 		return err
@@ -73,9 +73,9 @@ func configRun(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	allConfig := config.PrepareVars(c)
+	allConfig := clabcoreconfig.PrepareVars(c)
 
-	err = config.RenderAll(allConfig)
+	err = clabcoreconfig.RenderAll(allConfig)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func configRun(_ *cobra.Command, args []string) error {
 			return
 		}
 
-		err = config.Send(cs, action)
+		err = clabcoreconfig.Send(cs, action)
 		if err != nil {
 			log.Warnf("%s: %s", cs.TargetNode.ShortName, err)
 		}
@@ -126,7 +126,7 @@ func configRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func validateFilter(nodes map[string]nodes.Node) error {
+func validateFilter(nodes map[string]clabnodes.Node) error {
 	if len(configFilter) == 0 {
 		for n := range nodes {
 			configFilter = append(configFilter, n)
@@ -148,10 +148,10 @@ func validateFilter(nodes map[string]nodes.Node) error {
 
 func init() {
 	RootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{},
+	configCmd.Flags().StringSliceVarP(&clabcoreconfig.TemplatePaths, "template-path", "p", []string{},
 		"comma separated list of paths to search for templates")
 	_ = configCmd.MarkFlagDirname("template-path")
-	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{},
+	configCmd.Flags().StringSliceVarP(&clabcoreconfig.TemplateNames, "template-list", "l", []string{},
 		"comma separated list of template names to render")
 	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{},
 		"comma separated list of nodes to include")

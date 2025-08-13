@@ -12,10 +12,10 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // Configuration variables for the API Server commands.
@@ -44,7 +44,7 @@ var (
 
 // APIServerNode implements runtime.Node interface for API server containers.
 type APIServerNode struct {
-	config *types.NodeConfig
+	config *clabtypes.NodeConfig
 }
 
 // generateRandomJWTSecret creates a random string for use as JWT secret.
@@ -71,7 +71,7 @@ func init() {
 var apiServerStopCmd = &cobra.Command{
 	Use:     "stop",
 	Short:   "stop Containerlab API server container",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -85,13 +85,13 @@ var apiServerStopCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtimeName)
+		_, rinit, err := clabcore.RuntimeInitializer(runtimeName)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
 
 		rt := rinit()
-		err = rt.Init(containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}))
+		err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}))
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}

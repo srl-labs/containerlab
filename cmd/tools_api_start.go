@@ -12,12 +12,12 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 func init() {
@@ -65,22 +65,22 @@ func init() {
 		"container runtime to use for API server")
 }
 
-func NewAPIServerNode(name, image, labsDir string, runtime containerlabruntime.ContainerRuntime,
+func NewAPIServerNode(name, image, labsDir string, runtime clabruntime.ContainerRuntime,
 	env map[string]string, labels map[string]string,
 ) (*APIServerNode, error) {
 	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s", name, image, labsDir, runtime)
 
 	// Set up binds based on the runtime
-	binds := types.Binds{
+	binds := clabtypes.Binds{
 		//	types.NewBind(netnsPath, netnsPath, ""),
-		types.NewBind("/etc/passwd", "/etc/passwd", "ro"),
-		types.NewBind("/etc/shadow", "/etc/shadow", "ro"),
-		types.NewBind("/etc/group", "/etc/group", "ro"),
-		types.NewBind("/home", "/home", ""),
+		clabtypes.NewBind("/etc/passwd", "/etc/passwd", "ro"),
+		clabtypes.NewBind("/etc/shadow", "/etc/shadow", "ro"),
+		clabtypes.NewBind("/etc/group", "/etc/group", "ro"),
+		clabtypes.NewBind("/home", "/home", ""),
 	}
 	// if /etc/gshadow exists, add it to the binds
-	if utils.FileExists("/etc/gshadow") {
-		binds = append(binds, types.NewBind("/etc/gshadow", "/etc/gshadow", "ro"))
+	if clabutils.FileExists("/etc/gshadow") {
+		binds = append(binds, clabtypes.NewBind("/etc/gshadow", "/etc/gshadow", "ro"))
 	}
 
 	// get the runtime socket path
@@ -91,19 +91,19 @@ func NewAPIServerNode(name, image, labsDir string, runtime containerlabruntime.C
 
 	// build the bindmount for the socket, path sound be the same in the container as is on the host
 	// append the socket to the binds
-	binds = append(binds, types.NewBind(rtSocket, rtSocket, ""))
+	binds = append(binds, clabtypes.NewBind(rtSocket, rtSocket, ""))
 
 	// append the mounts required for container out of container operation
 	binds = append(binds, runtime.GetCooCBindMounts()...)
 
 	// Find containerlab binary and add bind mount if found
-	clabPath, err := getContainerlabBinaryPath()
+	clabPath, err := getclabBinaryPath()
 	if err != nil {
 		return nil, fmt.Errorf("could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH", err)
 	}
-	binds = append(binds, types.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
+	binds = append(binds, clabtypes.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
 
-	nodeConfig := &types.NodeConfig{
+	nodeConfig := &clabtypes.NodeConfig{
 		LongName:    name,
 		ShortName:   name,
 		Image:       image,
@@ -119,17 +119,17 @@ func NewAPIServerNode(name, image, labsDir string, runtime containerlabruntime.C
 	}, nil
 }
 
-func (n *APIServerNode) Config() *types.NodeConfig {
+func (n *APIServerNode) Config() *clabtypes.NodeConfig {
 	return n.config
 }
 
 // GetEndpoints implementation for the Node interface.
-func (*APIServerNode) GetEndpoints() []links.Endpoint {
+func (*APIServerNode) GetEndpoints() []clablinks.Endpoint {
 	return nil
 }
 
-// getContainerlabBinaryPath determine the binary path of the running executable.
-func getContainerlabBinaryPath() (string, error) {
+// getclabBinaryPath determine the binary path of the running executable.
+func getclabBinaryPath() (string, error) {
 	exePath, err := os.Executable()
 	if err != nil {
 		return "", err
@@ -145,19 +145,19 @@ func getContainerlabBinaryPath() (string, error) {
 // createLabels creates container labels.
 func createAPIServerLabels(containerName, owner string, port int, labsDir, host, runtimeType string) map[string]string {
 	labels := map[string]string{
-		containerlablabels.NodeName: containerName,
-		containerlablabels.NodeKind: "linux",
-		containerlablabels.NodeType: "tool",
-		containerlablabels.ToolType: "api-server",
-		"clab-api-port":             fmt.Sprintf("%d", port),
-		"clab-api-host":             host,
-		"clab-labs-dir":             labsDir,
-		"clab-runtime":              runtimeType,
+		clablabels.NodeName: containerName,
+		clablabels.NodeKind: "linux",
+		clablabels.NodeType: "tool",
+		clablabels.ToolType: "api-server",
+		"clab-api-port":     fmt.Sprintf("%d", port),
+		"clab-api-host":     host,
+		"clab-labs-dir":     labsDir,
+		"clab-runtime":      runtimeType,
 	}
 
 	// Add owner label if available
 	if owner != "" {
-		labels[containerlablabels.Owner] = owner
+		labels[clablabels.Owner] = owner
 	}
 
 	return labels
@@ -180,7 +180,7 @@ func getOwnerName() string {
 var apiServerStartCmd = &cobra.Command{
 	Use:     "start",
 	Short:   "start Containerlab API server container",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -204,19 +204,19 @@ var apiServerStartCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtimeName)
+		_, rinit, err := clabcore.RuntimeInitializer(runtimeName)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtimeName, err)
 		}
 
 		rt := rinit()
-		err = rt.Init(containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}))
+		err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}))
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}
 
 		// Check if container already exists
-		filter := []*types.GenericFilter{{FilterType: "name", Match: apiServerName}}
+		filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: apiServerName}}
 		containers, err := rt.ListContainers(ctx, filter)
 		if err != nil {
 			return fmt.Errorf("failed to list containers: %w", err)
@@ -227,7 +227,7 @@ var apiServerStartCmd = &cobra.Command{
 
 		// Pull the container image
 		log.Infof("Pulling image %s...", apiServerImage)
-		if err := rt.PullImage(ctx, apiServerImage, types.PullPolicyAlways); err != nil {
+		if err := rt.PullImage(ctx, apiServerImage, clabtypes.PullPolicyAlways); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", apiServerImage, err)
 		}
 

@@ -53,7 +53,7 @@ func NewExecCmdFromSlice(cmd []string) *ExecCmd {
 }
 
 // Stdout type alias for a string is an artificial type
-// to allow for custom marshalling of stdout output which can be either
+// to allow for custom marshaling of stdout output which can be either
 // a valid or non valid JSON.
 // For that reason a custom MarshalJSON method is implemented to take care of both.
 type Stdout string
@@ -222,7 +222,7 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 				// skip if there is no result
 				continue
 			}
-			// write seperator
+
 			if printSep {
 				result.WriteString("\n+++++++++++++++++++++++++++++\n\n")
 			}

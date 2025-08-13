@@ -7,7 +7,7 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
+	clabexec "github.com/srl-labs/containerlab/exec"
 )
 
 var (
@@ -47,7 +47,7 @@ type SrosVersion struct {
 // by executing the "cat /etc/sros-version" command
 // and parsing the output.
 func (n *sros) RunningVersion(ctx context.Context) (*SrosVersion, error) {
-	cmd, _ := exec.NewExecCmdFromString(`cat /etc/sros-version`)
+	cmd, _ := clabexec.NewExecCmdFromString(`cat /etc/sros-version`)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func (n *sros) RunningVersion(ctx context.Context) (*SrosVersion, error) {
 }
 
 func (*sros) parseVersionString(s string) *SrosVersion {
-	re, _ := regexp.Compile(`v(\d+)\.(\d+)\.([A-Za-z0-9]+)`)
+	re := regexp.MustCompile(`v(\d+)\.(\d+)\.([A-Za-z0-9]+)`)
 
 	v := re.FindStringSubmatch(s)
 	// 4 matches must be returned if all goes well

@@ -10,8 +10,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -25,8 +25,8 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 	if c.Config.Name == "" {
 		return fmt.Errorf("missing lab name")
 	}
-	if !utils.FileExists(filename) {
-		err := utils.CreateFile(filename, "127.0.0.1\tlocalhost")
+	if !clabutils.FileExists(filename) {
+		err := clabutils.CreateFile(filename, "127.0.0.1\tlocalhost")
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 		return err
 	}
 
-	hostEntries := make(types.HostEntries, 0, len(c.Nodes)*2)
+	hostEntries := make(clabtypes.HostEntries, 0, len(c.Nodes)*2)
 	for _, n := range c.Nodes {
 		nodeHostEntries, err := n.GetHostsEntries(ctx)
 		if err != nil {
@@ -58,8 +58,8 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 	content := &bytes.Buffer{}
 	fmt.Fprintf(content, clabHostEntryPrefix, c.Config.Name)
 	fmt.Fprint(content, "\n")
-	fmt.Fprint(content, hostEntries.ToHostsConfig(types.IpVersionV4))
-	fmt.Fprint(content, hostEntries.ToHostsConfig(types.IpVersionV6))
+	fmt.Fprint(content, hostEntries.ToHostsConfig(clabtypes.IpVersionV4))
+	fmt.Fprint(content, hostEntries.ToHostsConfig(clabtypes.IpVersionV6))
 	fmt.Fprintf(content, clabHostEntryPostfix, c.Config.Name)
 	fmt.Fprint(content, "\n")
 

@@ -29,7 +29,7 @@ func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 		Comment:   definitions.ContainerlabComment,
 	}
 
-	err = f.DeleteForwardingRules(r)
+	err = f.DeleteForwardingRules(&r)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (d *DockerRuntime) deleteMgmtNetworkFwdRule() (err error) {
 		Comment:   definitions.ContainerlabComment,
 	}
 
-	err = f.DeleteForwardingRules(r)
+	err = f.DeleteForwardingRules(&r)
 	if err != nil {
 		return err
 	}
@@ -84,7 +84,7 @@ func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 		Comment:   definitions.ContainerlabComment,
 	}
 
-	err = f.InstallForwardingRules(r)
+	err = f.InstallForwardingRules(&r)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (d *DockerRuntime) installMgmtNetworkFwdRule() (err error) {
 		Comment:   definitions.ContainerlabComment,
 	}
 
-	err = f.InstallForwardingRules(r)
+	err = f.InstallForwardingRules(&r)
 	if err != nil {
 		return err
 	}

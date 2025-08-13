@@ -23,17 +23,17 @@ import (
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/netconf"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnetconf "github.com/srl-labs/containerlab/netconf"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 )
 
 var (
 	kindNames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`1/1/(?P<port>\d+)`)
 	InterfaceOffset = 1
@@ -58,34 +58,34 @@ type SROSTemplateData struct {
 }
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrSROS)
 	}, nrea)
 }
 
 type vrSROS struct {
-	nodes.VRNode
+	clabnodes.VRNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 }
 
-func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	s.VRNode = *nodes.NewVRNode(s, defaultCredentials, scrapliPlatformName)
+	s.VRNode = *clabnodes.NewVRNode(s, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
-	s.LicensePolicy = types.LicensePolicyWarn
+	s.LicensePolicy = clabtypes.LicensePolicyWarn
 	// SR OS requires unbound pubkey authentication mode until this is
 	// gets fixed in later SR OS release.
-	s.SSHConfig.PubkeyAuthentication = types.PubkeyAuthValueUnbound
+	s.SSHConfig.PubkeyAuthentication = clabtypes.PubkeyAuthValueUnbound
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -97,11 +97,11 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
 	}
-	s.Cfg.Env = utils.MergeStringMaps(defEnv, s.Cfg.Env)
+	s.Cfg.Env = clabutils.MergeStringMaps(defEnv, s.Cfg.Env)
 
 	// mount tftpboot dir
 	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(path.Join(s.Cfg.LabDir, "tftpboot"), ":/tftpboot"))
@@ -122,8 +122,8 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0o777)
+func (s *vrSROS) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(s.Cfg.LabDir, 0o777)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -135,7 +135,7 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) err
 	return createVrSROSFiles(s)
 }
 
-func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	// b holds the configuration to be applied to the node
 	b := &bytes.Buffer{}
 
@@ -193,7 +193,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 }
 
 func (s *vrSROS) SaveConfig(_ context.Context) error {
-	err := netconf.SaveRunningConfig(s.Cfg.LongName,
+	err := clabnetconf.SaveRunningConfig(s.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -206,7 +206,7 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-func createVrSROSFiles(node nodes.Node) error {
+func createVrSROSFiles(node clabnodes.Node) error {
 	nodeCfg := node.Config()
 
 	// use default startup config load function if config in full form is provided
@@ -216,7 +216,7 @@ func createVrSROSFiles(node nodes.Node) error {
 			log.Infof("Using existing config file (%s) instead of applying a new one",
 				filepath.Join(nodeCfg.LabDir, configDirName, startupCfgFName))
 		} else {
-			nodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
+			clabnodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
 		}
 	}
 
@@ -224,7 +224,7 @@ func createVrSROSFiles(node nodes.Node) error {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
 		dst := filepath.Join(nodeCfg.LabDir, configDirName, licenseFName)
-		if err := utils.CopyFile(src, dst, 0o644); err != nil {
+		if err := clabutils.CopyFile(context.Background(), src, dst, 0o644); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
@@ -246,7 +246,7 @@ func nodeConfigExists(labDir string) bool {
 
 // isHealthy checks if the "/health" file created by vrnetlab exists and contains "0 running".
 func (s *vrSROS) isHealthy(ctx context.Context) bool {
-	ex := exec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
+	ex := clabexec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
 
 	res, err := s.RunExec(ctx, ex)
 	if err != nil {
@@ -265,7 +265,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	var err error
 	var d *network.Driver
 
-	configContent, err := utils.SubstituteEnvsAndTemplate(config, s.Cfg)
+	configContent, err := clabutils.SubstituteEnvsAndTemplate(config, s.Cfg)
 	if err != nil {
 		return err
 	}

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/mitchellh/go-homedir"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 type imageDomainNameTest struct {
@@ -70,7 +70,7 @@ func TestGetDockerConfigPath(t *testing.T) {
 
 func TestGetDockerAuth(t *testing.T) {
 	for _, data := range authTests {
-		img := utils.GetCanonicalImageName(data.Image)
+		img := clabutils.GetCanonicalImageName(data.Image)
 		cfg, _ := GetDockerConfig(data.ConfigPath)
 
 		auth, err := GetDockerAuth(cfg, img)

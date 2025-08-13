@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -127,7 +127,7 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 		log.Debugf("looked up hostname %s, received IP addresses [%s]", lr.Remote, sb.String()[2:])
 
 		// always use the first address
-		if len(ips) <= 0 {
+		if len(ips) == 0 {
 			return nil, fmt.Errorf("unable to resolve %s", lr.Remote)
 		}
 		ip = ips[0]
@@ -136,7 +136,7 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	parentIf := lr.ParentInterface
 
 	if parentIf == "" {
-		r, err := utils.GetRouteForIP(ip)
+		r, err := clabutils.GetRouteForIP(ip)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find a route to VxLAN remote address %s", ip.String())
 		}
@@ -156,7 +156,7 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	// check if MAC-Addr is set in the raw vxlan link
 	if lr.Endpoint.MAC == "" {
 		// if it is not set generate a MAC
-		link.remoteEndpoint.MAC, err = utils.GenMac(ClabOUI)
+		link.remoteEndpoint.MAC, err = clabutils.GenMac(ClabOUI)
 		if err != nil {
 			return nil, err
 		}

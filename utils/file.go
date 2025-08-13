@@ -64,7 +64,7 @@ func DirExists(filename string) bool {
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherwise, copy the file contents from src to dst.
 // mode is the desired target file permissions, e.g. "0644".
-func CopyFile(src, dst string, mode os.FileMode) (err error) {
+func CopyFile(ctx context.Context, src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
 	if !IsHttpURL(src, false) && !IsS3URL(src) {
 		sfi, err = os.Stat(src)
@@ -95,7 +95,7 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		}
 	}
 
-	return CopyFileContents(src, dst, mode)
+	return CopyFileContents(ctx, src, dst, mode)
 }
 
 // IsHttpURL checks if the url is a downloadable HTTP URL.
@@ -160,12 +160,57 @@ func ParseS3URL(s3URL string) (bucket, key string, err error) {
 	return bucket, key, nil
 }
 
+func copyFileContentsS3(src string) (io.ReadCloser, error) {
+	bucket, key, err := ParseS3URL(src)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get region from environment, default to us-east-1
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	// Create credential chain that mimics AWS SDK behavior
+	credProviders := []credentials.Provider{
+		&credentials.EnvAWS{},                                             // 1. Environment variables
+		&credentials.FileAWSCredentials{},                                 // 2. ~/.aws/credentials (default profile)
+		&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
+	}
+
+	// Create MinIO client with chained credentials
+	client, err := minio.New("s3.amazonaws.com", &minio.Options{
+		Creds:  credentials.NewChainCredentials(credProviders),
+		Secure: true,
+		Region: region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create S3 client: %w", err)
+	}
+
+	// Get object from S3
+	object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
+	}
+
+	// Verify object exists by reading its stats
+	_, err = object.Stat()
+	if err != nil {
+		object.Close()
+		return nil, fmt.Errorf("%w: %s: object not found or access denied: %v", errS3Fetch, src, err)
+	}
+
+	return object, nil
+}
+
 // CopyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
 // src can be an http(s) URL or an S3 URL.
-func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
+func CopyFileContents(ctx context.Context, src, dst string, mode os.FileMode) (err error) {
 	var in io.ReadCloser
 
 	switch {
@@ -173,7 +218,12 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		client := NewHTTPClient()
 
 		// download using client
-		resp, err := client.Get(src)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, http.NoBody)
+		if err != nil {
+			return err
+		}
+
+		resp, err := client.Do(req)
 		if err != nil || resp.StatusCode != 200 {
 			return fmt.Errorf("%w: %s", errHTTPFetch, src)
 		}
@@ -183,49 +233,10 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		in = resp.Body
 
 	case IsS3URL(src):
-		bucket, key, err := ParseS3URL(src)
+		in, err = copyFileContentsS3(src)
 		if err != nil {
 			return err
 		}
-
-		// Get region from environment, default to us-east-1
-		region := os.Getenv("AWS_REGION")
-		if region == "" {
-			region = "us-east-1"
-		}
-
-		// Create credential chain that mimics AWS SDK behavior
-		credProviders := []credentials.Provider{
-			&credentials.EnvAWS{},                                             // 1. Environment variables
-			&credentials.FileAWSCredentials{},                                 // 2. ~/.aws/credentials (default profile)
-			&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
-		}
-
-		// Create MinIO client with chained credentials
-		client, err := minio.New("s3.amazonaws.com", &minio.Options{
-			Creds:  credentials.NewChainCredentials(credProviders),
-			Secure: true,
-			Region: region,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create S3 client: %w", err)
-		}
-
-		// Get object from S3
-		object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
-		if err != nil {
-			return fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
-		}
-
-		// Verify object exists by reading its stats
-		_, err = object.Stat()
-		if err != nil {
-			object.Close()
-			return fmt.Errorf("%w: %s: object not found or access denied: %v", errS3Fetch, src, err)
-		}
-
-		in = object
-
 	default:
 		in, err = os.Open(src)
 		if err != nil {
@@ -403,7 +414,7 @@ const (
 
 // FilenameForURL extracts a filename from a given url
 // returns "undefined" when unsuccessful.
-func FilenameForURL(rawUrl string) string {
+func FilenameForURL(ctx context.Context, rawUrl string) string {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
 		return UndefinedFileName
@@ -411,7 +422,14 @@ func FilenameForURL(rawUrl string) string {
 
 	// try extracting the filename from "content-disposition" header
 	if IsHttpURL(rawUrl, false) {
-		resp, err := http.Head(rawUrl)
+		client := NewHTTPClient()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, rawUrl, http.NoBody)
+		if err != nil {
+			return filepath.Base(u.Path)
+		}
+
+		resp, err := client.Do(req)
 		if err != nil {
 			return filepath.Base(u.Path)
 		}
@@ -467,11 +485,8 @@ func NewHTTPClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-func GetRealUserIDs() (int, int, error) {
+func GetRealUserIDs() (userUID, userGID int, err error) {
 	// Here we check whether SUDO set the SUDO_UID and SUDO_GID variables
-	var userUID, userGID int
-	var err error
-
 	sudoUID, isSudoUIDSet := os.LookupEnv("SUDO_UID")
 	if isSudoUIDSet {
 		userUID, err = strconv.Atoi(sudoUID)

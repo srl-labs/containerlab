@@ -38,7 +38,7 @@ func NewGitLabRepoFromURL(url *neturl.URL) (*GitLabRepo, error) {
 	}
 
 	// set CloneURL to the copy of the original URL
-	// this is overriden later for repo urls with
+	// this is overridden later for repo urls with
 	// paths containing blob or tree elements
 	r.CloneURL = &neturl.URL{}
 	*r.CloneURL = *r.URL

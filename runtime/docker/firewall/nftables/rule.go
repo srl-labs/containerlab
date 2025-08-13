@@ -14,7 +14,7 @@ type clabNftablesRule struct {
 }
 
 // AddInterfaceFilter adds an interface filter to the rule.
-func (cnr *clabNftablesRule) AddInterfaceFilter(rule definitions.FirewallRule) {
+func (cnr *clabNftablesRule) AddInterfaceFilter(rule *definitions.FirewallRule) {
 	// define the metadata to evaluate
 	metaKey := directionMap[rule.Direction]
 

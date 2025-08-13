@@ -6,7 +6,7 @@ import (
 	"runtime"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/virt"
+	clabvirt "github.com/srl-labs/containerlab/virt"
 )
 
 type HostRequirements struct {
@@ -39,11 +39,11 @@ func NewHostRequirements() *HostRequirements {
 // Verify runs verification checks against the host requirements set for a node.
 func (h *HostRequirements) Verify(kindName, nodeName string) error {
 	// check virtualization Support
-	if h.VirtRequired && !virt.VerifyVirtSupport() {
+	if h.VirtRequired && !clabvirt.VerifyVirtSupport() {
 		return fmt.Errorf("CPU virtualization support is required for node %q (%s)", nodeName, kindName)
 	}
 	// check SSSE3 support on amd64 arch only as it is an x86_64 instruction
-	if runtime.GOARCH == "amd64" && h.SSSE3 && !virt.VerifySSSE3Support() {
+	if runtime.GOARCH == "amd64" && h.SSSE3 && !clabvirt.VerifySSSE3Support() {
 		return fmt.Errorf("SSSE3 CPU feature is required for node %q (%s)", nodeName, kindName)
 	}
 	// check minimum vCPUs
@@ -72,8 +72,8 @@ func (h *HostRequirements) Verify(kindName, nodeName string) error {
 
 // verifyMinAvailMemory verifies that the node requirement for minimum free memory is met.
 // It returns a bool indicating if the requirement is met and the amount of available memory in GB.
-func (h *HostRequirements) verifyMinAvailMemory() (bool, uint64) {
-	availMemGB := virt.GetSysMemory(virt.MemoryTypeAvailable) / 1024 / 1024 / 1024
+func (h *HostRequirements) verifyMinAvailMemory() (result bool, availMemGB uint64) {
+	availMemGB = clabvirt.GetSysMemory(clabvirt.MemoryTypeAvailable) / 1024 / 1024 / 1024
 
 	// if the MinFreeMemory amount is 0, there is no requirement defined, so result is true
 	if h.MinAvailMemoryGb == 0 {
@@ -81,13 +81,13 @@ func (h *HostRequirements) verifyMinAvailMemory() (bool, uint64) {
 	}
 
 	// amount of Free Memory must be greater-equal the requirement
-	result := uint64(h.MinAvailMemoryGb) <= availMemGB
+	result = uint64(h.MinAvailMemoryGb) <= availMemGB
 	return result, availMemGB
 }
 
 // verifyMinVCpu verifies that the node requirement for minimum vCPU count is met.
-func (h *HostRequirements) verifyMinVCpu() (bool, int) {
-	numCpu := runtime.NumCPU()
+func (h *HostRequirements) verifyMinVCpu() (result bool, numCpu int) {
+	numCpu = runtime.NumCPU()
 
 	// if the minCPU amount is 0, there is no requirement defined, so result is true
 	if h.MinVCPU == 0 {
@@ -95,6 +95,6 @@ func (h *HostRequirements) verifyMinVCpu() (bool, int) {
 	}
 
 	// count of vCPUs must be greater-equal the requirement
-	result := h.MinVCPU <= numCpu
+	result = h.MinVCPU <= numCpu
 	return result, numCpu
 }

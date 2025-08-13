@@ -14,9 +14,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/version"
-	"github.com/srl-labs/containerlab/git"
-	"github.com/srl-labs/containerlab/utils"
+	clabcmdversion "github.com/srl-labs/containerlab/cmd/version"
+	clabgit "github.com/srl-labs/containerlab/git"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -43,7 +43,7 @@ var RootCmd = &cobra.Command{
 
 func addSubcommands() {
 	RootCmd.AddCommand(InspectCmd)
-	RootCmd.AddCommand(version.VersionCmd)
+	RootCmd.AddCommand(clabcmdversion.VersionCmd)
 }
 
 func init() {
@@ -80,20 +80,20 @@ func preRunFn(cobraCmd *cobra.Command, _ []string) error {
 
 	// initializes the version manager that goes off and fetches current version in
 	// the background for us
-	version.InitManager(cobraCmd.Context())
+	clabcmdversion.InitManager(cobraCmd.Context())
 
 	// setting output to stderr, so that json outputs can be parsed
 	log.SetOutput(os.Stderr)
 
 	log.SetTimeFormat(time.TimeOnly)
 
-	err := utils.DropRootPrivs()
+	err := clabutils.DropRootPrivs()
 	if err != nil {
 		return err
 	}
 	// Rootless operations only supported for Docker runtime
 	if runtime != "" && runtime != "docker" {
-		err := utils.CheckAndGetRootPrivs(cobraCmd, nil)
+		err := clabutils.CheckAndGetRootPrivs(cobraCmd, nil)
 		if err != nil {
 			return err
 		}
@@ -126,14 +126,15 @@ func getTopoFilePath(cmd *cobra.Command) error { // skipcq: GO-R1005
 
 	var err error
 	// perform topology clone/fetch if the topo file is not available locally
-	if !utils.FileOrDirExists(topoFile) {
+	if !clabutils.FileOrDirExists(topoFile) {
 		switch {
-		case git.IsGitHubOrGitLabURL(topoFile) || git.IsGitHubShortURL(topoFile):
+		case clabgit.IsGitHubOrGitLabURL(topoFile) ||
+			clabgit.IsGitHubShortURL(topoFile):
 			topoFile, err = processGitTopoFile(topoFile)
 			if err != nil {
 				return err
 			}
-		case utils.IsHttpURL(topoFile, true):
+		case clabutils.IsHttpURL(topoFile, true):
 			// canonize the passed topo as URL by adding https schema if it was missing
 			if !strings.HasPrefix(topoFile, "http://") &&
 				!strings.HasPrefix(topoFile, "https://") {
@@ -169,17 +170,17 @@ func getTopoFilePath(cmd *cobra.Command) error { // skipcq: GO-R1005
 func processGitTopoFile(topo string) (string, error) {
 	// for short github urls, prepend https://github.com
 	// note that short notation only works for github links
-	if git.IsGitHubShortURL(topo) {
+	if clabgit.IsGitHubShortURL(topo) {
 		topo = "https://github.com/" + topo
 	}
 
-	repo, err := git.NewRepo(topo)
+	repo, err := clabgit.NewRepo(topo)
 	if err != nil {
 		return "", err
 	}
 
 	// Instantiate the git implementation to use.
-	gitImpl := git.NewGoGit(repo)
+	gitImpl := clabgit.NewGoGit(repo)
 
 	// clone the repo via the Git Implementation
 	err = gitImpl.Clone()
@@ -189,7 +190,7 @@ func processGitTopoFile(topo string) (string, error) {
 
 	// adjust permissions for the checked out repo
 	// it would belong to root/root otherwise
-	err = utils.SetUIDAndGID(repo.GetName())
+	err = clabutils.SetUIDAndGID(repo.GetName())
 	if err != nil {
 		log.Errorf("error adjusting repository permissions %v. Continuing anyways", err)
 	}

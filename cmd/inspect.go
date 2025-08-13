@@ -18,10 +18,10 @@ import (
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/labels"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var (
@@ -63,27 +63,27 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 		inspectFormat = "json" // Force JSON format if details are requested
 	}
 
-	opts := []core.ClabOption{
-		core.WithTimeout(timeout),
-		core.WithRuntime(
+	opts := []clabcore.ClabOption{
+		clabcore.WithTimeout(timeout),
+		clabcore.WithRuntime(
 			runtime,
-			&containerlabruntime.RuntimeConfig{
+			&clabruntime.RuntimeConfig{
 				Debug:            debug,
 				Timeout:          timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(debug),
+		clabcore.WithDebug(debug),
 	}
 
 	if topoFile != "" {
 		opts = append(opts,
-			core.WithTopoPath(topoFile, varsFile),
-			core.WithNodeFilter(nodeFilter),
+			clabcore.WithTopoPath(topoFile, varsFile),
+			clabcore.WithNodeFilter(nodeFilter),
 		)
 	}
 
-	c, err := core.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
@@ -117,8 +117,8 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 }
 
 // listContainers handles listing containers based on different criteria (topology or labels).
-func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.GenericContainer, error) {
-	var containers []containerlabruntime.GenericContainer
+func listContainers(ctx context.Context, c *clabcore.CLab) ([]clabruntime.GenericContainer, error) {
+	var containers []clabruntime.GenericContainer
 	var err error
 
 	if topoFile != "" {
@@ -128,13 +128,13 @@ func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.Ge
 			return nil, fmt.Errorf("failed to list containers based on topology: %s", err)
 		}
 	} else {
-		var listOptions []core.ListOption
+		var listOptions []clabcore.ListOption
 
 		// List containers based on labels (--name or --all)
 		if labName != "" {
-			listOptions = append(listOptions, core.WithListLabName(labName))
+			listOptions = append(listOptions, clabcore.WithListLabName(labName))
 		} else {
-			listOptions = append(listOptions, core.WithListContainerlabLabelExists())
+			listOptions = append(listOptions, clabcore.WithListclabLabelExists())
 		}
 
 		containers, err = c.ListContainers(ctx, listOptions...)
@@ -146,7 +146,7 @@ func listContainers(ctx context.Context, c *core.CLab) ([]containerlabruntime.Ge
 	return containers, nil
 }
 
-func toTableData(contDetails []types.ContainerDetails) []tableWriter.Row {
+func toTableData(contDetails []clabtypes.ContainerDetails) []tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0, len(contDetails))
 
 	for i := range contDetails {
@@ -218,12 +218,12 @@ func getShortestTopologyPath(p string) (string, error) {
 }
 
 // printContainerDetailsJSON handles the detailed JSON output of containers grouped by lab name.
-func printContainerDetailsJSON(containers []containerlabruntime.GenericContainer) error {
-	groupedDetails := make(map[string][]containerlabruntime.GenericContainer)
+func printContainerDetailsJSON(containers []clabruntime.GenericContainer) error {
+	groupedDetails := make(map[string][]clabruntime.GenericContainer)
 	// Sort containers first by lab name, then by container name for consistent output
 	sort.Slice(containers, func(i, j int) bool {
-		labNameI := containers[i].Labels[labels.Containerlab]
-		labNameJ := containers[j].Labels[labels.Containerlab]
+		labNameI := containers[i].Labels[clablabels.Containerlab]
+		labNameJ := containers[j].Labels[clablabels.Containerlab]
 		if labNameI == labNameJ {
 			// Use the first name if available
 			nameI := ""
@@ -240,13 +240,13 @@ func printContainerDetailsJSON(containers []containerlabruntime.GenericContainer
 	})
 
 	// Group the sorted containers
-	for _, cont := range containers {
-		labName := cont.Labels[labels.Containerlab]
+	for idx := range containers {
+		labName := containers[idx].Labels[clablabels.Containerlab]
 		// Ensure labName exists, default to a placeholder if missing (shouldn't happen with filters)
 		if labName == "" {
 			labName = "_unknown_lab_"
 		}
-		groupedDetails[labName] = append(groupedDetails[labName], cont)
+		groupedDetails[labName] = append(groupedDetails[labName], containers[idx])
 	}
 
 	b, err := json.MarshalIndent(groupedDetails, "", "  ")
@@ -259,43 +259,143 @@ func printContainerDetailsJSON(containers []containerlabruntime.GenericContainer
 	return nil
 }
 
+func printContainerInspectJSON(contDetails []clabtypes.ContainerDetails) error {
+	// Group summary results by LabName
+	// Use a map where keys are lab names and values are slices of container details
+	groupedLabs := make(map[string][]clabtypes.ContainerDetails)
+	for idx := range contDetails {
+		labName := contDetails[idx].LabName
+		if labName == "" {
+			labName = "_unknown_lab_" // Should not happen if filters work correctly
+		}
+		// Assign the *entire* ContainerDetails struct (including AbsLabPath)
+		groupedLabs[labName] = append(groupedLabs[labName], contDetails[idx])
+	}
+
+	b, err := json.MarshalIndent(groupedLabs, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal grouped container summary: %v", err)
+	}
+
+	fmt.Println(string(b))
+
+	return nil
+}
+
+func printContainerInspectTable(contDetails []clabtypes.ContainerDetails) {
+	// Generate and render table using the summary data (which uses relative LabPath)
+	tabData := toTableData(contDetails)
+	table := tableWriter.NewWriter()
+	table.SetOutputMirror(os.Stdout)
+	table.SetStyle(tableWriter.StyleRounded)
+	table.Style().Format.Header = text.FormatTitle
+	table.Style().Format.HeaderAlign = text.AlignCenter
+	table.Style().Options.SeparateRows = true
+	table.Style().Color = tableWriter.ColorOptions{
+		Header: text.Colors{text.Bold},
+	}
+
+	// For --wide, avoid AutoMerge and multi-line cells
+	headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
+	if wide {
+		headerBase = slices.Insert(headerBase, 0, "Owner")
+	}
+
+	var header tableWriter.Row
+	colConfigs := []tableWriter.ColumnConfig{}
+
+	if all {
+		header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
+		if !wide {
+			colConfigs = append(
+				colConfigs,
+				tableWriter.ColumnConfig{
+					Number:    1,
+					AutoMerge: true, VAlign: text.VAlignMiddle,
+				},
+				tableWriter.ColumnConfig{
+					Number:    2,
+					AutoMerge: true, VAlign: text.VAlignMiddle,
+				},
+			)
+		}
+		// If wide, do not set AutoMerge for any columns
+	} else {
+		header = headerBase
+		if !wide {
+			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
+				Number:    1,
+				AutoMerge: true, VAlign: text.VAlignMiddle,
+			})
+		}
+	}
+
+	table.AppendHeader(header)
+	if len(colConfigs) > 0 {
+		table.SetColumnConfigs(colConfigs)
+	}
+
+	table.AppendRows(tabData)
+	table.Render()
+}
+
+func printContainerInspectCSV(contDetails []clabtypes.ContainerDetails) {
+	csv := "lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner\n"
+	for idx := range contDetails {
+		csv += fmt.Sprintf("%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
+			contDetails[idx].LabName,
+			contDetails[idx].LabPath,
+			contDetails[idx].AbsLabPath,
+			contDetails[idx].Name,
+			contDetails[idx].ContainerID,
+			contDetails[idx].Image,
+			contDetails[idx].Kind,
+			contDetails[idx].State,
+			contDetails[idx].Status,
+			contDetails[idx].IPv4Address,
+			contDetails[idx].IPv6Address,
+			contDetails[idx].Owner)
+	}
+	fmt.Print(csv)
+}
+
 // PrintContainerInspect handles non-details output (table or grouped JSON summary).
-func PrintContainerInspect(containers []containerlabruntime.GenericContainer, format string) error {
-	contDetails := make([]types.ContainerDetails, 0, len(containers))
+func PrintContainerInspect(containers []clabruntime.GenericContainer, format string) error {
+	contDetails := make([]clabtypes.ContainerDetails, 0, len(containers))
 
 	// Gather summary details of each container
-	for _, cont := range containers {
-		absPath := cont.Labels[labels.TopoFile]
+	for idx := range containers {
+		absPath := containers[idx].Labels[clablabels.TopoFile]
 		shortPath, err := getShortestTopologyPath(absPath)
 		if err != nil {
-			log.Warnf("failed to get relative topology path for container %s: %v, using raw path %q", cont.Names[0], err, absPath)
+			log.Warnf("failed to get relative topology path for container %s: %v, using raw path %q", containers[idx].Names[0], err, absPath)
 			shortPath = absPath // Use raw path as fallback for display
 		}
 
-		status := parseStatus(cont.Status)
+		status := parseStatus(containers[idx].Status)
 
-		cdet := types.ContainerDetails{
-			LabName:     cont.Labels[labels.Containerlab],
+		cdet := clabtypes.ContainerDetails{
+			LabName:     containers[idx].Labels[clablabels.Containerlab],
 			LabPath:     shortPath, // Relative or shortest path for table view
 			AbsLabPath:  absPath,   // Absolute path for JSON view
-			Image:       cont.Image,
-			State:       cont.State,
+			Image:       containers[idx].Image,
+			State:       containers[idx].State,
 			Status:      status,
-			IPv4Address: cont.GetContainerIPv4(),
-			IPv6Address: cont.GetContainerIPv6(),
-			ContainerID: cont.ShortID,
+			IPv4Address: containers[idx].GetContainerIPv4(),
+			IPv6Address: containers[idx].GetContainerIPv6(),
+			ContainerID: containers[idx].ShortID,
 		}
 
-		if len(cont.Names) > 0 {
-			cdet.Name = cont.Names[0]
+		if len(containers[idx].Names) > 0 {
+			cdet.Name = containers[idx].Names[0]
 		}
-		if group, ok := cont.Labels[labels.NodeGroup]; ok {
+		if group, ok := containers[idx].Labels[clablabels.NodeGroup]; ok {
 			cdet.Group = group
 		}
-		if kind, ok := cont.Labels[labels.NodeKind]; ok {
+		if kind, ok := containers[idx].Labels[clablabels.NodeKind]; ok {
 			cdet.Kind = kind
 		}
-		if owner, ok := cont.Labels[labels.Owner]; ok {
+		if owner, ok := containers[idx].Labels[clablabels.Owner]; ok {
 			cdet.Owner = owner
 		}
 
@@ -310,107 +410,21 @@ func PrintContainerInspect(containers []containerlabruntime.GenericContainer, fo
 		return contDetails[i].LabName < contDetails[j].LabName
 	})
 
-	// --- Output based on format ---
 	switch format {
 	case "json":
-		// Group summary results by LabName
-		// Use a map where keys are lab names and values are slices of container details
-		groupedLabs := make(map[string][]types.ContainerDetails)
-		for _, cd := range contDetails {
-			labName := cd.LabName
-			if labName == "" {
-				labName = "_unknown_lab_" // Should not happen if filters work correctly
-			}
-			// Assign the *entire* ContainerDetails struct (including AbsLabPath)
-			groupedLabs[labName] = append(groupedLabs[labName], cd)
-		}
-
-		b, err := json.MarshalIndent(groupedLabs, "", "  ")
+		err := printContainerInspectJSON(contDetails)
 		if err != nil {
-			return fmt.Errorf("failed to marshal grouped container summary: %v", err)
+			return err
 		}
-
-		fmt.Println(string(b))
-
-		return err
-
 	case "table":
-		// Generate and render table using the summary data (which uses relative LabPath)
-		tabData := toTableData(contDetails)
-		table := tableWriter.NewWriter()
-		table.SetOutputMirror(os.Stdout)
-		table.SetStyle(tableWriter.StyleRounded)
-		table.Style().Format.Header = text.FormatTitle
-		table.Style().Format.HeaderAlign = text.AlignCenter
-		table.Style().Options.SeparateRows = true
-		table.Style().Color = tableWriter.ColorOptions{
-			Header: text.Colors{text.Bold},
-		}
-
-		// For --wide, avoid AutoMerge and multi-line cells
-		headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
-		if wide {
-			headerBase = slices.Insert(headerBase, 0, "Owner")
-		}
-
-		var header tableWriter.Row
-		colConfigs := []tableWriter.ColumnConfig{}
-
-		if all {
-			header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
-			if !wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-					Number:    1,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				})
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-					Number:    2,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				})
-			}
-			// If wide, do not set AutoMerge for any columns
-		} else {
-			header = headerBase
-			if !wide {
-				colConfigs = append(colConfigs, tableWriter.ColumnConfig{
-					Number:    1,
-					AutoMerge: true, VAlign: text.VAlignMiddle,
-				})
-			}
-		}
-
-		table.AppendHeader(header)
-		if len(colConfigs) > 0 {
-			table.SetColumnConfigs(colConfigs)
-		}
-
-		table.AppendRows(tabData)
-		table.Render()
-		return nil
-
+		printContainerInspectTable(contDetails)
 	case "csv":
-		csv := "lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner\n"
-		for _, cd := range contDetails {
-			csv += fmt.Sprintf("%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
-				cd.LabName,
-				cd.LabPath,
-				cd.AbsLabPath,
-				cd.Name,
-				cd.ContainerID,
-				cd.Image,
-				cd.Kind,
-				cd.State,
-				cd.Status,
-				cd.IPv4Address,
-				cd.IPv6Address,
-				cd.Owner)
-		}
-		fmt.Print(csv)
-		return nil
+		printContainerInspectCSV(contDetails)
+	default:
+		return fmt.Errorf("internal error: unhandled format %q", format)
 	}
 
-	// Should not be reached if format validation is correct
-	return fmt.Errorf("internal error: unhandled format %q", format)
+	return nil
 }
 
 // parseStatus extracts a simpler status string, focusing on health states.

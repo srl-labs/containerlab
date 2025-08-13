@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/exp/slices"
 )
 
@@ -19,14 +19,14 @@ var topologyTestSet = map[string]struct {
 					Kind:       "nokia_srlinux",
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: utils.Pointer(true),
+					AutoRemove: clabutils.Pointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
 						Options: []string{"someopt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: utils.Pointer(true),
+						Issue: clabutils.Pointer(true),
 					},
 				},
 			},
@@ -36,14 +36,14 @@ var topologyTestSet = map[string]struct {
 				Kind:       "nokia_srlinux",
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: utils.Pointer(true),
+				AutoRemove: clabutils.Pointer(true),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(true),
+					Issue: clabutils.Pointer(true),
 				},
 			},
 		},
@@ -81,14 +81,14 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: utils.Pointer(true),
+					AutoRemove: clabutils.Pointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: utils.Pointer(true),
+						Issue: clabutils.Pointer(true),
 					},
 				},
 			},
@@ -102,7 +102,7 @@ var topologyTestSet = map[string]struct {
 						"label2": "notv2",
 					},
 					Memory:     "2G",
-					AutoRemove: utils.Pointer(false),
+					AutoRemove: clabutils.Pointer(false),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
@@ -143,14 +143,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: utils.Pointer(false),
+				AutoRemove: clabutils.Pointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(true),
+					Issue: clabutils.Pointer(true),
 				},
 			},
 		},
@@ -163,7 +163,7 @@ var topologyTestSet = map[string]struct {
 				CPU:  1,
 				Binds: []string{
 					"x:z",
-					"m:n", // overriden by node
+					"m:n", // overridden by node
 				},
 			},
 			Kinds: map[string]*NodeDefinition{
@@ -253,7 +253,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: clabutils.Pointer(false),
 				},
 			},
 		},
@@ -331,14 +331,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: utils.Pointer(false),
+				AutoRemove: clabutils.Pointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: clabutils.Pointer(false),
 				},
 			},
 		},
@@ -376,14 +376,14 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: utils.Pointer(true),
+					AutoRemove: clabutils.Pointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: utils.Pointer(true),
+						Issue: clabutils.Pointer(true),
 					},
 				},
 			},
@@ -397,7 +397,7 @@ var topologyTestSet = map[string]struct {
 						"label2": "notv2",
 					},
 					Memory:     "2G",
-					AutoRemove: utils.Pointer(false),
+					AutoRemove: clabutils.Pointer(false),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
@@ -438,14 +438,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: utils.Pointer(false),
+				AutoRemove: clabutils.Pointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(true),
+					Issue: clabutils.Pointer(true),
 				},
 			},
 		},
@@ -458,7 +458,7 @@ var topologyTestSet = map[string]struct {
 					CPU:  1,
 					Binds: []string{
 						"x:z",
-						"m:n", // overriden by group
+						"m:n", // overridden by group
 					},
 				},
 			},
@@ -551,7 +551,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: clabutils.Pointer(false),
 				},
 			},
 		},
@@ -559,12 +559,12 @@ var topologyTestSet = map[string]struct {
 	"node_group_default": {
 		input: &Topology{
 			Defaults: &NodeDefinition{
-				Kind: "linux", // overriden by group
+				Kind: "linux", // overridden by group
 				User: "user1",
 				CPU:  1,
 				Binds: []string{
 					"x:z",
-					"m:n", // overriden by node
+					"m:n", // overridden by node
 				},
 			},
 			Groups: map[string]*NodeDefinition{
@@ -655,7 +655,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: clabutils.Pointer(false),
 				},
 			},
 		},

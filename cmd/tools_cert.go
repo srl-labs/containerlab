@@ -12,9 +12,9 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -99,14 +99,14 @@ func createCA(_ *cobra.Command, _ []string) error {
 	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
 		commonName, country, locality, organization, organizationUnit, expiry)
 
-	ca := cert.NewCA()
+	ca := clabcert.NewCA()
 
 	expDuration, err := time.ParseDuration(expiry)
 	if err != nil {
 		return fmt.Errorf("failed parsing expiry %s", expiry)
 	}
 
-	csrInput := &cert.CACSRInput{
+	csrInput := &clabcert.CACSRInput{
 		CommonName:       commonName,
 		Country:          country,
 		Locality:         locality,
@@ -121,11 +121,11 @@ func createCA(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	utils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
+	clabutils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
 
 	err = caCert.Write(
-		filepath.Join(path, caNamePrefix+types.CertFileSuffix),
-		filepath.Join(path, caNamePrefix+types.KeyFileSuffix),
+		filepath.Join(path, caNamePrefix+clabtypes.CertFileSuffix),
+		filepath.Join(path, caNamePrefix+clabtypes.KeyFileSuffix),
 		"",
 	)
 	if err != nil {
@@ -146,14 +146,14 @@ func signCert(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	ca := cert.NewCA()
+	ca := clabcert.NewCA()
 
-	var caCert *cert.Certificate
+	var caCert *clabcert.Certificate
 
 	log.Debugf("CA cert path: %q", caCertPath)
 	if caCertPath != "" {
 		// we might also honor the External CA env vars here
-		caCert, err = cert.NewCertificateFromFile(caCertPath, caKeyPath, "")
+		caCert, err = clabcert.NewCertificateFromFile(caCertPath, caKeyPath, "")
 		if err != nil {
 			return err
 		}
@@ -180,7 +180,7 @@ func signCert(_ *cobra.Command, _ []string) error {
 	}
 
 	nodeCert, err := ca.GenerateAndSignNodeCert(
-		&cert.NodeCSRInput{
+		&clabcert.NodeCSRInput{
 			Hosts:            certHosts,
 			CommonName:       commonName,
 			Country:          country,
@@ -194,12 +194,12 @@ func signCert(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	utils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
+	clabutils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
 
 	err = nodeCert.Write(
-		filepath.Join(path, certNamePrefix+types.CertFileSuffix),
-		filepath.Join(path, certNamePrefix+types.KeyFileSuffix),
-		filepath.Join(path, certNamePrefix+types.CSRFileSuffix))
+		filepath.Join(path, certNamePrefix+clabtypes.CertFileSuffix),
+		filepath.Join(path, certNamePrefix+clabtypes.KeyFileSuffix),
+		filepath.Join(path, certNamePrefix+clabtypes.CSRFileSuffix))
 	if err != nil {
 		return err
 	}

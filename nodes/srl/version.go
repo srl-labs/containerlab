@@ -6,8 +6,8 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"
 )
 
@@ -122,7 +122,7 @@ type SrlVersion struct {
 // by executing the "info from state /system information version | grep version" command
 // and parsing the output.
 func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
-	cmd, _ := exec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
+	cmd, _ := clabexec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
@@ -136,7 +136,7 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 }
 
 func (*srl) parseVersionString(s string) *SrlVersion {
-	re, _ := regexp.Compile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
+	re := regexp.MustCompile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
 
 	v := re.FindStringSubmatch(s)
 	// 6 matches must be returned if all goes well
@@ -168,7 +168,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
 	// so we add the keys to the template data for rendering.
 	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.Major == "0") {
-		tplData.SSHPubKeys = utils.MarshalAndCatenateSSHPubKeys(n.sshPubKeys)
+		tplData.SSHPubKeys = clabutils.MarshalAndCatenateSSHPubKeys(n.sshPubKeys)
 	}
 
 	// in srlinux >= v24.3+ we add ACL rules to enable http and telnet access

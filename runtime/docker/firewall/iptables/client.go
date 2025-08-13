@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
 	"github.com/srl-labs/containerlab/runtime/docker/firewall/definitions"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -36,12 +36,12 @@ type IpTablesClient struct {
 
 // NewIpTablesClient returns a new IpTablesClient.
 func NewIpTablesClient() (*IpTablesClient, error) {
-	v4ModLoaded, err := utils.IsKernelModuleLoaded("ip_tables")
+	v4ModLoaded, err := clabutils.IsKernelModuleLoaded("ip_tables")
 	if err != nil {
 		return nil, err
 	}
 
-	v6ModLoaded, _ := utils.IsKernelModuleLoaded("ip6_tables")
+	v6ModLoaded, _ := clabutils.IsKernelModuleLoaded("ip6_tables")
 
 	if !v4ModLoaded {
 		log.Debug("ip_tables kernel module not available")
@@ -61,7 +61,7 @@ func (*IpTablesClient) Name() string {
 
 // InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the provided
 // input or output interface and chain.
-func (c *IpTablesClient) InstallForwardingRules(rule definitions.FirewallRule) error {
+func (c *IpTablesClient) InstallForwardingRules(rule *definitions.FirewallRule) error {
 	err := c.InstallForwardingRulesForAF(v4AF, rule)
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (c *IpTablesClient) InstallForwardingRules(rule definitions.FirewallRule) e
 }
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family.
-func (c *IpTablesClient) InstallForwardingRulesForAF(af string, rule definitions.FirewallRule) error {
+func (c *IpTablesClient) InstallForwardingRulesForAF(af string, rule *definitions.FirewallRule) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
@@ -107,7 +107,7 @@ func (c *IpTablesClient) InstallForwardingRulesForAF(af string, rule definitions
 }
 
 // DeleteForwardingRules deletes the forwarding rules for v4 and v6 address families.
-func (c *IpTablesClient) DeleteForwardingRules(rule definitions.FirewallRule) error {
+func (c *IpTablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) error {
 	err := c.DeleteForwardingRulesForAF(v4AF, rule)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func (c *IpTablesClient) DeleteForwardingRules(rule definitions.FirewallRule) er
 }
 
 // DeleteForwardingRulesForAF deletes the forwarding rules for a specified AF.
-func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule definitions.FirewallRule) error {
+func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule *definitions.FirewallRule) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
@@ -145,7 +145,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule definitions.
 	// we are not deleting the rule if the bridge still exists
 	// it happens when bridge is either still in use by docker network
 	// or it is managed externally (created manually)
-	_, err = utils.BridgeByName(iface)
+	_, err = clabutils.BridgeByName(iface)
 	if err == nil {
 		log.Debugf("bridge %s is still in use, not removing the forwarding rule", iface)
 		return nil
@@ -171,7 +171,7 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule definitions.
 }
 
 // ruleExists checks if an allow rule for the provided `rule` exists.
-func (c *IpTablesClient) ruleExists(af string, rule definitions.FirewallRule) bool {
+func (c *IpTablesClient) ruleExists(af string, rule *definitions.FirewallRule) bool {
 	iptCmd := iptablesCmd[af]
 
 	res, err := exec.Command(iptCmd, strings.Split(iptCheckArgs, " ")...).CombinedOutput()

@@ -4,20 +4,24 @@ func CopyMap(m map[string]string) map[string]string {
 	if m == nil {
 		return nil
 	}
-	copy := make(map[string]string, len(m))
+
+	out := make(map[string]string, len(m))
 	for k, v := range m {
-		copy[k] = v
+		out[k] = v
 	}
-	return copy
+
+	return out
 }
 
 func CopySlice(s []string) []string {
 	if s == nil {
 		return nil
 	}
-	copy := make([]string, len(s))
-	copy = append(copy[:0], s...)
-	return copy
+
+	out := make([]string, len(s))
+	out = append(out[:0], s...)
+
+	return out
 }
 
 type CopyInterface[T any] interface{ Copy() T }

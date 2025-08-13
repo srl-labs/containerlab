@@ -14,11 +14,11 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -41,7 +41,7 @@ var (
 	groupPrefix string
 	file        string
 	deploy      bool
-	reg         *nodes.NodeRegistry
+	reg         *clabnodes.NodeRegistry
 )
 
 type nodesDef struct {
@@ -84,20 +84,20 @@ var generateCmd = &cobra.Command{
 		}
 		log.Debugf("generated topo: %s", string(b))
 		if file != "" {
-			err = utils.CreateFile(file, string(b))
+			err = clabutils.CreateFile(file, string(b))
 			if err != nil {
 				return err
 			}
 		}
 		if deploy {
-			err = utils.CheckAndGetRootPrivs(nil, nil)
+			err = clabutils.CheckAndGetRootPrivs(nil, nil)
 			if err != nil {
 				return err
 			}
 			reconfigure = true
 			if file == "" {
 				file = fmt.Sprintf("%s.clab.yml", labName)
-				err = utils.CreateFile(file, string(b))
+				err = clabutils.CreateFile(file, string(b))
 				if err != nil {
 					return err
 				}
@@ -120,8 +120,8 @@ var generateCmd = &cobra.Command{
 }
 
 func init() {
-	c := &core.CLab{}
-	c.Reg = nodes.NewNodeRegistry()
+	c := &clabcore.CLab{}
+	c.Reg = clabnodes.NewNodeRegistry()
 	c.RegisterNodes()
 
 	reg = c.Reg
@@ -164,12 +164,12 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 	images, licenses map[string]string, nodes ...nodesDef,
 ) ([]byte, error) {
 	numStages := len(nodes)
-	config := &core.Config{
+	config := &clabcore.Config{
 		Name: name,
-		Mgmt: new(types.MgmtNet),
-		Topology: &types.Topology{
-			Kinds: make(map[string]*types.NodeDefinition),
-			Nodes: make(map[string]*types.NodeDefinition),
+		Mgmt: new(clabtypes.MgmtNet),
+		Topology: &clabtypes.Topology{
+			Kinds: make(map[string]*clabtypes.NodeDefinition),
+			Nodes: make(map[string]*clabtypes.NodeDefinition),
 		},
 	}
 	config.Mgmt.Network = network
@@ -180,7 +180,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 		config.Mgmt.IPv6Subnet = ipv6range
 	}
 	for k, img := range images {
-		config.Topology.Kinds[k] = &types.NodeDefinition{Image: img}
+		config.Topology.Kinds[k] = &clabtypes.NodeDefinition{Image: img}
 	}
 	for k, lic := range licenses {
 		if knd, ok := config.Topology.Kinds[k]; ok {
@@ -188,13 +188,13 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 			config.Topology.Kinds[k] = knd
 			continue
 		}
-		config.Topology.Kinds[k] = &types.NodeDefinition{License: lic}
+		config.Topology.Kinds[k] = &clabtypes.NodeDefinition{License: lic}
 	}
 	if numStages == 1 {
 		for j := uint(0); j < nodes[0].numNodes; j++ {
 			node1 := fmt.Sprintf("%s1-%d", nodePrefix, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
-				config.Topology.Nodes[node1] = &types.NodeDefinition{
+				config.Topology.Nodes[node1] = &clabtypes.NodeDefinition{
 					Group: fmt.Sprintf("%s-1", groupPrefix),
 					Kind:  nodes[0].kind,
 					Type:  nodes[0].typ,
@@ -213,7 +213,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 		for j := uint(0); j < nodes[i].numNodes; j++ {
 			node1 := fmt.Sprintf("%s%d-%d", nodePrefix, i+1, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
-				config.Topology.Nodes[node1] = &types.NodeDefinition{
+				config.Topology.Nodes[node1] = &clabtypes.NodeDefinition{
 					Group: fmt.Sprintf("%s-%d", groupPrefix, i+1),
 					Kind:  nodes[i].kind,
 					Type:  nodes[i].typ,
@@ -222,7 +222,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 			for k := uint(0); k < nodes[i+1].numNodes; k++ {
 				node2 := fmt.Sprintf("%s%d-%d", nodePrefix, i+2, k+1)
 				if _, ok := config.Topology.Nodes[node2]; !ok {
-					config.Topology.Nodes[node2] = &types.NodeDefinition{
+					config.Topology.Nodes[node2] = &clabtypes.NodeDefinition{
 						Group: fmt.Sprintf("%s-%d", groupPrefix, i+2),
 						Kind:  nodes[i+1].kind,
 						Type:  nodes[i+1].typ,
@@ -230,17 +230,17 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 				}
 
 				// create a raw veth link
-				l := &links.LinkVEthRaw{
-					Endpoints: []*links.EndpointRaw{
-						links.NewEndpointRaw(node1, fmt.Sprintf(
+				l := &clablinks.LinkVEthRaw{
+					Endpoints: []*clablinks.EndpointRaw{
+						clablinks.NewEndpointRaw(node1, fmt.Sprintf(
 							generateNodesAttributes[nodes[i].kind].GetInterfaceFormat(), k+1+interfaceOffset), ""),
-						links.NewEndpointRaw(node2, fmt.Sprintf(
+						clablinks.NewEndpointRaw(node2, fmt.Sprintf(
 							generateNodesAttributes[nodes[i+1].kind].GetInterfaceFormat(), j+1), ""),
 					},
 				}
 
 				// encapsulate the brief rawlink in a linkdefinition
-				ld := &links.LinkDefinition{
+				ld := &clablinks.LinkDefinition{
 					Link: l.ToLinkBriefRaw(),
 				}
 

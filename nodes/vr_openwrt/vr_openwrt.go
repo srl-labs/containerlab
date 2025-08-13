@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var kindNames = []string{"openwrt"}
@@ -21,22 +21,22 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrOpenWrt)
 	}, nrea)
 }
 
 type vrOpenWrt struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *vrOpenWrt) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrOpenWrt) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -51,8 +51,8 @@ func (n *vrOpenWrt) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error 
 	return nil
 }
 
-func (n *vrOpenWrt) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *vrOpenWrt) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	// Ensure the overlay directory exists
-	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"), 0o777)
+	clabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"), 0o777)
 	return nil
 }

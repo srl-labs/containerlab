@@ -2,8 +2,8 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/core/config"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabcoreconfig "github.com/srl-labs/containerlab/core/config"
 )
 
 // Show the template variable s.
@@ -19,12 +19,12 @@ var configTemplateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var err error
 
-		config.DebugCount = debugCount
+		clabcoreconfig.DebugCount = debugCount
 
-		c, err := core.NewContainerLab(
-			core.WithTimeout(timeout),
-			core.WithTopoPath(topoFile, varsFile),
-			core.WithDebug(debug),
+		c, err := clabcore.NewContainerLab(
+			clabcore.WithTimeout(timeout),
+			clabcore.WithTopoPath(topoFile, varsFile),
+			clabcore.WithDebug(debug),
 		)
 		if err != nil {
 			return err
@@ -35,7 +35,7 @@ var configTemplateCmd = &cobra.Command{
 			return err
 		}
 
-		allConfig := config.PrepareVars(c)
+		allConfig := clabcoreconfig.PrepareVars(c)
 		if templateVarOnly {
 			for _, n := range configFilter {
 				conf := allConfig[n]
@@ -44,7 +44,7 @@ var configTemplateCmd = &cobra.Command{
 			return nil
 		}
 
-		err = config.RenderAll(allConfig)
+		err = clabcoreconfig.RenderAll(allConfig)
 		if err != nil {
 			return err
 		}

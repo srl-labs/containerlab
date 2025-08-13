@@ -6,29 +6,29 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestVMInterfaceAliases(t *testing.T) { // skipcq: GO-R1005
 	tests := map[string]struct {
-		endpoints           []*links.EndpointVeth
+		endpoints           []*clablinks.EndpointVeth
 		node                *VRNode
 		endpointErrContains string
 		checkErrContains    string
 		resultEps           []string
 	}{
 		"regexp-no-match": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
 			},
 			node: &VRNode{
 				DefaultNode: DefaultNode{
-					Cfg: &types.NodeConfig{
+					Cfg: &clabtypes.NodeConfig{
 						ShortName: "cisco-noregexpmatch",
 					},
 					InterfaceRegexp: regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`),
@@ -40,16 +40,16 @@ func TestVMInterfaceAliases(t *testing.T) { // skipcq: GO-R1005
 			resultEps:           []string{},
 		},
 		"nomatch": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "0/0/1",
 					},
 				},
 			},
 			node: &VRNode{
 				DefaultNode: DefaultNode{
-					Cfg: &types.NodeConfig{
+					Cfg: &clabtypes.NodeConfig{
 						ShortName: "juniper-nomatch",
 					},
 					InterfaceRegexp: regexp.MustCompile(`(?:et|xe|ge)-0/0/(?P<port>\d+)$`),

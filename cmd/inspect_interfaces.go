@@ -11,10 +11,10 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
-	"github.com/srl-labs/containerlab/core"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -29,7 +29,7 @@ var inspectInterfacesCmd = &cobra.Command{
 	Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
 	Aliases: []string{"int", "intf"},
 	RunE:    inspectInterfacesFn,
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 }
 
 func init() {
@@ -49,27 +49,27 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", interfacesFormat)
 	}
 
-	opts := []core.ClabOption{
-		core.WithTimeout(timeout),
-		core.WithRuntime(
+	opts := []clabcore.ClabOption{
+		clabcore.WithTimeout(timeout),
+		clabcore.WithRuntime(
 			runtime,
-			&containerlabruntime.RuntimeConfig{
+			&clabruntime.RuntimeConfig{
 				Debug:            debug,
 				Timeout:          timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(debug),
+		clabcore.WithDebug(debug),
 	}
 
 	if topoFile != "" {
 		opts = append(opts,
-			core.WithTopoPath(topoFile, varsFile),
-			core.WithNodeFilter(nodeFilter),
+			clabcore.WithTopoPath(topoFile, varsFile),
+			clabcore.WithNodeFilter(nodeFilter),
 		)
 	}
 
-	c, err := core.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
@@ -83,14 +83,14 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("could not find topology")
 	}
 
-	listOpts := []core.ListOption{
-		core.WithListLabName(labNameFilterLabel),
+	listOpts := []clabcore.ListOption{
+		clabcore.WithListLabName(labNameFilterLabel),
 	}
 
 	if interfacesNodeName != "" {
 		listOpts = append(
 			listOpts,
-			core.WithListNodeName(interfacesNodeName),
+			clabcore.WithListNodeName(interfacesNodeName),
 		)
 	}
 
@@ -113,7 +113,7 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 	return err
 }
 
-func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) *[]tableWriter.Row {
+func interfacesToTableData(contInterfaces []*clabtypes.ContainerInterfaces) *[]tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0)
 	for _, container := range contInterfaces {
 		for _, iface := range container.Interfaces {
@@ -141,7 +141,7 @@ func interfacesToTableData(contInterfaces []*types.ContainerInterfaces) *[]table
 }
 
 func printContainerInterfaces(
-	containerInterfaces []*types.ContainerInterfaces,
+	containerInterfaces []*clabtypes.ContainerInterfaces,
 	format string,
 ) error {
 	switch format {

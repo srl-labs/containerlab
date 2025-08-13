@@ -11,31 +11,31 @@ import (
 
 	osexec "os/exec"
 
-	containerlabexec "github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var kindnames = []string{"host"}
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(host)
 	}, nil)
 }
 
 type host struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *host) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -45,24 +45,24 @@ func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *host) Deploy(_ context.Context, _ *nodes.DeployParams) error {
-	n.SetState(state.Deployed)
+func (n *host) Deploy(_ context.Context, _ *clabnodes.DeployParams) error {
+	n.SetState(clabnodesstate.Deployed)
 	return nil
 }
 
 func (*host) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 func (*host) PullImage(_ context.Context) error             { return nil }
 func (*host) Delete(_ context.Context) error                { return nil }
-func (*host) WithMgmtNet(*types.MgmtNet)                    {}
+func (*host) WithMgmtNet(*clabtypes.MgmtNet)                {}
 
 // UpdateConfigWithRuntimeInfo is a noop for hosts.
 func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers returns a basic skeleton of a container to enable graphing of hosts kinds.
-func (h *host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) {
-	image := utils.GetOSRelease()
+func (h *host) GetContainers(_ context.Context) ([]clabruntime.GenericContainer, error) {
+	image := clabutils.GetOSRelease()
 
-	return []runtime.GenericContainer{
+	return []clabruntime.GenericContainer{
 		{
 			Names:   []string{"Host"},
 			State:   "running",
@@ -70,10 +70,10 @@ func (h *host) GetContainers(_ context.Context) ([]runtime.GenericContainer, err
 			ShortID: "N/A",
 			Image:   image,
 			Labels: map[string]string{
-				labels.NodeKind: kindnames[0],
+				clablabels.NodeKind: kindnames[0],
 			},
 			Status: "running",
-			NetworkSettings: runtime.GenericMgmtIPs{
+			NetworkSettings: clabruntime.GenericMgmtIPs{
 				IPv4addr: "",
 				// IPv4pLen: 0,
 				IPv4Gw:   "",
@@ -86,12 +86,12 @@ func (h *host) GetContainers(_ context.Context) ([]runtime.GenericContainer, err
 }
 
 // RunExec runs commands on the container host.
-func (*host) RunExec(ctx context.Context, e *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
+func (*host) RunExec(ctx context.Context, e *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
 	return RunExec(ctx, e)
 }
 
-func RunExec(ctx context.Context, e *containerlabexec.ExecCmd) (*containerlabexec.ExecResult, error) {
-	// retireve the command with its arguments
+func RunExec(ctx context.Context, e *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	// retrieve the command with its arguments
 	command := e.GetCmd()
 
 	// execute the command along with the context
@@ -112,7 +112,7 @@ func RunExec(ctx context.Context, e *containerlabexec.ExecCmd) (*containerlabexe
 	}
 
 	// create result struct
-	execResult := containerlabexec.NewExecResult(e)
+	execResult := clabexec.NewExecResult(e)
 	// set the result fields in the exec struct
 	execResult.SetReturnCode(cmd.ProcessState.ExitCode())
 	execResult.SetStdOut(outBuf.Bytes())

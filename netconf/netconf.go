@@ -53,7 +53,7 @@ func SaveRunningConfig(addr, username, password, _ string) error {
 
 // GetConfig retrieves the running configuration and returns it as a string. It automatically picks the appropriate network driver for the provided Scrapli Platform.
 func GetConfig(addr, username, password, scrapliPlatform string) (string, error) {
-	platform, err := platform.NewPlatform(
+	p, err := platform.NewPlatform(
 		scrapliPlatform,
 		addr,
 		options.WithAuthNoStrictKey(),
@@ -66,7 +66,7 @@ func GetConfig(addr, username, password, scrapliPlatform string) (string, error)
 		return "", fmt.Errorf("could not create or missing platform driver for %s: %+v", addr, err)
 	}
 
-	d, err := platform.GetNetworkDriver()
+	d, err := p.GetNetworkDriver()
 	if err != nil {
 		return "", fmt.Errorf("could not create generic driver for %s: %+v", addr, err)
 	}

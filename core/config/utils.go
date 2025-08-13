@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/types"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 const (
@@ -33,7 +33,7 @@ const (
 type Dict map[string]interface{}
 
 // PrepareVars variables for all nodes. This will also prepare all variables for the links.
-func PrepareVars(c *core.CLab) map[string]*NodeConfig {
+func PrepareVars(c *clabcore.CLab) map[string]*NodeConfig {
 	res := make(map[string]*NodeConfig)
 
 	// preparing all nodes vars
@@ -73,20 +73,6 @@ func PrepareVars(c *core.CLab) map[string]*NodeConfig {
 		}
 	}
 
-	// // prepare all links
-	// for lIdx, link := range c.Links {
-	// 	varsA := make(Dict)
-	// 	varsB := make(Dict)
-	// 	err := prepareLinkVars(link, varsA, varsB)
-	// 	if err != nil {
-	// 		log.Errorf("cannot prepare link vars for %d. %s: %s", lIdx, link.String(), err)
-	// 	}
-	// 	res[link.A.Node.ShortName].Vars[vkLinks] =
-	// 		append(res[link.A.Node.ShortName].Vars[vkLinks].([]interface{}), varsA)
-	// 	res[link.B.Node.ShortName].Vars[vkLinks] =
-	// 		append(res[link.B.Node.ShortName].Vars[vkLinks].([]interface{}), varsB)
-	// }
-
 	// Prepare top-level map of nodes
 	// copy 1-level deep
 	all_nodes := make(Dict)
@@ -102,7 +88,7 @@ func PrepareVars(c *core.CLab) map[string]*NodeConfig {
 }
 
 // Prepare variables for a specific link.
-func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
+func prepareLinkVars(link *clabtypes.Link, varsA, varsB Dict) error {
 	// Add a Dict for the far-end link vars and the far-end node name
 	varsA[vkFarEnd] = Dict{vkNodeName: link.B.Node.ShortName}
 	varsB[vkFarEnd] = Dict{vkNodeName: link.A.Node.ShortName}
@@ -147,7 +133,7 @@ func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 	}
 
 	// Add additional values if they are not present
-	add := map[string]func(link *types.Link) (string, string, error){
+	add := map[string]func(link *clabtypes.Link) (string, string, error){
 		vkLinkIP:   linkIP,
 		vkLinkName: linkName,
 	}
@@ -169,7 +155,7 @@ func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 }
 
 // Create a link name using the node names and optional link_num.
-func linkName(link *types.Link) (string, string, error) { //nolint: unparam
+func linkName(link *clabtypes.Link) (string, string, error) { //nolint: unparam,gocritic
 	var linkNo string
 	if v, ok := link.Vars[vkLinkNum]; ok {
 		linkNo = fmt.Sprintf("_%v", v)
@@ -179,7 +165,7 @@ func linkName(link *types.Link) (string, string, error) { //nolint: unparam
 }
 
 // Calculate link IP from the system IPs at both ends.
-func linkIP(link *types.Link) (string, string, error) {
+func linkIP(link *clabtypes.Link) (string, string, error) { //nolint: gocritic
 	var ipA netip.Prefix
 	var err error
 	//

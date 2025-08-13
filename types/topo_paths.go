@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -98,7 +98,7 @@ func (t *TopoPaths) SetTopologyVarsFilePath(varsFile string) error {
 }
 
 func (t *TopoPaths) SetLabDir(p string) (err error) {
-	if !utils.DirExists(p) {
+	if !clabutils.DirExists(p) {
 		return fmt.Errorf("folder %s does not exist or is not accessible", p)
 	}
 	t.labDir = p
@@ -122,14 +122,14 @@ func (t *TopoPaths) SetLabDirByPrefix(topologyName string) (err error) {
 // SetExternalCaFiles sets the paths for the cert and key files if externally generated should be used.
 func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
 	// resolve the provided paths to external CA files
-	certFile = utils.ResolvePath(certFile, t.TopologyFileDir())
-	keyFile = utils.ResolvePath(keyFile, t.TopologyFileDir())
+	certFile = clabutils.ResolvePath(certFile, t.TopologyFileDir())
+	keyFile = clabutils.ResolvePath(keyFile, t.TopologyFileDir())
 
-	if !utils.FileExists(certFile) {
+	if !clabutils.FileExists(certFile) {
 		return fmt.Errorf("external CA cert file %s does not exist", certFile)
 	}
 
-	if !utils.FileExists(keyFile) {
+	if !clabutils.FileExists(keyFile) {
 		return fmt.Errorf("external CA key file %s does not exist", keyFile)
 	}
 
@@ -207,8 +207,8 @@ func (t *TopoPaths) VarsFilenameAbsPath() string {
 // ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or downloaded files.
 // Creates the directory if it does not exist.
 func (*TopoPaths) ClabTmpDir() string {
-	if !utils.DirExists(clabTmpDir) {
-		utils.CreateDirectory(clabTmpDir, 0o755)
+	if !clabutils.DirExists(clabTmpDir) {
+		clabutils.CreateDirectory(clabTmpDir, 0o755)
 	}
 
 	return clabTmpDir
@@ -218,8 +218,8 @@ func (*TopoPaths) ClabTmpDir() string {
 // Creates the directory if it does not exist.
 func (t *TopoPaths) ClabBakDir() string {
 	d := filepath.Join(t.ClabTmpDir(), backupDirName)
-	if !utils.DirExists(d) {
-		utils.CreateDirectory(d, 0o755)
+	if !clabutils.DirExists(d) {
+		clabutils.CreateDirectory(d, 0o755)
 	}
 
 	return d

@@ -6,10 +6,10 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime/ignite"
-	"github.com/srl-labs/containerlab/types"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	meta "github.com/weaveworks/ignite/pkg/apis/meta/v1alpha1"
 	"github.com/weaveworks/ignite/pkg/operations"
 )
@@ -26,21 +26,21 @@ var memoryReqs = map[string]string{
 }
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(cvx)
 	}, nil)
-	nodes.SetNonDefaultRuntimePerKind(kindnames, ignite.RuntimeName)
+	clabnodes.SetNonDefaultRuntimePerKind(kindnames, clabruntimeignite.RuntimeName)
 }
 
 type cvx struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 	vmChans *operations.VMChannels
 }
 
-func (c *cvx) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (c *cvx) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	c.DefaultNode = *nodes.NewDefaultNode(c)
+	c.DefaultNode = *clabnodes.NewDefaultNode(c)
 
 	c.Cfg = cfg
 	for _, o := range opts {
@@ -74,7 +74,7 @@ func (c *cvx) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (c *cvx) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
+func (c *cvx) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 	// CreateContainer is no-op in case of ignite runtime
 	cID, err := c.Runtime.CreateContainer(ctx, c.Cfg)
 	if err != nil {
@@ -88,12 +88,12 @@ func (c *cvx) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 		c.vmChans = vmChans
 	}
 
-	c.SetState(state.Deployed)
+	c.SetState(clabnodesstate.Deployed)
 
 	return nil
 }
 
-func (c *cvx) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
+func (c *cvx) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for cvx '%s' node", c.Cfg.ShortName)
 	if c.vmChans == nil {
 		return nil
@@ -104,14 +104,14 @@ func (c *cvx) PostDeploy(_ context.Context, _ *nodes.PostDeployParams) error {
 
 func (c *cvx) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
-	images[nodes.ImageKey] = c.Cfg.Image
+	images[clabnodes.ImageKey] = c.Cfg.Image
 
-	if c.Runtime.GetName() != ignite.RuntimeName {
+	if c.Runtime.GetName() != clabruntimeignite.RuntimeName {
 		return images
 	}
 
-	images[nodes.KernelKey] = c.Cfg.Kernel
-	images[nodes.SandboxKey] = c.Cfg.Sandbox
+	images[clabnodes.KernelKey] = c.Cfg.Kernel
+	images[clabnodes.SandboxKey] = c.Cfg.Sandbox
 	return images
 }
 
@@ -119,7 +119,7 @@ func (c *cvx) GetImages(_ context.Context) map[string]string {
 func (c *cvx) CheckInterfaceName() error {
 	// allow swpX interface names
 	// https://regex101.com/r/SV0k1J/1
-	ifRe := regexp.MustCompile(`swp[\d\.]+$`)
+	ifRe := regexp.MustCompile(`swp[\d.]+$`)
 	for _, e := range c.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as swpX, where X is >=0", c.Cfg.ShortName, e.GetIfaceName())

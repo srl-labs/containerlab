@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // EndpointRaw is the raw (string) representation of an endpoint as defined in the topology file
@@ -16,11 +16,11 @@ type EndpointRaw struct {
 }
 
 // NewEndpointRaw creates a new EndpointRaw struct.
-func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
+func NewEndpointRaw(node, nodeIf, mac string) *EndpointRaw {
 	return &EndpointRaw{
 		Node:  node,
 		Iface: nodeIf,
-		MAC:   Mac,
+		MAC:   mac,
 	}
 }
 
@@ -41,7 +41,7 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	var err error
 	if er.MAC == "" {
 		// if mac is not present generate one
-		genericEndpoint.MAC, err = utils.GenMac(ClabOUI)
+		genericEndpoint.MAC, err = clabutils.GenMac(ClabOUI)
 		if err != nil {
 			return nil, err
 		}

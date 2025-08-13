@@ -12,15 +12,15 @@ import (
 
 	"github.com/charmbracelet/log"
 
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindNames          = []string{"sonic-vm"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	generateable     = true
 	generateIfFormat = "eth%d"
@@ -35,26 +35,26 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(sonic_vm)
 	}, nrea)
 }
 
 type sonic_vm struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *sonic_vm) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *sonic_vm) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -66,11 +66,11 @@ func (n *sonic_vm) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	defEnv := map[string]string{
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
@@ -81,8 +81,8 @@ func (n *sonic_vm) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *sonic_vm) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *sonic_vm) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		log.Errorf("Error handling certifcate for %s: %v", n.Cfg.ShortName, err)
@@ -90,11 +90,11 @@ func (n *sonic_vm) PreDeploy(_ context.Context, params *nodes.PreDeployParams) e
 		return nil
 	}
 
-	return nodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
+	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
 func (n *sonic_vm) SaveConfig(ctx context.Context) error {
-	cmd, err := exec.NewExecCmdFromString(saveCmd)
+	cmd, err := clabexec.NewExecCmdFromString(saveCmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to create execute cmd: %w", n.Cfg.ShortName, err)
 	}
@@ -104,7 +104,7 @@ func (n *sonic_vm) SaveConfig(ctx context.Context) error {
 		return fmt.Errorf("%s: failed to execute cmd: %w", n.Cfg.ShortName, err)
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
@@ -116,5 +116,5 @@ func (n *sonic_vm) SaveConfig(ctx context.Context) error {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *sonic_vm) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
+	return clabnodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

@@ -21,10 +21,10 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/platform"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -42,7 +42,7 @@ const (
 
 var (
 	kindNames          = []string{"cisco_iol"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	//go:embed iol.cfg.tmpl
 	cfgTemplate string
@@ -61,22 +61,22 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(iol)
 	}, nrea)
 }
 
 type iol struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 
 	isL2Node          bool
 	Pid               string
@@ -87,9 +87,9 @@ type iol struct {
 	firstBoot         bool
 }
 
-func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *iol) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.firstBoot = false
 
 	n.Cfg = cfg
@@ -105,7 +105,7 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		"IOL_PID": n.Pid,
 	}
 
-	n.Cfg.Env = utils.MergeStringMaps(env, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(env, n.Cfg.Env)
 
 	// check if user submitted node type is valid
 	switch nodeType {
@@ -135,8 +135,8 @@ func (n *iol) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *iol) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -146,7 +146,7 @@ func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 	return n.CreateIOLFiles(ctx)
 }
 
-func (n *iol) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+func (n *iol) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
 	n.GenBootConfig(ctx)
@@ -165,15 +165,15 @@ func (n *iol) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
 func (n *iol) CreateIOLFiles(ctx context.Context) error {
 	// If NVRAM already exists, don't need to create
 	// otherwise saved configs in NVRAM are overwritten.
-	if !utils.FileExists(path.Join(n.Cfg.LabDir, n.nvramFile)) {
+	if !clabutils.FileExists(path.Join(n.Cfg.LabDir, n.nvramFile)) {
 		// create nvram file
-		utils.CreateFile(path.Join(n.Cfg.LabDir, n.nvramFile), "")
+		clabutils.CreateFile(path.Join(n.Cfg.LabDir, n.nvramFile), "")
 		n.firstBoot = true
 	}
 
 	// create these files so the bind monut doesn't automatically
 	// make folders.
-	utils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), "")
+	clabutils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), "")
 
 	return n.GenInterfaceConfig(ctx)
 }
@@ -213,11 +213,11 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 	}
 
 	// create IOUYAP and NETMAP file for interface mappings
-	err := utils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), iouyapData)
+	err := clabutils.CreateFile(path.Join(n.Cfg.LabDir, "iouyap.ini"), iouyapData)
 	if err != nil {
 		return err
 	}
-	err = utils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), netmapdata)
+	err = clabutils.CreateFile(path.Join(n.Cfg.LabDir, "NETMAP"), netmapdata)
 
 	return err
 }
@@ -243,7 +243,7 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 		Hostname:           n.Cfg.ShortName,
 		IsL2Node:           n.isL2Node,
 		MgmtIPv4Addr:       n.Cfg.MgmtIPv4Address,
-		MgmtIPv4SubnetMask: utils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
+		MgmtIPv4SubnetMask: clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
 		MgmtIPv4GW:         n.Cfg.MgmtIPv4Gateway,
 		MgmtIPv6Addr:       n.Cfg.MgmtIPv6Address,
 		MgmtIPv6PrefixLen:  n.Cfg.MgmtIPv6PrefixLength,
@@ -252,7 +252,8 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 		PartialCfg:         n.partialStartupCfg,
 	}
 
-	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(utils.CreateFuncs()).Parse(n.bootCfg)
+	IOLCfgTpl, _ := template.New("clab-iol-default-config").Funcs(
+		clabutils.CreateFuncs()).Parse(n.bootCfg)
 
 	// generate the config
 	buf := new(bytes.Buffer)
@@ -261,7 +262,7 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 		return err
 	}
 
-	return utils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), buf.String())
+	return clabutils.CreateFile(path.Join(n.Cfg.LabDir, "boot_config.txt"), buf.String())
 }
 
 type IOLTemplateData struct {
@@ -287,7 +288,7 @@ type IOLInterface struct {
 }
 
 func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
-	captureGroups, err := utils.GetRegexpCaptureGroups(CapturingIntfRegexp, ifName)
+	captureGroups, err := clabutils.GetRegexpCaptureGroups(CapturingIntfRegexp, ifName)
 	if err != nil {
 		return "", err
 	}
@@ -319,9 +320,9 @@ func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 	}
 }
 
-// AddEndpoint override maps the endpoint name to an ethX-based naming where neccesary, before adding it to the node endpoints. Returns an error if the mapping goes wrong or if the
+// AddEndpoint override maps the endpoint name to an ethX-based naming where necessary, before adding it to the node endpoints. Returns an error if the mapping goes wrong or if the
 // interface name is NOT allowed.
-func (n *iol) AddEndpoint(e links.Endpoint) error {
+func (n *iol) AddEndpoint(e clablinks.Endpoint) error {
 	endpointName := e.GetIfaceName()
 	var IFaceName, IFaceAlias string
 
@@ -377,7 +378,7 @@ func isPartialConfigFile(c string) bool {
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 	mgmt_str := fmt.Sprintf("\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
-		n.Cfg.MgmtIPv4Address, utils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength), n.Cfg.MgmtIPv6Address,
+		n.Cfg.MgmtIPv4Address, clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength), n.Cfg.MgmtIPv6Address,
 		n.Cfg.MgmtIPv6PrefixLength, n.Cfg.MgmtIPv4Gateway, n.Cfg.MgmtIPv6Gateway)
 
 	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))

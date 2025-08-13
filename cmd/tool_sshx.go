@@ -17,13 +17,13 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/exec"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const sshx string = "sshx"
@@ -51,7 +51,7 @@ type SSHXListItem struct {
 
 // SSHXNode implements runtime.Node interface for SSHX containers.
 type SSHXNode struct {
-	config *types.NodeConfig
+	config *clabtypes.NodeConfig
 }
 
 func init() {
@@ -119,12 +119,12 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 		enableReadersFlag,
 	)
 
-	_, gid, _ := utils.GetRealUserIDs()
+	_, gid, _ := clabutils.GetRealUserIDs()
 
 	// user `user` is a sudo user in srl-labs/network-multitool
 	userName := "user"
 
-	nodeConfig := &types.NodeConfig{
+	nodeConfig := &clabtypes.NodeConfig{
 		LongName:   name,
 		ShortName:  name,
 		Image:      image,
@@ -139,7 +139,7 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 	// Add SSH directory mount if enabled
 	if mountSSH {
 		// Get user's home directory
-		sshDir := utils.ExpandHome("~/.ssh")
+		sshDir := clabutils.ExpandHome("~/.ssh")
 		// Check if the directory exists
 		if _, err := os.Stat(sshDir); err == nil {
 			nodeConfig.Binds = append(nodeConfig.Binds,
@@ -165,17 +165,17 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 	}
 }
 
-func (n *SSHXNode) Config() *types.NodeConfig {
+func (n *SSHXNode) Config() *clabtypes.NodeConfig {
 	return n.config
 }
 
-func (*SSHXNode) GetEndpoints() []links.Endpoint {
+func (*SSHXNode) GetEndpoints() []clablinks.Endpoint {
 	return nil
 }
 
 // getSSHXLink retrieves the SSHX link from the container.
-func getSSHXLink(ctx context.Context, rt containerlabruntime.ContainerRuntime, containerName string) string {
-	execCmd, err := exec.NewExecCmdFromString("cat /tmp/sshx")
+func getSSHXLink(ctx context.Context, rt clabruntime.ContainerRuntime, containerName string) string {
+	execCmd, err := clabexec.NewExecCmdFromString("cat /tmp/sshx")
 	if err != nil {
 		return ""
 	}
@@ -197,7 +197,7 @@ func getSSHXLink(ctx context.Context, rt containerlabruntime.ContainerRuntime, c
 var sshxAttachCmd = &cobra.Command{
 	Use:     "attach",
 	Short:   "attach SSHX terminal sharing to a lab",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -206,7 +206,7 @@ var sshxAttachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, topoFile, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
+		clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, topoFile,
 			sshxLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
 		if err != nil {
 			return err
@@ -226,7 +226,7 @@ var sshxAttachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtime)
+		_, rinit, err := clabcore.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtime, err)
 		}
@@ -234,15 +234,15 @@ var sshxAttachCmd = &cobra.Command{
 		rt := rinit()
 
 		err = rt.Init(
-			containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}),
-			containerlabruntime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
+			clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}),
+			clabruntime.WithMgmtNet(&clabtypes.MgmtNet{Network: networkName}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}
 
 		// Check if container already exists
-		filter := []*types.GenericFilter{{FilterType: "name", Match: sshxContainerName}}
+		filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: sshxContainerName}}
 
 		containers, err := rt.ListContainers(ctx, filter)
 		if err != nil {
@@ -255,14 +255,14 @@ var sshxAttachCmd = &cobra.Command{
 
 		// Pull the container image
 		log.Infof("Pulling image %s...", sshxImage)
-		if err := rt.PullImage(ctx, sshxImage, types.PullPolicyAlways); err != nil {
+		if err := rt.PullImage(ctx, sshxImage, clabtypes.PullPolicyAlways); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", sshxImage, err)
 		}
 
 		// Create container labels
 		owner := sshxOwner
 		if owner == "" {
-			owner = utils.GetOwner()
+			owner = clabutils.GetOwner()
 		}
 
 		labelsMap := createLabelsMap(
@@ -326,13 +326,13 @@ var sshxAttachCmd = &cobra.Command{
 var sshxDetachCmd = &cobra.Command{
 	Use:     "detach",
 	Short:   "detach SSHX terminal sharing from a lab",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
 		// Get lab topology information
-		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
+		clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, topoFile,
 			sshxLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
 		if err != nil {
 			return err
@@ -347,13 +347,13 @@ var sshxDetachCmd = &cobra.Command{
 		log.Debugf("Container name for deletion: %s", containerName)
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtime)
+		_, rinit, err := clabcore.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
 
 		rt := rinit()
-		err = rt.Init(containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}))
+		err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}))
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}
@@ -377,22 +377,22 @@ var sshxListCmd = &cobra.Command{
 		defer cancel()
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtime)
+		_, rinit, err := clabcore.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer: %w", err)
 		}
 
 		rt := rinit()
-		err = rt.Init(containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}))
+		err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}))
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
 		}
 
 		// Filter only by SSHX label
-		filter := []*types.GenericFilter{
+		filter := []*clabtypes.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      containerlablabels.ToolType,
+				Field:      clablabels.ToolType,
 				Operator:   "=",
 				Match:      sshx,
 			},
@@ -423,7 +423,7 @@ var sshxListCmd = &cobra.Command{
 
 			// Get owner from container labels
 			owner := "N/A"
-			if ownerVal, exists := c.Labels[containerlablabels.Owner]; exists && ownerVal != "" {
+			if ownerVal, exists := c.Labels[clablabels.Owner]; exists && ownerVal != "" {
 				owner = ownerVal
 			}
 
@@ -482,7 +482,7 @@ var sshxListCmd = &cobra.Command{
 var sshxReattachCmd = &cobra.Command{
 	Use:     "reattach",
 	Short:   "detach and reattach SSHX terminal sharing to a lab",
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 	RunE: func(_ *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
@@ -491,7 +491,7 @@ var sshxReattachCmd = &cobra.Command{
 			sshxLabName, sshxContainerName, sshxEnableReaders, sshxImage, topoFile, sshxMountSSHDir)
 
 		// Get lab topology information
-		clabInstance, err := core.NewContainerlabFromTopologyFileOrLabName(ctx, topoFile,
+		clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, topoFile,
 			sshxLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
 		if err != nil {
 			return err
@@ -512,15 +512,15 @@ var sshxReattachCmd = &cobra.Command{
 		}
 
 		// Initialize runtime
-		_, rinit, err := core.RuntimeInitializer(runtime)
+		_, rinit, err := clabcore.RuntimeInitializer(runtime)
 		if err != nil {
 			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtime, err)
 		}
 
 		rt := rinit()
 		err = rt.Init(
-			containerlabruntime.WithConfig(&containerlabruntime.RuntimeConfig{Timeout: timeout}),
-			containerlabruntime.WithMgmtNet(&types.MgmtNet{Network: networkName}),
+			clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}),
+			clabruntime.WithMgmtNet(&clabtypes.MgmtNet{Network: networkName}),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to initialize runtime: %w", err)
@@ -539,14 +539,14 @@ var sshxReattachCmd = &cobra.Command{
 		// Step 2: Create and attach new SSHX container
 		// Pull the container image
 		log.Infof("Pulling image %s...", sshxImage)
-		if err := rt.PullImage(ctx, sshxImage, types.PullPolicyAlways); err != nil {
+		if err := rt.PullImage(ctx, sshxImage, clabtypes.PullPolicyAlways); err != nil {
 			return fmt.Errorf("failed to pull image %s: %w", sshxImage, err)
 		}
 
 		// Create container labels
 		owner := sshxOwner
 		if owner == "" {
-			owner = utils.GetOwner()
+			owner = clabutils.GetOwner()
 		}
 
 		labelsMap := createLabelsMap(

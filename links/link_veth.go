@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -136,7 +136,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 	}
 
 	// disable TXOffloading
-	if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+	if err := clabutils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
 		return err
 	}
 
@@ -176,7 +176,7 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	}
 
 	// disable TXOffloading
-	if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+	if err := clabutils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
 		return err
 	}
 

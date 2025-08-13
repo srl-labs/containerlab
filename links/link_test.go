@@ -93,7 +93,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			name: "brief link with veth endpoints",
 			args: args{
 				yaml: []byte(`
-                    endpoints: 
+                    endpoints:
                         - "srl1:e1-5"
                         - "srl2:e1-5"
                 `),
@@ -116,7 +116,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			name: "brief link with veth endpoints and mtu",
 			args: args{
 				yaml: []byte(`
-                    endpoints: 
+                    endpoints:
                         - "srl1:e1-5"
                         - "srl2:e1-5"
                     mtu: 1500
@@ -227,7 +227,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				yaml: []byte(`
                     type:              mgmt-net
                     host-interface:    srl1_e1-5
-                    endpoint: 
+                    endpoint:
                         node:          srl1
                         interface:     e1-5
                 `),
@@ -247,7 +247,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				yaml: []byte(`
                     type:              host
                     host-interface:    srl1_e1-5
-                    endpoint: 
+                    endpoint:
                         node:          srl1
                         interface:     e1-5
                 `),
@@ -267,7 +267,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				yaml: []byte(`
                     type:              macvlan
                     host-interface:    srl1_e1-5
-                    endpoint: 
+                    endpoint:
                         node:          srl1
                         interface:     e1-5
                 `),
@@ -413,28 +413,28 @@ func Test_extractHostNodeInterfaceData(t *testing.T) {
 	}
 }
 
-func TestSanitiseInterfaceName(t *testing.T) {
+func TestSanitizeInterfaceName(t *testing.T) {
 	tests := map[string]struct {
 		input string
 		want  string
 	}{
-		"sanitise-test-original": {
+		"sanitize-test-original": {
 			input: "eth0",
 			want:  "eth0",
 		},
-		"sanitise-test-xrd": {
+		"sanitize-test-xrd": {
 			input: "Gi0-0-0-0",
 			want:  "Gi0-0-0-0",
 		},
-		"sanitise-test-c8000": {
+		"sanitize-test-c8000": {
 			input: "Hu0_0_0_1",
 			want:  "Hu0_0_0_1",
 		},
-		"sanitise-test-asa": {
+		"sanitize-test-asa": {
 			input: "GigabitEthernet 0/0",
 			want:  "GigabitEthernet-0-0",
 		},
-		"sanitise-test-junos": {
+		"sanitize-test-junos": {
 			input: "ge-0/0/0",
 			want:  "ge-0-0-0",
 		},
@@ -442,9 +442,9 @@ func TestSanitiseInterfaceName(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := SanitiseInterfaceName(tt.input)
+			got := SanitizeInterfaceName(tt.input)
 			if got != tt.want {
-				t.Errorf("got wrong sanitised interface name %q, want %q", got, tt.want)
+				t.Errorf("got wrong sanitized interface name %q, want %q", got, tt.want)
 			}
 		})
 	}

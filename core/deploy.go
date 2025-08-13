@@ -7,16 +7,19 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // Deploy the given topology.
 // skipcq: GO-R1005
-func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.GenericContainer, error) {
+func (c *CLab) Deploy( //nolint: funlen
+	ctx context.Context,
+	options *DeployOptions,
+) ([]clabruntime.GenericContainer, error) {
 	var err error
 
 	err = c.ResolveLinks()
@@ -34,30 +37,30 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	}
 
 	// create management network or use existing one
-	if err = c.CreateNetwork(ctx); err != nil {
+	if err := c.CreateNetwork(ctx); err != nil {
 		return nil, err
 	}
 
-	err = links.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+	err = clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = c.checkTopologyDefinition(ctx); err != nil {
+	if err := c.checkTopologyDefinition(ctx); err != nil {
 		return nil, err
 	}
 
-	if err = c.loadKernelModules(); err != nil {
+	if err := c.loadKernelModules(); err != nil {
 		return nil, err
 	}
 
 	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
 
 	if !options.skipLabDirFileACLs {
 		// adjust ACL for Labdir such that SUDO_UID Users will
 		// also have access to lab directory files
-		err = utils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
+		err = clabutils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
 		if err != nil {
 			log.Infof("unable to adjust Labdir file ACLs: %v", err)
 		}
@@ -140,7 +143,6 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		nodesWg.Wait()
 	}
 
-	// write to log
 	execCollection.Log()
 
 	if err := c.GenerateInventories(); err != nil {
@@ -181,8 +183,8 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 // certificateAuthoritySetup sets up the certificate authority parameters.
 func (c *CLab) certificateAuthoritySetup() error {
 	// init the Cert storage and CA
-	c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-	c.Cert.CA = cert.NewCA()
+	c.Cert.CertStorage = clabcert.NewLocalDirCertStorage(c.TopoPaths)
+	c.Cert.CA = clabcert.NewCA()
 
 	s := c.Config.Settings
 
@@ -224,7 +226,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 	}
 
 	// define the attributes used to generate the CA Cert
-	caCertInput := &cert.CACSRInput{
+	caCertInput := &clabcert.CACSRInput{
 		CommonName:   c.Config.Name + " lab CA",
 		Country:      "US",
 		Expiry:       validityDuration,
@@ -240,7 +242,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 // The exec collection is returned to the caller to ensure that the execution log
 // is printed after the nodes are created.
 // Nodes interdependencies are created in this function.
-func (c *CLab) createNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection, error) {
+func (c *CLab) createNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *clabexec.ExecCollection, error) {
 	for _, node := range c.Nodes {
 		c.dependencyManager.AddNode(node)
 	}

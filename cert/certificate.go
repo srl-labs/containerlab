@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // Certificate stores the combination of Cert and Key along with the CSR if available.
@@ -24,7 +24,7 @@ func NewCertificateFromFile(certFilePath, keyFilePath, csrFilePath string) (*Cer
 	if err != nil {
 		return nil, fmt.Errorf("failed loading cert file %v", err)
 	}
-	cert.Cert, err = utils.ReadFileContent(certFilePath)
+	cert.Cert, err = clabutils.ReadFileContent(certFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func NewCertificateFromFile(certFilePath, keyFilePath, csrFilePath string) (*Cer
 	if err != nil {
 		return nil, fmt.Errorf("failed loading key file %v", err)
 	}
-	cert.Key, err = utils.ReadFileContent(keyFilePath)
+	cert.Key, err = clabutils.ReadFileContent(keyFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func NewCertificateFromFile(certFilePath, keyFilePath, csrFilePath string) (*Cer
 		if err != nil {
 			log.Debugf("failed loading csr %s, continuing anyways", csrFilePath)
 		} else {
-			cert.Csr, err = utils.ReadFileContent(csrFilePath)
+			cert.Csr, err = clabutils.ReadFileContent(csrFilePath)
 			if err != nil {
 				return nil, err
 			}
@@ -60,13 +60,13 @@ func NewCertificateFromFile(certFilePath, keyFilePath, csrFilePath string) (*Cer
 func (c *Certificate) Write(certPath, keyPath, csrPath string) error {
 	log.Debugf("writing cert file to %s", certPath)
 
-	err := utils.CreateFile(certPath, string(c.Cert))
+	err := clabutils.CreateFile(certPath, string(c.Cert))
 	if err != nil {
 		return err
 	}
 
 	log.Debugf("writing key file to %s", keyPath)
-	err = utils.CreateFile(keyPath, string(c.Key))
+	err = clabutils.CreateFile(keyPath, string(c.Key))
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (c *Certificate) Write(certPath, keyPath, csrPath string) error {
 	if len(c.Csr) != 0 && csrPath != "" {
 		log.Debugf("writing csr file to %s", csrPath)
 
-		err = utils.CreateFile(csrPath, string(c.Csr))
+		err = clabutils.CreateFile(csrPath, string(c.Csr))
 		if err != nil {
 			return err
 		}

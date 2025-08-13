@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -26,7 +26,7 @@ var destroyCmd = &cobra.Command{
 	Short:   "destroy a lab",
 	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
 	Aliases: []string{"des"},
-	PreRunE: utils.CheckAndGetRootPrivs,
+	PreRunE: clabutils.CheckAndGetRootPrivs,
 	RunE:    destroyFn,
 }
 
@@ -55,72 +55,72 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("--all and --name should not be used together")
 	}
 
-	opts := []core.ClabOption{
-		core.WithTimeout(timeout),
-		core.WithLabName(labName),
-		core.WithRuntime(
+	opts := []clabcore.ClabOption{
+		clabcore.WithTimeout(timeout),
+		clabcore.WithLabName(labName),
+		clabcore.WithRuntime(
 			runtime,
-			&containerlabruntime.RuntimeConfig{
+			&clabruntime.RuntimeConfig{
 				Debug:            debug,
 				Timeout:          timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(debug),
+		clabcore.WithDebug(debug),
 		// during destroy we don't want to check bind paths
 		// as it is irrelevant for this command.
-		core.WithSkippedBindsPathsCheck(),
+		clabcore.WithSkippedBindsPathsCheck(),
 	}
 
 	if topoFile != "" {
-		opts = append(opts, core.WithTopoPath(topoFile, varsFile))
+		opts = append(opts, clabcore.WithTopoPath(topoFile, varsFile))
 	}
 
 	if keepMgmtNet {
-		opts = append(opts, core.WithKeepMgmtNet())
+		opts = append(opts, clabcore.WithKeepMgmtNet())
 	}
 
-	clab, err := core.NewContainerLab(opts...)
+	clab, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
 
-	destroyOptions := []core.DestroyOption{
-		core.WithDestroyMaxWorkers(maxWorkers),
-		core.WithDestroyNodeFilter(nodeFilter),
+	destroyOptions := []clabcore.DestroyOption{
+		clabcore.WithDestroyMaxWorkers(maxWorkers),
+		clabcore.WithDestroyNodeFilter(nodeFilter),
 	}
 
 	if keepMgmtNet {
 		destroyOptions = append(
 			destroyOptions,
-			core.WithDestroyKeepMgmtNet(),
+			clabcore.WithDestroyKeepMgmtNet(),
 		)
 	}
 
 	if cleanup {
 		destroyOptions = append(
 			destroyOptions,
-			core.WithDestroyCleanup(),
+			clabcore.WithDestroyCleanup(),
 		)
 	}
 
 	if gracefulShutdown {
 		destroyOptions = append(
 			destroyOptions,
-			core.WithDestroyGraceful(),
+			clabcore.WithDestroyGraceful(),
 		)
 	}
 
 	if all {
 		destroyOptions = append(
 			destroyOptions,
-			core.WithDestroyAll(),
+			clabcore.WithDestroyAll(),
 		)
 
 		if !yes {
 			destroyOptions = append(
 				destroyOptions,
-				core.WithDestroyTerminalPrompt(),
+				clabcore.WithDestroyTerminalPrompt(),
 			)
 		}
 	}

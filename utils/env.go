@@ -162,10 +162,10 @@ func ExpandEnvVarsInStrSlice(s []string) {
 // ToEnvKey capitalizes and removes special chars from a string to is used as an environment variable key.
 func ToEnvKey(s string) string {
 	// match special chars to later replace with "_"
-	regreplace, _ := regexp.Compile("[+-./]")
+	regreplace := regexp.MustCompile("[-+./]")
 	result := regreplace.ReplaceAllString(s, "_")
 	// match only valid env var chars
-	regAllowed, _ := regexp.Compile("[^a-zA-Z0-9_]+")
+	regAllowed := regexp.MustCompile("[^a-zA-Z0-9_]+")
 	result = regAllowed.ReplaceAllString(result, "")
 
 	return strings.ToUpper(result)

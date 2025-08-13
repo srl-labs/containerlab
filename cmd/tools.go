@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
+	clablabels "github.com/srl-labs/containerlab/labels"
 )
 
 // toolsCmd represents the tools command.
@@ -29,33 +29,33 @@ func createLabelsMap(topo, labName, containerName, owner, toolType string) map[s
 	shortName := strings.Replace(containerName, "clab-"+labName+"-", "", 1)
 
 	labels := map[string]string{
-		containerlablabels.Containerlab: labName,
-		containerlablabels.NodeName:     shortName,
-		containerlablabels.LongName:     containerName,
-		containerlablabels.NodeKind:     "linux",
-		containerlablabels.NodeGroup:    "",
-		containerlablabels.NodeType:     "tool",
-		containerlablabels.ToolType:     toolType,
+		clablabels.Containerlab: labName,
+		clablabels.NodeName:     shortName,
+		clablabels.LongName:     containerName,
+		clablabels.NodeKind:     "linux",
+		clablabels.NodeGroup:    "",
+		clablabels.NodeType:     "tool",
+		clablabels.ToolType:     toolType,
 	}
 
 	// Add topology file path
 	if topo != "" {
 		absPath, err := filepath.Abs(topo)
 		if err == nil {
-			labels[containerlablabels.TopoFile] = absPath
+			labels[clablabels.TopoFile] = absPath
 		} else {
-			labels[containerlablabels.TopoFile] = topo
+			labels[clablabels.TopoFile] = topo
 		}
 
 		// Set node lab directory
 		baseDir := filepath.Dir(topo)
-		labels[containerlablabels.NodeLabDir] =
+		labels[clablabels.NodeLabDir] =
 			filepath.Join(baseDir, "clab-"+labName, shortName)
 	}
 
 	// Add owner label if available
 	if owner != "" {
-		labels[containerlablabels.Owner] = owner
+		labels[clablabels.Owner] = owner
 	}
 
 	return labels

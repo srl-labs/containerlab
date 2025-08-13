@@ -12,8 +12,8 @@ import (
 	jT "github.com/kellerza/template"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -27,7 +27,7 @@ var TemplatePaths []string
 var DebugCount int
 
 type NodeConfig struct {
-	TargetNode  *types.NodeConfig
+	TargetNode  *clabtypes.NodeConfig
 	Credentials []string // Node's credentials
 	// All the variables used to render the template
 	Vars map[string]interface{}
@@ -79,7 +79,7 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 		log.Infof("No template names specified (-l) using: %s", strings.Join(TemplateNames, ", "))
 	}
 
-	tmpl := template.New("").Funcs(utils.CreateFuncs()).Funcs(jT.Funcs)
+	tmpl := template.New("").Funcs(clabutils.CreateFuncs()).Funcs(jT.Funcs)
 
 	for _, nc := range allnodes {
 		for _, baseN := range TemplateNames {

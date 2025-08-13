@@ -11,7 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/docker/go-connections/nat"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -63,8 +63,8 @@ type MgmtNet struct {
 var _ yaml.Unmarshaler = &MgmtNet{}
 
 // UnmarshalYAML is a custom unmarshaller for MgmtNet that allows to map old attributes to new ones.
-func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// define an alias type to avoid recursion during unmarshalling
+func (m *MgmtNet) UnmarshalYAML(unmarshal func(any) error) error {
+	// define an alias type to avoid recursion during unmarshaling
 	type MgmtNetAlias MgmtNet
 
 	type MgmtNetWithDeprecatedFields struct {
@@ -74,7 +74,7 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	mn := &MgmtNetWithDeprecatedFields{}
 
-	mn.MgmtNetAlias = (MgmtNetAlias)(*m)
+	mn.MgmtNetAlias = MgmtNetAlias(*m)
 	if err := unmarshal(mn); err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		mn.IPv6Subnet = mn.DeprecatedIPv6Subnet
 	}
 
-	*m = (MgmtNet)(mn.MgmtNetAlias)
+	*m = MgmtNet(mn.MgmtNetAlias)
 
 	return nil
 }
@@ -210,29 +210,23 @@ func (n *NodeConfig) Copy() *NodeConfig {
 	copyConfig := *n
 
 	// Deep copy maps
-	copyConfig.Sysctls = utils.CopyMap(n.Sysctls)
-	copyConfig.Env = utils.CopyMap(n.Env)
-	copyConfig.Labels = utils.CopyMap(n.Labels)
+	copyConfig.Sysctls = clabutils.CopyMap(n.Sysctls)
+	copyConfig.Env = clabutils.CopyMap(n.Env)
+	copyConfig.Labels = clabutils.CopyMap(n.Labels)
 
 	// Deep copy slices
-	copyConfig.Exec = utils.CopySlice(n.Exec)
-	copyConfig.Binds = utils.CopySlice(n.Binds)
-	copyConfig.Devices = utils.CopySlice(n.Devices)
-	copyConfig.CapAdd = utils.CopySlice(n.CapAdd)
-	copyConfig.Aliases = utils.CopySlice(n.Aliases)
-	copyConfig.ExtraHosts = utils.CopySlice(n.ExtraHosts)
-	copyConfig.ResultingPortBindings = utils.CopyObjectSlice(n.ResultingPortBindings)
-	copyConfig.Components = utils.CopyObjectSlice(n.Components)
+	copyConfig.Exec = clabutils.CopySlice(n.Exec)
+	copyConfig.Binds = clabutils.CopySlice(n.Binds)
+	copyConfig.Devices = clabutils.CopySlice(n.Devices)
+	copyConfig.CapAdd = clabutils.CopySlice(n.CapAdd)
+	copyConfig.Aliases = clabutils.CopySlice(n.Aliases)
+	copyConfig.ExtraHosts = clabutils.CopySlice(n.ExtraHosts)
+	copyConfig.ResultingPortBindings = clabutils.CopyObjectSlice(n.ResultingPortBindings)
+	copyConfig.Components = clabutils.CopyObjectSlice(n.Components)
 
-	// Deep copy pointers
-	// copyConfig.Config = n.Config.Copy()
-	// copyConfig.Certificate = n.Certificate.Copy()
 	copyConfig.Healthcheck = n.Healthcheck.Copy()
 	copyConfig.Extras = n.Extras.Copy()
 	copyConfig.DNS = n.DNS.Copy()
-	// copyConfig.Stages = n.Stages.Copy()
-	// copyConfig.PortBindings = n.PortBindings.Copy()
-	// copyConfig.PortSet = n.PortSet.Copy()
 
 	return &copyConfig
 }

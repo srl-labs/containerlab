@@ -5,7 +5,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // LinkHostRaw is the raw (string) representation of a host link as defined in the topology file.
@@ -71,7 +71,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
 	}
 
-	hostEp.MAC, err = utils.GenMac(ClabOUI)
+	hostEp.MAC, err = clabutils.GenMac(ClabOUI)
 	if err != nil {
 		return nil, err
 	}

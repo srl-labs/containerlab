@@ -10,9 +10,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/exec"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 var (
@@ -36,38 +36,38 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return errors.New("provide command to execute")
 	}
 
-	outputFormat, err := exec.ParseExecOutputFormat(execFormat)
+	outputFormat, err := clabexec.ParseExecOutputFormat(execFormat)
 	if err != nil {
 		return err
 	}
 
-	opts := make([]core.ClabOption, 0, 5)
+	opts := make([]clabcore.ClabOption, 0, 5)
 
 	// exec can work with or without a topology file
 	// when topology file is provided we need to parse it
 	// when topo file is not provided, we rely on labels to perform the filtering
 	if topoFile != "" {
-		opts = append(opts, core.WithTopoPath(topoFile, varsFile))
+		opts = append(opts, clabcore.WithTopoPath(topoFile, varsFile))
 	}
 
 	opts = append(opts,
-		core.WithTimeout(timeout),
-		core.WithRuntime(
+		clabcore.WithTimeout(timeout),
+		clabcore.WithRuntime(
 			runtime,
-			&containerlabruntime.RuntimeConfig{
+			&clabruntime.RuntimeConfig{
 				Debug:            debug,
 				Timeout:          timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDebug(debug),
+		clabcore.WithDebug(debug),
 	)
 
 	if labName != "" {
-		opts = append(opts, core.WithLabName(labName))
+		opts = append(opts, clabcore.WithLabName(labName))
 	}
 
-	c, err := core.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
@@ -77,14 +77,14 @@ func execFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	listOptions := []core.ListOption{
-		core.WithListFromCliArgs(labelsFilter),
+	listOptions := []clabcore.ListOption{
+		clabcore.WithListFromCliArgs(labelsFilter),
 	}
 
 	if topoFile != "" {
 		listOptions = append(
 			listOptions,
-			core.WithListLabName(c.Config.Name),
+			clabcore.WithListLabName(c.Config.Name),
 		)
 	}
 
@@ -94,9 +94,9 @@ func execFn(_ *cobra.Command, _ []string) error {
 	}
 
 	switch outputFormat {
-	case exec.ExecFormatPlain:
+	case clabexec.ExecFormatPlain:
 		resultCollection.Log()
-	case exec.ExecFormatJSON:
+	case clabexec.ExecFormatJSON:
 		out, err := resultCollection.Dump(outputFormat)
 		if err != nil {
 			return fmt.Errorf("failed to print the results collection: %v", err)

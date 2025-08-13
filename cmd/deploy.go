@@ -12,11 +12,11 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/version"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/core/dependency_manager"
-	containerlabruntime "github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
+	clabcmdversion "github.com/srl-labs/containerlab/cmd/version"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // name of the container management network.
@@ -55,7 +55,7 @@ var deployCmd = &cobra.Command{
 	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
 	Aliases:      []string{"dep"},
 	SilenceUsage: true,
-	PreRunE:      utils.CheckAndGetRootPrivs,
+	PreRunE:      clabutils.CheckAndGetRootPrivs,
 	RunE:         deployFn,
 }
 
@@ -85,53 +85,53 @@ func init() {
 func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	var err error
 
-	log.Info("Containerlab started", "version", version.Version)
+	log.Info("Containerlab started", "version", clabcmdversion.Version)
 
 	// Check for owner from environment (set by generate command)
 	if labOwner == "" && os.Getenv("CLAB_OWNER") != "" {
 		labOwner = os.Getenv("CLAB_OWNER")
 	}
 
-	opts := []core.ClabOption{
-		core.WithTimeout(timeout),
-		core.WithTopoPath(topoFile, varsFile),
-		core.WithTopoBackup(topoFile),
-		core.WithNodeFilter(nodeFilter),
-		core.WithRuntime(
+	opts := []clabcore.ClabOption{
+		clabcore.WithTimeout(timeout),
+		clabcore.WithTopoPath(topoFile, varsFile),
+		clabcore.WithTopoBackup(topoFile),
+		clabcore.WithNodeFilter(nodeFilter),
+		clabcore.WithRuntime(
 			runtime,
-			&containerlabruntime.RuntimeConfig{
+			&clabruntime.RuntimeConfig{
 				Debug:            debug,
 				Timeout:          timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		core.WithDependencyManager(dependency_manager.NewDependencyManager()),
-		core.WithDebug(debug),
+		clabcore.WithDependencyManager(clabcoredependency_manager.NewDependencyManager()),
+		clabcore.WithDebug(debug),
 	}
 
 	// process optional settings
 	if labName != "" {
-		opts = append(opts, core.WithLabName(labName))
+		opts = append(opts, clabcore.WithLabName(labName))
 	}
 	if labOwner != "" {
-		opts = append(opts, core.WithLabOwner(labOwner))
+		opts = append(opts, clabcore.WithLabOwner(labOwner))
 	}
 	if mgmtNetName != "" {
-		opts = append(opts, core.WithManagementNetworkName(mgmtNetName))
+		opts = append(opts, clabcore.WithManagementNetworkName(mgmtNetName))
 	}
 	if v4 := mgmtIPv4Subnet.String(); v4 != "<nil>" {
-		opts = append(opts, core.WithManagementIpv4Subnet(v4))
+		opts = append(opts, clabcore.WithManagementIpv4Subnet(v4))
 	}
 	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
-		opts = append(opts, core.WithManagementIpv6Subnet(v6))
+		opts = append(opts, clabcore.WithManagementIpv6Subnet(v6))
 	}
 
-	c, err := core.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
 		return err
 	}
 
-	deploymentOptions, err := core.NewDeployOptions(maxWorkers)
+	deploymentOptions, err := clabcore.NewDeployOptions(maxWorkers)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	versionCheckContext, cancel := context.WithTimeout(cobraCmd.Context(), 3*time.Second)
 	defer cancel()
 
-	m := version.GetManager()
+	m := clabcmdversion.GetManager()
 	m.DisplayNewVersionAvailable(versionCheckContext)
 
 	// print table summary

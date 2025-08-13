@@ -89,6 +89,12 @@ func (nre *NodeRegistryEntry) GetCredentials() *Credentials {
 	return nre.attributes.GetCredentials()
 }
 
+type NodeRegistryEntryAttributes struct {
+	credentials        *Credentials
+	generateAttributes *GenerateNodeAttributes
+	platformAttrs      *PlatformAttrs
+}
+
 func (nre *NodeRegistryEntry) GetGenerateAttributes() *GenerateNodeAttributes {
 	if nre.attributes == nil {
 		return nil
@@ -129,12 +135,6 @@ func newRegistryEntry(nodeKindNames []string, initFunction Initializer,
 type PlatformAttrs struct {
 	ScrapliPlatformName string
 	NapalmPlatformName  string
-}
-
-type NodeRegistryEntryAttributes struct {
-	credentials        *Credentials
-	generateAttributes *GenerateNodeAttributes
-	platformAttrs      *PlatformAttrs
 }
 
 // NewNodeRegistryEntryAttributes creates a new NodeRegistryEntryAttributes.

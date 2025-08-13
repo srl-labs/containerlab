@@ -21,13 +21,13 @@ import (
 	"github.com/awalterschulze/gographviz"
 	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
-	containerlaberrors "github.com/srl-labs/containerlab/errors"
-	"github.com/srl-labs/containerlab/internal/mermaid"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	claberrors "github.com/srl-labs/containerlab/errors"
+	clabinternalmermaid "github.com/srl-labs/containerlab/internal/mermaid"
+	clablabels "github.com/srl-labs/containerlab/labels"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
@@ -36,8 +36,8 @@ import (
 )
 
 type GraphTopo struct {
-	Nodes []types.ContainerDetails `json:"nodes,omitempty"`
-	Links []Link                   `json:"links,omitempty"`
+	Nodes []clabtypes.ContainerDetails `json:"nodes,omitempty"`
+	Links []Link                       `json:"links,omitempty"`
 }
 
 type Link struct {
@@ -100,7 +100,7 @@ func (c *CLab) GenerateDotGraph() error {
 		}
 	}
 
-	// Process the links inbetween Nodes
+	// Process the links between Nodes
 	for _, link := range c.Links {
 		attr = make(map[string]string)
 		attr["color"] = "black"
@@ -116,16 +116,15 @@ func (c *CLab) GenerateDotGraph() error {
 		if err := g.AddEdge(ANodeName, BNodeName, false, attr); err != nil {
 			return err
 		}
-		// log.Info(link.A.Node.ShortName, " <-> ", link.B.Node.ShortName)
 	}
 
 	// create graph directory
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
-	utils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
 
 	// create graph filename
 	dotfile := c.TopoPaths.GraphFilename(".dot")
-	utils.CreateFile(dotfile, g.String())
+	clabutils.CreateFile(dotfile, g.String())
 	log.Infof("Created %s", dotfile)
 
 	pngfile := c.TopoPaths.GraphFilename(".png")
@@ -142,7 +141,7 @@ func (c *CLab) GenerateDotGraph() error {
 }
 
 // generatePngFromDot generated PNG from the provided dot file.
-func generatePngFromDot(dotfile string, outfile string) (err error) {
+func generatePngFromDot(dotfile, outfile string) (err error) {
 	_, err = exec.Command("dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
 	if err != nil {
 		log.Errorf("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)
@@ -182,8 +181,8 @@ func (nfs noListFs) Open(name string) (result http.File, err error) {
 	return f, nil
 }
 
-func buildGraphNode(node nodes.Node) types.ContainerDetails {
-	return types.ContainerDetails{
+func buildGraphNode(node clabnodes.Node) clabtypes.ContainerDetails {
+	return clabtypes.ContainerDetails{
 		Name:        node.Config().ShortName,
 		Kind:        node.Config().Kind,
 		Image:       node.Config().Image,
@@ -201,20 +200,20 @@ func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 	}
 }
 
-func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []runtime.GenericContainer) {
+func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []clabruntime.GenericContainer) {
 	containerNames := make(map[string]struct{})
-	for _, cont := range containers {
-		log.Debugf("looking for node name %s", cont.Labels[labels.NodeName])
-		if node, ok := c.Nodes[cont.Labels[labels.NodeName]]; ok {
+	for idx := range containers {
+		log.Debugf("looking for node name %s", containers[idx].Labels[clablabels.NodeName])
+		if node, ok := c.Nodes[containers[idx].Labels[clablabels.NodeName]]; ok {
 			containerNames[node.Config().ShortName] = struct{}{}
-			g.Nodes = append(g.Nodes, types.ContainerDetails{
+			g.Nodes = append(g.Nodes, clabtypes.ContainerDetails{
 				Name:        node.Config().ShortName,
 				Kind:        node.Config().Kind,
 				Image:       node.Config().Image,
 				Group:       node.Config().Group,
-				State:       fmt.Sprintf("%s/%s", cont.State, cont.Status),
-				IPv4Address: cont.GetContainerIPv4(),
-				IPv6Address: cont.GetContainerIPv6(),
+				State:       fmt.Sprintf("%s/%s", containers[idx].State, containers[idx].Status),
+				IPv4Address: containers[idx].GetContainerIPv4(),
+				IPv6Address: containers[idx].GetContainerIPv6(),
 			})
 		}
 	}
@@ -226,7 +225,7 @@ func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []runtime.Gene
 }
 
 func (c *CLab) GenerateMermaidGraph(direction string) error {
-	fc := mermaid.NewFlowChart()
+	fc := clabinternalmermaid.NewFlowChart()
 
 	fc.SetTitle(c.Config.Name)
 
@@ -241,8 +240,8 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	}
 
 	// create graph directory
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
-	utils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
 
 	// create graph filename
 	fname := c.TopoPaths.GraphFilename(".mermaid")
@@ -250,7 +249,7 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	// Generate graph
 	var w strings.Builder
 	fc.Generate(&w)
-	utils.CreateFile(fname, w.String())
+	clabutils.CreateFile(fname, w.String())
 
 	log.Infof("Created mermaid diagram file: %s", fname)
 
@@ -268,10 +267,10 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 
 	if tmpl == "" {
 		t = template.Must(template.New("nextui.html").Parse(defaultTemplate))
-	} else if utils.FileExists(tmpl) {
+	} else if clabutils.FileExists(tmpl) {
 		t = template.Must(template.ParseFiles(tmpl))
 	} else {
-		return fmt.Errorf("%w. Path %s", containerlaberrors.ErrFileNotFound, tmpl)
+		return fmt.Errorf("%w. Path %s", claberrors.ErrFileNotFound, tmpl)
 	}
 
 	if staticDir != "" && tmpl == "" {
@@ -292,8 +291,8 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 		staticFS = http.Dir(staticDir)
 	}
 
-	fs := http.FileServer(noListFs{staticFS})
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	svr := http.FileServer(noListFs{staticFS})
+	http.Handle("/static/", http.StripPrefix("/static/", svr))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		_ = t.Execute(w, topoD)
@@ -306,7 +305,7 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 
 // GenerateDrawioDiagram pulls (if needed) and runs the "clab-io-draw" container in interactive TTY mode.
 // The container is removed automatically when the TUI session ends.
-func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error {
+func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { //nolint: funlen
 	client, err := dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Errorf("Failed to create Docker client: %v", err)

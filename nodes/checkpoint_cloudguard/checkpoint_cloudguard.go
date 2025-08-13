@@ -7,32 +7,32 @@ package checkpoint_cloudguard
 import (
 	"fmt"
 
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames           = []string{"checkpoint_cloudguard"}
-	defaultCredentials  = nodes.NewCredentials("admin", "admin")
+	defaultCredentials  = clabnodes.NewCredentials("admin", "admin")
 	scrapliPlatformName = "notsupported"
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, nil)
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, nil)
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(CheckpointCloudguard)
 	}, nrea)
 }
 
 type CheckpointCloudguard struct {
-	nodes.VRNode
+	clabnodes.VRNode
 }
 
-func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *CheckpointCloudguard) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
+	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -42,13 +42,13 @@ func (n *CheckpointCloudguard) Init(cfg *types.NodeConfig, opts ...nodes.NodeOpt
 	}
 	// env vars are used to set startup arguments in boxen container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
-	n.Cfg.Env = utils.MergeStringMaps(defEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
 		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
