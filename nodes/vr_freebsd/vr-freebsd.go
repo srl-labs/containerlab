@@ -11,15 +11,15 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindNames          = []string{"freebsd"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin")
 	saveCmd            = "sh -c \"/backup.sh -u $USERNAME -p $PASSWORD backup\""
 	InterfaceRegexp    = regexp.MustCompile(`vtnet(?P<port>\d+)`)
 	InterfaceOffset    = 1
@@ -34,22 +34,22 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() containerlabnodes.Node {
 		return new(vrFreeBSD)
 	}, nrea)
 }
 
 type vrFreeBSD struct {
-	nodes.VRNode
+	containerlabnodes.VRNode
 }
 
-func (n *vrFreeBSD) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vrFreeBSD) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, "")
+	n.VRNode = *containerlabnodes.NewVRNode(n, defaultCredentials, "")
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -59,7 +59,7 @@ func (n *vrFreeBSD) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOp
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    containerlabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
@@ -85,7 +85,7 @@ func (n *vrFreeBSD) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOp
 	return nil
 }
 
-func (n *vrFreeBSD) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *vrFreeBSD) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
 	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -96,7 +96,7 @@ func (n *vrFreeBSD) PreDeploy(_ context.Context, params *nodes.PreDeployParams) 
 }
 
 func (n *vrFreeBSD) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	cmd, _ := containerlabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)

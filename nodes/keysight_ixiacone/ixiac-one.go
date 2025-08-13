@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -27,19 +27,19 @@ var ixiacStatusConfig = struct {
 }
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *containerlabnodes.NodeRegistry) {
+	r.Register(kindnames, func() containerlabnodes.Node {
 		return new(ixiacOne)
 	}, nil)
 }
 
 type ixiacOne struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 }
 
-func (l *ixiacOne) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
+func (l *ixiacOne) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	l.DefaultNode = *nodes.NewDefaultNode(l)
+	l.DefaultNode = *containerlabnodes.NewDefaultNode(l)
 
 	l.Cfg = cfg
 	for _, o := range opts {
@@ -49,7 +49,7 @@ func (l *ixiacOne) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOpt
 	return nil
 }
 
-func (l *ixiacOne) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+func (l *ixiacOne) PostDeploy(ctx context.Context, _ *containerlabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for keysight_ixia-c-one '%s' node", l.Cfg.ShortName)
 	return l.ixiacPostDeploy(ctx)
 }
@@ -59,7 +59,7 @@ func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
 	ixiacOneCmd := fmt.Sprintf("bash -c 'ls %s'", ixiacStatusConfig.readyFileName)
 	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
 	for {
-		cmd, _ := exec.NewExecCmdFromString(ixiacOneCmd)
+		cmd, _ := containerlabexec.NewExecCmdFromString(ixiacOneCmd)
 		execResult, err := l.RunExec(ctx, cmd)
 		if err != nil {
 			return err

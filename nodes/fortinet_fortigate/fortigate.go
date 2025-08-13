@@ -9,14 +9,14 @@ import (
 	"path"
 	"regexp"
 
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames          = []string{"fortinet_fortigate"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`port(?P<port>\d+)$`)
 	InterfaceOffset = 2
@@ -32,26 +32,26 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &containerlabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindnames, func() containerlabnodes.Node {
 		return new(fortigate)
 	}, nrea)
 }
 
 type fortigate struct {
-	nodes.VRNode
+	containerlabnodes.VRNode
 }
 
-func (n *fortigate) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *fortigate) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init VRNode
-	n.VRNode = *nodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
+	n.VRNode = *containerlabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -63,7 +63,7 @@ func (n *fortigate) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOp
 	defEnv := map[string]string{
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    containerlabnodes.VrDefConnMode,
 		"VCPU":               "2",
 		"RAM":                "2048",
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,

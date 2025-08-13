@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime/ignite"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	containerlabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/weaveworks/ignite/pkg/operations"
@@ -27,23 +27,23 @@ const (
 var kindnames = []string{"linux"}
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindnames, func() containerlabnodes.Node {
 		return new(linux)
 	}, nrea)
 }
 
 type linux struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 	vmChans *operations.VMChannels
 }
 
-func (n *linux) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *linux) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
 	// linux kind uses `always` as a default restart policy
@@ -67,7 +67,7 @@ func (n *linux) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption
 	return nil
 }
 
-func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
+func (n *linux) Deploy(ctx context.Context, _ *containerlabnodes.DeployParams) error {
 	// Set the "CLAB_INTFS" variable to the number of interfaces
 	// Which is required by vrnetlab to determine if all configured interfaces are present
 	// such that the internal VM can be started with these interfaces assigned.
@@ -83,12 +83,12 @@ func (n *linux) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
 		n.vmChans = vmChans
 	}
 
-	n.SetState(state.Deployed)
+	n.SetState(containerlabnodesstate.Deployed)
 
 	return err
 }
 
-func (n *linux) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+func (n *linux) PostDeploy(ctx context.Context, _ *containerlabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for Linux '%s' node", n.Cfg.ShortName)
 
 	err := n.ExecFunction(ctx, containerlabutils.NSEthtoolTXOff(n.GetShortName(), "eth0"))
@@ -106,14 +106,14 @@ func (n *linux) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error
 
 func (n *linux) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
-	images[nodes.ImageKey] = n.Cfg.Image
+	images[containerlabnodes.ImageKey] = n.Cfg.Image
 
 	// ignite runtime additionally needs a kernel and sandbox image
-	if n.Runtime.GetName() != ignite.RuntimeName {
+	if n.Runtime.GetName() != containerlabruntimeignite.RuntimeName {
 		return images
 	}
-	images[nodes.KernelKey] = n.Cfg.Kernel
-	images[nodes.SandboxKey] = n.Cfg.Sandbox
+	images[containerlabnodes.KernelKey] = n.Cfg.Kernel
+	images[containerlabnodes.SandboxKey] = n.Cfg.Sandbox
 	return images
 }
 

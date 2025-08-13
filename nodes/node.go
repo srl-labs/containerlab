@@ -11,10 +11,10 @@ import (
 	"regexp"
 
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/cert"
+	containerlabcert "github.com/srl-labs/containerlab/cert"
 	containerlabexec "github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes/state"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
@@ -58,7 +58,7 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 }
 
 type PreDeployParams struct {
-	Cert         *cert.Cert
+	Cert         *containerlabcert.Cert
 	TopologyName string
 	TopoPaths    *containerlabtypes.TopoPaths
 	SSHPubKeys   []ssh.PublicKey
@@ -107,16 +107,16 @@ type Node interface {
 	// Adds the given link to the Node (container). After adding the Link to the node,
 	// the given function f is called within the Nodes namespace to setup the link.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	AddEndpoint(e links.Endpoint) error
-	GetEndpoints() []links.Endpoint
-	GetLinkEndpointType() links.LinkEndpointType
+	AddEndpoint(e containerlablinks.Endpoint) error
+	GetEndpoints() []containerlablinks.Endpoint
+	GetLinkEndpointType() containerlablinks.LinkEndpointType
 	GetShortName() string
 	// DeployEndpoints deploys the links for the node.
 	DeployEndpoints(ctx context.Context) error
 	// ExecFunction executes the given function within the nodes network namespace
 	ExecFunction(context.Context, func(ns.NetNS) error) error
-	GetState() state.NodeState
-	SetState(state.NodeState)
+	GetState() containerlabnodesstate.NodeState
+	SetState(containerlabnodesstate.NodeState)
 	GetSSHConfig() *containerlabtypes.SSHConfig
 	// RunExecFromConfig executes the topologyfile defined exec commands
 	RunExecFromConfig(context.Context, *containerlabexec.ExecCollection) error
@@ -147,7 +147,7 @@ func WithRuntime(r containerlabruntime.ContainerRuntime) NodeOption {
 
 // GenericVMInterfaceCheck checks interface names for generic VM-based nodes.
 // These nodes could only have interfaces named ethX, where X is >0.
-func GenericVMInterfaceCheck(nodeName string, eps []links.Endpoint) error {
+func GenericVMInterfaceCheck(nodeName string, eps []containerlablinks.Endpoint) error {
 	ifRe := regexp.MustCompile(`eth[1-9]\d*$`) // skipcq: GO-C4007
 	for _, e := range eps {
 		if !ifRe.MatchString(e.GetIfaceName()) {

@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	containerlablinks "github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestAosCXInterfaceParsing(t *testing.T) {
@@ -33,9 +33,9 @@ func TestAosCXInterfaceParsing(t *testing.T) {
 				},
 			},
 			node: &vrAosCX{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: containerlabnodes.VRNode{
+					DefaultNode: containerlabnodes.DefaultNode{
+						Cfg: &containerlabtypes.NodeConfig{
 							ShortName: "aoscx",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -66,9 +66,9 @@ func TestAosCXInterfaceParsing(t *testing.T) {
 				},
 			},
 			node: &vrAosCX{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: containerlabnodes.VRNode{
+					DefaultNode: containerlabnodes.DefaultNode{
+						Cfg: &containerlabtypes.NodeConfig{
 							ShortName: "aoscx",
 						},
 						InterfaceRegexp: InterfaceRegexp,

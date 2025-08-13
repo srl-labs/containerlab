@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
+	containerlablinks "github.com/srl-labs/containerlab/links"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -159,26 +159,26 @@ func TestGenerateConfigs(t *testing.T) {
 
 func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 	tests := map[string]struct {
-		endpoints           []*links.EndpointVeth
+		endpoints           []*containerlablinks.EndpointVeth
 		node                *DefaultNode
 		endpointErrContains string
 		checkErrContains    string
 		resultEps           []string
 	}{
 		"basic-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/4",
 					},
 				},
@@ -197,19 +197,19 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			},
 		},
 		"parse-offset": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "Gi3",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet 5",
 					},
 				},
@@ -229,19 +229,19 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			},
 		},
 		"skip-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth1",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
@@ -260,14 +260,14 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			},
 		},
 		"overlap": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/1",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "eth1",
 					},
 				},
@@ -284,9 +284,9 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			resultEps:           []string{},
 		},
 		"out-of-bounds-index": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "Gi1",
 					},
 				},
@@ -304,9 +304,9 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 			resultEps:           []string{},
 		},
 		"regexp-no-group": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*containerlablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: containerlablinks.EndpointGeneric{
 						IfaceName: "Gi2",
 					},
 				},

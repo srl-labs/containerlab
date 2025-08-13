@@ -22,9 +22,9 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/links"
+	containerlabcert "github.com/srl-labs/containerlab/cert"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlablinks "github.com/srl-labs/containerlab/links"
 	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	containerlabutils "github.com/srl-labs/containerlab/utils"
@@ -162,7 +162,7 @@ type srl struct {
 
 	// Params provided in Pre-Deploy, that srl uses in Post-Deploy phase
 	// to generate certificates
-	cert         *cert.Cert
+	cert         *containerlabcert.Cert
 	topologyName string
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
@@ -342,7 +342,7 @@ func (n *srl) PostDeploy(ctx context.Context, params *containerlabnodes.PostDepl
 }
 
 func (n *srl) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	cmd, _ := containerlabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
@@ -371,7 +371,7 @@ func (n *srl) Ready(ctx context.Context) error {
 			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", n.Cfg.ShortName, err)
 		default:
 			// two commands are checked, first if the mgmt_server is running
-			cmd, _ := exec.NewExecCmdFromString(mgmtServerRdyCmd)
+			cmd, _ := containerlabexec.NewExecCmdFromString(mgmtServerRdyCmd)
 			execResult, err := n.RunExec(ctx, cmd)
 			if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
 				logMsg := "mgmt_server status check failed"
@@ -403,7 +403,7 @@ func (n *srl) Ready(ctx context.Context) error {
 
 			// once mgmt server is running, we need to check if it is ready to accept configuration commands
 			// this is done with checking readyForConfigCmd
-			cmd, _ = exec.NewExecCmdFromString(readyForConfigCmd)
+			cmd, _ = containerlabexec.NewExecCmdFromString(readyForConfigCmd)
 			execResult, err = n.RunExec(ctx, cmd)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
@@ -637,7 +637,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		if ifName == "mgmt0" {
 			// if the endpoint has a custom MTU set, use it in the template logic
 			// otherwise we don't set the mtu as srlinux will use the default max value 9232
-			if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
+			if m := e.GetLink().GetMTU(); m != containerlablinks.DefaultLinkMTU {
 				tplData.MgmtMTU = m
 				// MgmtMTU seems to be only set when we use macvlan interface
 				// with network-mode: none. For this super narrow use case
@@ -663,7 +663,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 		// if the endpoint has a custom MTU set, use it in the template logic
 		// otherwise we don't set the mtu as srlinux will use the default max value 9232
-		if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
+		if m := e.GetLink().GetMTU(); m != containerlablinks.DefaultLinkMTU {
 			iface.Mtu = m
 		}
 
@@ -679,7 +679,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
-	execCmd := exec.NewExecCmdFromSlice([]string{
+	execCmd := containerlabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", buf.String(), defaultCfgPath),
 	})
@@ -691,7 +691,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	// su to admin user to apply the default config
 	// to make sure that the 'environment save' command will create
 	// files with correct permissions
-	cmd := exec.NewExecCmdFromSlice([]string{
+	cmd := containerlabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", defaultCfgPath),
 	})
@@ -718,7 +718,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config from startup-config file %s:\n%s", n.Cfg.ShortName, n.Cfg.StartupConfig, cfgStr)
 
-	cmd := exec.NewExecCmdFromSlice([]string{
+	cmd := containerlabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", cfgStr, overlayCfgPath),
 	})
@@ -727,7 +727,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 		return err
 	}
 
-	cmd = exec.NewExecCmdFromSlice([]string{
+	cmd = containerlabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", overlayCfgPath),
 	})
@@ -749,7 +749,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 func (n *srl) commitConfig(ctx context.Context) error {
 	log.Debugf("Node %q: committing configuration", n.Cfg.ShortName)
 
-	cmd, err := exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
+	cmd, err := containerlabexec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
 	if err != nil {
 		return err
 	}
@@ -768,7 +768,7 @@ func (n *srl) commitConfig(ctx context.Context) error {
 }
 
 func (n *srl) generateCheckpoint(ctx context.Context) error {
-	cmd, err := exec.NewExecCmdFromString(`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
+	cmd, err := containerlabexec.NewExecCmdFromString(`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
 	if err != nil {
 		return err
 	}

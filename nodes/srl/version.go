@@ -6,8 +6,8 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/utils"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"
 )
 
@@ -122,7 +122,7 @@ type SrlVersion struct {
 // by executing the "info from state /system information version | grep version" command
 // and parsing the output.
 func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
-	cmd, _ := exec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
+	cmd, _ := containerlabexec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
@@ -168,7 +168,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
 	// so we add the keys to the template data for rendering.
 	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.Major == "0") {
-		tplData.SSHPubKeys = utils.MarshalAndCatenateSSHPubKeys(n.sshPubKeys)
+		tplData.SSHPubKeys = containerlabutils.MarshalAndCatenateSSHPubKeys(n.sshPubKeys)
 	}
 
 	// in srlinux >= v24.3+ we add ACL rules to enable http and telnet access

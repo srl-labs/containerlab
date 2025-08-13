@@ -21,8 +21,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/platform"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
+	containerlablinks "github.com/srl-labs/containerlab/links"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -42,7 +42,7 @@ const (
 
 var (
 	kindNames          = []string{"cisco_iol"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = containerlabnodes.NewCredentials("admin", "admin")
 
 	//go:embed iol.cfg.tmpl
 	cfgTemplate string
@@ -61,22 +61,22 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &containerlabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() containerlabnodes.Node {
 		return new(iol)
 	}, nrea)
 }
 
 type iol struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 
 	isL2Node          bool
 	Pid               string
@@ -87,9 +87,9 @@ type iol struct {
 	firstBoot         bool
 }
 
-func (n *iol) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *iol) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 	n.firstBoot = false
 
 	n.Cfg = cfg
@@ -135,7 +135,7 @@ func (n *iol) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) 
 	return nil
 }
 
-func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
+func (n *iol) PreDeploy(ctx context.Context, params *containerlabnodes.PreDeployParams) error {
 	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
@@ -146,7 +146,7 @@ func (n *iol) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) erro
 	return n.CreateIOLFiles(ctx)
 }
 
-func (n *iol) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+func (n *iol) PostDeploy(ctx context.Context, _ *containerlabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Cisco IOL '%s' node", n.Cfg.ShortName)
 
 	n.GenBootConfig(ctx)
@@ -322,7 +322,7 @@ func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 
 // AddEndpoint override maps the endpoint name to an ethX-based naming where necessary, before adding it to the node endpoints. Returns an error if the mapping goes wrong or if the
 // interface name is NOT allowed.
-func (n *iol) AddEndpoint(e links.Endpoint) error {
+func (n *iol) AddEndpoint(e containerlablinks.Endpoint) error {
 	endpointName := e.GetIfaceName()
 	var IFaceName, IFaceAlias string
 

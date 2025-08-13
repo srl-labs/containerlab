@@ -9,14 +9,14 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames          = []string{"generic_vm"}
-	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
+	defaultCredentials = containerlabnodes.NewCredentials("clab", "clab@123")
 )
 
 const (
@@ -26,22 +26,22 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindnames, func() containerlabnodes.Node {
 		return new(genericVM)
 	}, nrea)
 }
 
 type genericVM struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 }
 
-func (n *genericVM) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *genericVM) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.VirtRequired = true
 
@@ -51,7 +51,7 @@ func (n *genericVM) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOp
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    containerlabnodes.VrDefConnMode,
 		"USERNAME":           defaultCredentials.GetUsername(),
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
@@ -73,7 +73,7 @@ func (n *genericVM) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOp
 	return nil
 }
 
-func (n *genericVM) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *genericVM) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
 	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -85,5 +85,5 @@ func (n *genericVM) PreDeploy(_ context.Context, params *nodes.PreDeployParams) 
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *genericVM) CheckInterfaceName() error {
-	return nodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
+	return containerlabnodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }

@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	containerlablinks "github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestFreeBSDInterfaceParsing(t *testing.T) {
@@ -33,9 +33,9 @@ func TestFreeBSDInterfaceParsing(t *testing.T) {
 				},
 			},
 			node: &vrFreeBSD{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: containerlabnodes.VRNode{
+					DefaultNode: containerlabnodes.DefaultNode{
+						Cfg: &containerlabtypes.NodeConfig{
 							ShortName: "freebsd",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -66,9 +66,9 @@ func TestFreeBSDInterfaceParsing(t *testing.T) {
 				},
 			},
 			node: &vrFreeBSD{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: containerlabnodes.VRNode{
+					DefaultNode: containerlabnodes.DefaultNode{
+						Cfg: &containerlabtypes.NodeConfig{
 							ShortName: "freebsd",
 						},
 						InterfaceRegexp: InterfaceRegexp,

@@ -25,13 +25,13 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/netconf"
+	containerlabcert "github.com/srl-labs/containerlab/cert"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
+	containerlabnetconf "github.com/srl-labs/containerlab/netconf"
 	containerlabnodes "github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -143,7 +143,7 @@ type sros struct {
 
 	// Params provided in Pre-Deploy, that sros uses in Post-Deploy phase
 	// to generate certificates
-	cert         *cert.Cert
+	cert         *containerlabcert.Cert
 	topologyName string
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
@@ -405,16 +405,16 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
 
 		// adjust label based env vars
-		componentConfig.Env["CLAB_LABEL_"+containerlabutils.ToEnvKey(labels.NodeName)] = componentConfig.ShortName
-		componentConfig.Env["CLAB_LABEL_"+containerlabutils.ToEnvKey(labels.LongName)] = componentConfig.LongName
+		componentConfig.Env["CLAB_LABEL_"+containerlabutils.ToEnvKey(containerlablabels.NodeName)] = componentConfig.ShortName
+		componentConfig.Env["CLAB_LABEL_"+containerlabutils.ToEnvKey(containerlablabels.LongName)] = componentConfig.LongName
 
 		if componentConfig.Labels == nil {
 			componentConfig.Labels = map[string]string{}
 		}
 
 		// adjust labels
-		componentConfig.Labels[labels.NodeName] = componentConfig.ShortName
-		componentConfig.Labels[labels.LongName] = componentConfig.LongName
+		componentConfig.Labels[containerlablabels.NodeName] = componentConfig.ShortName
+		componentConfig.Labels[containerlablabels.LongName] = componentConfig.LongName
 
 		// init the component
 		err = componentNode.Init(componentConfig)
@@ -568,7 +568,7 @@ func (n *sros) Deploy(ctx context.Context, deployParams *containerlabnodes.Deplo
 		}
 
 		// Update the nodes state
-		n.SetState(state.Deployed)
+		n.SetState(containerlabnodesstate.Deployed)
 		return nil
 	}
 
@@ -597,7 +597,7 @@ func (n *sros) Ready(ctx context.Context) error {
 		default:
 			// check if cpm is running
 			for k, cmd := range readyCmds {
-				cmd, _ := exec.NewExecCmdFromString(cmd)
+				cmd, _ := containerlabexec.NewExecCmdFromString(cmd)
 				execResult, err := n.RunExec(ctx, cmd)
 				if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
 					logMsg := fmt.Sprintf("status check %s failed on %s retrying", readyCmdsStrings[k], n.Cfg.ShortName)
@@ -868,7 +868,7 @@ func (n *sros) addPartialConfig() error {
 	return nil
 }
 
-func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
+func (n *sros) GetContainers(ctx context.Context) ([]containerlabruntime.GenericContainer, error) {
 	// if not a distributed setup call regular GetContainers
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetContainers(ctx)
@@ -1047,7 +1047,7 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 
 // saveConfigWithAddr will use the addr string to try to save the config of the node.
 func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
-	err := netconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
+	err := containerlabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,

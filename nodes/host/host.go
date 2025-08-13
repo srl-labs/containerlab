@@ -12,10 +12,10 @@ import (
 	osexec "os/exec"
 
 	containerlabexec "github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -23,19 +23,19 @@ import (
 var kindnames = []string{"host"}
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *containerlabnodes.NodeRegistry) {
+	r.Register(kindnames, func() containerlabnodes.Node {
 		return new(host)
 	}, nil)
 }
 
 type host struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 }
 
-func (n *host) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *host) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -45,8 +45,8 @@ func (n *host) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption)
 	return nil
 }
 
-func (n *host) Deploy(_ context.Context, _ *nodes.DeployParams) error {
-	n.SetState(state.Deployed)
+func (n *host) Deploy(_ context.Context, _ *containerlabnodes.DeployParams) error {
+	n.SetState(containerlabnodesstate.Deployed)
 	return nil
 }
 
@@ -59,10 +59,10 @@ func (*host) WithMgmtNet(*containerlabtypes.MgmtNet)        {}
 func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
 // GetContainers returns a basic skeleton of a container to enable graphing of hosts kinds.
-func (h *host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) {
+func (h *host) GetContainers(_ context.Context) ([]containerlabruntime.GenericContainer, error) {
 	image := containerlabutils.GetOSRelease()
 
-	return []runtime.GenericContainer{
+	return []containerlabruntime.GenericContainer{
 		{
 			Names:   []string{"Host"},
 			State:   "running",
@@ -70,10 +70,10 @@ func (h *host) GetContainers(_ context.Context) ([]runtime.GenericContainer, err
 			ShortID: "N/A",
 			Image:   image,
 			Labels: map[string]string{
-				labels.NodeKind: kindnames[0],
+				containerlablabels.NodeKind: kindnames[0],
 			},
 			Status: "running",
-			NetworkSettings: runtime.GenericMgmtIPs{
+			NetworkSettings: containerlabruntime.GenericMgmtIPs{
 				IPv4addr: "",
 				// IPv4pLen: 0,
 				IPv4Gw:   "",

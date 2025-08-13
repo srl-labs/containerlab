@@ -7,28 +7,28 @@ package ext_container
 import (
 	"context"
 
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
+	containerlablabels "github.com/srl-labs/containerlab/labels"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	containerlabruntime "github.com/srl-labs/containerlab/runtime"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var kindnames = []string{"ext-container"}
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *containerlabnodes.NodeRegistry) {
+	r.Register(kindnames, func() containerlabnodes.Node {
 		return new(extcont)
 	}, nil)
 }
 
 type extcont struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 }
 
-func (s *extcont) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+func (s *extcont) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
+	s.DefaultNode = *containerlabnodes.NewDefaultNode(s)
 	s.Cfg = cfg
 	for _, o := range opts {
 		o(s)
@@ -40,14 +40,14 @@ func (s *extcont) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOpti
 	return nil
 }
 
-func (e *extcont) Deploy(ctx context.Context, _ *nodes.DeployParams) error {
+func (e *extcont) Deploy(ctx context.Context, _ *containerlabnodes.DeployParams) error {
 	// check for the external dependency to be running
-	err := runtime.WaitForContainerRunning(ctx, e.Runtime, e.Cfg.ShortName, e.Cfg.ShortName)
+	err := containerlabruntime.WaitForContainerRunning(ctx, e.Runtime, e.Cfg.ShortName, e.Cfg.ShortName)
 	if err != nil {
 		return err
 	}
 
-	e.SetState(state.Deployed)
+	e.SetState(containerlabnodesstate.Deployed)
 
 	return nil
 }
@@ -65,7 +65,7 @@ func (e *extcont) GetContainerName() string {
 	return e.Cfg.ShortName
 }
 
-func (e *extcont) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
+func (e *extcont) GetContainers(ctx context.Context) ([]containerlabruntime.GenericContainer, error) {
 	containers, err := e.DefaultNode.GetContainers(ctx)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (e *extcont) GetContainers(ctx context.Context) ([]runtime.GenericContainer
 	// we need to artificially add the Node Kind Label
 	// this label data is e.g. used in the table printed after deployment
 	for idx := range containers {
-		containers[idx].Labels[labels.NodeKind] = kindnames[0]
+		containers[idx].Labels[containerlablabels.NodeKind] = kindnames[0]
 	}
 	return containers, nil
 }

@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	containerlablinks "github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestC8000vInterfaceParsing(t *testing.T) {
@@ -33,9 +33,9 @@ func TestC8000vInterfaceParsing(t *testing.T) {
 				},
 			},
 			node: &vrC8000v{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: containerlabnodes.VRNode{
+					DefaultNode: containerlabnodes.DefaultNode{
+						Cfg: &containerlabtypes.NodeConfig{
 							ShortName: "c8000v",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -66,9 +66,9 @@ func TestC8000vInterfaceParsing(t *testing.T) {
 				},
 			},
 			node: &vrC8000v{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: containerlabnodes.VRNode{
+					DefaultNode: containerlabnodes.DefaultNode{
+						Cfg: &containerlabtypes.NodeConfig{
 							ShortName: "c8000v",
 						},
 						InterfaceRegexp: InterfaceRegexp,

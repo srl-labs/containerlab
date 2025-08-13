@@ -15,8 +15,8 @@ import (
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
+	containerlabexec "github.com/srl-labs/containerlab/exec"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
 	containerlabtypes "github.com/srl-labs/containerlab/types"
 	containerlabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -35,7 +35,7 @@ const (
 
 var (
 	kindNames          = []string{"fdio_vpp"}
-	defaultCredentials = nodes.NewCredentials("root", "vpp")
+	defaultCredentials = containerlabnodes.NewCredentials("root", "vpp")
 	saveCmd            = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
 
 	// vppStartupConfigTpl is the template for the vpp startup config itself
@@ -45,17 +45,17 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *containerlabnodes.NodeRegistry) {
+	generateNodeAttributes := containerlabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := containerlabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() containerlabnodes.Node {
 		return new(fdio_vpp)
 	}, nrea)
 }
 
 type fdio_vpp struct {
-	nodes.DefaultNode
+	containerlabnodes.DefaultNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
@@ -66,9 +66,9 @@ type fdio_vpp struct {
 	vppCfgSrcPath string
 }
 
-func (n *fdio_vpp) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *fdio_vpp) Init(cfg *containerlabtypes.NodeConfig, opts ...containerlabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *containerlabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
 	// Containers are run in privileged mode so it should not matter now
@@ -113,7 +113,7 @@ func (n *fdio_vpp) Init(cfg *containerlabtypes.NodeConfig, opts ...nodes.NodeOpt
 	return nil
 }
 
-func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *fdio_vpp) PreDeploy(_ context.Context, params *containerlabnodes.PreDeployParams) error {
 	nodeCfg := n.Config()
 
 	containerlabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
@@ -152,7 +152,7 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) e
 }
 
 func (n *fdio_vpp) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	cmd, _ := containerlabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -179,12 +179,12 @@ func (n *fdio_vpp) CheckInterfaceName() error {
 	return nil
 }
 
-func (n *fdio_vpp) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *fdio_vpp) PostDeploy(ctx context.Context, params *containerlabnodes.PostDeployParams) error {
 	// add public keys extracted by containerlab from the host
 	// to the vpp's root linux user authorized keys
 	// to enable passwordless ssh
 	keys := strings.Join(containerlabutils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
-	execCmd := exec.NewExecCmdFromSlice([]string{
+	execCmd := containerlabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", keys, targetAuthzKeysPath),
 	})

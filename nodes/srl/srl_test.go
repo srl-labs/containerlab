@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	containerlablinks "github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	containerlabnodes "github.com/srl-labs/containerlab/nodes"
+	containerlabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestSRLInterfaceParsing(t *testing.T) {
@@ -41,8 +41,8 @@ func TestSRLInterfaceParsing(t *testing.T) {
 				},
 			},
 			node: &srl{
-				DefaultNode: nodes.DefaultNode{
-					Cfg: &types.NodeConfig{
+				DefaultNode: containerlabnodes.DefaultNode{
+					Cfg: &containerlabtypes.NodeConfig{
 						ShortName: "srl",
 					},
 					InterfaceRegexp: InterfaceRegexp,
@@ -77,8 +77,8 @@ func TestSRLInterfaceParsing(t *testing.T) {
 				},
 			},
 			node: &srl{
-				DefaultNode: nodes.DefaultNode{
-					Cfg: &types.NodeConfig{
+				DefaultNode: containerlabnodes.DefaultNode{
+					Cfg: &containerlabtypes.NodeConfig{
 						ShortName:   "srl",
 						NetworkMode: "none",
 					},
@@ -99,8 +99,8 @@ func TestSRLInterfaceParsing(t *testing.T) {
 				},
 			},
 			node: &srl{
-				DefaultNode: nodes.DefaultNode{
-					Cfg: &types.NodeConfig{
+				DefaultNode: containerlabnodes.DefaultNode{
+					Cfg: &containerlabtypes.NodeConfig{
 						ShortName: "srl",
 					},
 					InterfaceRegexp: InterfaceRegexp,
