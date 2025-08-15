@@ -7,7 +7,7 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-func redeployCmd() *cobra.Command {
+func redeployCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:          "redeploy",
 		Short:        "destroy and redeploy a lab",
@@ -15,7 +15,9 @@ func redeployCmd() *cobra.Command {
 		Aliases:      []string{"rdep"},
 		PreRunE:      clabutils.CheckAndGetRootPrivs,
 		SilenceUsage: true,
-		RunE:         redeployFn,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return redeployFn(cobraCmd, o)
+		},
 	}
 
 	// Add destroy flags
@@ -39,16 +41,16 @@ func redeployCmd() *cobra.Command {
 	c.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
 		"skip the lab directory extended ACLs provisioning")
 
-	return c
+	return c, nil
 }
 
-func redeployFn(cobraCmd *cobra.Command, args []string) error {
+func redeployFn(cobraCmd *cobra.Command, o *Options) error {
 	// First destroy the lab
-	err := destroyFn(cobraCmd, args)
+	err := destroyFn(cobraCmd, o)
 	if err != nil {
 		return err
 	}
 
 	// Then deploy it again
-	return deployFn(cobraCmd, args)
+	return deployFn(cobraCmd, o)
 }

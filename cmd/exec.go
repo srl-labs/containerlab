@@ -15,27 +15,23 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
-var (
-	labelsFilter []string
-	execFormat   string
-	execCommands []string
-)
-
-func execCmd() *cobra.Command {
+func execCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "exec",
 		Short: "execute a command in one or multiple containers",
-		RunE:  execFn,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return execFn(cobraCmd, o)
+		},
 	}
 
 	c.Flags().StringArrayVarP(&execCommands, "cmd", "", []string{}, "command to execute")
 	c.Flags().StringSliceVarP(&labelsFilter, "label", "", []string{}, "labels to filter container subset")
 	c.Flags().StringVarP(&execFormat, "format", "f", "plain", "output format. One of [json, plain]")
 
-	return c
+	return c, nil
 }
 
-func execFn(_ *cobra.Command, _ []string) error {
+func execFn(_ *cobra.Command, o *Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -53,25 +49,25 @@ func execFn(_ *cobra.Command, _ []string) error {
 	// exec can work with or without a topology file
 	// when topology file is provided we need to parse it
 	// when topo file is not provided, we rely on labels to perform the filtering
-	if topoFile != "" {
-		opts = append(opts, clabcore.WithTopoPath(topoFile, varsFile))
+	if o.Global.TopologyFile != "" {
+		opts = append(opts, clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile))
 	}
 
 	opts = append(opts,
-		clabcore.WithTimeout(timeout),
+		clabcore.WithTimeout(o.Global.Timeout),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	)
 
-	if labName != "" {
-		opts = append(opts, clabcore.WithLabName(labName))
+	if o.Global.TopologyName != "" {
+		opts = append(opts, clabcore.WithLabName(o.Global.TopologyName))
 	}
 
 	c, err := clabcore.NewContainerLab(opts...)
@@ -88,7 +84,7 @@ func execFn(_ *cobra.Command, _ []string) error {
 		clabcore.WithListFromCliArgs(labelsFilter),
 	}
 
-	if topoFile != "" {
+	if o.Global.TopologyFile != "" {
 		listOptions = append(
 			listOptions,
 			clabcore.WithListLabName(c.Config.Name),

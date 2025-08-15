@@ -36,13 +36,15 @@ var (
 	interfacesNodeName string
 )
 
-func inspectCmd() *cobra.Command {
+func inspectCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:     "inspect",
 		Short:   "inspect lab details",
 		Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
 		Aliases: []string{"ins", "i"},
-		RunE:    inspectFn,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return inspectFn(cobraCmd, o)
+		},
 	}
 
 	c.Flags().BoolVarP(&details, "details", "", false,
@@ -58,8 +60,10 @@ func inspectCmd() *cobra.Command {
 		Short:   "inspect interfaces of one or multiple nodes in a lab",
 		Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
 		Aliases: []string{"int", "intf"},
-		RunE:    inspectInterfacesFn,
 		PreRunE: clabutils.CheckAndGetRootPrivs,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return inspectInterfacesFn(cobraCmd, o)
+		},
 	}
 
 	c.AddCommand(interfacesC)
@@ -67,11 +71,11 @@ func inspectCmd() *cobra.Command {
 	interfacesC.Flags().StringVarP(&interfacesFormat, "format", "f", "table", "output format. One of [table, json]")
 	interfacesC.Flags().StringVarP(&interfacesNodeName, "node", "n", "", "node to inspect")
 
-	return c
+	return c, nil
 }
 
-func inspectFn(cobraCmd *cobra.Command, _ []string) error {
-	if labName == "" && topoFile == "" && !all {
+func inspectFn(cobraCmd *cobra.Command, o *Options) error {
+	if o.Global.TopologyName == "" && o.Global.TopologyFile == "" && !all {
 		return fmt.Errorf("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
 	}
 
@@ -85,21 +89,21 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(timeout),
+		clabcore.WithTimeout(o.Global.Timeout),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	}
 
-	if topoFile != "" {
+	if o.Global.TopologyFile != "" {
 		opts = append(opts,
-			clabcore.WithTopoPath(topoFile, varsFile),
+			clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
 			clabcore.WithNodeFilter(nodeFilter),
 		)
 	}
@@ -109,7 +113,7 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	containers, err := listContainers(cobraCmd.Context(), c)
+	containers, err := listContainers(cobraCmd.Context(), c, o)
 	if err != nil {
 		return err
 	}
@@ -138,11 +142,11 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 }
 
 // listContainers handles listing containers based on different criteria (topology or labels).
-func listContainers(ctx context.Context, c *clabcore.CLab) ([]clabruntime.GenericContainer, error) {
+func listContainers(ctx context.Context, c *clabcore.CLab, o *Options) ([]clabruntime.GenericContainer, error) {
 	var containers []clabruntime.GenericContainer
 	var err error
 
-	if topoFile != "" {
+	if o.Global.TopologyFile != "" {
 		// List containers defined in the topology file
 		containers, err = c.ListNodesContainers(ctx)
 		if err != nil {
@@ -152,8 +156,8 @@ func listContainers(ctx context.Context, c *clabcore.CLab) ([]clabruntime.Generi
 		var listOptions []clabcore.ListOption
 
 		// List containers based on labels (--name or --all)
-		if labName != "" {
-			listOptions = append(listOptions, clabcore.WithListLabName(labName))
+		if o.Global.TopologyName != "" {
+			listOptions = append(listOptions, clabcore.WithListLabName(o.Global.TopologyName))
 		} else {
 			listOptions = append(listOptions, clabcore.WithListclabLabelExists())
 		}

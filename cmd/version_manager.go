@@ -1,4 +1,4 @@
-package version
+package cmd
 
 import (
 	"context"
@@ -14,16 +14,16 @@ import (
 )
 
 var (
-	managerInstance     Manager   //nolint:gochecknoglobals
-	managerInstanceOnce sync.Once //nolint:gochecknoglobals
+	versionManagerInstance     Manager   //nolint:gochecknoglobals
+	versionManagerInstanceOnce sync.Once //nolint:gochecknoglobals
 )
 
 // InitManager initializes the version manager, we have an explicit init so we can capture the root
 // context to ensure appropriate cancellation during the version fetching if necessary.
-func InitManager(
+func initVersionManager(
 	ctx context.Context,
 ) {
-	managerInstanceOnce.Do(func() {
+	versionManagerInstanceOnce.Do(func() {
 		m := &manager{
 			verLock:        sync.Mutex{},
 			currentVersion: mustParseVersion(Version),
@@ -40,19 +40,19 @@ func InitManager(
 		// run it so we check the version stuff in the background while user stuff is happening
 		go m.run(ctx)
 
-		managerInstance = m
+		versionManagerInstance = m
 	})
 }
 
-func GetManager() Manager {
-	if managerInstance == nil {
+func getVersionManager() Manager {
+	if versionManagerInstance == nil {
 		// be defensive, should be initialized during first cmd spin up though
 		panic(
 			"version manager instance is nil, this should not happen",
 		)
 	}
 
-	return managerInstance
+	return versionManagerInstance
 }
 
 // Manager is the config manager interface defining the version manager methods.

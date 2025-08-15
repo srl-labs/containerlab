@@ -41,10 +41,22 @@ var (
 	netemFormat     string
 )
 
-func netemCmd() *cobra.Command {
+func netemCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "netem",
 		Short: "link impairment operations",
+	}
+
+	netemSetCmd := &cobra.Command{
+		Use:   "set",
+		Short: "set link impairments",
+		Long: `The netem queue discipline provides Network Emulation
+functionality for testing protocols by emulating the properties
+of real-world networks.`,
+		PreRunE: validateInputAndRoot,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return netemSetFn(o)
+		},
 	}
 
 	c.AddCommand(netemSetCmd)
@@ -62,52 +74,44 @@ func netemCmd() *cobra.Command {
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
 
+	netemShowCmd := &cobra.Command{
+		Use:     "show",
+		Short:   "show link impairments for a node",
+		PreRunE: validateInputAndRoot,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return netemShowFn(o)
+		},
+	}
 	c.AddCommand(netemShowCmd)
 	netemShowCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
 	netemShowCmd.Flags().StringVarP(&netemFormat, "format", "f", "table", "output format (table, json)")
 
+	netemResetCmd := &cobra.Command{
+		Use:     "reset",
+		Short:   "reset link impairments",
+		Long:    `Reset network impairments by deleting the netem qdisc from the specified interface.`,
+		PreRunE: validateInputAndRoot,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return netemResetFn(o)
+		},
+	}
 	c.AddCommand(netemResetCmd)
 	netemResetCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to reset impairment on")
 	netemResetCmd.Flags().StringVarP(&netemInterface, "interface", "i", "", "interface to reset impairment on")
 	netemResetCmd.MarkFlagRequired("node")
 	netemResetCmd.MarkFlagRequired("interface")
 
-	return c
+	return c, nil
 }
 
-var netemSetCmd = &cobra.Command{
-	Use:   "set",
-	Short: "set link impairments",
-	Long: `The netem queue discipline provides Network Emulation
-functionality for testing protocols by emulating the properties
-of real-world networks.`,
-	PreRunE: validateInputAndRoot,
-	RunE:    netemSetFn,
-}
-
-var netemShowCmd = &cobra.Command{
-	Use:     "show",
-	Short:   "show link impairments for a node",
-	PreRunE: validateInputAndRoot,
-	RunE:    netemShowFn,
-}
-
-var netemResetCmd = &cobra.Command{
-	Use:     "reset",
-	Short:   "reset link impairments",
-	Long:    `Reset network impairments by deleting the netem qdisc from the specified interface.`,
-	PreRunE: validateInputAndRoot,
-	RunE:    netemResetFn,
-}
-
-func netemSetFn(_ *cobra.Command, _ []string) error {
+func netemSetFn(o *Options) error {
 	// Ensure that the sch_netem kernel module is loaded (for Fedora/RHEL compatibility)
 	if err := exec.Command("modprobe", "sch_netem").Run(); err != nil {
 		log.Warn("failed to load sch_netem kernel module (expected on OrbStack machines)", "err", err)
 	}
 
 	// Get the runtime initializer.
-	_, rinit, err := clabcore.RuntimeInitializer(runtime)
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
 	if err != nil {
 		return err
 	}
@@ -119,7 +123,7 @@ func netemSetFn(_ *cobra.Command, _ []string) error {
 	err = rt.Init(
 		clabruntime.WithConfig(
 			&clabruntime.RuntimeConfig{
-				Timeout: timeout,
+				Timeout: o.Global.Timeout,
 			},
 		),
 	)
@@ -326,9 +330,9 @@ func qdiscToJSONData(qdisc *gotc.Object) clabtypes.ImpairmentData {
 	}
 }
 
-func netemShowFn(_ *cobra.Command, _ []string) error {
+func netemShowFn(o *Options) error {
 	// Get the runtime initializer.
-	_, rinit, err := clabcore.RuntimeInitializer(runtime)
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
 	if err != nil {
 		return err
 	}
@@ -338,7 +342,7 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	err = rt.Init(
 		clabruntime.WithConfig(
 			&clabruntime.RuntimeConfig{
-				Timeout: timeout,
+				Timeout: o.Global.Timeout,
 			},
 		),
 	)
@@ -403,9 +407,9 @@ func netemShowFn(_ *cobra.Command, _ []string) error {
 	return err
 }
 
-func netemResetFn(_ *cobra.Command, _ []string) error {
+func netemResetFn(o *Options) error {
 	// Get the runtime initializer.
-	_, rinit, err := clabcore.RuntimeInitializer(runtime)
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
 	if err != nil {
 		return err
 	}
@@ -415,7 +419,7 @@ func netemResetFn(_ *cobra.Command, _ []string) error {
 	err = rt.Init(
 		clabruntime.WithConfig(
 			&clabruntime.RuntimeConfig{
-				Timeout: timeout,
+				Timeout: o.Global.Timeout,
 			},
 		),
 	)

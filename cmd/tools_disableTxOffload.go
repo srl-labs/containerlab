@@ -16,7 +16,7 @@ import (
 
 var cntName string
 
-func disableTxOffloadCmd() *cobra.Command {
+func disableTxOffloadCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "disable-tx-offload",
 		Short: "disables tx checksum offload on eth0 interface of a container",
@@ -26,16 +26,16 @@ func disableTxOffloadCmd() *cobra.Command {
 			ctx := context.Background()
 
 			opts := []clabcore.ClabOption{
-				clabcore.WithTimeout(timeout),
+				clabcore.WithTimeout(o.Global.Timeout),
 				clabcore.WithRuntime(
-					runtime,
+					o.Global.Runtime,
 					&clabruntime.RuntimeConfig{
-						Debug:            debug,
-						Timeout:          timeout,
+						Debug:            o.Global.DebugCount > 0,
+						Timeout:          o.Global.Timeout,
 						GracefulShutdown: gracefulShutdown,
 					},
 				),
-				clabcore.WithDebug(debug),
+				clabcore.WithDebug(o.Global.DebugCount > 0),
 			}
 			c, err := clabcore.NewContainerLab(opts...)
 			if err != nil {
@@ -58,7 +58,11 @@ func disableTxOffloadCmd() *cobra.Command {
 	}
 
 	c.Flags().StringVarP(&cntName, "container", "c", "", "container name to disable offload in")
-	_ = c.MarkFlagRequired("container")
 
-	return c
+	err := c.MarkFlagRequired("container")
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }

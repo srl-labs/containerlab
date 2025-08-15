@@ -16,8 +16,8 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
-func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
-	if labName == "" && topoFile == "" {
+func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
+	if o.Global.TopologyName == "" && o.Global.TopologyFile == "" {
 		fmt.Println("provide either a lab name (--name) or a topology file path (--topo)")
 		return nil
 	}
@@ -27,21 +27,21 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(timeout),
+		clabcore.WithTimeout(o.Global.Timeout),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	}
 
-	if topoFile != "" {
+	if o.Global.TopologyFile != "" {
 		opts = append(opts,
-			clabcore.WithTopoPath(topoFile, varsFile),
+			clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
 			clabcore.WithNodeFilter(nodeFilter),
 		)
 	}
@@ -52,8 +52,8 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	labNameFilterLabel := ""
-	if labName != "" {
-		labNameFilterLabel = labName
+	if o.Global.TopologyName != "" {
+		labNameFilterLabel = o.Global.TopologyName
 	} else if c.Config.Name != "" {
 		labNameFilterLabel = c.Config.Name
 	} else {

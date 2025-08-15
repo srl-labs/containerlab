@@ -14,7 +14,7 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-func configCmd() *cobra.Command {
+func configCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:          "config",
 		Short:        "configure a lab",
@@ -22,30 +22,66 @@ func configCmd() *cobra.Command {
 		Aliases:      []string{"conf"},
 		ValidArgs:    []string{"commit", "send", "compare", "template"},
 		SilenceUsage: true,
-		RunE:         configRun,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return configRun(cobraCmd, args, o)
+		},
 	}
 
-	c.Flags().StringSliceVarP(&clabcoreconfig.TemplatePaths, "template-path", "p", []string{},
-		"comma separated list of paths to search for templates")
-	_ = c.MarkFlagDirname("template-path")
-	c.Flags().StringSliceVarP(&clabcoreconfig.TemplateNames, "template-list", "l", []string{},
-		"comma separated list of template names to render")
-	c.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{},
-		"comma separated list of nodes to include")
+	c.Flags().StringSliceVarP(
+		&clabcoreconfig.TemplatePaths,
+		"template-path",
+		"p",
+		[]string{},
+		"comma separated list of paths to search for templates",
+	)
+
+	c.Flags().StringSliceVarP(
+		&clabcoreconfig.TemplateNames,
+		"template-list",
+		"l",
+		[]string{},
+		"comma separated list of template names to render",
+	)
+
+	c.Flags().StringSliceVarP(
+		&o.Filter.LabelFilter,
+		"filter",
+		"f",
+		o.Filter.LabelFilter,
+		"comma separated list of nodes (by labels) to include",
+	)
+
+	c.Flags().StringSliceVarP(
+		&o.Filter.NodeFilter,
+		"node-filter",
+		"",
+		o.Filter.NodeFilter,
+		"comma separated list of nodes to include",
+	)
+
 	c.Flags().SortFlags = false
 
-	c.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include")
+	err := c.MarkFlagDirname("template-path")
+	if err != nil {
+		return nil, err
+	}
 
+	configSubCmds(c, o)
+
+	return c, nil
+}
+
+func configSubCmds(c *cobra.Command, o *Options) {
 	sendC := &cobra.Command{
 		Use:          "send",
 		Short:        "send raw configuration to a lab",
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				return fmt.Errorf("unexpected arguments: %s", args)
 			}
-			return configRun(cmd, []string{"send"})
+
+			return configRun(cobraCmd, []string{"send"}, o)
 		},
 	}
 
@@ -56,11 +92,12 @@ func configCmd() *cobra.Command {
 		Use:          "compare",
 		Short:        "compare configuration to a running lab",
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			if len(args) > 0 {
 				return fmt.Errorf("unexpected arguments: %s", args)
 			}
-			return configRun(cmd, []string{"compare"})
+
+			return configRun(cobraCmd, []string{"compare"}, o)
 		},
 	}
 
@@ -73,7 +110,9 @@ func configCmd() *cobra.Command {
 		Long:         "render a template based on variables from the topology definition file\nreference: https://containerlab.dev/cmd/config/template",
 		Aliases:      []string{"conf"},
 		SilenceUsage: true,
-		RunE:         configTemplate,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return configTemplate(o)
+		},
 	}
 
 	c.AddCommand(templateC)
@@ -81,21 +120,19 @@ func configCmd() *cobra.Command {
 	templateC.Flags().BoolVarP(&templateVarOnly, "vars", "v", false,
 		"show variable used for template rendering")
 	templateC.Flags().SortFlags = false
-
-	return c
 }
 
-func configRun(_ *cobra.Command, args []string) error {
+func configRun(_ *cobra.Command, args []string, o *Options) error {
 	var err error
 
-	transport.DebugCount = debugCount
-	clabcoreconfig.DebugCount = debugCount
+	transport.DebugCount = o.Global.DebugCount
+	clabcoreconfig.DebugCount = o.Global.DebugCount
 
 	c, err := clabcore.NewContainerLab(
-		clabcore.WithTimeout(timeout),
-		clabcore.WithTopoPath(topoFile, varsFile),
-		clabcore.WithNodeFilter(nodeFilter),
-		clabcore.WithDebug(debug),
+		clabcore.WithTimeout(o.Global.Timeout),
+		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
+		clabcore.WithNodeFilter(o.Filter.NodeFilter),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	)
 	if err != nil {
 		return err
@@ -159,15 +196,15 @@ func configRun(_ *cobra.Command, args []string) error {
 	return nil
 }
 
-func configTemplate(cmd *cobra.Command, args []string) error {
+func configTemplate(o *Options) error {
 	var err error
 
-	clabcoreconfig.DebugCount = debugCount
+	clabcoreconfig.DebugCount = o.Global.DebugCount
 
 	c, err := clabcore.NewContainerLab(
-		clabcore.WithTimeout(timeout),
-		clabcore.WithTopoPath(topoFile, varsFile),
-		clabcore.WithDebug(debug),
+		clabcore.WithTimeout(o.Global.Timeout),
+		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	)
 	if err != nil {
 		return err

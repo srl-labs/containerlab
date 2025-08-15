@@ -12,14 +12,13 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	clabcmdversion "github.com/srl-labs/containerlab/cmd/version"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-func deployCmd() *cobra.Command {
+func deployCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:          "deploy",
 		Short:        "deploy a lab",
@@ -27,7 +26,9 @@ func deployCmd() *cobra.Command {
 		Aliases:      []string{"dep"},
 		SilenceUsage: true,
 		PreRunE:      clabutils.CheckAndGetRootPrivs,
-		RunE:         deployFn,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return deployFn(cobraCmd, o)
+		},
 	}
 
 	c.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
@@ -49,14 +50,14 @@ func deployCmd() *cobra.Command {
 	c.Flags().StringVarP(&labOwner, "owner", "", "",
 		"lab owner name (only for users in clab_admins group)")
 
-	return c
+	return c, nil
 }
 
 // deployFn function runs deploy sub command.
-func deployFn(cobraCmd *cobra.Command, _ []string) error {
+func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	var err error
 
-	log.Info("Containerlab started", "version", clabcmdversion.Version)
+	log.Info("Containerlab started", "version", Version)
 
 	// Check for owner from environment (set by generate command)
 	if labOwner == "" && os.Getenv("CLAB_OWNER") != "" {
@@ -64,25 +65,25 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(timeout),
-		clabcore.WithTopoPath(topoFile, varsFile),
-		clabcore.WithTopoBackup(topoFile),
+		clabcore.WithTimeout(o.Global.Timeout),
+		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
+		clabcore.WithTopoBackup(o.Global.TopologyFile),
 		clabcore.WithNodeFilter(nodeFilter),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
 		clabcore.WithDependencyManager(clabcoredependency_manager.NewDependencyManager()),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	}
 
 	// process optional settings
-	if labName != "" {
-		opts = append(opts, clabcore.WithLabName(labName))
+	if o.Global.TopologyName != "" {
+		opts = append(opts, clabcore.WithLabName(o.Global.TopologyName))
 	}
 	if labOwner != "" {
 		opts = append(opts, clabcore.WithLabOwner(labOwner))
@@ -124,7 +125,7 @@ func deployFn(cobraCmd *cobra.Command, _ []string) error {
 	versionCheckContext, cancel := context.WithTimeout(cobraCmd.Context(), 3*time.Second)
 	defer cancel()
 
-	m := clabcmdversion.GetManager()
+	m := getVersionManager()
 	m.DisplayNewVersionAvailable(versionCheckContext)
 
 	// print table summary

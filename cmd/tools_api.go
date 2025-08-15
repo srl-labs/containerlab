@@ -6,13 +6,23 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-func apiServerCmd() *cobra.Command {
+func apiServerCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "api-server",
 		Short: "Containerlab API server operations",
 		Long:  "Start, stop, and manage Containerlab API server containers",
+	}
+
+	apiServerStartCmd := &cobra.Command{
+		Use:     "start",
+		Short:   "start Containerlab API server container",
+		PreRunE: clabutils.CheckAndGetRootPrivs,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return apiServerStart(cobraCmd, o)
+		},
 	}
 
 	c.AddCommand(apiServerStartCmd)
@@ -56,13 +66,29 @@ func apiServerCmd() *cobra.Command {
 	apiServerStartCmd.Flags().StringVarP(&apiServerRuntime, "runtime", "r", "docker",
 		"container runtime to use for API server")
 
+	apiServerStatusCmd := &cobra.Command{
+		Use:     "status",
+		Short:   "show status of active Containerlab API server containers",
+		PreRunE: clabutils.CheckAndGetRootPrivs,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return apiServerStatus(cobraCmd, o)
+		},
+	}
 	c.AddCommand(apiServerStatusCmd)
 	apiServerStatusCmd.Flags().StringVarP(&outputFormatAPI, "format", "f", "table",
 		"output format for 'status' command (table, json)")
 
+	apiServerStopCmd := &cobra.Command{
+		Use:     "stop",
+		Short:   "stop Containerlab API server container",
+		PreRunE: clabutils.CheckAndGetRootPrivs,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return apiServerStop(cobraCmd, o)
+		},
+	}
 	c.AddCommand(apiServerStopCmd)
 	apiServerStopCmd.Flags().StringVarP(&apiServerName, "name", "n", "clab-api-server",
 		"name of the API server container to stop")
 
-	return c
+	return c, nil
 }

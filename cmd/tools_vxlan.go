@@ -26,7 +26,7 @@ var (
 	vxlanUDPPort int
 )
 
-func vxlanCmd() *cobra.Command {
+func vxlanCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "vxlan",
 		Short: "VxLAN interface commands",
@@ -48,7 +48,7 @@ func vxlanCmd() *cobra.Command {
 	vxlanDeleteCmd.Flags().StringVarP(&delPrefix, "prefix", "p", "vx-",
 		"delete all containerlab created VxLAN interfaces which start with this prefix")
 
-	return c
+	return c, nil
 }
 
 var vxlanCreateCmd = &cobra.Command{

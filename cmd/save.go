@@ -12,29 +12,29 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
-func saveCmd() *cobra.Command {
+func saveCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "save",
 		Short: "save containers configuration",
 		Long: `save performs a configuration save. The exact command that is used to save the config depends on the node kind.
 Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact command used per node's kind`,
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
-			if labName == "" && topoFile == "" {
+			if o.Global.TopologyName == "" && o.Global.TopologyFile == "" {
 				return fmt.Errorf("provide topology file path  with --topo flag")
 			}
 			opts := []clabcore.ClabOption{
-				clabcore.WithTimeout(timeout),
-				clabcore.WithTopoPath(topoFile, varsFile),
+				clabcore.WithTimeout(o.Global.Timeout),
+				clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
 				clabcore.WithNodeFilter(nodeFilter),
 				clabcore.WithRuntime(
-					runtime,
+					o.Global.Runtime,
 					&clabruntime.RuntimeConfig{
-						Debug:            debug,
-						Timeout:          timeout,
+						Debug:            o.Global.DebugCount > 0,
+						Timeout:          o.Global.Timeout,
 						GracefulShutdown: gracefulShutdown,
 					},
 				),
-				clabcore.WithDebug(debug),
+				clabcore.WithDebug(o.Global.DebugCount > 0),
 			}
 			c, err := clabcore.NewContainerLab(opts...)
 			if err != nil {
@@ -48,5 +48,5 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 	c.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 
-	return c
+	return c, nil
 }
