@@ -14,30 +14,7 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
-	clabutils "github.com/srl-labs/containerlab/utils"
 )
-
-var (
-	interfacesFormat   string
-	interfacesNodeName string
-)
-
-// inspectInterfacesCmd represents the inspect interfaces command.
-var inspectInterfacesCmd = &cobra.Command{
-	Use:     "interfaces",
-	Short:   "inspect interfaces of one or multiple nodes in a lab",
-	Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
-	Aliases: []string{"int", "intf"},
-	RunE:    inspectInterfacesFn,
-	PreRunE: clabutils.CheckAndGetRootPrivs,
-}
-
-func init() {
-	InspectCmd.AddCommand(inspectInterfacesCmd)
-
-	inspectInterfacesCmd.Flags().StringVarP(&interfacesFormat, "format", "f", "table", "output format. One of [table, json]")
-	inspectInterfacesCmd.Flags().StringVarP(&interfacesNodeName, "node", "n", "", "node to inspect")
-}
 
 func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 	if labName == "" && topoFile == "" {

@@ -26,11 +26,13 @@ var (
 	vxlanUDPPort int
 )
 
-func init() {
-	toolsCmd.AddCommand(vxlanCmd)
-	vxlanCmd.AddCommand(vxlanCreateCmd)
-	vxlanCmd.AddCommand(vxlanDeleteCmd)
+func vxlanCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "vxlan",
+		Short: "VxLAN interface commands",
+	}
 
+	c.AddCommand(vxlanCreateCmd)
 	vxlanCreateCmd.Flags().IntVarP(&vxlanID, "id", "i", 10, "VxLAN ID (VNI)")
 	vxlanCreateCmd.Flags().StringVarP(&vxlanRemote, "remote", "", "", "address of the remote VTEP")
 	vxlanCreateCmd.Flags().StringVarP(&parentDev, "dev", "", "",
@@ -39,18 +41,14 @@ func init() {
 		"link to which 'attach' vxlan tunnel with tc redirect")
 	vxlanCreateCmd.Flags().IntVarP(&vxlanMTU, "mtu", "m", 0, "VxLAN MTU")
 	vxlanCreateCmd.Flags().IntVarP(&vxlanUDPPort, "port", "p", 14789, "VxLAN Destination UDP Port")
-
 	_ = vxlanCreateCmd.MarkFlagRequired("remote")
 	_ = vxlanCreateCmd.MarkFlagRequired("link")
 
+	c.AddCommand(vxlanDeleteCmd)
 	vxlanDeleteCmd.Flags().StringVarP(&delPrefix, "prefix", "p", "vx-",
 		"delete all containerlab created VxLAN interfaces which start with this prefix")
-}
 
-// vxlanCmd represents the vxlan command container.
-var vxlanCmd = &cobra.Command{
-	Use:   "vxlan",
-	Short: "VxLAN interface commands",
+	return c
 }
 
 var vxlanCreateCmd = &cobra.Command{

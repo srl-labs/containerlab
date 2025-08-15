@@ -50,83 +50,19 @@ type nodesDef struct {
 	typ      string
 }
 
-// generateCmd represents the generate command.
-var generateCmd = &cobra.Command{
-	Use:     "generate",
-	Aliases: []string{"gen"},
-	Short:   "generate a Clos topology file, based on provided flags",
-	RunE: func(cobraCmd *cobra.Command, _ []string) error {
-		if labName == "" {
-			return errors.New("provide a lab name with --name flag")
-		}
-		licenses, err := parseFlag(kind, license)
-		if err != nil {
-			return err
-		}
-		log.Debugf("parsed licenses: %+v", licenses)
+func generateCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:     "generate",
+		Aliases: []string{"gen"},
+		Short:   "generate a Clos topology file, based on provided flags",
+		RunE:    generate,
+	}
 
-		images, err := parseFlag(kind, image)
-		if err != nil {
-			return err
-		}
-		log.Debugf("parsed images: %+v", images)
+	clab := &clabcore.CLab{}
+	clab.Reg = clabnodes.NewNodeRegistry()
+	clab.RegisterNodes()
 
-		nodeDefs, err := parseNodesFlag(kind, nodesFlag...)
-		if err != nil {
-			return err
-		}
-		log.Debugf("parsed nodes definitions: %+v", nodeDefs)
-
-		b, err := generateTopologyConfig(labName, mgmtNetName, mgmtIPv4Subnet.String(),
-			mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
-		if err != nil {
-			return err
-		}
-		log.Debugf("generated topo: %s", string(b))
-		if file != "" {
-			err = clabutils.CreateFile(file, string(b))
-			if err != nil {
-				return err
-			}
-		}
-		if deploy {
-			err = clabutils.CheckAndGetRootPrivs(nil, nil)
-			if err != nil {
-				return err
-			}
-			reconfigure = true
-			if file == "" {
-				file = fmt.Sprintf("%s.clab.yml", labName)
-				err = clabutils.CreateFile(file, string(b))
-				if err != nil {
-					return err
-				}
-			}
-			topoFile = file
-
-			// Pass owner to deploy command if specified
-			if labOwner != "" {
-				// This will be picked up by the deploy command
-				os.Setenv("CLAB_OWNER", labOwner)
-			}
-
-			return deployCmd.RunE(cobraCmd, nil)
-		}
-		if file == "" {
-			fmt.Println(string(b))
-		}
-		return nil
-	},
-}
-
-func init() {
-	c := &clabcore.CLab{}
-	c.Reg = clabnodes.NewNodeRegistry()
-	c.RegisterNodes()
-
-	reg = c.Reg
-
-	generateNodesAttributes := reg.GetGenerateNodeAttributes()
+	generateNodesAttributes := clab.Reg.GetGenerateNodeAttributes()
 	var supportedKinds []string
 
 	// prepare list of generateable node kinds
@@ -136,28 +72,94 @@ func init() {
 		}
 	}
 
-	RootCmd.AddCommand(generateCmd)
-	generateCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
-	generateCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	generateCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	generateCmd.Flags().StringSliceVarP(&image, "image", "", []string{},
+	c.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
+	c.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
+	c.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+	c.Flags().StringSliceVarP(&image, "image", "", []string{},
 		"container image name, can be prefixed with the node kind. <kind>=<image_name>")
-	generateCmd.Flags().StringVarP(&kind, "kind", "", "srl",
+	c.Flags().StringVarP(&kind, "kind", "", "srl",
 		fmt.Sprintf("container kind, one of %v", supportedKinds))
-	generateCmd.Flags().StringSliceVarP(&nodesFlag, "nodes", "", []string{},
+	c.Flags().StringSliceVarP(&nodesFlag, "nodes", "", []string{},
 		"comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
-	generateCmd.Flags().StringSliceVarP(&license, "license", "", []string{},
+	c.Flags().StringSliceVarP(&license, "license", "", []string{},
 		"path to license file, can be prefix with the node kind. <kind>=/path/to/file")
-	generateCmd.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
-	generateCmd.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
-	generateCmd.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
-	generateCmd.Flags().BoolVarP(&deploy, "deploy", "", false,
+	c.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
+	c.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
+	c.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
+	c.Flags().BoolVarP(&deploy, "deploy", "", false,
 		"deploy a fabric based on the generated topology file")
-	generateCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+	c.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers creating nodes and virtual wires")
 	// Add the owner flag to generate command
-	generateCmd.Flags().StringVarP(&labOwner, "owner", "", "",
+	c.Flags().StringVarP(&labOwner, "owner", "", "",
 		"lab owner name (only for users in clab_admins group)")
+
+	return c
+}
+
+func generate(cobraCmd *cobra.Command, _ []string) error {
+	if labName == "" {
+		return errors.New("provide a lab name with --name flag")
+	}
+	licenses, err := parseFlag(kind, license)
+	if err != nil {
+		return err
+	}
+	log.Debugf("parsed licenses: %+v", licenses)
+
+	images, err := parseFlag(kind, image)
+	if err != nil {
+		return err
+	}
+	log.Debugf("parsed images: %+v", images)
+
+	nodeDefs, err := parseNodesFlag(kind, nodesFlag...)
+	if err != nil {
+		return err
+	}
+	log.Debugf("parsed nodes definitions: %+v", nodeDefs)
+
+	b, err := generateTopologyConfig(labName, mgmtNetName, mgmtIPv4Subnet.String(),
+		mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
+	if err != nil {
+		return err
+	}
+	log.Debugf("generated topo: %s", string(b))
+	if file != "" {
+		err = clabutils.CreateFile(file, string(b))
+		if err != nil {
+			return err
+		}
+	}
+	if deploy {
+		err = clabutils.CheckAndGetRootPrivs(nil, nil)
+		if err != nil {
+			return err
+		}
+		reconfigure = true
+		if file == "" {
+			file = fmt.Sprintf("%s.clab.yml", labName)
+			err = clabutils.CreateFile(file, string(b))
+			if err != nil {
+				return err
+			}
+		}
+		topoFile = file
+
+		// Pass owner to deploy command if specified
+		if labOwner != "" {
+			// This will be picked up by the deploy command
+			os.Setenv("CLAB_OWNER", labOwner)
+		}
+
+		return deployCmd().RunE(cobraCmd, nil)
+	}
+
+	if file == "" {
+		fmt.Println(string(b))
+	}
+
+	return nil
 }
 
 func generateTopologyConfig(name, network, ipv4range, ipv6range string,

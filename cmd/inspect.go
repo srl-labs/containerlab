@@ -22,6 +22,7 @@ import (
 	clablabels "github.com/srl-labs/containerlab/labels"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
@@ -30,23 +31,43 @@ var (
 	wide          bool
 )
 
-// InspectCmd represents the inspect command.
-var InspectCmd = &cobra.Command{
-	Use:     "inspect",
-	Short:   "inspect lab details",
-	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
-	Aliases: []string{"ins", "i"},
-	RunE:    inspectFn,
-}
+var (
+	interfacesFormat   string
+	interfacesNodeName string
+)
 
-func init() {
-	InspectCmd.Flags().BoolVarP(&details, "details", "", false,
+func inspectCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:     "inspect",
+		Short:   "inspect lab details",
+		Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
+		Aliases: []string{"ins", "i"},
+		RunE:    inspectFn,
+	}
+
+	c.Flags().BoolVarP(&details, "details", "", false,
 		"print all details of lab containers (JSON format, grouped by lab)")
-	InspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table",
+	c.Flags().StringVarP(&inspectFormat, "format", "f", "table",
 		"output format. One of [table, json, csv]")
-	InspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
-	InspectCmd.Flags().BoolVarP(&wide, "wide", "w", false,
+	c.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
+	c.Flags().BoolVarP(&wide, "wide", "w", false,
 		"also more details about a lab and its nodes")
+
+	interfacesC := &cobra.Command{
+		Use:     "interfaces",
+		Short:   "inspect interfaces of one or multiple nodes in a lab",
+		Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
+		Aliases: []string{"int", "intf"},
+		RunE:    inspectInterfacesFn,
+		PreRunE: clabutils.CheckAndGetRootPrivs,
+	}
+
+	c.AddCommand(interfacesC)
+
+	interfacesC.Flags().StringVarP(&interfacesFormat, "format", "f", "table", "output format. One of [table, json]")
+	interfacesC.Flags().StringVarP(&interfacesNodeName, "node", "n", "", "node to inspect")
+
+	return c
 }
 
 func inspectFn(cobraCmd *cobra.Command, _ []string) error {

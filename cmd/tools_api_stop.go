@@ -60,14 +60,6 @@ func generateRandomJWTSecret() (string, error) {
 	return base64.StdEncoding.EncodeToString(bytes), nil
 }
 
-func init() {
-	apiServerCmd.AddCommand(apiServerStopCmd)
-
-	// Stop command flags
-	apiServerStopCmd.Flags().StringVarP(&apiServerName, "name", "n", "clab-api-server",
-		"name of the API server container to stop")
-}
-
 var apiServerStopCmd = &cobra.Command{
 	Use:     "stop",
 	Short:   "stop Containerlab API server container",

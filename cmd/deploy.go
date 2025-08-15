@@ -19,66 +19,37 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-// name of the container management network.
-var mgmtNetName string
+func deployCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:          "deploy",
+		Short:        "deploy a lab",
+		Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
+		Aliases:      []string{"dep"},
+		SilenceUsage: true,
+		PreRunE:      clabutils.CheckAndGetRootPrivs,
+		RunE:         deployFn,
+	}
 
-// IPv4/6 address range for container management network.
-var (
-	mgmtIPv4Subnet net.IPNet
-	mgmtIPv6Subnet net.IPNet
-)
-
-// reconfigure flag.
-var reconfigure bool
-
-// max-workers flag.
-var maxWorkers uint
-
-// skipPostDeploy flag.
-var skipPostDeploy bool
-
-// template file for topology data export.
-var exportTemplate string
-
-var deployFormat string
-
-// skipLabDirFileACLs skips provisioning of extended File ACLs for the Lab directory.
-var skipLabDirFileACLs bool
-
-// labOwner flag for setting the owner label.
-var labOwner string
-
-// deployCmd represents the deploy command.
-var deployCmd = &cobra.Command{
-	Use:          "deploy",
-	Short:        "deploy a lab",
-	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
-	Aliases:      []string{"dep"},
-	SilenceUsage: true,
-	PreRunE:      clabutils.CheckAndGetRootPrivs,
-	RunE:         deployFn,
-}
-
-func init() {
-	RootCmd.AddCommand(deployCmd)
-	deployCmd.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
-	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
-	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	deployCmd.Flags().StringVarP(&deployFormat, "format", "f", "table", "output format. One of [table, json]")
-	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "c", false,
+	c.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
+	c.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
+	c.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
+	c.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+	c.Flags().StringVarP(&deployFormat, "format", "f", "table", "output format. One of [table, json]")
+	c.Flags().BoolVarP(&reconfigure, "reconfigure", "c", false,
 		"regenerate configuration artifacts and overwrite previous ones if any")
-	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+	c.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
 		"limit the maximum number of workers creating nodes and virtual wires")
-	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
-	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "",
+	c.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
+	c.Flags().StringVarP(&exportTemplate, "export-template", "",
 		"", "template file for topology data export")
-	deployCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	c.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
-	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
+	c.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
 		"skip the lab directory extended ACLs provisioning")
-	deployCmd.Flags().StringVarP(&labOwner, "owner", "", "",
+	c.Flags().StringVarP(&labOwner, "owner", "", "",
 		"lab owner name (only for users in clab_admins group)")
+
+	return c
 }
 
 // deployFn function runs deploy sub command.

@@ -31,12 +31,35 @@ var (
 	staticDir        string
 )
 
-// graphCmd represents the graph command.
-var graphCmd = &cobra.Command{
-	Use:   "graph",
-	Short: "generate a topology graph",
-	Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.dev/cmd/graph/",
-	RunE:  graphFn,
+func graphCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "graph",
+		Short: "generate a topology graph",
+		Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.dev/cmd/graph/",
+		RunE:  graphFn,
+	}
+
+	c.Flags().StringVarP(&srv, "srv", "s", "0.0.0.0:50080",
+		"HTTP server address serving the topology view")
+	c.Flags().BoolVarP(&offline, "offline", "o", false,
+		"use only information from topo file when building graph")
+	c.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file")
+	c.Flags().BoolVarP(&mermaid, "mermaid", "", false, "print mermaid flowchart to stdout")
+	c.Flags().StringVarP(&mermaidDirection, "mermaid-direction", "", "TD", "specify direction of mermaid dirgram")
+	c.Flags().StringSliceVar(&drawioArgs, "drawio-args", []string{},
+		"Additional flags to pass to the drawio diagram generation tool (can be specified multiple times)")
+	c.Flags().BoolVarP(&drawio, "drawio", "", false, "generate drawio diagram file")
+	c.Flags().StringVarP(&drawioVersion, "drawio-version", "", "latest",
+		"version of the clab-io-draw container to use for generating drawio diagram file")
+	c.Flags().StringVarP(&tmpl, "template", "", "",
+		"Go html template used to generate the graph")
+	c.Flags().StringVarP(&staticDir, "static-dir", "", "",
+		"Serve static files from the specified directory")
+	c.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+		"comma separated list of nodes to include")
+	c.MarkFlagsMutuallyExclusive("dot", "mermaid", "drawio")
+
+	return c
 }
 
 func graphFn(_ *cobra.Command, _ []string) error {
@@ -134,27 +157,4 @@ func graphFn(_ *cobra.Command, _ []string) error {
 	}
 
 	return c.ServeTopoGraph(tmpl, staticDir, srv, topoD)
-}
-
-func init() {
-	RootCmd.AddCommand(graphCmd)
-	graphCmd.Flags().StringVarP(&srv, "srv", "s", "0.0.0.0:50080",
-		"HTTP server address serving the topology view")
-	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false,
-		"use only information from topo file when building graph")
-	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file")
-	graphCmd.Flags().BoolVarP(&mermaid, "mermaid", "", false, "print mermaid flowchart to stdout")
-	graphCmd.Flags().StringVarP(&mermaidDirection, "mermaid-direction", "", "TD", "specify direction of mermaid dirgram")
-	graphCmd.Flags().StringSliceVar(&drawioArgs, "drawio-args", []string{},
-		"Additional flags to pass to the drawio diagram generation tool (can be specified multiple times)")
-	graphCmd.Flags().BoolVarP(&drawio, "drawio", "", false, "generate drawio diagram file")
-	graphCmd.Flags().StringVarP(&drawioVersion, "drawio-version", "", "latest",
-		"version of the clab-io-draw container to use for generating drawio diagram file")
-	graphCmd.Flags().StringVarP(&tmpl, "template", "", "",
-		"Go html template used to generate the graph")
-	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", "",
-		"Serve static files from the specified directory")
-	graphCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include")
-	graphCmd.MarkFlagsMutuallyExclusive("dot", "mermaid", "drawio")
 }

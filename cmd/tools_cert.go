@@ -33,12 +33,14 @@ var (
 	keySize          int
 )
 
-func init() {
-	toolsCmd.AddCommand(certCmd)
-	certCmd.AddCommand(CACmd)
-	certCmd.AddCommand(signCertCmd)
-	CACmd.AddCommand(CACreateCmd)
+func certCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "cert",
+		Short: "TLS certificate operations",
+	}
 
+	c.AddCommand(CACmd)
+	CACmd.AddCommand(CACreateCmd)
 	CACreateCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.dev", "Common Name")
 	CACreateCmd.Flags().StringVarP(&country, "country", "c", "Internet", "Country")
 	CACreateCmd.Flags().StringVarP(&locality, "locality", "l", "Server", "Location")
@@ -49,6 +51,7 @@ func init() {
 		"path to write certificate and key to. Default is current working directory")
 	CACreateCmd.Flags().StringVarP(&caNamePrefix, "name", "n", "ca", "certificate/key filename prefix")
 
+	c.AddCommand(signCertCmd)
 	signCertCmd.Flags().StringSliceVarP(&certHosts, "hosts", "", []string{},
 		"comma separate list of hosts of a certificate")
 	signCertCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.dev", "Common Name")
@@ -62,11 +65,8 @@ func init() {
 		"path to write certificate and key to. Default is current working directory")
 	signCertCmd.Flags().StringVarP(&certNamePrefix, "name", "n", "cert", "certificate/key filename prefix")
 	signCertCmd.Flags().IntVarP(&keySize, "key-size", "", 2048, "private key size")
-}
 
-var certCmd = &cobra.Command{
-	Use:   "cert",
-	Short: "TLS certificate operations",
+	return c
 }
 
 var CACmd = &cobra.Command{
