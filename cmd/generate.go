@@ -50,12 +50,14 @@ type nodesDef struct {
 	typ      string
 }
 
-func generateCmd() *cobra.Command {
+func generateCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:     "generate",
 		Aliases: []string{"gen"},
 		Short:   "generate a Clos topology file, based on provided flags",
-		RunE:    generate,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return generate(cobraCmd, o)
+		},
 	}
 
 	clab := &clabcore.CLab{}
@@ -94,11 +96,11 @@ func generateCmd() *cobra.Command {
 	c.Flags().StringVarP(&labOwner, "owner", "", "",
 		"lab owner name (only for users in clab_admins group)")
 
-	return c
+	return c, nil
 }
 
-func generate(cobraCmd *cobra.Command, _ []string) error {
-	if labName == "" {
+func generate(cobraCmd *cobra.Command, o *Options) error {
+	if o.Global.TopologyName == "" {
 		return errors.New("provide a lab name with --name flag")
 	}
 	licenses, err := parseFlag(kind, license)
@@ -119,7 +121,7 @@ func generate(cobraCmd *cobra.Command, _ []string) error {
 	}
 	log.Debugf("parsed nodes definitions: %+v", nodeDefs)
 
-	b, err := generateTopologyConfig(labName, mgmtNetName, mgmtIPv4Subnet.String(),
+	b, err := generateTopologyConfig(o.Global.TopologyName, mgmtNetName, mgmtIPv4Subnet.String(),
 		mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
 	if err != nil {
 		return err
@@ -138,13 +140,13 @@ func generate(cobraCmd *cobra.Command, _ []string) error {
 		}
 		reconfigure = true
 		if file == "" {
-			file = fmt.Sprintf("%s.clab.yml", labName)
+			file = fmt.Sprintf("%s.clab.yml", o.Global.TopologyName)
 			err = clabutils.CreateFile(file, string(b))
 			if err != nil {
 				return err
 			}
 		}
-		topoFile = file
+		o.Global.TopologyFile = file
 
 		// Pass owner to deploy command if specified
 		if labOwner != "" {
@@ -152,7 +154,7 @@ func generate(cobraCmd *cobra.Command, _ []string) error {
 			os.Setenv("CLAB_OWNER", labOwner)
 		}
 
-		return deployCmd().RunE(cobraCmd, nil)
+		return deployFn(cobraCmd, o)
 	}
 
 	if file == "" {

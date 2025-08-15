@@ -27,10 +27,19 @@ var (
 	MTU  = clablinks.DefaultLinkMTU
 )
 
-func vethCmd() *cobra.Command {
+func vethCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "veth",
 		Short: "veth operations",
+	}
+
+	vethCreateCmd := &cobra.Command{
+		Use:     "create",
+		Short:   "Create a veth interface and attach its sides to the specified containers",
+		PreRunE: clabutils.CheckAndGetRootPrivs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return vethCreate(o)
+		},
 	}
 
 	c.AddCommand(vethCreateCmd)
@@ -40,93 +49,88 @@ func vethCmd() *cobra.Command {
 		"veth endpoint B in the format of <containerB-name>:<interface-name> or <endpointB-type>:<endpoint-name>:<interface-name>")
 	vethCreateCmd.Flags().IntVarP(&MTU, "mtu", "m", MTU, "link MTU")
 
-	return c
+	return c, nil
 }
 
-var vethCreateCmd = &cobra.Command{
-	Use:     "create",
-	Short:   "Create a veth interface and attach its sides to the specified containers",
-	PreRunE: clabutils.CheckAndGetRootPrivs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var err error
+func vethCreate(o *Options) error {
+	var err error
 
-		parsedAEnd, err := parseVethEndpoint(AEnd)
-		if err != nil {
-			return err
-		}
+	parsedAEnd, err := parseVethEndpoint(AEnd)
+	if err != nil {
+		return err
+	}
 
-		parsedBEnd, err := parseVethEndpoint(BEnd)
-		if err != nil {
-			return err
-		}
+	parsedBEnd, err := parseVethEndpoint(BEnd)
+	if err != nil {
+		return err
+	}
 
-		opts := []clabcore.ClabOption{
-			clabcore.WithTimeout(timeout),
-			clabcore.WithRuntime(
-				runtime,
-				&clabruntime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: gracefulShutdown,
-				},
-			),
-			clabcore.WithDebug(debug),
-		}
-		c, err := clabcore.NewContainerLab(opts...)
-		if err != nil {
-			return err
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		rtName, _, err := clabcore.RuntimeInitializer(runtime)
-		if err != nil {
-			return err
-		}
-
-		// create fake nodes to make links resolve work
-		err = createNodes(ctx, c, parsedAEnd, parsedBEnd, rtName)
-		if err != nil {
-			return err
-		}
-
-		// now create link brief as if the link was passed via topology file
-		linkBrief := &clablinks.LinkBriefRaw{
-			Endpoints: []string{
-				fmt.Sprintf("%s:%s", parsedAEnd.Node, parsedAEnd.Iface),
-				fmt.Sprintf("%s:%s", parsedBEnd.Node, parsedBEnd.Iface),
+	opts := []clabcore.ClabOption{
+		clabcore.WithTimeout(o.Global.Timeout),
+		clabcore.WithRuntime(
+			o.Global.Runtime,
+			&clabruntime.RuntimeConfig{
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
+				GracefulShutdown: gracefulShutdown,
 			},
-			LinkCommonParams: clablinks.LinkCommonParams{
-				MTU: MTU,
-			},
-		}
+		),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
+	}
+	c, err := clabcore.NewContainerLab(opts...)
+	if err != nil {
+		return err
+	}
 
-		linkRaw, err := linkBrief.ToTypeSpecificRawLink()
-		if err != nil {
-			return err
-		}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		// we need to copy nodes.Nodes to links.Nodes since two interfaces
-		// are not identical, but a subset
-		resolveNodes := make(map[string]clablinks.Node, len(c.Nodes))
-		for k, v := range c.Nodes {
-			resolveNodes[k] = v
-		}
+	rtName, _, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	if err != nil {
+		return err
+	}
 
-		link, err := linkRaw.Resolve(&clablinks.ResolveParams{Nodes: resolveNodes})
-		if err != nil {
-			return err
-		}
+	// create fake nodes to make links resolve work
+	err = createNodes(ctx, c, parsedAEnd, parsedBEnd, rtName)
+	if err != nil {
+		return err
+	}
 
-		// deploy the endpoints of the Link
-		for _, ep := range link.GetEndpoints() {
-			ep.Deploy(ctx)
-		}
+	// now create link brief as if the link was passed via topology file
+	linkBrief := &clablinks.LinkBriefRaw{
+		Endpoints: []string{
+			fmt.Sprintf("%s:%s", parsedAEnd.Node, parsedAEnd.Iface),
+			fmt.Sprintf("%s:%s", parsedBEnd.Node, parsedBEnd.Iface),
+		},
+		LinkCommonParams: clablinks.LinkCommonParams{
+			MTU: MTU,
+		},
+	}
 
-		log.Info("veth interface successfully created!")
-		return nil
-	},
+	linkRaw, err := linkBrief.ToTypeSpecificRawLink()
+	if err != nil {
+		return err
+	}
+
+	// we need to copy nodes.Nodes to links.Nodes since two interfaces
+	// are not identical, but a subset
+	resolveNodes := make(map[string]clablinks.Node, len(c.Nodes))
+	for k, v := range c.Nodes {
+		resolveNodes[k] = v
+	}
+
+	link, err := linkRaw.Resolve(&clablinks.ResolveParams{Nodes: resolveNodes})
+	if err != nil {
+		return err
+	}
+
+	// deploy the endpoints of the Link
+	for _, ep := range link.GetEndpoints() {
+		ep.Deploy(ctx)
+	}
+
+	log.Info("veth interface successfully created!")
+	return nil
 }
 
 // createNodes creates fake nodes in c.Nodes map to make link resolve work.

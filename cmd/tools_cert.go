@@ -33,7 +33,7 @@ var (
 	keySize          int
 )
 
-func certCmd() *cobra.Command {
+func certCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "cert",
 		Short: "TLS certificate operations",
@@ -66,7 +66,7 @@ func certCmd() *cobra.Command {
 	signCertCmd.Flags().StringVarP(&certNamePrefix, "name", "n", "cert", "certificate/key filename prefix")
 	signCertCmd.Flags().IntVarP(&keySize, "key-size", "", 2048, "private key size")
 
-	return c
+	return c, nil
 }
 
 var CACmd = &cobra.Command{

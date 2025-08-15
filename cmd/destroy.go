@@ -13,14 +13,16 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-func destroyCmd() *cobra.Command {
+func destroyCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:     "destroy",
 		Short:   "destroy a lab",
 		Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
 		Aliases: []string{"des"},
 		PreRunE: clabutils.CheckAndGetRootPrivs,
-		RunE:    destroyFn,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return destroyFn(cobraCmd, o)
+		},
 	}
 
 	c.Flags().BoolVarP(&cleanup, "cleanup", "c", false,
@@ -36,37 +38,37 @@ func destroyCmd() *cobra.Command {
 	c.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
 		"comma separated list of nodes to include")
 
-	return c
+	return c, nil
 }
 
-func destroyFn(cobraCmd *cobra.Command, _ []string) error {
+func destroyFn(cobraCmd *cobra.Command, o *Options) error {
 	if cleanup && len(nodeFilter) != 0 {
 		return fmt.Errorf("cleanup cannot be used with node-filter")
 	}
 
-	if all && labName != "" {
+	if all && o.Global.TopologyName != "" {
 		return fmt.Errorf("--all and --name should not be used together")
 	}
 
 	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(timeout),
-		clabcore.WithLabName(labName),
+		clabcore.WithTimeout(o.Global.Timeout),
+		clabcore.WithLabName(o.Global.TopologyName),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 		// during destroy we don't want to check bind paths
 		// as it is irrelevant for this command.
 		clabcore.WithSkippedBindsPathsCheck(),
 	}
 
-	if topoFile != "" {
-		opts = append(opts, clabcore.WithTopoPath(topoFile, varsFile))
+	if o.Global.TopologyFile != "" {
+		opts = append(opts, clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile))
 	}
 
 	if keepMgmtNet {

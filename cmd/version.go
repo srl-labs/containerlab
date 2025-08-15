@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package version
+package cmd
 
 import (
 	"context"
@@ -29,7 +29,7 @@ const (
 	downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
 )
 
-func VersionCmd() *cobra.Command {
+func versionCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "version",
 		Short: "Show containerlab version or upgrade",
@@ -54,7 +54,7 @@ func VersionCmd() *cobra.Command {
 				ctx, cancel := context.WithTimeout(cobraCmd.Context(), 5*time.Second)
 				defer cancel()
 
-				m := GetManager()
+				m := getVersionManager()
 				m.DisplayNewVersionAvailable(ctx)
 
 				return nil
@@ -68,7 +68,7 @@ func VersionCmd() *cobra.Command {
 		},
 	)
 
-	return c
+	return c, nil
 }
 
 // this a note to self how color codes work

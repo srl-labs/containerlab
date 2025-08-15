@@ -38,7 +38,7 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 		destroyCmd := &cobra.Command{}
 		destroyCmd.SetContext(destroyCtx)
 
-		err := destroyFn(destroyCmd, []string{})
+		err := destroyFn(destroyCmd, GetOptions())
 		if err != nil {
 			log.Errorf("failed destroying lab after cancellation signal: %v", err)
 		}

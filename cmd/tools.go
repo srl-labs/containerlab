@@ -12,25 +12,36 @@ import (
 	clablabels "github.com/srl-labs/containerlab/labels"
 )
 
-func toolsCmd() *cobra.Command {
+func toolsSubcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
+	return []func(*Options) (*cobra.Command, error){
+		apiServerCmd,
+		certCmd,
+		disableTxOffloadCmd,
+		gottyCmd,
+		netemCmd,
+		sshxCmd,
+		vethCmd,
+		vxlanCmd,
+	}
+}
+
+func toolsCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "tools",
 		Short: "various tools your lab might need",
 		Long:  "tools command groups various tools you might need for your lab\nreference: https://containerlab.dev/cmd/tools/",
 	}
 
-	c.AddCommand(
-		disableTxOffloadCmd(),
-		gottyCmd(),
-		sshxCmd(),
-		apiServerCmd(),
-		certCmd(),
-		netemCmd(),
-		vethCmd(),
-		vxlanCmd(),
-	)
+	for _, f := range toolsSubcommandRegisterFuncs() {
+		cmd, err := f(o)
+		if err != nil {
+			return nil, err
+		}
 
-	return c
+		c.AddCommand(cmd)
+	}
+
+	return c, nil
 }
 
 // createLabelsMap creates container labels map for additional containers launched after the lab

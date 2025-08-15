@@ -31,12 +31,14 @@ var (
 	staticDir        string
 )
 
-func graphCmd() *cobra.Command {
+func graphCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "graph",
 		Short: "generate a topology graph",
 		Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.dev/cmd/graph/",
-		RunE:  graphFn,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return graphFn(o)
+		},
 	}
 
 	c.Flags().StringVarP(&srv, "srv", "s", "0.0.0.0:50080",
@@ -59,25 +61,25 @@ func graphCmd() *cobra.Command {
 		"comma separated list of nodes to include")
 	c.MarkFlagsMutuallyExclusive("dot", "mermaid", "drawio")
 
-	return c
+	return c, nil
 }
 
-func graphFn(_ *cobra.Command, _ []string) error {
+func graphFn(o *Options) error {
 	var err error
 
 	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(timeout),
-		clabcore.WithTopoPath(topoFile, varsFile),
+		clabcore.WithTimeout(o.Global.Timeout),
+		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
 		clabcore.WithNodeFilter(nodeFilter),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
 				GracefulShutdown: gracefulShutdown,
 			},
 		),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	}
 	c, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
