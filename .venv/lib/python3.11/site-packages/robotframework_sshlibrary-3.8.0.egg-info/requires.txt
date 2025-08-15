@@ -1,0 +1,3 @@
+paramiko>=1.15.3
+robotframework>=3.0
+scp>=0.13.0

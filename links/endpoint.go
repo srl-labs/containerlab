@@ -181,6 +181,6 @@ func CheckEndpointDoesNotExistYet(ctx context.Context, e Endpoint) error {
 			return nil
 		}
 
-		return fmt.Errorf("interface %s is defined via topology but does already exist: %v", e.String(), err)
+		return fmt.Errorf("interface %s is defined via topology but already exists: %v", e.String(), err)
 	})
 }

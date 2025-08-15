@@ -54,17 +54,20 @@ type SSHXNode struct {
 	config *clabtypes.NodeConfig
 }
 
-func init() {
-	toolsCmd.AddCommand(sshxCmd)
-	sshxCmd.AddCommand(sshxAttachCmd)
-	sshxCmd.AddCommand(sshxDetachCmd)
-	sshxCmd.AddCommand(sshxListCmd)
-	sshxCmd.AddCommand(sshxReattachCmd)
+func sshxCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   sshx,
+		Short: "SSHX terminal sharing operations",
+		Long:  "Attach or detach SSHX terminal sharing containers to labs",
+	}
 
-	sshxCmd.PersistentFlags().StringVarP(&outputFormat, "format", "f", "table",
+	c.AddCommand(sshxListCmd)
+
+	c.PersistentFlags().StringVarP(&outputFormat, "format", "f", "table",
 		"output format for 'list' command (table, json)")
 
-	// Attach command flags
+	c.AddCommand(sshxAttachCmd)
+
 	sshxAttachCmd.Flags().StringVarP(&sshxLabName, "lab", "l", "",
 		"name of the lab to attach SSHX container to")
 	sshxAttachCmd.Flags().StringVarP(&sshxContainerName, "name", "", "",
@@ -78,11 +81,13 @@ func init() {
 	sshxAttachCmd.Flags().BoolVarP(&sshxMountSSHDir, "expose-ssh", "s", false,
 		"mount host user's SSH directory (~/.ssh) to the sshx container")
 
-	// Detach command flags
+	c.AddCommand(sshxDetachCmd)
+
 	sshxDetachCmd.Flags().StringVarP(&sshxLabName, "lab", "l", "",
 		"name of the lab where SSHX container is attached")
 
-	// Reattach command flags
+	c.AddCommand(sshxReattachCmd)
+
 	sshxReattachCmd.Flags().StringVarP(&sshxLabName, "lab", "l", "",
 		"name of the lab to reattach SSHX container to")
 	sshxReattachCmd.Flags().StringVarP(&sshxContainerName, "name", "", "",
@@ -95,13 +100,8 @@ func init() {
 		"lab owner name for the SSHX container")
 	sshxReattachCmd.Flags().BoolVarP(&sshxMountSSHDir, "expose-ssh", "s", false,
 		"mount host user's SSH directory (~/.ssh) to the sshx container")
-}
 
-// sshxCmd represents the sshx command container.
-var sshxCmd = &cobra.Command{
-	Use:   sshx,
-	Short: "SSHX terminal sharing operations",
-	Long:  "Attach or detach SSHX terminal sharing containers to labs",
+	return c
 }
 
 // NewSSHXNode creates a new SSHX node configuration.

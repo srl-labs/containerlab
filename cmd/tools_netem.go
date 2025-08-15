@@ -41,10 +41,13 @@ var (
 	netemFormat     string
 )
 
-func init() {
-	toolsCmd.AddCommand(netemCmd)
+func netemCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "netem",
+		Short: "link impairment operations",
+	}
 
-	netemCmd.AddCommand(netemSetCmd)
+	c.AddCommand(netemSetCmd)
 	netemSetCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
 	netemSetCmd.Flags().StringVarP(&netemInterface, "interface", "i", "", "interface to apply impairment to")
 	netemSetCmd.Flags().DurationVarP(&netemDelay, "delay", "", 0*time.Second,
@@ -56,25 +59,20 @@ func init() {
 	netemSetCmd.Flags().Uint64VarP(&netemRate, "rate", "", 0, "link rate limit in kbit")
 	netemSetCmd.Flags().Float64VarP(&netemCorruption, "corruption", "", 0,
 		"random packet corruption probability expressed in percentage (e.g. 0.1 means 0.1%)")
-
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
 
-	netemCmd.AddCommand(netemShowCmd)
+	c.AddCommand(netemShowCmd)
 	netemShowCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
 	netemShowCmd.Flags().StringVarP(&netemFormat, "format", "f", "table", "output format (table, json)")
 
-	// Add reset command
-	netemCmd.AddCommand(netemResetCmd)
+	c.AddCommand(netemResetCmd)
 	netemResetCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to reset impairment on")
 	netemResetCmd.Flags().StringVarP(&netemInterface, "interface", "i", "", "interface to reset impairment on")
 	netemResetCmd.MarkFlagRequired("node")
 	netemResetCmd.MarkFlagRequired("interface")
-}
 
-var netemCmd = &cobra.Command{
-	Use:   "netem",
-	Short: "link impairment operations",
+	return c
 }
 
 var netemSetCmd = &cobra.Command{

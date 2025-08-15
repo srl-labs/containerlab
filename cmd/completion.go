@@ -59,7 +59,3 @@ fish:
 		}
 	},
 }
-
-func init() {
-	RootCmd.AddCommand(completionCmd)
-}

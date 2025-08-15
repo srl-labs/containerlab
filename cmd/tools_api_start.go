@@ -20,51 +20,6 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-func init() {
-	apiServerCmd.AddCommand(apiServerStartCmd)
-
-	// Start command flags
-	apiServerStartCmd.Flags().StringVarP(&apiServerImage, "image", "i",
-		"ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
-		"container image to use for API server")
-	apiServerStartCmd.Flags().StringVarP(&apiServerName, "name", "n", "clab-api-server",
-		"name of the API server container")
-	apiServerStartCmd.Flags().StringVarP(&apiServerLabsDir, "labs-dir", "l", "",
-		"directory to mount as shared labs directory")
-	apiServerStartCmd.Flags().IntVarP(&apiServerPort, "port", "p", 8080,
-		"port to expose the API server on")
-	apiServerStartCmd.Flags().StringVarP(&apiServerHost, "host", "", "localhost",
-		"host address for the API server")
-	apiServerStartCmd.Flags().StringVarP(&apiServerJWTSecret, "jwt-secret", "", "",
-		"JWT secret key for authentication (generated randomly if not provided)")
-	apiServerStartCmd.Flags().StringVarP(&apiServerJWTExpiration, "jwt-expiration", "", "60m",
-		"JWT token expiration time")
-	apiServerStartCmd.Flags().StringVarP(&apiServerUserGroup, "user-group", "", "clab_api",
-		"user group for API access")
-	apiServerStartCmd.Flags().StringVarP(&apiServerSuperUserGroup, "superuser-group", "", "clab_admins",
-		"superuser group name")
-	apiServerStartCmd.Flags().StringVarP(&apiServerLogLevel, "log-level", "", "debug",
-		"log level (debug/info/warn/error)")
-	apiServerStartCmd.Flags().StringVarP(&apiServerGinMode, "gin-mode", "", "release",
-		"Gin framework mode (debug/release/test)")
-	apiServerStartCmd.Flags().StringVarP(&apiServerTrustedProxies, "trusted-proxies", "", "",
-		"comma-separated list of trusted proxies")
-	apiServerStartCmd.Flags().BoolVarP(&apiServerTLSEnable, "tls-enable", "", false,
-		"enable TLS for the API server")
-	apiServerStartCmd.Flags().StringVarP(&apiServerTLSCertFile, "tls-cert", "", "",
-		"path to TLS certificate file")
-	apiServerStartCmd.Flags().StringVarP(&apiServerTLSKeyFile, "tls-key", "", "",
-		"path to TLS key file")
-	apiServerStartCmd.Flags().IntVarP(&apiServerSSHBasePort, "ssh-base-port", "", 2223,
-		"SSH proxy base port")
-	apiServerStartCmd.Flags().IntVarP(&apiServerSSHMaxPort, "ssh-max-port", "", 2322,
-		"SSH proxy maximum port")
-	apiServerStartCmd.Flags().StringVarP(&apiServerOwner, "owner", "o", "",
-		"owner name for the API server container")
-	apiServerStartCmd.Flags().StringVarP(&apiServerRuntime, "runtime", "r", "docker",
-		"container runtime to use for API server")
-}
-
 func NewAPIServerNode(name, image, labsDir string, runtime clabruntime.ContainerRuntime,
 	env map[string]string, labels map[string]string,
 ) (*APIServerNode, error) {

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -307,8 +308,35 @@ func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
 
 			log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
+
 			// download the file to tmp location
-			err := clabutils.CopyFileContents(context.Background(), p, absDestFile, 0o755)
+			err := os.MkdirAll(filepath.Dir(absDestFile), 0o750)
+			if err != nil {
+				return err
+			}
+
+			out, err := os.Create(absDestFile)
+			if err != nil {
+				return err
+			}
+
+			// Change file ownership to user running Containerlab instead of effective UID
+			err = clabutils.SetUIDAndGID(absDestFile)
+			if err != nil {
+				return err
+			}
+
+			err = out.Chmod(0o755)
+			if err != nil {
+				return err
+			}
+
+			defer func() {
+				// should only err on repeated calls to close anyway
+				_ = out.Close()
+			}()
+
+			err = clabutils.CopyFileContents(context.Background(), p, out)
 			if err != nil {
 				return err
 			}

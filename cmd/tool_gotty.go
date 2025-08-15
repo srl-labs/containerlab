@@ -54,17 +54,20 @@ type GoTTYNode struct {
 	config *clabtypes.NodeConfig
 }
 
-func init() {
-	toolsCmd.AddCommand(gottyCmd)
-	gottyCmd.AddCommand(gottyAttachCmd)
-	gottyCmd.AddCommand(gottyDetachCmd)
-	gottyCmd.AddCommand(gottyListCmd)
-	gottyCmd.AddCommand(gottyReattachCmd)
+func gottyCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   gotty,
+		Short: "GoTTY web terminal operations",
+		Long:  "Attach or detach GoTTY web terminal containers to labs",
+	}
 
-	gottyCmd.PersistentFlags().StringVarP(&gottyOutputFormat, "format", "f", "table",
+	c.AddCommand(gottyListCmd)
+
+	c.PersistentFlags().StringVarP(&gottyOutputFormat, "format", "f", "table",
 		"output format for 'list' command (table, json)")
 
-	// Attach command flags
+	c.AddCommand(gottyAttachCmd)
+
 	gottyAttachCmd.Flags().StringVarP(&gottyLabName, "lab", "l", "",
 		"name of the lab to attach GoTTY container to")
 	gottyAttachCmd.Flags().StringVarP(&gottyContainerName, "name", "", "",
@@ -82,11 +85,13 @@ func init() {
 	gottyAttachCmd.Flags().StringVarP(&gottyOwner, "owner", "o", "",
 		"lab owner name for the GoTTY container")
 
-	// Detach command flags.
+	c.AddCommand(gottyDetachCmd)
+
 	gottyDetachCmd.Flags().StringVarP(&gottyLabName, "lab", "l", "",
 		"name of the lab where GoTTY container is attached")
 
-	// Reattach command flags.
+	c.AddCommand(gottyReattachCmd)
+
 	gottyReattachCmd.Flags().StringVarP(&gottyLabName, "lab", "l", "",
 		"name of the lab to reattach GoTTY container to")
 	gottyReattachCmd.Flags().StringVarP(&gottyContainerName, "name", "", "",
@@ -103,13 +108,8 @@ func init() {
 		"container image to use for GoTTY")
 	gottyReattachCmd.Flags().StringVarP(&gottyOwner, "owner", "o", "",
 		"lab owner name for the GoTTY container")
-}
 
-// gottyCmd represents the gotty command container.
-var gottyCmd = &cobra.Command{
-	Use:   gotty,
-	Short: "GoTTY web terminal operations",
-	Long:  "Attach or detach GoTTY web terminal containers to labs",
+	return c
 }
 
 // NewGoTTYNode creates a new GoTTY node configuration.

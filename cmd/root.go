@@ -7,6 +7,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,48 +21,73 @@ import (
 )
 
 var (
-	debugCount       int
-	logLevel         string
-	debug            bool
-	timeout          time.Duration
-	topoFile         string
-	varsFile         string
-	graph            bool
-	runtime          string
-	nodeFilter       []string
-	labName          string
-	gracefulShutdown bool
+	debugCount         int
+	logLevel           string
+	debug              bool
+	timeout            time.Duration
+	topoFile           string
+	varsFile           string
+	graph              bool
+	runtime            string
+	nodeFilter         []string
+	labName            string
+	gracefulShutdown   bool
+	configFilter       []string
+	templateVarOnly    bool
+	mgmtNetName        string
+	mgmtIPv4Subnet     net.IPNet
+	mgmtIPv6Subnet     net.IPNet
+	reconfigure        bool
+	maxWorkers         uint
+	skipPostDeploy     bool
+	exportTemplate     string
+	deployFormat       string
+	skipLabDirFileACLs bool
+	labOwner           string
+	all                bool
+	cleanup            bool
+	keepMgmtNet        bool
+	yes                bool
 )
 
-// RootCmd represents the base command when called without any subcommands.
-var RootCmd = &cobra.Command{
-	Use:               "containerlab",
-	Short:             "deploy container based lab environments with a user-defined interconnections",
-	PersistentPreRunE: preRunFn,
-	Aliases:           []string{"clab"},
-	SilenceUsage:      true,
-}
+func Entrypoint() *cobra.Command {
+	c := &cobra.Command{
+		Use:               "containerlab",
+		Short:             "deploy container based lab environments with a user-defined interconnections",
+		PersistentPreRunE: preRunFn,
+		Aliases:           []string{"clab"},
+		SilenceUsage:      true,
+	}
 
-func addSubcommands() {
-	RootCmd.AddCommand(InspectCmd)
-	RootCmd.AddCommand(clabcmdversion.VersionCmd)
-}
-
-func init() {
-	RootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
-	RootCmd.PersistentFlags().StringVarP(&topoFile, "topo", "t", "",
+	c.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
+	c.PersistentFlags().StringVarP(&topoFile, "topo", "t", "",
 		"path to the topology definition file, a directory containing one, 'stdin', or a URL")
-	RootCmd.PersistentFlags().StringVarP(&varsFile, "vars", "", "",
+	c.PersistentFlags().StringVarP(&varsFile, "vars", "", "",
 		"path to the topology template variables file")
-	_ = RootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
-	RootCmd.PersistentFlags().StringVarP(&labName, "name", "", "", "lab name")
-	RootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second,
+	_ = c.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
+	c.PersistentFlags().StringVarP(&labName, "name", "", "", "lab name")
+	c.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second,
 		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
-	RootCmd.PersistentFlags().StringVarP(&runtime, "runtime", "r", "", "container runtime")
-	RootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info",
+	c.PersistentFlags().StringVarP(&runtime, "runtime", "r", "", "container runtime")
+	c.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info",
 		"logging level; one of [trace, debug, info, warning, error, fatal]")
 
-	addSubcommands()
+	c.AddCommand(
+		clabcmdversion.VersionCmd(),
+		completionCmd,
+		configCmd(),
+		deployCmd(),
+		destroyCmd(),
+		execCmd(),
+		generateCmd(),
+		graphCmd(),
+		inspectCmd(),
+		redeployCmd(),
+		saveCmd(),
+		toolsCmd(),
+	)
+
+	return c
 }
 
 func preRunFn(cobraCmd *cobra.Command, _ []string) error {

@@ -12,15 +12,25 @@ import (
 	clablabels "github.com/srl-labs/containerlab/labels"
 )
 
-// toolsCmd represents the tools command.
-var toolsCmd = &cobra.Command{
-	Use:   "tools",
-	Short: "various tools your lab might need",
-	Long:  "tools command groups various tools you might need for your lab\nreference: https://containerlab.dev/cmd/tools/",
-}
+func toolsCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "tools",
+		Short: "various tools your lab might need",
+		Long:  "tools command groups various tools you might need for your lab\nreference: https://containerlab.dev/cmd/tools/",
+	}
 
-func init() {
-	RootCmd.AddCommand(toolsCmd)
+	c.AddCommand(
+		disableTxOffloadCmd(),
+		gottyCmd(),
+		sshxCmd(),
+		apiServerCmd(),
+		certCmd(),
+		netemCmd(),
+		vethCmd(),
+		vxlanCmd(),
+	)
+
+	return c
 }
 
 // createLabelsMap creates container labels map for additional containers launched after the lab
@@ -49,8 +59,7 @@ func createLabelsMap(topo, labName, containerName, owner, toolType string) map[s
 
 		// Set node lab directory
 		baseDir := filepath.Dir(topo)
-		labels[clablabels.NodeLabDir] =
-			filepath.Join(baseDir, "clab-"+labName, shortName)
+		labels[clablabels.NodeLabDir] = filepath.Join(baseDir, "clab-"+labName, shortName)
 	}
 
 	// Add owner label if available

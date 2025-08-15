@@ -27,19 +27,20 @@ var (
 	MTU  = clablinks.DefaultLinkMTU
 )
 
-func init() {
-	toolsCmd.AddCommand(vethCmd)
-	vethCmd.AddCommand(vethCreateCmd)
+func vethCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "veth",
+		Short: "veth operations",
+	}
+
+	c.AddCommand(vethCreateCmd)
 	vethCreateCmd.Flags().StringVarP(&AEnd, "a-endpoint", "a", "",
 		"veth endpoint A in the format of <containerA-name>:<interface-name> or <endpointA-type>:<endpoint-name>:<interface-name>")
 	vethCreateCmd.Flags().StringVarP(&BEnd, "b-endpoint", "b", "",
 		"veth endpoint B in the format of <containerB-name>:<interface-name> or <endpointB-type>:<endpoint-name>:<interface-name>")
 	vethCreateCmd.Flags().IntVarP(&MTU, "mtu", "m", MTU, "link MTU")
-}
 
-var vethCmd = &cobra.Command{
-	Use:   "veth",
-	Short: "veth operations",
+	return c
 }
 
 var vethCreateCmd = &cobra.Command{
