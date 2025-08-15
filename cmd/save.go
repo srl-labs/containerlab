@@ -5,15 +5,10 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"sync"
 
-	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clablinks "github.com/srl-labs/containerlab/links"
-	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -23,7 +18,7 @@ var saveCmd = &cobra.Command{
 	Short: "save containers configuration",
 	Long: `save performs a configuration save. The exact command that is used to save the config depends on the node kind.
 Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact command used per node's kind`,
-	RunE: func(_ *cobra.Command, _ []string) error {
+	RunE: func(cobraCmd *cobra.Command, _ []string) error {
 		if labName == "" && topoFile == "" {
 			return fmt.Errorf("provide topology file path  with --topo flag")
 		}
@@ -46,29 +41,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 			return err
 		}
 
-		err = clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
-		if err != nil {
-			return err
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		var wg sync.WaitGroup
-		wg.Add(len(c.Nodes))
-		for _, node := range c.Nodes {
-			go func(node clabnodes.Node) {
-				defer wg.Done()
-
-				err := node.SaveConfig(ctx)
-				if err != nil {
-					log.Errorf("err: %v", err)
-				}
-			}(node)
-		}
-		wg.Wait()
-
-		return nil
+		return c.Save(cobraCmd.Context())
 	},
 }
 

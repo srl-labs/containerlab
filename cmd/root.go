@@ -39,6 +39,7 @@ var RootCmd = &cobra.Command{
 	Short:             "deploy container based lab environments with a user-defined interconnections",
 	PersistentPreRunE: preRunFn,
 	Aliases:           []string{"clab"},
+	SilenceUsage:      true,
 }
 
 func addSubcommands() {
@@ -47,7 +48,6 @@ func addSubcommands() {
 }
 
 func init() {
-	RootCmd.SilenceUsage = true
 	RootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
 	RootCmd.PersistentFlags().StringVarP(&topoFile, "topo", "t", "",
 		"path to the topology definition file, a directory containing one, 'stdin', or a URL")

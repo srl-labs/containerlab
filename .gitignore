@@ -52,3 +52,7 @@ __pycache__
 .env
 
 .zed
+
+# to keep robot things away
+venv/
+.venv/
