@@ -33,8 +33,11 @@ linters:
     - lll
     - mnd
     - nestif
+    - perfsprint
     - prealloc
     - revive
+    - wrapcheck
+    - wsl # deprecated, eventually we'll enable wsl_v5
     - wsl_v5
   settings:
     dupl:
@@ -47,11 +50,7 @@ linters:
       min-occurrences: 2
     gocritic:
       disabled-checks:
-        - dupImport
-        - ifElseChain
-        - octalLiteral
         - whyNoLint
-        - wrapperFunc
       enabled-tags:
         - diagnostic
         - experimental
@@ -84,12 +83,6 @@ linters:
       require-specific: false
       allow-unused: false
   exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
     rules:
       # we *care* about tests, but... like less :P
       - linters:
@@ -103,10 +96,6 @@ linters:
       - linters:
           - staticcheck
         text: could remove embedded field
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 formatters:
   enable:
     - gofmt

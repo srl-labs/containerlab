@@ -25,26 +25,13 @@ import (
 
 const gotty string = "gotty"
 
-// Configuration variables for the GoTTY commands.
-var (
-	gottyLabName       string
-	gottyContainerName string
-	gottyPort          int
-	gottyUsername      string
-	gottyPassword      string
-	gottyShell         string
-	gottyImage         string
-	gottyOutputFormat  string
-	gottyOwner         string
-)
-
 // GoTTYListItem defines the structure for GoTTY container info in JSON output.
 type GoTTYListItem struct {
 	Name        string `json:"name"`
 	Network     string `json:"network"`
 	State       string `json:"state"`
 	IPv4Address string `json:"ipv4_address"`
-	Port        int    `json:"port"`
+	Port        uint   `json:"port"`
 	WebURL      string `json:"web_url"`
 	Owner       string `json:"owner"`
 }
@@ -71,7 +58,7 @@ func gottyCmd(o *Options) (*cobra.Command, error) {
 
 	c.AddCommand(gottyListCmd)
 
-	c.PersistentFlags().StringVarP(&gottyOutputFormat, "format", "f", "table",
+	c.PersistentFlags().StringVarP(&o.ToolsGoTTY.Format, "format", "f", o.ToolsGoTTY.Format,
 		"output format for 'list' command (table, json)")
 
 	gottyAttachCmd := &cobra.Command{
@@ -85,21 +72,21 @@ func gottyCmd(o *Options) (*cobra.Command, error) {
 
 	c.AddCommand(gottyAttachCmd)
 
-	gottyAttachCmd.Flags().StringVarP(&gottyLabName, "lab", "l", "",
+	gottyAttachCmd.Flags().StringVarP(&o.Global.TopologyName, "lab", "l", o.Global.TopologyName,
 		"name of the lab to attach GoTTY container to")
-	gottyAttachCmd.Flags().StringVarP(&gottyContainerName, "name", "", "",
+	gottyAttachCmd.Flags().StringVarP(&o.ToolsGoTTY.ContainerName, "name", "", o.ToolsGoTTY.ContainerName,
 		"name of the GoTTY container (defaults to gotty-<labname>)")
-	gottyAttachCmd.Flags().IntVarP(&gottyPort, "port", "p", 8080,
+	gottyAttachCmd.Flags().UintVarP(&o.ToolsGoTTY.Port, "port", "p", o.ToolsGoTTY.Port,
 		"port for GoTTY web terminal")
-	gottyAttachCmd.Flags().StringVarP(&gottyUsername, "username", "u", "admin",
+	gottyAttachCmd.Flags().StringVarP(&o.ToolsGoTTY.Username, "username", "u", o.ToolsGoTTY.Username,
 		"username for GoTTY web terminal authentication")
-	gottyAttachCmd.Flags().StringVarP(&gottyPassword, "password", "P", "admin",
+	gottyAttachCmd.Flags().StringVarP(&o.ToolsGoTTY.Password, "password", "P", o.ToolsGoTTY.Password,
 		"password for GoTTY web terminal authentication")
-	gottyAttachCmd.Flags().StringVarP(&gottyShell, "shell", "s", "bash",
+	gottyAttachCmd.Flags().StringVarP(&o.ToolsGoTTY.Shell, "shell", "s", o.ToolsGoTTY.Shell,
 		"shell to use for GoTTY web terminal")
-	gottyAttachCmd.Flags().StringVarP(&gottyImage, "image", "i", "ghcr.io/srl-labs/network-multitool",
+	gottyAttachCmd.Flags().StringVarP(&o.ToolsGoTTY.Image, "image", "i", o.ToolsGoTTY.Image,
 		"container image to use for GoTTY")
-	gottyAttachCmd.Flags().StringVarP(&gottyOwner, "owner", "o", "",
+	gottyAttachCmd.Flags().StringVarP(&o.ToolsGoTTY.Owner, "owner", "o", o.ToolsGoTTY.Owner,
 		"lab owner name for the GoTTY container")
 
 	gottyDetachCmd := &cobra.Command{
@@ -113,7 +100,7 @@ func gottyCmd(o *Options) (*cobra.Command, error) {
 
 	c.AddCommand(gottyDetachCmd)
 
-	gottyDetachCmd.Flags().StringVarP(&gottyLabName, "lab", "l", "",
+	gottyDetachCmd.Flags().StringVarP(&o.Global.TopologyName, "lab", "l", o.Global.TopologyName,
 		"name of the lab where GoTTY container is attached")
 
 	gottyReattachCmd := &cobra.Command{
@@ -127,28 +114,28 @@ func gottyCmd(o *Options) (*cobra.Command, error) {
 
 	c.AddCommand(gottyReattachCmd)
 
-	gottyReattachCmd.Flags().StringVarP(&gottyLabName, "lab", "l", "",
+	gottyReattachCmd.Flags().StringVarP(&o.Global.TopologyName, "lab", "l", o.Global.TopologyName,
 		"name of the lab to reattach GoTTY container to")
-	gottyReattachCmd.Flags().StringVarP(&gottyContainerName, "name", "", "",
+	gottyReattachCmd.Flags().StringVarP(&o.ToolsGoTTY.ContainerName, "name", "", o.ToolsGoTTY.ContainerName,
 		"name of the GoTTY container (defaults to gotty-<labname>)")
-	gottyReattachCmd.Flags().IntVarP(&gottyPort, "port", "p", 8080,
+	gottyReattachCmd.Flags().UintVarP(&o.ToolsGoTTY.Port, "port", "p", o.ToolsGoTTY.Port,
 		"port for GoTTY web terminal")
-	gottyReattachCmd.Flags().StringVarP(&gottyUsername, "username", "u", "admin",
+	gottyReattachCmd.Flags().StringVarP(&o.ToolsGoTTY.Username, "username", "u", o.ToolsGoTTY.Username,
 		"username for GoTTY web terminal authentication")
-	gottyReattachCmd.Flags().StringVarP(&gottyPassword, "password", "P", "admin",
+	gottyReattachCmd.Flags().StringVarP(&o.ToolsGoTTY.Password, "password", "P", o.ToolsGoTTY.Password,
 		"password for GoTTY web terminal authentication")
-	gottyReattachCmd.Flags().StringVarP(&gottyShell, "shell", "s", "bash",
+	gottyReattachCmd.Flags().StringVarP(&o.ToolsGoTTY.Shell, "shell", "s", o.ToolsGoTTY.Shell,
 		"shell to use for GoTTY web terminal")
-	gottyReattachCmd.Flags().StringVarP(&gottyImage, "image", "i", "ghcr.io/srl-labs/network-multitool",
+	gottyReattachCmd.Flags().StringVarP(&o.ToolsGoTTY.Image, "image", "i", o.ToolsGoTTY.Image,
 		"container image to use for GoTTY")
-	gottyReattachCmd.Flags().StringVarP(&gottyOwner, "owner", "o", "",
+	gottyReattachCmd.Flags().StringVarP(&o.ToolsGoTTY.Owner, "owner", "o", o.ToolsGoTTY.Owner,
 		"lab owner name for the GoTTY container")
 
 	return c, nil
 }
 
 // NewGoTTYNode creates a new GoTTY node configuration.
-func NewGoTTYNode(name, image, network string, port int, username, password, shell string, labels map[string]string) *GoTTYNode {
+func NewGoTTYNode(name, image, network string, port uint, username, password, shell string, labels map[string]string) *GoTTYNode {
 	log.Debugf("Creating GoTTYNode: name=%s, image=%s, network=%s, port=%d, username=%s, shell=%s",
 		name, image, network, port, username, shell)
 
@@ -211,7 +198,7 @@ func getGoTTYStatus(
 	ctx context.Context,
 	rt clabruntime.ContainerRuntime,
 	containerName string,
-	port int,
+	port uint,
 ) (running bool, webURL string) {
 	// Pass the port parameter to the status command
 	statusCmd := fmt.Sprintf("gotty-service status %d", port)
@@ -237,11 +224,13 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	ctx := cobraCmd.Context()
 
 	log.Debugf("gotty attach called with flags: labName='%s', containerName='%s', port=%d, username='%s', password='%s', shell='%s', image='%s', topo='%s'",
-		gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, o.Global.TopologyFile)
+		o.Global.TopologyName, o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Port,
+		o.ToolsGoTTY.Username, o.ToolsGoTTY.Password, o.ToolsGoTTY.Shell, o.ToolsGoTTY.Image, o.Global.TopologyFile)
 
 	// Get lab topology information
 	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		gottyLabName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, gracefulShutdown)
+		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0,
+		o.Global.Timeout, o.Destroy.GracefulShutdown)
 	if err != nil {
 		return err
 	}
@@ -252,9 +241,9 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	// Set container name if not provided
-	if gottyContainerName == "" {
-		gottyContainerName = fmt.Sprintf("clab-%s-gotty", labName)
-		log.Debugf("Container name not provided, generated name: %s", gottyContainerName)
+	if o.ToolsGoTTY.ContainerName == "" {
+		o.ToolsGoTTY.ContainerName = fmt.Sprintf("clab-%s-gotty", labName)
+		log.Debugf("Container name not provided, generated name: %s", o.ToolsGoTTY.ContainerName)
 	}
 
 	// Initialize runtime
@@ -273,23 +262,23 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	// Check if container already exists
-	filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: gottyContainerName}}
+	filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: o.ToolsGoTTY.ContainerName}}
 	containers, err := rt.ListContainers(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
 	if len(containers) > 0 {
-		return fmt.Errorf("container %s already exists", gottyContainerName)
+		return fmt.Errorf("container %s already exists", o.ToolsGoTTY.ContainerName)
 	}
 
 	// Pull the container image
-	log.Infof("Pulling image %s...", gottyImage)
-	if err := rt.PullImage(ctx, gottyImage, clabtypes.PullPolicyAlways); err != nil {
-		return fmt.Errorf("failed to pull image %s: %w", gottyImage, err)
+	log.Infof("Pulling image %s...", o.ToolsGoTTY.Image)
+	if err := rt.PullImage(ctx, o.ToolsGoTTY.Image, clabtypes.PullPolicyAlways); err != nil {
+		return fmt.Errorf("failed to pull image %s: %w", o.ToolsGoTTY.Image, err)
 	}
 
 	// Create container labels
-	owner := gottyOwner
+	owner := o.ToolsGoTTY.Owner
 	if owner == "" {
 		owner = clabutils.GetOwner()
 	}
@@ -297,15 +286,15 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	labelsMap := createLabelsMap(
 		clabInstance.TopoPaths.TopologyFilenameAbsPath(),
 		labName,
-		gottyContainerName,
+		o.ToolsGoTTY.ContainerName,
 		owner,
 		gotty,
 	)
 
 	// Create and start GoTTY container
-	log.Infof("Creating GoTTY container %s on network '%s'", gottyContainerName, networkName)
-	gottyNode := NewGoTTYNode(gottyContainerName, gottyImage, networkName, gottyPort,
-		gottyUsername, gottyPassword, gottyShell, labelsMap)
+	log.Infof("Creating GoTTY container %s on network '%s'", o.ToolsGoTTY.ContainerName, networkName)
+	gottyNode := NewGoTTYNode(o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Image, networkName, o.ToolsGoTTY.Port,
+		o.ToolsGoTTY.Username, o.ToolsGoTTY.Password, o.ToolsGoTTY.Shell, labelsMap)
 
 	id, err := rt.CreateContainer(ctx, gottyNode.Config())
 	if err != nil {
@@ -314,11 +303,11 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	if _, err := rt.StartContainer(ctx, id, gottyNode); err != nil {
 		// Clean up on failure
-		rt.DeleteContainer(ctx, gottyContainerName)
+		rt.DeleteContainer(ctx, o.ToolsGoTTY.ContainerName)
 		return fmt.Errorf("failed to start GoTTY container: %w", err)
 	}
 
-	log.Infof("GoTTY container %s started. Waiting for GoTTY service to initialize...", gottyContainerName)
+	log.Infof("GoTTY container %s started. Waiting for GoTTY service to initialize...", o.ToolsGoTTY.ContainerName)
 
 	// Wait for GoTTY service with retries
 	var running bool
@@ -327,7 +316,7 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	for i := 0; i < maxRetries; i++ {
 		time.Sleep(3 * time.Second)
-		running, webURL = getGoTTYStatus(ctx, rt, gottyContainerName, gottyPort)
+		running, webURL = getGoTTYStatus(ctx, rt, o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Port)
 		if running {
 			break
 		}
@@ -336,14 +325,14 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	if !running {
 		log.Warnf("GoTTY container started but service may not be running.")
-		log.Warnf("Check the container logs: docker logs %s", gottyContainerName)
+		log.Warnf("Check the container logs: docker logs %s", o.ToolsGoTTY.ContainerName)
 		return nil
 	}
 
 	log.Info("GoTTY web terminal successfully started",
 		"url", webURL,
-		"username", gottyUsername,
-		"password", gottyPassword,
+		"username", o.ToolsGoTTY.Username,
+		"password", o.ToolsGoTTY.Password,
 		"note", fmt.Sprintf("From the web terminal, you can connect to lab nodes using SSH: ssh admin@clab-%s-<node-name>", labName))
 
 	return nil
@@ -354,7 +343,8 @@ func gottyDetach(cobraCmd *cobra.Command, o *Options) error {
 
 	// Get lab topology information
 	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		gottyLabName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, gracefulShutdown)
+		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0,
+		o.Global.Timeout, o.Destroy.GracefulShutdown)
 	if err != nil {
 		return err
 	}
@@ -419,7 +409,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	if len(containers) == 0 {
-		if gottyOutputFormat == "json" {
+		if o.ToolsGoTTY.Format == "json" {
 			fmt.Println("[]")
 		} else {
 			fmt.Println("No active GoTTY containers found")
@@ -443,11 +433,11 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		}
 
 		// Get port from container
-		port := gottyPort // Default port
+		port := o.ToolsGoTTY.Port // Default port
 		if len(containers[idx].Ports) > 0 {
 			for _, p := range containers[idx].Ports {
 				if p.HostPort != 0 {
-					port = p.HostPort
+					port = uint(p.HostPort)
 					break
 				}
 			}
@@ -476,7 +466,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	// Output based on format
-	if gottyOutputFormat == "json" {
+	if o.ToolsGoTTY.Format == "json" {
 		b, err := json.MarshalIndent(listItems, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)
@@ -513,11 +503,13 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	ctx := cobraCmd.Context()
 
 	log.Debugf("gotty reattach called with flags: labName='%s', containerName='%s', port=%d, username='%s', password='%s', shell='%s', image='%s', topo='%s'",
-		gottyLabName, gottyContainerName, gottyPort, gottyUsername, gottyPassword, gottyShell, gottyImage, o.Global.TopologyFile)
+		o.Global.TopologyName, o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Port,
+		o.ToolsGoTTY.Username, o.ToolsGoTTY.Password, o.ToolsGoTTY.Shell, o.ToolsGoTTY.Image, o.Global.TopologyFile)
 
 	// Get lab topology information
 	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		gottyLabName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, gracefulShutdown)
+		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0,
+		o.Global.Timeout, o.Destroy.GracefulShutdown)
 	if err != nil {
 		return err
 	}
@@ -531,9 +523,9 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	// Set container name if not provided
-	if gottyContainerName == "" {
-		gottyContainerName = fmt.Sprintf("clab-%s-gotty", labName)
-		log.Debugf("Container name not provided, generated name: %s", gottyContainerName)
+	if o.ToolsGoTTY.ContainerName == "" {
+		o.ToolsGoTTY.ContainerName = fmt.Sprintf("clab-%s-gotty", labName)
+		log.Debugf("Container name not provided, generated name: %s", o.ToolsGoTTY.ContainerName)
 	}
 
 	// Initialize runtime
@@ -552,24 +544,24 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	// Step 1: Detach (remove) existing GoTTY container if it exists
-	log.Infof("Removing existing GoTTY container %s if present...", gottyContainerName)
-	err = rt.DeleteContainer(ctx, gottyContainerName)
+	log.Infof("Removing existing GoTTY container %s if present...", o.ToolsGoTTY.ContainerName)
+	err = rt.DeleteContainer(ctx, o.ToolsGoTTY.ContainerName)
 	if err != nil {
 		// Just log the error but continue - the container might not exist
-		log.Debugf("Could not remove container %s: %v. This is normal if it doesn't exist.", gottyContainerName, err)
+		log.Debugf("Could not remove container %s: %v. This is normal if it doesn't exist.", o.ToolsGoTTY.ContainerName, err)
 	} else {
 		log.Infof("Successfully removed existing GoTTY container")
 	}
 
 	// Step 2: Create and attach new GoTTY container
 	// Pull the container image
-	log.Infof("Pulling image %s...", gottyImage)
-	if err := rt.PullImage(ctx, gottyImage, clabtypes.PullPolicyAlways); err != nil {
-		return fmt.Errorf("failed to pull image %s: %w", gottyImage, err)
+	log.Infof("Pulling image %s...", o.ToolsGoTTY.Image)
+	if err := rt.PullImage(ctx, o.ToolsGoTTY.Image, clabtypes.PullPolicyAlways); err != nil {
+		return fmt.Errorf("failed to pull image %s: %w", o.ToolsGoTTY.Image, err)
 	}
 
 	// Create container labels
-	owner := gottyOwner
+	owner := o.ToolsGoTTY.Owner
 	if owner == "" {
 		owner = clabutils.GetOwner()
 	}
@@ -577,15 +569,15 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	labelsMap := createLabelsMap(
 		clabInstance.TopoPaths.TopologyFilenameAbsPath(),
 		labName,
-		gottyContainerName,
+		o.ToolsGoTTY.ContainerName,
 		owner,
 		gotty,
 	)
 
 	// Create and start GoTTY container
-	log.Infof("Creating new GoTTY container %s on network '%s'", gottyContainerName, networkName)
-	gottyNode := NewGoTTYNode(gottyContainerName, gottyImage, networkName, gottyPort,
-		gottyUsername, gottyPassword, gottyShell, labelsMap)
+	log.Infof("Creating new GoTTY container %s on network '%s'", o.ToolsGoTTY.ContainerName, networkName)
+	gottyNode := NewGoTTYNode(o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Image, networkName, o.ToolsGoTTY.Port,
+		o.ToolsGoTTY.Username, o.ToolsGoTTY.Password, o.ToolsGoTTY.Shell, labelsMap)
 
 	id, err := rt.CreateContainer(ctx, gottyNode.Config())
 	if err != nil {
@@ -594,37 +586,37 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	if _, err := rt.StartContainer(ctx, id, gottyNode); err != nil {
 		// Clean up on failure
-		rt.DeleteContainer(ctx, gottyContainerName)
+		rt.DeleteContainer(ctx, o.ToolsGoTTY.ContainerName)
 		return fmt.Errorf("failed to start GoTTY container: %w", err)
 	}
 
-	log.Infof("GoTTY container %s started. Waiting for GoTTY service to initialize...", gottyContainerName)
+	log.Infof("GoTTY container %s started. Waiting for GoTTY service to initialize...", o.ToolsGoTTY.ContainerName)
 	time.Sleep(5 * time.Second)
 
 	// Get GoTTY status
-	running, webURL := getGoTTYStatus(ctx, rt, gottyContainerName, gottyPort)
+	running, webURL := getGoTTYStatus(ctx, rt, o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Port)
 	if !running {
 		// Use direct formatting to avoid the %s issue
 		log.Warnf("GoTTY container started but service may not be running.")
-		log.Warnf("Check the container logs: docker logs %s", gottyContainerName)
+		log.Warnf("Check the container logs: docker logs %s", o.ToolsGoTTY.ContainerName)
 		return nil
 	}
 
 	// Get container IP if webURL is empty
 	if webURL == "" {
 		filter := []*clabtypes.GenericFilter{{
-			FilterType: "name", Match: gottyContainerName,
+			FilterType: "name", Match: o.ToolsGoTTY.ContainerName,
 		}}
 		containers, err := rt.ListContainers(ctx, filter)
 		if err == nil && len(containers) > 0 {
-			webURL = fmt.Sprintf("http://%s:%d", containers[0].NetworkSettings.IPv4addr, gottyPort)
+			webURL = fmt.Sprintf("http://%s:%d", containers[0].NetworkSettings.IPv4addr, o.ToolsGoTTY.Port)
 		}
 	}
 
 	log.Info("GoTTY web terminal successfully reattached",
 		"url", webURL,
-		"username", gottyUsername,
-		"password", gottyPassword,
+		"username", o.ToolsGoTTY.Username,
+		"password", o.ToolsGoTTY.Password,
 		"note", fmt.Sprintf("From the web terminal, you can connect to lab nodes using SSH: ssh admin@clab-%s-<node-name>", labName))
 
 	return nil

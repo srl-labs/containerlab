@@ -36,7 +36,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 	// Use common.Runtime for consistency with other commands
 	runtimeName := o.Global.Runtime
 	if runtimeName == "" {
-		runtimeName = apiServerRuntime
+		runtimeName = o.ToolsAPI.Runtime
 	}
 
 	// Initialize containerlab with runtime using the same approach as inspect command
@@ -46,7 +46,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 			&clabruntime.RuntimeConfig{
 				Debug:            o.Global.DebugCount > 0,
 				Timeout:          o.Global.Timeout,
-				GracefulShutdown: gracefulShutdown,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
 			},
 		),
 		clabcore.WithDebug(o.Global.DebugCount > 0),
@@ -69,7 +69,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 	}
 
 	if len(containers) == 0 {
-		if outputFormatAPI == "json" {
+		if o.ToolsAPI.OutputFormat == "json" {
 			fmt.Println("[]")
 		} else {
 			fmt.Println("No active API server containers found")
@@ -125,8 +125,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 		})
 	}
 
-	// Output based on format
-	if outputFormatAPI == "json" {
+	if o.ToolsAPI.OutputFormat == "json" {
 		b, err := json.MarshalIndent(listItems, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)

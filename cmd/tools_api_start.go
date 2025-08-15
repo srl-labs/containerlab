@@ -97,7 +97,7 @@ func getclabBinaryPath() (string, error) {
 }
 
 // createLabels creates container labels.
-func createAPIServerLabels(containerName, owner string, port int, labsDir, host, runtimeType string) map[string]string {
+func createAPIServerLabels(containerName, owner string, port uint, labsDir, host, runtimeType string) map[string]string {
 	labels := map[string]string{
 		clablabels.NodeName: containerName,
 		clablabels.NodeKind: "linux",
@@ -118,9 +118,9 @@ func createAPIServerLabels(containerName, owner string, port int, labsDir, host,
 }
 
 // getOwnerName gets owner name from flag or environment variables.
-func getOwnerName() string {
-	if apiServerOwner != "" {
-		return apiServerOwner
+func getOwnerName(o *Options) string {
+	if o.ToolsAPI.Owner != "" {
+		return o.ToolsAPI.Owner
 	}
 
 	if owner := os.Getenv("SUDO_USER"); owner != "" {
@@ -134,12 +134,12 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 	ctx := cobraCmd.Context()
 
 	log.Debugf("api-server start called with flags: name='%s', image='%s', labsDir='%s', port=%d, host='%s'",
-		apiServerName, apiServerImage, apiServerLabsDir, apiServerPort, apiServerHost)
+		o.ToolsAPI.Name, o.ToolsAPI.Image, o.ToolsAPI.LabsDirectory, o.ToolsAPI.Port, o.ToolsAPI.Host)
 
 	// Generate random JWT secret if not provided
-	if apiServerJWTSecret == "" {
+	if o.ToolsAPI.JWTSecret == "" {
 		var err error
-		apiServerJWTSecret, err = generateRandomJWTSecret()
+		o.ToolsAPI.JWTSecret, err = generateRandomJWTSecret()
 		if err != nil {
 			return fmt.Errorf("failed to generate random JWT secret: %w", err)
 		}
@@ -148,7 +148,7 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 
 	runtimeName := o.Global.Runtime
 	if runtimeName == "" {
-		runtimeName = apiServerRuntime
+		runtimeName = o.ToolsAPI.Runtime
 	}
 
 	// Initialize runtime
@@ -164,65 +164,67 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 	}
 
 	// Check if container already exists
-	filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: apiServerName}}
+	filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: o.ToolsAPI.Name}}
 	containers, err := rt.ListContainers(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
 	if len(containers) > 0 {
-		return fmt.Errorf("container %s already exists", apiServerName)
+		return fmt.Errorf("container %s already exists", o.ToolsAPI.Name)
 	}
 
 	// Pull the container image
-	log.Infof("Pulling image %s...", apiServerImage)
-	if err := rt.PullImage(ctx, apiServerImage, clabtypes.PullPolicyAlways); err != nil {
-		return fmt.Errorf("failed to pull image %s: %w", apiServerImage, err)
+	log.Infof("Pulling image %s...", o.ToolsAPI.Image)
+	if err := rt.PullImage(ctx, o.ToolsAPI.Image, clabtypes.PullPolicyAlways); err != nil {
+		return fmt.Errorf("failed to pull image %s: %w", o.ToolsAPI.Image, err)
 	}
 
 	// Create environment variables map
 	env := map[string]string{
-		"CLAB_SHARED_LABS_DIR":   apiServerLabsDir,
-		"API_PORT":               fmt.Sprintf("%d", apiServerPort),
-		"API_SERVER_HOST":        apiServerHost,
-		"JWT_SECRET":             apiServerJWTSecret,
-		"JWT_EXPIRATION_MINUTES": apiServerJWTExpiration,
-		"API_USER_GROUP":         apiServerUserGroup,
-		"SUPERUSER_GROUP":        apiServerSuperUserGroup,
-		"CLAB_RUNTIME":           apiServerRuntime,
-		"LOG_LEVEL":              apiServerLogLevel,
-		"GIN_MODE":               apiServerGinMode,
+		"CLAB_SHARED_LABS_DIR":   o.ToolsAPI.LabsDirectory,
+		"API_PORT":               fmt.Sprintf("%d", o.ToolsAPI.Port),
+		"API_SERVER_HOST":        o.ToolsAPI.Host,
+		"JWT_SECRET":             o.ToolsAPI.JWTSecret,
+		"JWT_EXPIRATION_MINUTES": o.ToolsAPI.JWTExpiration,
+		"API_USER_GROUP":         o.ToolsAPI.UserGroup,
+		"SUPERUSER_GROUP":        o.ToolsAPI.SuperUserGroup,
+		"CLAB_RUNTIME":           o.ToolsAPI.Runtime,
+		"LOG_LEVEL":              o.ToolsAPI.LogLevel,
+		"GIN_MODE":               o.ToolsAPI.GinMode,
 	}
 
 	// Add optional environment variables
-	if apiServerTrustedProxies != "" {
-		env["TRUSTED_PROXIES"] = apiServerTrustedProxies
+	if o.ToolsAPI.TrustedProxies != "" {
+		env["TRUSTED_PROXIES"] = o.ToolsAPI.TrustedProxies
 	}
-	if apiServerTLSEnable {
+	if o.ToolsAPI.TLSEnable {
 		env["TLS_ENABLE"] = "true"
-		if apiServerTLSCertFile != "" {
-			env["TLS_CERT_FILE"] = apiServerTLSCertFile
+		if o.ToolsAPI.TLSCertFile != "" {
+			env["TLS_CERT_FILE"] = o.ToolsAPI.TLSCertFile
 		}
-		if apiServerTLSKeyFile != "" {
-			env["TLS_KEY_FILE"] = apiServerTLSKeyFile
+		if o.ToolsAPI.TLSKeyFile != "" {
+			env["TLS_KEY_FILE"] = o.ToolsAPI.TLSKeyFile
 		}
 	}
-	if apiServerSSHBasePort > 0 {
-		env["SSH_BASE_PORT"] = fmt.Sprintf("%d", apiServerSSHBasePort)
+	if o.ToolsAPI.SSHBasePort > 0 {
+		env["SSH_BASE_PORT"] = fmt.Sprintf("%d", o.ToolsAPI.SSHBasePort)
 	}
-	if apiServerSSHMaxPort > 0 {
-		env["SSH_MAX_PORT"] = fmt.Sprintf("%d", apiServerSSHMaxPort)
+	if o.ToolsAPI.SSHMaxPort > 0 {
+		env["SSH_MAX_PORT"] = fmt.Sprintf("%d", o.ToolsAPI.SSHMaxPort)
 	}
 
 	// Create container labels
-	if apiServerLabsDir == "" {
-		apiServerLabsDir = "~/.clab"
+	if o.ToolsAPI.LabsDirectory == "" {
+		o.ToolsAPI.LabsDirectory = "~/.clab"
 	}
-	owner := getOwnerName()
-	labels := createAPIServerLabels(apiServerName, owner, apiServerPort, apiServerLabsDir, apiServerHost, runtimeName)
+	owner := getOwnerName(o)
+	labels := createAPIServerLabels(o.ToolsAPI.Name, owner, o.ToolsAPI.Port,
+		o.ToolsAPI.LabsDirectory, o.ToolsAPI.Host, runtimeName)
 
 	// Create and start API server container
-	log.Infof("Creating API server container %s", apiServerName)
-	apiServerNode, err := NewAPIServerNode(apiServerName, apiServerImage, apiServerLabsDir, rt, env, labels)
+	log.Infof("Creating API server container %s", o.ToolsAPI.Name)
+	apiServerNode, err := NewAPIServerNode(o.ToolsAPI.Name, o.ToolsAPI.Image,
+		o.ToolsAPI.LabsDirectory, rt, env, labels)
 	if err != nil {
 		return err
 	}
@@ -234,14 +236,14 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 
 	if _, err := rt.StartContainer(ctx, id, apiServerNode); err != nil {
 		// Clean up on failure
-		rt.DeleteContainer(ctx, apiServerName)
+		rt.DeleteContainer(ctx, o.ToolsAPI.Name)
 		return fmt.Errorf("failed to start API server container: %w", err)
 	}
 
-	log.Infof("API server container %s started successfully.", apiServerName)
-	log.Infof("API Server available at: http://%s:%d", apiServerHost, apiServerPort)
-	if apiServerTLSEnable {
-		log.Infof("API Server TLS enabled at: https://%s:%d", apiServerHost, apiServerPort)
+	log.Infof("API server container %s started successfully.", o.ToolsAPI.Name)
+	log.Infof("API Server available at: http://%s:%d", o.ToolsAPI.Host, o.ToolsAPI.Port)
+	if o.ToolsAPI.TLSEnable {
+		log.Infof("API Server TLS enabled at: https://%s:%d", o.ToolsAPI.Host, o.ToolsAPI.Port)
 	}
 
 	return nil

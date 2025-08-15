@@ -26,12 +26,14 @@ func GetCanonicalImageName(imageName string) string {
 		// split on slash to get first element of the name
 		nameSplit := strings.Split(imageName, "/")
 		// case of foo.bar/baz
-		if strings.Contains(nameSplit[0], ".") {
+
+		switch {
+		case strings.Contains(nameSplit[0], "."):
 			canonicalImageName = imageName
-		} else if strings.Contains(nameSplit[0], "localhost") {
+		case strings.Contains(nameSplit[0], "localhost"):
 			// case of localhost/foo:bar - podman prefixes local images with "localhost"
 			canonicalImageName = imageName
-		} else {
+		default:
 			canonicalImageName = "docker.io/" + imageName
 		}
 	}

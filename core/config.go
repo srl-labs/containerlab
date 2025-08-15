@@ -654,22 +654,22 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	noProxyLower, existsLower := nodeCfg.Env["no_proxy"]
 	noProxyUpper, existsUpper := nodeCfg.Env["NO_PROXY"]
 	noProxy := ""
-	if existsLower {
+
+	switch {
+	case existsLower:
 		noProxy = noProxyLower
-		for _, defaultValue := range noProxyDefaults {
-			if !strings.Contains(noProxy, defaultValue) {
-				noProxy = noProxy + "," + defaultValue
-			}
-		}
-	} else if existsUpper {
+	case existsUpper:
 		noProxy = noProxyUpper
+	default:
+		noProxy = strings.Join(noProxyDefaults, ",")
+	}
+
+	if existsLower || existsUpper {
 		for _, defaultValue := range noProxyDefaults {
 			if !strings.Contains(noProxy, defaultValue) {
 				noProxy = noProxy + "," + defaultValue
 			}
 		}
-	} else {
-		noProxy = strings.Join(noProxyDefaults, ",")
 	}
 
 	// add all clab nodes to the no_proxy variable, if they have a static IP assigned, add this as well

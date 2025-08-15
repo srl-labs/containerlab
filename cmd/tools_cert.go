@@ -17,103 +17,104 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	commonName       string
-	country          string
-	locality         string
-	organization     string
-	organizationUnit string
-	expiry           string
-	path             string
-	caNamePrefix     string
-	certNamePrefix   string
-	certHosts        []string
-	caCertPath       string
-	caKeyPath        string
-	keySize          int
-)
-
 func certCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "cert",
 		Short: "TLS certificate operations",
 	}
 
+	CACmd := &cobra.Command{
+		Use:   "ca",
+		Short: "certificate authority operations",
+	}
+
 	c.AddCommand(CACmd)
+
+	CACreateCmd := &cobra.Command{
+		Use:   "create",
+		Short: "create ca certificate and key",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return createCA(o)
+		},
+	}
+
 	CACmd.AddCommand(CACreateCmd)
-	CACreateCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.dev", "Common Name")
-	CACreateCmd.Flags().StringVarP(&country, "country", "c", "Internet", "Country")
-	CACreateCmd.Flags().StringVarP(&locality, "locality", "l", "Server", "Location")
-	CACreateCmd.Flags().StringVarP(&organization, "organization", "o", "Containerlab", "Organization")
-	CACreateCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
-	CACreateCmd.Flags().StringVarP(&expiry, "expiry", "e", "87600h", "certificate validity period")
-	CACreateCmd.Flags().StringVarP(&path, "path", "p", "",
+	CACreateCmd.Flags().StringVarP(&o.ToolsCert.CommonName, "cn", "", o.ToolsCert.CommonName, "Common Name")
+	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Country, "country", "c", o.ToolsCert.Country, "Country")
+	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Locality, "locality", "l", o.ToolsCert.Locality, "Location")
+	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Organization, "organization", "o",
+		o.ToolsCert.Organization, "Organization")
+	CACreateCmd.Flags().StringVarP(&o.ToolsCert.OrganizationUnit, "ou", "",
+		o.ToolsCert.OrganizationUnit, "Organization Unit")
+	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Expiry, "expiry", "e", o.ToolsCert.Expiry, "certificate validity period")
+	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Path, "path", "p", o.ToolsCert.Path,
 		"path to write certificate and key to. Default is current working directory")
-	CACreateCmd.Flags().StringVarP(&caNamePrefix, "name", "n", "ca", "certificate/key filename prefix")
+	CACreateCmd.Flags().StringVarP(&o.ToolsCert.CANamePrefix, "name", "n", "ca", "certificate/key filename prefix")
+
+	signCertCmd := &cobra.Command{
+		Use:   "sign",
+		Short: "create and sign certificate",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return signCert(o)
+		},
+	}
 
 	c.AddCommand(signCertCmd)
-	signCertCmd.Flags().StringSliceVarP(&certHosts, "hosts", "", []string{},
+	signCertCmd.Flags().StringSliceVarP(&o.ToolsCert.CertHosts, "hosts", "", o.ToolsCert.CertHosts,
 		"comma separate list of hosts of a certificate")
-	signCertCmd.Flags().StringVarP(&commonName, "cn", "", "containerlab.dev", "Common Name")
-	signCertCmd.Flags().StringVarP(&caCertPath, "ca-cert", "", "", "Path to CA certificate")
-	signCertCmd.Flags().StringVarP(&caKeyPath, "ca-key", "", "", "Path to CA private key")
-	signCertCmd.Flags().StringVarP(&country, "country", "c", "Internet", "Country")
-	signCertCmd.Flags().StringVarP(&locality, "locality", "l", "Server", "Location")
-	signCertCmd.Flags().StringVarP(&organization, "organization", "o", "Containerlab", "Organization")
-	signCertCmd.Flags().StringVarP(&organizationUnit, "ou", "", "Containerlab Tools", "Organization Unit")
-	signCertCmd.Flags().StringVarP(&path, "path", "p", "",
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.CommonName, "cn", "", o.ToolsCert.CommonName, "Common Name")
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.CACertPath, "ca-cert", "",
+		o.ToolsCert.CACertPath, "Path to CA certificate")
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.CAKeyPath, "ca-key", "", o.ToolsCert.CAKeyPath, "Path to CA private key")
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.Country, "country", "c", o.ToolsCert.Country, "Country")
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.Locality, "locality", "l", o.ToolsCert.Locality, "Location")
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.Organization, "organization", "o",
+		o.ToolsCert.Organization, "Organization")
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.OrganizationUnit, "ou", "",
+		o.ToolsCert.OrganizationUnit, "Organization Unit")
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.Path, "path", "p", o.ToolsCert.Path,
 		"path to write certificate and key to. Default is current working directory")
-	signCertCmd.Flags().StringVarP(&certNamePrefix, "name", "n", "cert", "certificate/key filename prefix")
-	signCertCmd.Flags().IntVarP(&keySize, "key-size", "", 2048, "private key size")
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.CANamePrefix, "name", "n", "cert", "certificate/key filename prefix")
+	signCertCmd.Flags().UintVarP(&o.ToolsCert.KeySize, "key-size", "", o.ToolsCert.KeySize, "private key size")
 
 	return c, nil
 }
 
-var CACmd = &cobra.Command{
-	Use:   "ca",
-	Short: "certificate authority operations",
-}
-
-var CACreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "create ca certificate and key",
-	RunE:  createCA,
-}
-
-var signCertCmd = &cobra.Command{
-	Use:   "sign",
-	Short: "create and sign certificate",
-	RunE:  signCert,
-}
-
 // createCA creates a new CA certificate and key and writes them to the specified path.
-func createCA(_ *cobra.Command, _ []string) error {
+func createCA(o *Options) error {
 	var err error
-	if path == "" {
-		path, err = os.Getwd()
+	if o.ToolsCert.Path == "" {
+		o.ToolsCert.Path, err = os.Getwd()
 		if err != nil {
 			return err
 		}
 	}
 
-	log.Infof("Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
-		commonName, country, locality, organization, organizationUnit, expiry)
+	log.Infof(
+		"Certificate attributes: CN=%s, C=%s, L=%s, O=%s, OU=%s, Validity period=%s",
+		o.ToolsCert.CommonName,
+		o.ToolsCert.Country,
+		o.ToolsCert.Locality,
+		o.ToolsCert.Organization,
+		o.ToolsCert.OrganizationUnit,
+		o.ToolsCert.Expiry,
+	)
 
 	ca := clabcert.NewCA()
 
-	expDuration, err := time.ParseDuration(expiry)
+	expDuration, err := time.ParseDuration(o.ToolsCert.Expiry)
 	if err != nil {
-		return fmt.Errorf("failed parsing expiry %s", expiry)
+		return fmt.Errorf("failed parsing expiry %s", o.ToolsCert.Expiry)
 	}
 
 	csrInput := &clabcert.CACSRInput{
-		CommonName:       commonName,
-		Country:          country,
-		Locality:         locality,
-		Organization:     organization,
-		OrganizationUnit: organizationUnit,
+		CommonName:       o.ToolsCert.CommonName,
+		Country:          o.ToolsCert.Country,
+		Locality:         o.ToolsCert.Locality,
+		Organization:     o.ToolsCert.Organization,
+		OrganizationUnit: o.ToolsCert.OrganizationUnit,
 		Expiry:           expDuration,
-		KeySize:          keySize,
+		KeySize:          int(o.ToolsCert.KeySize),
 	}
 
 	caCert, err := ca.GenerateCACert(csrInput)
@@ -121,11 +122,11 @@ func createCA(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	clabutils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
+	clabutils.CreateDirectory(o.ToolsCert.Path, 0o777) // skipcq: GSC-G302
 
 	err = caCert.Write(
-		filepath.Join(path, caNamePrefix+clabtypes.CertFileSuffix),
-		filepath.Join(path, caNamePrefix+clabtypes.KeyFileSuffix),
+		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CANamePrefix+clabtypes.CertFileSuffix),
+		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CANamePrefix+clabtypes.KeyFileSuffix),
 		"",
 	)
 	if err != nil {
@@ -136,11 +137,11 @@ func createCA(_ *cobra.Command, _ []string) error {
 }
 
 // signCert creates node certificate and sign it with CA.
-func signCert(_ *cobra.Command, _ []string) error {
+func signCert(o *Options) error {
 	var err error
 
-	if path == "" {
-		path, err = os.Getwd()
+	if o.ToolsCert.Path == "" {
+		o.ToolsCert.Path, err = os.Getwd()
 		if err != nil {
 			return err
 		}
@@ -150,10 +151,10 @@ func signCert(_ *cobra.Command, _ []string) error {
 
 	var caCert *clabcert.Certificate
 
-	log.Debugf("CA cert path: %q", caCertPath)
-	if caCertPath != "" {
+	log.Debugf("CA cert path: %q", o.ToolsCert.CACertPath)
+	if o.ToolsCert.CACertPath != "" {
 		// we might also honor the External CA env vars here
-		caCert, err = clabcert.NewCertificateFromFile(caCertPath, caKeyPath, "")
+		caCert, err = clabcert.NewCertificateFromFile(o.ToolsCert.CACertPath, o.ToolsCert.CAKeyPath, "")
 		if err != nil {
 			return err
 		}
@@ -166,40 +167,40 @@ func signCert(_ *cobra.Command, _ []string) error {
 	}
 
 	log.Info("Creating and signing certificate",
-		"Hosts", certHosts,
-		"CN", commonName,
-		"C", country,
-		"L", locality,
-		"O", organization,
-		"OU", organizationUnit,
+		"Hosts", o.ToolsCert.CertHosts,
+		"CN", o.ToolsCert.CommonName,
+		"C", o.ToolsCert.Country,
+		"L", o.ToolsCert.Locality,
+		"O", o.ToolsCert.Organization,
+		"OU", o.ToolsCert.OrganizationUnit,
 	)
 
-	expDuration, err := time.ParseDuration(expiry)
+	expDuration, err := time.ParseDuration(o.ToolsCert.Expiry)
 	if err != nil {
-		return fmt.Errorf("failed parsing expiry %s", expiry)
+		return fmt.Errorf("failed parsing expiry %s", o.ToolsCert.Expiry)
 	}
 
 	nodeCert, err := ca.GenerateAndSignNodeCert(
 		&clabcert.NodeCSRInput{
-			Hosts:            certHosts,
-			CommonName:       commonName,
-			Country:          country,
-			Locality:         locality,
-			Organization:     organization,
-			OrganizationUnit: organizationUnit,
+			Hosts:            o.ToolsCert.CertHosts,
+			CommonName:       o.ToolsCert.CommonName,
+			Country:          o.ToolsCert.Country,
+			Locality:         o.ToolsCert.Locality,
+			Organization:     o.ToolsCert.Organization,
+			OrganizationUnit: o.ToolsCert.OrganizationUnit,
 			Expiry:           expDuration,
-			KeySize:          keySize,
+			KeySize:          int(o.ToolsCert.KeySize),
 		})
 	if err != nil {
 		return err
 	}
 
-	clabutils.CreateDirectory(path, 0o777) // skipcq: GSC-G302
+	clabutils.CreateDirectory(o.ToolsCert.Path, 0o777) // skipcq: GSC-G302
 
 	err = nodeCert.Write(
-		filepath.Join(path, certNamePrefix+clabtypes.CertFileSuffix),
-		filepath.Join(path, certNamePrefix+clabtypes.KeyFileSuffix),
-		filepath.Join(path, certNamePrefix+clabtypes.CSRFileSuffix))
+		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CANamePrefix+clabtypes.CertFileSuffix),
+		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CANamePrefix+clabtypes.KeyFileSuffix),
+		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CANamePrefix+clabtypes.CSRFileSuffix))
 	if err != nil {
 		return err
 	}

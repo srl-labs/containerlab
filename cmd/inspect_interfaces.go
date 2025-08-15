@@ -22,8 +22,8 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 		return nil
 	}
 
-	if interfacesFormat != "table" && interfacesFormat != "json" {
-		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", interfacesFormat)
+	if o.Inspect.InterfacesFormat != "table" && o.Inspect.InterfacesFormat != "json" {
+		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", o.Inspect.InterfacesFormat)
 	}
 
 	opts := []clabcore.ClabOption{
@@ -33,7 +33,7 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 			&clabruntime.RuntimeConfig{
 				Debug:            o.Global.DebugCount > 0,
 				Timeout:          o.Global.Timeout,
-				GracefulShutdown: gracefulShutdown,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
 			},
 		),
 		clabcore.WithDebug(o.Global.DebugCount > 0),
@@ -42,7 +42,7 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 	if o.Global.TopologyFile != "" {
 		opts = append(opts,
 			clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-			clabcore.WithNodeFilter(nodeFilter),
+			clabcore.WithNodeFilter(o.Filter.NodeFilter),
 		)
 	}
 
@@ -52,11 +52,12 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	labNameFilterLabel := ""
-	if o.Global.TopologyName != "" {
+	switch {
+	case o.Global.TopologyName != "":
 		labNameFilterLabel = o.Global.TopologyName
-	} else if c.Config.Name != "" {
+	case c.Config.Name != "":
 		labNameFilterLabel = c.Config.Name
-	} else {
+	default:
 		return fmt.Errorf("could not find topology")
 	}
 
@@ -64,10 +65,10 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 		clabcore.WithListLabName(labNameFilterLabel),
 	}
 
-	if interfacesNodeName != "" {
+	if o.Inspect.InterfacesNode != "" {
 		listOpts = append(
 			listOpts,
-			clabcore.WithListNodeName(interfacesNodeName),
+			clabcore.WithListNodeName(o.Inspect.InterfacesNode),
 		)
 	}
 
@@ -86,7 +87,7 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 		return fmt.Errorf("failed to list container interfaces: %s", err)
 	}
 
-	err = printContainerInterfaces(containerInterfaces, interfacesFormat)
+	err = printContainerInterfaces(containerInterfaces, o.Inspect.InterfacesFormat)
 	return err
 }
 

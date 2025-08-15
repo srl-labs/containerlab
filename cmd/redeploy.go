@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"net"
-
 	"github.com/spf13/cobra"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -21,24 +19,28 @@ func redeployCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	// Add destroy flags
-	c.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
-	c.Flags().BoolVarP(&gracefulShutdown, "graceful", "", false,
+	c.Flags().BoolVarP(&o.Destroy.Cleanup, "cleanup", "c", o.Destroy.Cleanup, "delete lab directory")
+	c.Flags().BoolVarP(&o.Destroy.GracefulShutdown, "graceful", "", o.Destroy.GracefulShutdown,
 		"attempt to stop containers before removing")
-	c.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	c.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+	c.Flags().BoolVarP(&o.Destroy.All, "all", "a", o.Destroy.All, "destroy all containerlab labs")
+	c.Flags().UintVarP(&o.Deploy.MaxWorkers, "max-workers", "", o.Deploy.MaxWorkers,
 		"limit the maximum number of workers creating/deleting nodes")
-	c.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
+	c.Flags().BoolVarP(&o.Destroy.KeepManagementNetwork, "keep-mgmt-net", "",
+		o.Destroy.KeepManagementNetwork, "do not remove the management network")
 
 	// Add deploy flags
-	c.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
-	c.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
-	c.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	c.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	c.Flags().StringVarP(&deployFormat, "format", "f", "table", "output format. One of [table, json]")
-	c.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
-	c.Flags().StringVarP(&exportTemplate, "export-template", "", "",
+	c.Flags().BoolVarP(&o.Deploy.GenerateGraph, "graph", "g", o.Deploy.GenerateGraph, "generate topology graph")
+	c.Flags().StringVarP(&o.Deploy.ManagementNetworkName, "network", "", "", "management network name")
+	c.Flags().IPNetVarP(&o.Deploy.ManagementIPv4Subnet, "ipv4-subnet", "4",
+		o.Deploy.ManagementIPv4Subnet, "management network IPv4 subnet range")
+	c.Flags().IPNetVarP(&o.Deploy.ManagementIPv6Subnet, "ipv6-subnet", "6",
+		o.Deploy.ManagementIPv6Subnet, "management network IPv6 subnet range")
+	c.Flags().StringVarP(&o.Deploy.Format, "format", "f", o.Deploy.Format, "output format. One of [table, json]")
+	c.Flags().BoolVarP(&o.Deploy.SkipPostDeploy, "skip-post-deploy", "",
+		o.Deploy.SkipPostDeploy, "skip post deploy action")
+	c.Flags().StringVarP(&o.Deploy.ExportTemplate, "export-template", "", o.Deploy.ExportTemplate,
 		"template file for topology data export")
-	c.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
+	c.Flags().BoolVarP(&o.Deploy.SkipLabDirectoryFileACLs, "skip-labdir-acl", "", o.Deploy.SkipLabDirectoryFileACLs,
 		"skip the lab directory extended ACLs provisioning")
 
 	return c, nil

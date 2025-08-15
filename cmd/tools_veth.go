@@ -21,12 +21,6 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	AEnd = ""
-	BEnd = ""
-	MTU  = clablinks.DefaultLinkMTU
-)
-
 func vethCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "veth",
@@ -43,11 +37,11 @@ func vethCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	c.AddCommand(vethCreateCmd)
-	vethCreateCmd.Flags().StringVarP(&AEnd, "a-endpoint", "a", "",
+	vethCreateCmd.Flags().StringVarP(&o.ToolsVeth.AEndpoint, "a-endpoint", "a", o.ToolsVeth.AEndpoint,
 		"veth endpoint A in the format of <containerA-name>:<interface-name> or <endpointA-type>:<endpoint-name>:<interface-name>")
-	vethCreateCmd.Flags().StringVarP(&BEnd, "b-endpoint", "b", "",
+	vethCreateCmd.Flags().StringVarP(&o.ToolsVeth.BEndpoint, "b-endpoint", "b", o.ToolsVeth.BEndpoint,
 		"veth endpoint B in the format of <containerB-name>:<interface-name> or <endpointB-type>:<endpoint-name>:<interface-name>")
-	vethCreateCmd.Flags().IntVarP(&MTU, "mtu", "m", MTU, "link MTU")
+	vethCreateCmd.Flags().IntVarP(&o.ToolsVeth.MTU, "mtu", "m", o.ToolsVeth.MTU, "link MTU")
 
 	return c, nil
 }
@@ -55,12 +49,12 @@ func vethCmd(o *Options) (*cobra.Command, error) {
 func vethCreate(o *Options) error {
 	var err error
 
-	parsedAEnd, err := parseVethEndpoint(AEnd)
+	parsedAEnd, err := parseVethEndpoint(o.ToolsVeth.AEndpoint)
 	if err != nil {
 		return err
 	}
 
-	parsedBEnd, err := parseVethEndpoint(BEnd)
+	parsedBEnd, err := parseVethEndpoint(o.ToolsVeth.BEndpoint)
 	if err != nil {
 		return err
 	}
@@ -72,7 +66,7 @@ func vethCreate(o *Options) error {
 			&clabruntime.RuntimeConfig{
 				Debug:            o.Global.DebugCount > 0,
 				Timeout:          o.Global.Timeout,
-				GracefulShutdown: gracefulShutdown,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
 			},
 		),
 		clabcore.WithDebug(o.Global.DebugCount > 0),
@@ -103,7 +97,7 @@ func vethCreate(o *Options) error {
 			fmt.Sprintf("%s:%s", parsedBEnd.Node, parsedBEnd.Iface),
 		},
 		LinkCommonParams: clablinks.LinkCommonParams{
-			MTU: MTU,
+			MTU: o.ToolsVeth.MTU,
 		},
 	}
 

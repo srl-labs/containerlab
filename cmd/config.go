@@ -117,7 +117,7 @@ func configSubCmds(c *cobra.Command, o *Options) {
 
 	c.AddCommand(templateC)
 	templateC.Flags().AddFlagSet(c.Flags())
-	templateC.Flags().BoolVarP(&templateVarOnly, "vars", "v", false,
+	templateC.Flags().BoolVarP(&o.Config.TemplateVarOnly, "vars", "v", o.Config.TemplateVarOnly,
 		"show variable used for template rendering")
 	templateC.Flags().SortFlags = false
 }
@@ -138,7 +138,7 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 		return err
 	}
 
-	err = validateFilter(c.Nodes)
+	err = validateFilter(c.Nodes, o)
 	if err != nil {
 		return err
 	}
@@ -182,8 +182,8 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 			log.Warnf("%s: %s", cs.TargetNode.ShortName, err)
 		}
 	}
-	wg.Add(len(configFilter))
-	for _, node := range configFilter {
+	wg.Add(len(o.Filter.LabelFilter))
+	for _, node := range o.Filter.LabelFilter {
 		// On debug this will not be executed concurrently
 		if log.GetLevel() == (log.DebugLevel) {
 			deploy(node)
@@ -210,14 +210,14 @@ func configTemplate(o *Options) error {
 		return err
 	}
 
-	err = validateFilter(c.Nodes)
+	err = validateFilter(c.Nodes, o)
 	if err != nil {
 		return err
 	}
 
 	allConfig := clabcoreconfig.PrepareVars(c)
-	if templateVarOnly {
-		for _, n := range configFilter {
+	if o.Config.TemplateVarOnly {
+		for _, n := range o.Filter.LabelFilter {
 			conf := allConfig[n]
 			conf.Print(true, false)
 		}
@@ -229,23 +229,23 @@ func configTemplate(o *Options) error {
 		return err
 	}
 
-	for _, n := range configFilter {
+	for _, n := range o.Filter.LabelFilter {
 		allConfig[n].Print(false, true)
 	}
 
 	return nil
 }
 
-func validateFilter(nodes map[string]clabnodes.Node) error {
-	if len(configFilter) == 0 {
+func validateFilter(nodes map[string]clabnodes.Node, o *Options) error {
+	if len(o.Filter.LabelFilter) == 0 {
 		for n := range nodes {
-			configFilter = append(configFilter, n)
+			o.Filter.LabelFilter = append(o.Filter.LabelFilter, n)
 		}
 		return nil
 	}
 
 	var mis []string
-	for _, nn := range configFilter {
+	for _, nn := range o.Filter.LabelFilter {
 		if _, ok := nodes[nn]; !ok {
 			mis = append(mis, nn)
 		}

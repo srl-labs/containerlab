@@ -26,44 +26,44 @@ func apiServerCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	c.AddCommand(apiServerStartCmd)
-	apiServerStartCmd.Flags().StringVarP(&apiServerImage, "image", "i",
-		"ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.Image, "image", "i",
+		o.ToolsAPI.Image,
 		"container image to use for API server")
-	apiServerStartCmd.Flags().StringVarP(&apiServerName, "name", "n", "clab-api-server",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.Name, "name", "n", o.ToolsAPI.Name,
 		"name of the API server container")
-	apiServerStartCmd.Flags().StringVarP(&apiServerLabsDir, "labs-dir", "l", "",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.LabsDirectory, "labs-dir", "l", o.ToolsAPI.LabsDirectory,
 		"directory to mount as shared labs directory")
-	apiServerStartCmd.Flags().IntVarP(&apiServerPort, "port", "p", 8080,
+	apiServerStartCmd.Flags().UintVarP(&o.ToolsAPI.Port, "port", "p", o.ToolsAPI.Port,
 		"port to expose the API server on")
-	apiServerStartCmd.Flags().StringVarP(&apiServerHost, "host", "", "localhost",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.Host, "host", "", o.ToolsAPI.Host,
 		"host address for the API server")
-	apiServerStartCmd.Flags().StringVarP(&apiServerJWTSecret, "jwt-secret", "", "",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.JWTSecret, "jwt-secret", "", o.ToolsAPI.JWTSecret,
 		"JWT secret key for authentication (generated randomly if not provided)")
-	apiServerStartCmd.Flags().StringVarP(&apiServerJWTExpiration, "jwt-expiration", "", "60m",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.JWTExpiration, "jwt-expiration", "", o.ToolsAPI.JWTExpiration,
 		"JWT token expiration time")
-	apiServerStartCmd.Flags().StringVarP(&apiServerUserGroup, "user-group", "", "clab_api",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.UserGroup, "user-group", "", o.ToolsAPI.UserGroup,
 		"user group for API access")
-	apiServerStartCmd.Flags().StringVarP(&apiServerSuperUserGroup, "superuser-group", "", "clab_admins",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.SuperUserGroup, "superuser-group", "", o.ToolsAPI.SuperUserGroup,
 		"superuser group name")
-	apiServerStartCmd.Flags().StringVarP(&apiServerLogLevel, "log-level", "", "debug",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.LogLevel, "log-level", "", o.ToolsAPI.LogLevel,
 		"log level (debug/info/warn/error)")
-	apiServerStartCmd.Flags().StringVarP(&apiServerGinMode, "gin-mode", "", "release",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.GinMode, "gin-mode", "", o.ToolsAPI.GinMode,
 		"Gin framework mode (debug/release/test)")
-	apiServerStartCmd.Flags().StringVarP(&apiServerTrustedProxies, "trusted-proxies", "", "",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.TrustedProxies, "trusted-proxies", "", o.ToolsAPI.TrustedProxies,
 		"comma-separated list of trusted proxies")
-	apiServerStartCmd.Flags().BoolVarP(&apiServerTLSEnable, "tls-enable", "", false,
+	apiServerStartCmd.Flags().BoolVarP(&o.ToolsAPI.TLSEnable, "tls-enable", "", o.ToolsAPI.TLSEnable,
 		"enable TLS for the API server")
-	apiServerStartCmd.Flags().StringVarP(&apiServerTLSCertFile, "tls-cert", "", "",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.TLSCertFile, "tls-cert", "", o.ToolsAPI.TLSCertFile,
 		"path to TLS certificate file")
-	apiServerStartCmd.Flags().StringVarP(&apiServerTLSKeyFile, "tls-key", "", "",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.TLSKeyFile, "tls-key", "", o.ToolsAPI.TLSKeyFile,
 		"path to TLS key file")
-	apiServerStartCmd.Flags().IntVarP(&apiServerSSHBasePort, "ssh-base-port", "", 2223,
+	apiServerStartCmd.Flags().UintVarP(&o.ToolsAPI.SSHBasePort, "ssh-base-port", "", o.ToolsAPI.SSHBasePort,
 		"SSH proxy base port")
-	apiServerStartCmd.Flags().IntVarP(&apiServerSSHMaxPort, "ssh-max-port", "", 2322,
+	apiServerStartCmd.Flags().UintVarP(&o.ToolsAPI.SSHMaxPort, "ssh-max-port", "", o.ToolsAPI.SSHMaxPort,
 		"SSH proxy maximum port")
-	apiServerStartCmd.Flags().StringVarP(&apiServerOwner, "owner", "o", "",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.Owner, "owner", "o", o.ToolsAPI.Owner,
 		"owner name for the API server container")
-	apiServerStartCmd.Flags().StringVarP(&apiServerRuntime, "runtime", "r", "docker",
+	apiServerStartCmd.Flags().StringVarP(&o.ToolsAPI.Runtime, "runtime", "r", o.ToolsAPI.Runtime,
 		"container runtime to use for API server")
 
 	apiServerStatusCmd := &cobra.Command{
@@ -75,7 +75,7 @@ func apiServerCmd(o *Options) (*cobra.Command, error) {
 		},
 	}
 	c.AddCommand(apiServerStatusCmd)
-	apiServerStatusCmd.Flags().StringVarP(&outputFormatAPI, "format", "f", "table",
+	apiServerStatusCmd.Flags().StringVarP(&o.ToolsAPI.OutputFormat, "format", "f", o.ToolsAPI.OutputFormat,
 		"output format for 'status' command (table, json)")
 
 	apiServerStopCmd := &cobra.Command{
@@ -87,7 +87,7 @@ func apiServerCmd(o *Options) (*cobra.Command, error) {
 		},
 	}
 	c.AddCommand(apiServerStopCmd)
-	apiServerStopCmd.Flags().StringVarP(&apiServerName, "name", "n", "clab-api-server",
+	apiServerStopCmd.Flags().StringVarP(&o.ToolsAPI.Name, "name", "n", o.ToolsAPI.Name,
 		"name of the API server container to stop")
 
 	return c, nil

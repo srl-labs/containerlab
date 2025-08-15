@@ -98,11 +98,12 @@ func (m *manager) GetLatestVersion(ctx context.Context) *gover.Version {
 func (m *manager) DisplayNewVersionAvailable(ctx context.Context) {
 	latestVersion := m.GetLatestVersion(ctx)
 
-	if latestVersion == nil {
+	switch {
+	case latestVersion == nil:
 		fmt.Print("Failed fetching latest version information\n")
-	} else if latestVersion.GreaterThan(m.currentVersion) {
+	case latestVersion.GreaterThan(m.currentVersion):
 		printNewVersionInfo(latestVersion.String())
-	} else {
+	default:
 		fmt.Printf("You are on the latest version (%s)\n", Version)
 	}
 }

@@ -30,17 +30,6 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-var (
-	netemNode       string
-	netemInterface  string
-	netemDelay      time.Duration
-	netemJitter     time.Duration
-	netemLoss       float64
-	netemRate       uint64
-	netemCorruption float64
-	netemFormat     string
-)
-
 func netemCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "netem",
@@ -53,51 +42,62 @@ func netemCmd(o *Options) (*cobra.Command, error) {
 		Long: `The netem queue discipline provides Network Emulation
 functionality for testing protocols by emulating the properties
 of real-world networks.`,
-		PreRunE: validateInputAndRoot,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return validateInputAndRoot(o)
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return netemSetFn(o)
 		},
 	}
 
 	c.AddCommand(netemSetCmd)
-	netemSetCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
-	netemSetCmd.Flags().StringVarP(&netemInterface, "interface", "i", "", "interface to apply impairment to")
-	netemSetCmd.Flags().DurationVarP(&netemDelay, "delay", "", 0*time.Second,
+	netemSetCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "node", "n",
+		o.ToolsNetem.ContainerName, "node to apply impairment to")
+	netemSetCmd.Flags().StringVarP(&o.ToolsNetem.Interface, "interface", "i",
+		o.ToolsNetem.Interface, "interface to apply impairment to")
+	netemSetCmd.Flags().DurationVarP(&o.ToolsNetem.Delay, "delay", "", o.ToolsNetem.Delay,
 		"time to delay outgoing packets (e.g. 100ms, 2s)")
-	netemSetCmd.Flags().DurationVarP(&netemJitter, "jitter", "", 0*time.Second,
+	netemSetCmd.Flags().DurationVarP(&o.ToolsNetem.Jitter, "jitter", "", o.ToolsNetem.Jitter,
 		"delay variation, aka jitter (e.g. 50ms)")
-	netemSetCmd.Flags().Float64VarP(&netemLoss, "loss", "", 0,
+	netemSetCmd.Flags().Float64VarP(&o.ToolsNetem.Loss, "loss", "", o.ToolsNetem.Loss,
 		"random packet loss expressed in percentage (e.g. 0.1 means 0.1%)")
-	netemSetCmd.Flags().Uint64VarP(&netemRate, "rate", "", 0, "link rate limit in kbit")
-	netemSetCmd.Flags().Float64VarP(&netemCorruption, "corruption", "", 0,
+	netemSetCmd.Flags().Uint64VarP(&o.ToolsNetem.Rate, "rate", "", o.ToolsNetem.Rate, "link rate limit in kbit")
+	netemSetCmd.Flags().Float64VarP(&o.ToolsNetem.Corruption, "corruption", "", 0,
 		"random packet corruption probability expressed in percentage (e.g. 0.1 means 0.1%)")
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
 
 	netemShowCmd := &cobra.Command{
-		Use:     "show",
-		Short:   "show link impairments for a node",
-		PreRunE: validateInputAndRoot,
+		Use:   "show",
+		Short: "show link impairments for a node",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return validateInputAndRoot(o)
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return netemShowFn(o)
 		},
 	}
 	c.AddCommand(netemShowCmd)
-	netemShowCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to apply impairment to")
-	netemShowCmd.Flags().StringVarP(&netemFormat, "format", "f", "table", "output format (table, json)")
+	netemShowCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "node", "n",
+		o.ToolsNetem.ContainerName, "node to apply impairment to")
+	netemShowCmd.Flags().StringVarP(&o.ToolsNetem.Format, "format", "f", o.ToolsNetem.Format, "output format (table, json)")
 
 	netemResetCmd := &cobra.Command{
-		Use:     "reset",
-		Short:   "reset link impairments",
-		Long:    `Reset network impairments by deleting the netem qdisc from the specified interface.`,
-		PreRunE: validateInputAndRoot,
+		Use:   "reset",
+		Short: "reset link impairments",
+		Long:  `Reset network impairments by deleting the netem qdisc from the specified interface.`,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return validateInputAndRoot(o)
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return netemResetFn(o)
 		},
 	}
 	c.AddCommand(netemResetCmd)
-	netemResetCmd.Flags().StringVarP(&netemNode, "node", "n", "", "node to reset impairment on")
-	netemResetCmd.Flags().StringVarP(&netemInterface, "interface", "i", "", "interface to reset impairment on")
+	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "node", "n",
+		o.ToolsNetem.ContainerName, "node to reset impairment on")
+	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.Interface, "interface", "i",
+		o.ToolsNetem.Interface, "interface to reset impairment on")
 	netemResetCmd.MarkFlagRequired("node")
 	netemResetCmd.MarkFlagRequired("interface")
 
@@ -135,7 +135,7 @@ func netemSetFn(o *Options) error {
 	defer cancel()
 
 	// retrieve the containers NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, netemNode)
+	nodeNsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,7 @@ func netemSetFn(o *Options) error {
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
 		netemIfLink, err := netlink.LinkByName(
-			clablinks.SanitizeInterfaceName(netemInterface))
+			clablinks.SanitizeInterfaceName(o.ToolsNetem.Interface))
 		if err != nil {
 			return err
 		}
@@ -170,8 +170,8 @@ func netemSetFn(o *Options) error {
 			return err
 		}
 
-		qdisc, err := clabinternaltc.SetImpairments(tcnl, netemNode, link,
-			netemDelay, netemJitter, netemLoss, netemRate, netemCorruption)
+		qdisc, err := clabinternaltc.SetImpairments(tcnl, o.ToolsNetem.ContainerName, link,
+			o.ToolsNetem.Delay, o.ToolsNetem.Jitter, o.ToolsNetem.Loss, o.ToolsNetem.Rate, o.ToolsNetem.Corruption)
 		if err != nil {
 			return err
 		}
@@ -184,16 +184,16 @@ func netemSetFn(o *Options) error {
 	return err
 }
 
-func validateInputAndRoot(c *cobra.Command, args []string) error {
-	if netemLoss < 0 || netemLoss > 100 {
+func validateInputAndRoot(o *Options) error {
+	if o.ToolsNetem.Loss < 0 || o.ToolsNetem.Loss > 100 {
 		return fmt.Errorf("packet loss must be in the range between 0 and 100")
 	}
 
-	if netemJitter != 0 && netemDelay == 0 {
+	if o.ToolsNetem.Jitter != 0 && o.ToolsNetem.Delay == 0 {
 		return fmt.Errorf("jitter cannot be set without setting delay")
 	}
 
-	clabutils.CheckAndGetRootPrivs(c, args)
+	clabutils.CheckAndGetRootPrivs(nil, nil)
 
 	return nil
 }
@@ -354,7 +354,7 @@ func netemShowFn(o *Options) error {
 	defer cancel()
 
 	// retrieve the container's NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, netemNode)
+	nodeNsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
 	if err != nil {
 		return err
 	}
@@ -380,7 +380,7 @@ func netemShowFn(o *Options) error {
 			return err
 		}
 
-		if netemFormat == "json" {
+		if o.ToolsNetem.Format == "json" {
 			var impairments []clabtypes.ImpairmentData
 			for idx := range qdiscs {
 				if qdiscs[idx].Attribute.Kind != "netem" {
@@ -390,7 +390,7 @@ func netemShowFn(o *Options) error {
 			}
 			// Structure output as a map keyed by the node name.
 			outputData := map[string][]clabtypes.ImpairmentData{
-				netemNode: impairments,
+				o.ToolsNetem.ContainerName: impairments,
 			}
 			jsonData, err := json.MarshalIndent(outputData, "", "  ")
 			if err != nil {
@@ -431,7 +431,7 @@ func netemResetFn(o *Options) error {
 	defer cancel()
 
 	// retrieve the container's NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, netemNode)
+	nodeNsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
 	if err != nil {
 		return err
 	}
@@ -453,7 +453,7 @@ func netemResetFn(o *Options) error {
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
 		netemIfLink, err := netlink.LinkByName(
-			clablinks.SanitizeInterfaceName(netemInterface))
+			clablinks.SanitizeInterfaceName(o.ToolsNetem.Interface))
 		if err != nil {
 			return err
 		}
@@ -465,7 +465,8 @@ func netemResetFn(o *Options) error {
 		if err := clabinternaltc.DeleteImpairments(tcnl, netemIfIface); err != nil {
 			return err
 		}
-		fmt.Printf("Reset impairments on node %q, interface %q\n", netemNode, netemIfLink.Attrs().Name)
+		fmt.Printf("Reset impairments on node %q, interface %q\n",
+			o.ToolsNetem.ContainerName, netemIfLink.Attrs().Name)
 		return nil
 	})
 

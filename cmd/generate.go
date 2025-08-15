@@ -7,7 +7,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -73,9 +72,12 @@ func generateCmd(o *Options) (*cobra.Command, error) {
 		},
 	}
 
-	c.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
-	c.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	c.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
+	c.Flags().StringVarP(&o.Deploy.ManagementNetworkName, "network", "",
+		o.Deploy.ManagementNetworkName, "management network name")
+	c.Flags().IPNetVarP(&o.Deploy.ManagementIPv4Subnet, "ipv4-subnet", "4",
+		o.Deploy.ManagementIPv4Subnet, "management network IPv4 subnet range")
+	c.Flags().IPNetVarP(&o.Deploy.ManagementIPv6Subnet, "ipv6-subnet", "6",
+		o.Deploy.ManagementIPv6Subnet, "management network IPv6 subnet range")
 	c.Flags().StringSliceVarP(&image, "image", "", []string{},
 		"container image name, can be prefixed with the node kind. <kind>=<image_name>")
 	c.Flags().StringVarP(&kind, "kind", "", "srl",
@@ -89,10 +91,10 @@ func generateCmd(o *Options) (*cobra.Command, error) {
 	c.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
 	c.Flags().BoolVarP(&deploy, "deploy", "", false,
 		"deploy a fabric based on the generated topology file")
-	c.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+	c.Flags().UintVarP(&o.Deploy.MaxWorkers, "max-workers", "", o.Deploy.MaxWorkers,
 		"limit the maximum number of workers creating nodes and virtual wires")
 	// Add the owner flag to generate command
-	c.Flags().StringVarP(&labOwner, "owner", "", "",
+	c.Flags().StringVarP(&o.Deploy.LabOwner, "owner", "", o.Deploy.LabOwner,
 		"lab owner name (only for users in clab_admins group)")
 
 	return c, nil
@@ -120,8 +122,8 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 	}
 	log.Debugf("parsed nodes definitions: %+v", nodeDefs)
 
-	b, err := generateTopologyConfig(o.Global.TopologyName, mgmtNetName, mgmtIPv4Subnet.String(),
-		mgmtIPv6Subnet.String(), images, licenses, reg, nodeDefs...)
+	b, err := generateTopologyConfig(o.Global.TopologyName, o.Deploy.ManagementNetworkName, o.Deploy.ManagementIPv4Subnet.String(),
+		o.Deploy.ManagementIPv6Subnet.String(), images, licenses, reg, nodeDefs...)
 	if err != nil {
 		return err
 	}
@@ -137,7 +139,7 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 		if err != nil {
 			return err
 		}
-		reconfigure = true
+		o.Deploy.Reconfigure = true
 		if file == "" {
 			file = fmt.Sprintf("%s.clab.yml", o.Global.TopologyName)
 			err = clabutils.CreateFile(file, string(b))
@@ -148,9 +150,9 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 		o.Global.TopologyFile = file
 
 		// Pass owner to deploy command if specified
-		if labOwner != "" {
+		if o.Deploy.LabOwner != "" {
 			// This will be picked up by the deploy command
-			os.Setenv("CLAB_OWNER", labOwner)
+			os.Setenv("CLAB_OWNER", o.Deploy.LabOwner)
 		}
 
 		return deployFn(cobraCmd, o)

@@ -25,13 +25,13 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 			opts := []clabcore.ClabOption{
 				clabcore.WithTimeout(o.Global.Timeout),
 				clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-				clabcore.WithNodeFilter(nodeFilter),
+				clabcore.WithNodeFilter(o.Filter.NodeFilter),
 				clabcore.WithRuntime(
 					o.Global.Runtime,
 					&clabruntime.RuntimeConfig{
 						Debug:            o.Global.DebugCount > 0,
 						Timeout:          o.Global.Timeout,
-						GracefulShutdown: gracefulShutdown,
+						GracefulShutdown: o.Destroy.GracefulShutdown,
 					},
 				),
 				clabcore.WithDebug(o.Global.DebugCount > 0),
@@ -45,7 +45,7 @@ Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact c
 		},
 	}
 
-	c.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	c.Flags().StringSliceVarP(&o.Filter.NodeFilter, "node-filter", "", o.Filter.NodeFilter,
 		"comma separated list of nodes to include")
 
 	return c, nil

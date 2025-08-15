@@ -16,30 +16,6 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
-// Configuration variables for the API Server commands.
-var (
-	apiServerImage          string
-	apiServerName           string
-	apiServerLabsDir        string
-	apiServerPort           int
-	apiServerHost           string
-	apiServerJWTSecret      string
-	apiServerJWTExpiration  string
-	apiServerUserGroup      string
-	apiServerSuperUserGroup string
-	apiServerRuntime        string
-	apiServerLogLevel       string
-	apiServerGinMode        string
-	apiServerTrustedProxies string
-	apiServerTLSEnable      bool
-	apiServerTLSCertFile    string
-	apiServerTLSKeyFile     string
-	apiServerSSHBasePort    int
-	apiServerSSHMaxPort     int
-	apiServerOwner          string
-	outputFormatAPI         string
-)
-
 // APIServerNode implements runtime.Node interface for API server containers.
 type APIServerNode struct {
 	config *clabtypes.NodeConfig
@@ -61,12 +37,12 @@ func generateRandomJWTSecret() (string, error) {
 func apiServerStop(cobraCmd *cobra.Command, o *Options) error {
 	ctx := cobraCmd.Context()
 
-	log.Debugf("Container name for deletion: %s", apiServerName)
+	log.Debugf("Container name for deletion: %s", o.ToolsAPI.Name)
 
 	// Use common.Runtime if available, otherwise use the api-server flag
 	runtimeName := o.Global.Runtime
 	if runtimeName == "" {
-		runtimeName = apiServerRuntime
+		runtimeName = o.ToolsAPI.Runtime
 	}
 
 	// Initialize runtime
@@ -81,11 +57,11 @@ func apiServerStop(cobraCmd *cobra.Command, o *Options) error {
 		return fmt.Errorf("failed to initialize runtime: %w", err)
 	}
 
-	log.Infof("Removing API server container %s", apiServerName)
-	if err := rt.DeleteContainer(ctx, apiServerName); err != nil {
+	log.Infof("Removing API server container %s", o.ToolsAPI.Name)
+	if err := rt.DeleteContainer(ctx, o.ToolsAPI.Name); err != nil {
 		return fmt.Errorf("failed to remove API server container: %w", err)
 	}
 
-	log.Infof("API server container %s removed successfully", apiServerName)
+	log.Infof("API server container %s removed successfully", o.ToolsAPI.Name)
 	return nil
 }

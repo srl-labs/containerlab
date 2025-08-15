@@ -25,28 +25,29 @@ func destroyCmd(o *Options) (*cobra.Command, error) {
 		},
 	}
 
-	c.Flags().BoolVarP(&cleanup, "cleanup", "c", false,
+	c.Flags().BoolVarP(&o.Destroy.Cleanup, "cleanup", "c", o.Destroy.Cleanup,
 		"delete lab directory. Cannot be used with node-filter")
-	c.Flags().BoolVarP(&gracefulShutdown, "graceful", "", false,
+	c.Flags().BoolVarP(&o.Destroy.GracefulShutdown, "graceful", "", o.Destroy.GracefulShutdown,
 		"attempt to stop containers before removing")
-	c.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	c.Flags().BoolVarP(&yes, "yes", "y", false,
+	c.Flags().BoolVarP(&o.Destroy.All, "all", "a", o.Destroy.All, "destroy all containerlab labs")
+	c.Flags().BoolVarP(&o.Destroy.AutoApprove, "yes", "y", o.Destroy.AutoApprove,
 		"auto-approve deletion when used with --all (skips confirmation prompt)")
-	c.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+	c.Flags().UintVarP(&o.Deploy.MaxWorkers, "max-workers", "", o.Deploy.MaxWorkers,
 		"limit the maximum number of workers deleting nodes")
-	c.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
-	c.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	c.Flags().BoolVarP(&o.Destroy.KeepManagementNetwork, "keep-mgmt-net", "",
+		o.Destroy.KeepManagementNetwork, "do not remove the management network")
+	c.Flags().StringSliceVarP(&o.Filter.NodeFilter, "node-filter", "", o.Filter.NodeFilter,
 		"comma separated list of nodes to include")
 
 	return c, nil
 }
 
 func destroyFn(cobraCmd *cobra.Command, o *Options) error {
-	if cleanup && len(nodeFilter) != 0 {
+	if o.Destroy.Cleanup && len(o.Filter.NodeFilter) != 0 {
 		return fmt.Errorf("cleanup cannot be used with node-filter")
 	}
 
-	if all && o.Global.TopologyName != "" {
+	if o.Destroy.All && o.Global.TopologyName != "" {
 		return fmt.Errorf("--all and --name should not be used together")
 	}
 
@@ -58,7 +59,7 @@ func destroyFn(cobraCmd *cobra.Command, o *Options) error {
 			&clabruntime.RuntimeConfig{
 				Debug:            o.Global.DebugCount > 0,
 				Timeout:          o.Global.Timeout,
-				GracefulShutdown: gracefulShutdown,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
 			},
 		),
 		clabcore.WithDebug(o.Global.DebugCount > 0),
@@ -71,7 +72,7 @@ func destroyFn(cobraCmd *cobra.Command, o *Options) error {
 		opts = append(opts, clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile))
 	}
 
-	if keepMgmtNet {
+	if o.Destroy.KeepManagementNetwork {
 		opts = append(opts, clabcore.WithKeepMgmtNet())
 	}
 
@@ -81,38 +82,38 @@ func destroyFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	destroyOptions := []clabcore.DestroyOption{
-		clabcore.WithDestroyMaxWorkers(maxWorkers),
-		clabcore.WithDestroyNodeFilter(nodeFilter),
+		clabcore.WithDestroyMaxWorkers(o.Deploy.MaxWorkers),
+		clabcore.WithDestroyNodeFilter(o.Filter.NodeFilter),
 	}
 
-	if keepMgmtNet {
+	if o.Destroy.KeepManagementNetwork {
 		destroyOptions = append(
 			destroyOptions,
 			clabcore.WithDestroyKeepMgmtNet(),
 		)
 	}
 
-	if cleanup {
+	if o.Destroy.Cleanup {
 		destroyOptions = append(
 			destroyOptions,
 			clabcore.WithDestroyCleanup(),
 		)
 	}
 
-	if gracefulShutdown {
+	if o.Destroy.GracefulShutdown {
 		destroyOptions = append(
 			destroyOptions,
 			clabcore.WithDestroyGraceful(),
 		)
 	}
 
-	if all {
+	if o.Destroy.All {
 		destroyOptions = append(
 			destroyOptions,
 			clabcore.WithDestroyAll(),
 		)
 
-		if !yes {
+		if !o.Destroy.AutoApprove {
 			destroyOptions = append(
 				destroyOptions,
 				clabcore.WithDestroyTerminalPrompt(),

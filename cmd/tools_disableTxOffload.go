@@ -14,8 +14,6 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var cntName string
-
 func disableTxOffloadCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "disable-tx-offload",
@@ -32,7 +30,7 @@ func disableTxOffloadCmd(o *Options) (*cobra.Command, error) {
 					&clabruntime.RuntimeConfig{
 						Debug:            o.Global.DebugCount > 0,
 						Timeout:          o.Global.Timeout,
-						GracefulShutdown: gracefulShutdown,
+						GracefulShutdown: o.Destroy.GracefulShutdown,
 					},
 				),
 				clabcore.WithDebug(o.Global.DebugCount > 0),
@@ -42,22 +40,24 @@ func disableTxOffloadCmd(o *Options) (*cobra.Command, error) {
 				return err
 			}
 
-			node, err := c.GetNode(cntName)
+			node, err := c.GetNode(o.ToolsTxOffload.ContainerName)
 			if err != nil {
 				return err
 			}
 
-			err = node.ExecFunction(ctx, clabutils.NSEthtoolTXOff(cntName, "eth0"))
+			err = node.ExecFunction(ctx, clabutils.NSEthtoolTXOff(
+				o.ToolsTxOffload.ContainerName, "eth0"))
 			if err != nil {
 				return err
 			}
 
-			log.Infof("Tx checksum offload disabled for eth0 interface of %s container", cntName)
+			log.Infof("Tx checksum offload disabled for eth0 interface of %s container", o.ToolsTxOffload.ContainerName)
 			return nil
 		},
 	}
 
-	c.Flags().StringVarP(&cntName, "container", "c", "", "container name to disable offload in")
+	c.Flags().StringVarP(&o.ToolsTxOffload.ContainerName, "container", "c",
+		o.ToolsTxOffload.ContainerName, "container name to disable offload in")
 
 	err := c.MarkFlagRequired("container")
 	if err != nil {

@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"context"
-	"net"
 	"os"
 	"time"
 
@@ -31,23 +30,27 @@ func deployCmd(o *Options) (*cobra.Command, error) {
 		},
 	}
 
-	c.Flags().BoolVarP(&graph, "graph", "g", false, "generate topology graph")
-	c.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
-	c.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	c.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	c.Flags().StringVarP(&deployFormat, "format", "f", "table", "output format. One of [table, json]")
-	c.Flags().BoolVarP(&reconfigure, "reconfigure", "c", false,
+	c.Flags().BoolVarP(&o.Deploy.GenerateGraph, "graph", "g", o.Deploy.GenerateGraph, "generate topology graph")
+	c.Flags().StringVarP(&o.Deploy.ManagementNetworkName, "network", "",
+		o.Deploy.ManagementNetworkName, "management network name")
+	c.Flags().IPNetVarP(&o.Deploy.ManagementIPv4Subnet, "ipv4-subnet", "4",
+		o.Deploy.ManagementIPv4Subnet, "management network IPv4 subnet range")
+	c.Flags().IPNetVarP(&o.Deploy.ManagementIPv6Subnet, "ipv6-subnet", "6",
+		o.Deploy.ManagementIPv6Subnet, "management network IPv6 subnet range")
+	c.Flags().StringVarP(&o.Deploy.Format, "format", "f", o.Deploy.Format, "output format. One of [table, json]")
+	c.Flags().BoolVarP(&o.Deploy.Reconfigure, "reconfigure", "c", o.Deploy.Reconfigure,
 		"regenerate configuration artifacts and overwrite previous ones if any")
-	c.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+	c.Flags().UintVarP(&o.Deploy.MaxWorkers, "max-workers", "", o.Deploy.MaxWorkers,
 		"limit the maximum number of workers creating nodes and virtual wires")
-	c.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
-	c.Flags().StringVarP(&exportTemplate, "export-template", "",
+	c.Flags().BoolVarP(&o.Deploy.SkipPostDeploy, "skip-post-deploy", "",
+		o.Deploy.SkipPostDeploy, "skip post deploy action")
+	c.Flags().StringVarP(&o.Deploy.ExportTemplate, "export-template", o.Deploy.ExportTemplate,
 		"", "template file for topology data export")
-	c.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	c.Flags().StringSliceVarP(&o.Filter.NodeFilter, "node-filter", "", o.Filter.NodeFilter,
 		"comma separated list of nodes to include")
-	c.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
+	c.Flags().BoolVarP(&o.Deploy.SkipLabDirectoryFileACLs, "skip-labdir-acl", "", o.Deploy.SkipLabDirectoryFileACLs,
 		"skip the lab directory extended ACLs provisioning")
-	c.Flags().StringVarP(&labOwner, "owner", "", "",
+	c.Flags().StringVarP(&o.Deploy.LabOwner, "owner", "", o.Deploy.LabOwner,
 		"lab owner name (only for users in clab_admins group)")
 
 	return c, nil
@@ -60,21 +63,21 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	log.Info("Containerlab started", "version", Version)
 
 	// Check for owner from environment (set by generate command)
-	if labOwner == "" && os.Getenv("CLAB_OWNER") != "" {
-		labOwner = os.Getenv("CLAB_OWNER")
+	if o.Deploy.LabOwner == "" && os.Getenv("CLAB_OWNER") != "" {
+		o.Deploy.LabOwner = os.Getenv("CLAB_OWNER")
 	}
 
 	opts := []clabcore.ClabOption{
 		clabcore.WithTimeout(o.Global.Timeout),
 		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
 		clabcore.WithTopoBackup(o.Global.TopologyFile),
-		clabcore.WithNodeFilter(nodeFilter),
+		clabcore.WithNodeFilter(o.Filter.NodeFilter),
 		clabcore.WithRuntime(
 			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
 				Debug:            o.Global.DebugCount > 0,
 				Timeout:          o.Global.Timeout,
-				GracefulShutdown: gracefulShutdown,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
 			},
 		),
 		clabcore.WithDependencyManager(clabcoredependency_manager.NewDependencyManager()),
@@ -85,16 +88,16 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	if o.Global.TopologyName != "" {
 		opts = append(opts, clabcore.WithLabName(o.Global.TopologyName))
 	}
-	if labOwner != "" {
-		opts = append(opts, clabcore.WithLabOwner(labOwner))
+	if o.Deploy.LabOwner != "" {
+		opts = append(opts, clabcore.WithLabOwner(o.Deploy.LabOwner))
 	}
-	if mgmtNetName != "" {
-		opts = append(opts, clabcore.WithManagementNetworkName(mgmtNetName))
+	if o.Deploy.ManagementNetworkName != "" {
+		opts = append(opts, clabcore.WithManagementNetworkName(o.Deploy.ManagementNetworkName))
 	}
-	if v4 := mgmtIPv4Subnet.String(); v4 != "<nil>" {
+	if v4 := o.Deploy.ManagementIPv4Subnet.String(); v4 != "<nil>" {
 		opts = append(opts, clabcore.WithManagementIpv4Subnet(v4))
 	}
-	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
+	if v6 := o.Deploy.ManagementIPv6Subnet.String(); v6 != "<nil>" {
 		opts = append(opts, clabcore.WithManagementIpv6Subnet(v6))
 	}
 
@@ -103,16 +106,16 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		return err
 	}
 
-	deploymentOptions, err := clabcore.NewDeployOptions(maxWorkers)
+	deploymentOptions, err := clabcore.NewDeployOptions(o.Deploy.MaxWorkers)
 	if err != nil {
 		return err
 	}
 
-	deploymentOptions.SetExportTemplate(exportTemplate).
-		SetReconfigure(reconfigure).
-		SetGraph(graph).
-		SetSkipPostDeploy(skipPostDeploy).
-		SetSkipLabDirFileACLs(skipLabDirFileACLs)
+	deploymentOptions.SetExportTemplate(o.Deploy.ExportTemplate).
+		SetReconfigure(o.Deploy.Reconfigure).
+		SetGraph(o.Deploy.GenerateGraph).
+		SetSkipPostDeploy(o.Deploy.SkipPostDeploy).
+		SetSkipLabDirFileACLs(o.Deploy.SkipLabDirectoryFileACLs)
 
 	containers, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {
@@ -129,5 +132,5 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	m.DisplayNewVersionAvailable(versionCheckContext)
 
 	// print table summary
-	return PrintContainerInspect(containers, deployFormat)
+	return PrintContainerInspect(containers, o)
 }

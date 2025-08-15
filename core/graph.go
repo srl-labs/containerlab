@@ -265,11 +265,12 @@ var defaultStatic embed.FS
 func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error {
 	var t *template.Template
 
-	if tmpl == "" {
+	switch {
+	case tmpl == "":
 		t = template.Must(template.New("nextui.html").Parse(defaultTemplate))
-	} else if clabutils.FileExists(tmpl) {
+	case clabutils.FileExists(tmpl):
 		t = template.Must(template.ParseFiles(tmpl))
-	} else {
+	default:
 		return fmt.Errorf("%w. Path %s", claberrors.ErrFileNotFound, tmpl)
 	}
 
