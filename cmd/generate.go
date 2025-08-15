@@ -41,7 +41,6 @@ var (
 	groupPrefix string
 	file        string
 	deploy      bool
-	reg         *clabnodes.NodeRegistry
 )
 
 type nodesDef struct {
@@ -51,15 +50,6 @@ type nodesDef struct {
 }
 
 func generateCmd(o *Options) (*cobra.Command, error) {
-	c := &cobra.Command{
-		Use:     "generate",
-		Aliases: []string{"gen"},
-		Short:   "generate a Clos topology file, based on provided flags",
-		RunE: func(cobraCmd *cobra.Command, _ []string) error {
-			return generate(cobraCmd, o)
-		},
-	}
-
 	clab := &clabcore.CLab{}
 	clab.Reg = clabnodes.NewNodeRegistry()
 	clab.RegisterNodes()
@@ -72,6 +62,15 @@ func generateCmd(o *Options) (*cobra.Command, error) {
 		if v.IsGenerateable() {
 			supportedKinds = append(supportedKinds, k)
 		}
+	}
+
+	c := &cobra.Command{
+		Use:     "generate",
+		Aliases: []string{"gen"},
+		Short:   "generate a Clos topology file, based on provided flags",
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return generate(cobraCmd, o, clab.Reg)
+		},
 	}
 
 	c.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
@@ -99,7 +98,7 @@ func generateCmd(o *Options) (*cobra.Command, error) {
 	return c, nil
 }
 
-func generate(cobraCmd *cobra.Command, o *Options) error {
+func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) error {
 	if o.Global.TopologyName == "" {
 		return errors.New("provide a lab name with --name flag")
 	}
@@ -122,7 +121,7 @@ func generate(cobraCmd *cobra.Command, o *Options) error {
 	log.Debugf("parsed nodes definitions: %+v", nodeDefs)
 
 	b, err := generateTopologyConfig(o.Global.TopologyName, mgmtNetName, mgmtIPv4Subnet.String(),
-		mgmtIPv6Subnet.String(), images, licenses, nodeDefs...)
+		mgmtIPv6Subnet.String(), images, licenses, reg, nodeDefs...)
 	if err != nil {
 		return err
 	}
@@ -165,7 +164,7 @@ func generate(cobraCmd *cobra.Command, o *Options) error {
 }
 
 func generateTopologyConfig(name, network, ipv4range, ipv6range string,
-	images, licenses map[string]string, nodes ...nodesDef,
+	images, licenses map[string]string, reg *clabnodes.NodeRegistry, nodes ...nodesDef,
 ) ([]byte, error) {
 	numStages := len(nodes)
 	config := &clabcore.Config{
