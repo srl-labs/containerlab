@@ -18,43 +18,56 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
-var (
-	srv              string
-	tmpl             string
-	offline          bool
-	dot              bool
-	mermaid          bool
-	mermaidDirection string
-	drawio           bool
-	drawioVersion    string
-	drawioArgs       []string
-	staticDir        string
-)
+func graphCmd(o *Options) (*cobra.Command, error) {
+	c := &cobra.Command{
+		Use:   "graph",
+		Short: "generate a topology graph",
+		Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.dev/cmd/graph/",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return graphFn(o)
+		},
+	}
 
-// graphCmd represents the graph command.
-var graphCmd = &cobra.Command{
-	Use:   "graph",
-	Short: "generate a topology graph",
-	Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.dev/cmd/graph/",
-	RunE:  graphFn,
+	c.Flags().StringVarP(&o.Graph.Server, "srv", "s", o.Graph.Server,
+		"HTTP server address serving the topology view")
+	c.Flags().BoolVarP(&o.Graph.Offline, "offline", "o", o.Graph.Offline,
+		"use only information from topo file when building graph")
+	c.Flags().BoolVarP(&o.Graph.GenerateDotFile, "dot", "", o.Graph.GenerateDotFile, "generate dot file")
+	c.Flags().BoolVarP(&o.Graph.GenerateMermaid, "mermaid", "", o.Graph.GenerateMermaid, "print mermaid flowchart to stdout")
+	c.Flags().StringVarP(&o.Graph.MermaidDirection, "mermaid-direction", "",
+		o.Graph.MermaidDirection, "specify direction of mermaid dirgram")
+	c.Flags().StringSliceVar(&o.Graph.DrawIOArgs, "drawio-args", o.Graph.DrawIOArgs,
+		"Additional flags to pass to the drawio diagram generation tool (can be specified multiple times)")
+	c.Flags().BoolVarP(&o.Graph.GenerateDrawIO, "drawio", "", o.Graph.GenerateDrawIO, "generate drawio diagram file")
+	c.Flags().StringVarP(&o.Graph.DrawIOVersion, "drawio-version", "", o.Graph.DrawIOVersion,
+		"version of the clab-io-draw container to use for generating drawio diagram file")
+	c.Flags().StringVarP(&o.Graph.Template, "template", "", o.Graph.Template,
+		"Go html template used to generate the graph")
+	c.Flags().StringVarP(&o.Graph.StaticDirectory, "static-dir", "", o.Graph.StaticDirectory,
+		"Serve static files from the specified directory")
+	c.Flags().StringSliceVarP(&o.Filter.NodeFilter, "node-filter", "", o.Filter.NodeFilter,
+		"comma separated list of nodes to include")
+	c.MarkFlagsMutuallyExclusive("dot", "mermaid", "drawio")
+
+	return c, nil
 }
 
-func graphFn(_ *cobra.Command, _ []string) error {
+func graphFn(o *Options) error {
 	var err error
 
 	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(timeout),
-		clabcore.WithTopoPath(topoFile, varsFile),
-		clabcore.WithNodeFilter(nodeFilter),
+		clabcore.WithTimeout(o.Global.Timeout),
+		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
+		clabcore.WithNodeFilter(o.Filter.NodeFilter),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: gracefulShutdown,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
 			},
 		),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	}
 	c, err := clabcore.NewContainerLab(opts...)
 	if err != nil {
@@ -66,16 +79,16 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if dot {
+	if o.Graph.GenerateDotFile {
 		return c.GenerateDotGraph()
 	}
 
-	if mermaid {
-		return c.GenerateMermaidGraph(mermaidDirection)
+	if o.Graph.GenerateMermaid {
+		return c.GenerateMermaidGraph(o.Graph.MermaidDirection)
 	}
 
-	if drawio {
-		return c.GenerateDrawioDiagram(drawioVersion, drawioArgs)
+	if o.Graph.GenerateDrawIO {
+		return c.GenerateDrawioDiagram(o.Graph.DrawIOVersion, o.Graph.DrawIOArgs)
 	}
 
 	gtopo := clabcore.GraphTopo{
@@ -88,7 +101,7 @@ func graphFn(_ *cobra.Command, _ []string) error {
 
 	var containers []clabruntime.GenericContainer
 	// if offline mode is not enforced, list containers matching lab name
-	if !offline {
+	if !o.Graph.Offline {
 		containers, err = c.ListContainers(ctx,
 			clabcore.WithListLabName(c.Config.Name))
 		if err != nil {
@@ -133,28 +146,5 @@ func graphFn(_ *cobra.Command, _ []string) error {
 		Data: template.JS(string(b)), // skipcq: GSC-G203
 	}
 
-	return c.ServeTopoGraph(tmpl, staticDir, srv, topoD)
-}
-
-func init() {
-	RootCmd.AddCommand(graphCmd)
-	graphCmd.Flags().StringVarP(&srv, "srv", "s", "0.0.0.0:50080",
-		"HTTP server address serving the topology view")
-	graphCmd.Flags().BoolVarP(&offline, "offline", "o", false,
-		"use only information from topo file when building graph")
-	graphCmd.Flags().BoolVarP(&dot, "dot", "", false, "generate dot file")
-	graphCmd.Flags().BoolVarP(&mermaid, "mermaid", "", false, "print mermaid flowchart to stdout")
-	graphCmd.Flags().StringVarP(&mermaidDirection, "mermaid-direction", "", "TD", "specify direction of mermaid dirgram")
-	graphCmd.Flags().StringSliceVar(&drawioArgs, "drawio-args", []string{},
-		"Additional flags to pass to the drawio diagram generation tool (can be specified multiple times)")
-	graphCmd.Flags().BoolVarP(&drawio, "drawio", "", false, "generate drawio diagram file")
-	graphCmd.Flags().StringVarP(&drawioVersion, "drawio-version", "", "latest",
-		"version of the clab-io-draw container to use for generating drawio diagram file")
-	graphCmd.Flags().StringVarP(&tmpl, "template", "", "",
-		"Go html template used to generate the graph")
-	graphCmd.Flags().StringVarP(&staticDir, "static-dir", "", "",
-		"Serve static files from the specified directory")
-	graphCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include")
-	graphCmd.MarkFlagsMutuallyExclusive("dot", "mermaid", "drawio")
+	return c.ServeTopoGraph(o.Graph.Template, o.Graph.StaticDirectory, o.Graph.Server, topoD)
 }

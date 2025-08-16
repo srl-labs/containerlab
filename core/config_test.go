@@ -428,10 +428,10 @@ func TestLabelsInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			tc.want[clablabels.NodeLabDir] =
-				clabutils.ResolvePath(tc.want[clablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
-			tc.want[clablabels.TopoFile] =
-				clabutils.ResolvePath(tc.want[clablabels.TopoFile], c.TopoPaths.TopologyFileDir())
+			tc.want[clablabels.NodeLabDir] = clabutils.ResolvePath(
+				tc.want[clablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
+			tc.want[clablabels.TopoFile] = clabutils.ResolvePath(
+				tc.want[clablabels.TopoFile], c.TopoPaths.TopologyFileDir())
 
 			labels := c.Nodes[tc.node].Config().Labels
 

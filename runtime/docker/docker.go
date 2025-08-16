@@ -785,11 +785,13 @@ func (*DockerRuntime) buildFilterString(gFilters []*clabtypes.GenericFilter) fil
 	filter := filters.NewArgs()
 	for _, gF := range gFilters {
 		filterStr := ""
-		if gF.Operator == "exists" {
+
+		switch {
+		case gF.Operator == "exists":
 			filterStr = gF.Field
-		} else if gF.FilterType == "name" {
+		case gF.FilterType == "name":
 			filterStr = fmt.Sprintf("^%s$", gF.Match) // this regexp ensure we have an exact match for name
-		} else {
+		default:
 			filterStr = gF.Field + gF.Operator + gF.Match
 		}
 

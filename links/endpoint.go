@@ -110,7 +110,7 @@ func (e *EndpointGeneric) GetNode() Node {
 }
 
 func (e *EndpointGeneric) Remove(ctx context.Context) error {
-	return e.GetNode().ExecFunction(ctx, func(n ns.NetNS) error {
+	return e.GetNode().ExecFunction(ctx, func(ns.NetNS) error {
 		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 
@@ -181,6 +181,6 @@ func CheckEndpointDoesNotExistYet(ctx context.Context, e Endpoint) error {
 			return nil
 		}
 
-		return fmt.Errorf("interface %s is defined via topology but does already exist: %v", e.String(), err)
+		return fmt.Errorf("interface %s is defined via topology but already exists: %v", e.String(), err)
 	})
 }

@@ -14,9 +14,14 @@ import (
 func main() {
 	ctx, cancel := clabcmd.SignalHandledContext()
 
-	clabcmd.RootCmd.SetContext(ctx)
+	root, err := clabcmd.Entrypoint()
+	if err != nil {
+		os.Exit(1)
+	}
 
-	err := fang.Execute(ctx, clabcmd.RootCmd, fang.WithoutVersion())
+	root.SetContext(ctx)
+
+	err = fang.Execute(ctx, root, fang.WithoutVersion())
 
 	// ensure cancel is *always* called (os.Exit bypasses)
 	cancel()

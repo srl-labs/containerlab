@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -307,8 +308,35 @@ func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
 
 			log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
+
 			// download the file to tmp location
-			err := clabutils.CopyFileContents(context.Background(), p, absDestFile, 0o755)
+			err := os.MkdirAll(filepath.Dir(absDestFile), 0o750)
+			if err != nil {
+				return err
+			}
+
+			out, err := os.Create(absDestFile)
+			if err != nil {
+				return err
+			}
+
+			// Change file ownership to user running Containerlab instead of effective UID
+			err = clabutils.SetUIDAndGID(absDestFile)
+			if err != nil {
+				return err
+			}
+
+			err = out.Chmod(0o755)
+			if err != nil {
+				return err
+			}
+
+			defer func() {
+				// should only err on repeated calls to close anyway
+				_ = out.Close()
+			}()
+
+			err = clabutils.CopyFileContents(context.Background(), p, out)
 			if err != nil {
 				return err
 			}
@@ -626,22 +654,22 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	noProxyLower, existsLower := nodeCfg.Env["no_proxy"]
 	noProxyUpper, existsUpper := nodeCfg.Env["NO_PROXY"]
 	noProxy := ""
-	if existsLower {
+
+	switch {
+	case existsLower:
 		noProxy = noProxyLower
-		for _, defaultValue := range noProxyDefaults {
-			if !strings.Contains(noProxy, defaultValue) {
-				noProxy = noProxy + "," + defaultValue
-			}
-		}
-	} else if existsUpper {
+	case existsUpper:
 		noProxy = noProxyUpper
+	default:
+		noProxy = strings.Join(noProxyDefaults, ",")
+	}
+
+	if existsLower || existsUpper {
 		for _, defaultValue := range noProxyDefaults {
 			if !strings.Contains(noProxy, defaultValue) {
 				noProxy = noProxy + "," + defaultValue
 			}
 		}
-	} else {
-		noProxy = strings.Join(noProxyDefaults, ",")
 	}
 
 	// add all clab nodes to the no_proxy variable, if they have a static IP assigned, add this as well

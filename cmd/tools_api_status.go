@@ -5,7 +5,6 @@
 package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -18,7 +17,6 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablabels "github.com/srl-labs/containerlab/labels"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
-	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // APIServerListItem defines the structure for API server container info in JSON output.
@@ -32,144 +30,130 @@ type APIServerListItem struct {
 	Owner   string `json:"owner"`
 }
 
-func init() {
-	apiServerCmd.AddCommand(apiServerStatusCmd)
-	apiServerStatusCmd.Flags().StringVarP(&outputFormatAPI, "format", "f", "table",
-		"output format for 'status' command (table, json)")
-}
+func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
+	ctx := cobraCmd.Context()
 
-// apiServerStatusCmd shows status of active API server containers.
-var apiServerStatusCmd = &cobra.Command{
-	Use:     "status",
-	Short:   "show status of active Containerlab API server containers",
-	PreRunE: clabutils.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+	// Use common.Runtime for consistency with other commands
+	runtimeName := o.Global.Runtime
+	if runtimeName == "" {
+		runtimeName = o.ToolsAPI.Runtime
+	}
 
-		// Use common.Runtime for consistency with other commands
-		runtimeName := runtime
-		if runtimeName == "" {
-			runtimeName = apiServerRuntime
+	// Initialize containerlab with runtime using the same approach as inspect command
+	opts := []clabcore.ClabOption{
+		clabcore.WithTimeout(o.Global.Timeout),
+		clabcore.WithRuntime(runtimeName,
+			&clabruntime.RuntimeConfig{
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
+			},
+		),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
+	}
+
+	c, err := clabcore.NewContainerLab(opts...)
+	if err != nil {
+		return err
+	}
+
+	// Check connectivity like inspect does
+	err = c.CheckConnectivity(ctx)
+	if err != nil {
+		return err
+	}
+
+	containers, err := c.ListContainers(ctx, clabcore.WithListToolType("api-server"))
+	if err != nil {
+		return fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	if len(containers) == 0 {
+		if o.ToolsAPI.OutputFormat == "json" {
+			fmt.Println("[]")
+		} else {
+			fmt.Println("No active API server containers found")
+		}
+		return nil
+	}
+
+	// Process containers and format output
+	listItems := make([]APIServerListItem, 0, len(containers))
+	for idx := range containers {
+		name := strings.TrimPrefix(containers[idx].Names[0], "/")
+
+		// Get port from labels or use default
+		port := 8080 // default
+		if portStr, ok := containers[idx].Labels["clab-api-port"]; ok {
+			if portVal, err := strconv.Atoi(portStr); err == nil {
+				port = portVal
+			}
 		}
 
-		// Initialize containerlab with runtime using the same approach as inspect command
-		opts := []clabcore.ClabOption{
-			clabcore.WithTimeout(timeout),
-			clabcore.WithRuntime(runtimeName,
-				&clabruntime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: gracefulShutdown,
-				},
-			),
-			clabcore.WithDebug(debug),
+		// Get host from labels or use default
+		host := "localhost" // default
+		if hostVal, ok := containers[idx].Labels["clab-api-host"]; ok {
+			host = hostVal
 		}
 
-		c, err := clabcore.NewContainerLab(opts...)
+		// Get labs dir from labels or use default
+		labsDir := "~/.clab" // default
+		if dirsVal, ok := containers[idx].Labels["clab-labs-dir"]; ok {
+			labsDir = dirsVal
+		}
+
+		// Get runtime from labels or use default
+		runtimeType := "docker" // default
+		if rtVal, ok := containers[idx].Labels["clab-runtime"]; ok {
+			runtimeType = rtVal
+		}
+
+		// Get owner from container labels
+		owner := "N/A"
+		if ownerVal, exists := containers[idx].Labels[clablabels.Owner]; exists && ownerVal != "" {
+			owner = ownerVal
+		}
+
+		listItems = append(listItems, APIServerListItem{
+			Name:    name,
+			State:   containers[idx].State,
+			Host:    host,
+			Port:    port,
+			LabsDir: labsDir,
+			Runtime: runtimeType,
+			Owner:   owner,
+		})
+	}
+
+	if o.ToolsAPI.OutputFormat == "json" {
+		b, err := json.MarshalIndent(listItems, "", "  ")
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to marshal to JSON: %w", err)
 		}
+		fmt.Println(string(b))
+	} else {
+		// Use go-pretty table
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.SetStyle(table.StyleRounded)
+		t.Style().Format.Header = text.FormatTitle
+		t.Style().Options.SeparateRows = true
 
-		// Check connectivity like inspect does
-		err = c.CheckConnectivity(ctx)
-		if err != nil {
-			return err
-		}
+		t.AppendHeader(table.Row{"NAME", "STATUS", "HOST", "PORT", "LABS DIR", "RUNTIME", "OWNER"})
 
-		containers, err := c.ListContainers(ctx, clabcore.WithListToolType("api-server"))
-		if err != nil {
-			return fmt.Errorf("failed to list containers: %w", err)
-		}
-
-		if len(containers) == 0 {
-			if outputFormatAPI == "json" {
-				fmt.Println("[]")
-			} else {
-				fmt.Println("No active API server containers found")
-			}
-			return nil
-		}
-
-		// Process containers and format output
-		listItems := make([]APIServerListItem, 0, len(containers))
-		for _, c := range containers {
-			name := strings.TrimPrefix(c.Names[0], "/")
-
-			// Get port from labels or use default
-			port := 8080 // default
-			if portStr, ok := c.Labels["clab-api-port"]; ok {
-				if portVal, err := strconv.Atoi(portStr); err == nil {
-					port = portVal
-				}
-			}
-
-			// Get host from labels or use default
-			host := "localhost" // default
-			if hostVal, ok := c.Labels["clab-api-host"]; ok {
-				host = hostVal
-			}
-
-			// Get labs dir from labels or use default
-			labsDir := "~/.clab" // default
-			if dirsVal, ok := c.Labels["clab-labs-dir"]; ok {
-				labsDir = dirsVal
-			}
-
-			// Get runtime from labels or use default
-			runtimeType := "docker" // default
-			if rtVal, ok := c.Labels["clab-runtime"]; ok {
-				runtimeType = rtVal
-			}
-
-			// Get owner from container labels
-			owner := "N/A"
-			if ownerVal, exists := c.Labels[clablabels.Owner]; exists && ownerVal != "" {
-				owner = ownerVal
-			}
-
-			listItems = append(listItems, APIServerListItem{
-				Name:    name,
-				State:   c.State,
-				Host:    host,
-				Port:    port,
-				LabsDir: labsDir,
-				Runtime: runtimeType,
-				Owner:   owner,
+		for _, item := range listItems {
+			t.AppendRow(table.Row{
+				item.Name,
+				item.State,
+				item.Host,
+				item.Port,
+				item.LabsDir,
+				item.Runtime,
+				item.Owner,
 			})
 		}
+		t.Render()
+	}
 
-		// Output based on format
-		if outputFormatAPI == "json" {
-			b, err := json.MarshalIndent(listItems, "", "  ")
-			if err != nil {
-				return fmt.Errorf("failed to marshal to JSON: %w", err)
-			}
-			fmt.Println(string(b))
-		} else {
-			// Use go-pretty table
-			t := table.NewWriter()
-			t.SetOutputMirror(os.Stdout)
-			t.SetStyle(table.StyleRounded)
-			t.Style().Format.Header = text.FormatTitle
-			t.Style().Options.SeparateRows = true
-
-			t.AppendHeader(table.Row{"NAME", "STATUS", "HOST", "PORT", "LABS DIR", "RUNTIME", "OWNER"})
-
-			for _, item := range listItems {
-				t.AppendRow(table.Row{
-					item.Name,
-					item.State,
-					item.Host,
-					item.Port,
-					item.LabsDir,
-					item.Runtime,
-					item.Owner,
-				})
-			}
-			t.Render()
-		}
-
-		return nil
-	},
+	return nil
 }
