@@ -54,7 +54,7 @@ func GetOptions() *Options {
 				Image:          "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
 				Name:           "clab-api-server",
 				Port:           8080,
-				Host:           "localshost",
+				Host:           "localhost",
 				JWTExpiration:  "60m",
 				UserGroup:      "clab_api",
 				SuperUserGroup: "clab_admins",
