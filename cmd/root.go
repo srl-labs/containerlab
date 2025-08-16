@@ -301,7 +301,7 @@ func Entrypoint() (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "containerlab",
 		Short: "deploy container based lab environments with a user-defined interconnections",
-		PersistentPreRunE: func(cobraCmd *cobra.Command, args []string) error {
+		PersistentPreRunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return preRunFn(cobraCmd, o)
 		},
 		Aliases:      []string{"clab"},

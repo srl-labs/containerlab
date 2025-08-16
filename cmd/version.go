@@ -29,7 +29,7 @@ const (
 	downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
 )
 
-func versionCmd(o *Options) (*cobra.Command, error) {
+func versionCmd(_ *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "version",
 		Short: "Show containerlab version or upgrade",

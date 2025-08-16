@@ -37,7 +37,6 @@ linters:
     - prealloc
     - revive
     - wrapcheck
-    - wsl # deprecated, eventually we'll enable wsl_v5
     - wsl_v5
   settings:
     dupl:

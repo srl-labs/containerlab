@@ -318,7 +318,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 	}
 
 	var header tableWriter.Row
-	colConfigs := []tableWriter.ColumnConfig{}
+	var colConfigs []tableWriter.ColumnConfig
 
 	if o.Destroy.All {
 		header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)

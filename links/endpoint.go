@@ -110,7 +110,7 @@ func (e *EndpointGeneric) GetNode() Node {
 }
 
 func (e *EndpointGeneric) Remove(ctx context.Context) error {
-	return e.GetNode().ExecFunction(ctx, func(n ns.NetNS) error {
+	return e.GetNode().ExecFunction(ctx, func(ns.NetNS) error {
 		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 

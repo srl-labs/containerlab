@@ -5,8 +5,6 @@
 package cmd
 
 import (
-	"context"
-
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	clabcore "github.com/srl-labs/containerlab/core"
@@ -20,8 +18,8 @@ func disableTxOffloadCmd(o *Options) (*cobra.Command, error) {
 		Short: "disables tx checksum offload on eth0 interface of a container",
 
 		PreRunE: clabutils.CheckAndGetRootPrivs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			ctx := cobraCmd.Context()
 
 			opts := []clabcore.ClabOption{
 				clabcore.WithTimeout(o.Global.Timeout),

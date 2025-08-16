@@ -43,7 +43,7 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 			log.Errorf("failed destroying lab after cancellation signal: %v", err)
 		}
 
-		os.Exit(1)
+		os.Exit(1) // // skipcq: RVV-A0003
 	}()
 
 	return ctx, cancel
