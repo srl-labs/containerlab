@@ -6,9 +6,9 @@ import (
 	"github.com/srl-labs/containerlab/labels"
 )
 
-func (c *CLab) CreateNetwork(ctx context.Context) error {
+func (c *CLab) CreateNetwork(ctx context.Context, caller ...string) error {
 	// create docker network or use existing one
-	if err := c.globalRuntime().CreateNet(ctx); err != nil {
+	if err := c.globalRuntime().CreateNet(ctx, caller...); err != nil {
 		return err
 	}
 

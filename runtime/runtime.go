@@ -27,7 +27,7 @@ type ContainerRuntime interface {
 	// Instructs the runtime not to delete the mgmt network on destroy
 	WithKeepMgmtNet()
 	// Create container (bridge) network
-	CreateNet(context.Context) error
+	CreateNet(context.Context, ...string) error
 	// Delete container (bridge) network
 	DeleteNet(context.Context) error
 	// Pull container image if not present

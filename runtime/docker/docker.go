@@ -164,9 +164,17 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 }
 
 // CreateNet creates a docker network or reusing if it exists.
-func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
+func (d *DockerRuntime) CreateNet(ctx context.Context, caller ...string) (err error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
+
+	// Determine the caller context (default to "create" if not specified)
+    var callerContext string
+    if len(caller) > 0 {
+        callerContext = caller[0]
+    } else {
+        callerContext = "create"
+    }
 
 	// Determine the driver to use (default to bridge if not specified)
 	driver := d.mgmt.Driver
@@ -179,8 +187,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
 	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
-	var networkCreated bool
-
+	
 	switch {
 	case dockerC.IsErrNotFound(err):
 		// Network doesn't exist, create it based on driver type
@@ -192,7 +199,10 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 			}
 			
 		case "macvlan":
-			networkCreated = true
+			if callerContext == "destroy" {
+            	log.Debugf("Network %q not found, but skipping creation since called from destroy operation", d.mgmt.Network)
+            return nil
+        	}
 			err = d.createMgmtMacvlan(nctx)
 			if err != nil {
 				return err
@@ -206,7 +216,6 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		
 	case err == nil:
 		// Network exists, validate it matches expected driver
-		networkCreated = false
 		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
 		if netResource.Driver != driver {
 			return fmt.Errorf("existing network %q has driver %q but configuration specifies %q", 
@@ -274,9 +283,7 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		}
 		
 		log.Debugf("Docker macvlan network %q created/reused with parent interface %q", d.mgmt.Network, d.mgmt.MacvlanParent)
-		if networkCreated {
-        	return d.postCreateMacvlanActions()
-    	}
+        return d.postCreateMacvlanActions()
 	}
 
 	return nil
