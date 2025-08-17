@@ -1379,7 +1379,16 @@
                         "juniper_vjunosevolved": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "cjunosevolved": {
+                            "ref": "#/definitions/node-config"
+                        },
+                        "juniper_cjunosevolved": {
+                            "ref": "#/definitions/node-config"
+                        },
                         "aruba_aoscx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_xrd": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_xrv": {
@@ -1389,6 +1398,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_nxos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_n9kv": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_csr": {
@@ -1401,6 +1413,12 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_iol": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_8000": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_c8000v": {
                             "$ref": "#/definitions/node-config"
                         },
                         "linux": {
@@ -1427,16 +1445,7 @@
                         "ext-container": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "cisco_xrd": {
-                            "$ref": "#/definitions/node-config"
-                        },
                         "rare": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "cisco_8000": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "cisco_c8000v": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cumulus_cvx": {
@@ -1458,15 +1467,6 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "fdio_vpp": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "cjunosevolved": {
-                            "ref": "#/definitions/node-config"
-                        },
-                        "juniper_cjunosevolved": {
-                            "ref": "#/definitions/node-config"
-                        },
-                        "cisco_n9kv": {
                             "$ref": "#/definitions/node-config"
                         }
                     },
