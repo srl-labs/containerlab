@@ -135,7 +135,7 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 		}
 	}
 	if deploy {
-		err = clabutils.CheckAndGetRootPrivs(nil, nil)
+		err = clabutils.CheckAndGetRootPrivs()
 		if err != nil {
 			return err
 		}

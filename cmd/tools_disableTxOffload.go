@@ -17,7 +17,9 @@ func disableTxOffloadCmd(o *Options) (*cobra.Command, error) {
 		Use:   "disable-tx-offload",
 		Short: "disables tx checksum offload on eth0 interface of a container",
 
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			ctx := cobraCmd.Context()
 

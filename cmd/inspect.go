@@ -49,7 +49,9 @@ func inspectCmd(o *Options) (*cobra.Command, error) {
 		Short:   "inspect interfaces of one or multiple nodes in a lab",
 		Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
 		Aliases: []string{"int", "intf"},
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return inspectInterfacesFn(cobraCmd, o)
 		},

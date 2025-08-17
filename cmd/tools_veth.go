@@ -28,9 +28,11 @@ func vethCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	vethCreateCmd := &cobra.Command{
-		Use:     "create",
-		Short:   "Create a veth interface and attach its sides to the specified containers",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "create",
+		Short: "Create a veth interface and attach its sides to the specified containers",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return vethCreate(o)
 		},

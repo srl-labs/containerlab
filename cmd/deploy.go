@@ -24,7 +24,9 @@ func deployCmd(o *Options) (*cobra.Command, error) {
 		Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
 		Aliases:      []string{"dep"},
 		SilenceUsage: true,
-		PreRunE:      clabutils.CheckAndGetRootPrivs,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return deployFn(cobraCmd, o)
 		},

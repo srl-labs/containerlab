@@ -61,10 +61,12 @@ func versionCmd(_ *Options) (*cobra.Command, error) {
 			},
 		},
 		&cobra.Command{
-			Use:     "upgrade",
-			Short:   "upgrade containerlab to latest available version",
-			PreRunE: clabutils.CheckAndGetRootPrivs,
-			RunE:    upgrade,
+			Use:   "upgrade",
+			Short: "upgrade containerlab to latest available version",
+			PreRunE: func(_ *cobra.Command, _ []string) error {
+				return clabutils.CheckAndGetRootPrivs()
+			},
+			RunE: upgrade,
 		},
 	)
 

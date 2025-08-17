@@ -19,7 +19,9 @@ func destroyCmd(o *Options) (*cobra.Command, error) {
 		Short:   "destroy a lab",
 		Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
 		Aliases: []string{"des"},
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return destroyFn(cobraCmd, o)
 		},

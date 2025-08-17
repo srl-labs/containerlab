@@ -17,9 +17,11 @@ func apiServerCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	apiServerStartCmd := &cobra.Command{
-		Use:     "start",
-		Short:   "start Containerlab API server container",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "start",
+		Short: "start Containerlab API server container",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return apiServerStart(cobraCmd, o)
 		},
@@ -67,9 +69,11 @@ func apiServerCmd(o *Options) (*cobra.Command, error) {
 		"container runtime to use for API server")
 
 	apiServerStatusCmd := &cobra.Command{
-		Use:     "status",
-		Short:   "show status of active Containerlab API server containers",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "status",
+		Short: "show status of active Containerlab API server containers",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return apiServerStatus(cobraCmd, o)
 		},
@@ -79,9 +83,11 @@ func apiServerCmd(o *Options) (*cobra.Command, error) {
 		"output format for 'status' command (table, json)")
 
 	apiServerStopCmd := &cobra.Command{
-		Use:     "stop",
-		Short:   "stop Containerlab API server container",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "stop",
+		Short: "stop Containerlab API server container",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return apiServerStop(cobraCmd, o)
 		},

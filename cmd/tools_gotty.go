@@ -62,9 +62,11 @@ func gottyCmd(o *Options) (*cobra.Command, error) {
 		"output format for 'list' command (table, json)")
 
 	gottyAttachCmd := &cobra.Command{
-		Use:     "attach",
-		Short:   "attach GoTTY web terminal to a lab",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "attach",
+		Short: "attach GoTTY web terminal to a lab",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return gottyAttach(cobraCmd, o)
 		},
@@ -90,9 +92,11 @@ func gottyCmd(o *Options) (*cobra.Command, error) {
 		"lab owner name for the GoTTY container")
 
 	gottyDetachCmd := &cobra.Command{
-		Use:     "detach",
-		Short:   "detach GoTTY web terminal from a lab",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "detach",
+		Short: "detach GoTTY web terminal from a lab",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return gottyDetach(cobraCmd, o)
 		},
@@ -104,9 +108,11 @@ func gottyCmd(o *Options) (*cobra.Command, error) {
 		"name of the lab where GoTTY container is attached")
 
 	gottyReattachCmd := &cobra.Command{
-		Use:     "reattach",
-		Short:   "detach and reattach GoTTY web terminal to a lab",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "reattach",
+		Short: "detach and reattach GoTTY web terminal to a lab",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return gottyReattach(cobraCmd, o)
 		},

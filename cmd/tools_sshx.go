@@ -64,9 +64,11 @@ func sshxCmd(o *Options) (*cobra.Command, error) {
 		"output format for 'list' command (table, json)")
 
 	sshxAttachCmd := &cobra.Command{
-		Use:     "attach",
-		Short:   "attach SSHX terminal sharing to a lab",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "attach",
+		Short: "attach SSHX terminal sharing to a lab",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return sshxAttach(cobraCmd, o)
 		},
@@ -88,9 +90,11 @@ func sshxCmd(o *Options) (*cobra.Command, error) {
 		"mount host user's SSH directory (~/.ssh) to the sshx container")
 
 	sshxDetachCmd := &cobra.Command{
-		Use:     "detach",
-		Short:   "detach SSHX terminal sharing from a lab",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "detach",
+		Short: "detach SSHX terminal sharing from a lab",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return sshxDetach(cobraCmd, o)
 		},
@@ -102,9 +106,11 @@ func sshxCmd(o *Options) (*cobra.Command, error) {
 		"name of the lab where SSHX container is attached")
 
 	sshxReattachCmd := &cobra.Command{
-		Use:     "reattach",
-		Short:   "detach and reattach SSHX terminal sharing to a lab",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "reattach",
+		Short: "detach and reattach SSHX terminal sharing to a lab",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return sshxReattach(cobraCmd, o)
 		},

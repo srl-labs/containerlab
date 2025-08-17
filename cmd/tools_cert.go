@@ -74,7 +74,8 @@ func certCmd(o *Options) (*cobra.Command, error) {
 		o.ToolsCert.OrganizationUnit, "Organization Unit")
 	signCertCmd.Flags().StringVarP(&o.ToolsCert.Path, "path", "p", o.ToolsCert.Path,
 		"path to write certificate and key to. Default is current working directory")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.CANamePrefix, "name", "n", "cert", "certificate/key filename prefix")
+	signCertCmd.Flags().StringVarP(&o.ToolsCert.CertNamePrefix, "name", "n",
+		o.ToolsCert.CertNamePrefix, "certificate/key filename prefix")
 	signCertCmd.Flags().UintVarP(&o.ToolsCert.KeySize, "key-size", "", o.ToolsCert.KeySize, "private key size")
 
 	return c, nil
@@ -198,9 +199,9 @@ func signCert(o *Options) error {
 	clabutils.CreateDirectory(o.ToolsCert.Path, 0o777) // skipcq: GSC-G302
 
 	err = nodeCert.Write(
-		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CANamePrefix+clabtypes.CertFileSuffix),
-		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CANamePrefix+clabtypes.KeyFileSuffix),
-		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CANamePrefix+clabtypes.CSRFileSuffix))
+		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CertNamePrefix+clabtypes.CertFileSuffix),
+		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CertNamePrefix+clabtypes.KeyFileSuffix),
+		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CertNamePrefix+clabtypes.CSRFileSuffix))
 	if err != nil {
 		return err
 	}

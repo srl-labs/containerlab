@@ -7,11 +7,13 @@ import (
 
 func redeployCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
-		Use:          "redeploy",
-		Short:        "destroy and redeploy a lab",
-		Long:         "destroy a lab and deploy it again based on the topology definition file\nreference: https://containerlab.dev/cmd/redeploy/",
-		Aliases:      []string{"rdep"},
-		PreRunE:      clabutils.CheckAndGetRootPrivs,
+		Use:     "redeploy",
+		Short:   "destroy and redeploy a lab",
+		Long:    "destroy a lab and deploy it again based on the topology definition file\nreference: https://containerlab.dev/cmd/redeploy/",
+		Aliases: []string{"rdep"},
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		SilenceUsage: true,
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return redeployFn(cobraCmd, o)

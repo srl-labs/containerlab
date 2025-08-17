@@ -22,9 +22,11 @@ func vxlanCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	vxlanCreateCmd := &cobra.Command{
-		Use:     "create",
-		Short:   "create vxlan interface",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "create",
+		Short: "create vxlan interface",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return vxlanCreate(cobraCmd, o)
 		},
@@ -51,9 +53,11 @@ func vxlanCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	vxlanDeleteCmd := &cobra.Command{
-		Use:     "delete",
-		Short:   "delete vxlan interface",
-		PreRunE: clabutils.CheckAndGetRootPrivs,
+		Use:   "delete",
+		Short: "delete vxlan interface",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return vxlanDelete(o)
 		},
