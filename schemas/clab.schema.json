@@ -1465,6 +1465,9 @@
                         },
                         "juniper_cjunosevolved": {
                             "ref": "#/definitions/node-config"
+                        },
+                        "cisco_n9kv": {
+                            "$ref": "#/definitions/node-config"
                         }
                     },
                     "additionalProperties": false
