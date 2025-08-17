@@ -27,6 +27,8 @@ const (
 
 var optionsInstance *Options //nolint:gochecknoglobals
 
+// GetOptions returns the global options instance if it exists
+// or creates a new one with default values for all options.
 func GetOptions() *Options {
 	if optionsInstance == nil {
 		optionsInstance = &Options{
