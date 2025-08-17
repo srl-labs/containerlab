@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
 
 	"github.com/charmbracelet/log"
@@ -17,7 +16,7 @@ const (
 	NOMODIFY              = -1
 )
 
-func CheckAndGetRootPrivs(_ *cobra.Command, _ []string) error {
+func CheckAndGetRootPrivs() error {
 	_, euid, suid := unix.Getresuid()
 	if euid != 0 && suid != 0 {
 		return fmt.Errorf("this containerlab command requires root privileges or root via SUID to run, effective UID: %v SUID: %v", euid, suid)

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/spf13/cobra"
 )
 
 var onlyOneSignalHandler = make(chan struct{}) //nolint: gochecknoglobals
@@ -33,14 +34,16 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 		destroyCtx, destroyCancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer destroyCancel()
 
+		// destroyFn requires a cobra.Command but only needs the ctx from it
+		destroyCmd := &cobra.Command{}
 		destroyCmd.SetContext(destroyCtx)
 
-		err := destroyFn(destroyCmd, []string{})
+		err := destroyFn(destroyCmd, GetOptions())
 		if err != nil {
 			log.Errorf("failed destroying lab after cancellation signal: %v", err)
 		}
 
-		os.Exit(1)
+		os.Exit(1) // skipcq: RVV-A0003
 	}()
 
 	return ctx, cancel

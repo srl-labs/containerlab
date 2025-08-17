@@ -30,11 +30,12 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 
 	var containers []clabruntime.GenericContainer
 
-	if opts.all {
+	switch {
+	case opts.all:
 		containers, err = c.ListContainers(ctx)
-	} else if c.TopoPaths.TopologyFilenameAbsPath() != "" {
+	case c.TopoPaths.TopologyFilenameAbsPath() != "":
 		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
-	} else {
+	default:
 		var listOpts []ListOption
 
 		if c.Config.Name != "" {

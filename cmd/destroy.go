@@ -13,70 +13,68 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	all         bool
-	cleanup     bool
-	keepMgmtNet bool
-	yes         bool
-)
+func destroyCmd(o *Options) (*cobra.Command, error) {
+	c := &cobra.Command{
+		Use:     "destroy",
+		Short:   "destroy a lab",
+		Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
+		Aliases: []string{"des"},
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return destroyFn(cobraCmd, o)
+		},
+	}
 
-// destroyCmd represents the destroy command.
-var destroyCmd = &cobra.Command{
-	Use:     "destroy",
-	Short:   "destroy a lab",
-	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
-	Aliases: []string{"des"},
-	PreRunE: clabutils.CheckAndGetRootPrivs,
-	RunE:    destroyFn,
-}
-
-func init() {
-	RootCmd.AddCommand(destroyCmd)
-	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false,
+	c.Flags().BoolVarP(&o.Destroy.Cleanup, "cleanup", "c", o.Destroy.Cleanup,
 		"delete lab directory. Cannot be used with node-filter")
-	destroyCmd.Flags().BoolVarP(&gracefulShutdown, "graceful", "", false,
+	c.Flags().BoolVarP(&o.Destroy.GracefulShutdown, "graceful", "", o.Destroy.GracefulShutdown,
 		"attempt to stop containers before removing")
-	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	destroyCmd.Flags().BoolVarP(&yes, "yes", "y", false,
+	c.Flags().BoolVarP(&o.Destroy.All, "all", "a", o.Destroy.All, "destroy all containerlab labs")
+	c.Flags().BoolVarP(&o.Destroy.AutoApprove, "yes", "y", o.Destroy.AutoApprove,
 		"auto-approve deletion when used with --all (skips confirmation prompt)")
-	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
+	c.Flags().UintVarP(&o.Deploy.MaxWorkers, "max-workers", "", o.Deploy.MaxWorkers,
 		"limit the maximum number of workers deleting nodes")
-	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
-	destroyCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
+	c.Flags().BoolVarP(&o.Destroy.KeepManagementNetwork, "keep-mgmt-net", "",
+		o.Destroy.KeepManagementNetwork, "do not remove the management network")
+	c.Flags().StringSliceVarP(&o.Filter.NodeFilter, "node-filter", "", o.Filter.NodeFilter,
 		"comma separated list of nodes to include")
+
+	return c, nil
 }
 
-func destroyFn(cobraCmd *cobra.Command, _ []string) error {
-	if cleanup && len(nodeFilter) != 0 {
+func destroyFn(cobraCmd *cobra.Command, o *Options) error {
+	if o.Destroy.Cleanup && len(o.Filter.NodeFilter) != 0 {
 		return fmt.Errorf("cleanup cannot be used with node-filter")
 	}
 
-	if all && labName != "" {
+	if o.Destroy.All && o.Global.TopologyName != "" {
 		return fmt.Errorf("--all and --name should not be used together")
 	}
 
 	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(timeout),
-		clabcore.WithLabName(labName),
+		clabcore.WithTimeout(o.Global.Timeout),
+		clabcore.WithLabName(o.Global.TopologyName),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: gracefulShutdown,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
 			},
 		),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 		// during destroy we don't want to check bind paths
 		// as it is irrelevant for this command.
 		clabcore.WithSkippedBindsPathsCheck(),
 	}
 
-	if topoFile != "" {
-		opts = append(opts, clabcore.WithTopoPath(topoFile, varsFile))
+	if o.Global.TopologyFile != "" {
+		opts = append(opts, clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile))
 	}
 
-	if keepMgmtNet {
+	if o.Destroy.KeepManagementNetwork {
 		opts = append(opts, clabcore.WithKeepMgmtNet())
 	}
 
@@ -86,38 +84,38 @@ func destroyFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	destroyOptions := []clabcore.DestroyOption{
-		clabcore.WithDestroyMaxWorkers(maxWorkers),
-		clabcore.WithDestroyNodeFilter(nodeFilter),
+		clabcore.WithDestroyMaxWorkers(o.Deploy.MaxWorkers),
+		clabcore.WithDestroyNodeFilter(o.Filter.NodeFilter),
 	}
 
-	if keepMgmtNet {
+	if o.Destroy.KeepManagementNetwork {
 		destroyOptions = append(
 			destroyOptions,
 			clabcore.WithDestroyKeepMgmtNet(),
 		)
 	}
 
-	if cleanup {
+	if o.Destroy.Cleanup {
 		destroyOptions = append(
 			destroyOptions,
 			clabcore.WithDestroyCleanup(),
 		)
 	}
 
-	if gracefulShutdown {
+	if o.Destroy.GracefulShutdown {
 		destroyOptions = append(
 			destroyOptions,
 			clabcore.WithDestroyGraceful(),
 		)
 	}
 
-	if all {
+	if o.Destroy.All {
 		destroyOptions = append(
 			destroyOptions,
 			clabcore.WithDestroyAll(),
 		)
 
-		if !yes {
+		if !o.Destroy.AutoApprove {
 			destroyOptions = append(
 				destroyOptions,
 				clabcore.WithDestroyTerminalPrompt(),

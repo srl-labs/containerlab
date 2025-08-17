@@ -265,11 +265,12 @@ var defaultStatic embed.FS
 func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error {
 	var t *template.Template
 
-	if tmpl == "" {
+	switch {
+	case tmpl == "":
 		t = template.Must(template.New("nextui.html").Parse(defaultTemplate))
-	} else if clabutils.FileExists(tmpl) {
+	case clabutils.FileExists(tmpl):
 		t = template.Must(template.ParseFiles(tmpl))
-	} else {
+	default:
 		return fmt.Errorf("%w. Path %s", claberrors.ErrFileNotFound, tmpl)
 	}
 
@@ -294,7 +295,7 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 	svr := http.FileServer(noListFs{staticFS})
 	http.Handle("/static/", http.StripPrefix("/static/", svr))
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		_ = t.Execute(w, topoD)
 	})
 
@@ -399,7 +400,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 			switch s {
 			case syscall.SIGWINCH:
 				if inTerminal {
-					resizeDockerTTY(client, ctx, containerID)
+					resizeDockerTTY(ctx, client, containerID)
 				}
 			case syscall.SIGINT, syscall.SIGTERM:
 				log.Infof("Received signal %v, stopping container %s", s, containerID)
@@ -411,7 +412,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 	}()
 
 	if inTerminal {
-		resizeDockerTTY(client, ctx, containerID)
+		resizeDockerTTY(ctx, client, containerID)
 	}
 
 	// Pipe local -> container
@@ -501,7 +502,7 @@ func pullImageIfNotPresent(ctx context.Context, client *dockerC.Client, imageNam
 
 // resizeDockerTTY attempts to match the container's TTY size to the local terminal size.
 // Called on startup and whenever SIGWINCH is received.
-func resizeDockerTTY(client *dockerC.Client, ctx context.Context, containerID string) {
+func resizeDockerTTY(ctx context.Context, client *dockerC.Client, containerID string) {
 	w, h, err := term.GetSize(int(os.Stdin.Fd()))
 	if err != nil {
 		log.Debugf("Unable to get local terminal size: %v", err)

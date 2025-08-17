@@ -973,19 +973,21 @@ func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
 
 	// Card, MDA and port are present
 	if foundIndices["card"] && foundIndices["mda"] && foundIndices["port"] {
-		if foundIndices["xiom"] && foundIndices["connector"] {
+		switch {
+		case foundIndices["xiom"] && foundIndices["connector"]:
 			// XIOM and connector are present, format will be: e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
 			return fmt.Sprintf("e%d-x%d-%d-c%d-%d", parsedIndices["card"],
 				parsedIndices["xiom"], parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"]), nil
-		} else if foundIndices["xiom"] {
+
+		case foundIndices["xiom"]:
 			// Only XIOM present, format will be: e1-x2-3-4 -> card 1, xiom 2, mda 3, port 4
 			return fmt.Sprintf("e%d-x%d-%d-%d", parsedIndices["card"],
 				parsedIndices["xiom"], parsedIndices["mda"], parsedIndices["port"]), nil
-		} else if foundIndices["connector"] {
+		case foundIndices["connector"]:
 			// Only connector present, format will be: e1-2-c3-4 -> card 1, mda 2, connector 3, port 4
 			return fmt.Sprintf("e%d-%d-c%d-%d", parsedIndices["card"],
 				parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"]), nil
-		} else {
+		default:
 			// No XIOM or connector present, format will be: e1-2-3 -> card 1, mda 2, port 3
 			return fmt.Sprintf("e%d-%d-%d", parsedIndices["card"],
 				parsedIndices["mda"], parsedIndices["port"]), nil

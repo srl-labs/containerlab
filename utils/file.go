@@ -95,7 +95,33 @@ func CopyFile(ctx context.Context, src, dst string, mode os.FileMode) (err error
 		}
 	}
 
-	return CopyFileContents(ctx, src, dst, mode)
+	err = os.MkdirAll(filepath.Dir(dst), 0o750)
+	if err != nil {
+		return err
+	}
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+
+	// Change file ownership to user running Containerlab instead of effective UID
+	err = SetUIDAndGID(dst)
+	if err != nil {
+		return err
+	}
+
+	err = out.Chmod(mode)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		// should only err on repeated calls to close anyway
+		_ = out.Close()
+	}()
+
+	return CopyFileContents(ctx, src, out)
 }
 
 // IsHttpURL checks if the url is a downloadable HTTP URL.
@@ -210,12 +236,16 @@ func copyFileContentsS3(src string) (io.ReadCloser, error) {
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
 // src can be an http(s) URL or an S3 URL.
-func CopyFileContents(ctx context.Context, src, dst string, mode os.FileMode) (err error) {
+func CopyFileContents(ctx context.Context, src string, dst *os.File) (err error) {
 	var in io.ReadCloser
 
 	switch {
 	case IsHttpURL(src, false):
-		client := NewHTTPClient()
+		client := &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+		}
 
 		// download using client
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, http.NoBody)
@@ -245,43 +275,12 @@ func CopyFileContents(ctx context.Context, src, dst string, mode os.FileMode) (e
 	}
 	defer in.Close() // skipcq: GO-S2307
 
-	// create directories if needed, since we promise to create the file
-	// if it doesn't exist
-	err = os.MkdirAll(filepath.Dir(dst), 0o750)
+	_, err = io.Copy(dst, in)
 	if err != nil {
 		return err
 	}
 
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
-	// Change file ownership to user running Containerlab instead of effective UID
-	err = SetUIDAndGID(dst)
-	if err != nil {
-		return err
-	}
-
-	err = out.Chmod(mode)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		cerr := out.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-
-	if _, err = io.Copy(out, in); err != nil {
-		return err
-	}
-
-	err = out.Sync()
-
-	return err
+	return dst.Sync()
 }
 
 // CreateFile writes content to a file by path `file`.

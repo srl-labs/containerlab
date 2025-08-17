@@ -14,58 +14,35 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
-	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	interfacesFormat   string
-	interfacesNodeName string
-)
-
-// inspectInterfacesCmd represents the inspect interfaces command.
-var inspectInterfacesCmd = &cobra.Command{
-	Use:     "interfaces",
-	Short:   "inspect interfaces of one or multiple nodes in a lab",
-	Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
-	Aliases: []string{"int", "intf"},
-	RunE:    inspectInterfacesFn,
-	PreRunE: clabutils.CheckAndGetRootPrivs,
-}
-
-func init() {
-	InspectCmd.AddCommand(inspectInterfacesCmd)
-
-	inspectInterfacesCmd.Flags().StringVarP(&interfacesFormat, "format", "f", "table", "output format. One of [table, json]")
-	inspectInterfacesCmd.Flags().StringVarP(&interfacesNodeName, "node", "n", "", "node to inspect")
-}
-
-func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
-	if labName == "" && topoFile == "" {
+func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
+	if o.Global.TopologyName == "" && o.Global.TopologyFile == "" {
 		fmt.Println("provide either a lab name (--name) or a topology file path (--topo)")
 		return nil
 	}
 
-	if interfacesFormat != "table" && interfacesFormat != "json" {
-		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", interfacesFormat)
+	if o.Inspect.InterfacesFormat != "table" && o.Inspect.InterfacesFormat != "json" {
+		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", o.Inspect.InterfacesFormat)
 	}
 
 	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(timeout),
+		clabcore.WithTimeout(o.Global.Timeout),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: gracefulShutdown,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
 			},
 		),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	}
 
-	if topoFile != "" {
+	if o.Global.TopologyFile != "" {
 		opts = append(opts,
-			clabcore.WithTopoPath(topoFile, varsFile),
-			clabcore.WithNodeFilter(nodeFilter),
+			clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
+			clabcore.WithNodeFilter(o.Filter.NodeFilter),
 		)
 	}
 
@@ -75,11 +52,12 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	labNameFilterLabel := ""
-	if labName != "" {
-		labNameFilterLabel = labName
-	} else if c.Config.Name != "" {
+	switch {
+	case o.Global.TopologyName != "":
+		labNameFilterLabel = o.Global.TopologyName
+	case c.Config.Name != "":
 		labNameFilterLabel = c.Config.Name
-	} else {
+	default:
 		return fmt.Errorf("could not find topology")
 	}
 
@@ -87,10 +65,10 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 		clabcore.WithListLabName(labNameFilterLabel),
 	}
 
-	if interfacesNodeName != "" {
+	if o.Inspect.InterfacesNode != "" {
 		listOpts = append(
 			listOpts,
-			clabcore.WithListNodeName(interfacesNodeName),
+			clabcore.WithListNodeName(o.Inspect.InterfacesNode),
 		)
 	}
 
@@ -109,7 +87,7 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to list container interfaces: %s", err)
 	}
 
-	err = printContainerInterfaces(containerInterfaces, interfacesFormat)
+	err = printContainerInterfaces(containerInterfaces, o.Inspect.InterfacesFormat)
 	return err
 }
 

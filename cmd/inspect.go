@@ -22,64 +22,82 @@ import (
 	clablabels "github.com/srl-labs/containerlab/labels"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	inspectFormat string
-	details       bool
-	wide          bool
-)
+func inspectCmd(o *Options) (*cobra.Command, error) {
+	c := &cobra.Command{
+		Use:     "inspect",
+		Short:   "inspect lab details",
+		Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
+		Aliases: []string{"ins", "i"},
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return inspectFn(cobraCmd, o)
+		},
+	}
 
-// InspectCmd represents the inspect command.
-var InspectCmd = &cobra.Command{
-	Use:     "inspect",
-	Short:   "inspect lab details",
-	Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
-	Aliases: []string{"ins", "i"},
-	RunE:    inspectFn,
-}
-
-func init() {
-	InspectCmd.Flags().BoolVarP(&details, "details", "", false,
+	c.Flags().BoolVarP(&o.Inspect.Details, "details", "", o.Inspect.Details,
 		"print all details of lab containers (JSON format, grouped by lab)")
-	InspectCmd.Flags().StringVarP(&inspectFormat, "format", "f", "table",
+	c.Flags().StringVarP(&o.Deploy.Format, "format", "f", o.Deploy.Format,
 		"output format. One of [table, json, csv]")
-	InspectCmd.Flags().BoolVarP(&all, "all", "a", false, "show all deployed containerlab labs")
-	InspectCmd.Flags().BoolVarP(&wide, "wide", "w", false,
+	c.Flags().BoolVarP(&o.Destroy.All, "all", "a", o.Destroy.All, "show all deployed containerlab labs")
+	c.Flags().BoolVarP(&o.Inspect.Wide, "wide", "w", o.Inspect.Wide,
 		"also more details about a lab and its nodes")
+
+	interfacesC := &cobra.Command{
+		Use:     "interfaces",
+		Short:   "inspect interfaces of one or multiple nodes in a lab",
+		Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
+		Aliases: []string{"int", "intf"},
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return inspectInterfacesFn(cobraCmd, o)
+		},
+	}
+
+	c.AddCommand(interfacesC)
+
+	interfacesC.Flags().StringVarP(&o.Inspect.InterfacesFormat, "format", "f",
+		o.Inspect.InterfacesFormat, "output format. One of [table, json]")
+	interfacesC.Flags().StringVarP(&o.Inspect.InterfacesNode, "node", "n",
+		o.Inspect.InterfacesNode, "node to inspect")
+
+	return c, nil
 }
 
-func inspectFn(cobraCmd *cobra.Command, _ []string) error {
-	if labName == "" && topoFile == "" && !all {
+func inspectFn(cobraCmd *cobra.Command, o *Options) error {
+	if o.Global.TopologyName == "" && o.Global.TopologyFile == "" && !o.Destroy.All {
 		return fmt.Errorf("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
 	}
 
 	// Format validation (only relevant if --details is NOT used)
-	if !details && inspectFormat != "table" && inspectFormat != "json" && inspectFormat != "csv" {
-		return fmt.Errorf("output format %q is not supported when --details is not used, use 'table', 'json' or 'csv'", inspectFormat)
+	if !o.Inspect.Details && o.Deploy.Format != "table" && o.Deploy.Format != "json" && o.Deploy.Format != "csv" {
+		return fmt.Errorf("output format %q is not supported when --details is not used, use 'table', 'json' or 'csv'", o.Deploy.Format)
 	}
 	// If --details is used, the format is implicitly JSON.
-	if details {
-		inspectFormat = "json" // Force JSON format if details are requested
+	if o.Inspect.Details {
+		o.Deploy.Format = "json" // Force JSON format if details are requested
 	}
 
 	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(timeout),
+		clabcore.WithTimeout(o.Global.Timeout),
 		clabcore.WithRuntime(
-			runtime,
+			o.Global.Runtime,
 			&clabruntime.RuntimeConfig{
-				Debug:            debug,
-				Timeout:          timeout,
-				GracefulShutdown: gracefulShutdown,
+				Debug:            o.Global.DebugCount > 0,
+				Timeout:          o.Global.Timeout,
+				GracefulShutdown: o.Destroy.GracefulShutdown,
 			},
 		),
-		clabcore.WithDebug(debug),
+		clabcore.WithDebug(o.Global.DebugCount > 0),
 	}
 
-	if topoFile != "" {
+	if o.Global.TopologyFile != "" {
 		opts = append(opts,
-			clabcore.WithTopoPath(topoFile, varsFile),
-			clabcore.WithNodeFilter(nodeFilter),
+			clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
+			clabcore.WithNodeFilter(o.Filter.NodeFilter),
 		)
 	}
 
@@ -88,14 +106,14 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	containers, err := listContainers(cobraCmd.Context(), c)
+	containers, err := listContainers(cobraCmd.Context(), c, o)
 	if err != nil {
 		return err
 	}
 
 	// Handle empty results
 	if len(containers) == 0 {
-		switch inspectFormat {
+		switch o.Deploy.Format {
 		case "json":
 			fmt.Println("{}")
 		case "csv":
@@ -107,21 +125,21 @@ func inspectFn(cobraCmd *cobra.Command, _ []string) error {
 	}
 
 	// Handle --details (always produces grouped JSON output)
-	if details {
+	if o.Inspect.Details {
 		return printContainerDetailsJSON(containers)
 	}
 
 	// Handle non-details cases (table or grouped JSON summary)
-	err = PrintContainerInspect(containers, inspectFormat)
+	err = PrintContainerInspect(containers, o)
 	return err
 }
 
 // listContainers handles listing containers based on different criteria (topology or labels).
-func listContainers(ctx context.Context, c *clabcore.CLab) ([]clabruntime.GenericContainer, error) {
+func listContainers(ctx context.Context, c *clabcore.CLab, o *Options) ([]clabruntime.GenericContainer, error) {
 	var containers []clabruntime.GenericContainer
 	var err error
 
-	if topoFile != "" {
+	if o.Global.TopologyFile != "" {
 		// List containers defined in the topology file
 		containers, err = c.ListNodesContainers(ctx)
 		if err != nil {
@@ -131,8 +149,8 @@ func listContainers(ctx context.Context, c *clabcore.CLab) ([]clabruntime.Generi
 		var listOptions []clabcore.ListOption
 
 		// List containers based on labels (--name or --all)
-		if labName != "" {
-			listOptions = append(listOptions, clabcore.WithListLabName(labName))
+		if o.Global.TopologyName != "" {
+			listOptions = append(listOptions, clabcore.WithListLabName(o.Global.TopologyName))
 		} else {
 			listOptions = append(listOptions, clabcore.WithListclabLabelExists())
 		}
@@ -146,18 +164,18 @@ func listContainers(ctx context.Context, c *clabcore.CLab) ([]clabruntime.Generi
 	return containers, nil
 }
 
-func toTableData(contDetails []clabtypes.ContainerDetails) []tableWriter.Row {
+func toTableData(contDetails []clabtypes.ContainerDetails, o *Options) []tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0, len(contDetails))
 
 	for i := range contDetails {
 		d := &contDetails[i]
 		tabRow := tableWriter.Row{}
 
-		if all {
+		if o.Destroy.All {
 			tabRow = append(tabRow, d.LabPath, d.LabName)
 		}
 
-		if wide {
+		if o.Inspect.Wide {
 			tabRow = append(tabRow, d.Owner)
 		}
 
@@ -169,7 +187,7 @@ func toTableData(contDetails []clabtypes.ContainerDetails) []tableWriter.Row {
 		}
 
 		// Common fields
-		if wide {
+		if o.Inspect.Wide {
 			// Print all fields on one line, no newlines
 			tabRow = append(tabRow,
 				d.Name,
@@ -282,9 +300,9 @@ func printContainerInspectJSON(contDetails []clabtypes.ContainerDetails) error {
 	return nil
 }
 
-func printContainerInspectTable(contDetails []clabtypes.ContainerDetails) {
+func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Options) {
 	// Generate and render table using the summary data (which uses relative LabPath)
-	tabData := toTableData(contDetails)
+	tabData := toTableData(contDetails, o)
 	table := tableWriter.NewWriter()
 	table.SetOutputMirror(os.Stdout)
 	table.SetStyle(tableWriter.StyleRounded)
@@ -297,16 +315,16 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails) {
 
 	// For --wide, avoid AutoMerge and multi-line cells
 	headerBase := tableWriter.Row{"Name", "Kind/Image", "State", "IPv4/6 Address"}
-	if wide {
+	if o.Inspect.Wide {
 		headerBase = slices.Insert(headerBase, 0, "Owner")
 	}
 
 	var header tableWriter.Row
-	colConfigs := []tableWriter.ColumnConfig{}
+	var colConfigs []tableWriter.ColumnConfig
 
-	if all {
+	if o.Destroy.All {
 		header = append(tableWriter.Row{"Topology", "Lab Name"}, headerBase...)
-		if !wide {
+		if !o.Inspect.Wide {
 			colConfigs = append(
 				colConfigs,
 				tableWriter.ColumnConfig{
@@ -322,7 +340,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails) {
 		// If wide, do not set AutoMerge for any columns
 	} else {
 		header = headerBase
-		if !wide {
+		if !o.Inspect.Wide {
 			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
 				Number:    1,
 				AutoMerge: true, VAlign: text.VAlignMiddle,
@@ -360,7 +378,7 @@ func printContainerInspectCSV(contDetails []clabtypes.ContainerDetails) {
 }
 
 // PrintContainerInspect handles non-details output (table or grouped JSON summary).
-func PrintContainerInspect(containers []clabruntime.GenericContainer, format string) error {
+func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options) error {
 	contDetails := make([]clabtypes.ContainerDetails, 0, len(containers))
 
 	// Gather summary details of each container
@@ -410,18 +428,18 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, format str
 		return contDetails[i].LabName < contDetails[j].LabName
 	})
 
-	switch format {
+	switch o.Deploy.Format {
 	case "json":
 		err := printContainerInspectJSON(contDetails)
 		if err != nil {
 			return err
 		}
 	case "table":
-		printContainerInspectTable(contDetails)
+		printContainerInspectTable(contDetails, o)
 	case "csv":
 		printContainerInspectCSV(contDetails)
 	default:
-		return fmt.Errorf("internal error: unhandled format %q", format)
+		return fmt.Errorf("internal error: unhandled format %q", o.Deploy.Format)
 	}
 
 	return nil
@@ -429,15 +447,17 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, format str
 
 // parseStatus extracts a simpler status string, focusing on health states.
 func parseStatus(status string) string {
-	if strings.Contains(status, "unhealthy") {
+	switch {
+	case strings.Contains(status, "unhealthy"):
 		return "unhealthy"
-	} else if strings.Contains(status, "health: starting") {
+	case strings.Contains(status, "health: starting"):
 		return "health: starting"
-	} else if strings.Contains(status, "healthy") {
+	case strings.Contains(status, "healthy"):
 		return "healthy"
+	default:
+		// Return original status if no specific health info found
+		return status
 	}
-	// Return original status if no specific health info found
-	return status
 }
 
 // ipWithoutPrefix removes the CIDR prefix length from an IP address string.
