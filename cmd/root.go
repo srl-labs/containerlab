@@ -17,6 +17,7 @@ import (
 	"github.com/spf13/cobra"
 	clabgit "github.com/srl-labs/containerlab/git"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -365,7 +366,7 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 		return err
 	}
 	// Rootless operations only supported for Docker runtime
-	if o.Global.Runtime != "" && o.Global.Runtime != "docker" {
+	if o.Global.Runtime != "" && o.Global.Runtime != clabruntimedocker.RuntimeName {
 		err := clabutils.CheckAndGetRootPrivs(cobraCmd, nil)
 		if err != nil {
 			return err
