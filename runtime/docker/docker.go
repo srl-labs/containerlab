@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/go-units"
 	"golang.org/x/sys/unix"
 
@@ -538,8 +539,17 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		Soft: int64(rlimit.Max),
 	}
 	resources.Ulimits = []*units.Ulimit{&ulimit}
+
+	bindMounts, volumeMounts, err := d.convertMounts(node.Binds)
+	if err != nil {
+		log.Errorf("Cannot convert mounts %v: %v", node.Binds, err)
+		bindMounts = nil
+		volumeMounts = nil
+	}
+
 	containerHostConfig := &container.HostConfig{
-		Binds:        node.Binds,
+		Binds:        bindMounts,
+		Mounts:       volumeMounts,
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
 		Privileged:   true,
@@ -1190,4 +1200,59 @@ func (*DockerRuntime) GetCooCBindMounts() clabtypes.Binds {
 		clabtypes.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
 		clabtypes.NewBind("/run/netns", "/run/netns", ""),
 	}
+}
+
+// convertMounts takes a list of filesystem bind mounts from the node "binds"
+// field in docker/clab format (src:dest:options) and separates them into bind
+// mounts (for HostConfig.Binds) and volumes (for HostConfig.Mounts) This
+// maintains backards compatibility with the existing containerlab topology
+// schema where anonymous volumes are sort of supported via the "binds" field.
+// While this does work, it is not technically correct as volumes (anonymous or
+// named) should be specified in the "volumes" field.
+func (*DockerRuntime) convertMounts(binds []string) ([]string, []mount.Mount, error) {
+	if len(binds) == 0 {
+		return nil, nil, nil
+	}
+	log.Debugf("convertMounts function received binds %v", binds)
+
+	var bindMounts []string
+	var volumes []mount.Mount
+
+	// Note: we don't do any input validation here
+	for _, bind := range binds {
+		b, err := types.NewBindFromString(bind)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if b.Src() == "" {
+			// This is an anonymous volume - use Mount API
+			volMount := mount.Mount{
+				Target: b.Dst(),
+				Type:   mount.TypeVolume,
+			}
+
+			// Handle volume-specific options (https://docs.docker.com/engine/storage/volumes/#options-for---volume).
+			if b.Mode() != "" {
+				options := strings.Split(b.Mode(), ",")
+				for _, option := range options {
+					if option == "ro" {
+						volMount.ReadOnly = true
+					} else if option == "volume-nocopy" {
+						volMount.VolumeOptions = &mount.VolumeOptions{
+							NoCopy: true,
+						}
+					}
+				}
+			}
+			volumes = append(volumes, volMount)
+			log.Debugf("parsed bind %q as a volume mount %+v", bind, volMount)
+		} else {
+			// This is a bind mount - use legacy Binds format
+			bindMounts = append(bindMounts, bind)
+			log.Debugf("parsed bind %q as a bind mount", bind)
+		}
+	}
+
+	return bindMounts, volumes, nil
 }
