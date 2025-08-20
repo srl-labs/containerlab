@@ -66,7 +66,7 @@ You can expand each container to view it's interfaces, set link impairments and 
 
 #### Undeployed local labs
 
-The undeployed local labs panel will show all discovered topology files in the directory of your current [VS Code Workspace.](https://code.visualstudio.com/docs/editing/workspaces)
+The undeployed local labs panel will show all discovered topology files in the directory of your current [VS Code Workspace](https://code.visualstudio.com/docs/editor/workspaces)
 
 Topology files are discovered by recursively searching your workspace directory and subdirectories for files which have the `*.clab.yaml` or `*.clab.yml` file extension.
 
@@ -243,9 +243,9 @@ In the explorer you can expand running labs and containers to view all the disco
 
 The extension provides two packet capture methods:
 
-#### Integrated Wireshark (Default)
+#### Integrated Wireshark
 
-The integrated Wireshark packet capture is the default method and requires no additional setup. It's perfect for users who prefer to lab completely inside VS Code or cannot install additional software on their system.
+The integrated Wireshark packet capture (using noVNC) is the default method and requires no additional setup. It's perfect for users who prefer to lab completely inside VS Code or cannot install additional software on their system.
 
 Edgeshark is still used on the Containerlab host, but the Wireshark client with the capture plugin is fully hosted inside of a container on your Containerlab host, the Wireshark window gets streamed via VNC directly into your VS Code window. When using Remote-SSH, no extra ports are exposed on your host system, everything is tunnelled over the single Remote-SSH connection.
 
