@@ -611,7 +611,10 @@
                     "$ref": "#/definitions/link-endpoint"
                 },
                 "host-interface": {
-                    "$ref": "#/definitions/mtu"
+                    "$ref": "#/definitions/link-host-interface"
+                },
+                "mode": {
+                    "$ref": "#/definitions/link-macvlan-mode"
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
@@ -838,8 +841,14 @@
         },
         "link-host-interface": {
             "type": "string",
-            "description": "link-scoped variables used by config engine",
-            "markdownDescription": "link-scoped variables used by config engine"
+            "description": "Name of the host interface",
+            "markdownDescription": "Name of the host interface"
+        },
+        "link-macvlan-mode": {
+            "type": "string",
+            "description": "MACVLAN operating mode",
+            "markdownDescription": "MACVLAN operating mode",
+            "enum": ["private", "vepa", "bridge", "passthru", "source"]
         },
         "extras-config": {
             "type": "object",
