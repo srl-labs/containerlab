@@ -270,7 +270,7 @@ The mgmt-net link type represents a veth pair that is connected to a container n
       node: <NodeA-Name>                  # mandatory
       interface: <NodeA-Interface-Name>   # mandatory
       mac: <NodeA-Interface-Mac>          # optional
-    host-interface: <interface-name         # mandatory
+    host-interface: <interface-name>        # mandatory
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
