@@ -52,7 +52,7 @@ jobs:
             image-suffix: "-dood-slim"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup QEMU
         uses: docker/setup-qemu-action@v3

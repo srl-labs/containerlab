@@ -11,7 +11,7 @@ jobs:
   build-clab:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: WillAbides/setup-go-faster@v1.14.0
         with:
           go-version: ${{ inputs.go_ver }}
