@@ -505,6 +505,24 @@
                             }
                         }
                     }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "(cisco_iol)"
+                            }
+                        },
+                        "required": ["kind"]
+                    },
+                    "then": {
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": ["iol","l2"]
+                            }
+                        }
+                    }
                 }
             ],
             "additionalProperties": false
