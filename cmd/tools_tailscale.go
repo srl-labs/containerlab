@@ -154,7 +154,7 @@ func tailscaleCmd(o *Options) (*cobra.Command, error) {
 }
 
 // NewTailscaleNode creates a new Tailscale node configuration.
-func NewTailscaleNode(name, image, network, authKey string, acceptRoutes bool, isEphemeral bool, rt clabruntime.ContainerRuntime, labels map[string]string) *TailscaleNode {
+func NewTailscaleNode(name, image, network, authKey string, acceptRoutes, isEphemeral bool, rt clabruntime.ContainerRuntime, labels map[string]string) *TailscaleNode {
 	log.Debugf("Creating TailscaleNode: name=%s, image=%s, network=%s, acceptRoutes=%t, ephemeral=%t",
 		name, image, network, acceptRoutes, isEphemeral)
 
@@ -248,7 +248,7 @@ func getTailscaleStatus(ctx context.Context, rt clabruntime.ContainerRuntime, co
 	return ip
 }
 
-// get the actual node name in the tailnet (in case of duplicate names tailscale appends a hyphen + number)
+// get the actual node name in the tailnet (in case of duplicate names tailscale appends a hyphen + number).
 func getTailscaleNodeName(ctx context.Context, rt clabruntime.ContainerRuntime, containerName string) string {
 	execCmd, err := clabexec.NewExecCmdFromString("tailscale status --self --json")
 	if err != nil {
@@ -298,7 +298,7 @@ func waitForTailscaleReady(ctx context.Context, rt clabruntime.ContainerRuntime,
 			if timeoutCtx.Err() == context.DeadlineExceeded {
 				return fmt.Errorf("tailscale container %s did not become healthy within %v", containerName, timeout)
 			}
-			return fmt.Errorf("context cancelled while waiting for tailscale: %v", timeoutCtx.Err())
+			return fmt.Errorf("context canceled while waiting for tailscale: %v", timeoutCtx.Err())
 
 		case <-ticker.C:
 			isHealthy, err := rt.IsHealthy(timeoutCtx, containerName)
@@ -333,26 +333,8 @@ func getMgmtNetworkSubnets(rt clabruntime.ContainerRuntime) []string {
 	return subnets
 }
 
-func tailscaleAttach(cobraCmd *cobra.Command, o *Options) error {
-	ctx := cobraCmd.Context()
-
-	log.Debug("tailscale attach called",
-		"labName", o.Global.TopologyName,
-		"containerName", o.ToolsTailscale.ContainerName,
-		"image", o.ToolsTailscale.Image,
-		"topoFile", o.Global.TopologyFile,
-		"acceptRoutes", o.ToolsTailscale.AcceptRoutes,
-		"ephemeral", o.ToolsTailscale.Ephemeral)
-
-	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, o.Destroy.GracefulShutdown)
-	if err != nil {
-		return err
-	}
-
+func setupTailscaleContainer(ctx context.Context, o *Options, clabInstance *clabcore.CLab, rt clabruntime.ContainerRuntime) error {
 	labName := clabInstance.Config.Name
-
 	networkName := clabInstance.Config.Mgmt.Network
 	if networkName == "" {
 		networkName = "clab-" + labName
@@ -373,33 +355,12 @@ func tailscaleAttach(cobraCmd *cobra.Command, o *Options) error {
 		}
 	}
 
-	// Initialize runtime with management network info from the deployed lab
-	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
-	if err != nil {
-		return fmt.Errorf("failed to get runtime initializer for '%s': %w", o.Global.Runtime, err)
-	}
-
-	rt := rinit()
-
-	mgmtNet := clabInstance.Config.Mgmt
-	log.Debugf("Using mgmt network from deployed lab: %+v", mgmtNet)
-
-	err = rt.Init(
-		clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}),
-		clabruntime.WithMgmtNet(mgmtNet),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to initialize runtime: %w", err)
-	}
-
 	// Check if container already exists
 	filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: o.ToolsTailscale.ContainerName}}
-
 	containers, err := rt.ListContainers(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
-
 	if len(containers) > 0 {
 		return fmt.Errorf("container %s already exists", o.ToolsTailscale.ContainerName)
 	}
@@ -438,6 +399,10 @@ func tailscaleAttach(cobraCmd *cobra.Command, o *Options) error {
 		return fmt.Errorf("failed to start tailscale container: %v", err)
 	}
 
+	return nil
+}
+
+func waitAndShowTailscaleInfo(ctx context.Context, o *Options, rt clabruntime.ContainerRuntime) error {
 	log.Info("Tailscale container started. Waiting for tailnet connection", "container", o.ToolsTailscale.ContainerName)
 
 	if err := waitForTailscaleReady(ctx, rt, o.ToolsTailscale.ContainerName, 60*time.Second); err != nil {
@@ -452,7 +417,6 @@ func tailscaleAttach(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	tsNodeName := getTailscaleNodeName(ctx, rt, o.ToolsTailscale.ContainerName)
-
 	subnets := getMgmtNetworkSubnets(rt)
 
 	log.Info("Tailscale attached",
@@ -461,6 +425,49 @@ func tailscaleAttach(cobraCmd *cobra.Command, o *Options) error {
 		"tailscale node", tsNodeName)
 
 	return nil
+}
+
+func tailscaleAttach(cobraCmd *cobra.Command, o *Options) error {
+	ctx := cobraCmd.Context()
+
+	log.Debug("tailscale attach called",
+		"labName", o.Global.TopologyName,
+		"containerName", o.ToolsTailscale.ContainerName,
+		"image", o.ToolsTailscale.Image,
+		"topoFile", o.Global.TopologyFile,
+		"acceptRoutes", o.ToolsTailscale.AcceptRoutes,
+		"ephemeral", o.ToolsTailscale.Ephemeral)
+
+	// Get lab topology information
+	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
+		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, o.Destroy.GracefulShutdown)
+	if err != nil {
+		return err
+	}
+
+	// Initialize runtime with management network info from the deployed lab
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	if err != nil {
+		return fmt.Errorf("failed to get runtime initializer for '%s': %w", o.Global.Runtime, err)
+	}
+
+	rt := rinit()
+	mgmtNet := clabInstance.Config.Mgmt
+	log.Debugf("Using mgmt network from deployed lab: %+v", mgmtNet)
+
+	err = rt.Init(
+		clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}),
+		clabruntime.WithMgmtNet(mgmtNet),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize runtime: %w", err)
+	}
+
+	if err := setupTailscaleContainer(ctx, o, clabInstance, rt); err != nil {
+		return err
+	}
+
+	return waitAndShowTailscaleInfo(ctx, o, rt)
 }
 
 func tailscaleDetach(cobraCmd *cobra.Command, o *Options) error {
@@ -515,8 +522,8 @@ func tailscaleDetach(cobraCmd *cobra.Command, o *Options) error {
 
 	log.Info("Found tailscale containers for lab", "lab", labName, "count", len(containers))
 
-	for _, container := range containers {
-		containerName := strings.TrimPrefix(container.Names[0], "/")
+	for i := range containers {
+		containerName := strings.TrimPrefix(containers[i].Names[0], "/")
 		log.Info("Removing tailscale container", "container", containerName)
 
 		if err := rt.DeleteContainer(ctx, containerName); err != nil {
@@ -571,7 +578,8 @@ func tailscaleList(cobraCmd *cobra.Command, o *Options) error {
 
 	// Process containers and format output
 	listItems := make([]TailscaleListItem, 0, len(containers))
-	for _, c := range containers {
+	for i := range containers {
+		c := &containers[i]
 		name := strings.TrimPrefix(c.Names[0], "/")
 		network := c.NetworkName
 		if network == "" {
@@ -635,65 +643,7 @@ func tailscaleList(cobraCmd *cobra.Command, o *Options) error {
 	return nil
 }
 
-func tailscaleReattach(cobraCmd *cobra.Command, o *Options) error {
-	ctx := cobraCmd.Context()
-
-	log.Debug("tailscale reattach called",
-		"labName", o.Global.TopologyName,
-		"containerName", o.ToolsTailscale.ContainerName,
-		"image", o.ToolsTailscale.Image,
-		"topoFile", o.Global.TopologyFile,
-		"acceptRoutes", o.ToolsTailscale.AcceptRoutes,
-		"ephemeral", o.ToolsTailscale.Ephemeral)
-
-	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, o.Destroy.GracefulShutdown)
-	if err != nil {
-		return err
-	}
-
-	labName := clabInstance.Config.Name
-	networkName := clabInstance.Config.Mgmt.Network
-	if networkName == "" {
-		networkName = "clab-" + labName
-	}
-
-	// Set container name if not provided
-	if o.ToolsTailscale.ContainerName == "" {
-		o.ToolsTailscale.ContainerName = fmt.Sprintf("clab-%s-tailscale", labName)
-		log.Debugf("Container name not provided, generated name: %s", o.ToolsTailscale.ContainerName)
-	}
-
-	if o.ToolsTailscale.AuthKey == "" {
-		// grab from system env
-		if envKey := os.Getenv("TS_AUTHKEY"); envKey != "" {
-			o.ToolsTailscale.AuthKey = envKey
-		} else {
-			return fmt.Errorf("auth key is required for tailscale. Use --auth-key flag or set the TS_AUTHKEY env var")
-		}
-	}
-
-	// Initialize runtime with management network info from the deployed lab
-	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
-	if err != nil {
-		return fmt.Errorf("failed to get runtime initializer for '%s': %w", o.Global.Runtime, err)
-	}
-
-	rt := rinit()
-
-	mgmtNet := clabInstance.Config.Mgmt
-	log.Debugf("Using mgmt network from deployed lab: %+v", mgmtNet)
-
-	err = rt.Init(
-		clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}),
-		clabruntime.WithMgmtNet(mgmtNet),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to initialize runtime: %w", err)
-	}
-
-	// Step 1: Remove existing Tailscale containers using labels
+func removeExistingTailscaleContainers(ctx context.Context, rt clabruntime.ContainerRuntime, labName string) error {
 	log.Info("Removing existing tailscale containers for lab", "lab", labName)
 
 	// Use labels to find Tailscale containers for this lab
@@ -717,8 +667,8 @@ func tailscaleReattach(cobraCmd *cobra.Command, o *Options) error {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
 
-	for _, container := range containers {
-		containerName := strings.TrimPrefix(container.Names[0], "/")
+	for i := range containers {
+		containerName := strings.TrimPrefix(containers[i].Names[0], "/")
 		log.Debug("Removing existing tailscale container", "container", containerName)
 
 		if err := rt.DeleteContainer(ctx, containerName); err != nil {
@@ -726,6 +676,16 @@ func tailscaleReattach(cobraCmd *cobra.Command, o *Options) error {
 		} else {
 			log.Debug("Removed existing tailscale container", "container", containerName)
 		}
+	}
+
+	return nil
+}
+
+func recreateTailscaleContainer(ctx context.Context, o *Options, clabInstance *clabcore.CLab, rt clabruntime.ContainerRuntime) error {
+	labName := clabInstance.Config.Name
+	networkName := clabInstance.Config.Mgmt.Network
+	if networkName == "" {
+		networkName = "clab-" + labName
 	}
 
 	// Step 2: Create and attach new Tailscale container
@@ -764,6 +724,10 @@ func tailscaleReattach(cobraCmd *cobra.Command, o *Options) error {
 		return fmt.Errorf("failed to start tailscale container: %v", err)
 	}
 
+	return nil
+}
+
+func showTailscaleReattachInfo(ctx context.Context, o *Options, rt clabruntime.ContainerRuntime) error {
 	log.Info("Tailscale container started. Waiting for tailnet connection", "container", o.ToolsTailscale.ContainerName)
 
 	// Wait for Tailscale to be ready using healthcheck
@@ -780,7 +744,6 @@ func tailscaleReattach(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	tsNodeName := getTailscaleNodeName(ctx, rt, o.ToolsTailscale.ContainerName)
-
 	subnets := getMgmtNetworkSubnets(rt)
 
 	log.Info("Tailscale reattached",
@@ -789,4 +752,71 @@ func tailscaleReattach(cobraCmd *cobra.Command, o *Options) error {
 		"tailscale node", tsNodeName)
 
 	return nil
+}
+
+func tailscaleReattach(cobraCmd *cobra.Command, o *Options) error {
+	ctx := cobraCmd.Context()
+
+	log.Debug("tailscale reattach called",
+		"labName", o.Global.TopologyName,
+		"containerName", o.ToolsTailscale.ContainerName,
+		"image", o.ToolsTailscale.Image,
+		"topoFile", o.Global.TopologyFile,
+		"acceptRoutes", o.ToolsTailscale.AcceptRoutes,
+		"ephemeral", o.ToolsTailscale.Ephemeral)
+
+	// Get lab topology information
+	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
+		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, o.Destroy.GracefulShutdown)
+	if err != nil {
+		return err
+	}
+
+	labName := clabInstance.Config.Name
+
+	// Set container name if not provided
+	if o.ToolsTailscale.ContainerName == "" {
+		o.ToolsTailscale.ContainerName = fmt.Sprintf("clab-%s-tailscale", labName)
+		log.Debugf("Container name not provided, generated name: %s", o.ToolsTailscale.ContainerName)
+	}
+
+	if o.ToolsTailscale.AuthKey == "" {
+		// grab from system env
+		if envKey := os.Getenv("TS_AUTHKEY"); envKey != "" {
+			o.ToolsTailscale.AuthKey = envKey
+		} else {
+			return fmt.Errorf("auth key is required for tailscale. Use --auth-key flag or set the TS_AUTHKEY env var")
+		}
+	}
+
+	// Initialize runtime with management network info from the deployed lab
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	if err != nil {
+		return fmt.Errorf("failed to get runtime initializer for '%s': %w", o.Global.Runtime, err)
+	}
+
+	rt := rinit()
+	mgmtNet := clabInstance.Config.Mgmt
+	log.Debugf("Using mgmt network from deployed lab: %+v", mgmtNet)
+
+	err = rt.Init(
+		clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}),
+		clabruntime.WithMgmtNet(mgmtNet),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize runtime: %w", err)
+	}
+
+	// Step 1: Remove existing Tailscale containers
+	if err := removeExistingTailscaleContainers(ctx, rt, labName); err != nil {
+		return err
+	}
+
+	// Step 2: Create new container
+	if err := recreateTailscaleContainer(ctx, o, clabInstance, rt); err != nil {
+		return err
+	}
+
+	// Step 3: Show info
+	return showTailscaleReattachInfo(ctx, o, rt)
 }
