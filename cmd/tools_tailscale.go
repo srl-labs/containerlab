@@ -21,16 +21,7 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-// Configuration variables for the Tailscale commands.
-var (
-	tailscaleLabName       string
-	tailscaleContainerName string
-	tailscaleAuthKey       string
-	tailscaleImage         string
-	tailscaleOwner         string
-	tailscaleAcceptRoutes  bool
-	tailscaleEphemeral     bool
-)
+const tailscaleConst string = "tailscale"
 
 // TailscaleListItem defines the structure for Tailscale container info in JSON output.
 type TailscaleListItem struct {
@@ -47,58 +38,119 @@ type TailscaleNode struct {
 	config *clabtypes.NodeConfig
 }
 
-func init() {
-	toolsCmd.AddCommand(tailscaleCmd)
-	tailscaleCmd.AddCommand(tailscaleAttachCmd)
-	tailscaleCmd.AddCommand(tailscaleDetachCmd)
-	tailscaleCmd.AddCommand(tailscaleListCmd)
-	tailscaleCmd.AddCommand(tailscaleReattachCmd)
-
-	tailscaleCmd.PersistentFlags().StringVarP(&outputFormat, "format", "f", "table",
-		"output format for 'list' command (table, json)")
-
-	// Attach command flags
-	tailscaleAttachCmd.Flags().StringVarP(&tailscaleLabName, "lab", "l", "",
-		"name of the lab to attach Tailscale container to")
-	tailscaleAttachCmd.Flags().StringVarP(&tailscaleContainerName, "name", "", "",
-		"name of the Tailscale container (defaults to tailscale-<labname>)")
-	tailscaleAttachCmd.Flags().StringVarP(&tailscaleAuthKey, "auth-key", "k", "",
-		"Tailscale auth key for authentication")
-	tailscaleAttachCmd.Flags().StringVarP(&tailscaleImage, "image", "i", "tailscale/tailscale:latest",
-		"container image to use for Tailscale")
-	tailscaleAttachCmd.Flags().StringVarP(&tailscaleOwner, "owner", "o", "",
-		"lab owner name for the Tailscale container")
-	tailscaleAttachCmd.Flags().BoolVarP(&tailscaleAcceptRoutes, "accept-routes", "", false,
-		"accept subnet routes advertised by other nodes")
-	tailscaleAttachCmd.Flags().BoolVarP(&tailscaleEphemeral, "ephemeral", "", true,
-		"make this node epehemral")
-
-	// Detach command flags
-	tailscaleDetachCmd.Flags().StringVarP(&tailscaleLabName, "lab", "l", "",
-		"name of the lab where Tailscale container is attached")
-
-	// Reattach command flags
-	tailscaleReattachCmd.Flags().StringVarP(&tailscaleLabName, "lab", "l", "",
-		"name of the lab to reattach Tailscale container to")
-	tailscaleReattachCmd.Flags().StringVarP(&tailscaleContainerName, "name", "", "",
-		"name of the Tailscale container (defaults to tailscale-<labname>)")
-	tailscaleReattachCmd.Flags().StringVarP(&tailscaleAuthKey, "auth-key", "k", "",
-		"Tailscale auth key for authentication")
-	tailscaleReattachCmd.Flags().StringVarP(&tailscaleImage, "image", "i", "tailscale/tailscale:latest",
-		"container image to use for Tailscale")
-	tailscaleReattachCmd.Flags().StringVarP(&tailscaleOwner, "owner", "o", "",
-		"lab owner name for the Tailscale container")
-	tailscaleReattachCmd.Flags().BoolVarP(&tailscaleAcceptRoutes, "accept-routes", "", false,
-		"accept subnet routes advertised by other nodes")
-	tailscaleReattachCmd.Flags().BoolVarP(&tailscaleEphemeral, "ephemeral", "", true,
-		"make this node epehemral")
+// ToolsTailscaleOptions holds options for tailscale commands.
+type ToolsTailscaleOptions struct {
+	ContainerName string
+	AuthKey       string
+	Image         string
+	Owner         string
+	AcceptRoutes  bool
+	Ephemeral     bool
+	Format        string
 }
 
-// tailscaleCmd represents the tailscale command container.
-var tailscaleCmd = &cobra.Command{
-	Use:   "tailscale",
-	Short: "Tailscale VPN operations",
-	Long:  "Attach or detach lab mgmt subnet to a Tailscale tailnet",
+func tailscaleCmd(o *Options) (*cobra.Command, error) {
+	// Initialize tailscale options if not present
+	if o.ToolsTailscale == nil {
+		o.ToolsTailscale = &ToolsTailscaleOptions{
+			Image:     "tailscale/tailscale:latest",
+			Ephemeral: true,
+			Format:    "table",
+		}
+	}
+
+	c := &cobra.Command{
+		Use:   tailscaleConst,
+		Short: "Tailscale VPN operations",
+		Long:  "Attach or detach lab mgmt subnet to a Tailscale tailnet",
+	}
+
+	c.PersistentFlags().StringVarP(&o.ToolsTailscale.Format, "format", "f", o.ToolsTailscale.Format,
+		"output format for 'list' command (table, json)")
+
+	tailscaleListCmd := &cobra.Command{
+		Use:   "list",
+		Short: "list active Tailscale containers",
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return tailscaleList(cobraCmd, o)
+		},
+	}
+
+	c.AddCommand(tailscaleListCmd)
+
+	tailscaleAttachCmd := &cobra.Command{
+		Use:   "attach",
+		Short: "attach a lab to a Tailscale tailnet",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return tailscaleAttach(cobraCmd, o)
+		},
+	}
+
+	c.AddCommand(tailscaleAttachCmd)
+
+	tailscaleAttachCmd.Flags().StringVarP(&o.Global.TopologyName, "lab", "l", o.Global.TopologyName,
+		"name of the lab to attach Tailscale container to")
+	tailscaleAttachCmd.Flags().StringVarP(&o.ToolsTailscale.ContainerName, "name", "", o.ToolsTailscale.ContainerName,
+		"name of the Tailscale container (defaults to tailscale-<labname>)")
+	tailscaleAttachCmd.Flags().StringVarP(&o.ToolsTailscale.AuthKey, "auth-key", "k", o.ToolsTailscale.AuthKey,
+		"Tailscale auth key for authentication")
+	tailscaleAttachCmd.Flags().StringVarP(&o.ToolsTailscale.Image, "image", "i", o.ToolsTailscale.Image,
+		"container image to use for Tailscale")
+	tailscaleAttachCmd.Flags().StringVarP(&o.ToolsTailscale.Owner, "owner", "o", o.ToolsTailscale.Owner,
+		"lab owner name for the Tailscale container")
+	tailscaleAttachCmd.Flags().BoolVarP(&o.ToolsTailscale.AcceptRoutes, "accept-routes", "", o.ToolsTailscale.AcceptRoutes,
+		"accept subnet routes advertised by other nodes")
+	tailscaleAttachCmd.Flags().BoolVarP(&o.ToolsTailscale.Ephemeral, "ephemeral", "", o.ToolsTailscale.Ephemeral,
+		"make this node ephemeral")
+
+	tailscaleDetachCmd := &cobra.Command{
+		Use:   "detach",
+		Short: "detach a lab management subnet from a tailscale tailnet",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return tailscaleDetach(cobraCmd, o)
+		},
+	}
+
+	c.AddCommand(tailscaleDetachCmd)
+
+	tailscaleDetachCmd.Flags().StringVarP(&o.Global.TopologyName, "lab", "l", o.Global.TopologyName,
+		"name of the lab where Tailscale container is attached")
+
+	tailscaleReattachCmd := &cobra.Command{
+		Use:   "reattach",
+		Short: "detach and reattach a Tailscale container to a lab",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return tailscaleReattach(cobraCmd, o)
+		},
+	}
+
+	c.AddCommand(tailscaleReattachCmd)
+
+	tailscaleReattachCmd.Flags().StringVarP(&o.Global.TopologyName, "lab", "l", o.Global.TopologyName,
+		"name of the lab to reattach Tailscale container to")
+	tailscaleReattachCmd.Flags().StringVarP(&o.ToolsTailscale.ContainerName, "name", "", o.ToolsTailscale.ContainerName,
+		"name of the Tailscale container (defaults to tailscale-<labname>)")
+	tailscaleReattachCmd.Flags().StringVarP(&o.ToolsTailscale.AuthKey, "auth-key", "k", o.ToolsTailscale.AuthKey,
+		"Tailscale auth key for authentication")
+	tailscaleReattachCmd.Flags().StringVarP(&o.ToolsTailscale.Image, "image", "i", o.ToolsTailscale.Image,
+		"container image to use for Tailscale")
+	tailscaleReattachCmd.Flags().StringVarP(&o.ToolsTailscale.Owner, "owner", "o", o.ToolsTailscale.Owner,
+		"lab owner name for the Tailscale container")
+	tailscaleReattachCmd.Flags().BoolVarP(&o.ToolsTailscale.AcceptRoutes, "accept-routes", "", o.ToolsTailscale.AcceptRoutes,
+		"accept subnet routes advertised by other nodes")
+	tailscaleReattachCmd.Flags().BoolVarP(&o.ToolsTailscale.Ephemeral, "ephemeral", "", o.ToolsTailscale.Ephemeral,
+		"make this node ephemeral")
+
+	return c, nil
 }
 
 // NewTailscaleNode creates a new Tailscale node configuration.
@@ -281,486 +333,460 @@ func getMgmtNetworkSubnets(rt clabruntime.ContainerRuntime) []string {
 	return subnets
 }
 
-// attach lab to tailnet
-var tailscaleAttachCmd = &cobra.Command{
-	Use:     "attach",
-	Short:   "attach a lab to a Tailscale tailnet",
-	PreRunE: clabutils.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+func tailscaleAttach(cobraCmd *cobra.Command, o *Options) error {
+	ctx := cobraCmd.Context()
 
-		log.Debug("tailscale attach called",
-			"labName", tailscaleLabName,
-			"containerName", tailscaleContainerName,
-			"image", tailscaleImage,
-			"topoFile", topoFile,
-			"acceptRoutes", tailscaleAcceptRoutes,
-			"epehemeral", tailscaleEphemeral)
+	log.Debug("tailscale attach called",
+		"labName", o.Global.TopologyName,
+		"containerName", o.ToolsTailscale.ContainerName,
+		"image", o.ToolsTailscale.Image,
+		"topoFile", o.Global.TopologyFile,
+		"acceptRoutes", o.ToolsTailscale.AcceptRoutes,
+		"ephemeral", o.ToolsTailscale.Ephemeral)
 
-		// Get lab topology information
-		clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, topoFile,
-			tailscaleLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
-		if err != nil {
-			return err
+	// Get lab topology information
+	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
+		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, o.Destroy.GracefulShutdown)
+	if err != nil {
+		return err
+	}
+
+	labName := clabInstance.Config.Name
+
+	networkName := clabInstance.Config.Mgmt.Network
+	if networkName == "" {
+		networkName = "clab-" + labName
+	}
+
+	// Set container name if not provided
+	if o.ToolsTailscale.ContainerName == "" {
+		o.ToolsTailscale.ContainerName = fmt.Sprintf("clab-%s-tailscale", labName)
+		log.Debugf("Container name not provided, generated name: %s", o.ToolsTailscale.ContainerName)
+	}
+
+	if o.ToolsTailscale.AuthKey == "" {
+		// grab from system env
+		if envKey := os.Getenv("TS_AUTHKEY"); envKey != "" {
+			o.ToolsTailscale.AuthKey = envKey
+		} else {
+			return fmt.Errorf("auth key is required for tailscale. Use --auth-key flag or set the TS_AUTHKEY env var")
 		}
+	}
 
-		labName := clabInstance.Config.Name
+	// Initialize runtime with management network info from the deployed lab
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	if err != nil {
+		return fmt.Errorf("failed to get runtime initializer for '%s': %w", o.Global.Runtime, err)
+	}
 
-		networkName := clabInstance.Config.Mgmt.Network
-		if networkName == "" {
-			networkName = "clab-" + labName
-		}
+	rt := rinit()
 
-		// Set container name if not provided
-		if tailscaleContainerName == "" {
-			tailscaleContainerName = fmt.Sprintf("clab-%s-tailscale", labName)
-			log.Debugf("Container name not provided, generated name: %s", tailscaleContainerName)
-		}
+	mgmtNet := clabInstance.Config.Mgmt
+	log.Debugf("Using mgmt network from deployed lab: %+v", mgmtNet)
 
-		if tailscaleAuthKey == "" {
-			// grab from system env
-			if envKey := os.Getenv("TS_AUTHKEY"); envKey != "" {
-				tailscaleAuthKey = envKey
-			} else {
-				return fmt.Errorf("auth key is required for tailscale. Use --auth-key flag or set the TS_AUTHKEY env var")
-			}
-		}
+	err = rt.Init(
+		clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}),
+		clabruntime.WithMgmtNet(mgmtNet),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize runtime: %w", err)
+	}
 
-		// Initialize runtime with management network info from the deployed lab
-		_, rinit, err := clabcore.RuntimeInitializer(runtime)
-		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtime, err)
-		}
+	// Check if container already exists
+	filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: o.ToolsTailscale.ContainerName}}
 
-		rt := rinit()
+	containers, err := rt.ListContainers(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to list containers: %w", err)
+	}
 
-		mgmtNet := clabInstance.Config.Mgmt
-		log.Debugf("Using mgmt network from deployed lab: %+v", mgmtNet)
+	if len(containers) > 0 {
+		return fmt.Errorf("container %s already exists", o.ToolsTailscale.ContainerName)
+	}
 
-		err = rt.Init(
-			clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}),
-			clabruntime.WithMgmtNet(mgmtNet),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to initialize runtime: %w", err)
-		}
+	log.Infof("Pulling image %s...", o.ToolsTailscale.Image)
+	if err := rt.PullImage(ctx, o.ToolsTailscale.Image, clabtypes.PullPolicyAlways); err != nil {
+		return fmt.Errorf("failed to pull image %s: %w", o.ToolsTailscale.Image, err)
+	}
 
-		// Check if container already exists
-		filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: tailscaleContainerName}}
+	owner := o.ToolsTailscale.Owner
+	if owner == "" {
+		owner = clabutils.GetOwner()
+	}
 
-		containers, err := rt.ListContainers(ctx, filter)
-		if err != nil {
-			return fmt.Errorf("failed to list containers: %w", err)
-		}
+	labelsMap := createLabelsMap(
+		clabInstance.TopoPaths.TopologyFilenameAbsPath(),
+		labName,
+		o.ToolsTailscale.ContainerName,
+		owner,
+		tailscaleConst,
+	)
 
-		if len(containers) > 0 {
-			return fmt.Errorf("container %s already exists", tailscaleContainerName)
-		}
+	log.Infof("Creating tailscale container %s on network '%s'", o.ToolsTailscale.ContainerName, networkName)
 
-		log.Infof("Pulling image %s...", tailscaleImage)
-		if err := rt.PullImage(ctx, tailscaleImage, clabtypes.PullPolicyAlways); err != nil {
-			return fmt.Errorf("failed to pull image %s: %w", tailscaleImage, err)
-		}
+	tailscaleNode := NewTailscaleNode(o.ToolsTailscale.ContainerName, o.ToolsTailscale.Image, networkName, o.ToolsTailscale.AuthKey,
+		o.ToolsTailscale.AcceptRoutes, o.ToolsTailscale.Ephemeral, rt, labelsMap)
 
-		owner := tailscaleOwner
-		if owner == "" {
-			owner = clabutils.GetOwner()
-		}
+	id, err := rt.CreateContainer(ctx, tailscaleNode.Config())
+	if err != nil {
+		return fmt.Errorf("failed to create tailscale container: %v", err)
+	}
 
-		labelsMap := createLabelsMap(
-			clabInstance.TopoPaths.TopologyFilenameAbsPath(),
-			labName,
-			tailscaleContainerName,
-			owner,
-			"tailscale",
-		)
+	if _, err := rt.StartContainer(ctx, id, tailscaleNode); err != nil {
+		// Clean up on failure
+		rt.DeleteContainer(ctx, o.ToolsTailscale.ContainerName)
+		return fmt.Errorf("failed to start tailscale container: %v", err)
+	}
 
-		log.Infof("Creating tailscale container %s on network '%s'", tailscaleContainerName, networkName)
+	log.Info("Tailscale container started. Waiting for tailnet connection", "container", o.ToolsTailscale.ContainerName)
 
-		tailscaleNode := NewTailscaleNode(tailscaleContainerName, tailscaleImage, networkName, tailscaleAuthKey,
-			tailscaleAcceptRoutes, tailscaleEphemeral, rt, labelsMap)
-
-		id, err := rt.CreateContainer(ctx, tailscaleNode.Config())
-		if err != nil {
-			return fmt.Errorf("failed to create tailscale container: %v", err)
-		}
-
-		if _, err := rt.StartContainer(ctx, id, tailscaleNode); err != nil {
-			// Clean up on failure
-			rt.DeleteContainer(ctx, tailscaleContainerName)
-			return fmt.Errorf("failed to start tailscale container: %v", err)
-		}
-
-		log.Info("Tailscale container started. Waiting for tailnet connection", "container", tailscaleContainerName)
-
-		if err := waitForTailscaleReady(ctx, rt, tailscaleContainerName, 60*time.Second); err != nil {
-			log.With("error", err).Warnf("Tailscale healthcheck failed, check the logs for more details: docker logs %s", tailscaleContainerName)
-			return nil
-		}
-
-		tsIPAddrs := getTailscaleStatus(ctx, rt, tailscaleContainerName)
-		if tsIPAddrs == "" {
-			log.Warn("Tailscale container is healthy but failed to retrieve IP address. Check the logs for more details: docker logs %s", tailscaleContainerName)
-			return nil
-		}
-
-		tsNodeName := getTailscaleNodeName(ctx, rt, tailscaleContainerName)
-
-		subnets := getMgmtNetworkSubnets(rt)
-
-		log.Info("Tailscale attached",
-			"tailscale ip", tsIPAddrs,
-			"lab subnet", strings.Join(subnets, "\n"),
-			"tailscale node", tsNodeName)
-
+	if err := waitForTailscaleReady(ctx, rt, o.ToolsTailscale.ContainerName, 60*time.Second); err != nil {
+		log.With("error", err).Warnf("Tailscale healthcheck failed, check the logs for more details: docker logs %s", o.ToolsTailscale.ContainerName)
 		return nil
-	},
+	}
+
+	tsIPAddrs := getTailscaleStatus(ctx, rt, o.ToolsTailscale.ContainerName)
+	if tsIPAddrs == "" {
+		log.Warn("Tailscale container is healthy but failed to retrieve IP address. Check the logs for more details: docker logs %s", o.ToolsTailscale.ContainerName)
+		return nil
+	}
+
+	tsNodeName := getTailscaleNodeName(ctx, rt, o.ToolsTailscale.ContainerName)
+
+	subnets := getMgmtNetworkSubnets(rt)
+
+	log.Info("Tailscale attached",
+		"tailscale ip", tsIPAddrs,
+		"lab subnet", strings.Join(subnets, "\n"),
+		"tailscale node", tsNodeName)
+
+	return nil
 }
 
-// detach lab mgmt from tailnet
-var tailscaleDetachCmd = &cobra.Command{
-	Use:     "detach",
-	Short:   "detach a lab management subnet from a tailscale tailnet",
-	PreRunE: clabutils.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+func tailscaleDetach(cobraCmd *cobra.Command, o *Options) error {
+	ctx := cobraCmd.Context()
 
-		// Get lab topology information
-		clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, topoFile,
-			tailscaleLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
-		if err != nil {
-			return err
-		}
-		labName := clabInstance.Config.Name
+	// Get lab topology information
+	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
+		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, o.Destroy.GracefulShutdown)
+	if err != nil {
+		return err
+	}
+	labName := clabInstance.Config.Name
 
-		log.Debug("tailscale detach called", "labName", labName)
+	log.Debug("tailscale detach called", "labName", labName)
 
-		// Initialize runtime
-		_, rinit, err := clabcore.RuntimeInitializer(runtime)
-		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer: %w", err)
-		}
+	// Initialize runtime
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	if err != nil {
+		return fmt.Errorf("failed to get runtime initializer: %w", err)
+	}
 
-		rt := rinit()
-		err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}))
-		if err != nil {
-			return fmt.Errorf("failed to initialize runtime: %w", err)
-		}
+	rt := rinit()
+	err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}))
+	if err != nil {
+		return fmt.Errorf("failed to initialize runtime: %w", err)
+	}
 
-		filter := []*clabtypes.GenericFilter{
-			{
-				FilterType: "label",
-				Field:      clablabels.ToolType,
-				Operator:   "=",
-				Match:      "tailscale",
-			},
-			{
-				FilterType: "label",
-				Field:      clablabels.Containerlab,
-				Operator:   "=",
-				Match:      labName,
-			},
-		}
+	filter := []*clabtypes.GenericFilter{
+		{
+			FilterType: "label",
+			Field:      clablabels.ToolType,
+			Operator:   "=",
+			Match:      tailscaleConst,
+		},
+		{
+			FilterType: "label",
+			Field:      clablabels.Containerlab,
+			Operator:   "=",
+			Match:      labName,
+		},
+	}
 
-		containers, err := rt.ListContainers(ctx, filter)
-		if err != nil {
-			return fmt.Errorf("failed to list tailscale containers: %w", err)
-		}
+	containers, err := rt.ListContainers(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to list tailscale containers: %w", err)
+	}
 
-		if len(containers) == 0 {
-			log.Info("No tailscale containers found for lab", "lab", labName)
-			return nil
-		}
-
-		log.Info("Found tailscale containers for lab", "lab", labName, "count", len(containers))
-
-		for _, container := range containers {
-			containerName := strings.TrimPrefix(container.Names[0], "/")
-			log.Info("Removing tailscale container", "container", containerName)
-
-			if err := rt.DeleteContainer(ctx, containerName); err != nil {
-				log.Error("Failed to remove tailscale container", "container", containerName, "error", err)
-				return fmt.Errorf("failed to remove tailscale container %s: %w", containerName, err)
-			}
-
-			log.Info("Tailscale container removed", "container", containerName)
-		}
-
+	if len(containers) == 0 {
+		log.Info("No tailscale containers found for lab", "lab", labName)
 		return nil
-	},
+	}
+
+	log.Info("Found tailscale containers for lab", "lab", labName, "count", len(containers))
+
+	for _, container := range containers {
+		containerName := strings.TrimPrefix(container.Names[0], "/")
+		log.Info("Removing tailscale container", "container", containerName)
+
+		if err := rt.DeleteContainer(ctx, containerName); err != nil {
+			log.Error("Failed to remove tailscale container", "container", containerName, "error", err)
+			return fmt.Errorf("failed to remove tailscale container %s: %w", containerName, err)
+		}
+
+		log.Info("Tailscale container removed", "container", containerName)
+	}
+
+	return nil
 }
 
-// tailscaleListCmd lists active Tailscale containers.
-var tailscaleListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list active Tailscale containers",
-	RunE: func(_ *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+func tailscaleList(cobraCmd *cobra.Command, o *Options) error {
+	ctx := cobraCmd.Context()
 
-		// Initialize runtime
-		_, rinit, err := clabcore.RuntimeInitializer(runtime)
+	// Initialize runtime
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	if err != nil {
+		return fmt.Errorf("failed to get runtime initializer: %w", err)
+	}
+
+	rt := rinit()
+	err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}))
+	if err != nil {
+		return fmt.Errorf("failed to initialize runtime: %w", err)
+	}
+
+	// Filter only by Tailscale label
+	filter := []*clabtypes.GenericFilter{
+		{
+			FilterType: "label",
+			Field:      clablabels.ToolType,
+			Operator:   "=",
+			Match:      tailscaleConst,
+		},
+	}
+
+	containers, err := rt.ListContainers(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	if len(containers) == 0 {
+		if o.ToolsTailscale.Format == "json" {
+			fmt.Println("[]")
+		} else {
+			fmt.Println("No active Tailscale containers found")
+		}
+		return nil
+	}
+
+	// Process containers and format output
+	listItems := make([]TailscaleListItem, 0, len(containers))
+	for _, c := range containers {
+		name := strings.TrimPrefix(c.Names[0], "/")
+		network := c.NetworkName
+		if network == "" {
+			network = "unknown"
+		}
+
+		// Get owner from container labels
+		owner := "N/A"
+		if ownerVal, exists := c.Labels[clablabels.Owner]; exists && ownerVal != "" {
+			owner = ownerVal
+		}
+
+		// Try to get the Tailscale IP if container is running
+		tailscaleIP := "N/A"
+		if c.State == "running" {
+			if ip := getTailscaleStatus(ctx, rt, name); ip != "" {
+				tailscaleIP = ip
+			}
+		}
+
+		listItems = append(listItems, TailscaleListItem{
+			Name:        name,
+			Network:     network,
+			State:       c.State,
+			IPv4Address: c.NetworkSettings.IPv4addr,
+			TailscaleIP: tailscaleIP,
+			Owner:       owner,
+		})
+	}
+
+	// Output based on format
+	if o.ToolsTailscale.Format == "json" {
+		b, err := json.MarshalIndent(listItems, "", "  ")
 		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer: %w", err)
+			return fmt.Errorf("failed to marshal to JSON: %w", err)
 		}
+		fmt.Println(string(b))
+	} else {
+		// Use go-pretty table
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.SetStyle(table.StyleRounded)
+		t.Style().Format.Header = text.FormatTitle
+		t.Style().Options.SeparateRows = true
 
-		rt := rinit()
-		err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}))
-		if err != nil {
-			return fmt.Errorf("failed to initialize runtime: %w", err)
-		}
+		t.AppendHeader(table.Row{"NAME", "NETWORK", "STATUS", "IPv4 ADDRESS", "TAILSCALE IP", "OWNER"})
 
-		// Filter only by Tailscale label
-		filter := []*clabtypes.GenericFilter{
-			{
-				FilterType: "label",
-				Field:      clablabels.ToolType,
-				Operator:   "=",
-				Match:      "tailscale",
-			},
-		}
-
-		containers, err := rt.ListContainers(ctx, filter)
-		if err != nil {
-			return fmt.Errorf("failed to list containers: %w", err)
-		}
-
-		if len(containers) == 0 {
-			if outputFormat == "json" {
-				fmt.Println("[]")
-			} else {
-				fmt.Println("No active Tailscale containers found")
-			}
-			return nil
-		}
-
-		// Process containers and format output
-		listItems := make([]TailscaleListItem, 0, len(containers))
-		for _, c := range containers {
-			name := strings.TrimPrefix(c.Names[0], "/")
-			network := c.NetworkName
-			if network == "" {
-				network = "unknown"
-			}
-
-			// Get owner from container labels
-			owner := "N/A"
-			if ownerVal, exists := c.Labels[clablabels.Owner]; exists && ownerVal != "" {
-				owner = ownerVal
-			}
-
-			// Try to get the Tailscale IP if container is running
-			tailscaleIP := "N/A"
-			if c.State == "running" {
-				if ip := getTailscaleStatus(ctx, rt, name); ip != "" {
-					tailscaleIP = ip
-				}
-			}
-
-			listItems = append(listItems, TailscaleListItem{
-				Name:        name,
-				Network:     network,
-				State:       c.State,
-				IPv4Address: c.NetworkSettings.IPv4addr,
-				TailscaleIP: tailscaleIP,
-				Owner:       owner,
+		for _, item := range listItems {
+			t.AppendRow(table.Row{
+				item.Name,
+				item.Network,
+				item.State,
+				item.IPv4Address,
+				item.TailscaleIP,
+				item.Owner,
 			})
 		}
+		t.Render()
+	}
 
-		// Output based on format
-		if outputFormat == "json" {
-			b, err := json.MarshalIndent(listItems, "", "  ")
-			if err != nil {
-				return fmt.Errorf("failed to marshal to JSON: %w", err)
-			}
-			fmt.Println(string(b))
-		} else {
-			// Use go-pretty table
-			t := table.NewWriter()
-			t.SetOutputMirror(os.Stdout)
-			t.SetStyle(table.StyleRounded)
-			t.Style().Format.Header = text.FormatTitle
-			t.Style().Options.SeparateRows = true
-
-			t.AppendHeader(table.Row{"NAME", "NETWORK", "STATUS", "IPv4 ADDRESS", "TAILSCALE IP", "OWNER"})
-
-			for _, item := range listItems {
-				t.AppendRow(table.Row{
-					item.Name,
-					item.Network,
-					item.State,
-					item.IPv4Address,
-					item.TailscaleIP,
-					item.Owner,
-				})
-			}
-			t.Render()
-		}
-
-		return nil
-	},
+	return nil
 }
 
-var tailscaleReattachCmd = &cobra.Command{
-	Use:     "reattach",
-	Short:   "detach and reattach Tailscale VPN to a lab",
-	PreRunE: clabutils.CheckAndGetRootPrivs,
-	RunE: func(_ *cobra.Command, _ []string) error {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+func tailscaleReattach(cobraCmd *cobra.Command, o *Options) error {
+	ctx := cobraCmd.Context()
 
-		log.Debug("tailscale reattach called",
-			"labName", tailscaleLabName,
-			"containerName", tailscaleContainerName,
-			"image", tailscaleImage,
-			"topoFile", topoFile,
-			"acceptRoutes", tailscaleAcceptRoutes,
-			"ephemeral", tailscaleEphemeral)
+	log.Debug("tailscale reattach called",
+		"labName", o.Global.TopologyName,
+		"containerName", o.ToolsTailscale.ContainerName,
+		"image", o.ToolsTailscale.Image,
+		"topoFile", o.Global.TopologyFile,
+		"acceptRoutes", o.ToolsTailscale.AcceptRoutes,
+		"ephemeral", o.ToolsTailscale.Ephemeral)
 
-		// Get lab topology information
-		clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, topoFile,
-			tailscaleLabName, varsFile, runtime, debug, timeout, gracefulShutdown)
-		if err != nil {
-			return err
+	// Get lab topology information
+	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
+		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0, o.Global.Timeout, o.Destroy.GracefulShutdown)
+	if err != nil {
+		return err
+	}
+
+	labName := clabInstance.Config.Name
+	networkName := clabInstance.Config.Mgmt.Network
+	if networkName == "" {
+		networkName = "clab-" + labName
+	}
+
+	// Set container name if not provided
+	if o.ToolsTailscale.ContainerName == "" {
+		o.ToolsTailscale.ContainerName = fmt.Sprintf("clab-%s-tailscale", labName)
+		log.Debugf("Container name not provided, generated name: %s", o.ToolsTailscale.ContainerName)
+	}
+
+	if o.ToolsTailscale.AuthKey == "" {
+		// grab from system env
+		if envKey := os.Getenv("TS_AUTHKEY"); envKey != "" {
+			o.ToolsTailscale.AuthKey = envKey
+		} else {
+			return fmt.Errorf("auth key is required for tailscale. Use --auth-key flag or set the TS_AUTHKEY env var")
 		}
+	}
 
-		labName := clabInstance.Config.Name
-		networkName := clabInstance.Config.Mgmt.Network
-		if networkName == "" {
-			networkName = "clab-" + labName
+	// Initialize runtime with management network info from the deployed lab
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	if err != nil {
+		return fmt.Errorf("failed to get runtime initializer for '%s': %w", o.Global.Runtime, err)
+	}
+
+	rt := rinit()
+
+	mgmtNet := clabInstance.Config.Mgmt
+	log.Debugf("Using mgmt network from deployed lab: %+v", mgmtNet)
+
+	err = rt.Init(
+		clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}),
+		clabruntime.WithMgmtNet(mgmtNet),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize runtime: %w", err)
+	}
+
+	// Step 1: Remove existing Tailscale containers using labels
+	log.Info("Removing existing tailscale containers for lab", "lab", labName)
+
+	// Use labels to find Tailscale containers for this lab
+	filter := []*clabtypes.GenericFilter{
+		{
+			FilterType: "label",
+			Field:      clablabels.ToolType,
+			Operator:   "=",
+			Match:      tailscaleConst,
+		},
+		{
+			FilterType: "label",
+			Field:      clablabels.Containerlab,
+			Operator:   "=",
+			Match:      labName,
+		},
+	}
+
+	containers, err := rt.ListContainers(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	for _, container := range containers {
+		containerName := strings.TrimPrefix(container.Names[0], "/")
+		log.Debug("Removing existing tailscale container", "container", containerName)
+
+		if err := rt.DeleteContainer(ctx, containerName); err != nil {
+			log.Debug("Could not remove container", "container", containerName, "error", err)
+		} else {
+			log.Debug("Removed existing tailscale container", "container", containerName)
 		}
+	}
 
-		// Set container name if not provided
-		if tailscaleContainerName == "" {
-			tailscaleContainerName = fmt.Sprintf("clab-%s-tailscale", labName)
-			log.Debugf("Container name not provided, generated name: %s", tailscaleContainerName)
-		}
+	// Step 2: Create and attach new Tailscale container
+	log.Info("Pulling tailscale image", "image", o.ToolsTailscale.Image)
+	if err := rt.PullImage(ctx, o.ToolsTailscale.Image, clabtypes.PullPolicyAlways); err != nil {
+		return fmt.Errorf("failed to pull image %s: %w", o.ToolsTailscale.Image, err)
+	}
 
-		if tailscaleAuthKey == "" {
-			// grab from system env
-			if envKey := os.Getenv("TS_AUTHKEY"); envKey != "" {
-				tailscaleAuthKey = envKey
-			} else {
-				return fmt.Errorf("auth key is required for tailscale. Use --auth-key flag or set the TS_AUTHKEY env var")
-			}
-		}
+	// Create container labels
+	owner := o.ToolsTailscale.Owner
+	if owner == "" {
+		owner = clabutils.GetOwner()
+	}
 
-		// Initialize runtime with management network info from the deployed lab
-		_, rinit, err := clabcore.RuntimeInitializer(runtime)
-		if err != nil {
-			return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtime, err)
-		}
+	labelsMap := createLabelsMap(
+		clabInstance.TopoPaths.TopologyFilenameAbsPath(),
+		labName,
+		o.ToolsTailscale.ContainerName,
+		owner,
+		tailscaleConst,
+	)
 
-		rt := rinit()
+	log.Infof("Creating tailscale container %s on network '%s'", o.ToolsTailscale.ContainerName, networkName)
 
-		mgmtNet := clabInstance.Config.Mgmt
-		log.Debugf("Using mgmt network from deployed lab: %+v", mgmtNet)
+	tailscaleNode := NewTailscaleNode(o.ToolsTailscale.ContainerName, o.ToolsTailscale.Image, networkName, o.ToolsTailscale.AuthKey,
+		o.ToolsTailscale.AcceptRoutes, o.ToolsTailscale.Ephemeral, rt, labelsMap)
 
-		err = rt.Init(
-			clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: timeout}),
-			clabruntime.WithMgmtNet(mgmtNet),
-		)
-		if err != nil {
-			return fmt.Errorf("failed to initialize runtime: %w", err)
-		}
+	id, err := rt.CreateContainer(ctx, tailscaleNode.Config())
+	if err != nil {
+		return fmt.Errorf("failed to create tailscale container: %v", err)
+	}
 
-		// Step 1: Remove existing Tailscale containers using labels
-		log.Info("Removing existing tailscale containers for lab", "lab", labName)
+	if _, err := rt.StartContainer(ctx, id, tailscaleNode); err != nil {
+		// Clean up on failure
+		rt.DeleteContainer(ctx, o.ToolsTailscale.ContainerName)
+		return fmt.Errorf("failed to start tailscale container: %v", err)
+	}
 
-		// Use labels to find Tailscale containers for this lab
-		filter := []*clabtypes.GenericFilter{
-			{
-				FilterType: "label",
-				Field:      clablabels.ToolType,
-				Operator:   "=",
-				Match:      "tailscale",
-			},
-			{
-				FilterType: "label",
-				Field:      clablabels.Containerlab,
-				Operator:   "=",
-				Match:      labName,
-			},
-		}
+	log.Info("Tailscale container started. Waiting for tailnet connection", "container", o.ToolsTailscale.ContainerName)
 
-		containers, err := rt.ListContainers(ctx, filter)
-		if err != nil {
-			return fmt.Errorf("failed to list containers: %w", err)
-		}
-
-		for _, container := range containers {
-			containerName := strings.TrimPrefix(container.Names[0], "/")
-			log.Debug("Removing existing tailscale container", "container", containerName)
-
-			if err := rt.DeleteContainer(ctx, containerName); err != nil {
-				log.Debug("Could not remove container", "container", containerName, "error", err)
-			} else {
-				log.Debug("Removed existing tailscale container", "container", containerName)
-			}
-		}
-
-		// Step 2: Create and attach new Tailscale container
-		log.Info("Pulling tailscale image", "image", tailscaleImage)
-		if err := rt.PullImage(ctx, tailscaleImage, clabtypes.PullPolicyAlways); err != nil {
-			return fmt.Errorf("failed to pull image %s: %w", tailscaleImage, err)
-		}
-
-		// Create container labels
-		owner := tailscaleOwner
-		if owner == "" {
-			owner = clabutils.GetOwner()
-		}
-
-		labelsMap := createLabelsMap(
-			clabInstance.TopoPaths.TopologyFilenameAbsPath(),
-			labName,
-			tailscaleContainerName,
-			owner,
-			"tailscale",
-		)
-
-		log.Infof("Creating tailscale container %s on network '%s'", tailscaleContainerName, networkName)
-
-		tailscaleNode := NewTailscaleNode(tailscaleContainerName, tailscaleImage, networkName, tailscaleAuthKey,
-			tailscaleAcceptRoutes, tailscaleEphemeral, rt, labelsMap)
-
-		id, err := rt.CreateContainer(ctx, tailscaleNode.Config())
-		if err != nil {
-			return fmt.Errorf("failed to create tailscale container: %v", err)
-		}
-
-		if _, err := rt.StartContainer(ctx, id, tailscaleNode); err != nil {
-			// Clean up on failure
-			rt.DeleteContainer(ctx, tailscaleContainerName)
-			return fmt.Errorf("failed to start tailscale container: %v", err)
-		}
-
-		log.Info("Tailscale container started. Waiting for tailnet connection", "container", tailscaleContainerName)
-
-		// Wait for Tailscale to be ready using healthcheck
-		if err := waitForTailscaleReady(ctx, rt, tailscaleContainerName, 60*time.Second); err != nil {
-			log.Warn("Tailscale container failed to become ready", "error", err, "container", tailscaleContainerName)
-			log.Info("Check the logs for more details", "command", fmt.Sprintf("docker logs %s", tailscaleContainerName))
-			return nil
-		}
-
-		tsIPAddrs := getTailscaleStatus(ctx, rt, tailscaleContainerName)
-		if tsIPAddrs == "" {
-			log.Warn("Tailscale container is healthy but failed to retrieve IP address.\nCheck the logs: docker logs %s", tailscaleContainerName)
-			return nil
-		}
-
-		tsNodeName := getTailscaleNodeName(ctx, rt, tailscaleContainerName)
-
-		subnets := getMgmtNetworkSubnets(rt)
-
-		log.Info("Tailscale reattached",
-			"tailscale ip", tsIPAddrs,
-			"lab subnet", strings.Join(subnets, "\n"),
-			"tailscale node", tsNodeName)
-
+	// Wait for Tailscale to be ready using healthcheck
+	if err := waitForTailscaleReady(ctx, rt, o.ToolsTailscale.ContainerName, 60*time.Second); err != nil {
+		log.Warn("Tailscale container failed to become ready", "error", err, "container", o.ToolsTailscale.ContainerName)
+		log.Info("Check the logs for more details", "command", fmt.Sprintf("docker logs %s", o.ToolsTailscale.ContainerName))
 		return nil
-	},
+	}
+
+	tsIPAddrs := getTailscaleStatus(ctx, rt, o.ToolsTailscale.ContainerName)
+	if tsIPAddrs == "" {
+		log.Warn("Tailscale container is healthy but failed to retrieve IP address.\nCheck the logs: docker logs %s", o.ToolsTailscale.ContainerName)
+		return nil
+	}
+
+	tsNodeName := getTailscaleNodeName(ctx, rt, o.ToolsTailscale.ContainerName)
+
+	subnets := getMgmtNetworkSubnets(rt)
+
+	log.Info("Tailscale reattached",
+		"tailscale ip", tsIPAddrs,
+		"lab subnet", strings.Join(subnets, "\n"),
+		"tailscale node", tsNodeName)
+
+	return nil
 }
