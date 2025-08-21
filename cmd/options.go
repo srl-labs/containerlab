@@ -89,6 +89,11 @@ func GetOptions() *Options {
 				Port:           14789,
 				DeletionPrefix: "vx-",
 			},
+			ToolsTailscale: &ToolsTailscaleOptions{
+				Image:     "tailscale/tailscale:latest",
+				Ephemeral: true,
+				Format:    "table",
+			},
 		}
 	}
 
@@ -112,6 +117,7 @@ type Options struct {
 	ToolsSSHX      *ToolsSSHXOptions
 	ToolsVeth      *ToolsVethOptions
 	ToolsVxlan     *ToolsVxlanOptions
+	ToolsTailscale *ToolsTailscaleOptions
 }
 
 type GlobalOptions struct {
