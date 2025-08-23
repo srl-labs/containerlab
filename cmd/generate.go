@@ -376,7 +376,7 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 	result := make([]nodesDef, numStages)
 	for idx, n := range nodes {
 		def := nodesDef{}
-		items := strings.SplitN(n, ":", nodeFlagNumKindPartCount)
+		items := strings.SplitN(n, ":", nodeFlagNumKindTypePartCount)
 		if len(items) == 0 {
 			log.Errorf("wrong --nodes format '%s'", n)
 			return nil, errSyntax
