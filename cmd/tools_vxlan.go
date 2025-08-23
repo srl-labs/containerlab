@@ -33,14 +33,47 @@ func vxlanCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	c.AddCommand(vxlanCreateCmd)
-	vxlanCreateCmd.Flags().UintVarP(&o.ToolsVxlan.ID, "id", "i", o.ToolsVxlan.ID, "VxLAN ID (VNI)")
-	vxlanCreateCmd.Flags().StringVarP(&o.ToolsVxlan.Remote, "remote", "", o.ToolsVxlan.Remote, "address of the remote VTEP")
-	vxlanCreateCmd.Flags().StringVarP(&o.ToolsVxlan.ParentDevice, "dev", "", o.ToolsVxlan.ParentDevice,
-		"parent (source) interface name for VxLAN")
-	vxlanCreateCmd.Flags().StringVarP(&o.ToolsVxlan.Link, "link", "l", o.ToolsVxlan.Link,
-		"link to which 'attach' vxlan tunnel with tc redirect")
-	vxlanCreateCmd.Flags().UintVarP(&o.ToolsVxlan.MTU, "mtu", "m", o.ToolsVxlan.MTU, "VxLAN MTU")
-	vxlanCreateCmd.Flags().UintVarP(&o.ToolsVxlan.Port, "port", "p", o.ToolsVxlan.Port, "VxLAN Destination UDP Port")
+	vxlanCreateCmd.Flags().UintVarP(
+		&o.ToolsVxlan.ID,
+		"id",
+		"i",
+		o.ToolsVxlan.ID,
+		"VxLAN ID (VNI)")
+	vxlanCreateCmd.Flags().StringVarP(
+		&o.ToolsVxlan.Remote,
+		"remote",
+		"",
+		o.ToolsVxlan.Remote,
+		"address of the remote VTEP",
+	)
+	vxlanCreateCmd.Flags().StringVarP(
+		&o.ToolsVxlan.ParentDevice,
+		"dev",
+		"",
+		o.ToolsVxlan.ParentDevice,
+		"parent (source) interface name for VxLAN",
+	)
+	vxlanCreateCmd.Flags().StringVarP(
+		&o.ToolsVxlan.Link,
+		"link",
+		"l",
+		o.ToolsVxlan.Link,
+		"link to which 'attach' vxlan tunnel with tc redirect",
+	)
+	vxlanCreateCmd.Flags().UintVarP(
+		&o.ToolsVxlan.MTU,
+		"mtu",
+		"m",
+		o.ToolsVxlan.MTU,
+		"VxLAN MTU",
+	)
+	vxlanCreateCmd.Flags().UintVarP(
+		&o.ToolsVxlan.Port,
+		"port",
+		"p",
+		o.ToolsVxlan.Port,
+		"VxLAN Destination UDP Port",
+	)
 
 	err := vxlanCreateCmd.MarkFlagRequired("remote")
 	if err != nil {
@@ -64,8 +97,13 @@ func vxlanCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	c.AddCommand(vxlanDeleteCmd)
-	vxlanDeleteCmd.Flags().StringVarP(&o.ToolsVxlan.DeletionPrefix, "prefix", "p", o.ToolsVxlan.DeletionPrefix,
-		"delete all containerlab created VxLAN interfaces which start with this prefix")
+	vxlanDeleteCmd.Flags().StringVarP(
+		&o.ToolsVxlan.DeletionPrefix,
+		"prefix",
+		"p",
+		o.ToolsVxlan.DeletionPrefix,
+		"delete all containerlab created VxLAN interfaces which start with this prefix",
+	)
 
 	return c, nil
 }
@@ -82,7 +120,9 @@ func vxlanCreate(cobraCmd *cobra.Command, o *Options) error {
 	if o.ToolsVxlan.ParentDevice == "" {
 		r, err := clabutils.GetRouteForIP(net.ParseIP(o.ToolsVxlan.Remote))
 		if err != nil {
-			return fmt.Errorf("failed to find a route to VxLAN remote address %s", o.ToolsVxlan.Remote)
+			return fmt.Errorf(
+				"failed to find a route to VxLAN remote address %s", o.ToolsVxlan.Remote,
+			)
 		}
 
 		o.ToolsVxlan.ParentDevice = r.Interface.Name

@@ -39,14 +39,7 @@ func apiServerStop(cobraCmd *cobra.Command, o *Options) error {
 
 	log.Debugf("Container name for deletion: %s", o.ToolsAPI.Name)
 
-	// Use common.Runtime if available, otherwise use the api-server flag
-	runtimeName := o.Global.Runtime
-	if runtimeName == "" {
-		runtimeName = o.ToolsAPI.Runtime
-	}
-
-	// Initialize runtime
-	_, rinit, err := clabcore.RuntimeInitializer(runtimeName)
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
 	if err != nil {
 		return fmt.Errorf("failed to get runtime initializer: %w", err)
 	}

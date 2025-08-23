@@ -17,7 +17,7 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-func certCmd(o *Options) (*cobra.Command, error) {
+func certCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	c := &cobra.Command{
 		Use:   "cert",
 		Short: "TLS certificate operations",
@@ -39,17 +39,60 @@ func certCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	CACmd.AddCommand(CACreateCmd)
-	CACreateCmd.Flags().StringVarP(&o.ToolsCert.CommonName, "cn", "", o.ToolsCert.CommonName, "Common Name")
-	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Country, "country", "c", o.ToolsCert.Country, "Country")
-	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Locality, "locality", "l", o.ToolsCert.Locality, "Location")
-	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Organization, "organization", "o",
-		o.ToolsCert.Organization, "Organization")
-	CACreateCmd.Flags().StringVarP(&o.ToolsCert.OrganizationUnit, "ou", "",
-		o.ToolsCert.OrganizationUnit, "Organization Unit")
-	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Expiry, "expiry", "e", o.ToolsCert.Expiry, "certificate validity period")
-	CACreateCmd.Flags().StringVarP(&o.ToolsCert.Path, "path", "p", o.ToolsCert.Path,
-		"path to write certificate and key to. Default is current working directory")
-	CACreateCmd.Flags().StringVarP(&o.ToolsCert.CANamePrefix, "name", "n", "ca", "certificate/key filename prefix")
+	CACreateCmd.Flags().StringVarP(
+		&o.ToolsCert.CommonName,
+		"cn",
+		"",
+		o.ToolsCert.CommonName,
+		"Common Name",
+	)
+	CACreateCmd.Flags().StringVarP(
+		&o.ToolsCert.Country,
+		"country",
+		"c",
+		o.ToolsCert.Country,
+		"Country",
+	)
+	CACreateCmd.Flags().StringVarP(
+		&o.ToolsCert.Locality,
+		"locality",
+		"l",
+		o.ToolsCert.Locality, "Location")
+	CACreateCmd.Flags().StringVarP(
+		&o.ToolsCert.Organization,
+		"organization",
+		"o",
+		o.ToolsCert.Organization,
+		"Organization",
+	)
+	CACreateCmd.Flags().StringVarP(
+		&o.ToolsCert.OrganizationUnit,
+		"ou",
+		"",
+		o.ToolsCert.OrganizationUnit,
+		"Organization Unit",
+	)
+	CACreateCmd.Flags().StringVarP(
+		&o.ToolsCert.Expiry,
+		"expiry",
+		"e",
+		o.ToolsCert.Expiry,
+		"certificate validity period",
+	)
+	CACreateCmd.Flags().StringVarP(
+		&o.ToolsCert.Path,
+		"path",
+		"p",
+		o.ToolsCert.Path,
+		"path to write certificate and key to. Default is current working directory",
+	)
+	CACreateCmd.Flags().StringVarP(
+		&o.ToolsCert.CANamePrefix,
+		"name",
+		"n",
+		"ca",
+		"certificate/key filename prefix",
+	)
 
 	signCertCmd := &cobra.Command{
 		Use:   "sign",
@@ -60,23 +103,79 @@ func certCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	c.AddCommand(signCertCmd)
-	signCertCmd.Flags().StringSliceVarP(&o.ToolsCert.CertHosts, "hosts", "", o.ToolsCert.CertHosts,
-		"comma separate list of hosts of a certificate")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.CommonName, "cn", "", o.ToolsCert.CommonName, "Common Name")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.CACertPath, "ca-cert", "",
-		o.ToolsCert.CACertPath, "Path to CA certificate")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.CAKeyPath, "ca-key", "", o.ToolsCert.CAKeyPath, "Path to CA private key")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.Country, "country", "c", o.ToolsCert.Country, "Country")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.Locality, "locality", "l", o.ToolsCert.Locality, "Location")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.Organization, "organization", "o",
-		o.ToolsCert.Organization, "Organization")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.OrganizationUnit, "ou", "",
-		o.ToolsCert.OrganizationUnit, "Organization Unit")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.Path, "path", "p", o.ToolsCert.Path,
-		"path to write certificate and key to. Default is current working directory")
-	signCertCmd.Flags().StringVarP(&o.ToolsCert.CertNamePrefix, "name", "n",
-		o.ToolsCert.CertNamePrefix, "certificate/key filename prefix")
-	signCertCmd.Flags().UintVarP(&o.ToolsCert.KeySize, "key-size", "", o.ToolsCert.KeySize, "private key size")
+	signCertCmd.Flags().StringSliceVarP(
+		&o.ToolsCert.CertHosts,
+		"hosts",
+		"", o.ToolsCert.CertHosts,
+		"comma separate list of hosts of a certificate",
+	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.CommonName,
+		"cn",
+		"",
+		o.ToolsCert.CommonName,
+		"Common Name",
+	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.CACertPath,
+		"ca-cert",
+		"",
+		o.ToolsCert.CACertPath,
+		"Path to CA certificate",
+	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.CAKeyPath,
+		"ca-key",
+		"", o.ToolsCert.CAKeyPath,
+		"Path to CA private key",
+	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.Country,
+		"country",
+		"c", o.ToolsCert.Country,
+		"Country",
+	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.Locality,
+		"locality",
+		"l", o.ToolsCert.Locality,
+		"Location",
+	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.Organization,
+		"organization",
+		"o",
+		o.ToolsCert.Organization,
+		"Organization",
+	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.OrganizationUnit,
+		"ou",
+		"",
+		o.ToolsCert.OrganizationUnit,
+		"Organization Unit",
+	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.Path,
+		"path",
+		"p",
+		o.ToolsCert.Path,
+		"path to write certificate and key to. Default is current working directory",
+	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.CertNamePrefix,
+		"name",
+		"n",
+		o.ToolsCert.CertNamePrefix,
+		"certificate/key filename prefix",
+	)
+	signCertCmd.Flags().UintVarP(
+		&o.ToolsCert.KeySize,
+		"key-size",
+		"",
+		o.ToolsCert.KeySize,
+		"private key size",
+	)
 
 	return c, nil
 }

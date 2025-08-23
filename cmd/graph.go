@@ -22,54 +22,96 @@ func graphCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "graph",
 		Short: "generate a topology graph",
-		Long:  "generate topology graph based on the topology definition file and running containers\nreference: https://containerlab.dev/cmd/graph/",
+		Long: "generate topology graph based on the topology definition file and " +
+			"running containers\nreference: https://containerlab.dev/cmd/graph/",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return graphFn(o)
 		},
 	}
 
-	c.Flags().StringVarP(&o.Graph.Server, "srv", "s", o.Graph.Server,
-		"HTTP server address serving the topology view")
-	c.Flags().BoolVarP(&o.Graph.Offline, "offline", "o", o.Graph.Offline,
-		"use only information from topo file when building graph")
-	c.Flags().BoolVarP(&o.Graph.GenerateDotFile, "dot", "", o.Graph.GenerateDotFile, "generate dot file")
-	c.Flags().BoolVarP(&o.Graph.GenerateMermaid, "mermaid", "", o.Graph.GenerateMermaid, "print mermaid flowchart to stdout")
-	c.Flags().StringVarP(&o.Graph.MermaidDirection, "mermaid-direction", "",
-		o.Graph.MermaidDirection, "specify direction of mermaid dirgram")
-	c.Flags().StringSliceVar(&o.Graph.DrawIOArgs, "drawio-args", o.Graph.DrawIOArgs,
-		"Additional flags to pass to the drawio diagram generation tool (can be specified multiple times)")
-	c.Flags().BoolVarP(&o.Graph.GenerateDrawIO, "drawio", "", o.Graph.GenerateDrawIO, "generate drawio diagram file")
-	c.Flags().StringVarP(&o.Graph.DrawIOVersion, "drawio-version", "", o.Graph.DrawIOVersion,
-		"version of the clab-io-draw container to use for generating drawio diagram file")
-	c.Flags().StringVarP(&o.Graph.Template, "template", "", o.Graph.Template,
-		"Go html template used to generate the graph")
-	c.Flags().StringVarP(&o.Graph.StaticDirectory, "static-dir", "", o.Graph.StaticDirectory,
-		"Serve static files from the specified directory")
-	c.Flags().StringSliceVarP(&o.Filter.NodeFilter, "node-filter", "", o.Filter.NodeFilter,
-		"comma separated list of nodes to include")
+	c.Flags().StringVarP(
+		&o.Graph.Server,
+		"srv",
+		"s",
+		o.Graph.Server,
+		"HTTP server address serving the topology view",
+	)
+	c.Flags().BoolVarP(
+		&o.Graph.Offline,
+		"offline",
+		"o",
+		o.Graph.Offline,
+		"use only information from topo file when building graph",
+	)
+	c.Flags().BoolVarP(
+		&o.Graph.GenerateDotFile,
+		"dot",
+		"",
+		o.Graph.GenerateDotFile,
+		"generate dot file",
+	)
+	c.Flags().BoolVarP(
+		&o.Graph.GenerateMermaid,
+		"mermaid",
+		"",
+		o.Graph.GenerateMermaid,
+		"print mermaid flowchart to stdout",
+	)
+	c.Flags().StringVarP(
+		&o.Graph.MermaidDirection,
+		"mermaid-direction", "",
+		o.Graph.MermaidDirection,
+		"specify direction of mermaid dirgram",
+	)
+	c.Flags().StringSliceVar(
+		&o.Graph.DrawIOArgs,
+		"drawio-args",
+		o.Graph.DrawIOArgs,
+		"Additional flags to pass to the drawio diagram generation tool "+
+			"(can be specified multiple times)",
+	)
+	c.Flags().BoolVarP(
+		&o.Graph.GenerateDrawIO,
+		"drawio",
+		"",
+		o.Graph.GenerateDrawIO,
+		"generate drawio diagram file",
+	)
+	c.Flags().StringVarP(
+		&o.Graph.DrawIOVersion,
+		"drawio-version",
+		"",
+		o.Graph.DrawIOVersion,
+		"version of the clab-io-draw container to use for generating drawio diagram file",
+	)
+	c.Flags().StringVarP(
+		&o.Graph.Template,
+		"template",
+		"",
+		o.Graph.Template,
+		"Go html template used to generate the graph",
+	)
+	c.Flags().StringVarP(
+		&o.Graph.StaticDirectory,
+		"static-dir",
+		"",
+		o.Graph.StaticDirectory,
+		"Serve static files from the specified directory",
+	)
+	c.Flags().StringSliceVarP(
+		&o.Filter.NodeFilter,
+		"node-filter",
+		"",
+		o.Filter.NodeFilter,
+		"comma separated list of nodes to include",
+	)
 	c.MarkFlagsMutuallyExclusive("dot", "mermaid", "drawio")
 
 	return c, nil
 }
 
 func graphFn(o *Options) error {
-	var err error
-
-	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-		clabcore.WithNodeFilter(o.Filter.NodeFilter),
-		clabcore.WithRuntime(
-			o.Global.Runtime,
-			&clabruntime.RuntimeConfig{
-				Debug:            o.Global.DebugCount > 0,
-				Timeout:          o.Global.Timeout,
-				GracefulShutdown: o.Destroy.GracefulShutdown,
-			},
-		),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	}
-	c, err := clabcore.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}

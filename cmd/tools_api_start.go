@@ -22,7 +22,13 @@ import (
 func NewAPIServerNode(name, image, labsDir string, runtime clabruntime.ContainerRuntime,
 	env map[string]string, labels map[string]string,
 ) (*APIServerNode, error) {
-	log.Debugf("Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s", name, image, labsDir, runtime)
+	log.Debugf(
+		"Creating APIServerNode: name=%s, image=%s, labsDir=%s, runtime=%s",
+		name,
+		image,
+		labsDir,
+		runtime,
+	)
 
 	// Set up binds based on the runtime
 	binds := clabtypes.Binds{
@@ -53,7 +59,11 @@ func NewAPIServerNode(name, image, labsDir string, runtime clabruntime.Container
 	// Find containerlab binary and add bind mount if found
 	clabPath, err := getclabBinaryPath()
 	if err != nil {
-		return nil, fmt.Errorf("could not find containerlab binary: %v. API server might not function correctly if containerlab is not in its PATH", err)
+		return nil, fmt.Errorf(
+			"could not find containerlab binary: %v. API server might not function correctly "+
+				"if containerlab is not in its PATH",
+			err,
+		)
 	}
 	binds = append(binds, clabtypes.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
 
@@ -97,7 +107,14 @@ func getclabBinaryPath() (string, error) {
 }
 
 // createLabels creates container labels.
-func createAPIServerLabels(containerName, owner string, port uint, labsDir, host, runtimeType string) map[string]string {
+func createAPIServerLabels(
+	containerName,
+	owner string,
+	port uint,
+	labsDir,
+	host,
+	runtimeType string,
+) map[string]string {
 	labels := map[string]string{
 		clablabels.NodeName: containerName,
 		clablabels.NodeKind: "linux",
@@ -133,8 +150,14 @@ func getOwnerName(o *Options) string {
 func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	ctx := cobraCmd.Context()
 
-	log.Debugf("api-server start called with flags: name='%s', image='%s', labsDir='%s', port=%d, host='%s'",
-		o.ToolsAPI.Name, o.ToolsAPI.Image, o.ToolsAPI.LabsDirectory, o.ToolsAPI.Port, o.ToolsAPI.Host)
+	log.Debugf(
+		"api-server start called with flags: name='%s', image='%s', labsDir='%s', port=%d, host='%s'",
+		o.ToolsAPI.Name,
+		o.ToolsAPI.Image,
+		o.ToolsAPI.LabsDirectory,
+		o.ToolsAPI.Port,
+		o.ToolsAPI.Host,
+	)
 
 	// Generate random JWT secret if not provided
 	if o.ToolsAPI.JWTSecret == "" {
@@ -146,15 +169,9 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 		log.Infof("Generated random JWT secret for API server")
 	}
 
-	runtimeName := o.Global.Runtime
-	if runtimeName == "" {
-		runtimeName = o.ToolsAPI.Runtime
-	}
-
-	// Initialize runtime
-	_, rinit, err := clabcore.RuntimeInitializer(runtimeName)
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
 	if err != nil {
-		return fmt.Errorf("failed to get runtime initializer for '%s': %w", runtimeName, err)
+		return fmt.Errorf("failed to get runtime initializer for '%s': %w", o.Global.Runtime, err)
 	}
 
 	rt := rinit()
@@ -188,7 +205,7 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 		"JWT_EXPIRATION_MINUTES": o.ToolsAPI.JWTExpiration,
 		"API_USER_GROUP":         o.ToolsAPI.UserGroup,
 		"SUPERUSER_GROUP":        o.ToolsAPI.SuperUserGroup,
-		"CLAB_RUNTIME":           o.ToolsAPI.Runtime,
+		"CLAB_RUNTIME":           o.Global.Runtime,
 		"LOG_LEVEL":              o.ToolsAPI.LogLevel,
 		"GIN_MODE":               o.ToolsAPI.GinMode,
 	}
@@ -219,7 +236,7 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 	}
 	owner := getOwnerName(o)
 	labels := createAPIServerLabels(o.ToolsAPI.Name, owner, o.ToolsAPI.Port,
-		o.ToolsAPI.LabsDirectory, o.ToolsAPI.Host, runtimeName)
+		o.ToolsAPI.LabsDirectory, o.ToolsAPI.Host, o.Global.Runtime)
 
 	// Create and start API server container
 	log.Infof("Creating API server container %s", o.ToolsAPI.Name)

@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -23,19 +22,7 @@ func disableTxOffloadCmd(o *Options) (*cobra.Command, error) {
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			ctx := cobraCmd.Context()
 
-			opts := []clabcore.ClabOption{
-				clabcore.WithTimeout(o.Global.Timeout),
-				clabcore.WithRuntime(
-					o.Global.Runtime,
-					&clabruntime.RuntimeConfig{
-						Debug:            o.Global.DebugCount > 0,
-						Timeout:          o.Global.Timeout,
-						GracefulShutdown: o.Destroy.GracefulShutdown,
-					},
-				),
-				clabcore.WithDebug(o.Global.DebugCount > 0),
-			}
-			c, err := clabcore.NewContainerLab(opts...)
+			c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 			if err != nil {
 				return err
 			}
@@ -45,13 +32,19 @@ func disableTxOffloadCmd(o *Options) (*cobra.Command, error) {
 				return err
 			}
 
-			err = node.ExecFunction(ctx, clabutils.NSEthtoolTXOff(
-				o.ToolsTxOffload.ContainerName, "eth0"))
+			err = node.ExecFunction(
+				ctx,
+				clabutils.NSEthtoolTXOff(o.ToolsTxOffload.ContainerName, "eth0"),
+			)
 			if err != nil {
 				return err
 			}
 
-			log.Infof("Tx checksum offload disabled for eth0 interface of %s container", o.ToolsTxOffload.ContainerName)
+			log.Infof(
+				"Tx checksum offload disabled for eth0 interface of %s container",
+				o.ToolsTxOffload.ContainerName,
+			)
+
 			return nil
 		},
 	}

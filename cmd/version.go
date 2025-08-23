@@ -107,7 +107,10 @@ func printNewVersionInfo(ver string) {
 	relSlug := docsLinkFromVer(ver)
 	fmt.Printf("🎉 A newer containerlab version (%s) is available!\n", ver)
 	fmt.Printf("Release notes: https://containerlab.dev/rn/%s\n", relSlug)
-	fmt.Println("Run 'sudo clab version upgrade' or see https://containerlab.dev/install/ for installation options.")
+	fmt.Println(
+		"Run 'sudo clab version upgrade' or see https://containerlab.dev/install/ " +
+			"for installation options.",
+	)
 }
 
 func upgrade(cobraCmd *cobra.Command, _ []string) error {

@@ -48,7 +48,7 @@ type nodesDef struct {
 	typ      string
 }
 
-func generateCmd(o *Options) (*cobra.Command, error) {
+func generateCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	clab := &clabcore.CLab{}
 	clab.Reg = clabnodes.NewNodeRegistry()
 	clab.RegisterNodes()
@@ -72,30 +72,99 @@ func generateCmd(o *Options) (*cobra.Command, error) {
 		},
 	}
 
-	c.Flags().StringVarP(&o.Deploy.ManagementNetworkName, "network", "",
-		o.Deploy.ManagementNetworkName, "management network name")
-	c.Flags().IPNetVarP(&o.Deploy.ManagementIPv4Subnet, "ipv4-subnet", "4",
-		o.Deploy.ManagementIPv4Subnet, "management network IPv4 subnet range")
-	c.Flags().IPNetVarP(&o.Deploy.ManagementIPv6Subnet, "ipv6-subnet", "6",
-		o.Deploy.ManagementIPv6Subnet, "management network IPv6 subnet range")
-	c.Flags().StringSliceVarP(&image, "image", "", []string{},
-		"container image name, can be prefixed with the node kind. <kind>=<image_name>")
-	c.Flags().StringVarP(&kind, "kind", "", "srl",
-		fmt.Sprintf("container kind, one of %v", supportedKinds))
-	c.Flags().StringSliceVarP(&nodesFlag, "nodes", "", []string{},
-		"comma separated nodes definitions in format <num_nodes>:<kind>:<type>, each defining a Clos network stage")
-	c.Flags().StringSliceVarP(&license, "license", "", []string{},
-		"path to license file, can be prefix with the node kind. <kind>=/path/to/file")
-	c.Flags().StringVarP(&nodePrefix, "node-prefix", "", defaultNodePrefix, "prefix used in node names")
-	c.Flags().StringVarP(&groupPrefix, "group-prefix", "", defaultGroupPrefix, "prefix used in group names")
-	c.Flags().StringVarP(&file, "file", "", "", "file path to save generated topology")
-	c.Flags().BoolVarP(&deploy, "deploy", "", false,
-		"deploy a fabric based on the generated topology file")
-	c.Flags().UintVarP(&o.Deploy.MaxWorkers, "max-workers", "", o.Deploy.MaxWorkers,
-		"limit the maximum number of workers creating nodes and virtual wires")
+	c.Flags().StringVarP(
+		&o.Deploy.ManagementNetworkName,
+		"network",
+		"",
+		o.Deploy.ManagementNetworkName,
+		"management network name",
+	)
+	c.Flags().IPNetVarP(
+		&o.Deploy.ManagementIPv4Subnet,
+		"ipv4-subnet",
+		"4",
+		o.Deploy.ManagementIPv4Subnet,
+		"management network IPv4 subnet range",
+	)
+	c.Flags().IPNetVarP(
+		&o.Deploy.ManagementIPv6Subnet,
+		"ipv6-subnet",
+		"6",
+		o.Deploy.ManagementIPv6Subnet,
+		"management network IPv6 subnet range",
+	)
+	c.Flags().StringSliceVarP(
+		&image,
+		"image",
+		"",
+		[]string{},
+		"container image name, can be prefixed with the node kind. <kind>=<image_name>",
+	)
+	c.Flags().StringVarP(
+		&kind,
+		"kind",
+		"",
+		"srl",
+		fmt.Sprintf("container kind, one of %v", supportedKinds),
+	)
+	c.Flags().StringSliceVarP(
+		&nodesFlag,
+		"nodes",
+		"",
+		[]string{},
+		"comma separated nodes definitions in format <num_nodes>:<kind>:<type>, "+
+			"each defining a Clos network stage",
+	)
+	c.Flags().StringSliceVarP(
+		&license,
+		"license",
+		"",
+		[]string{},
+		"path to license file, can be prefix with the node kind. <kind>=/path/to/file",
+	)
+	c.Flags().StringVarP(
+		&nodePrefix,
+		"node-prefix",
+		"",
+		defaultNodePrefix,
+		"prefix used in node names",
+	)
+	c.Flags().StringVarP(
+		&groupPrefix,
+		"group-prefix",
+		"",
+		defaultGroupPrefix,
+		"prefix used in group names",
+	)
+	c.Flags().StringVarP(
+		&file,
+		"file",
+		"",
+		"",
+		"file path to save generated topology",
+	)
+	c.Flags().BoolVarP(
+		&deploy,
+		"deploy",
+		"",
+		false,
+		"deploy a fabric based on the generated topology file",
+	)
+	c.Flags().UintVarP(
+		&o.Deploy.MaxWorkers,
+		"max-workers",
+		"",
+		o.Deploy.MaxWorkers,
+		"limit the maximum number of workers creating nodes and virtual wires",
+	)
 	// Add the owner flag to generate command
-	c.Flags().StringVarP(&o.Deploy.LabOwner, "owner", "", o.Deploy.LabOwner,
-		"lab owner name (only for users in clab_admins group)")
+	c.Flags().StringVarP(
+		&o.Deploy.LabOwner,
+		"owner",
+		"",
+		o.Deploy.LabOwner,
+		"lab owner name (only for users in clab_admins group)",
+	)
 
 	return c, nil
 }
@@ -122,8 +191,15 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 	}
 	log.Debugf("parsed nodes definitions: %+v", nodeDefs)
 
-	b, err := generateTopologyConfig(o.Global.TopologyName, o.Deploy.ManagementNetworkName, o.Deploy.ManagementIPv4Subnet.String(),
-		o.Deploy.ManagementIPv6Subnet.String(), images, licenses, reg, nodeDefs...)
+	b, err := generateTopologyConfig(
+		o.Global.TopologyName,
+		o.Deploy.ManagementNetworkName,
+		o.Deploy.ManagementIPv4Subnet.String(),
+		o.Deploy.ManagementIPv6Subnet.String(),
+		images,
+		licenses,
+		reg,
+		nodeDefs...)
 	if err != nil {
 		return err
 	}

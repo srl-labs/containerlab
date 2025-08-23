@@ -16,7 +16,6 @@ import (
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
-	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -39,11 +38,28 @@ func vethCmd(o *Options) (*cobra.Command, error) {
 	}
 
 	c.AddCommand(vethCreateCmd)
-	vethCreateCmd.Flags().StringVarP(&o.ToolsVeth.AEndpoint, "a-endpoint", "a", o.ToolsVeth.AEndpoint,
-		"veth endpoint A in the format of <containerA-name>:<interface-name> or <endpointA-type>:<endpoint-name>:<interface-name>")
-	vethCreateCmd.Flags().StringVarP(&o.ToolsVeth.BEndpoint, "b-endpoint", "b", o.ToolsVeth.BEndpoint,
-		"veth endpoint B in the format of <containerB-name>:<interface-name> or <endpointB-type>:<endpoint-name>:<interface-name>")
-	vethCreateCmd.Flags().IntVarP(&o.ToolsVeth.MTU, "mtu", "m", o.ToolsVeth.MTU, "link MTU")
+	vethCreateCmd.Flags().StringVarP(
+		&o.ToolsVeth.AEndpoint,
+		"a-endpoint",
+		"a",
+		o.ToolsVeth.AEndpoint,
+		"veth endpoint A in the format of <containerA-name>:<interface-name> "+
+			"or <endpointA-type>:<endpoint-name>:<interface-name>",
+	)
+	vethCreateCmd.Flags().StringVarP(
+		&o.ToolsVeth.BEndpoint,
+		"b-endpoint",
+		"b",
+		o.ToolsVeth.BEndpoint,
+		"veth endpoint B in the format of <containerB-name>:<interface-name> "+
+			"or <endpointB-type>:<endpoint-name>:<interface-name>",
+	)
+	vethCreateCmd.Flags().IntVarP(
+		&o.ToolsVeth.MTU,
+		"mtu",
+		"m", o.ToolsVeth.MTU,
+		"link MTU",
+	)
 
 	return c, nil
 }
@@ -61,19 +77,7 @@ func vethCreate(o *Options) error {
 		return err
 	}
 
-	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithRuntime(
-			o.Global.Runtime,
-			&clabruntime.RuntimeConfig{
-				Debug:            o.Global.DebugCount > 0,
-				Timeout:          o.Global.Timeout,
-				GracefulShutdown: o.Destroy.GracefulShutdown,
-			},
-		),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	}
-	c, err := clabcore.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}
@@ -204,7 +208,11 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 
 	case 3:
 		if _, ok := clabutils.StringInSlice([]string{"ovs-bridge", "bridge"}, arr[0]); !ok {
-			return ep, fmt.Errorf("only bride and ovs-bridge can be used as a first block in the link definition. Got: %s", arr[0])
+			return ep, fmt.Errorf(
+				"only bride and ovs-bridge can be used as a first block in the link definition. "+
+					"Got: %s",
+				arr[0],
+			)
 		}
 
 		switch arr[0] {

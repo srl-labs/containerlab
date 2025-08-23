@@ -69,13 +69,14 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 			Mgmt:     new(clabtypes.MgmtNet),
 			Topology: clabtypes.NewTopology(),
 		},
-		TopoPaths:       &clabtypes.TopoPaths{},
-		m:               new(sync.RWMutex),
-		Nodes:           make(map[string]clabnodes.Node),
-		Links:           make(map[int]clablinks.Link),
-		Runtimes:        make(map[string]clabruntime.ContainerRuntime),
-		Cert:            &clabcert.Cert{},
-		checkBindsPaths: true,
+		TopoPaths:         &clabtypes.TopoPaths{},
+		m:                 new(sync.RWMutex),
+		Nodes:             make(map[string]clabnodes.Node),
+		Links:             make(map[int]clablinks.Link),
+		Runtimes:          make(map[string]clabruntime.ContainerRuntime),
+		Cert:              &clabcert.Cert{},
+		checkBindsPaths:   true,
+		dependencyManager: clabcoredependency_manager.NewDependencyManager(),
 	}
 
 	// init a new NodeRegistry

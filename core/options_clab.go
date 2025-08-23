@@ -47,9 +47,9 @@ func WithTimeout(dur time.Duration) ClabOption {
 	}
 }
 
-// WithLabName sets the name of the lab
+// WithTopologyName sets the name of the lab/topology
 // to the provided string.
-func WithLabName(n string) ClabOption {
+func WithTopologyName(n string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Name = n
 		return nil

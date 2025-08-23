@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 
 	clabcore "github.com/srl-labs/containerlab/core"
-	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -23,30 +22,13 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	if o.Inspect.InterfacesFormat != "table" && o.Inspect.InterfacesFormat != "json" {
-		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", o.Inspect.InterfacesFormat)
-	}
-
-	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithRuntime(
-			o.Global.Runtime,
-			&clabruntime.RuntimeConfig{
-				Debug:            o.Global.DebugCount > 0,
-				Timeout:          o.Global.Timeout,
-				GracefulShutdown: o.Destroy.GracefulShutdown,
-			},
-		),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	}
-
-	if o.Global.TopologyFile != "" {
-		opts = append(opts,
-			clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-			clabcore.WithNodeFilter(o.Filter.NodeFilter),
+		return fmt.Errorf(
+			"output format %v is not supported, use 'table' or 'json'",
+			o.Inspect.InterfacesFormat,
 		)
 	}
 
-	c, err := clabcore.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}

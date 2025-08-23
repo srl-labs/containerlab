@@ -30,7 +30,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func netemCmd(o *Options) (*cobra.Command, error) {
+func netemCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	c := &cobra.Command{
 		Use:   "netem",
 		Short: "link impairment operations",
@@ -51,19 +51,53 @@ of real-world networks.`,
 	}
 
 	c.AddCommand(netemSetCmd)
-	netemSetCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "node", "n",
-		o.ToolsNetem.ContainerName, "node to apply impairment to")
-	netemSetCmd.Flags().StringVarP(&o.ToolsNetem.Interface, "interface", "i",
-		o.ToolsNetem.Interface, "interface to apply impairment to")
-	netemSetCmd.Flags().DurationVarP(&o.ToolsNetem.Delay, "delay", "", o.ToolsNetem.Delay,
-		"time to delay outgoing packets (e.g. 100ms, 2s)")
-	netemSetCmd.Flags().DurationVarP(&o.ToolsNetem.Jitter, "jitter", "", o.ToolsNetem.Jitter,
-		"delay variation, aka jitter (e.g. 50ms)")
-	netemSetCmd.Flags().Float64VarP(&o.ToolsNetem.Loss, "loss", "", o.ToolsNetem.Loss,
-		"random packet loss expressed in percentage (e.g. 0.1 means 0.1%)")
-	netemSetCmd.Flags().Uint64VarP(&o.ToolsNetem.Rate, "rate", "", o.ToolsNetem.Rate, "link rate limit in kbit")
-	netemSetCmd.Flags().Float64VarP(&o.ToolsNetem.Corruption, "corruption", "", 0,
-		"random packet corruption probability expressed in percentage (e.g. 0.1 means 0.1%)")
+	netemSetCmd.Flags().StringVarP(
+		&o.ToolsNetem.ContainerName,
+		"node",
+		"n",
+		o.ToolsNetem.ContainerName,
+		"node to apply impairment to",
+	)
+	netemSetCmd.Flags().StringVarP(
+		&o.ToolsNetem.Interface,
+		"interface",
+		"i",
+		o.ToolsNetem.Interface,
+		"interface to apply impairment to",
+	)
+	netemSetCmd.Flags().DurationVarP(
+		&o.ToolsNetem.Delay,
+		"delay",
+		"",
+		o.ToolsNetem.Delay,
+		"time to delay outgoing packets (e.g. 100ms, 2s)",
+	)
+	netemSetCmd.Flags().DurationVarP(
+		&o.ToolsNetem.Jitter,
+		"jitter",
+		"",
+		o.ToolsNetem.Jitter,
+		"delay variation, aka jitter (e.g. 50ms)",
+	)
+	netemSetCmd.Flags().Float64VarP(
+		&o.ToolsNetem.Loss,
+		"loss",
+		"",
+		o.ToolsNetem.Loss,
+		"random packet loss expressed in percentage (e.g. 0.1 means 0.1%)",
+	)
+	netemSetCmd.Flags().Uint64VarP(
+		&o.ToolsNetem.Rate,
+		"rate",
+		"",
+		o.ToolsNetem.Rate, "link rate limit in kbit")
+	netemSetCmd.Flags().Float64VarP(
+		&o.ToolsNetem.Corruption,
+		"corruption",
+		"",
+		0,
+		"random packet corruption probability expressed in percentage (e.g. 0.1 means 0.1%)",
+	)
 	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
 
@@ -78,9 +112,20 @@ of real-world networks.`,
 		},
 	}
 	c.AddCommand(netemShowCmd)
-	netemShowCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "node", "n",
-		o.ToolsNetem.ContainerName, "node to apply impairment to")
-	netemShowCmd.Flags().StringVarP(&o.ToolsNetem.Format, "format", "f", o.ToolsNetem.Format, "output format (table, json)")
+	netemShowCmd.Flags().StringVarP(
+		&o.ToolsNetem.ContainerName,
+		"node",
+		"n",
+		o.ToolsNetem.ContainerName,
+		"node to apply impairment to",
+	)
+	netemShowCmd.Flags().StringVarP(
+		&o.ToolsNetem.Format,
+		"format",
+		"f",
+		o.ToolsNetem.Format,
+		"output format (table, json)",
+	)
 
 	netemResetCmd := &cobra.Command{
 		Use:   "reset",
@@ -170,8 +215,16 @@ func netemSetFn(o *Options) error {
 			return err
 		}
 
-		qdisc, err := clabinternaltc.SetImpairments(tcnl, o.ToolsNetem.ContainerName, link,
-			o.ToolsNetem.Delay, o.ToolsNetem.Jitter, o.ToolsNetem.Loss, o.ToolsNetem.Rate, o.ToolsNetem.Corruption)
+		qdisc, err := clabinternaltc.SetImpairments(
+			tcnl,
+			o.ToolsNetem.ContainerName,
+			link,
+			o.ToolsNetem.Delay,
+			o.ToolsNetem.Jitter,
+			o.ToolsNetem.Loss,
+			o.ToolsNetem.Rate,
+			o.ToolsNetem.Corruption,
+		)
 		if err != nil {
 			return err
 		}
@@ -263,7 +316,9 @@ func qdiscToTableData(qdisc *gotc.Object) tableWriter.Row {
 		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
 	}
 
-	loss = strconv.FormatFloat(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64) + "%"
+	loss = strconv.FormatFloat(
+		float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100, 'f', 2, 64,
+	) + "%"
 	rate = strconv.Itoa(int(qdisc.Netem.Rate.Rate * 8 / 1000))
 	corruption = strconv.FormatFloat(float64(qdisc.Netem.Corrupt.Probability)/
 		float64(math.MaxUint32)*100, 'f', 2, 64) + "%"

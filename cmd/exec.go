@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 func execCmd(o *Options) (*cobra.Command, error) {
@@ -24,9 +23,27 @@ func execCmd(o *Options) (*cobra.Command, error) {
 		},
 	}
 
-	c.Flags().StringArrayVarP(&o.Exec.Commands, "cmd", "", o.Exec.Commands, "command to execute")
-	c.Flags().StringSliceVarP(&o.Filter.LabelFilter, "label", "", o.Filter.LabelFilter, "labels to filter container subset")
-	c.Flags().StringVarP(&o.Exec.Format, "format", "f", o.Exec.Format, "output format. One of [json, plain]")
+	c.Flags().StringArrayVarP(
+		&o.Exec.Commands,
+		"cmd",
+		"",
+		o.Exec.Commands,
+		"command to execute",
+	)
+	c.Flags().StringSliceVarP(
+		&o.Filter.LabelFilter,
+		"label",
+		"",
+		o.Filter.LabelFilter,
+		"labels to filter container subset",
+	)
+	c.Flags().StringVarP(
+		&o.Exec.Format,
+		"format",
+		"f",
+		o.Exec.Format,
+		"output format. One of [json, plain]",
+	)
 
 	return c, nil
 }
@@ -44,33 +61,7 @@ func execFn(_ *cobra.Command, o *Options) error {
 		return err
 	}
 
-	opts := make([]clabcore.ClabOption, 0, 5)
-
-	// exec can work with or without a topology file
-	// when topology file is provided we need to parse it
-	// when topo file is not provided, we rely on labels to perform the filtering
-	if o.Global.TopologyFile != "" {
-		opts = append(opts, clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile))
-	}
-
-	opts = append(opts,
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithRuntime(
-			o.Global.Runtime,
-			&clabruntime.RuntimeConfig{
-				Debug:            o.Global.DebugCount > 0,
-				Timeout:          o.Global.Timeout,
-				GracefulShutdown: o.Destroy.GracefulShutdown,
-			},
-		),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	)
-
-	if o.Global.TopologyName != "" {
-		opts = append(opts, clabcore.WithLabName(o.Global.TopologyName))
-	}
-
-	c, err := clabcore.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}

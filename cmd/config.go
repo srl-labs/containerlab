@@ -16,9 +16,10 @@ import (
 
 func configCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
-		Use:          "config",
-		Short:        "configure a lab",
-		Long:         "configure a lab based on templates and variables from the topology definition file\nreference: https://containerlab.dev/cmd/config/",
+		Use:   "config",
+		Short: "configure a lab",
+		Long: "configure a lab based on templates and variables from the topology definition " +
+			"file\n reference: https://containerlab.dev/cmd/config/",
 		Aliases:      []string{"conf"},
 		ValidArgs:    []string{"commit", "send", "compare", "template"},
 		SilenceUsage: true,
@@ -105,9 +106,10 @@ func configSubCmds(c *cobra.Command, o *Options) {
 	compareC.Flags().AddFlagSet(c.Flags())
 
 	templateC := &cobra.Command{
-		Use:          "template",
-		Short:        "render a template",
-		Long:         "render a template based on variables from the topology definition file\nreference: https://containerlab.dev/cmd/config/template",
+		Use:   "template",
+		Short: "render a template",
+		Long: "render a template based on variables from the topology definition file\n" +
+			"reference: https://containerlab.dev/cmd/config/template",
 		Aliases:      []string{"conf"},
 		SilenceUsage: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -117,8 +119,13 @@ func configSubCmds(c *cobra.Command, o *Options) {
 
 	c.AddCommand(templateC)
 	templateC.Flags().AddFlagSet(c.Flags())
-	templateC.Flags().BoolVarP(&o.Config.TemplateVarOnly, "vars", "v", o.Config.TemplateVarOnly,
-		"show variable used for template rendering")
+	templateC.Flags().BoolVarP(
+		&o.Config.TemplateVarOnly,
+		"vars",
+		"v",
+		o.Config.TemplateVarOnly,
+		"show variable used for template rendering",
+	)
 	templateC.Flags().SortFlags = false
 }
 
@@ -128,12 +135,7 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 	transport.DebugCount = o.Global.DebugCount
 	clabcoreconfig.DebugCount = o.Global.DebugCount
 
-	c, err := clabcore.NewContainerLab(
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-		clabcore.WithNodeFilter(o.Filter.NodeFilter),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}
@@ -201,11 +203,7 @@ func configTemplate(o *Options) error {
 
 	clabcoreconfig.DebugCount = o.Global.DebugCount
 
-	c, err := clabcore.NewContainerLab(
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}

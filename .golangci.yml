@@ -12,6 +12,7 @@ linters:
     - govet
     - ineffassign
     - importas
+    - lll
     - misspell
     - nakedret
     - noctx
@@ -30,7 +31,7 @@ linters:
     - goconst
     - gocyclo
     - gosec
-    - lll
+    # - lll
     - mnd
     - nestif
     - perfsprint
@@ -95,6 +96,10 @@ linters:
       - linters:
           - staticcheck
         text: could remove embedded field
+      # currently slowly enforcing lll :)
+      - linters:
+          - lll
+        path-except: cmd
 formatters:
   enable:
     - gofmt
