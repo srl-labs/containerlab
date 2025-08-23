@@ -203,6 +203,10 @@ type GlobalOptions struct {
 	GracefulShutdown bool
 	LogLevel         string
 	DebugCount       int
+
+	// special flag that should only be set by deploy, informs the context handler to destroy
+	// (or not) when root context is canceled
+	CleanOnCancel bool
 }
 
 func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {

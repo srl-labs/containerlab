@@ -134,6 +134,9 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 
 // deployFn function runs deploy sub command.
 func deployFn(cobraCmd *cobra.Command, o *Options) error {
+	// when deploying we cleanup if root context is canceled
+	o.Global.CleanOnCancel = true
+
 	var err error
 
 	log.Info("Containerlab started", "version", Version)

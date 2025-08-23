@@ -31,9 +31,20 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 
 	go func() {
 		sig := <-sigs
-		log.Errorf("received signal %q, canceling context and cleaning deployment...", sig)
+
+		log.Errorf("received signal %q, canceling context", sig)
 
 		cancel()
+
+		defer os.Exit(1)
+
+		options := GetOptions()
+
+		if !options.Global.CleanOnCancel {
+			log.Debug("clean on cancel is not true, exiting")
+
+			return
+		}
 
 		destroyCtx, destroyCancel := context.WithTimeout(
 			context.Background(),
@@ -45,12 +56,10 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 		destroyCmd := &cobra.Command{}
 		destroyCmd.SetContext(destroyCtx)
 
-		err := destroyFn(destroyCmd, GetOptions())
+		err := destroyFn(destroyCmd, options)
 		if err != nil {
 			log.Errorf("failed destroying lab after cancellation signal: %v", err)
 		}
-
-		os.Exit(1) // skipcq: RVV-A0003
 	}()
 
 	return ctx, cancel
