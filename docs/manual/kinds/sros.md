@@ -558,6 +558,76 @@ Containerlab supports SSH key injection into the Nokia SR OS nodes prior to depl
 
 Next, it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^7] at startup. This will enable key-based authentication when you connect to the node.
 
+## Packet Capture
+
+Currently, a packet capture on the veth interfaces of the `-{{ kind_display_name }}-` will only display traffic at the ingress direction[^8]. In order to capture traffic bidirectionally, a user needs to create a [mirror service](https://documentation.nokia.com/sr/25-7/7750-sr/books/oam-diagnostics/mirror-services.html) in the SR OS configuration. A simple example topology using [bridges in container namespace](bridge.md#bridges-in-container-namespace) and mirror configuration is provided below for convenience.
+
+/// tab | Topology with mirror service
+
+```yaml
+name: "sros"
+mgmt:
+  network: srsim_mgmt
+  ipv4-subnet: 10.78.140.0/24
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-sim10:
+      kind: nokia_srsim
+      type: SR-1 # Implicit default
+    sr-sim11:
+      kind: nokia_srsim
+    # In-namespace bridges for mirroring:
+    mirror|sr-sim10:
+      kind: bridge
+      network-mode: container:sr-sim10
+    mirror|sr-sim11:
+      kind: bridge
+      network-mode: container:sr-sim11
+  links:
+    # Data Interfaces
+    - endpoints: ["sr-sim10:1/1/c1/1", "sr-sim11:1/1/c1/1"]
+    - endpoints: ["sr-sim10:1/1/c1/2", "sr-sim11:1/1/c1/2"]
+    # Mirror port mapped to in-namespace bridge:
+    - endpoints: ["sr-sim10:1/1/c1/3", "mirror|sr-sim10:mirror0"]
+    - endpoints: ["sr-sim11:1/1/c1/3", "mirror|sr-sim11:mirror0"]
+
+```
+
+///
+/// tab | SR OS Mirror configuration
+
+```
+/configure port 1/1/c1/3 admin-state enable
+/configure port 1/1/c1/3 ethernet mode hybrid
+/configure mirror mirror-dest "mirror0" admin-state enable
+/configure mirror mirror-dest "mirror0" service-id 999
+/configure mirror mirror-dest "mirror0" { sap 1/1/c1/3:0 }
+/configure mirror mirror-source "mirror0" admin-state enable
+/configure mirror mirror-source "mirror0" port 1/1/c1/1 ingress true
+/configure mirror mirror-source "mirror0" port 1/1/c1/1 egress true
+/configure mirror mirror-source "mirror0" port 1/1/c1/2 ingress true
+/configure mirror mirror-source "mirror0" port 1/1/c1/2 egress true
+```
+
+///
+
+/// tab | tcpdump example
+
+```bash
+$ sudo ip netns exec  clab-sros-sr-sim10  tcpdump -nnei mirror0 icmp
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on mirror0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+
+10:00:40.281090 aa:c1:ab:0b:55:94 > aa:c1:ab:d7:6e:ae, ethertype IPv4 (0x0800), length 98: 10.0.0.10 > 10.0.0.11: ICMP echo request, id 251, seq 16385, length 64
+10:00:40.282415 aa:c1:ab:d7:6e:ae > aa:c1:ab:0b:55:94, ethertype IPv4 (0x0800), length 98: 10.0.0.11 > 10.0.0.10: ICMP echo reply, id 251, seq 16385, length 64
+```
+
+///
+
 ## License
 
 Path to a valid license must be provided for all Nokia SR OS nodes with a [`license`](../nodes.md#license) directive. If no valid license is provided, the nodes will not complete the deployment phase.
@@ -650,3 +720,4 @@ The following labs feature Nokia SR OS (SR-SIM) node:
 [^5]: This is a change from the [Vrnetlab](../vrnetlab.md) based vSIM where line cards and MDAs were pre-provisioned for some cases.
 [^6]: `~` is the home directory of the user that runs containerlab.
 [^7]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
+[^8]: See Github issue [#2741](https://github.com/srl-labs/containerlab/issues/2741)
