@@ -342,8 +342,7 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	)
 
 	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(
-		ctx,
+	clabInstance, err := clabcore.NewClabFromTopologyFileOrLabName(
 		o.Global.TopologyFile,
 		o.Global.TopologyName,
 		o.Global.VarsFile,
@@ -488,8 +487,7 @@ func gottyDetach(cobraCmd *cobra.Command, o *Options) error {
 	ctx := cobraCmd.Context()
 
 	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(
-		ctx,
+	clabInstance, err := clabcore.NewClabFromTopologyFileOrLabName(
 		o.Global.TopologyFile,
 		o.Global.TopologyName,
 		o.Global.VarsFile,
@@ -682,8 +680,7 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	)
 
 	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(
-		ctx,
+	clabInstance, err := clabcore.NewClabFromTopologyFileOrLabName(
 		o.Global.TopologyFile,
 		o.Global.TopologyName,
 		o.Global.VarsFile,

@@ -105,11 +105,17 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	return c, err
 }
 
-// NewclabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
+// NewClabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
 // or a lab name. It returns the initialized CLab structure with the
 // topology loaded.
-func NewclabFromTopologyFileOrLabName(ctx context.Context,
-	topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool,
+func NewClabFromTopologyFileOrLabName(
+	topoPath,
+	labName,
+	varsFile,
+	runtimeName string,
+	debug bool,
+	timeout time.Duration,
+	graceful bool,
 ) (*CLab, error) {
 	if topoPath == "" && labName == "" {
 		cwd, err := os.Getwd()

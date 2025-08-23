@@ -288,7 +288,7 @@ type DestroyOptions struct {
 }
 
 func (o *DestroyOptions) toClabOptions() []clabcore.ClabOption {
-	options := []clabcore.ClabOption{}
+	var options []clabcore.ClabOption
 
 	if o.KeepManagementNetwork {
 		options = append(options, clabcore.WithKeepMgmtNet())

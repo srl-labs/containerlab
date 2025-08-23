@@ -318,9 +318,15 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	)
 
 	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0,
-		o.Global.Timeout, o.Global.GracefulShutdown)
+	clabInstance, err := clabcore.NewClabFromTopologyFileOrLabName(
+		o.Global.TopologyFile,
+		o.Global.TopologyName,
+		o.Global.VarsFile,
+		o.Global.Runtime,
+		o.Global.DebugCount > 0,
+		o.Global.Timeout,
+		o.Global.GracefulShutdown,
+	)
 	if err != nil {
 		return err
 	}
@@ -460,9 +466,15 @@ func sshxDetach(cobraCmd *cobra.Command, o *Options) error {
 	ctx := cobraCmd.Context()
 
 	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0,
-		o.Global.Timeout, o.Global.GracefulShutdown)
+	clabInstance, err := clabcore.NewClabFromTopologyFileOrLabName(
+		o.Global.TopologyFile,
+		o.Global.TopologyName,
+		o.Global.VarsFile,
+		o.Global.Runtime,
+		o.Global.DebugCount > 0,
+		o.Global.Timeout,
+		o.Global.GracefulShutdown,
+	)
 	if err != nil {
 		return err
 	}
@@ -626,9 +638,15 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	)
 
 	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0,
-		o.Global.Timeout, o.Global.GracefulShutdown)
+	clabInstance, err := clabcore.NewClabFromTopologyFileOrLabName(
+		o.Global.TopologyFile,
+		o.Global.TopologyName,
+		o.Global.VarsFile,
+		o.Global.Runtime,
+		o.Global.DebugCount > 0,
+		o.Global.Timeout,
+		o.Global.GracefulShutdown,
+	)
 	if err != nil {
 		return err
 	}
