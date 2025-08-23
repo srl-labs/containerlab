@@ -170,12 +170,14 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 	}
 
 	var wg sync.WaitGroup
+
 	deploy := func(n string) {
 		defer wg.Done()
 
 		cs, ok := allConfig[n]
 		if !ok {
 			log.Errorf("Invalid node in filter: %s", n)
+
 			return
 		}
 
@@ -184,7 +186,9 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 			log.Warnf("%s: %s", cs.TargetNode.ShortName, err)
 		}
 	}
+
 	wg.Add(len(o.Filter.LabelFilter))
+
 	for _, node := range o.Filter.LabelFilter {
 		// On debug this will not be executed concurrently
 		if log.GetLevel() == (log.DebugLevel) {
@@ -193,6 +197,7 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 			go deploy(node)
 		}
 	}
+
 	wg.Wait()
 
 	return nil
@@ -214,11 +219,13 @@ func configTemplate(o *Options) error {
 	}
 
 	allConfig := clabcoreconfig.PrepareVars(c)
+
 	if o.Config.TemplateVarOnly {
 		for _, n := range o.Filter.LabelFilter {
 			conf := allConfig[n]
 			conf.Print(true, false)
 		}
+
 		return nil
 	}
 
@@ -239,17 +246,21 @@ func validateFilter(nodes map[string]clabnodes.Node, o *Options) error {
 		for n := range nodes {
 			o.Filter.LabelFilter = append(o.Filter.LabelFilter, n)
 		}
+
 		return nil
 	}
 
 	var mis []string
+
 	for _, nn := range o.Filter.LabelFilter {
 		if _, ok := nodes[nn]; !ok {
 			mis = append(mis, nn)
 		}
 	}
+
 	if len(mis) > 0 {
 		return fmt.Errorf("invalid nodes in filter: %s", strings.Join(mis, ", "))
 	}
+
 	return nil
 }

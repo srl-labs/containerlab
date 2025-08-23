@@ -54,6 +54,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 		} else {
 			fmt.Println("No active API server containers found")
 		}
+
 		return nil
 	}
 
@@ -64,6 +65,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 
 		// Get port from labels or use default
 		port := 8080 // default
+
 		if portStr, ok := containers[idx].Labels["clab-api-port"]; ok {
 			if portVal, err := strconv.Atoi(portStr); err == nil {
 				port = portVal
@@ -110,6 +112,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)
 		}
+
 		fmt.Println(string(b))
 	} else {
 		// Use go-pretty table
@@ -132,6 +135,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 				item.Owner,
 			})
 		}
+
 		t.Render()
 	}
 

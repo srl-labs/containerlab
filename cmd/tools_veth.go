@@ -135,6 +135,7 @@ func vethCreate(o *Options) error {
 	}
 
 	log.Info("veth interface successfully created!")
+
 	return nil
 }
 

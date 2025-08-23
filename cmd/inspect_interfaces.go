@@ -34,6 +34,7 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	labNameFilterLabel := ""
+
 	switch {
 	case o.Global.TopologyName != "":
 		labNameFilterLabel = o.Global.TopologyName
@@ -69,16 +70,17 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 		return fmt.Errorf("failed to list container interfaces: %s", err)
 	}
 
-	err = printContainerInterfaces(containerInterfaces, o.Inspect.InterfacesFormat)
-	return err
+	return printContainerInterfaces(containerInterfaces, o.Inspect.InterfacesFormat)
 }
 
 func interfacesToTableData(contInterfaces []*clabtypes.ContainerInterfaces) *[]tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0)
+
 	for _, container := range contInterfaces {
 		for _, iface := range container.Interfaces {
 			tabRow := tableWriter.Row{}
 			ifaceAlias := "N/A"
+
 			if iface.InterfaceAlias != "" {
 				ifaceAlias = iface.InterfaceAlias
 			}
@@ -97,6 +99,7 @@ func interfacesToTableData(contInterfaces []*clabtypes.ContainerInterfaces) *[]t
 			tabData = append(tabData, tabRow)
 		}
 	}
+
 	return &tabData
 }
 
@@ -110,9 +113,10 @@ func printContainerInterfaces(
 		if err != nil {
 			return fmt.Errorf("failed to marshal container details: %v", err)
 		}
-		fmt.Println(string(b))
-		return nil
 
+		fmt.Println(string(b))
+
+		return nil
 	case "table":
 		table := tableWriter.NewWriter()
 		table.SetOutputMirror(os.Stdout)
@@ -163,5 +167,6 @@ func printContainerInterfaces(
 
 		return nil
 	}
+
 	return nil
 }

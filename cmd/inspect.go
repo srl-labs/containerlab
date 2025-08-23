@@ -144,6 +144,7 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 		default: // Table format
 			log.Info("no containers found")
 		}
+
 		return err
 	}
 
@@ -154,6 +155,7 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 
 	// Handle non-details cases (table or grouped JSON summary)
 	err = PrintContainerInspect(containers, o)
+
 	return err
 }
 
@@ -164,6 +166,7 @@ func listContainers(
 	o *Options,
 ) ([]clabruntime.GenericContainer, error) {
 	var containers []clabruntime.GenericContainer
+
 	var err error
 
 	if o.Global.TopologyFile != "" {
@@ -235,6 +238,7 @@ func toTableData(contDetails []clabtypes.ContainerDetails, o *Options) []tableWr
 
 		tabData = append(tabData, tabRow)
 	}
+
 	return tabData
 }
 
@@ -270,18 +274,22 @@ func printContainerDetailsJSON(containers []clabruntime.GenericContainer) error 
 	sort.Slice(containers, func(i, j int) bool {
 		labNameI := containers[i].Labels[clablabels.Containerlab]
 		labNameJ := containers[j].Labels[clablabels.Containerlab]
+
 		if labNameI == labNameJ {
 			// Use the first name if available
 			nameI := ""
 			if len(containers[i].Names) > 0 {
 				nameI = containers[i].Names[0]
 			}
+
 			nameJ := ""
 			if len(containers[j].Names) > 0 {
 				nameJ = containers[j].Names[0]
 			}
+
 			return nameI < nameJ
 		}
+
 		return labNameI < labNameJ
 	})
 
@@ -293,6 +301,7 @@ func printContainerDetailsJSON(containers []clabruntime.GenericContainer) error 
 		if labName == "" {
 			labName = "_unknown_lab_"
 		}
+
 		groupedDetails[labName] = append(groupedDetails[labName], containers[idx])
 	}
 
@@ -310,6 +319,7 @@ func printContainerInspectJSON(contDetails []clabtypes.ContainerDetails) error {
 	// Group summary results by LabName
 	// Use a map where keys are lab names and values are slices of container details
 	groupedLabs := make(map[string][]clabtypes.ContainerDetails)
+
 	for idx := range contDetails {
 		labName := contDetails[idx].LabName
 		if labName == "" {
@@ -349,6 +359,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 	}
 
 	var header tableWriter.Row
+
 	var colConfigs []tableWriter.ColumnConfig
 
 	if o.Destroy.All {
@@ -369,6 +380,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 		// If wide, do not set AutoMerge for any columns
 	} else {
 		header = headerBase
+
 		if !o.Inspect.Wide {
 			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
 				Number:    1,
@@ -378,6 +390,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 	}
 
 	table.AppendHeader(header)
+
 	if len(colConfigs) > 0 {
 		table.SetColumnConfigs(colConfigs)
 	}
@@ -404,6 +417,7 @@ func printContainerInspectCSV(contDetails []clabtypes.ContainerDetails) {
 			contDetails[idx].IPv6Address,
 			contDetails[idx].Owner)
 	}
+
 	fmt.Print(csv)
 }
 
@@ -414,6 +428,7 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 	// Gather summary details of each container
 	for idx := range containers {
 		absPath := containers[idx].Labels[clablabels.TopoFile]
+
 		shortPath, err := getShortestTopologyPath(absPath)
 		if err != nil {
 			log.Warnf(
@@ -422,6 +437,7 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 				err,
 				absPath,
 			)
+
 			shortPath = absPath // Use raw path as fallback for display
 		}
 
@@ -442,12 +458,15 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 		if len(containers[idx].Names) > 0 {
 			cdet.Name = containers[idx].Names[0]
 		}
+
 		if group, ok := containers[idx].Labels[clablabels.NodeGroup]; ok {
 			cdet.Group = group
 		}
+
 		if kind, ok := containers[idx].Labels[clablabels.NodeKind]; ok {
 			cdet.Kind = kind
 		}
+
 		if owner, ok := containers[idx].Labels[clablabels.Owner]; ok {
 			cdet.Owner = owner
 		}
@@ -460,6 +479,7 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 		if contDetails[i].LabName == contDetails[j].LabName {
 			return contDetails[i].Name < contDetails[j].Name
 		}
+
 		return contDetails[i].LabName < contDetails[j].LabName
 	})
 

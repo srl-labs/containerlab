@@ -156,9 +156,8 @@ func vxlanCreate(cobraCmd *cobra.Command, o *Options) error {
 		return err
 	}
 
-	var vxl *clablinks.VxlanStitched
-	var ok bool
-	if vxl, ok = link.(*clablinks.VxlanStitched); !ok {
+	vxl, ok := link.(*clablinks.VxlanStitched)
+	if !ok {
 		return fmt.Errorf("not a VxlanStitched link")
 	}
 
@@ -171,22 +170,23 @@ func vxlanCreate(cobraCmd *cobra.Command, o *Options) error {
 }
 
 func vxlanDelete(o *Options) error {
-	var ls []netlink.Link
-	var err error
-
-	ls, err = clabutils.GetLinksByNamePrefix(o.ToolsVxlan.DeletionPrefix)
+	ls, err := clabutils.GetLinksByNamePrefix(o.ToolsVxlan.DeletionPrefix)
 	if err != nil {
 		return err
 	}
+
 	for _, l := range ls {
 		if l.Type() != "vxlan" {
 			continue
 		}
+
 		log.Infof("Deleting VxLAN link %s", l.Attrs().Name)
+
 		err := netlink.LinkDel(l)
 		if err != nil {
 			log.Warnf("error when deleting link %s: %v", l.Attrs().Name, err)
 		}
 	}
+
 	return nil
 }

@@ -23,6 +23,7 @@ linters:
     - unparam
     - unused
     - whitespace
+    - wsl_v5
   disable:
     # disabling for *now* so ci can pass nicely, but (some?) of these likely should be adressed
     - dupl
@@ -37,7 +38,6 @@ linters:
     - prealloc
     - revive
     - wrapcheck
-    - wsl_v5
   settings:
     dupl:
       threshold: 100
@@ -99,6 +99,7 @@ linters:
       - linters:
           - lll
           - mnd
+          - wsl_v5
         path-except: cmd
 formatters:
   enable:

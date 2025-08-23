@@ -27,6 +27,7 @@ type APIServerNode struct {
 // generateRandomJWTSecret creates a random string for use as JWT secret.
 func generateRandomJWTSecret() (string, error) {
 	bytes := make([]byte, jwtSecretLen)
+
 	_, err := rand.Read(bytes)
 	if err != nil {
 		return "", err
@@ -46,16 +47,19 @@ func apiServerStop(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	rt := rinit()
+
 	err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}))
 	if err != nil {
 		return fmt.Errorf("failed to initialize runtime: %w", err)
 	}
 
 	log.Infof("Removing API server container %s", o.ToolsAPI.Name)
+
 	if err := rt.DeleteContainer(ctx, o.ToolsAPI.Name); err != nil {
 		return fmt.Errorf("failed to remove API server container: %w", err)
 	}
 
 	log.Infof("API server container %s removed successfully", o.ToolsAPI.Name)
+
 	return nil
 }

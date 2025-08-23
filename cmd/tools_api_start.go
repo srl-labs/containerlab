@@ -65,6 +65,7 @@ func NewAPIServerNode(name, image, labsDir string, runtime clabruntime.Container
 			err,
 		)
 	}
+
 	binds = append(binds, clabtypes.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
 
 	nodeConfig := &clabtypes.NodeConfig{
@@ -99,11 +100,7 @@ func getclabBinaryPath() (string, error) {
 		return "", err
 	}
 
-	absPath, err := filepath.EvalSymlinks(exePath)
-	if err != nil {
-		return "", err
-	}
-	return absPath, nil
+	return filepath.EvalSymlinks(exePath)
 }
 
 // createLabels creates container labels.
@@ -162,10 +159,12 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 	// Generate random JWT secret if not provided
 	if o.ToolsAPI.JWTSecret == "" {
 		var err error
+
 		o.ToolsAPI.JWTSecret, err = generateRandomJWTSecret()
 		if err != nil {
 			return fmt.Errorf("failed to generate random JWT secret: %w", err)
 		}
+
 		log.Infof("Generated random JWT secret for API server")
 	}
 
@@ -175,6 +174,7 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 	}
 
 	rt := rinit()
+
 	err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}))
 	if err != nil {
 		return fmt.Errorf("failed to initialize runtime: %w", err)
@@ -182,16 +182,19 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 
 	// Check if container already exists
 	filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: o.ToolsAPI.Name}}
+
 	containers, err := rt.ListContainers(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
+
 	if len(containers) > 0 {
 		return fmt.Errorf("container %s already exists", o.ToolsAPI.Name)
 	}
 
 	// Pull the container image
 	log.Infof("Pulling image %s...", o.ToolsAPI.Image)
+
 	if err := rt.PullImage(ctx, o.ToolsAPI.Image, clabtypes.PullPolicyAlways); err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", o.ToolsAPI.Image, err)
 	}
@@ -214,18 +217,22 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 	if o.ToolsAPI.TrustedProxies != "" {
 		env["TRUSTED_PROXIES"] = o.ToolsAPI.TrustedProxies
 	}
+
 	if o.ToolsAPI.TLSEnable {
 		env["TLS_ENABLE"] = "true"
 		if o.ToolsAPI.TLSCertFile != "" {
 			env["TLS_CERT_FILE"] = o.ToolsAPI.TLSCertFile
 		}
+
 		if o.ToolsAPI.TLSKeyFile != "" {
 			env["TLS_KEY_FILE"] = o.ToolsAPI.TLSKeyFile
 		}
 	}
+
 	if o.ToolsAPI.SSHBasePort > 0 {
 		env["SSH_BASE_PORT"] = fmt.Sprintf("%d", o.ToolsAPI.SSHBasePort)
 	}
+
 	if o.ToolsAPI.SSHMaxPort > 0 {
 		env["SSH_MAX_PORT"] = fmt.Sprintf("%d", o.ToolsAPI.SSHMaxPort)
 	}
@@ -234,14 +241,29 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 	if o.ToolsAPI.LabsDirectory == "" {
 		o.ToolsAPI.LabsDirectory = "~/.clab"
 	}
+
 	owner := getOwnerName(o)
-	labels := createAPIServerLabels(o.ToolsAPI.Name, owner, o.ToolsAPI.Port,
-		o.ToolsAPI.LabsDirectory, o.ToolsAPI.Host, o.Global.Runtime)
+
+	labels := createAPIServerLabels(
+		o.ToolsAPI.Name,
+		owner,
+		o.ToolsAPI.Port,
+		o.ToolsAPI.LabsDirectory,
+		o.ToolsAPI.Host,
+		o.Global.Runtime,
+	)
 
 	// Create and start API server container
 	log.Infof("Creating API server container %s", o.ToolsAPI.Name)
-	apiServerNode, err := NewAPIServerNode(o.ToolsAPI.Name, o.ToolsAPI.Image,
-		o.ToolsAPI.LabsDirectory, rt, env, labels)
+
+	apiServerNode, err := NewAPIServerNode(
+		o.ToolsAPI.Name,
+		o.ToolsAPI.Image,
+		o.ToolsAPI.LabsDirectory,
+		rt,
+		env,
+		labels,
+	)
 	if err != nil {
 		return err
 	}
@@ -254,11 +276,13 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 	if _, err := rt.StartContainer(ctx, id, apiServerNode); err != nil {
 		// Clean up on failure
 		rt.DeleteContainer(ctx, o.ToolsAPI.Name)
+
 		return fmt.Errorf("failed to start API server container: %w", err)
 	}
 
 	log.Infof("API server container %s started successfully.", o.ToolsAPI.Name)
 	log.Infof("API Server available at: http://%s:%d", o.ToolsAPI.Host, o.ToolsAPI.Port)
+
 	if o.ToolsAPI.TLSEnable {
 		log.Infof("API Server TLS enabled at: https://%s:%d", o.ToolsAPI.Host, o.ToolsAPI.Port)
 	}

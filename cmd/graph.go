@@ -163,6 +163,7 @@ func graphFn(o *Options) error {
 	sort.Slice(gtopo.Nodes, func(i, j int) bool {
 		return gtopo.Nodes[i].Name < gtopo.Nodes[j].Name
 	})
+
 	for _, l := range c.Links {
 		eps := l.GetEndpoints()
 

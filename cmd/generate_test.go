@@ -186,6 +186,7 @@ func TestParseFlag(t *testing.T) {
 			if !cmp.Equal(result, set.out.out) {
 				t.Errorf("failed at '%s', expected %v, got %+v", name, set.out.out, result)
 			}
+
 			if err != set.out.err {
 				t.Errorf("failed at '%s', expected error %+v, got %+v", name, set.out.err, err)
 			}
@@ -200,6 +201,7 @@ func TestParseNodes(t *testing.T) {
 			if !cmp.Equal(result, set.out.out, cmp.AllowUnexported(nodesDef{})) {
 				t.Errorf("failed at '%s', expected %+v, got %+v", name, set.out.out, result)
 			}
+
 			if err != set.out.err {
 				t.Errorf("failed at '%s', expected error %+v, got %+v", name, set.out.err, err)
 			}

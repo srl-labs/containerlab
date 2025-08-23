@@ -57,6 +57,7 @@ func generateCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	clab.RegisterNodes()
 
 	generateNodesAttributes := clab.Reg.GetGenerateNodeAttributes()
+
 	var supportedKinds []string
 
 	// prepare list of generateable node kinds
@@ -176,22 +177,26 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 	if o.Global.TopologyName == "" {
 		return errors.New("provide a lab name with --name flag")
 	}
+
 	licenses, err := parseFlag(kind, license)
 	if err != nil {
 		return err
 	}
+
 	log.Debugf("parsed licenses: %+v", licenses)
 
 	images, err := parseFlag(kind, image)
 	if err != nil {
 		return err
 	}
+
 	log.Debugf("parsed images: %+v", images)
 
 	nodeDefs, err := parseNodesFlag(kind, nodesFlag...)
 	if err != nil {
 		return err
 	}
+
 	log.Debugf("parsed nodes definitions: %+v", nodeDefs)
 
 	b, err := generateTopologyConfig(
@@ -206,26 +211,32 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 	if err != nil {
 		return err
 	}
+
 	log.Debugf("generated topo: %s", string(b))
+
 	if file != "" {
 		err = clabutils.CreateFile(file, string(b))
 		if err != nil {
 			return err
 		}
 	}
+
 	if deploy {
 		err = clabutils.CheckAndGetRootPrivs()
 		if err != nil {
 			return err
 		}
+
 		o.Deploy.Reconfigure = true
 		if file == "" {
 			file = fmt.Sprintf("%s.clab.yml", o.Global.TopologyName)
+
 			err = clabutils.CreateFile(file, string(b))
 			if err != nil {
 				return err
 			}
 		}
+
 		o.Global.TopologyFile = file
 
 		// Pass owner to deploy command if specified
@@ -256,24 +267,31 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 			Nodes: make(map[string]*clabtypes.NodeDefinition),
 		},
 	}
+
 	config.Mgmt.Network = network
 	if ipv4range != "<nil>" {
 		config.Mgmt.IPv4Subnet = ipv4range
 	}
+
 	if ipv6range != "<nil>" {
 		config.Mgmt.IPv6Subnet = ipv6range
 	}
+
 	for k, img := range images {
 		config.Topology.Kinds[k] = &clabtypes.NodeDefinition{Image: img}
 	}
+
 	for k, lic := range licenses {
 		if knd, ok := config.Topology.Kinds[k]; ok {
 			knd.License = lic
 			config.Topology.Kinds[k] = knd
+
 			continue
 		}
+
 		config.Topology.Kinds[k] = &clabtypes.NodeDefinition{License: lic}
 	}
+
 	if numStages == 1 {
 		for j := uint(0); j < nodes[0].numNodes; j++ {
 			node1 := fmt.Sprintf("%s1-%d", nodePrefix, j+1)
@@ -294,6 +312,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 		if i > 0 {
 			interfaceOffset = nodes[i-1].numNodes
 		}
+
 		for j := uint(0); j < nodes[i].numNodes; j++ {
 			node1 := fmt.Sprintf("%s%d-%d", nodePrefix, i+1, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
@@ -303,6 +322,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 					Type:  nodes[i].typ,
 				}
 			}
+
 			for k := uint(0); k < nodes[i+1].numNodes; k++ {
 				node2 := fmt.Sprintf("%s%d-%d", nodePrefix, i+2, k+1) //nolint: mnd
 				if _, ok := config.Topology.Nodes[node2]; !ok {
@@ -333,26 +353,33 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 			}
 		}
 	}
+
 	return yaml.Marshal(config)
 }
 
 func parseFlag(kind string, ls []string) (map[string]string, error) {
 	result := make(map[string]string)
+
 	for _, l := range ls {
 		items := strings.SplitN(l, "=", 2) //nolint: mnd
+
 		switch len(items) {
 		case 0:
 			log.Errorf("missing value for flag item '%s'", l)
+
 			return nil, errSyntax
 		case 1:
 			if kind == "" {
 				log.Errorf("no kind specified for flag item '%s'", l)
+
 				return nil, errSyntax
 			}
+
 			if _, ok := result[kind]; !ok {
 				result[kind] = items[0]
 			} else {
 				log.Errorf("duplicated flag item for kind '%s'", kind)
+
 				return nil, errDuplicatedValue
 			}
 		case 2: //nolint: mnd
@@ -360,10 +387,12 @@ func parseFlag(kind string, ls []string) (map[string]string, error) {
 				result[items[0]] = items[1]
 			} else {
 				log.Errorf("duplicated flag item for kind '%s'", items[0])
+
 				return nil, errDuplicatedValue
 			}
 		}
 	}
+
 	return result, nil
 }
 
@@ -371,22 +400,30 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 	numStages := len(nodes)
 	if numStages == 0 {
 		log.Error("no nodes specified using --nodes")
+
 		return nil, errSyntax
 	}
+
 	result := make([]nodesDef, numStages)
 	for idx, n := range nodes {
 		def := nodesDef{}
+
 		items := strings.SplitN(n, ":", nodeFlagNumKindTypePartCount)
 		if len(items) == 0 {
 			log.Errorf("wrong --nodes format '%s'", n)
+
 			return nil, errSyntax
 		}
+
 		i, err := strconv.Atoi(items[0])
 		if err != nil {
 			log.Errorf("failed converting '%s' to an integer: %v", items[0], err)
+
 			return nil, errSyntax
 		}
+
 		def.numNodes = uint(i)
+
 		switch len(items) {
 		// kind is assumed to be `srl` or set with --kind
 		case nodeFlagNumPartCount:
@@ -394,14 +431,15 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 				log.Errorf("no kind specified for nodes '%s'", n)
 				return nil, errSyntax
 			}
+
 			def.kind = kind
 		case nodeFlagNumKindPartCount:
 			if kind == "" {
 				log.Errorf("no kind specified for nodes '%s'", n)
 				return nil, errSyntax
 			}
-			def.kind = items[1]
 
+			def.kind = items[1]
 		case nodeFlagNumKindTypePartCount:
 			def.numNodes = uint(i)
 			def.kind = kind
@@ -412,7 +450,9 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 
 			def.typ = items[2]
 		}
+
 		result[idx] = def
 	}
+
 	return result, nil
 }

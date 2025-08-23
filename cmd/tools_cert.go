@@ -260,6 +260,7 @@ func signCert(o *Options) error {
 	var caCert *clabcert.Certificate
 
 	log.Debugf("CA cert path: %q", o.ToolsCert.CACertPath)
+
 	if o.ToolsCert.CACertPath != "" {
 		// we might also honor the External CA env vars here
 		caCert, err = clabcert.NewCertificateFromFile(o.ToolsCert.CACertPath, o.ToolsCert.CAKeyPath, "")

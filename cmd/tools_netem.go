@@ -214,6 +214,7 @@ func netemSetFn(o *Options) error {
 		}
 
 		netemIfName := netemIfLink.Attrs().Name
+
 		link, err := net.InterfaceByName(netemIfName)
 		if err != nil {
 			return err
@@ -345,7 +346,9 @@ func qdiscToJSONData(qdisc *gotc.Object) clabtypes.ImpairmentData {
 	}
 
 	var delay, jitter string
+
 	var loss, corruption float64
+
 	var rate int
 
 	ifDisplayName := link.Attrs().Name
@@ -363,17 +366,21 @@ func qdiscToJSONData(qdisc *gotc.Object) clabtypes.ImpairmentData {
 	if qdisc.Netem.Latency64 != nil && *qdisc.Netem.Latency64 != 0 {
 		delay = (time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond).String()
 	}
+
 	if qdisc.Netem.Jitter64 != nil && *qdisc.Netem.Jitter64 != 0 {
 		jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
 	}
+
 	if qdisc.Netem.Rate != nil && int(qdisc.Netem.Rate.Rate) != 0 {
 		rate = int(qdisc.Netem.Rate.Rate * 8 / msPerSec)
 	}
+
 	if qdisc.Netem.Corrupt != nil && qdisc.Netem.Corrupt.Probability != 0 {
 		// round to 2 decimal places
 		corruption = math.Round((float64(qdisc.Netem.Corrupt.Probability)/
 			float64(math.MaxUint32)*100)*100) / 100 //nolint: mnd
 	}
+
 	if qdisc.Netem.Qopt.Loss != 0 {
 		// round to 2 decimal places
 		loss = math.Round(
@@ -399,6 +406,7 @@ func netemShowFn(o *Options) error {
 
 	// init the runtime
 	rt := rinit()
+
 	err = rt.Init(
 		clabruntime.WithConfig(
 			&clabruntime.RuntimeConfig{
@@ -428,6 +436,7 @@ func netemShowFn(o *Options) error {
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		if err := tcnl.Close(); err != nil {
 			log.Errorf("could not close rtnetlink socket: %v", err)
@@ -442,20 +451,25 @@ func netemShowFn(o *Options) error {
 
 		if o.ToolsNetem.Format == "json" {
 			var impairments []clabtypes.ImpairmentData
+
 			for idx := range qdiscs {
 				if qdiscs[idx].Attribute.Kind != "netem" {
 					continue // skip clsact or other qdisc types
 				}
+
 				impairments = append(impairments, qdiscToJSONData(&qdiscs[idx]))
 			}
+
 			// Structure output as a map keyed by the node name.
 			outputData := map[string][]clabtypes.ImpairmentData{
 				o.ToolsNetem.ContainerName: impairments,
 			}
+
 			jsonData, err := json.MarshalIndent(outputData, "", "  ")
 			if err != nil {
 				return fmt.Errorf("error marshaling JSON: %v", err)
 			}
+
 			fmt.Println(string(jsonData))
 		} else {
 			printImpairments(qdiscs)
@@ -476,6 +490,7 @@ func netemResetFn(o *Options) error {
 
 	// init the runtime
 	rt := rinit()
+
 	err = rt.Init(
 		clabruntime.WithConfig(
 			&clabruntime.RuntimeConfig{
@@ -505,6 +520,7 @@ func netemResetFn(o *Options) error {
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		if err := tcnl.Close(); err != nil {
 			log.Errorf("could not close rtnetlink socket: %v\n", err)
@@ -522,11 +538,14 @@ func netemResetFn(o *Options) error {
 		if err != nil {
 			return err
 		}
+
 		if err := clabinternaltc.DeleteImpairments(tcnl, netemIfIface); err != nil {
 			return err
 		}
+
 		fmt.Printf("Reset impairments on node %q, interface %q\n",
 			o.ToolsNetem.ContainerName, netemIfLink.Attrs().Name)
+
 		return nil
 	})
 

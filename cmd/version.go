@@ -90,6 +90,7 @@ func docsLinkFromVer(ver string) string {
 	if err != nil {
 		return "" // fallback
 	}
+
 	segments := v.Segments()
 	major := segments[0]
 	minor := segments[1]
@@ -99,6 +100,7 @@ func docsLinkFromVer(ver string) string {
 	if patch != 0 {
 		relSlug += fmt.Sprintf("#%d%d%d", major, minor, patch)
 	}
+
 	return relSlug
 }
 
@@ -116,10 +118,13 @@ func printNewVersionInfo(ver string) {
 
 func upgrade(cobraCmd *cobra.Command, _ []string) error {
 	f, err := os.CreateTemp("", "containerlab")
+
 	defer os.Remove(f.Name())
+
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
+
 	err = clabutils.CopyFileContents(cobraCmd.Context(), downloadURL, f)
 	if err != nil {
 		return fmt.Errorf("failed to download upgrade script: %w", err)
@@ -132,6 +137,7 @@ func upgrade(cobraCmd *cobra.Command, _ []string) error {
 
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
+
 	err = c.Run()
 	if err != nil {
 		return fmt.Errorf("upgrade failed: %w", err)
