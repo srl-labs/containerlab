@@ -14,6 +14,7 @@ linters:
     - importas
     - lll
     - misspell
+    - mnd
     - nakedret
     - noctx
     - nolintlint
@@ -31,8 +32,6 @@ linters:
     - goconst
     - gocyclo
     - gosec
-    # - lll
-    - mnd
     - nestif
     - perfsprint
     - prealloc
@@ -96,9 +95,10 @@ linters:
       - linters:
           - staticcheck
         text: could remove embedded field
-      # currently slowly enforcing lll :)
+      # currently slowly enforcing some things, starting with cmd package
       - linters:
           - lll
+          - mnd
         path-except: cmd
 formatters:
   enable:

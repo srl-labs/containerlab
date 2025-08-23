@@ -20,6 +20,11 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	linkEndpointTypeVethPartCount   = 2
+	linkEndpointTypeBridgePartCount = 3
+)
+
 func vethCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "veth",
@@ -196,7 +201,7 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 	var kind clablinks.LinkEndpointType
 
 	switch len(arr) {
-	case 2:
+	case linkEndpointTypeVethPartCount:
 		ep.Kind = clablinks.LinkEndpointTypeVeth
 
 		if arr[0] == "host" {
@@ -206,7 +211,7 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 		ep.Node = arr[0]
 		ep.Iface = arr[1]
 
-	case 3:
+	case linkEndpointTypeBridgePartCount:
 		if _, ok := clabutils.StringInSlice([]string{"ovs-bridge", "bridge"}, arr[0]); !ok {
 			return ep, fmt.Errorf(
 				"only bride and ovs-bridge can be used as a first block in the link definition. "+

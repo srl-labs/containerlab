@@ -11,7 +11,14 @@ import (
 )
 
 const (
-	multiToolImage = "ghcr.io/srl-labs/network-multitool"
+	multiToolImage             = "ghcr.io/srl-labs/network-multitool"
+	defaultTimeout             = 120 * time.Second
+	defaultToolsServerPort     = 8080
+	defaultToolsApiSSHBasePort = 2223
+	defaultToolsApiSSHMaxPort  = 2322
+	defaultToolsCertKeySize    = 2048
+	defaultVxlanID             = 10
+	defaultVxlanPort           = 14789
 )
 
 var optionsInstance *Options //nolint:gochecknoglobals
@@ -22,7 +29,7 @@ func GetOptions() *Options {
 	if optionsInstance == nil {
 		optionsInstance = &Options{
 			Global: &GlobalOptions{
-				Timeout:  120 * time.Second,
+				Timeout:  defaultTimeout,
 				LogLevel: "info",
 			},
 			Filter: &FilterOptions{},
@@ -46,15 +53,15 @@ func GetOptions() *Options {
 			ToolsAPI: &ToolsApiOptions{
 				Image:          "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
 				Name:           "clab-api-server",
-				Port:           8080,
+				Port:           defaultToolsServerPort,
 				Host:           "localhost",
 				JWTExpiration:  "60m",
 				UserGroup:      "clab_api",
 				SuperUserGroup: "clab_admins",
 				LogLevel:       "debug",
 				GinMode:        "release",
-				SSHBasePort:    2223,
-				SSHMaxPort:     2322,
+				SSHBasePort:    defaultToolsApiSSHBasePort,
+				SSHMaxPort:     defaultToolsApiSSHMaxPort,
 				OutputFormat:   "table",
 			},
 			ToolsCert: &ToolsCertOptions{
@@ -64,13 +71,13 @@ func GetOptions() *Options {
 				Organization:     "Containerlab",
 				OrganizationUnit: "Containerlab Tools",
 				Expiry:           "87600h",
-				KeySize:          2048,
+				KeySize:          defaultToolsCertKeySize,
 				CANamePrefix:     "ca",
 				CertNamePrefix:   "cert",
 			},
 			ToolsTxOffload: &ToolsDisableTxOffloadOptions{},
 			ToolsGoTTY: &ToolsGoTTYOptions{
-				Port:     8080,
+				Port:     defaultToolsServerPort,
 				Username: "admin",
 				Password: "admin",
 				Shell:    "bash",
@@ -88,8 +95,8 @@ func GetOptions() *Options {
 				MTU: clablinks.DefaultLinkMTU,
 			},
 			ToolsVxlan: &ToolsVxlanOptions{
-				ID:             10,
-				Port:           14789,
+				ID:             defaultVxlanID,
+				Port:           defaultVxlanPort,
 				DeletionPrefix: "vx-",
 			},
 		}

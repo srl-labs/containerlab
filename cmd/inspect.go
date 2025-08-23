@@ -361,7 +361,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 					AutoMerge: true, VAlign: text.VAlignMiddle,
 				},
 				tableWriter.ColumnConfig{
-					Number:    2,
+					Number:    2, //nolint: mnd
 					AutoMerge: true, VAlign: text.VAlignMiddle,
 				},
 			)
@@ -504,7 +504,7 @@ func ipWithoutPrefix(ip string) string {
 	}
 
 	ipParts := strings.Split(ip, "/")
-	if len(ipParts) != 2 {
+	if len(ipParts) != 2 { //nolint: mnd
 		return ip // Return original if not in expected format "address/prefix"
 	}
 

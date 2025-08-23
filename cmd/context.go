@@ -11,6 +11,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	maxCancelledDestroyTimeout = 20 * time.Second
+)
+
 var onlyOneSignalHandler = make(chan struct{}) //nolint: gochecknoglobals
 
 // SignalHandledContext returns a context that will be canceled if a SIGINT or SIGTERM is
@@ -31,7 +35,10 @@ func SignalHandledContext() (context.Context, context.CancelFunc) {
 
 		cancel()
 
-		destroyCtx, destroyCancel := context.WithTimeout(context.Background(), 20*time.Second)
+		destroyCtx, destroyCancel := context.WithTimeout(
+			context.Background(),
+			maxCancelledDestroyTimeout,
+		)
 		defer destroyCancel()
 
 		// destroyFn requires a cobra.Command but only needs the ctx from it

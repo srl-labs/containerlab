@@ -16,6 +16,9 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
+// 32 bytes (256 bits).
+const jwtSecretLen = 32
+
 // APIServerNode implements runtime.Node interface for API server containers.
 type APIServerNode struct {
 	config *clabtypes.NodeConfig
@@ -23,14 +26,12 @@ type APIServerNode struct {
 
 // generateRandomJWTSecret creates a random string for use as JWT secret.
 func generateRandomJWTSecret() (string, error) {
-	// Generate 32 random bytes (256 bits)
-	bytes := make([]byte, 32)
+	bytes := make([]byte, jwtSecretLen)
 	_, err := rand.Read(bytes)
 	if err != nil {
 		return "", err
 	}
 
-	// Encode as base64 string
 	return base64.StdEncoding.EncodeToString(bytes), nil
 }
 

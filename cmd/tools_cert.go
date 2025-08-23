@@ -57,7 +57,9 @@ func certCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		&o.ToolsCert.Locality,
 		"locality",
 		"l",
-		o.ToolsCert.Locality, "Location")
+		o.ToolsCert.Locality,
+		"Location",
+	)
 	CACreateCmd.Flags().StringVarP(
 		&o.ToolsCert.Organization,
 		"organization",
@@ -126,19 +128,22 @@ func certCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	signCertCmd.Flags().StringVarP(
 		&o.ToolsCert.CAKeyPath,
 		"ca-key",
-		"", o.ToolsCert.CAKeyPath,
+		"",
+		o.ToolsCert.CAKeyPath,
 		"Path to CA private key",
 	)
 	signCertCmd.Flags().StringVarP(
 		&o.ToolsCert.Country,
 		"country",
-		"c", o.ToolsCert.Country,
+		"c",
+		o.ToolsCert.Country,
 		"Country",
 	)
 	signCertCmd.Flags().StringVarP(
 		&o.ToolsCert.Locality,
 		"locality",
-		"l", o.ToolsCert.Locality,
+		"l",
+		o.ToolsCert.Locality,
 		"Location",
 	)
 	signCertCmd.Flags().StringVarP(
@@ -222,7 +227,10 @@ func createCA(o *Options) error {
 		return err
 	}
 
-	clabutils.CreateDirectory(o.ToolsCert.Path, 0o777) // skipcq: GSC-G302
+	clabutils.CreateDirectory(
+		o.ToolsCert.Path,
+		clabutils.PermissionsEveryoneAllPermissions,
+	) // skipcq: GSC-G302
 
 	err = caCert.Write(
 		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CANamePrefix+clabtypes.CertFileSuffix),
@@ -295,7 +303,10 @@ func signCert(o *Options) error {
 		return err
 	}
 
-	clabutils.CreateDirectory(o.ToolsCert.Path, 0o777) // skipcq: GSC-G302
+	clabutils.CreateDirectory(
+		o.ToolsCert.Path,
+		clabutils.PermissionsEveryoneAllPermissions,
+	) // skipcq: GSC-G302
 
 	err = nodeCert.Write(
 		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CertNamePrefix+clabtypes.CertFileSuffix),

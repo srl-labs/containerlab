@@ -26,7 +26,10 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-const sshx string = "sshx"
+const (
+	sshx         = "sshx"
+	sshxWaitTime = 5 * time.Second
+)
 
 // SSHXListItem defines the structure for SSHX container info in JSON output.
 type SSHXListItem struct {
@@ -399,7 +402,7 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	log.Infof("SSHX container %s started. Waiting for SSHX link...", o.ToolsSSHX.ContainerName)
-	time.Sleep(5 * time.Second)
+	time.Sleep(sshxWaitTime)
 
 	// Get SSHX link
 	link := getSSHXLink(ctx, rt, o.ToolsSSHX.ContainerName)
@@ -695,7 +698,7 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	log.Infof("SSHX container %s started. Waiting for SSHX link...", o.ToolsSSHX.ContainerName)
-	time.Sleep(5 * time.Second)
+	time.Sleep(sshxWaitTime)
 
 	// Get SSHX link
 	link := getSSHXLink(ctx, rt, o.ToolsSSHX.ContainerName)

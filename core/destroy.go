@@ -272,10 +272,8 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		if err = c.globalRuntime().DeleteNet(ctx); err != nil {
 			switch {
 			case err.Error() == fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network):
-				fmt.Println("SWALLOW ERR 1")
 			case strings.Contains(err.Error(), fmt.Sprintf(
 				" network %s not found", c.Config.Mgmt.Network)):
-				fmt.Println("SWALLOW ERR 2")
 			default:
 				log.Error(err)
 			}

@@ -14,6 +14,10 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	postDeployVersionCheckTimeout = 3 * time.Second
+)
+
 func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	c := &cobra.Command{
 		Use:   "deploy",
@@ -158,7 +162,10 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	// historically i think this was 5s, but we will already have had at least some time for
 	// the manager to have gone off and fetched the version, so 3s max to wrap that up and print
 	// seems reasonable
-	versionCheckContext, cancel := context.WithTimeout(cobraCmd.Context(), 3*time.Second)
+	versionCheckContext, cancel := context.WithTimeout(
+		cobraCmd.Context(),
+		postDeployVersionCheckTimeout,
+	)
 	defer cancel()
 
 	m := getVersionManager()

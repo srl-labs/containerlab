@@ -22,8 +22,11 @@ import (
 )
 
 const (
-	defaultNodePrefix  = "node"
-	defaultGroupPrefix = "tier"
+	defaultNodePrefix            = "node"
+	defaultGroupPrefix           = "tier"
+	nodeFlagNumPartCount         = 1
+	nodeFlagNumKindPartCount     = 2
+	nodeFlagNumKindTypePartCount = 3
 )
 
 var (
@@ -301,10 +304,10 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 				}
 			}
 			for k := uint(0); k < nodes[i+1].numNodes; k++ {
-				node2 := fmt.Sprintf("%s%d-%d", nodePrefix, i+2, k+1)
+				node2 := fmt.Sprintf("%s%d-%d", nodePrefix, i+2, k+1) //nolint: mnd
 				if _, ok := config.Topology.Nodes[node2]; !ok {
 					config.Topology.Nodes[node2] = &clabtypes.NodeDefinition{
-						Group: fmt.Sprintf("%s-%d", groupPrefix, i+2),
+						Group: fmt.Sprintf("%s-%d", groupPrefix, i+2), //nolint: mnd
 						Kind:  nodes[i+1].kind,
 						Type:  nodes[i+1].typ,
 					}
@@ -336,7 +339,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 func parseFlag(kind string, ls []string) (map[string]string, error) {
 	result := make(map[string]string)
 	for _, l := range ls {
-		items := strings.SplitN(l, "=", 2)
+		items := strings.SplitN(l, "=", 2) //nolint: mnd
 		switch len(items) {
 		case 0:
 			log.Errorf("missing value for flag item '%s'", l)
@@ -352,7 +355,7 @@ func parseFlag(kind string, ls []string) (map[string]string, error) {
 				log.Errorf("duplicated flag item for kind '%s'", kind)
 				return nil, errDuplicatedValue
 			}
-		case 2:
+		case 2: //nolint: mnd
 			if _, ok := result[items[0]]; !ok {
 				result[items[0]] = items[1]
 			} else {
@@ -373,7 +376,7 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 	result := make([]nodesDef, numStages)
 	for idx, n := range nodes {
 		def := nodesDef{}
-		items := strings.SplitN(n, ":", 3)
+		items := strings.SplitN(n, ":", nodeFlagNumKindPartCount)
 		if len(items) == 0 {
 			log.Errorf("wrong --nodes format '%s'", n)
 			return nil, errSyntax
@@ -385,24 +388,21 @@ func parseNodesFlag(kind string, nodes ...string) ([]nodesDef, error) {
 		}
 		def.numNodes = uint(i)
 		switch len(items) {
-		// num_nodes notation
 		// kind is assumed to be `srl` or set with --kind
-		case 1:
+		case nodeFlagNumPartCount:
 			if kind == "" {
 				log.Errorf("no kind specified for nodes '%s'", n)
 				return nil, errSyntax
 			}
 			def.kind = kind
-		// num_nodes:kind notation
-		case 2:
+		case nodeFlagNumKindPartCount:
 			if kind == "" {
 				log.Errorf("no kind specified for nodes '%s'", n)
 				return nil, errSyntax
 			}
 			def.kind = items[1]
 
-		// num_nodes:kind:type notation
-		case 3:
+		case nodeFlagNumKindTypePartCount:
 			def.numNodes = uint(i)
 			def.kind = kind
 

@@ -25,8 +25,9 @@ var (
 )
 
 const (
-	repoUrl     = "https://github.com/srl-labs/containerlab"
-	downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
+	repoUrl             = "https://github.com/srl-labs/containerlab"
+	downloadURL         = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
+	versionCheckTimeout = 5 * time.Second
 )
 
 func versionCmd(_ *Options) (*cobra.Command, error) {
@@ -51,7 +52,7 @@ func versionCmd(_ *Options) (*cobra.Command, error) {
 			Short: "Check if a new version of containerlab is available",
 			RunE: func(cobraCmd *cobra.Command, _ []string) error {
 				// We'll use a short 5-second timeout for the remote request
-				ctx, cancel := context.WithTimeout(cobraCmd.Context(), 5*time.Second)
+				ctx, cancel := context.WithTimeout(cobraCmd.Context(), versionCheckTimeout)
 				defer cancel()
 
 				m := getVersionManager()

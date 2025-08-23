@@ -23,7 +23,10 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-const gotty string = "gotty"
+const (
+	gotty         = "gotty"
+	gottyWaitTime = 5 * time.Second
+)
 
 // GoTTYListItem defines the structure for GoTTY container info in JSON output.
 type GoTTYListItem struct {
@@ -425,7 +428,7 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	maxRetries := 3
 
 	for i := 0; i < maxRetries; i++ {
-		time.Sleep(3 * time.Second)
+		time.Sleep(gottyWaitTime)
 		running, webURL = getGoTTYStatus(ctx, rt, o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Port)
 		if running {
 			break
@@ -742,7 +745,7 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		o.ToolsGoTTY.ContainerName,
 	)
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(gottyWaitTime)
 
 	// Get GoTTY status
 	running, webURL := getGoTTYStatus(ctx, rt, o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Port)
