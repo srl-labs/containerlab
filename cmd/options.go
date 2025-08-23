@@ -2,13 +2,23 @@ package cmd
 
 import (
 	"net"
+	"os"
 	"time"
 
+	clabcore "github.com/srl-labs/containerlab/core"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 const (
-	multiToolImage = "ghcr.io/srl-labs/network-multitool"
+	multiToolImage             = "ghcr.io/srl-labs/network-multitool"
+	defaultTimeout             = 120 * time.Second
+	defaultToolsServerPort     = 8080
+	defaultToolsApiSSHBasePort = 2223
+	defaultToolsApiSSHMaxPort  = 2322
+	defaultToolsCertKeySize    = 2048
+	defaultVxlanID             = 10
+	defaultVxlanPort           = 14789
 )
 
 var optionsInstance *Options //nolint:gochecknoglobals
@@ -19,12 +29,12 @@ func GetOptions() *Options {
 	if optionsInstance == nil {
 		optionsInstance = &Options{
 			Global: &GlobalOptions{
-				Timeout:  120 * time.Second,
+				Timeout:  defaultTimeout,
 				LogLevel: "info",
 			},
 			Filter: &FilterOptions{},
 			Deploy: &DeployOptions{
-				Format: "table",
+				LabOwner: os.Getenv("CLAB_OWNER"),
 			},
 			Destroy: &DestroyOptions{},
 			Config:  &ConfigOptions{},
@@ -32,6 +42,7 @@ func GetOptions() *Options {
 				Format: "plain",
 			},
 			Inspect: &InspectOptions{
+				Format:           "table",
 				InterfacesFormat: "table",
 			},
 			Graph: &GraphOptions{
@@ -42,16 +53,15 @@ func GetOptions() *Options {
 			ToolsAPI: &ToolsApiOptions{
 				Image:          "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
 				Name:           "clab-api-server",
-				Port:           8080,
+				Port:           defaultToolsServerPort,
 				Host:           "localhost",
 				JWTExpiration:  "60m",
 				UserGroup:      "clab_api",
 				SuperUserGroup: "clab_admins",
-				Runtime:        "docker",
 				LogLevel:       "debug",
 				GinMode:        "release",
-				SSHBasePort:    2223,
-				SSHMaxPort:     2322,
+				SSHBasePort:    defaultToolsApiSSHBasePort,
+				SSHMaxPort:     defaultToolsApiSSHMaxPort,
 				OutputFormat:   "table",
 			},
 			ToolsCert: &ToolsCertOptions{
@@ -61,13 +71,13 @@ func GetOptions() *Options {
 				Organization:     "Containerlab",
 				OrganizationUnit: "Containerlab Tools",
 				Expiry:           "87600h",
-				KeySize:          2048,
+				KeySize:          defaultToolsCertKeySize,
 				CANamePrefix:     "ca",
 				CertNamePrefix:   "cert",
 			},
 			ToolsTxOffload: &ToolsDisableTxOffloadOptions{},
 			ToolsGoTTY: &ToolsGoTTYOptions{
-				Port:     8080,
+				Port:     defaultToolsServerPort,
 				Username: "admin",
 				Password: "admin",
 				Shell:    "bash",
@@ -85,8 +95,8 @@ func GetOptions() *Options {
 				MTU: clablinks.DefaultLinkMTU,
 			},
 			ToolsVxlan: &ToolsVxlanOptions{
-				ID:             10,
-				Port:           14789,
+				ID:             defaultVxlanID,
+				Port:           defaultVxlanPort,
 				DeletionPrefix: "vx-",
 			},
 		}
@@ -114,14 +124,114 @@ type Options struct {
 	ToolsVxlan     *ToolsVxlanOptions
 }
 
+func (o *Options) ToClabOptions() []clabcore.ClabOption {
+	var clabOptions []clabcore.ClabOption
+
+	clabOptions = append(
+		clabOptions,
+		o.Global.toClabOptions()...,
+	)
+
+	clabOptions = append(
+		clabOptions,
+		o.Filter.toClabOptions()...,
+	)
+
+	clabOptions = append(
+		clabOptions,
+		o.Deploy.toClabOptions()...,
+	)
+
+	clabOptions = append(
+		clabOptions,
+		o.Destroy.toClabOptions()...,
+	)
+
+	return clabOptions
+}
+
+func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
+	destroyOptions := []clabcore.DestroyOption{
+		clabcore.WithDestroyMaxWorkers(o.Deploy.MaxWorkers),
+		clabcore.WithDestroyNodeFilter(o.Filter.NodeFilter),
+	}
+
+	if o.Destroy.KeepManagementNetwork {
+		destroyOptions = append(
+			destroyOptions,
+			clabcore.WithDestroyKeepMgmtNet(),
+		)
+	}
+
+	if o.Destroy.Cleanup {
+		destroyOptions = append(
+			destroyOptions,
+			clabcore.WithDestroyCleanup(),
+		)
+	}
+
+	if o.Global.GracefulShutdown {
+		destroyOptions = append(
+			destroyOptions,
+			clabcore.WithDestroyGraceful(),
+		)
+	}
+
+	if o.Destroy.All {
+		destroyOptions = append(
+			destroyOptions,
+			clabcore.WithDestroyAll(),
+		)
+
+		if !o.Destroy.AutoApprove {
+			destroyOptions = append(
+				destroyOptions,
+				clabcore.WithDestroyTerminalPrompt(),
+			)
+		}
+	}
+
+	return destroyOptions
+}
+
 type GlobalOptions struct {
-	TopologyFile string
-	VarsFile     string
-	TopologyName string
-	Timeout      time.Duration
-	Runtime      string
-	LogLevel     string
-	DebugCount   int
+	TopologyFile     string
+	VarsFile         string
+	TopologyName     string
+	Timeout          time.Duration
+	Runtime          string
+	GracefulShutdown bool
+	LogLevel         string
+	DebugCount       int
+
+	// special flag that should only be set by deploy, informs the context handler to destroy
+	// (or not) when root context is canceled
+	CleanOnCancel bool
+}
+
+func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
+	options := []clabcore.ClabOption{
+		clabcore.WithTimeout(o.Timeout),
+		clabcore.WithRuntime(
+			o.Runtime,
+			&clabruntime.RuntimeConfig{
+				Debug:            o.DebugCount > 0,
+				Timeout:          o.Timeout,
+				GracefulShutdown: o.GracefulShutdown,
+			},
+		),
+		clabcore.WithDebug(o.DebugCount > 0),
+	}
+
+	if o.TopologyFile != "" {
+		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFile))
+	}
+
+	if o.TopologyName != "" {
+		options = append(options, clabcore.WithTopologyName(o.TopologyName))
+	}
+
+	return options
 }
 
 type FilterOptions struct {
@@ -129,12 +239,17 @@ type FilterOptions struct {
 	NodeFilter  []string
 }
 
+func (o *FilterOptions) toClabOptions() []clabcore.ClabOption {
+	return []clabcore.ClabOption{
+		clabcore.WithNodeFilter(o.NodeFilter),
+	}
+}
+
 type DeployOptions struct {
 	GenerateGraph            bool
 	ManagementNetworkName    string
 	ManagementIPv4Subnet     net.IPNet
 	ManagementIPv6Subnet     net.IPNet
-	Format                   string
 	Reconfigure              bool
 	MaxWorkers               uint
 	SkipPostDeploy           bool
@@ -143,12 +258,43 @@ type DeployOptions struct {
 	LabOwner                 string
 }
 
+func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {
+	options := []clabcore.ClabOption{
+		clabcore.WithLabOwner(o.LabOwner),
+	}
+
+	if o.ManagementNetworkName != "" {
+		options = append(options, clabcore.WithManagementNetworkName(o.ManagementNetworkName))
+	}
+
+	managementIPv4Subnet := o.ManagementIPv4Subnet.String()
+	if managementIPv4Subnet != "<nil>" {
+		options = append(options, clabcore.WithManagementIpv4Subnet(managementIPv4Subnet))
+	}
+
+	managementIPv6Subnet := o.ManagementIPv6Subnet.String()
+	if managementIPv6Subnet != "<nil>" {
+		options = append(options, clabcore.WithManagementIpv6Subnet(managementIPv6Subnet))
+	}
+
+	return options
+}
+
 type DestroyOptions struct {
 	Cleanup               bool
 	All                   bool
-	GracefulShutdown      bool
 	KeepManagementNetwork bool
 	AutoApprove           bool
+}
+
+func (o *DestroyOptions) toClabOptions() []clabcore.ClabOption {
+	var options []clabcore.ClabOption
+
+	if o.KeepManagementNetwork {
+		options = append(options, clabcore.WithKeepMgmtNet())
+	}
+
+	return options
 }
 
 type ConfigOptions struct {
@@ -161,6 +307,7 @@ type ExecOptions struct {
 }
 
 type InspectOptions struct {
+	Format           string
 	Details          bool
 	Wide             bool
 	InterfacesFormat string
@@ -190,7 +337,6 @@ type ToolsApiOptions struct {
 	JWTExpiration  string
 	UserGroup      string
 	SuperUserGroup string
-	Runtime        string
 	LogLevel       string
 	GinMode        string
 	TrustedProxies string

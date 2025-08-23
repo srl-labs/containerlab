@@ -13,6 +13,11 @@ import (
 	gover "github.com/hashicorp/go-version"
 )
 
+const (
+	versionCheckInterval            = 100 * time.Millisecond
+	expectedClabReleaseVersionParts = 2
+)
+
 var (
 	versionManagerInstance     Manager   //nolint:gochecknoglobals
 	versionManagerInstanceOnce sync.Once //nolint:gochecknoglobals
@@ -73,7 +78,7 @@ func (m *manager) GetLatestVersion(ctx context.Context) *gover.Version {
 		return nil
 	}
 
-	t := time.NewTicker(100 * time.Millisecond)
+	t := time.NewTicker(versionCheckInterval)
 	defer t.Stop()
 
 	for {
@@ -152,7 +157,7 @@ func (m *manager) run(ctx context.Context) {
 
 	releaseParts := strings.Split(locationHeader, "releases/tag/")
 
-	if len(releaseParts) != 2 {
+	if len(releaseParts) != expectedClabReleaseVersionParts {
 		log.Debugf("could not properly parse release version from %q", locationHeader)
 
 		return

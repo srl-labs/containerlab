@@ -125,7 +125,7 @@ Deploy ${lab2-name} lab again
 
 Destroy all labs
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy --all --cleanup --yes
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 

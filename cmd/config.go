@@ -16,9 +16,10 @@ import (
 
 func configCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
-		Use:          "config",
-		Short:        "configure a lab",
-		Long:         "configure a lab based on templates and variables from the topology definition file\nreference: https://containerlab.dev/cmd/config/",
+		Use:   "config",
+		Short: "configure a lab",
+		Long: "configure a lab based on templates and variables from the topology definition " +
+			"file\n reference: https://containerlab.dev/cmd/config/",
 		Aliases:      []string{"conf"},
 		ValidArgs:    []string{"commit", "send", "compare", "template"},
 		SilenceUsage: true,
@@ -105,9 +106,10 @@ func configSubCmds(c *cobra.Command, o *Options) {
 	compareC.Flags().AddFlagSet(c.Flags())
 
 	templateC := &cobra.Command{
-		Use:          "template",
-		Short:        "render a template",
-		Long:         "render a template based on variables from the topology definition file\nreference: https://containerlab.dev/cmd/config/template",
+		Use:   "template",
+		Short: "render a template",
+		Long: "render a template based on variables from the topology definition file\n" +
+			"reference: https://containerlab.dev/cmd/config/template",
 		Aliases:      []string{"conf"},
 		SilenceUsage: true,
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -117,8 +119,13 @@ func configSubCmds(c *cobra.Command, o *Options) {
 
 	c.AddCommand(templateC)
 	templateC.Flags().AddFlagSet(c.Flags())
-	templateC.Flags().BoolVarP(&o.Config.TemplateVarOnly, "vars", "v", o.Config.TemplateVarOnly,
-		"show variable used for template rendering")
+	templateC.Flags().BoolVarP(
+		&o.Config.TemplateVarOnly,
+		"vars",
+		"v",
+		o.Config.TemplateVarOnly,
+		"show variable used for template rendering",
+	)
 	templateC.Flags().SortFlags = false
 }
 
@@ -128,12 +135,7 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 	transport.DebugCount = o.Global.DebugCount
 	clabcoreconfig.DebugCount = o.Global.DebugCount
 
-	c, err := clabcore.NewContainerLab(
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-		clabcore.WithNodeFilter(o.Filter.NodeFilter),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}
@@ -168,12 +170,14 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 	}
 
 	var wg sync.WaitGroup
+
 	deploy := func(n string) {
 		defer wg.Done()
 
 		cs, ok := allConfig[n]
 		if !ok {
 			log.Errorf("Invalid node in filter: %s", n)
+
 			return
 		}
 
@@ -182,7 +186,9 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 			log.Warnf("%s: %s", cs.TargetNode.ShortName, err)
 		}
 	}
+
 	wg.Add(len(o.Filter.LabelFilter))
+
 	for _, node := range o.Filter.LabelFilter {
 		// On debug this will not be executed concurrently
 		if log.GetLevel() == (log.DebugLevel) {
@@ -191,6 +197,7 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 			go deploy(node)
 		}
 	}
+
 	wg.Wait()
 
 	return nil
@@ -201,11 +208,7 @@ func configTemplate(o *Options) error {
 
 	clabcoreconfig.DebugCount = o.Global.DebugCount
 
-	c, err := clabcore.NewContainerLab(
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}
@@ -216,11 +219,13 @@ func configTemplate(o *Options) error {
 	}
 
 	allConfig := clabcoreconfig.PrepareVars(c)
+
 	if o.Config.TemplateVarOnly {
 		for _, n := range o.Filter.LabelFilter {
 			conf := allConfig[n]
 			conf.Print(true, false)
 		}
+
 		return nil
 	}
 
@@ -241,17 +246,21 @@ func validateFilter(nodes map[string]clabnodes.Node, o *Options) error {
 		for n := range nodes {
 			o.Filter.LabelFilter = append(o.Filter.LabelFilter, n)
 		}
+
 		return nil
 	}
 
 	var mis []string
+
 	for _, nn := range o.Filter.LabelFilter {
 		if _, ok := nodes[nn]; !ok {
 			mis = append(mis, nn)
 		}
 	}
+
 	if len(mis) > 0 {
 		return fmt.Errorf("invalid nodes in filter: %s", strings.Join(mis, ", "))
 	}
+
 	return nil
 }

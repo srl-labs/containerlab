@@ -12,7 +12,9 @@ linters:
     - govet
     - ineffassign
     - importas
+    - lll
     - misspell
+    - mnd
     - nakedret
     - noctx
     - nolintlint
@@ -21,6 +23,7 @@ linters:
     - unparam
     - unused
     - whitespace
+    - wsl_v5
   disable:
     # disabling for *now* so ci can pass nicely, but (some?) of these likely should be adressed
     - dupl
@@ -30,14 +33,11 @@ linters:
     - goconst
     - gocyclo
     - gosec
-    - lll
-    - mnd
     - nestif
     - perfsprint
     - prealloc
     - revive
     - wrapcheck
-    - wsl_v5
   settings:
     dupl:
       threshold: 100
@@ -95,6 +95,12 @@ linters:
       - linters:
           - staticcheck
         text: could remove embedded field
+      # currently slowly enforcing some things, starting with cmd package
+      - linters:
+          - lll
+          - mnd
+          - wsl_v5
+        path-except: cmd
 formatters:
   enable:
     - gofmt

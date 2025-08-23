@@ -26,7 +26,10 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-const sshx string = "sshx"
+const (
+	sshx         = "sshx"
+	sshxWaitTime = 5 * time.Second
+)
 
 // SSHXListItem defines the structure for SSHX container info in JSON output.
 type SSHXListItem struct {
@@ -43,7 +46,7 @@ type SSHXNode struct {
 	config *clabtypes.NodeConfig
 }
 
-func sshxCmd(o *Options) (*cobra.Command, error) {
+func sshxCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	c := &cobra.Command{
 		Use:   sshx,
 		Short: "SSHX terminal sharing operations",
@@ -60,8 +63,13 @@ func sshxCmd(o *Options) (*cobra.Command, error) {
 
 	c.AddCommand(sshxListCmd)
 
-	c.PersistentFlags().StringVarP(&o.ToolsSSHX.Format, "format", "f", o.ToolsSSHX.Format,
-		"output format for 'list' command (table, json)")
+	c.PersistentFlags().StringVarP(
+		&o.ToolsSSHX.Format,
+		"format",
+		"f",
+		o.ToolsSSHX.Format,
+		"output format for 'list' command (table, json)",
+	)
 
 	sshxAttachCmd := &cobra.Command{
 		Use:   "attach",
@@ -76,18 +84,48 @@ func sshxCmd(o *Options) (*cobra.Command, error) {
 
 	c.AddCommand(sshxAttachCmd)
 
-	sshxAttachCmd.Flags().StringVarP(&o.Global.TopologyName, "lab", "l", o.Global.TopologyName,
-		"name of the lab to attach SSHX container to")
-	sshxAttachCmd.Flags().StringVarP(&o.ToolsSSHX.ContainerName, "name", "", o.ToolsSSHX.ContainerName,
-		"name of the SSHX container (defaults to sshx-<labname>)")
-	sshxAttachCmd.Flags().BoolVarP(&o.ToolsSSHX.EnableReaders, "enable-readers", "w", o.ToolsSSHX.EnableReaders,
-		"enable read-only access links")
-	sshxAttachCmd.Flags().StringVarP(&o.ToolsSSHX.Image, "image", "i", o.ToolsSSHX.Image,
-		"container image to use for SSHX")
-	sshxAttachCmd.Flags().StringVarP(&o.ToolsSSHX.Owner, "owner", "o", o.ToolsSSHX.Owner,
-		"lab owner name for the SSHX container")
-	sshxAttachCmd.Flags().BoolVarP(&o.ToolsSSHX.MountSSHDir, "expose-ssh", "s", o.ToolsSSHX.MountSSHDir,
-		"mount host user's SSH directory (~/.ssh) to the sshx container")
+	sshxAttachCmd.Flags().StringVarP(
+		&o.Global.TopologyName,
+		"lab",
+		"l",
+		o.Global.TopologyName,
+		"name of the lab to attach SSHX container to",
+	)
+	sshxAttachCmd.Flags().StringVarP(
+		&o.ToolsSSHX.ContainerName,
+		"name",
+		"",
+		o.ToolsSSHX.ContainerName,
+		"name of the SSHX container (defaults to sshx-<labname>)",
+	)
+	sshxAttachCmd.Flags().BoolVarP(
+		&o.ToolsSSHX.EnableReaders,
+		"enable-readers",
+		"w",
+		o.ToolsSSHX.EnableReaders,
+		"enable read-only access links",
+	)
+	sshxAttachCmd.Flags().StringVarP(
+		&o.ToolsSSHX.Image,
+		"image",
+		"i",
+		o.ToolsSSHX.Image,
+		"container image to use for SSHX",
+	)
+	sshxAttachCmd.Flags().StringVarP(
+		&o.ToolsSSHX.Owner,
+		"owner",
+		"o",
+		o.ToolsSSHX.Owner,
+		"lab owner name for the SSHX container",
+	)
+	sshxAttachCmd.Flags().BoolVarP(
+		&o.ToolsSSHX.MountSSHDir,
+		"expose-ssh",
+		"s",
+		o.ToolsSSHX.MountSSHDir,
+		"mount host user's SSH directory (~/.ssh) to the sshx container",
+	)
 
 	sshxDetachCmd := &cobra.Command{
 		Use:   "detach",
@@ -118,24 +156,60 @@ func sshxCmd(o *Options) (*cobra.Command, error) {
 
 	c.AddCommand(sshxReattachCmd)
 
-	sshxReattachCmd.Flags().StringVarP(&o.Global.TopologyName, "lab", "l", o.Global.TopologyName,
-		"name of the lab to reattach SSHX container to")
-	sshxReattachCmd.Flags().StringVarP(&o.ToolsSSHX.ContainerName, "name", "", o.ToolsSSHX.ContainerName,
-		"name of the SSHX container (defaults to sshx-<labname>)")
-	sshxReattachCmd.Flags().BoolVarP(&o.ToolsSSHX.EnableReaders, "enable-readers", "w", o.ToolsSSHX.EnableReaders,
-		"enable read-only access links")
-	sshxReattachCmd.Flags().StringVarP(&o.ToolsSSHX.Image, "image", "i", o.ToolsSSHX.Image,
-		"container image to use for SSHX")
-	sshxReattachCmd.Flags().StringVarP(&o.ToolsSSHX.Owner, "owner", "o", o.ToolsSSHX.Owner,
-		"lab owner name for the SSHX container")
-	sshxReattachCmd.Flags().BoolVarP(&o.ToolsSSHX.MountSSHDir, "expose-ssh", "s", o.ToolsSSHX.MountSSHDir,
-		"mount host user's SSH directory (~/.ssh) to the sshx container")
+	sshxReattachCmd.Flags().StringVarP(
+		&o.Global.TopologyName,
+		"lab",
+		"l", o.Global.TopologyName,
+		"name of the lab to reattach SSHX container to",
+	)
+	sshxReattachCmd.Flags().StringVarP(
+		&o.ToolsSSHX.ContainerName,
+		"name",
+		"",
+		o.ToolsSSHX.ContainerName,
+		"name of the SSHX container (defaults to sshx-<labname>)",
+	)
+	sshxReattachCmd.Flags().BoolVarP(
+		&o.ToolsSSHX.EnableReaders,
+		"enable-readers",
+		"w",
+		o.ToolsSSHX.EnableReaders,
+		"enable read-only access links",
+	)
+	sshxReattachCmd.Flags().StringVarP(
+		&o.ToolsSSHX.Image,
+		"image",
+		"i",
+		o.ToolsSSHX.Image,
+		"container image to use for SSHX",
+	)
+	sshxReattachCmd.Flags().StringVarP(
+		&o.ToolsSSHX.Owner,
+		"owner",
+		"o",
+		o.ToolsSSHX.Owner,
+		"lab owner name for the SSHX container",
+	)
+	sshxReattachCmd.Flags().BoolVarP(
+		&o.ToolsSSHX.MountSSHDir,
+		"expose-ssh",
+		"s",
+		o.ToolsSSHX.MountSSHDir,
+		"mount host user's SSH directory (~/.ssh) to the sshx container",
+	)
 
 	return c, nil
 }
 
 // NewSSHXNode creates a new SSHX node configuration.
-func NewSSHXNode(name, image, network, labName string, enableReaders bool, labels map[string]string, mountSSH bool) *SSHXNode {
+func NewSSHXNode(
+	name,
+	image,
+	network,
+	labName string,
+	enableReaders bool,
+	labels map[string]string, mountSSH bool,
+) *SSHXNode {
 	log.Debugf("Creating SSHXNode: name=%s, image=%s, network=%s, enableReaders=%t, exposeSSH=%t",
 		name, image, network, enableReaders, mountSSH)
 
@@ -145,7 +219,9 @@ func NewSSHXNode(name, image, network, labName string, enableReaders bool, label
 	}
 
 	sshxCmd := fmt.Sprintf(
-		`curl -sSf https://sshx.io/get | sh > /dev/null ; sshx -q %s > /tmp/sshx & while [ ! -s /tmp/sshx ]; do sleep 1; done && cat /tmp/sshx ; sleep infinity`,
+		"curl -sSf https://sshx.io/get | sh > /dev/null "+
+			"; sshx -q %s > /tmp/sshx & while [ ! -s /tmp/sshx ]; do sleep 1; done "+
+			"&& cat /tmp/sshx ; sleep infinity",
 		enableReadersFlag,
 	)
 
@@ -204,7 +280,11 @@ func (*SSHXNode) GetEndpoints() []clablinks.Endpoint {
 }
 
 // getSSHXLink retrieves the SSHX link from the container.
-func getSSHXLink(ctx context.Context, rt clabruntime.ContainerRuntime, containerName string) string {
+func getSSHXLink(
+	ctx context.Context,
+	rt clabruntime.ContainerRuntime,
+	containerName string,
+) string {
 	execCmd, err := clabexec.NewExecCmdFromString("cat /tmp/sshx")
 	if err != nil {
 		return ""
@@ -226,14 +306,27 @@ func getSSHXLink(ctx context.Context, rt clabruntime.ContainerRuntime, container
 func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	ctx := cobraCmd.Context()
 
-	log.Debugf("sshx attach called with flags: labName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', exposeSSH=%t",
-		o.Global.TopologyName, o.ToolsSSHX.ContainerName, o.ToolsSSHX.EnableReaders,
-		o.ToolsSSHX.Image, o.Global.TopologyFile, o.ToolsSSHX.MountSSHDir)
+	log.Debugf(
+		"sshx attach called with flags: labName='%s', containerName='%s', "+
+			"enableReaders=%t, image='%s', topo='%s', exposeSSH=%t",
+		o.Global.TopologyName,
+		o.ToolsSSHX.ContainerName,
+		o.ToolsSSHX.EnableReaders,
+		o.ToolsSSHX.Image,
+		o.Global.TopologyFile,
+		o.ToolsSSHX.MountSSHDir,
+	)
 
 	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0,
-		o.Global.Timeout, o.Destroy.GracefulShutdown)
+	clabInstance, err := clabcore.NewClabFromTopologyFileOrLabName(
+		o.Global.TopologyFile,
+		o.Global.TopologyName,
+		o.Global.VarsFile,
+		o.Global.Runtime,
+		o.Global.DebugCount > 0,
+		o.Global.Timeout,
+		o.Global.GracefulShutdown,
+	)
 	if err != nil {
 		return err
 	}
@@ -281,6 +374,7 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	// Pull the container image
 	log.Infof("Pulling image %s...", o.ToolsSSHX.Image)
+
 	if err := rt.PullImage(ctx, o.ToolsSSHX.Image, clabtypes.PullPolicyAlways); err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", o.ToolsSSHX.Image, err)
 	}
@@ -300,8 +394,16 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	)
 
 	log.Infof("Creating SSHX container %s on network '%s'", o.ToolsSSHX.ContainerName, networkName)
-	sshxNode := NewSSHXNode(o.ToolsSSHX.ContainerName, o.ToolsSSHX.Image, networkName, labName,
-		o.ToolsSSHX.EnableReaders, labelsMap, o.ToolsSSHX.MountSSHDir)
+
+	sshxNode := NewSSHXNode(
+		o.ToolsSSHX.ContainerName,
+		o.ToolsSSHX.Image,
+		networkName,
+		labName,
+		o.ToolsSSHX.EnableReaders,
+		labelsMap,
+		o.ToolsSSHX.MountSSHDir,
+	)
 
 	id, err := rt.CreateContainer(ctx, sshxNode.Config())
 	if err != nil {
@@ -311,21 +413,32 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	if _, err := rt.StartContainer(ctx, id, sshxNode); err != nil {
 		// Clean up on failure
 		rt.DeleteContainer(ctx, o.ToolsSSHX.ContainerName)
+
 		return fmt.Errorf("failed to start SSHX container: %w", err)
 	}
 
 	log.Infof("SSHX container %s started. Waiting for SSHX link...", o.ToolsSSHX.ContainerName)
-	time.Sleep(5 * time.Second)
+	time.Sleep(sshxWaitTime)
 
 	// Get SSHX link
 	link := getSSHXLink(ctx, rt, o.ToolsSSHX.ContainerName)
 	if link == "" {
-		log.Warn("SSHX container started but failed to retrieve the link.\nCheck the container logs: docker logs %s", o.ToolsSSHX.ContainerName)
+		log.Warn(
+			"SSHX container started but failed to retrieve the link.\n"+
+				"Check the container logs: docker logs %s",
+			o.ToolsSSHX.ContainerName,
+		)
+
 		return nil
 	}
 
 	log.Info("SSHX successfully started", "link", link, "note",
-		fmt.Sprintf("Inside the shared terminal, you can connect to lab nodes using SSH:\nssh admin@clab-%s-<node-name>", labName))
+		fmt.Sprintf(
+			"Inside the shared terminal, you can connect to lab nodes using SSH:\n"+
+				"ssh admin@clab-%s-<node-name>",
+			labName,
+		),
+	)
 
 	// Display read-only link if enabled
 	if o.ToolsSSHX.EnableReaders {
@@ -341,7 +454,9 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	if o.ToolsSSHX.MountSSHDir {
-		fmt.Println("\nYour SSH keys and configuration have been mounted to allow direct authentication.")
+		fmt.Println(
+			"\nYour SSH keys and configuration have been mounted to allow direct authentication.",
+		)
 	}
 
 	return nil
@@ -351,12 +466,19 @@ func sshxDetach(cobraCmd *cobra.Command, o *Options) error {
 	ctx := cobraCmd.Context()
 
 	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0,
-		o.Global.Timeout, o.Destroy.GracefulShutdown)
+	clabInstance, err := clabcore.NewClabFromTopologyFileOrLabName(
+		o.Global.TopologyFile,
+		o.Global.TopologyName,
+		o.Global.VarsFile,
+		o.Global.Runtime,
+		o.Global.DebugCount > 0,
+		o.Global.Timeout,
+		o.Global.GracefulShutdown,
+	)
 	if err != nil {
 		return err
 	}
+
 	labName := clabInstance.Config.Name
 	if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
 		o.Global.TopologyFile = clabInstance.TopoPaths.TopologyFilenameAbsPath()
@@ -373,21 +495,24 @@ func sshxDetach(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	rt := rinit()
+
 	err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}))
 	if err != nil {
 		return fmt.Errorf("failed to initialize runtime: %w", err)
 	}
 
 	log.Infof("Removing SSHX container %s", containerName)
+
 	if err := rt.DeleteContainer(ctx, containerName); err != nil {
 		return fmt.Errorf("failed to remove SSHX container: %w", err)
 	}
 
 	log.Infof("SSHX container %s removed successfully", containerName)
+
 	return nil
 }
 
-func sshxList(cobraCmd *cobra.Command, o *Options) error {
+func sshxList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	ctx := cobraCmd.Context()
 
 	// Initialize runtime
@@ -397,6 +522,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	rt := rinit()
+
 	err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}))
 	if err != nil {
 		return fmt.Errorf("failed to initialize runtime: %w", err)
@@ -423,6 +549,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error {
 		} else {
 			fmt.Println("No active SSHX containers found")
 		}
+
 		return nil
 	}
 
@@ -430,6 +557,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error {
 	listItems := make([]SSHXListItem, 0, len(containers))
 	for idx := range containers {
 		name := strings.TrimPrefix(containers[idx].Names[0], "/")
+
 		network := containers[idx].NetworkName
 		if network == "" {
 			network = "unknown"
@@ -443,6 +571,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error {
 
 		// Try to get the SSHX link if container is running
 		link := "N/A"
+
 		if containers[idx].State == "running" {
 			if linkContent := getSSHXLink(ctx, rt, name); linkContent != "" {
 				link = linkContent
@@ -465,6 +594,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error {
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)
 		}
+
 		fmt.Println(string(b))
 	} else {
 		// Use go-pretty table
@@ -486,6 +616,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error {
 				item.Owner,
 			})
 		}
+
 		t.Render()
 	}
 
@@ -495,22 +626,38 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error {
 func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	ctx := cobraCmd.Context()
 
-	log.Debugf("sshx reattach called with flags: labName='%s', containerName='%s', enableReaders=%t, image='%s', topo='%s', exposeSSH=%t",
-		o.Global.TopologyName, o.ToolsSSHX.ContainerName, o.ToolsSSHX.EnableReaders,
-		o.ToolsSSHX.Image, o.Global.TopologyFile, o.ToolsSSHX.MountSSHDir)
+	log.Debugf(
+		"sshx reattach called with flags: labName='%s', containerName='%s', "+
+			"enableReaders=%t, image='%s', topo='%s', exposeSSH=%t",
+		o.Global.TopologyName,
+		o.ToolsSSHX.ContainerName,
+		o.ToolsSSHX.EnableReaders,
+		o.ToolsSSHX.Image,
+		o.Global.TopologyFile,
+		o.ToolsSSHX.MountSSHDir,
+	)
 
 	// Get lab topology information
-	clabInstance, err := clabcore.NewclabFromTopologyFileOrLabName(ctx, o.Global.TopologyFile,
-		o.Global.TopologyName, o.Global.VarsFile, o.Global.Runtime, o.Global.DebugCount > 0,
-		o.Global.Timeout, o.Destroy.GracefulShutdown)
+	clabInstance, err := clabcore.NewClabFromTopologyFileOrLabName(
+		o.Global.TopologyFile,
+		o.Global.TopologyName,
+		o.Global.VarsFile,
+		o.Global.Runtime,
+		o.Global.DebugCount > 0,
+		o.Global.Timeout,
+		o.Global.GracefulShutdown,
+	)
 	if err != nil {
 		return err
 	}
+
 	labName := clabInstance.Config.Name
+
 	networkName := clabInstance.Config.Mgmt.Network
 	if networkName == "" {
 		networkName = "clab-" + labName
 	}
+
 	if clabInstance.TopoPaths != nil && clabInstance.TopoPaths.TopologyFileIsSet() {
 		o.Global.TopologyFile = clabInstance.TopoPaths.TopologyFilenameAbsPath()
 	}
@@ -528,6 +675,7 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	rt := rinit()
+
 	err = rt.Init(
 		clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}),
 		clabruntime.WithMgmtNet(&clabtypes.MgmtNet{Network: networkName}),
@@ -538,10 +686,15 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	// Step 1: Detach (remove) existing SSHX container if it exists
 	log.Infof("Removing existing SSHX container %s if present...", o.ToolsSSHX.ContainerName)
+
 	err = rt.DeleteContainer(ctx, o.ToolsSSHX.ContainerName)
 	if err != nil {
 		// Just log the error but continue - the container might not exist
-		log.Debugf("Could not remove container %s: %v. This is normal if it doesn't exist.", o.ToolsSSHX.ContainerName, err)
+		log.Debugf(
+			"Could not remove container %s: %v. This is normal if it doesn't exist.",
+			o.ToolsSSHX.ContainerName,
+			err,
+		)
 	} else {
 		log.Infof("Successfully removed existing SSHX container")
 	}
@@ -549,6 +702,7 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	// Step 2: Create and attach new SSHX container
 	// Pull the container image
 	log.Infof("Pulling image %s...", o.ToolsSSHX.Image)
+
 	if err := rt.PullImage(ctx, o.ToolsSSHX.Image, clabtypes.PullPolicyAlways); err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", o.ToolsSSHX.Image, err)
 	}
@@ -568,9 +722,20 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	)
 
 	// Create and start SSHX container
-	log.Infof("Creating new SSHX container %s on network '%s'", o.ToolsSSHX.ContainerName, networkName)
-	sshxNode := NewSSHXNode(o.ToolsSSHX.ContainerName, o.ToolsSSHX.Image, networkName, labName,
-		o.ToolsSSHX.EnableReaders, labelsMap, o.ToolsSSHX.MountSSHDir)
+	log.Infof(
+		"Creating new SSHX container %s on network '%s'",
+		o.ToolsSSHX.ContainerName,
+		networkName,
+	)
+	sshxNode := NewSSHXNode(
+		o.ToolsSSHX.ContainerName,
+		o.ToolsSSHX.Image,
+		networkName,
+		labName,
+		o.ToolsSSHX.EnableReaders,
+		labelsMap,
+		o.ToolsSSHX.MountSSHDir,
+	)
 
 	id, err := rt.CreateContainer(ctx, sshxNode.Config())
 	if err != nil {
@@ -580,21 +745,35 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	if _, err := rt.StartContainer(ctx, id, sshxNode); err != nil {
 		// Clean up on failure
 		rt.DeleteContainer(ctx, o.ToolsSSHX.ContainerName)
+
 		return fmt.Errorf("failed to start SSHX container: %w", err)
 	}
 
 	log.Infof("SSHX container %s started. Waiting for SSHX link...", o.ToolsSSHX.ContainerName)
-	time.Sleep(5 * time.Second)
+	time.Sleep(sshxWaitTime)
 
 	// Get SSHX link
 	link := getSSHXLink(ctx, rt, o.ToolsSSHX.ContainerName)
 	if link == "" {
-		log.Warn("SSHX container started but failed to retrieve the link.\nCheck the container logs: docker logs %s", o.ToolsSSHX.ContainerName)
+		log.Warn(
+			"SSHX container started but failed to retrieve the link.\n"+
+				"Check the container logs: docker logs %s",
+			o.ToolsSSHX.ContainerName,
+		)
+
 		return nil
 	}
 
-	log.Info("SSHX successfully reattached", "link", link, "note",
-		fmt.Sprintf("Inside the shared terminal, you can connect to lab nodes using SSH:\nssh admin@clab-%s-<node-name>", labName))
+	log.Info(
+		"SSHX successfully reattached",
+		"link",
+		link,
+		"note",
+		fmt.Sprintf(
+			"Inside the shared terminal, you can connect to lab nodes using SSH:"+
+				"\nssh admin@clab-%s-<node-name>", labName,
+		),
+	)
 
 	// Display read-only link if enabled
 	if o.ToolsSSHX.EnableReaders {
@@ -610,7 +789,9 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	if o.ToolsSSHX.MountSSHDir {
-		fmt.Println("\nYour SSH keys and configuration have been mounted to allow direct authentication.")
+		fmt.Println(
+			"\nYour SSH keys and configuration have been mounted to allow direct authentication.",
+		)
 	}
 
 	return nil

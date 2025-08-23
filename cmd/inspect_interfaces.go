@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 
 	clabcore "github.com/srl-labs/containerlab/core"
-	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -23,35 +22,19 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	if o.Inspect.InterfacesFormat != "table" && o.Inspect.InterfacesFormat != "json" {
-		return fmt.Errorf("output format %v is not supported, use 'table' or 'json'", o.Inspect.InterfacesFormat)
-	}
-
-	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithRuntime(
-			o.Global.Runtime,
-			&clabruntime.RuntimeConfig{
-				Debug:            o.Global.DebugCount > 0,
-				Timeout:          o.Global.Timeout,
-				GracefulShutdown: o.Destroy.GracefulShutdown,
-			},
-		),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	}
-
-	if o.Global.TopologyFile != "" {
-		opts = append(opts,
-			clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-			clabcore.WithNodeFilter(o.Filter.NodeFilter),
+		return fmt.Errorf(
+			"output format %v is not supported, use 'table' or 'json'",
+			o.Inspect.InterfacesFormat,
 		)
 	}
 
-	c, err := clabcore.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
 
 	labNameFilterLabel := ""
+
 	switch {
 	case o.Global.TopologyName != "":
 		labNameFilterLabel = o.Global.TopologyName
@@ -87,16 +70,17 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 		return fmt.Errorf("failed to list container interfaces: %s", err)
 	}
 
-	err = printContainerInterfaces(containerInterfaces, o.Inspect.InterfacesFormat)
-	return err
+	return printContainerInterfaces(containerInterfaces, o.Inspect.InterfacesFormat)
 }
 
 func interfacesToTableData(contInterfaces []*clabtypes.ContainerInterfaces) *[]tableWriter.Row {
 	tabData := make([]tableWriter.Row, 0)
+
 	for _, container := range contInterfaces {
 		for _, iface := range container.Interfaces {
 			tabRow := tableWriter.Row{}
 			ifaceAlias := "N/A"
+
 			if iface.InterfaceAlias != "" {
 				ifaceAlias = iface.InterfaceAlias
 			}
@@ -115,6 +99,7 @@ func interfacesToTableData(contInterfaces []*clabtypes.ContainerInterfaces) *[]t
 			tabData = append(tabData, tabRow)
 		}
 	}
+
 	return &tabData
 }
 
@@ -128,9 +113,10 @@ func printContainerInterfaces(
 		if err != nil {
 			return fmt.Errorf("failed to marshal container details: %v", err)
 		}
-		fmt.Println(string(b))
-		return nil
 
+		fmt.Println(string(b))
+
+		return nil
 	case "table":
 		table := tableWriter.NewWriter()
 		table.SetOutputMirror(os.Stdout)
@@ -181,5 +167,6 @@ func printContainerInterfaces(
 
 		return nil
 	}
+
 	return nil
 }

@@ -270,8 +270,11 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
 		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
 		if err = c.globalRuntime().DeleteNet(ctx); err != nil {
-			// do not log error message if deletion error simply says that such network doesn't exist
-			if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
+			switch {
+			case err.Error() == fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network):
+			case strings.Contains(err.Error(), fmt.Sprintf(
+				" network %s not found", c.Config.Mgmt.Network)):
+			default:
 				log.Error(err)
 			}
 		}

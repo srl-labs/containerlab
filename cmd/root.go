@@ -50,17 +50,53 @@ func Entrypoint() (*cobra.Command, error) {
 		SilenceUsage: true,
 	}
 
-	c.PersistentFlags().CountVarP(&o.Global.DebugCount, "debug", "d", "enable debug mode")
-	c.PersistentFlags().StringVarP(&o.Global.TopologyFile, "topo", "t", "",
-		"path to the topology definition file, a directory containing one, 'stdin', or a URL")
-	c.PersistentFlags().StringVarP(&o.Global.VarsFile, "vars", "", "",
-		"path to the topology template variables file")
-	c.PersistentFlags().StringVarP(&o.Global.TopologyName, "name", "", "", "lab/topology name")
-	c.PersistentFlags().DurationVarP(&o.Global.Timeout, "timeout", "", o.Global.Timeout,
-		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
-	c.PersistentFlags().StringVarP(&o.Global.Runtime, "runtime", "r", "", "container runtime")
-	c.PersistentFlags().StringVarP(&o.Global.LogLevel, "log-level", "", o.Global.LogLevel,
-		"logging level; one of [trace, debug, info, warning, error, fatal]")
+	c.PersistentFlags().CountVarP(
+		&o.Global.DebugCount,
+		"debug",
+		"d",
+		"enable debug mode",
+	)
+	c.PersistentFlags().StringVarP(
+		&o.Global.TopologyFile,
+		"topo",
+		"t",
+		o.Global.TopologyFile,
+		"path to the topology definition file, a directory containing one, 'stdin', or a URL",
+	)
+	c.PersistentFlags().StringVarP(
+		&o.Global.VarsFile,
+		"vars",
+		"",
+		o.Global.VarsFile,
+		"path to the topology template variables file",
+	)
+	c.PersistentFlags().StringVarP(
+		&o.Global.TopologyName,
+		"name",
+		"",
+		o.Global.TopologyName,
+		"lab/topology name")
+	c.PersistentFlags().DurationVarP(
+		&o.Global.Timeout,
+		"timeout",
+		"",
+		o.Global.Timeout,
+		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s",
+	)
+	c.PersistentFlags().StringVarP(
+		&o.Global.Runtime,
+		"runtime",
+		"r",
+		o.Global.Runtime,
+		"container runtime",
+	)
+	c.PersistentFlags().StringVarP(
+		&o.Global.LogLevel,
+		"log-level",
+		"",
+		o.Global.LogLevel,
+		"logging level; one of [trace, debug, info, warning, error, fatal]",
+	)
 
 	err := c.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
 	if err != nil {
@@ -172,7 +208,11 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 	}
 
 	if len(files) > 1 {
-		return fmt.Errorf("more than one topology file matching the pattern *.clab.yml or *.clab.yaml found, can't pick one: %q", files)
+		return fmt.Errorf(
+			"more than one topology file matching the pattern *.clab.yml or *.clab.yaml found, "+
+				"can't pick one: %q",
+			files,
+		)
 	}
 
 	o.Global.TopologyFile = files[0]

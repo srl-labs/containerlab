@@ -27,27 +27,49 @@ import (
 
 func inspectCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
-		Use:     "inspect",
-		Short:   "inspect lab details",
-		Long:    "show details about a particular lab or all running labs\nreference: https://containerlab.dev/cmd/inspect/",
+		Use:   "inspect",
+		Short: "inspect lab details",
+		Long: "show details about a particular lab or all running labs\n" +
+			"reference: https://containerlab.dev/cmd/inspect/",
 		Aliases: []string{"ins", "i"},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return inspectFn(cobraCmd, o)
 		},
 	}
 
-	c.Flags().BoolVarP(&o.Inspect.Details, "details", "", o.Inspect.Details,
-		"print all details of lab containers (JSON format, grouped by lab)")
-	c.Flags().StringVarP(&o.Deploy.Format, "format", "f", o.Deploy.Format,
-		"output format. One of [table, json, csv]")
-	c.Flags().BoolVarP(&o.Destroy.All, "all", "a", o.Destroy.All, "show all deployed containerlab labs")
-	c.Flags().BoolVarP(&o.Inspect.Wide, "wide", "w", o.Inspect.Wide,
-		"also more details about a lab and its nodes")
+	c.Flags().BoolVarP(
+		&o.Inspect.Details,
+		"details",
+		"", o.Inspect.Details,
+		"print all details of lab containers (JSON format, grouped by lab)",
+	)
+	c.Flags().StringVarP(
+		&o.Inspect.Format,
+		"format",
+		"f",
+		o.Inspect.Format,
+		"output format. One of [table, json, csv]",
+	)
+	c.Flags().BoolVarP(
+		&o.Destroy.All,
+		"all",
+		"a",
+		o.Destroy.All,
+		"show all deployed containerlab labs",
+	)
+	c.Flags().BoolVarP(
+		&o.Inspect.Wide,
+		"wide",
+		"w",
+		o.Inspect.Wide,
+		"also more details about a lab and its nodes",
+	)
 
 	interfacesC := &cobra.Command{
-		Use:     "interfaces",
-		Short:   "inspect interfaces of one or multiple nodes in a lab",
-		Long:    "show interfaces and their attributes in a specific deployed lab\nreference: https://containerlab.dev/cmd/inspect/interfaces/",
+		Use:   "interfaces",
+		Short: "inspect interfaces of one or multiple nodes in a lab",
+		Long: "show interfaces and their attributes in a specific deployed lab\n" +
+			"reference: https://containerlab.dev/cmd/inspect/interfaces/",
 		Aliases: []string{"int", "intf"},
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return clabutils.CheckAndGetRootPrivs()
@@ -59,49 +81,47 @@ func inspectCmd(o *Options) (*cobra.Command, error) {
 
 	c.AddCommand(interfacesC)
 
-	interfacesC.Flags().StringVarP(&o.Inspect.InterfacesFormat, "format", "f",
-		o.Inspect.InterfacesFormat, "output format. One of [table, json]")
-	interfacesC.Flags().StringVarP(&o.Inspect.InterfacesNode, "node", "n",
-		o.Inspect.InterfacesNode, "node to inspect")
+	interfacesC.Flags().StringVarP(
+		&o.Inspect.InterfacesFormat,
+		"format",
+		"f",
+		o.Inspect.InterfacesFormat, "output format. One of [table, json]",
+	)
+	interfacesC.Flags().StringVarP(
+		&o.Inspect.InterfacesNode,
+		"node",
+		"n",
+		o.Inspect.InterfacesNode,
+		"node to inspect",
+	)
 
 	return c, nil
 }
 
 func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 	if o.Global.TopologyName == "" && o.Global.TopologyFile == "" && !o.Destroy.All {
-		return fmt.Errorf("provide either a lab name (--name) or a topology file path (--topo) or the --all flag")
-	}
-
-	// Format validation (only relevant if --details is NOT used)
-	if !o.Inspect.Details && o.Deploy.Format != "table" && o.Deploy.Format != "json" && o.Deploy.Format != "csv" {
-		return fmt.Errorf("output format %q is not supported when --details is not used, use 'table', 'json' or 'csv'", o.Deploy.Format)
-	}
-	// If --details is used, the format is implicitly JSON.
-	if o.Inspect.Details {
-		o.Deploy.Format = "json" // Force JSON format if details are requested
-	}
-
-	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithRuntime(
-			o.Global.Runtime,
-			&clabruntime.RuntimeConfig{
-				Debug:            o.Global.DebugCount > 0,
-				Timeout:          o.Global.Timeout,
-				GracefulShutdown: o.Destroy.GracefulShutdown,
-			},
-		),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	}
-
-	if o.Global.TopologyFile != "" {
-		opts = append(opts,
-			clabcore.WithTopoPath(o.Global.TopologyFile, o.Global.VarsFile),
-			clabcore.WithNodeFilter(o.Filter.NodeFilter),
+		return fmt.Errorf(
+			"provide either a lab name (--name) or a topology file path (--topo) or the --all flag",
 		)
 	}
 
-	c, err := clabcore.NewContainerLab(opts...)
+	// Format validation (only relevant if --details is NOT used)
+	if !o.Inspect.Details &&
+		o.Inspect.Format != "table" &&
+		o.Inspect.Format != "json" &&
+		o.Inspect.Format != "csv" {
+		return fmt.Errorf(
+			"output format %q is not supported when --details is not used, use "+
+				"'table', 'json' or 'csv'",
+			o.Inspect.Format,
+		)
+	}
+	// If --details is used, the format is implicitly JSON.
+	if o.Inspect.Details {
+		o.Inspect.Format = "json" // Force JSON format if details are requested
+	}
+
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}
@@ -113,14 +133,18 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 
 	// Handle empty results
 	if len(containers) == 0 {
-		switch o.Deploy.Format {
+		switch o.Inspect.Format {
 		case "json":
 			fmt.Println("{}")
 		case "csv":
-			fmt.Println("lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner")
+			fmt.Println(
+				"lab_name,labPath,absLabPath,name,container_id,image,kind,state,status," +
+					"ipv4_address,ipv6_address,owner",
+			)
 		default: // Table format
 			log.Info("no containers found")
 		}
+
 		return err
 	}
 
@@ -131,12 +155,18 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 
 	// Handle non-details cases (table or grouped JSON summary)
 	err = PrintContainerInspect(containers, o)
+
 	return err
 }
 
 // listContainers handles listing containers based on different criteria (topology or labels).
-func listContainers(ctx context.Context, c *clabcore.CLab, o *Options) ([]clabruntime.GenericContainer, error) {
+func listContainers(
+	ctx context.Context,
+	c *clabcore.CLab,
+	o *Options,
+) ([]clabruntime.GenericContainer, error) {
 	var containers []clabruntime.GenericContainer
+
 	var err error
 
 	if o.Global.TopologyFile != "" {
@@ -208,10 +238,12 @@ func toTableData(contDetails []clabtypes.ContainerDetails, o *Options) []tableWr
 
 		tabData = append(tabData, tabRow)
 	}
+
 	return tabData
 }
 
-// getShortestTopologyPath calculates the relative path to the provided topology file from the current working directory and returns it if it is shorted than the absolute path p.
+// getShortestTopologyPath calculates the relative path to the provided topology file from
+// the current working directory and returns it if it is shorted than the absolute path p.
 func getShortestTopologyPath(p string) (string, error) {
 	if p == "" {
 		return "", nil
@@ -242,28 +274,34 @@ func printContainerDetailsJSON(containers []clabruntime.GenericContainer) error 
 	sort.Slice(containers, func(i, j int) bool {
 		labNameI := containers[i].Labels[clablabels.Containerlab]
 		labNameJ := containers[j].Labels[clablabels.Containerlab]
+
 		if labNameI == labNameJ {
 			// Use the first name if available
 			nameI := ""
 			if len(containers[i].Names) > 0 {
 				nameI = containers[i].Names[0]
 			}
+
 			nameJ := ""
 			if len(containers[j].Names) > 0 {
 				nameJ = containers[j].Names[0]
 			}
+
 			return nameI < nameJ
 		}
+
 		return labNameI < labNameJ
 	})
 
 	// Group the sorted containers
 	for idx := range containers {
 		labName := containers[idx].Labels[clablabels.Containerlab]
-		// Ensure labName exists, default to a placeholder if missing (shouldn't happen with filters)
+		// Ensure labName exists, default to a placeholder if missing
+		// (shouldn't happen with filters)
 		if labName == "" {
 			labName = "_unknown_lab_"
 		}
+
 		groupedDetails[labName] = append(groupedDetails[labName], containers[idx])
 	}
 
@@ -281,6 +319,7 @@ func printContainerInspectJSON(contDetails []clabtypes.ContainerDetails) error {
 	// Group summary results by LabName
 	// Use a map where keys are lab names and values are slices of container details
 	groupedLabs := make(map[string][]clabtypes.ContainerDetails)
+
 	for idx := range contDetails {
 		labName := contDetails[idx].LabName
 		if labName == "" {
@@ -320,6 +359,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 	}
 
 	var header tableWriter.Row
+
 	var colConfigs []tableWriter.ColumnConfig
 
 	if o.Destroy.All {
@@ -332,7 +372,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 					AutoMerge: true, VAlign: text.VAlignMiddle,
 				},
 				tableWriter.ColumnConfig{
-					Number:    2,
+					Number:    2, //nolint: mnd
 					AutoMerge: true, VAlign: text.VAlignMiddle,
 				},
 			)
@@ -340,6 +380,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 		// If wide, do not set AutoMerge for any columns
 	} else {
 		header = headerBase
+
 		if !o.Inspect.Wide {
 			colConfigs = append(colConfigs, tableWriter.ColumnConfig{
 				Number:    1,
@@ -349,6 +390,7 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 	}
 
 	table.AppendHeader(header)
+
 	if len(colConfigs) > 0 {
 		table.SetColumnConfigs(colConfigs)
 	}
@@ -358,7 +400,8 @@ func printContainerInspectTable(contDetails []clabtypes.ContainerDetails, o *Opt
 }
 
 func printContainerInspectCSV(contDetails []clabtypes.ContainerDetails) {
-	csv := "lab_name,labPath,absLabPath,name,container_id,image,kind,state,status,ipv4_address,ipv6_address,owner\n"
+	csv := "lab_name,labPath,absLabPath,name,container_id,image,kind,state," +
+		"status,ipv4_address,ipv6_address,owner\n"
 	for idx := range contDetails {
 		csv += fmt.Sprintf("%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v,%v\n",
 			contDetails[idx].LabName,
@@ -374,6 +417,7 @@ func printContainerInspectCSV(contDetails []clabtypes.ContainerDetails) {
 			contDetails[idx].IPv6Address,
 			contDetails[idx].Owner)
 	}
+
 	fmt.Print(csv)
 }
 
@@ -384,9 +428,16 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 	// Gather summary details of each container
 	for idx := range containers {
 		absPath := containers[idx].Labels[clablabels.TopoFile]
+
 		shortPath, err := getShortestTopologyPath(absPath)
 		if err != nil {
-			log.Warnf("failed to get relative topology path for container %s: %v, using raw path %q", containers[idx].Names[0], err, absPath)
+			log.Warnf(
+				"failed to get relative topology path for container %s: %v, using raw path %q",
+				containers[idx].Names[0],
+				err,
+				absPath,
+			)
+
 			shortPath = absPath // Use raw path as fallback for display
 		}
 
@@ -407,12 +458,15 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 		if len(containers[idx].Names) > 0 {
 			cdet.Name = containers[idx].Names[0]
 		}
+
 		if group, ok := containers[idx].Labels[clablabels.NodeGroup]; ok {
 			cdet.Group = group
 		}
+
 		if kind, ok := containers[idx].Labels[clablabels.NodeKind]; ok {
 			cdet.Kind = kind
 		}
+
 		if owner, ok := containers[idx].Labels[clablabels.Owner]; ok {
 			cdet.Owner = owner
 		}
@@ -425,10 +479,11 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 		if contDetails[i].LabName == contDetails[j].LabName {
 			return contDetails[i].Name < contDetails[j].Name
 		}
+
 		return contDetails[i].LabName < contDetails[j].LabName
 	})
 
-	switch o.Deploy.Format {
+	switch o.Inspect.Format {
 	case "json":
 		err := printContainerInspectJSON(contDetails)
 		if err != nil {
@@ -439,7 +494,7 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 	case "csv":
 		printContainerInspectCSV(contDetails)
 	default:
-		return fmt.Errorf("internal error: unhandled format %q", o.Deploy.Format)
+		return fmt.Errorf("internal error: unhandled format %q", o.Inspect.Format)
 	}
 
 	return nil
@@ -469,7 +524,7 @@ func ipWithoutPrefix(ip string) string {
 	}
 
 	ipParts := strings.Split(ip, "/")
-	if len(ipParts) != 2 {
+	if len(ipParts) != 2 { //nolint: mnd
 		return ip // Return original if not in expected format "address/prefix"
 	}
 

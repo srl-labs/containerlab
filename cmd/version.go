@@ -25,8 +25,9 @@ var (
 )
 
 const (
-	repoUrl     = "https://github.com/srl-labs/containerlab"
-	downloadURL = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
+	repoUrl             = "https://github.com/srl-labs/containerlab"
+	downloadURL         = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
+	versionCheckTimeout = 5 * time.Second
 )
 
 func versionCmd(_ *Options) (*cobra.Command, error) {
@@ -51,7 +52,7 @@ func versionCmd(_ *Options) (*cobra.Command, error) {
 			Short: "Check if a new version of containerlab is available",
 			RunE: func(cobraCmd *cobra.Command, _ []string) error {
 				// We'll use a short 5-second timeout for the remote request
-				ctx, cancel := context.WithTimeout(cobraCmd.Context(), 5*time.Second)
+				ctx, cancel := context.WithTimeout(cobraCmd.Context(), versionCheckTimeout)
 				defer cancel()
 
 				m := getVersionManager()
@@ -89,6 +90,7 @@ func docsLinkFromVer(ver string) string {
 	if err != nil {
 		return "" // fallback
 	}
+
 	segments := v.Segments()
 	major := segments[0]
 	minor := segments[1]
@@ -98,6 +100,7 @@ func docsLinkFromVer(ver string) string {
 	if patch != 0 {
 		relSlug += fmt.Sprintf("#%d%d%d", major, minor, patch)
 	}
+
 	return relSlug
 }
 
@@ -107,15 +110,21 @@ func printNewVersionInfo(ver string) {
 	relSlug := docsLinkFromVer(ver)
 	fmt.Printf("🎉 A newer containerlab version (%s) is available!\n", ver)
 	fmt.Printf("Release notes: https://containerlab.dev/rn/%s\n", relSlug)
-	fmt.Println("Run 'sudo clab version upgrade' or see https://containerlab.dev/install/ for installation options.")
+	fmt.Println(
+		"Run 'sudo clab version upgrade' or see https://containerlab.dev/install/ " +
+			"for installation options.",
+	)
 }
 
 func upgrade(cobraCmd *cobra.Command, _ []string) error {
 	f, err := os.CreateTemp("", "containerlab")
+
 	defer os.Remove(f.Name())
+
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
+
 	err = clabutils.CopyFileContents(cobraCmd.Context(), downloadURL, f)
 	if err != nil {
 		return fmt.Errorf("failed to download upgrade script: %w", err)
@@ -128,6 +137,7 @@ func upgrade(cobraCmd *cobra.Command, _ []string) error {
 
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
+
 	err = c.Run()
 	if err != nil {
 		return fmt.Errorf("upgrade failed: %w", err)

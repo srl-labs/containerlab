@@ -69,13 +69,14 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 			Mgmt:     new(clabtypes.MgmtNet),
 			Topology: clabtypes.NewTopology(),
 		},
-		TopoPaths:       &clabtypes.TopoPaths{},
-		m:               new(sync.RWMutex),
-		Nodes:           make(map[string]clabnodes.Node),
-		Links:           make(map[int]clablinks.Link),
-		Runtimes:        make(map[string]clabruntime.ContainerRuntime),
-		Cert:            &clabcert.Cert{},
-		checkBindsPaths: true,
+		TopoPaths:         &clabtypes.TopoPaths{},
+		m:                 new(sync.RWMutex),
+		Nodes:             make(map[string]clabnodes.Node),
+		Links:             make(map[int]clablinks.Link),
+		Runtimes:          make(map[string]clabruntime.ContainerRuntime),
+		Cert:              &clabcert.Cert{},
+		checkBindsPaths:   true,
+		dependencyManager: clabcoredependency_manager.NewDependencyManager(),
 	}
 
 	// init a new NodeRegistry
@@ -104,11 +105,17 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	return c, err
 }
 
-// NewclabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
+// NewClabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
 // or a lab name. It returns the initialized CLab structure with the
 // topology loaded.
-func NewclabFromTopologyFileOrLabName(ctx context.Context,
-	topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool,
+func NewClabFromTopologyFileOrLabName(
+	topoPath,
+	labName,
+	varsFile,
+	runtimeName string,
+	debug bool,
+	timeout time.Duration,
+	graceful bool,
 ) (*CLab, error) {
 	if topoPath == "" && labName == "" {
 		cwd, err := os.Getwd()

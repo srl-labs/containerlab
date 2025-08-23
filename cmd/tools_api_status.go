@@ -16,7 +16,6 @@ import (
 	"github.com/spf13/cobra"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablabels "github.com/srl-labs/containerlab/labels"
-	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 // APIServerListItem defines the structure for API server container info in JSON output.
@@ -30,29 +29,10 @@ type APIServerListItem struct {
 	Owner   string `json:"owner"`
 }
 
-func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
+func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 	ctx := cobraCmd.Context()
 
-	// Use common.Runtime for consistency with other commands
-	runtimeName := o.Global.Runtime
-	if runtimeName == "" {
-		runtimeName = o.ToolsAPI.Runtime
-	}
-
-	// Initialize containerlab with runtime using the same approach as inspect command
-	opts := []clabcore.ClabOption{
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithRuntime(runtimeName,
-			&clabruntime.RuntimeConfig{
-				Debug:            o.Global.DebugCount > 0,
-				Timeout:          o.Global.Timeout,
-				GracefulShutdown: o.Destroy.GracefulShutdown,
-			},
-		),
-		clabcore.WithDebug(o.Global.DebugCount > 0),
-	}
-
-	c, err := clabcore.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}
@@ -74,6 +54,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 		} else {
 			fmt.Println("No active API server containers found")
 		}
+
 		return nil
 	}
 
@@ -84,6 +65,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 
 		// Get port from labels or use default
 		port := 8080 // default
+
 		if portStr, ok := containers[idx].Labels["clab-api-port"]; ok {
 			if portVal, err := strconv.Atoi(portStr); err == nil {
 				port = portVal
@@ -130,6 +112,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)
 		}
+
 		fmt.Println(string(b))
 	} else {
 		// Use go-pretty table
@@ -152,6 +135,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 				item.Owner,
 			})
 		}
+
 		t.Render()
 	}
 

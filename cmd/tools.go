@@ -29,7 +29,8 @@ func toolsCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "tools",
 		Short: "various tools your lab might need",
-		Long:  "tools command groups various tools you might need for your lab\nreference: https://containerlab.dev/cmd/tools/",
+		Long: "tools command groups various tools you might need for your lab\n" +
+			"reference: https://containerlab.dev/cmd/tools/",
 	}
 
 	for _, f := range toolsSubcommandRegisterFuncs() {
