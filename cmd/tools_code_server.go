@@ -136,10 +136,16 @@ func NewCodeServerNode(name, image, labsDir string, port uint, runtime clabrunti
 		return nil, fmt.Errorf("failed to create container port: %w", err)
 	}
 	exposedPorts[containerPort] = struct{}{}
+
+	var hostPort uint = 0
+	if port != 0 {
+		hostPort = port
+	}
+
 	portBindings[containerPort] = []nat.PortBinding{
 		{
 			HostIP:   "0.0.0.0",
-			HostPort: "",
+			HostPort: fmt.Sprintf("%d", hostPort),
 		},
 	}
 
