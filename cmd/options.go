@@ -102,6 +102,13 @@ func GetOptions() *Options {
 				SrcPort:        0,
 				DeletionPrefix: "vx-",
 			},
+			ToolsCodeServer: &ToolsCodeServerOptions{
+				Image:        "ghcr.io/kaelemc/clab-code-server:latest",
+				Name:         "clab-code-server",
+				Host:         "localhost",
+				LogLevel:     "debug",
+				OutputFormat: "table",
+			},
 			Version: &VersionOptions{
 				Short: false,
 				JSON:  false,
@@ -113,23 +120,24 @@ func GetOptions() *Options {
 }
 
 type Options struct {
-	Global         *GlobalOptions
-	Filter         *FilterOptions
-	Deploy         *DeployOptions
-	Destroy        *DestroyOptions
-	Config         *ConfigOptions
-	Exec           *ExecOptions
-	Inspect        *InspectOptions
-	Graph          *GraphOptions
-	ToolsAPI       *ToolsApiOptions
-	ToolsCert      *ToolsCertOptions
-	ToolsTxOffload *ToolsDisableTxOffloadOptions
-	ToolsGoTTY     *ToolsGoTTYOptions
-	ToolsNetem     *ToolsNetemOptions
-	ToolsSSHX      *ToolsSSHXOptions
-	ToolsVeth      *ToolsVethOptions
-	ToolsVxlan     *ToolsVxlanOptions
-	Version        *VersionOptions
+	Global          *GlobalOptions
+	Filter          *FilterOptions
+	Deploy          *DeployOptions
+	Destroy         *DestroyOptions
+	Config          *ConfigOptions
+	Exec            *ExecOptions
+	Inspect         *InspectOptions
+	Graph           *GraphOptions
+	ToolsAPI        *ToolsApiOptions
+	ToolsCert       *ToolsCertOptions
+	ToolsTxOffload  *ToolsDisableTxOffloadOptions
+	ToolsGoTTY      *ToolsGoTTYOptions
+	ToolsNetem      *ToolsNetemOptions
+	ToolsSSHX       *ToolsSSHXOptions
+	ToolsVeth       *ToolsVethOptions
+	ToolsVxlan      *ToolsVxlanOptions
+	ToolsCodeServer *ToolsCodeServerOptions
+	Version         *VersionOptions
 }
 
 func (o *Options) ToClabOptions() []clabcore.ClabOption {
@@ -433,6 +441,17 @@ type ToolsVxlanOptions struct {
 	Remote         string
 	ParentDevice   string
 	DeletionPrefix string
+}
+
+type ToolsCodeServerOptions struct {
+	Image         string
+	Name          string
+	Port          uint
+	Host          string
+	LogLevel      string
+	OutputFormat  string
+	LabsDirectory string
+	Owner         string
 }
 
 type VersionOptions struct {
