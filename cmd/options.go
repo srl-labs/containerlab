@@ -105,7 +105,6 @@ func GetOptions() *Options {
 			ToolsCodeServer: &ToolsCodeServerOptions{
 				Image:        "ghcr.io/kaelemc/clab-code-server:latest",
 				Name:         "clab-code-server",
-				Host:         "localhost",
 				LogLevel:     "debug",
 				OutputFormat: "table",
 			},
@@ -447,7 +446,6 @@ type ToolsCodeServerOptions struct {
 	Image         string
 	Name          string
 	Port          uint
-	Host          string
 	LogLevel      string
 	OutputFormat  string
 	LabsDirectory string
