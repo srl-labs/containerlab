@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -96,8 +95,8 @@ func NewCodeServerNode(name, image, labsDir string, port uint, runtime clabrunti
 	}
 
 	binds := clabtypes.Binds{
-		clabtypes.NewBind(homeDir, "/home/coder/labs", ""),
-		clabtypes.NewBind("/etc/group", "/etc/group", "ro"),
+		clabtypes.NewBind(homeDir, "/labs", ""),
+		// clabtypes.NewBind("/etc/group", "/etc/group", "ro"),
 	}
 
 	// get the runtime socket path
@@ -173,13 +172,11 @@ func (*codeServerNode) GetEndpoints() []clablinks.Endpoint {
 // createLabels creates container labels.
 func createCodeServerLabels(containerName, owner string, port uint, labsDir, host string) map[string]string {
 	labels := map[string]string{
-		clablabels.NodeName:     containerName,
-		clablabels.NodeKind:     "linux",
-		clablabels.NodeType:     "tool",
-		clablabels.ToolType:     "code-server",
-		"clab-code-server-host": host,
-		"clab-code-server-port": fmt.Sprintf("%d", port),
-		"clab-labs-dir":         labsDir,
+		clablabels.NodeName: containerName,
+		clablabels.NodeKind: "linux",
+		clablabels.NodeType: "tool",
+		clablabels.ToolType: "code-server",
+		"clab-labs-dir":     labsDir,
 	}
 
 	// Add owner label if available
@@ -315,7 +312,7 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: fun
 			&clabruntime.RuntimeConfig{
 				Debug:            o.Global.DebugCount > 0,
 				Timeout:          o.Global.Timeout,
-				GracefulShutdown: o.Destroy.GracefulShutdown,
+				GracefulShutdown: o.Global.GracefulShutdown,
 			},
 		),
 		clabcore.WithDebug(o.Global.DebugCount > 0),
@@ -352,18 +349,7 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: fun
 		name := strings.TrimPrefix(containers[idx].Names[0], "/")
 
 		// Get port from labels or use default
-		port := 8080 // default
-		if portStr, ok := containers[idx].Labels["code-server-port"]; ok {
-			if portVal, err := strconv.Atoi(portStr); err == nil {
-				port = portVal
-			}
-		}
-
-		// Get host from labels or use default
-		host := "localhost" // default
-		if hostVal, ok := containers[idx].Labels["code-server-host"]; ok {
-			host = hostVal
-		}
+		port := containers[idx].Ports[0].HostPort
 
 		// Get labs dir from labels or use default
 		labsDir := "~/.clab" // default
@@ -380,7 +366,6 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: fun
 		listItems = append(listItems, codeServerListItem{
 			Name:    name,
 			State:   containers[idx].State,
-			Host:    host,
 			Port:    port,
 			LabsDir: labsDir,
 			Owner:   owner,
@@ -401,13 +386,12 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: fun
 		t.Style().Format.Header = text.FormatTitle
 		t.Style().Options.SeparateRows = true
 
-		t.AppendHeader(table.Row{"NAME", "STATUS", "HOST", "PORT", "LABS DIR", "OWNER"})
+		t.AppendHeader(table.Row{"NAME", "STATUS", "PORT", "LABS DIR", "OWNER"})
 
 		for _, item := range listItems {
 			t.AppendRow(table.Row{
 				item.Name,
 				item.State,
-				item.Host,
 				item.Port,
 				item.LabsDir,
 				item.Owner,
