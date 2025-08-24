@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -22,6 +23,7 @@ func toolsSubcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		sshxCmd,
 		vethCmd,
 		vxlanCmd,
+		codeServerCmd,
 	}
 }
 
@@ -80,4 +82,18 @@ func createLabelsMap(topo, labName, containerName, owner, toolType string) map[s
 	}
 
 	return labels
+}
+
+// getclabBinaryPath determine the binary path of the running executable.
+func getclabBinaryPath() (string, error) {
+	exePath, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+
+	absPath, err := filepath.EvalSymlinks(exePath)
+	if err != nil {
+		return "", err
+	}
+	return absPath, nil
 }
