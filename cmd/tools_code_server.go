@@ -170,7 +170,7 @@ func (*codeServerNode) GetEndpoints() []clablinks.Endpoint {
 }
 
 // createLabels creates container labels.
-func createCodeServerLabels(containerName, owner string, port uint, labsDir, host string) map[string]string {
+func createCodeServerLabels(containerName, owner string, port uint, labsDir string) map[string]string {
 	labels := map[string]string{
 		clablabels.NodeName: containerName,
 		clablabels.NodeKind: "linux",
@@ -239,7 +239,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 
 	owner := getOwnerName(o)
 	labels := createCodeServerLabels(o.ToolsCodeServer.Name, owner, o.ToolsCodeServer.Port,
-		o.ToolsCodeServer.LabsDirectory, o.ToolsCodeServer.Host)
+		o.ToolsCodeServer.LabsDirectory)
 
 	// Create and start code server container
 	log.Info("Creating code server container", "name", o.ToolsCodeServer.Name)
@@ -271,8 +271,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 		if err == nil && len(containers) > 0 && len(containers[0].Ports) > 0 {
 			for _, portMapping := range containers[0].Ports {
 				if portMapping.ContainerPort == 8080 {
-					log.Infof("code-server available at: http://%s:%d",
-						o.ToolsCodeServer.Host, portMapping.HostPort)
+					log.Infof("code-server available at: http://0.0.0.0:%d", portMapping.HostPort)
 					break
 				}
 			}
@@ -280,7 +279,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 			log.Infof("code-server container started. Check 'docker ps' for the assigned port.")
 		}
 	} else {
-		log.Infof("code-server available at: http://%s:%d", o.ToolsCodeServer.Host, o.ToolsCodeServer.Port)
+		log.Infof("code-server available at: http://0.0.0.0:%d", o.ToolsCodeServer.Port)
 	}
 
 	return nil
