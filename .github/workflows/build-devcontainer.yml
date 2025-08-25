@@ -36,50 +36,50 @@ jobs:
           # AMD64 builds
           - platform: "linux/amd64"
             runner: "ubuntu-24.04"
-            suffix: "-amd64"
+            arch-suffix: "amd64"
             variant: "dind"
             devContFile: .devcontainer/docker-in-docker/devcontainer.json
             image-suffix: "-dind"
           - platform: "linux/amd64"
             runner: "ubuntu-24.04"
-            suffix: "-amd64"
+            arch-suffix: "amd64"
             variant: "dind-slim"
             devContFile: .devcontainer/docker-in-docker_slim/devcontainer.json
             image-suffix: "-dind-slim"
           - platform: "linux/amd64"
             runner: "ubuntu-24.04"
-            suffix: "-amd64"
+            arch-suffix: "amd64"
             variant: "dood"
             devContFile: .devcontainer/docker-outside-of-docker/devcontainer.json
             image-suffix: "-dood"
           - platform: "linux/amd64"
             runner: "ubuntu-24.04"
-            suffix: "-amd64"
+            arch-suffix: "amd64"
             variant: "dood-slim"
             devContFile: .devcontainer/docker-outside-of-docker_slim/devcontainer.json
             image-suffix: "-dood-slim"
           # ARM64 builds
           - platform: "linux/arm64"
             runner: "ubuntu-24.04-arm"
-            suffix: "-arm64"
+            arch-suffix: "arm64"
             variant: "dind"
             devContFile: .devcontainer/docker-in-docker/devcontainer.json
             image-suffix: "-dind"
           - platform: "linux/arm64"
             runner: "ubuntu-24.04-arm"
-            suffix: "-arm64"
+            arch-suffix: "arm64"
             variant: "dind-slim"
             devContFile: .devcontainer/docker-in-docker_slim/devcontainer.json
             image-suffix: "-dind-slim"
           - platform: "linux/arm64"
             runner: "ubuntu-24.04-arm"
-            suffix: "-arm64"
+            arch-suffix: "arm64"
             variant: "dood"
             devContFile: .devcontainer/docker-outside-of-docker/devcontainer.json
             image-suffix: "-dood"
           - platform: "linux/arm64"
             runner: "ubuntu-24.04-arm"
-            suffix: "-arm64"
+            arch-suffix: "arm64"
             variant: "dood-slim"
             devContFile: .devcontainer/docker-outside-of-docker_slim/devcontainer.json
             image-suffix: "-dood-slim"
@@ -114,7 +114,7 @@ jobs:
       - name: Extract tags
         id: extract-tags
         run: |
-          TAGS=$(echo '${{ steps.meta.outputs.tags }}' | awk -F: '{print $2}' | paste -sd "," -)
+          TAGS=$(echo '${{ steps.meta.outputs.tags }}' | awk -F: '{print $2}' | sed "s/$/\-${{ matrix.arch-suffix }}/" | paste -sd "," -)
           echo "TAGS=$TAGS" >> $GITHUB_OUTPUT
         shell: bash
 
@@ -124,7 +124,7 @@ jobs:
           CLAB_VERSION: ${{ inputs.clab_version }}
         with:
           imageName: ghcr.io/${{ github.repository }}/devcontainer${{ matrix.image-suffix }}
-          imageTag: ${{ steps.extract-tags.outputs.tags }}${{ matrix.suffix }}
+          imageTag: ${{ steps.extract-tags.outputs.tags }}
           push: always
           platform: ${{ matrix.platform }}
           configFile: ${{ matrix.devContFile }}
