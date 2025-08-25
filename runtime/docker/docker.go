@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -1190,4 +1191,12 @@ func (*DockerRuntime) GetCooCBindMounts() clabtypes.Binds {
 		clabtypes.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
 		clabtypes.NewBind("/run/netns", "/run/netns", ""),
 	}
+}
+
+func (*DockerRuntime) GetRuntimeBinary() (string, error) {
+	path, err := exec.LookPath("docker")
+	if err != nil {
+		return "", fmt.Errorf("failed to get docker runtime binary path: %w", err)
+	}
+	return path, nil
 }
