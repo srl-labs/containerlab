@@ -165,7 +165,7 @@ jobs:
             # manually set tag
             type=raw,value=${{ inputs.tag }}
 
-      - name: Extract tags
+      - name: Extract base tags (without arch suffix)
         id: extract-tags
         run: |
           TAGS=$(echo '${{ steps.meta.outputs.tags }}' | awk -F: '{print $2}' | paste -sd "," -)
