@@ -32,24 +32,55 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        arch:
+        include:
+          # AMD64 builds
           - platform: "linux/amd64"
             runner: "ubuntu-24.04"
             suffix: "-amd64"
+            variant: "dind"
+            devContFile: .devcontainer/docker-in-docker/devcontainer.json
+            image-suffix: "-dind"
+          - platform: "linux/amd64"
+            runner: "ubuntu-24.04"
+            suffix: "-amd64"
+            variant: "dind-slim"
+            devContFile: .devcontainer/docker-in-docker_slim/devcontainer.json
+            image-suffix: "-dind-slim"
+          - platform: "linux/amd64"
+            runner: "ubuntu-24.04"
+            suffix: "-amd64"
+            variant: "dood"
+            devContFile: .devcontainer/docker-outside-of-docker/devcontainer.json
+            image-suffix: "-dood"
+          - platform: "linux/amd64"
+            runner: "ubuntu-24.04"
+            suffix: "-amd64"
+            variant: "dood-slim"
+            devContFile: .devcontainer/docker-outside-of-docker_slim/devcontainer.json
+            image-suffix: "-dood-slim"
+          # ARM64 builds
           - platform: "linux/arm64"
             runner: "ubuntu-24.04-arm"
             suffix: "-arm64"
-        variant:
-          - name: "dind"
+            variant: "dind"
             devContFile: .devcontainer/docker-in-docker/devcontainer.json
             image-suffix: "-dind"
-          - name: "dind-slim"
+          - platform: "linux/arm64"
+            runner: "ubuntu-24.04-arm"
+            suffix: "-arm64"
+            variant: "dind-slim"
             devContFile: .devcontainer/docker-in-docker_slim/devcontainer.json
             image-suffix: "-dind-slim"
-          - name: "dood"
+          - platform: "linux/arm64"
+            runner: "ubuntu-24.04-arm"
+            suffix: "-arm64"
+            variant: "dood"
             devContFile: .devcontainer/docker-outside-of-docker/devcontainer.json
             image-suffix: "-dood"
-          - name: "dood-slim"
+          - platform: "linux/arm64"
+            runner: "ubuntu-24.04-arm"
+            suffix: "-arm64"
+            variant: "dood-slim"
             devContFile: .devcontainer/docker-outside-of-docker_slim/devcontainer.json
             image-suffix: "-dood-slim"
     steps:
@@ -92,11 +123,11 @@ jobs:
         env:
           CLAB_VERSION: ${{ inputs.clab_version }}
         with:
-          imageName: ghcr.io/${{ github.repository }}/devcontainer${{ matrix.variant.image-suffix }}
-          imageTag: ${{ steps.extract-tags.outputs.tags }}${{ matrix.arch.suffix }}
+          imageName: ghcr.io/${{ github.repository }}/devcontainer${{ matrix.image-suffix }}
+          imageTag: ${{ steps.extract-tags.outputs.tags }}${{ matrix.suffix }}
           push: always
-          platform: ${{ matrix.arch.platform }}
-          configFile: ${{ matrix.variant.devContFile }}
+          platform: ${{ matrix.platform }}
+          configFile: ${{ matrix.devContFile }}
 
   create-manifest:
     needs: build
