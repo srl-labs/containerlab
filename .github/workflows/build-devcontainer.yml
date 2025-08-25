@@ -28,37 +28,33 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  devcontainer:
-    runs-on: ubuntu-24.04
+  build:
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
+        arch:
+          - platform: "linux/amd64"
+            runner: "ubuntu-24.04"
+            suffix: "-amd64"
+          - platform: "linux/arm64"
+            runner: "ubuntu-24.04-arm"
+            suffix: "-arm64"
         variant:
-          - "dind"
-          - "dind-slim"
-          - "dood"
-          - "dood-slim"
-        include:
-          - variant: dind
+          - name: "dind"
             devContFile: .devcontainer/docker-in-docker/devcontainer.json
             image-suffix: "-dind"
-          - variant: dind-slim
+          - name: "dind-slim"
             devContFile: .devcontainer/docker-in-docker_slim/devcontainer.json
             image-suffix: "-dind-slim"
-          - variant: dood
+          - name: "dood"
             devContFile: .devcontainer/docker-outside-of-docker/devcontainer.json
             image-suffix: "-dood"
-          - variant: dood-slim
+          - name: "dood-slim"
             devContFile: .devcontainer/docker-outside-of-docker_slim/devcontainer.json
             image-suffix: "-dood-slim"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-
-      - name: Setup QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          # workaround for https://github.com/tonistiigi/binfmt/issues/240
-          image: tonistiigi/binfmt:qemu-v7.0.0-28
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -96,8 +92,65 @@ jobs:
         env:
           CLAB_VERSION: ${{ inputs.clab_version }}
         with:
-          imageName: ghcr.io/${{ github.repository }}/devcontainer${{ matrix.image-suffix }}
-          imageTag: ${{ steps.extract-tags.outputs.tags }}
+          imageName: ghcr.io/${{ github.repository }}/devcontainer${{ matrix.variant.image-suffix }}
+          imageTag: ${{ steps.extract-tags.outputs.tags }}${{ matrix.arch.suffix }}
           push: always
-          platform: linux/amd64,linux/arm64
-          configFile: ${{ matrix.devContFile }}
+          platform: ${{ matrix.arch.platform }}
+          configFile: ${{ matrix.variant.devContFile }}
+
+  create-manifest:
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        variant:
+          - name: "dind"
+            image-suffix: "-dind"
+          - name: "dind-slim"
+            image-suffix: "-dind-slim"
+          - name: "dood"
+            image-suffix: "-dood"
+          - name: "dood-slim"
+            image-suffix: "-dood-slim"
+    steps:
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=ref,event=pr
+            # git short commit
+            type=sha
+            # manually set tag
+            type=raw,value=${{ inputs.tag }}
+
+      - name: Extract tags
+        id: extract-tags
+        run: |
+          TAGS=$(echo '${{ steps.meta.outputs.tags }}' | awk -F: '{print $2}' | paste -sd "," -)
+          echo "TAGS=$TAGS" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Create and push manifest
+        run: |
+          for tag in $(echo "${{ steps.extract-tags.outputs.tags }}" | tr ',' '\n'); do
+            IMAGE_BASE="ghcr.io/${{ github.repository }}/devcontainer${{ matrix.variant.image-suffix }}"
+            
+            # Create manifest
+            docker manifest create "${IMAGE_BASE}:${tag}" \
+              --amend "${IMAGE_BASE}:${tag}-amd64" \
+              --amend "${IMAGE_BASE}:${tag}-arm64"
+            
+            # Push manifest
+            docker manifest push "${IMAGE_BASE}:${tag}"
+          done
