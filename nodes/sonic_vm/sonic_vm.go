@@ -85,7 +85,7 @@ func (n *sonic_vm) PreDeploy(_ context.Context, params *clabnodes.PreDeployParam
 	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		log.Errorf("Error handling certifcate for %s: %v", n.Cfg.ShortName, err)
+		log.Errorf("Error handling certificate for %s: %v", n.Cfg.ShortName, err)
 
 		return nil
 	}
