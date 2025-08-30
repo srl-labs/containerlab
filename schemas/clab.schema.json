@@ -147,6 +147,11 @@
                     "description": "Set to `true` to make the node to boot with a startup-config even if the config file is present in the lab directory",
                     "markdownDescription": "Set to `true` to [make the node to boot with a startup-config](https://containerlab.dev/manual/nodes/#enforce-startup-config) even if the config file is present in the lab directory"
                 },
+                "suppress-startup-config": {
+                    "type": "boolean",
+                    "description": "Set to `true` to prevent a startup-config file from being created (in a Zero-Touch Provisioning lab, for example)",
+                    "markdownDescription": "Set to `true` to [prevent a startup-config file from being created](https://containerlab.dev/manual/nodes/#suppress-startup-config) By default, containerlab will create a startup-config when initially creating a lab."
+                },
                 "auto-remove": {
                     "type": "boolean",
                     "description": "Set to `true` to remove the node automatically, instead of auto-restarting",
