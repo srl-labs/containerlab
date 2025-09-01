@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	kindnames          = []string{"mikrotik_ros", "vr-ros", "vr-mikrotik_ros"}
+	kindNames          = []string{"mikrotik_ros", "vr-ros", "vr-mikrotik_ros"}
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`ether(?P<port>\d+)`)
@@ -45,7 +45,7 @@ func Register(r *clabnodes.NodeRegistry) {
 
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
 
-	r.Register(kindnames, func() clabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrRos)
 	}, nrea)
 }
