@@ -93,7 +93,7 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 }
 
 // SaveConfig overrides the default VRNode SaveConfig to handle MikroTik RouterOS
-// Uses direct SSH connection since scrapligo doesn't support mikrotik_routeros platform.
+// Uses direct SSH connection since scrapligo doesn't support MikroTik RouterOS platform.
 // To be refactored to use scrapli's GenericDriver or an enhanced scraplicfg.
 func (n *vrRos) SaveConfig(_ context.Context) error {
 	// Create SSH client configuration
