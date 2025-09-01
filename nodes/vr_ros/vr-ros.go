@@ -5,13 +5,20 @@
 package vr_ros
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"path"
+	"path/filepath"
 	"regexp"
+	"strings"
+	"time"
 
+	"github.com/charmbracelet/log"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"golang.org/x/crypto/ssh"
 )
 
 var (
@@ -83,4 +90,85 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 	n.InterfaceHelp = InterfaceHelp
 
 	return nil
+}
+
+// SaveConfig overrides the default VRNode SaveConfig to handle MikroTik RouterOS
+// Uses direct SSH connection since scrapligo doesn't support mikrotik_routeros platform.
+// To be refactored to use scrapli's GenericDriver or an enhanced scraplicfg.
+func (n *vrRos) SaveConfig(_ context.Context) error {
+	// Create SSH client configuration
+	config := &ssh.ClientConfig{
+		User: n.Credentials.GetUsername(),
+		Auth: []ssh.AuthMethod{
+			ssh.Password(n.Credentials.GetPassword()),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Accept any host key
+		Timeout:         10 * time.Second,
+	}
+
+	// Connect to the MikroTik RouterOS device
+	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", n.Cfg.LongName), config)
+	if err != nil {
+		return fmt.Errorf("failed to connect to %s via SSH: %+v", n.Cfg.LongName, err)
+	}
+	defer conn.Close()
+
+	// Create a session
+	session, err := conn.NewSession()
+	if err != nil {
+		return fmt.Errorf("failed to create SSH session for %s: %+v", n.Cfg.LongName, err)
+	}
+	defer session.Close()
+
+	// Execute the export command to get the configuration
+	output, err := session.CombinedOutput("export")
+	if err != nil {
+		return fmt.Errorf("failed to execute export command on %s: %+v", n.Cfg.LongName, err)
+	}
+
+	config_content := strings.TrimSpace(string(output))
+	if config_content == "" {
+		return fmt.Errorf("received empty configuration from %s", n.Cfg.LongName)
+	}
+
+	// Filter out ether1 management interface IP address configuration
+	filtered_config := n.filterManagementInterfaceConfig(config_content)
+
+	// Save config to mounted labdir startup config path
+	configPath := filepath.Join(n.Cfg.LabDir, n.ConfigDirName, n.StartupCfgFName)
+	err = os.WriteFile(configPath, []byte(filtered_config), 0o777) // skipcq: GO-S2306
+	if err != nil {
+		return fmt.Errorf("failed to write config by %s path from %s container: %v", configPath, n.Cfg.ShortName, err)
+	}
+	log.Info("Saved configuration to path", "nodeName", n.Cfg.ShortName, "path", configPath)
+
+	return nil
+}
+
+// filterManagementInterfaceConfig removes ether1 (management interface) IP address configuration
+// from the exported RouterOS configuration to avoid including containerlab management IP settings.
+func (n *vrRos) filterManagementInterfaceConfig(config string) string {
+	lines := strings.Split(config, "\n")
+	var filteredLines []string
+
+	for _, line := range lines {
+		// Skip lines related to ether1 IP address configuration
+		if strings.Contains(line, "/ip address") {
+			// Mark that we're in the IP address section
+			filteredLines = append(filteredLines, line)
+			continue
+		}
+
+		// Skip IP address entries for ether1 interface
+		if strings.Contains(line, "interface=ether1") &&
+			(strings.Contains(line, "add address=") || strings.Contains(line, "add ")) {
+			// Skip this line as it's ether1 IP configuration
+			continue
+		}
+
+		// Keep all other lines
+		filteredLines = append(filteredLines, line)
+	}
+
+	return strings.Join(filteredLines, "\n")
 }
