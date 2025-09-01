@@ -227,8 +227,8 @@ func NewSSHXNode(
 
 	_, gid, _ := clabutils.GetRealUserIDs()
 
-	// user `user` is a sudo user in srl-labs/network-multitool
-	userName := "user"
+	// user `admin` is a sudo user in srl-labs/network-multitool
+	userName := "admin"
 
 	nodeConfig := &clabtypes.NodeConfig{
 		LongName:   name,
