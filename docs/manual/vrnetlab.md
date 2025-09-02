@@ -1,7 +1,7 @@
 ---
 vr_rns:
   "0.20.1": >-
-    New platforms: [Cisco IOL](kinds/cisco_iol.md), [Cisco vIOS](https://github.com/srl-labs/vrnetlab/tree/master/vios), [Huawei VRP](kinds/huawei_vrp.md)<br/>
+    New platforms: [Cisco IOL](kinds/cisco_iol.md), [Cisco vIOS](https://github.com/srl-labs/vrnetlab/tree/master/cisco/vios), [Huawei VRP](kinds/huawei_vrp.md)<br/>
     The vrnetlab version (commit) is now part of the image labels under the `vrnetlab-version` name. This should help you identify what version of vrnetlab is used to build the image.
 ---
 # VM-based routers integration

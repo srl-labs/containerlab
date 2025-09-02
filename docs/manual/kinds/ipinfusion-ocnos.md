@@ -4,7 +4,7 @@ search:
 ---
 # IPInfusion OcNOS
 
-IPInfusion OcNOS virtualized router is identified with `ipinfusion_ocnos` kind in the [topology file](../topo-def-file.md). It is built using [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab/tree/master/ocnos) and essentially is a Qemu VM packaged in a docker container format.
+IPInfusion OcNOS virtualized router is identified with `ipinfusion_ocnos` kind in the [topology file](../topo-def-file.md). It is built using [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab/tree/master/ipinfusion/ocnos) and essentially is a Qemu VM packaged in a docker container format.
 
 ipinfusion_ocnos nodes launched with containerlab come up pre-provisioned with SSH, and NETCONF services enabled.
 
