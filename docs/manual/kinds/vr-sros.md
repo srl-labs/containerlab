@@ -129,7 +129,7 @@ Interfaces can be defined in a non-sequential way, for example:
 
 vSIM SR OS simulator can be run in multiple HW variants as explained in [the vSIM installation guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE15836AAADTQZZA01_V1_vSIM%20Installation%20and%20Setup%20Guide%2020.10.R1.pdf).
 
-Nokia SR OS VM container images come with [pre-packaged SR OS VM variants](https://github.com/srl-labs/vrnetlab/tree/master/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/srl-labs/vrnetlab/tree/master/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. On the other hand, custom variants give users total flexibility in emulated hardware configuration, but cards and MDAs must be configured manually.
+Nokia SR OS VM container images come with [pre-packaged SR OS VM variants](https://github.com/srl-labs/vrnetlab/tree/master/nokia/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/srl-labs/vrnetlab/tree/master/nokia/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. On the other hand, custom variants give users total flexibility in emulated hardware configuration, but cards and MDAs must be configured manually.
 
 To make Nokia SR OS VM to boot in one of the packaged variants, set the type to one of the predefined variant values:
 
