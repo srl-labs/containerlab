@@ -44,7 +44,7 @@ With Rosetta virtualisation it is possible to run x86_64 images on ARM64, but th
 
 /// admonition | VM-based images
     type: warning
-VM-based images built with [hellt/vrnetlab](manual/vrnetlab.md) require nested virtualization support, which is only available on M3+ chip with macOS version 15 and above.
+VM-based images built with [srl-labs/vrnetlab](manual/vrnetlab.md) require nested virtualization support, which is only available on M3+ chip with macOS version 15 and above.
 
 If you happen to satisfy these requirements, please let us know in the comments which images you were able to run on your M3+ Mac.
 ///

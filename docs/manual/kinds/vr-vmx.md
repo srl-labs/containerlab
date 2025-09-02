@@ -85,7 +85,7 @@ Data interfaces `et-0/0/0+` need to be configured with IP addressing manually us
 
 Juniper vMX nodes come up with a basic configuration where only the control plane and line cards are provisioned, as well as the `admin` users and management interfaces such as NETCONF, SNMP, gNMI.
 
-Starting with [hellt/vrnetlab](https://github.com/hellt/vrnetlab) v0.8.2 VMX will make use of the management VRF[^1].
+Starting with [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab) v0.8.2 VMX will make use of the management VRF[^1].
 
 #### Startup configuration
 
@@ -115,4 +115,4 @@ The following labs feature Juniper vMX node:
 * vMX requires Linux kernel 4.17+
 * To check the boot log, use `docker logs -f <node-name>`.
 
-[^1]: https://github.com/hellt/vrnetlab/pull/98
+[^1]: https://github.com/srl-labs/vrnetlab/pull/98
