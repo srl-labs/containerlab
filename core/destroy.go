@@ -346,9 +346,10 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 }
 
 func (c *CLab) deleteToolContainers(ctx context.Context) {
-	toolTypes := []string{"sshx", "gotty"}
+	toolTypes := []string{"sshx", "gotty", "tailscale"}
 
 	for _, toolType := range toolTypes {
+		log.Debug("Processing tool type", "tool", toolType, "lab", c.Config.Name)
 		toolFilter := []*clabtypes.GenericFilter{
 			{
 				FilterType: "label",
@@ -367,12 +368,12 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 		containers, err := c.globalRuntime().ListContainers(ctx, toolFilter)
 		if err != nil {
 			log.Error("Failed to list tool containers", "tool", toolType, "error", err)
-			return
+			continue
 		}
 
 		if len(containers) == 0 {
 			log.Debug("No tool containers found for lab", "tool", toolType, "lab", c.Config.Name)
-			return
+			continue
 		}
 
 		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab",

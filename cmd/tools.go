@@ -22,6 +22,7 @@ func toolsSubcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		sshxCmd,
 		vethCmd,
 		vxlanCmd,
+		tailscaleCmd,
 	}
 }
 
