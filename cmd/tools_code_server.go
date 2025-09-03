@@ -154,7 +154,7 @@ func NewCodeServerNode(name, image, labsDir string,
 	exposedPorts := make(nat.PortSet)
 	portBindings := make(nat.PortMap)
 
-	containerPort, err := nat.NewPort("tcp", "8080")
+	containerPort, err := nat.NewPort("tcp", fmt.Sprintf("%d", codeServerPort))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container port: %w", err)
 	}
