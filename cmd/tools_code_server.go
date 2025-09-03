@@ -263,7 +263,6 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error {
 	// Pull the container image
 	log.Infof("Pulling image %s...", o.ToolsCodeServer.Image)
 
-	//nolint:lll
 	if err := rt.PullImage(ctx, o.ToolsCodeServer.Image, clabtypes.PullPolicyAlways); err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", o.ToolsCodeServer.Image, err)
 	}
