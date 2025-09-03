@@ -322,6 +322,47 @@
                         "type": "string"
                     },
                     "uniqueItems": true
+                },
+                "shm-size": {
+                    "type": "string",
+                    "description": "shared memory size limit allocated to the container. Supported memory suffixes (case insensitive): b, kib, kb, mib, mb, gib, gb",
+                    "markdownDescription": "[shared memory size limit](https://containerlab.dev/manual/nodes/#shm-size) allocated to the container (e.g. 256MB). Supported memory suffixes (case insensitive): b, kib, kb, mib, mb, gib, gb",
+                    "pattern": "^[0-9]+(\\.?[0-9]*)?\\s*([bB]|[kK][iI]?[bB]|[mM][iI]?[bB]|[gG][iI]?[bB])?$"
+                },
+                "cap-add": {
+                    "type": "array",
+                    "description": "list of capabilities to add to the container",
+                    "markdownDescription": "list of [capabilities](https://containerlab.dev/manual/nodes/#cap-add) to add to the container",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "sysctls": {
+                    "type": "object",
+                    "description": "sysctl kernel parameters to set in the container",
+                    "markdownDescription": "[sysctl kernel parameters](https://containerlab.dev/manual/nodes/#sysctls) to set in the container",
+                    "patternProperties": {
+                        ".+": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "devices": {
+                    "type": "array",
+                    "description": "list of host devices to add to the container",
+                    "markdownDescription": "list of [host devices](https://containerlab.dev/manual/nodes/#devices) to add to the container",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
                 }
             },
             "allOf": [
