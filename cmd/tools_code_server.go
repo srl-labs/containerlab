@@ -183,7 +183,7 @@ func NewCodeServerNode(name, image, labsDir string,
 		PortBindings: portBindings,
 		NetworkMode:  "bridge",
 		User:         "0",
-		Cmd:          "--config /config.yaml",
+		Cmd:          "--config /config.yaml --extensions-dir /extensions",
 	}
 
 	return &codeServerNode{
@@ -309,7 +309,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error {
 			for _, portMapping := range containers[0].Ports {
 				if portMapping.ContainerPort == codeServerPort {
 					// log the HOST PORT
-					log.Infof("code-server available at: http://0.0.0.0:%d", portMapping.HostPort)
+					log.Infof("code-server available at: https://0.0.0.0:%d", portMapping.HostPort)
 					break
 				}
 			}
@@ -317,7 +317,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error {
 			log.Infof("code-server container started. Check 'docker ps' for the assigned port.")
 		}
 	} else {
-		log.Infof("code-server available at: http://0.0.0.0:%d", o.ToolsCodeServer.Port)
+		log.Infof("code-server available at: https://0.0.0.0:%d", o.ToolsCodeServer.Port)
 	}
 
 	return nil
