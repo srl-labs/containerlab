@@ -357,12 +357,9 @@ func getMgmtNetworkSubnets(rt clabruntime.ContainerRuntime) []string {
 
 	log.Debug(
 		"Tailscale mgmt net info",
-		"network",
-		mgmtNet.Network,
-		"ipv4",
-		mgmtNet.IPv4Subnet,
-		"ipv6",
-		mgmtNet.IPv6Subnet,
+		"network", mgmtNet.Network,
+		"ipv4", mgmtNet.IPv4Subnet,
+		"ipv6", mgmtNet.IPv6Subnet,
 	)
 
 	if mgmtNet.IPv4Subnet != "" {
