@@ -100,7 +100,7 @@ func GetOptions() *Options {
 				DeletionPrefix: "vx-",
 			},
 			ToolsCodeServer: &ToolsCodeServerOptions{
-				Image:        "ghcr.io/kaelemc/clab-code-server:latest",
+				Image:        "ghcr.io/kaelemc/clab-code-server:main",
 				Name:         "clab-code-server",
 				LogLevel:     "debug",
 				OutputFormat: "table",
