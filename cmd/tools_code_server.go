@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	codeServerPort = 443
+	codeServerPort = 8080
 )
 
 // codeServerNode implements runtime.Node interface for code-server containers.
@@ -183,6 +183,7 @@ func NewCodeServerNode(name, image, labsDir string,
 		PortBindings: portBindings,
 		NetworkMode:  "bridge",
 		User:         "0",
+		Cmd:          "--config /config.yaml",
 	}
 
 	return &codeServerNode{
@@ -263,7 +264,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error {
 	log.Infof("Pulling image %s...", o.ToolsCodeServer.Image)
 
 	//nolint:lll
-	if err := rt.PullImage(ctx, o.ToolsCodeServer.Image, clabtypes.PullPolicyIfNotPresent); err != nil {
+	if err := rt.PullImage(ctx, o.ToolsCodeServer.Image, clabtypes.PullPolicyAlways); err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", o.ToolsCodeServer.Image, err)
 	}
 
