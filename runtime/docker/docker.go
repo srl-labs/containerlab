@@ -1333,9 +1333,9 @@ func (*DockerRuntime) GetCooCBindMounts() clabtypes.Binds {
 }
 
 func (*DockerRuntime) GetRuntimeBinary() (string, error) {
-	path, err := exec.LookPath("docker")
+	runtimePath, err := exec.LookPath("docker")
 	if err != nil {
 		return "", fmt.Errorf("failed to get docker runtime binary path: %w", err)
 	}
-	return path, nil
+	return runtimePath, nil
 }
