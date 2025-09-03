@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	codeServerPort = 8080
+	codeServerPort = 443
 )
 
 // codeServerNode implements runtime.Node interface for code-server containers.
@@ -307,6 +307,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error {
 		if err == nil && len(containers) > 0 && len(containers[0].Ports) > 0 {
 			for _, portMapping := range containers[0].Ports {
 				if portMapping.ContainerPort == codeServerPort {
+					// log the HOST PORT
 					log.Infof("code-server available at: http://0.0.0.0:%d", portMapping.HostPort)
 					break
 				}
