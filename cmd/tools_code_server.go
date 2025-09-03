@@ -23,6 +23,15 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	codeServerPort = 8080
+)
+
+// codeServerNode implements runtime.Node interface for code-server containers.
+type codeServerNode struct {
+	config *clabtypes.NodeConfig
+}
+
 func codeServerCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "code-server",
@@ -45,13 +54,17 @@ func codeServerCmd(o *Options) (*cobra.Command, error) {
 	codeServerStartCmd.Flags().StringVarP(&o.ToolsCodeServer.Image, "image", "i",
 		o.ToolsCodeServer.Image,
 		"container image to use for code-server")
-	codeServerStartCmd.Flags().StringVarP(&o.ToolsCodeServer.Name, "name", "n", o.ToolsCodeServer.Name,
+	codeServerStartCmd.Flags().StringVarP(&o.ToolsCodeServer.Name, "name", "n",
+		o.ToolsCodeServer.Name,
 		"name of the code-server container")
-	codeServerStartCmd.Flags().StringVarP(&o.ToolsCodeServer.LabsDirectory, "labs-dir", "l", o.ToolsCodeServer.LabsDirectory,
+	codeServerStartCmd.Flags().StringVarP(&o.ToolsCodeServer.LabsDirectory, "labs-dir", "l",
+		o.ToolsCodeServer.LabsDirectory,
 		"directory to mount as shared labs directory")
-	codeServerStartCmd.Flags().UintVarP(&o.ToolsCodeServer.Port, "port", "p", o.ToolsCodeServer.Port,
+	codeServerStartCmd.Flags().UintVarP(&o.ToolsCodeServer.Port, "port", "p",
+		o.ToolsCodeServer.Port,
 		"port to expose the code-server on")
-	codeServerStartCmd.Flags().StringVarP(&o.ToolsCodeServer.Owner, "owner", "o", o.ToolsCodeServer.Owner,
+	codeServerStartCmd.Flags().StringVarP(&o.ToolsCodeServer.Owner, "owner", "o",
+		o.ToolsCodeServer.Owner,
 		"owner name for the code-server container")
 
 	codeServerStatusCmd := &cobra.Command{
@@ -65,7 +78,8 @@ func codeServerCmd(o *Options) (*cobra.Command, error) {
 		},
 	}
 	c.AddCommand(codeServerStatusCmd)
-	codeServerStatusCmd.Flags().StringVarP(&o.ToolsCodeServer.OutputFormat, "format", "f", o.ToolsCodeServer.OutputFormat,
+	codeServerStatusCmd.Flags().StringVarP(&o.ToolsCodeServer.OutputFormat, "format", "f",
+		o.ToolsCodeServer.OutputFormat,
 		"output format for 'status' command (table, json)")
 
 	codeServerStopCmd := &cobra.Command{
@@ -85,9 +99,15 @@ func codeServerCmd(o *Options) (*cobra.Command, error) {
 	return c, nil
 }
 
-func NewCodeServerNode(name, image, labsDir string, port uint, runtime clabruntime.ContainerRuntime, labels map[string]string,
+func NewCodeServerNode(name, image, labsDir string,
+	port uint,
+	runtime clabruntime.ContainerRuntime,
+	labels map[string]string,
 ) (*codeServerNode, error) {
-	log.With("name", name, "image", image, "labsDir", labsDir, "runtime", runtime).Debug("Creating new code-server node.")
+	log.With("name", name,
+		"image", image,
+		"labsDir", labsDir,
+		"runtime", runtime).Debug("Creating new code-server node.")
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -115,7 +135,8 @@ func NewCodeServerNode(name, image, labsDir string, port uint, runtime clabrunti
 	// Find Docker binary and add bind mount if found
 	rtBinPath, err := runtime.GetRuntimeBinary()
 	if err != nil {
-		return nil, fmt.Errorf("could not find docker binary: %v. code-server might not function correctly if docker is not available", err)
+		return nil, fmt.Errorf("could not find docker binary: %v. "+
+			"code-server might not function correctly if docker is not available", err)
 	}
 	// currently only docker is supported.
 	binds = append(binds, clabtypes.NewBind(rtBinPath, "/usr/bin/docker", "ro"))
@@ -123,8 +144,10 @@ func NewCodeServerNode(name, image, labsDir string, port uint, runtime clabrunti
 	// Find containerlab binary and add bind mount if found
 	clabPath, err := getclabBinaryPath()
 	if err != nil {
-		return nil, fmt.Errorf("could not find containerlab binary: %v. code-server might not function correctly if containerlab is not in its PATH", err)
+		return nil, fmt.Errorf("could not find containerlab binary: %v. "+
+			"code-server might not function correctly if containerlab is not in its PATH", err)
 	}
+
 	binds = append(binds, clabtypes.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
 
 	// Publish host random port -> ctr port 8080
@@ -135,6 +158,7 @@ func NewCodeServerNode(name, image, labsDir string, port uint, runtime clabrunti
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container port: %w", err)
 	}
+
 	exposedPorts[containerPort] = struct{}{}
 
 	var hostPort uint = 0
@@ -176,7 +200,7 @@ func (*codeServerNode) GetEndpoints() []clablinks.Endpoint {
 }
 
 // createLabels creates container labels.
-func createCodeServerLabels(containerName, owner string, port uint, labsDir string) map[string]string {
+func createCodeServerLabels(containerName, owner, labsDir string) map[string]string {
 	labels := map[string]string{
 		clablabels.NodeName: containerName,
 		clablabels.NodeKind: "linux",
@@ -193,7 +217,7 @@ func createCodeServerLabels(containerName, owner string, port uint, labsDir stri
 	return labels
 }
 
-func codeServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
+func codeServerStart(cobraCmd *cobra.Command, o *Options) error {
 	ctx := cobraCmd.Context()
 
 	log.With(
@@ -214,6 +238,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 	}
 
 	rt := rinit()
+
 	err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}))
 	if err != nil {
 		return fmt.Errorf("failed to initialize runtime: %w", err)
@@ -224,16 +249,20 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 
 	// Check if container already exists
 	filter := []*clabtypes.GenericFilter{{FilterType: "name", Match: o.ToolsCodeServer.Name}}
+
 	containers, err := rt.ListContainers(ctx, filter)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
 	}
+
 	if len(containers) > 0 {
 		return fmt.Errorf("container %s already exists", o.ToolsCodeServer.Name)
 	}
 
 	// Pull the container image
 	log.Infof("Pulling image %s...", o.ToolsCodeServer.Image)
+
+	//nolint:lll
 	if err := rt.PullImage(ctx, o.ToolsCodeServer.Image, clabtypes.PullPolicyIfNotPresent); err != nil {
 		return fmt.Errorf("failed to pull image %s: %w", o.ToolsCodeServer.Image, err)
 	}
@@ -244,11 +273,12 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 	}
 
 	owner := getOwnerName(o)
-	labels := createCodeServerLabels(o.ToolsCodeServer.Name, owner, o.ToolsCodeServer.Port,
+	labels := createCodeServerLabels(o.ToolsCodeServer.Name, owner,
 		o.ToolsCodeServer.LabsDirectory)
 
 	// Create and start code server container
 	log.Info("Creating code server container", "name", o.ToolsCodeServer.Name)
+
 	codeServerNode, err := NewCodeServerNode(o.ToolsCodeServer.Name, o.ToolsCodeServer.Image,
 		o.ToolsCodeServer.LabsDirectory, o.ToolsCodeServer.Port, rt, labels)
 	if err != nil {
@@ -276,7 +306,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funl
 		}})
 		if err == nil && len(containers) > 0 && len(containers[0].Ports) > 0 {
 			for _, portMapping := range containers[0].Ports {
-				if portMapping.ContainerPort == 8080 {
+				if portMapping.ContainerPort == codeServerPort {
 					log.Infof("code-server available at: http://0.0.0.0:%d", portMapping.HostPort)
 					break
 				}
@@ -301,7 +331,7 @@ type codeServerListItem struct {
 	Owner   string `json:"owner"`
 }
 
-func codeServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
+func codeServerStatus(cobraCmd *cobra.Command, o *Options) error {
 	ctx := cobraCmd.Context()
 
 	// Use common.Runtime for consistency with other commands
@@ -345,6 +375,7 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: fun
 		} else {
 			fmt.Println("No active code-server containers found")
 		}
+
 		return nil
 	}
 
@@ -382,6 +413,7 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: fun
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)
 		}
+
 		fmt.Println(string(b))
 	} else {
 		// Use go-pretty table
@@ -402,15 +434,11 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error { //nolint: fun
 				item.Owner,
 			})
 		}
+
 		t.Render()
 	}
 
 	return nil
-}
-
-// codeServerNode implements runtime.Node interface for code-server containers.
-type codeServerNode struct {
-	config *clabtypes.NodeConfig
 }
 
 func codeServerStop(cobraCmd *cobra.Command, o *Options) error {
@@ -420,6 +448,7 @@ func codeServerStop(cobraCmd *cobra.Command, o *Options) error {
 
 	// Use common.Runtime if available, otherwise use the api-server flag
 	runtimeName := o.Global.Runtime
+
 	if runtimeName == "" {
 		runtimeName = "docker"
 	}
@@ -431,16 +460,19 @@ func codeServerStop(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	rt := rinit()
+
 	err = rt.Init(clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}))
 	if err != nil {
 		return fmt.Errorf("failed to initialize runtime: %w", err)
 	}
 
 	log.Info("Removing code-server container", "name", o.ToolsCodeServer.Name)
+
 	if err := rt.DeleteContainer(ctx, o.ToolsCodeServer.Name); err != nil {
 		return fmt.Errorf("failed to remove code-server container: %w", err)
 	}
 
 	log.Info("code server container removed", "name", o.ToolsCodeServer.Name)
+
 	return nil
 }
