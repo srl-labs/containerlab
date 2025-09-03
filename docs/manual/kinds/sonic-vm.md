@@ -11,7 +11,7 @@ search:
 
 This document covers the VM flavor of the upstream SONiC that is identified with `sonic-vm` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `sonic-vm` node.
 
-The VM-based image of SONiC is built with the [`hellt/vrnetlab`](https://github.com/hellt/vrnetlab/tree/master/sonic) project.
+The VM-based image of SONiC is built with the [`srl-labs/vrnetlab`](https://github.com/srl-labs/vrnetlab/tree/master/sonic) project.
 
 ## Getting Sonic images
 

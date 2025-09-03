@@ -76,7 +76,7 @@ topology:
         - configs/frr-daemons.cfg:/etc/frr/daemons
 ```
 
-1. SR OS container has to be requested from Nokia or built manually from qcow2 disk image using `hellt/vrnetlab` project as explained [here](../manual/vrnetlab.md).
+1. SR OS container has to be requested from Nokia or built manually from qcow2 disk image using `srl-labs/vrnetlab` project as explained [here](../manual/vrnetlab.md).
 
 Apart from typical containerlab node definitions statements like `kind` and `image`, for SR OS we leverage the [`vr-nokia_sros`](../manual/kinds/vr-sros.md) kind, `license` and `startup-config` keys to provide the SR OS container with the license key and the startup configuration file respectively. Check out [Basic configuration](#basic-configuration) section for more details on the contents of startup-configuration files for each topology member.
 

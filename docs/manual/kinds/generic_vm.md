@@ -12,7 +12,7 @@ A typical use case for this kind is to launch a regular Linux VM such as Ubuntu,
 
 To build a docker container for a generic VM you will need to download a `qcow2` VM image for your distribution.
 
-For Ubuntu images use [hellt/vrnetlab/ubuntu](https://github.com/hellt/vrnetlab/tree/master/ubuntu) repository and the associated build instructions.
+For Ubuntu images use [srl-labs/vrnetlab/ubuntu](https://github.com/srl-labs/vrnetlab/tree/master/ubuntu) repository and the associated build instructions.
 
 ## Managing Linux VM nodes
 

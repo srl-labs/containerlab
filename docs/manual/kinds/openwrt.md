@@ -10,7 +10,7 @@ kind_display_name: OpenWRT
 
 ## Getting OpenWRT image
 
-To build -{{ kind_display_name }}- docker container image follow the instructions from the [vrnetlab repo](https://github.com/hellt/vrnetlab/tree/master/openwrt).
+To build -{{ kind_display_name }}- docker container image follow the instructions from the [vrnetlab repo](https://github.com/srl-labs/vrnetlab/tree/master/openwrt).
 
 ## Example
 
