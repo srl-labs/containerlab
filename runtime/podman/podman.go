@@ -439,3 +439,11 @@ func (r *PodmanRuntime) GetRuntimeSocket() (string, error) {
 	}
 	return socket, nil
 }
+
+func (*PodmanRuntime) GetRuntimeBinary() (string, error) {
+	runtimePath, err := exec.LookPath("podman")
+	if err != nil {
+		return "", fmt.Errorf("failed to get podman runtime binary path: %w", err)
+	}
+	return runtimePath, nil
+}
