@@ -84,6 +84,9 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 		},
 	}
 
+	// populate vars
+	mapBriefVarsToEndpoints(lb, link.Endpoints)
+
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
 		link.MTU = clabconstants.DefaultLinkMTU

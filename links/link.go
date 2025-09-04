@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
 	clabinternalslices "github.com/srl-labs/containerlab/internal/slices"
@@ -357,7 +358,91 @@ func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, h
 	node = nodeData[0]
 	nodeIf = nodeData[1]
 
+	log.Debugf("extractHostNodeInterfaceData: eps=%v specialIndex=%d -> host=%s hostIf=%s node=%s nodeIf=%s",
+		lb.Endpoints, specialEPIndex, host, hostIf, node, nodeIf)
 	return host, hostIf, node, nodeIf, nil
+}
+
+func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) {
+	if lb == nil || lb.LinkCommonParams.Vars == nil || len(endpoints) == 0 {
+		return
+	}
+
+	// key on node name
+	byNode := make(map[string]*EndpointRaw, len(endpoints))
+	for _, ep := range endpoints {
+		byNode[ep.Node] = ep
+		if ep.Vars == nil {
+			ep.Vars = &EndpointVars{}
+		}
+	}
+
+	if v, ok := lb.LinkCommonParams.Vars["ipv4"]; ok {
+		m := parseBriefVarValue(v)
+		for n, cidr := range m {
+			if ep, ok := byNode[n]; ok && cidr != "" {
+				ep.Vars.IPv4 = cidr
+				log.Debugf("mapBriefVarsToEndpoints: set ipv4 for node=%s cidr=%s", n, cidr)
+			}
+		}
+	}
+	if v, ok := lb.LinkCommonParams.Vars["ipv6"]; ok {
+		m := parseBriefVarValue(v)
+		for n, cidr := range m {
+			if ep, ok := byNode[n]; ok && cidr != "" {
+				ep.Vars.IPv6 = cidr
+				log.Debugf("mapBriefVarsToEndpoints: set ipv6 for node=%s cidr=%s", n, cidr)
+			}
+		}
+	}
+}
+
+func parseBriefVarValue(val any) map[string]string {
+	out := make(map[string]string)
+	log.Debugf("parseBriefVarValue: type=%T", val)
+	switch v := val.(type) {
+	case []any:
+		// ipv4: [n1:1.1.1.1/24, n2:1.1.1.2/24]
+		for _, itm := range v {
+			s, ok := itm.(string)
+			if !ok {
+				log.Debug("parseBriefVarValue: skipping non-string list item")
+				continue
+			}
+			parts := strings.SplitN(s, ":", 2)
+			if len(parts) != 2 {
+				log.Debugf("parseBriefVarValue: invalid list item, missing colon: %q", s)
+				continue
+			}
+			n := strings.TrimSpace(parts[0])
+			cidr := strings.TrimSpace(parts[1])
+			if n != "" && cidr != "" {
+				out[n] = cidr
+				log.Debugf("parseBriefVarValue: parsed node=%s cidr=%s", n, cidr)
+			}
+		}
+	case map[any]any:
+		// vars:
+		//   ipv4:
+		//     n1: 1.1.1.1/24
+		//     n2: 1.1.1.2/24
+		// yaml.v2 often decodes nested maps as map[interface{}]interface{} when held in interface{}.
+		for nk, cv := range v {
+			ns, ok1 := nk.(string)
+			s, ok2 := cv.(string)
+			if !ok1 || !ok2 {
+				log.Debugf("parseBriefVarValue: skipping non-string map entry key=%T val=%T", nk, cv)
+				continue
+			}
+			ns = strings.TrimSpace(ns)
+			s = strings.TrimSpace(s)
+			if ns != "" && s != "" {
+				out[ns] = s
+				log.Debugf("parseBriefVarValue: parsed node=%s cidr=%s", ns, s)
+			}
+		}
+	}
+	return out
 }
 
 func genRandomIfName() string {

@@ -11,9 +11,10 @@ import (
 // EndpointRaw is the raw (string) representation of an endpoint as defined in the topology file
 // for a given link definition.
 type EndpointRaw struct {
-	Node  string `yaml:"node"`
-	Iface string `yaml:"interface"`
-	MAC   string `yaml:"mac,omitempty"`
+	Node  string        `yaml:"node"`
+	Iface string        `yaml:"interface"`
+	MAC   string        `yaml:"mac,omitempty"`
+	Vars  *EndpointVars `yaml:"vars,omitempty"`
 }
 
 // NewEndpointRaw creates a new EndpointRaw struct.
@@ -38,6 +39,11 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	}
 
 	genericEndpoint := NewEndpointGeneric(node, er.Iface, l)
+
+	if er.Vars != nil {
+		cp := *er.Vars
+		genericEndpoint.Vars = &cp
+	}
 
 	var err error
 	if er.MAC == "" {
