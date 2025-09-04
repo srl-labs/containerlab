@@ -964,12 +964,34 @@
                     "type": "string",
                     "description": "",
                     "pattern": "^(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})"
+                },
+                "vars": {
+                    "$ref": "#/definitions/endpoint-vars"
                 }
             },
             "required": [
                 "node",
                 "interface"
             ],
+            "additionalProperties": false
+        },
+        "endpoint-vars": {
+            "type": "object",
+            "description": "per-endpoint variables",
+            "properties": {
+                "ipv4": {
+                    "type": "string",
+                    "description": "IPv4 unicast address in CIDR notation to configure on this interface",
+                    "markdownDescription": "Interface IPv4 unicast address in CIDR notation, e.g. 10.0.0.1/24",
+                    "pattern": "^((?:[1-9]|[1-9][0-9]|1[0-9]{2}|2[01][0-9]|22[0-3])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9]))/(?:3[0-2]|[12]?[0-9])$"
+                },
+                "ipv6": {
+                    "type": "string",
+                    "description": "IPv6 address in CIDR notation to configure on this interface",
+                    "markdownDescription": "Interface IPv6 address in CIDR notation, e.g. 2001:db8::1/64",
+                    "pattern": "^[0-9A-Fa-f:]+/(?:12[0-8]|1[01][0-9]|[1-9]?[0-9])$"
+                }
+            },
             "additionalProperties": false
         },
         "link-vxlan-remote": {
@@ -1003,7 +1025,51 @@
         "link-vars": {
             "type": "object",
             "description": "link-scoped variables used by config engine",
-            "markdownDescription": "link-scoped variables used by config engine"
+            "markdownDescription": "link-scoped variables used by config engine and brief per-endpoint IP assignment",
+            "properties": {
+                "ipv4": {
+                    "description": "Assign IPv4 per endpoint in brief links. Accepts list of 'node:cidr' or map of node->cidr",
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "description": "node:cidr pairs, e.g. n1:192.0.2.1/24",
+                                "pattern": "^[^: \t\n\r]+:((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))/(3[0-2]|[12]?[0-9])$"
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string",
+                                "description": "IPv4 CIDR",
+                                "pattern": "^((([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5]))/(3[0-2]|[12]?[0-9])$"
+                            }
+                        }
+                    ]
+                },
+                "ipv6": {
+                    "description": "Assign IPv6 per endpoint in brief links. Accepts list of 'node:cidr' or map of node->cidr",
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "description": "node:cidr pairs, e.g. n1:2001:db8::1/64"
+                            }
+                        },
+                        {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string",
+                                "description": "IPv6 CIDR",
+                                "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$"
+                            }
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": true
         },
         "labels": {
             "type": "object",
