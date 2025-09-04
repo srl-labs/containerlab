@@ -118,6 +118,7 @@ func NewCodeServerNode(name, image, labsDir string,
 	codeServerDataDir := fmt.Sprintf("%s/.clab/code-server/%s/data", homeDir, name)
 	codeServerConfigDir := fmt.Sprintf("%s/.clab/code-server/%s/config", homeDir, name)
 	codeServerExtensionsDir := fmt.Sprintf("%s/.clab/code-server/%s/extensions", homeDir, name)
+	codeServerUserDataDir := fmt.Sprintf("%s/.clab/code-server/%s/user-data", homeDir, name)
 
 	// Create directories if they don't exist
 	if err := os.MkdirAll(codeServerDataDir, 0755); err != nil {
@@ -128,6 +129,9 @@ func NewCodeServerNode(name, image, labsDir string,
 	}
 	if err := os.MkdirAll(codeServerExtensionsDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create code-server extensions directory: %w", err)
+	}
+	if err := os.MkdirAll(codeServerUserDataDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create code-server user-data directory: %w", err)
 	}
 
 	// Check if this is first run (marker file doesn't exist)
@@ -158,6 +162,7 @@ cert: false
 		clabtypes.NewBind(codeServerDataDir, "/root/.local/share/code-server", ""),
 		clabtypes.NewBind(codeServerConfigDir, "/root/.config/code-server", ""),
 		clabtypes.NewBind(codeServerExtensionsDir, "/persistent-extensions", ""),
+		clabtypes.NewBind(codeServerUserDataDir, "/persistent-user-data", ""),
 		// clabtypes.NewBind("/etc/group", "/etc/group", "ro"),
 	}
 
@@ -219,10 +224,10 @@ cert: false
 	var cmd string
 	if isFirstRun {
 		// On first run, copy extensions then start
-		cmd = "-c \"cp -r /extensions/* /persistent-extensions/ 2>/dev/null || true; code-server --config /root/.config/code-server/config.yaml --extensions-dir /persistent-extensions\""
+		cmd = "-c \"cp -r /extensions/* /persistent-extensions/ 2>/dev/null || true; code-server --config /root/.config/code-server/config.yaml --extensions-dir /persistent-extensions --user-data-dir /persistent-user-data\""
 	} else {
 		// On subsequent runs, just start directly
-		cmd = "-c \"code-server --config /root/.config/code-server/config.yaml --extensions-dir /persistent-extensions\""
+		cmd = "-c \"code-server --config /root/.config/code-server/config.yaml --extensions-dir /persistent-extensions --user-data-dir /persistent-user-data\""
 	}
 
 	nodeConfig := &clabtypes.NodeConfig{
