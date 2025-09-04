@@ -9,7 +9,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"net/netip"
 	"os"
 	"path"
 	"path/filepath"
@@ -674,15 +673,11 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		}
 
 		if a := e.GetIPv4Addr(); a != "" {
-			if p, err := netip.ParsePrefix(a); err == nil {
-				iface.IPv4 = p.String()
-			}
+			iface.IPv4 = a
 		}
 
 		if a := e.GetIPv6Addr(); a != "" {
-			if p, err := netip.ParsePrefix(a); err == nil {
-				iface.IPv6 = p.String()
-			}
+			iface.IPv6 = a
 		}
 
 		// add the template interface definition to the template data
