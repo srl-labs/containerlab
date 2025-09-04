@@ -9,6 +9,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"net/netip"
 	"os"
 	"path"
 	"path/filepath"
@@ -601,6 +602,8 @@ type tplIFace struct {
 	Port       string
 	BreakoutNo string
 	Mtu        int
+	IPv4       string
+	IPv6       string
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
@@ -668,6 +671,18 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		// otherwise we don't set the mtu as srlinux will use the default max value 9232
 		if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 			iface.Mtu = m
+		}
+
+		if a := e.GetIPv4Addr(); a != "" {
+			if p, err := netip.ParsePrefix(a); err == nil {
+				iface.IPv4 = p.String()
+			}
+		}
+
+		if a := e.GetIPv6Addr(); a != "" {
+			if p, err := netip.ParsePrefix(a); err == nil {
+				iface.IPv6 = p.String()
+			}
 		}
 
 		// add the template interface definition to the template data
