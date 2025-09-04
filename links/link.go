@@ -378,20 +378,18 @@ func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) {
 	}
 
 	if v, ok := lb.LinkCommonParams.Vars["ipv4"]; ok {
-		m := parseBriefVarValue(v)
-		for n, cidr := range m {
-			if ep, ok := byNode[n]; ok && cidr != "" {
+		parsed := parseBriefVarValue(v)
+		for nodeName, cidr := range parsed {
+			if ep, ok := byNode[nodeName]; ok && cidr != "" {
 				ep.Vars.IPv4 = cidr
-				log.Debugf("mapBriefVarsToEndpoints: set ipv4 for node=%s cidr=%s", n, cidr)
 			}
 		}
 	}
 	if v, ok := lb.LinkCommonParams.Vars["ipv6"]; ok {
-		m := parseBriefVarValue(v)
-		for n, cidr := range m {
-			if ep, ok := byNode[n]; ok && cidr != "" {
+		parsed := parseBriefVarValue(v)
+		for nodeName, cidr := range parsed {
+			if ep, ok := byNode[nodeName]; ok && cidr != "" {
 				ep.Vars.IPv6 = cidr
-				log.Debugf("mapBriefVarsToEndpoints: set ipv6 for node=%s cidr=%s", n, cidr)
 			}
 		}
 	}
@@ -399,26 +397,22 @@ func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) {
 
 func parseBriefVarValue(val any) map[string]string {
 	out := make(map[string]string)
-	log.Debugf("parseBriefVarValue: type=%T", val)
 	switch v := val.(type) {
 	case []any:
 		// ipv4: [n1:1.1.1.1/24, n2:1.1.1.2/24]
 		for _, itm := range v {
 			s, ok := itm.(string)
 			if !ok {
-				log.Debug("parseBriefVarValue: skipping non-string list item")
 				continue
 			}
 			parts := strings.SplitN(s, ":", 2)
 			if len(parts) != 2 {
-				log.Debugf("parseBriefVarValue: invalid list item, missing colon: %q", s)
 				continue
 			}
 			n := strings.TrimSpace(parts[0])
 			cidr := strings.TrimSpace(parts[1])
 			if n != "" && cidr != "" {
 				out[n] = cidr
-				log.Debugf("parseBriefVarValue: parsed node=%s cidr=%s", n, cidr)
 			}
 		}
 	case map[any]any:
@@ -428,17 +422,15 @@ func parseBriefVarValue(val any) map[string]string {
 		//     n2: 1.1.1.2/24
 		// yaml.v2 often decodes nested maps as map[interface{}]interface{} when held in interface{}.
 		for nk, cv := range v {
-			ns, ok1 := nk.(string)
-			s, ok2 := cv.(string)
-			if !ok1 || !ok2 {
-				log.Debugf("parseBriefVarValue: skipping non-string map entry key=%T val=%T", nk, cv)
+			node, okNode := nk.(string)
+			cidr, okCIDR := cv.(string)
+			if !okNode || !okCIDR {
 				continue
 			}
-			ns = strings.TrimSpace(ns)
-			s = strings.TrimSpace(s)
-			if ns != "" && s != "" {
-				out[ns] = s
-				log.Debugf("parseBriefVarValue: parsed node=%s cidr=%s", ns, s)
+			node = strings.TrimSpace(node)
+			cidr = strings.TrimSpace(cidr)
+			if node != "" && cidr != "" {
+				out[node] = cidr
 			}
 		}
 	}
