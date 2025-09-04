@@ -59,6 +59,18 @@ set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} breakout-mode num-channel
 set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}/{{ $ep.BreakoutNo }} admin-state enable
   {{- end }}
 
+  {{- /* If per-endpoint IPv4/IPv6 are provided, configure them on subinterface 0 */}}
+  {{- if or $ep.IPv4 $ep.IPv6 }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 admin-state enable
+    {{- if $ep.IPv4 }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 ipv4 address {{ $ep.IPv4 }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 ipv4 admin-state enable
+    {{- end }}
+    {{- if $ep.IPv6 }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 ipv6 address {{ $ep.IPv6 }}
+set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 ipv6 admin-state enable
+    {{- end }}
+  {{- end }}
 {{ end -}}
 {{- if .SSHPubKeys }}
 set / system aaa authentication linuxadmin-user ssh-key [ {{ .SSHPubKeys }} ]
