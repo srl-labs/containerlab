@@ -114,6 +114,104 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			},
 		},
 		{
+			name: "brief link with ip var single side",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: [n1:10.10.10.1/24]
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeBrief),
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
+						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{}},
+					},
+					LinkCommonParams: LinkCommonParams{MTU: DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"n1:10.10.10.1/24"}}},
+				},
+			},
+		},
+		{
+			name: "brief link with ip var both sides",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: [n1:10.10.10.1/24, n2:10.10.10.2/24]
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeBrief),
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
+						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.2/24"}},
+					},
+					LinkCommonParams: LinkCommonParams{MTU: DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"n1:10.10.10.1/24", "n2:10.10.10.2/24"}}},
+				},
+			},
+		},
+		{
+			name: "brief link with ip var invalid node",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n3:10.10.10.3/24"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ipv4 var duplicate node",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n1:10.10.10.1/24", "n1:10.20.30.40/24"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ipv4 var as invalid address",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n1:foo"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ipv6 var as invalid address",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv6: ["n1:foo"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
 			name: "brief link with veth endpoints and mtu",
 			args: args{
 				yaml: []byte(`
@@ -218,6 +316,35 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 					},
 					LinkCommonParams: LinkCommonParams{
 						MTU: 1400,
+					},
+				},
+			},
+		},
+		{
+			name: "veth link with endpoint vars",
+			args: args{
+				yaml: []byte(`
+                    type: veth
+                    endpoints:
+                      - node: n1
+                        interface: e1-1
+                        vars:
+                          ipv4: 10.10.10.1/24
+                          ipv6: 2001:db8::1/64
+                      - node: n2
+                        interface: e1-2
+                        vars:
+                          ipv4: 10.10.10.2/24
+                          ipv6: 2001:db8::2/64
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeVEth),
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24", IPv6: "2001:db8::1/64"}},
+						{Node: "n2", Iface: "e1-2", Vars: &EndpointVars{IPv4: "10.10.10.2/24", IPv6: "2001:db8::2/64"}},
 					},
 				},
 			},
