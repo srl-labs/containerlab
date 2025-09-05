@@ -398,7 +398,6 @@ func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) error {
 }
 
 func parseVarIPBrief(af string, val []string, nodes map[string]*EndpointRaw) error {
-
 	tmpNodes := make(map[string]any)
 
 	for _, s := range val {
@@ -406,13 +405,12 @@ func parseVarIPBrief(af string, val []string, nodes map[string]*EndpointRaw) err
 		if len(parts) != 2 {
 			return fmt.Errorf("endpoint %s var entry %q must be in 'node:prefix' formatting", af, s)
 		}
+
 		n, cidr := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
-		// if n == "" || cidr == "" {
-		// 	return fmt.Errorf("vars.%s: entry %q contains empty node or cidr", af, s)
-		// }
 		if _, ok := nodes[n]; !ok {
 			return fmt.Errorf("endpoint %s var has invalid node entry for %q", af, n)
 		}
+
 		if _, exists := tmpNodes[n]; exists {
 			return fmt.Errorf("endpoint %s var has duplicate node entry for %q", af, n)
 		}
