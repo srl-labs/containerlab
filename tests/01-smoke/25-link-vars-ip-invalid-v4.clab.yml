@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: link-vars-ip-invalid-v4-addr
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine
+    n2:
+      kind: linux
+      image: alpine
+  links:
+    - endpoints: [n1:eth1, n2:eth1]
+      vars:
+        ipv4: [n1:INVALID]
