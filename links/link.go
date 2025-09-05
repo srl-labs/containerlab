@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"strings"
 
 	"github.com/charmbracelet/log"
@@ -30,8 +31,13 @@ const (
 type LinkCommonParams struct {
 	MTU             int                 `yaml:"mtu,omitempty"`
 	Labels          map[string]string   `yaml:"labels,omitempty"`
-	Vars            map[string]any      `yaml:"vars,omitempty"`
+	Vars            *LinkVars           `yaml:"vars,omitempty"`
 	DeploymentState LinkDeploymentState `yaml:",omitempty"`
+}
+
+type LinkVars struct {
+	IPv4 []string `yaml:"ipv4,omitempty"`
+	IPv6 []string `yaml:"ipv6,omitempty"`
 }
 
 // GetMTU returns the MTU of the link.
@@ -363,9 +369,9 @@ func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, h
 	return host, hostIf, node, nodeIf, nil
 }
 
-func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) {
-	if lb == nil || lb.LinkCommonParams.Vars == nil || len(endpoints) == 0 {
-		return
+func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) error {
+	if lb.LinkCommonParams.Vars == nil {
+		return nil
 	}
 
 	// key on node name
@@ -377,64 +383,59 @@ func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) {
 		}
 	}
 
-	if v, ok := lb.LinkCommonParams.Vars["ipv4"]; ok {
-		parsed := parseBriefVarValue(v)
-		for nodeName, cidr := range parsed {
-			if ep, ok := byNode[nodeName]; ok && cidr != "" {
-				ep.Vars.IPv4 = cidr
-			}
+	if len(lb.LinkCommonParams.Vars.IPv4) > 0 {
+		if err := parseVarIPBrief("ipv4", lb.LinkCommonParams.Vars.IPv4, byNode); err != nil {
+			return err
 		}
 	}
-	if v, ok := lb.LinkCommonParams.Vars["ipv6"]; ok {
-		parsed := parseBriefVarValue(v)
-		for nodeName, cidr := range parsed {
-			if ep, ok := byNode[nodeName]; ok && cidr != "" {
-				ep.Vars.IPv6 = cidr
-			}
+
+	if len(lb.LinkCommonParams.Vars.IPv6) > 0 {
+		if err := parseVarIPBrief("ipv6", lb.LinkCommonParams.Vars.IPv6, byNode); err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
-func parseBriefVarValue(val any) map[string]string {
-	out := make(map[string]string)
-	switch v := val.(type) {
-	case []any:
-		// ipv4: [n1:1.1.1.1/24, n2:1.1.1.2/24]
-		for _, itm := range v {
-			s, ok := itm.(string)
-			if !ok {
-				continue
-			}
-			parts := strings.SplitN(s, ":", 2)
-			if len(parts) != 2 {
-				continue
-			}
-			n := strings.TrimSpace(parts[0])
-			cidr := strings.TrimSpace(parts[1])
-			if n != "" && cidr != "" {
-				out[n] = cidr
-			}
+func parseVarIPBrief(af string, val []string, nodes map[string]*EndpointRaw) error {
+
+	tmpNodes := make(map[string]any)
+
+	for _, s := range val {
+		parts := strings.SplitN(s, ":", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("endpoint %s var entry %q must be in 'node:prefix' formatting", af, s)
 		}
-	case map[any]any:
-		// vars:
-		//   ipv4:
-		//     n1: 1.1.1.1/24
-		//     n2: 1.1.1.2/24
-		// yaml.v2 often decodes nested maps as map[interface{}]interface{} when held in interface{}.
-		for nk, cv := range v {
-			node, okNode := nk.(string)
-			cidr, okCIDR := cv.(string)
-			if !okNode || !okCIDR {
-				continue
+		n, cidr := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		// if n == "" || cidr == "" {
+		// 	return fmt.Errorf("vars.%s: entry %q contains empty node or cidr", af, s)
+		// }
+		if _, ok := nodes[n]; !ok {
+			return fmt.Errorf("endpoint %s var has invalid node entry for %q", af, n)
+		}
+		if _, exists := tmpNodes[n]; exists {
+			return fmt.Errorf("endpoint %s var has duplicate node entry for %q", af, n)
+		}
+		tmpNodes[n] = ""
+
+		prefix, err := netip.ParsePrefix(cidr)
+		if err != nil {
+			return fmt.Errorf("endpoint %s var has invalid prefix %q for %q (%v)", af, cidr, n, err)
+		}
+		switch af {
+		case "ipv4":
+			if !prefix.Addr().Is4() {
+				return fmt.Errorf("endpoint %s var has non-IPv4 prefix %q for %q (%v)", af, prefix, n, err)
 			}
-			node = strings.TrimSpace(node)
-			cidr = strings.TrimSpace(cidr)
-			if node != "" && cidr != "" {
-				out[node] = cidr
+			nodes[n].Vars.IPv4 = cidr
+		case "ipv6":
+			if !prefix.Addr().Is6() {
+				return fmt.Errorf("endpoint %s var has non-IPv6 prefix %q for %q (%v)", af, prefix, n, err)
 			}
+			nodes[n].Vars.IPv6 = cidr
 		}
 	}
-	return out
+	return nil
 }
 
 func genRandomIfName() string {
