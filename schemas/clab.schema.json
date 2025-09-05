@@ -1365,6 +1365,11 @@
                     "description": "MTU for the custom network",
                     "markdownDescription": "[MTU](https://containerlab.dev/manual/network/#mtu) in Bytes for the custom management network",
                     "$ref": "#/definitions/mtu"
+                },
+                "external-access": {
+                    "type": "boolean",
+                    "description": "controls whether the management network has external access or not",
+                    "markdownDescription": "controls whether the [management network has external access](https://containerlab.dev/manual/network/#external-access) or not"
                 }
             },
             "minProperties": 1,
