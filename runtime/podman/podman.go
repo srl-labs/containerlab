@@ -439,3 +439,7 @@ func (r *PodmanRuntime) GetRuntimeSocket() (string, error) {
 	}
 	return socket, nil
 }
+
+func (*PodmanRuntime) GetRuntimeBinary() (string, error) {
+	return "", fmt.Errorf("Podman runtime is currently unsupported")
+}
