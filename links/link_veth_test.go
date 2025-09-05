@@ -26,7 +26,10 @@ func TestLinkVEthRaw_ToLinkBriefRaw(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars:   map[string]any{"foo": "bar"},
+					Vars: &LinkVars{
+						IPv4: []string{"node1:10.10.10.1/24"},
+						IPv6: []string{"node1:2001:db8::1/64"},
+					},
 				},
 				Endpoints: []*EndpointRaw{
 					{
@@ -44,7 +47,10 @@ func TestLinkVEthRaw_ToLinkBriefRaw(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars:   map[string]any{"foo": "bar"},
+					Vars: &LinkVars{
+						IPv4: []string{"node1:10.10.10.1/24"},
+						IPv6: []string{"node1:2001:db8::1/64"},
+					},
 				},
 			},
 		},
@@ -121,7 +127,10 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars:   map[string]any{"foo": "bar"},
+					Vars: &LinkVars{
+						IPv4: []string{"node1:10.10.10.1/24"},
+						IPv6: []string{"node1:2001:db8::1/64"},
+					},
 				},
 				Endpoints: []*EndpointRaw{
 					{
@@ -146,7 +155,10 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars:   map[string]any{"foo": "bar"},
+					Vars: &LinkVars{
+						IPv4: []string{"node1:10.10.10.1/24"},
+						IPv6: []string{"node1:2001:db8::1/64"},
+					},
 				},
 				Endpoints: []Endpoint{
 					&EndpointVeth{
