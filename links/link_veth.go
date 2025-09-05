@@ -85,7 +85,9 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	}
 
 	// populate vars
-	mapBriefVarsToEndpoints(lb, link.Endpoints)
+	if err := mapBriefVarsToEndpoints(lb, link.Endpoints); err != nil {
+		return nil, err
+	}
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
