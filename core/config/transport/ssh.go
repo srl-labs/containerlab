@@ -50,6 +50,15 @@ type SSHTransport struct {
 
 	// Kind specific transactions & prompt checking function
 	K SSHKind
+
+	debug bool
+}
+
+func WithDebug() SSHTransportOption {
+	return func(tx *SSHTransport) error {
+		tx.debug = true
+		return nil
+	}
 }
 
 // WithUserNamePassword adds username & password authentication.
@@ -178,7 +187,7 @@ func (t *SSHTransport) InChannel() {
 	// Save first prompt
 	t.LoginMessage = t.Run("", 15)
 
-	if DebugCount > 1 {
+	if t.debug {
 		t.LoginMessage.Info(t.Target)
 	}
 }
@@ -205,7 +214,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 				command: command,
 			}
 		case ret := <-t.in:
-			if DebugCount > 1 {
+			if t.debug {
 				ret.Debug(t.Target, command+"<--InChannel--")
 			}
 
@@ -218,7 +227,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 				// we should continue reading...
 				sHistory += ret.result
 
-				if DebugCount > 1 {
+				if t.debug {
 					log.Debugf("+")
 				}
 
@@ -440,10 +449,7 @@ func (r *SSHReply) LogString(node string, linefeed, debug bool) string { // skip
 		s = "" + strings.Repeat(" ", ind) + s
 		s += prefix + "? "
 		s += strings.Join(strings.Split(r.prompt, "\n"), prefix+"? ")
-
-		if DebugCount > 3 { // add bytestring
-			s += fmt.Sprintf("%s| %v%s ? %v", prefix, []byte(r.result), prefix, []byte(r.prompt))
-		}
+		s += fmt.Sprintf("%s| %v%s ? %v", prefix, []byte(r.result), prefix, []byte(r.prompt))
 	}
 
 	return s
@@ -459,7 +465,7 @@ func (r *SSHReply) Info(node string) *SSHReply {
 	return r
 }
 
-func (r *SSHReply) Debug(node, message string, t ...interface{}) {
+func (r *SSHReply) Debug(node, message string, t ...any) {
 	msg := message
 	if len(t) > 0 {
 		msg = t[0].(string)

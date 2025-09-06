@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabcoreconfig "github.com/srl-labs/containerlab/core/config"
-	clabcoreconfigtransport "github.com/srl-labs/containerlab/core/config/transport"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 
 	"github.com/charmbracelet/log"
@@ -132,7 +131,6 @@ func configSubCmds(c *cobra.Command, o *Options) {
 func configRun(_ *cobra.Command, args []string, o *Options) error {
 	var err error
 
-	clabcoreconfigtransport.DebugCount = o.Global.DebugCount
 	clabcoreconfig.DebugCount = o.Global.DebugCount
 
 	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
@@ -181,7 +179,7 @@ func configRun(_ *cobra.Command, args []string, o *Options) error {
 			return
 		}
 
-		err = clabcoreconfig.Send(cs, action)
+		err = clabcoreconfig.Send(cs, action, o.Global.DebugCount > 0)
 		if err != nil {
 			log.Warnf("%s: %s", cs.TargetNode.ShortName, err)
 		}

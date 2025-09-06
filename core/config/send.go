@@ -6,7 +6,7 @@ import (
 	clabcoreconfigtransport "github.com/srl-labs/containerlab/core/config/transport"
 )
 
-func Send(cs *NodeConfig, _ string) error {
+func Send(cs *NodeConfig, _ string, debug bool) error {
 	var tx clabcoreconfigtransport.Transport
 
 	var err error
@@ -25,12 +25,20 @@ func Send(cs *NodeConfig, _ string) error {
 				cs.TargetNode.ShortName, cs.TargetNode.Kind)
 		}
 
-		tx, err = clabcoreconfigtransport.NewSSHTransport(
-			cs.TargetNode,
+		opts := []clabcoreconfigtransport.SSHTransportOption{
 			clabcoreconfigtransport.WithUserNamePassword(
 				ssh_cred[0],
 				ssh_cred[1]),
 			clabcoreconfigtransport.HostKeyCallback(),
+		}
+
+		if debug {
+			opts = append(opts, clabcoreconfigtransport.WithDebug())
+		}
+
+		tx, err = clabcoreconfigtransport.NewSSHTransport(
+			cs.TargetNode,
+			opts...,
 		)
 		if err != nil {
 			return err
