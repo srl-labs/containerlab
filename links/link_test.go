@@ -603,3 +603,26 @@ func TestSanitizeInterfaceName(t *testing.T) {
 		})
 	}
 }
+
+// cover the getter for endpoint IPv4/v6 vars
+func TestEndpointVarIPGetter(t *testing.T) {
+	t.Run("nil Vars returns empty strings", func(t *testing.T) {
+		eg := &EndpointGeneric{Vars: nil}
+		if got := eg.GetIPv4Addr(); got != "" {
+			t.Errorf("GetIPv4Addr() = %q; want empty", got)
+		}
+		if got := eg.GetIPv6Addr(); got != "" {
+			t.Errorf("GetIPv6Addr() = %q; want empty", got)
+		}
+	})
+
+	t.Run("non-nil Vars returns set values", func(t *testing.T) {
+		eg := &EndpointGeneric{Vars: &EndpointVars{IPv4: "192.0.2.1/31", IPv6: "2001:db8::1/64"}}
+		if got := eg.GetIPv4Addr(); got != "192.0.2.1/31" {
+			t.Errorf("GetIPv4Addr() = %q; want %q", got, "192.0.2.1/31")
+		}
+		if got := eg.GetIPv6Addr(); got != "2001:db8::1/64" {
+			t.Errorf("GetIPv6Addr() = %q; want %q", got, "2001:db8::1/64")
+		}
+	})
+}

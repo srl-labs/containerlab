@@ -210,6 +210,61 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 	}
 }
 
+func TestLinkVEthRaw_InvalidEndpointVarAFParsing(t *testing.T) {
+	fn1 := newFakeNode("node1")
+	fn2 := newFakeNode("node2")
+
+	params := &ResolveParams{
+		Nodes: map[string]Node{
+			"node1": fn1,
+			"node2": fn2,
+		},
+	}
+
+	t.Run("IPv4 endpoint var has IPv6 prefix", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			LinkCommonParams: LinkCommonParams{},
+			Endpoints: []*EndpointRaw{
+				{
+					Node:  "node1",
+					Iface: "eth1",
+					Vars: &EndpointVars{
+						IPv4: "2001:db8::1/64",
+					},
+				},
+				{
+					Node:  "node2",
+					Iface: "eth2",
+				},
+			},
+		}
+		if _, err := r.Resolve(params); err == nil {
+			t.Fatalf("want error for non-IPv4 prefix in IPv4 var")
+		}
+	})
+
+	t.Run("IPv6 endpoint var has IPv4 prefix", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			LinkCommonParams: LinkCommonParams{},
+			Endpoints: []*EndpointRaw{
+				{
+					Node:  "node1",
+					Iface: "eth1",
+					Vars: &EndpointVars{
+						IPv6: "10.10.10.1/24",
+					},
+				},
+				{
+					Node:  "node2",
+					Iface: "eth2"},
+			},
+		}
+		if _, err := r.Resolve(params); err == nil {
+			t.Fatalf("want error for non-IPv6 prefix in IPv6 var")
+		}
+	})
+}
+
 // fakeNode is a fake implementation of Node for testing.
 type fakeNode struct {
 	Name      string
