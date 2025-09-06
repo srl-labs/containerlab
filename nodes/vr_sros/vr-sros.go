@@ -123,7 +123,7 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 }
 
 func (s *vrSROS) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(s.Cfg.LabDir, 0o777)
+	clabutils.CreateDirectory(s.Cfg.LabDir, clabutils.PermissionsEveryoneAllPermissions)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -224,7 +224,8 @@ func createVrSROSFiles(node clabnodes.Node) error {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
 		dst := filepath.Join(nodeCfg.LabDir, configDirName, licenseFName)
-		if err := clabutils.CopyFile(context.Background(), src, dst, 0o644); err != nil {
+		if err := clabutils.CopyFile(context.Background(), src, dst,
+			clabutils.PermissionsOwnerAllPermissions); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

@@ -33,6 +33,7 @@ import (
 )
 
 const (
+	PermissionsOwnerAllPermissions    = 0o644
 	PermissionsEveryoneAllPermissions = 0o777
 )
 

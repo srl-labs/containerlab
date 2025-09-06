@@ -41,13 +41,17 @@ func (c *CLab) createAuthzKeysFile() error {
 	}
 
 	// ensure authz_keys will have the permissions allowing it to be read by anyone
-	return os.Chmod(clabAuthzKeysFPath, 0o644) // skipcq: GSC-G302
+	return os.Chmod(
+		clabAuthzKeysFPath,
+		clabutils.PermissionsOwnerAllPermissions,
+	) // skipcq: GSC-G302
 }
 
 // RetrieveSSHPubKeysFromFiles retrieves public keys from the ~/.ssh/*.authorized_keys
 // and ~/.ssh/*.pub files.
 func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
 	var keys []ssh.PublicKey
+
 	p := clabutils.ResolvePath(pubKeysGlob, "")
 
 	all, err := filepath.Glob(p)
@@ -115,12 +119,14 @@ func RetrieveSSHAgentKeys() ([]ssh.PublicKey, error) {
 		log.Debug("SSH_AUTH_SOCK not set, skipping pubkey fetching")
 		return nil, nil
 	}
+
 	conn, err := net.Dial("unix", socket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open SSH_AUTH_SOCK: %w", err)
 	}
 
 	agentClient := agent.NewClient(conn)
+
 	keys, err := agentClient.List()
 	if err != nil {
 		return nil, fmt.Errorf("error listing agent's pub keys %w", err)
@@ -135,6 +141,7 @@ func RetrieveSSHAgentKeys() ([]ssh.PublicKey, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		pubKeys = append(pubKeys, pkey)
 	}
 

@@ -33,6 +33,7 @@ func WithLabOwner(owner string) ClabOption {
 		} else if owner != "" {
 			log.Warn("Only users in clab_admins group can set custom owner. Using current user as owner.")
 		}
+
 		return nil
 	}
 }
@@ -42,7 +43,9 @@ func WithTimeout(dur time.Duration) ClabOption {
 		if dur <= 0 {
 			return errors.New("zero or negative timeouts are not allowed")
 		}
+
 		c.timeout = dur
+
 		return nil
 	}
 }
@@ -52,6 +55,7 @@ func WithTimeout(dur time.Duration) ClabOption {
 func WithTopologyName(n string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Name = n
+
 		return nil
 	}
 }
@@ -60,6 +64,7 @@ func WithTopologyName(n string) ClabOption {
 func WithSkippedBindsPathsCheck() ClabOption {
 	return func(c *CLab) error {
 		c.checkBindsPaths = false
+
 		return nil
 	}
 }
@@ -69,6 +74,7 @@ func WithSkippedBindsPathsCheck() ClabOption {
 func WithManagementNetworkName(n string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Mgmt.Network = n
+
 		return nil
 	}
 }
@@ -78,6 +84,7 @@ func WithManagementNetworkName(n string) ClabOption {
 func WithManagementIpv4Subnet(s string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Mgmt.IPv4Subnet = s
+
 		return nil
 	}
 }
@@ -87,6 +94,7 @@ func WithManagementIpv4Subnet(s string) ClabOption {
 func WithManagementIpv6Subnet(s string) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Mgmt.IPv6Subnet = s
+
 		return nil
 	}
 }
@@ -95,6 +103,7 @@ func WithManagementIpv6Subnet(s string) ClabOption {
 func WithDependencyManager(dm clabcoredependency_manager.DependencyManager) ClabOption {
 	return func(c *CLab) error {
 		c.dependencyManager = dm
+
 		return nil
 	}
 }
@@ -103,6 +112,7 @@ func WithDependencyManager(dm clabcoredependency_manager.DependencyManager) Clab
 func WithDebug(debug bool) ClabOption {
 	return func(c *CLab) error {
 		c.Config.Debug = debug
+
 		return nil
 	}
 }
@@ -140,6 +150,7 @@ func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 func WithKeepMgmtNet() ClabOption {
 	return func(c *CLab) error {
 		c.globalRuntime().WithKeepMgmtNet()
+
 		return nil
 	}
 }
@@ -165,7 +176,12 @@ func WithTopoBackup(path string) ClabOption {
 		// create a backup file for the topology file
 		backupFPath := c.TopoPaths.TopologyBakFileAbsPath()
 
-		err := clabutils.CopyFile(context.Background(), path, backupFPath, 0o644)
+		err := clabutils.CopyFile(
+			context.Background(),
+			path,
+			backupFPath,
+			clabutils.PermissionsOwnerAllPermissions,
+		)
 		if err != nil {
 			log.Warn("Could not create topology backup", "topology path", path,
 				"backup path", backupFPath, "error", err)
@@ -213,8 +229,11 @@ func WithTopoFromLab(labName string) ClabOption {
 
 		// Verify topology file exists and is accessible
 		if !clabutils.FileOrDirExists(topoFile) {
-			return fmt.Errorf("topology file '%s' referenced by lab '%s' does not exist or is not accessible",
-				topoFile, labName)
+			return fmt.Errorf(
+				"topology file '%s' referenced by lab '%s' does not exist or is not accessible",
+				topoFile,
+				labName,
+			)
 		}
 
 		log.Debugf("found topology file for lab %s: %s", labName, topoFile)

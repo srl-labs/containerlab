@@ -57,7 +57,7 @@ func (n *rare) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 }
 
 func (n *rare) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsEveryoneAllPermissions)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -69,7 +69,8 @@ func (n *rare) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 func (n *rare) createRAREFiles() error {
 	nodeCfg := n.Config()
 	// create "run" directory that will be bind mounted to rare node
-	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0o777)
+	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"),
+		clabutils.PermissionsEveryoneAllPermissions)
 
 	return nil
 }

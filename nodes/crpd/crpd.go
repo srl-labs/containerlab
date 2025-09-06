@@ -86,7 +86,7 @@ func (s *crpd) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 }
 
 func (s *crpd) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(s.Cfg.LabDir, 0o777)
+	clabutils.CreateDirectory(s.Cfg.LabDir, clabutils.PermissionsEveryoneAllPermissions)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -144,7 +144,8 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 
 	// path by which to save a config
 	confPath := s.Cfg.LabDir + "/config/juniper.conf"
-	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(), 0o777) // skipcq: GO-S2306
+	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(),
+		clabutils.PermissionsEveryoneAllPermissions) // skipcq: GO-S2306
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.Cfg.ShortName, err)
 	}
@@ -156,8 +157,10 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 func createCRPDFiles(node clabnodes.Node) error {
 	nodeCfg := node.Config()
 	// create config and logs directory that will be bind mounted to crpd
-	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"), 0o777)
-	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"), 0o777)
+	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"),
+		clabutils.PermissionsEveryoneAllPermissions)
+	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"),
+		clabutils.PermissionsEveryoneAllPermissions)
 
 	// copy crpd config from default template or user-provided conf file
 	cfg := filepath.Join(nodeCfg.LabDir, "config", "juniper.conf")
@@ -196,11 +199,13 @@ func createCRPDFiles(node clabnodes.Node) error {
 		src := nodeCfg.License
 		dst = filepath.Join(nodeCfg.LabDir, licDir, licFile)
 
-		if err := os.MkdirAll(filepath.Join(nodeCfg.LabDir, licDir), 0o777); err != nil { // skipcq: GSC-G301
+		if err := os.MkdirAll(filepath.Join(nodeCfg.LabDir, licDir),
+			clabutils.PermissionsEveryoneAllPermissions); err != nil { // skipcq: GSC-G301
 			return err
 		}
 
-		if err = clabutils.CopyFile(context.Background(), src, dst, 0o644); err != nil {
+		if err = clabutils.CopyFile(context.Background(), src, dst,
+			clabutils.PermissionsOwnerAllPermissions); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

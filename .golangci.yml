@@ -95,12 +95,42 @@ linters:
       - linters:
           - staticcheck
         text: could remove embedded field
-      # currently slowly enforcing some things, starting with cmd package
-      - linters:
-          - lll
-          - mnd
-          - wsl_v5
-        path-except: cmd
+    # slowly enforcing things, excluding these packages (for now!)
+    paths:
+      - core/cert
+      - core/clab
+      - core/config
+      - core/deploy
+      - core/destroy
+      - core/cert
+      - core/export
+      - core/file
+      - core/graph
+      - core/hostfile
+      - core/image
+      - core/inventory
+      - core/list
+      - core/network
+      - core/register
+      - core/save
+      - core/sshconfig
+      - core/topology
+      - core/dependency_manager
+      - cert
+      - errors
+      - exec
+      - git
+      - internal
+      - labels
+      - links
+      - mocks
+      - netconf
+      - nodes
+      - runtime
+      - schemas
+      - types
+      - utils
+      - virt
 formatters:
   enable:
     - gofmt

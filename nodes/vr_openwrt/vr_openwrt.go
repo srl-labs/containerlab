@@ -53,6 +53,7 @@ func (n *vrOpenWrt) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 
 func (n *vrOpenWrt) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	// Ensure the overlay directory exists
-	clabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"), 0o777)
+	clabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"),
+		clabutils.PermissionsEveryoneAllPermissions)
 	return nil
 }

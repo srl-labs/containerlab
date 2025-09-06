@@ -248,14 +248,14 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 }
 
 func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsEveryoneAllPermissions)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if n.Cfg.Extras != nil && len(n.Cfg.Extras.SRLAgents) != 0 {
 		agents := n.Cfg.Extras.SRLAgents
 
 		appmgr := filepath.Join(n.Cfg.LabDir, "config", "appmgr")
-		clabutils.CreateDirectory(appmgr, 0o777)
+		clabutils.CreateDirectory(appmgr, clabutils.PermissionsEveryoneAllPermissions)
 
 		// process extras -> agents configurations
 		for _, fullpath := range agents {
@@ -271,7 +271,8 @@ func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 			}
 
 			dst := filepath.Join(appmgr, basename)
-			if err := clabutils.CopyFile(ctx, fullpath, dst, 0o644); err != nil {
+			if err := clabutils.CopyFile(ctx, fullpath, dst,
+				clabutils.PermissionsOwnerAllPermissions); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
 			}
 		}
@@ -463,7 +464,8 @@ func (n *srl) createSRLFiles() error {
 		// copy license file to node specific directory in lab
 		src = n.Cfg.License
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := clabutils.CopyFile(context.Background(), src, licPath, 0o644); err != nil {
+		if err := clabutils.CopyFile(context.Background(), src, licPath,
+			clabutils.PermissionsOwnerAllPermissions); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
@@ -475,7 +477,8 @@ func (n *srl) createSRLFiles() error {
 		return err
 	}
 
-	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0o777)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"),
+		clabutils.PermissionsEveryoneAllPermissions)
 
 	// create repository files (for yum/apt) that
 	// are mounted to srl container during the init phase

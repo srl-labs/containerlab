@@ -18,13 +18,16 @@ type DeployOptions struct {
 // NewDeployOptions creates a new DeployOptions instance with the specified maxWorkers value.
 func NewDeployOptions(maxWorkers uint) (*DeployOptions, error) {
 	d := &DeployOptions{}
+
 	err := d.initWorkerCount(maxWorkers)
+
 	return d, err
 }
 
 // SetReconfigure sets the reconfigure option and returns the updated DeployOptions instance.
 func (d *DeployOptions) SetReconfigure(b bool) *DeployOptions {
 	d.reconfigure = b
+
 	return d
 }
 
@@ -53,6 +56,7 @@ func (d *DeployOptions) SkipPostDeploy() bool {
 // SetGraph sets the graph option and returns the updated DeployOptions instance.
 func (d *DeployOptions) SetGraph(b bool) *DeployOptions {
 	d.graph = b
+
 	return d
 }
 
@@ -64,6 +68,7 @@ func (d *DeployOptions) Graph() bool {
 // SetMaxWorkers sets the maxWorkers option and returns the updated DeployOptions instance.
 func (d *DeployOptions) SetMaxWorkers(i uint) *DeployOptions {
 	d.maxWorkers = i
+
 	return d
 }
 
@@ -75,6 +80,7 @@ func (d *DeployOptions) MaxWorkers() uint {
 // SetExportTemplate sets the exportTemplate option and returns the updated DeployOptions instance.
 func (d *DeployOptions) SetExportTemplate(templatePath string) *DeployOptions {
 	d.exportTemplate = templatePath
+
 	return d
 }
 
@@ -103,6 +109,7 @@ func (d *DeployOptions) initWorkerCount(maxWorkers uint) error {
 		if err != nil {
 			return err
 		}
+
 		nodeWorkers = uint(vCpus)
 	}
 
