@@ -212,6 +212,32 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "brief link with ipv4 var non-IPv4 prefix",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n1:2001:db8::1/64"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ipv6 var non-IPv6 prefix",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv6: ["n1:10.10.10.1/24"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
 			name: "brief link with veth endpoints and mtu",
 			args: args{
 				yaml: []byte(`
