@@ -68,7 +68,7 @@ func (n *c8000) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 }
 
 func (n *c8000) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsEveryoneAllPermissions)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {

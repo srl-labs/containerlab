@@ -43,7 +43,7 @@ func (c *CLab) createAuthzKeysFile() error {
 	// ensure authz_keys will have the permissions allowing it to be read by anyone
 	return os.Chmod(
 		clabAuthzKeysFPath,
-		clabutils.PermissionsOwnerAllPermissions,
+		clabutils.PermissiosnFileDefault,
 	) // skipcq: GSC-G302
 }
 

@@ -89,7 +89,7 @@ func (n *vyos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 }
 
 func (n *vyos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsEveryoneAllPermissions)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
 	if err := n.fixdirACL(); err != nil {
 		return err
 	}

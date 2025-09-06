@@ -97,23 +97,19 @@ linters:
         text: could remove embedded field
     # slowly enforcing things, excluding these packages (for now!)
     paths:
-      - core/cert
       - core/clab
-      - core/config
+      - core/config_test
+      - core/config/
       - core/deploy
       - core/destroy
       - core/cert
       - core/export
-      - core/file
-      - core/graph
       - core/hostfile
       - core/image
       - core/inventory
       - core/list
       - core/network
       - core/register
-      - core/save
-      - core/sshconfig
       - core/topology
       - core/dependency_manager
       - cert

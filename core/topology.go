@@ -58,7 +58,7 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 	}
 
 	err = clabutils.CopyFile(context.Background(), url, tmpFile.Name(),
-		clabutils.PermissionsOwnerAllPermissions)
+		clabutils.PermissiosnFileDefault)
 
 	return tmpFile.Name(), err
 }

@@ -213,7 +213,7 @@ func (g *GoGit) cloneNonExisting() error {
 		co.ReferenceName = plumbing.NewBranchReferenceName(branchName)
 	}
 	// pre-create the repo directory and adjust the ACLs
-	clabutils.CreateDirectory(g.gitRepo.GetName(), 0o755)
+	clabutils.CreateDirectory(g.gitRepo.GetName(), clabutils.PermissionsDirDefault)
 	err = clabutils.AdjustFileACLs(g.gitRepo.GetName())
 	if err != nil {
 		log.Warnf("failed to adjust repository (%s) ACLs. continuin anyways", g.gitRepo.GetName())

@@ -15,6 +15,8 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
+const topoFromLabListTimeout = 30 * time.Second
+
 type ClabOption func(c *CLab) error
 
 // WithLabOwner sets the owner label for all nodes in the lab.
@@ -180,7 +182,7 @@ func WithTopoBackup(path string) ClabOption {
 			context.Background(),
 			path,
 			backupFPath,
-			clabutils.PermissionsOwnerAllPermissions,
+			clabutils.PermissiosnFileDefault,
 		)
 		if err != nil {
 			log.Warn("Could not create topology backup", "topology path", path,
@@ -201,7 +203,7 @@ func WithTopoFromLab(labName string) ClabOption {
 			return fmt.Errorf("lab name is required to derive topology path")
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), topoFromLabListTimeout)
 		defer cancel()
 
 		filter := []*clabtypes.GenericFilter{

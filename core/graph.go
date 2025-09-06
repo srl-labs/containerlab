@@ -52,8 +52,9 @@ type TopoData struct {
 	Data template.JS
 }
 
-// noListFs embeds the http.Dir to override the Open method of a filesystem
-// to prevent listing of static files, see https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
+// noListFs embeds the http.Dir to override the Open method of a filesystem to prevent listing of
+// static files, see:
+// https://github.com/srl-labs/containerlab/pull/802#discussion_r815373751
 type noListFs struct {
 	http.FileSystem
 }
@@ -63,10 +64,12 @@ var g *gographviz.Graph
 // GenerateDotGraph generates a graph of the lab topology.
 func (c *CLab) GenerateDotGraph() error {
 	log.Info("Generating lab graph...")
+
 	g = gographviz.NewGraph()
 	if err := g.SetName(c.TopoPaths.TopologyFilenameWithoutExt()); err != nil {
 		return err
 	}
+
 	if err := g.SetDir(false); err != nil {
 		return err
 	}
@@ -79,9 +82,9 @@ func (c *CLab) GenerateDotGraph() error {
 		attr["color"] = "red"
 		attr["style"] = "filled"
 		attr["fillcolor"] = "red"
-
 		attr["label"] = nodeName
 		attr["xlabel"] = node.Config().Kind
+
 		if strings.TrimSpace(node.Config().Group) != "" {
 			attr["group"] = node.Config().Group
 			if strings.Contains(node.Config().Group, "bb") {
@@ -94,6 +97,7 @@ func (c *CLab) GenerateDotGraph() error {
 				attr["fontcolor"] = "black"
 			}
 		}
+
 		if err := g.AddNode(c.TopoPaths.TopologyFilenameWithoutExt(),
 			node.Config().ShortName, attr); err != nil {
 			return err
@@ -113,14 +117,15 @@ func (c *CLab) GenerateDotGraph() error {
 			(strings.Contains(BNodeName, "client")) {
 			attr["color"] = "blue"
 		}
+
 		if err := g.AddEdge(ANodeName, BNodeName, false, attr); err != nil {
 			return err
 		}
 	}
 
 	// create graph directory
-	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
-	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabutils.PermissionsDirDefault)
+	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), clabutils.PermissionsDirDefault)
 
 	// create graph filename
 	dotfile := c.TopoPaths.GraphFilename(".dot")
@@ -135,8 +140,10 @@ func (c *CLab) GenerateDotGraph() error {
 		if err != nil {
 			return err
 		}
+
 		log.Info("Created ", pngfile)
 	}
+
 	return nil
 }
 
@@ -144,9 +151,21 @@ func (c *CLab) GenerateDotGraph() error {
 func generatePngFromDot(dotfile, outfile string) (err error) {
 	_, err = exec.Command("dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
 	if err != nil {
-		log.Errorf("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)
-		return fmt.Errorf("failed to generate png (%v) from dot file (%v), with error (%v)", outfile, dotfile, err)
+		log.Errorf(
+			"failed to generate png (%v) from dot file (%v), with error (%v)",
+			outfile,
+			dotfile,
+			err,
+		)
+
+		return fmt.Errorf(
+			"failed to generate png (%v) from dot file (%v), with error (%v)",
+			outfile,
+			dotfile,
+			err,
+		)
 	}
+
 	return nil
 }
 
@@ -158,6 +177,7 @@ func commandExists(cmd string) bool {
 	} else {
 		log.Debugf("executable %s doesn't exist!", cmd)
 	}
+
 	return err == nil
 }
 
@@ -195,6 +215,7 @@ func buildGraphNode(node clabnodes.Node) clabtypes.ContainerDetails {
 
 func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 	log.Info("building graph from topology file")
+
 	for _, node := range c.Nodes {
 		g.Nodes = append(g.Nodes, buildGraphNode(node))
 	}
@@ -202,8 +223,10 @@ func (c *CLab) BuildGraphFromTopo(g *GraphTopo) {
 
 func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []clabruntime.GenericContainer) {
 	containerNames := make(map[string]struct{})
+
 	for idx := range containers {
 		log.Debugf("looking for node name %s", containers[idx].Labels[clablabels.NodeName])
+
 		if node, ok := c.Nodes[containers[idx].Labels[clablabels.NodeName]]; ok {
 			containerNames[node.Config().ShortName] = struct{}{}
 			g.Nodes = append(g.Nodes, clabtypes.ContainerDetails{
@@ -217,6 +240,7 @@ func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []clabruntime.
 			})
 		}
 	}
+
 	for _, node := range c.Nodes {
 		if _, exist := containerNames[node.Config().ShortName]; !exist {
 			g.Nodes = append(g.Nodes, buildGraphNode(node))
@@ -240,8 +264,8 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	}
 
 	// create graph directory
-	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
-	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabutils.PermissionsDirDefault)
+	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), clabutils.PermissionsDirDefault)
 
 	// create graph filename
 	fname := c.TopoPaths.GraphFilename(".mermaid")
@@ -279,6 +303,7 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 	}
 
 	var staticFS http.FileSystem
+
 	if staticDir == "" {
 		// extract the sub fs with static files from the embedded fs
 		subFS, err := fs.Sub(defaultStatic, "graph_templates/nextui/static")
@@ -289,6 +314,7 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 		staticFS = http.FS(subFS)
 	} else {
 		log.Infof("Serving static files from directory: %s", staticDir)
+
 		staticFS = http.Dir(staticDir)
 	}
 
@@ -304,12 +330,13 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 	return http.ListenAndServe(srv, nil)
 }
 
-// GenerateDrawioDiagram pulls (if needed) and runs the "clab-io-draw" container in interactive TTY mode.
-// The container is removed automatically when the TUI session ends.
+// GenerateDrawioDiagram pulls (if needed) and runs the "clab-io-draw" container in interactive
+// TTY mode. The container is removed automatically when the TUI session ends.
 func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { //nolint: funlen
 	client, err := dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Errorf("Failed to create Docker client: %v", err)
+
 		return fmt.Errorf("failed to create Docker client: %w", err)
 	}
 
@@ -319,6 +346,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 	// If user asks for "latest" => always pull. Otherwise only if missing.
 	if version == "latest" {
 		log.Infof("Forcing a pull of the latest image: %s", imageName)
+
 		if err := forcePull(ctx, client, imageName); err != nil {
 			return fmt.Errorf("failed to pull latest image: %w", err)
 		}
@@ -362,6 +390,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 		log.Errorf("Failed to create container for clab-io-draw: %v", err)
 		return fmt.Errorf("failed to create container: %w", err)
 	}
+
 	containerID := createResp.ID
 
 	// Attach to TTY
@@ -375,6 +404,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 		log.Errorf("Failed to attach to container: %v", err)
 		return fmt.Errorf("failed to attach to container: %w", err)
 	}
+
 	defer attachResp.Close()
 
 	// Start the container
@@ -385,7 +415,9 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 
 	// If we're running in a real terminal, set raw mode & handle resizing
 	inTerminal := term.IsTerminal(int(os.Stdin.Fd()))
+
 	var oldState *term.State
+
 	if inTerminal {
 		oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
 		if err != nil {
@@ -394,7 +426,9 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 	}
 
 	sigCh := make(chan os.Signal, 1)
+
 	signal.Notify(sigCh, syscall.SIGWINCH, syscall.SIGINT, syscall.SIGTERM)
+
 	go func() {
 		for s := range sigCh {
 			switch s {
@@ -404,7 +438,9 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 				}
 			case syscall.SIGINT, syscall.SIGTERM:
 				log.Infof("Received signal %v, stopping container %s", s, containerID)
+
 				timeoutSec := 2
+
 				_ = client.ContainerStop(ctx, containerID,
 					container.StopOptions{Timeout: &[]int{timeoutSec}[0]})
 			}
@@ -420,6 +456,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 
 	// Pipe container -> local
 	errChan := make(chan error, 1)
+
 	go func() {
 		_, copyErr := io.Copy(os.Stdout, attachResp.Reader)
 		errChan <- copyErr
@@ -427,7 +464,9 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 
 	// Wait for container to exit
 	waitCh, waitErrCh := client.ContainerWait(ctx, containerID, container.WaitConditionNotRunning)
+
 	var exitCode int64
+
 	select {
 	case we := <-waitErrCh:
 		if we != nil {
@@ -439,6 +478,7 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 			log.Errorf("Container wait error: %s", status.Error.Message)
 			return fmt.Errorf("container wait error: %s", status.Error.Message)
 		}
+
 		exitCode = status.StatusCode
 	}
 
@@ -461,20 +501,26 @@ func (c *CLab) GenerateDrawioDiagram(version string, userArgs []string) error { 
 	if exitCode != 0 {
 		return fmt.Errorf("clab-io-draw container exited with code %d", exitCode)
 	}
+
 	log.Info("Diagram created successfully.")
+
 	return nil
 }
 
 // forcePull always does a Docker Pull, even if the image is already present locally.
 func forcePull(ctx context.Context, client *dockerC.Client, imageName string) error {
 	log.Infof("Pulling image %q forcibly", imageName)
+
 	rc, err := client.ImagePull(ctx, imageName, image.PullOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to pull image %q: %w", imageName, err)
 	}
+
 	defer rc.Close()
+
 	// Must consume entire body or Docker won't finalize the pull
 	_, _ = io.Copy(io.Discard, rc)
+
 	return nil
 }
 
@@ -485,18 +531,25 @@ func pullImageIfNotPresent(ctx context.Context, client *dockerC.Client, imageNam
 	if err == nil {
 		// Found locally
 		log.Debugf("Image %q already present locally; skipping pull", imageName)
+
 		return nil
 	}
+
 	if dockerC.IsErrNotFound(err) {
 		log.Infof("Image %q not found locally; pulling...", imageName)
+
 		rc, pErr := client.ImagePull(ctx, imageName, image.PullOptions{})
 		if pErr != nil {
 			return fmt.Errorf("failed to pull image %q: %w", imageName, pErr)
 		}
+
 		defer rc.Close()
+
 		_, _ = io.Copy(io.Discard, rc)
+
 		return nil
 	}
+
 	return fmt.Errorf("failed to inspect image %q: %w", imageName, err)
 }
 
@@ -506,8 +559,10 @@ func resizeDockerTTY(ctx context.Context, client *dockerC.Client, containerID st
 	w, h, err := term.GetSize(int(os.Stdin.Fd()))
 	if err != nil {
 		log.Debugf("Unable to get local terminal size: %v", err)
+
 		return
 	}
+
 	if resizeErr := client.ContainerResize(ctx, containerID, container.ResizeOptions{
 		Width:  uint(w),
 		Height: uint(h),
@@ -520,6 +575,7 @@ func parseDrawioArgs(argList []string) []string {
 	// If the user passes multiple tokens in one argument, e.g. "-I --theme nokia_modern",
 	// we'll parse them into separate tokens.
 	var finalTokens []string
+
 	for _, rawArg := range argList {
 		parsed, err := shlex.Split(rawArg)
 		if err != nil {
@@ -530,5 +586,6 @@ func parseDrawioArgs(argList []string) []string {
 			finalTokens = append(finalTokens, parsed...)
 		}
 	}
+
 	return finalTokens
 }

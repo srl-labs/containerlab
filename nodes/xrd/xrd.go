@@ -92,7 +92,7 @@ func (n *xrd) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 func (n *xrd) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	n.genInterfacesEnv()
 
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsEveryoneAllPermissions)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -141,7 +141,7 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate xr-storage directory
 	clabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"),
-		clabutils.PermissionsEveryoneAllPermissions)
+		clabutils.PermissionsOpen)
 	// generate first-boot config
 	cfg := filepath.Join(n.Cfg.LabDir, "first-boot.cfg")
 	nodeCfg.ResStartupConfig = cfg

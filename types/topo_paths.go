@@ -208,7 +208,7 @@ func (t *TopoPaths) VarsFilenameAbsPath() string {
 // Creates the directory if it does not exist.
 func (*TopoPaths) ClabTmpDir() string {
 	if !clabutils.DirExists(clabTmpDir) {
-		clabutils.CreateDirectory(clabTmpDir, 0o755)
+		clabutils.CreateDirectory(clabTmpDir, clabutils.PermissionsDirDefault)
 	}
 
 	return clabTmpDir
@@ -219,7 +219,7 @@ func (*TopoPaths) ClabTmpDir() string {
 func (t *TopoPaths) ClabBakDir() string {
 	d := filepath.Join(t.ClabTmpDir(), backupDirName)
 	if !clabutils.DirExists(d) {
-		clabutils.CreateDirectory(d, 0o755)
+		clabutils.CreateDirectory(d, clabutils.PermissionsDirDefault)
 	}
 
 	return d

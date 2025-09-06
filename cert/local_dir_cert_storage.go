@@ -37,7 +37,7 @@ func (c *LocalDirCertStorage) StoreCaCert(cert *Certificate) error {
 	// CA cert/key/csr can only be stored in the labdir/.tls/ca dir,
 	// so we need to create it if it does not exist.
 	clabutils.CreateDirectory(filepath.Dir(c.paths.CaCertAbsFilename()),
-		clabutils.PermissionsEveryoneAllPermissions)
+		clabutils.PermissionsOpen)
 
 	return cert.Write(c.paths.CaCertAbsFilename(), c.paths.CaKeyAbsFilename(), c.paths.CaCSRAbsFilename())
 }
@@ -46,7 +46,7 @@ func (c *LocalDirCertStorage) StoreCaCert(cert *Certificate) error {
 func (c *LocalDirCertStorage) StoreNodeCert(nodeName string, cert *Certificate) error {
 	// create a folder for the node if it does not exist
 	clabutils.CreateDirectory(c.paths.NodeTLSDir(nodeName),
-		clabutils.PermissionsEveryoneAllPermissions)
+		clabutils.PermissionsOpen)
 
 	// write cert files
 	return cert.Write(c.paths.NodeCertAbsFilename(nodeName),

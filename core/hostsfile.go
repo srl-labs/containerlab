@@ -18,6 +18,8 @@ const (
 	clabHostEntryPrefix  = "###### CLAB-%s-START ######"
 	clabHostEntryPostfix = "###### CLAB-%s-END ######"
 	clabHostsFilename    = "/etc/hosts"
+
+	hostEntriesPerNode = 2
 )
 
 func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
@@ -40,7 +42,7 @@ func (c *CLab) appendHostsFileEntries(ctx context.Context) error {
 		return err
 	}
 
-	hostEntries := make(clabtypes.HostEntries, 0, len(c.Nodes)*2)
+	hostEntries := make(clabtypes.HostEntries, 0, len(c.Nodes)*hostEntriesPerNode)
 	for _, n := range c.Nodes {
 		nodeHostEntries, err := n.GetHostsEntries(ctx)
 		if err != nil {
@@ -83,7 +85,7 @@ func (c *CLab) DeleteEntriesFromHostsFile() error {
 	f, err := os.OpenFile(
 		clabHostsFilename,
 		os.O_RDWR,
-		clabutils.PermissionsOwnerAllPermissions,
+		clabutils.PermissiosnFileDefault,
 	) // skipcq: GSC-G302
 	if err != nil {
 		return err

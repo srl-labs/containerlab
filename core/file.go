@@ -35,7 +35,8 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	}
 
 	// load the topology file/template
-	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameBase()).Funcs(clabutils.CreateFuncs()).
+	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameBase()).
+		Funcs(clabutils.CreateFuncs()).
 		ParseFiles(c.TopoPaths.TopologyFilenameAbsPath())
 	if err != nil {
 		return err
@@ -48,7 +49,7 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	}
 
 	log.Debugf("template variables: %v", templateVars)
-	// execute template
+
 	buf := new(bytes.Buffer)
 
 	err = topologyTemplate.Execute(buf, templateVars)
@@ -65,9 +66,12 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	if err != nil {
 		return err
 	}
+
 	err = yaml.UnmarshalStrict(yamlFile, c.Config)
 	if err != nil {
-		return fmt.Errorf("%w\nConsult with release notes to see if any fields were changed/removed", err)
+		return fmt.Errorf(
+			"%w\nConsult with release notes to see if any fields were changed/removed", err,
+		)
 	}
 
 	c.Config.Topology.ImportEnvs()
@@ -75,13 +79,14 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	return nil
 }
 
-func readTemplateVariables(topo, varsFile string) (interface{}, error) {
-	var templateVars interface{}
-	// variable file is not explicitly set
+func readTemplateVariables(topo, varsFile string) (any, error) {
+	var templateVars any
+
 	if varsFile == "" {
 		ext := filepath.Ext(topo)
 		for _, vext := range []string{".yaml", ".yml", ".json"} {
 			varsFile = fmt.Sprintf("%s%s%s", topo[0:len(topo)-len(ext)], varFileSuffix, vext)
+
 			_, err := os.Stat(varsFile)
 			switch {
 			case os.IsNotExist(err):
@@ -89,18 +94,26 @@ func readTemplateVariables(topo, varsFile string) (interface{}, error) {
 			case err != nil:
 				return nil, err
 			}
-			// file with current extension found, go read it.
-			goto READFILE
+
+			break
 		}
-		// no var file found, assume the topology is not a template
-		// or a template that doesn't require external variables
-		return nil, nil
+
+		if varsFile == "" {
+			// no var file found, assume the topology is not a template
+			// or a template that doesn't require external variables
+			return nil, nil
+		}
 	}
-READFILE:
+
 	data, err := os.ReadFile(varsFile)
 	if err != nil {
 		return nil, err
 	}
+
 	err = yaml.Unmarshal(data, &templateVars)
-	return templateVars, err
+	if err != nil {
+		return nil, err
+	}
+
+	return templateVars, nil
 }
