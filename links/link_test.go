@@ -113,6 +113,143 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			},
 		},
 		{
+			name: "brief link with ipv4 var malformed entry",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n1"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ip var single side",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: [n1:10.10.10.1/24]
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeBrief),
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
+						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{}},
+					},
+					LinkCommonParams: LinkCommonParams{MTU: DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"n1:10.10.10.1/24"}}},
+				},
+			},
+		},
+		{
+			name: "brief link with ip var both sides",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: [n1:10.10.10.1/24, n2:10.10.10.2/24]
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeBrief),
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
+						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.2/24"}},
+					},
+					LinkCommonParams: LinkCommonParams{MTU: DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"n1:10.10.10.1/24", "n2:10.10.10.2/24"}}},
+				},
+			},
+		},
+		{
+			name: "brief link with ip var invalid node",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n3:10.10.10.3/24"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ipv4 var duplicate node",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n1:10.10.10.1/24", "n1:10.20.30.40/24"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ipv4 var as invalid address",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n1:foo"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ipv6 var as invalid address",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv6: ["n1:foo"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ipv4 var non-IPv4 prefix",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n1:2001:db8::1/64"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
+			name: "brief link with ipv6 var non-IPv6 prefix",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv6: ["n1:10.10.10.1/24"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
 			name: "brief link with veth endpoints and mtu",
 			args: args{
 				yaml: []byte(`
@@ -217,6 +354,35 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 					},
 					LinkCommonParams: LinkCommonParams{
 						MTU: 1400,
+					},
+				},
+			},
+		},
+		{
+			name: "veth link with endpoint vars",
+			args: args{
+				yaml: []byte(`
+                    type: veth
+                    endpoints:
+                      - node: n1
+                        interface: e1-1
+                        vars:
+                          ipv4: 10.10.10.1/24
+                          ipv6: 2001:db8::1/64
+                      - node: n2
+                        interface: e1-2
+                        vars:
+                          ipv4: 10.10.10.2/24
+                          ipv6: 2001:db8::2/64
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeVEth),
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24", IPv6: "2001:db8::1/64"}},
+						{Node: "n2", Iface: "e1-2", Vars: &EndpointVars{IPv4: "10.10.10.2/24", IPv6: "2001:db8::2/64"}},
 					},
 				},
 			},
@@ -448,4 +614,27 @@ func TestSanitizeInterfaceName(t *testing.T) {
 			}
 		})
 	}
+}
+
+// cover the getter for endpoint IPv4/v6 vars.
+func TestEndpointVarIPGetter(t *testing.T) {
+	t.Run("nil Vars returns empty strings", func(t *testing.T) {
+		eg := &EndpointGeneric{Vars: nil}
+		if got := eg.GetIPv4Addr(); got != "" {
+			t.Errorf("GetIPv4Addr() = %q; want empty", got)
+		}
+		if got := eg.GetIPv6Addr(); got != "" {
+			t.Errorf("GetIPv6Addr() = %q; want empty", got)
+		}
+	})
+
+	t.Run("non-nil Vars returns set values", func(t *testing.T) {
+		eg := &EndpointGeneric{Vars: &EndpointVars{IPv4: "192.0.2.1/31", IPv6: "2001:db8::1/64"}}
+		if got := eg.GetIPv4Addr(); got != "192.0.2.1/31" {
+			t.Errorf("GetIPv4Addr() = %q; want %q", got, "192.0.2.1/31")
+		}
+		if got := eg.GetIPv6Addr(); got != "2001:db8::1/64" {
+			t.Errorf("GetIPv6Addr() = %q; want %q", got, "2001:db8::1/64")
+		}
+	})
 }

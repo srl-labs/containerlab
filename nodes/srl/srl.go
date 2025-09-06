@@ -598,6 +598,8 @@ type tplIFace struct {
 	Port       string
 	BreakoutNo string
 	Mtu        int
+	IPv4       string
+	IPv6       string
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
@@ -665,6 +667,14 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		// otherwise we don't set the mtu as srlinux will use the default max value 9232
 		if m := e.GetLink().GetMTU(); m != clablinks.DefaultLinkMTU {
 			iface.Mtu = m
+		}
+
+		if a := e.GetIPv4Addr(); a != "" {
+			iface.IPv4 = a
+		}
+
+		if a := e.GetIPv6Addr(); a != "" {
+			iface.IPv6 = a
 		}
 
 		// add the template interface definition to the template data
