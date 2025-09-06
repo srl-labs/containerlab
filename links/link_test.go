@@ -604,7 +604,7 @@ func TestSanitizeInterfaceName(t *testing.T) {
 	}
 }
 
-// cover the getter for endpoint IPv4/v6 vars
+// cover the getter for endpoint IPv4/v6 vars.
 func TestEndpointVarIPGetter(t *testing.T) {
 	t.Run("nil Vars returns empty strings", func(t *testing.T) {
 		eg := &EndpointGeneric{Vars: nil}
