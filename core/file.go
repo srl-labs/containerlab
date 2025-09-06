@@ -84,16 +84,19 @@ func readTemplateVariables(topo, varsFile string) (any, error) {
 
 	if varsFile == "" {
 		ext := filepath.Ext(topo)
-		for _, vext := range []string{".yaml", ".yml", ".json"} {
-			varsFile = fmt.Sprintf("%s%s%s", topo[0:len(topo)-len(ext)], varFileSuffix, vext)
 
-			_, err := os.Stat(varsFile)
+		for _, vext := range []string{".yaml", ".yml", ".json"} {
+			maybeVarsFile := fmt.Sprintf("%s%s%s", topo[0:len(topo)-len(ext)], varFileSuffix, vext)
+
+			_, err := os.Stat(maybeVarsFile)
 			switch {
 			case os.IsNotExist(err):
 				continue
 			case err != nil:
 				return nil, err
 			}
+
+			varsFile = maybeVarsFile
 
 			break
 		}

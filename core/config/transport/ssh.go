@@ -59,7 +59,9 @@ func WithUserNamePassword(username, password string) SSHTransportOption {
 		if tx.SSHConfig.Auth == nil {
 			tx.SSHConfig.Auth = []ssh.AuthMethod{}
 		}
+
 		tx.SSHConfig.Auth = append(tx.SSHConfig.Auth, ssh.Password(password))
+
 		return nil
 	}
 }
@@ -71,20 +73,27 @@ func HostKeyCallback(callback ...ssh.HostKeyCallback) SSHTransportOption {
 		tx.SSHConfig.HostKeyCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			if len(callback) == 0 {
 				log.Warnf("Skipping host key verification for %s", hostname)
+
 				return nil
 			}
+
 			for _, hkc := range callback {
 				if hkc(hostname, remote, key) == nil {
 					return nil
 				}
 			}
+
 			return fmt.Errorf("invalid host key %s: %s", hostname, key)
 		}
+
 		return nil
 	}
 }
 
-func NewSSHTransport(node *clabtypes.NodeConfig, options ...SSHTransportOption) (*SSHTransport, error) {
+func NewSSHTransport(
+	node *clabtypes.NodeConfig,
+	options ...SSHTransportOption,
+) (*SSHTransport, error) {
 	switch node.Kind {
 	case "vr-sros", "srl", "nokia_sros", "nokia_srsim", "nokia_srlinux":
 		c := &SSHTransport{}
@@ -106,8 +115,10 @@ func NewSSHTransport(node *clabtypes.NodeConfig, options ...SSHTransportOption) 
 		case "srl", "nokia_srlinux":
 			c.K = &SrlSSHKind{}
 		}
+
 		return c, nil
 	}
+
 	return nil, fmt.Errorf("no transport implemented for kind: %s", node.Kind)
 }
 
@@ -127,14 +138,17 @@ func (t *SSHTransport) InChannel() {
 	go func() {
 		buf := make([]byte, 1024)
 		tmpS := ""
+
 		n, err := t.ses.In.Read(buf) // this reads the ssh terminal
 		if err == nil {
 			tmpS = string(buf[:n])
 		}
+
 		for err == nil {
 			if strings.Contains(tmpS, "#") {
 				parts := strings.Split(tmpS, "#")
 				li := len(parts) - 1
+
 				for i := 0; i < li; i++ {
 					r := t.K.PromptParse(t, &parts[i])
 					if r == nil {
@@ -142,14 +156,19 @@ func (t *SSHTransport) InChannel() {
 							result: parts[i],
 						}
 					}
+
 					t.in <- *r
 				}
+
 				tmpS = parts[li]
 			}
+
 			n, err = t.ses.In.Read(buf)
 			tmpS += string(buf[:n])
 		}
+
 		log.Debugf("In Channel closing: %v", err)
+
 		t.in <- SSHReply{
 			result: tmpS,
 			prompt: "",
@@ -158,6 +177,7 @@ func (t *SSHTransport) InChannel() {
 
 	// Save first prompt
 	t.LoginMessage = t.Run("", 15)
+
 	if DebugCount > 1 {
 		t.LoginMessage.Info(t.Target)
 	}
@@ -179,6 +199,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 		select {
 		case <-time.After(time.Duration(timeout) * time.Second):
 			log.Warnf("timeout waiting for prompt: %s", command)
+
 			return &SSHReply{
 				result:  sHistory,
 				command: command,
@@ -196,10 +217,13 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 			if ret.prompt == "" && ret.result != "" {
 				// we should continue reading...
 				sHistory += ret.result
+
 				if DebugCount > 1 {
 					log.Debugf("+")
 				}
+
 				timeout = 2 // reduce timeout, node is already sending data
+
 				continue
 			}
 
@@ -209,6 +233,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 				rr = sHistory + "#" + ret.result
 				sHistory = "" //nolint:ineffassign
 			}
+
 			rr = strings.Trim(rr, " \n\r\t")
 
 			if strings.HasPrefix(rr, command) {
@@ -216,14 +241,18 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 			} else if !strings.Contains(rr, command) {
 				log.Debugf("read more %s:%s", command, rr)
 				sHistory = rr
+
 				continue
 			}
+
 			res := &SSHReply{
 				result:  rr,
 				prompt:  ret.prompt,
 				command: command,
 			}
+
 			res.Debug(t.Target, command+"<--RUN--")
+
 			return res
 		}
 	}
@@ -251,20 +280,27 @@ func (t *SSHTransport) Write(data, info *string) error {
 		if l == "" || strings.HasPrefix(l, "#") {
 			continue
 		}
+
 		c += 1
+
 		t.Run(l, 5).Info(t.Target)
 	}
 
 	if transaction {
 		commit, err := t.K.ConfigCommit(t)
+
 		msg := fmt.Sprintf("%s COMMIT - %d lines", *info, c)
+
 		if commit.result != "" {
 			msg += commit.LogString(t.Target, true, false)
 		}
+
 		if err != nil {
 			log.Error(msg)
+
 			return err
 		}
+
 		log.Info(msg)
 	}
 
@@ -278,9 +314,11 @@ func (t *SSHTransport) Connect(host string, _ ...TransportOption) error {
 	if t.PromptChar == "" {
 		t.PromptChar = "#"
 	}
+
 	if t.Port == 0 {
 		t.Port = 22
 	}
+
 	if t.SSHConfig == nil {
 		return fmt.Errorf("require auth credentials in SSHConfig")
 	}
@@ -294,10 +332,12 @@ func (t *SSHTransport) Connect(host string, _ ...TransportOption) error {
 	if err != nil || ses_ == nil {
 		return fmt.Errorf("cannot connect to %s: %s", host, err)
 	}
+
 	t.ses = ses_
 
 	log.Infof("Connected to %s\n", host)
 	t.InChannel()
+
 	// Read to first prompt
 	return nil
 }
@@ -309,6 +349,7 @@ func (t *SSHTransport) Close() {
 		close(t.in)
 		t.in = nil
 	}
+
 	t.ses.Close()
 }
 
@@ -323,18 +364,22 @@ func NewSSHSession(host string, sshConfig *ssh.ClientConfig) (*SSHSession, error
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect: %s", err)
 	}
+
 	session, err := connection.NewSession()
 	if err != nil {
 		return nil, err
 	}
+
 	sshIn, err := session.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("session stdout: %s", err)
 	}
+
 	sshOut, err := session.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("session stdin: %s", err)
 	}
+
 	// sshIn2, err := session.StderrPipe()
 	// if err != nil {
 	// 	return nil, fmt.Errorf("session stderr: %s", err)
@@ -343,6 +388,7 @@ func NewSSHSession(host string, sshConfig *ssh.ClientConfig) (*SSHSession, error
 	modes := ssh.TerminalModes{
 		ssh.ECHO: 1, // disable echo
 	}
+
 	err = session.RequestPty("dumb", 24, 1000, modes)
 	if err != nil {
 		session.Close()
@@ -378,22 +424,28 @@ func (ses *SSHSession) Close() {
 //	? - prompt part of the result
 func (r *SSHReply) LogString(node string, linefeed, debug bool) string { // skipcq: RVV-A0005
 	ind := 12 + len(node)
+
 	prefix := "\n" + strings.Repeat(" ", ind)
 	s := ""
+
 	if linefeed {
 		s = "\n" + strings.Repeat(" ", 11)
 	}
+
 	s += node + " # " + r.command
 	s += prefix + "| "
 	s += strings.Join(strings.Split(r.result, "\n"), prefix+"| ")
+
 	if debug { // Add the prompt & more
 		s = "" + strings.Repeat(" ", ind) + s
 		s += prefix + "? "
 		s += strings.Join(strings.Split(r.prompt, "\n"), prefix+"? ")
+
 		if DebugCount > 3 { // add bytestring
 			s += fmt.Sprintf("%s| %v%s ? %v", prefix, []byte(r.result), prefix, []byte(r.prompt))
 		}
 	}
+
 	return s
 }
 
@@ -401,7 +453,9 @@ func (r *SSHReply) Info(node string) *SSHReply {
 	if r.result == "" {
 		return r
 	}
+
 	log.Info(r.LogString(node, false, false))
+
 	return r
 }
 
@@ -410,8 +464,10 @@ func (r *SSHReply) Debug(node, message string, t ...interface{}) {
 	if len(t) > 0 {
 		msg = t[0].(string)
 	}
+
 	_, fn, line, _ := runtime.Caller(1)
 	msg += fmt.Sprintf("(%s line %d)", fn, line)
 	msg += r.LogString(node, true, true)
+
 	log.Debug(msg)
 }

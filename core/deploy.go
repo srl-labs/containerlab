@@ -28,9 +28,11 @@ func (c *CLab) Deploy( //nolint: funlen
 	}
 
 	log.Debugf("lab Conf: %+v", c.Config)
+
 	if options.reconfigure {
 		_ = c.destroy(ctx, uint(len(c.Nodes)), true)
 		log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
+
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return nil, err
 		}
@@ -69,6 +71,7 @@ func (c *CLab) Deploy( //nolint: funlen
 	// create an empty ansible inventory file that will get populated later
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
+
 	_, err = os.Create(ansibleInvFPath)
 	if err != nil {
 		return nil, err
@@ -77,6 +80,7 @@ func (c *CLab) Deploy( //nolint: funlen
 	// create an empty nornir simple inventory file that will get populated later
 	// we create it here first, so that bind mounts of nornir-simple-inventory.yml file could work
 	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
+
 	_, err = os.Create(nornirSimpleInvFPath)
 	if err != nil {
 		return nil, err
@@ -84,6 +88,7 @@ func (c *CLab) Deploy( //nolint: funlen
 
 	// in an similar fashion, create an empty topology data file
 	topoDataFPath := c.TopoPaths.TopoExportFile()
+
 	topoDataF, err := os.Create(topoDataFPath)
 	if err != nil {
 		return nil, err
@@ -166,12 +171,14 @@ func (c *CLab) Deploy( //nolint: funlen
 	}
 
 	log.Info("Adding host entries", "path", "/etc/hosts")
+
 	err = c.appendHostsFileEntries(ctx)
 	if err != nil {
 		log.Errorf("failed to create hosts file: %v", err)
 	}
 
 	log.Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
+
 	err = c.addSSHConfig()
 	if err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
@@ -242,7 +249,11 @@ func (c *CLab) certificateAuthoritySetup() error {
 // The exec collection is returned to the caller to ensure that the execution log
 // is printed after the nodes are created.
 // Nodes interdependencies are created in this function.
-func (c *CLab) createNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *clabexec.ExecCollection, error) {
+func (c *CLab) createNodes(
+	ctx context.Context,
+	maxWorkers uint,
+	skipPostDeploy bool,
+) (*sync.WaitGroup, *clabexec.ExecCollection, error) {
 	for _, node := range c.Nodes {
 		c.dependencyManager.AddNode(node)
 	}

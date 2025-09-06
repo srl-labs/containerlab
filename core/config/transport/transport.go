@@ -20,7 +20,6 @@ type Transport interface {
 // Write config to a node.
 func Write(tx Transport, host string, data, info []string, options ...TransportOption) error {
 	// the Kind should configure the transport parameters before
-
 	err := tx.Connect(host, options...)
 	if err != nil {
 		return fmt.Errorf("%s: %s", host, err)

@@ -3,11 +3,12 @@ package config
 import (
 	"fmt"
 
-	"github.com/srl-labs/containerlab/core/config/transport"
+	clabcoreconfigtransport "github.com/srl-labs/containerlab/core/config/transport"
 )
 
 func Send(cs *NodeConfig, _ string) error {
-	var tx transport.Transport
+	var tx clabcoreconfigtransport.Transport
+
 	var err error
 
 	ct, ok := cs.TargetNode.Labels["config.transport"]
@@ -18,20 +19,18 @@ func Send(cs *NodeConfig, _ string) error {
 	switch ct {
 	case "ssh":
 		ssh_cred := cs.Credentials
-		if err != nil {
-			return err
-		}
 
-		if len(ssh_cred) < 2 {
+		if len(ssh_cred) < 2 { //nolint: mnd
 			return fmt.Errorf("SSH credentials for node %s of type %s not found, cannot configure",
 				cs.TargetNode.ShortName, cs.TargetNode.Kind)
 		}
-		tx, err = transport.NewSSHTransport(
+
+		tx, err = clabcoreconfigtransport.NewSSHTransport(
 			cs.TargetNode,
-			transport.WithUserNamePassword(
+			clabcoreconfigtransport.WithUserNamePassword(
 				ssh_cred[0],
 				ssh_cred[1]),
-			transport.HostKeyCallback(),
+			clabcoreconfigtransport.HostKeyCallback(),
 		)
 		if err != nil {
 			return err
@@ -42,9 +41,10 @@ func Send(cs *NodeConfig, _ string) error {
 		return fmt.Errorf("unknown transport: %s", ct)
 	}
 
-	err = transport.Write(tx, cs.TargetNode.LongName, cs.Data, cs.Info)
+	err = clabcoreconfigtransport.Write(tx, cs.TargetNode.LongName, cs.Data, cs.Info)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

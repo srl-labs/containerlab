@@ -14,16 +14,20 @@ type pullResult struct {
 	err  error
 }
 
-// pullImagesForNodes concurrently pulls images for all nodes, avoiding duplicate pulls for the same image.
+// pullImagesForNodes concurrently pulls images for all nodes, avoiding duplicate pulls for the
+// same image.
 func (c *CLab) pullImagesForNodes(ctx context.Context) error {
 	errCh := make(chan error, len(c.Nodes))
+
 	var wg sync.WaitGroup
 
 	var pullMutex sync.Mutex
+
 	ongoingPulls := make(map[string]*pullResult)
 
 	for _, node := range c.Nodes {
 		wg.Add(1)
+
 		go c.pullNodeImages(ctx, node, &wg, errCh, &pullMutex, ongoingPulls)
 	}
 
@@ -35,6 +39,7 @@ func (c *CLab) pullImagesForNodes(ctx context.Context) error {
 
 	// Collect all errors
 	var errors []error
+
 	for err := range errCh {
 		if err != nil {
 			errors = append(errors, err)
@@ -69,7 +74,10 @@ func (c *CLab) pullNodeImages(
 
 	for imageKey, imageName := range images {
 		if imageName == "" {
-			errCh <- fmt.Errorf("missing required %q attribute for node %q", imageKey, node.Config().ShortName)
+			errCh <- fmt.Errorf(
+				"missing required %q attribute for node %q", imageKey, node.Config().ShortName,
+			)
+
 			return
 		}
 
@@ -77,10 +85,12 @@ func (c *CLab) pullNodeImages(
 		imageKey := fmt.Sprintf("%s:%s", imageName, node.Config().ImagePullPolicy)
 
 		pullMutex.Lock()
+
 		if existing, found := ongoingPulls[imageKey]; found {
 			// Image is already being pulled, wait for it to complete
 			pullMutex.Unlock()
 			<-existing.done
+
 			if existing.err != nil {
 				errCh <- existing.err
 				return
@@ -90,7 +100,9 @@ func (c *CLab) pullNodeImages(
 			result := &pullResult{
 				done: make(chan struct{}),
 			}
+
 			ongoingPulls[imageKey] = result
+
 			pullMutex.Unlock()
 
 			// Perform the actual pull

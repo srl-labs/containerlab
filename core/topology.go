@@ -44,7 +44,12 @@ func FindTopoFileByPath(path string) (string, error) {
 				filenames = append(filenames, filepath.Base(match))
 			}
 
-			return "", fmt.Errorf("found multiple topology definitions [ %s ] in a given directory %q. Provide the specific filename", strings.Join(filenames, ", "), path)
+			return "", fmt.Errorf(
+				"found multiple topology definitions [ %s ] in a given directory %q. "+
+					"Provide the specific filename",
+				strings.Join(filenames, ", "),
+				path,
+			)
 		}
 	}
 

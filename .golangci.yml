@@ -72,6 +72,8 @@ linters:
           alias: clab$1
         - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)
           alias: clab$1$2
+        - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)/(\w+)
+          alias: clab$1$2$3
       no-unaliased: true
     lll:
       line-length: 100
@@ -95,23 +97,12 @@ linters:
       - linters:
           - staticcheck
         text: could remove embedded field
+      # ssh bits have a lot of mnd that is pretty clear what it is for/doing, so just ignore
+      - linters:
+          - mnd
+        path: core/config/transport/
     # slowly enforcing things, excluding these packages (for now!)
     paths:
-      - core/clab
-      - core/config_test
-      - core/config/
-      - core/deploy
-      - core/destroy
-      - core/cert
-      - core/export
-      - core/hostfile
-      - core/image
-      - core/inventory
-      - core/list
-      - core/network
-      - core/register
-      - core/topology
-      - core/dependency_manager
       - cert
       - errors
       - exec

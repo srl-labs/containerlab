@@ -30,8 +30,10 @@ func (c *CLab) ListContainers(
 		if err != nil {
 			return containers, fmt.Errorf("could not list containers: %v", err)
 		}
+
 		containers = append(containers, ctrs...)
 	}
+
 	return containers, nil
 }
 
@@ -68,6 +70,7 @@ func (c *CLab) ListNodesContainersIgnoreNotFound(
 		if err != nil {
 			continue
 		}
+
 		containers = append(containers, cts...)
 	}
 
@@ -110,6 +113,7 @@ func (c *CLab) ListContainerInterfaces(
 	default:
 		log.Warnf("Container %v has no namespace set, skipping!", containerInterfaces.ContainerName)
 		containerInterfaces.Interfaces = make([]*clabtypes.ContainerInterfaceDetails, 0)
+
 		return &containerInterfaces, nil
 	}
 
@@ -139,6 +143,7 @@ func (c *CLab) ListContainerInterfaces(
 
 		containerInterfaces.Interfaces = append(containerInterfaces.Interfaces, &ifaceDetails)
 	}
+
 	log.Debugf("Fetched %v interfaces for %v", len(interfaces), containerInterfaces.ContainerName)
 
 	return &containerInterfaces, nil
@@ -168,6 +173,7 @@ func (c *CLab) ListContainersInterfaces(
 		} else {
 			log.Warnf("No interfaces found for container %v", cIfs.ContainerName)
 		}
+
 		containerInterfaces = append(containerInterfaces, cIfs)
 	}
 

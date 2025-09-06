@@ -40,15 +40,18 @@ type NodeConfig struct {
 func LoadTemplates(tmpl *template.Template, role string) error {
 	for _, p := range TemplatePaths {
 		fn := filepath.Join(p, fmt.Sprintf("*__%s.tmpl", role))
+
 		_, err := tmpl.ParseGlob(fn)
 		if err != nil {
 			if strings.Contains(err.Error(), "pattern matches no file") {
 				log.Debug(err)
 				continue
 			}
+
 			return fmt.Errorf("could not load templates from %s: %w", fn, err)
 		}
 	}
+
 	return nil
 }
 
@@ -72,10 +75,12 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 
 	if len(TemplateNames) == 0 {
 		var err error
+
 		TemplateNames, err = GetTemplateNamesInDirs(TemplateFS)
 		if err != nil {
 			return err
 		}
+
 		log.Infof("No template names specified (-l) using: %s", strings.Join(TemplateNames, ", "))
 	}
 
@@ -84,21 +89,28 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 	for _, nc := range allnodes {
 		for _, baseN := range TemplateNames {
 			tmplN := fmt.Sprintf("%s__%s.tmpl", baseN, nc.Vars[vkRole])
+
 			log.Debugf("Looking up template %v", tmplN)
+
 			if l := tmpl.Lookup(tmplN); l == nil {
 				err := LoadTemplates(tmpl, fmt.Sprintf("%s", nc.Vars[vkRole]))
 				if err != nil {
 					return err
 				}
+
 				l = tmpl.Lookup(tmplN)
 				if l == nil {
 					log.Debugf("No template found for %s; skipping..", nc.TargetNode.ShortName)
 					continue
 				}
 			}
+
 			var buf strings.Builder
+
 			err := tmpl.ExecuteTemplate(&buf, tmplN, nc.Vars)
+
 			log.Debugf("Executed a template %s with an error code %v", tmplN, err)
+
 			if err != nil {
 				nc.Print(true, true)
 				return err
@@ -109,12 +121,14 @@ func RenderAll(allnodes map[string]*NodeConfig) error {
 			nc.Info = append(nc.Info, tmplN)
 		}
 	}
+
 	return nil
 }
 
 // String implements stringer interface for NodeConfig.
 func (c *NodeConfig) String() string {
 	s := fmt.Sprintf("%s: %v", c.TargetNode.ShortName, c.Info)
+
 	return s
 }
 
@@ -126,28 +140,38 @@ func (c *NodeConfig) Print(vars, rendered bool) { // skipcq: RVV-A0005
 
 	if vars {
 		s.WriteString(" vars = ")
+
 		var saved_nodes Dict
+
 		restore := false
-		if DebugCount < 3 {
+
+		if DebugCount < 3 { //nolint: mnd
 			saved_nodes, restore = c.Vars[vkNodes].(Dict)
+
 			if restore {
 				var n strings.Builder
+
 				n.WriteRune('{')
+
 				for k := range saved_nodes {
 					fmt.Fprintf(&n, "%s: {...}, ", k)
 				}
+
 				n.WriteRune('}')
 				c.Vars[vkNodes] = n.String()
 			}
 		}
+
 		vars, err := yaml.Marshal(c.Vars)
 		if err != nil {
 			log.Warnf("error printing vars for node %s: %s", c.TargetNode.ShortName, err)
 			s.WriteString(err.Error())
 		}
+
 		if restore {
 			c.Vars[vkNodes] = saved_nodes
 		}
+
 		if len(vars) > 0 {
 			s.Write(vars)
 		}
@@ -162,6 +186,7 @@ func (c *NodeConfig) Print(vars, rendered bool) { // skipcq: RVV-A0005
 				s.WriteString("\n     ")
 				s.WriteString(l)
 			}
+
 			s.WriteString("\n  ]]")
 		}
 	}

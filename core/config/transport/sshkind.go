@@ -38,6 +38,7 @@ func (*VrSrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // 
 		s.Run("/configure global", 5).Info(s.Target)
 		s.Run("discard", 1).Info(s.Target)
 	}
+
 	return nil
 }
 
@@ -46,6 +47,7 @@ func (*VrSrosSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
 	if res.result != "" {
 		return res, fmt.Errorf("could not commit %s", res.result)
 	}
+
 	return res, nil
 }
 
@@ -58,6 +60,7 @@ func (*VrSrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 			prompt: (*in)[r+4:] + s.PromptChar,
 		}
 	}
+
 	return nil
 }
 
@@ -76,6 +79,7 @@ func (*SrosSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // sk
 		s.Run("/configure global", 5).Info(s.Target)
 		s.Run("discard", 1).Info(s.Target)
 	}
+
 	return nil
 }
 
@@ -84,6 +88,7 @@ func (*SrosSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
 	if res.result != "" {
 		return res, fmt.Errorf("could not commit %s", res.result)
 	}
+
 	return res, nil
 }
 
@@ -96,6 +101,7 @@ func (*SrosSSHKind) PromptParse(s *SSHTransport, in *string) *SSHReply {
 			prompt: (*in)[r+4:] + s.PromptChar,
 		}
 	}
+
 	return nil
 }
 
@@ -107,22 +113,27 @@ func (*SrlSSHKind) ConfigStart(s *SSHTransport, transaction bool) error { // ski
 	if transaction {
 		r0 := s.Run("enter candidate private", 5)
 		r1 := s.Run("discard stay", 2)
+
 		if !strings.Contains(r1.result, "Nothing to discard") {
 			r0.result += "; " + r1.result
 			r0.command += "; " + r1.command
 		}
+
 		r0.Info(s.Target)
 	}
+
 	return nil
 }
 
 func (*SrlSSHKind) ConfigCommit(s *SSHTransport) (*SSHReply, error) {
 	r := s.Run("commit now", 10)
+
 	if strings.Contains(r.result, "All changes have been committed") {
 		r.result = ""
 	} else {
 		return r, fmt.Errorf("could not commit %s", r.result)
 	}
+
 	return r, nil
 }
 
@@ -137,17 +148,21 @@ func promptParseNoSpaces(in *string, promptChar string, lines int) *SSHReply {
 	if n < 0 {
 		return nil
 	}
+
 	if strings.Contains((*in)[n:], " ") {
 		return nil
 	}
+
 	if lines > 1 {
 		// Add another line to the prompt
 		res := (*in)[:n]
 		n = strings.LastIndex(res, "\n")
 	}
+
 	if n < 0 {
 		n = 0
 	}
+
 	return &SSHReply{
 		result: (*in)[:n],
 		prompt: (*in)[n:] + promptChar,
