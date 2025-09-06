@@ -57,7 +57,7 @@ func (s *sonic) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 }
 
 func (s *sonic) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(s.Cfg.LabDir, 0o777)
+	clabutils.CreateDirectory(s.Cfg.LabDir, clabutils.PermissionsOpen)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil

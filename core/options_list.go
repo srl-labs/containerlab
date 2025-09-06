@@ -79,7 +79,7 @@ func (o *ListOptions) ToFilters() []*clabtypes.GenericFilter {
 		if strings.Contains(cliArg, "=") {
 			cliArgParts := strings.Split(cliArg, "=")
 
-			if len(cliArgParts) != 2 {
+			if len(cliArgParts) != 2 { //nolint: mnd
 				// silently ignoring for safety
 				continue
 			}

@@ -9,6 +9,7 @@ func Test_recursiveAcyclicityCheck(t *testing.T) {
 		dependencies map[string][]string
 		i            int
 	}
+
 	tests := []struct {
 		name string
 		args args

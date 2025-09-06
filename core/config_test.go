@@ -52,6 +52,7 @@ func TestLicenseInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
@@ -100,9 +101,10 @@ func TestBindsInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
-				t.Error(err)
+				t.Fatal(err)
 			}
 
 			binds := c.Nodes["node1"].Config().Binds
@@ -158,6 +160,7 @@ func TestTypeInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
@@ -236,6 +239,7 @@ func TestEnvInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
@@ -282,6 +286,7 @@ func TestUserInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
@@ -322,6 +327,7 @@ func TestVerifyLinks(t *testing.T) {
 					},
 				),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
@@ -331,10 +337,12 @@ func TestVerifyLinks(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			err = c.verifyLinks(ctx)
 			if err != nil && err.Error() != tc.want {
 				t.Fatalf("wanted %q got %q", tc.want, err.Error())
 			}
+
 			if err == nil && tc.want != "" {
 				t.Fatalf("wanted %q got nil", tc.want)
 			}
@@ -344,9 +352,11 @@ func TestVerifyLinks(t *testing.T) {
 
 func TestLabelsInit(t *testing.T) {
 	owner := os.Getenv("SUDO_USER")
+
 	if owner == "" {
 		owner = os.Getenv("USER")
 	}
+
 	tests := map[string]struct {
 		got  string
 		node string
@@ -423,6 +433,7 @@ func TestLabelsInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
@@ -441,7 +452,9 @@ func TestLabelsInit(t *testing.T) {
 
 			// test that labels were propagated to env vars as CLAB_LABEL_<label-name>:<label-value>
 			env := c.Nodes[tc.node].Config().Env
+
 			fmt.Printf("%v\n", env)
+
 			for k, v := range tc.want {
 				// sanitize label key to be used as an env key
 				sk := clabutils.ToEnvKey(k)
@@ -482,6 +495,7 @@ func TestVerifyRootNetNSLinks(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.topo, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
@@ -582,6 +596,7 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.topo, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
@@ -596,6 +611,7 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			mockRuntime.EXPECT().ListContainers(gomock.Any(), gomock.Any()).AnyTimes().Return(tc.mockResult.c, tc.mockResult.e)
 
 			ctx := context.Background()
+
 			err = c.verifyContainersUniqueness(ctx)
 			if tc.wantError {
 				assert.Error(t, err)
@@ -637,6 +653,7 @@ func TestEnvFileInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
@@ -687,10 +704,12 @@ func TestSuppressConfigInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			suppress := c.Nodes[tc.node].Config().SuppressStartupConfig
 			if suppress != tc.want {
 				t.Fatalf("wanted %v, got %v", tc.want, suppress)
@@ -727,6 +746,7 @@ func TestStartupConfigInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Error(err)
@@ -762,6 +782,7 @@ func TestExecInit(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Error(err)

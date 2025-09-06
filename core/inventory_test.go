@@ -85,12 +85,14 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			var s strings.Builder
+
 			err = c.generateAnsibleInventory(&s)
 			if err != nil {
 				t.Fatal(err)
@@ -216,12 +218,14 @@ node3:
 			opts := []ClabOption{
 				WithTopoPath(tc.got, ""),
 			}
+
 			c, err := NewContainerLab(opts...)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			var s strings.Builder
+
 			err = c.generateNornirSimpleInventory(&s)
 			if err != nil {
 				t.Fatal(err)

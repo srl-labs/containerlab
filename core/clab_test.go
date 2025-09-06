@@ -330,6 +330,7 @@ func TestWithTopo(t *testing.T) {
 	type args struct {
 		topoRef string
 	}
+
 	tests := []struct {
 		name      string
 		args      args
@@ -386,10 +387,12 @@ func TestWithTopo(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
+
 			err = wt(c)
 			if tt.wantError && err == nil {
 				t.Errorf("expected error, got non")
 			}
+
 			if !tt.wantError && err != nil {
 				t.Errorf("got error %v, expected no error", err)
 			}

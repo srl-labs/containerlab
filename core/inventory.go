@@ -51,7 +51,6 @@ func (c *CLab) GenerateInventories() error {
 	// generate Ansible Inventory
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 
-	var err error
 	ansibleFile, err := os.Create(ansibleInvFPath)
 	if err != nil {
 		return err
@@ -69,6 +68,7 @@ func (c *CLab) GenerateInventories() error {
 
 	// generate Nornir Simple Inventory
 	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
+
 	nornirFile, err := os.Create(nornirSimpleInvFPath)
 	if err != nil {
 		return err
@@ -140,6 +140,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+
 	err = t.Execute(w, inv)
 	if err != nil {
 		return err
@@ -174,22 +175,24 @@ func (n *AnsibleKindProps) setAnsibleConnection(kind string) {
 //go:embed assets/inventory_nornir_simple.go.tpl
 var nornirSimpleInvT string
 
-// NornirSimpleInventoryKindProps is the kind properties structure used to generate the nornir simple inventory file.
+// NornirSimpleInventoryKindProps is the kind properties structure used to generate the nornir
+// simple inventory file.
 type NornirSimpleInventoryKindProps struct {
 	Username string
 	Password string
 	Platform string
 }
 
-// NornirSimpleInventoryNode represents the data structure used to generate the nornir simple inventory file.
-// It embeds the NodeConfig struct and adds the Username and Password fields extracted from
-// the node registry.
+// NornirSimpleInventoryNode represents the data structure used to generate the nornir simple
+// inventory file. It embeds the NodeConfig struct and adds the Username and Password fields
+// extracted from the node registry.
 type NornirSimpleInventoryNode struct {
 	*clabtypes.NodeConfig
 	NornirGroups []string
 }
 
-// NornirSimpleInventory represents the data structure used to generate the nornir simple inventory file.
+// NornirSimpleInventory represents the data structure used to generate the nornir simple inventory
+// file.
 type NornirSimpleInventory struct {
 	// clab node kinds
 	Kinds map[string]*NornirSimpleInventoryKindProps
@@ -246,11 +249,13 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 				}
 			}
 		}
+
 		for key, value := range n.Config().Labels {
 			if strings.HasPrefix(key, "nornir-group") {
 				nornirNode.NornirGroups = append(nornirNode.NornirGroups, value)
 			}
 		}
+
 		// sort by group name so it's deterministic
 		slices.Sort(nornirNode.NornirGroups)
 
@@ -268,6 +273,7 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+
 	err = t.Execute(w, inv)
 	if err != nil {
 		return err

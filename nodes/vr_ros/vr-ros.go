@@ -136,7 +136,8 @@ func (n *vrRos) SaveConfig(_ context.Context) error {
 
 	// Save config to mounted labdir startup config path
 	configPath := filepath.Join(n.Cfg.LabDir, n.ConfigDirName, n.StartupCfgFName)
-	err = os.WriteFile(configPath, []byte(filtered_config), 0o777) // skipcq: GO-S2306
+	err = os.WriteFile(configPath, []byte(filtered_config),
+		clabutils.PermissionsOpen) // skipcq: GO-S2306
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v", configPath, n.Cfg.ShortName, err)
 	}
