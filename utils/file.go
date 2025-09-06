@@ -33,7 +33,11 @@ import (
 )
 
 const (
-	PermissionsEveryoneAllPermissions = 0o777
+	PermissiosnFileDefault = 0o644
+	PermissionsDirDefault  = 0o755
+	PermissionsOpen        = 0o777
+
+	PermissionsGroupRX = 0o750
 )
 
 var (

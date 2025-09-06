@@ -44,7 +44,7 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 
 	// generate config dir
-	clabutils.CreateDirectory(n.configDir, 0o777)
+	clabutils.CreateDirectory(n.configDir, clabutils.PermissionsOpen)
 	log.Debugf("Chowning dir %s", n.configDir)
 	if err := os.Chown(n.Cfg.LabDir, 0, vyattacfg_gid); err != nil {
 		return err
@@ -70,11 +70,11 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	scriptDir := filepath.Join(n.configDir, "scripts")
 	preScript := filepath.Join(scriptDir, "vyos-preconfig-bootup.script")
 	postScript := filepath.Join(scriptDir, "vyos-postconfig-bootup.script")
-	clabutils.CreateDirectory(scriptDir, 0o777)
+	clabutils.CreateDirectory(scriptDir, clabutils.PermissionsOpen)
 
 	for _, s := range []string{preScript, postScript} {
 		clabutils.CreateFile(s, "#!/bin/sh")
-		os.Chmod(s, 0o755)
+		os.Chmod(s, clabutils.PermissionsDirDefault)
 		os.Chown(s, 0, vyattacfg_gid)
 	}
 

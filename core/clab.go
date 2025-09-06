@@ -105,9 +105,8 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	return c, err
 }
 
-// NewClabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
-// or a lab name. It returns the initialized CLab structure with the
-// topology loaded.
+// NewClabFromTopologyFileOrLabName creates a containerlab instance using either a topology file
+// path or a lab name. It returns the initialized CLab structure with the topology loaded.
 func NewClabFromTopologyFileOrLabName(
 	topoPath,
 	labName,
@@ -120,8 +119,13 @@ func NewClabFromTopologyFileOrLabName(
 	if topoPath == "" && labName == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get current working directory and no topology path or lab name provided: %w", err)
+			return nil, fmt.Errorf(
+				"failed to get current working directory and no topology path or "+
+					"lab name provided: %w",
+				err,
+			)
 		}
+
 		topoPath = cwd
 	}
 
@@ -171,11 +175,13 @@ func RuntimeInitializer(name string) (string, clabruntime.Initializer, error) {
 // or stdin or a URL (HTTP/HTTPS/S3) and returns the topology file name if found.
 func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	var file string
+
 	var err error
 
 	switch {
 	case path == "-" || path == "stdin":
 		log.Debugf("interpreting topo %q as stdin", path)
+
 		file, err = readFromStdin(c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
@@ -184,6 +190,7 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	case !clabutils.FileOrDirExists(path) &&
 		clabutils.IsHttpURL(path, true):
 		log.Debugf("interpreting topo %q as remote URL", path)
+
 		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
@@ -191,6 +198,7 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	// if the path is an S3 URL, download the file and store it in the tmp dir
 	case clabutils.IsS3URL(path):
 		log.Debugf("interpreting topo %q as S3 URL", path)
+
 		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
@@ -201,11 +209,13 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 
 	default:
 		log.Debugf("interpreting topo %q as file path", path)
+
 		file, err = FindTopoFileByPath(path)
 		if err != nil {
 			return "", err
 		}
 	}
+
 	return file, nil
 }
 
@@ -240,6 +250,7 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 // initMgmtNetwork sets management network config.
 func (c *CLab) initMgmtNetwork() error {
 	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
+
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
@@ -269,6 +280,7 @@ func (c *CLab) GetNode(name string) (clabnodes.Node, error) {
 	if node, exists := c.Nodes[name]; exists {
 		return node, nil
 	}
+
 	return nil, fmt.Errorf("%w: %s", ErrNodeNotFound, name)
 }
 
@@ -286,14 +298,17 @@ func (c *CLab) createIgniteSerialDependency() error {
 					return err
 				}
 			}
+
 			prevIgniteNode = n
 		}
 	}
+
 	return nil
 }
 
-// createNamespaceSharingDependency adds dependency between the containerlab nodes that share a common network namespace.
-// When a node_a in the topology configured to be started in the netns of a node_b as such:
+// createNamespaceSharingDependency adds dependency between the containerlab nodes that share a
+// common network namespace. When a node_a in the topology configured to be started in the netns
+// of a node_b as such:
 //
 // node_a:
 //
@@ -303,16 +318,23 @@ func (c *CLab) createIgniteSerialDependency() error {
 func (c *CLab) createNamespaceSharingDependency() {
 	for _, n := range c.dependencyManager.GetNodes() {
 		nodeConfig := n.Config()
-		netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2)
+
+		netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2) //nolint: mnd
 		if netModeArr[0] != "container" {
 			// we only care about nodes with shared netns network-mode ("container:<CONTAINERNAME>")
 			continue
 		}
 
 		referenceNodeName := netModeArr[1]
+
 		referenceNode, err := c.dependencyManager.GetNode(referenceNodeName)
 		if err != nil {
-			log.Warnf("node %s referenced in namespace sharing not found in topology definition, considering it an external dependency.", referenceNodeName)
+			log.Warnf(
+				"node %s referenced in namespace sharing not found in topology definition, "+
+					"considering it an external dependency.",
+				referenceNodeName,
+			)
+
 			continue
 		}
 
@@ -320,8 +342,9 @@ func (c *CLab) createNamespaceSharingDependency() {
 	}
 }
 
-// createStaticDynamicDependency creates the dependencies between the nodes such that all nodes with dynamic mgmt IP
-// are dependent on the nodes with static mgmt IP. This results in nodes with static mgmt IP to be scheduled before dynamic ones.
+// createStaticDynamicDependency creates the dependencies between the nodes such that all nodes
+// with dynamic mgmt IP are dependent on the nodes with static mgmt IP. This results in nodes with
+// static mgmt IP to be scheduled before dynamic ones.
 func (c *CLab) createStaticDynamicDependency() error {
 	staticIPNodes := make(map[string]*clabcoredependency_manager.DependencyNode)
 	dynIPNodes := make(map[string]*clabcoredependency_manager.DependencyNode)
@@ -332,6 +355,7 @@ func (c *CLab) createStaticDynamicDependency() error {
 			staticIPNodes[name] = n
 			continue
 		}
+
 		dynIPNodes[name] = n
 	}
 
@@ -345,6 +369,7 @@ func (c *CLab) createStaticDynamicDependency() error {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -421,7 +446,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			// before continuing with the post-deploy stage (for e.g. certificate creation)
 			err = node.UpdateConfigWithRuntimeInfo(ctx)
 			if err != nil {
-				log.Errorf("failed to update node runtime information for node %s: %v", node.Config().ShortName, err)
+				log.Errorf(
+					"failed to update node runtime information for node %s: %v",
+					node.Config().ShortName,
+					err,
+				)
 			}
 
 			node.Done(ctx, clabtypes.WaitForCreate)
@@ -441,7 +470,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			if !skipPostDeploy {
 				err = node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes})
 				if err != nil {
-					log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
+					log.Errorf(
+						"failed to run postdeploy task for node %s: %v",
+						node.Config().ShortName,
+						err,
+					)
 				}
 			}
 
@@ -454,32 +487,43 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 
 			if node.MustWait(clabtypes.WaitForHealthy) {
 				node.EnterStage(ctx, clabtypes.WaitForHealthy)
-				// if there is a dependecy on the healthy state of this node, enter the checking procedure
+				// if there is a dependecy on the healthy state of this node, enter the
+				// checking procedure
 				for {
 					healthy, err := node.IsHealthy(ctx)
 					if err != nil {
-						log.Errorf("error checking for node health %v. Continuing deployment anyways", err)
+						log.Errorf(
+							"error checking for node health %v. Continuing deployment anyways",
+							err,
+						)
+
 						break
 					}
+
 					if healthy {
 						log.Infof("node %q turned healthy, continuing", node.GetShortName())
 						node.Done(ctx, clabtypes.WaitForHealthy)
+
 						break
 					}
+
 					time.Sleep(time.Second)
 				}
 			}
 
 			if node.MustWait(clabtypes.WaitForExit) {
 				node.EnterStage(ctx, clabtypes.WaitForExit)
-				// if there is a dependency on the healthy state of this node, enter the checking procedure
+				// if there is a dependency on the healthy state of this node, enter the
+				// checking procedure
 				for {
 					status := node.GetContainerStatus(ctx)
 					if status == clabruntime.Stopped {
 						log.Infof("node %q stopped", node.GetShortName())
 						node.Done(ctx, clabtypes.WaitForExit)
+
 						break
 					}
+
 					time.Sleep(time.Second)
 				}
 			}
@@ -491,7 +535,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 }
 
 // skipcq: GO-R1005
-func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy bool) (*sync.WaitGroup, *clabexec.ExecCollection) {
+func (c *CLab) scheduleNodes(
+	ctx context.Context,
+	maxWorkers int,
+	skipPostDeploy bool,
+) (*sync.WaitGroup, *clabexec.ExecCollection) {
 	concurrentChan := make(chan *clabcoredependency_manager.DependencyNode)
 
 	execCollection := clabexec.NewExecCollection()
@@ -500,6 +548,7 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	if numScheduledNodes < maxWorkers {
 		maxWorkers = numScheduledNodes
 	}
+
 	wg := new(sync.WaitGroup)
 
 	// start concurrent workers
@@ -531,16 +580,16 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				// the nodes stuck in waiting.
 				// Entering the Create stage here would not consume a worker and let other nodes
 				// to be scheduled.
-
 				node.EnterStage(ctx, clabtypes.WaitForCreate)
 
 				// wait for possible external dependencies
 				c.waitForExternalNodeDependencies(ctx, node.Config().ShortName)
 				// when all nodes that this node depends on are created, push it into the channel
 				workerChan <- node
-				// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
+				// indicate we are done, such that only when all of these functions are done,
+				// the workerChan is being closed
 				wfcwg.Done()
-			}(dn, c.dependencyManager, concurrentChan, workerFuncChWG) // execute this function straight away
+			}(dn, c.dependencyManager, concurrentChan, workerFuncChWG)
 		}
 
 		// Gate to make sure the channel is not closed before all the nodes made it though the channel
@@ -552,21 +601,25 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	return wg, execCollection
 }
 
-// waitForExternalNodeDependencies makes nodes that have a reference to an external container network-namespace (network-mode: container:<NAME>)
-// to wait until the referenced container is in started status.
-// The wait time is 15 minutes by default.
+// waitForExternalNodeDependencies makes nodes that have a reference to an external container
+// network-namespace (network-mode: container:<NAME>) to wait until the referenced container is
+// in started status. The wait time is 15 minutes by default.
 func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName string) {
 	if _, exists := c.Nodes[nodeName]; !exists {
 		log.Errorf("unable to find referenced node %q", nodeName)
 		return
 	}
+
 	nodeConfig := c.Nodes[nodeName].Config()
-	netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2)
+
+	netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2) //nolint: mnd
 	if netModeArr[0] != "container" {
 		// we only care about nodes with NetMode "container:<CONTAINERNAME>"
 		return
 	}
-	// the referenced container might be an external pre-existing or a container created also by the given clab topology.
+
+	// the referenced container might be an external pre-existing or a container created also by
+	// the given clab topology.
 	contName := netModeArr[1]
 
 	// if the container does not exist in the list of container, it must be an external dependency
@@ -578,8 +631,9 @@ func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName str
 	clabruntime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntimeName], contName, nodeName)
 }
 
-// GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes - host and mgmt-net.
-// The CLab nodes are copied to a new map and thus clab.Node interface is converted to link.Node.
+// GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes -
+// host and mgmt-net. The CLab nodes are copied to a new map and thus clab.Node interface is
+// converted to link.Node.
 func (c *CLab) getLinkNodes() map[string]clablinks.Node {
 	// resolveNodes is a map of all nodes in the topology
 	// that is artificially created to combat circular dependencies.
@@ -660,7 +714,11 @@ func (c *CLab) extractDNSServers(filesys fs.FS) error {
 		// skip nodes in container network mode since docker doesn't allow
 		// setting dns config for them
 		if strings.HasPrefix(config.NetworkMode, "container") {
-			log.Debugf("Skipping DNS config for node %s as it is in container network mode", config.ShortName)
+			log.Debugf(
+				"Skipping DNS config for node %s as it is in container network mode",
+				config.ShortName,
+			)
+
 			continue
 		}
 
@@ -676,7 +734,8 @@ func (c *CLab) extractDNSServers(filesys fs.FS) error {
 	return nil
 }
 
-// CheckConnectivity checks the connectivity to all container runtimes, returns an error if it encounters any, otherwise nil.
+// CheckConnectivity checks the connectivity to all container runtimes, returns an error if it
+// encounters any, otherwise nil.
 func (c *CLab) CheckConnectivity(ctx context.Context) error {
 	for _, r := range c.Runtimes {
 		err := r.CheckConnection(ctx)

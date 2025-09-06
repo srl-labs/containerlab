@@ -74,6 +74,7 @@ func (c *CLab) parseTopology() error {
 	for nodeName := range c.Config.Topology.Nodes {
 		nodeNames = append(nodeNames, nodeName)
 	}
+
 	sort.Strings(nodeNames)
 
 	// collect node runtimes in a map[NodeName] -> RuntimeName
@@ -106,6 +107,7 @@ func (c *CLab) parseTopology() error {
 		if rInit, ok := clabruntime.ContainerRuntimes[r]; ok {
 			newRuntime := rInit()
 			defaultConfig := c.Runtimes[c.globalRuntimeName].Config()
+
 			err := newRuntime.Init(
 				clabruntime.WithConfig(&defaultConfig),
 			)
@@ -128,7 +130,12 @@ func (c *CLab) parseTopology() error {
 }
 
 // NewNode initializes a new node object.
-func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *clabtypes.NodeDefinition, idx int) error {
+func (c *CLab) NewNode(
+	nodeName,
+	nodeRuntime string,
+	nodeDef *clabtypes.NodeDefinition,
+	idx int,
+) error {
 	nodeCfg, err := c.createNodeCfg(nodeName, nodeDef, idx)
 	if err != nil {
 		return err
@@ -152,6 +159,7 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *clabtypes.NodeDefi
 		clabnodes.WithMgmtNet(c.Config.Mgmt))
 	if err != nil {
 		log.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
+
 		return fmt.Errorf("failed to initialize node %q: %v", nodeCfg.ShortName, err)
 	}
 
@@ -164,7 +172,11 @@ func (c *CLab) NewNode(nodeName, nodeRuntime string, nodeDef *clabtypes.NodeDefi
 	return nil
 }
 
-func (c *CLab) createNodeCfg(nodeName string, nodeDef *clabtypes.NodeDefinition, idx int) (*clabtypes.NodeConfig, error) {
+func (c *CLab) createNodeCfg( //nolint: funlen
+	nodeName string,
+	nodeDef *clabtypes.NodeDefinition,
+	idx int,
+) (*clabtypes.NodeConfig, error) {
 	// default longName follows $prefix-$lab-$nodeName pattern
 	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
 
@@ -216,6 +228,7 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *clabtypes.NodeDefinition,
 		Aliases:         c.Config.Topology.GetNodeAliases(nodeName),
 		Components:      c.Config.Topology.GetComponents(nodeName),
 	}
+
 	var err error
 
 	nodeCfg.Stages, err = c.Config.Topology.GetStages(nodeName)
@@ -237,8 +250,12 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *clabtypes.NodeDefinition,
 		return nil, err
 	}
 
-	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(nodeCfg.ShortName)
-	nodeCfg.SuppressStartupConfig = c.Config.Topology.GetNodeSuppressStartupConfig(nodeCfg.ShortName)
+	nodeCfg.EnforceStartupConfig = c.Config.Topology.GetNodeEnforceStartupConfig(
+		nodeCfg.ShortName,
+	)
+	nodeCfg.SuppressStartupConfig = c.Config.Topology.GetNodeSuppressStartupConfig(
+		nodeCfg.ShortName,
+	)
 
 	// initialize license field
 	p := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
@@ -250,11 +267,14 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *clabtypes.NodeDefinition,
 	if err != nil {
 		return nil, err
 	}
+
 	err = c.resolveBindPaths(binds, nodeName)
 	if err != nil {
 		return nil, err
 	}
+
 	nodeCfg.Binds = binds
+
 	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
 	if err != nil {
 		return nil, err
@@ -269,8 +289,8 @@ func (c *CLab) createNodeCfg(nodeName string, nodeDef *clabtypes.NodeDefinition,
 	return nodeCfg, nil
 }
 
-// processStartupConfig processes the raw path of the startup-config as it is defined in the topology file.
-// It handles remote files (HTTP/HTTPS/S3), local files and embedded configs.
+// processStartupConfig processes the raw path of the startup-config as it is defined in the .
+// topology file It handles remote files (HTTP/HTTPS/S3), local files and embedded configs.
 // As a result the `nodeCfg.StartupConfig` will be set to an absPath of the startup config file.
 func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name
@@ -307,10 +327,15 @@ func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 			// Deduce the absolute destination filename for the downloaded content
 			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
 
-			log.Debugf("Fetching startup-config %q for node %q storing at %q", p, nodeCfg.ShortName, absDestFile)
+			log.Debugf(
+				"Fetching startup-config %q for node %q storing at %q",
+				p,
+				nodeCfg.ShortName,
+				absDestFile,
+			)
 
 			// download the file to tmp location
-			err := os.MkdirAll(filepath.Dir(absDestFile), 0o750)
+			err := os.MkdirAll(filepath.Dir(absDestFile), clabutils.PermissionsGroupRX)
 			if err != nil {
 				return err
 			}
@@ -326,7 +351,7 @@ func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 				return err
 			}
 
-			err = out.Chmod(0o755)
+			err = out.Chmod(clabutils.PermissionsDirDefault)
 			if err != nil {
 				return err
 			}
@@ -357,6 +382,7 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 	if err := c.verifyLinks(ctx); err != nil {
 		return err
 	}
+
 	if err := c.verifyRootNetNSLinks(); err != nil {
 		return err
 	}
@@ -368,6 +394,7 @@ func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
 			return err
 		}
 	}
+
 	if err := c.verifyDuplicateAddresses(); err != nil {
 		return err
 	}
@@ -392,9 +419,12 @@ func (c *CLab) verifyRootNetNSLinks() error {
 			// if so, add their ep names to the list of rootEpNames
 			for _, e := range n.GetEndpoints() {
 				if val, exists := rootEpNames[e.GetIfaceName()]; exists {
-					return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]",
-						e.GetIfaceName(), val, e.GetNode().GetShortName())
+					return fmt.Errorf(
+						"root network namespace endpoint %q defined by multiple nodes [%s, %s]",
+						e.GetIfaceName(), val, e.GetNode().GetShortName(),
+					)
 				}
+
 				rootEpNames[e.GetIfaceName()] = e.GetNode().GetShortName()
 			}
 		}
@@ -408,9 +438,12 @@ func (c *CLab) verifyRootNetNSLinks() error {
 		// if so, add their ep names to the list of rootEpNames
 		for _, e := range n.GetEndpoints() {
 			if val, exists := rootEpNames[e.GetIfaceName()]; exists {
-				return fmt.Errorf("root network namespace endpoint %q defined by multiple nodes [%s, %s]",
-					e.GetIfaceName(), val, e.GetNode().GetShortName())
+				return fmt.Errorf(
+					"root network namespace endpoint %q defined by multiple nodes [%s, %s]",
+					e.GetIfaceName(), val, e.GetNode().GetShortName(),
+				)
 			}
+
 			rootEpNames[e.GetIfaceName()] = e.GetNode().GetShortName()
 		}
 	}
@@ -422,6 +455,7 @@ func (c *CLab) verifyRootNetNSLinks() error {
 // appear only once.
 func (c *CLab) verifyLinks(ctx context.Context) error {
 	var err error
+
 	var verificationErrors []error
 
 	for _, e := range c.Endpoints {
@@ -430,18 +464,22 @@ func (c *CLab) verifyLinks(ctx context.Context) error {
 			verificationErrors = append(verificationErrors, err)
 		}
 	}
+
 	if len(verificationErrors) > 0 {
 		return errors.Join(verificationErrors...)
 	}
+
 	return nil
 }
 
 // LoadKernelModules loads containerlab-required kernel modules.
 func (*CLab) loadKernelModules() error {
 	modules := []string{"ip_tables", "ip6_tables"}
+
 	opts := []kmod.Option{
 		kmod.SetInitFunc(clabutils.ModInitFunc),
 	}
+
 	for _, m := range modules {
 		isLoaded, err := clabutils.IsKernelModuleLoaded(m)
 		if err != nil {
@@ -490,9 +528,13 @@ func (c *CLab) verifyDuplicateAddresses() error {
 				if ip == "" {
 					continue
 				}
+
 				dupIps[ip] = struct{}{}
 			} else {
-				return fmt.Errorf("management IP address %s appeared more than once in the topology file", ip)
+				return fmt.Errorf(
+					"management IP address %s appeared more than once in the topology file",
+					ip,
+				)
 			}
 		}
 	}
@@ -500,8 +542,9 @@ func (c *CLab) verifyDuplicateAddresses() error {
 	return nil
 }
 
-// verifyContainersUniqueness ensures that nodes defined in the topology do not have names of the existing containers
-// additionally it checks that the lab name is unique and no containers are currently running with the same lab name label.
+// verifyContainersUniqueness ensures that nodes defined in the topology do not have names of the
+// existing containers additionally it checks that the lab name is unique and no containers are
+// currently running with the same lab name label.
 func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	nctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -516,18 +559,25 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	}
 
 	var dups []string
+
 	for idx := range c.Nodes {
 		if c.Nodes[idx].Config().SkipUniquenessCheck {
 			continue
 		}
+
 		for cIdx := range containers {
 			if c.Nodes[idx].Config().LongName == containers[cIdx].Names[0] {
 				dups = append(dups, c.Nodes[idx].Config().LongName)
 			}
 		}
 	}
+
 	if len(dups) != 0 {
-		return fmt.Errorf("containers %q already exist. Add '--reconfigure' flag to the deploy command to first remove the containers and then deploy the lab", dups)
+		return fmt.Errorf(
+			"containers %q already exist. Add '--reconfigure' flag to the deploy command to "+
+				"first remove the containers and then deploy the lab",
+			dups,
+		)
 	}
 
 	// check that none of the existing containers has a label that matches
@@ -535,17 +585,20 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	// this ensures lab uniqueness
 	for idx := range containers {
 		if containers[idx].Labels[clablabels.Containerlab] == c.Config.Name {
-			return fmt.Errorf("the '%s' lab has already been deployed. Destroy the lab before deploying a lab with the same name", c.Config.Name)
+			return fmt.Errorf(
+				"the '%s' lab has already been deployed. Destroy the lab before deploying a "+
+					"lab with the same name", c.Config.Name,
+			)
 		}
 	}
 
 	return nil
 }
 
-// resolveBindPaths resolves the host paths in a bind string, such as /hostpath:/remotepath(:options) string
-// it allows host path to have `~` and relative path to an absolute path
-// the list of binds will be changed in place.
-// if the host path doesn't exist, the error will be returned.
+// resolveBindPaths resolves the host paths in a bind string, such as
+// /hostpath:/remotepath(:options) string it allows host path to have `~` and relative path to an
+// absolute path the list of binds will be changed in place. if the host path doesn't exist, the
+// error will be returned.
 func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 	// checks are skipped when, for example, the destroy operation is run
 	if !c.checkBindsPaths {
@@ -561,6 +614,7 @@ func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 			// volume, in this case we don't need to resolve the path
 			continue
 		}
+
 		// replace special variables
 		r := c.magicVarReplacer(nodeName)
 		hp := r.Replace(elems[0])
@@ -568,14 +622,15 @@ func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 
 		_, err := os.Stat(hp)
 		if err != nil {
-			// check if the hostpath mount has a reference to ansible-inventory.yml or topology-data.json
-			// if that is the case, we do not emit an error on missing file, since these files
-			// will be created by containerlab upon lab deployment
+			// check if the hostpath mount has a reference to ansible-inventory.yml or
+			// topology-data.json if that is the case, we do not emit an error on missing file,
+			// since these files will be created by containerlab upon lab deployment
 			if hp != c.TopoPaths.AnsibleInventoryFileAbsPath() &&
 				hp != c.TopoPaths.TopoExportFile() {
 				return fmt.Errorf("failed to verify bind path: %v", err)
 			}
 		}
+
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
 	}
@@ -620,6 +675,7 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 			owner = os.Getenv("USER")
 		}
 	}
+
 	cfg.Labels[clablabels.Owner] = owner
 }
 
@@ -672,15 +728,20 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 		}
 	}
 
-	// add all clab nodes to the no_proxy variable, if they have a static IP assigned, add this as well
+	// add all clab nodes to the no_proxy variable, if they have a static IP assigned,
+	// add this as well
 	var noProxyList []string
 	for key := range c.Config.Topology.Nodes {
 		noProxyList = append(noProxyList, key)
+
 		ipv4address := c.Config.Topology.Nodes[key].GetMgmtIPv4()
+
 		if ipv4address != "" {
 			noProxyList = append(noProxyList, ipv4address)
 		}
+
 		ipv6address := c.Config.Topology.Nodes[key].GetMgmtIPv6()
+
 		if ipv6address != "" {
 			noProxyList = append(noProxyList, ipv6address)
 		}
@@ -690,6 +751,7 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	if c.Config.Mgmt.IPv4Subnet != "" {
 		noProxyList = append(noProxyList, c.Config.Mgmt.IPv4Subnet)
 	}
+
 	if c.Config.Mgmt.IPv6Subnet != "" {
 		noProxyList = append(noProxyList, c.Config.Mgmt.IPv6Subnet)
 	}

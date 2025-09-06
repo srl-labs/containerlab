@@ -44,7 +44,12 @@ func FindTopoFileByPath(path string) (string, error) {
 				filenames = append(filenames, filepath.Base(match))
 			}
 
-			return "", fmt.Errorf("found multiple topology definitions [ %s ] in a given directory %q. Provide the specific filename", strings.Join(filenames, ", "), path)
+			return "", fmt.Errorf(
+				"found multiple topology definitions [ %s ] in a given directory %q. "+
+					"Provide the specific filename",
+				strings.Join(filenames, ", "),
+				path,
+			)
 		}
 	}
 
@@ -57,7 +62,8 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 		return "", err
 	}
 
-	err = clabutils.CopyFile(context.Background(), url, tmpFile.Name(), 0o644)
+	err = clabutils.CopyFile(context.Background(), url, tmpFile.Name(),
+		clabutils.PermissiosnFileDefault)
 
 	return tmpFile.Name(), err
 }

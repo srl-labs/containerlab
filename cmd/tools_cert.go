@@ -229,7 +229,7 @@ func createCA(o *Options) error {
 
 	clabutils.CreateDirectory(
 		o.ToolsCert.Path,
-		clabutils.PermissionsEveryoneAllPermissions,
+		clabutils.PermissionsOpen,
 	) // skipcq: GSC-G302
 
 	err = caCert.Write(
@@ -306,7 +306,7 @@ func signCert(o *Options) error {
 
 	clabutils.CreateDirectory(
 		o.ToolsCert.Path,
-		clabutils.PermissionsEveryoneAllPermissions,
+		clabutils.PermissionsOpen,
 	) // skipcq: GSC-G302
 
 	err = nodeCert.Write(

@@ -39,6 +39,7 @@ func (c *CLab) RemoveSSHConfig(topoPaths *clabtypes.TopoPaths) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
+
 	return nil
 }
 
@@ -90,10 +91,15 @@ func (c *CLab) addSSHConfig() error {
 		return err
 	}
 
-	f, err := os.OpenFile(c.TopoPaths.SSHConfigPath(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	f, err := os.OpenFile(
+		c.TopoPaths.SSHConfigPath(),
+		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+		clabutils.PermissiosnFileDefault,
+	)
 	if err != nil {
 		return err
 	}
+
 	defer f.Close()
 
 	err = t.Execute(f, tmpl)

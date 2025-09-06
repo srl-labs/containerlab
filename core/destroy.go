@@ -110,7 +110,12 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 
 // creates a mostly cloned version of the current c but set to the new topology, and with the
 // necessary steps (mgmt network things) handled preparing the new CLab for destruction.
-func (c *CLab) makeCopyForDestroy(ctx context.Context, topo, labDir string, opts DestroyOptions) (*CLab, error) {
+func (c *CLab) makeCopyForDestroy(
+	ctx context.Context,
+	topo,
+	labDir string,
+	opts DestroyOptions,
+) (*CLab, error) {
 	newOpts := []ClabOption{
 		WithTimeout(c.timeout),
 		WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()),
@@ -182,6 +187,7 @@ func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
 				labDirs, _ = filepath.Glob(filepath.Join(topoDir, "clab-*"))
 			} else {
 				log.Debug("Looking for lab directory in current directory")
+
 				labDirs, _ = filepath.Glob("clab-*")
 			}
 
@@ -247,12 +253,14 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	c.deleteToolContainers(ctx)
 
 	log.Info("Removing host entries", "path", "/etc/hosts")
+
 	err = c.DeleteEntriesFromHostsFile()
 	if err != nil {
 		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
 	}
 
 	log.Info("Removing SSH config", "path", c.TopoPaths.SSHConfigPath())
+
 	err = c.RemoveSSHConfig(c.TopoPaths)
 	if err != nil {
 		log.Errorf("failed to remove ssh config file: %v", err)
@@ -269,6 +277,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	// delete lab management network
 	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
 		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
+
 		if err = c.globalRuntime().DeleteNet(ctx); err != nil {
 			switch {
 			case err.Error() == fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network):
@@ -291,6 +300,7 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 
 	workerFunc := func(i uint, input chan clabnodes.Node, wg *sync.WaitGroup) {
 		defer wg.Done()
+
 		for {
 			select {
 			case n := <-input:
@@ -298,6 +308,7 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 					log.Debugf("Worker %d terminating...", i)
 					return
 				}
+
 				err := n.Delete(ctx)
 				if err != nil {
 					log.Errorf("could not remove container %q: %v", n.Config().LongName, err)
@@ -318,6 +329,7 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 	// start the serial worker
 	if len(serialNodes) > 0 {
 		wg.Add(1)
+
 		go workerFunc(workers, serialChan, wg)
 	}
 
@@ -327,6 +339,7 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 			serialChan <- n
 			continue
 		}
+
 		concurrentChan <- n
 	}
 
@@ -380,12 +393,20 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 
 		for idx := range containers {
 			containerName := strings.TrimPrefix(containers[idx].Names[0], "/")
+
 			log.Info("Removing tool container", "tool", toolType, "container", containerName)
+
 			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
 				log.Error("Failed to remove tool container", "tool", toolType,
 					"container", containerName, "error", err)
 			} else {
-				log.Info("Tool container removed successfully", "tool", toolType, "container", containerName)
+				log.Info(
+					"Tool container removed successfully",
+					"tool",
+					toolType,
+					"container",
+					containerName,
+				)
 			}
 		}
 	}
@@ -403,11 +424,14 @@ func cliPromptToDestroyAll(topos map[string]string) error {
 
 	log.Warn("The following labs will be removed:", "labs", sb.String())
 
-	warningStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1")) // red color (ansi code 1)
-	prompt := "Are you sure you want to remove all labs listed above? Enter 'y', to confirm or ENTER to abort: "
+	// red color (ansi code 1)
+	warningStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("1"))
+	prompt := "Are you sure you want to remove all labs listed above? Enter 'y'," +
+		" to confirm or ENTER to abort: "
 	fmt.Print(warningStyle.Render(prompt))
 
 	reader := bufio.NewReader(os.Stdin)
+
 	input, err := reader.ReadString('\n')
 	if err != nil {
 		return fmt.Errorf("failed to read user input: %v", err)

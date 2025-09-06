@@ -72,6 +72,8 @@ linters:
           alias: clab$1
         - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)
           alias: clab$1$2
+        - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)/(\w+)
+          alias: clab$1$2$3
       no-unaliased: true
     lll:
       line-length: 100
@@ -95,12 +97,27 @@ linters:
       - linters:
           - staticcheck
         text: could remove embedded field
-      # currently slowly enforcing some things, starting with cmd package
+      # ssh bits have a lot of mnd that is pretty clear what it is for/doing, so just ignore
       - linters:
-          - lll
           - mnd
-          - wsl_v5
-        path-except: cmd
+        path: core/config/transport/
+    # slowly enforcing things, excluding these packages (for now!)
+    paths:
+      - cert
+      - errors
+      - exec
+      - git
+      - internal
+      - labels
+      - links
+      - mocks
+      - netconf
+      - nodes
+      - runtime
+      - schemas
+      - types
+      - utils
+      - virt
 formatters:
   enable:
     - gofmt
