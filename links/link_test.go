@@ -114,6 +114,19 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 			},
 		},
 		{
+			name: "brief link with ipv4 var malformed entry",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "n1:e1-1"
+                        - "n2:e1-1"
+                    vars:
+                      ipv4: ["n1"]
+                `),
+			},
+			wantErr: true,
+		},
+		{
 			name: "brief link with ip var single side",
 			args: args{
 				yaml: []byte(`
