@@ -1,7 +1,6 @@
-package labels
+package constants
 
 const (
-	// label names constants.
 	Containerlab  = "containerlab"
 	NodeName      = "clab-node-name"
 	LongName      = "clab-node-longname"

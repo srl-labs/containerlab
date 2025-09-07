@@ -26,8 +26,8 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	clabcert "github.com/srl-labs/containerlab/cert"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
@@ -406,16 +406,16 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
 
 		// adjust label based env vars
-		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clablabels.NodeName)] = componentConfig.ShortName
-		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clablabels.LongName)] = componentConfig.LongName
+		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clabconstants.NodeName)] = componentConfig.ShortName
+		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clabconstants.LongName)] = componentConfig.LongName
 
 		if componentConfig.Labels == nil {
 			componentConfig.Labels = map[string]string{}
 		}
 
 		// adjust labels
-		componentConfig.Labels[clablabels.NodeName] = componentConfig.ShortName
-		componentConfig.Labels[clablabels.LongName] = componentConfig.LongName
+		componentConfig.Labels[clabconstants.NodeName] = componentConfig.ShortName
+		componentConfig.Labels[clabconstants.LongName] = componentConfig.LongName
 
 		// init the component
 		err = componentNode.Init(componentConfig)

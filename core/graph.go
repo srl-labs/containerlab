@@ -21,9 +21,9 @@ import (
 	"github.com/awalterschulze/gographviz"
 	"github.com/charmbracelet/log"
 	"github.com/google/shlex"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	claberrors "github.com/srl-labs/containerlab/errors"
 	clabinternalmermaid "github.com/srl-labs/containerlab/internal/mermaid"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -225,9 +225,9 @@ func (c *CLab) BuildGraphFromDeployedLab(g *GraphTopo, containers []clabruntime.
 	containerNames := make(map[string]struct{})
 
 	for idx := range containers {
-		log.Debugf("looking for node name %s", containers[idx].Labels[clablabels.NodeName])
+		log.Debugf("looking for node name %s", containers[idx].Labels[clabconstants.NodeName])
 
-		if node, ok := c.Nodes[containers[idx].Labels[clablabels.NodeName]]; ok {
+		if node, ok := c.Nodes[containers[idx].Labels[clabconstants.NodeName]]; ok {
 			containerNames[node.Config().ShortName] = struct{}{}
 			g.Nodes = append(g.Nodes, clabtypes.ContainerDetails{
 				Name:        node.Config().ShortName,

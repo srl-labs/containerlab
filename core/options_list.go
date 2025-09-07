@@ -3,7 +3,7 @@ package core
 import (
 	"strings"
 
-	clablabels "github.com/srl-labs/containerlab/labels"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
@@ -33,7 +33,7 @@ func (o *ListOptions) ToFilters() []*clabtypes.GenericFilter {
 			filters,
 			&clabtypes.GenericFilter{
 				FilterType: "label",
-				Field:      clablabels.Containerlab,
+				Field:      clabconstants.Containerlab,
 				Operator:   "=",
 				Match:      o.labName,
 			},
@@ -45,7 +45,7 @@ func (o *ListOptions) ToFilters() []*clabtypes.GenericFilter {
 			filters,
 			&clabtypes.GenericFilter{
 				FilterType: "label",
-				Field:      clablabels.LongName,
+				Field:      clabconstants.LongName,
 				Operator:   "=",
 				Match:      o.nodeName,
 			},
@@ -57,7 +57,7 @@ func (o *ListOptions) ToFilters() []*clabtypes.GenericFilter {
 			filters,
 			&clabtypes.GenericFilter{
 				FilterType: "label",
-				Field:      clablabels.ToolType,
+				Field:      clabconstants.ToolType,
 				Operator:   "=",
 				Match:      o.toolType,
 			},
@@ -69,7 +69,7 @@ func (o *ListOptions) ToFilters() []*clabtypes.GenericFilter {
 			filters,
 			&clabtypes.GenericFilter{
 				FilterType: "label",
-				Field:      clablabels.Containerlab,
+				Field:      clabconstants.Containerlab,
 				Operator:   "exists",
 			},
 		)

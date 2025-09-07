@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
@@ -134,7 +134,7 @@ func (n *k8s_kind) GetContainers(ctx context.Context) ([]clabruntime.GenericCont
 			containers[idx].Labels[key] = v
 		}
 		// we need to overwrite the nodename label
-		containers[idx].Labels[clablabels.NodeName] = containers[idx].Names[0]
+		containers[idx].Labels[clabconstants.NodeName] = containers[idx].Names[0]
 	}
 
 	return containers, nil

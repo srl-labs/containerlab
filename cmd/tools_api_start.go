@@ -11,8 +11,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -113,19 +113,19 @@ func createAPIServerLabels(
 	runtimeType string,
 ) map[string]string {
 	labels := map[string]string{
-		clablabels.NodeName: containerName,
-		clablabels.NodeKind: "linux",
-		clablabels.NodeType: "tool",
-		clablabels.ToolType: "api-server",
-		"clab-api-port":     fmt.Sprintf("%d", port),
-		"clab-api-host":     host,
-		"clab-labs-dir":     labsDir,
-		"clab-runtime":      runtimeType,
+		clabconstants.NodeName: containerName,
+		clabconstants.NodeKind: "linux",
+		clabconstants.NodeType: "tool",
+		clabconstants.ToolType: "api-server",
+		"clab-api-port":        fmt.Sprintf("%d", port),
+		"clab-api-host":        host,
+		"clab-labs-dir":        labsDir,
+		"clab-runtime":         runtimeType,
 	}
 
 	// Add owner label if available
 	if owner != "" {
-		labels[clablabels.Owner] = owner
+		labels[clabconstants.Owner] = owner
 	}
 
 	return labels

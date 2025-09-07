@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	clablabels "github.com/srl-labs/containerlab/labels"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -366,64 +366,64 @@ func TestLabelsInit(t *testing.T) {
 			got:  "test_data/topo1.yml",
 			node: "node1",
 			want: map[string]string{
-				clablabels.Containerlab: "topo1",
-				clablabels.NodeName:     "node1",
-				clablabels.LongName:     "clab-topo1-node1",
-				clablabels.NodeKind:     "nokia_srlinux",
-				clablabels.NodeType:     "ixr-d2l",
-				clablabels.NodeGroup:    "",
-				clablabels.NodeLabDir:   "./clab-topo1/node1",
-				clablabels.TopoFile:     "topo1.yml",
-				clablabels.Owner:        owner,
+				clabconstants.Containerlab: "topo1",
+				clabconstants.NodeName:     "node1",
+				clabconstants.LongName:     "clab-topo1-node1",
+				clabconstants.NodeKind:     "nokia_srlinux",
+				clabconstants.NodeType:     "ixr-d2l",
+				clabconstants.NodeGroup:    "",
+				clabconstants.NodeLabDir:   "./clab-topo1/node1",
+				clabconstants.TopoFile:     "topo1.yml",
+				clabconstants.Owner:        owner,
 			},
 		},
 		"custom_node_label": {
 			got:  "test_data/topo1.yml",
 			node: "node2",
 			want: map[string]string{
-				clablabels.Containerlab: "topo1",
-				clablabels.NodeName:     "node2",
-				clablabels.LongName:     "clab-topo1-node2",
-				clablabels.NodeKind:     "nokia_srlinux",
-				clablabels.NodeType:     "ixr-d2l",
-				clablabels.NodeGroup:    "",
-				clablabels.NodeLabDir:   "./clab-topo1/node2",
-				clablabels.TopoFile:     "topo1.yml",
-				"node-label":            "value",
-				clablabels.Owner:        owner,
-				"with-dollar-sign":      "some$value",
+				clabconstants.Containerlab: "topo1",
+				clabconstants.NodeName:     "node2",
+				clabconstants.LongName:     "clab-topo1-node2",
+				clabconstants.NodeKind:     "nokia_srlinux",
+				clabconstants.NodeType:     "ixr-d2l",
+				clabconstants.NodeGroup:    "",
+				clabconstants.NodeLabDir:   "./clab-topo1/node2",
+				clabconstants.TopoFile:     "topo1.yml",
+				"node-label":               "value",
+				clabconstants.Owner:        owner,
+				"with-dollar-sign":         "some$value",
 			},
 		},
 		"custom_kind_label": {
 			got:  "test_data/topo2.yml",
 			node: "node1",
 			want: map[string]string{
-				clablabels.Containerlab: "topo2",
-				clablabels.NodeName:     "node1",
-				clablabels.LongName:     "clab-topo2-node1",
-				clablabels.NodeKind:     "nokia_srlinux",
-				clablabels.NodeType:     "ixrd2l",
-				clablabels.NodeGroup:    "",
-				clablabels.NodeLabDir:   "./clab-topo2/node1",
-				clablabels.TopoFile:     "topo2.yml",
-				"kind-label":            "value",
-				clablabels.Owner:        owner,
+				clabconstants.Containerlab: "topo2",
+				clabconstants.NodeName:     "node1",
+				clabconstants.LongName:     "clab-topo2-node1",
+				clabconstants.NodeKind:     "nokia_srlinux",
+				clabconstants.NodeType:     "ixrd2l",
+				clabconstants.NodeGroup:    "",
+				clabconstants.NodeLabDir:   "./clab-topo2/node1",
+				clabconstants.TopoFile:     "topo2.yml",
+				"kind-label":               "value",
+				clabconstants.Owner:        owner,
 			},
 		},
 		"custom_default_label": {
 			got:  "test_data/topo3.yml",
 			node: "node2",
 			want: map[string]string{
-				clablabels.Containerlab: "topo3",
-				clablabels.NodeName:     "node2",
-				clablabels.LongName:     "clab-topo3-node2",
-				clablabels.NodeKind:     "nokia_srlinux",
-				clablabels.NodeType:     "ixrd2l",
-				clablabels.NodeGroup:    "",
-				clablabels.NodeLabDir:   "./clab-topo3/node2",
-				clablabels.TopoFile:     "topo3.yml",
-				"default-label":         "value",
-				clablabels.Owner:        owner,
+				clabconstants.Containerlab: "topo3",
+				clabconstants.NodeName:     "node2",
+				clabconstants.LongName:     "clab-topo3-node2",
+				clabconstants.NodeKind:     "nokia_srlinux",
+				clabconstants.NodeType:     "ixrd2l",
+				clabconstants.NodeGroup:    "",
+				clabconstants.NodeLabDir:   "./clab-topo3/node2",
+				clabconstants.TopoFile:     "topo3.yml",
+				"default-label":            "value",
+				clabconstants.Owner:        owner,
 			},
 		},
 	}
@@ -439,10 +439,10 @@ func TestLabelsInit(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			tc.want[clablabels.NodeLabDir] = clabutils.ResolvePath(
-				tc.want[clablabels.NodeLabDir], c.TopoPaths.TopologyFileDir())
-			tc.want[clablabels.TopoFile] = clabutils.ResolvePath(
-				tc.want[clablabels.TopoFile], c.TopoPaths.TopologyFileDir())
+			tc.want[clabconstants.NodeLabDir] = clabutils.ResolvePath(
+				tc.want[clabconstants.NodeLabDir], c.TopoPaths.TopologyFileDir())
+			tc.want[clabconstants.TopoFile] = clabutils.ResolvePath(
+				tc.want[clabconstants.TopoFile], c.TopoPaths.TopologyFileDir())
 
 			labels := c.Nodes[tc.node].Config().Labels
 

@@ -15,7 +15,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/pmorjan/kmod"
-	clablabels "github.com/srl-labs/containerlab/labels"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -584,7 +584,7 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	// the lab name of a currently deploying lab
 	// this ensures lab uniqueness
 	for idx := range containers {
-		if containers[idx].Labels[clablabels.Containerlab] == c.Config.Name {
+		if containers[idx].Labels[clabconstants.Containerlab] == c.Config.Name {
 			return fmt.Errorf(
 				"the '%s' lab has already been deployed. Destroy the lab before deploying a "+
 					"lab with the same name", c.Config.Name,
@@ -658,14 +658,14 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 		cfg.Labels = map[string]string{}
 	}
 
-	cfg.Labels[clablabels.Containerlab] = c.Config.Name
-	cfg.Labels[clablabels.NodeName] = cfg.ShortName
-	cfg.Labels[clablabels.LongName] = cfg.LongName
-	cfg.Labels[clablabels.NodeKind] = cfg.Kind
-	cfg.Labels[clablabels.NodeType] = cfg.NodeType
-	cfg.Labels[clablabels.NodeGroup] = cfg.Group
-	cfg.Labels[clablabels.NodeLabDir] = cfg.LabDir
-	cfg.Labels[clablabels.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
+	cfg.Labels[clabconstants.Containerlab] = c.Config.Name
+	cfg.Labels[clabconstants.NodeName] = cfg.ShortName
+	cfg.Labels[clabconstants.LongName] = cfg.LongName
+	cfg.Labels[clabconstants.NodeKind] = cfg.Kind
+	cfg.Labels[clabconstants.NodeType] = cfg.NodeType
+	cfg.Labels[clabconstants.NodeGroup] = cfg.Group
+	cfg.Labels[clabconstants.NodeLabDir] = cfg.LabDir
+	cfg.Labels[clabconstants.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
 
 	// Use custom owner if set, otherwise use current user
 	owner := c.customOwner
@@ -676,7 +676,7 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 		}
 	}
 
-	cfg.Labels[clablabels.Owner] = owner
+	cfg.Labels[clabconstants.Owner] = owner
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added

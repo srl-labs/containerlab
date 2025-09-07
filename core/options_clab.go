@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -209,7 +209,7 @@ func WithTopoFromLab(labName string) ClabOption {
 		filter := []*clabtypes.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      clablabels.Containerlab,
+				Field:      clabconstants.Containerlab,
 				Operator:   "=",
 				Match:      labName,
 			},
@@ -224,7 +224,7 @@ func WithTopoFromLab(labName string) ClabOption {
 			return fmt.Errorf("lab '%s' not found - no running containers", labName)
 		}
 
-		topoFile := containers[0].Labels[clablabels.TopoFile]
+		topoFile := containers[0].Labels[clabconstants.TopoFile]
 		if topoFile == "" {
 			return fmt.Errorf("could not determine topology file from container labels")
 		}

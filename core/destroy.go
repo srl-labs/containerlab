@@ -12,7 +12,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
-	clablabels "github.com/srl-labs/containerlab/labels"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -56,12 +56,12 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	topos := map[string]string{}
 
 	for idx := range containers {
-		topoFile, ok := containers[idx].Labels[clablabels.TopoFile]
+		topoFile, ok := containers[idx].Labels[clabconstants.TopoFile]
 		if !ok {
 			continue
 		}
 
-		topos[topoFile] = filepath.Dir(containers[idx].Labels[clablabels.NodeLabDir])
+		topos[topoFile] = filepath.Dir(containers[idx].Labels[clabconstants.NodeLabDir])
 	}
 
 	defer func() {
@@ -365,13 +365,13 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 		toolFilter := []*clabtypes.GenericFilter{
 			{
 				FilterType: "label",
-				Field:      clablabels.ToolType,
+				Field:      clabconstants.ToolType,
 				Operator:   "=",
 				Match:      toolType,
 			},
 			{
 				FilterType: "label",
-				Field:      clablabels.Containerlab,
+				Field:      clabconstants.Containerlab,
 				Operator:   "=",
 				Match:      c.Config.Name,
 			},

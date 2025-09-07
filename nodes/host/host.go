@@ -11,8 +11,8 @@ import (
 
 	osexec "os/exec"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -70,7 +70,7 @@ func (h *host) GetContainers(_ context.Context) ([]clabruntime.GenericContainer,
 			ShortID: "N/A",
 			Image:   image,
 			Labels: map[string]string{
-				clablabels.NodeKind: kindnames[0],
+				clabconstants.NodeKind: kindnames[0],
 			},
 			Status: "running",
 			NetworkSettings: clabruntime.GenericMgmtIPs{

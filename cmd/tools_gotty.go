@@ -14,9 +14,9 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -553,7 +553,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	filter := []*clabtypes.GenericFilter{
 		{
 			FilterType: "label",
-			Field:      clablabels.ToolType,
+			Field:      clabconstants.ToolType,
 			Operator:   "=",
 			Match:      gotty,
 		},
@@ -586,7 +586,9 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 		// Get owner from container labels
 		owner := "N/A"
-		if ownerVal, exists := containers[idx].Labels[clablabels.Owner]; exists && ownerVal != "" {
+
+		ownerVal, exists := containers[idx].Labels[clabconstants.Owner]
+		if exists && ownerVal != "" {
 			owner = ownerVal
 		}
 
