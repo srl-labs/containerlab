@@ -7,7 +7,7 @@ package ext_container
 import (
 	"context"
 
-	clablabels "github.com/srl-labs/containerlab/labels"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -74,7 +74,7 @@ func (e *extcont) GetContainers(ctx context.Context) ([]clabruntime.GenericConta
 	// we need to artificially add the Node Kind Label
 	// this label data is e.g. used in the table printed after deployment
 	for idx := range containers {
-		containers[idx].Labels[clablabels.NodeKind] = kindnames[0]
+		containers[idx].Labels[clabconstants.NodeKind] = kindnames[0]
 	}
 	return containers, nil
 }

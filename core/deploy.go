@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabcert "github.com/srl-labs/containerlab/cert"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -57,7 +58,7 @@ func (c *CLab) Deploy( //nolint: funlen
 	}
 
 	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
-	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabutils.PermissionsDirDefault)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabconstants.PermissionsDirDefault)
 
 	if !options.skipLabDirFileACLs {
 		// adjust ACL for Labdir such that SUDO_UID Users will
@@ -211,7 +212,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 			keySize = s.CertificateAuthority.KeySize
 		}
 
-		// if external CA cert and and key are set, propagate to topopaths
+		// if external CA cert and key are set, propagate to topopaths
 		extCACert := s.CertificateAuthority.Cert
 		extCAKey := s.CertificateAuthority.Key
 

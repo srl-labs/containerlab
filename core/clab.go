@@ -361,7 +361,7 @@ func (c *CLab) createStaticDynamicDependency() error {
 
 	// go through all the dynamic ip nodes
 	for _, dynNode := range dynIPNodes {
-		// and add their wait group to the the static nodes, while increasing the waitgroup
+		// and add their wait group to the static nodes, while increasing the waitgroup
 		for _, staticNode := range staticIPNodes {
 			err := staticNode.AddDepender(clabtypes.WaitForCreate, dynNode, clabtypes.WaitForCreate)
 			if err != nil {
@@ -555,7 +555,7 @@ func (c *CLab) scheduleNodes(
 	wg.Add(maxWorkers)
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
-	for i := 0; i < maxWorkers; i++ {
+	for i := range maxWorkers {
 		go c.scheduleNodeWorkerF(ctx, i, concurrentChan, wg, skipPostDeploy, execCollection)
 	}
 

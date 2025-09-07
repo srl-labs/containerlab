@@ -30,14 +30,7 @@ import (
 	"github.com/steiler/acls"
 
 	"github.com/charmbracelet/log"
-)
-
-const (
-	PermissiosnFileDefault = 0o644
-	PermissionsDirDefault  = 0o755
-	PermissionsOpen        = 0o777
-
-	PermissionsGroupRX = 0o750
+	clabconstants "github.com/srl-labs/containerlab/constants"
 )
 
 var (
@@ -604,7 +597,7 @@ func GetOSRelease() string {
 	if osRelease != "" {
 		return osRelease
 	}
-	osRelease = "N/A"
+	osRelease = clabconstants.NotApplicable
 
 	matches, err := filepath.Glob("/etc/*-release")
 	if err != nil {

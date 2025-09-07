@@ -30,7 +30,7 @@ const (
 	vkLinkNum  = "clab_link_num"  // optional, link number in case you have multiple, used to calculate the name
 )
 
-type Dict map[string]interface{}
+type Dict map[string]any
 
 // PrepareVars variables for all nodes. This will also prepare all variables for the links.
 func PrepareVars(c *clabcore.CLab) map[string]*NodeConfig {
@@ -40,7 +40,7 @@ func PrepareVars(c *clabcore.CLab) map[string]*NodeConfig {
 	for _, node := range c.Nodes {
 		nodeCfg := node.Config()
 		name := nodeCfg.ShortName
-		vars := make(map[string]interface{})
+		vars := make(map[string]any)
 		vars[vkNodeName] = name
 		vars[vkKind] = nodeCfg.Kind
 		vars[vkManagementIPv4] = nodeCfg.MgmtIPv4Address

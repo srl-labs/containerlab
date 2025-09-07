@@ -13,6 +13,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -255,8 +256,15 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 	return nil
 }
 
-func generateTopologyConfig(name, network, ipv4range, ipv6range string,
-	images, licenses map[string]string, reg *clabnodes.NodeRegistry, nodes ...nodesDef,
+func generateTopologyConfig( //nolint: funlen
+	name,
+	network,
+	ipv4range,
+	ipv6range string,
+	images,
+	licenses map[string]string,
+	reg *clabnodes.NodeRegistry,
+	nodes ...nodesDef,
 ) ([]byte, error) {
 	numStages := len(nodes)
 	config := &clabcore.Config{
@@ -269,11 +277,12 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 	}
 
 	config.Mgmt.Network = network
-	if ipv4range != "<nil>" {
+
+	if ipv4range != clabconstants.UnsetNetAddr {
 		config.Mgmt.IPv4Subnet = ipv4range
 	}
 
-	if ipv6range != "<nil>" {
+	if ipv6range != clabconstants.UnsetNetAddr {
 		config.Mgmt.IPv6Subnet = ipv6range
 	}
 
@@ -293,7 +302,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 	}
 
 	if numStages == 1 {
-		for j := uint(0); j < nodes[0].numNodes; j++ {
+		for j := range nodes[0].numNodes {
 			node1 := fmt.Sprintf("%s1-%d", nodePrefix, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
 				config.Topology.Nodes[node1] = &clabtypes.NodeDefinition{
@@ -307,13 +316,13 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 
 	generateNodesAttributes := reg.GetGenerateNodeAttributes()
 
-	for i := 0; i < numStages-1; i++ {
+	for i := range numStages - 1 {
 		interfaceOffset := uint(0)
 		if i > 0 {
 			interfaceOffset = nodes[i-1].numNodes
 		}
 
-		for j := uint(0); j < nodes[i].numNodes; j++ {
+		for j := range nodes[i].numNodes {
 			node1 := fmt.Sprintf("%s%d-%d", nodePrefix, i+1, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
 				config.Topology.Nodes[node1] = &clabtypes.NodeDefinition{
@@ -323,7 +332,7 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 				}
 			}
 
-			for k := uint(0); k < nodes[i+1].numNodes; k++ {
+			for k := range nodes[i+1].numNodes {
 				node2 := fmt.Sprintf("%s%d-%d", nodePrefix, i+2, k+1) //nolint: mnd
 				if _, ok := config.Topology.Nodes[node2]; !ok {
 					config.Topology.Nodes[node2] = &clabtypes.NodeDefinition{

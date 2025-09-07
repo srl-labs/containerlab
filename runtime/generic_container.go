@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
@@ -49,14 +50,14 @@ func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *clabexec.ExecC
 
 func (ctr *GenericContainer) GetContainerIPv4() string {
 	if ctr.NetworkSettings.IPv4addr == "" {
-		return "N/A"
+		return clabconstants.NotApplicable
 	}
 	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv4addr, ctr.NetworkSettings.IPv4pLen)
 }
 
 func (ctr *GenericContainer) GetContainerIPv6() string {
 	if ctr.NetworkSettings.IPv6addr == "" {
-		return "N/A"
+		return clabconstants.NotApplicable
 	}
 	return fmt.Sprintf("%s/%d", ctr.NetworkSettings.IPv6addr, ctr.NetworkSettings.IPv6pLen)
 }

@@ -14,8 +14,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clablabels "github.com/srl-labs/containerlab/labels"
 )
 
 // APIServerListItem defines the structure for API server container info in JSON output.
@@ -49,7 +49,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	if len(containers) == 0 {
-		if o.ToolsAPI.OutputFormat == "json" {
+		if o.ToolsAPI.OutputFormat == clabconstants.FormatJSON {
 			fmt.Println("[]")
 		} else {
 			fmt.Println("No active API server containers found")
@@ -91,8 +91,10 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 		}
 
 		// Get owner from container labels
-		owner := "N/A"
-		if ownerVal, exists := containers[idx].Labels[clablabels.Owner]; exists && ownerVal != "" {
+		owner := clabconstants.NotApplicable
+
+		ownerVal, exists := containers[idx].Labels[clabconstants.Owner]
+		if exists && ownerVal != "" {
 			owner = ownerVal
 		}
 
@@ -107,7 +109,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 		})
 	}
 
-	if o.ToolsAPI.OutputFormat == "json" {
+	if o.ToolsAPI.OutputFormat == clabconstants.FormatJSON {
 		b, err := json.MarshalIndent(listItems, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)

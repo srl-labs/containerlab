@@ -13,10 +13,9 @@ import (
 	"strings"
 	"text/template"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
-
-const NornirPlatformNameSchemaEnvVar = "CLAB_NORNIR_PLATFORM_NAME_SCHEMA"
 
 //go:embed assets/inventory_ansible.go.tpl
 var ansibleInvT string
@@ -210,7 +209,7 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 		Groups: make(map[string][]*NornirSimpleInventoryNode),
 	}
 
-	platformNameSchema := os.Getenv(NornirPlatformNameSchemaEnvVar)
+	platformNameSchema := os.Getenv(clabconstants.ClabEnvNornirPlatformNameSchema)
 
 	for _, n := range c.Nodes {
 		nornirNode := &NornirSimpleInventoryNode{
@@ -225,7 +224,7 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 
 		// the nornir platform is set by default to the node's kind
 		// and is overwritten with the proper Nornir Inventory Platform
-		// based on the the value of CLAB_PLATFORM_NAME_SCHEMA (nornir or scrapi).
+		// based on the value of CLAB_PLATFORM_NAME_SCHEMA (nornir or scrapi).
 		// defaults to Nornir-Napalm/Netmiko compatible platform name
 		nornirSimpleInventoryKindProps.Platform = n.Config().Kind
 

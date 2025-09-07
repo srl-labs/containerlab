@@ -23,6 +23,7 @@ import (
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -123,7 +124,7 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 }
 
 func (s *vrSROS) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(s.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -225,7 +226,7 @@ func createVrSROSFiles(node clabnodes.Node) error {
 		src := nodeCfg.License
 		dst := filepath.Join(nodeCfg.LabDir, configDirName, licenseFName)
 		if err := clabutils.CopyFile(context.Background(), src, dst,
-			clabutils.PermissiosnFileDefault); err != nil {
+			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)

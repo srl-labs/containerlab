@@ -18,8 +18,8 @@ import (
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -107,9 +107,9 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 
 	// Format validation (only relevant if --details is NOT used)
 	if !o.Inspect.Details &&
-		o.Inspect.Format != "table" &&
-		o.Inspect.Format != "json" &&
-		o.Inspect.Format != "csv" {
+		o.Inspect.Format != clabconstants.FormatTable &&
+		o.Inspect.Format != clabconstants.FormatJSON &&
+		o.Inspect.Format != clabconstants.FormatCSV {
 		return fmt.Errorf(
 			"output format %q is not supported when --details is not used, use "+
 				"'table', 'json' or 'csv'",
@@ -118,7 +118,7 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 	// If --details is used, the format is implicitly JSON.
 	if o.Inspect.Details {
-		o.Inspect.Format = "json" // Force JSON format if details are requested
+		o.Inspect.Format = clabconstants.FormatJSON // Force JSON format if details are requested
 	}
 
 	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
@@ -134,9 +134,9 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 	// Handle empty results
 	if len(containers) == 0 {
 		switch o.Inspect.Format {
-		case "json":
+		case clabconstants.FormatJSON:
 			fmt.Println("{}")
-		case "csv":
+		case clabconstants.FormatCSV:
 			fmt.Println(
 				"lab_name,labPath,absLabPath,name,container_id,image,kind,state,status," +
 					"ipv4_address,ipv6_address,owner",
@@ -272,8 +272,8 @@ func printContainerDetailsJSON(containers []clabruntime.GenericContainer) error 
 	groupedDetails := make(map[string][]clabruntime.GenericContainer)
 	// Sort containers first by lab name, then by container name for consistent output
 	sort.Slice(containers, func(i, j int) bool {
-		labNameI := containers[i].Labels[clablabels.Containerlab]
-		labNameJ := containers[j].Labels[clablabels.Containerlab]
+		labNameI := containers[i].Labels[clabconstants.Containerlab]
+		labNameJ := containers[j].Labels[clabconstants.Containerlab]
 
 		if labNameI == labNameJ {
 			// Use the first name if available
@@ -295,7 +295,7 @@ func printContainerDetailsJSON(containers []clabruntime.GenericContainer) error 
 
 	// Group the sorted containers
 	for idx := range containers {
-		labName := containers[idx].Labels[clablabels.Containerlab]
+		labName := containers[idx].Labels[clabconstants.Containerlab]
 		// Ensure labName exists, default to a placeholder if missing
 		// (shouldn't happen with filters)
 		if labName == "" {
@@ -427,7 +427,7 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 
 	// Gather summary details of each container
 	for idx := range containers {
-		absPath := containers[idx].Labels[clablabels.TopoFile]
+		absPath := containers[idx].Labels[clabconstants.TopoFile]
 
 		shortPath, err := getShortestTopologyPath(absPath)
 		if err != nil {
@@ -444,7 +444,7 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 		status := parseStatus(containers[idx].Status)
 
 		cdet := clabtypes.ContainerDetails{
-			LabName:     containers[idx].Labels[clablabels.Containerlab],
+			LabName:     containers[idx].Labels[clabconstants.Containerlab],
 			LabPath:     shortPath, // Relative or shortest path for table view
 			AbsLabPath:  absPath,   // Absolute path for JSON view
 			Image:       containers[idx].Image,
@@ -459,15 +459,15 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 			cdet.Name = containers[idx].Names[0]
 		}
 
-		if group, ok := containers[idx].Labels[clablabels.NodeGroup]; ok {
+		if group, ok := containers[idx].Labels[clabconstants.NodeGroup]; ok {
 			cdet.Group = group
 		}
 
-		if kind, ok := containers[idx].Labels[clablabels.NodeKind]; ok {
+		if kind, ok := containers[idx].Labels[clabconstants.NodeKind]; ok {
 			cdet.Kind = kind
 		}
 
-		if owner, ok := containers[idx].Labels[clablabels.Owner]; ok {
+		if owner, ok := containers[idx].Labels[clabconstants.Owner]; ok {
 			cdet.Owner = owner
 		}
 
@@ -484,7 +484,7 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 	})
 
 	switch o.Inspect.Format {
-	case "json":
+	case clabconstants.FormatJSON:
 		err := printContainerInspectJSON(contDetails)
 		if err != nil {
 			return err
@@ -519,7 +519,7 @@ func parseStatus(status string) string {
 // Returns "N/A" if input contains "N/A".
 // Returns original string if it doesn't contain exactly one "/".
 func ipWithoutPrefix(ip string) string {
-	if strings.Contains(ip, "N/A") {
+	if strings.Contains(ip, clabconstants.NotApplicable) {
 		return ip
 	}
 

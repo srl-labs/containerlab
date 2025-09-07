@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -48,7 +49,7 @@ func (n *VRNode) Init(cfg *clabtypes.NodeConfig, opts ...NodeOption) error {
 
 // PreDeploy default function: create lab directory, generate certificates, generate startup config file.
 func (n *VRNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -106,7 +107,7 @@ func (n *VRNode) SaveConfig(_ context.Context) error {
 
 	// Save config to mounted labdir startup config path
 	configPath := filepath.Join(n.Cfg.LabDir, n.ConfigDirName, n.StartupCfgFName)
-	err = os.WriteFile(configPath, []byte(config), clabutils.PermissionsOpen) // skipcq: GO-S2306
+	err = os.WriteFile(configPath, []byte(config), clabconstants.PermissionsOpen) // skipcq: GO-S2306
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v", configPath, n.Cfg.ShortName, err)
 	}

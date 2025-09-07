@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	clabcert "github.com/srl-labs/containerlab/cert"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -229,7 +230,7 @@ func createCA(o *Options) error {
 
 	clabutils.CreateDirectory(
 		o.ToolsCert.Path,
-		clabutils.PermissionsOpen,
+		clabconstants.PermissionsOpen,
 	) // skipcq: GSC-G302
 
 	err = caCert.Write(
@@ -306,7 +307,7 @@ func signCert(o *Options) error {
 
 	clabutils.CreateDirectory(
 		o.ToolsCert.Path,
-		clabutils.PermissionsOpen,
+		clabconstants.PermissionsOpen,
 	) // skipcq: GSC-G302
 
 	err = nodeCert.Write(

@@ -23,8 +23,8 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	clabcert "github.com/srl-labs/containerlab/cert"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -248,14 +248,14 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 }
 
 func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
 	// Create appmgr subdir for agent specs and copy files, if needed
 	if n.Cfg.Extras != nil && len(n.Cfg.Extras.SRLAgents) != 0 {
 		agents := n.Cfg.Extras.SRLAgents
 
 		appmgr := filepath.Join(n.Cfg.LabDir, "config", "appmgr")
-		clabutils.CreateDirectory(appmgr, clabutils.PermissionsOpen)
+		clabutils.CreateDirectory(appmgr, clabconstants.PermissionsOpen)
 
 		// process extras -> agents configurations
 		for _, fullpath := range agents {
@@ -272,7 +272,7 @@ func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 
 			dst := filepath.Join(appmgr, basename)
 			if err := clabutils.CopyFile(ctx, fullpath, dst,
-				clabutils.PermissiosnFileDefault); err != nil {
+				clabconstants.PermissionsFileDefault); err != nil {
 				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
 			}
 		}
@@ -465,7 +465,7 @@ func (n *srl) createSRLFiles() error {
 		src = n.Cfg.License
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
 		if err := clabutils.CopyFile(context.Background(), src, licPath,
-			clabutils.PermissiosnFileDefault); err != nil {
+			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
@@ -478,7 +478,7 @@ func (n *srl) createSRLFiles() error {
 	}
 
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 
 	// create repository files (for yum/apt) that
 	// are mounted to srl container during the init phase
@@ -640,7 +640,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		if ifName == "mgmt0" {
 			// if the endpoint has a custom MTU set, use it in the template logic
 			// otherwise we don't set the mtu as srlinux will use the default max value 9232
-			if m := e.GetLink().GetMTU(); m != clablinks.DefaultLinkMTU {
+			if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 				tplData.MgmtMTU = m
 				// MgmtMTU seems to be only set when we use macvlan interface
 				// with network-mode: none. For this super narrow use case
@@ -666,7 +666,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 		// if the endpoint has a custom MTU set, use it in the template logic
 		// otherwise we don't set the mtu as srlinux will use the default max value 9232
-		if m := e.GetLink().GetMTU(); m != clablinks.DefaultLinkMTU {
+		if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 			iface.Mtu = m
 		}
 

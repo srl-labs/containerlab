@@ -26,8 +26,8 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	clabcert "github.com/srl-labs/containerlab/cert"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
@@ -236,7 +236,7 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	// either the non-distributed OR distributed AND is a CPM
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]),
-			clabutils.PermissionsOpen)
+			clabconstants.PermissionsOpen)
 		slot := n.Cfg.Env[envNokiaSrosSlot]
 		if slot == "" {
 			return fmt.Errorf("fail to init node because Env var %q is set to %q",
@@ -406,16 +406,16 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
 
 		// adjust label based env vars
-		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clablabels.NodeName)] = componentConfig.ShortName
-		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clablabels.LongName)] = componentConfig.LongName
+		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clabconstants.NodeName)] = componentConfig.ShortName
+		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clabconstants.LongName)] = componentConfig.LongName
 
 		if componentConfig.Labels == nil {
 			componentConfig.Labels = map[string]string{}
 		}
 
 		// adjust labels
-		componentConfig.Labels[clablabels.NodeName] = componentConfig.ShortName
-		componentConfig.Labels[clablabels.LongName] = componentConfig.LongName
+		componentConfig.Labels[clabconstants.NodeName] = componentConfig.ShortName
+		componentConfig.Labels[clabconstants.LongName] = componentConfig.LongName
 
 		// init the component
 		err = componentNode.Init(componentConfig)
@@ -679,21 +679,21 @@ func (n *sros) createSROSFiles() error {
 		// copy license file to node specific directory in lab
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
 		if err := clabutils.CopyFile(context.Background(), n.Cfg.License, licPath,
-			clabutils.PermissiosnFileDefault); err != nil {
+			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("license copying src %s -> dst %s failed: %v", n.Cfg.License, licPath, err)
 		}
 		log.Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)
 	}
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
 		err = n.createSROSConfigFiles()

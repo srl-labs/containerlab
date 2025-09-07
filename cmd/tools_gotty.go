@@ -14,9 +14,9 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -453,7 +453,7 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	maxRetries := 3
 
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		time.Sleep(gottyWaitTime)
 
 		running, webURL = getGoTTYStatus(ctx, rt, o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Port)
@@ -553,7 +553,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	filter := []*clabtypes.GenericFilter{
 		{
 			FilterType: "label",
-			Field:      clablabels.ToolType,
+			Field:      clabconstants.ToolType,
 			Operator:   "=",
 			Match:      gotty,
 		},
@@ -565,7 +565,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	if len(containers) == 0 {
-		if o.ToolsGoTTY.Format == "json" {
+		if o.ToolsGoTTY.Format == clabconstants.FormatJSON {
 			fmt.Println("[]")
 		} else {
 			fmt.Println("No active GoTTY containers found")
@@ -585,8 +585,10 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		}
 
 		// Get owner from container labels
-		owner := "N/A"
-		if ownerVal, exists := containers[idx].Labels[clablabels.Owner]; exists && ownerVal != "" {
+		owner := clabconstants.NotApplicable
+
+		ownerVal, exists := containers[idx].Labels[clabconstants.Owner]
+		if exists && ownerVal != "" {
 			owner = ownerVal
 		}
 
@@ -603,7 +605,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		}
 
 		// Try to get the GoTTY status if container is running
-		webURL := "N/A"
+		webURL := clabconstants.NotApplicable
 
 		if containers[idx].State == "running" {
 			running, url := getGoTTYStatus(ctx, rt, name, port)
@@ -626,7 +628,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	// Output based on format
-	if o.ToolsGoTTY.Format == "json" {
+	if o.ToolsGoTTY.Format == clabconstants.FormatJSON {
 		b, err := json.MarshalIndent(listItems, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)

@@ -13,6 +13,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/network"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/steiler/acls"
 )
@@ -44,7 +45,7 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 
 	// generate config dir
-	clabutils.CreateDirectory(n.configDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.configDir, clabconstants.PermissionsOpen)
 	log.Debugf("Chowning dir %s", n.configDir)
 	if err := os.Chown(n.Cfg.LabDir, 0, vyattacfg_gid); err != nil {
 		return err
@@ -70,11 +71,11 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	scriptDir := filepath.Join(n.configDir, "scripts")
 	preScript := filepath.Join(scriptDir, "vyos-preconfig-bootup.script")
 	postScript := filepath.Join(scriptDir, "vyos-postconfig-bootup.script")
-	clabutils.CreateDirectory(scriptDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(scriptDir, clabconstants.PermissionsOpen)
 
 	for _, s := range []string{preScript, postScript} {
 		clabutils.CreateFile(s, "#!/bin/sh")
-		os.Chmod(s, clabutils.PermissionsDirDefault)
+		os.Chmod(s, clabconstants.PermissionsDirDefault)
 		os.Chown(s, 0, vyattacfg_gid)
 	}
 

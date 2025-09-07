@@ -85,7 +85,8 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		"ipv6-subnet",
 		"6",
 		o.Deploy.ManagementIPv6Subnet,
-		"management network IPv6 subnet range")
+		"management network IPv6 subnet range",
+	)
 	c.Flags().StringVarP(
 		&o.Inspect.Format,
 		"format",

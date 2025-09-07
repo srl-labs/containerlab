@@ -183,7 +183,7 @@ func (c *CLab) ListContainersInterfaces(
 		})
 	} else {
 		return nil, fmt.Errorf(
-			"could not retrieve retrieve interfaces for all containers, expected %v, got %v",
+			"could not retrieve interfaces for all containers, expected %v, got %v",
 			len(containers),
 			len(containerInterfaces),
 		)

@@ -14,6 +14,7 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -89,7 +90,7 @@ func (n *vyos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 }
 
 func (n *vyos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	if err := n.fixdirACL(); err != nil {
 		return err
 	}

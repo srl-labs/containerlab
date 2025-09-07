@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -41,7 +42,7 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	var err error
 	if er.MAC == "" {
 		// if mac is not present generate one
-		genericEndpoint.MAC, err = clabutils.GenMac(ClabOUI)
+		genericEndpoint.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 		if err != nil {
 			return nil, err
 		}

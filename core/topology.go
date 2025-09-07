@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -63,7 +64,7 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 	}
 
 	err = clabutils.CopyFile(context.Background(), url, tmpFile.Name(),
-		clabutils.PermissiosnFileDefault)
+		clabconstants.PermissionsFileDefault)
 
 	return tmpFile.Name(), err
 }

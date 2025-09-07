@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabexec "github.com/srl-labs/containerlab/exec"
 )
@@ -88,9 +89,9 @@ func execFn(_ *cobra.Command, o *Options) error {
 	}
 
 	switch outputFormat {
-	case clabexec.ExecFormatPlain:
+	case clabconstants.FormatPlain:
 		resultCollection.Log()
-	case clabexec.ExecFormatJSON:
+	case clabconstants.FormatJSON:
 		out, err := resultCollection.Dump(outputFormat)
 		if err != nil {
 			return fmt.Errorf("failed to print the results collection: %v", err)

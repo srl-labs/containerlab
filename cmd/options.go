@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -92,7 +92,7 @@ func GetOptions() *Options {
 				Format: "table",
 			},
 			ToolsVeth: &ToolsVethOptions{
-				MTU: clablinks.DefaultLinkMTU,
+				MTU: clabconstants.DefaultLinkMTU,
 			},
 			ToolsVxlan: &ToolsVxlanOptions{
 				ID:             defaultVxlanID,
@@ -267,14 +267,20 @@ func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {
 		options = append(options, clabcore.WithManagementNetworkName(o.ManagementNetworkName))
 	}
 
-	managementIPv4Subnet := o.ManagementIPv4Subnet.String()
-	if managementIPv4Subnet != "<nil>" {
-		options = append(options, clabcore.WithManagementIpv4Subnet(managementIPv4Subnet))
+	mgmtIPv4Subnet := o.ManagementIPv4Subnet.String()
+	if mgmtIPv4Subnet != clabconstants.UnsetNetAddr {
+		options = append(
+			options,
+			clabcore.WithManagementIpv4Subnet(mgmtIPv4Subnet),
+		)
 	}
 
-	managementIPv6Subnet := o.ManagementIPv6Subnet.String()
-	if managementIPv6Subnet != "<nil>" {
-		options = append(options, clabcore.WithManagementIpv6Subnet(managementIPv6Subnet))
+	mgmtIPv6Subnet := o.ManagementIPv6Subnet.String()
+	if mgmtIPv6Subnet != clabconstants.UnsetNetAddr {
+		options = append(
+			options,
+			clabcore.WithManagementIpv6Subnet(mgmtIPv6Subnet),
+		)
 	}
 
 	return options

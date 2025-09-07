@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"
@@ -64,7 +65,7 @@ func (c *CLab) addSSHConfig() error {
 
 	// add the data for all nodes to the template input
 	for _, n := range c.Nodes {
-		// get the Kind from the KindRegistry and and extract
+		// get the Kind from the KindRegistry and extract
 		// the kind registered Username
 		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
 		nodeData := SSHConfigNodeTmpl{
@@ -94,7 +95,7 @@ func (c *CLab) addSSHConfig() error {
 	f, err := os.OpenFile(
 		c.TopoPaths.SSHConfigPath(),
 		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
-		clabutils.PermissiosnFileDefault,
+		clabconstants.PermissionsFileDefault,
 	)
 	if err != nil {
 		return err

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	"gopkg.in/yaml.v2"
 )
 
@@ -107,7 +108,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 						NewEndpointRaw("srl2", "e1-5", ""),
 					},
 					LinkCommonParams: LinkCommonParams{
-						MTU: DefaultLinkMTU,
+						MTU: clabconstants.DefaultLinkMTU,
 					},
 				},
 			},
@@ -150,7 +151,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 					HostInterface: "eth0",
 					Endpoint:      NewEndpointRaw("srl1", "e1-1", ""),
 					LinkCommonParams: LinkCommonParams{
-						MTU: DefaultLinkMTU,
+						MTU: clabconstants.DefaultLinkMTU,
 					},
 				},
 			},
@@ -169,7 +170,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 					HostInterface: "srl1-e1-1",
 					Endpoint:      NewEndpointRaw("srl1", "e1-1", ""),
 					LinkCommonParams: LinkCommonParams{
-						MTU: DefaultLinkMTU,
+						MTU: clabconstants.DefaultLinkMTU,
 					},
 				},
 			},
@@ -188,7 +189,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 					HostInterface: "srl1-e1-1",
 					Endpoint:      NewEndpointRaw("srl1", "e1-1", ""),
 					LinkCommonParams: LinkCommonParams{
-						MTU: DefaultLinkMTU,
+						MTU: clabconstants.DefaultLinkMTU,
 					},
 				},
 			},

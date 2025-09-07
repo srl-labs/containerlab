@@ -21,6 +21,7 @@ import (
 	tableWriter "github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabinternaltc "github.com/srl-labs/containerlab/internal/tc"
 	clablinks "github.com/srl-labs/containerlab/links"
@@ -277,10 +278,10 @@ func printImpairments(qdiscs []gotc.Object) {
 
 	table.AppendHeader(header)
 
-	var rows []tableWriter.Row
+	rows := make([]tableWriter.Row, len(qdiscs))
 
 	for idx := range qdiscs {
-		rows = append(rows, qdiscToTableData(&qdiscs[idx]))
+		rows[idx] = qdiscToTableData(&qdiscs[idx])
 	}
 
 	table.AppendRows(rows)
@@ -305,11 +306,11 @@ func qdiscToTableData(qdisc *gotc.Object) tableWriter.Row {
 	if qdisc.Netem == nil {
 		return tableWriter.Row{
 			ifDisplayName,
-			"N/A", // delay
-			"N/A", // jitter
-			"N/A", // loss
-			"N/A", // rate
-			"N/A", // corruption
+			clabconstants.NotApplicable, // delay
+			clabconstants.NotApplicable, // jitter
+			clabconstants.NotApplicable, // loss
+			clabconstants.NotApplicable, // rate
+			clabconstants.NotApplicable, // corruption
 		}
 	}
 
@@ -449,7 +450,7 @@ func netemShowFn(o *Options) error {
 			return err
 		}
 
-		if o.ToolsNetem.Format == "json" {
+		if o.ToolsNetem.Format == clabconstants.FormatJSON {
 			var impairments []clabtypes.ImpairmentData
 
 			for idx := range qdiscs {

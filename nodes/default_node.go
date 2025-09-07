@@ -18,6 +18,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabcert "github.com/srl-labs/containerlab/cert"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
@@ -143,7 +144,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	// This env var does not count in the eth0 interface that is automatically created by the container runtime.
 	// This env var is used by some containers (e.g. vrnetlab systems) to postpone the startup until all interfaces
 	// have been added to the container namespace.
-	d.Config().Env[clabtypes.CLAB_ENV_INTFS] = strconv.Itoa(len(d.GetEndpoints()))
+	d.Config().Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(len(d.GetEndpoints()))
 
 	// create the container
 	cID, err := d.Runtime.CreateContainer(ctx, d.Cfg)
@@ -416,7 +417,7 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 	nodeCfg := node.Config()
 	// create config directory that will be bind mounted to vrnetlab container at / path
 	clabutils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 
 	if nodeCfg.StartupConfig != "" {
 		// dstCfg is a path to a file on the clab host that will have rendered configuration
