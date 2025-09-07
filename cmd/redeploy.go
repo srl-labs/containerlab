@@ -74,17 +74,17 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		"management network name",
 	)
 	c.Flags().IPNetVarP(
-		&o.Deploy.ManagementIPv4Subnet,
+		o.Deploy.ManagementIPv4Subnet,
 		"ipv4-subnet",
 		"4",
-		o.Deploy.ManagementIPv4Subnet,
+		*o.Deploy.ManagementIPv4Subnet,
 		"management network IPv4 subnet range",
 	)
 	c.Flags().IPNetVarP(
-		&o.Deploy.ManagementIPv6Subnet,
+		o.Deploy.ManagementIPv6Subnet,
 		"ipv6-subnet",
 		"6",
-		o.Deploy.ManagementIPv6Subnet,
+		*o.Deploy.ManagementIPv6Subnet,
 		"management network IPv6 subnet range")
 	c.Flags().StringVarP(
 		&o.Inspect.Format,

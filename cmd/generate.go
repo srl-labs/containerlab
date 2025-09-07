@@ -7,6 +7,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
@@ -84,17 +85,17 @@ func generateCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		"management network name",
 	)
 	c.Flags().IPNetVarP(
-		&o.Deploy.ManagementIPv4Subnet,
+		o.Deploy.ManagementIPv4Subnet,
 		"ipv4-subnet",
 		"4",
-		o.Deploy.ManagementIPv4Subnet,
+		*o.Deploy.ManagementIPv4Subnet,
 		"management network IPv4 subnet range",
 	)
 	c.Flags().IPNetVarP(
-		&o.Deploy.ManagementIPv6Subnet,
+		o.Deploy.ManagementIPv6Subnet,
 		"ipv6-subnet",
 		"6",
-		o.Deploy.ManagementIPv6Subnet,
+		*o.Deploy.ManagementIPv6Subnet,
 		"management network IPv6 subnet range",
 	)
 	c.Flags().StringSliceVarP(
@@ -202,8 +203,8 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 	b, err := generateTopologyConfig(
 		o.Global.TopologyName,
 		o.Deploy.ManagementNetworkName,
-		o.Deploy.ManagementIPv4Subnet.String(),
-		o.Deploy.ManagementIPv6Subnet.String(),
+		o.Deploy.ManagementIPv4Subnet,
+		o.Deploy.ManagementIPv6Subnet,
 		images,
 		licenses,
 		reg,
@@ -255,8 +256,15 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 	return nil
 }
 
-func generateTopologyConfig(name, network, ipv4range, ipv6range string,
-	images, licenses map[string]string, reg *clabnodes.NodeRegistry, nodes ...nodesDef,
+func generateTopologyConfig( //nolint: funlen
+	name,
+	network string,
+	ipv4range,
+	ipv6range *net.IPNet,
+	images,
+	licenses map[string]string,
+	reg *clabnodes.NodeRegistry,
+	nodes ...nodesDef,
 ) ([]byte, error) {
 	numStages := len(nodes)
 	config := &clabcore.Config{
@@ -269,12 +277,12 @@ func generateTopologyConfig(name, network, ipv4range, ipv6range string,
 	}
 
 	config.Mgmt.Network = network
-	if ipv4range != "<nil>" {
-		config.Mgmt.IPv4Subnet = ipv4range
+	if ipv4range != nil {
+		config.Mgmt.IPv4Subnet = ipv4range.String()
 	}
 
-	if ipv6range != "<nil>" {
-		config.Mgmt.IPv6Subnet = ipv6range
+	if ipv6range != nil {
+		config.Mgmt.IPv6Subnet = ipv6range.String()
 	}
 
 	for k, img := range images {

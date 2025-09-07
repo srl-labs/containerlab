@@ -11,6 +11,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
@@ -21,7 +22,8 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 		return nil
 	}
 
-	if o.Inspect.InterfacesFormat != "table" && o.Inspect.InterfacesFormat != "json" {
+	if o.Inspect.InterfacesFormat != clabconstants.FormatTable &&
+		o.Inspect.InterfacesFormat != clabconstants.FormatJSON {
 		return fmt.Errorf(
 			"output format %v is not supported, use 'table' or 'json'",
 			o.Inspect.InterfacesFormat,
@@ -79,7 +81,7 @@ func interfacesToTableData(contInterfaces []*clabtypes.ContainerInterfaces) *[]t
 	for _, container := range contInterfaces {
 		for _, iface := range container.Interfaces {
 			tabRow := tableWriter.Row{}
-			ifaceAlias := "N/A"
+			ifaceAlias := clabconstants.NotApplicable
 
 			if iface.InterfaceAlias != "" {
 				ifaceAlias = iface.InterfaceAlias
@@ -108,7 +110,7 @@ func printContainerInterfaces(
 	format string,
 ) error {
 	switch format {
-	case "json":
+	case clabconstants.FormatJSON:
 		b, err := json.MarshalIndent(containerInterfaces, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal container details: %v", err)

@@ -10,11 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 
 	"github.com/google/shlex"
-)
-
-const (
-	ExecFormatJSON  string = "json"
-	ExecFormatPlain string = "plain"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 )
 
 var ErrRunExecNotSupported = errors.New("exec not supported for this kind")
@@ -22,13 +18,13 @@ var ErrRunExecNotSupported = errors.New("exec not supported for this kind")
 // ParseExecOutputFormat parses the exec output format user input.
 func ParseExecOutputFormat(s string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(s)) {
-	case ExecFormatJSON:
-		return ExecFormatJSON, nil
-	case ExecFormatPlain, "table":
-		return ExecFormatPlain, nil
+	case clabconstants.FormatJSON:
+		return clabconstants.FormatJSON, nil
+	case clabconstants.FormatPlain, clabconstants.FormatTable:
+		return clabconstants.FormatPlain, nil
 	}
 	return "", fmt.Errorf("cannot parse %q as execution output format, supported output formats %q",
-		s, []string{ExecFormatJSON, ExecFormatPlain})
+		s, []string{clabconstants.FormatJSON, clabconstants.FormatPlain})
 }
 
 // ExecCmd represents an exec command.
@@ -120,13 +116,13 @@ func (e *ExecResult) String() string {
 func (e *ExecResult) Dump(format string) (string, error) {
 	var result string
 	switch format {
-	case ExecFormatJSON:
+	case clabconstants.FormatJSON:
 		byteData, err := json.MarshalIndent(e, "", "  ")
 		if err != nil {
 			return "", err
 		}
 		result = string(byteData)
-	case ExecFormatPlain:
+	case clabconstants.FormatPlain:
 		result = e.String()
 	}
 	return result, nil
@@ -208,14 +204,14 @@ func (ec *ExecCollection) Dump(format string) (string, error) {
 	defer ec.m.RUnlock()
 	result := strings.Builder{}
 	switch format {
-	case ExecFormatJSON:
+	case clabconstants.FormatJSON:
 		byteData, err := json.MarshalIndent(ec.execEntries, "", "  ")
 		if err != nil {
 			return "", err
 		}
 
 		result.Write(byteData)
-	case ExecFormatPlain:
+	case clabconstants.FormatPlain:
 		printSep := false
 		for k, execResults := range ec.execEntries {
 			if len(execResults) == 0 {

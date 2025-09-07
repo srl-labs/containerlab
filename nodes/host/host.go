@@ -66,8 +66,8 @@ func (h *host) GetContainers(_ context.Context) ([]clabruntime.GenericContainer,
 		{
 			Names:   []string{"Host"},
 			State:   "running",
-			ID:      "N/A",
-			ShortID: "N/A",
+			ID:      clabconstants.NotApplicable,
+			ShortID: clabconstants.NotApplicable,
 			Image:   image,
 			Labels: map[string]string{
 				clabconstants.NodeKind: kindnames[0],

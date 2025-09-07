@@ -49,7 +49,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	if len(containers) == 0 {
-		if o.ToolsAPI.OutputFormat == "json" {
+		if o.ToolsAPI.OutputFormat == clabconstants.FormatJSON {
 			fmt.Println("[]")
 		} else {
 			fmt.Println("No active API server containers found")
@@ -91,7 +91,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 		}
 
 		// Get owner from container labels
-		owner := "N/A"
+		owner := clabconstants.NotApplicable
 
 		ownerVal, exists := containers[idx].Labels[clabconstants.Owner]
 		if exists && ownerVal != "" {
@@ -109,7 +109,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 		})
 	}
 
-	if o.ToolsAPI.OutputFormat == "json" {
+	if o.ToolsAPI.OutputFormat == clabconstants.FormatJSON {
 		b, err := json.MarshalIndent(listItems, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)

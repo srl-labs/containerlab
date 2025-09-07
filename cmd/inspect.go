@@ -107,9 +107,9 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 
 	// Format validation (only relevant if --details is NOT used)
 	if !o.Inspect.Details &&
-		o.Inspect.Format != "table" &&
-		o.Inspect.Format != "json" &&
-		o.Inspect.Format != "csv" {
+		o.Inspect.Format != clabconstants.FormatTable &&
+		o.Inspect.Format != clabconstants.FormatJSON &&
+		o.Inspect.Format != clabconstants.FormatCSV {
 		return fmt.Errorf(
 			"output format %q is not supported when --details is not used, use "+
 				"'table', 'json' or 'csv'",
@@ -118,7 +118,7 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 	// If --details is used, the format is implicitly JSON.
 	if o.Inspect.Details {
-		o.Inspect.Format = "json" // Force JSON format if details are requested
+		o.Inspect.Format = clabconstants.FormatJSON // Force JSON format if details are requested
 	}
 
 	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
@@ -134,9 +134,9 @@ func inspectFn(cobraCmd *cobra.Command, o *Options) error {
 	// Handle empty results
 	if len(containers) == 0 {
 		switch o.Inspect.Format {
-		case "json":
+		case clabconstants.FormatJSON:
 			fmt.Println("{}")
-		case "csv":
+		case clabconstants.FormatCSV:
 			fmt.Println(
 				"lab_name,labPath,absLabPath,name,container_id,image,kind,state,status," +
 					"ipv4_address,ipv6_address,owner",
@@ -484,7 +484,7 @@ func PrintContainerInspect(containers []clabruntime.GenericContainer, o *Options
 	})
 
 	switch o.Inspect.Format {
-	case "json":
+	case clabconstants.FormatJSON:
 		err := printContainerInspectJSON(contDetails)
 		if err != nil {
 			return err
@@ -519,7 +519,7 @@ func parseStatus(status string) string {
 // Returns "N/A" if input contains "N/A".
 // Returns original string if it doesn't contain exactly one "/".
 func ipWithoutPrefix(ip string) string {
-	if strings.Contains(ip, "N/A") {
+	if strings.Contains(ip, clabconstants.NotApplicable) {
 		return ip
 	}
 

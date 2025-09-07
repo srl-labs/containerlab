@@ -565,7 +565,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	if len(containers) == 0 {
-		if o.ToolsGoTTY.Format == "json" {
+		if o.ToolsGoTTY.Format == clabconstants.FormatJSON {
 			fmt.Println("[]")
 		} else {
 			fmt.Println("No active GoTTY containers found")
@@ -585,7 +585,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		}
 
 		// Get owner from container labels
-		owner := "N/A"
+		owner := clabconstants.NotApplicable
 
 		ownerVal, exists := containers[idx].Labels[clabconstants.Owner]
 		if exists && ownerVal != "" {
@@ -605,7 +605,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		}
 
 		// Try to get the GoTTY status if container is running
-		webURL := "N/A"
+		webURL := clabconstants.NotApplicable
 
 		if containers[idx].State == "running" {
 			running, url := getGoTTYStatus(ctx, rt, name, port)
@@ -628,7 +628,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	// Output based on format
-	if o.ToolsGoTTY.Format == "json" {
+	if o.ToolsGoTTY.Format == clabconstants.FormatJSON {
 		b, err := json.MarshalIndent(listItems, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)

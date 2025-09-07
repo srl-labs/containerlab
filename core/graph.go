@@ -35,6 +35,14 @@ import (
 	"golang.org/x/term"
 )
 
+const (
+	blue  = "blue"
+	white = "white"
+	red   = "red"
+	green = "green"
+	black = "black"
+)
+
 type GraphTopo struct {
 	Nodes []clabtypes.ContainerDetails `json:"nodes,omitempty"`
 	Links []Link                       `json:"links,omitempty"`
@@ -79,22 +87,22 @@ func (c *CLab) GenerateDotGraph() error {
 	// Process the Nodes
 	for nodeName, node := range c.Nodes {
 		attr = make(map[string]string)
-		attr["color"] = "red"
+		attr["color"] = red
 		attr["style"] = "filled"
-		attr["fillcolor"] = "red"
+		attr["fillcolor"] = red
 		attr["label"] = nodeName
 		attr["xlabel"] = node.Config().Kind
 
 		if strings.TrimSpace(node.Config().Group) != "" {
 			attr["group"] = node.Config().Group
 			if strings.Contains(node.Config().Group, "bb") {
-				attr["fillcolor"] = "blue"
-				attr["color"] = "blue"
-				attr["fontcolor"] = "white"
+				attr["fillcolor"] = blue
+				attr["color"] = blue
+				attr["fontcolor"] = white
 			} else if strings.Contains(node.Config().Kind, "srl") {
-				attr["fillcolor"] = "green"
-				attr["color"] = "green"
-				attr["fontcolor"] = "black"
+				attr["fillcolor"] = green
+				attr["color"] = green
+				attr["fontcolor"] = black
 			}
 		}
 
@@ -107,7 +115,7 @@ func (c *CLab) GenerateDotGraph() error {
 	// Process the links between Nodes
 	for _, link := range c.Links {
 		attr = make(map[string]string)
-		attr["color"] = "black"
+		attr["color"] = black
 
 		eps := link.GetEndpoints()
 		ANodeName := eps[0].GetNode().GetShortName()
@@ -115,7 +123,7 @@ func (c *CLab) GenerateDotGraph() error {
 
 		if (strings.Contains(ANodeName, "client")) ||
 			(strings.Contains(BNodeName, "client")) {
-			attr["color"] = "blue"
+			attr["color"] = blue
 		}
 
 		if err := g.AddEdge(ANodeName, BNodeName, false, attr); err != nil {
@@ -207,7 +215,7 @@ func buildGraphNode(node clabnodes.Node) clabtypes.ContainerDetails {
 		Kind:        node.Config().Kind,
 		Image:       node.Config().Image,
 		Group:       node.Config().Group,
-		State:       "N/A",
+		State:       clabconstants.NotApplicable,
 		IPv4Address: node.Config().MgmtIPv4Address,
 		IPv6Address: node.Config().MgmtIPv6Address,
 	}

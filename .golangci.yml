@@ -6,6 +6,7 @@ linters:
     - dogsled
     - funlen
     - gocritic
+    - goconst
     - godot
     - godox
     - goprintffuncname
@@ -31,7 +32,6 @@ linters:
     - errcheck
     - exhaustive
     - gocognit
-    - goconst
     - gocyclo
     - gosec
     - nestif
@@ -46,7 +46,7 @@ linters:
       statements: 50
     goconst:
       min-len: 2
-      min-occurrences: 2
+      min-occurrences: 3
     gocritic:
       disabled-checks:
         - whyNoLint

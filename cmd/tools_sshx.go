@@ -544,7 +544,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	if len(containers) == 0 {
-		if o.ToolsSSHX.Format == "json" {
+		if o.ToolsSSHX.Format == clabconstants.FormatJSON {
 			fmt.Println("[]")
 		} else {
 			fmt.Println("No active SSHX containers found")
@@ -564,7 +564,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		}
 
 		// Get owner from container labels
-		owner := "N/A"
+		owner := clabconstants.NotApplicable
 
 		ownerVal, exists := containers[idx].Labels[clabconstants.Owner]
 		if exists && ownerVal != "" {
@@ -572,7 +572,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 		}
 
 		// Try to get the SSHX link if container is running
-		link := "N/A"
+		link := clabconstants.NotApplicable
 
 		if containers[idx].State == "running" {
 			if linkContent := getSSHXLink(ctx, rt, name); linkContent != "" {
@@ -591,7 +591,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	}
 
 	// Output based on format
-	if o.ToolsSSHX.Format == "json" {
+	if o.ToolsSSHX.Format == clabconstants.FormatJSON {
 		b, err := json.MarshalIndent(listItems, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal to JSON: %w", err)

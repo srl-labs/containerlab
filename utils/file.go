@@ -30,6 +30,7 @@ import (
 	"github.com/steiler/acls"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 )
 
 var (
@@ -596,7 +597,7 @@ func GetOSRelease() string {
 	if osRelease != "" {
 		return osRelease
 	}
-	osRelease = "N/A"
+	osRelease = clabconstants.NotApplicable
 
 	matches, err := filepath.Glob("/etc/*-release")
 	if err != nil {
