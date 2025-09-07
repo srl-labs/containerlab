@@ -597,12 +597,12 @@ type srlTemplateData struct {
 
 // tplIFace template interface struct.
 type tplIFace struct {
-	Slot       string
-	Port       string
-	BreakoutNo string
-	Mtu        int
-	IPv4       string
-	IPv6       string
+	BaseName    string // base interface excl. breakout
+	FullName    string // full interface name incl. breakout
+	HasBreakout bool
+	Mtu         int
+	IPv4        string
+	IPv6        string
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
@@ -657,13 +657,14 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
 
 		// create a template interface struct
-		iface := tplIFace{
-			Slot: ifNameParts[0],
-			Port: ifNameParts[1],
-		}
+		iface := tplIFace{}
+		iface.BaseName = fmt.Sprintf("ethernet-%s/%s", ifNameParts[0], ifNameParts[1])
 		// if it is a breakout port add the breakout identifier
 		if len(ifNameParts) == 3 {
-			iface.BreakoutNo = ifNameParts[2]
+			iface.FullName = fmt.Sprintf("%s/%s", iface.BaseName, ifNameParts[2])
+			iface.HasBreakout = true
+		} else {
+			iface.FullName = iface.BaseName
 		}
 
 		// if the endpoint has a custom MTU set, use it in the template logic
