@@ -7,13 +7,13 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -85,17 +85,17 @@ func generateCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		"management network name",
 	)
 	c.Flags().IPNetVarP(
-		o.Deploy.ManagementIPv4Subnet,
+		&o.Deploy.ManagementIPv4Subnet,
 		"ipv4-subnet",
 		"4",
-		*o.Deploy.ManagementIPv4Subnet,
+		o.Deploy.ManagementIPv4Subnet,
 		"management network IPv4 subnet range",
 	)
 	c.Flags().IPNetVarP(
-		o.Deploy.ManagementIPv6Subnet,
+		&o.Deploy.ManagementIPv6Subnet,
 		"ipv6-subnet",
 		"6",
-		*o.Deploy.ManagementIPv6Subnet,
+		o.Deploy.ManagementIPv6Subnet,
 		"management network IPv6 subnet range",
 	)
 	c.Flags().StringSliceVarP(
@@ -203,8 +203,8 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 	b, err := generateTopologyConfig(
 		o.Global.TopologyName,
 		o.Deploy.ManagementNetworkName,
-		o.Deploy.ManagementIPv4Subnet,
-		o.Deploy.ManagementIPv6Subnet,
+		o.Deploy.ManagementIPv4Subnet.String(),
+		o.Deploy.ManagementIPv6Subnet.String(),
 		images,
 		licenses,
 		reg,
@@ -258,9 +258,9 @@ func generate(cobraCmd *cobra.Command, o *Options, reg *clabnodes.NodeRegistry) 
 
 func generateTopologyConfig( //nolint: funlen
 	name,
-	network string,
+	network,
 	ipv4range,
-	ipv6range *net.IPNet,
+	ipv6range string,
 	images,
 	licenses map[string]string,
 	reg *clabnodes.NodeRegistry,
@@ -277,12 +277,13 @@ func generateTopologyConfig( //nolint: funlen
 	}
 
 	config.Mgmt.Network = network
-	if ipv4range != nil {
-		config.Mgmt.IPv4Subnet = ipv4range.String()
+
+	if ipv4range != clabconstants.UnsetNetAddr {
+		config.Mgmt.IPv4Subnet = ipv4range
 	}
 
-	if ipv6range != nil {
-		config.Mgmt.IPv6Subnet = ipv6range.String()
+	if ipv6range != clabconstants.UnsetNetAddr {
+		config.Mgmt.IPv6Subnet = ipv6range
 	}
 
 	for k, img := range images {
@@ -301,7 +302,7 @@ func generateTopologyConfig( //nolint: funlen
 	}
 
 	if numStages == 1 {
-		for j := uint(0); j < nodes[0].numNodes; j++ {
+		for j := range nodes[0].numNodes {
 			node1 := fmt.Sprintf("%s1-%d", nodePrefix, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
 				config.Topology.Nodes[node1] = &clabtypes.NodeDefinition{
@@ -315,13 +316,13 @@ func generateTopologyConfig( //nolint: funlen
 
 	generateNodesAttributes := reg.GetGenerateNodeAttributes()
 
-	for i := 0; i < numStages-1; i++ {
+	for i := range numStages - 1 {
 		interfaceOffset := uint(0)
 		if i > 0 {
 			interfaceOffset = nodes[i-1].numNodes
 		}
 
-		for j := uint(0); j < nodes[i].numNodes; j++ {
+		for j := range nodes[i].numNodes {
 			node1 := fmt.Sprintf("%s%d-%d", nodePrefix, i+1, j+1)
 			if _, ok := config.Topology.Nodes[node1]; !ok {
 				config.Topology.Nodes[node1] = &clabtypes.NodeDefinition{
@@ -331,7 +332,7 @@ func generateTopologyConfig( //nolint: funlen
 				}
 			}
 
-			for k := uint(0); k < nodes[i+1].numNodes; k++ {
+			for k := range nodes[i+1].numNodes {
 				node2 := fmt.Sprintf("%s%d-%d", nodePrefix, i+2, k+1) //nolint: mnd
 				if _, ok := config.Topology.Nodes[node2]; !ok {
 					config.Topology.Nodes[node2] = &clabtypes.NodeDefinition{

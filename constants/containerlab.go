@@ -6,6 +6,8 @@ const (
 	DefaultLinkMTU = 9500
 
 	NotApplicable = "N/A"
+
+	UnsetNetAddr = "<nil>"
 )
 
 const (

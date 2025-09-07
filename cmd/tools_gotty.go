@@ -453,7 +453,7 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	maxRetries := 3
 
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		time.Sleep(gottyWaitTime)
 
 		running, webURL = getGoTTYStatus(ctx, rt, o.ToolsGoTTY.ContainerName, o.ToolsGoTTY.Port)

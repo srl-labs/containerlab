@@ -35,7 +35,7 @@ func inspectInterfacesFn(cobraCmd *cobra.Command, o *Options) error {
 		return fmt.Errorf("could not parse the topology file: %v", err)
 	}
 
-	labNameFilterLabel := ""
+	var labNameFilterLabel string
 
 	switch {
 	case o.Global.TopologyName != "":

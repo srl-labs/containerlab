@@ -158,7 +158,7 @@ func (t *SSHTransport) InChannel() {
 				parts := strings.Split(tmpS, "#")
 				li := len(parts) - 1
 
-				for i := 0; i < li; i++ {
+				for i := range li {
 					r := t.K.PromptParse(t, &parts[i])
 					if r == nil {
 						r = &SSHReply{
@@ -240,7 +240,7 @@ func (t *SSHTransport) Run(command string, timeout int) *SSHReply {
 				rr = ret.result
 			} else {
 				rr = sHistory + "#" + ret.result
-				sHistory = "" //nolint:ineffassign
+				sHistory = "" //nolint:ineffassign,wastedassign
 			}
 
 			rr = strings.Trim(rr, " \n\r\t")

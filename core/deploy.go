@@ -212,7 +212,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 			keySize = s.CertificateAuthority.KeySize
 		}
 
-		// if external CA cert and and key are set, propagate to topopaths
+		// if external CA cert and key are set, propagate to topopaths
 		extCACert := s.CertificateAuthority.Cert
 		extCAKey := s.CertificateAuthority.Key
 

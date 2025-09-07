@@ -709,7 +709,8 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	// check if either of the no_proxy variables exists
 	noProxyLower, existsLower := nodeCfg.Env["no_proxy"]
 	noProxyUpper, existsUpper := nodeCfg.Env["NO_PROXY"]
-	noProxy := ""
+
+	var noProxy string
 
 	switch {
 	case existsLower:

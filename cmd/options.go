@@ -248,8 +248,8 @@ func (o *FilterOptions) toClabOptions() []clabcore.ClabOption {
 type DeployOptions struct {
 	GenerateGraph            bool
 	ManagementNetworkName    string
-	ManagementIPv4Subnet     *net.IPNet
-	ManagementIPv6Subnet     *net.IPNet
+	ManagementIPv4Subnet     net.IPNet
+	ManagementIPv6Subnet     net.IPNet
 	Reconfigure              bool
 	MaxWorkers               uint
 	SkipPostDeploy           bool
@@ -267,17 +267,19 @@ func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {
 		options = append(options, clabcore.WithManagementNetworkName(o.ManagementNetworkName))
 	}
 
-	if o.ManagementIPv4Subnet != nil {
+	mgmtIPv4Subnet := o.ManagementIPv4Subnet.String()
+	if mgmtIPv4Subnet != clabconstants.UnsetNetAddr {
 		options = append(
 			options,
-			clabcore.WithManagementIpv4Subnet(o.ManagementIPv4Subnet.String()),
+			clabcore.WithManagementIpv4Subnet(mgmtIPv4Subnet),
 		)
 	}
 
-	if o.ManagementIPv6Subnet != nil {
+	mgmtIPv6Subnet := o.ManagementIPv6Subnet.String()
+	if mgmtIPv6Subnet != clabconstants.UnsetNetAddr {
 		options = append(
 			options,
-			clabcore.WithManagementIpv6Subnet(o.ManagementIPv6Subnet.String()),
+			clabcore.WithManagementIpv6Subnet(mgmtIPv6Subnet),
 		)
 	}
 

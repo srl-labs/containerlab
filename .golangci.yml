@@ -1,43 +1,44 @@
 version: "2"
 linters:
-  enable:
-    - asciicheck
-    - bodyclose
-    - dogsled
-    - funlen
-    - gocritic
-    - goconst
-    - godot
-    - godox
-    - goprintffuncname
-    - govet
-    - ineffassign
-    - importas
-    - lll
-    - misspell
-    - mnd
-    - nakedret
-    - noctx
-    - nolintlint
-    - prealloc
-    - staticcheck
-    - unconvert
-    - unparam
-    - unused
-    - whitespace
-    - wsl_v5
+  default: all
   disable:
     # disabling for *now* so ci can pass nicely, but (some?) of these likely should be adressed
+    - contextcheck
+    - cyclop
+    - depguard
     - dupl
+    - embeddedstructfieldcheck
+    - err113
     - errcheck
+    - errorlint
     - exhaustive
+    - exhaustruct
+    - exptostd
+    - forbidigo
+    - forcetypeassert
+    - funcorder
+    - gochecknoglobals
     - gocognit
     - gocyclo
+    - gomoddirectives
     - gosec
+    - ireturn
+    - musttag
     - nestif
+    - nilnil
+    - nlreturn
+    - noinlineerr
+    - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
     - perfsprint
     - revive
+    - tagliatelle
+    - testpackage
+    - usetesting
+    - varnamelen
     - wrapcheck
+    - wsl # deprecated, wsl_v5 included in all ofc
   settings:
     dupl:
       threshold: 100

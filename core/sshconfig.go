@@ -65,7 +65,7 @@ func (c *CLab) addSSHConfig() error {
 
 	// add the data for all nodes to the template input
 	for _, n := range c.Nodes {
-		// get the Kind from the KindRegistry and and extract
+		// get the Kind from the KindRegistry and extract
 		// the kind registered Username
 		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
 		nodeData := SSHConfigNodeTmpl{
