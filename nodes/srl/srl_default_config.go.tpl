@@ -49,26 +49,26 @@ set / interface mgmt0 subinterface 0 ip-mtu {{ .MgmtIPMTU }}
 
 {{- /* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
 {{- range $epName, $ep := .IFaces }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
+set / interface {{ $ep.BaseName }} admin-state enable
   {{- if ne $ep.Mtu 0 }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} mtu {{ $ep.Mtu }}
+set / interface {{ $ep.BaseName }} mtu {{ $ep.Mtu }}
   {{- end }}
 
-  {{- if ne $ep.BreakoutNo  "" }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} breakout-mode num-channels 4 channel-speed 25G
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}/{{ $ep.BreakoutNo }} admin-state enable
+  {{- if $ep.HasBreakout }}
+set / interface {{ $ep.BaseName }} breakout-mode num-channels 4 channel-speed 25G
+set / interface {{ $ep.FullName }} admin-state enable
   {{- end }}
 
   {{- /* If per-endpoint IPv4/IPv6 are provided, configure them on subinterface 0 */}}
   {{- if or $ep.IPv4 $ep.IPv6 }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 admin-state enable
+set / interface {{ $ep.FullName }} subinterface 0 admin-state enable
     {{- if $ep.IPv4 }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 ipv4 address {{ $ep.IPv4 }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 ipv4 admin-state enable
+set / interface {{ $ep.FullName }} subinterface 0 ipv4 address {{ $ep.IPv4 }}
+set / interface {{ $ep.FullName }} subinterface 0 ipv4 admin-state enable
     {{- end }}
     {{- if $ep.IPv6 }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 ipv6 address {{ $ep.IPv6 }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}{{ if ne $ep.BreakoutNo "" }}/{{ $ep.BreakoutNo }}{{ end }} subinterface 0 ipv6 admin-state enable
+set / interface {{ $ep.FullName }} subinterface 0 ipv6 address {{ $ep.IPv6 }}
+set / interface {{ $ep.FullName }} subinterface 0 ipv6 admin-state enable
     {{- end }}
   {{- end }}
 {{ end -}}
