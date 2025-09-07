@@ -12,6 +12,7 @@ import (
 
 	"github.com/charmbracelet/log"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -82,7 +83,7 @@ func (n *sonic_vm) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 }
 
 func (n *sonic_vm) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		log.Errorf("Error handling certificate for %s: %v", n.Cfg.ShortName, err)

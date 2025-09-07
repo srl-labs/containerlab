@@ -16,6 +16,7 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -92,7 +93,7 @@ func (n *xrd) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 func (n *xrd) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	n.genInterfacesEnv()
 
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -141,7 +142,7 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate xr-storage directory
 	clabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 	// generate first-boot config
 	cfg := filepath.Join(n.Cfg.LabDir, "first-boot.cfg")
 	nodeCfg.ResStartupConfig = cfg

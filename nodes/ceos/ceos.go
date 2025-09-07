@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -119,7 +120,7 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 }
 
 func (n *ceos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -153,7 +154,7 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	nodeCfg := n.Config()
 	// generate config directory
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 	cfg := filepath.Join(n.Cfg.LabDir, "flash", "startup-config")
 	nodeCfg.ResStartupConfig = cfg
 
@@ -195,7 +196,7 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 			topoDir := filepath.Dir(filepath.Dir(nodeCfg.LabDir)) // topo dir is needed to resolve extrapaths
 			if err := clabutils.CopyFile(ctx,
 				clabutils.ResolvePath(extrapath, topoDir), dest,
-				clabutils.PermissiosnFileDefault); err != nil {
+				clabconstants.PermissionsFileDefault); err != nil {
 				return fmt.Errorf("extras: copy-to-flash %s -> %s failed %v", extrapath, dest, err)
 			}
 		}
@@ -217,7 +218,7 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	// adding if-wait.sh script to flash dir
 	ifScriptP := path.Join(nodeCfg.LabDir, "flash", "if-wait.sh")
 	clabutils.CreateFile(ifScriptP, clabutils.IfWaitScript)
-	os.Chmod(ifScriptP, clabutils.PermissionsOpen) // skipcq: GSC-G302
+	os.Chmod(ifScriptP, clabconstants.PermissionsOpen) // skipcq: GSC-G302
 
 	return err
 }

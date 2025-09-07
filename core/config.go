@@ -335,7 +335,7 @@ func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 			)
 
 			// download the file to tmp location
-			err := os.MkdirAll(filepath.Dir(absDestFile), clabutils.PermissionsGroupRX)
+			err := os.MkdirAll(filepath.Dir(absDestFile), clabconstants.PermissionsGroupRX)
 			if err != nil {
 				return err
 			}
@@ -351,7 +351,7 @@ func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 				return err
 			}
 
-			err = out.Chmod(clabutils.PermissionsDirDefault)
+			err = out.Chmod(clabconstants.PermissionsDirDefault)
 			if err != nil {
 				return err
 			}

@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -68,12 +69,12 @@ func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *clabnodes.PreDeploy
 	// If user-defined startup exists, copy it into the Consolidated config file
 	if clabutils.FileExists(n.UserStartupConfig) {
 		clabutils.CopyFile(ctx, n.UserStartupConfig, n.ConsolidatedConfig,
-			clabutils.PermissiosnFileDefault)
+			clabconstants.PermissionsFileDefault)
 	} else {
 		if n.Cfg.StartupConfig != "" {
 			// Copy startup-config in the Labdir
 			clabutils.CopyFile(ctx, n.Cfg.StartupConfig, n.ConsolidatedConfig,
-				clabutils.PermissiosnFileDefault)
+				clabconstants.PermissionsFileDefault)
 		}
 		// Consolidate the startup config with the default template
 		if err := n.addDefaultConfig(ctx); err != nil {
@@ -117,10 +118,10 @@ func (n *sixwind_vsr) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	)
 
 	// Creating if-wait script in lab dir
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	n.itfwaitpath = path.Join(n.Cfg.LabDir, "if-wait.sh")
 	clabutils.CreateFile(n.itfwaitpath, clabutils.IfWaitScript)
-	os.Chmod(n.itfwaitpath, clabutils.PermissionsOpen)
+	os.Chmod(n.itfwaitpath, clabconstants.PermissionsOpen)
 
 	// Adding if-wait.sh script to the filesystem
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.itfwaitpath, ":", ifWaitScriptContainerPath))
@@ -158,7 +159,7 @@ func (n *sixwind_vsr) SaveConfig(ctx context.Context) error {
 	}
 
 	err = os.WriteFile(n.UserStartupConfig, execResult.GetStdOutByteSlice(),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v",
 			n.UserStartupConfig, n.Cfg.ShortName, err)
@@ -228,7 +229,7 @@ func (n *sixwind_vsr) addDefaultConfig(_ context.Context) error {
 	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
 	out, err := os.OpenFile(n.ConsolidatedConfig, os.O_CREATE|os.O_APPEND|os.O_WRONLY,
-		clabutils.PermissiosnFileDefault)
+		clabconstants.PermissionsFileDefault)
 	if err != nil {
 		log.Errorf("failed to open consolidated config file: %v", err)
 	}

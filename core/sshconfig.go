@@ -7,6 +7,7 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"
@@ -94,7 +95,7 @@ func (c *CLab) addSSHConfig() error {
 	f, err := os.OpenFile(
 		c.TopoPaths.SSHConfigPath(),
 		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
-		clabutils.PermissiosnFileDefault,
+		clabconstants.PermissionsFileDefault,
 	)
 	if err != nil {
 		return err

@@ -32,14 +32,6 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-const (
-	PermissiosnFileDefault = 0o644
-	PermissionsDirDefault  = 0o755
-	PermissionsOpen        = 0o777
-
-	PermissionsGroupRX = 0o750
-)
-
 var (
 	errNonRegularFile = errors.New("non-regular file")
 	errHTTPFetch      = errors.New("failed to fetch http(s) resource")

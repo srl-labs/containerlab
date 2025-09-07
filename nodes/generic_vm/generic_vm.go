@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -74,7 +75,7 @@ func (n *genericVM) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 }
 
 func (n *genericVM) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil

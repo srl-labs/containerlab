@@ -9,6 +9,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -213,7 +214,7 @@ func (g *GoGit) cloneNonExisting() error {
 		co.ReferenceName = plumbing.NewBranchReferenceName(branchName)
 	}
 	// pre-create the repo directory and adjust the ACLs
-	clabutils.CreateDirectory(g.gitRepo.GetName(), clabutils.PermissionsDirDefault)
+	clabutils.CreateDirectory(g.gitRepo.GetName(), clabconstants.PermissionsDirDefault)
 	err = clabutils.AdjustFileACLs(g.gitRepo.GetName())
 	if err != nil {
 		log.Warnf("failed to adjust repository (%s) ACLs. continuin anyways", g.gitRepo.GetName())

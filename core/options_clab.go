@@ -182,7 +182,7 @@ func WithTopoBackup(path string) ClabOption {
 			context.Background(),
 			path,
 			backupFPath,
-			clabutils.PermissiosnFileDefault,
+			clabconstants.PermissionsFileDefault,
 		)
 		if err != nil {
 			log.Warn("Could not create topology backup", "topology path", path,

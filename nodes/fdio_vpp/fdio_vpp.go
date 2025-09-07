@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -116,9 +117,9 @@ func (n *fdio_vpp) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 func (n *fdio_vpp) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	nodeCfg := n.Config()
 
-	clabutils.CreateDirectory(n.Cfg.LabDir, clabutils.PermissionsOpen)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	clabutils.CreateFile(n.ifWaitSrcPath, clabutils.IfWaitScript)
-	os.Chmod(n.ifWaitSrcPath, clabutils.PermissionsOpen)
+	os.Chmod(n.ifWaitSrcPath, clabconstants.PermissionsOpen)
 
 	// record pubkeys extracted by clab
 	// with the vpp struct

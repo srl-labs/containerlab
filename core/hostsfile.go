@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -85,7 +86,7 @@ func (c *CLab) DeleteEntriesFromHostsFile() error {
 	f, err := os.OpenFile(
 		clabHostsFilename,
 		os.O_RDWR,
-		clabutils.PermissiosnFileDefault,
+		clabconstants.PermissionsFileDefault,
 	) // skipcq: GSC-G302
 	if err != nil {
 		return err

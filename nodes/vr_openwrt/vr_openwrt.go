@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -54,6 +55,6 @@ func (n *vrOpenWrt) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 func (n *vrOpenWrt) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	// Ensure the overlay directory exists
 	clabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "overlay"),
-		clabutils.PermissionsOpen)
+		clabconstants.PermissionsOpen)
 	return nil
 }

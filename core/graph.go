@@ -124,8 +124,8 @@ func (c *CLab) GenerateDotGraph() error {
 	}
 
 	// create graph directory
-	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabutils.PermissionsDirDefault)
-	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), clabutils.PermissionsDirDefault)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabconstants.PermissionsDirDefault)
+	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), clabconstants.PermissionsDirDefault)
 
 	// create graph filename
 	dotfile := c.TopoPaths.GraphFilename(".dot")
@@ -264,8 +264,8 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	}
 
 	// create graph directory
-	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabutils.PermissionsDirDefault)
-	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), clabutils.PermissionsDirDefault)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabconstants.PermissionsDirDefault)
+	clabutils.CreateDirectory(c.TopoPaths.GraphDir(), clabconstants.PermissionsDirDefault)
 
 	// create graph filename
 	fname := c.TopoPaths.GraphFilename(".mermaid")
