@@ -56,3 +56,7 @@ __pycache__
 # to keep robot things away
 venv/
 .venv/
+
+# rf test report files
+tests/*.xml
+tests/*.html
