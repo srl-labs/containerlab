@@ -277,10 +277,10 @@ func printImpairments(qdiscs []gotc.Object) {
 
 	table.AppendHeader(header)
 
-	var rows []tableWriter.Row
+	rows := make([]tableWriter.Row, len(qdiscs))
 
 	for idx := range qdiscs {
-		rows = append(rows, qdiscToTableData(&qdiscs[idx]))
+		rows[idx] = qdiscToTableData(&qdiscs[idx])
 	}
 
 	table.AppendRows(rows)

@@ -730,7 +730,7 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 
 	// add all clab nodes to the no_proxy variable, if they have a static IP assigned,
 	// add this as well
-	var noProxyList []string
+	var noProxyList []string //nolint:prealloc
 	for key := range c.Config.Topology.Nodes {
 		noProxyList = append(noProxyList, key)
 

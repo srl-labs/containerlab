@@ -18,6 +18,7 @@ linters:
     - nakedret
     - noctx
     - nolintlint
+    - prealloc
     - staticcheck
     - unconvert
     - unparam
@@ -35,7 +36,6 @@ linters:
     - gosec
     - nestif
     - perfsprint
-    - prealloc
     - revive
     - wrapcheck
   settings:

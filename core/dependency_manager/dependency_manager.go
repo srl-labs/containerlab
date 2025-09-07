@@ -78,8 +78,6 @@ func (dm *defaultDependencyManager) checkNodesExist(nodeNames []string) error {
 func (dm *defaultDependencyManager) String() string {
 	dependencies := dm.generateDependencyMap()
 
-	var result []string
-
 	keys := make([]string, 0, len(dependencies))
 	for k := range dependencies {
 		keys = append(keys, k)
@@ -87,10 +85,14 @@ func (dm *defaultDependencyManager) String() string {
 
 	sort.Strings(keys)
 
-	// print dependencies
-	for _, nodename := range keys {
-		result = append(result, fmt.Sprintf("%s -> [ %s ]", nodename,
-			strings.Join(dependencies[nodename], ", ")))
+	result := make([]string, len(keys))
+
+	for idx, nodename := range keys {
+		result[idx] = fmt.Sprintf(
+			"%s -> [ %s ]",
+			nodename,
+			strings.Join(dependencies[nodename], ", "),
+		)
 	}
 
 	return strings.Join(result, "\n")
@@ -141,7 +143,7 @@ func isAcyclic(nodeDependers map[string][]string, i int) bool {
 	}
 
 	// debug output
-	var d []string
+	d := make([]string, 0, len(nodeDependers))
 
 	for dependee, dependers := range nodeDependers {
 		d = append(d, fmt.Sprintf("%s <- [ %s ]", dependee, strings.Join(dependers, ", ")))

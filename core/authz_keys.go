@@ -135,15 +135,15 @@ func RetrieveSSHAgentKeys() ([]ssh.PublicKey, error) {
 
 	log.Debugf("extracted %d keys from ssh-agent", len(keys))
 
-	var pubKeys []ssh.PublicKey
+	pubKeys := make([]ssh.PublicKey, len(keys))
 
-	for _, key := range keys {
+	for idx, key := range keys {
 		pkey, err := ssh.ParsePublicKey(key.Blob)
 		if err != nil {
 			return nil, err
 		}
 
-		pubKeys = append(pubKeys, pkey)
+		pubKeys[idx] = pkey
 	}
 
 	return pubKeys, nil
