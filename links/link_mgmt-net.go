@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -50,7 +51,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	bridgeEp := NewEndpointBridge(NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link), true)
 
 	var err error
-	bridgeEp.MAC, err = clabutils.GenMac(ClabOUI)
+	bridgeEp.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +69,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -92,7 +93,7 @@ func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil

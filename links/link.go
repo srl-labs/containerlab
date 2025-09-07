@@ -17,8 +17,6 @@ import (
 type LinkDeploymentState uint8
 
 const (
-	DefaultLinkMTU = 9500
-
 	LinkDeploymentStateNotDeployed = iota
 	// LinkDeploymentStateHalfDeployed is a state in which one of the endpoints
 	// of the links finished deploying and the other one is not yet deployed.
@@ -29,10 +27,10 @@ const (
 
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
-	MTU             int                    `yaml:"mtu,omitempty"`
-	Labels          map[string]string      `yaml:"labels,omitempty"`
-	Vars            map[string]interface{} `yaml:"vars,omitempty"`
-	DeploymentState LinkDeploymentState    `yaml:",omitempty"`
+	MTU             int                 `yaml:"mtu,omitempty"`
+	Labels          map[string]string   `yaml:"labels,omitempty"`
+	Vars            map[string]any      `yaml:"vars,omitempty"`
+	DeploymentState LinkDeploymentState `yaml:",omitempty"`
 }
 
 // GetMTU returns the MTU of the link.

@@ -108,7 +108,6 @@ linters:
       - exec
       - git
       - internal
-      - labels
       - links
       - mocks
       - netconf

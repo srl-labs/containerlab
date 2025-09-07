@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -41,7 +42,7 @@ func hostLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkHostRaw, erro
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -71,7 +72,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
 	}
 
-	hostEp.MAC, err = clabutils.GenMac(ClabOUI)
+	hostEp.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil

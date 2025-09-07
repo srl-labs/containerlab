@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
@@ -92,7 +92,7 @@ func GetOptions() *Options {
 				Format: "table",
 			},
 			ToolsVeth: &ToolsVethOptions{
-				MTU: clablinks.DefaultLinkMTU,
+				MTU: clabconstants.DefaultLinkMTU,
 			},
 			ToolsVxlan: &ToolsVxlanOptions{
 				ID:             defaultVxlanID,

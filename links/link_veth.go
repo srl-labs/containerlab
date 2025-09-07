@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -62,7 +63,7 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if l.MTU == 0 {
-		l.MTU = DefaultLinkMTU
+		l.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return l, nil
@@ -85,7 +86,7 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil

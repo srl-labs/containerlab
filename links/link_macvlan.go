@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	"github.com/vishvananda/netlink"
 )
 
@@ -50,7 +51,7 @@ func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil

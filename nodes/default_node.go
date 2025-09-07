@@ -144,7 +144,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	// This env var does not count in the eth0 interface that is automatically created by the container runtime.
 	// This env var is used by some containers (e.g. vrnetlab systems) to postpone the startup until all interfaces
 	// have been added to the container namespace.
-	d.Config().Env[clabtypes.CLAB_ENV_INTFS] = strconv.Itoa(len(d.GetEndpoints()))
+	d.Config().Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(len(d.GetEndpoints()))
 
 	// create the container
 	cID, err := d.Runtime.CreateContainer(ctx, d.Cfg)

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
@@ -71,7 +72,7 @@ func (n *linux) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 	// Set the "CLAB_INTFS" variable to the number of interfaces
 	// Which is required by vrnetlab to determine if all configured interfaces are present
 	// such that the internal VM can be started with these interfaces assigned.
-	n.Config().Env[clabtypes.CLAB_ENV_INTFS] = strconv.Itoa(len(n.GetEndpoints()))
+	n.Config().Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(len(n.GetEndpoints()))
 
 	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
 	if err != nil {

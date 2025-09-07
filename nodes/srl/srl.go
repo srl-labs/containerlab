@@ -25,7 +25,6 @@ import (
 	clabcert "github.com/srl-labs/containerlab/cert"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -641,7 +640,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		if ifName == "mgmt0" {
 			// if the endpoint has a custom MTU set, use it in the template logic
 			// otherwise we don't set the mtu as srlinux will use the default max value 9232
-			if m := e.GetLink().GetMTU(); m != clablinks.DefaultLinkMTU {
+			if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 				tplData.MgmtMTU = m
 				// MgmtMTU seems to be only set when we use macvlan interface
 				// with network-mode: none. For this super narrow use case
@@ -667,7 +666,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 		// if the endpoint has a custom MTU set, use it in the template logic
 		// otherwise we don't set the mtu as srlinux will use the default max value 9232
-		if m := e.GetLink().GetMTU(); m != clablinks.DefaultLinkMTU {
+		if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 			iface.Mtu = m
 		}
 
