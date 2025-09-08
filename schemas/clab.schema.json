@@ -297,8 +297,11 @@
                         "type": "object",
                         "properties": {
                             "slot": {
-                                "type": "string",
-                                "description": "Set component physical position on a distributed chassis"
+                                "description": "Set component physical position on a distributed chassis",
+                                "anyOf": [
+                                    { "type": "string", "pattern": "^[ABab]$" },
+                                    { "type": "integer", "minimum": 1}
+                                ]
                             },
                             "type": {
                                 "type": "string",
