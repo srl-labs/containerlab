@@ -1,10 +1,22 @@
 package types
 
+import "fmt"
+
 type Component struct {
 	Slot string            `yaml:"slot,omitempty"`
 	Type string            `yaml:"type,omitempty"`
 	Env  map[string]string `yaml:"env,omitempty"`
+	SFM  string            `yaml:"sfm,omitempty"`
+	XIOM string            `yaml:"xiom,omitempty"`
+	MDA  MDAS              `yaml:"mda,omitempty"`
 }
+
+type MDA struct {
+	Slot int    `yaml:"slot,omitempty"`
+	Type string `yaml:"type,omitempty"`
+}
+
+type MDAS []MDA
 
 func (c *Component) Copy() *Component {
 	if c == nil {
@@ -24,5 +36,39 @@ func (c *Component) Copy() *Component {
 		Slot: c.Slot,
 		Type: c.Type,
 		Env:  envCopy,
+		SFM:  c.SFM,
+		XIOM: c.XIOM,
+		MDA:  c.MDA.Copy(),
 	}
+}
+
+func (l *MDAS) UnmarshalYAML(unmarshal func(any) error) error {
+
+	var entries []MDA
+	if err := unmarshal(&entries); err != nil {
+		return err
+	}
+
+	if len(entries) == 0 {
+		*l = nil
+		return nil
+	}
+
+	for _, e := range entries {
+		if e.Type == "" || e.Slot <= 0 {
+			return fmt.Errorf("invalid mda entry. slot and type are required, got slot %q, type%q", e.Slot, e.Type)
+		}
+	}
+
+	*l = MDAS(entries)
+	return nil
+}
+
+func (l MDAS) Copy() MDAS {
+	if l == nil {
+		return nil
+	}
+	out := make([]MDA, len(l))
+	copy(out, l)
+	return out
 }
