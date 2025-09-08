@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -495,4 +496,12 @@ func (*IgniteRuntime) GetRuntimeSocket() (string, error) {
 
 func (*IgniteRuntime) GetCooCBindMounts() clabtypes.Binds {
 	return nil
+}
+
+func (*IgniteRuntime) GetRuntimeBinary() (string, error) {
+	path, err := exec.LookPath("ignite")
+	if err != nil {
+		return "", fmt.Errorf("failed to get ignite runtime binary path: %w", err)
+	}
+	return path, nil
 }

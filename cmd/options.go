@@ -99,6 +99,12 @@ func GetOptions() *Options {
 				Port:           defaultVxlanPort,
 				DeletionPrefix: "vx-",
 			},
+			ToolsCodeServer: &ToolsCodeServerOptions{
+				Image:        "ghcr.io/kaelemc/clab-code-server:main",
+				Name:         "clab-code-server",
+				LogLevel:     "debug",
+				OutputFormat: "table",
+			},
 		}
 	}
 
@@ -106,22 +112,23 @@ func GetOptions() *Options {
 }
 
 type Options struct {
-	Global         *GlobalOptions
-	Filter         *FilterOptions
-	Deploy         *DeployOptions
-	Destroy        *DestroyOptions
-	Config         *ConfigOptions
-	Exec           *ExecOptions
-	Inspect        *InspectOptions
-	Graph          *GraphOptions
-	ToolsAPI       *ToolsApiOptions
-	ToolsCert      *ToolsCertOptions
-	ToolsTxOffload *ToolsDisableTxOffloadOptions
-	ToolsGoTTY     *ToolsGoTTYOptions
-	ToolsNetem     *ToolsNetemOptions
-	ToolsSSHX      *ToolsSSHXOptions
-	ToolsVeth      *ToolsVethOptions
-	ToolsVxlan     *ToolsVxlanOptions
+	Global          *GlobalOptions
+	Filter          *FilterOptions
+	Deploy          *DeployOptions
+	Destroy         *DestroyOptions
+	Config          *ConfigOptions
+	Exec            *ExecOptions
+	Inspect         *InspectOptions
+	Graph           *GraphOptions
+	ToolsAPI        *ToolsApiOptions
+	ToolsCert       *ToolsCertOptions
+	ToolsTxOffload  *ToolsDisableTxOffloadOptions
+	ToolsGoTTY      *ToolsGoTTYOptions
+	ToolsNetem      *ToolsNetemOptions
+	ToolsSSHX       *ToolsSSHXOptions
+	ToolsVeth       *ToolsVethOptions
+	ToolsVxlan      *ToolsVxlanOptions
+	ToolsCodeServer *ToolsCodeServerOptions
 }
 
 func (o *Options) ToClabOptions() []clabcore.ClabOption {
@@ -420,4 +427,14 @@ type ToolsVxlanOptions struct {
 	Remote         string
 	ParentDevice   string
 	DeletionPrefix string
+}
+
+type ToolsCodeServerOptions struct {
+	Image         string
+	Name          string
+	Port          uint
+	LogLevel      string
+	OutputFormat  string
+	LabsDirectory string
+	Owner         string
 }
