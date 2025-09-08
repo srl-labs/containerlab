@@ -58,6 +58,9 @@ const (
 	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
 	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
 	envNokiaSrosCard          = "NOKIA_SROS_CARD"
+	envNokiaSrosSFM           = "NOKIA_SROS_SFM"
+	envNokiaSrosXIOM          = "NOKIA_SROS_XIOM"
+	envNokiaSrosMDA           = "NOKIA_SROS_MDA"
 )
 
 var (
@@ -401,6 +404,21 @@ func (n *sros) setupComponentNodes() error {
 		// set the type var if type is set
 		if c.Type != "" {
 			componentConfig.Env[envNokiaSrosCard] = c.Type
+		}
+
+		if c.SFM != "" {
+			componentConfig.Env[envNokiaSrosSFM] = c.SFM
+		}
+
+		if c.XIOM != "" {
+			componentConfig.Env[envNokiaSrosXIOM] = c.XIOM
+		}
+
+		if len(c.MDA) > 0 {
+			for _, m := range c.MDA {
+				key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
+				componentConfig.Env[key] = m.Type
+			}
 		}
 
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
