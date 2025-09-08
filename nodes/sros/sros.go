@@ -172,6 +172,8 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	n.HostRequirements.MinAvailMemoryGb = 4
 	n.HostRequirements.MinAvailMemoryGbFailAction = clabtypes.FailBehaviourLog
 
+	n.LicensePolicy = clabtypes.LicensePolicyRequired
+
 	n.Cfg = cfg
 
 	n.InterfaceHelp = InterfaceHelp
