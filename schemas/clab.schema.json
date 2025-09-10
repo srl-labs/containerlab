@@ -114,7 +114,8 @@
                         "k8s-kind",
                         "fdio_vpp",
                         "vyosnetworks_vyos",
-                        "juniper_cjunosevolved"
+                        "juniper_cjunosevolved",
+                        "arrcus_arcos"
                     ]
                 },
                 "license": {
@@ -1545,6 +1546,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "fdio_vpp": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "arrcus_arcos": {
                             "$ref": "#/definitions/node-config"
                         }
                     },
