@@ -379,20 +379,20 @@ topology:
         - slot: A # containers will be attached to this Linux NS
         - slot: B
         - slot: 1
-          type: iom5-e # equivalent to override NOKIA_SROS_CARD
-          env:
-            NOKIA_SROS_SFM: m-sfm6-7/12
-            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
-            NOKIA_SROS_MDA_2: me3-400gb-qsfpdd
+          type: iom5-e # maps to NOKIA_SROS_CARD
+          sfm: m-sfm6-7/12 # maps to NOKIA_SROS_SFM
+          mda:
+            - slot: 1
+              type: me6-100gb-qsfp28 # maps to NOKIA_SROS_MDA_1
+            - slot: 2
+              type: me3-400gb-qsfpdd # maps to NOKIA_SROS_MDA_2
         - slot: 2
-          env:
-            NOKIA_SROS_SFM: m-sfm6-7/12
-            NOKIA_SROS_CARD: iom5-e # (1)!
-            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
-            NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
+          type: iom5-e
+          sfm: m-sfm6-7/12
+          mda:
+            - slot: 2
+              type: me6-100gb-qsfp28
 ```
-
-1. As an example, the card type is set here as an env var, instead of the `type` field like we did for slot 1.
 
 ///
 /// tab | with links
