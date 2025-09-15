@@ -28,25 +28,31 @@ docker image load -i ArcOS_4.3.1B_DOCKER.xz
 
 There are several management interfaces supported by ArcOS nodes:
 
-=== "CLI"
-    to connect to a ArcOS CLI shell of a running ArcOS container:
-    ```bash
-    docker exec -it <container-name/id> /usr/bin/cli
-    ```
-=== "bash"
-    to connect to a `bash` shell of a running ArcOS container:
-    ```bash
-    docker exec -it <container-name/id> bash
-    ```
-=== "SSH"
-    to connect to a ArcOS CLI, simply SSH to the node:
-    ```
-    ssh clab@<container-name>
-    Password: `clab@123`
-    ```
+/// tab | CLI
+to connect to a ArcOS CLI shell of a running ArcOS container:
+```bash
+docker exec -it <container-name/id> /usr/bin/cli
+```
+///
 
-!!!info
-    Default user credentials: `clab:clab@123`
+/// tab | bash
+to connect to a `bash` shell of a running ArcOS container:
+```bash
+docker exec -it <container-name/id> bash
+```
+///
+
+/// tab | SSH
+to connect to a ArcOS CLI, simply SSH to the node:
+```
+ssh clab@<container-name>
+Password: `clab@123`
+```
+///
+
+/// info
+Default user credentials: `clab:clab@123`
+///
 
 ## Interfaces mapping
 
@@ -87,14 +93,17 @@ To provide a user-defined config, take the [default configuration template]() an
 ## Known issues and limitations
 
 #### OS Version
+
 * Currently, only v4.X is supported.
 
 #### management interface
+
 * The interface name is currently set to eth0.
 * Even if the IP address is changed in the configuration, it will not actually be reflected.
 * The management VRF, which is intended for the management interface, is currently not usable.
 
 #### boot
+
 * After deployment, the network connection is established immediately, but it takes about 50 seconds for the config to be loaded.
 
 ## Lab examples
