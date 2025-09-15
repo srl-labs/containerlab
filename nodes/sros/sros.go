@@ -226,7 +226,6 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	// store the certificate-related parameters
 	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
 	n.cert = params.Cert
-
 	n.topologyName = params.TopologyName
 
 	if strings.HasPrefix(n.Cfg.NetworkMode, "container:") {
@@ -271,6 +270,12 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 	// start waiting for container ready (PID based check)
 	if err := n.Ready(ctx); err != nil {
+		return err
+	}
+
+	// generate the certificate
+	certificate, err := n.LoadOrGenerateCertificate(n.cert, n.topologyName)
+	if err != nil {
 		return err
 	}
 
