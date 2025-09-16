@@ -776,7 +776,7 @@ func (n *sros) createSROSConfigFiles() error {
 	}
 
 	// write the TLS cert to the config dir
-	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.pem")
+	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.crt")
 	err = writeStringToFile(certPath, n.Config().TLSCert)
 	return err
 }
