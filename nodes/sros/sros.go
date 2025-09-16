@@ -705,19 +705,6 @@ func (n *sros) createSROSFiles() error {
 	return nil
 }
 
-// Func to write a key/cert files.
-func writeStringToFile(path, content string) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	_, err = f.WriteString(content)
-	return err
-}
-
 // Func that handles the config generation for the SR-SIM kind.
 func (n *sros) createSROSConfigFiles() error {
 	// generate a startup config file
@@ -771,13 +758,13 @@ func (n *sros) createSROSConfigFiles() error {
 
 	// write the TLS key to the config dir
 	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.key")
-	if err = writeStringToFile(keyPath, n.Config().TLSKey); err != nil {
+	if err = clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
 		return err
 	}
 
 	// write the TLS cert to the config dir
 	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.crt")
-	err = writeStringToFile(certPath, n.Config().TLSCert)
+	err = clabutils.CreateFile(certPath, n.Config().TLSCert)
 	return err
 }
 
