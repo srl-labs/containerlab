@@ -52,6 +52,7 @@ const (
 	configCf3                 = "config/cf3"
 	configCf2                 = "config/cf2"
 	configCf1                 = "config/cf1"
+	certsDir                  = "system-pki"
 	startupCfgName            = "config.cfg"
 	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
 	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
@@ -220,22 +221,22 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
 
-	// generate the certificate
-	certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return err
-	}
-
-	// set the certificate data
-	n.Config().TLSCert = string(certificate.Cert)
-	n.Config().TLSKey = string(certificate.Key)
-
 	if strings.HasPrefix(n.Cfg.NetworkMode, "container:") {
 		n.Cfg.ExtraHosts = nil
 	}
 
-	// either the non-distributed OR distributed AND is a CPM
+	// Create files/dir structure for standalone nodes or distributed CPM nodes
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
+		// generate the certificate
+		certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+		if err != nil {
+			return err
+		}
+
+		// set the certificate data
+		n.Config().TLSCert = string(certificate.Cert)
+		n.Config().TLSKey = string(certificate.Key)
+
 		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]),
 			clabconstants.PermissionsOpen)
 		slot := n.Cfg.Env[envNokiaSrosSlot]
@@ -755,16 +756,19 @@ func (n *sros) createSROSConfigFiles() error {
 	if err != nil {
 		return fmt.Errorf("failed to generate config for node %q: %v", n.Cfg.ShortName, err)
 	}
+	if n.isCPM(slotAName) {
+		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1, certsDir),
+			clabconstants.PermissionsOpen)
+		// write the TLS key to the config dir
+		keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1, certsDir, "node.key")
+		if err = clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
+			return err
+		}
 
-	// write the TLS key to the config dir
-	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.key")
-	if err = clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
-		return err
+		// write the TLS cert to the config dir
+		certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1, certsDir, "node.crt")
+		err = clabutils.CreateFile(certPath, n.Config().TLSCert)
 	}
-
-	// write the TLS cert to the config dir
-	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.crt")
-	err = clabutils.CreateFile(certPath, n.Config().TLSCert)
 	return err
 }
 
