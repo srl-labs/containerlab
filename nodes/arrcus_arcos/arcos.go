@@ -1,4 +1,4 @@
-package arcos
+package arrcus_arcos
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	kindNames          = []string{"arcos", "arrcus_arcos"}
+	kindNames          = []string{"arrcus_arcos"}
 	defaultCredentials = clabnodes.NewCredentials("clab", "clab@123")
 
 	// Initialize Env with arcos-specific defaults (currently empty, for future extensibility)
@@ -38,8 +38,8 @@ func Register(r *clabnodes.NodeRegistry) {
 	}, nrea)
 }
 
+// Init DefaultNode initialization and apply options.
 func (n *arcos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
-	// Init DefaultNode
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
