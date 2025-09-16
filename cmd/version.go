@@ -126,7 +126,9 @@ func printVersionInfo(c *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
+
 		fmt.Println(string(j))
+
 		return nil
 	}
 
@@ -136,6 +138,7 @@ func printVersionInfo(c *cobra.Command, _ []string) error {
 	fmt.Printf("       date: %s\n", date)
 	fmt.Printf("     source: %s\n", repoUrl)
 	fmt.Printf(" rel. notes: %s\n", versionData.ReleaseNotes)
+
 	return nil
 }
 
