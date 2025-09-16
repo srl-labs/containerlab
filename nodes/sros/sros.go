@@ -47,6 +47,8 @@ const (
 	slotAName = "A"
 	slotBName = "B"
 
+	standaloneSlotName = slotAName
+
 	retryTimer = 1 * time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName       = "nokia_sros"
@@ -209,9 +211,63 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
 	log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
 
-	err := n.setupComponentNodes()
-	if err != nil {
-		return err
+	if n.isStandaloneNode() {
+		log.Debugf("%q is standalone node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
+		err := n.setupStandaloneComponents()
+		if err != nil {
+			return err
+		}
+	} else {
+		log.Debugf("%q is distributed node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
+		err := n.setupComponentNodes()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// integrated -> pull component info from slot A components
+func (n *sros) setupStandaloneComponents() error {
+
+	if len(n.Cfg.Components) != 1 {
+		return fmt.Errorf("more than one component defined for standalone SR-SIM node: %q", n.Cfg.ShortName)
+	}
+
+	slotA := n.Cfg.Components[0]
+
+	slotName := strings.ToUpper(strings.TrimSpace(slotA.Slot))
+	// single undefined slot is implicitly set to A
+	if slotName == "" {
+		slotName = standaloneSlotName
+	}
+
+	if slotName != standaloneSlotName {
+		return fmt.Errorf("expected no slot, or slot %q for components of standalone SR-SIM node: %q", standaloneSlotName, n.Cfg.ShortName)
+	}
+
+	for k, v := range slotA.Env {
+		n.Cfg.Env[k] = v
+	}
+
+	if slotA.Type != "" {
+		n.Cfg.Env[envNokiaSrosCard] = slotA.Type
+	}
+
+	if slotA.SFM != "" {
+		n.Cfg.Env[envNokiaSrosSFM] = slotA.SFM
+	}
+
+	if slotA.XIOM != "" {
+		n.Cfg.Env[envNokiaSrosXIOM] = slotA.XIOM
+	}
+
+	if len(slotA.MDA) > 0 {
+		for _, m := range slotA.MDA {
+			key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
+			n.Cfg.Env[key] = m.Type
+		}
 	}
 
 	return nil
@@ -493,7 +549,7 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 func (n *sros) isDistributedCardNode() bool {
 	_, exists := n.Cfg.Env[envNokiaSrosSlot]
 	// is distributed if components is > 1 and the slot var exists.
-	return exists && !n.isDistributedBaseNode()
+	return exists && len(n.Cfg.Components) == 0
 }
 
 // check if SR-SIM is distributed: `components` key is present.

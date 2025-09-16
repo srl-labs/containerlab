@@ -51,6 +51,19 @@ Ensure l1 can ping sros over 1/1/c23/4 interface
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
 
+Ensure MDA is overriden with explicit slot on sr1-01
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show mda" | sshpass -p "NokiaSros1!" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-sr1-01
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    me12-100gb-qsfp28
+
+Ensure MDA is overriden with implicit slot on sr1-02
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show mda" | sshpass -p "NokiaSros1!" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-sr1-02
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    me12-100gb-qsfp28
 
 *** Keywords ***
 Cleanup
