@@ -7,7 +7,7 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 4 GB        |
 | **Topology file**             | [srlarcos01.clab.yml][topofile]                                             |
 | **Name**                      | srlarcos01                                                                  |
-| **Version information**[^2]   | `containerlab:0.56.0`, `srlinux:25.3.2`, `arcos:4.3.1B`, `docker-ce:27.1.1` |
+| **Version information**[^2]   | `containerlab:0.70.0`, `srlinux:25.3.2`, `arcos:4.3.1B`, `docker-ce:27.1.1` |
 
 ## Description
 
