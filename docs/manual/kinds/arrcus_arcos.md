@@ -4,9 +4,7 @@ search:
 ---
 # Arrcus ArcOS
 
-[Arrcus ArcOS](https://arrcus.com/connected-edge/arcos) is identified with `arcos` or `arrcus_arcos` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a node.
-
-ArcOS nodes launched with containerlab comes up with
+[Arrcus ArcOS](https://arrcus.com/connected-edge/arcos) is identified with `arrcus_arcos` kind in the [topology file](../topo-def-file.md). ArcOS nodes launched with containerlab comes up with
 
 * their management interface `eth0` configured with IPv4/6 addresses as assigned by docker
 * hostname assigned to the node name
@@ -18,7 +16,7 @@ ArcOS nodes launched with containerlab comes up with
 
 ArcOS image is available for download only for users who have an active service account.
 
-The obtained image archive can be loaded to local docker image store with (example):
+The obtained image archive can be loaded to local docker image store with:
 
 ```bash
 docker image load -i ArcOS_4.3.1B_DOCKER.xz
@@ -30,29 +28,38 @@ There are several management interfaces supported by ArcOS nodes:
 
 /// tab | CLI
 to connect to a ArcOS CLI shell of a running ArcOS container:
+
 ```bash
 docker exec -it <container-name/id> /usr/bin/cli
 ```
+
 ///
 
 /// tab | bash
 to connect to a `bash` shell of a running ArcOS container:
+
 ```bash
 docker exec -it <container-name/id> bash
 ```
+
 ///
 
 /// tab | SSH
 to connect to a ArcOS CLI, simply SSH to the node:
+
 ```
 ssh clab@<container-name>
-Password: `clab@123`
+Password: clab@123
 ```
+
 ///
 
-/// info
-Default user credentials: `clab:clab@123`
-///
+### Credentials
+
+Default user credentials:
+
+* Usernane: `clab`
+* Password: `clab@123`
 
 ## Interfaces mapping
 
@@ -67,9 +74,9 @@ ArcOS container uses the following mapping for its linux interfaces:
 
 #### Default node configuration
 
-It is possible to launch nodes of `arcos` or `arrcus_arcos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+It is possible to launch nodes of `arrcus_arcos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
-When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template]() and copy it to the config directory of the node.
+When a node is defined without `startup-config` statement present, containerlab will generate config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/arrcus_arcos/arcos.cfg) and copy it to the config directory of the node.
 
 #### User defined config
 
@@ -88,21 +95,21 @@ When a config file is passed via `startup-config` parameter it will be used duri
 
 With such topology file containerlab is instructed to take a file `r1.cfg` from the current working directory and copy it to the lab directory for that specific node under the `/startup.cfg` name. This will result in this config acting as a startup-config for the node.
 
-To provide a user-defined config, take the [default configuration template]() and add the necessary configuration commands without changing the rest of the file. This will result in proper automatic assignment of IP addresses to the management interface, as well as applying user-defined commands.
+To provide a user-defined config, take the [default configuration template](https://github.com/srl-labs/containerlab/blob/main/nodes/arrcus_arcos/arcos.cfg) and add the necessary configuration commands without changing the rest of the file. This will result in proper automatic assignment of IP addresses to the management interface, as well as applying user-defined commands.
 
 ## Known issues and limitations
 
-#### OS Version
+### OS Version
 
 * Currently, only v4.X is supported.
 
-#### management interface
+### management interface
 
-* The interface name is currently set to eth0.
+* The interface name is currently set to `eth0`.
 * Even if the IP address is changed in the configuration, it will not actually be reflected.
 * The management VRF, which is intended for the management interface, is currently not usable.
 
-#### boot
+### boot
 
 * After deployment, the network connection is established immediately, but it takes about 50 seconds for the config to be loaded.
 
