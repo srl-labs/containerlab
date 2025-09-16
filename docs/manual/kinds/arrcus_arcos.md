@@ -54,6 +54,15 @@ Password: clab@123
 
 ///
 
+/// tab | Netconf
+Netconf server runs on 830 port:
+
+```bash
+ssh clab@<container-name> -p 830 -s netconf
+```
+
+///
+
 ### Credentials
 
 Default user credentials:
