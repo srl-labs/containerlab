@@ -25,7 +25,6 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	clabcert "github.com/srl-labs/containerlab/cert"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
@@ -141,15 +140,13 @@ type sros struct {
 	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
 	startupCliCfg []byte
 
-	// Params provided in Pre-Deploy, that sros uses in Post-Deploy phase
-	// to generate certificates
-	cert         *clabcert.Cert
-	topologyName string
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
+
 	// software version SR OS x node runs
 	swVersion      *SrosVersion
 	componentNodes []clabnodes.Node
+
 	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when deploying.
 	// e.g. inspect is either called after deploy or independently. Hence we need to differentiate if we need to perform the
 	// component cpm based rename or not. This field indicates just that
@@ -223,10 +220,15 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
 
-	// store the certificate-related parameters
-	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
-	n.cert = params.Cert
-	n.topologyName = params.TopologyName
+	// generate the certificate
+	certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+	if err != nil {
+		return err
+	}
+
+	// set the certificate data
+	n.Config().TLSCert = string(certificate.Cert)
+	n.Config().TLSKey = string(certificate.Key)
 
 	if strings.HasPrefix(n.Cfg.NetworkMode, "container:") {
 		n.Cfg.ExtraHosts = nil
@@ -270,12 +272,6 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 	// start waiting for container ready (PID based check)
 	if err := n.Ready(ctx); err != nil {
-		return err
-	}
-
-	// generate the certificate
-	certificate, err := n.LoadOrGenerateCertificate(n.cert, n.topologyName)
-	if err != nil {
 		return err
 	}
 
@@ -709,6 +705,19 @@ func (n *sros) createSROSFiles() error {
 	return nil
 }
 
+// Func to write a key/cert files.
+func writeStringToFile(path, content string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	_, err = f.WriteString(content)
+	return err
+}
+
 // Func that handles the config generation for the SR-SIM kind.
 func (n *sros) createSROSConfigFiles() error {
 	// generate a startup config file
@@ -757,6 +766,18 @@ func (n *sros) createSROSConfigFiles() error {
 	err = n.GenerateConfig(cf3CfgFile, cfgTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to generate config for node %q: %v", n.Cfg.ShortName, err)
+	}
+
+	// write the TLS key to the config dir
+	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.key")
+	if err := writeStringToFile(keyPath, n.Config().TLSKey); err != nil {
+		return err
+	}
+
+	// write the TLS cert to the config dir
+	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.pem")
+	if err := writeStringToFile(certPath, n.Config().TLSCert); err != nil {
+		return err
 	}
 
 	return nil
