@@ -726,6 +726,7 @@ func (n *sros) createSROSConfigFiles() error {
 
 	var cfgTemplate string
 	var err error
+
 	// Path pointing to the target config file under configCf3 dir
 	cf3CfgFile := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, startupCfgName)
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
@@ -770,17 +771,14 @@ func (n *sros) createSROSConfigFiles() error {
 
 	// write the TLS key to the config dir
 	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.key")
-	if err := writeStringToFile(keyPath, n.Config().TLSKey); err != nil {
+	if err = writeStringToFile(keyPath, n.Config().TLSKey); err != nil {
 		return err
 	}
 
 	// write the TLS cert to the config dir
 	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "node.pem")
-	if err := writeStringToFile(certPath, n.Config().TLSCert); err != nil {
-		return err
-	}
-
-	return nil
+	err = writeStringToFile(certPath, n.Config().TLSCert)
+	return err
 }
 
 // SlotIsInteger checks if the slot string represents a valid integer.
