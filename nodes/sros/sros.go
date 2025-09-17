@@ -53,6 +53,7 @@ const (
 	configCf1                 = "config/cf1"
 	certsDir                  = "system-pki"
 	startupCfgName            = "config.cfg"
+	envVarGrpcInsecureMode    = "SRSIM_GRPC_INSECURE_MODE"
 	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
 	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
 	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
@@ -81,6 +82,7 @@ var (
 
 	srosEnv = map[string]string{
 		"SRSIM":                   "1",
+		envVarGrpcInsecureMode:    "1",
 		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
@@ -231,7 +233,6 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 		if err != nil {
 			return err
 		}
-
 		// set the certificate data
 		n.Config().TLSCert = string(certificate.Cert)
 		n.Config().TLSKey = string(certificate.Key)
@@ -715,12 +716,12 @@ func (n *sros) createSROSFiles() error {
 func (n *sros) createSROSCertificates() error {
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir),
 		clabconstants.PermissionsOpen)
-	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node.key")
+	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node_key.pem")
 	if err := clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
 		return err
 	}
 
-	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node.crt")
+	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node_cert.pem")
 	if err := clabutils.CreateFile(certPath, n.Config().TLSCert); err != nil {
 		return err
 	}
@@ -832,6 +833,14 @@ func (n *sros) addDefaultConfig() error {
 	if strings.Contains(tplData.NodeType, "ixr-") {
 		tplData.GRPCConfig = grpcConfigIXR
 		tplData.SystemConfig = systemCfgIXR
+	}
+	if strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]) == "1" || strings.EqualFold(strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]), "true") {
+		log.Infof("HEEEEEEEEEYA")
+		log.Debugf("Will generate cert for node %s but I am not doing anything with it", n.Cfg.ShortName)
+		tplData.GRPCConfig = grpcConfigInsecure
+		if strings.Contains(tplData.NodeType, "ixr-") {
+			tplData.GRPCConfig = grpcConfigIXRInsecure
+		}
 	}
 
 	if n.Config().DNS != nil {
