@@ -44,7 +44,7 @@ rtt min/avg/max/mdev = 1.379/1.685/1.992/0.306 ms
 ```
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
-[arcos]: ../manual/kinds/arcos.md
+[arcos]: ../manual/kinds/arrcus_arcos.md
 [topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
