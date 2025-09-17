@@ -716,12 +716,12 @@ func (n *sros) createSROSCertificates() error {
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir),
 		clabconstants.PermissionsOpen)
 	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node.key")
-	if err = clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
+	if err := clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
 		return err
 	}
 
 	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node.crt")
-	if err = clabutils.CreateFile(certPath, n.Config().TLSCert); err != nil {
+	if err := clabutils.CreateFile(certPath, n.Config().TLSCert); err != nil {
 		return err
 	}
 	return nil
