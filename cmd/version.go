@@ -101,7 +101,7 @@ func docsLinkFromVer(ver string) string {
 	return relSlug
 }
 
-func printVersionInfoFn(c *cobra.Command, o *Options) error {
+func printVersionInfoFn(_ *cobra.Command, o *Options) error {
 	versionData := struct {
 		Version      string `json:"version"`
 		Commit       string `json:"commit"`
