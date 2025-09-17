@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/scrapli/scrapligo/driver/netconf"
+	"github.com/scrapli/scrapligo/driver/opoptions"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
@@ -51,7 +53,6 @@ const (
 	configCf3                 = "config/cf3"
 	configCf2                 = "config/cf2"
 	configCf1                 = "config/cf1"
-	certsDir                  = "system-pki"
 	startupCfgName            = "config.cfg"
 	envVarGrpcInsecureMode    = "SRSIM_GRPC_INSECURE_MODE"
 	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
@@ -233,6 +234,7 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 		if err != nil {
 			return err
 		}
+
 		// set the certificate data
 		n.Config().TLSCert = string(certificate.Cert)
 		n.Config().TLSKey = string(certificate.Key)
@@ -306,6 +308,11 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			if err != nil {
 				return err
 			}
+			err = n.tlsCertBootstrap(ctx, addr)
+			if err != nil {
+				return fmt.Errorf("TLS cert/key bootstrap to node %q failed: %w", n.Cfg.LongName, err)
+			}
+
 			err = n.saveConfigWithAddr(ctx, addr)
 			if err != nil {
 				return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
@@ -714,14 +721,14 @@ func (n *sros) createSROSFiles() error {
 
 // Func that Places the Certificates in the right place and format
 func (n *sros) createSROSCertificates() error {
-	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir),
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
-	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node_key.pem")
+	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "key.pem")
 	if err := clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
 		return err
 	}
 
-	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node_cert.pem")
+	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, "cert.pem")
 	if err := clabutils.CreateFile(certPath, n.Config().TLSCert); err != nil {
 		return err
 	}
@@ -1100,6 +1107,98 @@ func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
 	log.Info("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr)
 
 	return nil
+}
+
+// TLS bootstrap via NETCONF to enable secure gRPC:
+//  - `imports key.pem` as `node-tls.key (encrypted DER)
+//  - `imports cert.pem` as `node-tls.crt (encrypted DER)
+//  - administratively enables TLS profile `grpc-tls-certs`
+
+func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
+	var operations []clabnetconf.Operation
+
+	operations = append(operations, func(d *netconf.Driver) error {
+		payload := `
+<action xmlns="urn:ietf:params:xml:ns:yang:1">
+	<admin xmlns="urn:nokia.com:sros:ns:yang:sr:oper-admin">
+		<system>
+			<security>
+				<pki>
+					<import>
+						<input-url>cf3:/key.pem</input-url>
+						<output-file>node-tls.key</output-file>
+						<type>key</type>
+						<format>pem</format>
+					</import>
+				</pki>
+			</security>
+		</system>
+	</admin>
+</action>`
+		_, err := d.RPC(opoptions.WithFilter(payload))
+		return err
+	})
+
+	operations = append(operations, func(d *netconf.Driver) error {
+		payload := `
+<action xmlns="urn:ietf:params:xml:ns:yang:1">
+	<admin xmlns="urn:nokia.com:sros:ns:yang:sr:oper-admin">
+		<system>
+			<security>
+				<pki>
+					<import>
+						<input-url>cf3:/cert/pem</input-url>
+						<output-file>node-tls.crt</output-file>
+						<type>certificate</type>
+						<format>pem</format>
+					</import>
+				</pki>
+			</security>
+		</system>
+	</admin>
+</action>`
+		_, err := d.RPC(opoptions.WithFilter(payload))
+		return err
+	})
+
+	operations = append(operations, func(d *netconf.Driver) error {
+		payload := `
+<configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf" xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
+    <system>
+        <security>
+            <tls>
+                <cert-profile nc:operation="merge">
+             		<cert-profile-name>grpc-tls-certs</cert-profile-name>
+					<admin-state>enable</admin-state>
+                    <entry>
+                        <entry-id>1</entry-id>
+                        <certificate-file>node-tls.crt</certificate-file>
+                        <key-file>node-tls.key</key-file>
+                    </entry>
+                </cert-profile>
+            </tls>
+        </security>
+    </system>
+</configure>`
+		_, err := d.EditConfig("candidate", payload)
+		return err
+	})
+
+	operations = append(operations, func(d *netconf.Driver) error {
+		_, err := d.Commit()
+		return err
+	})
+
+	err := clabnetconf.MultiExec(
+		fmt.Sprintf("[%s]", addr),
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
+		operations,
+	)
+	if err == nil {
+		log.Info("Completed NETCONF bootstrap for gRPC TLS profile")
+	}
+	return err
 }
 
 // isPartialConfigFile returns true if the config file name contains .partial substring.
