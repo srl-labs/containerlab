@@ -47,6 +47,8 @@ const (
 	slotAName = "A"
 	slotBName = "B"
 
+	standaloneSlotName = slotAName
+
 	retryTimer = 1 * time.Second
 	// additional config that clab adds on top of the factory config.
 	scrapliPlatformName       = "nokia_sros"
@@ -58,6 +60,9 @@ const (
 	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
 	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
 	envNokiaSrosCard          = "NOKIA_SROS_CARD"
+	envNokiaSrosSFM           = "NOKIA_SROS_SFM"
+	envNokiaSrosXIOM          = "NOKIA_SROS_XIOM"
+	envNokiaSrosMDA           = "NOKIA_SROS_MDA"
 )
 
 var (
@@ -169,6 +174,8 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	n.HostRequirements.MinAvailMemoryGb = 4
 	n.HostRequirements.MinAvailMemoryGbFailAction = clabtypes.FailBehaviourLog
 
+	n.LicensePolicy = clabtypes.LicensePolicyRequired
+
 	n.Cfg = cfg
 
 	n.InterfaceHelp = InterfaceHelp
@@ -201,15 +208,76 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	mac := genMac(n.Cfg)
 	srosEnv[envNokiaSrosSystemBaseMac] = mac
 
-	n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
-	log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
+	if n.isStandaloneNode() {
+		log.Debugf("%q is standalone node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
 
-	err := n.setupComponentNodes()
-	if err != nil {
-		return err
+		vars, err := n.setupStandaloneComponents()
+		if err != nil {
+			return err
+		}
+
+		// n.Cfg.Env overrides component vars, overrides default srosEnv
+		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, vars, n.Cfg.Env)
+		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
+	} else {
+		log.Debugf("%q is distributed node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
+
+		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
+		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
+
+		err := n.setupComponentNodes()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// integrated -> pull component info from slot A components.
+func (n *sros) setupStandaloneComponents() (map[string]string, error) {
+	vars := map[string]string{}
+
+	if len(n.Cfg.Components) == 0 {
+		return nil, nil
+	}
+
+	slotA := n.Cfg.Components[0]
+
+	slotName := strings.ToUpper(strings.TrimSpace(slotA.Slot))
+	// single undefined slot is implicitly set to A
+	if slotName == "" {
+		slotName = standaloneSlotName
+	}
+
+	if slotName != standaloneSlotName {
+		return nil, fmt.Errorf("expected no slot, or slot %q for components of standalone SR-SIM node: %q", standaloneSlotName, n.Cfg.ShortName)
+	}
+
+	if slotA.Type != "" {
+		vars[envNokiaSrosCard] = slotA.Type
+	}
+
+	if slotA.SFM != "" {
+		vars[envNokiaSrosSFM] = slotA.SFM
+	}
+
+	if slotA.XIOM != "" {
+		vars[envNokiaSrosXIOM] = slotA.XIOM
+	}
+
+	if len(slotA.MDA) > 0 {
+		for _, m := range slotA.MDA {
+			key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
+			vars[key] = m.Type
+		}
+	}
+
+	for k, v := range slotA.Env {
+		vars[k] = v
+	}
+
+	return vars, nil
 }
 
 // Pre Deploy func for SR-SIM kind.
@@ -403,6 +471,21 @@ func (n *sros) setupComponentNodes() error {
 			componentConfig.Env[envNokiaSrosCard] = c.Type
 		}
 
+		if c.SFM != "" {
+			componentConfig.Env[envNokiaSrosSFM] = c.SFM
+		}
+
+		if c.XIOM != "" {
+			componentConfig.Env[envNokiaSrosXIOM] = c.XIOM
+		}
+
+		if len(c.MDA) > 0 {
+			for _, m := range c.MDA {
+				key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
+				componentConfig.Env[key] = m.Type
+			}
+		}
+
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
 
 		// adjust label based env vars
@@ -473,7 +556,7 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 func (n *sros) isDistributedCardNode() bool {
 	_, exists := n.Cfg.Env[envNokiaSrosSlot]
 	// is distributed if components is > 1 and the slot var exists.
-	return exists && !n.isDistributedBaseNode()
+	return exists && len(n.Cfg.Components) == 0
 }
 
 // check if SR-SIM is distributed: `components` key is present.
