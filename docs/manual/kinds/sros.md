@@ -56,10 +56,10 @@ ssh admin@<node-name> -p 830 -s netconf
 
 ///
 /// tab | gNMI
-Using the best-in-class [gnmic](https://gnmic.openconfig.net) gNMI client as an example:
+The node comes with the TLS-enabled gNMI service running over port 57400. To verify gNMI service operation, use the best-in-class [gnmic](https://gnmic.openconfig.net) gNMI client:
 
 ```bash
-gnmic -a <container-name/node-mgmt-address> --insecure \
+gnmic -a <container-name/node-mgmt-address> --skip-verify \
 -u admin -p NokiaSros1! \
 capabilities
 ```
