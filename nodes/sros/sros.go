@@ -208,17 +208,23 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	mac := genMac(n.Cfg)
 	srosEnv[envNokiaSrosSystemBaseMac] = mac
 
-	n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
-	log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
-
 	if n.isStandaloneNode() {
 		log.Debugf("%q is standalone node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
-		err := n.setupStandaloneComponents()
+
+		vars, err := n.setupStandaloneComponents()
 		if err != nil {
 			return err
 		}
+
+		// n.Cfg.Env overrides component vars, overrides default srosEnv
+		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, vars, n.Cfg.Env)
+		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
 	} else {
 		log.Debugf("%q is distributed node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
+
+		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
+		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
+
 		err := n.setupComponentNodes()
 		if err != nil {
 			return err
@@ -229,10 +235,12 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 }
 
 // integrated -> pull component info from slot A components
-func (n *sros) setupStandaloneComponents() error {
+func (n *sros) setupStandaloneComponents() (map[string]string, error) {
+
+	vars := map[string]string{}
 
 	if len(n.Cfg.Components) != 1 {
-		return fmt.Errorf("more than one component defined for standalone SR-SIM node: %q", n.Cfg.ShortName)
+		return nil, fmt.Errorf("more than one component defined for standalone SR-SIM node: %q", n.Cfg.ShortName)
 	}
 
 	slotA := n.Cfg.Components[0]
@@ -244,33 +252,33 @@ func (n *sros) setupStandaloneComponents() error {
 	}
 
 	if slotName != standaloneSlotName {
-		return fmt.Errorf("expected no slot, or slot %q for components of standalone SR-SIM node: %q", standaloneSlotName, n.Cfg.ShortName)
-	}
-
-	for k, v := range slotA.Env {
-		n.Cfg.Env[k] = v
+		return nil, fmt.Errorf("expected no slot, or slot %q for components of standalone SR-SIM node: %q", standaloneSlotName, n.Cfg.ShortName)
 	}
 
 	if slotA.Type != "" {
-		n.Cfg.Env[envNokiaSrosCard] = slotA.Type
+		vars[envNokiaSrosCard] = slotA.Type
 	}
 
 	if slotA.SFM != "" {
-		n.Cfg.Env[envNokiaSrosSFM] = slotA.SFM
+		vars[envNokiaSrosSFM] = slotA.SFM
 	}
 
 	if slotA.XIOM != "" {
-		n.Cfg.Env[envNokiaSrosXIOM] = slotA.XIOM
+		vars[envNokiaSrosXIOM] = slotA.XIOM
 	}
 
 	if len(slotA.MDA) > 0 {
 		for _, m := range slotA.MDA {
 			key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
-			n.Cfg.Env[key] = m.Type
+			vars[key] = m.Type
 		}
 	}
 
-	return nil
+	for k, v := range slotA.Env {
+		vars[k] = v
+	}
+
+	return vars, nil
 }
 
 // Pre Deploy func for SR-SIM kind.

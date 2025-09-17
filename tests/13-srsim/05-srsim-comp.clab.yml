@@ -53,6 +53,33 @@ topology:
       startup-config: |
         /configure card 1 admin-state enable
         /configure card 1 card-type iom-1
+
+    sr1-03:
+      kind: nokia_srsim
+      type: sr-1
+      components: 
+         - env:
+              NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # verify env MDA override on component
+           mda:
+               - slot: 1
+                 type: me6-100gb-qsfp28
+      startup-config: |
+        /configure card 1 admin-state enable
+        /configure card 1 card-type iom-1
+
+    sr1-04:
+      kind: nokia_srsim
+      type: sr-1
+      env: 
+        NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # verify env MDA override on node config
+      components: 
+         - mda:
+            - slot: 1
+              type: me6-100gb-qsfp28
+      startup-config: |
+        /configure card 1 admin-state enable
+        /configure card 1 card-type iom-1
+        
         
   links:
     - endpoints: ["l1:eth1", "sros:1/1/c23/4"]

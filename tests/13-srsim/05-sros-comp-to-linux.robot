@@ -65,6 +65,20 @@ Ensure MDA is overriden with implicit slot on sr1-02
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    me12-100gb-qsfp28
 
+Ensure MDA is overriden with env var on component on sr1-03
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show mda" | sshpass -p "NokiaSros1!" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-sr1-03
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    me12-100gb-qsfp28
+
+Ensure MDA is overriden with env var on node on sr1-04
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show mda" | sshpass -p "NokiaSros1!" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-sr1-04
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    me12-100gb-qsfp28
+
 *** Keywords ***
 Cleanup
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
