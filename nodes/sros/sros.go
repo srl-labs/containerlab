@@ -1147,7 +1147,7 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 			<security>
 				<pki>
 					<import>
-						<input-url>cf3:/cert/pem</input-url>
+						<input-url>cf3:/cert.pem</input-url>
 						<output-file>node-tls.crt</output-file>
 						<type>certificate</type>
 						<format>pem</format>
