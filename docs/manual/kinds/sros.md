@@ -160,7 +160,6 @@ Data interfaces need to be configured with IP addressing manually using the SR O
 
 The SR-SIM can emulate different hardware platforms as explained in the [SR-SIM Installation, deployment and setup guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html). These variants can be set using the `type` directive in the clab topology file, or by overriding the different available environment variables such as the ones for the chassis (`NOKIA_SROS_CHASSIS`) or card (`NOKIA_SROS_CARD`).  
 
-
 Users can then use environment variables to change the default behavior of a given container. If there is a conflict between the `type` field in the topology file and an environment variable in the topology file, the environment variable will take precedence.
 
 > When `type` is not provided in the topology file, SR-SIM will start as `SR-1` platform.
@@ -171,7 +170,7 @@ If the chosen platform is chassis-based, the SR-SIM deployment needs to be done 
 
 We call non-chassis-based systems like SR-1, SR-1s integrated variants. As these systems have a fixed form factor, they run as a single container and are represented as a single node in the topology file.
 
-Besides setting the `type` to drive the platform selection, users can then modify some of the default settings on a per-node basis using the `components` configuration on the node, or the environment variables. 
+Besides setting the `type` to drive the platform selection, users can then modify some of the default settings on a per-node basis using the `components` configuration on the node, or the environment variables.
 
 For example, to change the slot 1 MDA, refer to the example below:
 /// tab | Integrated SR-SIM
@@ -224,7 +223,7 @@ topology:
 
 When the emulated platform is chassis-based, like SR-7, SR-14s, etc., the SR-SIM node must be defined in a distributed mode in the topology file.
 
-A distributed SR-SIM node consists of two or more containers with a specific role: CPM or IOM. A node can boot in either mode depending on the settings of the `NOKIA_SROS_SLOT` environment variable and the SR-SIM node type. 
+A distributed SR-SIM node consists of two or more containers with a specific role: CPM or IOM. A node can boot in either mode depending on the settings of the `NOKIA_SROS_SLOT` environment variable and the SR-SIM node type.
 There are several other variables that will modify the default settings for a simulated chassis (e.g. SFM, XIOM, MDA, etc.), so please check the [SR-SIM Installation guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html) for a full list of options.
 
 Containerlab provides two ways to define the distributed variant:
@@ -242,7 +241,7 @@ Distributed systems require certain settings given the nature of the SR-SIM simu
 
 #### Grouped topology
 
-Users can simplify the topology file with distributed SR-SIM nodes by using the `components` directive in the node definition. In this case, every member in the `components` section will result in a spawned container emulating the corresponding component type (CPM or IOM). 
+Users can simplify the topology file with distributed SR-SIM nodes by using the `components` directive in the node definition. In this case, every member in the `components` section will result in a spawned container emulating the corresponding component type (CPM or IOM).
 
 Each card in the chassis can have it's card type, SFM, XIOM and MDA configured either using the relevant directives, or via environment variables.
 
