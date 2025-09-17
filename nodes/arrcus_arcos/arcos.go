@@ -17,7 +17,7 @@ var (
 	kindNames          = []string{"arrcus_arcos"}
 	defaultCredentials = clabnodes.NewCredentials("clab", "clab@123")
 
-	// Initialize Env with arcos-specific defaults (currently empty, for future extensibility)
+	// Initialize Env with arcos-specific defaults (currently empty, for future extensibility).
 	arcosEnv = map[string]string{}
 
 	//go:embed arcos.cfg
