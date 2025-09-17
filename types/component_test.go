@@ -1,9 +1,8 @@
 package types
 
 import (
-	"testing"
-
 	"strings"
+	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"gopkg.in/yaml.v2"

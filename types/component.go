@@ -43,7 +43,6 @@ func (c *Component) Copy() *Component {
 }
 
 func (l *MDAS) UnmarshalYAML(unmarshal func(any) error) error {
-
 	var entries []MDA
 	if err := unmarshal(&entries); err != nil {
 		return err

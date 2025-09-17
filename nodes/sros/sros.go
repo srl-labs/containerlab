@@ -234,9 +234,8 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	return nil
 }
 
-// integrated -> pull component info from slot A components
+// integrated -> pull component info from slot A components.
 func (n *sros) setupStandaloneComponents() (map[string]string, error) {
-
 	vars := map[string]string{}
 
 	if len(n.Cfg.Components) == 0 {
