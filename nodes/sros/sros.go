@@ -23,8 +23,6 @@ import (
 
 	"github.com/charmbracelet/log"
 
-	"golang.org/x/crypto/ssh"
-
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
@@ -33,6 +31,7 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -696,12 +695,34 @@ func (n *sros) createSROSFiles() error {
 		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
+	if n.isCPM(slotAName) || n.isStandaloneNode() {
+		err = n.createSROSCertificates()
+	}
+	if err != nil {
+		return err
+	}
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
 		err = n.createSROSConfigFiles()
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// Func that Places the Certificates in the right place and format
+func (n *sros) createSROSCertificates() error {
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir),
+		clabconstants.PermissionsOpen)
+	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node.key")
+	if err = clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
+		return err
+	}
+
+	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, certsDir, "node.crt")
+	if err = clabutils.CreateFile(certPath, n.Config().TLSCert); err != nil {
+		return err
 	}
 	return nil
 }
@@ -755,19 +776,6 @@ func (n *sros) createSROSConfigFiles() error {
 	err = n.GenerateConfig(cf3CfgFile, cfgTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to generate config for node %q: %v", n.Cfg.ShortName, err)
-	}
-	if n.isCPM(slotAName) {
-		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1, certsDir),
-			clabconstants.PermissionsOpen)
-		// write the TLS key to the config dir
-		keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1, certsDir, "node.key")
-		if err = clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
-			return err
-		}
-
-		// write the TLS cert to the config dir
-		certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1, certsDir, "node.crt")
-		err = clabutils.CreateFile(certPath, n.Config().TLSCert)
 	}
 	return err
 }
