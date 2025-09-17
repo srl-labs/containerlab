@@ -239,8 +239,8 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 
 	vars := map[string]string{}
 
-	if len(n.Cfg.Components) != 1 {
-		return nil, fmt.Errorf("more than one component defined for standalone SR-SIM node: %q", n.Cfg.ShortName)
+	if len(n.Cfg.Components) == 0 {
+		return nil, nil
 	}
 
 	slotA := n.Cfg.Components[0]
