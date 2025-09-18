@@ -56,10 +56,10 @@ ssh admin@<node-name> -p 830 -s netconf
 
 ///
 /// tab | gNMI
-The node comes with the TLS-enabled gNMI service running over port 57400. To verify gNMI service operation, use the best-in-class [gnmic](https://gnmic.openconfig.net) gNMI client:
+The node can boot with the TLS-enabled gNMI service running over port 57400 using the environment flag `CLAB_SRSIM_GRPC_INSECURE=0`. To verify gNMI service operation, use the best-in-class [gnmic](https://gnmic.openconfig.net) gNMI client:
 
 ```bash
-gnmic -a <container-name/node-mgmt-address> --skip-verify \
+gnmic -a <container-name/node-mgmt-address> --tls-ca <CLAB_DIR>/.tls/ca/ca.pem \
 -u admin -p NokiaSros1! \
 capabilities
 ```
