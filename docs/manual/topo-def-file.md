@@ -332,7 +332,8 @@ The vxlan type results in a vxlan tunnel interface that is created in the host n
         mac: <Node-Interface-Mac>            # optional
       remote: <Remote-VTEP-IP>               # mandatory
       vni: <VNI>                             # mandatory
-      udp-port: <VTEP-UDP-Port>              # mandatory
+      dst-port: <VTEP-UDP-Port>              # mandatory
+      src-port: <Source-UDP-Port>            # optional
       mtu: <link-mtu>                        # optional
       vars: <link-variables>                 # optional (used in templating)
       labels: <link-labels>                  # optional (used in templating)
@@ -352,7 +353,8 @@ In addition to these interfaces, tc rules are being provisioned to stitch the vx
         mac: <Node-Interface-Mac>            # optional
       remote: <Remote-VTEP-IP>               # mandatory
       vni: <VNI>                             # mandatory
-      udp-port: <VTEP-UDP-Port>              # mandatory
+      dst-port: <VTEP-UDP-Port>              # mandatory
+      src-port: <Source-UDP-Port>            # optional
       mtu: <link-mtu>                        # optional
       vars: <link-variables>                 # optional (used in templating)
       labels: <link-labels>                  # optional (used in templating)

@@ -67,12 +67,26 @@ func vxlanCmd(o *Options) (*cobra.Command, error) {
 		o.ToolsVxlan.MTU,
 		"VxLAN MTU",
 	)
-	vxlanCreateCmd.Flags().UintVarP(
-		&o.ToolsVxlan.Port,
+	vxlanCreateCmd.Flags().UintVar(
+		&o.ToolsVxlan.DstPort,
 		"port",
-		"p",
-		o.ToolsVxlan.Port,
+		o.ToolsVxlan.DstPort,
 		"VxLAN Destination UDP Port",
+	)
+	vxlanCreateCmd.Flags().MarkDeprecated("port", "use dst-port instead")
+	vxlanCreateCmd.Flags().UintVarP(
+		&o.ToolsVxlan.DstPort,
+		"dst-port",
+		"p",
+		o.ToolsVxlan.DstPort,
+		"VxLAN Destination UDP Port",
+	)
+	vxlanCreateCmd.Flags().UintVarP(
+		&o.ToolsVxlan.SrcPort,
+		"src-port",
+		"s",
+		o.ToolsVxlan.SrcPort,
+		"VxLAN Source UDP Port",
 	)
 
 	err := vxlanCreateCmd.MarkFlagRequired("remote")
@@ -135,7 +149,8 @@ func vxlanCreate(cobraCmd *cobra.Command, o *Options) error {
 		LinkCommonParams: clablinks.LinkCommonParams{
 			MTU: int(o.ToolsVxlan.MTU),
 		},
-		UDPPort:  int(o.ToolsVxlan.Port),
+		DstPort:  int(o.ToolsVxlan.DstPort),
+		SrcPort:  int(o.ToolsVxlan.SrcPort),
 		LinkType: clablinks.LinkTypeVxlanStitch,
 		Endpoint: *clablinks.NewEndpointRaw(
 			"host",

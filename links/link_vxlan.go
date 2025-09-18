@@ -24,8 +24,10 @@ type LinkVxlanRaw struct {
 	Remote           string      `yaml:"remote"`
 	VNI              int         `yaml:"vni"`
 	Endpoint         EndpointRaw `yaml:"endpoint"`
-	UDPPort          int         `yaml:"udp-port,omitempty"`
+	UdpPort          int         `yaml:"udp-port,omitempty"` // deprecated
+	DstPort          int         `yaml:"dst-port,omitempty"`
 	ParentInterface  string      `yaml:"parent-interface,omitempty"`
+	SrcPort          int         `yaml:"src-port,omitempty"`
 
 	// we use the same struct for vxlan and vxlan stitch, so we need to differentiate them in the raw format
 	LinkType LinkType
@@ -148,9 +150,14 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	// resolve remote endpoint
 	link.remoteEndpoint = NewEndpointVxlan(params.Nodes["host"], link)
 	link.remoteEndpoint.parentIface = parentIf
-	link.remoteEndpoint.udpPort = lr.UDPPort
-	if lr.UDPPort == 0 {
-		link.remoteEndpoint.udpPort = VxLANDefaultPort
+	// If the deprecated udp-port is used in the topology, copy it over to the dst-port
+	if lr.UdpPort != 0 && lr.DstPort == 0 {
+		lr.DstPort = lr.UdpPort
+	}
+	link.remoteEndpoint.dstPort = lr.DstPort
+	link.remoteEndpoint.srcPort = lr.SrcPort
+	if lr.DstPort == 0 {
+		link.remoteEndpoint.dstPort = VxLANDefaultPort
 	}
 	link.remoteEndpoint.remote = ip
 	link.remoteEndpoint.vni = lr.VNI
@@ -243,9 +250,15 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 		Group:        l.remoteEndpoint.remote,
 		Learning:     true,
 	}
-	// set the upd port if defined in the input
-	if l.remoteEndpoint.udpPort != 0 {
-		vxlanconf.Port = l.remoteEndpoint.udpPort
+	// set the destination UDP port
+	if l.remoteEndpoint.dstPort != 0 {
+		vxlanconf.Port = l.remoteEndpoint.dstPort
+	}
+
+	// set the source UDP port
+	if l.remoteEndpoint.srcPort != 0 {
+		vxlanconf.PortLow = l.remoteEndpoint.srcPort
+		vxlanconf.PortHigh = l.remoteEndpoint.srcPort + 1
 	}
 
 	// define the MTU if defined in the input
