@@ -736,7 +736,8 @@ func (n *sros) createSROSCertificates() error {
 	}
 
 	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, tlsCertFile)
-	if err := clabutils.CreateFile(certPath, n.Config().TLSCert); err != nil {
+	err := clabutils.CreateFile(certPath, n.Config().TLSCert)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -1116,7 +1117,7 @@ func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
 }
 
 // BuildPKIImportXML
-func buildPKIImportXML(inputURL string, outputFile string, importType string) string {
+func buildPKIImportXML(inputURL, outputFile, importType string) string {
 	return clabnetconf.NewXMLBuilder().
 		StartElement("action", "xmlns", "urn:ietf:params:xml:ns:yang:1").
 		StartElement("admin", "xmlns", "urn:nokia.com:sros:ns:yang:sr:oper-admin").
@@ -1179,28 +1180,28 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 		func(d *netconf.Driver) error {
 			r, e := d.RPC(opoptions.WithFilter(xmlMap["key"]))
 			if r.Failed != nil {
-				return fmt.Errorf("rpc response failed sent: %s, received: %s", xmlMap["key"], r.Result)
+				return fmt.Errorf("rpc response failed on node %q sent: %s, received: %s", n.Cfg.ShortName, xmlMap["key"], r.Result)
 			}
 			return e
 		},
 		func(d *netconf.Driver) error {
 			r, e := d.RPC(opoptions.WithFilter(xmlMap["certificate"]))
 			if r.Failed != nil {
-				return fmt.Errorf("rpc response failed sent: %s, received: %s", xmlMap["certificate"], r.Result)
+				return fmt.Errorf("rpc response failed on node %q sent: %s, received: %s", n.Cfg.ShortName, xmlMap["certificate"], r.Result)
 			}
 			return e
 		},
 		func(d *netconf.Driver) error {
 			r, e := d.EditConfig("candidate", xmlMap["tlsProfile"])
 			if r.Failed != nil {
-				return fmt.Errorf("rpc EditConfig response failed sent: %s, received: %s", xmlMap["tlsProfile"], r.Result)
+				return fmt.Errorf("rpc EditConfig response failed on node %q sent: %s, received: %s", n.Cfg.ShortName, xmlMap["tlsProfile"], r.Result)
 			}
 			return e
 		},
 		func(d *netconf.Driver) error {
 			r, e := d.Commit()
 			if r.Failed != nil {
-				return fmt.Errorf("rpc Commit response failed %s", r.Result)
+				return fmt.Errorf("rpc Commit response failed on node %q, result: %s", n.Cfg.ShortName, r.Result)
 			}
 			return e
 		},
