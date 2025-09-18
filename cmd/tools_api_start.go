@@ -228,7 +228,7 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 
 	// Create container labels
 	if o.ToolsAPI.LabsDirectory == "" {
-		o.ToolsAPI.LabsDirectory = "~/.clab"
+		o.ToolsAPI.LabsDirectory = defaultLabsDir
 	}
 
 	owner := getOwnerName(o)
