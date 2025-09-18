@@ -15,7 +15,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func vxlanCmd(o *Options) (*cobra.Command, error) {
+func vxlanCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	c := &cobra.Command{
 		Use:   "vxlan",
 		Short: "VxLAN interface commands",
