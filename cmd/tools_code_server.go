@@ -19,13 +19,153 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
-	codeServerPort = 8080
+	codeServerPort       = 8080
+	codeServerDirPerm    = 0o755
+	codeServerConfigPerm = 0o644
+	codeServerMarkerName = ".initialized"
 )
+
+type codeServerPaths struct {
+	dataDir       string
+	configDir     string
+	extensionsDir string
+	userDataDir   string
+	markerFile    string
+	configFile    string
+}
+
+func newCodeServerPaths(homeDir, name string) codeServerPaths {
+	basePath := fmt.Sprintf("%s/.clab/code-server/%s", homeDir, name)
+
+	return codeServerPaths{
+		dataDir:       fmt.Sprintf("%s/data", basePath),
+		configDir:     fmt.Sprintf("%s/config", basePath),
+		extensionsDir: fmt.Sprintf("%s/extensions", basePath),
+		userDataDir:   fmt.Sprintf("%s/user-data", basePath),
+		markerFile:    fmt.Sprintf("%s/extensions/%s", basePath, codeServerMarkerName),
+		configFile:    fmt.Sprintf("%s/config/config.yaml", basePath),
+	}
+}
+
+func prepareCodeServerPersistence(paths *codeServerPaths) (bool, error) {
+	directories := []string{
+		paths.dataDir,
+		paths.configDir,
+		paths.extensionsDir,
+		paths.userDataDir,
+	}
+
+	for _, dir := range directories {
+		if err := os.MkdirAll(dir, codeServerDirPerm); err != nil {
+			return false, fmt.Errorf("failed to create %s directory: %w", dir, err)
+		}
+	}
+
+	isFirstRun, err := ensureExtensionsInitialized(paths.markerFile)
+	if err != nil {
+		return false, err
+	}
+
+	if err := writeCodeServerConfig(paths.configFile); err != nil {
+		return false, err
+	}
+
+	return isFirstRun, nil
+}
+
+func ensureExtensionsInitialized(markerFile string) (bool, error) {
+	if _, err := os.Stat(markerFile); err == nil {
+		return false, nil
+	} else if !os.IsNotExist(err) {
+		return false, fmt.Errorf("failed to check code-server marker file: %w", err)
+	}
+
+	if err := os.WriteFile(markerFile, []byte("initialized"), codeServerConfigPerm); err != nil {
+		return false, fmt.Errorf("failed to create code-server marker file: %w", err)
+	}
+
+	return true, nil
+}
+
+func writeCodeServerConfig(configFile string) error {
+	const configContent = `bind-addr: 0.0.0.0:8080
+auth: password
+password: clab
+cert: false
+`
+
+	if err := os.WriteFile(configFile, []byte(configContent), codeServerConfigPerm); err != nil {
+		return fmt.Errorf("failed to create code-server config file: %w", err)
+	}
+
+	return nil
+}
+
+func buildCodeServerBinds(
+	homeDir string,
+	runtime clabruntime.ContainerRuntime,
+	paths *codeServerPaths,
+) (clabtypes.Binds, error) {
+	binds := clabtypes.Binds{
+		clabtypes.NewBind(homeDir, "/labs", ""),
+		clabtypes.NewBind("/home", "/home", ""),
+		clabtypes.NewBind(paths.dataDir, "/root/.local/share/code-server", ""),
+		clabtypes.NewBind(paths.configDir, "/root/.config/code-server", ""),
+		clabtypes.NewBind(paths.extensionsDir, "/persistent-extensions", ""),
+		clabtypes.NewBind(paths.userDataDir, "/persistent-user-data", ""),
+	}
+
+	rtSocket, err := runtime.GetRuntimeSocket()
+	if err != nil {
+		return nil, err
+	}
+
+	binds = append(binds, clabtypes.NewBind(rtSocket, rtSocket, ""))
+	binds = append(binds, runtime.GetCooCBindMounts()...)
+
+	rtBinPath, err := runtime.GetRuntimeBinary()
+	if err != nil {
+		return nil, fmt.Errorf("could not find docker binary: %v. "+
+			"code-server might not function correctly if docker is not available", err)
+	}
+
+	binds = append(binds, clabtypes.NewBind(rtBinPath, "/usr/bin/docker", "ro"))
+
+	clabPath, err := getclabBinaryPath()
+	if err != nil {
+		return nil, fmt.Errorf("could not find containerlab binary: %v. "+
+			"code-server might not function correctly if containerlab is not in its PATH", err)
+	}
+
+	binds = append(binds, clabtypes.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
+
+	return binds, nil
+}
+
+func buildCodeServerCommand(isFirstRun bool) string {
+	baseCommand := strings.Join([]string{
+		"code-server --config /root/.config/code-server/config.yaml",
+		"--extensions-dir /persistent-extensions",
+		"--user-data-dir /persistent-user-data",
+	}, " ")
+
+	if !isFirstRun {
+		return fmt.Sprintf("-c %q", baseCommand)
+	}
+
+	copyExtensionsCommand := "cp -r /extensions/* /persistent-extensions/" +
+		" 2>/dev/null || true"
+
+	firstRunCommand := copyExtensionsCommand + "; " + baseCommand
+
+	return fmt.Sprintf("-c %q", firstRunCommand)
+}
 
 // codeServerNode implements runtime.Node interface for code-server containers.
 type codeServerNode struct {
@@ -114,90 +254,18 @@ func NewCodeServerNode(name, image, labsDir string,
 		return nil, fmt.Errorf("failed to get user home directory: %w", err)
 	}
 
-	// Create persistent directories for code-server config and data
-	codeServerDataDir := fmt.Sprintf("%s/.clab/code-server/%s/data", homeDir, name)
-	codeServerConfigDir := fmt.Sprintf("%s/.clab/code-server/%s/config", homeDir, name)
-	codeServerExtensionsDir := fmt.Sprintf("%s/.clab/code-server/%s/extensions", homeDir, name)
-	codeServerUserDataDir := fmt.Sprintf("%s/.clab/code-server/%s/user-data", homeDir, name)
+	paths := newCodeServerPaths(homeDir, name)
 
-	// Create directories if they don't exist
-	if err := os.MkdirAll(codeServerDataDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create code-server data directory: %w", err)
-	}
-	if err := os.MkdirAll(codeServerConfigDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create code-server config directory: %w", err)
-	}
-	if err := os.MkdirAll(codeServerExtensionsDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create code-server extensions directory: %w", err)
-	}
-	if err := os.MkdirAll(codeServerUserDataDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create code-server user-data directory: %w", err)
-	}
-
-	// Check if this is first run (marker file doesn't exist)
-	// On first run only, we'll copy pre-installed extensions
-	markerFile := fmt.Sprintf("%s/.initialized", codeServerExtensionsDir)
-	isFirstRun := false
-	if _, err := os.Stat(markerFile); os.IsNotExist(err) {
-		isFirstRun = true
-		// Create marker file immediately to avoid re-copying
-		os.WriteFile(markerFile, []byte("initialized"), 0644)
-	}
-
-	// Create config.yaml file with password authentication
-	configFile := fmt.Sprintf("%s/config.yaml", codeServerConfigDir)
-	configContent := `bind-addr: 0.0.0.0:8080
-auth: password
-password: clab
-cert: false
-`
-	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
-		return nil, fmt.Errorf("failed to create code-server config file: %w", err)
-	}
-
-	binds := clabtypes.Binds{
-		clabtypes.NewBind(homeDir, "/labs", ""),
-		clabtypes.NewBind("/home", "/home", ""),
-		// Mount persistent directories for code-server
-		clabtypes.NewBind(codeServerDataDir, "/root/.local/share/code-server", ""),
-		clabtypes.NewBind(codeServerConfigDir, "/root/.config/code-server", ""),
-		clabtypes.NewBind(codeServerExtensionsDir, "/persistent-extensions", ""),
-		clabtypes.NewBind(codeServerUserDataDir, "/persistent-user-data", ""),
-		// clabtypes.NewBind("/etc/group", "/etc/group", "ro"),
-	}
-
-	// get the runtime socket path
-	rtSocket, err := runtime.GetRuntimeSocket()
+	isFirstRun, err := prepareCodeServerPersistence(&paths)
 	if err != nil {
 		return nil, err
 	}
 
-	// build the bindmount for the socket, path sound be the same in the container as is on the host
-	// append the socket to the binds
-	binds = append(binds, clabtypes.NewBind(rtSocket, rtSocket, ""))
-
-	// append the mounts required for container out of container operation
-	binds = append(binds, runtime.GetCooCBindMounts()...)
-
-	// Find Docker binary and add bind mount if found
-	rtBinPath, err := runtime.GetRuntimeBinary()
+	binds, err := buildCodeServerBinds(homeDir, runtime, &paths)
 	if err != nil {
-		return nil, fmt.Errorf("could not find docker binary: %v. "+
-			"code-server might not function correctly if docker is not available", err)
-	}
-	// currently only docker is supported.
-	binds = append(binds, clabtypes.NewBind(rtBinPath, "/usr/bin/docker", "ro"))
-
-	// Find containerlab binary and add bind mount if found
-	clabPath, err := getclabBinaryPath()
-	if err != nil {
-		return nil, fmt.Errorf("could not find containerlab binary: %v. "+
-			"code-server might not function correctly if containerlab is not in its PATH", err)
+		return nil, err
 	}
 
-	binds = append(binds, clabtypes.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
-
-	// Publish host random port -> ctr port 8080
 	exposedPorts := make(nat.PortSet)
 	portBindings := make(nat.PortMap)
 
@@ -220,15 +288,7 @@ cert: false
 		},
 	}
 
-	// Build command based on whether it's first run
-	var cmd string
-	if isFirstRun {
-		// On first run, copy extensions then start
-		cmd = "-c \"cp -r /extensions/* /persistent-extensions/ 2>/dev/null || true; code-server --config /root/.config/code-server/config.yaml --extensions-dir /persistent-extensions --user-data-dir /persistent-user-data\""
-	} else {
-		// On subsequent runs, just start directly
-		cmd = "-c \"code-server --config /root/.config/code-server/config.yaml --extensions-dir /persistent-extensions --user-data-dir /persistent-user-data\""
-	}
+	cmd := buildCodeServerCommand(isFirstRun)
 
 	nodeConfig := &clabtypes.NodeConfig{
 		LongName:     name,
@@ -287,7 +347,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error {
 
 	runtimeName := o.Global.Runtime
 	if runtimeName == "" {
-		runtimeName = "docker"
+		runtimeName = clabruntimedocker.RuntimeName
 	}
 
 	// Initialize runtime
@@ -396,7 +456,7 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error {
 	// Use common.Runtime for consistency with other commands
 	runtimeName := o.Global.Runtime
 	if runtimeName == "" {
-		runtimeName = "docker"
+		runtimeName = clabruntimedocker.RuntimeName
 	}
 
 	// Initialize containerlab with runtime using the same approach as inspect command
@@ -509,7 +569,7 @@ func codeServerStop(cobraCmd *cobra.Command, o *Options) error {
 	runtimeName := o.Global.Runtime
 
 	if runtimeName == "" {
-		runtimeName = "docker"
+		runtimeName = clabruntimedocker.RuntimeName
 	}
 
 	// Initialize runtime
