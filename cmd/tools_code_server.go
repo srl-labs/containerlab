@@ -15,8 +15,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clablabels "github.com/srl-labs/containerlab/labels"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -261,16 +261,16 @@ func (*codeServerNode) GetEndpoints() []clablinks.Endpoint {
 // createLabels creates container labels.
 func createCodeServerLabels(containerName, owner, labsDir string) map[string]string {
 	labels := map[string]string{
-		clablabels.NodeName: containerName,
-		clablabels.NodeKind: "linux",
-		clablabels.NodeType: "tool",
-		clablabels.ToolType: "code-server",
-		"clab-labs-dir":     labsDir,
+		clabconstants.NodeName: containerName,
+		clabconstants.NodeKind: "linux",
+		clabconstants.NodeType: "tool",
+		clabconstants.ToolType: "code-server",
+		"clab-labs-dir":        labsDir,
 	}
 
 	// Add owner label if available
 	if owner != "" {
-		labels[clablabels.Owner] = owner
+		labels[clabconstants.Owner] = owner
 	}
 
 	return labels
@@ -454,7 +454,7 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error {
 
 		// Get owner from container labels
 		owner := "N/A"
-		if ownerVal, exists := containers[idx].Labels[clablabels.Owner]; exists && ownerVal != "" {
+		if ownerVal, exists := containers[idx].Labels[clabconstants.Owner]; exists && ownerVal != "" {
 			owner = ownerVal
 		}
 
