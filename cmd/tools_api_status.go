@@ -79,7 +79,7 @@ func apiServerStatus(cobraCmd *cobra.Command, o *Options) error {
 		}
 
 		// Get labs dir from labels or use default
-		labsDir := "~/.clab" // default
+		labsDir := defaultLabsDir // default
 		if dirsVal, ok := containers[idx].Labels["clab-labs-dir"]; ok {
 			labsDir = dirsVal
 		}

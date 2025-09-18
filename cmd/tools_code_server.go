@@ -29,6 +29,7 @@ const (
 	codeServerDirPerm    = 0o755
 	codeServerConfigPerm = 0o644
 	codeServerMarkerName = ".initialized"
+	defaultLabsDir       = "~/.clab"
 )
 
 type codeServerPaths struct {
@@ -387,7 +388,7 @@ func codeServerStart(cobraCmd *cobra.Command, o *Options) error {
 
 	// Create container labels
 	if o.ToolsCodeServer.LabsDirectory == "" {
-		o.ToolsCodeServer.LabsDirectory = "~/.clab"
+		o.ToolsCodeServer.LabsDirectory = defaultLabsDir
 	}
 
 	owner := getOwnerName(o)
@@ -507,7 +508,7 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error {
 		port := containers[idx].Ports[0].HostPort
 
 		// Get labs dir from labels or use default
-		labsDir := "~/.clab" // default
+		labsDir := defaultLabsDir // default
 		if dirsVal, ok := containers[idx].Labels["clab-labs-dir"]; ok {
 			labsDir = dirsVal
 		}
