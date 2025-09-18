@@ -1191,21 +1191,7 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 			return e
 		},
 		func(d *netconf.Driver) error {
-			payload := `<configure xmlns="urn:nokia.com:sros:ns:yang:sr:conf"
-    xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">
-    <system>
-        <security>
-            <tls>
-                <cert-profile nc:operation="merge">
-                    <cert-profile-name>clab-grpc-certs</cert-profile-name>
-                    <admin-state>enable</admin-state>
-                </cert-profile>
-            </tls>
-        </security>
-    </system>
-</configure>`
-			r, e := d.EditConfig("candidate", payload)
-			// r, e := d.EditConfig("candidate", xmlMap["tlsProfile"])
+			r, e := d.EditConfig("candidate", xmlMap["tlsProfile"])
 			if r.Failed != nil {
 				return fmt.Errorf("rpc EditConfig response failed sent: %s, received: %s", xmlMap["tlsProfile"], r.Result)
 			}
