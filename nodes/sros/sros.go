@@ -1140,6 +1140,7 @@ func buildPKIImportXML(inputURL string, outputFile string, importType string) st
 // BuildTLSProfileXML builds the TLS profile configuration XML
 func buildTLSProfileXML() string {
 	return clabnetconf.NewXMLBuilder().
+		StartElement("config").
 		StartElement("configure",
 			"xmlns", "urn:nokia.com:sros:ns:yang:sr:conf",
 			"xmlns:nc", "urn:ietf:params:xml:ns:netconf:base:1.0").
@@ -1159,6 +1160,7 @@ func buildTLSProfileXML() string {
 		EndElement("security").
 		EndElement("system").
 		EndElement("configure").
+		EndElement("config").
 		String()
 }
 
