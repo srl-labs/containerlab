@@ -120,6 +120,10 @@ nav:
               - start: cmd/tools/api-server/start.md
               - stop: cmd/tools/api-server/stop.md
               - status: cmd/tools/api-server/status.md
+          - code-server:
+              - start: cmd/tools/code-server/start.md
+              - stop: cmd/tools/code-server/stop.md
+              - status: cmd/tools/code-server/status.md
           - sshx:
               - attach: cmd/tools/sshx/attach.md
               - detach: cmd/tools/sshx/detach.md
