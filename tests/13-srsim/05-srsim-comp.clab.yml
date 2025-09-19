@@ -80,7 +80,7 @@ topology:
         /configure card 1 admin-state enable
         /configure card 1 card-type iom-1
 
-    sr1-05:
+    sr2s-01:
       kind: nokia_srsim
       type: sr-2s
       components: 
