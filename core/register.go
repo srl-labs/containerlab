@@ -6,6 +6,7 @@ package core
 
 import (
 	clabnodes6wind_vsr "github.com/srl-labs/containerlab/nodes/6wind_vsr"
+	clabnodesarrcus_arcos "github.com/srl-labs/containerlab/nodes/arrcus_arcos"
 	clabnodesbridge "github.com/srl-labs/containerlab/nodes/bridge"
 	clabnodesc8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	clabnodesceos "github.com/srl-labs/containerlab/nodes/ceos"
@@ -107,4 +108,5 @@ func (c *CLab) RegisterNodes() {
 	clabnodesfdio_vpp.Register(c.Reg)
 	clabnodesvyosnetworks_vyos.Register(c.Reg)
 	clabnodescjunosevolved.Register(c.Reg)
+	clabnodesarrcus_arcos.Register(c.Reg)
 }

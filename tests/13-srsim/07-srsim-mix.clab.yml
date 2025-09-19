@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
 name: "sr07"
 mgmt:
   network: srsim_mgmt
@@ -64,11 +65,13 @@ topology:
         - slot: A
         - slot: B
         - slot: 1
-          env:
-            NOKIA_SROS_CARD: iom5-e
-            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
-            NOKIA_SROS_MDA_2: me3-400gb-qsfpdd
-            NOKIA_SROS_SFM: m-sfm6-7/12
+          type: iom5-e
+          sfm: m-sfm6-7/12
+          mda:
+            - slot: 1
+              type: me6-100gb-qsfp28
+            - slot: 2
+              type: me3-400gb-qsfpdd
         - slot: 2
     srsim11-a:
       kind: nokia_srsim

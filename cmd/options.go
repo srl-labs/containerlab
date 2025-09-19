@@ -99,6 +99,10 @@ func GetOptions() *Options {
 				Port:           defaultVxlanPort,
 				DeletionPrefix: "vx-",
 			},
+			Version: &VersionOptions{
+				Short: false,
+				JSON:  false,
+			},
 		}
 	}
 
@@ -122,6 +126,7 @@ type Options struct {
 	ToolsSSHX      *ToolsSSHXOptions
 	ToolsVeth      *ToolsVethOptions
 	ToolsVxlan     *ToolsVxlanOptions
+	Version        *VersionOptions
 }
 
 func (o *Options) ToClabOptions() []clabcore.ClabOption {
@@ -420,4 +425,9 @@ type ToolsVxlanOptions struct {
 	Remote         string
 	ParentDevice   string
 	DeletionPrefix string
+}
+
+type VersionOptions struct {
+	Short bool
+	JSON  bool
 }

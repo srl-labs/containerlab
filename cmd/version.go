@@ -7,6 +7,7 @@ package cmd
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -30,21 +31,17 @@ const (
 	versionCheckTimeout = 5 * time.Second
 )
 
-func versionCmd(_ *Options) (*cobra.Command, error) {
+func versionCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "version",
 		Short: "Show containerlab version or upgrade",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			fmt.Println(projASCIILogo)
-			verSlug := docsLinkFromVer(Version)
-			fmt.Printf("    version: %s\n", Version)
-			fmt.Printf("     commit: %s\n", commit)
-			fmt.Printf("       date: %s\n", date)
-			fmt.Printf("     source: %s\n", repoUrl)
-			fmt.Printf(" rel. notes: https://containerlab.dev/rn/%s\n", verSlug)
-			return nil
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return printVersionInfoFn(cobraCmd, o)
 		},
 	}
+
+	c.Flags().BoolVarP(&o.Version.Short, "short", "s", false, "Print just the version number")
+	c.Flags().BoolVarP(&o.Version.JSON, "json", "j", false, "Print version info as json")
 
 	c.AddCommand(
 		&cobra.Command{
@@ -102,6 +99,47 @@ func docsLinkFromVer(ver string) string {
 	}
 
 	return relSlug
+}
+
+func printVersionInfoFn(_ *cobra.Command, o *Options) error {
+	versionData := struct {
+		Version      string `json:"version"`
+		Commit       string `json:"commit"`
+		Date         string `json:"date"`
+		RepoUrl      string `json:"repository"`
+		ReleaseNotes string `json:"releaseNotes"`
+	}{
+		Version:      Version,
+		Commit:       commit,
+		Date:         date,
+		RepoUrl:      repoUrl,
+		ReleaseNotes: fmt.Sprintf("https://containerlab.dev/rn/%s", docsLinkFromVer(Version)),
+	}
+
+	if o.Version.Short {
+		fmt.Println(Version)
+		return nil
+	}
+
+	if o.Version.JSON {
+		j, err := json.Marshal(versionData)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(j))
+
+		return nil
+	}
+
+	fmt.Println(projASCIILogo)
+	fmt.Printf("    version: %s\n", Version)
+	fmt.Printf("     commit: %s\n", commit)
+	fmt.Printf("       date: %s\n", date)
+	fmt.Printf("     source: %s\n", repoUrl)
+	fmt.Printf(" rel. notes: %s\n", versionData.ReleaseNotes)
+
+	return nil
 }
 
 // printNewVersionInfo prints instructions about a

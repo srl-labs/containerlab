@@ -114,7 +114,8 @@
                         "k8s-kind",
                         "fdio_vpp",
                         "vyosnetworks_vyos",
-                        "juniper_cjunosevolved"
+                        "juniper_cjunosevolved",
+                        "arrcus_arcos"
                     ]
                 },
                 "license": {
@@ -296,19 +297,114 @@
                         "type": "object",
                         "properties": {
                             "slot": {
-                                "type": "string",
-                                "description": "Set component physical position on a distributed chassis"
+                                "description": "Set component physical position on a distributed chassis",
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "pattern": "^[ABab]$"
+                                    },
+                                    {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    }
+                                ]
                             },
                             "type": {
-                                "type": "string",
                                 "description": "Set component type"
+                            },
+                            "sfm": {
+                                "description": "Set SFM type (SR-OS specific).",
+                                "$ref": "#/definitions/sros-sfm-types"
+                            },
+                            "xiom": {
+                                "description": "Set XIOM type (SR-OS specific).",
+                                "$ref": "#/definitions/sros-xiom-types"
+                            },
+                            "mda": {
+                                "type": "array",
+                                "description": "Define list of MDAs (SR-OS Specific). Each defined MDA must have values of 'slot' and 'type'",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "slot": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "type": {
+                                            "description": "Set MDA type (SR-OS specific)"
+                                        }
+                                    },
+                                    "required": [
+                                        "slot",
+                                        "type"
+                                    ],
+                                    "additionalProperties": false
+                                }
                             },
                             "env": {
                                 "type": "object",
                                 "$ref": "#/definitions/env"
                             }
                         },
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "slot": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "then": {
+                                    "properties": {
+                                        "type": {
+                                            "$ref": "#/definitions/sros-cpm-types"
+                                        }
+                                    }
+                                },
+                                "else": {
+                                    "properties": {
+                                        "type": {
+                                            "$ref": "#/definitions/sros-card-types"
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                "if": {
+                                    "required": [
+                                        "xiom"
+                                    ]
+                                },
+                                "then": {
+                                    "properties": {
+                                        "mda": {
+                                            "items": {
+                                                "properties": {
+                                                    "type": {
+                                                        "$ref": "#/definitions/sros-xiom-mda-types"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "else": {
+                                    "properties": {
+                                        "mda": {
+                                            "items": {
+                                                "properties": {
+                                                    "type": {
+                                                        "$ref": "#/definitions/sros-mda-types"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        ]
                     },
                     "uniqueItems": true,
                     "description": "List of node components, used for multicontainer systems",
@@ -559,13 +655,18 @@
                                 "pattern": "(cisco_iol)"
                             }
                         },
-                        "required": ["kind"]
+                        "required": [
+                            "kind"
+                        ]
                     },
                     "then": {
                         "properties": {
                             "type": {
                                 "type": "string",
-                                "enum": ["iol","l2"]
+                                "enum": [
+                                    "iol",
+                                    "l2"
+                                ]
                             }
                         }
                     }
@@ -912,7 +1013,13 @@
             "type": "string",
             "description": "MACVLAN operating mode",
             "markdownDescription": "MACVLAN operating mode",
-            "enum": ["private", "vepa", "bridge", "passthru", "source"]
+            "enum": [
+                "private",
+                "vepa",
+                "bridge",
+                "passthru",
+                "source"
+            ]
         },
         "extras-config": {
             "type": "object",
@@ -1298,6 +1405,256 @@
             "markdownDescription": "IPv6 address",
             "type": "string",
             "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
+        },
+        "sros-card-types": {
+            "type": "string",
+            "description": "Card types for SR-OS",
+            "enum": [
+                "xcm-x20",
+                "imm40-10gb-sfp",
+                "iom4-e",
+                "iom-a",
+                "imm-2pac-fp3",
+                "iom4-e-hs",
+                "imm4-100gb-cfp4",
+                "iom-e",
+                "iom-v",
+                "iom4-e-b",
+                "iom-sar-hm",
+                "xcm2-x20",
+                "iom-1",
+                "xcm-14s",
+                "imm40-10gb-sfp-ptp",
+                "iom-ixr-r6",
+                "imm36-100g-qsfp28",
+                "imm48-sfp+2-qsfp28",
+                "iom5-e",
+                "xcm-7s",
+                "imm48-sfp++6-qsfp28",
+                "xcm-1s",
+                "xcm-2s",
+                "imm24-sfp++8-sfp28+2-qsfp28",
+                "iom-sar-hmc",
+                "imm14-10g-sfp++4-1g-tx",
+                "iom-ixr-r4",
+                "imm6-qsfpdd+48-sfp56",
+                "imm32-qsfp28+4-qsfpdd",
+                "i48-800g-qsfpdd-1x",
+                "imm36-qsfpdd",
+                "imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
+                "iom-ixr-r6d",
+                "xcm2-7s",
+                "i24-800g-qsfpdd-1",
+                "imm36-800g-qsfpdd",
+                "xcm2-14s",
+                "i48-400g-qsfpdd-1",
+                "i80-200g-sfpdd+12-400g-qsfpdd-1",
+                "i40-200g-sfpdd+6-800g-qsfpdd-1",
+                "i80-200g-sfpdd+12-800g-qsfpdd-1x",
+                "xcm-2se",
+                "xcm-14s-b",
+                "xcm-7s-b",
+                "imm2-qsfpdd+2-qsfp28+24-sfp28",
+                "xcmc-2se",
+                "imm12-sfp28+2-qsfp28",
+                "dms24-800g-qsfpdd-1",
+                "iom-sar"
+            ]
+        },
+        "sros-cpm-types": {
+            "type": "string",
+            "description": "CPM card types for SR-OS",
+            "enum": [
+                "cpm-x20",
+                "cpm-v",
+                "cpm5",
+                "cpm-a",
+                "cpm-e",
+                "cpm-sar-hm",
+                "cpm-sar-hmc",
+                "cpm-ixr-e-gnss",
+                "cpm-s",
+                "cpiom-ixr-r6",
+                "cpm-ixr",
+                "cpm-1",
+                "cpm-ixr-s",
+                "cpm-1x",
+                "cpm-1s",
+                "cpm-2s",
+                "cpm-ixr-e",
+                "cpm2-s",
+                "cpm2-x20",
+                "cpm-ixr-r4",
+                "cpm-ixr-x",
+                "cpm-ixr-ec",
+                "cpiom-ixr-r6d",
+                "cpm-1se",
+                "cpm-2se",
+                "cpm-ixr-e2",
+                "cpm-ixr-e2c",
+                "cpm-sar"
+            ]
+        },
+        "sros-mda-types": {
+            "type": "string",
+            "description": "MDA types for SR-OS",
+            "enum": [
+                "x12-400g-qsfpdd",
+                "x6-200g-cfp2-dco",
+                "p10-10g-sfp",
+                "p1-100g-cfp",
+                "p6-10g-sfp",
+                "x40-10g-sfp",
+                "m40-10g-sfp",
+                "p20-1gb-sfp",
+                "s36-100gb-qsfp28-3.6t",
+                "p-isa2-ms",
+                "p-isa2-ms-e",
+                "isa2-aa",
+                "isa2-tunnel",
+                "isa2-bb",
+                "x4-100g-cfp2",
+                "maxp1-100gb-cfp",
+                "ma4-10gb-sfp+",
+                "maxp10-10gb-sfp+",
+                "me10-10gb-sfp+",
+                "ma2-10gb-sfp+12-1gb-sfp",
+                "ma44-1gb-csfp",
+                "ma20-1gb-tx",
+                "m20-10g-sfp+",
+                "me1-100gb-cfp2",
+                "m4-100g-cfp4",
+                "maxp1-100gb-cfp2",
+                "maxp1-100gb-cfp4",
+                "isa-ms-v",
+                "isa-aa-v",
+                "isa-tunnel-v",
+                "isa-bb-v",
+                "m20-v",
+                "me-isa2-ms",
+                "me-isa2-ms-e",
+                "me40-1gb-csfp",
+                "m4-1g-tx+20-1g-sfp+6-10g-sfp+",
+                "me6-10gb-sfp+",
+                "isa2-video",
+                "me2-100gb-qsfp28",
+                "i6-10/100eth-tx",
+                "i2-sdi",
+                "i2-cellular",
+                "me12-10/1gb-sfp+",
+                "me16-25gb-sfp28+2-100gb-qsfp28",
+                "me6-100gb-qsfp28",
+                "x6-400g-cfp8",
+                "me2-100gb-ms-qsfp28",
+                "s18-100gb-qsfp28",
+                "x40-10g-sfp-ptp",
+                "m40-10g-sfp-ptp",
+                "m36-100g-qsfp28",
+                "m48-sfp+2-qsfp28",
+                "m10-10g-sfp+",
+                "m20-1g-csfp",
+                "m6-10g-sfp++1-100g-qsfp28",
+                "me3-200gb-cfp2-dco",
+                "x24-100g-qsfp28",
+                "me12-100gb-qsfp28",
+                "i1-wlan",
+                "s36-400gb-qsfpdd",
+                "m24-sfp++8-sfp28+2-qsfp28",
+                "s36-100gb-qsfp28",
+                "a32-chds1v2",
+                "m48-sfp++6-qsfp28",
+                "maxp10-10/1gb-msec-sfp+",
+                "m4-10g-sfp++1-100g-cfp2",
+                "i3-10/100eth-tx",
+                "me3-400gb-qsfpdd",
+                "m18-25g-sfp28",
+                "m14-10g-sfp++4-1g-tx",
+                "m6-10g-sfp++4-25g-sfp28",
+                "me6-400gb-qsfpdd",
+                "me8-10/25gb-sfp28",
+                "m10-1g-sfp+2-10g-sfp+",
+                "m6-qsfpdd+48-sfp56",
+                "m32-qsfp28+4-qsfpdd",
+                "m36-qsfpdd",
+                "m1-400g-qsfpdd+1-100g-qsfp28",
+                "m5-100g-qsfp28",
+                "m48-800g-qsfpdd-1x",
+                "m24-800g-qsfpdd-1",
+                "ms36-800g-qsfpdd",
+                "x2-s36-800g-qsfpdd-18.0t",
+                "m48-400g-qsfpdd-1",
+                "m80-200g-sfpdd+12-800g-qsfpdd-1x",
+                "m40-200g-sfpdd+6-800g-qsfpdd-1",
+                "m80-200g-sfpdd+12-400g-qsfpdd-1",
+                "m46-10g-sfp+",
+                "m2-cfp2",
+                "m2-qsfpdd+2-qsfp28+24-sfp28",
+                "x2-s36-800g-qsfpdd-12.0t",
+                "me16-25gb-sfp28+2-100gb-qsfp-b",
+                "m10-50g-sfp56",
+                "m32-1g-csfp",
+                "m80-1g-csfp",
+                "m12-sfp28+2-qsfp28",
+                "m2-100g-qsfp28+16-10g-sfp+",
+                "d24-800g-qsfpdd-1",
+                "m10-sfp++6-sfp",
+                "m5e2-100g-qsfp28+2-800g-qdd",
+                "m5e8-100g-sfp112+2-800g-qdd"
+            ]
+        },
+        "sros-xiom-types": {
+            "type": "string",
+            "description": "XIOM types for SR-OS",
+            "enum": [
+                "iom-s-3.0t",
+                "iom-s-1.5t",
+                "iom2-se-6.0t",
+                "iom2-se-3.0t",
+                "x2-s36-800g-qsfpdd-6.0t",
+                "x2-s36-400g-qsfp112-3.0t"
+            ]
+        },
+        "sros-xiom-mda-types": {
+            "type": "string",
+            "description": "XIOM MDA types for SR-OS",
+            "enum": [
+                "ms6-200gb-cfp2-dco",
+                "ms3-200gb-cfp2-dco",
+                "ms16-100gb-sfpdd+4-100gb-qsfp28",
+                "ms18-100gb-qsfp28",
+                "ms4-400gb-qsfpdd+4-100gb-qsfp28",
+                "ms24-10/100gb-sfpdd",
+                "ms2-400gb-qsfpdd+2-100gb-qsfp28",
+                "ms8-100gb-sfpdd+2-100gb-qsfp28",
+                "ms16-sdd+4-qsfp28-b",
+                "ms8-sdd+2-qsfp28-b",
+                "mse24-200g-sfpdd",
+                "mse6-800g-cfp2-dco",
+                "mse14-800g+4-400g",
+                "m36-800g-qsfpdd",
+                "mse6-800g-qsfpdd",
+                "m36-400g-qsfp112",
+                "ms2-100g-qsfp28+2-800g-qsfpdd",
+                "ms8-100g-sfp112+2-800g-qsfpdd",
+                "ms4-400g-qsfpdd+4-100g-qsfp28"
+            ]
+        },
+        "sros-sfm-types": {
+            "type": "string",
+            "description": "SFM types for SR-OS",
+            "enum": [
+                "m-sfm5-12",
+                "m-sfm5-7",
+                "m-sfm6-7/12",
+                "sfm-2s",
+                "sfm-2se",
+                "sfm-s",
+                "sfm-x20",
+                "sfm-x20-b",
+                "sfm-x20s-b",
+                "sfm2-s",
+                "sfm2-x20s"
+            ]
         }
     },
     "type": "object",
@@ -1545,6 +1902,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "fdio_vpp": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "arrcus_arcos": {
                             "$ref": "#/definitions/node-config"
                         }
                     },

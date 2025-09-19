@@ -56,6 +56,7 @@ nav:
           - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
           - Palo Alto PAN: manual/kinds/vr-pan.md
           - 6WIND VSR: manual/kinds/6wind_vsr.md
+          - Arrcus ArcOS: manual/kinds/arrcus_arcos.md
           - FD.io VPP: manual/kinds/fdio_vpp.md
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
@@ -154,6 +155,7 @@ nav:
       - Nokia SR Linux and Juniper vJunos-switch: lab-examples/srl-vjunos-switch.md
       - Nokia SR Linux and Juniper vJunosEvolved: lab-examples/srl-vjunosevolved.md
       - Nokia SR Linux and Juniper cJunosEvolved: lab-examples/srl-cjunosevolved.md
+      - Nokia SR Linux and Arrcus ArcOS: lab-examples/srl-arcos.md
       - FRR: lab-examples/frr01.md
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
