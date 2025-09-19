@@ -258,22 +258,6 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 		vars[envNokiaSrosCard] = slotA.Type
 	}
 
-	if slotA.SFM != "" {
-		vars[envNokiaSrosSFM] = slotA.SFM
-	}
-
-	if len(slotA.XIOM) > 0 {
-		for _, x := range slotA.XIOM {
-			key := fmt.Sprintf("%s_X%d", envNokiaSrosXIOM, x.Slot)
-			vars[key] = x.Type
-			// add the nested MDA
-			for _, m := range x.MDA {
-				key := fmt.Sprintf("%s_X%d_%d", envNokiaSrosMDA, x.Slot, m.Slot)
-				vars[key] = m.Type
-			}
-		}
-	}
-
 	if len(slotA.MDA) > 0 {
 		for _, m := range slotA.MDA {
 			key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
