@@ -262,8 +262,16 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 		vars[envNokiaSrosSFM] = slotA.SFM
 	}
 
-	if slotA.XIOM != "" {
-		vars[envNokiaSrosXIOM] = slotA.XIOM
+	if len(slotA.XIOM) > 0 {
+		for _, x := range slotA.XIOM {
+			key := fmt.Sprintf("%s_X%d", envNokiaSrosXIOM, x.Slot)
+			vars[key] = x.Type
+			// add the nested MDA
+			for _, m := range x.MDA {
+				key := fmt.Sprintf("%s_X%d_%d", envNokiaSrosMDA, x.Slot, m.Slot)
+				vars[key] = m.Type
+			}
+		}
 	}
 
 	if len(slotA.MDA) > 0 {
@@ -475,8 +483,16 @@ func (n *sros) setupComponentNodes() error {
 			componentConfig.Env[envNokiaSrosSFM] = c.SFM
 		}
 
-		if c.XIOM != "" {
-			componentConfig.Env[envNokiaSrosXIOM] = c.XIOM
+		if len(c.XIOM) > 0 {
+			for _, x := range c.XIOM {
+				key := fmt.Sprintf("%s_X%d", envNokiaSrosXIOM, x.Slot)
+				componentConfig.Env[key] = x.Type
+				// add the nested MDA
+				for _, m := range x.MDA {
+					key := fmt.Sprintf("%s_X%d_%d", envNokiaSrosMDA, x.Slot, m.Slot)
+					componentConfig.Env[key] = m.Type
+				}
+			}
 		}
 
 		if len(c.MDA) > 0 {
@@ -732,6 +748,23 @@ func (n *sros) checkComponentSlotsConfig() error {
 		}
 		// addd to component names map
 		componentNames[component.Slot] = struct{}{}
+
+		// Rule: if XIOMs are present for this component, MDAs must be defined under XIOM, not directly under slot
+		if len(component.XIOM) > 0 && len(component.MDA) > 0 {
+			return fmt.Errorf("node %s slot %s: MDAs must be defined under XIOM when XIOMs are present", n.GetShortName(), component.Slot)
+		}
+
+		// Check XIOM slots uniqueness and validity
+		xiomSlots := map[int]struct{}{}
+		for _, x := range component.XIOM {
+			if x.Slot <= 0 {
+				return fmt.Errorf("node %s slot %s: XIOM slot must be > 0, got %d", n.GetShortName(), component.Slot, x.Slot)
+			}
+			if _, ok := xiomSlots[x.Slot]; ok {
+				return fmt.Errorf("node %s slot %s: duplicate XIOM slot %d", n.GetShortName(), component.Slot, x.Slot)
+			}
+			xiomSlots[x.Slot] = struct{}{}
+		}
 	}
 	return nil
 }
