@@ -6,14 +6,14 @@
 package netconf
 
 import (
-	"bytes"
 	"fmt"
-	"html"
 
 	"github.com/charmbracelet/log"
+	"github.com/go-xmlfmt/xmlfmt"
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/options"
 	"github.com/scrapli/scrapligo/platform"
+	"github.com/scrapli/scrapligo/response"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
 	"github.com/scrapli/scrapligocfg"
@@ -100,7 +100,7 @@ func GetConfig(addr, username, password, scrapliPlatform string) (string, error)
 }
 
 // Operation defines a NETCONF action to be executed against an established NETCONF driver.
-type Operation func(*netconf.Driver) error
+type Operation func(*netconf.Driver) (*response.NetconfResponse, error)
 
 // MultiExec opens a NETCONF session to the provided address and executes the supplied operations
 // sequentially. The driver is opened once and used across every operation, enabling scenarios that
@@ -129,91 +129,17 @@ func MultiExec(addr, username, password string, operations []Operation) error {
 	}
 	defer d.Close()
 
-	for idx, operation := range operations {
-		if err = operation(d); err != nil {
-			return fmt.Errorf("netconf operation %d failed: %w", idx+1, err)
+	for _, operation := range operations {
+		r, e := operation(d)
+		log.Debugf("NETCONF RPC sent to %q: %s", addr, xmlfmt.FormatXML(string(r.Input), "\t", "    "))
+		if r.Failed != nil {
+			return fmt.Errorf("NETCONF RPC to %q failed received: %s",
+				addr, r.Result)
+		}
+		if e != nil {
+			return e
 		}
 	}
 
 	return nil
-}
-
-// XMLBuilder provides an interface for building XML.
-type XMLBuilder struct {
-	buf    bytes.Buffer
-	indent int
-	pretty bool
-}
-
-// NewXMLBuilder creates a new XML builder.
-func NewXMLBuilder() *XMLBuilder {
-	return &XMLBuilder{pretty: false}
-}
-
-// SetPretty enables/disables pretty printing.
-func (b *XMLBuilder) SetPretty(pretty bool) *XMLBuilder {
-	b.pretty = pretty
-	return b
-}
-
-// StartElement starts a new XML element with optional attributes.
-func (b *XMLBuilder) StartElement(name string, attrs ...string) *XMLBuilder {
-	if b.pretty && b.buf.Len() > 0 {
-		b.buf.WriteString("\n")
-		b.writeIndent()
-	}
-
-	b.buf.WriteString("<")
-	b.buf.WriteString(name)
-
-	for i := 0; i < len(attrs); i += 2 {
-		if i+1 < len(attrs) {
-			b.buf.WriteString(" ")
-			b.buf.WriteString(attrs[i])
-			b.buf.WriteString(`="`)
-			b.buf.WriteString(html.EscapeString(attrs[i+1]))
-			b.buf.WriteString(`"`)
-		}
-	}
-
-	b.buf.WriteString(">")
-	b.indent++
-	return b
-}
-
-// EndElement closes an XML element.
-func (b *XMLBuilder) EndElement(name string) *XMLBuilder {
-	b.indent--
-	if b.pretty {
-		b.buf.WriteString("\n")
-		b.writeIndent()
-	}
-
-	b.buf.WriteString("</")
-	b.buf.WriteString(name)
-	b.buf.WriteString(">")
-	return b
-}
-
-// Text adds text content to the current element.
-func (b *XMLBuilder) Text(text string) *XMLBuilder {
-	b.buf.WriteString(html.EscapeString(text))
-	return b
-}
-
-// Element adds a complete element with text content.
-func (b *XMLBuilder) Element(name, text string, attrs ...string) *XMLBuilder {
-	return b.StartElement(name, attrs...).Text(text).EndElement(name)
-}
-
-// writeIndent writes the current indentation.
-func (b *XMLBuilder) writeIndent() {
-	for i := 0; i < b.indent; i++ {
-		b.buf.WriteString("    ")
-	}
-}
-
-// String returns the built XML as a string.
-func (b *XMLBuilder) String() string {
-	return b.buf.String()
 }

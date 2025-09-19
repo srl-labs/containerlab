@@ -56,9 +56,25 @@ ssh admin@<node-name> -p 830 -s netconf
 
 ///
 /// tab | gNMI
-The node can boot with the TLS-enabled gNMI service running over port 57400 using the environment flag `CLAB_SRSIM_GRPC_INSECURE=0`. To verify gNMI service operation, use the best-in-class [gnmic](https://gnmic.openconfig.net) gNMI client:
+By default, gRPC services are insecure running on port 57400, but you can boot with a TLS-enabled profile using clab-generated certificates using the [certificate](../nodes.md#certificate) `issue: true` option on the node definition.
+```yaml
+topology:
+  nodes:
+    sr-sim:
+      kind: nokia_srsim
+      image: nokia_srsim:25.7.R1
+      certificate: 
+        issue: True # False by default
+```
+ To verify gNMI service operation, you use the best-in-class [gnmic](https://gnmic.openconfig.net) gNMI client:
 
 ```bash
+#Insecure
+gnmic -a <container-name/node-mgmt-address> --insecure \
+-u admin -p NokiaSros1! \
+capabilities
+
+#Secure (use certificate.issue: true)
 gnmic -a <container-name/node-mgmt-address> --tls-ca <CLAB_DIR>/.tls/ca/ca.pem \
 -u admin -p NokiaSros1! \
 capabilities

@@ -21,9 +21,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/beevik/etree"
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/opoptions"
+	"github.com/scrapli/scrapligo/response"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
@@ -59,7 +61,6 @@ const (
 	tlsKeyFile                = "node.key"
 	tlsCertFile               = "node.crt"
 	tlsCertProfileName        = "clab-grpc-certs"
-	envVarGrpcInsecureMode    = "CLAB_SRSIM_GRPC_INSECURE"
 	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
 	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
 	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
@@ -91,7 +92,6 @@ var (
 
 	srosEnv = map[string]string{
 		"SRSIM":                   "1",
-		envVarGrpcInsecureMode:    "1",
 		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
@@ -183,9 +183,6 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 
 	n.InterfaceHelp = InterfaceHelp
 	n.InterfaceRegexp = InterfaceRegexp
-
-	// force cert creation for sros nodes as they by make use of tls certificate in the default config
-	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
@@ -301,15 +298,17 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	// Create files/dir structure for standalone nodes or distributed CPM nodes
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		// generate the certificate
-		certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-		if err != nil {
-			return err
+		if n.Cfg.Certificate.Issue != nil && *n.Cfg.Certificate.Issue {
+
+			certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+			if err != nil {
+				return err
+			}
+
+			// set the certificate data
+			n.Config().TLSCert = string(certificate.Cert)
+			n.Config().TLSKey = string(certificate.Key)
 		}
-
-		// set the certificate data
-		n.Config().TLSCert = string(certificate.Cert)
-		n.Config().TLSKey = string(certificate.Key)
-
 		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]),
 			clabconstants.PermissionsOpen)
 		slot := n.Cfg.Env[envNokiaSrosSlot]
@@ -379,9 +378,9 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			if err != nil {
 				return err
 			}
-			// TLS bootsrap in case of envVarGrpcInsecureMode flag
-			if strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]) == "0" ||
-				strings.EqualFold(strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]), "false") {
+			// TLS bootsrap in case of n.Cff.Certificate.Issue flag
+			if n.Cfg.Certificate.Issue != nil && *n.Cfg.Certificate.Issue {
+
 				err = n.tlsCertBootstrap(ctx, addr)
 				if err != nil {
 					return fmt.Errorf("TLS cert/key bootstrap to node %q failed: %w", n.Cfg.LongName, err)
@@ -812,17 +811,20 @@ func (n *sros) createSROSFiles() error {
 
 // Func that Places the Certificates in the right place and format.
 func (n *sros) createSROSCertificates() error {
-	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
-		clabconstants.PermissionsOpen)
-	keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, tlsKeyFile)
-	if err := clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
-		return err
-	}
+	if n.Cfg.Certificate.Issue != nil && *n.Cfg.Certificate.Issue {
 
-	certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, tlsCertFile)
-	err := clabutils.CreateFile(certPath, n.Config().TLSCert)
-	if err != nil {
-		return err
+		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
+			clabconstants.PermissionsOpen)
+		keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, tlsKeyFile)
+		if err := clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
+			return err
+		}
+
+		certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, tlsCertFile)
+		err := clabutils.CreateFile(certPath, n.Config().TLSCert)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -933,10 +935,10 @@ func (n *sros) addDefaultConfig() error {
 		tplData.GRPCConfig = grpcConfigIXR
 		tplData.SystemConfig = systemCfgIXR
 	}
-	if strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]) == "1" ||
-		strings.EqualFold(strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]), "true") {
-		log.Debugf("Using insecure cert configuration for node %s, found flag %s",
-			n.Cfg.ShortName, envVarGrpcInsecureMode)
+	if n.Cfg.Certificate.Issue == nil ||
+		(n.Cfg.Certificate.Issue != nil && !*n.Cfg.Certificate.Issue) {
+		log.Debugf("Using insecure cert configuration for node %s, found certificate.issue flag %v or `nil`",
+			n.Cfg.ShortName, *n.Cfg.Certificate.Issue)
 		tplData.GRPCConfig = grpcConfigInsecure
 		if strings.Contains(tplData.NodeType, "ixr-") {
 			tplData.GRPCConfig = grpcConfigIXRInsecure
@@ -1204,46 +1206,55 @@ func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
 
 // BuildPKIImportXML.
 func buildPKIImportXML(inputURL, outputFile, importType string) string {
-	return clabnetconf.NewXMLBuilder().
-		StartElement("action", "xmlns", "urn:ietf:params:xml:ns:yang:1").
-		StartElement("admin", "xmlns", "urn:nokia.com:sros:ns:yang:sr:oper-admin").
-		StartElement("system").
-		StartElement("security").
-		StartElement("pki").
-		StartElement("import").
-		Element("input-url", inputURL).
-		Element("output-file", outputFile).
-		Element("type", importType).
-		Element("format", "pem").
-		EndElement("import").
-		EndElement("pki").
-		EndElement("security").
-		EndElement("system").
-		EndElement("admin").
-		EndElement("action").
-		String()
+	action := etree.NewElement("action")
+	action.CreateAttr("xmlns", "urn:ietf:params:xml:ns:yang:1")
+
+	admin := action.CreateElement("admin")
+	admin.CreateAttr("xmlns", "urn:nokia.com:sros:ns:yang:sr:oper-admin")
+
+	importElem := admin.CreateElement("system").
+		CreateElement("security").
+		CreateElement("pki").
+		CreateElement("import")
+
+	// Add import parameters
+	importElem.CreateElement("input-url").SetText(inputURL)
+	importElem.CreateElement("output-file").SetText(outputFile)
+	importElem.CreateElement("type").SetText(importType)
+	importElem.CreateElement("format").SetText("pem")
+	var buf bytes.Buffer
+	action.WriteTo(&buf, &etree.WriteSettings{
+		CanonicalText:    false,
+		CanonicalAttrVal: false,
+	})
+	return buf.String()
 }
 
 // BuildTLSProfileXML builds the TLS profile configuration XML.
 func buildTLSProfileXML() string {
-	return clabnetconf.NewXMLBuilder().
-		StartElement("config").
-		StartElement("configure",
-			"xmlns", "urn:nokia.com:sros:ns:yang:sr:conf",
-			"xmlns:nc", "urn:ietf:params:xml:ns:netconf:base:1.0").
-		StartElement("system").
-		StartElement("security").
-		StartElement("tls").
-		StartElement("cert-profile", "nc:operation", "merge").
-		Element("cert-profile-name", tlsCertProfileName).
-		Element("admin-state", "enable").
-		EndElement("cert-profile").
-		EndElement("tls").
-		EndElement("security").
-		EndElement("system").
-		EndElement("configure").
-		EndElement("config").
-		String()
+	config := etree.NewElement("config")
+	configure := config.CreateElement("configure")
+	configure.CreateAttr("xmlns", "urn:nokia.com:sros:ns:yang:sr:conf")
+	configure.CreateAttr("xmlns:nc", "urn:ietf:params:xml:ns:netconf:base:1.0")
+
+	certProfile := configure.CreateElement("system").
+		CreateElement("security").
+		CreateElement("tls").
+		CreateElement("cert-profile")
+
+	// Set operation attribute
+	certProfile.CreateAttr("nc:operation", "merge")
+
+	// Add profile configuration
+	certProfile.CreateElement("cert-profile-name").SetText(tlsCertProfileName)
+	certProfile.CreateElement("admin-state").SetText("enable")
+
+	var buf bytes.Buffer
+	config.WriteTo(&buf, &etree.WriteSettings{
+		CanonicalText:    false,
+		CanonicalAttrVal: false,
+	})
+	return buf.String()
 }
 
 // TLS bootstrap via NETCONF to enable secure gRPC:
@@ -1251,43 +1262,18 @@ func buildTLSProfileXML() string {
 //   - `imports cf3:\node.crt` in PEM format as `cf3:\system-pki\node.crt“ (encrypted DER)
 //   - administratively enables TLS profile `grpc-tls-certs`
 func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
-	xmlMap := map[string]string{
-		"key":         buildPKIImportXML(fmt.Sprintf("cf3:/%s", tlsKeyFile), tlsKeyFile, "key"),
-		"certificate": buildPKIImportXML(fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate"),
-		"tlsProfile":  buildTLSProfileXML(),
-	}
 	operations := []clabnetconf.Operation{
-		func(d *netconf.Driver) error {
-			r, e := d.RPC(opoptions.WithFilter(xmlMap["key"]))
-			if r.Failed != nil {
-				return fmt.Errorf("NETCONF custom RPC failed on node %q sent: %s, received: %s",
-					n.Cfg.ShortName, string(r.Input), r.Result)
-			}
-			return e
+		func(d *netconf.Driver) (*response.NetconfResponse, error) {
+			return d.RPC(opoptions.WithFilter(buildPKIImportXML(fmt.Sprintf("cf3:/%s", tlsKeyFile), tlsKeyFile, "key")))
 		},
-		func(d *netconf.Driver) error {
-			r, e := d.RPC(opoptions.WithFilter(xmlMap["certificate"]))
-			if r.Failed != nil {
-				return fmt.Errorf("NETCONF custom RPC failed on node %q sent: %s, received: %s",
-					n.Cfg.ShortName, string(r.Input), r.Result)
-			}
-			return e
+		func(d *netconf.Driver) (*response.NetconfResponse, error) {
+			return d.RPC(opoptions.WithFilter(buildPKIImportXML(fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate")))
 		},
-		func(d *netconf.Driver) error {
-			r, e := d.EditConfig("candidate", xmlMap["tlsProfile"])
-			if r.Failed != nil {
-				return fmt.Errorf("NETCONF edit-config failed on node %q sent: %s, received: %s",
-					n.Cfg.ShortName, string(r.Input), r.Result)
-			}
-			return e
+		func(d *netconf.Driver) (*response.NetconfResponse, error) {
+			return d.EditConfig("candidate", buildTLSProfileXML())
 		},
-		func(d *netconf.Driver) error {
-			r, e := d.Commit()
-			if r.Failed != nil {
-				return fmt.Errorf("NETCONF commit failed on node %q sent: %s, received: %s",
-					n.Cfg.ShortName, string(r.Input), r.Result)
-			}
-			return e
+		func(d *netconf.Driver) (*response.NetconfResponse, error) {
+			return d.Commit()
 		},
 	}
 
