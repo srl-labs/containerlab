@@ -317,8 +317,47 @@
                                 "$ref": "#/definitions/sros-sfm-types"
                             },
                             "xiom": {
-                                "description": "Set XIOM type (SR-OS specific).",
-                                "$ref": "#/definitions/sros-xiom-types"
+                                "type": "array",
+                                "description": "Define list of XIOMs (SR-OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "slot": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "type": {
+                                            "$ref": "#/definitions/sros-xiom-types"
+                                        },
+                                        "mda": {
+                                            "type": "array",
+                                            "description": "Define list of MDAs under this XIOM. Each defined MDA must have values of 'slot' and 'type'",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "slot": {
+                                                        "type": "integer",
+                                                        "minimum": 1
+                                                    },
+                                                    "type": {
+                                                        "$ref": "#/definitions/sros-xiom-mda-types"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "slot",
+                                                    "type"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "slot",
+                                        "type"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "uniqueItems": true
                             },
                             "mda": {
                                 "type": "array",
@@ -331,7 +370,8 @@
                                             "minimum": 1
                                         },
                                         "type": {
-                                            "description": "Set MDA type (SR-OS specific)"
+                                            "description": "Set MDA type (SR-OS specific)",
+                                            "$ref": "#/definitions/sros-mda-types"
                                         }
                                     },
                                     "required": [
@@ -370,39 +410,7 @@
                                         }
                                     }
                                 }
-                            },
-                            {
-                                "if": {
-                                    "required": [
-                                        "xiom"
-                                    ]
-                                },
-                                "then": {
-                                    "properties": {
-                                        "mda": {
-                                            "items": {
-                                                "properties": {
-                                                    "type": {
-                                                        "$ref": "#/definitions/sros-xiom-mda-types"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                                "else": {
-                                    "properties": {
-                                        "mda": {
-                                            "items": {
-                                                "properties": {
-                                                    "type": {
-                                                        "$ref": "#/definitions/sros-mda-types"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                
                             }
                         ]
                     },

@@ -258,14 +258,6 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 		vars[envNokiaSrosCard] = slotA.Type
 	}
 
-	if slotA.SFM != "" {
-		vars[envNokiaSrosSFM] = slotA.SFM
-	}
-
-	if slotA.XIOM != "" {
-		vars[envNokiaSrosXIOM] = slotA.XIOM
-	}
-
 	if len(slotA.MDA) > 0 {
 		for _, m := range slotA.MDA {
 			key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
@@ -475,8 +467,16 @@ func (n *sros) setupComponentNodes() error {
 			componentConfig.Env[envNokiaSrosSFM] = c.SFM
 		}
 
-		if c.XIOM != "" {
-			componentConfig.Env[envNokiaSrosXIOM] = c.XIOM
+		if len(c.XIOM) > 0 {
+			for _, x := range c.XIOM {
+				key := fmt.Sprintf("%s_X%d", envNokiaSrosXIOM, x.Slot)
+				componentConfig.Env[key] = x.Type
+				// add the nested MDA
+				for _, m := range x.MDA {
+					key := fmt.Sprintf("%s_X%d_%d", envNokiaSrosMDA, x.Slot, m.Slot)
+					componentConfig.Env[key] = m.Type
+				}
+			}
 		}
 
 		if len(c.MDA) > 0 {
@@ -732,6 +732,7 @@ func (n *sros) checkComponentSlotsConfig() error {
 		}
 		// addd to component names map
 		componentNames[component.Slot] = struct{}{}
+
 	}
 	return nil
 }

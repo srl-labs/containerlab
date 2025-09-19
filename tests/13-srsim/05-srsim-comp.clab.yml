@@ -79,6 +79,38 @@ topology:
       startup-config: |
         /configure card 1 admin-state enable
         /configure card 1 card-type iom-1
+
+    sr2s-01:
+      kind: nokia_srsim
+      type: sr-2s
+      components: 
+        - slot: A
+          sfm: sfm-2s
+        - slot: 1
+          sfm: sfm-2s
+          type: xcm-2s
+          xiom:
+            - slot: 1 # xiom 1/x1
+              type: iom-s-3.0t
+              mda:
+                - slot: 1 # mda 1/x1/1
+                  type: ms18-100gb-qsfp28
+      startup-config: |
+        /configure chassis router chassis-number 1 power-shelf 1 admin-state enable
+        /configure chassis router chassis-number 1 power-shelf 1 power-shelf-type ps-a4-shelf-dc
+        /configure chassis router chassis-number 1 power-shelf 1 power-module 1 admin-state enable
+        /configure chassis router chassis-number 1 power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
+        /configure system power-management power-zone 1 mode none
+        /configure system power-management power-zone 1 power-safety-level 0
+        /configure sfm 1 admin-state enable
+        /configure sfm 1 sfm-type sfm-2s
+        /configure card 1 admin-state enable
+        /configure card 1 card-type xcm-2s
+        /configure card 1 xiom x1 admin-state enable
+        /configure card 1 xiom x1 xiom-type iom-s-3.0t
+        /configure card 1 xiom x1 mda 1 admin-state enable
+        /configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28
+
         
         
   links:
