@@ -297,6 +297,33 @@ topology:
 ```
 
 ///
+/// tab | with XIOM override
+
+```yaml
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-sim1:
+      kind: nokia_srsim
+      type: SR-2s
+      components:
+        - slot: A # containers will be attached to this Linux NS
+          sfm: sfm-2s
+        - slot: 1
+          type: xcm-2s # maps to NOKIA_SROS_CARD
+          sfm: sfm-2s # maps to NOKIA_SROS_SFM
+          xiom:
+            - slot: 1 # XIOM slot x1
+              type: iom-s-3.0t # maps to NOKIA_SROS_XIOM_X1 env var
+              mda:  # mdas are nested *under* the XIOM
+                - slot: 1 # mda x1/1
+                  type: ms18-100gb-qsfp28 # maps to NOKIA_SROS_MDA_X1_1 env var
+```
+
+///
 /// tab | with links
 
 ```yaml
