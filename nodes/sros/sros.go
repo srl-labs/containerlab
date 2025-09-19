@@ -1264,10 +1264,12 @@ func buildTLSProfileXML() string {
 func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 	operations := []clabnetconf.Operation{
 		func(d *netconf.Driver) (*response.NetconfResponse, error) {
-			return d.RPC(opoptions.WithFilter(buildPKIImportXML(fmt.Sprintf("cf3:/%s", tlsKeyFile), tlsKeyFile, "key")))
+			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
+				fmt.Sprintf("cf3:/%s", tlsKeyFile), tlsKeyFile, "key")))
 		},
 		func(d *netconf.Driver) (*response.NetconfResponse, error) {
-			return d.RPC(opoptions.WithFilter(buildPKIImportXML(fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate")))
+			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
+				fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate")))
 		},
 		func(d *netconf.Driver) (*response.NetconfResponse, error) {
 			return d.EditConfig("candidate", buildTLSProfileXML())
