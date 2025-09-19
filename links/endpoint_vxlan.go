@@ -8,7 +8,8 @@ import (
 
 type EndpointVxlan struct {
 	EndpointGeneric
-	udpPort     int
+	dstPort     int
+	srcPort     int
 	remote      net.IP
 	parentIface string
 	vni         int
@@ -26,7 +27,7 @@ func NewEndpointVxlan(node Node, link Link) *EndpointVxlan {
 }
 
 func (e *EndpointVxlan) String() string {
-	return fmt.Sprintf("vxlan remote: %q, udp-port: %d, vni: %d", e.remote, e.udpPort, e.vni)
+	return fmt.Sprintf("vxlan remote: %q, dst-port: %d, vni: %d", e.remote, e.dstPort, e.vni)
 }
 
 // Verify verifies that the endpoint is valid and can be deployed.

@@ -96,7 +96,8 @@ func GetOptions() *Options {
 			},
 			ToolsVxlan: &ToolsVxlanOptions{
 				ID:             defaultVxlanID,
-				Port:           defaultVxlanPort,
+				DstPort:        defaultVxlanPort,
+				SrcPort:        0,
 				DeletionPrefix: "vx-",
 			},
 			Version: &VersionOptions{
@@ -421,7 +422,8 @@ type ToolsVxlanOptions struct {
 	Link           string
 	ID             uint
 	MTU            uint
-	Port           uint
+	DstPort        uint
+	SrcPort        uint
 	Remote         string
 	ParentDevice   string
 	DeletionPrefix string

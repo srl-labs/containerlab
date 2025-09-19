@@ -846,8 +846,11 @@
                 "vni": {
                     "$ref": "#/definitions/link-vxlan-vni"
                 },
-                "udp-port": {
-                    "$ref": "#/definitions/link-vxlan-udpport"
+                "dst-port": {
+                    "$ref": "#/definitions/link-vxlan-dstport"
+                },
+                "src-port": {
+                    "$ref": "#/definitions/link-vxlan-srcport"
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
@@ -864,7 +867,7 @@
                 "endpoint",
                 "remote",
                 "vni",
-                "udp-port"
+                "dst-port"
             ],
             "additionalProperties": false
         },
@@ -885,8 +888,11 @@
                 "vni": {
                     "$ref": "#/definitions/link-vxlan-vni"
                 },
-                "udp-port": {
-                    "$ref": "#/definitions/link-vxlan-udpport"
+                "dst-port": {
+                    "$ref": "#/definitions/link-vxlan-dstport"
+                },
+                "src-port": {
+                    "$ref": "#/definitions/link-vxlan-srcport"
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
@@ -903,7 +909,7 @@
                 "endpoint",
                 "remote",
                 "vni",
-                "udp-port"
+                "dst-port"
             ],
             "additionalProperties": false
         },
@@ -974,9 +980,15 @@
             "minimum": 1,
             "maximum": 16777215
         },
-        "link-vxlan-udpport": {
+        "link-vxlan-dstport": {
             "type": "integer",
-            "description": "Remote UDP port",
+            "description": "Destination UDP port",
+            "minimum": 1,
+            "maximum": 65535
+        },
+        "link-vxlan-srcport": {
+            "type": "integer",
+            "description": "Source UDP port",
             "minimum": 1,
             "maximum": 65535
         },
