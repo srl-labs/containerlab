@@ -1237,11 +1237,6 @@ func buildTLSProfileXML() string {
 		StartElement("cert-profile", "nc:operation", "merge").
 		Element("cert-profile-name", tlsCertProfileName).
 		Element("admin-state", "enable").
-		// StartElement("entry").
-		// Element("entry-id", "1").
-		// Element("certificate-file", tlsCertFile).
-		// Element("key-file", tlsKeyFile).
-		// EndElement("entry").
 		EndElement("cert-profile").
 		EndElement("tls").
 		EndElement("security").
@@ -1265,31 +1260,32 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 		func(d *netconf.Driver) error {
 			r, e := d.RPC(opoptions.WithFilter(xmlMap["key"]))
 			if r.Failed != nil {
-				return fmt.Errorf("rpc response failed on node %q sent: %s, received: %s",
-					n.Cfg.ShortName, xmlMap["key"], r.Result)
+				return fmt.Errorf("NETCONF custom RPC failed on node %q sent: %s, received: %s",
+					n.Cfg.ShortName, string(r.Input), r.Result)
 			}
 			return e
 		},
 		func(d *netconf.Driver) error {
 			r, e := d.RPC(opoptions.WithFilter(xmlMap["certificate"]))
 			if r.Failed != nil {
-				return fmt.Errorf("rpc response failed on node %q sent: %s, received: %s",
-					n.Cfg.ShortName, xmlMap["certificate"], r.Result)
+				return fmt.Errorf("NETCONF custom RPC failed on node %q sent: %s, received: %s",
+					n.Cfg.ShortName, string(r.Input), r.Result)
 			}
 			return e
 		},
 		func(d *netconf.Driver) error {
 			r, e := d.EditConfig("candidate", xmlMap["tlsProfile"])
 			if r.Failed != nil {
-				return fmt.Errorf("rpc EditConfig response failed on node %q sent: %s, received: %s",
-					n.Cfg.ShortName, xmlMap["tlsProfile"], r.Result)
+				return fmt.Errorf("NETCONF edit-config failed on node %q sent: %s, received: %s",
+					n.Cfg.ShortName, string(r.Input), r.Result)
 			}
 			return e
 		},
 		func(d *netconf.Driver) error {
 			r, e := d.Commit()
 			if r.Failed != nil {
-				return fmt.Errorf("rpc Commit response failed on node %q, result: %s", n.Cfg.ShortName, r.Result)
+				return fmt.Errorf("NETCONF commit failed on node %q sent: %s, received: %s",
+					n.Cfg.ShortName, string(r.Input), r.Result)
 			}
 			return e
 		},
