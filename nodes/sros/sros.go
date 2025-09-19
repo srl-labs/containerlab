@@ -749,22 +749,6 @@ func (n *sros) checkComponentSlotsConfig() error {
 		// addd to component names map
 		componentNames[component.Slot] = struct{}{}
 
-		// Rule: if XIOMs are present for this component, MDAs must be defined under XIOM, not directly under slot
-		if len(component.XIOM) > 0 && len(component.MDA) > 0 {
-			return fmt.Errorf("node %s slot %s: MDAs must be defined under XIOM when XIOMs are present", n.GetShortName(), component.Slot)
-		}
-
-		// Check XIOM slots uniqueness and validity
-		xiomSlots := map[int]struct{}{}
-		for _, x := range component.XIOM {
-			if x.Slot <= 0 {
-				return fmt.Errorf("node %s slot %s: XIOM slot must be > 0, got %d", n.GetShortName(), component.Slot, x.Slot)
-			}
-			if _, ok := xiomSlots[x.Slot]; ok {
-				return fmt.Errorf("node %s slot %s: duplicate XIOM slot %d", n.GetShortName(), component.Slot, x.Slot)
-			}
-			xiomSlots[x.Slot] = struct{}{}
-		}
 	}
 	return nil
 }
