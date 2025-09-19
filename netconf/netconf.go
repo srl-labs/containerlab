@@ -138,25 +138,25 @@ func MultiExec(addr, username, password string, operations []Operation) error {
 	return nil
 }
 
-// XMLBuilder provides an interface for building XML
+// XMLBuilder provides an interface for building XML.
 type XMLBuilder struct {
 	buf    bytes.Buffer
 	indent int
 	pretty bool
 }
 
-// NewXMLBuilder creates a new XML builder
+// NewXMLBuilder creates a new XML builder.
 func NewXMLBuilder() *XMLBuilder {
 	return &XMLBuilder{pretty: false}
 }
 
-// SetPretty enables/disables pretty printing
+// SetPretty enables/disables pretty printing.
 func (b *XMLBuilder) SetPretty(pretty bool) *XMLBuilder {
 	b.pretty = pretty
 	return b
 }
 
-// StartElement starts a new XML element with optional attributes
+// StartElement starts a new XML element with optional attributes.
 func (b *XMLBuilder) StartElement(name string, attrs ...string) *XMLBuilder {
 	if b.pretty && b.buf.Len() > 0 {
 		b.buf.WriteString("\n")
@@ -181,7 +181,7 @@ func (b *XMLBuilder) StartElement(name string, attrs ...string) *XMLBuilder {
 	return b
 }
 
-// EndElement closes an XML element
+// EndElement closes an XML element.
 func (b *XMLBuilder) EndElement(name string) *XMLBuilder {
 	b.indent--
 	if b.pretty {
@@ -195,25 +195,25 @@ func (b *XMLBuilder) EndElement(name string) *XMLBuilder {
 	return b
 }
 
-// Text adds text content to the current element
+// Text adds text content to the current element.
 func (b *XMLBuilder) Text(text string) *XMLBuilder {
 	b.buf.WriteString(html.EscapeString(text))
 	return b
 }
 
-// Element adds a complete element with text content
+// Element adds a complete element with text content.
 func (b *XMLBuilder) Element(name, text string, attrs ...string) *XMLBuilder {
 	return b.StartElement(name, attrs...).Text(text).EndElement(name)
 }
 
-// writeIndent writes the current indentation
+// writeIndent writes the current indentation.
 func (b *XMLBuilder) writeIndent() {
 	for i := 0; i < b.indent; i++ {
 		b.buf.WriteString("    ")
 	}
 }
 
-// String returns the built XML as a string
+// String returns the built XML as a string.
 func (b *XMLBuilder) String() string {
 	return b.buf.String()
 }

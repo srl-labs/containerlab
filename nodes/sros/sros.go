@@ -380,7 +380,8 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 				return err
 			}
 			// TLS bootsrap in case of envVarGrpcInsecureMode flag
-			if strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]) == "0" || strings.EqualFold(strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]), "false") {
+			if strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]) == "0" ||
+				strings.EqualFold(strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]), "false") {
 				err = n.tlsCertBootstrap(ctx, addr)
 				if err != nil {
 					return fmt.Errorf("TLS cert/key bootstrap to node %q failed: %w", n.Cfg.LongName, err)
@@ -809,7 +810,7 @@ func (n *sros) createSROSFiles() error {
 	return nil
 }
 
-// Func that Places the Certificates in the right place and format
+// Func that Places the Certificates in the right place and format.
 func (n *sros) createSROSCertificates() error {
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
@@ -932,8 +933,10 @@ func (n *sros) addDefaultConfig() error {
 		tplData.GRPCConfig = grpcConfigIXR
 		tplData.SystemConfig = systemCfgIXR
 	}
-	if strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]) == "1" || strings.EqualFold(strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]), "true") {
-		log.Debugf("Using insecure cert configuration for node %s, found flag %s", n.Cfg.ShortName, envVarGrpcInsecureMode)
+	if strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]) == "1" ||
+		strings.EqualFold(strings.ToLower(n.Cfg.Env[envVarGrpcInsecureMode]), "true") {
+		log.Debugf("Using insecure cert configuration for node %s, found flag %s",
+			n.Cfg.ShortName, envVarGrpcInsecureMode)
 		tplData.GRPCConfig = grpcConfigInsecure
 		if strings.Contains(tplData.NodeType, "ixr-") {
 			tplData.GRPCConfig = grpcConfigIXRInsecure
@@ -1199,7 +1202,7 @@ func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
 	return nil
 }
 
-// BuildPKIImportXML
+// BuildPKIImportXML.
 func buildPKIImportXML(inputURL, outputFile, importType string) string {
 	return clabnetconf.NewXMLBuilder().
 		StartElement("action", "xmlns", "urn:ietf:params:xml:ns:yang:1").
@@ -1221,7 +1224,7 @@ func buildPKIImportXML(inputURL, outputFile, importType string) string {
 		String()
 }
 
-// BuildTLSProfileXML builds the TLS profile configuration XML
+// BuildTLSProfileXML builds the TLS profile configuration XML.
 func buildTLSProfileXML() string {
 	return clabnetconf.NewXMLBuilder().
 		StartElement("config").
@@ -1253,7 +1256,6 @@ func buildTLSProfileXML() string {
 //   - `imports cf3:\node.crt` in PEM format as `cf3:\system-pki\node.crt“ (encrypted DER)
 //   - administratively enables TLS profile `grpc-tls-certs`
 func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
-
 	xmlMap := map[string]string{
 		"key":         buildPKIImportXML(fmt.Sprintf("cf3:/%s", tlsKeyFile), tlsKeyFile, "key"),
 		"certificate": buildPKIImportXML(fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate"),
@@ -1263,21 +1265,24 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 		func(d *netconf.Driver) error {
 			r, e := d.RPC(opoptions.WithFilter(xmlMap["key"]))
 			if r.Failed != nil {
-				return fmt.Errorf("rpc response failed on node %q sent: %s, received: %s", n.Cfg.ShortName, xmlMap["key"], r.Result)
+				return fmt.Errorf("rpc response failed on node %q sent: %s, received: %s",
+					n.Cfg.ShortName, xmlMap["key"], r.Result)
 			}
 			return e
 		},
 		func(d *netconf.Driver) error {
 			r, e := d.RPC(opoptions.WithFilter(xmlMap["certificate"]))
 			if r.Failed != nil {
-				return fmt.Errorf("rpc response failed on node %q sent: %s, received: %s", n.Cfg.ShortName, xmlMap["certificate"], r.Result)
+				return fmt.Errorf("rpc response failed on node %q sent: %s, received: %s",
+					n.Cfg.ShortName, xmlMap["certificate"], r.Result)
 			}
 			return e
 		},
 		func(d *netconf.Driver) error {
 			r, e := d.EditConfig("candidate", xmlMap["tlsProfile"])
 			if r.Failed != nil {
-				return fmt.Errorf("rpc EditConfig response failed on node %q sent: %s, received: %s", n.Cfg.ShortName, xmlMap["tlsProfile"], r.Result)
+				return fmt.Errorf("rpc EditConfig response failed on node %q sent: %s, received: %s",
+					n.Cfg.ShortName, xmlMap["tlsProfile"], r.Result)
 			}
 			return e
 		},
