@@ -45,18 +45,22 @@ func (e *Endpoint) String() string {
 
 // MgmtNet struct defines the management network options.
 type MgmtNet struct {
-	Network string `yaml:"network,omitempty" json:"network,omitempty"` // container runtime network name
-	Bridge  string `yaml:"bridge,omitempty" json:"bridge,omitempty"`
+	// container runtime network name
+	Network string `json:"network,omitempty" yaml:"network,omitempty"`
+	Bridge  string `json:"bridge,omitempty"  yaml:"bridge,omitempty"`
+
 	// linux bridge backing the runtime network
-	IPv4Subnet     string            `yaml:"ipv4-subnet,omitempty" json:"ipv4-subnet,omitempty"`
-	IPv4Gw         string            `yaml:"ipv4-gw,omitempty" json:"ipv4-gw,omitempty"`
-	IPv4Range      string            `yaml:"ipv4-range,omitempty" json:"ipv4-range,omitempty"`
-	IPv6Subnet     string            `yaml:"ipv6-subnet,omitempty" json:"ipv6-subnet,omitempty"`
-	IPv6Gw         string            `yaml:"ipv6-gw,omitempty" json:"ipv6-gw,omitempty"`
-	IPv6Range      string            `yaml:"ipv6-range,omitempty" json:"ipv6-range,omitempty"`
-	MTU            int               `yaml:"mtu,omitempty" json:"mtu,omitempty"`
-	ExternalAccess *bool             `yaml:"external-access,omitempty" json:"external-access,omitempty"`
-	DriverOpts     map[string]string `yaml:"driver-opts,omitempty" json:"driver-opts,omitempty"`
+	IPv4Subnet string `json:"ipv4-subnet,omitempty" yaml:"ipv4-subnet,omitempty"`
+	IPv4Gw     string `json:"ipv4-gw,omitempty"     yaml:"ipv4-gw,omitempty"`
+	IPv4Range  string `json:"ipv4-range,omitempty"  yaml:"ipv4-range,omitempty"`
+	IPv6Subnet string `json:"ipv6-subnet,omitempty" yaml:"ipv6-subnet,omitempty"`
+	IPv6Gw     string `json:"ipv6-gw,omitempty"     yaml:"ipv6-gw,omitempty"`
+	IPv6Range  string `json:"ipv6-range,omitempty"  yaml:"ipv6-range,omitempty"`
+	MTU        int    `json:"mtu,omitempty"         yaml:"mtu,omitempty"`
+
+	ExternalAccess *bool `json:"external-access,omitempty" yaml:"external-access,omitempty"`
+
+	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
 }
 
 // Interface compliance.
@@ -69,9 +73,10 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(any) error) error {
 
 	type MgmtNetWithDeprecatedFields struct {
 		MgmtNetAlias         `yaml:",inline"`
-		DeprecatedIPv4Subnet string `yaml:"ipv4_subnet,omitempty" json:"ipv4_subnet,omitempty"`
-		DeprecatedIPv6Subnet string `yaml:"ipv6_subnet,omitempty" json:"ipv6_subnet,omitempty"`
+		DeprecatedIPv4Subnet string `json:"ipv4_subnet,omitempty" yaml:"ipv4_subnet,omitempty"`
+		DeprecatedIPv6Subnet string `json:"ipv6_subnet,omitempty" yaml:"ipv6_subnet,omitempty"`
 	}
+
 	mn := &MgmtNetWithDeprecatedFields{}
 
 	mn.MgmtNetAlias = MgmtNetAlias(*m)
@@ -81,12 +86,21 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(any) error) error {
 
 	// process deprecated fields and use their values for new fields if new fields are not set
 	if mn.DeprecatedIPv4Subnet != "" && mn.IPv4Subnet == "" {
-		log.Warnf("Attribute \"ipv4_subnet\" is deprecated and will be removed in the future. Change it to \"ipv4-subnet\"")
+		log.Warnf(
+			"Attribute \"ipv4_subnet\" is deprecated and will be removed " +
+				"in the future. Change it to \"ipv4-subnet\"",
+		)
+
 		mn.IPv4Subnet = mn.DeprecatedIPv4Subnet
 	}
+
 	// map old to new if old defined but new not
 	if mn.DeprecatedIPv6Subnet != "" && mn.IPv6Subnet == "" {
-		log.Warnf("Attribute \"ipv6_subnet\" is deprecated and will be removed in the future. Change it to \"ipv6-subnet\"")
+		log.Warnf(
+			"Attribute \"ipv6_subnet\" is deprecated and will be removed " +
+				"in the future. Change it to \"ipv6-subnet\"",
+		)
+
 		mn.IPv6Subnet = mn.DeprecatedIPv6Subnet
 	}
 
@@ -102,7 +116,8 @@ type NodeConfig struct {
 	// containerlab-prefixed unique container name
 	LongName string `json:"longname,omitempty"`
 	Fqdn     string `json:"fqdn,omitempty"`
-	// LabDir is a directory related to the node, it contains config items and/or other persistent state
+	// LabDir is a directory related to the node, it contains config items and/or other persistent
+	// state
 	LabDir string `json:"labdir,omitempty"`
 	Index  int    `json:"index,omitempty"`
 	Group  string `json:"group,omitempty"`
@@ -111,9 +126,11 @@ type NodeConfig struct {
 	StartupConfig string `json:"startup-config,omitempty"`
 	// optional delay (in seconds) to wait before creating this node
 	StartupDelay uint `json:"startup-delay,omitempty"`
-	// when set to true will enforce the use of startup-config, even when config is present in the lab directory
+	// when set to true will enforce the use of startup-config, even when config is present in the
+	// lab directory
 	EnforceStartupConfig bool `json:"enforce-startup-config,omitempty"`
-	// when set to true will prevent creation of a startup-config, for auto-provisioning testing (ZTP)
+	// when set to true will prevent creation of a startup-config, for auto-provisioning testing
+	// (ZTP)
 	SuppressStartupConfig bool `json:"suppress-startup-config,omitempty"`
 	// when set to true will auto-remove a stopped/failed container
 	AutoRemove    bool   `json:"auto-remove,omitempty"`
@@ -253,6 +270,7 @@ func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
 	if cd == nil {
 		return nil
 	}
+
 	return cd.Vars
 }
 
@@ -298,6 +316,7 @@ func (k *K8sKindExtras) Copy() *K8sKindExtras {
 	cp := &K8sKindExtras{
 		Deploy: k.Deploy.Copy(),
 	}
+
 	return cp
 }
 
@@ -310,6 +329,7 @@ type K8sKindDeployExtras struct {
 
 func (k *K8sKindDeployExtras) Copy() *K8sKindDeployExtras {
 	cp := *k
+
 	return &cp
 }
 
@@ -360,17 +380,21 @@ type GenericPortBinding struct {
 
 func (p *GenericPortBinding) String() string {
 	var result string
+
 	if strings.Contains(p.HostIP, ":") {
 		result = fmt.Sprintf("[%s]", p.HostIP)
 	} else {
 		result = p.HostIP
 	}
+
 	result += fmt.Sprintf(":%d/%s -> %d", p.HostPort, p.Protocol, p.ContainerPort)
+
 	return result
 }
 
 func (p *GenericPortBinding) Copy() *GenericPortBinding {
 	cp := *p
+
 	return &cp
 }
 
@@ -454,8 +478,7 @@ const (
 // a valid PullPolicyValue. Defaults to PullPolicyIfNotPresent.
 func ParsePullPolicyValue(s string) PullPolicyValue {
 	// remove whitespace and convert to lower
-	s = strings.TrimSpace(strings.ToLower(s))
-	switch s {
+	switch strings.TrimSpace(strings.ToLower(s)) {
 	case "always":
 		return PullPolicyAlways
 	case "never":

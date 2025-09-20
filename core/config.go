@@ -88,7 +88,7 @@ func (c *CLab) parseTopology() error {
 		}
 
 		// this case if for non-default runtimes overriding the global default
-		if r, ok := clabnodes.NonDefaultRuntimes[topologyNode.GetKind()]; ok {
+		if r, ok := clabnodes.NonDefaultRuntimes[topologyNode.Kind]; ok {
 			nodeRuntimes[nodeName] = r
 			continue
 		}

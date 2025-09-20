@@ -15,6 +15,7 @@ func TestComponentMDAUnmarshal(t *testing.T) {
 - slot: 2
   type: b
 `
+
 	var m MDAS
 	if err := yaml.Unmarshal([]byte(mdaYaml), &m); err != nil {
 		t.Fatalf("err unmarshalling mdas: %v", err)
@@ -45,7 +46,9 @@ func TestComponentMDAUnmarshalInvalidSlotZero(t *testing.T) {
 - slot: 0
   type: foo
 `
+
 	var m MDAS
+
 	if err := yaml.Unmarshal([]byte(mdaYaml), &m); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
@@ -60,7 +63,9 @@ func TestComponentMDAUnmarshalInvalidSlotNonNumeric(t *testing.T) {
 - slot: z
   type: foo
 `
+
 	var m MDAS
+
 	if err := yaml.Unmarshal([]byte(mdaYaml), &m); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
@@ -74,7 +79,9 @@ func TestComponentMDAUnmarshalMissingType(t *testing.T) {
 	mdaYaml := `
 - slot: 1
 `
+
 	var m MDAS
+
 	if err := yaml.Unmarshal([]byte(mdaYaml), &m); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
@@ -88,7 +95,9 @@ func TestComponentMDAUnmarshalMissingSlot(t *testing.T) {
 	mdaYaml := `
 - type: abc
 `
+
 	var m MDAS
+
 	if err := yaml.Unmarshal([]byte(mdaYaml), &m); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
@@ -105,7 +114,9 @@ func TestComponentMDAUnmarshalDuplicateSlot(t *testing.T) {
 - slot: 1
   type: b
 `
+
 	var m MDAS
+
 	if err := yaml.Unmarshal([]byte(mdaYaml), &m); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
@@ -122,7 +133,9 @@ func TestXIOMSUnmarshalDuplicateSlot(t *testing.T) {
 - slot: 1
   type: foo
 `
+
 	var x XIOMS
+
 	if err := yaml.Unmarshal([]byte(xiomYaml), &x); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
@@ -142,13 +155,16 @@ func TestXIOMNestedMDAUnmarshalDuplicateSlot(t *testing.T) {
     - slot: 1
       type: bar
 `
+
 	var x XIOMS
+
 	if err := yaml.Unmarshal([]byte(xiomYaml), &x); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
 		if want := "invalid mda entry"; !strings.Contains(err.Error(), want) {
 			t.Fatalf("error = %q, want contains %q", err.Error(), want)
 		}
+
 		if want := "duplicate slot"; !strings.Contains(err.Error(), want) {
 			t.Fatalf("error = %q, want contains %q", err.Error(), want)
 		}
@@ -160,7 +176,9 @@ func TestXIOMSUnmarshalInvalidSlotZero(t *testing.T) {
 - slot: 0
   type: iom-s-1.5t
 `
+
 	var x XIOMS
+
 	if err := yaml.Unmarshal([]byte(xiomYaml), &x); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
@@ -174,7 +192,9 @@ func TestXIOMSUnmarshalMissingType(t *testing.T) {
 	xiomYaml := `
 - slot: 1
 `
+
 	var x XIOMS
+
 	if err := yaml.Unmarshal([]byte(xiomYaml), &x); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
@@ -188,7 +208,9 @@ func TestXIOMSUnmarshalMissingSlot(t *testing.T) {
 	xiomYaml := `
 - type: iom-s-1.5t
 `
+
 	var x XIOMS
+
 	if err := yaml.Unmarshal([]byte(xiomYaml), &x); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
@@ -203,7 +225,9 @@ func TestXIOMSUnmarshalInvalidSlotNonNumeric(t *testing.T) {
 - slot: z
   type: iom-s-1.5t
 `
+
 	var x XIOMS
+
 	if err := yaml.Unmarshal([]byte(xiomYaml), &x); err == nil {
 		t.Fatalf("expected error, got nil")
 	} else {
