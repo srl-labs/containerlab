@@ -137,6 +137,48 @@ func mergeStringSliceFields(
 	return clabutils.MergeStringSlices(defaultsField, fieldKind, fieldGroup, fieldNode)
 }
 
+func mergeStringMapFields(
+	topo *Topology,
+	nodeName string,
+	getFieldNode func(*NodeDefinition) map[string]string,
+	getFieldGroup func(*NodeDefinition) map[string]string,
+	getFieldKind func(*NodeDefinition) map[string]string,
+	getFieldDefaults func(*NodeDefinition) map[string]string,
+) map[string]string {
+	out := map[string]string{}
+
+	nodeDefintion, ok := topo.Nodes[nodeName]
+	if !ok {
+		return out
+	}
+
+	fieldNode := getFieldNode(nodeDefintion)
+
+	var fieldGroup map[string]string
+
+	group := topo.GetGroup(topo.GetNodeGroup(nodeName))
+	if group != nil {
+		fieldGroup = getFieldGroup(group)
+	}
+
+	var fieldKind map[string]string
+
+	kind := topo.GetKind(topo.GetNodeKind(nodeName))
+	if kind != nil {
+		fieldKind = getFieldKind(kind)
+	}
+
+	defaultsField := getFieldDefaults(topo.GetDefaults())
+
+	// merge "backwards" for prioritization reasons
+	mergedOut := clabutils.MergeStringMaps(defaultsField, fieldKind, fieldGroup, fieldNode)
+	if mergedOut == nil {
+		return out
+	}
+
+	return mergedOut
+}
+
 // Topology represents a lab topology.
 type Topology struct {
 	Defaults *NodeDefinition             `yaml:"defaults,omitempty"`
@@ -291,6 +333,61 @@ func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
 	return result, nil
 }
 
+func (t *Topology) GetNodeGroup(name string) string {
+	defaultGroup := t.GetDefaults().Group
+
+	nodeDefinition, ok := t.Nodes[name]
+	if !ok {
+		return defaultGroup
+	}
+
+	group := nodeDefinition.Group
+
+	if group != "" {
+		return group
+	}
+
+	kind := t.GetNodeKind(name)
+
+	if kind != "" {
+		// Check if the node actually has a kind, then get the group from kinds
+		kindGroup := t.GetKind(kind).Group
+
+		if kindGroup != "" {
+			return kindGroup
+		}
+	}
+
+	return defaultGroup
+}
+
+func (t *Topology) GetNodeType(name string) string {
+	defaultType := t.GetDefaults().Type
+
+	nodeDefinition, ok := t.Nodes[name]
+	if !ok {
+		return defaultType
+	}
+
+	if nodeDefinition.Type != "" {
+		return strings.TrimSpace(nodeDefinition.Type)
+	}
+
+	group := t.GetGroup(t.GetNodeGroup(name))
+
+	if group != nil && group.Type != "" {
+		return strings.TrimSpace(group.Type)
+	}
+
+	kind := t.GetKind(t.GetNodeKind(name))
+
+	if kind != nil && kind.Type != "" {
+		return strings.TrimSpace(kind.Type)
+	}
+
+	return defaultType
+}
+
 func (t *Topology) GetNodePorts(nodeName string) (nat.PortSet, nat.PortMap, error) {
 	ports := getField(
 		t,
@@ -309,16 +406,15 @@ func (t *Topology) GetNodePorts(nodeName string) (nat.PortSet, nat.PortMap, erro
 	return nil, nil, nil
 }
 
-func (t *Topology) GetNodeEnv(name string) map[string]string {
-	if ndef, ok := t.Nodes[name]; ok {
-		return clabutils.MergeStringMaps(
-			clabutils.MergeStringMaps(t.GetDefaults().GetEnv(),
-				t.GetKind(t.GetNodeKind(name)).GetEnv(),
-				t.GetGroup(t.GetNodeGroup(name)).GetEnv()),
-			ndef.GetEnv())
-	}
-
-	return nil
+func (t *Topology) GetNodeEnv(nodeName string) map[string]string {
+	return mergeStringMapFields(
+		t,
+		nodeName,
+		func(node *NodeDefinition) map[string]string { return node.Env },
+		func(group *NodeDefinition) map[string]string { return group.Env },
+		func(kind *NodeDefinition) map[string]string { return kind.Env },
+		func(defaults *NodeDefinition) map[string]string { return defaults.Env },
+	)
 }
 
 func (t *Topology) GetNodeEnvFiles(nodeName string) []string {
@@ -332,30 +428,15 @@ func (t *Topology) GetNodeEnvFiles(nodeName string) []string {
 	)
 }
 
-func (t *Topology) GetNodeLabels(name string) map[string]string {
-	if ndef, ok := t.Nodes[name]; ok {
-		return clabutils.MergeStringMaps(t.Defaults.GetLabels(),
-			t.GetKind(t.GetNodeKind(name)).GetLabels(),
-			t.GetGroup(t.GetNodeGroup(name)).GetLabels(),
-			ndef.GetLabels())
-	}
-
-	return nil
-}
-
-func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
-	if ndef, ok := t.Nodes[name]; ok {
-		vars := clabutils.MergeMaps(t.Defaults.GetConfigDispatcher().GetVars(),
-			t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars(),
-			t.GetGroup(t.GetNodeGroup(name)).GetConfigDispatcher().GetVars(),
-			ndef.GetConfigDispatcher().GetVars())
-
-		return &ConfigDispatcher{
-			Vars: vars,
-		}
-	}
-
-	return nil
+func (t *Topology) GetNodeLabels(nodeName string) map[string]string {
+	return mergeStringMapFields(
+		t,
+		nodeName,
+		func(node *NodeDefinition) map[string]string { return node.Labels },
+		func(group *NodeDefinition) map[string]string { return group.Labels },
+		func(kind *NodeDefinition) map[string]string { return kind.Labels },
+		func(defaults *NodeDefinition) map[string]string { return defaults.Labels },
+	)
 }
 
 func (t *Topology) GetNodeDevices(nodeName string) []string {
@@ -504,70 +585,17 @@ func (t *Topology) GetNodeImage(nodeName string) string {
 }
 
 func (t *Topology) GetNodeImagePullPolicy(nodeName string) PullPolicyValue {
-	return ParsePullPolicyValue(getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) string { return node.ImagePullPolicy },
-		func(group *NodeDefinition) string { return group.ImagePullPolicy },
-		func(kind *NodeDefinition) string { return kind.ImagePullPolicy },
-		func(defaults *NodeDefinition) string { return defaults.ImagePullPolicy },
-		func(v string) bool { return v != "" },
-	))
-}
-
-func (t *Topology) GetNodeGroup(name string) string {
-	defaultGroup := t.GetDefaults().Group
-
-	nodeDefinition, ok := t.Nodes[name]
-	if !ok {
-		return defaultGroup
-	}
-
-	group := nodeDefinition.Group
-
-	if group != "" {
-		return group
-	}
-
-	kind := t.GetNodeKind(name)
-
-	if kind != "" {
-		// Check if the node actually has a kind, then get the group from kinds
-		kindGroup := t.GetKind(kind).Group
-
-		if kindGroup != "" {
-			return kindGroup
-		}
-	}
-
-	return defaultGroup
-}
-
-func (t *Topology) GetNodeType(name string) string {
-	defaultType := t.GetDefaults().Type
-
-	nodeDefinition, ok := t.Nodes[name]
-	if !ok {
-		return defaultType
-	}
-
-	if nodeDefinition.Type != "" {
-		return strings.TrimSpace(nodeDefinition.Type)
-	}
-
-	group := t.GetGroup(t.GetNodeGroup(name))
-
-	if group != nil && group.Type != "" {
-		return strings.TrimSpace(group.Type)
-	}
-
-	kind := t.GetKind(t.GetNodeKind(name))
-
-	if kind != nil && kind.Type != "" {
-		return strings.TrimSpace(kind.Type)
-	}
-
-	return defaultType
+	return ParsePullPolicyValue(
+		getField(
+			t,
+			nodeName,
+			func(node *NodeDefinition) string { return node.ImagePullPolicy },
+			func(group *NodeDefinition) string { return group.ImagePullPolicy },
+			func(kind *NodeDefinition) string { return kind.ImagePullPolicy },
+			func(defaults *NodeDefinition) string { return defaults.ImagePullPolicy },
+			func(v string) bool { return v != "" },
+		),
+	)
 }
 
 func (t *Topology) GetNodePosition(nodeName string) string {
@@ -714,16 +742,15 @@ func (t *Topology) GetNodeMemory(nodeName string) string {
 }
 
 // GetSysCtl return the Sysctl configuration for the given node.
-func (t *Topology) GetSysCtl(name string) map[string]string {
-	if ndef, ok := t.Nodes[name]; ok {
-		return clabutils.MergeStringMaps(
-			clabutils.MergeStringMaps(t.GetDefaults().GetSysctls(),
-				t.GetKind(t.GetNodeKind(name)).GetSysctls(),
-				t.GetGroup(t.GetNodeGroup(name)).GetSysctls()),
-			ndef.GetSysctls())
-	}
-
-	return nil
+func (t *Topology) GetSysCtl(nodeName string) map[string]string {
+	return mergeStringMapFields(
+		t,
+		nodeName,
+		func(node *NodeDefinition) map[string]string { return node.Sysctls },
+		func(group *NodeDefinition) map[string]string { return group.Sysctls },
+		func(kind *NodeDefinition) map[string]string { return kind.Sysctls },
+		func(defaults *NodeDefinition) map[string]string { return defaults.Sysctls },
+	)
 }
 
 // GetNodeExtras returns the 'extras' section for the given node.
@@ -739,34 +766,74 @@ func (t *Topology) GetNodeExtras(nodeName string) *Extras {
 	)
 }
 
+func (t *Topology) GetNodeDns(nodeName string) *DNSConfig {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) *DNSConfig { return node.DNS },
+		func(group *NodeDefinition) *DNSConfig { return group.DNS },
+		func(kind *NodeDefinition) *DNSConfig { return kind.DNS },
+		func(defaults *NodeDefinition) *DNSConfig {
+			if defaults.DNS != nil {
+				return defaults.DNS
+			}
+
+			return &DNSConfig{}
+		},
+		func(v *DNSConfig) bool { return v != nil },
+	)
+}
+
+func (t *Topology) GetHealthCheckConfig(nodeName string) *HealthcheckConfig {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) *HealthcheckConfig { return node.HealthCheck },
+		func(group *NodeDefinition) *HealthcheckConfig { return group.HealthCheck },
+		func(kind *NodeDefinition) *HealthcheckConfig { return kind.HealthCheck },
+		func(defaults *NodeDefinition) *HealthcheckConfig { return defaults.HealthCheck },
+		func(v *HealthcheckConfig) bool { return v != nil },
+	)
+}
+
+func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
+	if ndef, ok := t.Nodes[name]; ok {
+		vars := clabutils.MergeMaps(t.Defaults.GetConfigDispatcher().GetVars(),
+			t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars(),
+			t.GetGroup(t.GetNodeGroup(name)).GetConfigDispatcher().GetVars(),
+			ndef.GetConfigDispatcher().GetVars())
+
+		return &ConfigDispatcher{
+			Vars: vars,
+		}
+	}
+
+	return nil
+}
+
 // GetStages return the configuration stages set for the given node.
 // It merges the default, kind and node stages into a single Stages struct
 // with node stages taking precedence over kind stages and default stages.
-func (t *Topology) GetStages(name string) (*Stages, error) {
+func (t *Topology) GetStages(nodeName string) (*Stages, error) {
 	s := NewStages()
 
-	// default Stages
 	defaultStages := t.GetDefaults().Stages
 	if defaultStages != nil {
 		s.Merge(defaultStages)
 	}
 
-	// kind Stages
-	kindStages := t.GetKind(t.GetNodeKind(name)).GetStages()
-	if kindStages != nil {
-		s.Merge(kindStages)
+	kind := t.GetKind(t.GetNodeKind(nodeName))
+	if kind != nil && kind.Stages != nil {
+		s.Merge(kind.Stages)
 	}
 
-	// group Stages
-	groupStages := t.GetGroup(t.GetNodeGroup(name)).GetStages()
-	if groupStages != nil {
-		s.Merge(groupStages)
+	group := t.GetGroup(t.GetNodeGroup(nodeName))
+	if group != nil && group.Stages != nil {
+		s.Merge(group.Stages)
 	}
 
-	// node Stages
-	nodeStages := t.Nodes[name].GetStages()
-	if nodeStages != nil {
-		s.Merge(nodeStages)
+	if t.Nodes[nodeName].Stages != nil {
+		s.Merge(t.Nodes[nodeName].Stages)
 	}
 
 	// set nil values to their respective defaults
@@ -791,24 +858,6 @@ func (t *Topology) ImportEnvs() {
 	}
 }
 
-func (t *Topology) GetNodeDns(nodeName string) *DNSConfig {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) *DNSConfig { return node.DNS },
-		func(group *NodeDefinition) *DNSConfig { return group.DNS },
-		func(kind *NodeDefinition) *DNSConfig { return kind.DNS },
-		func(defaults *NodeDefinition) *DNSConfig {
-			if defaults.DNS != nil {
-				return defaults.DNS
-			}
-
-			return &DNSConfig{}
-		},
-		func(v *DNSConfig) bool { return v != nil },
-	)
-}
-
 // GetCertificateConfig returns the certificate configuration for the given node.
 func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
 	// default for issuing node certificates is false
@@ -824,18 +873,6 @@ func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
 		t.Nodes[name].GetCertificateConfig())
 
 	return cc
-}
-
-func (t *Topology) GetHealthCheckConfig(nodeName string) *HealthcheckConfig {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) *HealthcheckConfig { return node.HealthCheck },
-		func(group *NodeDefinition) *HealthcheckConfig { return group.HealthCheck },
-		func(kind *NodeDefinition) *HealthcheckConfig { return kind.HealthCheck },
-		func(defaults *NodeDefinition) *HealthcheckConfig { return defaults.HealthCheck },
-		func(v *HealthcheckConfig) bool { return v != nil },
-	)
 }
 
 func (t *Topology) GetNodeAliases(nodeName string) []string {

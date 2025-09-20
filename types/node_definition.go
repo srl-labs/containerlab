@@ -122,54 +122,6 @@ func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
 	return n.Config
 }
 
-func (n *NodeDefinition) GetMgmtIPv4() string {
-	if n == nil {
-		return ""
-	}
-
-	return n.MgmtIPv4
-}
-
-func (n *NodeDefinition) GetMgmtIPv6() string {
-	if n == nil {
-		return ""
-	}
-
-	return n.MgmtIPv6
-}
-
-func (n *NodeDefinition) GetEnv() map[string]string {
-	if n == nil {
-		return nil
-	}
-
-	return n.Env
-}
-
-func (n *NodeDefinition) GetLabels() map[string]string {
-	if n == nil {
-		return nil
-	}
-
-	return n.Labels
-}
-
-func (n *NodeDefinition) GetSysctls() map[string]string {
-	if n == nil || n.Sysctls == nil {
-		return map[string]string{}
-	}
-
-	return n.Sysctls
-}
-
-func (n *NodeDefinition) GetStages() *Stages {
-	if n == nil {
-		return nil
-	}
-
-	return n.Stages
-}
-
 func (n *NodeDefinition) GetCertificateConfig() *CertificateConfig {
 	if n == nil {
 		return nil

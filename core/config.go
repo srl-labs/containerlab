@@ -206,8 +206,8 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Exec:            c.Config.Topology.GetNodeExec(nodeName),
 		Env:             c.Config.Topology.GetNodeEnv(nodeName),
 		NetworkMode:     strings.ToLower(c.Config.Topology.GetNodeNetworkMode(nodeName)),
-		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
-		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
+		MgmtIPv4Address: nodeDef.MgmtIPv4,
+		MgmtIPv6Address: nodeDef.MgmtIPv6,
 		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
@@ -735,13 +735,13 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	for key := range c.Config.Topology.Nodes {
 		noProxyList = append(noProxyList, key)
 
-		ipv4address := c.Config.Topology.Nodes[key].GetMgmtIPv4()
+		ipv4address := c.Config.Topology.Nodes[key].MgmtIPv4
 
 		if ipv4address != "" {
 			noProxyList = append(noProxyList, ipv4address)
 		}
 
-		ipv6address := c.Config.Topology.Nodes[key].GetMgmtIPv6()
+		ipv6address := c.Config.Topology.Nodes[key].MgmtIPv6
 
 		if ipv6address != "" {
 			noProxyList = append(noProxyList, ipv6address)
