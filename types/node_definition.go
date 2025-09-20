@@ -122,54 +122,6 @@ func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
 	return n.Config
 }
 
-func (n *NodeDefinition) GetImagePullPolicy() string {
-	if n == nil {
-		return ""
-	}
-
-	return n.ImagePullPolicy
-}
-
-func (n *NodeDefinition) GetBinds() []string {
-	if n == nil {
-		return nil
-	}
-
-	return n.Binds
-}
-
-func (n *NodeDefinition) GetDevices() []string {
-	if n == nil {
-		return nil
-	}
-
-	return n.Devices
-}
-
-func (n *NodeDefinition) GetCapAdd() []string {
-	if n == nil {
-		return nil
-	}
-
-	return n.CapAdd
-}
-
-func (n *NodeDefinition) GetComponents() []*Component {
-	if n == nil {
-		return nil
-	}
-
-	return n.Components
-}
-
-func (n *NodeDefinition) GetPorts() []string {
-	if n == nil {
-		return nil
-	}
-
-	return n.Ports
-}
-
 func (n *NodeDefinition) GetMgmtIPv4() string {
 	if n == nil {
 		return ""
@@ -194,28 +146,12 @@ func (n *NodeDefinition) GetEnv() map[string]string {
 	return n.Env
 }
 
-func (n *NodeDefinition) GetEnvFiles() []string {
-	if n == nil {
-		return nil
-	}
-
-	return n.EnvFiles
-}
-
 func (n *NodeDefinition) GetLabels() map[string]string {
 	if n == nil {
 		return nil
 	}
 
 	return n.Labels
-}
-
-func (n *NodeDefinition) GetExec() []string {
-	if n == nil {
-		return nil
-	}
-
-	return n.Exec
 }
 
 func (n *NodeDefinition) GetSysctls() map[string]string {
@@ -226,14 +162,6 @@ func (n *NodeDefinition) GetSysctls() map[string]string {
 	return n.Sysctls
 }
 
-func (n *NodeDefinition) GetExtras() *Extras {
-	if n == nil {
-		return nil
-	}
-
-	return n.Extras
-}
-
 func (n *NodeDefinition) GetStages() *Stages {
 	if n == nil {
 		return nil
@@ -242,36 +170,12 @@ func (n *NodeDefinition) GetStages() *Stages {
 	return n.Stages
 }
 
-func (n *NodeDefinition) GetDns() *DNSConfig {
-	if n == nil {
-		return nil
-	}
-
-	return n.DNS
-}
-
 func (n *NodeDefinition) GetCertificateConfig() *CertificateConfig {
 	if n == nil {
 		return nil
 	}
 
 	return n.Certificate
-}
-
-func (n *NodeDefinition) GetHealthcheckConfig() *HealthcheckConfig {
-	if n == nil {
-		return nil
-	}
-
-	return n.HealthCheck
-}
-
-func (n *NodeDefinition) GetAliases() []string {
-	if n == nil {
-		return nil
-	}
-
-	return n.Aliases
 }
 
 // ImportEnvs imports all environment variables defined in the shell
