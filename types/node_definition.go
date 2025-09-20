@@ -114,22 +114,6 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 	return nil
 }
 
-func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
-	if n == nil {
-		return nil
-	}
-
-	return n.Config
-}
-
-func (n *NodeDefinition) GetCertificateConfig() *CertificateConfig {
-	if n == nil {
-		return nil
-	}
-
-	return n.Certificate
-}
-
 // ImportEnvs imports all environment variables defined in the shell
 // if __IMPORT_ENVS is set to true.
 func (n *NodeDefinition) ImportEnvs() {

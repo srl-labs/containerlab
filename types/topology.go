@@ -796,19 +796,32 @@ func (t *Topology) GetHealthCheckConfig(nodeName string) *HealthcheckConfig {
 	)
 }
 
-func (t *Topology) GetNodeConfigDispatcher(name string) *ConfigDispatcher {
-	if ndef, ok := t.Nodes[name]; ok {
-		vars := clabutils.MergeMaps(t.Defaults.GetConfigDispatcher().GetVars(),
-			t.GetKind(t.GetNodeKind(name)).GetConfigDispatcher().GetVars(),
-			t.GetGroup(t.GetNodeGroup(name)).GetConfigDispatcher().GetVars(),
-			ndef.GetConfigDispatcher().GetVars())
-
-		return &ConfigDispatcher{
-			Vars: vars,
-		}
+func (t *Topology) GetNodeConfigDispatcher(nodeName string) *ConfigDispatcher {
+	nodeDefintion, ok := t.Nodes[nodeName]
+	if nodeDefintion == nil || !ok {
+		return nil
 	}
 
-	return nil
+	vars := t.Defaults.Config.GetVars()
+
+	kind := t.GetKind(t.GetNodeKind(nodeName))
+	if kind != nil && kind.Config != nil {
+		vars = clabutils.MergeMaps(vars, kind.Config.GetVars())
+	}
+
+	group := t.GetGroup(t.GetNodeGroup(nodeName))
+	if group != nil && group.Config != nil {
+		vars = clabutils.MergeMaps(vars, group.Config.GetVars())
+	}
+
+	nodeDefinition := t.Nodes[nodeName]
+	if nodeDefinition != nil && nodeDefinition.Config != nil {
+		vars = clabutils.MergeMaps(vars, nodeDefinition.Config.GetVars())
+	}
+
+	return &ConfigDispatcher{
+		Vars: vars,
+	}
 }
 
 // GetStages return the configuration stages set for the given node.
@@ -833,8 +846,8 @@ func (t *Topology) GetStages(nodeName string) (*Stages, error) {
 	}
 
 	nodeDefinition := t.Nodes[nodeName]
-	if nodeDefinition != nil && t.Nodes[nodeName].Stages != nil {
-		s.Merge(t.Nodes[nodeName].Stages)
+	if nodeDefinition != nil && nodeDefinition.Stages != nil {
+		s.Merge(nodeDefinition.Stages)
 	}
 
 	// set nil values to their respective defaults
@@ -860,18 +873,28 @@ func (t *Topology) ImportEnvs() {
 }
 
 // GetCertificateConfig returns the certificate configuration for the given node.
-func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
+func (t *Topology) GetCertificateConfig(nodeName string) *CertificateConfig {
 	// default for issuing node certificates is false
 	cc := &CertificateConfig{
 		Issue: clabutils.Pointer(false),
 	}
 
-	// merge defaults, kind and node certificate config into the default certificate config
-	cc.Merge(
-		t.GetDefaults().GetCertificateConfig()).Merge(
-		t.GetKind(t.GetNodeKind(name)).GetCertificateConfig()).Merge(
-		t.GetGroup(t.GetNodeGroup(name)).GetCertificateConfig()).Merge(
-		t.Nodes[name].GetCertificateConfig())
+	cc.Merge(t.GetDefaults().Certificate)
+
+	kind := t.GetKind(t.GetNodeKind(nodeName))
+	if kind != nil {
+		cc.Merge(kind.Certificate)
+	}
+
+	group := t.GetGroup(t.GetNodeGroup(nodeName))
+	if group != nil {
+		cc.Merge(group.Certificate)
+	}
+
+	nodeDefinition := t.Nodes[nodeName]
+	if nodeDefinition != nil {
+		cc.Merge(nodeDefinition.Certificate)
+	}
 
 	return cc
 }
