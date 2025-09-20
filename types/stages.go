@@ -20,7 +20,8 @@ const (
 )
 
 var (
-	// the defauts we need as pointers, so assign them to vars, such that we can acquire the pointer.
+	// the defauts we need as pointers, so assign them to vars, such that we can acquire the
+	// pointer.
 	defaultCommandExecutionPhase = CommandExecutionPhaseEnter
 	defaultCommandTarget         = CommandTargetContainer
 )
@@ -100,30 +101,35 @@ func (s *Stages) Merge(other *Stages) error {
 			return err
 		}
 	}
+
 	if other.Create != nil {
 		err = s.Create.Merge(other.Create)
 		if err != nil {
 			return err
 		}
 	}
+
 	if other.CreateLinks != nil {
 		err = s.CreateLinks.Merge(other.CreateLinks)
 		if err != nil {
 			return err
 		}
 	}
+
 	if other.Healthy != nil {
 		err = s.Healthy.Merge(other.Healthy)
 		if err != nil {
 			return err
 		}
 	}
+
 	if other.Exit != nil {
 		err = s.Exit.Merge(other.Exit)
 		if err != nil {
 			return err
 		}
 	}
+
 	return err
 }
 
@@ -154,6 +160,7 @@ func (c *Exec) InitDefaults() {
 	if c.Phase == "" {
 		c.Phase = defaultCommandExecutionPhase
 	}
+
 	// default target to container
 	if c.Target == "" {
 		c.Target = defaultCommandTarget
@@ -171,7 +178,8 @@ func (c *Exec) String() string {
 type ExecPhase string
 
 const (
-	// CommandExecutionPhaseEnter represents a command to be executed when the node enters the stage.
+	// CommandExecutionPhaseEnter represents a command to be executed when the node enters the
+	// stage.
 	CommandExecutionPhaseEnter ExecPhase = "on-enter"
 	// CommandExecutionPhaseExit represents a command to be executed when the node exits the stage.
 	CommandExecutionPhaseExit ExecPhase = "on-exit"
@@ -180,7 +188,8 @@ const (
 type ExecTarget string
 
 const (
-	// CommandTargetContainer determines that the commands are meant to be executed within the container.
+	// CommandTargetContainer determines that the commands are meant to be executed within the
+	// container.
 	CommandTargetContainer ExecTarget = "container"
 	// CommandTargetHost determines that the commands are meant to be executed on the host system.
 	CommandTargetHost ExecTarget = "host"
@@ -289,6 +298,7 @@ func (s *StageBase) Merge(sb *StageBase) error {
 		if s.WaitFor.contains(wf) {
 			continue
 		}
+
 		s.WaitFor = append(s.WaitFor, wf)
 	}
 

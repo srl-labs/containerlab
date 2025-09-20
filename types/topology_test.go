@@ -45,6 +45,8 @@ var topologyTestSet = map[string]struct {
 				Certificate: &CertificateConfig{
 					Issue: clabutils.Pointer(true),
 				},
+				Env:    map[string]string{},
+				Labels: map[string]string{},
 			},
 		},
 	},
@@ -665,7 +667,9 @@ var topologyTestSet = map[string]struct {
 func TestGetNodeKind(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		kind := item.input.GetNodeKind("node1")
+
 		if diff := cmp.Diff(item.want["node1"].Kind, kind); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -675,8 +679,11 @@ func TestGetNodeKind(t *testing.T) {
 func TestGetNodeGroup(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		group := item.input.GetNodeGroup("node1")
+
 		t.Logf("%q test item result: %v", name, group)
+
 		if diff := cmp.Diff(item.want["node1"].Group, group); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -686,8 +693,11 @@ func TestGetNodeGroup(t *testing.T) {
 func TestGetNodeType(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		typ := item.input.GetNodeType("node1")
+
 		t.Logf("%q test item result: %v", name, typ)
+
 		if diff := cmp.Diff(item.want["node1"].Type, typ); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -697,9 +707,13 @@ func TestGetNodeType(t *testing.T) {
 func TestGetNodeConfig(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		config := item.input.GetNodeStartupConfig("node1")
+
 		wantedConfig := item.want["node1"].StartupConfig
+
 		t.Logf("%q test item result: %v", name, config)
+
 		if diff := cmp.Diff(wantedConfig, config); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -709,8 +723,11 @@ func TestGetNodeConfig(t *testing.T) {
 func TestGetNodeImage(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		image := item.input.GetNodeImage("node1")
+
 		t.Logf("%q test item result: %v", name, image)
+
 		if diff := cmp.Diff(item.want["node1"].Image, image); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -720,9 +737,13 @@ func TestGetNodeImage(t *testing.T) {
 func TestGetNodeLicense(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		lic := item.input.GetNodeLicense("node1")
+
 		wantedLicense := item.want["node1"].License
+
 		t.Logf("%q test item result: %v", name, lic)
+
 		if diff := cmp.Diff(wantedLicense, lic); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -732,8 +753,11 @@ func TestGetNodeLicense(t *testing.T) {
 func TestGetNodePosition(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		pos := item.input.GetNodePosition("node1")
+
 		t.Logf("%q test item result: %v", name, pos)
+
 		if diff := cmp.Diff(item.want["node1"].Position, pos); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -743,8 +767,11 @@ func TestGetNodePosition(t *testing.T) {
 func TestGetNodeCmd(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		cmd := item.input.GetNodeCmd("node1")
+
 		t.Logf("%q test item result: %v", name, cmd)
+
 		if diff := cmp.Diff(item.want["node1"].Cmd, cmd); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -754,8 +781,11 @@ func TestGetNodeCmd(t *testing.T) {
 func TestGetNodeExec(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		exec := item.input.GetNodeExec("node1")
+
 		t.Logf("%q test item result: %v", name, exec)
+
 		if diff := cmp.Diff(item.want["node1"].Exec, exec); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -765,8 +795,11 @@ func TestGetNodeExec(t *testing.T) {
 func TestGetNodeUser(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		user := item.input.GetNodeUser("node1")
+
 		t.Logf("%q test item result: %v", name, user)
+
 		if diff := cmp.Diff(item.want["node1"].User, user); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -790,8 +823,11 @@ func TestGetNodeBinds(t *testing.T) {
 func TestGetNodeEnv(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		envs := item.input.GetNodeEnv("node1")
+
 		t.Logf("%q test item result: %v", name, envs)
+
 		if diff := cmp.Diff(item.want["node1"].Env, envs); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -801,8 +837,11 @@ func TestGetNodeEnv(t *testing.T) {
 func TestGetNodeLabels(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		labels := item.input.GetNodeLabels("node1")
+
 		t.Logf("%q test item result: %v", name, labels)
+
 		if diff := cmp.Diff(item.want["node1"].Labels, labels); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -812,12 +851,17 @@ func TestGetNodeLabels(t *testing.T) {
 func TestGetNodeAutoRemove(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		autoremove := item.input.GetNodeAutoRemove("node1")
+
 		t.Logf("%q test item result: %v", name, autoremove)
+
 		want := false
+
 		if item.want["node1"].AutoRemove != nil {
 			want = *item.want["node1"].AutoRemove
 		}
+
 		if diff := cmp.Diff(want, autoremove); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}

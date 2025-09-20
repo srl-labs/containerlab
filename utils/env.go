@@ -23,22 +23,22 @@ func ConvertEnvs(m map[string]string) []string {
 	return s
 }
 
-func mapify(i interface{}) (map[string]interface{}, bool) {
+func mapify(i any) (map[string]any, bool) {
 	value := reflect.ValueOf(i)
 	if value.Kind() == reflect.Map {
-		m := map[string]interface{}{}
+		m := map[string]any{}
 		for _, k := range value.MapKeys() {
 			m[fmt.Sprintf("%v", k)] = value.MapIndex(k).Interface()
 		}
 		return m, true
 	}
-	return map[string]interface{}{}, false
+	return map[string]any{}, false
 }
 
 // MergeMaps merges all dictionaries and return a new dictionary
 // recursively if matching keys are both dictionaries.
-func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
-	res := make(map[string]interface{})
+func MergeMaps(dicts ...map[string]any) map[string]any {
+	res := make(map[string]any)
 	for _, m := range dicts {
 		if m == nil {
 			continue
@@ -83,7 +83,7 @@ func MergeStringMaps(maps ...map[string]string) map[string]string {
 		}
 	}
 
-	// return nil nil instead of an empty map if all maps were nil
+	// return nil instead of an empty map if all maps were nil
 	if !nonNilMapSeen {
 		return nil
 	}

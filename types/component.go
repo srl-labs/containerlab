@@ -17,14 +17,14 @@ type XIOM struct {
 	MDA  MDAS   `yaml:"mda,omitempty"`
 }
 
-type XIOMS []XIOM
+type XIOMS []XIOM //nolint: recvcheck
 
 type MDA struct {
 	Slot int    `yaml:"slot,omitempty"`
 	Type string `yaml:"type,omitempty"`
 }
 
-type MDAS []MDA
+type MDAS []MDA //nolint: recvcheck
 
 func (c *Component) Copy() *Component {
 	if c == nil {
@@ -62,17 +62,25 @@ func (l *MDAS) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 
 	slots := map[int]struct{}{}
+
 	for _, e := range entries {
 		if e.Type == "" || e.Slot <= 0 {
-			return fmt.Errorf("invalid mda entry. slot and type are required, got slot %q, type%q", e.Slot, e.Type)
+			return fmt.Errorf(
+				"invalid mda entry. slot and type are required, got slot %q, type%q",
+				e.Slot,
+				e.Type,
+			)
 		}
+
 		if _, exists := slots[e.Slot]; exists {
 			return fmt.Errorf("invalid mda entry. duplicate slot %d", e.Slot)
 		}
+
 		slots[e.Slot] = struct{}{}
 	}
 
 	*l = MDAS(entries)
+
 	return nil
 }
 
@@ -80,13 +88,16 @@ func (l MDAS) Copy() MDAS {
 	if l == nil {
 		return nil
 	}
+
 	out := make([]MDA, len(l))
 	copy(out, l)
+
 	return out
 }
 
 func (l *XIOMS) UnmarshalYAML(unmarshal func(any) error) error {
 	var entries []XIOM
+
 	if err := unmarshal(&entries); err != nil {
 		return err
 	}
@@ -97,17 +108,25 @@ func (l *XIOMS) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 
 	slots := map[int]struct{}{}
+
 	for _, e := range entries {
 		if e.Type == "" || e.Slot <= 0 {
-			return fmt.Errorf("invalid xiom entry. slot and type are required, got slot %q, type %q", e.Slot, e.Type)
+			return fmt.Errorf(
+				"invalid xiom entry. slot and type are required, got slot %q, type %q",
+				e.Slot,
+				e.Type,
+			)
 		}
+
 		if _, exists := slots[e.Slot]; exists {
 			return fmt.Errorf("invalid xiom entry. duplicate slot %d", e.Slot)
 		}
+
 		slots[e.Slot] = struct{}{}
 	}
 
 	*l = XIOMS(entries)
+
 	return nil
 }
 
@@ -115,11 +134,14 @@ func (l XIOMS) Copy() XIOMS {
 	if l == nil {
 		return nil
 	}
+
 	out := make([]XIOM, len(l))
 	copy(out, l)
+
 	// deep copy
 	for i := range out {
 		out[i].MDA = out[i].MDA.Copy()
 	}
+
 	return out
 }
