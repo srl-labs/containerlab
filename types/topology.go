@@ -20,7 +20,7 @@ func getField[T any](
 	fieldDefault := getFieldDefaults(topo.GetDefaults())
 
 	nodeDefintion, ok := topo.Nodes[nodeName]
-	if !ok {
+	if nodeDefintion == nil || !ok {
 		return fieldDefault
 	}
 
@@ -72,7 +72,7 @@ func getFieldPtr[T any, P ptrTo[T]](
 	}
 
 	nodeDefintion, ok := topo.Nodes[nodeName]
-	if !ok {
+	if nodeDefintion == nil || !ok {
 		return finalDefault
 	}
 
@@ -111,7 +111,7 @@ func mergeStringSliceFields(
 	var out []string
 
 	nodeDefintion, ok := topo.Nodes[nodeName]
-	if !ok {
+	if nodeDefintion == nil || !ok {
 		return out
 	}
 
@@ -148,7 +148,7 @@ func mergeStringMapFields(
 	out := map[string]string{}
 
 	nodeDefintion, ok := topo.Nodes[nodeName]
-	if !ok {
+	if nodeDefintion == nil || !ok {
 		return out
 	}
 
@@ -255,7 +255,7 @@ func (t *Topology) GetNodeKind(name string) string {
 	defaultKind := t.GetDefaults().Kind
 
 	nodeDefinition, ok := t.Nodes[name]
-	if !ok {
+	if nodeDefinition == nil || !ok {
 		// if no node kind is set, there is no way for us to look up the kind in the kind
 		return defaultKind
 	}
@@ -337,7 +337,7 @@ func (t *Topology) GetNodeGroup(name string) string {
 	defaultGroup := t.GetDefaults().Group
 
 	nodeDefinition, ok := t.Nodes[name]
-	if !ok {
+	if nodeDefinition == nil || !ok {
 		return defaultGroup
 	}
 
@@ -365,7 +365,7 @@ func (t *Topology) GetNodeType(name string) string {
 	defaultType := t.GetDefaults().Type
 
 	nodeDefinition, ok := t.Nodes[name]
-	if !ok {
+	if nodeDefinition == nil || !ok {
 		return defaultType
 	}
 
@@ -832,7 +832,8 @@ func (t *Topology) GetStages(nodeName string) (*Stages, error) {
 		s.Merge(group.Stages)
 	}
 
-	if t.Nodes[nodeName].Stages != nil {
+	nodeDefinition := t.Nodes[nodeName]
+	if nodeDefinition != nil && t.Nodes[nodeName].Stages != nil {
 		s.Merge(t.Nodes[nodeName].Stages)
 	}
 
@@ -877,9 +878,9 @@ func (t *Topology) GetCertificateConfig(name string) *CertificateConfig {
 
 func (t *Topology) GetNodeAliases(nodeName string) []string {
 	nodeDefinition, ok := t.Nodes[nodeName]
-	if ok {
-		return nodeDefinition.Aliases
+	if nodeDefinition == nil || !ok {
+		return nil
 	}
 
-	return nil
+	return nodeDefinition.Aliases
 }
