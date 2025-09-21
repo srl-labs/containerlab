@@ -251,106 +251,46 @@ func (t *Topology) GetGroups() map[string]*NodeDefinition {
 	return t.Groups
 }
 
-func (t *Topology) GetNodeKind(name string) string {
+func (t *Topology) GetNodeKind(nodeName string) string {
 	defaultKind := t.GetDefaults().Kind
 
-	nodeDefinition, ok := t.Nodes[name]
+	nodeDefinition, ok := t.Nodes[nodeName]
 	if nodeDefinition == nil || !ok {
-		// if no node kind is set, there is no way for us to look up the kind in the kind
 		return defaultKind
 	}
 
-	kind := nodeDefinition.Kind
-
-	if kind != "" {
-		return kind
+	if nodeDefinition.Kind != "" {
+		return nodeDefinition.Kind
 	}
 
 	group := t.GetGroup(nodeDefinition.Group)
-
-	if group != nil {
-		// Check if the node actually has a group, then get the kind from groups
-		groupKind := group.Kind
-
-		if groupKind != "" {
-			return groupKind
-		}
+	if group != nil && group.Kind != "" {
+		return group.Kind
 	}
 
-	defaultGroup := t.GetGroup(t.Defaults.Group)
-
-	if defaultGroup != nil {
-		// Check for groups at default levels
-		defaultsGroupKind := defaultGroup.Kind
-
-		if defaultsGroupKind != "" {
-			return defaultsGroupKind
-		}
+	defaults := t.GetGroup(t.Defaults.Group)
+	if defaults != nil && defaults.Kind != "" {
+		return defaults.Kind
 	}
 
 	return defaultKind
 }
 
-func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
-	bindSources := mergeStringSliceFields(
-		t,
-		nodeName,
-		func(node *NodeDefinition) []string { return node.Binds },
-		func(group *NodeDefinition) []string { return group.Binds },
-		func(kind *NodeDefinition) []string { return kind.Binds },
-		func(defaults *NodeDefinition) []string { return defaults.Binds },
-	)
-
-	if len(bindSources) == 0 {
-		return nil, nil
-	}
-
-	binds := map[string]*Bind{}
-
-	// add the binds from less to more specific levels, indexed by the destination path.
-	// thereby more specific binds will overwrite less specific one
-	for _, bind := range bindSources {
-		b, err := NewBindFromString(bind)
-		if err != nil {
-			return nil, err
-		}
-
-		binds[b.Dst()] = b
-	}
-
-	// in order to return nil instead of empty array when no binds are defined
-	if len(binds) == 0 {
-		return nil, nil
-	}
-
-	// build the result array with all the entries from binds map
-	result := make([]string, 0, len(binds))
-
-	for _, b := range binds {
-		result = append(result, b.String())
-	}
-
-	return result, nil
-}
-
-func (t *Topology) GetNodeGroup(name string) string {
+func (t *Topology) GetNodeGroup(nodeName string) string {
 	defaultGroup := t.GetDefaults().Group
 
-	nodeDefinition, ok := t.Nodes[name]
+	nodeDefinition, ok := t.Nodes[nodeName]
 	if nodeDefinition == nil || !ok {
 		return defaultGroup
 	}
 
-	group := nodeDefinition.Group
-
-	if group != "" {
-		return group
+	if nodeDefinition.Group != "" {
+		return nodeDefinition.Group
 	}
 
-	kind := t.GetNodeKind(name)
+	kind := t.GetNodeKind(nodeName)
 
 	if kind != "" {
-		// Check if the node actually has a kind, then get the group from kinds
 		kindGroup := t.GetKind(kind).Group
 
 		if kindGroup != "" {
@@ -361,10 +301,10 @@ func (t *Topology) GetNodeGroup(name string) string {
 	return defaultGroup
 }
 
-func (t *Topology) GetNodeType(name string) string {
+func (t *Topology) GetNodeType(nodeName string) string {
 	defaultType := t.GetDefaults().Type
 
-	nodeDefinition, ok := t.Nodes[name]
+	nodeDefinition, ok := t.Nodes[nodeName]
 	if nodeDefinition == nil || !ok {
 		return defaultType
 	}
@@ -373,14 +313,12 @@ func (t *Topology) GetNodeType(name string) string {
 		return strings.TrimSpace(nodeDefinition.Type)
 	}
 
-	group := t.GetGroup(t.GetNodeGroup(name))
-
+	group := t.GetGroup(t.GetNodeGroup(nodeName))
 	if group != nil && group.Type != "" {
 		return strings.TrimSpace(group.Type)
 	}
 
-	kind := t.GetKind(t.GetNodeKind(name))
-
+	kind := t.GetKind(t.GetNodeKind(nodeName))
 	if kind != nil && kind.Type != "" {
 		return strings.TrimSpace(kind.Type)
 	}
@@ -794,6 +732,48 @@ func (t *Topology) GetHealthCheckConfig(nodeName string) *HealthcheckConfig {
 		func(defaults *NodeDefinition) *HealthcheckConfig { return defaults.HealthCheck },
 		func(v *HealthcheckConfig) bool { return v != nil },
 	)
+}
+
+func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
+	bindSources := mergeStringSliceFields(
+		t,
+		nodeName,
+		func(node *NodeDefinition) []string { return node.Binds },
+		func(group *NodeDefinition) []string { return group.Binds },
+		func(kind *NodeDefinition) []string { return kind.Binds },
+		func(defaults *NodeDefinition) []string { return defaults.Binds },
+	)
+
+	if len(bindSources) == 0 {
+		return nil, nil
+	}
+
+	binds := map[string]*Bind{}
+
+	// add the binds from less to more specific levels, indexed by the destination path.
+	// thereby more specific binds will overwrite less specific one
+	for _, bind := range bindSources {
+		b, err := NewBindFromString(bind)
+		if err != nil {
+			return nil, err
+		}
+
+		binds[b.Dst()] = b
+	}
+
+	// in order to return nil instead of empty array when no binds are defined
+	if len(binds) == 0 {
+		return nil, nil
+	}
+
+	// build the result array with all the entries from binds map
+	result := make([]string, 0, len(binds))
+
+	for _, b := range binds {
+		result = append(result, b.String())
+	}
+
+	return result, nil
 }
 
 func (t *Topology) GetNodeConfigDispatcher(nodeName string) *ConfigDispatcher {
