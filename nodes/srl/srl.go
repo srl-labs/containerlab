@@ -644,7 +644,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 				tplData.MgmtMTU = m
 				// MgmtMTU seems to be only set when we use macvlan interface
 				// with network-mode: none. For this super narrow use case
-				// we setup mgmt port mtu to match the mtu of the macvlan parnet interface
+				// we setup mgmt port mtu to match the mtu of the macvlan parent interface
 				// but then we need to make sure that IP MTU is smaller by 14B
 				tplData.MgmtIPMTU = m - 14
 			}
