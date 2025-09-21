@@ -21,7 +21,7 @@ type Link struct {
 	B      *Endpoint
 	MTU    int
 	Labels map[string]string
-	Vars   map[string]interface{}
+	Vars   map[string]any
 }
 
 func (link *Link) String() string {
@@ -263,10 +263,10 @@ type GenericFilter struct {
 // that is responsible to execute configuration commands on the nodes
 // after they started.
 type ConfigDispatcher struct {
-	Vars map[string]interface{} `yaml:"vars,omitempty"`
+	Vars map[string]any `yaml:"vars,omitempty"`
 }
 
-func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
+func (cd *ConfigDispatcher) GetVars() map[string]any {
 	if cd == nil {
 		return nil
 	}

@@ -57,7 +57,7 @@ func PrepareVars(c *clabcore.CLab) map[string]*NodeConfig {
 		}
 
 		// Create link array
-		vars[vkLinks] = []interface{}{}
+		vars[vkLinks] = []any{}
 
 		// Ensure role or Kind
 		if _, ok := vars[vkRole]; !ok {
@@ -95,7 +95,7 @@ func prepareLinkVars(link *clabtypes.Link, varsA, varsB Dict) error {
 
 	// Add a key/value(s) pairs to the links vars (varsA & varsB)
 	// If multiple vars are specified, each links also gets the far end value
-	addValues := func(key string, v1 interface{}, v2 interface{}) {
+	addValues := func(key string, v1 any, v2 any) {
 		varsA[key] = v1
 		(varsA[vkFarEnd]).(Dict)[key] = v2
 		varsB[key] = v2

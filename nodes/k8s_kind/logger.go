@@ -26,7 +26,7 @@ func (l *kindLogger) Warn(message string) {
 	l.l.Warn(message)
 }
 
-func (l *kindLogger) Warnf(format string, args ...interface{}) {
+func (l *kindLogger) Warnf(format string, args ...any) {
 	l.l.Warnf(format, args...)
 }
 
@@ -34,7 +34,7 @@ func (l *kindLogger) Error(message string) {
 	l.l.Error(message)
 }
 
-func (l *kindLogger) Errorf(format string, args ...interface{}) {
+func (l *kindLogger) Errorf(format string, args ...any) {
 	l.l.Errorf(format, args...)
 }
 
@@ -59,7 +59,7 @@ func (l *kindInfoLogger) Info(message string) {
 	l.l.Info(message)
 }
 
-func (l *kindInfoLogger) Infof(format string, args ...interface{}) {
+func (l *kindInfoLogger) Infof(format string, args ...any) {
 	if !l.enabled {
 		return
 	}

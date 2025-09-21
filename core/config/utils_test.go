@@ -73,7 +73,7 @@ func gettestLink() *clabtypes.Link {
 			Node: &clabtypes.NodeConfig{
 				ShortName: "a",
 				Config: &clabtypes.ConfigDispatcher{
-					Vars: map[string]interface{}{
+					Vars: map[string]any{
 						vkSystemIP: "10.0.0.1/32",
 					},
 				},
@@ -83,17 +83,17 @@ func gettestLink() *clabtypes.Link {
 			Node: &clabtypes.NodeConfig{
 				ShortName: "b",
 				Config: &clabtypes.ConfigDispatcher{
-					Vars: map[string]interface{}{
+					Vars: map[string]any{
 						vkSystemIP: "10.0.0.2/32",
 					},
 				},
 			},
 		},
-		Vars: map[string]interface{}{},
+		Vars: map[string]any{},
 	}
 }
 
-func assert(t *testing.T, val, exp interface{}) {
+func assert(t *testing.T, val, exp any) {
 	if !cmp.Equal(val, exp) {
 		_, fn, line, _ := runtime.Caller(1)
 		t.Errorf("assert failed on line %v in %s\n%s", line, fn, cmp.Diff(val, exp))
