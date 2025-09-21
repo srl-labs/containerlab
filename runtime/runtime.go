@@ -70,6 +70,8 @@ type ContainerRuntime interface {
 	GetRuntimeSocket() (string, error)
 	// GetCooCBindMounts returns the extra mounts a container running this runtime in Container-outside-of-Container (CooC - General case – container uses host container runtime) does need to function properly
 	GetCooCBindMounts() clabtypes.Binds
+	// GetRuntimeBinary returns the path to the binary of the runtime
+	GetRuntimeBinary() (string, error)
 }
 
 type ContainerStatus string
