@@ -67,7 +67,7 @@ func main() {
 	)
 }
 
-func checkResponse(res interface{}, err error) {
+func checkResponse(res any, err error) {
 	if err != nil {
 		log.Fatal(err) // skipcq: RVV-A0003
 	}

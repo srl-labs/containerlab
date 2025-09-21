@@ -148,7 +148,7 @@ func printContainerInterfaces(
 			{Number: 1, AutoMerge: true},
 			{
 				Name: "State",
-				Transformer: func(val interface{}) string {
+				Transformer: func(val any) string {
 					state := strings.ToLower(val.(string))
 					switch {
 					case state == "up":

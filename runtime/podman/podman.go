@@ -194,7 +194,7 @@ func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConf
 }
 
 // StartContainer starts a previously created container by ID or its name and executes post-start actions method.
-func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, node runtime.Node) (interface{}, error) {
+func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, node runtime.Node) (any, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err

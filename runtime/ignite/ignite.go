@@ -160,7 +160,7 @@ func (c *IgniteRuntime) StartContainer( //nolint: funlen
 	ctx context.Context,
 	_ string,
 	node clabruntime.Node,
-) (interface{}, error) {
+) (any, error) {
 	vm := c.baseVM.DeepCopy()
 
 	nodecfg := node.Config()
