@@ -56,25 +56,31 @@ ssh admin@<node-name> -p 830 -s netconf
 
 ///
 /// tab | gNMI
-By default, gRPC services are insecure running on port 57400, but you can boot with a TLS-enabled profile using clab-generated certificates using the [certificate](../nodes.md#certificate) `issue: true` option on the node definition.
+By default, gRPC services (gNMI, gNOI) are configured in the insecure mode running over port 57400:
+
+To verify gNMI service operation, you can use the best-in-class [gnmic](https://gnmic.openconfig.net) gNMI client:
+
+```bash
+gnmic -a <container-name/node-mgmt-address> --insecure \
+-u admin -p NokiaSros1! \
+capabilities
+```
+
+To secure gRPC services with TLS, you can instruct containerlab to issue a self-signed certificate for the node, using [certificate](../nodes.md#certificate) issue config block:
+
 ```yaml
 topology:
   nodes:
     sr-sim:
       kind: nokia_srsim
       image: nokia_srsim:25.7.R1
-      certificate: 
+      certificate:
         issue: True # False by default
 ```
- To verify gNMI service operation, you use the best-in-class [gnmic](https://gnmic.openconfig.net) gNMI client:
+
+Then you can enjoy the secured and verified gNMI connectivity:
 
 ```bash
-#Insecure
-gnmic -a <container-name/node-mgmt-address> --insecure \
--u admin -p NokiaSros1! \
-capabilities
-
-#Secure (use certificate.issue: true)
 gnmic -a <container-name/node-mgmt-address> --tls-ca <CLAB_DIR>/.tls/ca/ca.pem \
 -u admin -p NokiaSros1! \
 capabilities
