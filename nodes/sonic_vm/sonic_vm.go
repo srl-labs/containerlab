@@ -1,7 +1,8 @@
 // Copyright 2020 Nokia
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
-// The author of this code is Adam Kulagowski (adam.kulagowski@codilime.com), CodiLime (codilime.com).
+// The author of this code is Adam Kulagowski (adam.kulagowski@codilime.com), CodiLime
+// (codilime.com).
 
 package sonic_vm
 
@@ -42,7 +43,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(sonic_vm)
@@ -74,10 +79,18 @@ func (n *sonic_vm) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
+		fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"),
+	)
 
-	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
+	n.Cfg.Cmd = fmt.Sprintf(
+		"--username %s --password %s --hostname %s --connection-mode %s --trace",
+		n.Cfg.Env["USERNAME"],
+		n.Cfg.Env["PASSWORD"],
+		n.Cfg.ShortName,
+		n.Cfg.Env["CONNECTION_MODE"],
+	)
 
 	return nil
 }
@@ -110,7 +123,11 @@ func (n *sonic_vm) SaveConfig(ctx context.Context) error {
 	}
 
 	confPath := n.Cfg.LabDir + "/" + configDirName
-	log.Infof("saved /etc/sonic/config_db.json backup from %s node to %s\n", n.Cfg.ShortName, confPath)
+	log.Infof(
+		"saved /etc/sonic/config_db.json backup from %s node to %s\n",
+		n.Cfg.ShortName,
+		confPath,
+	)
 
 	return nil
 }

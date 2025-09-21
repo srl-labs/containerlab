@@ -69,7 +69,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(iol)
@@ -303,10 +307,20 @@ func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 			foundIndices[indexKey] = true
 			parsedIndices[indexKey], err = strconv.Atoi(index)
 			if err != nil {
-				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %s index %q could not be cast to an integer",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
 			if parsedIndices[indexKey] < 0 {
-				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 0", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %q index %q does not match requirement >= 0",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
 		} else {
 			foundIndices[indexKey] = false
@@ -321,7 +335,8 @@ func (*iol) GetMappedInterfaceName(ifName string) (string, error) {
 	}
 }
 
-// AddEndpoint override maps the endpoint name to an ethX-based naming where necessary, before adding it to the node endpoints. Returns an error if the mapping goes wrong or if the
+// AddEndpoint override maps the endpoint name to an ethX-based naming where necessary, before
+// adding it to the node endpoints. Returns an error if the mapping goes wrong or if the
 // interface name is NOT allowed.
 func (n *iol) AddEndpoint(e clablinks.Endpoint) error {
 	endpointName := e.GetIfaceName()
@@ -334,10 +349,19 @@ func (n *iol) AddEndpoint(e clablinks.Endpoint) error {
 		log.Debugf("%s: %s needs mapping", n.Cfg.ShortName, endpointName)
 		mappedName, err := n.GetMappedInterfaceName(endpointName)
 		if err != nil {
-			return fmt.Errorf("%q interface name %q could not be mapped to an ethX-based interface name: %w\n%s",
-				n.Cfg.ShortName, e.GetIfaceName(), err, IntfHelpMsg)
+			return fmt.Errorf(
+				"%q interface name %q could not be mapped to an ethX-based interface name: %w\n%s",
+				n.Cfg.ShortName,
+				e.GetIfaceName(),
+				err,
+				IntfHelpMsg,
+			)
 		}
-		log.Debugf("Interface Mapping: Mapping interface %q (ifAlias) to %q (ifName)", endpointName, mappedName)
+		log.Debugf(
+			"Interface Mapping: Mapping interface %q (ifAlias) to %q (ifName)",
+			endpointName,
+			mappedName,
+		)
 		IFaceName = mappedName
 		IFaceAlias = endpointName
 	}
@@ -359,12 +383,19 @@ func (n *iol) CheckInterfaceName() error {
 	for _, e := range n.Endpoints {
 		IFaceName := e.GetIfaceName()
 		if MgmtIntfRegexp.MatchString(IFaceName) {
-			return fmt.Errorf("IOL Node: %q. Management interface Ethernet0/0, e0/0 or eth0 is not allowed", n.Cfg.ShortName)
+			return fmt.Errorf(
+				"IOL Node: %q. Management interface Ethernet0/0, e0/0 or eth0 is not allowed",
+				n.Cfg.ShortName,
+			)
 		}
 
 		if !DefaultIntfRegexp.MatchString(IFaceName) {
-			return fmt.Errorf("IOL Node %q has an interface named %q which doesn't match the required pattern. %s",
-				n.Cfg.ShortName, IFaceName, IntfHelpMsg)
+			return fmt.Errorf(
+				"IOL Node %q has an interface named %q which doesn't match the required pattern. %s",
+				n.Cfg.ShortName,
+				IFaceName,
+				IntfHelpMsg,
+			)
 		}
 	}
 
@@ -378,14 +409,21 @@ func isPartialConfigFile(c string) bool {
 }
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
-	mgmt_str := fmt.Sprintf("\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
-		n.Cfg.MgmtIPv4Address, clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength), n.Cfg.MgmtIPv6Address,
-		n.Cfg.MgmtIPv6PrefixLength, n.Cfg.MgmtIPv4Gateway, n.Cfg.MgmtIPv6Gateway)
+	mgmt_str := fmt.Sprintf(
+		"\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
+		n.Cfg.MgmtIPv4Address,
+		clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
+		n.Cfg.MgmtIPv6Address,
+		n.Cfg.MgmtIPv6PrefixLength,
+		n.Cfg.MgmtIPv4Gateway,
+		n.Cfg.MgmtIPv6Gateway,
+	)
 
 	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
 }
 
-// SaveConfig is used for "clab save" functionality -- it saves the running config to the startup configuration.
+// SaveConfig is used for "clab save" functionality -- it saves the running config to the startup
+// configuration.
 func (n *iol) SaveConfig(_ context.Context) error {
 	p, err := platform.NewPlatform(
 		"cisco_iosxe",
@@ -415,6 +453,9 @@ func (n *iol) SaveConfig(_ context.Context) error {
 		return fmt.Errorf("failed to send command; error: %+v", err)
 	}
 
-	log.Infof("Successfully copied running configuration to startup configuration file for node: %q\n", n.Cfg.ShortName)
+	log.Infof(
+		"Successfully copied running configuration to startup configuration file for node: %q\n",
+		n.Cfg.ShortName,
+	)
 	return nil
 }

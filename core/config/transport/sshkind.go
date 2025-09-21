@@ -15,7 +15,8 @@ type SSHKind interface {
 	ConfigCommit(s *SSHTransport) (*SSHReply, error)
 	// Prompt parsing function
 	//
-	// This function receives string, split by the delimiter and should ensure this is a valid prompt
+	// This function receives string, split by the delimiter and should ensure this is a valid
+	// prompt
 	// Valid prompt, strip the prompt from the result and add it to the prompt in SSHReply
 	//
 	// A default implementation is promptParseNoSpaces, which simply ensures there are

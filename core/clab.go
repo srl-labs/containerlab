@@ -592,7 +592,8 @@ func (c *CLab) scheduleNodes(
 			}(dn, c.dependencyManager, concurrentChan, workerFuncChWG)
 		}
 
-		// Gate to make sure the channel is not closed before all the nodes made it though the channel
+		// Gate to make sure the channel is not closed before all the nodes made it though the
+		// channel
 		workerFuncChWG.Wait()
 		// close the channel and thereby terminate the workerFuncs
 		close(concurrentChan)

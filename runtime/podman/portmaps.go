@@ -19,10 +19,14 @@ import (
 
 // Reusing parts of the code from podman specgenutil/util.go
 // https://github.com/containers/podman/blob/54c630aa0a4dbbddb04ac07b223687aeaa6daefd/pkg/specgenutil/util.go
-// Licensed under apache 2.0 license https://github.com/containers/podman/blob/54c630aa0a4dbbddb04ac07b223687aeaa6daefd/LICENSE
+// Licensed under apache 2.0 license
+// https://github.com/containers/podman/blob/54c630aa0a4dbbddb04ac07b223687aeaa6daefd/LICENSE
 
 // convertPortMap takes a nat.PortMap Docker type and produces a podman-compatible PortMapping.
-func (*PodmanRuntime) convertPortMap(_ context.Context, portMap nat.PortMap) ([]netTypes.PortMapping, error) {
+func (*PodmanRuntime) convertPortMap(
+	_ context.Context,
+	portMap nat.PortMap,
+) ([]netTypes.PortMapping, error) {
 	log.Debugf("Method convertPortMap was called with inputs %+v", portMap)
 	toReturn := make([]netTypes.PortMapping, 0, len(portMap))
 	for port, hostpmap := range portMap {
@@ -55,7 +59,10 @@ func (*PodmanRuntime) convertPortMap(_ context.Context, portMap nat.PortMap) ([]
 	return toReturn, nil
 }
 
-func (*PodmanRuntime) convertExpose(_ context.Context, exposePorts nat.PortSet) (map[uint16]string, error) {
+func (*PodmanRuntime) convertExpose(
+	_ context.Context,
+	exposePorts nat.PortSet,
+) (map[uint16]string, error) {
 	log.Debugf("Method convertExpose was called with inputs %+v", exposePorts)
 	toReturn := make(map[uint16]string, len(exposePorts))
 	for portProto := range exposePorts {
@@ -81,7 +88,11 @@ func (*PodmanRuntime) convertExpose(_ context.Context, exposePorts nat.PortSet) 
 	return toReturn, nil
 }
 
-func parseSplitPort(hostIP, hostPort *string, ctrPort string, protocol *string) (netTypes.PortMapping, error) {
+func parseSplitPort(
+	hostIP, hostPort *string,
+	ctrPort string,
+	protocol *string,
+) (netTypes.PortMapping, error) {
 	newPort := netTypes.PortMapping{}
 	if ctrPort == "" {
 		return newPort, errors.Errorf("must provide a non-empty container port to publish")
@@ -138,7 +149,9 @@ func parseSplitPort(hostIP, hostPort *string, ctrPort string, protocol *string) 
 func parseAndValidateRange(portRange string) (uint16, uint16, error) {
 	splitRange := strings.Split(portRange, "-")
 	if len(splitRange) > 2 {
-		return 0, 0, errors.Errorf("invalid port format - port ranges are formatted as startPort-stopPort")
+		return 0, 0, errors.Errorf(
+			"invalid port format - port ranges are formatted as startPort-stopPort",
+		)
 	}
 
 	if splitRange[0] == "" {
@@ -160,7 +173,11 @@ func parseAndValidateRange(portRange string) (uint16, uint16, error) {
 			return 0, 0, err
 		}
 		if endPort <= startPort {
-			return 0, 0, errors.Errorf("the end port of a range must be higher than the start port - %d is not higher than %d", endPort, startPort)
+			return 0, 0, errors.Errorf(
+				"the end port of a range must be higher than the start port - %d is not higher than %d",
+				endPort,
+				startPort,
+			)
 		}
 		// Our range is the total number of ports
 		// involved, so we need to add 1 (8080:8081 is

@@ -210,7 +210,11 @@ func newFakeNode(name string) *fakeNode {
 	return &fakeNode{Name: name}
 }
 
-func (*fakeNode) AddLinkToContainer(_ context.Context, _ netlink.Link, _ func(ns.NetNS) error) error {
+func (*fakeNode) AddLinkToContainer(
+	_ context.Context,
+	_ netlink.Link,
+	_ func(ns.NetNS) error,
+) error {
 	panic("not implemented")
 }
 

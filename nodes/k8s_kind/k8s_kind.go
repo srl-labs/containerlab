@@ -166,7 +166,10 @@ func (n *k8s_kind) getProvider() (*cluster.Provider, error) {
 	case "podman": // this is an ugly workaround because podman is generally excluded via golang tags ... should be "podman.RuntimeName"
 		kindProviderOptions = cluster.ProviderWithPodman()
 	default:
-		return nil, fmt.Errorf("runtime %s not supported by the k8s_kind node kind", n.Runtime.GetName())
+		return nil, fmt.Errorf(
+			"runtime %s not supported by the k8s_kind node kind",
+			n.Runtime.GetName(),
+		)
 	}
 
 	// create the Provider with the above runtime based options

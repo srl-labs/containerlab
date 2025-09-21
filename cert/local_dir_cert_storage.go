@@ -40,7 +40,11 @@ func (c *LocalDirCertStorage) StoreCaCert(cert *Certificate) error {
 	clabutils.CreateDirectory(filepath.Dir(c.paths.CaCertAbsFilename()),
 		clabconstants.PermissionsOpen)
 
-	return cert.Write(c.paths.CaCertAbsFilename(), c.paths.CaKeyAbsFilename(), c.paths.CaCSRAbsFilename())
+	return cert.Write(
+		c.paths.CaCertAbsFilename(),
+		c.paths.CaKeyAbsFilename(),
+		c.paths.CaCSRAbsFilename(),
+	)
 }
 
 // StoreNodeCert stores the given certificate in a file in the baseFolder.

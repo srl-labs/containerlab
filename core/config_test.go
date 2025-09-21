@@ -458,9 +458,14 @@ func TestLabelsInit(t *testing.T) {
 			for k, v := range tc.want {
 				// sanitize label key to be used as an env key
 				sk := clabutils.ToEnvKey(k)
-				// fail if env vars map doesn't have env var with key CLAB_LABEL_<label-name> and label value matches env value
+				// fail if env vars map doesn't have env var with key CLAB_LABEL_<label-name> and
+				// label value matches env value
 				if val, exists := env["CLAB_LABEL_"+sk]; !exists || val != v {
-					t.Errorf("env var %q promoted from a label %q was not found", "CLAB_LABEL_"+sk, k)
+					t.Errorf(
+						"env var %q promoted from a label %q was not found",
+						"CLAB_LABEL_"+sk,
+						k,
+					)
 				}
 			}
 		})
@@ -608,7 +613,10 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			c.globalRuntimeName = rtName
 
 			// prepare runtime result
-			mockRuntime.EXPECT().ListContainers(gomock.Any(), gomock.Any()).AnyTimes().Return(tc.mockResult.c, tc.mockResult.e)
+			mockRuntime.EXPECT().
+				ListContainers(gomock.Any(), gomock.Any()).
+				AnyTimes().
+				Return(tc.mockResult.c, tc.mockResult.e)
 
 			ctx := context.Background()
 

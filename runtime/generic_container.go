@@ -38,11 +38,19 @@ func (ctr *GenericContainer) SetRuntime(r ContainerRuntime) {
 }
 
 // RunExec executes a single command for a GenericContainer.
-func (gc *GenericContainer) RunExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+func (gc *GenericContainer) RunExec(
+	ctx context.Context,
+	execCmd *clabexec.ExecCmd,
+) (*clabexec.ExecResult, error) {
 	containerName := gc.Names[0]
 	execResult, err := gc.Runtime.Exec(ctx, containerName, execCmd)
 	if err != nil {
-		log.Errorf("%s: failed to execute cmd: %q with error %v", containerName, execCmd.GetCmdString(), err)
+		log.Errorf(
+			"%s: failed to execute cmd: %q with error %v",
+			containerName,
+			execCmd.GetCmdString(),
+			err,
+		)
 		return nil, err
 	}
 	return execResult, nil

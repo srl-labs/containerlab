@@ -57,7 +57,10 @@ func (g *GoGit) getDefaultBranch() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("unable to determine default branch for %q", g.gitRepo.GetCloneURL().String())
+	return "", fmt.Errorf(
+		"unable to determine default branch for %q",
+		g.gitRepo.GetCloneURL().String(),
+	)
 }
 
 func (g *GoGit) openRepo() error {

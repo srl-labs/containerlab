@@ -30,7 +30,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(kindnames, func() clabnodes.Node {
 		return new(IPInfusionOcNOS)
@@ -61,8 +65,13 @@ func (n *IPInfusionOcNOS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.Node
 	}
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
-	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
+	n.Cfg.Cmd = fmt.Sprintf(
+		"--username %s --password %s --hostname %s --connection-mode %s --trace",
+		n.Cfg.Env["USERNAME"],
+		n.Cfg.Env["PASSWORD"],
+		n.Cfg.ShortName,
+		n.Cfg.Env["CONNECTION_MODE"],
+	)
 
 	return nil
 }

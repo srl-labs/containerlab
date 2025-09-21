@@ -37,7 +37,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrCat9kv)
@@ -71,16 +75,25 @@ func (n *vrCat9kv) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
+		fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"),
+	)
 
 	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
 		n.Cfg.Binds = append(n.Cfg.Binds, "/dev:/dev")
 	}
 
-	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace",
-		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName,
-		n.Cfg.Env["CONNECTION_MODE"], n.Cfg.Env["VCPU"], n.Cfg.Env["RAM"])
+	n.Cfg.Cmd = fmt.Sprintf(
+		"--username %s --password %s --hostname %s --connection-mode %s --vcpu %s --ram %s --trace",
+		n.Cfg.Env["USERNAME"],
+		n.Cfg.Env["PASSWORD"],
+		n.Cfg.ShortName,
+		n.Cfg.Env["CONNECTION_MODE"],
+		n.Cfg.Env["VCPU"],
+		n.Cfg.Env["RAM"],
+	)
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceOffset = InterfaceOffset

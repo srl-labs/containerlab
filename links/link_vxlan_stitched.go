@@ -45,7 +45,11 @@ func (l *VxlanStitched) Deploy(ctx context.Context, ep Endpoint) error {
 	return l.internalDeploy(ctx, ep, false)
 }
 
-func (l *VxlanStitched) internalDeploy(ctx context.Context, ep Endpoint, skipVethCreation bool) error {
+func (l *VxlanStitched) internalDeploy(
+	ctx context.Context,
+	ep Endpoint,
+	skipVethCreation bool,
+) error {
 	// deploy the vxlan link
 	err := l.vxlanLink.Deploy(ctx, ep)
 	if err != nil {

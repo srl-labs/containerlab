@@ -157,7 +157,11 @@ of real-world networks.`,
 func netemSetFn(o *Options) error {
 	// Ensure that the sch_netem kernel module is loaded (for Fedora/RHEL compatibility)
 	if err := exec.Command("modprobe", "sch_netem").Run(); err != nil {
-		log.Warn("failed to load sch_netem kernel module (expected on OrbStack machines)", "err", err)
+		log.Warn(
+			"failed to load sch_netem kernel module (expected on OrbStack machines)",
+			"err",
+			err,
+		)
 	}
 
 	// Get the runtime initializer.

@@ -39,7 +39,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrVMX)
@@ -71,10 +75,18 @@ func (n *vrVMX) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"))
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
+		fmt.Sprint(path.Join(n.Cfg.LabDir, n.ConfigDirName), ":/config"),
+	)
 
-	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
+	n.Cfg.Cmd = fmt.Sprintf(
+		"--username %s --password %s --hostname %s --connection-mode %s --trace",
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
+		n.Cfg.ShortName,
+		n.Cfg.Env["CONNECTION_MODE"],
+	)
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceOffset = InterfaceOffset

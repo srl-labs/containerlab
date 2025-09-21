@@ -8,7 +8,8 @@ import (
 )
 
 // UnixGroupExists checks if the group, given as a group name, exists on the system.
-// `getent group` is used to retrieve domain-joined group information, as `os/user`'s pure Go implementation only checks against /etc/groups.
+// `getent group` is used to retrieve domain-joined group information, as `os/user`'s pure Go
+// implementation only checks against /etc/groups.
 func UnixGroupExists(groupName string) (bool, error) {
 	cmd := exec.Command("getent", "group", groupName)
 	_, err := cmd.Output()
@@ -33,14 +34,21 @@ func getUnixGroupMembers(groupName string) ([]string, error) {
 	cmd := exec.Command("getent", "group", groupName)
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("error while looking up user groups using getent command %v: %w", groupName, err)
+		return nil, fmt.Errorf(
+			"error while looking up user groups using getent command %v: %w",
+			groupName,
+			err,
+		)
 	}
 
 	// output format is `username:x:uid:users,comma,separated`
 	// we need to extract the users, also trim the newline from the end of the output
 	parts := strings.Split(strings.TrimSuffix(string(out), "\n"), ":")
 	if len(parts) < 4 {
-		return nil, fmt.Errorf("error while looking up user groups using getent command %v: unexpected output format", groupName)
+		return nil, fmt.Errorf(
+			"error while looking up user groups using getent command %v: unexpected output format",
+			groupName,
+		)
 	}
 
 	users = strings.Split(parts[3], ",")
@@ -48,7 +56,8 @@ func getUnixGroupMembers(groupName string) ([]string, error) {
 	return users, nil
 }
 
-// UserInUnixGroup returns whether the given user (via username) is part of the Unix group given in the second argument.
+// UserInUnixGroup returns whether the given user (via username) is part of the Unix group given in
+// the second argument.
 func UserInUnixGroup(username, groupName string) (bool, error) {
 	groupMembers, err := getUnixGroupMembers(groupName)
 	if err != nil {

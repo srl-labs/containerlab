@@ -60,10 +60,13 @@ func (ca *CA) GenerateCACert(input *CACSRInput) (*Certificate, error) {
 			Organization:       []string{input.Organization},
 			OrganizationalUnit: []string{input.OrganizationUnit},
 		},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(input.Expiry),
-		IsCA:                  true,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(input.Expiry),
+		IsCA:      true,
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageClientAuth,
+			x509.ExtKeyUsageServerAuth,
+		},
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 	}
@@ -75,7 +78,13 @@ func (ca *CA) GenerateCACert(input *CACSRInput) (*Certificate, error) {
 	}
 
 	// create the certificate
-	caBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, certTemplate, &caPrivKey.PublicKey, caPrivKey)
+	caBytes, err := x509.CreateCertificate(
+		rand.Reader,
+		certTemplate,
+		certTemplate,
+		&caPrivKey.PublicKey,
+		caPrivKey,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +112,8 @@ func (ca *CA) GenerateCACert(input *CACSRInput) (*Certificate, error) {
 	return clabCert, nil
 }
 
-// GenerateAndSignNodeCert generates and signs a node certificate, key and CSR based on the provided input and signs it with the CA.
+// GenerateAndSignNodeCert generates and signs a node certificate, key and CSR based on the provided
+// input and signs it with the CA.
 func (ca *CA) GenerateAndSignNodeCert(input *NodeCSRInput) (*Certificate, error) {
 	// parse hosts from input to retrieve dns and ip SANs
 	dns, ip := parseHostsInput(input.Hosts)
@@ -143,7 +153,13 @@ func (ca *CA) GenerateAndSignNodeCert(input *NodeCSRInput) (*Certificate, error)
 	}
 
 	// create the certificate
-	certBytes, err := x509.CreateCertificate(rand.Reader, certTemplate, ca.cert, &newPrivKey.PublicKey, ca.key)
+	certBytes, err := x509.CreateCertificate(
+		rand.Reader,
+		certTemplate,
+		ca.cert,
+		&newPrivKey.PublicKey,
+		ca.key,
+	)
 	if err != nil {
 		return nil, err
 	}

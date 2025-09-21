@@ -15,7 +15,8 @@ func GetCanonicalImageName(imageName string) string {
 	//    foo/bar == docker.io/foo/bar:latest
 	//    foo.bar/baz == foo.bar/bar:latest
 	//    localhost/foo:bar == localhost/foo:bar
-	//    docker.elastic.co/elasticsearch/elasticsearch == docker.elastic.co/elasticsearch/elasticsearch:latest
+	// docker.elastic.co/elasticsearch/elasticsearch ==
+	// docker.elastic.co/elasticsearch/elasticsearch:latest
 	canonicalImageName := imageName
 	slashCount := strings.Count(imageName, "/")
 

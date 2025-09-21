@@ -34,7 +34,8 @@ type Endpoint interface {
 	Deploy(context.Context) error
 	// IsNodeless returns true for the endpoints that has no explicit node defined in the topology.
 	// E.g. host endpoints, mgmt bridge endpoints.
-	// Because there is no node that would deploy this side of the link they should be deployed along
+	// Because there is no node that would deploy this side of the link they should be deployed
+	// along
 	// with the A side of the veth link.
 	IsNodeless() bool
 	// Setters for ifaceName and Alias
@@ -116,7 +117,11 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 		case err != nil:
 			return err
 		}
-		log.Debugf("Removing interface %q from namespace %q", e.GetIfaceName(), e.GetNode().GetShortName())
+		log.Debugf(
+			"Removing interface %q from namespace %q",
+			e.GetIfaceName(),
+			e.GetNode().GetShortName(),
+		)
 		return netlink.LinkDel(brSideEp)
 	})
 }
@@ -176,6 +181,10 @@ func CheckEndpointDoesNotExistYet(ctx context.Context, e Endpoint) error {
 			return nil
 		}
 
-		return fmt.Errorf("interface %s is defined via topology but already exists: %v", e.String(), err)
+		return fmt.Errorf(
+			"interface %s is defined via topology but already exists: %v",
+			e.String(),
+			err,
+		)
 	})
 }

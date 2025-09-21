@@ -10,7 +10,8 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-// GenerateIPv6ULASubnet creates a random /64 ULA (Unique Local Address) IPv6 subnet in the fd00::/8 range.
+// GenerateIPv6ULASubnet creates a random /64 ULA (Unique Local Address) IPv6 subnet in the fd00::/8
+// range.
 func GenerateIPv6ULASubnet() (string, error) {
 	var ula strings.Builder
 

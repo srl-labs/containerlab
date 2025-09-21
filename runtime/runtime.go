@@ -34,7 +34,8 @@ type ContainerRuntime interface {
 	PullImage(context.Context, string, clabtypes.PullPolicyValue) error
 	// CreateContainer creates a container, but does not start it
 	CreateContainer(context.Context, *clabtypes.NodeConfig) (string, error)
-	// Start pre-created container by its name. Returns an extra interface that can be used to receive signals
+	// Start pre-created container by its name. Returns an extra interface that can be used to
+	// receive signals
 	// about the container life-cycle after it was created, e.g. for post-deploy tasks
 	StartContainer(context.Context, string, Node) (any, error)
 	// Stop running container by its name
@@ -49,7 +50,8 @@ type ContainerRuntime interface {
 	GetNSPath(context.Context, string) (string, error)
 	// Executes cmd on container identified with id and returns stdout, stderr bytes and an error
 	Exec(ctx context.Context, cID string, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error)
-	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err
+	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor
+	// attaches stdout/err
 	ExecNotWait(ctx context.Context, cID string, execCmd *clabexec.ExecCmd) error
 	// Delete container by its name
 	DeleteContainer(context.Context, string) error
@@ -68,7 +70,9 @@ type ContainerRuntime interface {
 	CheckConnection(ctx context.Context) error
 	// GetRuntimeSocket returns the path to the control socket
 	GetRuntimeSocket() (string, error)
-	// GetCooCBindMounts returns the extra mounts a container running this runtime in Container-outside-of-Container (CooC - General case – container uses host container runtime) does need to function properly
+	// GetCooCBindMounts returns the extra mounts a container running this runtime in
+	// Container-outside-of-Container (CooC - General case – container uses host container
+	// runtime) does need to function properly
 	GetCooCBindMounts() clabtypes.Binds
 }
 
@@ -111,7 +115,11 @@ func WithMgmtNet(mgmt *clabtypes.MgmtNet) RuntimeOption {
 }
 
 // WaitForContainerRunning waits for container to become running by polling its status.
-func WaitForContainerRunning(ctx context.Context, r ContainerRuntime, contName, nodeName string) error {
+func WaitForContainerRunning(
+	ctx context.Context,
+	r ContainerRuntime,
+	contName, nodeName string,
+) error {
 	// how long to wait for the external container to become running
 	statusCheckTimeout := 15 * time.Minute
 	// frequency to check for new container state
@@ -124,8 +132,12 @@ func WaitForContainerRunning(ctx context.Context, r ContainerRuntime, contName, 
 	// startTime is used to calculate elapsed waiting time
 	startTime := time.Now()
 
-	resultErr := fmt.Errorf("node %q waited %s for external dependency container %q to come up, which did not happen. Giving up now",
-		nodeName, time.Since(startTime), contName)
+	resultErr := fmt.Errorf(
+		"node %q waited %s for external dependency container %q to come up, which did not happen. Giving up now",
+		nodeName,
+		time.Since(startTime),
+		contName,
+	)
 
 TIMEOUT_LOOP:
 	for {

@@ -25,7 +25,12 @@ func WithLabOwner(owner string) ClabOption {
 	return func(c *CLab) error {
 		currentUser, err := user.Current()
 		if err != nil {
-			log.Warn("Failed to get current user when trying to set the custom lab owner", "error", err)
+			log.Warn(
+				"Failed to get current user when trying to set the custom lab owner",
+				"error",
+				err,
+			)
+
 			return nil
 		}
 

@@ -100,8 +100,7 @@ mocks-rm: ## remove generated mocks
 lint:
 	golangci-lint run
 
-clint:
-	docker run -it --rm -v $(CURDIR):/app -w /app golangci/golangci-lint:v2.2.1 golangci-lint run --timeout 5m -v
+
 
 .PHONY: docs
 docs:

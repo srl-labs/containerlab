@@ -57,7 +57,10 @@ func (l *ixiacOne) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams
 // ixiacPostDeploy runs postdeploy actions which are required for keysight_ixia-c-one node.
 func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
 	ixiacOneCmd := fmt.Sprintf("bash -c 'ls %s'", ixiacStatusConfig.readyFileName)
-	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
+	statusInProgressMsg := fmt.Sprintf(
+		"ls: %s: No such file or directory",
+		ixiacStatusConfig.readyFileName,
+	)
 	for {
 		cmd, _ := clabexec.NewExecCmdFromString(ixiacOneCmd)
 		execResult, err := l.RunExec(ctx, cmd)

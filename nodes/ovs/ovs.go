@@ -78,9 +78,14 @@ func (n *ovs) Delete(_ context.Context) error {
 	c := goOvs.New()
 
 	for _, ep := range n.GetEndpoints() {
-		// Under the hood, this is called with "--if-exists", so it will handle the case where it doesn't exist for some reason.
+		// Under the hood, this is called with "--if-exists", so it will handle the case where it
+		// doesn't exist for some reason.
 		if err := c.VSwitch.DeletePort(n.Cfg.ShortName, ep.GetIfaceName()); err != nil {
-			log.Errorf("Could not remove OVS port %q from bridge %q", ep.GetIfaceName(), n.Config().ShortName)
+			log.Errorf(
+				"Could not remove OVS port %q from bridge %q",
+				ep.GetIfaceName(),
+				n.Config().ShortName,
+			)
 		}
 	}
 
@@ -104,7 +109,11 @@ func (n *ovs) RunExec(_ context.Context, _ *clabexec.ExecCmd) (*clabexec.ExecRes
 	return nil, clabexec.ErrRunExecNotSupported
 }
 
-func (n *ovs) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (n *ovs) AddLinkToContainer(
+	ctx context.Context,
+	link netlink.Link,
+	f func(ns.NetNS) error,
+) error {
 	// retrieve the namespace handle
 	curNamespace, err := ns.GetCurrentNS()
 	if err != nil {

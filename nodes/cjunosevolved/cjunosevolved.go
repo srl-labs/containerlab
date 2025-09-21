@@ -64,7 +64,10 @@ func (n *cjunosevolved) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOp
 	}
 
 	// mount config dir to support startup-config functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
+		fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"),
+	)
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceOffset = InterfaceOffset

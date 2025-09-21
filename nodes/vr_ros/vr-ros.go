@@ -83,8 +83,13 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 		n.Cfg.Binds = append(n.Cfg.Binds, "/dev:/dev")
 	}
 
-	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		defaultCredentials.GetUsername(), defaultCredentials.GetPassword(), n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
+	n.Cfg.Cmd = fmt.Sprintf(
+		"--username %s --password %s --hostname %s --connection-mode %s --trace",
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
+		n.Cfg.ShortName,
+		n.Cfg.Env["CONNECTION_MODE"],
+	)
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceOffset = InterfaceOffset
@@ -140,7 +145,12 @@ func (n *vrRos) SaveConfig(_ context.Context) error {
 	err = os.WriteFile(configPath, []byte(filtered_config),
 		clabconstants.PermissionsOpen) // skipcq: GO-S2306
 	if err != nil {
-		return fmt.Errorf("failed to write config by %s path from %s container: %v", configPath, n.Cfg.ShortName, err)
+		return fmt.Errorf(
+			"failed to write config by %s path from %s container: %v",
+			configPath,
+			n.Cfg.ShortName,
+			err,
+		)
 	}
 	log.Info("Saved configuration to path", "nodeName", n.Cfg.ShortName, "path", configPath)
 

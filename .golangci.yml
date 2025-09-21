@@ -121,10 +121,15 @@ formatters:
   enable:
     - gofmt
     - goimports
+    - golines
   settings:
     goimports:
       local-prefixes:
         - github.com/golangci/golangci-lint
+    golines:
+      # default line length is 100
+      # Shorten single-line comments.
+      shorten-comments: true
   exclusions:
     generated: lax
     paths:

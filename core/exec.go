@@ -9,7 +9,11 @@ import (
 )
 
 // Exec execute commands on running topology nodes.
-func (c *CLab) Exec(ctx context.Context, cmds []string, listOptions ...ListOption) (*clabexec.ExecCollection, error) {
+func (c *CLab) Exec(
+	ctx context.Context,
+	cmds []string,
+	listOptions ...ListOption,
+) (*clabexec.ExecCollection, error) {
 	err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err

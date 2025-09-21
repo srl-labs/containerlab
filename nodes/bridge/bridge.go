@@ -85,7 +85,8 @@ func (n *bridge) Deploy(ctx context.Context, dp *clabnodes.DeployParams) error {
 	// store nodes map for later use
 	n.nodesMap = dp.Nodes
 
-	// if the NetworkMode is set, then the bridge is setup within a namespace, so it must be created.
+	// if the NetworkMode is set, then the bridge is setup within a namespace, so it must be
+	// created.
 	if n.Config().NetworkMode != "" {
 		cntName, err := clabutils.ContainerNameFromNetworkMode(n.Config().NetworkMode)
 		if err != nil {
@@ -198,14 +199,22 @@ func (b *bridge) RunExec(_ context.Context, _ *clabexec.ExecCmd) (*clabexec.Exec
 	return nil, clabexec.ErrRunExecNotSupported
 }
 
-func (b *bridge) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (b *bridge) AddLinkToContainer(
+	ctx context.Context,
+	link netlink.Link,
+	f func(ns.NetNS) error,
+) error {
 	if b.Cfg.NetworkMode != "" {
 		return b.addLinkToContainerNamespace(ctx, link, f)
 	}
 	return b.addLinkToContainerHost(ctx, link, f)
 }
 
-func (b *bridge) addLinkToContainerNamespace(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (b *bridge) addLinkToContainerNamespace(
+	ctx context.Context,
+	link netlink.Link,
+	f func(ns.NetNS) error,
+) error {
 	cntName, err := clabutils.ContainerNameFromNetworkMode(b.Config().NetworkMode)
 	if err != nil {
 		return err
@@ -229,7 +238,11 @@ func (b *bridge) addLinkToContainerNamespace(ctx context.Context, link netlink.L
 	return err
 }
 
-func (b *bridge) addLinkToContainerHost(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (b *bridge) addLinkToContainerHost(
+	_ context.Context,
+	link netlink.Link,
+	f func(ns.NetNS) error,
+) error {
 	// retrieve the namespace handle
 	curNamespace, err := ns.GetCurrentNS()
 	if err != nil {
@@ -259,7 +272,8 @@ func (b *bridge) GetLinkEndpointType() clablinks.LinkEndpointType {
 	return clablinks.LinkEndpointTypeBridge
 }
 
-// installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed in and out of the bridge
+// installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed in and out of the
+// bridge
 // otherwise, communication over the bridge is not permitted on most systems.
 func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	f, err := firewall.NewFirewallClient()

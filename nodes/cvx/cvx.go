@@ -122,7 +122,11 @@ func (c *cvx) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`swp[\d.]+$`)
 	for _, e := range c.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as swpX, where X is >=0", c.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf(
+				"%q interface name %q doesn't match the required pattern. It should be named as swpX, where X is >=0",
+				c.Cfg.ShortName,
+				e.GetIfaceName(),
+			)
 		}
 	}
 

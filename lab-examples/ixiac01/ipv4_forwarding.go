@@ -61,7 +61,8 @@ func main() {
 			checkResponse(res, err)
 
 			fm := res.FlowMetrics().Items()[0]
-			return fm.Transmit() == gosnappi.FlowMetricTransmit.STOPPED && fm.FramesRx() == uint64(pktCount)
+			return fm.Transmit() == gosnappi.FlowMetricTransmit.STOPPED &&
+				fm.FramesRx() == uint64(pktCount)
 		},
 		10*time.Second,
 	)

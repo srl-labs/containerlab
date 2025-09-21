@@ -45,7 +45,11 @@ var (
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
 	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		nil,
+	)
 
 	r.Register(kindnames, func() clabnodes.Node {
 		return new(sixwind_vsr)
@@ -164,7 +168,11 @@ func (n *sixwind_vsr) SaveConfig(ctx context.Context) error {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v",
 			n.UserStartupConfig, n.Cfg.ShortName, err)
 	}
-	log.Infof("saved 6WIND VSR configuration from %s node to %s\n", n.Cfg.ShortName, n.UserStartupConfig)
+	log.Infof(
+		"saved 6WIND VSR configuration from %s node to %s\n",
+		n.Cfg.ShortName,
+		n.UserStartupConfig,
+	)
 
 	return nil
 }
@@ -175,7 +183,10 @@ func (n *sixwind_vsr) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 	for _, e := range n.Endpoints {
 		if e.GetIfaceName() == "eth0" && nm != "none" {
-			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+			return fmt.Errorf(
+				"eth0 interface name is not allowed for %s node when network mode is not set to none",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 	return nil

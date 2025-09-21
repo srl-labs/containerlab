@@ -264,7 +264,11 @@ func signCert(o *Options) error {
 
 	if o.ToolsCert.CACertPath != "" {
 		// we might also honor the External CA env vars here
-		caCert, err = clabcert.NewCertificateFromFile(o.ToolsCert.CACertPath, o.ToolsCert.CAKeyPath, "")
+		caCert, err = clabcert.NewCertificateFromFile(
+			o.ToolsCert.CACertPath,
+			o.ToolsCert.CAKeyPath,
+			"",
+		)
 		if err != nil {
 			return err
 		}

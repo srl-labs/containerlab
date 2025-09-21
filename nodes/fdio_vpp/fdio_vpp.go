@@ -48,7 +48,11 @@ var (
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
 	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		nil,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(fdio_vpp)
@@ -174,7 +178,10 @@ func (n *fdio_vpp) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 	for _, e := range n.Endpoints {
 		if e.GetIfaceName() == "eth0" && nm != "none" {
-			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+			return fmt.Errorf(
+				"eth0 interface name is not allowed for %s node when network mode is not set to none",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 	return nil

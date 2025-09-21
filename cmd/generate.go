@@ -346,9 +346,13 @@ func generateTopologyConfig( //nolint: funlen
 				l := &clablinks.LinkVEthRaw{
 					Endpoints: []*clablinks.EndpointRaw{
 						clablinks.NewEndpointRaw(node1, fmt.Sprintf(
-							generateNodesAttributes[nodes[i].kind].GetInterfaceFormat(), k+1+interfaceOffset), ""),
+							generateNodesAttributes[nodes[i].kind].GetInterfaceFormat(),
+							k+1+interfaceOffset,
+						), ""),
 						clablinks.NewEndpointRaw(node2, fmt.Sprintf(
-							generateNodesAttributes[nodes[i+1].kind].GetInterfaceFormat(), j+1), ""),
+							generateNodesAttributes[nodes[i+1].kind].GetInterfaceFormat(),
+							j+1,
+						), ""),
 					},
 				}
 

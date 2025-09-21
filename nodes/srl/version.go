@@ -122,7 +122,9 @@ type SrlVersion struct {
 // by executing the "info from state /system information version | grep version" command
 // and parsing the output.
 func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
-	cmd, _ := clabexec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
+	cmd, _ := clabexec.NewExecCmdFromString(
+		`sr_cli -d "info from state /system information version | grep version"`,
+	)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
@@ -153,7 +155,8 @@ func (v *SrlVersion) String() string {
 	return "v" + v.Major + "." + v.Minor + "." + v.Patch + "-" + v.Build + "-" + v.Commit
 }
 
-// MajorMinorSemverString returns a string representation of the major.minor version with a leading v.
+// MajorMinorSemverString returns a string representation of the major.minor version with a leading
+// v.
 func (v *SrlVersion) MajorMinorSemverString() string {
 	return "v" + v.Major + "." + v.Minor
 }

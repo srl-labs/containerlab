@@ -55,7 +55,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformOpts,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(crpd)
@@ -124,7 +128,10 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 		}
 
 		if execResult.GetStdErrString() != "" {
-			return fmt.Errorf("crpd post-deploy license add failed: %s", execResult.GetStdErrString())
+			return fmt.Errorf(
+				"crpd post-deploy license add failed: %s",
+				execResult.GetStdErrString(),
+			)
 		}
 		log.Debugf("crpd post-deploy license add result: %s", execResult.GetStdOutString())
 	}
@@ -148,7 +155,12 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(),
 		clabconstants.PermissionsOpen) // skipcq: GO-S2306
 	if err != nil {
-		return fmt.Errorf("failed to write config by %s path from %s container: %v", confPath, s.Cfg.ShortName, err)
+		return fmt.Errorf(
+			"failed to write config by %s path from %s container: %v",
+			confPath,
+			s.Cfg.ShortName,
+			err,
+		)
 	}
 	log.Infof("saved cRPD configuration from %s node to %s\n", s.Cfg.ShortName, confPath)
 
