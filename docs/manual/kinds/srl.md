@@ -301,6 +301,29 @@ topology:
 
 Containerlab will take the `myconfig.json` file, copy it to the lab directory for that specific node under the `config.json` name, and mount that directory to the container. This will result in this config acting as a startup-config for the node.
 
+#### Link addressing
+
+Nokia SR Linux kind supports [IPv4/IPv6 link variables](../topo-def-file.md#ipv4ipv6) that are used to configure IP addresses on the point to point links between the nodes by providing `ipv4` and/or `ipv6` variables in the link definition.
+
+```yaml
+name: ip-vars-brief
+topology:
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+    srl2:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+  links:
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+      vars:
+        ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
+        ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
+```
+
+The result of providing the IPv4/IPv6 variables will result in configuration of `subinterface 0` and the respective IP addresses under it.
+
 #### Saving configuration
 
 As was explained in the [Node configuration](#node-configuration) section, SR Linux containers can make their config persistent because config files are provided to the containers from the host via the bind mount.

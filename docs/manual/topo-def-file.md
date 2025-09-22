@@ -1,3 +1,10 @@
+---
+search:
+  boost: 8
+---
+
+# Topology definition
+
 Containerlab builds labs based on the topology information that users pass to it. This topology information is expressed as a code contained in the _topology definition file_ which structure is the prime focus of this document.
 
 -{{diagram(url='srl-labs/containerlab/diagrams/containerlab.drawio', page='4', title='', zoom='1.5')}}-
@@ -130,8 +137,8 @@ Refer to the [node configuration](nodes.md) document to meet all other options a
 
 Although it is absolutely fine to define a node without any links (like in [this lab](../lab-examples/single-srl.md)), we usually interconnect the nodes to make topologies. One of containerlab purposes is to make the interconnection of the nodes simple.
 
-Links are defined under the `topology.links` section of the topology file. Containerlab understands two formats of link definition - brief and extended.
-A brief form of a link definition compresses link parameters in a single string and provide a quick way to define a link at the cost of link features available.
+Links are defined under the `topology.links` section of the topology file. Containerlab understands two formats of link definition - brief and extended.  
+A brief form of a link definition compresses link parameters in a single string and provide a quick way to define a link at the cost of link features available.  
 A more expressive extended form exposes all link features, but requires more typing if done manually. The extended format is perfect for machine-generated link topologies.
 
 ##### Interface naming
@@ -202,7 +209,7 @@ Containerlab transparently maps from interface aliases to Linux interface names,
 /// details | How do aliases work?
 Internally, interface aliases end up being deterministically mapped to Linux interface names, which conform to Linux interface naming standards: at most 15 characters, spaces and forward slashes (`/`) not permitted.
 
-Since many NOSes use long interface names (`GigabitEthernet1`, that's exactly 1 character longer than permitted), and like to use slashes in their interface naming conventions, these NOS interface names cannot be directly used as interface names for the container interfaces created by Containerlab.
+Since many NOSes use long interface names (`GigabitEthernet1`, that's exactly 1 character longer than permitted), and like to use slashes in their interface naming conventions, these NOS interface names cannot be directly used as interface names for the container interfaces created by Containerlab.  
 For example, SR Linux maps its `ethernet-1/2` interface to the Linux interface `e1-2`. On the other hand, Juniper vSRX maps its `ge-0/0/1` interface to `eth2`.
 ///
 
@@ -301,7 +308,7 @@ The `host-interface` is the name of the existing interface present in the host n
 
 ###### host
 
-The host link type creates a veth pair between a container and the host network namespace.
+The host link type creates a veth pair between a container and the host network namespace.  
 In comparison to the veth type, no bridge or other namespace is required to be referenced in the link definition for a "remote" end of the veth pair.
 
 ```yaml
@@ -380,7 +387,9 @@ Such interfaces are useful for testing and debugging purposes where we want to m
 
 ##### Variables
 
-Link variables are extended attributes that are not neccesarily configuring attributes of the physical connection between two nodes.
+Link variables are a way to supply additional link-related information that can be passed to the configuration templates.
+
+Some kinds will use these variables to configure the interfaces or supply the tune the base configuration based on the link variables. Not all kinds make use of the variables, those that do, will mentioned it in their respective documentation.
 
 ###### ipv4/ipv6
 
@@ -405,10 +414,14 @@ topology:
         ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
     - endpoints: ["srl1:e1-2", "srl2:e1-2"]
       vars:
-        ipv4: ["192.168.2.1/24"]
+        ipv4: ["192.168.2.1/24"] #(1)!
 ```
 
-We can also do this with the [extended](#extended-format) format:
+1. In this case, only the `srl1` node's `e1-2` interface will be provided with the ipv4 variable, since the list contains only one entry and the first entry always corresponds to the first endpoint defined in the `endpoints` list.
+
+    In case you only need to provide the variable to the 2nd endpoint, you keep the first element of the list empty, like so: `ipv4: ["", "192.168.2.1/24"]`.
+
+The [extended](#extended-format) format also supports providing the variables, in a more structured way:
 
 ```yaml
 name: ip-vars-extended
@@ -448,7 +461,7 @@ In both examples, we configure the `192.168.0.0/24`, and `2001:db8::/64` subnets
 We can also set the IP for only one side, which is shown using IPv4 as an example on the link between srl1 and srl2 on the `e1-2` interfaces. Where the IPv4 address `192.168.2.1` is only set for `srl1`.
 
 /// note
-Currently only the SR Linux and Cisco IOL kind(s) support this feature. Contributions to add support for other kinds are welcomed.
+Currently only the [Nokia SR Linux](../manual/kinds/srl.md) and [Cisco IOL](../manual/kinds/cisco_iol.md) kind(s) support this feature. Contributions to add support for other kinds are welcomed.
 ///
 
 #### Groups
