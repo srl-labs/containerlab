@@ -399,13 +399,13 @@ topology:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
   links:
-    - endpoints: [srl1:e1-1, srl2:e1-1]
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
       vars:
-        ipv4: [srl1:192.168.0.1/24, srl2:192.168.0.2/24]
-        ipv6: [srl1:2001:db8::1/64, srl2:2001:db8::2/64]
-    - endpoints: [srl1:e1-2, srl2:e1-2]
+        ipv4: ["srl1:192.168.0.1/24", "srl2:192.168.0.2/24"]
+        ipv6: ["srl1:2001:db8::1/64", "srl2:2001:db8::2/64"]
+    - endpoints: ["srl1:e1-2", "srl2:e1-2"]
       vars:
-        ipv4: [srl1:192.168.2.1/24]
+        ipv4: ["srl1:192.168.2.1/24"]
 ```
 
 We can also do this with the [extended](#extended-format) format:
