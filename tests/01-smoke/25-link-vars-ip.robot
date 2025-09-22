@@ -54,6 +54,14 @@ Verify addresses configured on n2 e1-3
     Should Contain    ${output}    address 192.168.3.2/24
     Should Contain    ${output}    address 2001:db8:abc3::2/64
 
+Verify addresses configured on n3 e1-1
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} exec clab-${lab-name}-n3 sr_cli 'info flat / interface ethernet-1/1 subinterface 0'
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    address 192.168.0.3/24
+    Should Contain    ${output}    address 2001:db8:abc1::3/64
+
 *** Keywords ***
 Cleanup
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup

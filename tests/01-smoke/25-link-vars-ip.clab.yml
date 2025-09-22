@@ -8,6 +8,9 @@ topology:
     n2:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
+    n3:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
   links:
     - endpoints: [n1:e1-1, n2:e1-1]
       vars:
@@ -26,3 +29,8 @@ topology:
           vars:
             ipv4: 192.168.3.2/24
             ipv6: 2001:db8:abc3::2/64
+    - endpoints: [n1:e1-4, n3:e1-1]
+      vars:
+        ipv4: ["", 192.168.0.3/24]
+        ipv6: ["", 2001:db8:abc1::3/64]
+
