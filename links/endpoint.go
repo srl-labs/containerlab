@@ -19,6 +19,8 @@ type Endpoint interface {
 	GetIfaceDisplayName() string
 	GetRandIfaceName() string
 	GetMac() net.HardwareAddr
+	GetIPv4Addr() string
+	GetIPv6Addr() string
 	String() string
 	// GetLink retrieves the link that the endpoint is assigned to
 	GetLink() Link
@@ -51,6 +53,12 @@ type EndpointGeneric struct {
 	Link     Link
 	MAC      net.HardwareAddr
 	randName string
+	Vars     *EndpointVars
+}
+
+type EndpointVars struct {
+	IPv4 string `yaml:"ipv4,omitempty"`
+	IPv6 string `yaml:"ipv6,omitempty"`
 }
 
 func NewEndpointGeneric(node Node, iface string, link Link) *EndpointGeneric {
@@ -62,6 +70,7 @@ func NewEndpointGeneric(node Node, iface string, link Link) *EndpointGeneric {
 		// when it is first deployed in the root namespace
 		randName: genRandomIfName(),
 		Link:     link,
+		Vars:     &EndpointVars{},
 	}
 }
 
@@ -94,6 +103,20 @@ func (e *EndpointGeneric) SetIfaceAlias(ifaceAlias string) {
 
 func (e *EndpointGeneric) GetMac() net.HardwareAddr {
 	return e.MAC
+}
+
+func (e *EndpointGeneric) GetIPv4Addr() string {
+	if e.Vars == nil {
+		return ""
+	}
+	return e.Vars.IPv4
+}
+
+func (e *EndpointGeneric) GetIPv6Addr() string {
+	if e.Vars == nil {
+		return ""
+	}
+	return e.Vars.IPv6
 }
 
 func (e *EndpointGeneric) GetLink() Link {

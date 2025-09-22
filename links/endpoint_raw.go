@@ -3,6 +3,7 @@ package links
 import (
 	"fmt"
 	"net"
+	"net/netip"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -11,9 +12,10 @@ import (
 // EndpointRaw is the raw (string) representation of an endpoint as defined in the topology file
 // for a given link definition.
 type EndpointRaw struct {
-	Node  string `yaml:"node"`
-	Iface string `yaml:"interface"`
-	MAC   string `yaml:"mac,omitempty"`
+	Node  string        `yaml:"node"`
+	Iface string        `yaml:"interface"`
+	MAC   string        `yaml:"mac,omitempty"`
+	Vars  *EndpointVars `yaml:"vars,omitempty"`
 }
 
 // NewEndpointRaw creates a new EndpointRaw struct.
@@ -38,6 +40,23 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	}
 
 	genericEndpoint := NewEndpointGeneric(node, er.Iface, l)
+
+	if er.Vars != nil {
+		cp := *er.Vars
+		if cp.IPv4 != "" {
+			p, err := netip.ParsePrefix(cp.IPv4)
+			if err != nil || !p.Addr().Is4() {
+				return nil, fmt.Errorf("invalid ipv4 address %q for %s:%s", cp.IPv4, er.Node, er.Iface)
+			}
+		}
+		if cp.IPv6 != "" {
+			p, err := netip.ParsePrefix(cp.IPv6)
+			if err != nil || !p.Addr().Is6() {
+				return nil, fmt.Errorf("invalid ipv6 address %q for %s:%s", cp.IPv6, er.Node, er.Iface)
+			}
+		}
+		genericEndpoint.Vars = &cp
+	}
 
 	var err error
 	if er.MAC == "" {
