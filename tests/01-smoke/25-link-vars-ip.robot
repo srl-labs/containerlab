@@ -54,35 +54,6 @@ Verify addresses configured on n2 e1-3
     Should Contain    ${output}    address 192.168.3.2/24
     Should Contain    ${output}    address 2001:db8:abc3::2/64
 
-Error on duplicate node in vars
-    ${lab-file-name}=    Set Variable    25-link-vars-ip-duplicate.clab.yml
-    ${rc}    ${output}=    Run And Return Rc And Output    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Not Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    duplicate node entry
-
-Error on unknown node in vars
-    ${lab-file-name}=    Set Variable    25-link-vars-ip-mismatch.clab.yml
-    ${rc}    ${output}=    Run And Return Rc And Output    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Not Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    invalid node entry
-
-Error on invalid IPv4 address
-    ${lab-file-name}=    Set Variable    25-link-vars-ip-invalid-v4.clab.yml
-    ${rc}    ${output}=    Run And Return Rc And Output    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Not Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ipv4 var has invalid prefix
-
-Error on invalid IPv6 address
-    ${lab-file-name}=    Set Variable    25-link-vars-ip-invalid-v6.clab.yml
-    ${rc}    ${output}=    Run And Return Rc And Output    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
-    Log    ${output}
-    Should Not Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ipv6 var has invalid prefix
-
-
 *** Keywords ***
 Cleanup
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup

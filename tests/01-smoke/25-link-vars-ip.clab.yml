@@ -11,8 +11,8 @@ topology:
   links:
     - endpoints: [n1:e1-1, n2:e1-1]
       vars:
-        ipv4: [n1:192.168.0.1/24, n2:192.168.0.2/24]
-        ipv6: [n1:2001:db8:abc1::1/64, n2:2001:db8:abc1::2/64]
+        ipv4: [192.168.0.1/24, 192.168.0.2/24]
+        ipv6: [2001:db8:abc1::1/64, 2001:db8:abc1::2/64]
     - endpoints: [n1:e1-2, n2:e1-2]
     - type: veth
       endpoints:
