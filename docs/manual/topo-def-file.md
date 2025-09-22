@@ -386,7 +386,7 @@ Link variables are extended attributes that are not neccesarily configuring attr
 
 The `ipv4` and `ipv6` link variables allow for you to set the IPv4 and/or IPv6 address on an interface respectively; directly from the topology file.
 
-Refer to the below example, where we configure some addressing on the node interfaces using the [brief](#brief-format) format.
+Refer to the below example, where we configure some addressing on the node interfaces using the [brief](#brief-format) format where addresses are passed as an ordered list matching the order of which the endpoint interfaces are defined.
 
 ```yaml
 name: ip-vars-brief
@@ -401,11 +401,11 @@ topology:
   links:
     - endpoints: ["srl1:e1-1", "srl2:e1-1"]
       vars:
-        ipv4: ["srl1:192.168.0.1/24", "srl2:192.168.0.2/24"]
-        ipv6: ["srl1:2001:db8::1/64", "srl2:2001:db8::2/64"]
+        ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
+        ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
     - endpoints: ["srl1:e1-2", "srl2:e1-2"]
       vars:
-        ipv4: ["srl1:192.168.2.1/24"]
+        ipv4: ["192.168.2.1/24"]
 ```
 
 We can also do this with the [extended](#extended-format) format:
