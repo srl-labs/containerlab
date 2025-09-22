@@ -389,8 +389,13 @@ func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) error {
 }
 
 func parseVarIPBrief(af string, vals []string, endpoints []*EndpointRaw) error {
-	if len(vals) == 0 {
+
+	nVals := len(vals)
+
+	if nVals == 0 {
 		return nil
+	} else if nVals > len(endpoints) {
+		return fmt.Errorf("number of defined %s vars exceed number of endpoints", af)
 	}
 
 	for i, cidr := range vals {
@@ -398,7 +403,10 @@ func parseVarIPBrief(af string, vals []string, endpoints []*EndpointRaw) error {
 		if endpoints[i].Vars == nil {
 			endpoints[i].Vars = &EndpointVars{}
 		}
-
+		if cidr == "" {
+			// empty entry = no addr on this interface
+			continue
+		}
 		prefix, err := netip.ParsePrefix(cidr)
 		if err != nil {
 			return fmt.Errorf("endpoint %s var has invalid prefix %q (%v)", af, cidr, err)
