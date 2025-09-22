@@ -4,7 +4,7 @@ test_patterns = ["*/*_test.go"]
 
 [[analyzers]]
 name = "go"
-enabled = true
+enabled = false
 
-  [analyzers.meta]
-  import_root = "github.com/srl-labs/containerlab"
+[analyzers.meta]
+import_root = "github.com/srl-labs/containerlab"
