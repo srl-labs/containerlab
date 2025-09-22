@@ -79,6 +79,21 @@ Ensure MDA is overriden with env var on node on sr1-04
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    me12-100gb-qsfp28
 
+Ensure XIOM is equipped and up on sr2s-01
+    Sleep    60s    give some time for linecards to come up
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show xiom | match up | match up" | sshpass -p "NokiaSros1!" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-sr2s-01-a
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    iom-s-3.0t
+
+Ensure XIOM MDA x/1 is equipped and up on sr2s-01
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show mda | match x1/1 | match up | match up" | sshpass -p "NokiaSros1!" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-sr2s-01-a
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    ms18-100gb-qsfp28
+
 *** Keywords ***
 Cleanup
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup

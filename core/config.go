@@ -88,9 +88,11 @@ func (c *CLab) parseTopology() error {
 		}
 
 		// this case if for non-default runtimes overriding the global default
-		if r, ok := clabnodes.NonDefaultRuntimes[topologyNode.GetKind()]; ok {
-			nodeRuntimes[nodeName] = r
-			continue
+		if topologyNode != nil {
+			if r, ok := clabnodes.NonDefaultRuntimes[topologyNode.Kind]; ok {
+				nodeRuntimes[nodeName] = r
+				continue
+			}
 		}
 
 		// saving the global default runtime
@@ -205,9 +207,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Cmd:             c.Config.Topology.GetNodeCmd(nodeName),
 		Exec:            c.Config.Topology.GetNodeExec(nodeName),
 		Env:             c.Config.Topology.GetNodeEnv(nodeName),
-		NetworkMode:     strings.ToLower(c.Config.Topology.GetNodeNetworkMode(nodeName)),
-		MgmtIPv4Address: nodeDef.GetMgmtIPv4(),
-		MgmtIPv6Address: nodeDef.GetMgmtIPv6(),
+		NetworkMode:     c.Config.Topology.GetNodeNetworkMode(nodeName),
 		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
 		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
 		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
@@ -227,6 +227,11 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
 		Aliases:         c.Config.Topology.GetNodeAliases(nodeName),
 		Components:      c.Config.Topology.GetComponents(nodeName),
+	}
+
+	if nodeDef != nil {
+		nodeCfg.MgmtIPv4Address = nodeDef.MgmtIPv4
+		nodeCfg.MgmtIPv6Address = nodeDef.MgmtIPv6
 	}
 
 	var err error
@@ -735,16 +740,17 @@ func addEnvVarsToNodeCfg(c *CLab, nodeCfg *clabtypes.NodeConfig) error {
 	for key := range c.Config.Topology.Nodes {
 		noProxyList = append(noProxyList, key)
 
-		ipv4address := c.Config.Topology.Nodes[key].GetMgmtIPv4()
-
-		if ipv4address != "" {
-			noProxyList = append(noProxyList, ipv4address)
+		nodeConfig := c.Config.Topology.Nodes[key]
+		if nodeConfig == nil {
+			continue
 		}
 
-		ipv6address := c.Config.Topology.Nodes[key].GetMgmtIPv6()
+		if nodeConfig.MgmtIPv4 != "" {
+			noProxyList = append(noProxyList, nodeConfig.MgmtIPv4)
+		}
 
-		if ipv6address != "" {
-			noProxyList = append(noProxyList, ipv6address)
+		if nodeConfig.MgmtIPv6 != "" {
+			noProxyList = append(noProxyList, nodeConfig.MgmtIPv6)
 		}
 	}
 

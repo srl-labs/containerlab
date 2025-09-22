@@ -115,7 +115,6 @@ linters:
       - nodes
       - runtime
       - schemas
-      - types
       - utils
       - virt
 formatters:

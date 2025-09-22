@@ -285,7 +285,7 @@ func isInt(n any) bool {
 	return false
 }
 
-func ToFloat64(v interface{}) (float64, error) {
+func ToFloat64(v any) (float64, error) {
 	if str, ok := v.(string); ok {
 		return strToFloat64(str)
 	}
@@ -330,7 +330,7 @@ func strToInt64(str string) (int64, error) {
 	return iv, nil
 }
 
-func ToInt64(v interface{}) (int64, error) {
+func ToInt64(v any) (int64, error) {
 	if str, ok := v.(string); ok {
 		return strToInt64(str)
 	}

@@ -679,7 +679,7 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullPol
 }
 
 // StartContainer starts a docker container.
-func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node clabruntime.Node) (interface{}, error) {
+func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node clabruntime.Node) (any, error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 

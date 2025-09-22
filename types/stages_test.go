@@ -110,8 +110,10 @@ func TestMerge(t *testing.T) {
 			err := tt.s.Merge(tt.other)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Stages.Merge() error = %v, wantErr %v", err, tt.wantErr)
+
 				return
 			}
+
 			if diff := cmp.Diff(tt.s, tt.want); diff != "" {
 				t.Errorf("Stages.Merge() mismatch (+want -got):\n%s", diff)
 			}

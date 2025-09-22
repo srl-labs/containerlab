@@ -317,8 +317,47 @@
                                 "$ref": "#/definitions/sros-sfm-types"
                             },
                             "xiom": {
-                                "description": "Set XIOM type (SR-OS specific).",
-                                "$ref": "#/definitions/sros-xiom-types"
+                                "type": "array",
+                                "description": "Define list of XIOMs (SR-OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "slot": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "type": {
+                                            "$ref": "#/definitions/sros-xiom-types"
+                                        },
+                                        "mda": {
+                                            "type": "array",
+                                            "description": "Define list of MDAs under this XIOM. Each defined MDA must have values of 'slot' and 'type'",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "slot": {
+                                                        "type": "integer",
+                                                        "minimum": 1
+                                                    },
+                                                    "type": {
+                                                        "$ref": "#/definitions/sros-xiom-mda-types"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "slot",
+                                                    "type"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "slot",
+                                        "type"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "uniqueItems": true
                             },
                             "mda": {
                                 "type": "array",
@@ -331,7 +370,8 @@
                                             "minimum": 1
                                         },
                                         "type": {
-                                            "description": "Set MDA type (SR-OS specific)"
+                                            "description": "Set MDA type (SR-OS specific)",
+                                            "$ref": "#/definitions/sros-mda-types"
                                         }
                                     },
                                     "required": [
@@ -370,39 +410,7 @@
                                         }
                                     }
                                 }
-                            },
-                            {
-                                "if": {
-                                    "required": [
-                                        "xiom"
-                                    ]
-                                },
-                                "then": {
-                                    "properties": {
-                                        "mda": {
-                                            "items": {
-                                                "properties": {
-                                                    "type": {
-                                                        "$ref": "#/definitions/sros-xiom-mda-types"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-                                "else": {
-                                    "properties": {
-                                        "mda": {
-                                            "items": {
-                                                "properties": {
-                                                    "type": {
-                                                        "$ref": "#/definitions/sros-mda-types"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                
                             }
                         ]
                     },
@@ -846,8 +854,11 @@
                 "vni": {
                     "$ref": "#/definitions/link-vxlan-vni"
                 },
-                "udp-port": {
-                    "$ref": "#/definitions/link-vxlan-udpport"
+                "dst-port": {
+                    "$ref": "#/definitions/link-vxlan-dstport"
+                },
+                "src-port": {
+                    "$ref": "#/definitions/link-vxlan-srcport"
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
@@ -864,7 +875,7 @@
                 "endpoint",
                 "remote",
                 "vni",
-                "udp-port"
+                "dst-port"
             ],
             "additionalProperties": false
         },
@@ -885,8 +896,11 @@
                 "vni": {
                     "$ref": "#/definitions/link-vxlan-vni"
                 },
-                "udp-port": {
-                    "$ref": "#/definitions/link-vxlan-udpport"
+                "dst-port": {
+                    "$ref": "#/definitions/link-vxlan-dstport"
+                },
+                "src-port": {
+                    "$ref": "#/definitions/link-vxlan-srcport"
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
@@ -903,7 +917,7 @@
                 "endpoint",
                 "remote",
                 "vni",
-                "udp-port"
+                "dst-port"
             ],
             "additionalProperties": false
         },
@@ -974,9 +988,15 @@
             "minimum": 1,
             "maximum": 16777215
         },
-        "link-vxlan-udpport": {
+        "link-vxlan-dstport": {
             "type": "integer",
-            "description": "Remote UDP port",
+            "description": "Destination UDP port",
+            "minimum": 1,
+            "maximum": 65535
+        },
+        "link-vxlan-srcport": {
+            "type": "integer",
+            "description": "Source UDP port",
             "minimum": 1,
             "maximum": 65535
         },

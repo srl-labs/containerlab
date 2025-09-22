@@ -30,7 +30,7 @@ type NodeConfig struct {
 	TargetNode  *clabtypes.NodeConfig
 	Credentials []string // Node's credentials
 	// All the variables used to render the template
-	Vars map[string]interface{}
+	Vars map[string]any
 	// the Rendered templates
 	Data []string
 	Info []string
