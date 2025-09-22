@@ -374,63 +374,46 @@ func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) error {
 		return nil
 	}
 
-	// key on node name
-	byNode := make(map[string]*EndpointRaw, len(endpoints))
-	for _, ep := range endpoints {
-		byNode[ep.Node] = ep
-		if ep.Vars == nil {
-			ep.Vars = &EndpointVars{}
-		}
-	}
-
 	if len(lb.LinkCommonParams.Vars.IPv4) > 0 {
-		if err := parseVarIPBrief("ipv4", lb.LinkCommonParams.Vars.IPv4, byNode); err != nil {
+		if err := parseVarIPBrief("ipv4", lb.LinkCommonParams.Vars.IPv4, endpoints); err != nil {
 			return err
 		}
 	}
 
 	if len(lb.LinkCommonParams.Vars.IPv6) > 0 {
-		if err := parseVarIPBrief("ipv6", lb.LinkCommonParams.Vars.IPv6, byNode); err != nil {
+		if err := parseVarIPBrief("ipv6", lb.LinkCommonParams.Vars.IPv6, endpoints); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func parseVarIPBrief(af string, val []string, nodes map[string]*EndpointRaw) error {
-	tmpNodes := make(map[string]any)
+func parseVarIPBrief(af string, vals []string, endpoints []*EndpointRaw) error {
+	if len(vals) == 0 {
+		return nil
+	}
 
-	for _, s := range val {
-		parts := strings.SplitN(s, ":", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("endpoint %s var entry %q must be in 'node:prefix' formatting", af, s)
+	for i, cidr := range vals {
+		cidr = strings.TrimSpace(cidr)
+		if endpoints[i].Vars == nil {
+			endpoints[i].Vars = &EndpointVars{}
 		}
-
-		n, cidr := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
-		if _, ok := nodes[n]; !ok {
-			return fmt.Errorf("endpoint %s var has invalid node entry for %q", af, n)
-		}
-
-		if _, exists := tmpNodes[n]; exists {
-			return fmt.Errorf("endpoint %s var has duplicate node entry for %q", af, n)
-		}
-		tmpNodes[n] = ""
 
 		prefix, err := netip.ParsePrefix(cidr)
 		if err != nil {
-			return fmt.Errorf("endpoint %s var has invalid prefix %q for %q (%v)", af, cidr, n, err)
+			return fmt.Errorf("endpoint %s var has invalid prefix %q (%v)", af, cidr, err)
 		}
 		switch af {
 		case "ipv4":
 			if !prefix.Addr().Is4() {
-				return fmt.Errorf("endpoint %s var has non-IPv4 prefix %q for %q (%v)", af, prefix, n, err)
+				return fmt.Errorf("endpoint %s var has non-IPv4 prefix %q", af, prefix)
 			}
-			nodes[n].Vars.IPv4 = cidr
+			endpoints[i].Vars.IPv4 = cidr
 		case "ipv6":
 			if !prefix.Addr().Is6() {
-				return fmt.Errorf("endpoint %s var has non-IPv6 prefix %q for %q (%v)", af, prefix, n, err)
+				return fmt.Errorf("endpoint %s var has non-IPv6 prefix %q", af, prefix)
 			}
-			nodes[n].Vars.IPv6 = cidr
+			endpoints[i].Vars.IPv6 = cidr
 		}
 	}
 	return nil

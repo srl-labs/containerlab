@@ -134,7 +134,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                         - "n1:e1-1"
                         - "n2:e1-1"
                     vars:
-                      ipv4: [n1:10.10.10.1/24]
+                      ipv4: [10.10.10.1/24]
                 `),
 			},
 			wantErr: false,
@@ -143,9 +143,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Link: &LinkVEthRaw{
 					Endpoints: []*EndpointRaw{
 						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
-						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{}},
+						{Node: "n2", Iface: "e1-1", Vars: nil},
 					},
-					LinkCommonParams: LinkCommonParams{MTU: clabconstants.DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"n1:10.10.10.1/24"}}},
+					LinkCommonParams: LinkCommonParams{MTU: clabconstants.DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"10.10.10.1/24"}}},
 				},
 			},
 		},
@@ -157,7 +157,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                         - "n1:e1-1"
                         - "n2:e1-1"
                     vars:
-                      ipv4: [n1:10.10.10.1/24, n2:10.10.10.2/24]
+                      ipv4: [10.10.10.1/24, 10.10.10.2/24]
                 `),
 			},
 			wantErr: false,
@@ -168,35 +168,9 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
 						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.2/24"}},
 					},
-					LinkCommonParams: LinkCommonParams{MTU: clabconstants.DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"n1:10.10.10.1/24", "n2:10.10.10.2/24"}}},
+					LinkCommonParams: LinkCommonParams{MTU: clabconstants.DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"10.10.10.1/24", "10.10.10.2/24"}}},
 				},
 			},
-		},
-		{
-			name: "brief link with ip var invalid node",
-			args: args{
-				yaml: []byte(`
-                    endpoints:
-                        - "n1:e1-1"
-                        - "n2:e1-1"
-                    vars:
-                      ipv4: ["n3:10.10.10.3/24"]
-                `),
-			},
-			wantErr: true,
-		},
-		{
-			name: "brief link with ipv4 var duplicate node",
-			args: args{
-				yaml: []byte(`
-                    endpoints:
-                        - "n1:e1-1"
-                        - "n2:e1-1"
-                    vars:
-                      ipv4: ["n1:10.10.10.1/24", "n1:10.20.30.40/24"]
-                `),
-			},
-			wantErr: true,
 		},
 		{
 			name: "brief link with ipv4 var as invalid address",
@@ -206,7 +180,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                         - "n1:e1-1"
                         - "n2:e1-1"
                     vars:
-                      ipv4: ["n1:foo"]
+                      ipv4: ["foo"]
                 `),
 			},
 			wantErr: true,
@@ -219,7 +193,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                         - "n1:e1-1"
                         - "n2:e1-1"
                     vars:
-                      ipv6: ["n1:foo"]
+                      ipv6: ["foo"]
                 `),
 			},
 			wantErr: true,
@@ -232,7 +206,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                         - "n1:e1-1"
                         - "n2:e1-1"
                     vars:
-                      ipv4: ["n1:2001:db8::1/64"]
+                      ipv4: ["2001:db8::1/64"]
                 `),
 			},
 			wantErr: true,
@@ -245,7 +219,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                         - "n1:e1-1"
                         - "n2:e1-1"
                     vars:
-                      ipv6: ["n1:10.10.10.1/24"]
+                      ipv6: ["10.10.10.1/24"]
                 `),
 			},
 			wantErr: true,
