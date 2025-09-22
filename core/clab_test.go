@@ -186,6 +186,7 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 			if counter >= counterMax {
 				return clabruntime.Running
 			}
+
 			return clabruntime.Stopped
 		},
 	).Times(counterMax)

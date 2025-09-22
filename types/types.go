@@ -72,9 +72,9 @@ func (m *MgmtNet) UnmarshalYAML(unmarshal func(any) error) error {
 	type MgmtNetAlias MgmtNet
 
 	type MgmtNetWithDeprecatedFields struct {
-		MgmtNetAlias         `       yaml:",inline"`
-		DeprecatedIPv4Subnet string `yaml:"ipv4_subnet,omitempty" json:"ipv4_subnet,omitempty"`
-		DeprecatedIPv6Subnet string `yaml:"ipv6_subnet,omitempty" json:"ipv6_subnet,omitempty"`
+		MgmtNetAlias         `yaml:",inline"`
+		DeprecatedIPv4Subnet string `json:"ipv4_subnet,omitempty" yaml:"ipv4_subnet,omitempty"`
+		DeprecatedIPv6Subnet string `json:"ipv6_subnet,omitempty" yaml:"ipv6_subnet,omitempty"`
 	}
 
 	mn := &MgmtNetWithDeprecatedFields{}

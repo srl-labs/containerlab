@@ -130,6 +130,7 @@ formatters:
       # default line length is 100
       # Shorten single-line comments.
       shorten-comments: true
+      reformat-tags: false
   exclusions:
     generated: lax
     paths:
