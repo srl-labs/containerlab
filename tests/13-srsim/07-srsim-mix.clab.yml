@@ -13,6 +13,9 @@ topology:
     srsim10:
       kind: nokia_srsim
       type: sr-7
+      certificate:
+        issue: true
+        sans: ["10.78.140.2","fd00:10:78:140::2"]
       startup-config: |
         /configure sfm 1 sfm-type m-sfm6-7/12
         /configure sfm 2 sfm-type m-sfm6-7/12

@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
+	github.com/beevik/etree v1.6.0
 	github.com/charmbracelet/fang v0.3.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
@@ -17,6 +18,7 @@ require (
 	github.com/docker/go-units v0.5.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/florianl/go-tc v0.4.5
+	github.com/go-xmlfmt/xmlfmt v1.1.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/nftables v0.2.0
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
