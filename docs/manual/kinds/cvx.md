@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: cumulus_cvx
+kind_display_name: Cumulus VX
 ---
-# Cumulus VX
+# -{{ kind_display_name }}-
+[-{{ kind_display_name }}-](https://docs.nvidia.com/networking-ethernet-software/cumulus-vx/) is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+The `cvx` kind defines a supported feature set and a startup procedure of a `cvx` node.
 
-[Cumulus VX](https://docs.nvidia.com/networking-ethernet-software/cumulus-vx/) is identified with `cvx` or `cumulus_cvx` kind in the [topology file](../topo-def-file.md). The `cvx` kind defines a supported feature set and a startup procedure of a `cvx` node.
 
 CVX nodes launched with containerlab come up with:
 
@@ -61,7 +64,7 @@ name: cvx_lab
 topology:
   nodes:
     cvx:
-      kind: cvx
+      kind: -{{ kind_code_name }}-
       binds:
         - cvx/interfaces:/etc/network/interfaces
         - cvx/daemons:/etc/frr/daemons

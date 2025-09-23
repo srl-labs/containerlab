@@ -31,10 +31,10 @@ The user configures the CLOS fabric topology by using the `--nodes` flag. The fl
 For example, the following flag value will define a 2-tier CLOS fabric with tier1 (leafs) consists of 4x SR Linux containers of IXR-D3 type and the 2x Arista cEOS spines:
 
 ```
-4:srl:ixrd3,2:ceos
+4:nokia_srlinux:ixrd3,2:arista_ceos
 ```
 
-Note, that the default kind is `srl`, so you can omit the kind for SR Linux node. The same nodes value can be expressed like that: `4:ixrd3,2:ceos`
+Note, that the default kind is `nokia_srlinux`, so you can omit the kind for SR Linux node. The same nodes value can be expressed like that: `4:ixrd3,2:arista_ceos`
 
 #### kind
 
@@ -44,7 +44,7 @@ For example the following value will generate a 3-tier CLOS fabric of cEOS nodes
 
 ```bash
 # cEOS fabric
-containerlab gen --name 3tier --kind ceos --nodes 4,2,1
+containerlab gen --name 3tier --kind arista_ceos --nodes 4,2,1
 
 # since SR Linux kind is assumed by default
 # SRL fabric command is even shorter
@@ -55,9 +55,9 @@ containerlab gen --name 3tier --nodes 4,2,1
 
 Use `--image` flag to specify the container image that should be used by a given kind.
 
-The value of this flag follows the `kind=image` pattern. For example, to set the container image `ceos:4.32.0F` for the `ceos` kind the flag will be: `--image ceos=ceos:4.32.0F`.
+The value of this flag follows the `kind=image` pattern. For example, to set the container image `ceos:4.32.0F` for the `arista_ceos` kind the flag will be: `--image arista_ceos=ceos:4.32.0F`.
 
-To set images for multiple kinds repeat the flag: `--image srl=ghcr.io/nokia/srlinux:latest --image ceos=ceos:4.32.0F` or use the comma separated form: `--image srl=ghcr.io/nokia/srlinux:latest,ceos=ceos:latest`
+To set images for multiple kinds repeat the flag: `--image nokia_srlinux=ghcr.io/nokia/srlinux:latest --image arista_ceos=ceos:4.32.0F` or use the comma separated form: `--image nokia_srlinux=ghcr.io/nokia/srlinux:latest,arista_ceos=ceos:latest`
 
 If the kind information is not provided in the `image` flag, the kind value will be taken from the `--kind` flag.
 
@@ -65,7 +65,7 @@ If the kind information is not provided in the `image` flag, the kind value will
 
 With `--license` flag it is possible to set the license path that should be used by a given kind.
 
-The value of this flag follows the `kind=path` pattern. For example, to set the license path for the `srl` kind: `--license srl=/tmp/license.key`.
+The value of this flag follows the `kind=path` pattern. For example, to set the license path for the `nokia_srlinux` kind: `--license nokia_srlinux=/tmp/license.key`.
 
 To set license for multiple kinds repeat the flag: `--license <kind1>=/path1 --image <kind2>=/path2` or use the comma separated form: `--license <kind1>=/path1,<kind2>=/path2`
 
@@ -126,10 +126,10 @@ containerlab generate --name 3tier --nodes 8,4,2 --owner bob --deploy
 Generate and deploy a lab topology for 3-tier CLOS network with 8 leafs, 4 spines and 2 superspines. All using Nokia SR Linux nodes with license and image provided.
 
 /// note
-The `srl` kind in the image and license flags can be omitted, as it is implied by default
+The `nokia_srlinux` kind in the image and license flags can be omitted, as it is implied by default
 ///
 
 ```bash
-containerlab generate --name 3tier --image srl=ghcr.io/nokia/srlinux:latest \
+containerlab generate --name 3tier --image nokia_srlinux=ghcr.io/nokia/srlinux:latest \
                       --nodes 8,4,2 --deploy
 ```

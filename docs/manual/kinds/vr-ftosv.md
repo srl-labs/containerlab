@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: dell_ftosv
+kind_display_name: Dell FTOSv (OS10)
 ---
-# Dell FTOSv (OS10) / ftosv
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- virtualized router/switch is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-Dell FTOSv (OS10) virtualized router/switch is identified with `dell_ftosv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Dell FTOSv nodes launched with containerlab comes up pre-provisioned with SSH and SNMP services enabled.
 
@@ -56,7 +59,7 @@ It is possible to make vMX nodes boot up with a user-defined startup-config inst
 topology:
   nodes:
     node:
-      kind: dell_ftosv
+      kind: -{{ kind_code_name }}-
       startup-config: myconfig.txt
 ```
 

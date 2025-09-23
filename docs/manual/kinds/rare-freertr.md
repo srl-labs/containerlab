@@ -1,12 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: rare
+kind_display_name: RARE/freeRtr
 ---
-# RARE/freeRtr
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
-[RARE](http://rare.freertr.org) stands for Router for Academia, Research & Education. It is an open source routing platform, used to create a network operating system (NOS) on commodity hardware (a white box switch). RARE uses FreeRtr as a control plane software  and is thus often referred to as RARE/freeRtr.
-
-RARE nodes are identified by the `rare` kind in the [topology file](../topo-def-file.md).
+[RARE](http://rare.freertr.org) stands for Router for Academia, Research & Education. It is an open source routing platform, used to create a network operating system (NOS) on commodity hardware (a white box switch). RARE uses FreeRtr as a control plane software  and is thus often referred to as -{{ kind_display_name }}-.
 
 ???info "what is RARE?"
     RARE/freeRtr has the particularity to run interchangeably different dataplanes such P4 INTEL TOFINO, P4 BMv2, DPDK, XDP, libpcap or UNIX UDP raw sockets. This inherent property allows RARE/freeRtr to run multiple use cases requiring different bandwidth capability.
@@ -25,7 +26,7 @@ RARE/freeRtr container image is freely available on [GitHub Container Registry](
 
 The container image is nightly build of a [RARE/freeRtr](https://github.com/rare-freertr/freeRtr) control plane off the `master` branch.
 
-## Managing RARE/freeRtr nodes
+## Managing -{{ kind_display_name }}- nodes
 
 RARE/freeRtr node launched with containerlab can be managed via the following interfaces:
 
@@ -73,7 +74,7 @@ It is possible to make RARE/freeRtr nodes to boot up with a user-defined config 
 ```yaml
 nodes:
   rtr1:
-    kind: rare
+    kind: -{{ kind_code_name }}-
     image: ghcr.io/rare-freertr/freertr-containerlab:latest
     binds:
       - rtr-hw.txt:/rtr/run/conf/rtr-hw.txt

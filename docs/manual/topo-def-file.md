@@ -17,7 +17,7 @@ topology:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     ceos:
-      kind: ceos
+      kind: arista_ceos
       image: ceos:4.32.0F
 
   links:
@@ -109,7 +109,7 @@ topology:
       type: ixr-d2l
       image: ghcr.io/nokia/srlinux
     ceos:                   # this is a name of the 2nd node
-      kind: ceos
+      kind: arista_ceos
       image: ceos:4.32.0F
 ```
 
@@ -449,7 +449,7 @@ topology:
       kind: nokia_srlinux
 ```
 
-In the example above the `topology.kinds` element has `srl` kind referenced. With this, we set some values for the properties of the `srl` kind. A configuration like that says that nodes of `srl` kind will also inherit the properties (type, image) defined on the _kind level_.
+In the example above the `topology.kinds` element has `nokia_srlinux` kind referenced. With this, we set some values for the properties of the `nokia_srlinux` kind. A configuration like that says that nodes of `nokia_srlinux` kind will also inherit the properties (type, image) defined on the _kind level_.
 
 Essentially, what `kinds` section allows us to do is to shorten the lab definition in cases when we have a number of nodes of a same kind. All the nodes (`srl1`, `srl2`, `srl3`) will have the same values for their `type` and `image` properties.
 
@@ -472,7 +472,7 @@ topology:
       image: ghcr.io/nokia/srlinux
 ```
 
-A lot of unnecessary repetition is eliminated when we set `srl` kind properties on kind level.
+A lot of unnecessary repetition is eliminated when we set `nokia_srlinux` kind properties on kind level.
 
 #### Defaults
 

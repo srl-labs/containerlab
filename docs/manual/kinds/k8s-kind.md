@@ -1,28 +1,31 @@
 ---
 search:
   boost: 4
+kind_code_name: k8s-kind
+kind_display_name: Kubernetes in docker (kind) cluster
 ---
 
-# Kubernetes in docker (kind) cluster
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 Since more and more applications (including network management systems and network functions) are being deployed in the k8s clusters, it is important to be able to test the network connectivity between the k8s workloads and the underlay network.
 
-[Kind][kind-url] is a tool for running local Kubernetes clusters using Docker container “nodes”. By integrating kind clusters via a new kind `k8s-kind` with containerlab, it is possible to spin-up kind clusters as part of the containerlab topology.
+[Kind][kind-url] is a tool for running local Kubernetes clusters using Docker container “nodes”. By integrating kind clusters via a new kind `-{{ kind_code_name }}-` with containerlab, it is possible to spin-up kind clusters as part of the containerlab topology.
 
 This deployment model unlocks the possibility to integrate network underlay created by containerlab with the workloads running in the kind clusters in a single YAML file. The integration between kind clusters and containerlab topology makes it easy to deploy and interconnect k8s clusters and the underlay network.
 
-## Using `k8s-kind`
+## Using `-{{ kind_code_name }}-`
 
 Integration between Kind and Containerlab is a mix of two kinds:
 
-1. `k8s-kind` - to manage the creation of the kind clusters
+1. `-{{ kind_code_name }}-` - to manage the creation of the kind clusters
 2. `ext-container` - to allow for the interconnection between the nodes of a kind cluster and the network nodes that are part of the same containerlab topology
 
 The lab depicted below incorporates two kind clusters, one with a control plane and a worker node, and the other with an all-in-one node.
 
-By defining the clusters with `k8s-kind` nodes we let containerlab manage the lifecycle (deployment/destroy) of the kind clusters. But this is not all. We can use the `ext-container` nodes to define actual kind cluster containers that run the control plane and worker nodes.
+By defining the clusters with `-{{ kind_code_name }}-` nodes we let containerlab manage the lifecycle (deployment/destroy) of the kind clusters. But this is not all. We can use the `ext-container` nodes to define actual kind cluster containers that run the control plane and worker nodes.
 
 The name of the `ext-container` node is known upfront as it is computed as `<k8s-kind-node-name>-control-plane` for the control plane node and `<k8s-kind-node-name>-worker[worker-node-index]` for the worker nodes.
 
@@ -67,7 +70,7 @@ k02-control-plane
 
 ## Cluster config
 
-It is possible to provide original kind cluster configuration via `startup-configuration` parameter of the `k8s-kind` node. Due to the kind cluster config provided to `k01` node above, kind will spin up 2 containers, one control-plane and one worker node. `k02` cluster that doesn't have a `startup-configuration` defined will spin up a single container with an all-in-one control-plane and a worker node.
+It is possible to provide original kind cluster configuration via `startup-configuration` parameter of the `-{{ kind_code_name }}-` node. Due to the kind cluster config provided to `k01` node above, kind will spin up 2 containers, one control-plane and one worker node. `k02` cluster that doesn't have a `startup-configuration` defined will spin up a single container with an all-in-one control-plane and a worker node.
 
 Contents of `k01-config.yaml`:
 
@@ -95,20 +98,20 @@ Given the lab above, we configure `eth1` interface on all nodes. For example, we
 
 ## Node parameters
 
-With `k8s-kind`` nodes it is possible to use the following configuration parameters:
+With `-{{ kind_code_name }}-` nodes it is possible to use the following configuration parameters:
 
 - [image](../nodes.md#image) - to define the kind container image to use for the kind cluster
 - [startup-config](../nodes.md#startup-config) - to provide a kind cluster configuration (optional, kind defaults apply otherwise)
 
 ### Extra parameters
 
-In addition to the generic node parameters, `k8s-kind` can take following extra parameters from `extras` field.
+In addition to the generic node parameters, `-{{ kind_code_name }}-` can take following extra parameters from `extras` field.
 
 ```
 topology:
   nodes:
     kind0:
-      kind: k8s_kind
+      kind: -{{ kind_code_name }}-
       extras:
         k8s_kind:
           deploy:
@@ -120,11 +123,11 @@ topology:
 
 ### Duplication of nodes in the output
 
-When you deploy a lab with `k8s-kind` nodes you may notice that the output of the `deploy` command contains more nodes than you have defined in the topology file. This is a known visual issue that is caused by the fact that `k8s-kind` nodes are merely a placeholder for a kind cluster configuration, and the actual nodes of the kind cluster are defined by the `ext-container` nodes.
+When you deploy a lab with `-{{ kind_code_name }}-` nodes you may notice that the output of the `deploy` command contains more nodes than you have defined in the topology file. This is a known visual issue that is caused by the fact that `-{{ kind_code_name }}-` nodes are merely a placeholder for a kind cluster configuration, and the actual nodes of the kind cluster are defined by the `ext-container` nodes.
 
 ### `inspect --all` command output
 
-When you run `clab inspect --all` command you may notice that the output doesn't list the `k8s-kind` nodes nor the `ext-container` nodes.
+When you run `clab inspect --all` command you may notice that the output doesn't list the `-{{ kind_code_name }}-` nodes nor the `ext-container` nodes.
 
 For now, use `clab inspect -t <topology-file>` to see the full topology output.
 
