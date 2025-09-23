@@ -61,7 +61,6 @@ Check Cards after 40s on srsim10
     Log    ${output}
 
 Check Cards after 40s on srsim11
-    Sleep    40s    give some time for linecards to come up
     [Documentation]    Give some time for datapath cards to come up
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    echo "show card state | match ' up '" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim11-a
