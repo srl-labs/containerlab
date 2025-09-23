@@ -53,12 +53,18 @@ Verify links in node l2
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
-Check Cards after 40s
+Check Cards after 40s on srsim10
     Sleep    40s    give some time for linecards to come up
     [Documentation]    Give some time for datapath cards to come up
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    echo "show card state | match 'up    up'" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim10-a
-    ...    echo "show card state | match 'up    up'" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim11-a
+    ...    echo "show card state | match ' up '" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim10-a
+    Log    ${output}
+
+Check Cards after 40s on srsim11
+    Sleep    40s    give some time for linecards to come up
+    [Documentation]    Give some time for datapath cards to come up
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show card state | match ' up '" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim11-a
     Log    ${output}
 
 Ensure l1 can ping l2 via sr-sim network
