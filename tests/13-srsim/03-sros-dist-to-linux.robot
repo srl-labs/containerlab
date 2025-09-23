@@ -51,6 +51,12 @@ Ensure l1 can ping sros over 1/1/1 interface
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
 
+Do a gNOI cert get-certs
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.1.0 cert get-certs --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-sros-a
+    Log    ${output}
+    Should Contain    ${output}    sros-a.${lab-name}.io
 
 *** Keywords ***
 Cleanup

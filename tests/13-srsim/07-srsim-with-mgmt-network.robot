@@ -84,11 +84,18 @@ Check the number of hosts entries should be Equal to 4xIPv4 and 4xIPv6
 Do a gNMI GET using TLS
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/openconfig/gnmic get --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10-a --path /state/system/oper-name --values-only
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/openconfig/gnmic:0.42.0 get --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10-a --path /state/system/oper-name --values-only
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    srsim10-a
 
+Do a gNOI ping
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.1.0 system ping --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10-a --destination 10.78.140.3 --count 3
+    Log    ${output}
+    Should Contain    ${output}    5 packets sent
+    Should Contain    ${output}    5 packets received
 
 *** Keywords ***
 Cleanup
