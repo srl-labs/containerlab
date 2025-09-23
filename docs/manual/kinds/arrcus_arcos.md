@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: arrcus_arcos
+kind_display_name: Arrcus ArcOS
 ---
-# Arrcus ArcOS
+# -{{ kind_display_name }}-
+[-{{ kind_display_name }}-](https://arrcus.com/connected-edge/arcos) is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+ArcOS nodes launched with containerlab comes up with
 
-[Arrcus ArcOS](https://arrcus.com/connected-edge/arcos) is identified with `arrcus_arcos` kind in the [topology file](../topo-def-file.md). ArcOS nodes launched with containerlab comes up with
 
 * their management interface `eth0` configured with IPv4/6 addresses as assigned by docker
 * hostname assigned to the node name
@@ -83,7 +86,7 @@ ArcOS container uses the following mapping for its linux interfaces:
 
 #### Default node configuration
 
-It is possible to launch nodes of `arrcus_arcos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+It is possible to launch nodes of `-{{ kind_code_name }}-` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 When a node is defined without `startup-config` statement present, containerlab will generate config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/arrcus_arcos/arcos.cfg) and copy it to the config directory of the node.
 
@@ -96,7 +99,7 @@ name: r1
 topology:
   nodes:
     arcos:
-      kind: arrcus_arcos
+      kind: -{{ kind_code_name }}-
       startup-config: r1.cfg
 ```
 

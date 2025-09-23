@@ -1,15 +1,18 @@
 ---
 search:
   boost: 4
+kind_code_name: sonic-vm
+kind_display_name: SONiC (VM)
 ---
-# SONiC (VM)
+# -{{ kind_display_name }}-
+This document covers the VM flavor of the upstream SONiC that is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+A kind defines a supported feature set and a startup procedure of a `-{{ kind_code_name }}-` node.
 
 [SONiC](https://sonic-net.github.io/SONiC/) Network OS is distributed in two formats suitable for testing with containerlab
 
 1. Containerized SONiC (`sonic-vs` kind)
-2. Virtual Machine SONiC (`sonic-vm` kind; the topic of this document)
+2. Virtual Machine SONiC (`-{{ kind_code_name }}-` kind; the topic of this document)
 
-This document covers the VM flavor of the upstream SONiC that is identified with `sonic-vm` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `sonic-vm` node.
 
 The VM-based image of SONiC is built with the [`srl-labs/vrnetlab`](https://github.com/srl-labs/vrnetlab/tree/master/sonic) project.
 

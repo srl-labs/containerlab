@@ -308,7 +308,7 @@ topology:
     nokia_srlinux:
       env:
         ENV1: 2 # ENV1=2 will be set to if it's not set on node level
-        ENV3: kind # ENV3=kind will be set for all nodes of srl kind
+        ENV3: kind # ENV3=kind will be set for all nodes of nokia_srlinux kind
   nodes:
     node1:
       env:

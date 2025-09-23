@@ -50,6 +50,7 @@ nav:
           - VyOS Networks VyOS: manual/kinds/vyosnetworks_vyos.md
           - OpenBSD: manual/kinds/openbsd.md
           - FreeBSD: manual/kinds/freebsd.md
+          - OpenWRT: manual/kinds/openwrt.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
           - Ostinato: manual/kinds/ostinato.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md

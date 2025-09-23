@@ -1,14 +1,17 @@
 ---
 search:
   boost: 4
+kind_code_name: nokia_srlinux
+kind_display_name: Nokia SR Linux
 ---
-# Nokia SR Linux
+# -{{ kind_display_name }}-
+[-{{ kind_display_name }}-](https://www.nokia.com/networks/products/service-router-linux-NOS/) NOS is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+A kind defines a supported feature set and a startup procedure of a node.
 
-[Nokia SR Linux](https://www.nokia.com/networks/products/service-router-linux-NOS/) NOS is identified with `nokia_srlinux` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a node.
 
 ## Getting SR Linux image
 
-Nokia SR Linux is the first commercial Network OS with a free and open distribution model. Everyone can pull SR Linux container from a public registry:
+-{{ kind_display_name }}- is the first commercial Network OS with a free and open distribution model. Everyone can pull SR Linux container from a public registry:
 
 ```bash
 # pull latest available release
@@ -192,7 +195,7 @@ name: srl_lab
 topology:
   nodes:
     srl1:
-      kind: nokia_srlinux
+      kind: -{{ kind_code_name }}-
       type: ixr-d3
 ```
 
@@ -274,7 +277,7 @@ name: srl_lab
 topology:
   nodes:
     srl1:
-      kind: nokia_srlinux
+      kind: -{{ kind_code_name }}-
       type: ixr-d3
       image: ghcr.io/nokia/srlinux
       # a path to the partial config in CLI format relative to the current working directory
@@ -292,7 +295,7 @@ name: srl_lab
 topology:
   nodes:
     srl1:
-      kind: nokia_srlinux
+      kind: -{{ kind_code_name }}-
       type: ixr-d3
       image: ghcr.io/nokia/srlinux
       # a path to the full config in JSON format relative to the current working directory
@@ -431,7 +434,7 @@ net.ipv6.conf.default.autoconf = "0"
 
 ### File mounts
 
-When a user starts a lab, containerlab creates a lab directory for storing [configuration artifacts](../conf-artifacts.md). For `nokia_srlinux` kind, containerlab creates directories for each node of that kind.
+When a user starts a lab, containerlab creates a lab directory for storing [configuration artifacts](../conf-artifacts.md). For `-{{ kind_code_name }}-` kind, containerlab creates directories for each node of that kind.
 
 ```
 ~/clab/clab-srl02

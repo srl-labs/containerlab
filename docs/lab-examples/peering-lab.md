@@ -63,7 +63,7 @@ The two IXP members are defined as follows:
 topology:
   nodes:
     peer1:
-      kind: vr-nokia_sros
+      kind: nokia_sros
       image: sros:23.3.R1 #(1)!
       license: license.key
       startup-config: configs/sros.partial.cfg
@@ -78,7 +78,7 @@ topology:
 
 1. SR OS container has to be requested from Nokia or built manually from qcow2 disk image using `srl-labs/vrnetlab` project as explained [here](../manual/vrnetlab.md).
 
-Apart from typical containerlab node definitions statements like `kind` and `image`, for SR OS we leverage the [`vr-nokia_sros`](../manual/kinds/vr-sros.md) kind, `license` and `startup-config` keys to provide the SR OS container with the license key and the startup configuration file respectively. Check out [Basic configuration](#basic-configuration) section for more details on the contents of startup-configuration files for each topology member.
+Apart from typical containerlab node definitions statements like `kind` and `image`, for SR OS we leverage the [`nokia_sros`](../manual/kinds/vr-sros.md) kind, `license` and `startup-config` keys to provide the SR OS container with the license key and the startup configuration file respectively. Check out [Basic configuration](#basic-configuration) section for more details on the contents of startup-configuration files for each topology member.
 
 For the FRR, which uses the public official container image, node we leverage the `binds` key to mount the FRR configuration file and the FRR daemon configuration file into the container. Again, the contents of these files are explained in the [Basic configuration](#basic-configuration) section.
 
@@ -185,7 +185,7 @@ Upon successful deployment, containerlab presents the lab summary table that con
 +---+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 | # |      Name      | Container ID |             Image             |     Kind      |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
-| 1 | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 3fff:172:20:20::5/64 |
+| 1 | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | nokia_sros | running | 172.20.20.5/24 | 3fff:172:20:20::5/64 |
 | 2 | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 3fff:172:20:20::3/64 |
 | 3 | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 3fff:172:20:20::4/64 |
 | 4 | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 3fff:172:20:20::2/64 |
@@ -203,7 +203,7 @@ $ containerlab inspect --all
 +---+--------------+----------+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 | # |  Topo Path   | Lab Name |      Name      | Container ID |             Image             |     Kind      |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+--------------+----------+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
-| 1 | ixp.clab.yml | ixp      | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 3fff:172:20:20::5/64 |
+| 1 | ixp.clab.yml | ixp      | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | nokia_sros    | running | 172.20.20.5/24 | 3fff:172:20:20::5/64 |
 | 2 |              |          | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 3fff:172:20:20::3/64 |
 | 3 |              |          | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 3fff:172:20:20::4/64 |
 | 4 |              |          | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 3fff:172:20:20::2/64 |

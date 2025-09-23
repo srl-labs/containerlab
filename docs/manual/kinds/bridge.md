@@ -1,12 +1,15 @@
 ---
 search:
   boost: 4
+kind_code_name: bridge
+kind_display_name: Linux bridge
 ---
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
-# Linux bridge
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
-Containerlab can connect its nodes to a Linux bridge instead of interconnecting the nodes directly. This connectivity option is enabled with `bridge` kind and opens a variety of integrations that containerlab labs can have with workloads of other types.
+Containerlab can connect its nodes to a -{{ kind_display_name }}- instead of interconnecting the nodes directly. This connectivity option is enabled with `-{{ kind_code_name }}-` kind and opens a variety of integrations that containerlab labs can have with workloads of other types.
 
 For example, by connecting a lab node to a bridge we can:
 
@@ -41,7 +44,7 @@ topology:
       kind: nokia_srlinux
     # note, that the bridge br-clab must be created manually
     br-clab:
-      kind: bridge
+      kind: -{{ kind_code_name }}-
 
   links:
     - endpoints: ["srl1:e1-1", "br-clab:eth1"]
@@ -49,7 +52,7 @@ topology:
     - endpoints: ["srl3:e1-1", "br-clab:eth3"]
 ```
 
-In the example above, node `br-clab` of kind `bridge` tells containerlab to identify it as a linux bridge and look for a bridge named `br-clab`.
+In the example above, node `br-clab` of kind `-{{ kind_code_name }}-` tells containerlab to identify it as a linux bridge and look for a bridge named `br-clab`.
 
 When connecting other nodes to a bridge, the bridge endpoint must be present in the `links` section.
 
@@ -104,7 +107,7 @@ name: "bridge-ns"
 topology:
   nodes:
      br01|bp1:
-       kind: bridge
+       kind: -{{ kind_code_name }}-
        network-mode: container:bp1
      bp1:
        kind: linux
