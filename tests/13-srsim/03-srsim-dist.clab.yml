@@ -18,7 +18,7 @@ topology:
       kind: nokia_srsim
       type: ixr-s
       certificate:
-        issue: True
+        issue: true
       env: 
         NOKIA_SROS_SLOT: A
       startup-config: |
