@@ -53,12 +53,15 @@ Verify links in node l2
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
-Sleep for 10 seconds
+Check Cards after 40s
+    Sleep    40s    give some time for linecards to come up
     [Documentation]    Give some time for datapath cards to come up
-    Sleep    10s
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show card state | match 'up    up'" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim10-a
+    ...    echo "show card state | match 'up    up'" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim11-a
+    Log    ${output}
 
 Ensure l1 can ping l2 via sr-sim network
-    Sleep    30s    give some time for linecards to come up
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping -c 2 -W 3 -M do -s 8662 10.111.0.1"
     Log    ${output}
@@ -75,7 +78,7 @@ Check the number of hosts entries should be Equal to 4xIPv4 and 4xIPv6
 Do a gNMI GET using TLS
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/openconfig/gnmic get  --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10-a  --path /state/system/oper-name --values-only
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/openconfig/gnmic get --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10-a --path /state/system/oper-name --values-only
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    srsim10-a
