@@ -207,7 +207,10 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 
 	mac := genMac(n.Cfg)
 	srosEnv[envNokiaSrosSystemBaseMac] = mac
-
+	// Ensure n.Cfg.Certificate.Issue is not nil
+	if n.Cfg.Certificate.Issue == nil {
+		n.Cfg.Certificate.Issue = clabutils.Pointer(false)
+	}
 	if n.isStandaloneNode() {
 		log.Debugf("%q is standalone node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
 
@@ -290,8 +293,7 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	// Create files/dir structure for standalone nodes or distributed CPM nodes
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		// generate the certificate
-		if n.Cfg.Certificate.Issue != nil && *n.Cfg.Certificate.Issue {
-
+		if *n.Cfg.Certificate.Issue {
 			certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 			if err != nil {
 				return err
@@ -371,14 +373,12 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 				return err
 			}
 			// TLS bootstrap in case of n.Cfg.Certificate.Issue flag
-			if n.Cfg.Certificate.Issue != nil && *n.Cfg.Certificate.Issue {
-
+			if *n.Cfg.Certificate.Issue {
 				err = n.tlsCertBootstrap(ctx, addr)
 				if err != nil {
 					return fmt.Errorf("TLS cert/key bootstrap to node %q failed: %w", n.Cfg.LongName, err)
 				}
 				log.Infof("Completed NETCONF bootstrap for gRPC-TLS profile on node %s", n.Cfg.ShortName)
-
 			}
 			err = n.saveConfigWithAddr(ctx, addr)
 			if err != nil {
@@ -813,8 +813,7 @@ func (n *sros) createSROSFiles() error {
 
 // Func that Places the Certificates in the right place and format.
 func (n *sros) createSROSCertificates() error {
-	if n.Cfg.Certificate.Issue != nil && *n.Cfg.Certificate.Issue {
-
+	if *n.Cfg.Certificate.Issue {
 		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 			clabconstants.PermissionsOpen)
 		keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, tlsKeyFile)
@@ -880,8 +879,9 @@ func (n *sros) createSROSConfigFiles() error {
 	err = n.GenerateConfig(cf3CfgFile, cfgTemplate)
 	if err != nil {
 		return fmt.Errorf("failed to generate config for node %q: %v", n.Cfg.ShortName, err)
+	} else {
+		return nil
 	}
-	return err
 }
 
 // SlotIsInteger checks if the slot string represents a valid integer.
@@ -937,9 +937,8 @@ func (n *sros) addDefaultConfig() error {
 		tplData.GRPCConfig = grpcConfigIXR
 		tplData.SystemConfig = systemCfgIXR
 	}
-	if n.Cfg.Certificate.Issue == nil ||
-		(n.Cfg.Certificate.Issue != nil && !*n.Cfg.Certificate.Issue) {
-		log.Debugf("Using insecure cert configuration for node %s, found certificate.issue flag %v or `nil`",
+	if !*n.Cfg.Certificate.Issue {
+		log.Debugf("Using insecure cert configuration for node %s, found certificate.issue flag %v",
 			n.Cfg.ShortName, *n.Cfg.Certificate.Issue)
 		tplData.GRPCConfig = grpcConfigInsecure
 		if strings.Contains(tplData.NodeType, "ixr-") {
