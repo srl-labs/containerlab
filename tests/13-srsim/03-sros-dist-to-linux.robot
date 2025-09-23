@@ -46,7 +46,7 @@ Verify links in node l1
 Ensure l1 can ping sros over 1/1/1 interface
     Sleep    30s    give some time for linecards to come up
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping -c2 w3 10.0.0.2"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping -c2 -w3 10.0.0.2"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
