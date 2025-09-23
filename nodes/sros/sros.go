@@ -370,7 +370,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			if err != nil {
 				return err
 			}
-			// TLS bootsrap in case of n.Cff.Certificate.Issue flag
+			// TLS bootstrap in case of n.Cfg.Certificate.Issue flag
 			if n.Cfg.Certificate.Issue != nil && *n.Cfg.Certificate.Issue {
 
 				err = n.tlsCertBootstrap(ctx, addr)
