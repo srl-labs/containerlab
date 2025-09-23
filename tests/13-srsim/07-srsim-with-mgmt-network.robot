@@ -94,8 +94,8 @@ Do a gNOI ping
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.1.0 system ping --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10-a --destination 10.78.140.3 --count 3
     Log    ${output}
-    Should Contain    ${output}    5 packets sent
-    Should Contain    ${output}    5 packets received
+    Should Contain    ${output}    3 packets sent
+    Should Contain    ${output}    3 packets received
 
 *** Keywords ***
 Cleanup
