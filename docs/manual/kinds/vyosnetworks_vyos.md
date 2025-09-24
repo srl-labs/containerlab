@@ -1,11 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: vyosnetworks_vyos
+kind_display_name: VyOS Networks VyOS
 ---
 
-# VyOS Networks VyOS
+# -{{ kind_display_name }}-
+Containerized VyOS network operating system is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
-Containerized VyOS network operating system is identified with the `vyosnetworks_vyos` kind in the [topology file](../topo-def-file.md).
 
 VyOS nodes will launch with the following features
 
@@ -103,7 +105,7 @@ VyOS only allows interfaces in the format `ethN`. The `eth0` interface is reserv
 
 ### Node configuration
 
-VyOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `vyosnetworks_vyos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+VyOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `-{{ kind_code_name }}-` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
 
@@ -117,7 +119,7 @@ name: vyos_lab
 topology:
   nodes:
     vyos:
-      kind: vyosnetworks_vyos
+      kind: -{{ kind_code_name }}-
 ```
 
 The generated config will be saved to the path `clab-<lab_name>/<node-name>/config/config.boot`. Using the example topology presented above, the exact path to the config will be `clab-vyos/vyos/config/config.boot`.
@@ -131,13 +133,13 @@ name: vyos_lab
 topology:
   nodes:
     ceos:
-      kind: vyosnetworks_vyos
+      kind: -{{ kind_code_name }}-
       startup-config: myconfig.conf
 ```
 
 When a config file is passed via `startup-config` parameter it will be used during an initial lab deployment. However, a config file that might be in the lab directory of a node takes precedence over the startup-config[^1].
 
-It is possible to change the default config which every VyOS node will start with by specifying it in the `topology.kinds.vyos.startup-config`
+It is possible to change the default config which every VyOS node will start with by specifying it in the `topology.kinds.vyosnetworks_vyos.startup-config`
 
 ```yaml
 name: vyos_lab
@@ -145,15 +147,15 @@ name: vyos_lab
 topology:
   kinds:
     vyosnetworks_vyos:
-    startup-config: vyos-custom-startup.cfg
+      startup-config: vyos-custom-startup.cfg
   nodes:
     # vyos1 will boot with vyos-custom-startup.cfg as set in the kind parameters
     vyos1:
-      kind: vyosnetworks_vyos
+      kind: -{{ kind_code_name }}-
       image: vyos:latest
     # vyos2 will boot with its own specific startup config, as it overrides the kind variables
     vyos2:
-      kind: vyosnetworks_vyos
+      kind: -{{ kind_code_name }}-
       image: vyos:latest
       startup-config: node-specific-startup.cfg
   links:

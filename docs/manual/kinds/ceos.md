@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: arista_ceos
+kind_display_name: Arista cEOS
 ---
-# Arista cEOS
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+The `-{{ kind_code_name }}-` kind defines a supported feature set and a startup procedure of a `ceos` node.
 
-Arista cEOS is identified with `ceos` or `arista_ceos` kind in the [topology file](../topo-def-file.md). The `ceos` kind defines a supported feature set and a startup procedure of a `ceos` node.
 
 cEOS nodes launched with containerlab comes up with
 
@@ -136,12 +139,12 @@ With the following topology file, containerlab is instructed to take a `mymappin
     topology:
       nodes:
         ceos1:
-          kind: ceos
+          kind: -{{ kind_code_name }}-
           image: ceos:4.32.0F
           binds:
             - mymapping.json:/mnt/flash/EosIntfMapping.json:ro # (1)!
         ceos2:
-          kind: ceos
+          kind: -{{ kind_code_name }}-
           image: ceos:4.32.0F
           binds:
             - mymapping.json:/mnt/flash/EosIntfMapping.json:ro
@@ -154,19 +157,19 @@ With the following topology file, containerlab is instructed to take a `mymappin
     ```yaml
         topology:
           kinds:
-            ceos:
+            arista_ceos:
               binds:
                 - mymapping.json:/mnt/flash/EosIntfMapping.json:ro
           nodes:
             ceos1:
-              kind: ceos
+              kind: -{{ kind_code_name }}-
               image: ceos:4.32.0F
             ceos2:
-              kind: ceos
+              kind: -{{ kind_code_name }}-
               image: ceos:4.32.0F
     ```
 
-    This way the bind is set only once, and nodes of `ceos` kind will have these binds applied.
+    This way the bind is set only once, and nodes of `-{{ kind_code_name }}-` kind will have these binds applied.
 
 ### Additional interface naming considerations
 
@@ -196,10 +199,10 @@ name: ceos
 topology:
   nodes:
     ceos1:
-      kind: ceos
+      kind: -{{ kind_code_name }}-
       image: ceos:4.32.0F
     ceos2:
-      kind: ceos
+      kind: -{{ kind_code_name }}-
       image: ceos:4.32.0F
   links:
     - endpoints: ["ceos1:eth1_1", "ceos2:eth2_1_1"]
@@ -214,7 +217,7 @@ This topology will be equivalent to `ceos1:Ethernet1/1` connected to `ceos2:Ethe
 
 ### Node configuration
 
-cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `ceos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+cEOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `-{{ kind_code_name }}-` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
 
@@ -228,7 +231,7 @@ name: ceos
 topology:
   nodes:
     ceos:
-      kind: ceos
+      kind: -{{ kind_code_name }}-
 ```
 
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/flash/startup-config`. Using the example topology presented above, the exact path to the config will be `clab-ceos/ceos/flash/startup-config`.
@@ -248,14 +251,14 @@ The default empty configuration supports placing the management interface into a
 name: ceos_vrf
 topology:
   kinds:
-    ceos:
+    arista_ceos:
       env:
         CLAB_MGMT_VRF: MGMT
   nodes:
     node1:
-      kind: ceos
+      kind: -{{ kind_code_name }}-
     node2:
-      kind: ceos
+      kind: -{{ kind_code_name }}-
       env:
         CLAB_MGMT_VRF: FOO
 ```
@@ -269,7 +272,7 @@ name: ceos_lab
 topology:
   nodes:
     ceos:
-      kind: ceos
+      kind: -{{ kind_code_name }}-
       startup-config: myconfig.conf
 ```
 
@@ -280,23 +283,23 @@ With such topology file containerlab is instructed to take a file `myconfig.conf
 It is possible to change the default config which every ceos node will start with with the following steps:
 
 1. Craft a valid startup configuration file[^2].
-2. Use this file as a startup-config for ceos kind:
+2. Use this file as a startup-config for arista_ceos kind:
 
     ```yaml
     name: ceos
 
     topology:
       kinds:
-        ceos:
-        startup-config: ceos-custom-startup.cfg
+        arista_ceos:
+          startup-config: ceos-custom-startup.cfg
       nodes:
         # ceos1 will boot with ceos-custom-startup.cfg as set in the kind parameters
         ceos1:
-          kind: ceos
+          kind: -{{ kind_code_name }}-
           image: ceos:4.32.0F
         # ceos2 will boot with its own specific startup config, as it overrides the kind variables
         ceos2:
-          kind: ceos
+          kind: -{{ kind_code_name }}-
           image: ceos:4.32.0F
           startup-config: node-specific-startup.cfg
       links:
@@ -325,7 +328,7 @@ To start an Arista cEOS node containerlab uses the following configuration:
 
 ### File mounts
 
-When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `ceos` kind containerlab creates `flash` directory for each ceos node and mounts these folders by `/mnt/flash` paths.
+When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `-{{ kind_code_name }}-` kind containerlab creates `flash` directory for each ceos node and mounts these folders by `/mnt/flash` paths.
 
 ```
 ❯ tree clab-srlceos01/ceos
@@ -364,7 +367,7 @@ name: ceos
 topology:
   nodes:
     ceos1:
-      kind: ceos
+      kind: -{{ kind_code_name }}-
       ...
       extras:
         ceos-copy-to-flash:
@@ -444,7 +447,7 @@ where 75000 is `60 (# of nodes) * 1250`.
 ...
 topology:
   kinds:
-    ceos:
+    arista_ceos:
       ...
       binds:
         - /etc/sysctl.d/99-zceoslab.conf:/etc/sysctl.d/99-zceoslab.conf:ro

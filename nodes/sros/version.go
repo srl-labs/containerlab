@@ -17,8 +17,14 @@ var (
 	//go:embed configs/grpc.cfg
 	grpcConfig string
 
+	//go:embed configs/grpc_insecure.cfg
+	grpcConfigInsecure string
+
 	//go:embed configs/grpc_ixr.cfg
 	grpcConfigIXR string
+
+	//go:embed configs/grpc_ixr_insecure.cfg
+	grpcConfigIXRInsecure string
 
 	//go:embed configs/netconf.cfg
 	netconfConfig string

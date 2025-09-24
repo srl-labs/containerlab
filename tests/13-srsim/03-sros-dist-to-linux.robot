@@ -46,11 +46,17 @@ Verify links in node l1
 Ensure l1 can ping sros over 1/1/1 interface
     Sleep    30s    give some time for linecards to come up
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping 10.0.0.2 -c2 -w 3"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping -c2 -w3 10.0.0.2"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
 
+Do a gNOI cert get-certs
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.1.0 cert get-certs --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-sros-a
+    Log    ${output}
+    Should Contain    ${output}    sros-a.${lab-name}.io
 
 *** Keywords ***
 Cleanup

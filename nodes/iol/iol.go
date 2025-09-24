@@ -9,6 +9,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"net/netip"
 	"os"
 	"path"
 	"path/filepath"
@@ -207,12 +208,25 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		netmapdata += fmt.Sprintf("%s:%d/%d 513:%d/%d\n", n.Pid, slot, port, slot, port)
 
 		// populate template array for config
+		ipv4Addr := ""
+		ipv4Mask := ""
+		v4Addr := intf.GetIPv4Addr()
+
+		if v4Addr != "" {
+			p, _ := netip.ParsePrefix(v4Addr)
+			ipv4Addr = p.Addr().String()
+			ipv4Mask = clabutils.CIDRToDDN(p.Bits())
+		}
+
 		n.interfaces = append(n.interfaces,
 			IOLInterface{
-				intf.GetIfaceName(),
-				x,
-				slot,
-				port,
+				IfaceName: intf.GetIfaceName(),
+				IfaceIdx:  x,
+				Slot:      slot,
+				Port:      port,
+				IPv4Addr:  ipv4Addr,
+				IPv4Mask:  ipv4Mask,
+				IPv6Addr:  intf.GetIPv6Addr(),
 			},
 		)
 	}
@@ -290,6 +304,9 @@ type IOLInterface struct {
 	IfaceIdx  int
 	Slot      int
 	Port      int
+	IPv4Addr  string
+	IPv4Mask  string
+	IPv6Addr  string
 }
 
 func (*iol) GetMappedInterfaceName(ifName string) (string, error) {

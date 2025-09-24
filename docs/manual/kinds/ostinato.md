@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: linux
+kind_display_name: Ostinato
 ---
-# Ostinato
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
-[Ostinato](https://ostinato.org/) network traffic generator is currently identified with `linux` kind in the [topology file](../topo-def-file.md). This will change to its own kind in the future.
+[-{{ kind_display_name }}-](https://ostinato.org/) network traffic generator is currently identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). This will change to its own kind in the future.
 
 ## Getting Ostinato image
 
@@ -18,7 +21,7 @@ Add a topology definition for the Ostinato node in `.clab.yml` as shown below -
 topology:
   nodes:
     ost:
-      kind: linux
+      kind: -{{ kind_code_name }}-
       image: ostinato/ostinato:{tag}
       ports:
         - 5900:5900/tcp
@@ -27,7 +30,7 @@ topology:
 
 Replace `{tag}` above with the tag shown in the output of `docker images`
 
-## Managing Ostinato nodes
+## Managing -{{ kind_display_name }}- nodes
 
 Ostinato has a GUI and a Python API. The Ostinato image includes both the Ostinato agent (called _Drone_) which does the actual traffic generation and the Ostinato GUI that is used to configure and monitor the Drone agent.
 
@@ -69,7 +72,7 @@ Ostinato allows you to save and load files - traffic streams, pcaps and session 
 topology:
   nodes:
     ost:
-      kind: linux
+      kind: -{{ kind_code_name }}-
       image: ostinato/ostinato:{tag}
       ports:
         - 5900:5900/tcp

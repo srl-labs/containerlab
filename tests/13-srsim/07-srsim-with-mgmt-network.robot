@@ -53,12 +53,21 @@ Verify links in node l2
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
-Sleep for 10 seconds
+Check Cards after 40s on srsim10
+    Sleep    40s    give some time for linecards to come up
     [Documentation]    Give some time for datapath cards to come up
-    Sleep    10s
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show card state | match ' up '" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim10-a
+    Log    ${output}
+
+Check Cards after 20s on srsim11
+    Sleep    20s    give some time for linecards to come up
+    [Documentation]    Give some time for datapath cards to come up
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show card state | match ' up '" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim11-a
+    Log    ${output}
 
 Ensure l1 can ping l2 via sr-sim network
-    Sleep    30s    give some time for linecards to come up
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping -c 2 -W 3 -M do -s 8662 10.111.0.1"
     Log    ${output}
@@ -72,6 +81,21 @@ Check the number of hosts entries should be Equal to 4xIPv4 and 4xIPv6
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal As Integers    ${output}    8
 
+Do a gNMI GET using TLS
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/openconfig/gnmic:0.42.0 get --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10-a --path /state/system/oper-name --values-only
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    srsim10-a
+
+Do a gNOI ping
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker run --network host --rm --mount type=bind,source=${CURDIR}/clab-${lab-name}/.tls/ca,target=/tls ghcr.io/karimra/gnoic:0.1.0 system ping --username admin --password 'NokiaSros1!' --tls-ca /tls/ca.pem --address clab-${lab-name}-srsim10-a --destination 10.78.140.3 --count 3
+    Log    ${output}
+    Should Contain    ${output}    3 packets sent
+    Should Contain    ${output}    3 packets received
 
 *** Keywords ***
 Cleanup

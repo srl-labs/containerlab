@@ -29,12 +29,12 @@ name: my-lab
 topology:
   nodes:
     router1:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
       startup-config: s3://my-bucket/configs/router1.cli
     
     router2:
-      kind: srl
+      kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:latest
       startup-config: s3://my-bucket/configs/router2.cli
 ```

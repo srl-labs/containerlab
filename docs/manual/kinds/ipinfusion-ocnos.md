@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: ipinfusion_ocnos
+kind_display_name: IPInfusion OcNOS
 ---
-# IPInfusion OcNOS
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- virtualized router is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+It is built using [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab/tree/master/ipinfusion/ocnos) and essentially is a Qemu VM packaged in a docker container format.
 
-IPInfusion OcNOS virtualized router is identified with `ipinfusion_ocnos` kind in the [topology file](../topo-def-file.md). It is built using [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab/tree/master/ipinfusion/ocnos) and essentially is a Qemu VM packaged in a docker container format.
 
 ipinfusion_ocnos nodes launched with containerlab come up pre-provisioned with SSH, and NETCONF services enabled.
 
@@ -17,7 +20,7 @@ ipinfusion_ocnos nodes launched with containerlab come up pre-provisioned with S
     Containers with OcNOS inside will take ~3min to fully boot.  
     You can monitor the progress with `docker logs -f <container-name>` and `docker exec -it <container-name> tail -f /console.log`.
 
-IPInfusion OcNOS node launched with containerlab can be managed via the following interfaces:
+-{{ kind_display_name }}- node launched with containerlab can be managed via the following interfaces:
 
 === "bash"
     to connect to a `bash` shell of a running ipinfusion_ocnos container:
