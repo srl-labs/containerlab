@@ -18,7 +18,7 @@ topology:
     sros:
       kind: nokia_srsim
       type: sr-1-92s
-      components: 
+      components:
         - slot: A
         - slot: 1
       startup-config: |
@@ -33,7 +33,7 @@ topology:
     sr1-01:
       kind: nokia_srsim
       type: sr-1
-      components: 
+      components:
         - slot: A # override integrated MDA explicit slot
           mda:
             - slot: 1
@@ -45,8 +45,8 @@ topology:
     sr1-02:
       kind: nokia_srsim
       type: sr-1
-      components: 
-         - mda: # override integrated MDA implicit slot
+      components:
+        - mda: # override integrated MDA implicit slot
             - slot: 1
               type: me12-100gb-qsfp28
       startup-config: |
@@ -56,12 +56,12 @@ topology:
     sr1-03:
       kind: nokia_srsim
       type: sr-1
-      components: 
-         - env:
-              NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # verify env MDA override on component
-           mda:
-               - slot: 1
-                 type: me6-100gb-qsfp28
+      components:
+        - env:
+            NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # verify env MDA override on component
+          mda:
+            - slot: 1
+              type: me6-100gb-qsfp28
       startup-config: |
         /configure card 1 admin-state enable
         /configure card 1 card-type iom-1
@@ -69,10 +69,10 @@ topology:
     sr1-04:
       kind: nokia_srsim
       type: sr-1
-      env: 
+      env:
         NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # verify env MDA override on node config
-      components: 
-         - mda:
+      components:
+        - mda:
             - slot: 1
               type: me6-100gb-qsfp28
       startup-config: |
@@ -82,7 +82,7 @@ topology:
     sr2s-01:
       kind: nokia_srsim
       type: sr-2s
-      components: 
+      components:
         - slot: A
           sfm: sfm-2s
         - slot: 1
@@ -110,7 +110,5 @@ topology:
         /configure card 1 xiom x1 mda 1 admin-state enable
         /configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28
 
-        
-        
   links:
     - endpoints: ["l1:eth1", "sros:1/1/c23/4"]
