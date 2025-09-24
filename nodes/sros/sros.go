@@ -16,10 +16,12 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
+	"unicode"
 
 	"github.com/beevik/etree"
 	"github.com/brunoga/deep"
@@ -507,10 +509,36 @@ func (n *sros) DeleteNetnsSymlink() error {
 	return n.DefaultNode.DeleteNetnsSymlink()
 }
 
+// sortComponents ensure components are in order of
+// CPM then regular IOM/XCMs
+func (n *sros) sortComponents() {
+	slices.SortFunc(n.Cfg.Components, func(a, b *clabtypes.Component) int {
+		s1 := strings.ToUpper(strings.TrimSpace(a.Slot))
+		s2 := strings.ToUpper(strings.TrimSpace(b.Slot))
+
+		p1 := n.getSortOrder(s1)
+		p2 := n.getSortOrder(s2)
+
+		return p1 - p2
+	})
+}
+
+func (n *sros) getSortOrder(slot string) int {
+	r := rune(slot[0])
+	if unicode.IsLetter(r) {
+		return int(r) // A=65, B=66
+	} else {
+		num, _ := strconv.Atoi(slot)
+		return 1000 + num // 1001, 1002... always bigger than slot A/B
+	}
+}
+
 func (n *sros) setupComponentNodes() error {
 	if !n.isDistributedBaseNode() {
 		return nil
 	}
+
+	n.sortComponents()
 
 	// Registry, because it is not a package Var
 	nr := clabnodes.NewNodeRegistry()
