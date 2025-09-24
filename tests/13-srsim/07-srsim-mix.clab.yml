@@ -72,7 +72,7 @@ topology:
             - slot: 2
               type: me3-400gb-qsfpdd
         - slot: 2
-    srsim11-a:
+    SRSIM11-a:
       kind: nokia_srsim
       type: sr-7
       startup-config: |
@@ -120,20 +120,20 @@ topology:
     srsim11-b:
       kind: nokia_srsim
       type: sr-7
-      network-mode: container:srsim11-a
+      network-mode: container:SRSIM11-a
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 02:f3:11:00:00:00
         NOKIA_SROS_SLOT: B
     srsim11-1:
       kind: nokia_srsim
       type: sr-7
-      network-mode: container:srsim11-a
+      network-mode: container:SRSIM11-a
       env:
         NOKIA_SROS_SLOT: 1
     srsim11-2:
       kind: nokia_srsim
       type: sr-7
-      network-mode: container:srsim11-a
+      network-mode: container:SRSIM11-a
       env:
         NOKIA_SROS_SLOT: 2
         NOKIA_SROS_CARD: iom5-e
