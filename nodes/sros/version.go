@@ -59,8 +59,15 @@ func (n *sros) RunningVersion(ctx context.Context) (*SrosVersion, error) {
 		return nil, err
 	}
 
-	log.Debug("Extracted raw SR OS version",
-		"node", n.Cfg.ShortName, "stdout", execResult.GetStdOutString(), "stderr", execResult.GetStdErrString())
+	log.Debug(
+		"Extracted raw SR OS version",
+		"node",
+		n.Cfg.ShortName,
+		"stdout",
+		execResult.GetStdOutString(),
+		"stderr",
+		execResult.GetStdErrString(),
+	)
 
 	return n.parseVersionString(execResult.GetStdOutString()), nil
 }
@@ -82,7 +89,8 @@ func (v *SrosVersion) String() string {
 	return fmt.Sprintf("v%s.%s.%s", v.Major, v.Minor, v.Build)
 }
 
-// MajorMinorSemverString returns a string representation of the major.minor version with a leading v.
+// MajorMinorSemverString returns a string representation of the major.minor version with a leading
+// v.
 func (v *SrosVersion) MajorMinorSemverString() string {
 	return fmt.Sprintf("v%s.%s", v.Major, v.Minor)
 }

@@ -137,7 +137,10 @@ func pkcs1To8(der []byte) ([]byte, error) {
 func (n *vyos) authorizedKeyCmds() []string {
 	var cmds []string
 	var b strings.Builder
-	baseCmd := fmt.Sprintf("set system login user %s authentication public-keys clab ", n.creds.GetUsername())
+	baseCmd := fmt.Sprintf(
+		"set system login user %s authentication public-keys clab ",
+		n.creds.GetUsername(),
+	)
 
 	for _, k := range n.SSHPubKeys {
 		// Set ssh key type

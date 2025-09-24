@@ -98,8 +98,11 @@ func (n *arcos) createARCOSFiles(ctx context.Context) error {
 func (n *arcos) CheckInterfaceName() error {
 	for _, e := range n.Endpoints {
 		if !ifaceRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as swpX (X >= 0), optionally with .subif",
-				n.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf(
+				"%q interface name %q doesn't match the required pattern. It should be named as swpX (X >= 0), optionally with .subif",
+				n.Cfg.ShortName,
+				e.GetIfaceName(),
+			)
 		}
 	}
 	return nil

@@ -39,7 +39,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(dell_sonic)
@@ -71,10 +75,18 @@ func (n *dell_sonic) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOptio
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support startup-config functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
+		fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"),
+	)
 
-	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
+	n.Cfg.Cmd = fmt.Sprintf(
+		"--username %s --password %s --hostname %s --connection-mode %s --trace",
+		n.Cfg.Env["USERNAME"],
+		n.Cfg.Env["PASSWORD"],
+		n.Cfg.ShortName,
+		n.Cfg.Env["CONNECTION_MODE"],
+	)
 
 	return nil
 }
@@ -104,7 +116,11 @@ func (n *dell_sonic) SaveConfig(ctx context.Context) error {
 	}
 
 	confPath := n.Cfg.LabDir + "/" + configDirName
-	log.Infof("saved /etc/sonic/config_db.json backup from %s node to %s\n", n.Cfg.ShortName, confPath)
+	log.Infof(
+		"saved /etc/sonic/config_db.json backup from %s node to %s\n",
+		n.Cfg.ShortName,
+		confPath,
+	)
 
 	return nil
 }

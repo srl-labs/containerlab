@@ -40,10 +40,12 @@ const (
 
 	retryTimer = time.Second
 
-	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory config.
-	// Default config is a config that adds some basic configuration to the node, such as tls certs, gnmi/json-rpc, login-banner.
+	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory
+	// config. Default config is a config that adds some basic configuration to the node, such as
+	// tls certs, gnmi/json-rpc, login-banner.
 	defaultCfgPath = "/tmp/clab-default-config"
-	// overlayCfgPath is a path to a file with additional config that clab adds on top of the default config.
+	// overlayCfgPath is a path to a file with additional config that clab adds on top of the
+	// default config.
 	// Partial config provided via startup-config parameter is an overlay config.
 	overlayCfgPath = "/tmp/clab-overlay-config"
 )
@@ -125,7 +127,8 @@ var (
 
 	saveCmd          = `/opt/srlinux/bin/sr_cli -d "tools system configuration save"`
 	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
-	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
+	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the
+	// mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
 	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(clabutils.CreateFuncs()).
@@ -137,8 +140,10 @@ var (
 		Revision: 0,
 	}
 
-	InterfaceRegexp = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`)
-	InterfaceHelp   = "ethernet-L/P, ethernet-L/P/C or eL-P, eL-P-C (where L, P, C >= 1)"
+	InterfaceRegexp = regexp.MustCompile(
+		`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`,
+	)
+	InterfaceHelp = "ethernet-L/P, ethernet-L/P/C or eL-P, eL-P-C (where L, P, C >= 1)"
 )
 
 // Register registers the node in the NodeRegistry.
@@ -148,7 +153,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformOpts,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(srl)
@@ -157,7 +166,8 @@ func Register(r *clabnodes.NodeRegistry) {
 
 type srl struct {
 	clabnodes.DefaultNode
-	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
+	// startup-config passed as a path to a file with CLI instructions will be read into this byte
+	// slice
 	startupCliCfg []byte
 
 	// Params provided in Pre-Deploy, that srl uses in Post-Deploy phase
@@ -182,7 +192,8 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 
 	n.Cfg = cfg
 
-	// force cert creation for srlinux nodes as they by make use of tls certificate in the default config
+	// force cert creation for srlinux nodes as they by make use of tls certificate in the default
+	// config
 	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
 
 	for _, o := range opts {
@@ -190,7 +201,13 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	}
 
 	if n.Cfg.NodeType != "" && !strings.Contains(n.Cfg.NodeType, "-") {
-		log.Warn("Deprecation notice", "notice", "You are using a deprecated SR Linux node type name. Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\nDeprecated type format will be removed after January 2026", "deprecated type", n.Cfg.NodeType)
+		log.Warn(
+			"Deprecation notice",
+			"notice",
+			"You are using a deprecated SR Linux node type name. Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\nDeprecated type format will be removed after January 2026",
+			"deprecated type",
+			n.Cfg.NodeType,
+		)
 	}
 
 	if n.Cfg.NodeType == "" {
@@ -223,7 +240,8 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	}
 
 	if n.Cfg.License != "" {
-		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will
+		// be copied to that path
 		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
 			filepath.Join(n.Cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 	}
@@ -353,12 +371,17 @@ func (n *srl) SaveConfig(ctx context.Context) error {
 		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
-	log.Infof("saved SR Linux configuration from %s node. Output:\n%s", n.Cfg.ShortName, execResult.GetStdOutString())
+	log.Infof(
+		"saved SR Linux configuration from %s node. Output:\n%s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+	)
 
 	return nil
 }
 
-// Ready returns when the node boot sequence reached the stage when it is ready to accept config commands
+// Ready returns when the node boot sequence reached the stage when it is ready to accept config
+// commands
 // returns an error if not ready by the expiry of the timer readyTimeout.
 func (n *srl) Ready(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
@@ -369,7 +392,11 @@ func (n *srl) Ready(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", n.Cfg.ShortName, err)
+			return fmt.Errorf(
+				"timed out waiting for SR Linux node %s to boot: %v",
+				n.Cfg.ShortName,
+				err,
+			)
 		default:
 			// two commands are checked, first if the mgmt_server is running
 			cmd, _ := clabexec.NewExecCmdFromString(mgmtServerRdyCmd)
@@ -392,7 +419,10 @@ func (n *srl) Ready(ctx context.Context) error {
 			}
 
 			if execResult.GetStdErrString() != "" {
-				log.Debugf("error during checking SR Linux boot status: %s", execResult.GetStdErrString())
+				log.Debugf(
+					"error during checking SR Linux boot status: %s",
+					execResult.GetStdErrString(),
+				)
 				time.Sleep(retryTimer)
 				continue
 			}
@@ -402,7 +432,8 @@ func (n *srl) Ready(ctx context.Context) error {
 				continue
 			}
 
-			// once mgmt server is running, we need to check if it is ready to accept configuration commands
+			// once mgmt server is running, we need to check if it is ready to accept configuration
+			// commands
 			// this is done with checking readyForConfigCmd
 			cmd, _ = clabexec.NewExecCmdFromString(readyForConfigCmd)
 			execResult, err = n.RunExec(ctx, cmd)
@@ -419,7 +450,10 @@ func (n *srl) Ready(ctx context.Context) error {
 			}
 
 			if !strings.Contains(execResult.GetStdOutString(), "loaded initial configuration") {
-				log.Debugf("Management server readiness files doesn't contain the marker string %s", execResult.GetStdOutString())
+				log.Debugf(
+					"Management server readiness files doesn't contain the marker string %s",
+					execResult.GetStdOutString(),
+				)
 				time.Sleep(retryTimer)
 				continue
 			}
@@ -441,7 +475,11 @@ func (*srl) checkKernelVersion() error {
 
 	// do the comparison
 	if !kv.GreaterOrEqual(requiredKernelVersion) {
-		log.Infof("Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s", requiredKernelVersion, kv)
+		log.Infof(
+			"Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s",
+			requiredKernelVersion,
+			kv,
+		)
 	}
 	return nil
 }
@@ -511,8 +549,10 @@ func (n *srl) createSRLFiles() error {
 		x := bytes.TrimLeft(cBuf.Bytes(), " \t\r\n")
 		isJSON := len(x) > 0 && x[0] == '{'
 		if !isJSON {
-			log.Debugf("startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
-				n.Cfg.ShortName)
+			log.Debugf(
+				"startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
+				n.Cfg.ShortName,
+			)
 
 			n.startupCliCfg = cBuf.Bytes()
 
@@ -524,7 +564,10 @@ func (n *srl) createSRLFiles() error {
 	}
 
 	if cfgTemplate == "" {
-		log.Debugf("configuration template for node %s is empty, skipping startup config file generation", n.Cfg.ShortName)
+		log.Debugf(
+			"configuration template for node %s is empty, skipping startup config file generation",
+			n.Cfg.ShortName,
+		)
 
 		return nil
 	}
@@ -715,22 +758,36 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf(
+		"node %s. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return nil
 }
 
-// addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via startup-config directive.
+// addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via
+// startup-config directive.
 func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 	if len(n.startupCliCfg) == 0 {
-		log.Debugf("node %q: startup-config empty, committing existing candidate", n.Config().ShortName)
+		log.Debugf(
+			"node %q: startup-config empty, committing existing candidate",
+			n.Config().ShortName,
+		)
 
 		return nil
 	}
 
 	cfgStr := string(n.startupCliCfg)
 
-	log.Debugf("Node %q additional config from startup-config file %s:\n%s", n.Cfg.ShortName, n.Cfg.StartupConfig, cfgStr)
+	log.Debugf(
+		"Node %q additional config from startup-config file %s:\n%s",
+		n.Cfg.ShortName,
+		n.Cfg.StartupConfig,
+		cfgStr,
+	)
 
 	cmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
@@ -754,7 +811,12 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf(
+		"node %s. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return nil
 }
@@ -776,13 +838,20 @@ func (n *srl) commitConfig(ctx context.Context) error {
 		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf(
+		"node %s. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return nil
 }
 
 func (n *srl) generateCheckpoint(ctx context.Context) error {
-	cmd, err := clabexec.NewExecCmdFromString(`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
+	cmd, err := clabexec.NewExecCmdFromString(
+		`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`,
+	)
 	if err != nil {
 		return err
 	}
@@ -796,7 +865,12 @@ func (n *srl) generateCheckpoint(ctx context.Context) error {
 		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf(
+		"node %s. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return nil
 }
@@ -863,10 +937,20 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 			foundIndices[indexKey] = true
 			parsedIndices[indexKey], err = strconv.Atoi(index)
 			if err != nil {
-				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %s index %q could not be cast to an integer",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
 			if parsedIndices[indexKey] < 1 {
-				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 1", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %q index %q does not match requirement >= 1",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
 		} else {
 			foundIndices[indexKey] = false
@@ -898,11 +982,18 @@ func (n *srl) CheckInterfaceName() error {
 
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern: %s", e.GetIfaceName(), n.InterfaceHelp)
+			return fmt.Errorf(
+				"nokia sr linux interface name %q doesn't match the required pattern: %s",
+				e.GetIfaceName(),
+				n.InterfaceHelp,
+			)
 		}
 
 		if e.GetIfaceName() == "mgmt0" && nm != "none" {
-			return fmt.Errorf("mgmt0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+			return fmt.Errorf(
+				"mgmt0 interface name is not allowed for %s node when network mode is not set to none",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 

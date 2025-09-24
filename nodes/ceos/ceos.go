@@ -64,7 +64,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(KindNames, func() clabnodes.Node {
 		return new(ceos)
@@ -193,7 +197,9 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 			basename := filepath.Base(extrapath)
 			dest := filepath.Join(flash, basename)
 
-			topoDir := filepath.Dir(filepath.Dir(nodeCfg.LabDir)) // topo dir is needed to resolve extrapaths
+			topoDir := filepath.Dir(
+				filepath.Dir(nodeCfg.LabDir),
+			) // topo dir is needed to resolve extrapaths
 			if err := clabutils.CopyFile(ctx,
 				clabutils.ResolvePath(extrapath, topoDir), dest,
 				clabconstants.PermissionsFileDefault); err != nil {
@@ -224,7 +230,8 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 }
 
 func setMgmtInterface(node *clabtypes.NodeConfig) error {
-	// use interface mapping file to set the Management interface if it is provided in the binds section
+	// use interface mapping file to set the Management interface if it is provided in the binds
+	// section
 	// default is Management0
 	mgmtInterface := "Management0"
 	for _, bindelement := range node.Binds {
@@ -247,7 +254,10 @@ func setMgmtInterface(node *clabtypes.NodeConfig) error {
 		var intfMappingJson intfMap
 		err = json.Unmarshal(m, &intfMappingJson)
 		if err != nil {
-			log.Debugf("Management interface could not be read from intfMapping file for '%s' node.", node.ShortName)
+			log.Debugf(
+				"Management interface could not be read from intfMapping file for '%s' node.",
+				node.ShortName,
+			)
 			return err
 		}
 		mgmtInterface = intfMappingJson.ManagementIntf.Eth0
@@ -283,8 +293,13 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 
 	// adding ipv6 address to configs
 	if nodeCfg.MgmtIPv6Address != "" {
-		cfgs = append(cfgs,
-			fmt.Sprintf("ipv6 address %s/%d", nodeCfg.MgmtIPv6Address, nodeCfg.MgmtIPv6PrefixLength),
+		cfgs = append(
+			cfgs,
+			fmt.Sprintf(
+				"ipv6 address %s/%d",
+				nodeCfg.MgmtIPv6Address,
+				nodeCfg.MgmtIPv6PrefixLength,
+			),
 		)
 	}
 
@@ -307,7 +322,11 @@ func (n *ceos) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`eth[1-9][\w.]*$|et[1-9][\w.]*$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters", n.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf(
+				"arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters",
+				n.Cfg.ShortName,
+				e.GetIfaceName(),
+			)
 		}
 	}
 

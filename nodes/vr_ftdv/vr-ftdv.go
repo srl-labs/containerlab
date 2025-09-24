@@ -36,7 +36,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrFtdv)
@@ -72,8 +76,13 @@ func (n *vrFtdv) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 		n.Cfg.Binds = append(n.Cfg.Binds, "/dev:/dev")
 	}
 
-	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
+	n.Cfg.Cmd = fmt.Sprintf(
+		"--username %s --password %s --hostname %s --connection-mode %s --trace",
+		n.Cfg.Env["USERNAME"],
+		n.Cfg.Env["PASSWORD"],
+		n.Cfg.ShortName,
+		n.Cfg.Env["CONNECTION_MODE"],
+	)
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceOffset = InterfaceOffset

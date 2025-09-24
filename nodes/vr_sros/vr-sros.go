@@ -65,7 +65,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrSROS)
@@ -111,7 +115,9 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 		s.Cfg.Binds = append(s.Cfg.Binds, "/dev:/dev")
 	}
 
-	s.Cfg.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant %q", s.Cfg.Env["CONNECTION_MODE"],
+	s.Cfg.Cmd = fmt.Sprintf(
+		"--trace --connection-mode %s --hostname %s --variant %q",
+		s.Cfg.Env["CONNECTION_MODE"],
 		s.Cfg.ShortName,
 		s.Cfg.NodeType,
 	)

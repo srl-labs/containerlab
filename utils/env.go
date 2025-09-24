@@ -159,7 +159,8 @@ func ExpandEnvVarsInStrSlice(s []string) {
 	}
 }
 
-// ToEnvKey capitalizes and removes special chars from a string to is used as an environment variable key.
+// ToEnvKey capitalizes and removes special chars from a string to is used as an environment
+// variable key.
 func ToEnvKey(s string) string {
 	// match special chars to later replace with "_"
 	regreplace := regexp.MustCompile("[-+./]")

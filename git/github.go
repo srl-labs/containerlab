@@ -49,7 +49,10 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 	case len(splitPath) == 2:
 		return r, nil
 	case len(splitPath) < 4:
-		return nil, fmt.Errorf("%w invalid github path. should have either 2 or >= 4 path elements", errInvalidURL)
+		return nil, fmt.Errorf(
+			"%w invalid github path. should have either 2 or >= 4 path elements",
+			errInvalidURL,
+		)
 	}
 
 	r.GitBranch = splitPath[3]
@@ -59,7 +62,10 @@ func NewGitHubRepoFromURL(url *neturl.URL) (*GitHubRepo, error) {
 	case "blob":
 		if !strings.HasSuffix(r.URL.Path, ".yml") &&
 			!strings.HasSuffix(r.URL.Path, ".yaml") {
-			return nil, fmt.Errorf("%w: topology file must have yml or yaml extension", errInvalidURL)
+			return nil, fmt.Errorf(
+				"%w: topology file must have yml or yaml extension",
+				errInvalidURL,
+			)
 		}
 
 		if len(splitPath)-1 > 4 {

@@ -12,7 +12,7 @@ import (
 )
 
 type LinkMgmtNetRaw struct {
-	LinkCommonParams `yaml:",inline"`
+	LinkCommonParams `             yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
@@ -111,7 +111,11 @@ func (*mgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func (b *mgmtBridgeLinkNode) AddLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (b *mgmtBridgeLinkNode) AddLinkToContainer(
+	_ context.Context,
+	link netlink.Link,
+	f func(ns.NetNS) error,
+) error {
 	// retrieve the namespace handle
 	curNamespace, err := ns.GetCurrentNS()
 	if err != nil {

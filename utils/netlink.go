@@ -54,7 +54,8 @@ func GenMac(oui string) (net.HardwareAddr, error) {
 	return hwa, err
 }
 
-// DeleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS func.
+// DeleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS
+// func.
 func DeleteNetnsSymlink(n string) error {
 	log.Debug("Deleting netns symlink: ", n)
 	sl := fmt.Sprintf("/run/netns/%s", n)

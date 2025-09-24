@@ -81,7 +81,11 @@ func TestGetDockerAuth(t *testing.T) {
 		t.Logf("auth string: %v", auth)
 
 		if auth != data.ExpectedAuthString {
-			t.Errorf("expected auth string '%s' does not match computed '%s'", data.ExpectedAuthString, auth)
+			t.Errorf(
+				"expected auth string '%s' does not match computed '%s'",
+				data.ExpectedAuthString,
+				auth,
+			)
 		}
 	}
 }

@@ -29,7 +29,11 @@ const (
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
 	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		nil,
+	)
 
 	r.Register(kindnames, func() clabnodes.Node {
 		return new(genericVM)
@@ -61,15 +65,23 @@ func (n *genericVM) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
 	// mount config dir to support config backup functionality
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"))
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
+		fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"),
+	)
 
 	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
 		// mount dev dir to enable macvtap
 		n.Cfg.Binds = append(n.Cfg.Binds, "/dev:/dev")
 	}
 
-	n.Cfg.Cmd = fmt.Sprintf("--username %s --password %s --hostname %s --connection-mode %s --trace",
-		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], n.Cfg.ShortName, n.Cfg.Env["CONNECTION_MODE"])
+	n.Cfg.Cmd = fmt.Sprintf(
+		"--username %s --password %s --hostname %s --connection-mode %s --trace",
+		n.Cfg.Env["USERNAME"],
+		n.Cfg.Env["PASSWORD"],
+		n.Cfg.ShortName,
+		n.Cfg.Env["CONNECTION_MODE"],
+	)
 
 	return nil
 }

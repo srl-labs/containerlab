@@ -19,10 +19,15 @@ const (
 func CheckAndGetRootPrivs() error {
 	_, euid, suid := unix.Getresuid()
 	if euid != 0 && suid != 0 {
-		return fmt.Errorf("this containerlab command requires root privileges or root via SUID to run, effective UID: %v SUID: %v", euid, suid)
+		return fmt.Errorf(
+			"this containerlab command requires root privileges or root via SUID to run, effective UID: %v SUID: %v",
+			euid,
+			suid,
+		)
 	}
 
-	// If we are not running directly as root, and SUID is properly set, attempt to get root privileges
+	// If we are not running directly as root, and SUID is properly set, attempt to get root
+	// privileges
 	if euid != 0 && suid == 0 {
 		clabGroupExists, err := UnixGroupExists(CLAB_AUTHORIZED_GROUP)
 		if err != nil {
@@ -41,8 +46,11 @@ func CheckAndGetRootPrivs() error {
 			}
 
 			if !userInClabGroup {
-				return fmt.Errorf("user '%v' is not part of containerlab admin group 'clab_admins', which is required to execute this command.\nTo add yourself to this group, run the following command:\n\t$ sudo usermod -aG clab_admins %v",
-					currentEffUser.Username, currentEffUser.Username)
+				return fmt.Errorf(
+					"user '%v' is not part of containerlab admin group 'clab_admins', which is required to execute this command.\nTo add yourself to this group, run the following command:\n\t$ sudo usermod -aG clab_admins %v",
+					currentEffUser.Username,
+					currentEffUser.Username,
+				)
 			}
 
 			log.Debug("Group membership check passed")
@@ -62,7 +70,8 @@ func CheckAndGetRootPrivs() error {
 }
 
 func obtainRootPrivs() error {
-	// Escalate to root privileges, changing saved UIDs to root/current group to be able to retain privilege escalation
+	// Escalate to root privileges, changing saved UIDs to root/current group to be able to retain
+	// privilege escalation
 	err := changePrivileges(0, os.Getgid(), 0, os.Getgid())
 	if err != nil {
 		return err

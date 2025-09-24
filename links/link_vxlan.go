@@ -20,7 +20,7 @@ const (
 
 // LinkVxlanRaw is the raw (string) representation of a vxlan link as defined in the topology file.
 type LinkVxlanRaw struct {
-	LinkCommonParams `yaml:",inline"`
+	LinkCommonParams `            yaml:",inline"`
 	Remote           string      `yaml:"remote"`
 	VNI              int         `yaml:"vni"`
 	Endpoint         EndpointRaw `yaml:"endpoint"`
@@ -29,7 +29,8 @@ type LinkVxlanRaw struct {
 	ParentInterface  string      `yaml:"parent-interface,omitempty"`
 	SrcPort          int         `yaml:"src-port,omitempty"`
 
-	// we use the same struct for vxlan and vxlan stitch, so we need to differentiate them in the raw format
+	// we use the same struct for vxlan and vxlan stitch, so we need to differentiate them in the
+	// raw format
 	LinkType LinkType
 }
 
@@ -48,7 +49,9 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 
 // resolveStitchedVEthComponent creates the veth link and returns it, the endpoint that is
 // supposed to be stitched is returned separately for further processing.
-func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*LinkVEth, Endpoint, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(
+	params *ResolveParams,
+) (*LinkVEth, Endpoint, error) {
 	var err error
 
 	// hostIface is the name of the host interface that will be created
@@ -180,7 +183,11 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	return link, nil
 }
 
-func (lr *LinkVxlanRaw) resolveLocalEndpoint(stitched bool, params *ResolveParams, link *LinkVxlan) (Endpoint, error) {
+func (lr *LinkVxlanRaw) resolveLocalEndpoint(
+	stitched bool,
+	params *ResolveParams,
+	link *LinkVxlan,
+) (Endpoint, error) {
 	if stitched {
 		// point the vxlan endpoint to the host system
 		vxlanRawEp := lr.Endpoint
@@ -235,7 +242,11 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 	// retrieve the parent interface netlink handle
 	parentIface, err := netlink.LinkByName(l.remoteEndpoint.parentIface)
 	if err != nil {
-		return fmt.Errorf("error looking up vxlan parent interface %s: %w", l.remoteEndpoint.parentIface, err)
+		return fmt.Errorf(
+			"error looking up vxlan parent interface %s: %w",
+			l.remoteEndpoint.parentIface,
+			err,
+		)
 	}
 
 	// create the Vxlan struct
@@ -276,7 +287,11 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 	if l.MTU == 0 {
 		interf, err := netlink.LinkByName(l.localEndpoint.GetRandIfaceName())
 		if err != nil {
-			return fmt.Errorf("error looking up local vxlan endpoint of %s : %w", l.localEndpoint.String(), err)
+			return fmt.Errorf(
+				"error looking up local vxlan endpoint of %s : %w",
+				l.localEndpoint.String(),
+				err,
+			)
 		}
 		l.MTU = interf.Attrs().MTU
 	}

@@ -51,7 +51,7 @@ Verify links in node l1
     Should Contain    ${output}    state UP
 
 Ensure l1 can ping sros over 1/1/c1/1 interface
-    Sleep    5s    give some time for networking stack to settle
+    Sleep    15s    give some time for networking stack to settle
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "/bin/ping -c2 -w3 10.0.0.2"
     Log    ${output}

@@ -459,8 +459,11 @@ func CreateStringFuncs() map[string]any {
 // StringFuncs holds string related functions for templates.
 type StringFuncs struct{}
 
-// Split slices input into the substrings separated by separator, returning a slice of the substrings between those separators. If input does not contain separator and separator is not empty, returns a single-element slice whose only element is input.
-// If separator is empty, it will split after each UTF-8 sequence. If both inputs are empty (i.e. strings.Split "" ""), it will return an empty slice.
+// Split slices input into the substrings separated by separator, returning a slice of the
+// substrings between those separators. If input does not contain separator and separator is not
+// empty, returns a single-element slice whose only element is input. If separator is empty, it will
+// split after each UTF-8 sequence. If both inputs are empty (i.e. strings.Split "" ""), it will
+// return an empty slice.
 // This is equivalent to strings.SplitN with a count of -1.
 // Note that the delimiter is not included in the resulting elements.
 func (sf *StringFuncs) Split(sep string, s any) []string {
@@ -543,9 +546,12 @@ func InterfaceSlice(slice any) ([]any, error) {
 	}
 }
 
-// ToInt converts the input to an int (signed integer, 32- or 64-bit depending on platform). This is similar to conv.ToInt64 on 64-bit platforms, but is useful when input to another function must be provided as an int.
+// ToInt converts the input to an int (signed integer, 32- or 64-bit depending on platform). This is
+// similar to conv.ToInt64 on 64-bit platforms, but is useful when input to another function must be
+// provided as an int.
 // Unconvertible inputs will result in errors.
-// On 32-bit systems, given a number that is too large to fit in an int, the result is -1. This is done to protect against CWE-190 and CWE-681.
+// On 32-bit systems, given a number that is too large to fit in an int, the result is -1. This is
+// done to protect against CWE-190 and CWE-681.
 func (ConvFuncs) ToInt(in any) (int, error) {
 	i, err := ToInt64(in)
 	if err != nil {

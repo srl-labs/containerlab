@@ -132,7 +132,10 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
 						{Node: "n2", Iface: "e1-1", Vars: nil},
 					},
-					LinkCommonParams: LinkCommonParams{MTU: clabconstants.DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"10.10.10.1/24"}}},
+					LinkCommonParams: LinkCommonParams{
+						MTU:  clabconstants.DefaultLinkMTU,
+						Vars: &LinkVars{IPv4: []string{"10.10.10.1/24"}},
+					},
 				},
 			},
 		},
@@ -155,7 +158,10 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{}},
 						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
 					},
-					LinkCommonParams: LinkCommonParams{MTU: clabconstants.DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"", "10.10.10.1/24"}}},
+					LinkCommonParams: LinkCommonParams{
+						MTU:  clabconstants.DefaultLinkMTU,
+						Vars: &LinkVars{IPv4: []string{"", "10.10.10.1/24"}},
+					},
 				},
 			},
 		},
@@ -178,7 +184,10 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{}},
 						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{IPv6: "123::4/127"}},
 					},
-					LinkCommonParams: LinkCommonParams{MTU: clabconstants.DefaultLinkMTU, Vars: &LinkVars{IPv6: []string{"", "123::4/127"}}},
+					LinkCommonParams: LinkCommonParams{
+						MTU:  clabconstants.DefaultLinkMTU,
+						Vars: &LinkVars{IPv6: []string{"", "123::4/127"}},
+					},
 				},
 			},
 		},
@@ -201,7 +210,10 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
 						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.2/24"}},
 					},
-					LinkCommonParams: LinkCommonParams{MTU: clabconstants.DefaultLinkMTU, Vars: &LinkVars{IPv4: []string{"10.10.10.1/24", "10.10.10.2/24"}}},
+					LinkCommonParams: LinkCommonParams{
+						MTU:  clabconstants.DefaultLinkMTU,
+						Vars: &LinkVars{IPv4: []string{"10.10.10.1/24", "10.10.10.2/24"}},
+					},
 				},
 			},
 		},
@@ -415,8 +427,16 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Type: string(LinkTypeVEth),
 				Link: &LinkVEthRaw{
 					Endpoints: []*EndpointRaw{
-						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24", IPv6: "2001:db8::1/64"}},
-						{Node: "n2", Iface: "e1-2", Vars: &EndpointVars{IPv4: "10.10.10.2/24", IPv6: "2001:db8::2/64"}},
+						{
+							Node:  "n1",
+							Iface: "e1-1",
+							Vars:  &EndpointVars{IPv4: "10.10.10.1/24", IPv6: "2001:db8::1/64"},
+						},
+						{
+							Node:  "n2",
+							Iface: "e1-2",
+							Vars:  &EndpointVars{IPv4: "10.10.10.2/24", IPv6: "2001:db8::2/64"},
+						},
 					},
 				},
 			},
@@ -598,16 +618,32 @@ func Test_extractHostNodeInterfaceData(t *testing.T) {
 				return
 			}
 			if gotHost != tt.wantHost {
-				t.Errorf("extractHostNodeInterfaceData() gotHost = %v, want %v", gotHost, tt.wantHost)
+				t.Errorf(
+					"extractHostNodeInterfaceData() gotHost = %v, want %v",
+					gotHost,
+					tt.wantHost,
+				)
 			}
 			if gotHostIf != tt.wantHostIf {
-				t.Errorf("extractHostNodeInterfaceData() gotHostIf = %v, want %v", gotHostIf, tt.wantHostIf)
+				t.Errorf(
+					"extractHostNodeInterfaceData() gotHostIf = %v, want %v",
+					gotHostIf,
+					tt.wantHostIf,
+				)
 			}
 			if gotNode != tt.wantNode {
-				t.Errorf("extractHostNodeInterfaceData() gotNode = %v, want %v", gotNode, tt.wantNode)
+				t.Errorf(
+					"extractHostNodeInterfaceData() gotNode = %v, want %v",
+					gotNode,
+					tt.wantNode,
+				)
 			}
 			if gotNodeIf != tt.wantNodeIf {
-				t.Errorf("extractHostNodeInterfaceData() gotNodeIf = %v, want %v", gotNodeIf, tt.wantNodeIf)
+				t.Errorf(
+					"extractHostNodeInterfaceData() gotNodeIf = %v, want %v",
+					gotNodeIf,
+					tt.wantNodeIf,
+				)
 			}
 		})
 	}

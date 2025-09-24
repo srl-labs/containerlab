@@ -14,7 +14,11 @@ type GenericLinkNode struct {
 	nspath    string
 }
 
-func (g *GenericLinkNode) AddLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (g *GenericLinkNode) AddLinkToContainer(
+	_ context.Context,
+	link netlink.Link,
+	f func(ns.NetNS) error,
+) error {
 	// retrieve the namespace handle
 	netns, err := ns.GetNS(g.nspath)
 	if err != nil {

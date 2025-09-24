@@ -80,7 +80,8 @@ func (kv *KernelVersion) String() string {
 	return fmt.Sprintf("%d.%d.%d", kv.Major, kv.Minor, kv.Revision)
 }
 
-// GreaterOrEqual returns true if the Kernel version is greater or equal to the compared Kernel version.
+// GreaterOrEqual returns true if the Kernel version is greater or equal to the compared Kernel
+// version.
 func (kv *KernelVersion) GreaterOrEqual(cmpKv *KernelVersion) bool {
 	if kv.Major < cmpKv.Major {
 		return false

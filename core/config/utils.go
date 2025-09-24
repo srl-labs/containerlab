@@ -50,7 +50,11 @@ func PrepareVars(c *clabcore.CLab) map[string]*NodeConfig {
 		// Init array for this node
 		for key, val := range nodeCfg.Config.Vars {
 			if key == vkNodes || key == vkNodeName {
-				log.Warnf("the variable %s on %s will be ignored, it hides other nodes", vkNodes, name)
+				log.Warnf(
+					"the variable %s on %s will be ignored, it hides other nodes",
+					vkNodes,
+					name,
+				)
 				continue
 			}
 			vars[key] = val
@@ -112,7 +116,13 @@ func prepareLinkVars(link *clabtypes.Link, varsA, varsB Dict) error {
 		if vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
 			// Array/slice should contain 2 values, one for each end of the link
 			if vv.Len() != 2 {
-				return fmt.Errorf("%s: variable %s should contain 2 elements, found %d: %v", link.String(), k, vv.Len(), v)
+				return fmt.Errorf(
+					"%s: variable %s should contain 2 elements, found %d: %v",
+					link.String(),
+					k,
+					vv.Len(),
+					v,
+				)
 			}
 			addValues(k, vv.Index(0).Interface(), vv.Index(1).Interface())
 			continue
@@ -179,11 +189,21 @@ func linkIP(link *clabtypes.Link) (string, string, error) { //nolint: gocritic
 	}
 	sysA, err := netip.ParsePrefix(fmt.Sprintf("%v", link.A.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
-		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.A.Node.ShortName, err)
+		return "", "", fmt.Errorf(
+			"no 'ip' on link & the '%s' of %s: %s",
+			vkSystemIP,
+			link.A.Node.ShortName,
+			err,
+		)
 	}
 	sysB, err := netip.ParsePrefix(fmt.Sprintf("%v", link.B.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
-		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.B.Node.ShortName, err)
+		return "", "", fmt.Errorf(
+			"no 'ip' on link & the '%s' of %s: %s",
+			vkSystemIP,
+			link.B.Node.ShortName,
+			err,
+		)
 	}
 
 	o4 := 0
@@ -277,7 +297,10 @@ func GetTemplateNamesInDirs(dirs []fs.FS) ([]string, error) {
 		}
 	}
 	if len(tnames) == 0 {
-		return nil, fmt.Errorf("no templates files were found in specified paths: %v", TemplatePaths)
+		return nil, fmt.Errorf(
+			"no templates files were found in specified paths: %v",
+			TemplatePaths,
+		)
 	}
 	return tnames, nil
 }

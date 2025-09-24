@@ -115,9 +115,13 @@ var (
 	cf3Dir = "/home/sros/flash3" // Where the running config will be stored
 	licDir = "/nokia/license"
 
-	InterfaceRegexp       = regexp.MustCompile(`^(?P<card>\d+)/(?:x(?P<xiom>\d+)/)?(?P<mda>\d+)(?:/c(?P<connector>\d+))?/(?P<port>\d+)$`)
-	MappedInterfaceRegexp = regexp.MustCompile(`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`)
-	InterfaceHelp         = `The format of the interface name need to be one of:
+	InterfaceRegexp = regexp.MustCompile(
+		`^(?P<card>\d+)/(?:x(?P<xiom>\d+)/)?(?P<mda>\d+)(?:/c(?P<connector>\d+))?/(?P<port>\d+)$`,
+	)
+	MappedInterfaceRegexp = regexp.MustCompile(
+		`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`,
+	)
+	InterfaceHelp = `The format of the interface name need to be one of:
 	  Regular SR OS interface names, that is:
 	  1/2/3       -> card 1, mda 2, port 3
       1/2/c3/4    -> card 1, mda 2, connector 3, port 4
@@ -138,7 +142,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformOpts,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(sros)
@@ -148,7 +156,8 @@ func Register(r *clabnodes.NodeRegistry) {
 // sros SR-SIM Kind structure.
 type sros struct {
 	clabnodes.DefaultNode
-	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
+	// startup-config passed as a path to a file with CLI instructions will be read into this byte
+	// slice
 	startupCliCfg []byte
 
 	// SSH public keys extracted from the clab host
@@ -158,8 +167,9 @@ type sros struct {
 	swVersion      *SrosVersion
 	componentNodes []clabnodes.Node
 
-	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when deploying.
-	// e.g. inspect is either called after deploy or independently. Hence we need to differentiate if we need to perform the
+	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when
+	// deploying. e.g. inspect is either called after deploy or independently. Hence we need to
+	// differentiate if we need to perform the
 	// component cpm based rename or not. This field indicates just that
 	renameDone bool
 
@@ -254,7 +264,11 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 	}
 
 	if slotName != standaloneSlotName {
-		return nil, fmt.Errorf("expected no slot, or slot %q for components of standalone SR-SIM node: %q", standaloneSlotName, n.Cfg.ShortName)
+		return nil, fmt.Errorf(
+			"expected no slot, or slot %q for components of standalone SR-SIM node: %q",
+			standaloneSlotName,
+			n.Cfg.ShortName,
+		)
 	}
 
 	if slotA.Type != "" {
@@ -321,7 +335,8 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 		)
 
 		if n.Cfg.License != "" && (n.isCPM("") || n.isStandaloneNode()) {
-			// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+			// we mount a fixed path node.Labdir/license.key as the license referenced in topo file
+			// will be copied to that path
 			n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 		}
@@ -364,7 +379,13 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 		isHealthy, err := n.IsHealthy(ctx)
 		if err != nil {
-			log.Debug(fmt.Errorf("health check failed, check 'docker logs -f %s': %w", n.Cfg.LongName, err))
+			log.Debug(
+				fmt.Errorf(
+					"health check failed, check 'docker logs -f %s': %w",
+					n.Cfg.LongName,
+					err,
+				),
+			)
 		}
 
 		if isHealthy {
@@ -376,9 +397,16 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			if *n.Cfg.Certificate.Issue {
 				err = n.tlsCertBootstrap(ctx, addr)
 				if err != nil {
-					return fmt.Errorf("TLS cert/key bootstrap to node %q failed: %w", n.Cfg.LongName, err)
+					return fmt.Errorf(
+						"TLS cert/key bootstrap to node %q failed: %w",
+						n.Cfg.LongName,
+						err,
+					)
 				}
-				log.Infof("Completed NETCONF bootstrap for gRPC-TLS profile on node %s", n.Cfg.ShortName)
+				log.Infof(
+					"Completed NETCONF bootstrap for gRPC-TLS profile on node %s",
+					n.Cfg.ShortName,
+				)
 			}
 			err = n.saveConfigWithAddr(ctx, addr)
 			if err != nil {
@@ -569,7 +597,8 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	return nil
 }
 
-// isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a distributed setup.
+// isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a
+// distributed setup.
 func (n *sros) isDistributedCardNode() bool {
 	_, exists := n.Cfg.Env[envNokiaSrosSlot]
 	// is distributed if components is > 1 and the slot var exists.
@@ -618,7 +647,12 @@ func (n *sros) calcComponentFqdn(slot string) string {
 		return n.Cfg.Fqdn
 	}
 	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
-	result := fmt.Sprintf("%s-%s%s", n.Cfg.Fqdn[:fqdnDotIndex], strings.ToLower(slot), n.Cfg.Fqdn[fqdnDotIndex:])
+	result := fmt.Sprintf(
+		"%s-%s%s",
+		n.Cfg.Fqdn[:fqdnDotIndex],
+		strings.ToLower(slot),
+		n.Cfg.Fqdn[fqdnDotIndex:],
+	)
 	return result
 }
 
@@ -682,7 +716,8 @@ func (n *sros) Deploy(ctx context.Context, deployParams *clabnodes.DeployParams)
 	return nil
 }
 
-// Ready returns when the node boot sequence reached the stage when it is ready to accept config commands
+// Ready returns when the node boot sequence reached the stage when it is ready to accept config
+// commands
 // returns an error if not ready by the expiry of the timer readyTimeout.
 func (n *sros) Ready(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
@@ -694,19 +729,30 @@ func (n *sros) Ready(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timed out waiting for SR OS node %s to boot: %v", n.Cfg.ShortName, err)
+			return fmt.Errorf(
+				"timed out waiting for SR OS node %s to boot: %v",
+				n.Cfg.ShortName,
+				err,
+			)
 		default:
 			// check if cpm is running
 			for k, cmd := range readyCmds {
 				cmd, _ := clabexec.NewExecCmdFromString(cmd)
 				execResult, err := n.RunExec(ctx, cmd)
 				if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
-					logMsg := fmt.Sprintf("status check %s failed on %s retrying", readyCmdsStrings[k], n.Cfg.ShortName)
+					logMsg := fmt.Sprintf(
+						"status check %s failed on %s retrying",
+						readyCmdsStrings[k],
+						n.Cfg.ShortName,
+					)
 					if err != nil {
 						logMsg += fmt.Sprintf(" error: %v", err)
 					}
 					if execResult != nil && execResult.GetReturnCode() != 0 {
-						logMsg += fmt.Sprintf(", output:%s", strings.ReplaceAll(execResult.String(), "\n", "; "))
+						logMsg += fmt.Sprintf(
+							", output:%s",
+							strings.ReplaceAll(execResult.String(), "\n", "; "),
+						)
 					}
 					log.Debug(logMsg)
 				}
@@ -730,7 +776,11 @@ func (*sros) checkKernelVersion() error {
 
 	// do the comparison
 	if !kv.GreaterOrEqual(requiredKernelVersion) {
-		log.Warnf("Nokia SR OS requires a kernel version greater than %s. Detected kernel version: %s. Not all features might function properly!", requiredKernelVersion, kv)
+		log.Warnf(
+			"Nokia SR OS requires a kernel version greater than %s. Detected kernel version: %s. Not all features might function properly!",
+			requiredKernelVersion,
+			kv,
+		)
 	}
 	return nil
 }
@@ -745,7 +795,11 @@ func (n *sros) checkComponentSlotsConfig() error {
 		// check if slot exists
 		_, exists := componentNames[slot]
 		if exists {
-			return fmt.Errorf("node %s slot %s duplicate definition", n.GetShortName(), component.Slot)
+			return fmt.Errorf(
+				"node %s slot %s duplicate definition",
+				n.GetShortName(),
+				component.Slot,
+			)
 		}
 		// addd to component names map
 		componentNames[component.Slot] = struct{}{}
@@ -781,7 +835,12 @@ func (n *sros) createSROSFiles() error {
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
 		if err := clabutils.CopyFile(context.Background(), n.Cfg.License, licPath,
 			clabconstants.PermissionsFileDefault); err != nil {
-			return fmt.Errorf("license copying src %s -> dst %s failed: %v", n.Cfg.License, licPath, err)
+			return fmt.Errorf(
+				"license copying src %s -> dst %s failed: %v",
+				n.Cfg.License,
+				licPath,
+				err,
+			)
 		}
 		log.Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)
 	}
@@ -840,7 +899,12 @@ func (n *sros) createSROSConfigFiles() error {
 	var err error
 
 	// Path pointing to the target config file under configCf3 dir
-	cf3CfgFile := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, startupCfgName)
+	cf3CfgFile := filepath.Join(
+		n.Cfg.LabDir,
+		n.Cfg.Env[envNokiaSrosSlot],
+		configCf3,
+		startupCfgName,
+	)
 	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
 
 	// generate config and use that to boot node
@@ -872,7 +936,11 @@ func (n *sros) createSROSConfigFiles() error {
 	}
 
 	if cfgTemplate == "" {
-		log.Debug("configuration template is empty, skipping startup config file generation", "node", n.Cfg.ShortName)
+		log.Debug(
+			"configuration template is empty, skipping startup config file generation",
+			"node",
+			n.Cfg.ShortName,
+		)
 		return nil
 	}
 
@@ -909,7 +977,8 @@ func (n *sros) isCPM(cpm string) bool {
 	return true
 }
 
-// addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner, ssh keys.
+// addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner,
+// ssh keys.
 func (n *sros) addDefaultConfig() error {
 	b, err := n.banner()
 	if err != nil {
@@ -959,7 +1028,13 @@ func (n *sros) addDefaultConfig() error {
 		return err
 	}
 	if buf.Len() == 0 {
-		log.Warn("Buffer empty, template parsing error", "node", n.Cfg.ShortName, "template", srosCfgTpl.Name())
+		log.Warn(
+			"Buffer empty, template parsing error",
+			"node",
+			n.Cfg.ShortName,
+			"template",
+			srosCfgTpl.Name(),
+		)
 	} else {
 		log.Debug("Additional default config parsed", "node", n.Cfg.ShortName, "template", srosCfgTpl.Name())
 		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
@@ -997,7 +1072,11 @@ func (n *sros) addPartialConfig() error {
 				return err
 			}
 			if configContent.Len() == 0 {
-				log.Warn("Buffer empty, PARTIAL config template parsing error", "node", n.Cfg.ShortName)
+				log.Warn(
+					"Buffer empty, PARTIAL config template parsing error",
+					"node",
+					n.Cfg.ShortName,
+				)
 			} else {
 				log.Debug("Additional PARTIAL config parsed", "node",
 					n.Cfg.ShortName, "partial-config", configContent.String())
@@ -1103,10 +1182,20 @@ func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
 			foundIndices[indexKey] = true
 			parsedIndices[indexKey], err = strconv.Atoi(index)
 			if err != nil {
-				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %s index %q could not be cast to an integer",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
 			if parsedIndices[indexKey] < 1 {
-				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 1", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %q index %q does not match requirement >= 1",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
 		} else {
 			foundIndices[indexKey] = false
@@ -1117,16 +1206,24 @@ func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
 	if foundIndices["card"] && foundIndices["mda"] && foundIndices["port"] {
 		switch {
 		case foundIndices["xiom"] && foundIndices["connector"]:
-			// XIOM and connector are present, format will be: e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
-			return fmt.Sprintf("e%d-x%d-%d-c%d-%d", parsedIndices["card"],
-				parsedIndices["xiom"], parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"]), nil
+			// XIOM and connector are present, format will be: e1-x2-3-c4-5 -> card 1, xiom 2, mda
+			// 3, connector 4, port 5
+			return fmt.Sprintf(
+				"e%d-x%d-%d-c%d-%d",
+				parsedIndices["card"],
+				parsedIndices["xiom"],
+				parsedIndices["mda"],
+				parsedIndices["connector"],
+				parsedIndices["port"],
+			), nil
 
 		case foundIndices["xiom"]:
 			// Only XIOM present, format will be: e1-x2-3-4 -> card 1, xiom 2, mda 3, port 4
 			return fmt.Sprintf("e%d-x%d-%d-%d", parsedIndices["card"],
 				parsedIndices["xiom"], parsedIndices["mda"], parsedIndices["port"]), nil
 		case foundIndices["connector"]:
-			// Only connector present, format will be: e1-2-c3-4 -> card 1, mda 2, connector 3, port 4
+			// Only connector present, format will be: e1-2-c3-4 -> card 1, mda 2, connector 3, port
+			// 4
 			return fmt.Sprintf("e%d-%d-c%d-%d", parsedIndices["card"],
 				parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"]), nil
 		default:
@@ -1150,11 +1247,18 @@ func (n *sros) CheckInterfaceName() error {
 
 	for _, e := range n.Endpoints {
 		if !MappedInterfaceRegexp.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern: %s", e.GetIfaceName(), n.InterfaceHelp)
+			return fmt.Errorf(
+				"nokia SR OS interface name %q doesn't match the required pattern: %s",
+				e.GetIfaceName(),
+				n.InterfaceHelp,
+			)
 		}
 
 		if e.GetIfaceName() == "eth0" && nm != "none" {
-			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+			return fmt.Errorf(
+				"eth0 interface name is not allowed for %s node when network mode is not set to none",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 
@@ -1302,12 +1406,24 @@ func (n *sros) IsHealthy(_ context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	log.Debug("Checking netconf connection", "node", n.Cfg.LongName, "addr", fmt.Sprintf("%q:830", addr))
+	log.Debug(
+		"Checking netconf connection",
+		"node",
+		n.Cfg.LongName,
+		"addr",
+		fmt.Sprintf("%q:830", addr),
+	)
 	return CheckPortWithRetry(addr, 830, readyTimeout, 5, retryTimer)
 }
 
 // CheckPortWithRetry checks if a port is open with retry logic.
-func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries int, retryDelay time.Duration) (bool, error) {
+func CheckPortWithRetry(
+	host string,
+	port int,
+	timeout time.Duration,
+	maxRetries int,
+	retryDelay time.Duration,
+) (bool, error) {
 	var lastErr error
 
 	for i := range maxRetries {
@@ -1336,5 +1452,8 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	case n.Cfg.MgmtIPv4Address != "":
 		return n.Cfg.MgmtIPv4Address, nil
 	}
-	return n.Cfg.LongName, fmt.Errorf("no management IP address (IPv4 or IPv6) configured for node %q", n.Cfg.LongName)
+	return n.Cfg.LongName, fmt.Errorf(
+		"no management IP address (IPv4 or IPv6) configured for node %q",
+		n.Cfg.LongName,
+	)
 }

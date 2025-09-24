@@ -48,7 +48,11 @@ func (c *CLab) RemoveSSHConfig(topoPaths *clabtypes.TopoPaths) error {
 func (c *CLab) addSSHConfig() error {
 	sshConfigDir := path.Dir(c.TopoPaths.SSHConfigPath())
 	if !clabutils.FileOrDirExists(sshConfigDir) {
-		log.Debugf("ssh config directory %s does not exist, skipping ssh config generation", sshConfigDir)
+		log.Debugf(
+			"ssh config directory %s does not exist, skipping ssh config generation",
+			sshConfigDir,
+		)
+
 		return nil
 	}
 

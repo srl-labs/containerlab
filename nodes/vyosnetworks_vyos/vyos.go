@@ -56,7 +56,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(KindNames, func() clabnodes.Node {
 		return new(vyos)
@@ -203,7 +207,11 @@ func (n *vyos) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`eth[1-9]$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("vyos node %q has an interface named %q which doesn't match the required pattern. Interfaces may only be named ethX where X is any number greater than 0", n.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf(
+				"vyos node %q has an interface named %q which doesn't match the required pattern. Interfaces may only be named ethX where X is any number greater than 0",
+				n.Cfg.ShortName,
+				e.GetIfaceName(),
+			)
 		}
 	}
 

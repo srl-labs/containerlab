@@ -15,7 +15,8 @@ type Certificate struct {
 	Csr  []byte
 }
 
-// NewCertificateFromFile creates a new Certificate by loading cert, key and csr (if exists) from respecting files.
+// NewCertificateFromFile creates a new Certificate by loading cert, key and csr (if exists) from
+// respecting files.
 func NewCertificateFromFile(certFilePath, keyFilePath, csrFilePath string) (*Certificate, error) {
 	cert := &Certificate{}
 

@@ -256,7 +256,8 @@ func TestLinkVEthRaw_InvalidEndpointVarAFParsing(t *testing.T) {
 				},
 				{
 					Node:  "node2",
-					Iface: "eth2"},
+					Iface: "eth2",
+				},
 			},
 		}
 		if _, err := r.Resolve(params); err == nil {
@@ -277,7 +278,11 @@ func newFakeNode(name string) *fakeNode {
 	return &fakeNode{Name: name}
 }
 
-func (*fakeNode) AddLinkToContainer(_ context.Context, _ netlink.Link, _ func(ns.NetNS) error) error {
+func (*fakeNode) AddLinkToContainer(
+	_ context.Context,
+	_ netlink.Link,
+	_ func(ns.NetNS) error,
+) error {
 	panic("not implemented")
 }
 

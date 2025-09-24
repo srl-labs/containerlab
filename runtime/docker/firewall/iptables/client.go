@@ -59,7 +59,8 @@ func (*IpTablesClient) Name() string {
 	return ipTables
 }
 
-// InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the provided
+// InstallForwardingRules installs the forwarding rules for v4 and v6 address families for the
+// provided
 // input or output interface and chain.
 func (c *IpTablesClient) InstallForwardingRules(rule *definitions.FirewallRule) error {
 	err := c.InstallForwardingRulesForAF(v4AF, rule)
@@ -75,7 +76,10 @@ func (c *IpTablesClient) InstallForwardingRules(rule *definitions.FirewallRule) 
 }
 
 // InstallForwardingRulesForAF installs the forwarding rules for the specified address family.
-func (c *IpTablesClient) InstallForwardingRulesForAF(af string, rule *definitions.FirewallRule) error {
+func (c *IpTablesClient) InstallForwardingRulesForAF(
+	af string,
+	rule *definitions.FirewallRule,
+) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
@@ -121,7 +125,10 @@ func (c *IpTablesClient) DeleteForwardingRules(rule *definitions.FirewallRule) e
 }
 
 // DeleteForwardingRulesForAF deletes the forwarding rules for a specified AF.
-func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule *definitions.FirewallRule) error {
+func (c *IpTablesClient) DeleteForwardingRulesForAF(
+	af string,
+	rule *definitions.FirewallRule,
+) error {
 	iptCmd := ip4tablesCmd
 	if af == v6AF {
 		iptCmd = ip6tablesCmd
@@ -134,7 +141,9 @@ func (c *IpTablesClient) DeleteForwardingRulesForAF(af string, rule *definitions
 	if err != nil {
 		// non nil error typically means that DOCKER-USER chain doesn't exist
 		// this happens with old docker installations (centos7 hello) from default repos
-		return fmt.Errorf("missing DOCKER-USER iptables chain. See http://containerlab.dev/manual/network/#external-access")
+		return fmt.Errorf(
+			"missing DOCKER-USER iptables chain. See http://containerlab.dev/manual/network/#external-access",
+		)
 	}
 
 	if !bytes.Contains(res, []byte(iface)) {
@@ -195,7 +204,11 @@ func (c *IpTablesClient) ruleExists(af string, rule *definitions.FirewallRule) b
 	}
 
 	if bytes.Contains(res, []byte(matcher)) {
-		log.Debugf("found iptables forwarding rule targeting the interface %q direction %s. Skipping creation of the forwarding rule", rule.Interface, rule.Direction)
+		log.Debugf(
+			"found iptables forwarding rule targeting the interface %q direction %s. Skipping creation of the forwarding rule",
+			rule.Interface,
+			rule.Direction,
+		)
 
 		return true
 	}

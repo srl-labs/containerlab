@@ -130,7 +130,11 @@ func TestSRLInterfaceParsing(t *testing.T) {
 					foundError = true
 					if tc.checkErrContains != "" && !(strings.Contains(
 						fmt.Sprint(gotCheckErr), tc.checkErrContains)) {
-						t.Errorf("got error for check %+v, want %+v", gotCheckErr, tc.checkErrContains)
+						t.Errorf(
+							"got error for check %+v, want %+v",
+							gotCheckErr,
+							tc.checkErrContains,
+						)
 					}
 				}
 

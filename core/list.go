@@ -128,7 +128,11 @@ func (c *CLab) ListContainerInterfaces(
 		return nil, fmt.Errorf("unable to list network interfaces: %w", err)
 	}
 
-	containerInterfaces.Interfaces = make([]*clabtypes.ContainerInterfaceDetails, 0, len(interfaces))
+	containerInterfaces.Interfaces = make(
+		[]*clabtypes.ContainerInterfaceDetails,
+		0,
+		len(interfaces),
+	)
 
 	for _, iface := range interfaces {
 		ifaceDetails := clabtypes.ContainerInterfaceDetails{}

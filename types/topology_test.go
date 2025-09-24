@@ -815,7 +815,12 @@ func TestGetNodeBinds(t *testing.T) {
 		slices.Sort(item.want["node1"].Binds)
 
 		if diff := cmp.Diff(item.want["node1"].Binds, binds); diff != "" {
-			t.Fatalf("Binds resolve failed.\nGot: %q\nWant: %q\nDiff\n%s", binds, item.want["node1"].Binds, diff)
+			t.Fatalf(
+				"Binds resolve failed.\nGot: %q\nWant: %q\nDiff\n%s",
+				binds,
+				item.want["node1"].Binds,
+				diff,
+			)
 		}
 	}
 }
@@ -877,7 +882,12 @@ func TestGetNodeDNS(t *testing.T) {
 		t.Logf("%q test item result: %v", name, dns)
 
 		if diff := cmp.Diff(item.want["node1"].DNS, dns); diff != "" {
-			t.Fatalf("DNS config object doesn't match.\nGot: %+v\nWant: %+v\nDiff\n%s", dns, item.want["node1"].DNS, diff)
+			t.Fatalf(
+				"DNS config object doesn't match.\nGot: %+v\nWant: %+v\nDiff\n%s",
+				dns,
+				item.want["node1"].DNS,
+				diff,
+			)
 		}
 	}
 }

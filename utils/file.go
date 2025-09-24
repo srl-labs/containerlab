@@ -76,7 +76,12 @@ func CopyFile(ctx context.Context, src, dst string, mode os.FileMode) (err error
 		if !sfi.Mode().IsRegular() {
 			// cannot copy non-regular files (e.g., directories,
 			// symlinks, devices, etc.)
-			return fmt.Errorf("file copy failed: source file %s (%q): %w", sfi.Name(), sfi.Mode().String(), errNonRegularFile)
+			return fmt.Errorf(
+				"file copy failed: source file %s (%q): %w",
+				sfi.Name(),
+				sfi.Mode().String(),
+				errNonRegularFile,
+			)
 		}
 	}
 
@@ -201,9 +206,11 @@ func copyFileContentsS3(src string) (io.ReadCloser, error) {
 
 	// Create credential chain that mimics AWS SDK behavior
 	credProviders := []credentials.Provider{
-		&credentials.EnvAWS{},                                             // 1. Environment variables
-		&credentials.FileAWSCredentials{},                                 // 2. ~/.aws/credentials (default profile)
-		&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
+		&credentials.EnvAWS{},             // 1. Environment variables
+		&credentials.FileAWSCredentials{}, // 2. ~/.aws/credentials (default profile)
+		&credentials.IAM{
+			Client: &http.Client{Timeout: 10 * time.Second},
+		}, // 3. IAM role (EC2/ECS/Lambda)
 	}
 
 	// Create MinIO client with chained credentials
@@ -226,7 +233,12 @@ func copyFileContentsS3(src string) (io.ReadCloser, error) {
 	_, err = object.Stat()
 	if err != nil {
 		object.Close()
-		return nil, fmt.Errorf("%w: %s: object not found or access denied: %v", errS3Fetch, src, err)
+		return nil, fmt.Errorf(
+			"%w: %s: object not found or access denied: %v",
+			errS3Fetch,
+			src,
+			err,
+		)
 	}
 
 	return object, nil
@@ -379,7 +391,10 @@ func lookupUserHomeDirViaGetent(userId string) string {
 	// we need to extract home dir
 	parts := strings.Split(string(out), ":")
 	if len(parts) < 6 {
-		log.Debugf("error while looking up user by id using getent command %v: unexpected output format", userId)
+		log.Debugf(
+			"error while looking up user by id using getent command %v: unexpected output format",
+			userId,
+		)
 		return ""
 	}
 
@@ -509,7 +524,8 @@ func GetRealUserIDs() (userUID, userGID int, err error) {
 	return userUID, userGID, nil
 }
 
-// AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds ACL rules:
+// AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds
+// ACL rules:
 // rwx for the real UID user and r-x for the real GID group.
 func AdjustFileACLs(fsPath string) error {
 	userUID, userGID, err := GetRealUserIDs()
@@ -557,7 +573,8 @@ func AdjustFileACLs(fsPath string) error {
 	return a.Apply(fsPath, acls.PosixACLDefault)
 }
 
-// SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from getRealUserIDs,
+// SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from
+// getRealUserIDs,
 // which should reflect the non-root user's UID and GID.
 func SetUIDAndGID(fsPath string) error {
 	userUID, userGID, err := GetRealUserIDs()

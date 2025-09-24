@@ -50,7 +50,10 @@ var (
 func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 	for _, kindname := range kindnames {
 		if _, exists := NonDefaultRuntimes[kindname]; exists {
-			return fmt.Errorf("non default runtime config for kind with the name '%s' exists already", kindname)
+			return fmt.Errorf(
+				"non default runtime config for kind with the name '%s' exists already",
+				kindname,
+			)
 		}
 		NonDefaultRuntimes[kindname] = runtime
 	}
@@ -86,21 +89,29 @@ type Node interface {
 	PreDeploy(ctx context.Context, params *PreDeployParams) error
 	Deploy(context.Context, *DeployParams) error // Deploy triggers the deployment of this node
 	PostDeploy(ctx context.Context, params *PostDeployParams) error
-	WithMgmtNet(*clabtypes.MgmtNet)           // WithMgmtNet provides the management network for the node
+	WithMgmtNet(
+		*clabtypes.MgmtNet,
+	) // WithMgmtNet provides the management network for the node
 	WithRuntime(clabruntime.ContainerRuntime) // WithRuntime provides the runtime for the node
 	PullImage(ctx context.Context) error      // PullImage pulls the image for the node
-	// CalculateInterfaceIndex returns with the interface index offset from the first valid dataplane interface based on the interface name. Errors otherwise.
+	// CalculateInterfaceIndex returns with the interface index offset from the first valid
+	// dataplane interface based on the interface name. Errors otherwise.
 	CalculateInterfaceIndex(ifName string) (int, error)
-	// CheckInterfaceName checks if a name of the interface referenced in the topology file is correct for this node
+	// CheckInterfaceName checks if a name of the interface referenced in the topology file is
+	// correct for this node
 	CheckInterfaceName() error
-	// VerifyStartupConfig checks for existence of the referenced file and maybe performs additional config checks
+	// VerifyStartupConfig checks for existence of the referenced file and maybe performs additional
+	// config checks
 	VerifyStartupConfig(topoDir string) error
-	SaveConfig(context.Context) error            // SaveConfig saves the nodes configuration to an external file
+	SaveConfig(
+		context.Context,
+	) error // SaveConfig saves the nodes configuration to an external file
 	Delete(context.Context) error                // Delete triggers the deletion of this node
 	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
 	GetRuntime() clabruntime.ContainerRuntime    // GetRuntime returns the nodes assigned runtime
 	GenerateConfig(dst, templ string) error      // Generate the nodes configuration
-	// UpdateConfigWithRuntimeInfo updates node config with runtime info like IP addresses assigned by runtime
+	// UpdateConfigWithRuntimeInfo updates node config with runtime info like IP addresses assigned
+	// by runtime
 	UpdateConfigWithRuntimeInfo(context.Context) error
 	// RunExec execute a single command for a given node.
 	RunExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error)
@@ -151,7 +162,11 @@ func GenericVMInterfaceCheck(nodeName string, eps []clablinks.Endpoint) error {
 	ifRe := regexp.MustCompile(`eth[1-9]\d*$`) // skipcq: GO-C4007
 	for _, e := range eps {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >0", nodeName, e.GetIfaceName())
+			return fmt.Errorf(
+				"%q interface name %q doesn't match the required pattern. It should be named as ethX, where X is >0",
+				nodeName,
+				e.GetIfaceName(),
+			)
 		}
 	}
 

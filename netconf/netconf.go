@@ -21,7 +21,8 @@ import (
 
 // SaveRunningConfig saves the running config to the startup by means
 // of invoking a netconf rpc <copy-config> from running to startup datastore
-// this method is used on the network elements that can't perform configuration save via other means.
+// this method is used on the network elements that can't perform configuration save via other
+// means.
 func SaveRunningConfig(addr, username, password, _ string) error {
 	opts := []util.Option{
 		options.WithAuthNoStrictKey(),
@@ -53,7 +54,8 @@ func SaveRunningConfig(addr, username, password, _ string) error {
 	return nil
 }
 
-// GetConfig retrieves the running configuration and returns it as a string. It automatically picks the appropriate network driver for the provided Scrapli Platform.
+// GetConfig retrieves the running configuration and returns it as a string. It automatically picks
+// the appropriate network driver for the provided Scrapli Platform.
 func GetConfig(addr, username, password, scrapliPlatform string) (string, error) {
 	p, err := platform.NewPlatform(
 		scrapliPlatform,
@@ -104,7 +106,8 @@ type Operation func(*netconf.Driver) (*response.NetconfResponse, error)
 
 // MultiExec opens a NETCONF session to the provided address and executes the supplied operations
 // sequentially. The driver is opened once and used across every operation, enabling scenarios that
-// require multiple NETCONF calls within a single session (for example, chaining import actions prior
+// require multiple NETCONF calls within a single session (for example, chaining import actions
+// prior
 // to committing configuration changes).
 func MultiExec(addr, username, password string, operations []Operation) error {
 	opts := []util.Option{

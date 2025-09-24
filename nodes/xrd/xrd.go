@@ -58,7 +58,11 @@ func Register(r *clabnodes.NodeRegistry) {
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(xrd)
@@ -78,13 +82,17 @@ func (n *xrd) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		o(n)
 	}
 
-	n.Cfg.Binds = append(n.Cfg.Binds,
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
 		// mount first-boot config file
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "first-boot.cfg"), ":/etc/xrd/first-boot.cfg"),
 		// persist data by mounting /xr-storage
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "xr-storage"), ":/xr-storage"),
 		// management IPv6 address script
-		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh"), ":/etc/xrd/mgmt_intf_v6_addr.sh"),
+		fmt.Sprint(
+			filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh"),
+			":/etc/xrd/mgmt_intf_v6_addr.sh",
+		),
 	)
 
 	return nil
@@ -178,7 +186,8 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	return err
 }
 
-// genInterfacesEnv populates the content of a required env var that sets the interface mapping rules.
+// genInterfacesEnv populates the content of a required env var that sets the interface mapping
+// rules.
 func (n *xrd) genInterfacesEnv() {
 	// xrd-control-plane variant needs XR_INTERFACE ENV var to be populated for all active interface
 	// here we take the number of links users set in the topology to get the right # of links
@@ -200,7 +209,10 @@ func (n *xrd) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`^Gi0-0-0-\d+$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("cisco XRd interface name %q doesn't match the required pattern. XRd interfaces should be named as Gi0-0-0-X where X is the interface number", e.GetIfaceName())
+			return fmt.Errorf(
+				"cisco XRd interface name %q doesn't match the required pattern. XRd interfaces should be named as Gi0-0-0-X where X is the interface number",
+				e.GetIfaceName(),
+			)
 		}
 	}
 

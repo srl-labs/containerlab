@@ -21,7 +21,11 @@ func NewNodeRegistry() *NodeRegistry {
 }
 
 // Register registers the node' init function for all provided names.
-func (r *NodeRegistry) Register(names []string, initf Initializer, attributes *NodeRegistryEntryAttributes) error {
+func (r *NodeRegistry) Register(
+	names []string,
+	initf Initializer,
+	attributes *NodeRegistryEntryAttributes,
+) error {
 	newEntry := newRegistryEntry(names, initf, attributes)
 	return r.addEntry(newEntry)
 }
@@ -44,14 +48,19 @@ func (r *NodeRegistry) NewNodeOfKind(nodeKindName string) (Node, error) {
 	nodeKindEntry, ok := r.nodeIndex[nodeKindName]
 	if !ok {
 		registeredKinds := strings.Join(r.GetRegisteredNodeKindNames(), ", ")
-		return nil, fmt.Errorf("kind %q is not supported. Supported kinds are %q", nodeKindName, registeredKinds)
+		return nil, fmt.Errorf(
+			"kind %q is not supported. Supported kinds are %q",
+			nodeKindName,
+			registeredKinds,
+		)
 	}
 
 	// return a new instance of the requested node
 	return nodeKindEntry.initFunction(), nil
 }
 
-// GetRegisteredNodeKindNames returns a sorted slice of all the registered node kind names in the registry.
+// GetRegisteredNodeKindNames returns a sorted slice of all the registered node kind names in the
+// registry.
 func (r *NodeRegistry) GetRegisteredNodeKindNames() []string {
 	var result []string
 	for k := range r.nodeIndex {
@@ -130,7 +139,8 @@ func newRegistryEntry(nodeKindNames []string, initFunction Initializer,
 	}
 }
 
-// PlatformAttrs contains the platform attributes this node/platform is known to have in different libraries and tools.
+// PlatformAttrs contains the platform attributes this node/platform is known to have in different
+// libraries and tools.
 // Most often just the platform/provider name.
 type PlatformAttrs struct {
 	ScrapliPlatformName string
@@ -138,7 +148,11 @@ type PlatformAttrs struct {
 }
 
 // NewNodeRegistryEntryAttributes creates a new NodeRegistryEntryAttributes.
-func NewNodeRegistryEntryAttributes(c *Credentials, ga *GenerateNodeAttributes, pa *PlatformAttrs) *NodeRegistryEntryAttributes {
+func NewNodeRegistryEntryAttributes(
+	c *Credentials,
+	ga *GenerateNodeAttributes,
+	pa *PlatformAttrs,
+) *NodeRegistryEntryAttributes {
 	// set default value for GenerateNodeAttributes
 	if ga == nil {
 		ga = NewGenerateNodeAttributes(false, "")

@@ -46,7 +46,11 @@ func NSEthtoolTXOff(cntName, ifaceName string) func(ns.NetNS) error {
 		// disabling offload on given interface
 		err := EthtoolTXOff(ifaceName)
 		if err != nil {
-			log.Infof("failed to disable TX checksum offload for %s interface for %s container", ifaceName, cntName)
+			log.Infof(
+				"failed to disable TX checksum offload for %s interface for %s container",
+				ifaceName,
+				cntName,
+			)
 		}
 		return nil
 	}

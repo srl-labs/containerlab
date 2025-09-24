@@ -322,7 +322,13 @@ func getGoTTYStatus(
 
 	log.Debugf("GoTTY status output for port %d: %s", port, output)
 
-	return strings.Contains(output, "GoTTY service is running"), fmt.Sprintf("http://HOST_IP:%d", port)
+	return strings.Contains(
+			output,
+			"GoTTY service is running",
+		), fmt.Sprintf(
+			"http://HOST_IP:%d",
+			port,
+		)
 }
 
 func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
@@ -418,7 +424,11 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 	)
 
 	// Create and start GoTTY container
-	log.Infof("Creating GoTTY container %s on network '%s'", o.ToolsGoTTY.ContainerName, networkName)
+	log.Infof(
+		"Creating GoTTY container %s on network '%s'",
+		o.ToolsGoTTY.ContainerName,
+		networkName,
+	)
 	gottyNode := NewGoTTYNode(
 		o.ToolsGoTTY.ContainerName,
 		o.ToolsGoTTY.Image,

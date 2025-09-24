@@ -25,12 +25,16 @@ func (n *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 	n.mapSSHPubKeys(supportedSSHKeyAlgos)
 
 	if len(tplData.SSHPubKeysRSA) > 32 {
-		log.Warn("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
+		log.Warn(
+			"more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type",
+		)
 		tplData.SSHPubKeysRSA = tplData.SSHPubKeysRSA[:32]
 	}
 
 	if len(tplData.SSHPubKeysECDSA) > 32 {
-		log.Warn("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
+		log.Warn(
+			"more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type",
+		)
 		tplData.SSHPubKeysECDSA = tplData.SSHPubKeysECDSA[:32]
 	}
 }

@@ -335,7 +335,11 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 					foundError = true
 					if tc.endpointErrContains != "" && !(strings.Contains(
 						fmt.Sprint(gotEndpointErr), tc.endpointErrContains)) {
-						t.Errorf("got error for endpoint %+v, want %s", gotEndpointErr, tc.endpointErrContains)
+						t.Errorf(
+							"got error for endpoint %+v, want %s",
+							gotEndpointErr,
+							tc.endpointErrContains,
+						)
 					}
 				}
 			}
@@ -350,7 +354,11 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 					foundError = true
 					if tc.checkErrContains != "" && !(strings.Contains(
 						fmt.Sprint(gotCheckErr), tc.checkErrContains)) {
-						t.Errorf("got error for check %+v, want %s", gotCheckErr, tc.checkErrContains)
+						t.Errorf(
+							"got error for check %+v, want %s",
+							gotCheckErr,
+							tc.checkErrContains,
+						)
 					}
 				}
 

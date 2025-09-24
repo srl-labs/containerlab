@@ -342,7 +342,10 @@ type Link interface {
 	GetMTU() int
 }
 
-func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, hostIf, node, nodeIf string, err error) {
+func extractHostNodeInterfaceData(
+	lb *LinkBriefRaw,
+	specialEPIndex int,
+) (host, hostIf, node, nodeIf string, err error) {
 	// the index of the node is the specialEndpointIndex +1  modulo 2
 	nodeindex := (specialEPIndex + 1) % 2
 
@@ -351,12 +354,18 @@ func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, h
 
 	if len(hostData) != 2 {
 		return "", "", "", "",
-			fmt.Errorf("invalid link endpoint format. expected <node>:<port>, got %s", lb.Endpoints[specialEPIndex])
+			fmt.Errorf(
+				"invalid link endpoint format. expected <node>:<port>, got %s",
+				lb.Endpoints[specialEPIndex],
+			)
 	}
 
 	if len(nodeData) != 2 {
 		return "", "", "", "",
-			fmt.Errorf("invalid link endpoint format. expected <node>:<port>, got %s", lb.Endpoints[nodeindex])
+			fmt.Errorf(
+				"invalid link endpoint format. expected <node>:<port>, got %s",
+				lb.Endpoints[nodeindex],
+			)
 	}
 
 	host = hostData[0]
@@ -364,8 +373,15 @@ func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, h
 	node = nodeData[0]
 	nodeIf = nodeData[1]
 
-	log.Debugf("extractHostNodeInterfaceData: eps=%v specialIndex=%d -> host=%s hostIf=%s node=%s nodeIf=%s",
-		lb.Endpoints, specialEPIndex, host, hostIf, node, nodeIf)
+	log.Debugf(
+		"extractHostNodeInterfaceData: eps=%v specialIndex=%d -> host=%s hostIf=%s node=%s nodeIf=%s",
+		lb.Endpoints,
+		specialEPIndex,
+		host,
+		hostIf,
+		node,
+		nodeIf,
+	)
 	return host, hostIf, node, nodeIf, nil
 }
 
@@ -389,7 +405,6 @@ func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) error {
 }
 
 func parseVarIPBrief(af string, vals []string, endpoints []*EndpointRaw) error {
-
 	nVals := len(vals)
 
 	if nVals == 0 {
@@ -443,9 +458,11 @@ type Node interface {
 	// AddLinkToContainer adds a link to the node (container).
 	// In case of a regular container, it will push the link into the
 	// network namespace and then run the function f within the namespace
-	// this is to rename the link, set mtu, set the interface up, e.g. see link.SetNameMACAndUpInterface()
+	// this is to rename the link, set mtu, set the interface up, e.g. see
+	// link.SetNameMACAndUpInterface()
 	//
-	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make the bridge
+	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make
+	// the bridge
 	// the master of the interface and bring the interface up.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
 	// AddEndpoint adds the Endpoint to the node
