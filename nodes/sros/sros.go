@@ -477,8 +477,11 @@ func (n *sros) setupComponentNodes() error {
 			return err
 		}
 
-		// copy the original nodes NodeConfig
-		componentConfig := deep.MustCopy(n.Cfg)
+		// copy the original node's NodeConfig to the component
+		componentConfig, err := deep.Copy(n.Cfg)
+		if err != nil {
+			return fmt.Errorf("failed to deep copy node config for component: %w", err)
+		}
 
 		// the first node will create the namespace, so NetworkMode remains unchanged.
 		// all consecutive need to be attached to specifically that Namespace via NetworkMode

@@ -17,14 +17,14 @@ type XIOM struct {
 	MDA  MDAS   `yaml:"mda,omitempty"`
 }
 
-type XIOMS []XIOM //nolint: recvcheck
+type XIOMS []XIOM
 
 type MDA struct {
 	Slot int    `yaml:"slot,omitempty"`
 	Type string `yaml:"type,omitempty"`
 }
 
-type MDAS []MDA //nolint: recvcheck
+type MDAS []MDA
 
 func (l *MDAS) UnmarshalYAML(unmarshal func(any) error) error {
 	var entries []MDA
