@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/beevik/etree"
+	"github.com/brunoga/deep"
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/opoptions"
@@ -477,7 +478,7 @@ func (n *sros) setupComponentNodes() error {
 		}
 
 		// copy the original nodes NodeConfig
-		componentConfig := n.Cfg.Copy()
+		componentConfig := deep.MustCopy(n.Cfg)
 
 		// the first node will create the namespace, so NetworkMode remains unchanged.
 		// all consecutive need to be attached to specifically that Namespace via NetworkMode
