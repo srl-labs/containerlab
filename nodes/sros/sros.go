@@ -166,6 +166,7 @@ type sros struct {
 	// software version SR OS x node runs
 	swVersion      *SrosVersion
 	componentNodes []clabnodes.Node
+
 	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when
 	// deploying. e.g. inspect is either called after deploy or independently. Hence we need to
 	// differentiate if we need to perform the
@@ -192,10 +193,6 @@ func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 
 	n.InterfaceHelp = InterfaceHelp
 	n.InterfaceRegexp = InterfaceRegexp
-
-	// force cert creation for sros nodes as they by make use of tls certificate in the default
-	// config
-	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
