@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/beevik/etree v1.6.0
+	github.com/brunoga/deep v1.2.5
 	github.com/charmbracelet/fang v0.3.0
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2

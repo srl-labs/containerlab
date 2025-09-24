@@ -17,38 +17,14 @@ type XIOM struct {
 	MDA  MDAS   `yaml:"mda,omitempty"`
 }
 
-type XIOMS []XIOM //nolint: recvcheck
+type XIOMS []XIOM
 
 type MDA struct {
 	Slot int    `yaml:"slot,omitempty"`
 	Type string `yaml:"type,omitempty"`
 }
 
-type MDAS []MDA //nolint: recvcheck
-
-func (c *Component) Copy() *Component {
-	if c == nil {
-		return nil
-	}
-
-	// Deep copy the map
-	var envCopy map[string]string
-	if c.Env != nil {
-		envCopy = make(map[string]string, len(c.Env))
-		for k, v := range c.Env {
-			envCopy[k] = v
-		}
-	}
-
-	return &Component{
-		Slot: c.Slot,
-		Type: c.Type,
-		Env:  envCopy,
-		SFM:  c.SFM,
-		XIOM: c.XIOM.Copy(),
-		MDA:  c.MDA.Copy(),
-	}
-}
+type MDAS []MDA
 
 func (l *MDAS) UnmarshalYAML(unmarshal func(any) error) error {
 	var entries []MDA
@@ -84,17 +60,6 @@ func (l *MDAS) UnmarshalYAML(unmarshal func(any) error) error {
 	return nil
 }
 
-func (l MDAS) Copy() MDAS {
-	if l == nil {
-		return nil
-	}
-
-	out := make([]MDA, len(l))
-	copy(out, l)
-
-	return out
-}
-
 func (l *XIOMS) UnmarshalYAML(unmarshal func(any) error) error {
 	var entries []XIOM
 
@@ -128,20 +93,4 @@ func (l *XIOMS) UnmarshalYAML(unmarshal func(any) error) error {
 	*l = XIOMS(entries)
 
 	return nil
-}
-
-func (l XIOMS) Copy() XIOMS {
-	if l == nil {
-		return nil
-	}
-
-	out := make([]XIOM, len(l))
-	copy(out, l)
-
-	// deep copy
-	for i := range out {
-		out[i].MDA = out[i].MDA.Copy()
-	}
-
-	return out
 }

@@ -11,7 +11,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/docker/go-connections/nat"
-	clabutils "github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -219,35 +218,6 @@ type NodeConfig struct {
 	Components          []*Component
 }
 
-func (n *NodeConfig) Copy() *NodeConfig {
-	if n == nil {
-		return nil
-	}
-
-	copyConfig := *n
-
-	// Deep copy maps
-	copyConfig.Sysctls = clabutils.CopyMap(n.Sysctls)
-	copyConfig.Env = clabutils.CopyMap(n.Env)
-	copyConfig.Labels = clabutils.CopyMap(n.Labels)
-
-	// Deep copy slices
-	copyConfig.Exec = clabutils.CopySlice(n.Exec)
-	copyConfig.Binds = clabutils.CopySlice(n.Binds)
-	copyConfig.Devices = clabutils.CopySlice(n.Devices)
-	copyConfig.CapAdd = clabutils.CopySlice(n.CapAdd)
-	copyConfig.Aliases = clabutils.CopySlice(n.Aliases)
-	copyConfig.ExtraHosts = clabutils.CopySlice(n.ExtraHosts)
-	copyConfig.ResultingPortBindings = clabutils.CopyObjectSlice(n.ResultingPortBindings)
-	copyConfig.Components = clabutils.CopyObjectSlice(n.Components)
-
-	copyConfig.Healthcheck = n.Healthcheck.Copy()
-	copyConfig.Extras = n.Extras.Copy()
-	copyConfig.DNS = n.DNS.Copy()
-
-	return &copyConfig
-}
-
 type GenericFilter struct {
 	// defined by now "label" / "name" [then only Match is required]
 	FilterType string
@@ -286,38 +256,9 @@ type Extras struct {
 	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
 }
 
-func (e *Extras) Copy() *Extras {
-	if e == nil {
-		return nil
-	}
-
-	srlAgentsCopy := append([]string(nil), e.SRLAgents...)
-	ceosCopyToFlashCopy := append([]string(nil), e.CeosCopyToFlash...)
-
-	var k8sKindCopy *K8sKindExtras
-	if e.K8sKind != nil {
-		k8sKindCopy = e.K8sKind.Copy() // assumes K8sKindExtras has a Copy() method
-	}
-
-	return &Extras{
-		SRLAgents:       srlAgentsCopy,
-		MysocketProxy:   e.MysocketProxy,
-		CeosCopyToFlash: ceosCopyToFlashCopy,
-		K8sKind:         k8sKindCopy,
-	}
-}
-
 // K8sKindExtras represents the k8s-kind-specific extra options.
 type K8sKindExtras struct {
 	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
-}
-
-func (k *K8sKindExtras) Copy() *K8sKindExtras {
-	cp := &K8sKindExtras{
-		Deploy: k.Deploy.Copy(),
-	}
-
-	return cp
 }
 
 // K8sKindDeployExtras represents the options used for the kind cluster creation.
@@ -325,12 +266,6 @@ func (k *K8sKindExtras) Copy() *K8sKindExtras {
 // only the ones that are relevant for containerlab.
 type K8sKindDeployExtras struct {
 	Wait *string `yaml:"wait,omitempty"`
-}
-
-func (k *K8sKindDeployExtras) Copy() *K8sKindDeployExtras {
-	cp := *k
-
-	return &cp
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
@@ -392,12 +327,6 @@ func (p *GenericPortBinding) String() string {
 	return result
 }
 
-func (p *GenericPortBinding) Copy() *GenericPortBinding {
-	cp := *p
-
-	return &cp
-}
-
 type LabData struct {
 	Containers []ContainerDetails `json:"containers"`
 }
@@ -410,22 +339,6 @@ type DNSConfig struct {
 	Options []string `yaml:"options,omitempty"`
 	// DNS Search Domains
 	Search []string `yaml:"search,omitempty"`
-}
-
-func (d *DNSConfig) Copy() *DNSConfig {
-	if d == nil {
-		return nil
-	}
-
-	serversCopy := append([]string(nil), d.Servers...)
-	optionsCopy := append([]string(nil), d.Options...)
-	searchCopy := append([]string(nil), d.Search...)
-
-	return &DNSConfig{
-		Servers: serversCopy,
-		Options: optionsCopy,
-		Search:  searchCopy,
-	}
 }
 
 // CertificateConfig represents TLS parameters set for a node.
@@ -504,23 +417,6 @@ type HealthcheckConfig struct {
 	// StartPeriod is the time to wait for the container to initialize
 	// before starting health-retries countdown in seconds
 	StartPeriod int `yaml:"start-period,omitempty"`
-}
-
-func (h *HealthcheckConfig) Copy() *HealthcheckConfig {
-	if h == nil {
-		return nil
-	}
-
-	// Copy the slice manually to avoid shared references
-	testCopy := append([]string(nil), h.Test...)
-
-	return &HealthcheckConfig{
-		Test:        testCopy,
-		Interval:    h.Interval,
-		Timeout:     h.Timeout,
-		Retries:     h.Retries,
-		StartPeriod: h.StartPeriod,
-	}
 }
 
 // GetIntervalDuration returns the interval as time.Duration.
