@@ -486,8 +486,8 @@ func (n *sros) setupComponentNodes() error {
 		// the first node will create the namespace, so NetworkMode remains unchanged.
 		// all consecutive need to be attached to specifically that Namespace via NetworkMode
 		if idx > 0 {
-			componentConfig.NetworkMode = fmt.Sprintf("container:%s", strings.ToLower(
-				n.componentNodes[0].GetShortName()))
+			componentConfig.NetworkMode = fmt.Sprintf("container:%s",
+				n.componentNodes[0].GetShortName())
 		}
 
 		// adjust the config values from the original node
@@ -1242,7 +1242,7 @@ func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *sros) CheckInterfaceName() error {
-	nm := strings.ToLower(n.Cfg.NetworkMode)
+	nm := n.Cfg.NetworkMode
 
 	err := n.CheckInterfaceOverlap()
 	if err != nil {
