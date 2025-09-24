@@ -400,9 +400,16 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			if *n.Cfg.Certificate.Issue {
 				err = n.tlsCertBootstrap(ctx, addr)
 				if err != nil {
-					return fmt.Errorf("TLS cert/key bootstrap to node %q failed: %w", n.Cfg.LongName, err)
+					return fmt.Errorf(
+						"TLS cert/key bootstrap to node %q failed: %w",
+						n.Cfg.LongName,
+						err,
+					)
 				}
-				log.Infof("Completed NETCONF bootstrap for gRPC-TLS profile on node %s", n.Cfg.ShortName)
+				log.Infof(
+					"Completed NETCONF bootstrap for gRPC-TLS profile on node %s",
+					n.Cfg.ShortName,
+				)
 			}
 			err = n.saveConfigWithAddr(ctx, addr)
 			if err != nil {

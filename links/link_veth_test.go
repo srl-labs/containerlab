@@ -256,7 +256,8 @@ func TestLinkVEthRaw_InvalidEndpointVarAFParsing(t *testing.T) {
 				},
 				{
 					Node:  "node2",
-					Iface: "eth2"},
+					Iface: "eth2",
+				},
 			},
 		}
 		if _, err := r.Resolve(params); err == nil {

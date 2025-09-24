@@ -373,8 +373,15 @@ func extractHostNodeInterfaceData(
 	node = nodeData[0]
 	nodeIf = nodeData[1]
 
-	log.Debugf("extractHostNodeInterfaceData: eps=%v specialIndex=%d -> host=%s hostIf=%s node=%s nodeIf=%s",
-		lb.Endpoints, specialEPIndex, host, hostIf, node, nodeIf)
+	log.Debugf(
+		"extractHostNodeInterfaceData: eps=%v specialIndex=%d -> host=%s hostIf=%s node=%s nodeIf=%s",
+		lb.Endpoints,
+		specialEPIndex,
+		host,
+		hostIf,
+		node,
+		nodeIf,
+	)
 	return host, hostIf, node, nodeIf, nil
 }
 
@@ -398,7 +405,6 @@ func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) error {
 }
 
 func parseVarIPBrief(af string, vals []string, endpoints []*EndpointRaw) error {
-
 	nVals := len(vals)
 
 	if nVals == 0 {

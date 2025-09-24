@@ -106,7 +106,8 @@ type Operation func(*netconf.Driver) (*response.NetconfResponse, error)
 
 // MultiExec opens a NETCONF session to the provided address and executes the supplied operations
 // sequentially. The driver is opened once and used across every operation, enabling scenarios that
-// require multiple NETCONF calls within a single session (for example, chaining import actions prior
+// require multiple NETCONF calls within a single session (for example, chaining import actions
+// prior
 // to committing configuration changes).
 func MultiExec(addr, username, password string, operations []Operation) error {
 	opts := []util.Option{
