@@ -19,16 +19,21 @@ func getField[T any](
 ) T {
 	fieldDefault := getFieldDefaults(topo.GetDefaults())
 
+	// Check if the node exists in the topology
 	nodeDefintion, ok := topo.Nodes[nodeName]
-	if nodeDefintion == nil || !ok {
+	if !ok {
 		return fieldDefault
 	}
 
-	fieldNode := getFieldNode(nodeDefintion)
-	if isSet(fieldNode) {
-		return fieldNode
+	// Check node's own field (if the node definition is not nil)
+	if nodeDefintion != nil {
+		fieldNode := getFieldNode(nodeDefintion)
+		if isSet(fieldNode) {
+			return fieldNode
+		}
 	}
 
+	// Check group field
 	group := topo.GetGroup(topo.GetNodeGroup(nodeName))
 	if group != nil {
 		fieldGroup := getFieldGroup(group)
@@ -37,6 +42,7 @@ func getField[T any](
 		}
 	}
 
+	// Check kind field
 	kind := topo.GetKind(topo.GetNodeKind(nodeName))
 	if kind != nil {
 		fieldKind := getFieldKind(kind)
@@ -110,12 +116,16 @@ func mergeStringSliceFields(
 ) []string {
 	var out []string
 
+	// Check if the node exists in the topology
 	nodeDefintion, ok := topo.Nodes[nodeName]
-	if nodeDefintion == nil || !ok {
+	if !ok {
 		return out
 	}
 
-	fieldNode := getFieldNode(nodeDefintion)
+	var fieldNode []string
+	if nodeDefintion != nil {
+		fieldNode = getFieldNode(nodeDefintion)
+	}
 
 	var fieldGroup []string
 
@@ -147,12 +157,16 @@ func mergeStringMapFields(
 ) map[string]string {
 	out := map[string]string{}
 
+	// Check if the node exists in the topology
 	nodeDefintion, ok := topo.Nodes[nodeName]
-	if nodeDefintion == nil || !ok {
+	if !ok {
 		return out
 	}
 
-	fieldNode := getFieldNode(nodeDefintion)
+	var fieldNode map[string]string
+	if nodeDefintion != nil {
+		fieldNode = getFieldNode(nodeDefintion)
+	}
 
 	var fieldGroup map[string]string
 
