@@ -333,7 +333,29 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 		_ = t.Execute(w, topoD)
 	})
 
-	log.Infof("Serving topology graph on http://%s", srv)
+	// If the server binds to 0.0.0.0, show all routable addresses for better usability
+	if strings.HasPrefix(srv, "0.0.0.0:") {
+		port := strings.Split(srv, ":")[1]
+		routableAddrs, err := clabutils.GetRoutableAddresses()
+		if err != nil {
+			log.Debugf("Failed to get routable addresses: %v", err)
+			log.Infof("Serving topology graph on http://%s", srv)
+		} else if len(routableAddrs) > 0 {
+			log.Infof("Serving topology graph on:")
+			for _, addr := range routableAddrs {
+				// Format IPv6 addresses properly
+				if strings.Contains(addr, ":") {
+					log.Infof("  http://[%s]:%s", addr, port)
+				} else {
+					log.Infof("  http://%s:%s", addr, port)
+				}
+			}
+		} else {
+			log.Infof("Serving topology graph on http://%s", srv)
+		}
+	} else {
+		log.Infof("Serving topology graph on http://%s", srv)
+	}
 
 	return http.ListenAndServe(srv, nil)
 }
