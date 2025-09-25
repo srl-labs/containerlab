@@ -192,6 +192,16 @@
                     "type": "object",
                     "$ref": "#/definitions/env"
                 },
+                "env-files": {
+                    "type": "array",
+                    "description": "list of external files containing environment variables",
+                    "markdownDescription": "list of external files containing [environment variables](https://containerlab.dev/manual/nodes/#env-files)",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
                 "user": {
                     "description": "user to use within the container",
                     "markdownDescription": "[user](https://containerlab.dev/manual/nodes/#user) to use within the container",
@@ -410,7 +420,6 @@
                                         }
                                     }
                                 }
-                                
                             }
                         ]
                     },
