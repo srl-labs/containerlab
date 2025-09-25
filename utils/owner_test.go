@@ -11,7 +11,7 @@ func TestGetOwner(t *testing.T) {
 	// Save original environment variables
 	origSudoUser := os.Getenv("SUDO_USER")
 	origUser := os.Getenv("USER")
-	
+
 	// Cleanup function to restore original environment
 	defer func() {
 		if origSudoUser != "" {
@@ -27,10 +27,10 @@ func TestGetOwner(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name      string
-		sudoUser  string
-		user      string
-		want      string
+		name     string
+		sudoUser string
+		user     string
+		want     string
 	}{
 		{
 			name:     "sudo_user_set",
@@ -66,7 +66,7 @@ func TestGetOwner(t *testing.T) {
 			} else {
 				os.Unsetenv("SUDO_USER")
 			}
-			
+
 			if tt.user != "" {
 				os.Setenv("USER", tt.user)
 			} else {

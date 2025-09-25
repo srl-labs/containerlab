@@ -16,11 +16,11 @@ func TestPointer(t *testing.T) {
 			test: func(t *testing.T) {
 				input := "test"
 				got := Pointer(input)
-				
+
 				if got == nil {
 					t.Fatalf("Pointer() returned nil")
 				}
-				
+
 				if diff := cmp.Diff(*got, input); diff != "" {
 					t.Fatalf("mismatch (-want +got):\n%s", diff)
 				}
@@ -31,11 +31,11 @@ func TestPointer(t *testing.T) {
 			test: func(t *testing.T) {
 				input := 42
 				got := Pointer(input)
-				
+
 				if got == nil {
 					t.Fatalf("Pointer() returned nil")
 				}
-				
+
 				if diff := cmp.Diff(*got, input); diff != "" {
 					t.Fatalf("mismatch (-want +got):\n%s", diff)
 				}
@@ -46,11 +46,11 @@ func TestPointer(t *testing.T) {
 			test: func(t *testing.T) {
 				input := true
 				got := Pointer(input)
-				
+
 				if got == nil {
 					t.Fatalf("Pointer() returned nil")
 				}
-				
+
 				if diff := cmp.Diff(*got, input); diff != "" {
 					t.Fatalf("mismatch (-want +got):\n%s", diff)
 				}
@@ -61,11 +61,11 @@ func TestPointer(t *testing.T) {
 			test: func(t *testing.T) {
 				input := ""
 				got := Pointer(input)
-				
+
 				if got == nil {
 					t.Fatalf("Pointer() returned nil")
 				}
-				
+
 				if diff := cmp.Diff(*got, input); diff != "" {
 					t.Fatalf("mismatch (-want +got):\n%s", diff)
 				}
@@ -76,11 +76,11 @@ func TestPointer(t *testing.T) {
 			test: func(t *testing.T) {
 				input := 0
 				got := Pointer(input)
-				
+
 				if got == nil {
 					t.Fatalf("Pointer() returned nil")
 				}
-				
+
 				if diff := cmp.Diff(*got, input); diff != "" {
 					t.Fatalf("mismatch (-want +got):\n%s", diff)
 				}
@@ -91,11 +91,11 @@ func TestPointer(t *testing.T) {
 			test: func(t *testing.T) {
 				input := false
 				got := Pointer(input)
-				
+
 				if got == nil {
 					t.Fatalf("Pointer() returned nil")
 				}
-				
+
 				if diff := cmp.Diff(*got, input); diff != "" {
 					t.Fatalf("mismatch (-want +got):\n%s", diff)
 				}
@@ -110,11 +110,11 @@ func TestPointer(t *testing.T) {
 				}
 				input := testStruct{Name: "test", ID: 1}
 				got := Pointer(input)
-				
+
 				if got == nil {
 					t.Fatalf("Pointer() returned nil")
 				}
-				
+
 				if diff := cmp.Diff(*got, input); diff != "" {
 					t.Fatalf("mismatch (-want +got):\n%s", diff)
 				}

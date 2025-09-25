@@ -129,18 +129,18 @@ func TestNewBindFromString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewBindFromString(tt.bind)
-			
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("NewBindFromString() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			
+
 			if tt.wantErr && err != nil {
 				if tt.errStr != "" && !contains(err.Error(), tt.errStr) {
 					t.Fatalf("expected error containing %q, got %q", tt.errStr, err.Error())
 				}
+
 				return
 			}
-			
+
 			if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(Bind{})); diff != "" {
 				t.Fatalf("mismatch (-want +got):\n%s", diff)
 			}
@@ -185,9 +185,11 @@ func TestBind_Accessors(t *testing.T) {
 			if got := tt.bind.Src(); got != tt.wantSrc {
 				t.Errorf("Bind.Src() = %v, want %v", got, tt.wantSrc)
 			}
+
 			if got := tt.bind.Dst(); got != tt.wantDst {
 				t.Errorf("Bind.Dst() = %v, want %v", got, tt.wantDst)
 			}
+
 			if got := tt.bind.Mode(); got != tt.wantMode {
 				t.Errorf("Bind.Mode() = %v, want %v", got, tt.wantMode)
 			}
@@ -292,10 +294,10 @@ func TestBinds_ToStringSlice(t *testing.T) {
 	}
 }
 
-// contains is a helper function to check if a string contains a substring
+// contains is a helper function to check if a string contains a substring.
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
-		(len(substr) > 0 && findSubstring(s, substr)))
+	return len(s) >= len(substr) && (s == substr || substr == "" ||
+		(substr != "" && findSubstring(s, substr)))
 }
 
 func findSubstring(s, substr string) bool {
@@ -304,5 +306,6 @@ func findSubstring(s, substr string) bool {
 			return true
 		}
 	}
+
 	return false
 }

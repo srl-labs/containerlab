@@ -71,9 +71,11 @@ func TestCLab_exportTopologyDataWithMinimalTemplate(t *testing.T) {
 			if !strings.Contains(got, `"name"`) {
 				t.Fatalf("output missing 'name' field: %s", got)
 			}
+
 			if !strings.Contains(got, `"type"`) {
 				t.Fatalf("output missing 'type' field: %s", got)
 			}
+
 			if !strings.Contains(got, `"clab"`) {
 				t.Fatalf("output missing 'clab' type value: %s", got)
 			}
@@ -88,14 +90,14 @@ func TestCLab_exportTopologyDataWithMinimalTemplate_NilConfig(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	
+
 	// Expect this to panic
 	defer func() {
 		if r := recover(); r == nil {
 			t.Fatalf("expected panic when Config is nil, but didn't panic")
 		}
 	}()
-	
+
 	// This should panic
 	_ = c.exportTopologyDataWithMinimalTemplate(&buf)
 }

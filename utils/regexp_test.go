@@ -124,8 +124,8 @@ func TestGetRegexpCaptureGroups(t *testing.T) {
 
 func TestGetRegexpCaptureGroups_EdgeCases(t *testing.T) {
 	tests := []struct {
-		name    string
-		test    func(t *testing.T)
+		name string
+		test func(t *testing.T)
 	}{
 		{
 			name: "numeric_groups_ignored",
@@ -160,14 +160,19 @@ func TestGetRegexpCaptureGroups_EdgeCases(t *testing.T) {
 			name: "complex_regex_with_multiple_groups",
 			test: func(t *testing.T) {
 				// Test with complex regex having multiple capture groups
-				r := regexp.MustCompile(`(?P<protocol>https?)://(?P<user>\w+):(?P<pass>\w+)@(?P<host>[^/]+)/(?P<path>.*)`)
-				got, err := GetRegexpCaptureGroups(r, "https://user:password@example.com/path/to/resource")
+				r := regexp.MustCompile(
+					`(?P<protocol>https?)://(?P<user>\w+):(?P<pass>\w+)@(?P<host>[^/]+)/(?P<path>.*)`,
+				)
+				got, err := GetRegexpCaptureGroups(
+					r,
+					"https://user:password@example.com/path/to/resource",
+				)
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
 				want := map[string]string{
 					"protocol": "https",
-					"user":     "user", 
+					"user":     "user",
 					"pass":     "password",
 					"host":     "example.com",
 					"path":     "path/to/resource",

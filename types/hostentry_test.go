@@ -117,12 +117,12 @@ func TestHostEntry_SetDescription(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := tt.hostEntry.SetDescription(tt.description)
-			
+
 			// Should return the same instance
 			if got != tt.hostEntry {
 				t.Fatalf("expected SetDescription to return the same instance")
 			}
-			
+
 			if diff := cmp.Diff(tt.want, got, cmp.AllowUnexported(HostEntry{})); diff != "" {
 				t.Fatalf("mismatch (-want +got):\n%s", diff)
 			}
@@ -302,9 +302,9 @@ func TestHostEntries_Merge(t *testing.T) {
 			// Make a copy of original for testing
 			original := make(HostEntries, len(tt.original))
 			copy(original, tt.original)
-			
+
 			original.Merge(tt.other)
-			
+
 			if diff := cmp.Diff(tt.want, original, cmp.AllowUnexported(HostEntry{})); diff != "" {
 				t.Fatalf("mismatch (-want +got):\n%s", diff)
 			}
