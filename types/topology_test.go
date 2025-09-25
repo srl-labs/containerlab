@@ -734,18 +734,17 @@ func TestGetNodeImage(t *testing.T) {
 	}
 }
 
-// TestGetNodeImageNilNode tests the specific case from the issue where nodes are nil
-// but should inherit image from kinds via defaults.
-func TestGetNodeImageNilNode(t *testing.T) {
+// TestGetNodeImageOnlyViaDefault tests that the node
+// inherits image from kinds via defaults.
+func TestGetNodeImageOnlyViaDefault(t *testing.T) {
 	// This represents the exact scenario from the GitHub issue
 	topology := &Topology{
 		Defaults: &NodeDefinition{
-			Kind: "cisco_iol",
+			Kind: "nokia_srlinux",
 		},
 		Kinds: map[string]*NodeDefinition{
-			"cisco_iol": {
-				Image: "vrnetlab/cisco_iol:L2-17.15.01",
-				Type:  "L2",
+			"nokia_srlinux": {
+				Image: "ghcr.io/nokia/srlinux:latest",
 			},
 		},
 		Nodes: map[string]*NodeDefinition{
@@ -763,8 +762,8 @@ func TestGetNodeImageNilNode(t *testing.T) {
 		nodeName string
 		want     string
 	}{
-		{"sw01", "vrnetlab/cisco_iol:L2-17.15.01"},
-		{"sw02", "vrnetlab/cisco_iol:L2-17.15.01"},
+		{"sw01", "ghcr.io/nokia/srlinux:latest"},
+		{"sw02", "ghcr.io/nokia/srlinux:latest"},
 		{"host01", "debian-host:latest"},
 	}
 
