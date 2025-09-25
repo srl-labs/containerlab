@@ -266,6 +266,12 @@ To upgrade `containerlab` to the latest available version issue the following co
 sudo -E containerlab version upgrade
 ```
 
+Alternatively, you can use the `update` alias:
+
+```
+sudo -E containerlab version update
+```
+
 This command will fetch the installation script and will upgrade the tool to its most recent version. In case of GitHub rate limit, provide `GITHUB_TOKEN` env var with your personal GitHub token to the upgrade command.
 
 Or leverage `apt`/`yum` utilities if containerlab repo was added as explained in the [Package managers](#package-managers) section.

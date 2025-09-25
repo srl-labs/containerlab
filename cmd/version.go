@@ -59,8 +59,9 @@ func versionCmd(o *Options) (*cobra.Command, error) {
 			},
 		},
 		&cobra.Command{
-			Use:   "upgrade",
-			Short: "upgrade containerlab to latest available version",
+			Use:     "upgrade",
+			Aliases: []string{"update"},
+			Short:   "upgrade containerlab to latest available version",
 			PreRunE: func(_ *cobra.Command, _ []string) error {
 				return clabutils.CheckAndGetRootPrivs()
 			},
@@ -149,7 +150,7 @@ func printNewVersionInfo(ver string) {
 	fmt.Printf("🎉 A newer containerlab version (%s) is available!\n", ver)
 	fmt.Printf("Release notes: https://containerlab.dev/rn/%s\n", relSlug)
 	fmt.Println(
-		"Run 'sudo clab version upgrade' or see https://containerlab.dev/install/ " +
+		"Run 'sudo clab version upgrade' (or 'sudo clab version update') or see https://containerlab.dev/install/ " +
 			"for installation options.",
 	)
 }

@@ -17,5 +17,5 @@ Example result output:
 ```
 🎉 A newer containerlab version (0.62.2) is available!
 Release notes: https://containerlab.dev/rn/0.62/#0622
-Run 'sudo clab version upgrade' or see https://containerlab.dev/install/ for installation options.
+Run 'sudo clab version upgrade' (or 'sudo clab version update') or see https://containerlab.dev/install/ for installation options.
 ```
