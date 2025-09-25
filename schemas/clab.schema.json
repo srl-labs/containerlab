@@ -394,16 +394,6 @@
                             "env": {
                                 "type": "object",
                                 "$ref": "#/definitions/env"
-                            },
-                            "env-files": {
-                                "type": "array",
-                                "description": "list of external files containing environment variables",
-                                "markdownDescription": "list of external files containing [environment variables](https://containerlab.dev/manual/nodes/#env-files)",
-                                "minItems": 1,
-                                "items": {
-                                    "type": "string"
-                                },
-                                "uniqueItems": true
                             }
                         },
                         "additionalProperties": false,
@@ -430,7 +420,6 @@
                                         }
                                     }
                                 }
-                                
                             }
                         ]
                     },
