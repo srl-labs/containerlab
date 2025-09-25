@@ -1,6 +1,7 @@
 package types
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -134,7 +135,7 @@ func TestNewBindFromString(t *testing.T) {
 			}
 
 			if tt.wantErr && err != nil {
-				if tt.errStr != "" && !contains(err.Error(), tt.errStr) {
+				if tt.errStr != "" && !strings.Contains(err.Error(), tt.errStr) {
 					t.Fatalf("expected error containing %q, got %q", tt.errStr, err.Error())
 				}
 
@@ -292,12 +293,6 @@ func TestBinds_ToStringSlice(t *testing.T) {
 			}
 		})
 	}
-}
-
-// contains is a helper function to check if a string contains a substring.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || substr == "" ||
-		(substr != "" && findSubstring(s, substr)))
 }
 
 func findSubstring(s, substr string) bool {
