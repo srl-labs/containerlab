@@ -734,6 +734,49 @@ func TestGetNodeImage(t *testing.T) {
 	}
 }
 
+// TestGetNodeImageOnlyViaDefault tests that the node
+// inherits image from kinds via defaults.
+func TestGetNodeImageOnlyViaDefault(t *testing.T) {
+	// This represents the exact scenario from the GitHub issue
+	topology := &Topology{
+		Defaults: &NodeDefinition{
+			Kind: "nokia_srlinux",
+		},
+		Kinds: map[string]*NodeDefinition{
+			"nokia_srlinux": {
+				Image: "ghcr.io/nokia/srlinux:latest",
+			},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"sw01": nil, // This simulates YAML parsing where "sw01:" creates a nil entry
+			"sw02": nil,
+			"host01": {
+				Kind:  "linux",
+				Image: "debian-host:latest",
+			},
+		},
+	}
+
+	// Test that nil nodes inherit image from kinds via defaults
+	tests := []struct {
+		nodeName string
+		want     string
+	}{
+		{"sw01", "ghcr.io/nokia/srlinux:latest"},
+		{"sw02", "ghcr.io/nokia/srlinux:latest"},
+		{"host01", "debian-host:latest"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.nodeName, func(t *testing.T) {
+			got := topology.GetNodeImage(tt.nodeName)
+			if got != tt.want {
+				t.Errorf("GetNodeImage(%s) = %q, want %q", tt.nodeName, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetNodeLicense(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
