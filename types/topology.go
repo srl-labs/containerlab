@@ -20,14 +20,14 @@ func getField[T any](
 	fieldDefault := getFieldDefaults(topo.GetDefaults())
 
 	// Check if the node exists in the topology
-	nodeDefintion, ok := topo.Nodes[nodeName]
+	nodeDefinition, ok := topo.Nodes[nodeName]
 	if !ok {
 		return fieldDefault
 	}
 
 	// Check node's own field (if the node definition is not nil)
-	if nodeDefintion != nil {
-		fieldNode := getFieldNode(nodeDefintion)
+	if nodeDefinition != nil {
+		fieldNode := getFieldNode(nodeDefinition)
 		if isSet(fieldNode) {
 			return fieldNode
 		}
