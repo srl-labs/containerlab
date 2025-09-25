@@ -286,4 +286,116 @@ On top of the built-in function, Containerlab bundles the following custom funct
 
 > If a function you need is not available, check if it is available in the [gomplate](https://docs.gomplate.ca/functions/) documentation and ask a request to add it via Containerlab's issue tracker.
 
+##### Magic Variables
+
+Containerlab supports various magic variables that can be used throughout your topology definitions to make your lab configurations more dynamic and less verbose. There are two types of variables:
+
+1. **Path Magic Variables** - Simple string replacement variables surrounded by double underscores (`__variable__`) 
+2. **Template Variables** - Go template variables available in startup configuration templates
+
+###### Path Magic Variables
+
+These variables can be used in startup-config paths, bind paths, and exec commands. They are replaced with actual values during lab deployment:
+
+| Variable | Description | Example Usage | Expands To |
+|----------|-------------|---------------|------------|
+| `__clabNodeName__` | Current node's short name | `startup-config: cfg/__clabNodeName__.cfg` | `cfg/node1.cfg` (for node named "node1") |
+| `__clabNodeDir__` | Path to the node's lab directory | `binds: __clabNodeDir__/conf:/conf` | `clab-mylab/node1/conf:/conf` |
+| `__clabDir__` | Path to the lab's main directory | `binds: __clabDir__/data.json:/data.json:ro` | `clab-mylab/data.json:/data.json:ro` |
+
+**Usage Examples:**
+
+***Startup Configuration:***
+```yaml
+name: mylab
+topology:
+  defaults:
+    startup-config: configs/__clabNodeName__.cfg  # Each node gets its own config file
+  nodes:
+    router1:
+    router2:
+```
+
+***Bind Mounts:***
+```yaml
+name: mylab
+topology:
+  nodes:
+    node1:
+      binds:
+        - __clabNodeDir__/custom.conf:/etc/custom.conf  # Node-specific files
+        - __clabDir__/shared-data.json:/shared.json:ro  # Lab-wide shared files
+```
+
+***Exec Commands:***
+```yaml
+name: mylab
+topology:
+  nodes:
+    node1:
+      exec:
+        - echo "Node __clabNodeName__ started"  # Will output "Node node1 started"
+```
+
+###### Template Variables
+
+These variables are available when using Go templates in startup configuration files. They provide access to node properties, network information, and lab context:
+
+| Variable | Type | Description | Example Value |
+|----------|------|-------------|---------------|
+| `clab_node` | string | Node's short name | `"router1"` |
+| `clab_kind` | string | Node's kind | `"nokia_srlinux"` |
+| `clab_type` | string | Node's type | `"ixrd2"` |
+| `clab_management_ipv4` | string | Node's management IPv4 address | `"172.20.20.2"` |
+| `clab_management_ipv6` | string | Node's management IPv6 address | `"3fff:172:20:20::2"` |
+| `clab_nodes` | array | List of all nodes in the lab | Array of node objects |
+| `clab_links` | array | List of all links connected to this node | Array of link objects |
+| `clab_far` | object | Information about the far-end of links | Object with remote node data |
+| `clab_role` | string | Node's role (defaults to kind) | `"spine"` |
+| `clab_system_ip` | string | System IP if configured | `"10.0.0.1"` |
+| `clab_link_ip` | string | Link IP address | `"192.168.1.1/24"` |
+| `clab_link_name` | string | Link name | `"link-1"` |
+| `clab_link_num` | number | Link number for multiple links | `1` |
+
+**Template Usage Examples:**
+
+***Basic Node Information:***
+```go
+hostname {{ .clab_node }}
+system-ip {{ .clab_management_ipv4 }}
+management-interface ipv4 {{ .clab_management_ipv4 }}/24
+```
+
+***Link Configuration with Far-End Information:***
+```go
+{{- range $link := .clab_links }}
+interface ethernet-1/{{ $link.clab_link_num }}
+  description "Connected to {{ $link.clab_far.clab_node }}"
+  ip address {{ $link.clab_link_ip }}
+{{- end }}
+```
+
+***Conditional Configuration Based on Node Role:***
+```go
+{{- if eq .clab_role "spine" }}
+router bgp 65000
+{{- else if eq .clab_role "leaf" }}
+router bgp 65001
+{{- end }}
+```
+
+###### Variables in Different Contexts
+
+Magic variables can be used in various parts of your topology definition:
+
+- **startup-config paths**: `__clabNodeName__`, `__clabNodeDir__`, `__clabDir__`
+- **bind mount paths**: `__clabNodeName__`, `__clabNodeDir__`, `__clabDir__`  
+- **exec commands**: `__clabNodeName__`, `__clabNodeDir__`, `__clabDir__`
+- **startup-config templates**: All template variables (`clab_*`)
+
+/// admonition | Note
+    type: subtle-note
+Path magic variables (`__variable__`) are processed during topology parsing and are simple string replacements. Template variables (`clab_*`) are processed during startup configuration rendering and support full Go template functionality including conditionals, loops, and functions.
+///
+
 [^1]: You can use https://repeatit.io/ to play online with Go templating language.
