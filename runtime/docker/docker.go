@@ -344,7 +344,14 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 		if strings.Contains(strings.ToLower(err.Error()), strings.ToLower("Pool overlaps")) ||
 			strings.Contains(strings.ToLower(err.Error()), strings.ToLower("subnet")) {
 			networksAndAddresses := map[string][]string{}
-			nets, _ := d.Client.NetworkList(nctx, networkapi.ListOptions{})
+			nets, listErr := d.Client.NetworkList(nctx, networkapi.ListOptions{})
+			if listErr != nil {
+				return "", fmt.Errorf(
+					"failed to list Docker networks while handling subnet overlap error: %w (original error: %v)",
+					listErr,
+					err,
+				)
+			}
 			for _, n := range nets {
 				for _, cfg := range n.IPAM.Config {
 					// store existing networks and their subnets
