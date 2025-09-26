@@ -329,17 +329,20 @@ func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 			fname := clabutils.FilenameForURL(context.Background(), p)
 
 			// Deduce the absolute destination filename for the downloaded content
-			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
+			dstFileAbsPath := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
 
 			log.Debugf(
 				"Fetching startup-config %q for node %q storing at %q",
 				p,
 				nodeCfg.ShortName,
-				absDestFile,
+				dstFileAbsPath,
 			)
 
 			// download the file to tmp location
-			out, cleanup, err := clabutils.CreateFileWithPermissions(absDestFile, clabconstants.PermissionsDirDefault)
+			out, cleanup, err := clabutils.CreateFileWithPermissions(
+				dstFileAbsPath,
+				clabconstants.PermissionsDirDefault,
+			)
 			if err != nil {
 				return err
 			}
@@ -351,7 +354,7 @@ func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 			}
 
 			// adjust the NodeConfig by pointing startup-config to the local downloaded file
-			p = absDestFile
+			p = dstFileAbsPath
 		}
 	}
 	// resolve the startup config path to an abs path
