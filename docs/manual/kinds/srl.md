@@ -5,9 +5,9 @@ kind_code_name: nokia_srlinux
 kind_display_name: Nokia SR Linux
 ---
 # -{{ kind_display_name }}-
+
 [-{{ kind_display_name }}-](https://www.nokia.com/networks/products/service-router-linux-NOS/) NOS is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 A kind defines a supported feature set and a startup procedure of a node.
-
 
 ## Getting SR Linux image
 
@@ -174,6 +174,8 @@ For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that 
 The available Nokia 7220 IXR models support the following types: `ixr-d1`, `ixr-d2`, `ixr-d3`, `ixr-d2l`, `ixr-d3l`, `ixr-d4`, `ixr-d5`, `ixr-h2`, `ixr-h3`, `ixr-h4`, `ixr-h4-32d`,`ixr-h5-32d`, `ixr-h5-64d`,`ixr-h5-64o`.
 
 Nokia 7250 IXR chassis-based systems have types `ixr-6e`, `ixr-10e`, `ixr-18e`, `ixr-x1b` and `ixr-x3b`. The chassis-based systems require a license file. Check with your Nokia representative for eligibility.
+
+Nokia 7730 SXR routers have types `sxr-1x-44s` and `sxr-1d-32d`. SXR platforms requires a license file.
 
 If type is not set in the clab file `ixr-d2l` value will be used by containerlab.
 
