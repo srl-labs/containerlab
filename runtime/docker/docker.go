@@ -366,9 +366,17 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 				}
 			}
 			// fallback: no exact match, but clarify
+			// Show both IPv4 and IPv6 subnets in the error message if present
+			requestedSubnets := d.mgmt.IPv4Subnet
+			if d.mgmt.IPv6Subnet != "" {
+				if requestedSubnets != "" {
+					requestedSubnets += ", "
+				}
+				requestedSubnets += d.mgmt.IPv6Subnet
+			}
 			return "", fmt.Errorf(
-				"requested subnet %s overlaps an existing Docker network. Existing networks: %v. Original error: %w. See https://containerlab.dev/manual/network/",
-				d.mgmt.IPv4Subnet,
+				"requested subnet(s) %s overlap an existing Docker network. Existing networks: %v. Original error: %w. See https://containerlab.dev/manual/network/",
+				requestedSubnets,
 				networksAndAddresses,
 				err,
 			)
