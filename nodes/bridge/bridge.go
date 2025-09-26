@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -48,6 +49,9 @@ type bridge struct {
 	clabnodes.DefaultNode
 	containerNs string
 	nodesMap    map[string]clabnodes.Node
+	// autoBridgeCreated tracks whether we created the bridge during PreDeploy
+	// so we know if we should clean it up during Delete
+	autoBridgeCreated bool
 }
 
 func (s *bridge) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -79,6 +83,66 @@ func (n *bridge) nameWithoutSeparatorSuffix() string {
 		return s[:idx]
 	}
 	return s
+}
+
+func (b *bridge) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	// Only auto-create bridges in the host namespace (not in container namespace)
+	if b.containerNs != "" {
+		return nil
+	}
+
+	// Check if the bridge already exists
+	err := b.ExecFunction(ctx, func(nn ns.NetNS) error {
+		_, err := clabutils.BridgeByName(b.nameWithoutSeparatorSuffix())
+		return err
+	})
+
+	// If bridge exists, we don't create it (and won't delete it either)
+	if err == nil {
+		b.autoBridgeCreated = false
+		log.Debugf("Bridge %s already exists, not auto-creating", b.nameWithoutSeparatorSuffix())
+		return nil
+	}
+
+	// If there was an error other than "not found", return it
+	if !strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "does not exist") {
+		return fmt.Errorf("error checking bridge existence: %w", err)
+	}
+
+	// Bridge does not exist, create it
+	log.Infof("Creating bridge %s", b.nameWithoutSeparatorSuffix())
+	err = b.ExecFunction(ctx, func(nn ns.NetNS) error {
+		// add the bridge
+		err := netlink.LinkAdd(&netlink.Bridge{
+			LinkAttrs: netlink.LinkAttrs{
+				Name: b.nameWithoutSeparatorSuffix(),
+			},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create bridge: %w", err)
+		}
+		// retrieve link ref
+		netlinkLink, err := netlink.LinkByName(b.nameWithoutSeparatorSuffix())
+		if err != nil {
+			return fmt.Errorf("failed to get bridge link: %w", err)
+		}
+		// bring the link up
+		err = netlink.LinkSetUp(netlinkLink)
+		if err != nil {
+			return fmt.Errorf("failed to bring bridge up: %w", err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Mark that we created this bridge so we can clean it up later
+	b.autoBridgeCreated = true
+	log.Debugf("Successfully created bridge %s", b.nameWithoutSeparatorSuffix())
+
+	return nil
 }
 
 func (n *bridge) Deploy(ctx context.Context, dp *clabnodes.DeployParams) error {
@@ -122,10 +186,117 @@ func (n *bridge) Deploy(ctx context.Context, dp *clabnodes.DeployParams) error {
 	return nil
 }
 
-func (*bridge) Delete(_ context.Context) error {
+func (b *bridge) Delete(ctx context.Context) error {
+	log.Debugf("Bridge Delete called for %s, containerNs: %s", 
+		b.nameWithoutSeparatorSuffix(), b.containerNs)
+	
 	// we are not deleting iptables rules set up in the post deploy stage
 	// because we can't guarantee that the bridge is not used by another topology.
+
+	// Only auto-delete bridges in the host namespace
+	if b.containerNs != "" {
+		log.Debugf("Bridge %s is in container namespace, not auto-deleting", 
+			b.nameWithoutSeparatorSuffix())
+		return nil
+	}
+
+	bridgeName := b.nameWithoutSeparatorSuffix()
+	
+	// Start a goroutine to handle deferred bridge deletion
+	// This allows the container deletions to complete first
+	go b.deferredBridgeDeletion(context.Background(), bridgeName)
+	
 	return nil
+}
+
+// deferredBridgeDeletion waits for slave interfaces to be removed then deletes the bridge
+func (b *bridge) deferredBridgeDeletion(ctx context.Context, bridgeName string) {
+	// Wait a bit to allow container deletions to start
+	time.Sleep(2 * time.Second)
+	
+	// Poll for up to 30 seconds waiting for slave interfaces to be removed
+	timeout := time.Now().Add(30 * time.Second)
+	
+	for {
+		deleted, err := b.tryDeleteBridge(ctx, bridgeName)
+		if err != nil {
+			log.Debugf("Error checking bridge %s: %v", bridgeName, err)
+			return
+		}
+		
+		if deleted {
+			return
+		}
+		
+		if time.Now().After(timeout) {
+			log.Debugf("Timeout waiting for bridge %s slave interfaces to be removed", bridgeName)
+			return
+		}
+		
+		// Wait before trying again
+		time.Sleep(1 * time.Second)
+	}
+}
+
+// tryDeleteBridge attempts to delete the bridge if no slave interfaces remain
+// Returns (deleted, error)
+func (b *bridge) tryDeleteBridge(ctx context.Context, bridgeName string) (bool, error) {
+	err := b.ExecFunction(ctx, func(nn ns.NetNS) error {
+		br, err := netlink.LinkByName(bridgeName)
+		if err != nil {
+			// Bridge doesn't exist, consider it deleted
+			if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "does not exist") {
+				log.Debugf("Bridge %s already deleted", bridgeName)
+				return nil
+			}
+			return fmt.Errorf("error checking bridge: %w", err)
+		}
+
+		// Get all links and check if any are enslaved to this bridge
+		links, err := netlink.LinkList()
+		if err != nil {
+			return fmt.Errorf("error listing links: %w", err)
+		}
+
+		hasSlaves := false
+		slaveNames := []string{}
+		for _, link := range links {
+			// Skip the bridge itself and loopback interface
+			if link.Attrs().Index == br.Attrs().Index || link.Type() == "loopback" {
+				continue
+			}
+			
+			// Check if this link is enslaved to our bridge
+			if link.Attrs().MasterIndex == br.Attrs().Index {
+				hasSlaves = true
+				slaveNames = append(slaveNames, link.Attrs().Name)
+			}
+		}
+
+		if hasSlaves {
+			log.Debugf("Bridge %s still has slave interfaces: %v, waiting", bridgeName, slaveNames)
+			return fmt.Errorf("has slaves") // Signal that we should try again
+		}
+
+		// No slave interfaces remain, delete the bridge
+		log.Infof("Deleting bridge %s (no slave interfaces remain)", bridgeName)
+		err = netlink.LinkDel(br)
+		if err != nil {
+			return fmt.Errorf("failed to delete bridge %s: %w", bridgeName, err)
+		}
+
+		log.Debugf("Successfully deleted bridge %s", bridgeName)
+		return nil
+	})
+	
+	if err != nil {
+		if strings.Contains(err.Error(), "has slaves") {
+			return false, nil // Not deleted, but no error
+		}
+		return false, err // Real error
+	}
+	
+	return true, nil // Successfully deleted
 }
 
 func (*bridge) GetImages(_ context.Context) map[string]string { return map[string]string{} }
@@ -168,19 +339,15 @@ func (b *bridge) CheckDeploymentConditions(ctx context.Context) error {
 		}
 	}
 
-	// check bridge exists only if host ns
-	if b.containerNs == "" {
-		err = b.ExecFunction(ctx, func(nn ns.NetNS) error {
-			// check bridge exists
-			_, err = clabutils.BridgeByName(b.nameWithoutSeparatorSuffix())
-			if err != nil {
-				return err
-			}
-			return nil
-		})
+	// For host namespace bridges, we now create them automatically in PreDeploy
+	// so we don't need to check if they exist here
+	// We still check for container namespace bridges since they should exist within their container
+	if b.containerNs != "" {
+		// For bridges in container namespaces, the bridge will be created during Deploy
+		// so we don't need to check for existence here either
 	}
 
-	return err
+	return nil
 }
 
 func (*bridge) PullImage(_ context.Context) error { return nil }
@@ -272,8 +439,11 @@ func (b *bridge) GetLinkEndpointType() clablinks.LinkEndpointType {
 	return clablinks.LinkEndpointTypeBridge
 }
 
-// installIPTablesBridgeFwdRule installs `allow` rule for the traffic routed in and out of the
-// bridge
+// SupportsAutoBridge indicates that this bridge node supports automatic bridge creation/deletion
+func (b *bridge) SupportsAutoBridge() bool {
+	// Only support auto bridge for host namespace bridges
+	return b.containerNs == ""
+}
 // otherwise, communication over the bridge is not permitted on most systems.
 func (b *bridge) installIPTablesBridgeFwdRule() (err error) {
 	f, err := firewall.NewFirewallClient()
