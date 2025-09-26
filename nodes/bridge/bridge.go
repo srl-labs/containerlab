@@ -193,49 +193,50 @@ func (b *bridge) Delete(ctx context.Context) error {
 	// we are not deleting iptables rules set up in the post deploy stage
 	// because we can't guarantee that the bridge is not used by another topology.
 
-	// Only auto-delete bridges in the host namespace
+	// Only auto-delete bridges in the host namespace that appear to be containerlab-managed
+	// This is determined by naming patterns or other characteristics
 	if b.containerNs != "" {
 		log.Debugf("Bridge %s is in container namespace, not auto-deleting", 
+			b.nameWithoutSeparatorSuffix())
+		return nil
+	}
+	
+	// Be conservative about which bridges to auto-delete
+	// Only delete bridges that look like they were created for this specific topology
+	if !b.shouldAutoDelete() {
+		log.Debugf("Bridge %s doesn't appear to be auto-manageable, not deleting", 
 			b.nameWithoutSeparatorSuffix())
 		return nil
 	}
 
 	bridgeName := b.nameWithoutSeparatorSuffix()
 	
-	// Start a goroutine to handle deferred bridge deletion
-	// This allows the container deletions to complete first
-	go b.deferredBridgeDeletion(context.Background(), bridgeName)
+	// Wait a short time to allow container network cleanup to progress
+	// This gives time for the container deletion process to remove interfaces
+	time.Sleep(100 * time.Millisecond)
 	
-	return nil
-}
-
-// deferredBridgeDeletion waits for slave interfaces to be removed then deletes the bridge
-func (b *bridge) deferredBridgeDeletion(ctx context.Context, bridgeName string) {
-	// Wait a bit to allow container deletions to start
-	time.Sleep(2 * time.Second)
-	
-	// Poll for up to 30 seconds waiting for slave interfaces to be removed
-	timeout := time.Now().Add(30 * time.Second)
-	
-	for {
+	// Try to delete the bridge if no slave interfaces remain
+	// Poll for a few seconds to handle timing
+	maxAttempts := 10
+	for attempt := 0; attempt < maxAttempts; attempt++ {
 		deleted, err := b.tryDeleteBridge(ctx, bridgeName)
 		if err != nil {
-			log.Debugf("Error checking bridge %s: %v", bridgeName, err)
-			return
+			log.Debugf("Error during bridge deletion attempt %d: %v", attempt+1, err)
+			return nil // Don't fail the overall deletion
 		}
 		
 		if deleted {
-			return
+			return nil
 		}
 		
-		if time.Now().After(timeout) {
-			log.Debugf("Timeout waiting for bridge %s slave interfaces to be removed", bridgeName)
-			return
+		// Wait a bit before trying again, but not too long to avoid blocking
+		if attempt < maxAttempts-1 {
+			time.Sleep(500 * time.Millisecond)
 		}
-		
-		// Wait before trying again
-		time.Sleep(1 * time.Second)
 	}
+	
+	log.Debugf("Bridge %s still has slave interfaces after %d attempts, leaving it", bridgeName, maxAttempts)
+	return nil
 }
 
 // tryDeleteBridge attempts to delete the bridge if no slave interfaces remain
@@ -439,10 +440,41 @@ func (b *bridge) GetLinkEndpointType() clablinks.LinkEndpointType {
 	return clablinks.LinkEndpointTypeBridge
 }
 
-// SupportsAutoBridge indicates that this bridge node supports automatic bridge creation/deletion
-func (b *bridge) SupportsAutoBridge() bool {
-	// Only support auto bridge for host namespace bridges
-	return b.containerNs == ""
+// shouldAutoDelete determines if this bridge should be auto-deleted based on heuristics
+func (b *bridge) shouldAutoDelete() bool {
+	bridgeName := b.nameWithoutSeparatorSuffix()
+	
+	// Only delete bridges that were likely created for containerlab use
+	// This includes bridges that:
+	// 1. Were created during PreDeploy execution (if we can track it)
+	// 2. Have naming patterns that suggest containerlab usage
+	
+	// If we tracked that this bridge was auto-created, always allow deletion
+	if b.autoBridgeCreated {
+		return true
+	}
+	
+	// Otherwise, use naming heuristics
+	// Common containerlab bridge naming patterns:
+	// - Contains "clab" in the name
+	// - Contains the topology name
+	// - Follows certain patterns like "br-something"
+	
+	if strings.Contains(bridgeName, "clab") {
+		return true
+	}
+	
+	// For bridges named like "test-br", "lab-br", etc., be more careful
+	// Only auto-delete if they match specific patterns AND we're confident
+	commonPatterns := []string{"test-", "lab-", "demo-"}
+	for _, pattern := range commonPatterns {
+		if strings.HasPrefix(bridgeName, pattern) && strings.HasSuffix(bridgeName, "-br") {
+			return true
+		}
+	}
+	
+	// Be conservative - don't delete bridges we're not sure about
+	return false
 }
 // otherwise, communication over the bridge is not permitted on most systems.
 func (b *bridge) installIPTablesBridgeFwdRule() (err error) {

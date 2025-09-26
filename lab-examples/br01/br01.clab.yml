@@ -13,7 +13,8 @@ topology:
       kind: nokia_srlinux
     srl3:
       kind: nokia_srlinux
-    # note, that the bridge br-clab must be created manually
+    # Note: the bridge br-clab will be auto-created by containerlab
+    # if it doesn't exist and auto-deleted when the lab is destroyed
     br-clab:
       kind: bridge
 
