@@ -118,7 +118,6 @@ func (c *CLab) makeCopyForDestroy(
 ) (*CLab, error) {
 	newOpts := []ClabOption{
 		WithTimeout(c.timeout),
-		WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()),
 		WithNodeFilter(opts.nodeFilter),
 		// during destroy we don't want to check bind paths
 		// as it is irrelevant for this command.
@@ -131,6 +130,23 @@ func (c *CLab) makeCopyForDestroy(
 				GracefulShutdown: opts.graceful,
 			},
 		),
+	}
+
+	// Try to load topology file, but if it doesn't exist and we're keeping mgmt net,
+	// fall back to using just the lab name without topology parsing
+	if clabutils.FileOrDirExists(topo) {
+		newOpts = append(newOpts, WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()))
+	} else if opts.keepMgmtNet {
+		// Topology file doesn't exist, but we're keeping management network
+		// Extract lab name from the first container and use it without topology parsing
+		log.Warnf("Topology file '%s' not found, proceeding with limited cleanup (--keep-mgmt-net is set)", topo)
+		
+		// Use lab name from the main CLab config if available
+		if c.Config.Name != "" {
+			newOpts = append(newOpts, WithTopologyName(c.Config.Name))
+		}
+	} else {
+		return nil, fmt.Errorf("topology file '%s' not found and --keep-mgmt-net is not set", topo)
 	}
 
 	if opts.keepMgmtNet {
@@ -151,22 +167,26 @@ func (c *CLab) makeCopyForDestroy(
 		}
 	}
 
-	err = clablinks.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
-	if err != nil {
-		return nil, err
-	}
+	// Only try to set up the management network if we have topology parsing
+	// When we skip topology parsing (keepMgmtNet case), skip these steps
+	if cc.TopoPaths.TopologyFileIsSet() {
+		err = clablinks.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
+		if err != nil {
+			return nil, err
+		}
 
-	// create management network or use existing one
-	// we call this to populate the nc.cfg.mgmt.bridge variable
-	// which is needed for the removal of the iptables rules
-	err = cc.CreateNetwork(ctx)
-	if err != nil {
-		return nil, err
-	}
+		// create management network or use existing one
+		// we call this to populate the nc.cfg.mgmt.bridge variable
+		// which is needed for the removal of the iptables rules
+		err = cc.CreateNetwork(ctx)
+		if err != nil {
+			return nil, err
+		}
 
-	err = cc.ResolveLinks()
-	if err != nil {
-		return nil, err
+		err = cc.ResolveLinks()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return cc, nil
@@ -217,9 +237,20 @@ func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
 }
 
 func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
+	// First, try to get containers using parsed topology nodes
 	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
 	if err != nil {
 		return err
+	}
+
+	// If no containers found via nodes (e.g., topology not parsed), fall back to listing by lab name
+	if len(containers) == 0 && c.Config.Name != "" {
+		log.Debugf("No containers found via topology nodes, trying to list by lab name: %s", c.Config.Name)
+		listOpts := []ListOption{WithListLabName(c.Config.Name)}
+		containers, err = c.ListContainers(ctx, listOpts...)
+		if err != nil {
+			return err
+		}
 	}
 
 	if len(containers) == 0 {
@@ -228,6 +259,10 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	if maxWorkers == 0 {
 		maxWorkers = uint(len(c.Nodes))
+		// If no parsed nodes, set a reasonable default
+		if len(c.Nodes) == 0 {
+			maxWorkers = uint(len(containers))
+		}
 	}
 
 	// a set of workers that do not support concurrency
@@ -248,7 +283,12 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	log.Info("Destroying lab", "name", c.Config.Name)
 
-	c.deleteNodes(ctx, maxWorkers, serialNodes)
+	// Use node-based deletion if we have parsed nodes, otherwise delete containers directly
+	if len(c.Nodes) > 0 {
+		c.deleteNodes(ctx, maxWorkers, serialNodes)
+	} else {
+		c.deleteContainersDirect(ctx, containers, maxWorkers)
+	}
 
 	c.deleteToolContainers(ctx)
 
@@ -266,12 +306,16 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		log.Errorf("failed to remove ssh config file: %v", err)
 	}
 
-	// delete container network namespaces symlinks
-	for _, node := range c.Nodes {
-		err = node.DeleteNetnsSymlink()
-		if err != nil {
-			return fmt.Errorf("error while deleting netns symlinks: %w", err)
+	// delete container network namespaces symlinks - only if we have parsed nodes
+	if len(c.Nodes) > 0 {
+		for _, node := range c.Nodes {
+			err = node.DeleteNetnsSymlink()
+			if err != nil {
+				return fmt.Errorf("error while deleting netns symlinks: %w", err)
+			}
 		}
+	} else {
+		log.Debugf("Skipping netns symlink cleanup - no parsed topology nodes available")
 	}
 
 	// delete lab management network
@@ -290,6 +334,60 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	return nil
+}
+
+func (c *CLab) deleteContainersDirect(ctx context.Context, containers []clabruntime.GenericContainer, maxWorkers uint) {
+	if len(containers) == 0 {
+		return
+	}
+
+	log.Infof("Deleting %d containers directly (topology not available)", len(containers))
+
+	wg := new(sync.WaitGroup)
+	containerChan := make(chan clabruntime.GenericContainer)
+
+	workerFunc := func(i uint, input chan clabruntime.GenericContainer, wg *sync.WaitGroup) {
+		defer wg.Done()
+
+		for {
+			select {
+			case container := <-input:
+				if container.Names == nil || len(container.Names) == 0 {
+					log.Debugf("Worker %d terminating...", i)
+					return
+				}
+
+				containerName := strings.TrimPrefix(container.Names[0], "/")
+				log.Debugf("Worker %d: deleting container %s", i, containerName)
+
+				err := c.globalRuntime().DeleteContainer(ctx, containerName)
+				if err != nil {
+					log.Errorf("could not remove container %q: %v", containerName, err)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
+
+	// start workers
+	wg.Add(int(maxWorkers))
+	for i := range maxWorkers {
+		go workerFunc(i, containerChan, wg)
+	}
+
+	// send containers to workers
+	for _, container := range containers {
+		containerChan <- container
+	}
+
+	// send termination signals
+	for range maxWorkers {
+		containerChan <- clabruntime.GenericContainer{}
+	}
+
+	close(containerChan)
+	wg.Wait()
 }
 
 func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
