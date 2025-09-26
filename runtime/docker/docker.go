@@ -340,6 +340,48 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 
 	netCreateResponse, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
 	if err != nil {
+		// Handle subnet overlap error
+		if strings.Contains(strings.ToLower(err.Error()), strings.ToLower("Pool overlaps")) ||
+			strings.Contains(strings.ToLower(err.Error()), strings.ToLower("subnet")) {
+			networksAndAddresses := map[string][]string{}
+			nets, listErr := d.Client.NetworkList(nctx, networkapi.ListOptions{})
+			if listErr != nil {
+				return "", fmt.Errorf(
+					"failed to list Docker networks while handling subnet overlap error: %w (original error: %v)",
+					listErr,
+					err,
+				)
+			}
+			for _, n := range nets {
+				for _, cfg := range n.IPAM.Config {
+					// store existing networks and their subnets
+					networksAndAddresses[n.Name] = append(networksAndAddresses[n.Name], cfg.Subnet)
+					if cfg.Subnet == d.mgmt.IPv4Subnet || cfg.Subnet == d.mgmt.IPv6Subnet {
+						return "", fmt.Errorf(
+							"subnet %s already in use by Docker network %q. See https://containerlab.dev/manual/network/",
+							cfg.Subnet,
+							n.Name,
+						)
+					}
+				}
+			}
+			// fallback: no exact match, but clarify
+			// Show both IPv4 and IPv6 subnets in the error message if present
+			requestedSubnets := d.mgmt.IPv4Subnet
+			if d.mgmt.IPv6Subnet != "" {
+				if requestedSubnets != "" {
+					requestedSubnets += ", "
+				}
+				requestedSubnets += d.mgmt.IPv6Subnet
+			}
+			return "", fmt.Errorf(
+				"requested subnet(s) %s overlap an existing Docker network. Existing networks: %v. Original error: %w. See https://containerlab.dev/manual/network/",
+				requestedSubnets,
+				networksAndAddresses,
+				err,
+			)
+		}
+
 		return "", err
 	}
 
