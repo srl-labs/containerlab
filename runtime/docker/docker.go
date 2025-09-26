@@ -341,26 +341,33 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 	netCreateResponse, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
 	if err != nil {
 		// Handle subnet overlap error
-    if strings.Contains(err.Error(), "Pool overlaps") || strings.Contains(err.Error(), "subnet") {
-        nets, _ := d.Client.NetworkList(nctx, networkapi.ListOptions{})
-        for _, n := range nets {
-            for _, cfg := range n.IPAM.Config {
-                if cfg.Subnet == d.mgmt.IPv4Subnet {
-                    return "", fmt.Errorf(
-                        "subnet %s already in use by Docker network %q. See https://containerlab.dev/manual/network/",
-                        cfg.Subnet, n.Name,
-                    )
-                }
-            }
-        }
-        // fallback: no exact match, but clarify
-        return "", fmt.Errorf(
-            "requested subnet %s overlaps an existing Docker network. Original error: %v. See https://containerlab.dev/manual/network/",
-            d.mgmt.IPv4Subnet, err,
-        )
-    }
+		if strings.Contains(strings.ToLower(err.Error()), strings.ToLower("Pool overlaps")) ||
+			strings.Contains(strings.ToLower(err.Error()), strings.ToLower("subnet")) {
+			networksAndAddresses := map[string][]string{}
+			nets, _ := d.Client.NetworkList(nctx, networkapi.ListOptions{})
+			for _, n := range nets {
+				for _, cfg := range n.IPAM.Config {
+					// store existing networks and their subnets
+					networksAndAddresses[n.Name] = append(networksAndAddresses[n.Name], cfg.Subnet)
+					if cfg.Subnet == d.mgmt.IPv4Subnet || cfg.Subnet == d.mgmt.IPv6Subnet {
+						return "", fmt.Errorf(
+							"subnet %s already in use by Docker network %q. See https://containerlab.dev/manual/network/",
+							cfg.Subnet,
+							n.Name,
+						)
+					}
+				}
+			}
+			// fallback: no exact match, but clarify
+			return "", fmt.Errorf(
+				"requested subnet %s overlaps an existing Docker network. Existing networks: %v. Original error: %w. See https://containerlab.dev/manual/network/",
+				d.mgmt.IPv4Subnet,
+				networksAndAddresses,
+				err,
+			)
+		}
 
-    return "", err
+		return "", err
 	}
 
 	if len(netCreateResponse.ID) < 12 {
@@ -375,7 +382,8 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 }
 
 // getMgmtBridgeIPs gets the management bridge v4/6 addresses.
-func getMgmtBridgeIPs(	bridgeName string,
+func getMgmtBridgeIPs(
+	bridgeName string,
 	netResource *networkapi.Inspect,
 ) (v4, v6 string, err error) {
 	if v4, v6, err = clabutils.FirstLinkIPs(bridgeName); err != nil {
