@@ -46,3 +46,55 @@ func CIDRToDDN(length int) string {
 	mask := net.CIDRMask(length, 32)
 	return fmt.Sprintf("%d.%d.%d.%d", mask[0], mask[1], mask[2], mask[3])
 }
+
+// GetRoutableAddresses returns a list of routable IPv4 and IPv6 addresses on the system.
+// It excludes loopback, link-local, and other special-use addresses.
+func GetRoutableAddresses() ([]string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil, err
+	}
+
+	var routableAddrs []string
+	for _, addr := range addrs {
+		// Parse the address
+		var ip net.IP
+		switch v := addr.(type) {
+		case *net.IPNet:
+			ip = v.IP
+		case *net.IPAddr:
+			ip = v.IP
+		default:
+			continue
+		}
+
+		// Skip loopback addresses
+		if ip.IsLoopback() {
+			continue
+		}
+
+		// Skip link-local addresses
+		if ip.IsLinkLocalUnicast() {
+			continue
+		}
+
+		// Skip multicast and other special addresses
+		if ip.IsMulticast() || ip.IsUnspecified() {
+			continue
+		}
+
+		// For IPv4, skip private addresses like 127.x.x.x, 169.254.x.x
+		if ip.To4() != nil {
+			// Skip 169.254.x.x (link-local)
+			if ip.To4()[0] == 169 && ip.To4()[1] == 254 {
+				continue
+			}
+		}
+
+		// For IPv6, skip unique local addresses (fc00::/7) if we want only global addresses
+		// But include them for now as they might be routable within the network
+		routableAddrs = append(routableAddrs, ip.String())
+	}
+
+	return routableAddrs, nil
+}
