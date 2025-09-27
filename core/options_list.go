@@ -12,11 +12,13 @@ type ListOption func(o *ListOptions)
 
 // ListOptions represents the options for listing containers.
 type ListOptions struct {
+	containerName   string
 	labName         string
 	nodeName        string
 	toolType        string
 	clabLabelExists bool
 	cliArgs         []string
+	filters         []*clabtypes.GenericFilter
 }
 
 // NewListOptions returns a new list options object.
@@ -27,6 +29,16 @@ func NewListOptions() *ListOptions {
 // ToFilters converts the list options to a slice of generic filters.
 func (o *ListOptions) ToFilters() []*clabtypes.GenericFilter {
 	var filters []*clabtypes.GenericFilter
+
+	if o.containerName != "" {
+		filters = append(
+			filters,
+			&clabtypes.GenericFilter{
+				FilterType: "name",
+				Match:      o.containerName,
+			},
+		)
+	}
 
 	if o.labName != "" {
 		filters = append(
@@ -105,7 +117,18 @@ func (o *ListOptions) ToFilters() []*clabtypes.GenericFilter {
 		}
 	}
 
+	filters = append(filters, o.filters...)
+
 	return filters
+}
+
+// WithListContainerName filters the list operation to the given container name.
+func WithListContainerName(
+	s string,
+) ListOption {
+	return func(o *ListOptions) {
+		o.containerName = s
+	}
 }
 
 // WithListLabName filters the list operation to the given lab name.
@@ -148,5 +171,12 @@ func WithListclabLabelExists() ListOption {
 func WithListFromCliArgs(ss []string) ListOption {
 	return func(o *ListOptions) {
 		o.cliArgs = ss
+	}
+}
+
+// WithListFilter adds user created normal filters to the filter set.
+func WithListFilter(fs []*clabtypes.GenericFilter) ListOption {
+	return func(o *ListOptions) {
+		o.filters = fs
 	}
 }

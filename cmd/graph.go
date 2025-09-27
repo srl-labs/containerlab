@@ -24,8 +24,8 @@ func graphCmd(o *Options) (*cobra.Command, error) {
 		Short: "generate a topology graph",
 		Long: "generate topology graph based on the topology definition file and " +
 			"running containers\nreference: https://containerlab.dev/cmd/graph/",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return graphFn(o)
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return graphFn(cobraCmd.Context(), o)
 		},
 	}
 
@@ -110,7 +110,7 @@ func graphCmd(o *Options) (*cobra.Command, error) {
 	return c, nil
 }
 
-func graphFn(o *Options) error {
+func graphFn(ctx context.Context, o *Options) error {
 	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
@@ -122,7 +122,7 @@ func graphFn(o *Options) error {
 	}
 
 	if o.Graph.GenerateDotFile {
-		return c.GenerateDotGraph()
+		return c.GenerateDotGraph(ctx)
 	}
 
 	if o.Graph.GenerateMermaid {

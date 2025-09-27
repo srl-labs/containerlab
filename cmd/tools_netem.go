@@ -50,8 +50,8 @@ of real-world networks.`,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return validateInputAndRoot(o)
 		},
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return netemSetFn(o)
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return netemSetFn(cobraCmd.Context(), o)
 		},
 	}
 
@@ -154,9 +154,9 @@ of real-world networks.`,
 	return c, nil
 }
 
-func netemSetFn(o *Options) error {
+func netemSetFn(ctx context.Context, o *Options) error {
 	// Ensure that the sch_netem kernel module is loaded (for Fedora/RHEL compatibility)
-	if err := exec.Command("modprobe", "sch_netem").Run(); err != nil {
+	if err := exec.CommandContext(ctx, "modprobe", "sch_netem").Run(); err != nil {
 		log.Warn(
 			"failed to load sch_netem kernel module (expected on OrbStack machines)",
 			"err",

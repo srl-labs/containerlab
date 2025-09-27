@@ -6,6 +6,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -77,7 +78,7 @@ func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
 
 // RetrieveSSHPubKeys retrieves the PubKeys from the different sources
 // SSHAgent as well as all home dir based /.ssh/*.pub files.
-func (c *CLab) RetrieveSSHPubKeys() ([]ssh.PublicKey, error) {
+func (c *CLab) RetrieveSSHPubKeys(ctx context.Context) ([]ssh.PublicKey, error) {
 	keys := make([]ssh.PublicKey, 0)
 
 	var errs error
@@ -89,7 +90,7 @@ func (c *CLab) RetrieveSSHPubKeys() ([]ssh.PublicKey, error) {
 		errs = errors.Join(err)
 	}
 
-	agentKeys, err := RetrieveSSHAgentKeys()
+	agentKeys, err := RetrieveSSHAgentKeys(ctx)
 	if err != nil {
 		errs = errors.Join(err)
 	}
@@ -114,14 +115,16 @@ func addKeyToBuffer(b *bytes.Buffer, key string) {
 }
 
 // RetrieveSSHAgentKeys retrieves public keys registered with the ssh-agent.
-func RetrieveSSHAgentKeys() ([]ssh.PublicKey, error) {
+func RetrieveSSHAgentKeys(ctx context.Context) ([]ssh.PublicKey, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	if socket == "" {
 		log.Debug("SSH_AUTH_SOCK not set, skipping pubkey fetching")
 		return nil, nil
 	}
 
-	conn, err := net.Dial("unix", socket)
+	dialer := net.Dialer{}
+
+	conn, err := dialer.DialContext(ctx, "unix", socket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open SSH_AUTH_SOCK: %w", err)
 	}

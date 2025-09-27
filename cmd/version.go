@@ -169,7 +169,7 @@ func upgrade(cobraCmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to download upgrade script: %w", err)
 	}
 
-	c := exec.Command("sudo", "-E", "bash", f.Name())
+	c := exec.CommandContext(cobraCmd.Context(), "sudo", "-E", "bash", f.Name())
 	// pass the environment variables to the upgrade script
 	// so that GITHUB_TOKEN is available
 	c.Env = os.Environ()

@@ -99,7 +99,7 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	c.SSHPubKeys, err = c.RetrieveSSHPubKeys()
+	c.SSHPubKeys, err = c.RetrieveSSHPubKeys(ctx)
 	if err != nil {
 		log.Warn(err)
 	}
@@ -161,7 +161,7 @@ func (c *CLab) Deploy( //nolint: funlen
 
 	// generate graph of the lab topology
 	if options.graph {
-		if err = c.GenerateDotGraph(); err != nil {
+		if err = c.GenerateDotGraph(ctx); err != nil {
 			log.Error(err)
 		}
 	}

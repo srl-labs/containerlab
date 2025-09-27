@@ -30,7 +30,8 @@ const (
 	dockerNetName     = "clab"
 	dockerNetIPv4Addr = "172.20.20.0/24"
 	dockerNetIPv6Addr = "3fff:172:20:20::/64"
-	// veth link mtu.
+
+	// DefaultVethLinkMTU is the veth link mtu.
 	DefaultVethLinkMTU = 9500
 
 	// clab specific topology variables.

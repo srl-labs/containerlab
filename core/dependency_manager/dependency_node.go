@@ -26,7 +26,7 @@ type DependencyNode struct {
 	m sync.Mutex
 }
 
-// newDependencyNode initializes a dependencyNode with the given name.
+// NewDependencyNode initializes a dependencyNode with the given name.
 func NewDependencyNode(node clabnodes.Node) *DependencyNode {
 	d := &DependencyNode{
 		Node:     node,
@@ -177,7 +177,7 @@ func (d *DependencyNode) Done(ctx context.Context, p clabtypes.WaitForStage) {
 	}
 }
 
-// addDepender adds a depender to the dependencyNode. This will also add the dependee to the
+// AddDepender adds a depender to the dependencyNode. This will also add the dependee to the
 // depender to increase the waitgroup count for the depender.
 func (d *DependencyNode) AddDepender(dependerStage clabtypes.WaitForStage,
 	depender *DependencyNode, stage clabtypes.WaitForStage,

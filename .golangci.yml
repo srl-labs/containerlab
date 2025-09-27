@@ -105,7 +105,6 @@ linters:
     # slowly enforcing things, excluding these packages (for now!)
     paths:
       - cert
-      - errors
       - exec
       - git
       - internal
@@ -114,9 +113,9 @@ linters:
       - netconf
       - nodes
       - runtime
-      - schemas
       - utils
       - virt
+    warn-unused: true
 formatters:
   enable:
     - gofmt
@@ -131,12 +130,6 @@ formatters:
       # Shorten single-line comments.
       shorten-comments: true
       reformat-tags: false
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

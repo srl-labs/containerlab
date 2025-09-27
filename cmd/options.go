@@ -8,6 +8,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 )
 
 const (
@@ -31,6 +32,7 @@ func GetOptions() *Options {
 			Global: &GlobalOptions{
 				Timeout:  defaultTimeout,
 				LogLevel: "info",
+				Runtime:  clabruntimedocker.RuntimeName,
 			},
 			Filter: &FilterOptions{},
 			Deploy: &DeployOptions{
@@ -235,6 +237,10 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 
 	if o.TopologyName != "" {
 		options = append(options, clabcore.WithTopologyName(o.TopologyName))
+	}
+
+	if o.TopologyFile == "" && o.TopologyName != "" {
+		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName))
 	}
 
 	return options
