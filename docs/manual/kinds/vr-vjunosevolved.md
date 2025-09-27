@@ -11,6 +11,8 @@ kind_display_name: Juniper vJunosEvolved
 * `PTX10002-36QDD`- A fixed form factor 800G transport router based on Juniper's Express 5 (aka BX) ASIC.
 * `PTX10001-36MR` - A fixed form factor 400G transport router based on Juniper's Express 4 (aka BT) ASIC.
 
+It is currently not possible to select the emulated platform; Containerlab defaults to `PTX10001-36MR`
+
 Juniper vJunosEvolved nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
 ## How to obtain the image
