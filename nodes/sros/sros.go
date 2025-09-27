@@ -69,6 +69,9 @@ const (
 	envNokiaSrosSFM           = "NOKIA_SROS_SFM"
 	envNokiaSrosXIOM          = "NOKIA_SROS_XIOM"
 	envNokiaSrosMDA           = "NOKIA_SROS_MDA"
+
+	defaultSrosPowerType       = "dc"
+	defaultSrosPowerModuleType = "ps-a-dc-6000"
 )
 
 var (
@@ -134,7 +137,42 @@ var (
       e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
       e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
 	  eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
+
+	// key = type
+	srosPowerConfig = map[string]SrosPower{
+		"sr-1s": {
+			Modules: map[string]int{
+				"ac/hv": 3,
+				"dc":    4,
+			},
+		},
+		"sr-2s": {
+			Modules: map[string]int{
+				"ac/hv": 3,
+				"dc":    4,
+			},
+		},
+		"sr-2se": {
+			Modules: map[string]int{
+				"ac/hv": 3,
+				"dc":    4,
+			},
+		},
+		"sr-7s": {
+			Modules: 10,
+			Shelves: 2,
+		},
+		"sr-14s": {
+			Modules: 10,
+			Shelves: 2,
+		},
+	}
 )
+
+type SrosPower struct {
+	Modules interface{}
+	Shelves int
+}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
@@ -1541,5 +1579,50 @@ func (n *sros) generateComponentConfig() (string, error) {
 		}
 	}
 
+	config.WriteString(n.generatePowerConfig())
+
 	return config.String(), nil
+}
+
+func (n *sros) generatePowerConfig() string {
+
+	nodeType := strings.ToLower(n.Cfg.NodeType)
+	if _, ok := srosPowerConfig[nodeType]; !ok {
+		return ""
+	}
+
+	cfg := srosPowerConfig[nodeType]
+
+	shelves := 1
+	if s := cfg.Shelves; s != 0 {
+		shelves = s
+	}
+
+	modules := 0
+	switch m := cfg.Modules.(type) {
+	case map[string]int:
+		modules = m[defaultSrosPowerType]
+	case int:
+		modules = m
+	}
+
+	shelfType := fmt.Sprintf("ps-a%d-shelf-dc", modules)
+
+	var config strings.Builder
+
+	for s := 1; s <= shelves; s++ {
+		config.WriteString(
+			fmt.Sprintf(
+				"/configure chassis router chassis-number 1 power-shelf %d power-shelf-type %s\n",
+				s, shelfType))
+
+		for m := 1; m <= modules; m++ {
+			config.WriteString(
+				fmt.Sprintf(
+					"/configure chassis router chassis-number 1 power-shelf %d power-module %d power-module-type %s\n",
+					s, m, defaultSrosPowerModuleType))
+		}
+	}
+
+	return config.String()
 }
