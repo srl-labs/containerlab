@@ -30,6 +30,8 @@ type srosTemplateData struct {
 	SSHConfig string
 	// PartialConfig
 	PartialConfig string
+	// ComponentConfig stores config lines for installed component HW
+	ComponentConfig string
 }
 
 // tplIFace template interface struct.
