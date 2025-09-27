@@ -198,11 +198,11 @@ func WithTopoBackup(path string) ClabOption {
 	}
 }
 
-// WithTopoFromLab loads the topology file path based on a running lab name.
+// WithTopologyFromLab loads the topology file path based on a running lab name.
 // The lab name is used to look up the container labels of a running lab and
 // derive the topology file location. It falls back to WithTopoPath once the
 // topology path is discovered.
-func WithTopoFromLab(labName string) ClabOption {
+func WithTopologyFromLab(labName string) ClabOption {
 	return func(c *CLab) error {
 		if labName == "" {
 			return fmt.Errorf("lab name is required to derive topology path")

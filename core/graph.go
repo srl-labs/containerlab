@@ -70,7 +70,7 @@ type noListFs struct {
 var g *gographviz.Graph
 
 // GenerateDotGraph generates a graph of the lab topology.
-func (c *CLab) GenerateDotGraph() error {
+func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 	log.Info("Generating lab graph...")
 
 	g = gographviz.NewGraph()
@@ -144,7 +144,7 @@ func (c *CLab) GenerateDotGraph() error {
 
 	// Only try to create png
 	if commandExists("dot") {
-		err := generatePngFromDot(dotfile, pngfile)
+		err := generatePngFromDot(ctx, dotfile, pngfile)
 		if err != nil {
 			return err
 		}
@@ -156,8 +156,8 @@ func (c *CLab) GenerateDotGraph() error {
 }
 
 // generatePngFromDot generated PNG from the provided dot file.
-func generatePngFromDot(dotfile, outfile string) (err error) {
-	_, err = exec.Command("dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
+func generatePngFromDot(ctx context.Context, dotfile, outfile string) (err error) {
+	_, err = exec.CommandContext(ctx, "dot", "-o", outfile, "-Tpng", dotfile).CombinedOutput()
 	if err != nil {
 		log.Errorf(
 			"failed to generate png (%v) from dot file (%v), with error (%v)",

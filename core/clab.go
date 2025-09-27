@@ -79,7 +79,6 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		dependencyManager: clabcoredependency_manager.NewDependencyManager(),
 	}
 
-	// init a new NodeRegistry
 	c.Reg = clabnodes.NewNodeRegistry()
 	c.RegisterNodes()
 
@@ -103,50 +102,6 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	}
 
 	return c, err
-}
-
-// NewClabFromTopologyFileOrLabName creates a containerlab instance using either a topology file
-// path or a lab name. It returns the initialized CLab structure with the topology loaded.
-func NewClabFromTopologyFileOrLabName(
-	topoPath,
-	labName,
-	varsFile,
-	runtimeName string,
-	debug bool,
-	timeout time.Duration,
-	graceful bool,
-) (*CLab, error) {
-	if topoPath == "" && labName == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf(
-				"failed to get current working directory and no topology path or "+
-					"lab name provided: %w",
-				err,
-			)
-		}
-
-		topoPath = cwd
-	}
-
-	opts := []ClabOption{
-		WithTimeout(timeout),
-		WithRuntime(runtimeName, &clabruntime.RuntimeConfig{
-			Debug:            debug,
-			Timeout:          timeout,
-			GracefulShutdown: graceful,
-		}),
-		WithDebug(debug),
-	}
-
-	switch {
-	case topoPath != "":
-		opts = append(opts, WithTopoPath(topoPath, varsFile))
-	case labName != "":
-		opts = append(opts, WithTopoFromLab(labName))
-	}
-
-	return NewContainerLab(opts...)
 }
 
 // RuntimeInitializer returns a runtime initializer function for a provided runtime name.
