@@ -6,7 +6,12 @@ kind_display_name: Juniper vJunosEvolved
 ---
 # Juniper vJunosEvolved
 
-[Juniper vJunosEvolved](https://www.juniper.net/documentation/product/us/en/vjunosevolved/) is a virtualized PTX10001 router identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Juniper vJunosEvolved](https://www.juniper.net/documentation/product/us/en/vjunosevolved/) is a virtualized Junos OS Evolved router identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format that can emulate either of these PTX platforms:
+
+* `PTX10002-36QDD`- A fixed form factor 800G transport router based on Juniper's Express 5 (aka BX) ASIC.
+* `PTX10001-36MR` - A fixed form factor 400G transport router based on Juniper's Express 4 (aka BT) ASIC.
+
+It is currently not possible to select the emulated platform; Containerlab defaults to `PTX10001-36MR`
 
 Juniper vJunosEvolved nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
