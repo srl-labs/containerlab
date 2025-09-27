@@ -269,17 +269,19 @@ func (t *Topology) GetNodeKind(nodeName string) string {
 	defaultKind := t.GetDefaults().Kind
 
 	nodeDefinition, ok := t.Nodes[nodeName]
-	if nodeDefinition == nil || !ok {
+	if !ok {
 		return defaultKind
 	}
 
-	if nodeDefinition.Kind != "" {
+	if nodeDefinition != nil && nodeDefinition.Kind != "" {
 		return nodeDefinition.Kind
 	}
 
-	group := t.GetGroup(nodeDefinition.Group)
-	if group != nil && group.Kind != "" {
-		return group.Kind
+	if nodeDefinition != nil {
+		group := t.GetGroup(nodeDefinition.Group)
+		if group != nil && group.Kind != "" {
+			return group.Kind
+		}
 	}
 
 	defaults := t.GetGroup(t.Defaults.Group)
@@ -319,11 +321,11 @@ func (t *Topology) GetNodeType(nodeName string) string {
 	defaultType := t.GetDefaults().Type
 
 	nodeDefinition, ok := t.Nodes[nodeName]
-	if nodeDefinition == nil || !ok {
+	if !ok {
 		return defaultType
 	}
 
-	if nodeDefinition.Type != "" {
+	if nodeDefinition != nil && nodeDefinition.Type != "" {
 		return strings.TrimSpace(nodeDefinition.Type)
 	}
 
