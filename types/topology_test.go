@@ -662,6 +662,34 @@ var topologyTestSet = map[string]struct {
 			},
 		},
 	},
+	// see #2852
+	"type_from_kind_via_defaults": {
+		input: &Topology{
+			Nodes: map[string]*NodeDefinition{
+				"node1": {},
+			},
+			Kinds: map[string]*NodeDefinition{
+				"default_kind": {
+					Type: "fooer",
+				},
+			},
+			Defaults: &NodeDefinition{
+				Kind: "default_kind",
+			},
+		},
+		want: map[string]*NodeDefinition{
+			"node1": {
+				Kind:   "default_kind",
+				Type:   "fooer",
+				Env:    map[string]string{},
+				Labels: map[string]string{},
+				DNS:    &DNSConfig{},
+				Certificate: &CertificateConfig{
+					Issue: clabutils.Pointer(false),
+				},
+			},
+		},
+	},
 }
 
 func TestGetNodeKind(t *testing.T) {
