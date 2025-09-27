@@ -146,6 +146,12 @@ var (
 				"dc":    4,
 			},
 		},
+		"sr-1se": {
+			Modules: map[string]int{
+				"ac/hv": 3,
+				"dc":    4,
+			},
+		},
 		"sr-2s": {
 			Modules: map[string]int{
 				"ac/hv": 3,
