@@ -23,6 +23,7 @@ func CreateFuncs() template.FuncMap {
 		"subtract":     subtract,
 		"mul":          mul,
 		"div":          div,
+		"idiv":          idiv,
 		"rem":          rem,
 		"seq":          seq,
 	}
@@ -142,6 +143,25 @@ func div(a, b any) (any, error) {
 	}
 
 	dividend, err := ToFloat64(b)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	if dividend == 0 {
+		return 0, fmt.Errorf("error: division by 0")
+	}
+
+	return divisor / dividend, nil
+}
+
+// integer divide a by b
+func idiv(a, b any) (any, error) {
+	divisor, err := ToInt64(a)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	dividend, err := ToInt64(b)
 	if err != nil {
 		return nil, fmt.Errorf("expected a number: %w", err)
 	}
