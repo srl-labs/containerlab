@@ -614,6 +614,75 @@ In the example above, the `ALPINE_VERSION` environment variable is used to set t
 | `${var:+$OTHER}`   | If var set, evaluate expression as $OTHER, otherwise as empty string |
 | `$$var`            | Escape expressions. Result will be `$var`.                           |
 
+## Magic Variables
+
+Magic variables are special strings that get replaced with actual values during the topology parsing.to make your lab configurations more dynamic and less verbose. These variables are surrounded by double underscores (`__variable__`) and can be seen in some of the advanced topology examples.
+
+These variables can be used in startup-config paths, bind paths, and exec commands. They are replaced with actual values during lab deployment:
+
+| Variable | Description | Example Usage | Expands To |
+|----------|-------------|---------------|------------|
+| `__clabNodeName__` {: style='white-space: nowrap;'} | Current node's short name | `startup-config: cfg/__clabNodeName__.cfg` | `cfg/node1.cfg` (for node named "node1") |
+| `__clabNodeDir__` {: style='white-space: nowrap;'} | Path to the node's lab directory | `binds: __clabNodeDir__/conf:/conf` | `clab-mylab/node1/conf:/conf` |
+| `__clabDir__` {: style='white-space: nowrap;'} | Path to the lab's main directory | `binds: __clabDir__/data.json:/data.json:ro` | `clab-mylab/data.json:/data.json:ro` |
+
+Here are some practical examples when using magic variables can greatly simplify your topology definitions:
+
+/// tab | Dynamic startup configuration
+
+A common pattern found in many labs is to have a separate startup configuration file for each node. For regular network nodes it can be provided using `startup-config` property, for Linux containers it is often done using the file binds.
+
+Regardless of the target node, at the end of the day, these startup configuration files are often named after the node they belong to. Using `__clabNodeName__` magic variable, we can simplify the topology definition and avoid repeating the node names in the config file paths by setting the `startup-config` or `binds` property once in the `defaults` or `kinds` section and then containerlab will take care of resolving it to the actual node.
+
+Consider the following example where we set the `startup-config` property in the `defaults` section:
+
+```yaml
+name: mylab
+topology:
+  defaults:
+    startup-config: configs/__clabNodeName__.cfg
+  nodes:
+    router1:
+    router2:
+```
+
+Both `router1` and `router2` nodes will get their own startup configuration files: `configs/router1.cfg` and `configs/router2.cfg` respectively.
+
+///
+
+/// tab | Node-specific and lab-wide file binds
+
+Using the `__clabNodeDir__` and `__clabDir__` magic variables, it is possible to bind node-specific files as well as lab-wide shared files into the nodes.
+
+```yaml
+name: mylab
+topology:
+  nodes:
+    node1:
+      binds:
+        # Node-specific files
+        - __clabNodeDir__/custom.conf:/etc/custom.conf
+        # Lab-wide shared files
+        - __clabDir__/shared-data.json:/shared.json:ro
+```
+
+///
+
+/// tab | Customized exec commands
+
+Another popular use case for the `__clabNodeName__` magic variable is to customize the `exec` commands on a per-node basis.
+
+```yaml
+name: mylab
+topology:
+  nodes:
+    node1:
+      exec:
+        - echo "Node __clabNodeName__ started"  # Will output "Node node1 started"
+```
+
+///
+
 ## Generated topologies
 
 To further simplify parametrization of the topology files, containerlab allows users to template the topology files using Go Template engine.
