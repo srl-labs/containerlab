@@ -1027,6 +1027,137 @@ func TestDivFunc(t *testing.T) {
 	}
 }
 
+func TestIdivFunc(t *testing.T) {
+	tests := map[string]struct {
+		a, b   any
+		want   any
+		errStr string
+	}{
+		// Examples:
+		// idiv(10, 2) = 5 (10 / 2 = 5)
+		// idiv(7, 3) = 2 (7 / 3 = 2, truncates remainder)
+		// idiv(7.9, 3) = 2 (7.9 converts to 7, then 7 / 3 = 2)
+		// idiv(-10, 3) = -3 (-10 / 3 = -3 in integer division)
+		// idiv(10, 0) = error: division by 0
+		"divide two positive ints": {
+			a:    10,
+			b:    2,
+			want: int64(5),
+		},
+		"divide with remainder truncation": {
+			a:    7,
+			b:    3,
+			want: int64(2),
+		},
+		"divide negative dividend": {
+			a:    -10,
+			b:    3,
+			want: int64(-3),
+		},
+		"divide by negative divisor": {
+			a:    10,
+			b:    -3,
+			want: int64(-3),
+		},
+		"divide two negatives": {
+			a:    -10,
+			b:    -3,
+			want: int64(3),
+		},
+		"divide zero by number": {
+			a:    0,
+			b:    5,
+			want: int64(0),
+		},
+		"divide by zero": {
+			a:      5,
+			b:      0,
+			errStr: "division by 0",
+		},
+		"divide string numbers": {
+			a:    "10",
+			b:    "2",
+			want: int64(5),
+		},
+		"divide float numbers (truncated)": {
+			a:    7.9,
+			b:    3.1,
+			want: int64(2), // 7 / 3 = 2
+		},
+		"divide float by int": {
+			a:    9.0,
+			b:    2,
+			want: int64(4),
+		},
+		"divide int by float": {
+			a:    9,
+			b:    2.0,
+			want: int64(4),
+		},
+		"divide bool true by int": {
+			a:    true,
+			b:    2,
+			want: int64(0), // true = 1, 1 / 2 = 0
+		},
+		"divide int by bool true": {
+			a:    5,
+			b:    true,
+			want: int64(5), // 5 / 1 = 5
+		},
+		"divide bool false by int": {
+			a:    false,
+			b:    2,
+			want: int64(0), // false = 0, 0 / 2 = 0
+		},
+		"divide int by bool false": {
+			a:      5,
+			b:      false,
+			errStr: "division by 0",
+		},
+		"divide invalid string": {
+			a:      "foo",
+			b:      2,
+			errStr: "expected a number",
+		},
+		"divide int by invalid string": {
+			a:      2,
+			b:      "bar",
+			errStr: "expected a number",
+		},
+		"divide nil by int": {
+			a:      nil,
+			b:      2,
+			errStr: "expected a number",
+		},
+		"divide int by nil": {
+			a:      2,
+			b:      nil,
+			errStr: "expected a number",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := idiv(tc.a, tc.b)
+			if tc.errStr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.errStr)
+				}
+				if !strings.Contains(err.Error(), tc.errStr) {
+					t.Fatalf("expected error containing %q, got %q", tc.errStr, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Fatalf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestRemFunc(t *testing.T) {
 	tests := map[string]struct {
 		a, b   any
