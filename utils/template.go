@@ -23,7 +23,7 @@ func CreateFuncs() template.FuncMap {
 		"subtract":     subtract,
 		"mul":          mul,
 		"div":          div,
-		"idiv":          idiv,
+		"idiv":         idiv,
 		"rem":          rem,
 		"seq":          seq,
 	}
@@ -155,6 +155,8 @@ func div(a, b any) (any, error) {
 }
 
 // integer divide a by b
+// idiv(10, 2) = 5 (10 / 2 = 5)
+// idiv(7, 3) = 2 (7 / 3 = 2, truncates remainder).
 func idiv(a, b any) (any, error) {
 	divisor, err := ToInt64(a)
 	if err != nil {
