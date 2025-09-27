@@ -51,8 +51,8 @@ Inspect ${lab2-name} lab using its name
 
     ${num_lines} =    Run    bash -c "echo '${output}' | wc -l"
     # lab2 only has 1 nodes and therefore inspect output should contain only 1 node with two lines
-    # (+4 lines for the table header and footer)
-    Should Be Equal As Integers    ${num_lines}    6
+    # (+4 lines for the table header and footer, +1 for the log line about parsing topo)
+    Should Be Equal As Integers    ${num_lines}    7
 
 Inspect ${lab2-name} lab using topology file reference
     ${result} =    Run Process
