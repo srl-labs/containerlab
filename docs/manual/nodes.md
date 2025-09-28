@@ -874,7 +874,7 @@ topology:
 
 Containerlab supports the [docker healthcheck](https://docs.docker.com/reference/dockerfile/#healthcheck) configuration for the nodes. The healthcheck instruction can be set on the `defaults`, `kind` or `node` level, with the node level likely being the most used one.
 
-Healtcheck allows containerlab users to define the healthcheck configuration that will be used by the container runtime to check the health of the container.
+Healthcheck allows containerlab users to define the healthcheck configuration that will be used by the container runtime to check the health of the container.
 
 ```yaml
 topology:
