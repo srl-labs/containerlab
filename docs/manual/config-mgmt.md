@@ -145,7 +145,7 @@ The remote file will be downloaded to the containerlab's temp directory at `$TMP
 - For https locations the certificates won't be verified to allow fetching artifacts from servers with self-signed certificates.
 ///
 
-### Customisation options
+### Customization options
 
 While many labs would be just fine with providing the partial or full configs to the lab nodes, some advanced labs might want to customize the startup config file before providing it to the node.
 
