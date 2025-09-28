@@ -101,31 +101,11 @@ func CopyFile(ctx context.Context, src, dst string, mode os.FileMode) (err error
 		}
 	}
 
-	err = os.MkdirAll(filepath.Dir(dst), 0o750)
+	out, cleanup, err := CreateFileWithPermissions(dst, mode)
 	if err != nil {
 		return err
 	}
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-
-	// Change file ownership to user running Containerlab instead of effective UID
-	err = SetUIDAndGID(dst)
-	if err != nil {
-		return err
-	}
-
-	err = out.Chmod(mode)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		// should only err on repeated calls to close anyway
-		_ = out.Close()
-	}()
+	defer cleanup()
 
 	return CopyFileContents(ctx, src, out)
 }
@@ -294,6 +274,43 @@ func CopyFileContents(ctx context.Context, src string, dst *os.File) (err error)
 	}
 
 	return dst.Sync()
+}
+
+// CreateFileWithPermissions creates a file with proper directory structure,
+// ownership, and permissions. It returns the file handle and a cleanup function.
+// The caller is responsible for calling the cleanup function to close the file.
+func CreateFileWithPermissions(filePath string, mode os.FileMode) (*os.File, func(), error) {
+	// Create parent directories
+	err := os.MkdirAll(filepath.Dir(filePath), 0o750)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Create the file
+	file, err := os.Create(filePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Change file ownership to user running Containerlab instead of effective UID
+	err = SetUIDAndGID(filePath)
+	if err != nil {
+		_ = file.Close()
+		return nil, nil, err
+	}
+
+	// Set file permissions
+	err = file.Chmod(mode)
+	if err != nil {
+		_ = file.Close()
+		return nil, nil, err
+	}
+
+	cleanup := func() {
+		// should only err on repeated calls to close anyway
+		_ = file.Close()
+	}
+	return file, cleanup, nil
 }
 
 // CreateFile writes content to a file by path `file`.
