@@ -292,25 +292,24 @@ func CreateFileWithPermissions(filePath string, mode os.FileMode) (*os.File, fun
 		return nil, nil, err
 	}
 
-	cleanup := func() {
-		// should only err on repeated calls to close anyway
-		_ = file.Close()
-	}
-
 	// Change file ownership to user running Containerlab instead of effective UID
 	err = SetUIDAndGID(filePath)
 	if err != nil {
-		cleanup()
+		_ = file.Close()
 		return nil, nil, err
 	}
 
 	// Set file permissions
 	err = file.Chmod(mode)
 	if err != nil {
-		cleanup()
+		_ = file.Close()
 		return nil, nil, err
 	}
 
+	cleanup := func() {
+		// should only err on repeated calls to close anyway
+		_ = file.Close()
+	}
 	return file, cleanup, nil
 }
 
