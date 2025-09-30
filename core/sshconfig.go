@@ -126,7 +126,7 @@ func (c *CLab) addSSHConfig() error {
 // if we couldn't parse the ssh version we assume we can't use unbound option
 // or if the version is lower than 8.9
 // and the node has the PubkeyAuthentication set to unbound
-// we set it to empty string since it is not supported by the SSH client
+// we set it to empty string since it is not supported by the SSH client.
 func applySSHVersionCompatibility(nodeData *SSHConfigNodeTmpl, sshVersion string) {
 	if (sshVersion == "" || semver.Compare("v"+sshVersion, "v8.9") < 0) &&
 		nodeData.SSHConfig.PubkeyAuthentication == clabtypes.PubkeyAuthValueUnbound {
@@ -135,11 +135,12 @@ func applySSHVersionCompatibility(nodeData *SSHConfigNodeTmpl, sshVersion string
 }
 
 // extractBaseNodeName extracts the base node name from a distributed SROS node name
-// e.g., "clab-foo-sr1-a" -> "clab-foo-sr1"
+// e.g., "clab-foo-sr1-a" -> "clab-foo-sr1".
 func extractBaseNodeName(longName string) string {
 	lastDash := strings.LastIndex(longName, "-")
 	if lastDash > 0 {
 		return longName[:lastDash]
 	}
+
 	return longName
 }
