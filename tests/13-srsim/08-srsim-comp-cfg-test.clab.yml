@@ -9,16 +9,22 @@ topology:
 
   nodes:
     # only distributed nodes support the config gen for now
-    # sr2s:
-    #   kind: nokia_srsim
-    #   type: sr-2s
-    #   components:
-    #     - slot: A
-    #       type: cpm-2s
-    #       sfm: sfm-2s
-    #     - slot: 1
-    #       sfm: sfm-2s
-    #       type: xcm-2s 
+    sr2s:
+      kind: nokia_srsim
+      type: sr-2s
+      components:
+        - slot: A
+          type: cpm-2s
+          sfm: sfm-2s
+        - slot: 1
+          sfm: sfm-2s
+          type: xcm-2s
+          xiom:
+            - slot: 1
+              type: iom-s-3.0t
+              mda:
+                - slot: 1
+                  type: ms18-100gb-qsfp28
 
     # sr2se:
     #   kind: nokia_srsim
