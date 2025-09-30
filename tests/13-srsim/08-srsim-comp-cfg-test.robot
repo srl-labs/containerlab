@@ -39,7 +39,7 @@ Check SR-14S power module configuration
     ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr14s-a --path /configure/chassis[chassis-class=*][chassis-number=*]/power-shelf[power-shelf-id=*]/power-module[power-module-id=*]/power-module-type
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain X Times   ${output}    ps-a-dc-6000  2
+    Should Contain X Times   ${output}    ps-a-dc-6000  20
 
 Check SR-14S card configuration
     ${rc}    ${output} =    Run And Return Rc And Output
