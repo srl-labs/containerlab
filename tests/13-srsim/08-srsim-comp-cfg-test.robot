@@ -22,8 +22,8 @@ Deploy ${lab-name} lab
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Wait for 10s
-    Sleep    10s    Let everything fully provision & come up
+Wait for 30s
+    Sleep    30s    Let everything fully provision & come up
 
 Check SR-2S power shelf configuration
     ${rc}    ${output} =    Run And Return Rc And Output
