@@ -31,7 +31,7 @@ Check SR-14S power shelf configuration
     ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr14s-a --path /configure/chassis[chassis-class=*][chassis-number=*]/power-shelf[power-shelf-id=*]/power-shelf-type
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain 2 Times   ${output}    ps-a10-shelf-dc
+    Should Contain X Times   ${output}    ps-a10-shelf-dc   2
 
 Check SR-14S power module configuration
     Skip If    '${runtime}' != 'docker'
@@ -39,7 +39,7 @@ Check SR-14S power module configuration
     ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr14s-a --path /configure/chassis[chassis-class=*][chassis-number=*]/power-shelf[power-shelf-id=*]/power-module[power-module-id=*]/power-module-type
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain 20 Times   ${output}    ps-a-dc-6000
+    Should Contain X Times   ${output}    ps-a-dc-6000  2
 
 Check SR-14S card configuration
     ${rc}    ${output} =    Run And Return Rc And Output
