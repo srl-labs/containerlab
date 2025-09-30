@@ -222,8 +222,8 @@ type sros struct {
 	// rootComponents stores the OG components from root node for dist setups
 	// ..allows children of the distributed root node to access root components (ie. for cfg gen)
 	rootComponents []*clabtypes.Component
-	// for a distributed node using components, save the root node name
-	baseNodeName string
+	// store the longname with cpm suffix
+	cpmContainerName string
 
 	preDeployParams *clabnodes.PreDeployParams
 }
@@ -661,13 +661,8 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	if err != nil {
 		return err
 	}
-	// save the base node name pre adjustment
-	n.baseNodeName = n.Cfg.LongName
-
-	// adjust general node to be represented as the cpm node
-	n.Cfg.ShortName = n.calcComponentName(n.Cfg.ShortName, cpmSlot)
-	n.Cfg.LongName = n.calcComponentName(n.Cfg.LongName, cpmSlot)
-	n.Cfg.Fqdn = n.calcComponentFqdn(cpmSlot)
+	// store the CPM container name
+	n.cpmContainerName = n.calcComponentName(n.Cfg.LongName, cpmSlot)
 	n.renameDone = true
 
 	// adjust also the mgmt IP addresses of the general node
@@ -1214,7 +1209,12 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
 func (n *sros) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node) error {
-	hosts, err := n.Runtime.GetHostsPath(ctx, n.Cfg.LongName)
+	containerName := n.Cfg.LongName
+	if n.isDistributedBaseNode() && n.cpmContainerName != "" {
+		containerName = n.cpmContainerName
+	}
+
+	hosts, err := n.Runtime.GetHostsPath(ctx, containerName)
 	if err != nil {
 		log.Warn("Unable to locate SR OS node /etc/hosts file", "node", n.Cfg.ShortName, "err", err)
 		return err
@@ -1552,15 +1552,13 @@ func (n *sros) GetDistMgmtIPs() (MgmtIP, error) {
 		components = n.rootComponents
 	}
 
-	baseName := n.baseNodeName
-
 	// for distributed nodes, get the IP from the
 	// 0th component container
 	if len(components) > 0 {
 		c := components[0]
 		slot := c.Slot
 
-		componentName := baseName + "-" + slot
+		componentName := n.Cfg.LongName + "-" + slot
 
 		containers, err := n.Runtime.ListContainers(context.Background(), []*clabtypes.GenericFilter{
 			{
@@ -1593,7 +1591,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 		return nil, err
 	}
 
-	if n.isDistributedBaseNode() && n.baseNodeName != "" {
+	if n.isDistributedBaseNode() {
 		ips, err := n.GetDistMgmtIPs()
 		if err != nil {
 			return clabtypes.HostEntries{}, err
@@ -1602,7 +1600,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 		if ips.IPv4 != "" { // v4
 			result = append(result, clabtypes.NewHostEntry(
 				ips.IPv4,
-				n.baseNodeName,
+				n.Cfg.LongName,
 				clabtypes.IpVersionV4,
 			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
 		}
@@ -1610,7 +1608,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 		if ips.IPv6 != "" {
 			result = append(result, clabtypes.NewHostEntry(
 				ips.IPv6,
-				n.baseNodeName,
+				n.Cfg.LongName,
 				clabtypes.IpVersionV6,
 			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
 		}
@@ -1753,4 +1751,12 @@ func (n *sros) generatePowerConfig() string {
 	}
 
 	return config.String()
+}
+
+// override to fetch CPM to avoid renaming the base node to CPM A
+func (n *sros) GetContainerName() string {
+	if n.isDistributedBaseNode() && n.cpmContainerName != "" {
+		return n.cpmContainerName
+	}
+	return n.DefaultNode.GetContainerName()
 }
