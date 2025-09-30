@@ -670,18 +670,14 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	n.Cfg.Fqdn = n.calcComponentFqdn(cpmSlot)
 	n.renameDone = true
 
-	cpmNode, err := n.cpmNode()
+	// adjust also the mgmt IP addresses of the general node
+	ips, err := n.GetDistMgmtIPs()
 	if err != nil {
 		return err
 	}
 
-	// adjust also the mgmt IP addresses of the general node
-	contList, err := cpmNode.GetContainers(ctx)
-	if err != nil {
-		return err
-	}
-	n.Cfg.MgmtIPv4Address = contList[0].GetContainerIPv4()
-	n.Cfg.MgmtIPv6Address = contList[0].GetContainerIPv6()
+	n.Cfg.MgmtIPv4Address = ips.IPv4
+	n.Cfg.MgmtIPv6Address = ips.IPv4
 
 	return nil
 }
@@ -1537,19 +1533,34 @@ func CheckPortWithRetry(
 	return false, lastErr
 }
 
-// custom overrie for hostfile entry to write basename when using component nodes
-func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error) {
-	result, err := n.DefaultNode.GetHostsEntries(ctx)
-	if err != nil {
-		return nil, err
+type MgmtIP struct {
+	IPv4 string
+	IPv6 string
+}
+
+// MgmtIPAddr returns both ipv4 and ipv6 management IP address of a
+// distributed node defined via components:.
+// It returns an error if neither is set in the node config.
+func (n *sros) GetDistMgmtIPs() (MgmtIP, error) {
+	ips := MgmtIP{}
+
+	var components []*clabtypes.Component
+
+	if n.isDistributedBaseNode() {
+		components = n.Cfg.Components
+	} else {
+		components = n.rootComponents
 	}
 
-	if n.isDistributedBaseNode() && n.baseNodeName != "" {
-		// since sorted, 0th component should always have IP
-		c := n.Cfg.Components[0]
+	baseName := n.baseNodeName
+
+	// for distributed nodes, get the IP from the
+	// 0th component container
+	if len(components) > 0 {
+		c := components[0]
 		slot := c.Slot
 
-		componentName := n.baseNodeName + "-" + slot
+		componentName := baseName + "-" + slot
 
 		containers, err := n.Runtime.ListContainers(context.Background(), []*clabtypes.GenericFilter{
 			{
@@ -1559,24 +1570,49 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 		})
 
 		if err != nil {
-			return clabtypes.HostEntries{}, fmt.Errorf("unable to get container %q: %v", componentName, err)
+			return MgmtIP{}, fmt.Errorf("unable to get container %q: %v", componentName, err)
 		}
 
 		for _, container := range containers {
 			if container.NetworkSettings.IPv4addr != "" {
-				result = append(result, clabtypes.NewHostEntry(
-					container.NetworkSettings.IPv4addr,
-					n.baseNodeName,
-					clabtypes.IpVersionV4,
-				).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+				ips.IPv4 = container.NetworkSettings.IPv4addr
 			}
 			if container.NetworkSettings.IPv6addr != "" {
-				result = append(result, clabtypes.NewHostEntry(
-					container.NetworkSettings.IPv6addr,
-					n.baseNodeName,
-					clabtypes.IpVersionV6,
-				).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+				ips.IPv6 = container.NetworkSettings.IPv6addr
 			}
+		}
+	}
+
+	return ips, nil
+}
+
+// custom overrie for hostfile entry to write basename when using component nodes
+func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error) {
+	result, err := n.DefaultNode.GetHostsEntries(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if n.isDistributedBaseNode() && n.baseNodeName != "" {
+		ips, err := n.GetDistMgmtIPs()
+		if err != nil {
+			return clabtypes.HostEntries{}, err
+		}
+
+		if ips.IPv4 != "" { // v4
+			result = append(result, clabtypes.NewHostEntry(
+				ips.IPv4,
+				n.baseNodeName,
+				clabtypes.IpVersionV4,
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+		}
+
+		if ips.IPv6 != "" {
+			result = append(result, clabtypes.NewHostEntry(
+				ips.IPv6,
+				n.baseNodeName,
+				clabtypes.IpVersionV6,
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
 		}
 	}
 
@@ -1594,42 +1630,16 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	}
 
 	if !n.isStandaloneNode() {
-		var components []*clabtypes.Component
-
-		if n.isDistributedBaseNode() {
-			components = n.Cfg.Components
-		} else {
-			components = n.rootComponents
+		ips, err := n.GetDistMgmtIPs()
+		if err != nil {
+			return "", err
 		}
 
-		baseName := n.baseNodeName
-
-		// for distributed nodes, get the IP from the
-		// 0th component container
-		if len(components) > 0 {
-			c := components[0]
-			slot := c.Slot
-
-			componentName := baseName + "-" + slot
-
-			containers, err := n.Runtime.ListContainers(context.Background(), []*clabtypes.GenericFilter{
-				{
-					FilterType: "name",
-					Match:      componentName,
-				},
-			})
-			if err != nil {
-				return baseName, fmt.Errorf("unable to get container %q: %v", componentName, err)
-			}
-
-			for _, container := range containers {
-				if container.NetworkSettings.IPv4addr != "" {
-					return container.NetworkSettings.IPv4addr, nil
-				}
-				if container.NetworkSettings.IPv6addr != "" {
-					return container.NetworkSettings.IPv6addr, nil
-				}
-			}
+		switch {
+		case ips.IPv6 != "":
+			return ips.IPv6, nil
+		case ips.IPv4 != "":
+			return ips.IPv4, nil
 		}
 	}
 
