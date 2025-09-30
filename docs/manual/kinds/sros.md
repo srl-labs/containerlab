@@ -219,7 +219,7 @@ topology:
       type: SR-1
       license: /opt/nokia/sros/license.txt
       components:
-        - mdas:
+        - mda:
           - slot: 1
             type: me12-100gb-qsfp28 # override default MDA type in slot 1
 ```
@@ -266,6 +266,8 @@ Distributed systems require certain settings given the nature of the SR-SIM simu
 Users can simplify the topology file with distributed SR-SIM nodes by using the `components` directive in the node definition. In this case, every member in the `components` section will result in a spawned container emulating the corresponding component type (CPM or IOM).
 
 Each card in the chassis can have it's card type, SFM, XIOM and MDA configured either using the relevant directives, or via environment variables.
+
+When using the `components` structure in the node configuration for a distributed node, containerlab will also generate the  configuration for the installed components in the chassis, as well as relevant power supply configuration[^5] to ensure the installed components come up.
 
 /// tab | Distributed grouped SR-SIM
 
@@ -504,7 +506,7 @@ topology:
 
 ## Node configuration
 
-Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, and gNMI are provisioned[^5].
+Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, and gNMI are provisioned[^6].
 
 ### User-defined config
 
@@ -621,13 +623,13 @@ Some common BOF options can also be controlled using environmental variables as 
 
 ### SSH keys
 
-Containerlab supports SSH key injection into the Nokia SR OS nodes prior to deployment. First containerlab retrieves all public keys from `~/.ssh`[^6] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
+Containerlab supports SSH key injection into the Nokia SR OS nodes prior to deployment. First containerlab retrieves all public keys from `~/.ssh`[^7] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
 
-Next, it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^7] at startup. This will enable key-based authentication when you connect to the node.
+Next, it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^8] at startup. This will enable key-based authentication when you connect to the node.
 
 ## Packet Capture
 
-Currently, a packet capture on the veth interfaces of the `-{{ kind_display_name }}-` will only display traffic at the ingress direction[^8]. In order to capture traffic bidirectionally, a user needs to create a [mirror service](https://documentation.nokia.com/sr/25-7/7750-sr/books/oam-diagnostics/mirror-services.html) in the SR OS configuration. A simple example topology using [bridges in container namespace](bridge.md#bridges-in-container-namespace) and mirror configuration is provided below for convenience.
+Currently, a packet capture on the veth interfaces of the `-{{ kind_display_name }}-` will only display traffic at the ingress direction[^9]. In order to capture traffic bidirectionally, a user needs to create a [mirror service](https://documentation.nokia.com/sr/25-7/7750-sr/books/oam-diagnostics/mirror-services.html) in the SR OS configuration. A simple example topology using [bridges in container namespace](bridge.md#bridges-in-container-namespace) and mirror configuration is provided below for convenience.
 
 /// tab | Topology with mirror service
 
@@ -784,7 +786,8 @@ The following labs feature Nokia SR OS (SR-SIM) node:
 [^2]: There are some caveats to this, for instance, if the container referred by the `network-mode` directive is stopped for any reason, all the other depending containers will stop working properly.
 [^3]: If needed, switches can be created using the clab kind `bridge` or using `iproute2` commands. MTU needs to be set to 9000 at least.
 [^4]: The word SHOULD is interpreted as [RFC2129](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC8174](https://datatracker.ietf.org/doc/html/rfc8174). Links will come up as long as they are attached to the same Linux namespace.
-[^5]: This is a change from the [Vrnetlab](../vrnetlab.md) based vSIM where line cards and MDAs were pre-provisioned for some cases.
-[^6]: `~` is the home directory of the user that runs containerlab.
-[^7]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
-[^8]: See Github issue [#2741](https://github.com/srl-labs/containerlab/issues/2741)
+[^5]: Power configuration is only applied for sr-1s, 1se, 2s, 2se, 7s and 14s nodes. See [sros.go](https://github.com/srl-labs/containerlab/pull/2827/files#diff-ae71218e629cf2763a2702c67297cb2ade467276acff8f39973caf1a09731d94R142-R175) for more info.
+[^6]: This is a change from the [Vrnetlab](../vrnetlab.md) based vSIM where line cards and MDAs were pre-provisioned for some cases.
+[^7]: `~` is the home directory of the user that runs containerlab.
+[^8]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
+[^9]: See Github issue [#2741](https://github.com/srl-labs/containerlab/issues/2741)
