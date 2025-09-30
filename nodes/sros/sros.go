@@ -526,10 +526,10 @@ func (n *sros) sortComponents() {
 func (n *sros) getSortOrder(slot string) int {
 	r := rune(slot[0])
 	if unicode.IsLetter(r) {
-		return int(r) // A=65, B=66
+		return 1000 + int(r) // A=1065, B=1066... always bigger than numbered slots
 	} else {
 		num, _ := strconv.Atoi(slot)
-		return 1000 + num // 1001, 1002... always bigger than slot A/B
+		return num // 1, 2, 3... smaller than CPM slots, so will come first
 	}
 }
 
