@@ -20,7 +20,7 @@ Deploy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
-    Should Be Equal As Integers    ${rc}    0s
+    Should Be Equal As Integers    ${rc}    0
 
 Wait for 10s
     Sleep    10s    Let everything fully provision & come up
