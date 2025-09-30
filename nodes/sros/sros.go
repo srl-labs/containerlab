@@ -1532,10 +1532,6 @@ func (n *sros) generateComponentConfig() (string, error) {
 		return "", nil
 	}
 
-	if !n.isCPM("") {
-		return "", nil
-	}
-
 	components := n.rootComponents
 
 	if len(components) == 0 {
