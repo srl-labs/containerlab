@@ -222,6 +222,8 @@ type sros struct {
 	// rootComponents stores the OG components from root node for dist setups
 	// ..allows children of the distributed root node to access root components (ie. for cfg gen)
 	rootComponents []*clabtypes.Component
+	// for a distributed node using components, save the root node name
+	baseNodeName string
 
 	preDeployParams *clabnodes.PreDeployParams
 }
@@ -659,6 +661,8 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	if err != nil {
 		return err
 	}
+	// save the base node name pre adjustment
+	n.baseNodeName = n.Cfg.LongName
 
 	// adjust general node to be represented as the cpm node
 	n.Cfg.ShortName = n.calcComponentName(n.Cfg.ShortName, cpmSlot)
@@ -1533,6 +1537,52 @@ func CheckPortWithRetry(
 	return false, lastErr
 }
 
+// custom overrie for hostfile entry to write basename when using component nodes
+func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error) {
+	result, err := n.DefaultNode.GetHostsEntries(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if n.isDistributedBaseNode() && n.baseNodeName != "" {
+		// since sorted, 0th component should always have IP
+		c := n.Cfg.Components[0]
+		slot := c.Slot
+
+		componentName := n.baseNodeName + "-" + slot
+
+		containers, err := n.Runtime.ListContainers(context.Background(), []*clabtypes.GenericFilter{
+			{
+				FilterType: "name",
+				Match:      componentName,
+			},
+		})
+
+		if err != nil {
+			return clabtypes.HostEntries{}, fmt.Errorf("unable to get container %q: %v", componentName, err)
+		}
+
+		for _, container := range containers {
+			if container.NetworkSettings.IPv4addr != "" {
+				result = append(result, clabtypes.NewHostEntry(
+					container.NetworkSettings.IPv4addr,
+					n.baseNodeName,
+					clabtypes.IpVersionV4,
+				).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+			}
+			if container.NetworkSettings.IPv6addr != "" {
+				result = append(result, clabtypes.NewHostEntry(
+					container.NetworkSettings.IPv6addr,
+					n.baseNodeName,
+					clabtypes.IpVersionV6,
+				).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+			}
+		}
+	}
+
+	return result, nil
+}
+
 // MgmtIPAddr returns ipv4 or ipv6 management IP address of the node.
 // It returns an error if neither is set in the node config.
 func (n *sros) MgmtIPAddr() (string, error) {
@@ -1542,6 +1592,47 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	case n.Cfg.MgmtIPv4Address != "":
 		return n.Cfg.MgmtIPv4Address, nil
 	}
+
+	if !n.isStandaloneNode() {
+		var components []*clabtypes.Component
+
+		if n.isDistributedBaseNode() {
+			components = n.Cfg.Components
+		} else {
+			components = n.rootComponents
+		}
+
+		baseName := n.baseNodeName
+
+		// for distributed nodes, get the IP from the
+		// 0th component container
+		if len(components) > 0 {
+			c := components[0]
+			slot := c.Slot
+
+			componentName := baseName + "-" + slot
+
+			containers, err := n.Runtime.ListContainers(context.Background(), []*clabtypes.GenericFilter{
+				{
+					FilterType: "name",
+					Match:      componentName,
+				},
+			})
+			if err != nil {
+				return baseName, fmt.Errorf("unable to get container %q: %v", componentName, err)
+			}
+
+			for _, container := range containers {
+				if container.NetworkSettings.IPv4addr != "" {
+					return container.NetworkSettings.IPv4addr, nil
+				}
+				if container.NetworkSettings.IPv6addr != "" {
+					return container.NetworkSettings.IPv6addr, nil
+				}
+			}
+		}
+	}
+
 	return n.Cfg.LongName, fmt.Errorf(
 		"no management IP address (IPv4 or IPv6) configured for node %q",
 		n.Cfg.LongName,

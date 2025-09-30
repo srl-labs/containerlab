@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"os"
 	"path"
+	"strings"
 	"text/template"
 
 	"github.com/charmbracelet/log"
@@ -78,17 +79,24 @@ func (c *CLab) addSSHConfig() error {
 			SSHConfig: n.GetSSHConfig(),
 		}
 
-		// if we couldn't parse the ssh version we assume we can't use unbound option
-		// or if the version is lower than 8.9
-		// and the node has the PubkeyAuthentication set to unbound
-		// we set it to empty string since it is not supported by the SSH client
-		if (sshVersion == "" || semver.Compare("v"+sshVersion, "v8.9") < 0) &&
-			nodeData.SSHConfig.PubkeyAuthentication ==
-				clabtypes.PubkeyAuthValueUnbound {
-			nodeData.SSHConfig.PubkeyAuthentication = ""
-		}
+		applySSHVersionCompatibility(&nodeData, sshVersion)
 
 		tmpl.Nodes = append(tmpl.Nodes, nodeData)
+
+		// For components based nodes
+		// add SSH entry for base node name
+		if len(n.Config().Components) > 0 {
+			baseName := extractBaseNodeName(n.Config().LongName)
+			baseNodeData := SSHConfigNodeTmpl{
+				Name:      baseName,
+				Username:  NodeRegistryEntry.GetCredentials().GetUsername(),
+				SSHConfig: n.GetSSHConfig(),
+			}
+
+			applySSHVersionCompatibility(&baseNodeData, sshVersion)
+
+			tmpl.Nodes = append(tmpl.Nodes, baseNodeData)
+		}
 	}
 
 	t, err := template.New("sshconfig").Parse(sshConfigTemplate)
@@ -113,4 +121,25 @@ func (c *CLab) addSSHConfig() error {
 	}
 
 	return nil
+}
+
+// if we couldn't parse the ssh version we assume we can't use unbound option
+// or if the version is lower than 8.9
+// and the node has the PubkeyAuthentication set to unbound
+// we set it to empty string since it is not supported by the SSH client
+func applySSHVersionCompatibility(nodeData *SSHConfigNodeTmpl, sshVersion string) {
+	if (sshVersion == "" || semver.Compare("v"+sshVersion, "v8.9") < 0) &&
+		nodeData.SSHConfig.PubkeyAuthentication == clabtypes.PubkeyAuthValueUnbound {
+		nodeData.SSHConfig.PubkeyAuthentication = ""
+	}
+}
+
+// extractBaseNodeName extracts the base node name from a distributed SROS node name
+// e.g., "clab-foo-sr1-a" -> "clab-foo-sr1"
+func extractBaseNodeName(longName string) string {
+	lastDash := strings.LastIndex(longName, "-")
+	if lastDash > 0 {
+		return longName[:lastDash]
+	}
+	return longName
 }
