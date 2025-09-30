@@ -1043,10 +1043,7 @@ func (n *sros) addDefaultConfig() error {
 	}
 
 	// Generate component configuration
-	componentConfig, err := n.generateComponentConfig()
-	if err != nil {
-		return err
-	}
+	componentConfig := n.generateComponentConfig()
 
 	// tplData holds data used in templating of the default config snippet
 	tplData := srosTemplateData{
@@ -1525,17 +1522,17 @@ func (n *sros) MgmtIPAddr() (string, error) {
 
 // generateComponentConfig generates SR OS configuration
 // for explicitly defined components using components nodeConfig
-func (n *sros) generateComponentConfig() (string, error) {
+func (n *sros) generateComponentConfig() string {
 
 	if n.isStandaloneNode() {
 		// skip integrated for now
-		return "", nil
+		return ""
 	}
 
 	components := n.rootComponents
 
 	if len(components) == 0 {
-		return "", nil
+		return ""
 	}
 
 	var config strings.Builder
@@ -1583,7 +1580,7 @@ func (n *sros) generateComponentConfig() (string, error) {
 
 	config.WriteString(n.generatePowerConfig())
 
-	return config.String(), nil
+	return config.String()
 }
 
 func (n *sros) generatePowerConfig() string {
