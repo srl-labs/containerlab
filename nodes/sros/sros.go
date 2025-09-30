@@ -1532,7 +1532,7 @@ func (n *sros) generateComponentConfig() (string, error) {
 		return "", nil
 	}
 
-	if n.isDistributedCardNode() && !n.isCPM("") {
+	if !n.isCPM("") {
 		return "", nil
 	}
 
