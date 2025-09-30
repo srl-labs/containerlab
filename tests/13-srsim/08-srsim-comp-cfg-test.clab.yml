@@ -4,7 +4,7 @@ name: comp-cfg-gen-test
 topology:
   kinds:
     nokia_srsim:
-      license: ~/labs/lics/srsim.txt
+      license: /opt/nokia/sros/license-sros25.txt
       image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
 
   nodes:
