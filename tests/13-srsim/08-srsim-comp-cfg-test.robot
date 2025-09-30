@@ -60,12 +60,8 @@ Check SR-2S MDA configuration
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    ms18-100gb-qsfp28
 
-Check SR-2S MDA state
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr2s-a --path /state/card[slot-number=1]/xiom[xiom-slot=x1]/mda[mda-slot=1]/hardware-data/oper-state
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    in-service
+Ensure SR-2S MDA is up
+    Wait Until Keyword Succeeds    2 minutes    10 seconds    Check SR-2S MDA state
 
 Check SR-14S power shelf configuration
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -95,13 +91,23 @@ Check SR-14S MDA configuration
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    x2-s36-800g-qsfpdd-18.0t
 
+Ensure SR-14S MDA is up
+    Wait Until Keyword Succeeds    2 minutes    10 seconds    Check SR-14S MDA state
+
+*** Keywords ***
+Cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+
+Check SR-2S MDA state
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr2s-a --path /state/card[slot-number=1]/xiom[xiom-slot=x1]/mda[mda-slot=1]/hardware-data/oper-state
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    in-service
+
 Check SR-14S MDA state
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr14s-a --path /state/card[slot-number=1]/mda[mda-slot=1]/hardware-data/oper-state
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    in-service
-
-*** Keywords ***
-Cleanup
-    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
