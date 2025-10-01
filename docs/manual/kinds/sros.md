@@ -387,13 +387,13 @@ When a distributed SR-SIM node is defined using `components`, we need to take in
 3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
 4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom`, `sfm` and `mda` fields.
 
-##### Config generation
+##### Configuration for components
 
-When using the `components` structure in the node configuration for a distributed node, containerlab will also generate the SR-OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^5] to ensure the installed components come up.
+When using the `components` structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^5] to ensure the installed components come up without requiring a user to manually provide the configuration.
 
-/// details | Disabling generated SR-OS configuration for `components`
+/// details | Disabling generated SR OS configuration for `components`
     type: tip
-You can disable this config generation behaviour by setting the `CLAB_SROS_DISABLE_COMPONENT_CONFIG` env var on the base node.
+You can disable this config generation behavior by setting the `CLAB_SROS_DISABLE_COMPONENT_CONFIG` env var on the base node.
 
 ```yaml hl_lines="6-7"
 topology:
@@ -444,7 +444,7 @@ topology:
 ```
 
 ///
-/// tab | Generated SR-OS configuration (MD-CLI)
+/// tab | Generated SR OS configuration (MD-CLI)
 
 ```
 /configure card 1 card-type iom5-e admin-state enable
