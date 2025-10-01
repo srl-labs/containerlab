@@ -1007,6 +1007,8 @@ func (n *sros) addDefaultConfig() error {
 	// Generate component configuration IF no startup-config defined.
 	if n.Cfg.StartupConfig == "" {
 		componentConfig = n.generateComponentConfig()
+	} else {
+		log.Debugf("SR-SIM node %q has startup-config defined, skipping component config gen", n.Cfg.LongName)
 	}
 
 	// tplData holds data used in templating of the default config snippet
