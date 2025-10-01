@@ -39,7 +39,7 @@ var (
 // a brand new lookup of unsafePath (such as with [SecureJoin] or openat2) after
 // doing [MkdirAll]. If you intend to open the directory after creating it, you
 // should use MkdirAllHandle.
-func MkdirAllHandle(root *os.File, unsafePath string, mode int) (_ *os.File, Err error) {
+func MkdirAllHandle(root *os.File, unsafePath string, mode os.FileMode) (_ *os.File, Err error) {
 	// Make sure there are no os.FileMode bits set.
 	if mode&^0o7777 != 0 {
 		return nil, fmt.Errorf("%w for mkdir 0o%.3o", errInvalidMode, mode)
@@ -199,7 +199,7 @@ func MkdirAllHandle(root *os.File, unsafePath string, mode int) (_ *os.File, Err
 //
 // NOTE: The mode argument must be set the unix mode bits (unix.S_I...), not
 // the Go generic mode bits ([os.FileMode]...).
-func MkdirAll(root, unsafePath string, mode int) error {
+func MkdirAll(root, unsafePath string, mode os.FileMode) error {
 	rootDir, err := os.OpenFile(root, unix.O_PATH|unix.O_DIRECTORY|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return err

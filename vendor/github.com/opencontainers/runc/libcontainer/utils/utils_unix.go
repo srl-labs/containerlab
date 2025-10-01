@@ -334,7 +334,7 @@ func MkdirAllInRootOpen(root, unsafePath string, mode uint32) (_ *os.File, Err e
 	}
 	defer rootDir.Close()
 
-	return securejoin.MkdirAllHandle(rootDir, unsafePath, int(mode))
+	return securejoin.MkdirAllHandle(rootDir, unsafePath, os.FileMode(mode))
 }
 
 // MkdirAllInRoot is a wrapper around MkdirAllInRootOpen which closes the
