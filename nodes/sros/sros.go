@@ -55,22 +55,23 @@ const (
 	standaloneSlotName = slotAName
 
 	retryTimer = 1 * time.Second
-	// additional config that clab adds on top of the factory config.
-	scrapliPlatformName       = "nokia_sros"
-	configCf3                 = "config/cf3"
-	configCf2                 = "config/cf2"
-	configCf1                 = "config/cf1"
-	startupCfgName            = "config.cfg"
-	tlsKeyFile                = "node.key"
-	tlsCertFile               = "node.crt"
-	tlsCertProfileName        = "clab-grpc-certs"
-	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
-	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
-	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
-	envNokiaSrosCard          = "NOKIA_SROS_CARD"
-	envNokiaSrosSFM           = "NOKIA_SROS_SFM"
-	envNokiaSrosXIOM          = "NOKIA_SROS_XIOM"
-	envNokiaSrosMDA           = "NOKIA_SROS_MDA"
+
+	scrapliPlatformName          = "nokia_sros"
+	configCf3                    = "config/cf3"
+	configCf2                    = "config/cf2"
+	configCf1                    = "config/cf1"
+	startupCfgName               = "config.cfg"
+	tlsKeyFile                   = "node.key"
+	tlsCertFile                  = "node.crt"
+	tlsCertProfileName           = "clab-grpc-certs"
+	envNokiaSrosSlot             = "NOKIA_SROS_SLOT"
+	envNokiaSrosChassis          = "NOKIA_SROS_CHASSIS"
+	envNokiaSrosSystemBaseMac    = "NOKIA_SROS_SYSTEM_BASE_MAC"
+	envNokiaSrosCard             = "NOKIA_SROS_CARD"
+	envNokiaSrosSFM              = "NOKIA_SROS_SFM"
+	envNokiaSrosXIOM             = "NOKIA_SROS_XIOM"
+	envNokiaSrosMDA              = "NOKIA_SROS_MDA"
+	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
 
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
@@ -1072,8 +1073,14 @@ func (n *sros) addDefaultConfig() error {
 		return err
 	}
 
-	// Generate component configuration
-	componentConfig := n.generateComponentConfig()
+	componentConfig := ""
+
+	// Generate component configuration IF no startup-config defined.
+	if n.Cfg.StartupConfig == "" {
+		componentConfig = n.generateComponentConfig()
+	} else {
+		log.Debugf("SR-SIM node %q has startup-config defined, skipping component config gen", n.Cfg.LongName)
+	}
 
 	// tplData holds data used in templating of the default config snippet
 	tplData := srosTemplateData{
@@ -1676,8 +1683,11 @@ func (n *sros) MgmtIPAddr() (string, error) {
 }
 
 // generateComponentConfig generates SR OS configuration
-// for explicitly defined components using components nodeConfig
+// for explicitly defined components using components nodeConfig.
 func (n *sros) generateComponentConfig() string {
+	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
+		return ""
+	}
 
 	if n.isStandaloneNode() {
 		// skip integrated for now
@@ -1701,7 +1711,13 @@ func (n *sros) generateComponentConfig() string {
 		}
 
 		if component.Type != "" {
-			config.WriteString(fmt.Sprintf("/configure card %s card-type %s admin-state enable\n", slot, component.Type))
+			config.WriteString(
+				fmt.Sprintf(
+					"/configure card %s card-type %s admin-state enable\n",
+					slot,
+					component.Type,
+				),
+			)
 		} else {
 			// not all types may have preprovisioned card
 			// so the following configs will fail if card
@@ -1711,72 +1727,57 @@ func (n *sros) generateComponentConfig() string {
 		}
 
 		if component.SFM != "" {
-			config.WriteString(fmt.Sprintf("/configure sfm %s sfm-type %s admin-state enable\n", slot, component.SFM))
+			config.WriteString(
+				fmt.Sprintf(
+					"/configure sfm %s sfm-type %s admin-state enable\n",
+					slot,
+					component.SFM,
+				),
+			)
 		}
 
 		for _, xiom := range component.XIOM {
 			if xiom.Type != "" {
-				config.WriteString(fmt.Sprintf("/configure card %s xiom x%d xiom-type %s admin-state enable\n", slot, xiom.Slot, xiom.Type))
+				config.WriteString(
+					fmt.Sprintf(
+						"/configure card %s xiom x%d xiom-type %s admin-state enable\n",
+						slot,
+						xiom.Slot,
+						xiom.Type,
+					),
+				)
 			}
 
 			for _, mda := range xiom.MDA {
 				if mda.Type != "" {
-					config.WriteString(fmt.Sprintf("/configure card %s xiom x%d mda %d mda-type %s admin-state enable\n", slot, xiom.Slot, mda.Slot, mda.Type))
+					config.WriteString(
+						fmt.Sprintf(
+							"/configure card %s xiom x%d mda %d mda-type %s admin-state enable\n",
+							slot,
+							xiom.Slot,
+							mda.Slot,
+							mda.Type,
+						),
+					)
 				}
 			}
 		}
 
 		for _, mda := range component.MDA {
 			if mda.Type != "" {
-				config.WriteString(fmt.Sprintf("/configure card %s mda %d mda-type %s admin-state enable\n", slot, mda.Slot, mda.Type))
+				config.WriteString(
+					fmt.Sprintf(
+						"/configure card %s mda %d mda-type %s admin-state enable\n",
+						slot,
+						mda.Slot,
+						mda.Type,
+					),
+				)
 			}
 		}
 	}
 
 	config.WriteString(n.generatePowerConfig())
-
-	return config.String()
-}
-
-func (n *sros) generatePowerConfig() string {
-
-	nodeType := strings.ToLower(n.Cfg.NodeType)
-	if _, ok := srosPowerConfig[nodeType]; !ok {
-		return ""
-	}
-
-	cfg := srosPowerConfig[nodeType]
-
-	shelves := 1
-	if s := cfg.Shelves; s != 0 {
-		shelves = s
-	}
-
-	modules := 0
-	switch m := cfg.Modules.(type) {
-	case map[string]int:
-		modules = m[defaultSrosPowerType]
-	case int:
-		modules = m
-	}
-
-	shelfType := fmt.Sprintf("ps-a%d-shelf-dc", modules)
-
-	var config strings.Builder
-
-	for s := 1; s <= shelves; s++ {
-		config.WriteString(
-			fmt.Sprintf(
-				"/configure chassis router chassis-number 1 power-shelf %d power-shelf-type %s\n",
-				s, shelfType))
-
-		for m := 1; m <= modules; m++ {
-			config.WriteString(
-				fmt.Sprintf(
-					"/configure chassis router chassis-number 1 power-shelf %d power-module %d power-module-type %s\n",
-					s, m, defaultSrosPowerModuleType))
-		}
-	}
 
 	return config.String()
 }

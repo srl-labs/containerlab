@@ -203,7 +203,7 @@ topology:
     sr-sim:
       kind: nokia_srsim
       image: nokia_srsim:25.7.R1
-      type: SR-1s # overriding the default SR-1 type with SR-1s
+      type: sr-1s # overriding the default SR-1 type with SR-1s
       license: /opt/nokia/sros/license.txt
 ```
 
@@ -216,7 +216,7 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       image: nokia_srsim:25.7.R1
-      type: SR-1
+      type: sr-1
       license: /opt/nokia/sros/license.txt
       components:
         - mda:
@@ -233,7 +233,7 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       image: nokia_srsim:25.7.R1
-      type: SR-1
+      type: sr-1
       license: /opt/nokia/sros/license.txt
       env:
         NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # override default MDA type in slot 1
@@ -280,7 +280,7 @@ topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
-      type: SR-7
+      type: sr-7
       components:
         - slot: A
         - slot: B
@@ -300,7 +300,7 @@ topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
-      type: SR-7
+      type: sr-7
       components:
         - slot: A # containers will be attached to this Linux NS
         - slot: B
@@ -332,7 +332,7 @@ topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
-      type: SR-2s
+      type: sr-2s
       components:
         - slot: A # containers will be attached to this Linux NS
           sfm: sfm-2s
@@ -359,7 +359,7 @@ topology:
   nodes: 
     sr-sim1:
       kind: nokia_srsim
-      type: SR-7
+      type: sr-7
       components:
         - slot: A
         - slot: B
@@ -367,7 +367,7 @@ topology:
         - slot: 2
     sr-sim2:
       kind: nokia_srsim
-      type: SR-7
+      type: sr-7
       components:
         - slot: A
         - slot: B
@@ -388,6 +388,97 @@ When a distributed SR-SIM node is defined using `components`, we need to take in
 2. When changing a MDA or card type from its default value, the configuration for card, SFM and MDA must be also defined.
 3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
 4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom`, `sfm` and `mda` fields.
+
+##### Configuration for components
+
+When using the `components` structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^5] to ensure the installed components come up without requiring a user to manually provide the configuration.
+
+/// details | Disabling generated SR OS configuration for `components`
+    type: tip
+You can disable this config generation behavior by setting the `CLAB_SROS_DISABLE_COMPONENT_CONFIG` env var on the base node.
+
+```yaml hl_lines="6-7"
+topology:
+  nodes:
+    sr-sim1:
+      kind: nokia_srsim
+      type: sr-7
+      env:
+        CLAB_SROS_DISABLE_COMPONENT_CONFIG: "xyz"
+      components:
+        - slot: A
+        - slot: B
+        - slot: 1
+        - slot: 2
+```
+
+///
+
+/// tab | Topology with components
+
+```yaml
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-sim1:
+      kind: nokia_srsim
+      type: sr-7
+      components:
+        - slot: A
+        - slot: B
+        - slot: 1
+          type: iom5-e
+          sfm: m-sfm6-7/12
+          mda:
+            - slot: 1
+              type: me6-100gb-qsfp28
+            - slot: 2
+              type: me3-400gb-qsfpdd
+        - slot: 2
+          type: iom5-e
+          sfm: m-sfm6-7/12
+          mda:
+            - slot: 2
+              type: me6-100gb-qsfp28
+```
+
+///
+/// tab | Generated SR OS configuration (MD-CLI)
+
+```
+/configure card 1 card-type iom5-e admin-state enable
+/configure sfm 1 sfm-type m-sfm6-7/12 admin-state enable
+/configure card 1 mda 1 mda-type me6-100gb-qsfp28 admin-state enable
+/configure card 1 mda 2 mda-type me3-400gb-qsfpdd admin-state enable
+/configure card 2 card-type iom5-e admin-state enable
+/configure sfm 2 sfm-type m-sfm6-7/12 admin-state enable
+/configure card 2 mda 2 mda-type me6-100gb-qsfp28 admin-state enable
+```
+
+///
+/// tab | `show card state` output
+
+```
+===============================================================================
+Card State
+===============================================================================
+Slot/  Provisioned Type                  Admin Operational   Num   Num Comments
+Id         Equipped Type (if different)  State State         Ports MDA 
+-------------------------------------------------------------------------------
+1      iom5-e:he1200g+                   up    up                  2   
+1/1    me6-100gb-qsfp28                  up    up            6         
+1/2    me3-400gb-qsfpdd                  up    up            3         
+2      iom5-e:he1200g+                   up    up                  2   
+2/2    me6-100gb-qsfp28                  up    up            6         
+A      cpm5                              up    up                      Active
+B      cpm5                              up    up                      Standby
+===============================================================================
+```
+
+///
 
 #### Standard topology
 
@@ -413,12 +504,12 @@ topology:
   nodes:
     sr-sim:
       kind: nokia_srsim
-      type: SR-1x-92S
+      type: sr-1x-92S
       env:
          NOKIA_SROS_SLOT: A
     sr-sim-iom:
       kind: nokia_srsim
-      type: SR-1x-92S
+      type: sr-1x-92S
       network-mode: container:sr-sim
       env:
         NOKIA_SROS_SLOT: 1
@@ -483,7 +574,7 @@ topology:
   nodes:
     sr-2se-a:
       kind: nokia_srsim
-      type: SR-2se
+      type: sr-2se
       env:
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # override Chassis MAC
@@ -492,7 +583,7 @@ topology:
         NOKIA_SROS_CARD: cpm-2se # override CPM
     sros-2se-1:
       kind: nokia_srsim
-      type: SR-2se
+      type: sr-2se
       network-mode: container:sr-2se-a
       env:
         NOKIA_SROS_SLOT: 1
@@ -646,7 +737,7 @@ topology:
   nodes:
     sr-sim10:
       kind: nokia_srsim
-      type: SR-1 # Implicit default
+      type: sr-1 # Implicit default
     sr-sim11:
       kind: nokia_srsim
     # In-namespace bridges for mirroring:
