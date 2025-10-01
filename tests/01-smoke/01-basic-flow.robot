@@ -479,6 +479,17 @@ Verify iptables allow rule is set
     ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f '{{index .Config.Labels "clab-mgmt-net-bridge"}}'
     Log    ${br}
     Set Suite Variable    ${MgmtBr}    ${br}
+    
+    # Detect which backend is in use
+    ${rc}    ${output} =    Run And Return Rc And Output    iptables -V
+    ${use_nft} =    Run Keyword And Return Status    Should Contain    ${output}    nf_tables
+    
+    Run Keyword If    ${use_nft}
+    ...    Verify iptables allow rule is set nftables
+    ...    ELSE
+    ...    Verify iptables allow rule is set iptables
+
+Verify iptables allow rule is set iptables
     ${ipt} =    Run
     ...    sudo iptables -vnL DOCKER-USER
     Log    ${ipt}
@@ -496,6 +507,13 @@ Verify iptables allow rule is set
     ...    ACCEPT 0 -- ${MgmtBr} *
     ...    ignore_case=True
     ...    collapse_spaces=True
+
+Verify iptables allow rule is set nftables
+    ${ipt} =    Run
+    ...    sudo nft list chain ip filter DOCKER-USER
+    Log    ${ipt}
+    Should Match Regexp    ${ipt}    oifname.*${MgmtBr}.*accept
+    Should Match Regexp    ${ipt}    iifname.*${MgmtBr}.*accept
 
 Verify ip6tables allow rule is set
     [Documentation]    Checking if ip6tables allow rule is set so that external traffic can reach containerlab management network
@@ -595,8 +613,25 @@ Verify Hosts file has same number of lines
 Verify iptables allow rule are gone
     [Documentation]    Checking if iptables allow rule is removed once the lab is destroyed
     Skip If    '${runtime}' != 'docker'
+    
+    # Detect which backend is in use
+    ${rc}    ${output} =    Run And Return Rc And Output    iptables -V
+    ${use_nft} =    Run Keyword And Return Status    Should Contain    ${output}    nf_tables
+    
+    Run Keyword If    ${use_nft}
+    ...    Verify iptables allow rule are gone nftables
+    ...    ELSE
+    ...    Verify iptables allow rule are gone iptables
+
+Verify iptables allow rule are gone iptables
     ${ipt} =    Run
     ...    sudo iptables -vnL DOCKER-USER
+    Log    ${ipt}
+    Should Not Contain    ${ipt}    ${MgmtBr}
+
+Verify iptables allow rule are gone nftables
+    ${ipt} =    Run
+    ...    sudo nft list chain ip filter DOCKER-USER
     Log    ${ipt}
     Should Not Contain    ${ipt}    ${MgmtBr}
 
