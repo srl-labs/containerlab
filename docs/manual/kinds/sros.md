@@ -203,7 +203,7 @@ topology:
     sr-sim:
       kind: nokia_srsim
       image: nokia_srsim:25.7.R1
-      type: SR-1s # overriding the default SR-1 type with SR-1s
+      type: sr-1s # overriding the default SR-1 type with SR-1s
       license: /opt/nokia/sros/license.txt
 ```
 
@@ -216,7 +216,7 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       image: nokia_srsim:25.7.R1
-      type: SR-1
+      type: sr-1
       license: /opt/nokia/sros/license.txt
       components:
         - mda:
@@ -233,7 +233,7 @@ topology:
     sr-sim1:
       kind: nokia_srsim
       image: nokia_srsim:25.7.R1
-      type: SR-1
+      type: sr-1
       license: /opt/nokia/sros/license.txt
       env:
         NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # override default MDA type in slot 1
@@ -278,7 +278,7 @@ topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
-      type: SR-7
+      type: sr-7
       env:
         CLAB_SROS_DISABLE_COMPONENT_CONFIG: "xyz"
       components:
@@ -300,7 +300,7 @@ topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
-      type: SR-7
+      type: sr-7
       components:
         - slot: A
         - slot: B
@@ -320,7 +320,7 @@ topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
-      type: SR-7
+      type: sr-7
       components:
         - slot: A # containers will be attached to this Linux NS
         - slot: B
@@ -352,7 +352,7 @@ topology:
   nodes:
     sr-sim1:
       kind: nokia_srsim
-      type: SR-2s
+      type: sr-2s
       components:
         - slot: A # containers will be attached to this Linux NS
           sfm: sfm-2s
@@ -379,7 +379,7 @@ topology:
   nodes: 
     sr-sim1:
       kind: nokia_srsim
-      type: SR-7
+      type: sr-7
       components:
         - slot: A
         - slot: B
@@ -387,7 +387,7 @@ topology:
         - slot: 2
     sr-sim2:
       kind: nokia_srsim
-      type: SR-7
+      type: sr-7
       components:
         - slot: A
         - slot: B
@@ -433,12 +433,12 @@ topology:
   nodes:
     sr-sim:
       kind: nokia_srsim
-      type: SR-1x-92S
+      type: sr-1x-92S
       env:
          NOKIA_SROS_SLOT: A
     sr-sim-iom:
       kind: nokia_srsim
-      type: SR-1x-92S
+      type: sr-1x-92S
       network-mode: container:sr-sim
       env:
         NOKIA_SROS_SLOT: 1
@@ -503,7 +503,7 @@ topology:
   nodes:
     sr-2se-a:
       kind: nokia_srsim
-      type: SR-2se
+      type: sr-2se
       env:
         NOKIA_SROS_SLOT: A
         NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01 # override Chassis MAC
@@ -512,7 +512,7 @@ topology:
         NOKIA_SROS_CARD: cpm-2se # override CPM
     sros-2se-1:
       kind: nokia_srsim
-      type: SR-2se
+      type: sr-2se
       network-mode: container:sr-2se-a
       env:
         NOKIA_SROS_SLOT: 1
@@ -666,7 +666,7 @@ topology:
   nodes:
     sr-sim10:
       kind: nokia_srsim
-      type: SR-1 # Implicit default
+      type: sr-1 # Implicit default
     sr-sim11:
       kind: nokia_srsim
     # In-namespace bridges for mirroring:
