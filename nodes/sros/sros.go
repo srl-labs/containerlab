@@ -224,6 +224,9 @@ type sros struct {
 	rootComponents []*clabtypes.Component
 	// store the longname with cpm suffix
 	cpmContainerName string
+	// for component nodes, store base nodes
+	baseShortName string
+	baseLongName  string
 
 	preDeployParams *clabnodes.PreDeployParams
 }
@@ -360,6 +363,7 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		// generate the certificate
 		if *n.Cfg.Certificate.Issue {
+			n.Cfg.Certificate.SANs = append(n.Cfg.Certificate.SANs, n.baseShortName, n.baseLongName)
 			certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 			if err != nil {
 				return err
@@ -637,6 +641,9 @@ func (n *sros) setupComponentNodes() error {
 		// store root components for cpms, for config gen
 		if srosNode, ok := componentNode.(*sros); ok {
 			srosNode.rootComponents = n.Cfg.Components
+			// store base node name
+			srosNode.baseShortName = n.Cfg.ShortName
+			srosNode.baseLongName = n.Cfg.LongName
 		}
 
 		// store the node in the componentNodes
