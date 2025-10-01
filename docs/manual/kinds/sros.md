@@ -271,7 +271,7 @@ When using the `components` structure in the node configuration for a distribute
 
 /// details | Disabling generated SR-OS configuration for `components`
     type: tip
-You can disable this config generation behaviour by setting the `SROS_DISABLE_COMPONENT_CONFIG` env var on the base node.
+You can disable this config generation behaviour by setting the `CLAB_SROS_DISABLE_COMPONENT_CONFIG` env var on the base node.
 
 ```yaml hl_lines="6-7"
 topology:
@@ -280,7 +280,7 @@ topology:
       kind: nokia_srsim
       type: SR-7
       env:
-        SROS_DISABLE_COMPONENT_CONFIG: "xyz"
+        CLAB_SROS_DISABLE_COMPONENT_CONFIG: "xyz"
       components:
         - slot: A
         - slot: B

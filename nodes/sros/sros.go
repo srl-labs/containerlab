@@ -70,7 +70,7 @@ const (
 	envNokiaSrosXIOM          = "NOKIA_SROS_XIOM"
 	envNokiaSrosMDA           = "NOKIA_SROS_MDA"
 	// custom env var introduced to disable the component configuration gen
-	envDisableComponentConfigGen = "SROS_DISABLE_COMPONENT_CONFIG"
+	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
 
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"

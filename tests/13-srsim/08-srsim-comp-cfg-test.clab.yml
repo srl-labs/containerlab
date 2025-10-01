@@ -30,7 +30,7 @@ topology:
       kind: nokia_srsim
       type: sr-2s
       env:
-        SROS_DISABLE_COMPONENT_CONFIG: foo
+        CLAB_SROS_DISABLE_COMPONENT_CONFIG: foo
       components:
         - slot: A
           type: cpm-2s
