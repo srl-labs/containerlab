@@ -672,7 +672,7 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	}
 
 	n.Cfg.MgmtIPv4Address = ips.IPv4
-	n.Cfg.MgmtIPv6Address = ips.IPv4
+	n.Cfg.MgmtIPv6Address = ips.IPv6
 
 	return nil
 }
