@@ -140,48 +140,7 @@ var (
       e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
       e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
 	  eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
-
-	// key = type
-	srosPowerConfig = map[string]SrosPower{
-		"sr-1s": {
-			Modules: map[string]int{
-				"ac/hv": 3,
-				"dc":    4,
-			},
-		},
-		"sr-1se": {
-			Modules: map[string]int{
-				"ac/hv": 3,
-				"dc":    4,
-			},
-		},
-		"sr-2s": {
-			Modules: map[string]int{
-				"ac/hv": 3,
-				"dc":    4,
-			},
-		},
-		"sr-2se": {
-			Modules: map[string]int{
-				"ac/hv": 3,
-				"dc":    4,
-			},
-		},
-		"sr-7s": {
-			Modules: 10,
-			Shelves: 2,
-		},
-		"sr-14s": {
-			Modules: 10,
-			Shelves: 2,
-		},
-	}
 )
-
-type SrosPower struct {
-	Modules interface{}
-	Shelves int
-}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
