@@ -62,11 +62,11 @@ Check Cards after 20s on srsim11
 Ensure l1 can ping l2 via sr-sim network
     Wait Until Keyword Succeeds    2 minutes    10 seconds    From l1 ping l2 via sr-sim network
 
-Check the number of hosts entries should be Equal to 4xIPv4 and 4xIPv6
+Check the number of hosts entries should be Equal to 5xIPv4 and 5xIPv6
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    cat /etc/hosts | grep -c clab-${lab-name}
     Should Be Equal As Integers    ${rc}    0
-    Should Be Equal As Integers    ${output}    8
+    Should Be Equal As Integers    ${output}    10
 
 Do a gNMI GET using TLS
     Skip If    '${runtime}' != 'docker'
