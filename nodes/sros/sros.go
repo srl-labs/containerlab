@@ -1002,8 +1002,12 @@ func (n *sros) addDefaultConfig() error {
 		return err
 	}
 
-	// Generate component configuration
-	componentConfig := n.generateComponentConfig()
+	componentConfig := ""
+
+	// Generate component configuration IF no startup-config defined.
+	if n.Cfg.StartupConfig == "" {
+		componentConfig = n.generateComponentConfig()
+	}
 
 	// tplData holds data used in templating of the default config snippet
 	tplData := srosTemplateData{
