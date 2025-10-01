@@ -32,6 +32,9 @@ func inspectCmd(o *Options) (*cobra.Command, error) {
 		Long: "show details about a particular lab or all running labs\n" +
 			"reference: https://containerlab.dev/cmd/inspect/",
 		Aliases: []string{"ins", "i"},
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
 			return inspectFn(cobraCmd, o)
 		},
