@@ -26,6 +26,25 @@ topology:
                 - slot: 1
                   type: ms18-100gb-qsfp28
 
+    sr2s-nocfg:
+      kind: nokia_srsim
+      type: sr-2s
+      env:
+        SROS_DISABLE_COMPONENT_CONFIG: foo
+      components:
+        - slot: A
+          type: cpm-2s
+          sfm: sfm-2s
+        - slot: 1
+          sfm: sfm-2s
+          type: xcm-2s
+          xiom:
+            - slot: 1
+              type: iom-s-3.0t
+              mda:
+                - slot: 1
+                  type: ms18-100gb-qsfp28
+
     # sr2se:
     #   kind: nokia_srsim
     #   type: sr-2se
