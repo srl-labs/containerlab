@@ -1209,6 +1209,22 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 			clabnodes.ErrContainersNotFound)
 	}
 
+	// Forge the IP address to be the actual IP of mgmt
+	// because the CPM A might not own the netns & mgmt IP
+	if len(n.Cfg.Components) > 0 {
+		ips, err := n.GetDistMgmtIPs()
+		if err == nil {
+			if ips.IPv4 != "" {
+				cnts[0].NetworkSettings.IPv4addr = ips.IPv4
+				cnts[0].NetworkSettings.IPv4pLen = ips.IPv4pLen
+			}
+			if ips.IPv6 != "" {
+				cnts[0].NetworkSettings.IPv6addr = ips.IPv6
+				cnts[0].NetworkSettings.IPv6pLen = ips.IPv6pLen
+			}
+		}
+	}
+
 	return cnts, err
 }
 
@@ -1541,8 +1557,10 @@ func CheckPortWithRetry(
 }
 
 type MgmtIP struct {
-	IPv4 string
-	IPv6 string
+	IPv4     string
+	IPv4pLen int
+	IPv6     string
+	IPv6pLen int
 }
 
 // MgmtIPAddr returns both ipv4 and ipv6 management IP address of a
@@ -1581,9 +1599,12 @@ func (n *sros) GetDistMgmtIPs() (MgmtIP, error) {
 		for _, container := range containers {
 			if container.NetworkSettings.IPv4addr != "" {
 				ips.IPv4 = container.NetworkSettings.IPv4addr
+				ips.IPv6pLen = container.NetworkSettings.IPv4pLen
+
 			}
 			if container.NetworkSettings.IPv6addr != "" {
 				ips.IPv6 = container.NetworkSettings.IPv6addr
+				ips.IPv6pLen = container.NetworkSettings.IPv6pLen
 			}
 		}
 	}
