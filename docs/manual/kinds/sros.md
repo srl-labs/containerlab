@@ -269,6 +269,26 @@ Each card in the chassis can have it's card type, SFM, XIOM and MDA configured e
 
 When using the `components` structure in the node configuration for a distributed node, containerlab will also generate the  configuration for the installed components in the chassis, as well as relevant power supply configuration[^5] to ensure the installed components come up.
 
+/// details | Disabling generated SR-OS configuration for `components`
+    type: tip
+You can disable this config generation behaviour by setting the `SROS_DISABLE_COMPONENT_CONFIG` env var on the base node.
+
+```yaml hl_lines="6-7"
+topology:
+  nodes:
+    sr-sim1:
+      kind: nokia_srsim
+      type: SR-7
+      env:
+        SROS_DISABLE_COMPONENT_CONFIG: "xyz"
+      components:
+        - slot: A
+        - slot: B
+        - slot: 1
+        - slot: 2
+```
+///
+
 /// tab | Distributed grouped SR-SIM
 
 ```yaml

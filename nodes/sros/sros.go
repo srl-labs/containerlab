@@ -69,6 +69,8 @@ const (
 	envNokiaSrosSFM           = "NOKIA_SROS_SFM"
 	envNokiaSrosXIOM          = "NOKIA_SROS_XIOM"
 	envNokiaSrosMDA           = "NOKIA_SROS_MDA"
+	// custom env var introduced to disable the component configuration gen
+	envDisableComponentConfigGen = "SROS_DISABLE_COMPONENT_CONFIG"
 
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
@@ -1523,6 +1525,10 @@ func (n *sros) MgmtIPAddr() (string, error) {
 // generateComponentConfig generates SR OS configuration
 // for explicitly defined components using components nodeConfig
 func (n *sros) generateComponentConfig() string {
+
+	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
+		return ""
+	}
 
 	if n.isStandaloneNode() {
 		// skip integrated for now
