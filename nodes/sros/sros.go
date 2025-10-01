@@ -53,23 +53,22 @@ const (
 	standaloneSlotName = slotAName
 
 	retryTimer = 1 * time.Second
-	// additional config that clab adds on top of the factory config.
-	scrapliPlatformName       = "nokia_sros"
-	configCf3                 = "config/cf3"
-	configCf2                 = "config/cf2"
-	configCf1                 = "config/cf1"
-	startupCfgName            = "config.cfg"
-	tlsKeyFile                = "node.key"
-	tlsCertFile               = "node.crt"
-	tlsCertProfileName        = "clab-grpc-certs"
-	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
-	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
-	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
-	envNokiaSrosCard          = "NOKIA_SROS_CARD"
-	envNokiaSrosSFM           = "NOKIA_SROS_SFM"
-	envNokiaSrosXIOM          = "NOKIA_SROS_XIOM"
-	envNokiaSrosMDA           = "NOKIA_SROS_MDA"
-	// custom env var introduced to disable the component configuration gen.
+
+	scrapliPlatformName          = "nokia_sros"
+	configCf3                    = "config/cf3"
+	configCf2                    = "config/cf2"
+	configCf1                    = "config/cf1"
+	startupCfgName               = "config.cfg"
+	tlsKeyFile                   = "node.key"
+	tlsCertFile                  = "node.crt"
+	tlsCertProfileName           = "clab-grpc-certs"
+	envNokiaSrosSlot             = "NOKIA_SROS_SLOT"
+	envNokiaSrosChassis          = "NOKIA_SROS_CHASSIS"
+	envNokiaSrosSystemBaseMac    = "NOKIA_SROS_SYSTEM_BASE_MAC"
+	envNokiaSrosCard             = "NOKIA_SROS_CARD"
+	envNokiaSrosSFM              = "NOKIA_SROS_SFM"
+	envNokiaSrosXIOM             = "NOKIA_SROS_XIOM"
+	envNokiaSrosMDA              = "NOKIA_SROS_MDA"
 	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
 
 	defaultSrosPowerType       = "dc"
