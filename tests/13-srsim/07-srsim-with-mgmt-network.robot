@@ -40,18 +40,10 @@ Ensure sros redirect port is open
     Should Be Equal As Integers    ${output}    2
 
 Verify links in node l1
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ip link show eth1"
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    state UP
+    Wait Until Keyword Succeeds    2 minutes    10 seconds    Verify eth1 in node l1
 
-Verify links in node l2
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l2 --cmd "ip link show eth1"
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    state UP
+Verify links in node l1
+    Wait Until Keyword Succeeds    2 minutes    10 seconds    Verify eth1 in node l2
 
 Check Cards after 40s on srsim10
     Sleep    40s    give some time for linecards to come up
@@ -68,12 +60,7 @@ Check Cards after 20s on srsim11
     Log    ${output}
 
 Ensure l1 can ping l2 via sr-sim network
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping -c 2 -W 3 -M do -s 8662 10.111.0.1"
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    0% packet loss
-    Should Contain    ${output}    2 received
+    Wait Until Keyword Succeeds    2 minutes    10 seconds    From l1 ping l2 via sr-sim network
 
 Check the number of hosts entries should be Equal to 4xIPv4 and 4xIPv6
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -101,3 +88,25 @@ Do a gNOI ping
 Cleanup
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    rm -f ${key-path}*
+
+Verify eth1 in node l1
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ip link show eth1"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+
+Verify eth1 in node l2
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l2 --cmd "ip link show eth1"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    state UP
+
+From l1 ping l2 via sr-sim network
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping -c 2 -W 3 -M do -s 8662 10.111.0.1"
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    0% packet loss
+    Should Contain    ${output}    2 received
