@@ -409,6 +409,7 @@ topology:
         - slot: 1
         - slot: 2
 ```
+
 ///
 
 /// tab | Topology with components
@@ -454,8 +455,10 @@ topology:
 /configure sfm 2 sfm-type m-sfm6-7/12 admin-state enable
 /configure card 2 mda 2 mda-type me6-100gb-qsfp28 admin-state enable
 ```
+
 ///
 /// tab | `show card state` output
+
 ```
 ===============================================================================
 Card State
@@ -472,8 +475,8 @@ A      cpm5                              up    up                      Active
 B      cpm5                              up    up                      Standby
 ===============================================================================
 ```
-///
 
+///
 
 #### Standard topology
 
