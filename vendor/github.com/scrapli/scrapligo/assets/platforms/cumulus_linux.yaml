@@ -1,0 +1,66 @@
+---
+platform-type: 'cumulus_linux'
+default:
+  driver-type: "network"
+  privilege-levels:
+    exec:
+      name: "exec"
+      pattern: '(?im)^\S+@\S+:\S+:\S+\$\s*$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    configuration:
+      name: "configuration"
+      pattern: '(?im)^\S+@\S+:\S+:\S+#\s*$'
+      previous-priv: "exec"
+      deescalate: "exit"
+      escalate: "sudo su"
+      escalate-auth: true
+      escalate-prompt: ": "
+  default-desired-privilege-level: "exec"
+  failed-when-contains:
+    - "Permission denied"
+    - "ERROR:"
+    - "command not found"
+  textfsm-platform: ""
+  network-on-open:
+    - operation: "acquire-priv"
+  network-on-close:
+    - operation: "acquire-priv"
+    - operation: "channel.write"
+      input: "exit"
+    - operation: "channel.return"
+variants:
+  root_login:
+    driver-type: "network"
+    privilege-levels:
+      exec:
+        name: "exec"
+        pattern: '(?im)^\S+@\S+:\S+:\S+#\s*$'
+        previous-priv:
+        deescalate:
+        escalate:
+        escalate-auth: false
+        escalate-prompt: ": "
+      configuration:
+        name: "configuration"
+        pattern: '(?im)^\S+@\S+:\S+:\S+#\s*$'
+        previous-priv: exec
+        deescalate:
+        escalate:
+        escalate-auth: false
+        escalate-prompt:
+    default-desired-privilege-level: "exec"
+    failed-when-contains:
+      - "Permission denied"
+      - "ERROR:"
+    textfsm-platform: ""
+    network-on-open:
+      - operation: "acquire-priv"
+    network-on-close:
+      - operation: "acquire-priv"
+      - operation: "channel.write"
+        input: "exit"
+      - operation: "channel.return"

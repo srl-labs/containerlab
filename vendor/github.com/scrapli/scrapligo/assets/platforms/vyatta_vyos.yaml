@@ -1,0 +1,39 @@
+---
+platform-type: 'vyatta_vyos'
+default:
+  driver-type: 'network'
+  privilege-levels:
+    exec:
+      name: "exec"
+      pattern: '(?im)^.*@\S+~\$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    configuration:
+      name: 'configuration'
+      pattern: '(?im)^.*@\S+#'
+      not-contains:
+      previous-priv: 'exec'
+      deescalate: 'exit'
+      escalate: 'configure'
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: 'exec'
+  failed-when-contains:
+    - 'Invalid command'
+    - 'is not valid'
+    - 'Set failed'
+  textfsm-platform: 'vyatta_vyos' # ignored in go because no ntc-templates
+  network-on-open:
+    - operation: 'acquire-priv' # targets default desired priv by default
+    - operation: 'driver.send-command'
+      command: 'terminal width 512'
+    - operation: 'driver.send-command'
+      command: 'terminal length 0'
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'exit'
+    - operation: 'channel.return'

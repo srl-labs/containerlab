@@ -1,0 +1,39 @@
+---
+platform-type: 'nokia_srl'
+default:
+  driver-type: "network"
+  privilege-levels:
+    exec:
+      name: "exec"
+      # https://regex101.com/r/PGLSJJ/1
+      pattern: '(?im)^--{(\s\[[\w\s]+\]){0,5}[\+\*\s]{1,}running\s}--\[.+?\]--\s*\n[abcd]:\S+#\s*$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    configuration:
+      name: "configuration"
+      # https://regex101.com/r/JsaUZy/1
+      pattern: '(?im)^--{(\s\[[\w\s]+\]){0,5}[\+\*\!\s]{1,}candidate[\-\w\s]+}--\[.+?\]--\s*\n[abcd]:\S+#\s*$'
+      previous-priv: "exec"
+      deescalate: "discard now"
+      escalate: "enter candidate private"
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: "exec"
+  failed-when-contains:
+    - "Error:"
+    - "error:" # wildcard catch for errors like `Validation error:`, `Parsing error:`
+  textfsm-platform: "" # ignored in go because no ntc-templates
+  network-on-open:
+    - operation: "acquire-priv" # targets default desired priv by default
+    - operation: "driver.send-command"
+      command: "environment cli-engine type basic"
+    - operation: "driver.send-command"
+      command: "environment complete-on-space false"
+  network-on-close:
+    - operation: "acquire-priv"
+    - operation: "channel.write"
+      input: "quit"
+    - operation: "channel.return"

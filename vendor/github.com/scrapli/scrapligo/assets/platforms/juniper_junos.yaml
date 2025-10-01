@@ -1,0 +1,75 @@
+---
+platform-type: 'juniper_junos'
+default:
+  driver-type: 'network'
+  privilege-levels:
+    exec:
+      name: 'exec'
+      pattern: '(?im)^({\w+:\d}\n){0,1}[\w\-@()/:\.]{1,63}>\s?$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    configuration:
+      name: 'configuration'
+      pattern: '(?im)^({\w+:\d}\[edit\]\n){0,1}[\w\-@()/:\.]{1,63}#\s?$'
+      previous-priv: 'exec'
+      deescalate: 'exit configuration-mode'
+      escalate: 'configure'
+      escalate-auth: false
+      escalate-prompt:
+    configuration-exclusive:
+      name: 'configuration-exclusive'
+      pattern: '(?im)^({\w+:\d}\[edit\]\n){0,1}[\w\-@()/:\.]{1,63}#\s?$'
+      previous-priv: 'exec'
+      deescalate: 'exit configuration-mode'
+      escalate: 'configure exclusive'
+      escalate-auth: false
+      escalate-prompt:
+    configuration-private:
+      name: 'configuration-private'
+      pattern: '(?im)^({\w+:\d}\[edit\]\n){0,1}[\w\-@()/:\.]{1,63}#\s?$'
+      previous-priv: 'exec'
+      deescalate: 'exit configuration-mode'
+      escalate: 'configure private'
+      escalate-auth: false
+      escalate-prompt:
+    shell:
+      name: 'shell'
+      pattern: '(?im)^.*[%$]\s?$'
+      not-contains:
+        - "root"
+      previous-priv: 'exec'
+      deescalate: 'exit'
+      escalate: 'start shell'
+      escalate-auth: false
+      escalate-prompt:
+    root-shell:
+      name: 'root-shell'
+      pattern: '(?im)^.*root@[[:ascii:]]*?:?[[:ascii:]]*?[%#]\s?$'
+      previous-priv: 'exec'
+      deescalate: 'exit'
+      escalate: 'start shell user root'
+      escalate-auth: true
+      escalate-prompt: '(?im)^[pP]assword:\s?$'
+  default-desired-privilege-level: 'exec'
+  failed-when-contains:
+    - 'is ambiguous'
+    - 'No valid completions'
+    - 'unknown command'
+    - 'syntax error'
+  textfsm-platform: 'juniper_junos' # ignored in go because no ntc-templates
+  network-on-open:
+    - operation: 'acquire-priv' # targets default desired priv by default
+    - operation: 'driver.send-command'
+      command: 'set cli screen-width 511'
+    - operation: 'driver.send-command'
+      command: 'set cli screen-length 0'
+    - operation: 'driver.send-command'
+      command: 'set cli complete-on-space off'
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'exit'
+    - operation: 'channel.return'

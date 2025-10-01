@@ -1,0 +1,86 @@
+---
+# platform-type is the "name" or "type" of the platform -- it should match the name of the yaml file
+# if it is an embedded asset, it should be of the format vendor_os, i.e. cisco_iosxe, or nokia_srl.
+platform-type: 'scrapligo_example'
+default:
+  # driver-type can be either "generic" or "network" for the corresponding scrapli driver base class
+  driver-type: 'network'
+
+  # privilege-levels is a map/dict of privilege level name : privilege level data
+  privilege-levels:
+    example:
+      name: 'example'
+      # pattern represents the regex that is used to map a prompt to a privilege level
+      pattern: '(?im)^[\w.\-@/:]{1,63}\([\w.\-@/:+]{0,32}\)#$'
+      # not contains is a list of strings that if seen in the prompt means we are *not* in this prompt
+      # level -- this is useful to make regexs simpler and to not need lookarounds (because cant in go
+      # with std library anyway)
+      not-contains:
+        - 'tcl)'
+      # the "previous" or "lower" privilege level that you normally would deescalate to from this
+      # priv
+      previous-priv: 'privilege-exec'
+      # the command used to deescalate from this privilege level to the "previous-priv"
+      deescalate: 'end'
+      # the command used to escalate *into* this privilege level (from the previous-priv)
+      escalate: 'configure terminal'
+      # true/false there is escalation authentication (like enable secret)
+      escalate-auth: false
+      # option regex pattern to use to find the escalation prompt
+      escalate-prompt:
+
+  # default desired priv is the "main" privilege level scrapli operates in -- the one you would
+  # normally send "commands" (not configs) in, in cisco/eos land that is privilege-exec
+  default-desired-privilege-level: 'privilege-exec'
+
+  # a list of strings that if seen in output indicates the command/config failed
+  failed-when-contains:
+    - '% Ambiguous command'
+    - '% Incomplete command'
+    - '% Invalid input detected'
+    - '% Unknown command'
+
+  # textfsm-platform - only applicable in scrapli python, maps this platform to the ntc-templates
+  # platform string for ntc-templates/textfsm integration
+  textfsm-platform: 'cisco_iosxe'
+
+  # list of operations to run in the "on-open" phase of connection establishment. this can include as
+  # many operations as you'd like, or of course you could just do this in code manually yourself. the
+  # idea here is to disable paging and any fancy prompt things before doing "real" scrapli work.
+  # the available operation types are:
+  #   channel.write:
+  #     description:
+  #       writes data to the channel at whatever privilege level you are currently in. does not send
+  #       a return/new-line, just writes what you ask it to
+  #     args:
+  #       input: the input to write
+  #   channel.return:
+  #     description: sends a return, thats it
+  #   acquire-priv:
+  #     description: acquire a privilege level
+  #     args:
+  #       target: the target privilege level name, if not provided will be default desired privilege
+  #   driver.send-command:
+  #     description: send a command like "normal"
+  #     args:
+  #       command: the command to send
+  network-on-open:
+    - operation: 'acquire-priv' # targets default desired priv by default
+    - operation: 'driver.send-command'
+      command: 'terminal width 512'
+    - operation: 'driver.send-command'
+      command: 'terminal length 0'
+
+  # list of any operations to run in the "on-close" phase of things. typically this will just be
+  # something like "exit" and a return to terminate the session
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'exit'
+    - operation: 'channel.return'
+
+  # options is a list of options that contain a option name and a value, see platform/options.go
+  # for the available options
+  options:
+    - option: port
+      value: 2022

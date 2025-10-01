@@ -1,0 +1,57 @@
+---
+platform-type: 'cisco_iosxr'
+default:
+  driver-type: 'network'
+  privilege-levels:
+    exec:
+      name: 'exec'
+      pattern: '(?im)^[\w.\-@/:]{1,63}#\s?$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    configuration:
+      name: 'configuration'
+      pattern: '(?im)^[\w.\-@/:]{1,63}\(config[\+\w.\-@/:]{0,32}\)#\s?$'
+      previous-priv: 'exec'
+      deescalate: 'end'
+      escalate: 'configure terminal'
+      escalate-auth: false
+      escalate-prompt:
+    configuration-exclusive:
+      name: 'configuration-exclusive'
+      pattern: '(?im)^[\w.\-@/:]{1,63}\(config[\w.\-@/:]{0,32}\)#\s?$'
+      previous-priv: 'exec'
+      deescalate: 'end'
+      escalate: 'configure exclusive'
+      escalate-auth: false
+      escalate-prompt:
+    run:
+      name: 'run'
+      # match [xr-vm_node0_RP0_CPU0:~]$ (Cisco NC55XX)
+      # match [node0_RP0_CPU0:~]$ (Cisco 8000)
+      pattern: '(?im)^\[[^]]+\]\$\s*$'
+      previous-priv: 'exec'
+      deescalate: 'logout'
+      escalate: 'run'
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: 'exec'
+  failed-when-contains:
+    - '% Ambiguous command'
+    - '% Incomplete command'
+    - '% Invalid input detected'
+    - '% Unknown command'
+  textfsm-platform: 'cisco_iosxr' # ignored in go because no ntc-templates
+  network-on-open:
+    - operation: 'acquire-priv' # targets default desired priv by default
+    - operation: 'driver.send-command'
+      command: 'terminal width 512'
+    - operation: 'driver.send-command'
+      command: 'terminal length 0'
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'exit'
+    - operation: 'channel.return'

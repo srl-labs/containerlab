@@ -1,0 +1,55 @@
+---
+platform-type: 'ipinfusion_ocnos'
+default:
+  driver-type: 'network'
+  privilege-levels:
+    linux:
+      name: 'linux'
+      pattern: '(?im)^\S+@\S+\:\S+[\#\?]\s*$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    exec:
+      name: 'exec'
+      pattern: '(?im)^[\w.\-@/:]{1,63}>\s*$'
+      previous-priv: "linux"
+      deescalate: "logout"
+      escalate: "cmlsh"
+      escalate-auth: false
+      escalate-prompt:
+    privilege-exec:
+      name: 'privilege-exec'
+      pattern: '(?im)^[\w.\-@/:]{1,63}#\s*$'
+      previous-priv: "exec"
+      deescalate: "disable"
+      escalate: "enable"
+      escalate-auth: false
+      escalate-prompt:
+    configuration:
+      name: 'configuration'
+      pattern: '(?im)^[\w.\-@/:]{1,63}\([\w.\-@/:+]{0,32}\)#\s*$'
+      previous-priv: 'privilege-exec'
+      deescalate: 'end'
+      escalate: 'configure terminal'
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: 'exec'
+  failed-when-contains:
+    - "% Ambiguous command"
+    - "% Incomplete command"
+    - "% Invalid input detected"
+    - "% Unknown command"
+  textfsm-platform: '' # ignored in go because no ntc-templates
+  network-on-open:
+    - operation: 'acquire-priv' # targets default desired priv by default
+    - operation: 'driver.send-command'
+      command: 'terminal length 0'
+    - operation: 'driver.send-command'
+      command: 'terminal width 511'
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'exit'
+    - operation: 'channel.return'

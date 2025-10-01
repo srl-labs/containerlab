@@ -1,0 +1,29 @@
+---
+platform-type: 'nokia_sros_classic'
+default:
+  driver-type: 'network'
+  privilege-levels:
+    configuration:
+      name: 'configuration'
+      pattern: '(?im)^\*?[abcd]:\S+#\s*$'
+      previous-priv: ''
+      deescalate: ''
+      escalate: ''
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: 'configuration'
+  failed-when-contains:
+    - "CRITICAL:"
+    - "MAJOR:"
+    - "MINOR:"
+    - "Error:"
+  textfsm-platform: '' # ignored in go because no ntc-templates
+  network-on-open:
+    - operation: 'acquire-priv' # targets default desired priv by default
+    - operation: 'driver.send-command'
+      command: 'environment no more'
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'logout'
+    - operation: 'channel.return'

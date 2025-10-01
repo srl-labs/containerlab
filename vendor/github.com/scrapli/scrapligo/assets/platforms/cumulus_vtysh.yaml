@@ -1,0 +1,43 @@
+---
+platform-type: 'cumulus_vtysh'
+default:
+  driver-type: "network"
+  privilege-levels:
+    linux:
+      name: "linux"
+      pattern: '(?im)^\S+@\S+:\S+:\S+[\$|#]\s*$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    exec:
+      name: "exec"
+      pattern: '(?im)^[\w\.\-]+#\s*$'
+      previous-priv: "linux"
+      deescalate: "exit"
+      escalate: "vtysh"
+      escalate-auth: false
+      escalate-prompt:
+    configuration:
+      name: "configuration"
+      pattern: '(?im)^[\w\.\-]+\(config\)#\s*$'
+      previous-priv: "exec"
+      deescalate: "exit"
+      escalate: "configure terminal"
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: "exec"
+  failed-when-contains:
+    - "Permission denied"
+    - "ERROR:"
+    - "% Unknown command"
+    - "% Command incomplete"
+  textfsm-platform: ""
+  network-on-open:
+    - operation: "acquire-priv"
+  network-on-close:
+    - operation: "acquire-priv"
+    - operation: "channel.write"
+      input: "exit"
+    - operation: "channel.return"

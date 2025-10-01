@@ -1,0 +1,38 @@
+---
+platform-type: 'hp_comware'
+default:
+  driver-type: 'network'
+  privilege-levels:
+    user-view:
+      name: 'user-view'
+      pattern: '(?im)^<[\w.\-@/:]{1,63}>$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    system-view:
+      name: 'system-view'
+      pattern: '(?im)^[[\w.\-@/:]{1,63}]$'
+      previous-priv: 'user-view'
+      deescalate: 'quit'
+      escalate: 'system-view'
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: 'user-view'
+  failed-when-contains:
+    - '% Unrecognized command'
+    - '% Ambiguous command'
+    - '% Wrong parameter'
+    - "% Incomplete command"
+    - "% Too many parameters"
+  textfsm-platform: 'hp_comware' # ignored in go because no ntc-templates
+  network-on-open:
+    - operation: 'acquire-priv' # targets default desired priv by default
+    - operation: 'driver.send-command'
+      command: 'screen-length disable'
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'quit'
+    - operation: 'channel.return'

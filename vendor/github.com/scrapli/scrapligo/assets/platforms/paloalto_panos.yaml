@@ -1,0 +1,40 @@
+---
+platform-type: 'paloalto_panos'
+default:
+  driver-type: 'network'
+  privilege-levels:
+    exec:
+      name: 'exec'
+      pattern: '(?im)^[\w\._-]+@[\w\.\(\)_-]+>\s?'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    configuration:
+      name: 'configuration'
+      pattern: '(?im)^[\w\._-]+@[\w\.\(\)_-]+#\s?$'
+      previous-priv: 'exec'
+      deescalate: 'exit'
+      escalate: 'configure'
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: 'exec'
+  failed-when-contains:
+    - "Unknown command:"
+    - "Invalid Syntax."
+    - "Validation Error:"
+  textfsm-platform: '' # ignored in go because no ntc-templates
+  network-on-open:
+    - operation: 'acquire-priv' # targets default desired priv by default
+    - operation: 'driver.send-command'
+      command: 'set cli scripting-mode on'
+    - operation: 'driver.send-command'
+      command: 'set cli pager off'
+    - operation: 'driver.send-command'
+      command: 'environment command-completion space false'
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'exit'
+    - operation: 'channel.return'

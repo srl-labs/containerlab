@@ -1,0 +1,49 @@
+---
+platform-type: 'nokia_sros'
+default:
+  driver-type: 'network'
+  privilege-levels:
+    exec:
+      name: 'exec'
+      pattern: '(?im)^\[.*\]\n[abcd]:\S+@\S+#\s?$'
+      previous-priv:
+      deescalate:
+      escalate:
+      escalate-auth: false
+      escalate-prompt:
+    # configuration privilege level maps to the exclusive config mode on SR OS
+    configuration:
+      name: 'configuration'
+      pattern: '(?im)^\*?\(ex\)\[/?\]\n[abcd]:\S+@\S+#\s?$'
+      previous-priv: 'exec'
+      deescalate: 'quit-config'
+      escalate: 'edit-config exclusive'
+      escalate-auth: false
+      escalate-prompt:
+    configuration-with-path:
+      name: 'configuration-with-path'
+      pattern: '(?im)^\*?\(ex\)\[\S{2,}.+\]\n[abcd]:\S+@\S+#\s?$'
+      previous-priv: 'exec'
+      deescalate: 'exit all'
+      escalate: ''
+      escalate-auth: false
+      escalate-prompt:
+  default-desired-privilege-level: 'exec'
+  failed-when-contains:
+    - "CRITICAL:"
+    - "MAJOR:"
+    - "MINOR:"
+  textfsm-platform: '' # ignored in go because no ntc-templates
+  network-on-open:
+    - operation: 'acquire-priv' # targets default desired priv by default
+    - operation: 'driver.send-command'
+      command: 'environment console width 512'
+    - operation: 'driver.send-command'
+      command: 'environment more false'
+    - operation: 'driver.send-command'
+      command: 'environment command-completion space false'
+  network-on-close:
+    - operation: 'acquire-priv'
+    - operation: 'channel.write'
+      input: 'logout'
+    - operation: 'channel.return'
