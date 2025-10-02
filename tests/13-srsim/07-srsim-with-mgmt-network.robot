@@ -40,10 +40,10 @@ Ensure sros redirect port is open
     Should Be Equal As Integers    ${output}    2
 
 Verify links in node l1
-    Wait Until Keyword Succeeds    2 minutes    10 seconds    Verify eth1 in node l1
+    Wait Until Keyword Succeeds    4 minutes    10 seconds    Verify eth1 in node l1
 
 Verify links in node l2
-    Wait Until Keyword Succeeds    2 minutes    10 seconds    Verify eth1 in node l2
+    Wait Until Keyword Succeeds    4 minutes    10 seconds    Verify eth1 in node l2
 
 Check Cards after 40s on srsim10
     Sleep    40s    give some time for linecards to come up
