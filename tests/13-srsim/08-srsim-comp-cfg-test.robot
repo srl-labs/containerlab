@@ -108,7 +108,7 @@ Check secondary SR-14s inspect returns IPv4 mgmt IP correctly
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    172.20.20
-    ${sr14s-2-ipv4} Set Variable    ${output}
+    Set Suite Variable    ${sr14s-2-ipv4}    ${output}
 
 Check secondary SR-14s slot 1 actually owns mgmt IPv4 addr
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -131,7 +131,7 @@ Check secondary SR-14s inspect returns IPv6 mgmt IP correctly
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    3fff:172:20:20
-    ${sr14s-2-ipv6} Set Variable    ${output}
+    Set Suite Variable    ${sr14s-2-ipv6}    ${output}
 
 Check secondary SR-14s slot 1 actually owns mgmt IPv6 addr
     ${rc}    ${output} =    Run And Return Rc And Output
