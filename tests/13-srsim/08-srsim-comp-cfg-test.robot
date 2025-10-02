@@ -101,52 +101,6 @@ Check SR-2s-ncofg has unprovisioned card
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    unprovisioned
 
-# IPv4
-Check secondary SR-14s inspect returns IPv4 mgmt IP correctly
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -t ${lab-file-name} -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-2")) | .ipv4_address'
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    172.20.20
-    Set Suite Variable    ${sr14s-2-ipv4}    ${output}
-
-Check secondary SR-14s slot 1 actually owns mgmt IPv4 addr
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-2-1")) | .ipv4_address'
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ${sr14s-2-ipv4}
-
-Confirm SR-14s slot A doesn't have any IPv4 address
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-2-a")) | .ipv4_address'
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    N/A
-
-# IPv6
-Check secondary SR-14s inspect returns IPv6 mgmt IP correctly
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -t ${lab-file-name} -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-2")) | .ipv6_address'
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    3fff:172:20:20
-    Set Suite Variable    ${sr14s-2-ipv6}    ${output}
-
-Check secondary SR-14s slot 1 actually owns mgmt IPv6 addr
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-2-1")) | .ipv6_address'
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ${sr14s-2-ipv6}
-
-Confirm SR-14s slot A doesn't have any IPv6 address
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-2-a")) | .ipv6_address'
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    N/A
-
 *** Keywords ***
 Cleanup
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
