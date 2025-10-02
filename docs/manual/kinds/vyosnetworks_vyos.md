@@ -132,7 +132,7 @@ You may specify a customer startup configuration using the `startup-config` prop
 name: vyos_lab
 topology:
   nodes:
-    ceos:
+    vyos:
       kind: -{{ kind_code_name }}-
       startup-config: myconfig.conf
 ```
