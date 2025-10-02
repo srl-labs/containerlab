@@ -267,8 +267,6 @@ Users can simplify the topology file with distributed SR-SIM nodes by using the 
 
 Each card in the chassis can have it's card type, SFM, XIOM and MDA configured either using the relevant directives, or via environment variables.
 
-When using the `components` structure in the node configuration for a distributed node, containerlab will also generate the  configuration for the installed components in the chassis, as well as relevant power supply configuration[^5] to ensure the installed components come up.
-
 /// tab | Distributed grouped SR-SIM
 
 ```yaml
@@ -384,14 +382,14 @@ topology:
 
 When a distributed SR-SIM node is defined using `components`, we need to take into account the following:
 
-1. Individual containers will be attached to the namespace of the 1st element of the `components` list: CPM-A in the above examples.
+1. Component order get sorted[^5] upon deployment of the lab. Individual containers will be attached to the namespace of the 1st element of the sorted `components` list: CPM-1 in the above examples.
 2. When changing a MDA or card type from its default value, the configuration for card, SFM and MDA must be also defined.
 3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
 4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom`, `sfm` and `mda` fields.
 
 ##### Configuration for components
 
-When using the `components` structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^5] to ensure the installed components come up without requiring a user to manually provide the configuration.
+When using the `components` structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^6] to ensure the installed components come up without requiring a user to manually provide the configuration.
 
 /// details | Disabling generated SR OS configuration for `components`
     type: tip
@@ -597,7 +595,7 @@ topology:
 
 ## Node configuration
 
-Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, and gNMI are provisioned[^6].
+Nokia SR OS nodes come up with a default configuration where only the management interfaces such as NETCONF, SNMP, and gNMI are provisioned[^7].
 
 ### User-defined config
 
@@ -714,13 +712,13 @@ Some common BOF options can also be controlled using environmental variables as 
 
 ### SSH keys
 
-Containerlab supports SSH key injection into the Nokia SR OS nodes prior to deployment. First containerlab retrieves all public keys from `~/.ssh`[^7] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
+Containerlab supports SSH key injection into the Nokia SR OS nodes prior to deployment. First containerlab retrieves all public keys from `~/.ssh`[^8] directory and `~/.ssh/authorized_keys` file, then it retrieves public keys from the ssh agent if one is running.
 
-Next, it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^8] at startup. This will enable key-based authentication when you connect to the node.
+Next, it will filter out public keys that are not of RSA/ECDSA type. The remaining valid public keys will be configured for the admin user of the Nokia SR OS node using key IDs from 32 downwards[^9] at startup. This will enable key-based authentication when you connect to the node.
 
 ## Packet Capture
 
-Currently, a packet capture on the veth interfaces of the `-{{ kind_display_name }}-` will only display traffic at the ingress direction[^9]. In order to capture traffic bidirectionally, a user needs to create a [mirror service](https://documentation.nokia.com/sr/25-7/7750-sr/books/oam-diagnostics/mirror-services.html) in the SR OS configuration. A simple example topology using [bridges in container namespace](bridge.md#bridges-in-container-namespace) and mirror configuration is provided below for convenience.
+Currently, a packet capture on the veth interfaces of the `-{{ kind_display_name }}-` will only display traffic at the ingress direction[^10]. In order to capture traffic bidirectionally, a user needs to create a [mirror service](https://documentation.nokia.com/sr/25-7/7750-sr/books/oam-diagnostics/mirror-services.html) in the SR OS configuration. A simple example topology using [bridges in container namespace](bridge.md#bridges-in-container-namespace) and mirror configuration is provided below for convenience.
 
 /// tab | Topology with mirror service
 
@@ -877,8 +875,9 @@ The following labs feature Nokia SR OS (SR-SIM) node:
 [^2]: There are some caveats to this, for instance, if the container referred by the `network-mode` directive is stopped for any reason, all the other depending containers will stop working properly.
 [^3]: If needed, switches can be created using the clab kind `bridge` or using `iproute2` commands. MTU needs to be set to 9000 at least.
 [^4]: The word SHOULD is interpreted as [RFC2129](https://datatracker.ietf.org/doc/html/rfc2119) and [RFC8174](https://datatracker.ietf.org/doc/html/rfc8174). Links will come up as long as they are attached to the same Linux namespace.
-[^5]: Power configuration is only applied for sr-1s, 1se, 2s, 2se, 7s and 14s nodes. See [sros.go](https://github.com/srl-labs/containerlab/pull/2827/files#diff-ae71218e629cf2763a2702c67297cb2ade467276acff8f39973caf1a09731d94R142-R175) for more info.
-[^6]: This is a change from the [Vrnetlab](../vrnetlab.md) based vSIM where line cards and MDAs were pre-provisioned for some cases.
-[^7]: `~` is the home directory of the user that runs containerlab.
-[^8]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
-[^9]: See Github issue [#2741](https://github.com/srl-labs/containerlab/issues/2741)
+[^5]: The sort order has numeric defined slots come first, in order of lowest value to highest, and then alphabetically named slots (CPM) come last. See the [sorting test](https://github.com/srl-labs/containerlab/pull/2834/files#diff-ae18606243948313f0fc2df17b8a4eefd16cfcbccfe15219a1ca649712494c6eR16-R24) for more info.
+[^6]: Power configuration is only applied for sr-1s, 1se, 2s, 2se, 7s and 14s nodes. See [sros.go](https://github.com/srl-labs/containerlab/pull/2827/files#diff-ae71218e629cf2763a2702c67297cb2ade467276acff8f39973caf1a09731d94R142-R175) for more info.
+[^7]: This is a change from the [Vrnetlab](../vrnetlab.md) based vSIM where line cards and MDAs were pre-provisioned for some cases.
+[^8]: `~` is the home directory of the user that runs containerlab.
+[^9]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
+[^10]: See Github issue [#2741](https://github.com/srl-labs/containerlab/issues/2741)
