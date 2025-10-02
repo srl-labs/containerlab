@@ -1565,7 +1565,7 @@ func (n *sros) GetDistMgmtIPs() (MgmtIP, error) {
 		for _, container := range containers {
 			if container.NetworkSettings.IPv4addr != "" {
 				ips.IPv4 = container.NetworkSettings.IPv4addr
-				ips.IPv6pLen = container.NetworkSettings.IPv4pLen
+				ips.IPv4pLen = container.NetworkSettings.IPv4pLen
 
 			}
 			if container.NetworkSettings.IPv6addr != "" {
