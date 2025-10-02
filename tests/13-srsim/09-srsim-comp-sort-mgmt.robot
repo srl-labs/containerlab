@@ -28,7 +28,7 @@ Wait for 45s
 # IPv4
 Check SR-14s inspect returns IPv4 mgmt IP correctly
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -t ${CURDIR}/${lab-file-name} -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s")) | .ipv4_address'
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -t ${CURDIR}/${lab-file-name} -f json | jq -r '.["${lab-name}"][] | select(.name | contains("sr14s")) | .ipv4_address'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    172.20.20
@@ -36,14 +36,14 @@ Check SR-14s inspect returns IPv4 mgmt IP correctly
 
 Check SR-14s slot 1 actually owns mgmt IPv4 addr
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-1")) | .ipv4_address'
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["${lab-name}"][] | select(.name | contains("sr14s-1")) | .ipv4_address'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    ${sr14s-ipv4}
 
 Confirm SR-14s slot A doesn't have any IPv4 address
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-a")) | .ipv4_address'
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["${lab-name}"][] | select(.name | contains("sr14s-a")) | .ipv4_address'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    N/A
@@ -51,7 +51,7 @@ Confirm SR-14s slot A doesn't have any IPv4 address
 # IPv6
 Check SR-14s inspect returns IPv6 mgmt IP correctly
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -t ${CURDIR}/${lab-file-name} -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s")) | .ipv6_address'
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -t ${CURDIR}/${lab-file-name} -f json | jq -r '.["${lab-name}"][] | select(.name | contains("sr14s")) | .ipv6_address'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    3fff:172:20:20
@@ -59,14 +59,14 @@ Check SR-14s inspect returns IPv6 mgmt IP correctly
 
 Check SR-14s slot 1 actually owns mgmt IPv6 addr
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-1")) | .ipv6_address'
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["${lab-name}"][] | select(.name | contains("sr14s-1")) | .ipv6_address'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    ${sr14s-ipv6}
 
 Confirm SR-14s slot A doesn't have any IPv6 address
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["comp-cfg-gen-test"][] | select(.name | contains("sr14s-a")) | .ipv6_address'
+    ...    sudo ${CLAB_BIN} --runtime ${runtime} ins -a -f json | jq -r '.["${lab-name}"][] | select(.name | contains("sr14s-a")) | .ipv6_address'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    N/A
