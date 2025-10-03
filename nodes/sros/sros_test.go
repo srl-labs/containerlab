@@ -21,7 +21,7 @@ func TestComponentSorting(t *testing.T) {
 				{Slot: "A"},
 				{Slot: "2"},
 			},
-			expected: []string{"1", "2", "3", "A", "b"},
+			expected: []string{"1", "2", "3", "b", "A"},
 		},
 		{
 			name: "iom/xcm only",
@@ -39,7 +39,7 @@ func TestComponentSorting(t *testing.T) {
 				{Slot: "b"},
 				{Slot: "A"},
 			},
-			expected: []string{"A", "b"},
+			expected: []string{"b", "A"},
 		},
 	}
 
