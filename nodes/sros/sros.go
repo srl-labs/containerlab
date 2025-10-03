@@ -636,7 +636,7 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	n.renameDone = true
 
 	// adjust also the mgmt IP addresses of the general node
-	ips, err := n.GetDistMgmtIPs()
+	ips, err := n.distNodeMgmtIPs()
 	if err != nil {
 		return err
 	}
@@ -1181,7 +1181,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 	// Forge the IP address to be the actual IP of mgmt
 	// because the CPM A might not own the netns & mgmt IP
 	if len(n.Cfg.Components) > 0 {
-		ips, err := n.GetDistMgmtIPs()
+		ips, err := n.distNodeMgmtIPs()
 		if err == nil {
 			if ips.IPv4 != "" {
 				cnts[0].NetworkSettings.IPv4addr = ips.IPv4
@@ -1525,6 +1525,7 @@ func CheckPortWithRetry(
 	return false, lastErr
 }
 
+// MgmtIP represents the management IPv4/v6 addresses of a node.
 type MgmtIP struct {
 	IPv4     string
 	IPv4pLen int
@@ -1532,10 +1533,10 @@ type MgmtIP struct {
 	IPv6pLen int
 }
 
-// MgmtIPAddr returns both ipv4 and ipv6 management IP address of a
-// distributed node defined via components:.
+// distNodeMgmtIPs returns both ipv4 and ipv6 management IP address of a
+// distributed node defined via components.
 // It returns an error if neither is set in the node config.
-func (n *sros) GetDistMgmtIPs() (MgmtIP, error) {
+func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
 	ips := MgmtIP{}
 
 	var components []*clabtypes.Component
@@ -1583,7 +1584,7 @@ func (n *sros) GetDistMgmtIPs() (MgmtIP, error) {
 	return ips, nil
 }
 
-// custom overrie for hostfile entry to write basename when using component nodes.
+// custom override for hosts file entry to write basename when using component nodes.
 func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error) {
 	result, err := n.DefaultNode.GetHostsEntries(ctx)
 	if err != nil {
@@ -1591,7 +1592,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 	}
 
 	if n.isDistributedBaseNode() {
-		ips, err := n.GetDistMgmtIPs()
+		ips, err := n.distNodeMgmtIPs()
 		if err != nil {
 			return clabtypes.HostEntries{}, err
 		}
@@ -1627,7 +1628,7 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	}
 
 	if !n.isStandaloneNode() {
-		ips, err := n.GetDistMgmtIPs()
+		ips, err := n.distNodeMgmtIPs()
 		if err != nil {
 			return "", err
 		}
