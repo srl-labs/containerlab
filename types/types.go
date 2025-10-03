@@ -159,6 +159,11 @@ type NodeConfig struct {
 	User             string            `json:"user,omitempty"`
 	Entrypoint       string            `json:"entrypoint,omitempty"`
 	Cmd              string            `json:"cmd,omitempty"`
+	// Velocloud-specific stuff. Probably need to make this more generic.
+	VeloVcoFqdn      string `json:"vco-fqdn,omitempty"`
+	VeloApiToken     string `json:"api-token,omitempty"`
+	VeloEnterpriseId int    `json:"enterprise-id"`
+	VeloEdgeId       int    `json:"edge-id"`
 	// Exec is a list of commands to execute inside the container backing the node.
 	Exec []string          `json:"exec,omitempty"`
 	Env  map[string]string `json:"env,omitempty"`
