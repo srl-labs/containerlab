@@ -382,7 +382,7 @@ topology:
 
 When a distributed SR-SIM node is defined using `components`, we need to take into account the following:
 
-1. Component order get sorted[^5] upon deployment of the lab. Individual containers will be attached to the namespace of the 1st element of the sorted `components` list: CPM-1 in the above examples.
+1. The component order gets sorted[^5] upon deployment of the lab. Individual containers will be attached to the namespace of the 1st element in the sorted `components` list: CPM-1 in the above examples.
 2. When changing a MDA or card type from its default value, the configuration for card, SFM and MDA must be also defined.
 3. Links can be added referring to the node name. The same [interface naming](#interface-naming) convention holds for all SR-SIM nodes.
 4. Environment variable based configuration on per-component, or node-level will override the configuration set in `type`, `xiom`, `sfm` and `mda` fields.
