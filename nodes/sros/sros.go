@@ -16,10 +16,12 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
+	"unicode"
 
 	"github.com/beevik/etree"
 	"github.com/brunoga/deep"
@@ -180,6 +182,11 @@ type sros struct {
 	// rootComponents stores the OG components from root node for dist setups
 	// ..allows children of the distributed root node to access root components (ie. for cfg gen)
 	rootComponents []*clabtypes.Component
+	// store the longname with cpm suffix
+	cpmContainerName string
+	// for component nodes, store base nodes
+	baseShortName string
+	baseLongName  string
 
 	preDeployParams *clabnodes.PreDeployParams
 }
@@ -316,6 +323,7 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		// generate the certificate
 		if *n.Cfg.Certificate.Issue {
+			n.Cfg.Certificate.SANs = append(n.Cfg.Certificate.SANs, n.baseShortName, n.baseLongName)
 			certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 			if err != nil {
 				return err
@@ -467,10 +475,39 @@ func (n *sros) DeleteNetnsSymlink() error {
 	return n.DefaultNode.DeleteNetnsSymlink()
 }
 
+// sortComponents ensure components are in order of
+// LCs first, then CPMs (cpm b comes first if present).
+func (n *sros) sortComponents() {
+	slices.SortFunc(n.Cfg.Components, func(a, b *clabtypes.Component) int {
+		s1 := strings.ToUpper(strings.TrimSpace(a.Slot))
+		s2 := strings.ToUpper(strings.TrimSpace(b.Slot))
+
+		p1 := n.getSortOrder(s1)
+		p2 := n.getSortOrder(s2)
+
+		return p1 - p2
+	})
+}
+
+func (n *sros) getSortOrder(slot string) int {
+	r := rune(slot[0])
+	if unicode.IsLetter(r) {
+		// for letters, B before A, letters after numbers
+		// B=66 -> 34
+		// A=65 -> 35
+		return 100 - int(r)
+	} else {
+		num, _ := strconv.Atoi(slot)
+		return num // 1, 2, 3... smaller than CPM slots, so will come first
+	}
+}
+
 func (n *sros) setupComponentNodes() error {
 	if !n.isDistributedBaseNode() {
 		return nil
 	}
+
+	n.sortComponents()
 
 	// Registry, because it is not a package Var
 	nr := clabnodes.NewNodeRegistry()
@@ -567,6 +604,9 @@ func (n *sros) setupComponentNodes() error {
 		// store root components for cpms, for config gen
 		if srosNode, ok := componentNode.(*sros); ok {
 			srosNode.rootComponents = n.Cfg.Components
+			// store base node name
+			srosNode.baseShortName = n.Cfg.ShortName
+			srosNode.baseLongName = n.Cfg.LongName
 		}
 
 		// store the node in the componentNodes
@@ -591,25 +631,18 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 	if err != nil {
 		return err
 	}
-
-	// adjust general node to be represented as the cpm node
-	n.Cfg.ShortName = n.calcComponentName(n.Cfg.ShortName, cpmSlot)
-	n.Cfg.LongName = n.calcComponentName(n.Cfg.LongName, cpmSlot)
-	n.Cfg.Fqdn = n.calcComponentFqdn(cpmSlot)
+	// store the CPM container name
+	n.cpmContainerName = n.calcComponentName(n.Cfg.LongName, cpmSlot)
 	n.renameDone = true
 
-	cpmNode, err := n.cpmNode()
+	// adjust also the mgmt IP addresses of the general node
+	ips, err := n.distNodeMgmtIPs()
 	if err != nil {
 		return err
 	}
 
-	// adjust also the mgmt IP addresses of the general node
-	contList, err := cpmNode.GetContainers(ctx)
-	if err != nil {
-		return err
-	}
-	n.Cfg.MgmtIPv4Address = contList[0].GetContainerIPv4()
-	n.Cfg.MgmtIPv6Address = contList[0].GetContainerIPv6()
+	n.Cfg.MgmtIPv4Address = ips.IPv4
+	n.Cfg.MgmtIPv6Address = ips.IPv6
 
 	return nil
 }
@@ -1145,6 +1178,22 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 			clabnodes.ErrContainersNotFound)
 	}
 
+	// Forge the IP address to be the actual IP of mgmt
+	// because the CPM A might not own the netns & mgmt IP
+	if len(n.Cfg.Components) > 0 {
+		ips, err := n.distNodeMgmtIPs()
+		if err == nil {
+			if ips.IPv4 != "" {
+				cnts[0].NetworkSettings.IPv4addr = ips.IPv4
+				cnts[0].NetworkSettings.IPv4pLen = ips.IPv4pLen
+			}
+			if ips.IPv6 != "" {
+				cnts[0].NetworkSettings.IPv6addr = ips.IPv6
+				cnts[0].NetworkSettings.IPv6pLen = ips.IPv6pLen
+			}
+		}
+	}
+
 	return cnts, err
 }
 
@@ -1152,7 +1201,12 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
 func (n *sros) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node) error {
-	hosts, err := n.Runtime.GetHostsPath(ctx, n.Cfg.LongName)
+	containerName := n.Cfg.LongName
+	if n.isDistributedBaseNode() && n.cpmContainerName != "" {
+		containerName = n.cpmContainerName
+	}
+
+	hosts, err := n.Runtime.GetHostsPath(ctx, containerName)
 	if err != nil {
 		log.Warn("Unable to locate SR OS node /etc/hosts file", "node", n.Cfg.ShortName, "err", err)
 		return err
@@ -1471,6 +1525,98 @@ func CheckPortWithRetry(
 	return false, lastErr
 }
 
+// MgmtIP represents the management IPv4/v6 addresses of a node.
+type MgmtIP struct {
+	IPv4     string
+	IPv4pLen int
+	IPv6     string
+	IPv6pLen int
+}
+
+// distNodeMgmtIPs returns both ipv4 and ipv6 management IP address of a
+// distributed node defined via components.
+// It returns an error if neither is set in the node config.
+func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
+	ips := MgmtIP{}
+
+	var components []*clabtypes.Component
+
+	if n.isDistributedBaseNode() {
+		components = n.Cfg.Components
+	} else {
+		components = n.rootComponents
+	}
+
+	// for distributed nodes, get the IP from the
+	// 0th component container
+	if len(components) > 0 {
+		c := components[0]
+		slot := c.Slot
+
+		componentName := n.Cfg.LongName + "-" + slot
+
+		containers, err := n.Runtime.ListContainers(
+			context.Background(),
+			[]*clabtypes.GenericFilter{
+				{
+					FilterType: "name",
+					Match:      componentName,
+				},
+			},
+		)
+		if err != nil {
+			return MgmtIP{}, fmt.Errorf("unable to get container %q: %v", componentName, err)
+		}
+
+		for _, container := range containers {
+			if container.NetworkSettings.IPv4addr != "" {
+				ips.IPv4 = container.NetworkSettings.IPv4addr
+				ips.IPv4pLen = container.NetworkSettings.IPv4pLen
+
+			}
+			if container.NetworkSettings.IPv6addr != "" {
+				ips.IPv6 = container.NetworkSettings.IPv6addr
+				ips.IPv6pLen = container.NetworkSettings.IPv6pLen
+			}
+		}
+	}
+
+	return ips, nil
+}
+
+// custom override for hosts file entry to write basename when using component nodes.
+func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error) {
+	result, err := n.DefaultNode.GetHostsEntries(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if n.isDistributedBaseNode() {
+		ips, err := n.distNodeMgmtIPs()
+		if err != nil {
+			return clabtypes.HostEntries{}, err
+		}
+
+		if ips.IPv4 != "" { // v4
+			result = append(result, clabtypes.NewHostEntry(
+				ips.IPv4,
+				n.Cfg.LongName,
+				clabtypes.IpVersionV4,
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+		}
+
+		if ips.IPv6 != "" {
+			result = append(result, clabtypes.NewHostEntry(
+				ips.IPv6,
+				n.Cfg.LongName,
+				clabtypes.IpVersionV6,
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+		}
+	}
+
+	return result, nil
+}
+
 // MgmtIPAddr returns ipv4 or ipv6 management IP address of the node.
 // It returns an error if neither is set in the node config.
 func (n *sros) MgmtIPAddr() (string, error) {
@@ -1480,6 +1626,21 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	case n.Cfg.MgmtIPv4Address != "":
 		return n.Cfg.MgmtIPv4Address, nil
 	}
+
+	if !n.isStandaloneNode() {
+		ips, err := n.distNodeMgmtIPs()
+		if err != nil {
+			return "", err
+		}
+
+		switch {
+		case ips.IPv6 != "":
+			return ips.IPv6, nil
+		case ips.IPv4 != "":
+			return ips.IPv4, nil
+		}
+	}
+
 	return n.Cfg.LongName, fmt.Errorf(
 		"no management IP address (IPv4 or IPv6) configured for node %q",
 		n.Cfg.LongName,
@@ -1584,4 +1745,12 @@ func (n *sros) generateComponentConfig() string {
 	config.WriteString(n.generatePowerConfig())
 
 	return config.String()
+}
+
+// override to fetch CPM to avoid renaming the base node to CPM A.
+func (n *sros) GetContainerName() string {
+	if n.isDistributedBaseNode() && n.cpmContainerName != "" {
+		return n.cpmContainerName
+	}
+	return n.DefaultNode.GetContainerName()
 }
