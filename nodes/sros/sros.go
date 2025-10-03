@@ -476,7 +476,7 @@ func (n *sros) DeleteNetnsSymlink() error {
 }
 
 // sortComponents ensure components are in order of
-// LCs first, then CPMs (cpm b comes first if present)
+// LCs first, then CPMs (cpm b comes first if present).
 func (n *sros) sortComponents() {
 	slices.SortFunc(n.Cfg.Components, func(a, b *clabtypes.Component) int {
 		s1 := strings.ToUpper(strings.TrimSpace(a.Slot))
@@ -1554,13 +1554,15 @@ func (n *sros) GetDistMgmtIPs() (MgmtIP, error) {
 
 		componentName := n.Cfg.LongName + "-" + slot
 
-		containers, err := n.Runtime.ListContainers(context.Background(), []*clabtypes.GenericFilter{
-			{
-				FilterType: "name",
-				Match:      componentName,
+		containers, err := n.Runtime.ListContainers(
+			context.Background(),
+			[]*clabtypes.GenericFilter{
+				{
+					FilterType: "name",
+					Match:      componentName,
+				},
 			},
-		})
-
+		)
 		if err != nil {
 			return MgmtIP{}, fmt.Errorf("unable to get container %q: %v", componentName, err)
 		}
@@ -1581,7 +1583,7 @@ func (n *sros) GetDistMgmtIPs() (MgmtIP, error) {
 	return ips, nil
 }
 
-// custom overrie for hostfile entry to write basename when using component nodes
+// custom overrie for hostfile entry to write basename when using component nodes.
 func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error) {
 	result, err := n.DefaultNode.GetHostsEntries(ctx)
 	if err != nil {
@@ -1744,7 +1746,7 @@ func (n *sros) generateComponentConfig() string {
 	return config.String()
 }
 
-// override to fetch CPM to avoid renaming the base node to CPM A
+// override to fetch CPM to avoid renaming the base node to CPM A.
 func (n *sros) GetContainerName() string {
 	if n.isDistributedBaseNode() && n.cpmContainerName != "" {
 		return n.cpmContainerName
