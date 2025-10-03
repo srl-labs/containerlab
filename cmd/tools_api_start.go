@@ -7,7 +7,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -91,16 +90,6 @@ func (n *APIServerNode) Config() *clabtypes.NodeConfig {
 // GetEndpoints implementation for the Node interface.
 func (*APIServerNode) GetEndpoints() []clablinks.Endpoint {
 	return nil
-}
-
-// getclabBinaryPath determine the binary path of the running executable.
-func getclabBinaryPath() (string, error) {
-	exePath, err := os.Executable()
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.EvalSymlinks(exePath)
 }
 
 // createLabels creates container labels.
@@ -239,7 +228,7 @@ func apiServerStart(cobraCmd *cobra.Command, o *Options) error { //nolint: funle
 
 	// Create container labels
 	if o.ToolsAPI.LabsDirectory == "" {
-		o.ToolsAPI.LabsDirectory = "~/.clab"
+		o.ToolsAPI.LabsDirectory = defaultLabsDir
 	}
 
 	owner := getOwnerName(o)
