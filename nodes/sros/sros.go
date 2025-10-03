@@ -476,7 +476,7 @@ func (n *sros) DeleteNetnsSymlink() error {
 }
 
 // sortComponents ensure components are in order of
-// CPM then regular IOM/XCMs
+// LCs first, then CPMs (cpm b comes first if present)
 func (n *sros) sortComponents() {
 	slices.SortFunc(n.Cfg.Components, func(a, b *clabtypes.Component) int {
 		s1 := strings.ToUpper(strings.TrimSpace(a.Slot))
