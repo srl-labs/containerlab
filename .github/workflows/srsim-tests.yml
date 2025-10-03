@@ -22,6 +22,7 @@ jobs:
           - "03*.robot"
           - "05*.robot"
           - "07*.robot"
+          - "08*.robot"
     steps:
       - name: Checkout
         uses: actions/checkout@v5

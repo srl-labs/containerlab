@@ -53,22 +53,26 @@ const (
 	standaloneSlotName = slotAName
 
 	retryTimer = 1 * time.Second
-	// additional config that clab adds on top of the factory config.
-	scrapliPlatformName       = "nokia_sros"
-	configCf3                 = "config/cf3"
-	configCf2                 = "config/cf2"
-	configCf1                 = "config/cf1"
-	startupCfgName            = "config.cfg"
-	tlsKeyFile                = "node.key"
-	tlsCertFile               = "node.crt"
-	tlsCertProfileName        = "clab-grpc-certs"
-	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
-	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
-	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
-	envNokiaSrosCard          = "NOKIA_SROS_CARD"
-	envNokiaSrosSFM           = "NOKIA_SROS_SFM"
-	envNokiaSrosXIOM          = "NOKIA_SROS_XIOM"
-	envNokiaSrosMDA           = "NOKIA_SROS_MDA"
+
+	scrapliPlatformName          = "nokia_sros"
+	configCf3                    = "config/cf3"
+	configCf2                    = "config/cf2"
+	configCf1                    = "config/cf1"
+	startupCfgName               = "config.cfg"
+	tlsKeyFile                   = "node.key"
+	tlsCertFile                  = "node.crt"
+	tlsCertProfileName           = "clab-grpc-certs"
+	envNokiaSrosSlot             = "NOKIA_SROS_SLOT"
+	envNokiaSrosChassis          = "NOKIA_SROS_CHASSIS"
+	envNokiaSrosSystemBaseMac    = "NOKIA_SROS_SYSTEM_BASE_MAC"
+	envNokiaSrosCard             = "NOKIA_SROS_CARD"
+	envNokiaSrosSFM              = "NOKIA_SROS_SFM"
+	envNokiaSrosXIOM             = "NOKIA_SROS_XIOM"
+	envNokiaSrosMDA              = "NOKIA_SROS_MDA"
+	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
+
+	defaultSrosPowerType       = "dc"
+	defaultSrosPowerModuleType = "ps-a-dc-6000"
 )
 
 var (
@@ -173,6 +177,9 @@ type sros struct {
 	// differentiate if we need to perform the
 	// component cpm based rename or not. This field indicates just that
 	renameDone bool
+	// rootComponents stores the OG components from root node for dist setups
+	// ..allows children of the distributed root node to access root components (ie. for cfg gen)
+	rootComponents []*clabtypes.Component
 
 	preDeployParams *clabnodes.PreDeployParams
 }
@@ -556,6 +563,12 @@ func (n *sros) setupComponentNodes() error {
 		}
 		// set the runtime by copying it from the general node
 		componentNode.WithRuntime(n.GetRuntime())
+
+		// store root components for cpms, for config gen
+		if srosNode, ok := componentNode.(*sros); ok {
+			srosNode.rootComponents = n.Cfg.Components
+		}
+
 		// store the node in the componentNodes
 		n.componentNodes = append(n.componentNodes, componentNode)
 	}
@@ -988,23 +1001,34 @@ func (n *sros) addDefaultConfig() error {
 	if err != nil {
 		return err
 	}
+
+	componentConfig := ""
+
+	// Generate component configuration IF no startup-config defined.
+	if n.Cfg.StartupConfig == "" {
+		componentConfig = n.generateComponentConfig()
+	} else {
+		log.Debugf("SR-SIM node %q has startup-config defined, skipping component config gen", n.Cfg.LongName)
+	}
+
 	// tplData holds data used in templating of the default config snippet
 	tplData := srosTemplateData{
-		Name:          n.Cfg.ShortName,
-		TLSKey:        n.Cfg.TLSKey,
-		TLSCert:       n.Cfg.TLSCert,
-		TLSAnchor:     n.Cfg.TLSAnchor,
-		Banner:        b,
-		IFaces:        map[string]tplIFace{},
-		MgmtMTU:       0,
-		MgmtIPMTU:     0,
-		SystemConfig:  systemCfg,
-		SNMPConfig:    snmpv2Config,
-		GRPCConfig:    grpcConfig,
-		NetconfConfig: netconfConfig,
-		LoggingConfig: loggingConfig,
-		SSHConfig:     sshConfig,
-		NodeType:      strings.ToLower(n.Cfg.NodeType),
+		Name:            n.Cfg.ShortName,
+		TLSKey:          n.Cfg.TLSKey,
+		TLSCert:         n.Cfg.TLSCert,
+		TLSAnchor:       n.Cfg.TLSAnchor,
+		Banner:          b,
+		IFaces:          map[string]tplIFace{},
+		MgmtMTU:         0,
+		MgmtIPMTU:       0,
+		SystemConfig:    systemCfg,
+		SNMPConfig:      snmpv2Config,
+		GRPCConfig:      grpcConfig,
+		NetconfConfig:   netconfConfig,
+		LoggingConfig:   loggingConfig,
+		SSHConfig:       sshConfig,
+		NodeType:        strings.ToLower(n.Cfg.NodeType),
+		ComponentConfig: componentConfig,
 	}
 	if strings.Contains(tplData.NodeType, "ixr-") {
 		tplData.GRPCConfig = grpcConfigIXR
@@ -1460,4 +1484,104 @@ func (n *sros) MgmtIPAddr() (string, error) {
 		"no management IP address (IPv4 or IPv6) configured for node %q",
 		n.Cfg.LongName,
 	)
+}
+
+// generateComponentConfig generates SR OS configuration
+// for explicitly defined components using components nodeConfig.
+func (n *sros) generateComponentConfig() string {
+	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
+		return ""
+	}
+
+	if n.isStandaloneNode() {
+		// skip integrated for now
+		return ""
+	}
+
+	components := n.rootComponents
+
+	if len(components) == 0 {
+		return ""
+	}
+
+	var config strings.Builder
+
+	for _, component := range components {
+		slot := strings.ToUpper(component.Slot)
+
+		if slot == "A" || slot == "B" {
+			// cpm -> skip
+			continue
+		}
+
+		if component.Type != "" {
+			config.WriteString(
+				fmt.Sprintf(
+					"/configure card %s card-type %s admin-state enable\n",
+					slot,
+					component.Type,
+				),
+			)
+		} else {
+			// not all types may have preprovisioned card
+			// so the following configs will fail if card
+			// doesn't have valid type explicitly set.
+			log.Warnf("SR-SIM node %q, has no type set for component in slot %q, skipping component SR-OS config generation.", n.Cfg.ShortName, slot)
+			continue
+		}
+
+		if component.SFM != "" {
+			config.WriteString(
+				fmt.Sprintf(
+					"/configure sfm %s sfm-type %s admin-state enable\n",
+					slot,
+					component.SFM,
+				),
+			)
+		}
+
+		for _, xiom := range component.XIOM {
+			if xiom.Type != "" {
+				config.WriteString(
+					fmt.Sprintf(
+						"/configure card %s xiom x%d xiom-type %s admin-state enable\n",
+						slot,
+						xiom.Slot,
+						xiom.Type,
+					),
+				)
+			}
+
+			for _, mda := range xiom.MDA {
+				if mda.Type != "" {
+					config.WriteString(
+						fmt.Sprintf(
+							"/configure card %s xiom x%d mda %d mda-type %s admin-state enable\n",
+							slot,
+							xiom.Slot,
+							mda.Slot,
+							mda.Type,
+						),
+					)
+				}
+			}
+		}
+
+		for _, mda := range component.MDA {
+			if mda.Type != "" {
+				config.WriteString(
+					fmt.Sprintf(
+						"/configure card %s mda %d mda-type %s admin-state enable\n",
+						slot,
+						mda.Slot,
+						mda.Type,
+					),
+				)
+			}
+		}
+	}
+
+	config.WriteString(n.generatePowerConfig())
+
+	return config.String()
 }

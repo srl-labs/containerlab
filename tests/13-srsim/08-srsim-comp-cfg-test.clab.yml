@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: comp-cfg-gen-test
+
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+
+  nodes:
+    # only distributed nodes support the config gen for now
+    sr2s:
+      kind: nokia_srsim
+      type: sr-2s
+      components:
+        - slot: A
+          type: cpm-2s
+          sfm: sfm-2s
+        - slot: 1
+          sfm: sfm-2s
+          type: xcm-2s
+          xiom:
+            - slot: 1
+              type: iom-s-3.0t
+              mda:
+                - slot: 1
+                  type: ms18-100gb-qsfp28
+
+    sr2s-nocfg:
+      kind: nokia_srsim
+      type: sr-2s
+      env:
+        CLAB_SROS_DISABLE_COMPONENT_CONFIG: foo
+      components:
+        - slot: A
+          type: cpm-2s
+          sfm: sfm-2s
+        - slot: 1
+          sfm: sfm-2s
+          type: xcm-2s
+          xiom:
+            - slot: 1
+              type: iom-s-3.0t
+              mda:
+                - slot: 1
+                  type: ms18-100gb-qsfp28
+
+    # sr2se:
+    #   kind: nokia_srsim
+    #   type: sr-2se
+    #   components:
+    #     - slot: A
+    #       type: cpm-2se
+    #       sfm: sfm-2se
+    #     - slot: 1
+    #       sfm: sfm-2se
+    #       type: xcm-2se
+
+    # sr7s:
+    #   kind: nokia_srsim
+    #   type: sr-7s
+    #   components:
+    #     - slot: A
+    #       type: cpm2-s
+    #       sfm: sfm2-s
+    #     - slot: 1
+    #       sfm: sfm2-s
+    #       type: xcm2-7s
+    #       mda:
+    #         - slot: 1
+    #           type: x2-s36-800g-qsfpdd-18.0t
+
+    sr14s:
+      kind: nokia_srsim
+      type: sr-14s
+      components:
+        - slot: A
+          type: cpm2-s
+          sfm: sfm2-s
+        - slot: 1
+          sfm: sfm2-s
+          type: xcm2-14s
+          mda:
+            - slot: 1
+              type: x2-s36-800g-qsfpdd-18.0t
