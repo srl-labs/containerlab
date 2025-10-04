@@ -56,48 +56,65 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 	return nil
 }
 
+// flagBinding represents the mapping between a flag name and how to update the option value.
+type flagBinding struct {
+	flagName string
+	updater  func(*Options)
+}
+
+// getFlagBindings returns all flag-to-option bindings in a centralized location.
+func getFlagBindings() []flagBinding {
+	return []flagBinding{
+		// Global options (persistent flags)
+		{"debug", func(o *Options) { o.Global.DebugCount = v.GetInt("debug") }},
+		{"topo", func(o *Options) { o.Global.TopologyFile = v.GetString("topo") }},
+		{"vars", func(o *Options) { o.Global.VarsFile = v.GetString("vars") }},
+		{"name", func(o *Options) { o.Global.TopologyName = v.GetString("name") }},
+		{"timeout", func(o *Options) { o.Global.Timeout = v.GetDuration("timeout") }},
+		{"runtime", func(o *Options) { o.Global.Runtime = v.GetString("runtime") }},
+		{"log-level", func(o *Options) { o.Global.LogLevel = v.GetString("log-level") }},
+
+		// Deploy options (local flags for deploy command)
+		{"graph", func(o *Options) { o.Deploy.GenerateGraph = v.GetBool("graph") }},
+		{"network", func(o *Options) { o.Deploy.ManagementNetworkName = v.GetString("network") }},
+		{"reconfigure", func(o *Options) { o.Deploy.Reconfigure = v.GetBool("reconfigure") }},
+		{"max-workers", func(o *Options) { o.Deploy.MaxWorkers = v.GetUint("max-workers") }},
+		{"skip-post-deploy", func(o *Options) { o.Deploy.SkipPostDeploy = v.GetBool("skip-post-deploy") }},
+		{"skip-labdir-acl", func(o *Options) { o.Deploy.SkipLabDirectoryFileACLs = v.GetBool("skip-labdir-acl") }},
+		{"export-template", func(o *Options) { o.Deploy.ExportTemplate = v.GetString("export-template") }},
+		{"owner", func(o *Options) { o.Deploy.LabOwner = v.GetString("owner") }},
+
+		// Filter options
+		{"node-filter", func(o *Options) { o.Filter.NodeFilter = v.GetStringSlice("node-filter") }},
+
+		// Destroy options
+		{"cleanup", func(o *Options) { o.Destroy.Cleanup = v.GetBool("cleanup") }},
+		{"all", func(o *Options) { o.Destroy.All = v.GetBool("all") }},
+		{"keep-mgmt-net", func(o *Options) { o.Destroy.KeepManagementNetwork = v.GetBool("keep-mgmt-net") }},
+
+		// Inspect options
+		{"format", func(o *Options) { o.Inspect.Format = v.GetString("format") }},
+		{"details", func(o *Options) { o.Inspect.Details = v.GetBool("details") }},
+		{"wide", func(o *Options) { o.Inspect.Wide = v.GetBool("wide") }},
+
+		// Graph options
+		{"server", func(o *Options) { o.Graph.Server = v.GetString("server") }},
+		{"template", func(o *Options) { o.Graph.Template = v.GetString("template") }},
+		{"offline", func(o *Options) { o.Graph.Offline = v.GetBool("offline") }},
+		{"dot", func(o *Options) { o.Graph.GenerateDotFile = v.GetBool("dot") }},
+		{"mermaid", func(o *Options) { o.Graph.GenerateMermaid = v.GetBool("mermaid") }},
+		{"drawio", func(o *Options) { o.Graph.GenerateDrawIO = v.GetBool("drawio") }},
+	}
+}
+
 // updateOptionsFromViper updates the Options struct from viper values
 // when environment variables are set and flags are not explicitly provided.
 func updateOptionsFromViper(cmd *cobra.Command, o *Options) {
-	// Update Global options (persistent flags)
-	updateIfNotChanged(cmd, "debug", func() { o.Global.DebugCount = v.GetInt("debug") })
-	updateIfNotChanged(cmd, "topo", func() { o.Global.TopologyFile = v.GetString("topo") })
-	updateIfNotChanged(cmd, "vars", func() { o.Global.VarsFile = v.GetString("vars") })
-	updateIfNotChanged(cmd, "name", func() { o.Global.TopologyName = v.GetString("name") })
-	updateIfNotChanged(cmd, "timeout", func() { o.Global.Timeout = v.GetDuration("timeout") })
-	updateIfNotChanged(cmd, "runtime", func() { o.Global.Runtime = v.GetString("runtime") })
-	updateIfNotChanged(cmd, "log-level", func() { o.Global.LogLevel = v.GetString("log-level") })
-
-	// Update Deploy options (local flags for deploy command)
-	updateIfNotChanged(cmd, "graph", func() { o.Deploy.GenerateGraph = v.GetBool("graph") })
-	updateIfNotChanged(cmd, "network", func() { o.Deploy.ManagementNetworkName = v.GetString("network") })
-	updateIfNotChanged(cmd, "reconfigure", func() { o.Deploy.Reconfigure = v.GetBool("reconfigure") })
-	updateIfNotChanged(cmd, "max-workers", func() { o.Deploy.MaxWorkers = v.GetUint("max-workers") })
-	updateIfNotChanged(cmd, "skip-post-deploy", func() { o.Deploy.SkipPostDeploy = v.GetBool("skip-post-deploy") })
-	updateIfNotChanged(cmd, "skip-labdir-acl", func() { o.Deploy.SkipLabDirectoryFileACLs = v.GetBool("skip-labdir-acl") })
-	updateIfNotChanged(cmd, "export-template", func() { o.Deploy.ExportTemplate = v.GetString("export-template") })
-	updateIfNotChanged(cmd, "owner", func() { o.Deploy.LabOwner = v.GetString("owner") })
-
-	// Update Filter options
-	updateIfNotChanged(cmd, "node-filter", func() { o.Filter.NodeFilter = v.GetStringSlice("node-filter") })
-
-	// Update Destroy options
-	updateIfNotChanged(cmd, "cleanup", func() { o.Destroy.Cleanup = v.GetBool("cleanup") })
-	updateIfNotChanged(cmd, "all", func() { o.Destroy.All = v.GetBool("all") })
-	updateIfNotChanged(cmd, "keep-mgmt-net", func() { o.Destroy.KeepManagementNetwork = v.GetBool("keep-mgmt-net") })
-
-	// Update Inspect options
-	updateIfNotChanged(cmd, "format", func() { o.Inspect.Format = v.GetString("format") })
-	updateIfNotChanged(cmd, "details", func() { o.Inspect.Details = v.GetBool("details") })
-	updateIfNotChanged(cmd, "wide", func() { o.Inspect.Wide = v.GetBool("wide") })
-
-	// Update Graph options
-	updateIfNotChanged(cmd, "server", func() { o.Graph.Server = v.GetString("server") })
-	updateIfNotChanged(cmd, "template", func() { o.Graph.Template = v.GetString("template") })
-	updateIfNotChanged(cmd, "offline", func() { o.Graph.Offline = v.GetBool("offline") })
-	updateIfNotChanged(cmd, "dot", func() { o.Graph.GenerateDotFile = v.GetBool("dot") })
-	updateIfNotChanged(cmd, "mermaid", func() { o.Graph.GenerateMermaid = v.GetBool("mermaid") })
-	updateIfNotChanged(cmd, "drawio", func() { o.Graph.GenerateDrawIO = v.GetBool("drawio") })
+	for _, binding := range getFlagBindings() {
+		updateIfNotChanged(cmd, binding.flagName, func() {
+			binding.updater(o)
+		})
+	}
 }
 
 // updateIfNotChanged updates the option value using the provided function
