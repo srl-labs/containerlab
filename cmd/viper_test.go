@@ -72,6 +72,7 @@ func TestViperEnvVars(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Save original value if exists
 			originalVal := os.Getenv(tt.envKey)
+
 			defer func() {
 				if originalVal != "" {
 					os.Setenv(tt.envKey, originalVal)
@@ -94,6 +95,7 @@ func TestViperEnvVars(t *testing.T) {
 
 			// Execute prerun to trigger viper update
 			o := GetOptions()
+
 			err = preRunFn(cmd, o)
 			if err != nil {
 				t.Fatalf("PreRun failed: %v", err)
@@ -131,6 +133,7 @@ func TestViperEnvKeyReplacer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Save original value if exists
 			originalVal := os.Getenv(tt.envKey)
+
 			defer func() {
 				if originalVal != "" {
 					os.Setenv(tt.envKey, originalVal)
@@ -153,6 +156,7 @@ func TestViperEnvKeyReplacer(t *testing.T) {
 
 			// Execute prerun to trigger viper update
 			o := GetOptions()
+
 			err = preRunFn(cmd, o)
 			if err != nil {
 				t.Fatalf("PreRun failed: %v", err)
@@ -238,6 +242,7 @@ func TestViperSubcommandFlags(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Save original value if exists
 			originalVal := os.Getenv(tt.envKey)
+
 			defer func() {
 				if originalVal != "" {
 					os.Setenv(tt.envKey, originalVal)
@@ -270,6 +275,7 @@ func TestViperSubcommandFlags(t *testing.T) {
 			// Execute prerun on deploy command (use root command's prerun to avoid deploy-specific
 			// checks)
 			o := GetOptions()
+
 			err = preRunFn(deployCmd, o)
 			if err != nil {
 				t.Fatalf("PreRun failed: %v", err)
@@ -293,5 +299,6 @@ func findCommand(cmd *cobra.Command, name string) *cobra.Command {
 			return subCmd
 		}
 	}
+
 	return nil
 }
