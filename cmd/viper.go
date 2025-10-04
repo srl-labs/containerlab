@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -39,7 +40,7 @@ func initViper(cmd *cobra.Command) error {
 // bindFlags binds all cobra flags to viper for a command and its subcommands.
 // It uses command hierarchy to create namespaced keys for environment variables.
 // For example, the --container flag in "tools disable-tx-offload" becomes:
-// CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER
+// CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER.
 func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 	return bindFlagsWithPath(cmd, v, "")
 }
@@ -138,9 +139,10 @@ func updateOptionsFromViper(cmd *cobra.Command, _ *Options) {
 }
 
 // getCommandPath builds the command path from root to current command.
-// For example: "tools.disable-tx-offload"
+// For example: "tools.disable-tx-offload".
 func getCommandPath(cmd *cobra.Command) string {
 	var parts []string
+
 	current := cmd
 
 	for current != nil && current.Name() != "containerlab" && current.Name() != "" {
@@ -167,6 +169,7 @@ func updateFlagFromViper(f *pflag.Flag, cmdPath string) {
 	// 2. If not found AND the flag name itself is a bound key (root persistent flags),
 	//    then check that key
 	var key string
+
 	var hasValue bool
 
 	if cmdPath != "" {
@@ -179,13 +182,7 @@ func updateFlagFromViper(f *pflag.Flag, cmdPath string) {
 		if !hasValue {
 			// Check if the flag name itself is a viper key (indicates root persistent flag)
 			// We use AllKeys to check all bound keys
-			isRootKey := false
-			for _, k := range v.AllKeys() {
-				if k == f.Name {
-					isRootKey = true
-					break
-				}
-			}
+			isRootKey := slices.Contains(v.AllKeys(), f.Name)
 
 			// Only fall back to unprefixed key if it's actually bound at root
 			if isRootKey {

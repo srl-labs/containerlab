@@ -309,6 +309,7 @@ func TestViperNestedCommandFlags(t *testing.T) {
 
 	// Save original value if exists
 	originalVal := os.Getenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER")
+
 	defer func() {
 		if originalVal != "" {
 			os.Setenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER", originalVal)
@@ -346,6 +347,7 @@ func TestViperNestedCommandFlags(t *testing.T) {
 
 	// Execute prerun on the command
 	o := GetOptions()
+
 	err = preRunFn(disableTxCmd, o)
 	if err != nil {
 		t.Fatalf("PreRun failed: %v", err)
@@ -353,6 +355,9 @@ func TestViperNestedCommandFlags(t *testing.T) {
 
 	// Check if the value was set correctly
 	if o.ToolsTxOffload.ContainerName != "test-container" {
-		t.Errorf("Expected container name to be 'test-container', got '%s'", o.ToolsTxOffload.ContainerName)
+		t.Errorf(
+			"Expected container name to be 'test-container', got '%s'",
+			o.ToolsTxOffload.ContainerName,
+		)
 	}
 }
