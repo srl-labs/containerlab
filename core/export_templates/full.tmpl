@@ -14,7 +14,9 @@
         "node": "{{ $ep.GetNode.GetShortName }}",
         "interface": "{{ $ep.GetIfaceName }}",
         "mac": "{{ $ep.GetMac }}",
-        "peer": "{{if eq (len $eps) 2}}z{{else}}dummy{{end}}"
+        "peer": "{{if eq (len $eps) 2}}z{{else}}dummy{{end}}",
+        "ipv4": "{{ $ep.GetIPv4Addr }}",
+        "ipv6": "{{ $ep.GetIPv6Addr }}"
       }
       {{- if eq (len $eps) 2 }}
       {{- $ep :=  index $eps 1 }},
@@ -22,7 +24,9 @@
         "node": "{{  $ep.GetNode.GetShortName }}",
         "interface": "{{ $ep.GetIfaceName }}",
         "mac": "{{ $ep.GetMac }}",
-        "peer": "a"
+        "peer": "a",
+        "ipv4": "{{ $ep.GetIPv4Addr }}",
+        "ipv6": "{{ $ep.GetIPv6Addr }}"
       }
       {{- end }}
     }{{end}}
