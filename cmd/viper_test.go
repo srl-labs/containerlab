@@ -213,24 +213,24 @@ func TestViperSubcommandFlags(t *testing.T) {
 		check    func(*Options) bool
 	}{
 		{
-			name:     "CLAB_GRAPH sets graph generation flag",
-			envKey:   "CLAB_GRAPH",
+			name:     "CLAB_DEPLOY_GRAPH sets graph generation flag",
+			envKey:   "CLAB_DEPLOY_GRAPH",
 			envValue: "true",
 			check: func(o *Options) bool {
 				return o.Deploy.GenerateGraph == true
 			},
 		},
 		{
-			name:     "CLAB_RECONFIGURE sets reconfigure flag",
-			envKey:   "CLAB_RECONFIGURE",
+			name:     "CLAB_DEPLOY_RECONFIGURE sets reconfigure flag",
+			envKey:   "CLAB_DEPLOY_RECONFIGURE",
 			envValue: "true",
 			check: func(o *Options) bool {
 				return o.Deploy.Reconfigure == true
 			},
 		},
 		{
-			name:     "CLAB_MAX_WORKERS sets max workers",
-			envKey:   "CLAB_MAX_WORKERS",
+			name:     "CLAB_DEPLOY_MAX_WORKERS sets max workers",
+			envKey:   "CLAB_DEPLOY_MAX_WORKERS",
 			envValue: "10",
 			check: func(o *Options) bool {
 				return o.Deploy.MaxWorkers == 10
@@ -301,4 +301,58 @@ func findCommand(cmd *cobra.Command, name string) *cobra.Command {
 	}
 
 	return nil
+}
+
+func TestViperNestedCommandFlags(t *testing.T) {
+	// Test for nested commands like "tools disable-tx-offload"
+	// Environment variable should be CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER
+	
+	// Save original value if exists
+	originalVal := os.Getenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER")
+	defer func() {
+		if originalVal != "" {
+			os.Setenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER", originalVal)
+		} else {
+			os.Unsetenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER")
+		}
+	}()
+
+	// Set environment variable
+	os.Setenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER", "test-container")
+	// Also set a topology name to avoid the file search
+	os.Setenv("CLAB_NAME", "test-lab")
+	defer os.Unsetenv("CLAB_NAME")
+
+	// Reset options instance to get fresh defaults
+	optionsInstance = nil
+
+	// Create command
+	cmd, err := Entrypoint()
+	if err != nil {
+		t.Fatalf("Failed to create command: %v", err)
+	}
+
+	// Find the tools command
+	toolsCmd := findCommand(cmd, "tools")
+	if toolsCmd == nil {
+		t.Fatal("Tools command not found")
+	}
+
+	// Find the disable-tx-offload subcommand
+	disableTxCmd := findCommand(toolsCmd, "disable-tx-offload")
+	if disableTxCmd == nil {
+		t.Fatal("disable-tx-offload command not found")
+	}
+
+	// Execute prerun on the command
+	o := GetOptions()
+	err = preRunFn(disableTxCmd, o)
+	if err != nil {
+		t.Fatalf("PreRun failed: %v", err)
+	}
+
+	// Check if the value was set correctly
+	if o.ToolsTxOffload.ContainerName != "test-container" {
+		t.Errorf("Expected container name to be 'test-container', got '%s'", o.ToolsTxOffload.ContainerName)
+	}
 }

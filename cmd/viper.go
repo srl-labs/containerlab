@@ -25,8 +25,9 @@ func initViper(cmd *cobra.Command) error {
 	// Set the environment variable prefix
 	v.SetEnvPrefix(envPrefix)
 
-	// Replace hyphens and slashes with underscores in environment variable names
-	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_", "/", "_"))
+	// Replace hyphens, slashes, and dots with underscores in environment variable names
+	// This allows keys like "deploy.graph" to match env var "CLAB_DEPLOY_GRAPH"
+	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_", "/", "_", ".", "_"))
 
 	// Automatically bind environment variables
 	v.AutomaticEnv()
@@ -36,20 +37,51 @@ func initViper(cmd *cobra.Command) error {
 }
 
 // bindFlags binds all cobra flags to viper for a command and its subcommands.
+// It uses command hierarchy to create namespaced keys for environment variables.
+// For example, the --container flag in "tools disable-tx-offload" becomes:
+// CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER
 func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
-	// Bind persistent flags
-	if err := v.BindPFlags(cmd.PersistentFlags()); err != nil {
-		return err
+	return bindFlagsWithPath(cmd, v, "")
+}
+
+// bindFlagsWithPath recursively binds flags with their command path as prefix.
+func bindFlagsWithPath(cmd *cobra.Command, v *viper.Viper, cmdPath string) error {
+	// Build the current command path
+	currentPath := cmdPath
+	if cmd.Name() != "containerlab" && cmd.Name() != "" {
+		if currentPath != "" {
+			currentPath = currentPath + "." + cmd.Name()
+		} else {
+			currentPath = cmd.Name()
+		}
 	}
 
-	// Bind local flags
-	if err := v.BindPFlags(cmd.Flags()); err != nil {
-		return err
-	}
+	// Bind persistent flags with command path prefix
+	cmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
+		key := flag.Name
+		if currentPath != "" {
+			key = currentPath + "." + flag.Name
+		}
+		_ = v.BindPFlag(key, flag)
+	})
+
+	// Bind local flags with command path prefix
+	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
+		// Skip if this flag is a persistent flag (already bound above)
+		if cmd.PersistentFlags().Lookup(flag.Name) != nil {
+			return
+		}
+		
+		key := flag.Name
+		if currentPath != "" {
+			key = currentPath + "." + flag.Name
+		}
+		_ = v.BindPFlag(key, flag)
+	})
 
 	// Recursively bind flags for all subcommands
 	for _, subCmd := range cmd.Commands() {
-		if err := bindFlags(subCmd, v); err != nil {
+		if err := bindFlagsWithPath(subCmd, v, currentPath); err != nil {
 			return err
 		}
 	}
@@ -62,6 +94,9 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 // This iterates through all flags that were bound to viper and updates their
 // values from environment variables if the flag was not explicitly set.
 func updateOptionsFromViper(cmd *cobra.Command, _ *Options) {
+	// Build command path for this command
+	cmdPath := getCommandPath(cmd)
+
 	// Collect all flags that should be checked (avoid duplicates)
 	flagMap := make(map[string]*pflag.Flag)
 
@@ -89,21 +124,53 @@ func updateOptionsFromViper(cmd *cobra.Command, _ *Options) {
 
 	// Now update all collected flags from viper
 	for _, f := range flagMap {
-		updateFlagFromViper(f)
+		updateFlagFromViper(f, cmdPath)
 	}
+}
+
+// getCommandPath builds the command path from root to current command.
+// For example: "tools.disable-tx-offload"
+func getCommandPath(cmd *cobra.Command) string {
+	var parts []string
+	current := cmd
+	
+	for current != nil && current.Name() != "containerlab" && current.Name() != "" {
+		parts = append([]string{current.Name()}, parts...)
+		current = current.Parent()
+	}
+	
+	return strings.Join(parts, ".")
 }
 
 // updateFlagFromViper updates a single flag's value from viper if:
 // - The flag was not explicitly set on the command line
 // - Viper has a value for this flag (from env var or config file).
-func updateFlagFromViper(f *pflag.Flag) {
+// It checks for the value using the command-namespaced key.
+func updateFlagFromViper(f *pflag.Flag, cmdPath string) {
 	// Skip if flag was explicitly set via command line
 	if f.Changed {
 		return
 	}
 
+	// Build the key to check in viper (includes command path)
+	// Try with command path first, then without (for root persistent flags)
+	key := f.Name
+	if cmdPath != "" {
+		key = cmdPath + "." + f.Name
+	}
+
+	// Check if viper has this key
+	hasValue := v.IsSet(key)
+	
+	// If not found with command path and we have a command path,
+	// try without it (this handles root persistent flags)
+	if !hasValue && cmdPath != "" {
+		key = f.Name
+		hasValue = v.IsSet(key)
+	}
+
 	// Skip if viper doesn't have a value for this flag
-	if !v.IsSet(f.Name) {
+	if !hasValue {
 		return
 	}
 
@@ -113,28 +180,28 @@ func updateFlagFromViper(f *pflag.Flag) {
 
 	switch f.Value.Type() {
 	case "bool":
-		val = v.GetString(f.Name)
+		val = v.GetString(key)
 	case "string":
-		val = v.GetString(f.Name)
+		val = v.GetString(key)
 	case "stringSlice":
 		// For slices, join with comma as that's what cobra expects
-		slice := v.GetStringSlice(f.Name)
+		slice := v.GetStringSlice(key)
 		if len(slice) > 0 {
 			val = strings.Join(slice, ",")
 		}
 	case "int", "int8", "int16", "int32", "int64":
-		val = v.GetString(f.Name)
+		val = v.GetString(key)
 	case "uint", "uint8", "uint16", "uint32", "uint64":
-		val = v.GetString(f.Name)
+		val = v.GetString(key)
 	case "float32", "float64":
-		val = v.GetString(f.Name)
+		val = v.GetString(key)
 	case "duration":
-		val = v.GetString(f.Name)
+		val = v.GetString(key)
 	case "count":
-		val = v.GetString(f.Name)
+		val = v.GetString(key)
 	default:
 		// For any other type, try to get it as a string
-		val = v.GetString(f.Name)
+		val = v.GetString(key)
 	}
 
 	// Set the value on the flag (which updates the underlying variable)
