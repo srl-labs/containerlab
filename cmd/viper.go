@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -56,76 +57,88 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 	return nil
 }
 
-// flagBinding represents the mapping between a flag name and how to update the option value.
-type flagBinding struct {
-	flagName string
-	updater  func(*Options)
-}
-
-// getFlagBindings returns all flag-to-option bindings in a centralized location.
-func getFlagBindings() []flagBinding {
-	return []flagBinding{
-		// Global options (persistent flags)
-		{"debug", func(o *Options) { o.Global.DebugCount = v.GetInt("debug") }},
-		{"topo", func(o *Options) { o.Global.TopologyFile = v.GetString("topo") }},
-		{"vars", func(o *Options) { o.Global.VarsFile = v.GetString("vars") }},
-		{"name", func(o *Options) { o.Global.TopologyName = v.GetString("name") }},
-		{"timeout", func(o *Options) { o.Global.Timeout = v.GetDuration("timeout") }},
-		{"runtime", func(o *Options) { o.Global.Runtime = v.GetString("runtime") }},
-		{"log-level", func(o *Options) { o.Global.LogLevel = v.GetString("log-level") }},
-
-		// Deploy options (local flags for deploy command)
-		{"graph", func(o *Options) { o.Deploy.GenerateGraph = v.GetBool("graph") }},
-		{"network", func(o *Options) { o.Deploy.ManagementNetworkName = v.GetString("network") }},
-		{"reconfigure", func(o *Options) { o.Deploy.Reconfigure = v.GetBool("reconfigure") }},
-		{"max-workers", func(o *Options) { o.Deploy.MaxWorkers = v.GetUint("max-workers") }},
-		{"skip-post-deploy", func(o *Options) { o.Deploy.SkipPostDeploy = v.GetBool("skip-post-deploy") }},
-		{"skip-labdir-acl", func(o *Options) { o.Deploy.SkipLabDirectoryFileACLs = v.GetBool("skip-labdir-acl") }},
-		{"export-template", func(o *Options) { o.Deploy.ExportTemplate = v.GetString("export-template") }},
-		{"owner", func(o *Options) { o.Deploy.LabOwner = v.GetString("owner") }},
-
-		// Filter options
-		{"node-filter", func(o *Options) { o.Filter.NodeFilter = v.GetStringSlice("node-filter") }},
-
-		// Destroy options
-		{"cleanup", func(o *Options) { o.Destroy.Cleanup = v.GetBool("cleanup") }},
-		{"all", func(o *Options) { o.Destroy.All = v.GetBool("all") }},
-		{"keep-mgmt-net", func(o *Options) { o.Destroy.KeepManagementNetwork = v.GetBool("keep-mgmt-net") }},
-
-		// Inspect options
-		{"format", func(o *Options) { o.Inspect.Format = v.GetString("format") }},
-		{"details", func(o *Options) { o.Inspect.Details = v.GetBool("details") }},
-		{"wide", func(o *Options) { o.Inspect.Wide = v.GetBool("wide") }},
-
-		// Graph options
-		{"server", func(o *Options) { o.Graph.Server = v.GetString("server") }},
-		{"template", func(o *Options) { o.Graph.Template = v.GetString("template") }},
-		{"offline", func(o *Options) { o.Graph.Offline = v.GetBool("offline") }},
-		{"dot", func(o *Options) { o.Graph.GenerateDotFile = v.GetBool("dot") }},
-		{"mermaid", func(o *Options) { o.Graph.GenerateMermaid = v.GetBool("mermaid") }},
-		{"drawio", func(o *Options) { o.Graph.GenerateDrawIO = v.GetBool("drawio") }},
-	}
-}
-
 // updateOptionsFromViper updates the Options struct from viper values
 // when environment variables are set and flags are not explicitly provided.
-func updateOptionsFromViper(cmd *cobra.Command, o *Options) {
-	for _, binding := range getFlagBindings() {
-		updateIfNotChanged(cmd, binding.flagName, func() {
-			binding.updater(o)
+// This iterates through all flags that were bound to viper and updates their
+// values from environment variables if the flag was not explicitly set.
+func updateOptionsFromViper(cmd *cobra.Command, _ *Options) {
+	// Collect all flags that should be checked (avoid duplicates)
+	flagMap := make(map[string]*pflag.Flag)
+	
+	// Helper to add flags to map
+	addFlags := func(fs *pflag.FlagSet) {
+		fs.VisitAll(func(f *pflag.Flag) {
+			if _, exists := flagMap[f.Name]; !exists {
+				flagMap[f.Name] = f
+			}
 		})
+	}
+	
+	// Add this command's local flags
+	addFlags(cmd.Flags())
+	
+	// Add this command's persistent flags
+	addFlags(cmd.PersistentFlags())
+	
+	// Add inherited persistent flags from all parent commands
+	parent := cmd.Parent()
+	for parent != nil {
+		addFlags(parent.PersistentFlags())
+		parent = parent.Parent()
+	}
+	
+	// Now update all collected flags from viper
+	for _, f := range flagMap {
+		updateFlagFromViper(f)
 	}
 }
 
-// updateIfNotChanged updates the option value using the provided function
-// if the flag was not explicitly set on the command line and viper has a value for it.
-func updateIfNotChanged(cmd *cobra.Command, flagName string, updateFn func()) {
-	flag := cmd.Flag(flagName)
-	if flag == nil {
-		// Try persistent flags if local flag not found
-		flag = cmd.PersistentFlags().Lookup(flagName)
+// updateFlagFromViper updates a single flag's value from viper if:
+// - The flag was not explicitly set on the command line
+// - Viper has a value for this flag (from env var or config file)
+func updateFlagFromViper(f *pflag.Flag) {
+	// Skip if flag was explicitly set via command line
+	if f.Changed {
+		return
 	}
-	if flag != nil && !flag.Changed && v.IsSet(flagName) {
-		updateFn()
+
+	// Skip if viper doesn't have a value for this flag
+	if !v.IsSet(f.Name) {
+		return
+	}
+
+	// Get the value from viper based on the flag's type and set it
+	// The flag.Value.Set() method handles type conversion for us
+	var val string
+	
+	switch f.Value.Type() {
+	case "bool":
+		val = v.GetString(f.Name)
+	case "string":
+		val = v.GetString(f.Name)
+	case "stringSlice":
+		// For slices, join with comma as that's what cobra expects
+		slice := v.GetStringSlice(f.Name)
+		if len(slice) > 0 {
+			val = strings.Join(slice, ",")
+		}
+	case "int", "int8", "int16", "int32", "int64":
+		val = v.GetString(f.Name)
+	case "uint", "uint8", "uint16", "uint32", "uint64":
+		val = v.GetString(f.Name)
+	case "float32", "float64":
+		val = v.GetString(f.Name)
+	case "duration":
+		val = v.GetString(f.Name)
+	case "count":
+		val = v.GetString(f.Name)
+	default:
+		// For any other type, try to get it as a string
+		val = v.GetString(f.Name)
+	}
+
+	// Set the value on the flag (which updates the underlying variable)
+	if val != "" {
+		_ = f.Value.Set(val)
 	}
 }
