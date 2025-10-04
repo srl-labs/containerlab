@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	clabcert "github.com/srl-labs/containerlab/cert"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabcore "github.com/srl-labs/containerlab/core"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -182,6 +183,13 @@ func certCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		o.ToolsCert.KeySize,
 		"private key size",
 	)
+	signCertCmd.Flags().StringVarP(
+		&o.ToolsCert.TopologyFile,
+		"topology",
+		"",
+		o.ToolsCert.TopologyFile,
+		"path to topology file to generate certificates for all nodes with certificate.issue=true",
+	)
 
 	return c, nil
 }
@@ -247,6 +255,17 @@ func createCA(o *Options) error {
 
 // signCert creates node certificate and sign it with CA.
 func signCert(o *Options) error {
+	// If topology file is provided, use topology-based certificate generation
+	if o.ToolsCert.TopologyFile != "" {
+		return signCertFromTopology(o)
+	}
+	
+	// Otherwise, use the original single certificate generation
+	return signSingleCert(o)
+}
+
+// signSingleCert creates a single node certificate and signs it with CA.
+func signSingleCert(o *Options) error {
 	var err error
 
 	if o.ToolsCert.Path == "" {
@@ -320,6 +339,154 @@ func signCert(o *Options) error {
 		filepath.Join(o.ToolsCert.Path, o.ToolsCert.CertNamePrefix+clabtypes.CSRFileSuffix))
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// signCertFromTopology generates certificates for all nodes in a topology file that have certificate.issue=true.
+func signCertFromTopology(o *Options) error {
+	// Load topology from file
+	c, err := clabcore.NewContainerLab()
+	if err != nil {
+		return fmt.Errorf("failed to create containerlab instance: %w", err)
+	}
+
+	err = c.LoadTopologyFromFile(o.ToolsCert.TopologyFile, "")
+	if err != nil {
+		return fmt.Errorf("failed to load topology from file %s: %w", o.ToolsCert.TopologyFile, err)
+	}
+
+	// Initialize CA
+	ca := clabcert.NewCA()
+	var caCert *clabcert.Certificate
+
+	// Load CA certificate if provided
+	if o.ToolsCert.CACertPath != "" {
+		caCert, err = clabcert.NewCertificateFromFile(
+			o.ToolsCert.CACertPath,
+			o.ToolsCert.CAKeyPath,
+			"",
+		)
+		if err != nil {
+			return fmt.Errorf("failed to load CA certificate: %w", err) 
+		}
+	} else {
+		// Try to load CA from topology lab directory
+		caCertPath := c.TopoPaths.CaCertAbsFilename()
+		caKeyPath := c.TopoPaths.CaKeyAbsFilename()
+		if _, err := os.Stat(caCertPath); err == nil {
+			if _, err := os.Stat(caKeyPath); err == nil {
+				caCert, err = clabcert.NewCertificateFromFile(caCertPath, caKeyPath, "")
+				if err != nil {
+					log.Warnf("Failed to load CA from topology directory: %v", err)
+				}
+			}
+		}
+	}
+
+	// Set CA certificate
+	err = ca.SetCACert(caCert)
+	if err != nil {
+		return fmt.Errorf("failed to set CA certificate: %w", err)
+	}
+
+	// Get default expiry duration
+	expDuration, err := time.ParseDuration(o.ToolsCert.Expiry)
+	if err != nil {
+		return fmt.Errorf("failed parsing expiry %s: %w", o.ToolsCert.Expiry, err)
+	}
+
+	// Counter to track processed nodes
+	processedNodes := 0
+
+	// Iterate through topology nodes
+	for nodeName, nodeDef := range c.Config.Topology.Nodes {
+		// Get resolved certificate config for this node 
+		certConfig := c.Config.Topology.GetCertificateConfig(nodeName)
+		
+		// Skip nodes that don't have certificate.issue=true
+		if certConfig == nil || certConfig.Issue == nil || !*certConfig.Issue {
+			log.Debugf("Skipping node %s: certificate generation not enabled", nodeName)
+			continue
+		}
+
+		log.Infof("Generating certificate for node %s", nodeName)
+
+		// Build hosts list similar to how nodes/default_node.go does it
+		var longName string
+		if c.Config.Prefix != nil {
+			longName = fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
+		} else {
+			longName = fmt.Sprintf("clab-%s-%s", c.Config.Name, nodeName)
+		}
+
+		hosts := []string{
+			nodeName,
+			longName,
+			nodeName + "." + c.Config.Name + ".io",
+		}
+
+		// Add configured SANs
+		if certConfig.SANs != nil {
+			hosts = append(hosts, certConfig.SANs...)
+		}
+
+		// Add management IPs if defined
+		if nodeDef.MgmtIPv4 != "" {
+			hosts = append(hosts, nodeDef.MgmtIPv4)
+		}
+		if nodeDef.MgmtIPv6 != "" {
+			hosts = append(hosts, nodeDef.MgmtIPv6)
+		}
+
+		// Determine certificate validity duration
+		certExpiry := expDuration
+		if certConfig.ValidityDuration > 0 {
+			certExpiry = certConfig.ValidityDuration
+		}
+
+		// Determine key size
+		keySize := int(o.ToolsCert.KeySize)
+		if certConfig.KeySize > 0 {
+			keySize = certConfig.KeySize
+		}
+
+		// Generate certificate
+		nodeCert, err := ca.GenerateAndSignNodeCert(
+			&clabcert.NodeCSRInput{
+				CommonName:   nodeName + "." + c.Config.Name + ".io",
+				Hosts:        hosts,
+				Organization: "containerlab",
+				Country:      "US",
+				KeySize:      keySize,
+				Expiry:       certExpiry,
+			})
+		if err != nil {
+			return fmt.Errorf("failed to generate certificate for node %s: %w", nodeName, err)
+		}
+
+		// Create node certificate directory
+		nodeCertDir := c.TopoPaths.NodeTLSDir(nodeName)
+		clabutils.CreateDirectory(nodeCertDir, clabconstants.PermissionsOpen)
+
+		// Write certificate files
+		err = nodeCert.Write(
+			c.TopoPaths.NodeCertAbsFilename(nodeName),
+			c.TopoPaths.NodeCertKeyAbsFilename(nodeName),
+			c.TopoPaths.NodeCertCSRAbsFilename(nodeName))
+		if err != nil {
+			return fmt.Errorf("failed to write certificate files for node %s: %w", nodeName, err)
+		}
+
+		log.Infof("Successfully generated certificate for node %s", nodeName)
+		processedNodes++
+	}
+
+	if processedNodes == 0 {
+		log.Warnf("No nodes found with certificate.issue=true in topology %s", o.ToolsCert.TopologyFile)
+	} else {
+		log.Infof("Successfully generated certificates for %d nodes", processedNodes)  
 	}
 
 	return nil

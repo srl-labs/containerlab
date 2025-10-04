@@ -381,6 +381,7 @@ type ToolsCertOptions struct {
 	CACertPath       string
 	CAKeyPath        string
 	KeySize          uint
+	TopologyFile     string
 }
 
 type ToolsDisableTxOffloadOptions struct {
