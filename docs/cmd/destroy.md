@@ -4,6 +4,8 @@
 
 The `destroy` command destroys a lab referenced by its [topology definition file](../manual/topo-def-file.md).
 
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
+
 ### Usage
 
 `containerlab [global-flags] destroy [local-flags]`

@@ -28,6 +28,8 @@ The two most common applications of this command are:
 
     This command will destroy the lab and remove the lab directory before deploying the lab again. This ensures a clean redeployment as if you were deploying a lab for the first time discarding any previous lab state.
 
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
+
 ### Usage
 
 `containerlab [global-flags] redeploy [local-flags]`

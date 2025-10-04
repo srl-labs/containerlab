@@ -3,6 +3,13 @@
 ### Description
 
 The `deploy` command spins up a lab using the topology expressed via [topology definition file](../manual/topo-def-file.md).
+<!-- --8<-- [start:env-vars-flags] -->
+> All command line arguments can be also provided via environment variables (CLI flags take precedence). The environment variable names are constructed by prepending `CLAB_` to the flag name, then adding the command path and ending with the flag name in its full form, all in uppercase and with hyphens replaced by underscores.
+>
+> For example, the `--max-workers` flag for the `deploy` command can be set via `CLAB_DEPLOY_MAX_WORKERS` environment variable.  
+> Or `CLAB_INSPECT_ALL=1` to set `--all` flag for the `inspect` command.  
+> Or `CLAB_TOPO=srlinux.dev/clab-srl clab dep -c` to deploy a lab with the topology passed via environment variable.
+<!-- --8<-- [end:env-vars-flags] -->
 
 ### Usage
 
