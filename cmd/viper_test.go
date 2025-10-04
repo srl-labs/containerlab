@@ -13,6 +13,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// setEnvWithCleanup sets an environment variable and returns a cleanup function
+// to restore the original value.
+func setEnvWithCleanup(key, value string) func() {
+	original := os.Getenv(key)
+	os.Setenv(key, value)
+
+	return func() {
+		if original != "" {
+			os.Setenv(key, original)
+		} else {
+			os.Unsetenv(key)
+		}
+	}
+}
+
 func TestViperEnvVars(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -70,19 +85,7 @@ func TestViperEnvVars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original value if exists
-			originalVal := os.Getenv(tt.envKey)
-
-			defer func() {
-				if originalVal != "" {
-					os.Setenv(tt.envKey, originalVal)
-				} else {
-					os.Unsetenv(tt.envKey)
-				}
-			}()
-
-			// Set environment variable
-			os.Setenv(tt.envKey, tt.envValue)
+			defer setEnvWithCleanup(tt.envKey, tt.envValue)()
 
 			// Reset options instance to get fresh defaults
 			optionsInstance = nil
@@ -105,9 +108,6 @@ func TestViperEnvVars(t *testing.T) {
 			if !tt.check(o) {
 				t.Errorf("Environment variable %s did not set the expected value", tt.envKey)
 			}
-
-			// Clean up
-			os.Unsetenv(tt.envKey)
 		})
 	}
 }
@@ -131,19 +131,7 @@ func TestViperEnvKeyReplacer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original value if exists
-			originalVal := os.Getenv(tt.envKey)
-
-			defer func() {
-				if originalVal != "" {
-					os.Setenv(tt.envKey, originalVal)
-				} else {
-					os.Unsetenv(tt.envKey)
-				}
-			}()
-
-			// Set environment variable
-			os.Setenv(tt.envKey, tt.envValue)
+			defer setEnvWithCleanup(tt.envKey, tt.envValue)()
 
 			// Reset options instance to get fresh defaults
 			optionsInstance = nil
@@ -166,17 +154,12 @@ func TestViperEnvKeyReplacer(t *testing.T) {
 			if !tt.check(o) {
 				t.Errorf("Environment variable %s did not set the expected value", tt.envKey)
 			}
-
-			// Clean up
-			os.Unsetenv(tt.envKey)
 		})
 	}
 }
 
 func TestViperFlagTakesPrecedence(t *testing.T) {
-	// Set environment variable
-	os.Setenv("CLAB_LOG_LEVEL", "debug")
-	defer os.Unsetenv("CLAB_LOG_LEVEL")
+	defer setEnvWithCleanup("CLAB_LOG_LEVEL", "debug")()
 
 	// Reset options instance to get fresh defaults
 	optionsInstance = nil
@@ -240,22 +223,9 @@ func TestViperSubcommandFlags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Save original value if exists
-			originalVal := os.Getenv(tt.envKey)
-
-			defer func() {
-				if originalVal != "" {
-					os.Setenv(tt.envKey, originalVal)
-				} else {
-					os.Unsetenv(tt.envKey)
-				}
-			}()
-
-			// Set environment variable
-			os.Setenv(tt.envKey, tt.envValue)
+			defer setEnvWithCleanup(tt.envKey, tt.envValue)()
 			// Also set a topology name to avoid the file search
-			os.Setenv("CLAB_NAME", "test-lab")
-			defer os.Unsetenv("CLAB_NAME")
+			defer setEnvWithCleanup("CLAB_NAME", "test-lab")()
 
 			// Reset options instance to get fresh defaults
 			optionsInstance = nil
@@ -285,9 +255,6 @@ func TestViperSubcommandFlags(t *testing.T) {
 			if !tt.check(o) {
 				t.Errorf("Environment variable %s did not set the expected value", tt.envKey)
 			}
-
-			// Clean up
-			os.Unsetenv(tt.envKey)
 		})
 	}
 }
@@ -306,23 +273,9 @@ func findCommand(cmd *cobra.Command, name string) *cobra.Command {
 func TestViperNestedCommandFlags(t *testing.T) {
 	// Test for nested commands like "tools disable-tx-offload"
 	// Environment variable should be CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER
-
-	// Save original value if exists
-	originalVal := os.Getenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER")
-
-	defer func() {
-		if originalVal != "" {
-			os.Setenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER", originalVal)
-		} else {
-			os.Unsetenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER")
-		}
-	}()
-
-	// Set environment variable
-	os.Setenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER", "test-container")
+	defer setEnvWithCleanup("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER", "test-container")()
 	// Also set a topology name to avoid the file search
-	os.Setenv("CLAB_NAME", "test-lab")
-	defer os.Unsetenv("CLAB_NAME")
+	defer setEnvWithCleanup("CLAB_NAME", "test-lab")()
 
 	// Reset options instance to get fresh defaults
 	optionsInstance = nil
