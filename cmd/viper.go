@@ -64,7 +64,7 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 func updateOptionsFromViper(cmd *cobra.Command, _ *Options) {
 	// Collect all flags that should be checked (avoid duplicates)
 	flagMap := make(map[string]*pflag.Flag)
-	
+
 	// Helper to add flags to map
 	addFlags := func(fs *pflag.FlagSet) {
 		fs.VisitAll(func(f *pflag.Flag) {
@@ -73,20 +73,20 @@ func updateOptionsFromViper(cmd *cobra.Command, _ *Options) {
 			}
 		})
 	}
-	
+
 	// Add this command's local flags
 	addFlags(cmd.Flags())
-	
+
 	// Add this command's persistent flags
 	addFlags(cmd.PersistentFlags())
-	
+
 	// Add inherited persistent flags from all parent commands
 	parent := cmd.Parent()
 	for parent != nil {
 		addFlags(parent.PersistentFlags())
 		parent = parent.Parent()
 	}
-	
+
 	// Now update all collected flags from viper
 	for _, f := range flagMap {
 		updateFlagFromViper(f)
@@ -95,7 +95,7 @@ func updateOptionsFromViper(cmd *cobra.Command, _ *Options) {
 
 // updateFlagFromViper updates a single flag's value from viper if:
 // - The flag was not explicitly set on the command line
-// - Viper has a value for this flag (from env var or config file)
+// - Viper has a value for this flag (from env var or config file).
 func updateFlagFromViper(f *pflag.Flag) {
 	// Skip if flag was explicitly set via command line
 	if f.Changed {
@@ -110,7 +110,7 @@ func updateFlagFromViper(f *pflag.Flag) {
 	// Get the value from viper based on the flag's type and set it
 	// The flag.Value.Set() method handles type conversion for us
 	var val string
-	
+
 	switch f.Value.Type() {
 	case "bool":
 		val = v.GetString(f.Name)

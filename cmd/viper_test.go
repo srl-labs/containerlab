@@ -267,7 +267,8 @@ func TestViperSubcommandFlags(t *testing.T) {
 				t.Fatal("Deploy command not found")
 			}
 
-			// Execute prerun on deploy command (use root command's prerun to avoid deploy-specific checks)
+			// Execute prerun on deploy command (use root command's prerun to avoid deploy-specific
+			// checks)
 			o := GetOptions()
 			err = preRunFn(deployCmd, o)
 			if err != nil {
