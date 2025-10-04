@@ -306,7 +306,7 @@ func findCommand(cmd *cobra.Command, name string) *cobra.Command {
 func TestViperNestedCommandFlags(t *testing.T) {
 	// Test for nested commands like "tools disable-tx-offload"
 	// Environment variable should be CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER
-	
+
 	// Save original value if exists
 	originalVal := os.Getenv("CLAB_TOOLS_DISABLE_TX_OFFLOAD_CONTAINER")
 	defer func() {

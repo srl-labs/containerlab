@@ -48,7 +48,9 @@ func bindFlags(cmd *cobra.Command, v *viper.Viper) error {
 func bindFlagsWithPath(cmd *cobra.Command, v *viper.Viper, cmdPath string) error {
 	// Build the current command path
 	currentPath := cmdPath
-	if cmd.Name() != "containerlab" && cmd.Name() != "" {
+	isRootCmd := cmd.Name() == "containerlab" || cmd.Name() == ""
+
+	if !isRootCmd {
 		if currentPath != "" {
 			currentPath = currentPath + "." + cmd.Name()
 		} else {
@@ -56,13 +58,19 @@ func bindFlagsWithPath(cmd *cobra.Command, v *viper.Viper, cmdPath string) error
 		}
 	}
 
-	// Bind persistent flags with command path prefix
+	// Bind persistent flags
 	cmd.PersistentFlags().VisitAll(func(flag *pflag.Flag) {
-		key := flag.Name
-		if currentPath != "" {
-			key = currentPath + "." + flag.Name
+		// For root command persistent flags, bind WITHOUT prefix so they work globally
+		// as CLAB_<FLAG> from any command
+		if isRootCmd {
+			_ = v.BindPFlag(flag.Name, flag)
 		}
-		_ = v.BindPFlag(key, flag)
+
+		// Also bind with command path if we have one (for subcommands)
+		if currentPath != "" {
+			key := currentPath + "." + flag.Name
+			_ = v.BindPFlag(key, flag)
+		}
 	})
 
 	// Bind local flags with command path prefix
@@ -71,12 +79,13 @@ func bindFlagsWithPath(cmd *cobra.Command, v *viper.Viper, cmdPath string) error
 		if cmd.PersistentFlags().Lookup(flag.Name) != nil {
 			return
 		}
-		
-		key := flag.Name
+
+		// Local flags MUST have a command path prefix
+		// Don't bind without prefix to avoid ambiguity
 		if currentPath != "" {
-			key = currentPath + "." + flag.Name
+			key := currentPath + "." + flag.Name
+			_ = v.BindPFlag(key, flag)
 		}
-		_ = v.BindPFlag(key, flag)
 	})
 
 	// Recursively bind flags for all subcommands
@@ -133,12 +142,12 @@ func updateOptionsFromViper(cmd *cobra.Command, _ *Options) {
 func getCommandPath(cmd *cobra.Command) string {
 	var parts []string
 	current := cmd
-	
+
 	for current != nil && current.Name() != "containerlab" && current.Name() != "" {
 		parts = append([]string{current.Name()}, parts...)
 		current = current.Parent()
 	}
-	
+
 	return strings.Join(parts, ".")
 }
 
@@ -152,19 +161,40 @@ func updateFlagFromViper(f *pflag.Flag, cmdPath string) {
 		return
 	}
 
-	// Build the key to check in viper (includes command path)
-	// Try with command path first, then without (for root persistent flags)
-	key := f.Name
-	if cmdPath != "" {
-		key = cmdPath + "." + f.Name
-	}
+	// Determine the key to check in viper
+	// Strategy:
+	// 1. First check if flag is bound with full command path (e.g., version.short)
+	// 2. If not found AND the flag name itself is a bound key (root persistent flags),
+	//    then check that key
+	var key string
+	var hasValue bool
 
-	// Check if viper has this key
-	hasValue := v.IsSet(key)
-	
-	// If not found with command path and we have a command path,
-	// try without it (this handles root persistent flags)
-	if !hasValue && cmdPath != "" {
+	if cmdPath != "" {
+		// For commands with a path, first try the full command.flag format
+		key = cmdPath + "." + f.Name
+		hasValue = v.IsSet(key)
+
+		// If not found with command path, check if this flag name is bound at root level
+		// This happens for root persistent flags which are bound without prefix
+		if !hasValue {
+			// Check if the flag name itself is a viper key (indicates root persistent flag)
+			// We use AllKeys to check all bound keys
+			isRootKey := false
+			for _, k := range v.AllKeys() {
+				if k == f.Name {
+					isRootKey = true
+					break
+				}
+			}
+
+			// Only fall back to unprefixed key if it's actually bound at root
+			if isRootKey {
+				key = f.Name
+				hasValue = v.IsSet(key)
+			}
+		}
+	} else {
+		// For commands without a path (shouldn't normally happen)
 		key = f.Name
 		hasValue = v.IsSet(key)
 	}
