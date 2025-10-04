@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/spf13/cobra"
 )
 
 func TestViperEnvVars(t *testing.T) {
@@ -198,4 +199,98 @@ func TestViperFlagTakesPrecedence(t *testing.T) {
 	if !cmp.Equal(o.Global.LogLevel, "error") {
 		t.Errorf("Expected log level to be 'error' (from flag), got '%s'", o.Global.LogLevel)
 	}
+}
+
+func TestViperSubcommandFlags(t *testing.T) {
+	tests := []struct {
+		name     string
+		envKey   string
+		envValue string
+		check    func(*Options) bool
+	}{
+		{
+			name:     "CLAB_GRAPH sets graph generation flag",
+			envKey:   "CLAB_GRAPH",
+			envValue: "true",
+			check: func(o *Options) bool {
+				return o.Deploy.GenerateGraph == true
+			},
+		},
+		{
+			name:     "CLAB_RECONFIGURE sets reconfigure flag",
+			envKey:   "CLAB_RECONFIGURE",
+			envValue: "true",
+			check: func(o *Options) bool {
+				return o.Deploy.Reconfigure == true
+			},
+		},
+		{
+			name:     "CLAB_MAX_WORKERS sets max workers",
+			envKey:   "CLAB_MAX_WORKERS",
+			envValue: "10",
+			check: func(o *Options) bool {
+				return o.Deploy.MaxWorkers == 10
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save original value if exists
+			originalVal := os.Getenv(tt.envKey)
+			defer func() {
+				if originalVal != "" {
+					os.Setenv(tt.envKey, originalVal)
+				} else {
+					os.Unsetenv(tt.envKey)
+				}
+			}()
+
+			// Set environment variable
+			os.Setenv(tt.envKey, tt.envValue)
+			// Also set a topology name to avoid the file search
+			os.Setenv("CLAB_NAME", "test-lab")
+			defer os.Unsetenv("CLAB_NAME")
+
+			// Reset options instance to get fresh defaults
+			optionsInstance = nil
+
+			// Create command
+			cmd, err := Entrypoint()
+			if err != nil {
+				t.Fatalf("Failed to create command: %v", err)
+			}
+
+			// Find the deploy subcommand
+			deployCmd := findCommand(cmd, "deploy")
+			if deployCmd == nil {
+				t.Fatal("Deploy command not found")
+			}
+
+			// Execute prerun on deploy command (use root command's prerun to avoid deploy-specific checks)
+			o := GetOptions()
+			err = preRunFn(deployCmd, o)
+			if err != nil {
+				t.Fatalf("PreRun failed: %v", err)
+			}
+
+			// Check if the value was set correctly
+			if !tt.check(o) {
+				t.Errorf("Environment variable %s did not set the expected value", tt.envKey)
+			}
+
+			// Clean up
+			os.Unsetenv(tt.envKey)
+		})
+	}
+}
+
+// findCommand finds a subcommand by name.
+func findCommand(cmd *cobra.Command, name string) *cobra.Command {
+	for _, subCmd := range cmd.Commands() {
+		if subCmd.Name() == name {
+			return subCmd
+		}
+	}
+	return nil
 }
