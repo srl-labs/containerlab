@@ -230,3 +230,124 @@ func TestCLab_exportTopologyDataWithLinkIPs(t *testing.T) {
 		t.Errorf("endpoint 'z' ipv6 = %v, want '2001:db8::2/64'", endpointZ["ipv6"])
 	}
 }
+
+// TestCLab_exportTopologyDataWithEmptyLinkIPs tests that links without IPv4/IPv6
+// addresses export empty strings gracefully.
+func TestCLab_exportTopologyDataWithEmptyLinkIPs(t *testing.T) {
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
+
+	// Create mock nodes
+	mockNode1 := clabmocksmocknodes.NewMockNode(mockCtrl)
+	mockNode1.EXPECT().Config().Return(
+		&clabtypes.NodeConfig{
+			ShortName: "node1",
+			LongName:  "clab-test-node1",
+			Kind:      "linux",
+			Image:     "alpine:latest",
+		},
+	).AnyTimes()
+	mockNode1.EXPECT().GetShortName().Return("node1").AnyTimes()
+
+	mockNode2 := clabmocksmocknodes.NewMockNode(mockCtrl)
+	mockNode2.EXPECT().Config().Return(
+		&clabtypes.NodeConfig{
+			ShortName: "node2",
+			LongName:  "clab-test-node2",
+			Kind:      "linux",
+			Image:     "alpine:latest",
+		},
+	).AnyTimes()
+	mockNode2.EXPECT().GetShortName().Return("node2").AnyTimes()
+
+	// Create mock endpoints WITHOUT IP addresses
+	mockEndpoint1 := clabmocksmocklinks.NewMockEndpoint(mockCtrl)
+	mockEndpoint1.EXPECT().GetNode().Return(mockNode1).AnyTimes()
+	mockEndpoint1.EXPECT().GetIfaceName().Return("eth1").AnyTimes()
+	mockEndpoint1.EXPECT().GetMac().Return(nil).AnyTimes()
+	mockEndpoint1.EXPECT().GetIPv4Addr().Return("").AnyTimes()
+	mockEndpoint1.EXPECT().GetIPv6Addr().Return("").AnyTimes()
+
+	mockEndpoint2 := clabmocksmocklinks.NewMockEndpoint(mockCtrl)
+	mockEndpoint2.EXPECT().GetNode().Return(mockNode2).AnyTimes()
+	mockEndpoint2.EXPECT().GetIfaceName().Return("eth1").AnyTimes()
+	mockEndpoint2.EXPECT().GetMac().Return(nil).AnyTimes()
+	mockEndpoint2.EXPECT().GetIPv4Addr().Return("").AnyTimes()
+	mockEndpoint2.EXPECT().GetIPv6Addr().Return("").AnyTimes()
+
+	// Create mock link
+	mockLink := clabmocksmocklinks.NewMockLink(mockCtrl)
+	mockLink.EXPECT().GetEndpoints().Return([]clablinks.Endpoint{mockEndpoint1, mockEndpoint2}).AnyTimes()
+
+	// Create CLab instance with the mock link
+	prefix := "clab"
+	c := &CLab{
+		Config: &Config{
+			Name:   "test-lab",
+			Prefix: &prefix,
+			Mgmt:   new(clabtypes.MgmtNet),
+		},
+		Nodes: map[string]clabnodes.Node{
+			"node1": mockNode1,
+			"node2": mockNode2,
+		},
+		Links: map[int]clablinks.Link{
+			0: mockLink,
+		},
+	}
+
+	// Export the topology
+	var buf bytes.Buffer
+	err := c.exportTopologyDataWithTemplate(context.Background(), &buf, "")
+	if err != nil {
+		t.Fatalf("exportTopologyDataWithTemplate() error = %v", err)
+	}
+
+	// Parse the JSON output
+	var result map[string]interface{}
+	err = json.Unmarshal(buf.Bytes(), &result)
+	if err != nil {
+		t.Fatalf("failed to parse JSON output: %v", err)
+	}
+
+	// Verify the links section exists
+	links, ok := result["links"].([]interface{})
+	if !ok {
+		t.Fatalf("links field is missing or not an array")
+	}
+
+	if len(links) == 0 {
+		t.Fatalf("expected at least one link, got 0")
+	}
+
+	// Check the first link
+	link := links[0].(map[string]interface{})
+
+	// Verify endpoint "a" has empty IP addresses
+	endpointA, ok := link["a"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("endpoint 'a' is missing or not an object")
+	}
+
+	if ipv4 := endpointA["ipv4"].(string); ipv4 != "" {
+		t.Errorf("endpoint 'a' ipv4 = %v, want empty string", endpointA["ipv4"])
+	}
+
+	if ipv6 := endpointA["ipv6"].(string); ipv6 != "" {
+		t.Errorf("endpoint 'a' ipv6 = %v, want empty string", endpointA["ipv6"])
+	}
+
+	// Verify endpoint "z" has empty IP addresses
+	endpointZ, ok := link["z"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("endpoint 'z' is missing or not an object")
+	}
+
+	if ipv4 := endpointZ["ipv4"].(string); ipv4 != "" {
+		t.Errorf("endpoint 'z' ipv4 = %v, want empty string", endpointZ["ipv4"])
+	}
+
+	if ipv6 := endpointZ["ipv6"].(string); ipv6 != "" {
+		t.Errorf("endpoint 'z' ipv6 = %v, want empty string", endpointZ["ipv6"])
+	}
+}
