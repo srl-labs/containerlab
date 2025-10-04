@@ -112,10 +112,20 @@ func Entrypoint() (*cobra.Command, error) {
 		c.AddCommand(cmd)
 	}
 
+	// Initialize viper for environment variable support
+	if err := initViper(c); err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
 func preRunFn(cobraCmd *cobra.Command, o *Options) error {
+	// Update options from viper (environment variables take precedence over defaults)
+	if v != nil {
+		updateOptionsFromViper(cobraCmd, o)
+	}
+
 	// setting log level
 	switch {
 	case o.Global.DebugCount > 0:

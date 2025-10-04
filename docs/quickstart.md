@@ -196,6 +196,10 @@ To get a broader view on the containerlab features and components, refer to the 
 
 Do not forget to check out the [Lab examples](lab-examples/lab-examples.md) section where we provide complete and ready-to-run topology definition files. This is a great starting point to explore containerlab by doing.
 
+## Command Line Reference
+
+Containerlab CLI has a rich set of commands and flags. Check out the [**Command reference**](cmd/deploy.md) section to get familiar with all the commands and their usage.
+
 [^1]: For other installation options such as package managers, manual binary downloads or instructions to get containerlab for non-RHEL/Debian distros, refer to the [installation guide](install.md).
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

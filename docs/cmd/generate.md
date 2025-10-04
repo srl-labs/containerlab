@@ -8,6 +8,8 @@ With this command it is possible to generate definition file for a CLOS fabric b
 
 It is assumed, that the interconnection between the tiers is done in a full-mesh fashion. Such as tier1 nodes are fully meshed with tier2, tier2 is meshed with tier3 and so on.
 
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
+
 ### Usage
 
 `containerlab [global-flags] generate [local-flags]`
