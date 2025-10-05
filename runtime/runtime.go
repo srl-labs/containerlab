@@ -74,6 +74,8 @@ type ContainerRuntime interface {
 	// Container-outside-of-Container (CooC - General case – container uses host container
 	// runtime) does need to function properly
 	GetCooCBindMounts() clabtypes.Binds
+	// GetRuntimeBinary returns the path to the binary of the runtime
+	GetRuntimeBinary() (string, error)
 }
 
 type ContainerStatus string
