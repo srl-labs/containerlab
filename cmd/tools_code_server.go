@@ -234,7 +234,8 @@ func codeServerCmd(o *Options) (*cobra.Command, error) {
 		},
 	}
 	c.AddCommand(codeServerStopCmd)
-	codeServerStopCmd.Flags().StringVarP(&o.ToolsCodeServer.Name, "name", "n", o.ToolsCodeServer.Name,
+	codeServerStopCmd.Flags().StringVarP(&o.ToolsCodeServer.Name,
+		"name", "n", o.ToolsCodeServer.Name,
 		"name of the code-server container to stop")
 
 	return c, nil
@@ -515,7 +516,8 @@ func codeServerStatus(cobraCmd *cobra.Command, o *Options) error {
 
 		// Get owner from container labels
 		owner := "N/A"
-		if ownerVal, exists := containers[idx].Labels[clabconstants.Owner]; exists && ownerVal != "" {
+		if ownerVal, exists := containers[idx].Labels[clabconstants.Owner]; exists &&
+			ownerVal != "" {
 			owner = ownerVal
 		}
 
