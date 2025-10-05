@@ -149,11 +149,11 @@ func buildCodeServerBinds(
 	return binds, nil
 }
 
-func buildCodeServerCommand(isFirstRun bool) string {
+func buildCodeServerCommand(isFirstRun bool, defaultDir string) string {
 	baseCommand := strings.Join([]string{
 		"code-server --config /root/.config/code-server/config.yaml",
 		"--extensions-dir /persistent-extensions",
-		"--user-data-dir /persistent-user-data",
+		"--user-data-dir /persistent-user-data ", defaultDir,
 	}, " ")
 
 	if !isFirstRun {
@@ -289,7 +289,7 @@ func NewCodeServerNode(name, image, labsDir string,
 		},
 	}
 
-	cmd := buildCodeServerCommand(isFirstRun)
+	cmd := buildCodeServerCommand(isFirstRun, homeDir)
 
 	nodeConfig := &clabtypes.NodeConfig{
 		LongName:     name,
