@@ -145,6 +145,7 @@ func buildCodeServerBinds(
 	}
 
 	binds = append(binds, clabtypes.NewBind(clabPath, "/usr/bin/containerlab", "ro"))
+	binds = append(binds, clabtypes.NewBind(clabPath, "/usr/bin/clab", "ro"))
 
 	return binds, nil
 }
