@@ -1771,7 +1771,7 @@ func (n *sros) GetContainerName() string {
 }
 
 // MonitorLogs reads from the passed io reader to check if we get
-// any unexpected errors in PostDeploy phase of SRSIM (ie. rejected config)
+// any unexpected errors in PostDeploy phase of SRSIM (ie. rejected config).
 func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
