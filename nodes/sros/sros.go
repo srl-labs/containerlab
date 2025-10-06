@@ -1770,8 +1770,13 @@ func (n *sros) GetContainerName() string {
 	return n.DefaultNode.GetContainerName()
 }
 
-// MonitorLogs reads from the passed io reader to check if we get
-// any unexpected errors in PostDeploy phase of SRSIM (ie. rejected config).
+// MonitorLogs monitors log output from the provided reader during the PostDeploy phase of SRSIM.
+// It scans each line for SR-OS error messages (minor or critical) and logs them as warnings or errors.
+// The method checks for context cancellation on each line and returns immediately if the context is cancelled.
+// Parameters:
+//   - ctx: context for cancellation; if cancelled, the method returns.
+//   - reader: io.ReadCloser providing log lines to scan.
+// The method returns when the context is cancelled or the reader is exhausted.
 func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
