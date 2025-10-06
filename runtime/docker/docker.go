@@ -1347,5 +1347,4 @@ func (d *DockerRuntime) StreamLogs(ctx context.Context, containerName string) (i
 	}
 
 	return logStream, nil
-
 }
