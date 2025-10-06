@@ -28,6 +28,13 @@ const (
 
 	generateable     = true
 	generateIfFormat = "eth%d"
+
+	// C8000v modes
+	modeAutonomous = "autonomous"
+	modeController = "controller"
+
+	// Default mode if not specified
+	defaultMode = modeAutonomous
 )
 
 // Register registers the node in the NodeRegistry.
@@ -50,6 +57,7 @@ func Register(r *clabnodes.NodeRegistry) {
 
 type vrC8000v struct {
 	clabnodes.VRNode
+	mode string
 }
 
 func (n *vrC8000v) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -62,6 +70,24 @@ func (n *vrC8000v) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	for _, o := range opts {
 		o(n)
 	}
+
+	// Determine mode from NodeType field
+	// NodeType can be: autonomous, controller
+	// If not specified, defaults to autonomous
+	n.mode = n.Cfg.NodeType
+	if n.mode == "" {
+		n.mode = defaultMode
+	}
+
+	// Validate mode
+	if !isValidMode(n.mode) {
+		return fmt.Errorf(
+			"invalid mode %q for cisco_c8000v node %q. Must be one of: autonomous, controller",
+			n.mode,
+			n.Cfg.ShortName,
+		)
+	}
+
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
@@ -69,6 +95,7 @@ func (n *vrC8000v) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 		"PASSWORD":           defaultCredentials.GetPassword(),
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
+		"MODE":               n.mode, // Set MODE environment variable for vrnetlab
 	}
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
@@ -96,4 +123,14 @@ func (n *vrC8000v) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption)
 	n.InterfaceHelp = InterfaceHelp
 
 	return nil
+}
+
+// isValidMode checks if the mode is valid.
+func isValidMode(mode string) bool {
+	switch mode {
+	case modeAutonomous, modeController:
+		return true
+	default:
+		return false
+	}
 }
