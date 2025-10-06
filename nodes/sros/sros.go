@@ -5,6 +5,7 @@
 package sros
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	_ "embed"
@@ -75,6 +76,9 @@ const (
 
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
+
+	srosMinorError    = "MINOR:"
+	srosCriticalError = "CRITICAL:"
 )
 
 var (
@@ -373,12 +377,23 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		return err
 	}
 
+	logs, err := n.Runtime.StreamLogs(ctx, n.GetContainerName())
+	if err != nil {
+		log.Debug("Failed to get container log stream", "node", n.Cfg.ShortName, "err", err)
+	} else {
+		// Start monitoring in a goroutine
+		monitoringCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		defer logs.Close()
+
+		go n.MonitorLogs(monitoringCtx, logs)
+	}
+
 	// Populate /etc/hosts for service discovery on mgmt interface
-	if err := n.populateHosts(ctx, params.Nodes); err != nil {
+	if err = n.populateHosts(ctx, params.Nodes); err != nil {
 		log.Warn("Unable to populate hosts list", "node", n.Cfg.ShortName, "err", err)
 	}
 
-	var err error
 	n.swVersion, err = n.RunningVersion(ctx)
 	if err != nil {
 		return err
@@ -1753,4 +1768,25 @@ func (n *sros) GetContainerName() string {
 		return n.cpmContainerName
 	}
 	return n.DefaultNode.GetContainerName()
+}
+
+// MonitorLogs reads from the passed io reader to check if we get
+// any unexpected errors in PostDeploy phase of SRSIM (ie. rejected config)
+func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser) {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if strings.Contains(line, srosMinorError) {
+			log.Warnf("Got SR-OS log message on: %q\n\t%s", n.Cfg.ShortName, line)
+		} else if strings.Contains(line, srosCriticalError) {
+			log.Errorf("Got SR-OS log message on: %q\n\t%s", n.Cfg.ShortName, line)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+	}
 }
