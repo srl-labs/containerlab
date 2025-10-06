@@ -7,6 +7,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -74,6 +75,9 @@ type ContainerRuntime interface {
 	// Container-outside-of-Container (CooC - General case – container uses host container
 	// runtime) does need to function properly
 	GetCooCBindMounts() clabtypes.Binds
+	// StreamLogs returns a reader for the container's logs
+	// The caller needs to close the returned ReadCloser.
+	StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error)
 }
 
 type ContainerStatus string
