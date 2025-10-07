@@ -1,12 +1,12 @@
 ---
 search:
   boost: 4
-kind_code_name: vr_cisco_sdwan
+kind_code_name: cisco_sdwan
 kind_display_name: Cisco SD-WAN Controllers
 ---
 # Cisco SD-WAN
 
-Cisco SD-WAN controller components are identified with `{{ kind_code_name }}` kind in the [topology file](../topo-def-file.md).
+Cisco SD-WAN controller components are identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
 This kind supports all three Cisco SD-WAN controller components:
 
@@ -22,7 +22,7 @@ This kind supports all three Cisco SD-WAN controller components:
 | vSmart    | 1    | 4 GB  | 30 GB      |
 | vBond     | 1    | 2 GB  | 30 GB      |
 
-## Managing cisco_sdwan nodes
+## Managing -{{ kind_code_name }}- nodes
 
 /// note
 SD-WAN components boot in 5-10 minutes. Monitor progress with:
@@ -64,17 +64,17 @@ Specify the component type using the `type` parameter:
 topology:
   nodes:
     sdwan-manager:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: manager
       image: vrnetlab/cisco_sdwan-manager:20.16.1
 
     sdwan-controller:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: controller
       image: vrnetlab/cisco_sdwan-controller:20.16.1
 
     sdwan-validator:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: validator
       image: vrnetlab/cisco_sdwan-validator:20.16.1
 ```
@@ -106,7 +106,7 @@ The cisco_sdwan kind supports two configuration file formats:
 topology:
   nodes:
     sdwan-manager:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: manager
       startup-config: sdwan-manager-config.xml
 ```
@@ -147,7 +147,7 @@ Example zCloud XML (`sdwan-manager-config.xml`):
 topology:
   nodes:
     sdwan-manager:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: manager
       startup-config: sdwan-manager-cloud-init.yaml
 ```
@@ -178,17 +178,17 @@ name: sdwan-controllers
 topology:
   nodes:
     sdwan-manager:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: manager
       image: vrnetlab/cisco_sdwan-manager:20.16.1
 
     sdwan-controller:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: controller
       image: vrnetlab/cisco_sdwan-controller:20.16.1
 
     sdwan-validator:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: validator
       image: vrnetlab/cisco_sdwan-validator:20.16.1
 
@@ -205,17 +205,17 @@ name: sdwan-fabric
 topology:
   nodes:
     sdwan-manager:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: manager
       image: vrnetlab/cisco_sdwan-manager:20.16.1
 
     sdwan-controller:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: controller
       image: vrnetlab/cisco_sdwan-controller:20.16.1
 
     sdwan-validator:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: validator
       image: vrnetlab/cisco_sdwan-validator:20.16.1
 
@@ -238,19 +238,19 @@ name: sdwan-custom
 topology:
   nodes:
     sdwan-manager:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: manager
       startup-config: configs/sdwan-manager-zcloud.xml
       image: vrnetlab/cisco_sdwan-manager:20.16.1
 
     sdwan-controller:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: controller
       startup-config: configs/sdwan-controller-cloud-init.yaml
       image: vrnetlab/cisco_sdwan-controller:20.16.1
 
     sdwan-validator:
-      kind: vr_cisco_sdwan
+      kind: cisco_sdwan
       type: validator
       image: vrnetlab/cisco_sdwan-validator:20.16.1
 ```
