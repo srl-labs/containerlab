@@ -1802,7 +1802,7 @@ func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan c
 		if strings.Contains(line, srosMinorError) ||
 			strings.Contains(line, srosCriticalError) {
 			log.Warn(
-				"Got SR OS log message. Deployment may hang",
+				"Got SR OS log message",
 				"node",
 				n.Cfg.ShortName,
 				"message",
