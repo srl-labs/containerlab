@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -77,8 +78,9 @@ const (
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
 
-	srosMinorError    = "MINOR:"
-	srosCriticalError = "CRITICAL:"
+	srosMinorError     = "MINOR:"
+	srosCriticalError  = "CRITICAL:"
+	srosRejectedCfgMsg = "Configuration load failed - using default configuration"
 )
 
 var (
@@ -377,6 +379,8 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		return err
 	}
 
+	errChan := make(chan error, 1)
+
 	logs, err := n.Runtime.StreamLogs(ctx, n.GetContainerName())
 	if err != nil {
 		log.Debug("Failed to get container log stream", "node", n.Cfg.ShortName, "err", err)
@@ -386,7 +390,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		defer cancel()
 		defer logs.Close()
 
-		go n.MonitorLogs(monitoringCtx, logs)
+		go n.MonitorLogs(monitoringCtx, logs, errChan)
 	}
 
 	// Populate /etc/hosts for service discovery on mgmt interface
@@ -450,6 +454,10 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case err := <-errChan:
+			log.With("kind", n.Cfg.Kind, "node", n.Cfg.ShortName).Debugf("got %q on errChan", err)
+			log.Info("Skipping postdeploy actions", "kind", n.Cfg.Kind, "node", n.Cfg.ShortName)
+			return nil
 		case <-time.After(retryTimer):
 			// continue to next iteration
 		}
@@ -1781,9 +1789,11 @@ func (n *sros) GetContainerName() string {
 // Parameters:
 //   - ctx: context for cancellation; if cancelled, the method returns.
 //   - reader: io.ReadCloser providing log lines to scan.
+//   - exitChan: channel which will signal an error for postdeploy to skip.
 //
-// The method returns when the context is cancelled or the reader is exhausted.
-func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser) {
+// The method returns when the context is cancelled, when the reader is exhausted or if
+// it detects that SR-OS rejected the config as per the const srosRejectedCfgMsg
+func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan chan<- error) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -1798,6 +1808,11 @@ func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser) {
 				"message",
 				line+"\n",
 			)
+		}
+
+		if strings.Contains(line, srosRejectedCfgMsg) {
+			exitChan <- errors.New("configuration rejected by SR-OS")
+			return
 		}
 
 		select {
