@@ -1064,11 +1064,11 @@ func (n *sros) addDefaultConfig() error {
 
 	componentConfig := ""
 
-	// Generate component configuration IF no startup-config defined.
-	if n.Cfg.StartupConfig == "" {
+	// Generate component configuration IF no startup-config, or partial is defined.
+	if !isNonPartialConfigFile(n.Cfg.StartupConfig) {
 		componentConfig = n.generateComponentConfig()
 	} else {
-		log.Debugf("SR-SIM node %q has startup-config defined, skipping component config gen", n.Cfg.LongName)
+		log.Debugf("SR-SIM node %q has non-partial startup-config defined, skipping component config gen", n.Cfg.LongName)
 	}
 
 	// tplData holds data used in templating of the default config snippet
