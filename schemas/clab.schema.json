@@ -323,12 +323,12 @@
                                 "description": "Set component type"
                             },
                             "sfm": {
-                                "description": "Set SFM type (SR-OS specific).",
+                                "description": "Set SFM type (SR OS specific).",
                                 "$ref": "#/definitions/sros-sfm-types"
                             },
                             "xiom": {
                                 "type": "array",
-                                "description": "Define list of XIOMs (SR-OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
+                                "description": "Define list of XIOMs (SR OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
                                 "items": {
                                     "type": "object",
                                     "properties": {
@@ -371,7 +371,7 @@
                             },
                             "mda": {
                                 "type": "array",
-                                "description": "Define list of MDAs (SR-OS Specific). Each defined MDA must have values of 'slot' and 'type'",
+                                "description": "Define list of MDAs (SR OS Specific). Each defined MDA must have values of 'slot' and 'type'",
                                 "items": {
                                     "type": "object",
                                     "properties": {
@@ -380,7 +380,7 @@
                                             "minimum": 1
                                         },
                                         "type": {
-                                            "description": "Set MDA type (SR-OS specific)",
+                                            "description": "Set MDA type (SR OS specific)",
                                             "$ref": "#/definitions/sros-mda-types"
                                         }
                                     },
@@ -1484,7 +1484,7 @@
         },
         "sros-card-types": {
             "type": "string",
-            "description": "Card types for SR-OS",
+            "description": "Card types for SR OS",
             "enum": [
                 "xcm-x20",
                 "imm40-10gb-sfp",
@@ -1539,7 +1539,7 @@
         },
         "sros-cpm-types": {
             "type": "string",
-            "description": "CPM card types for SR-OS",
+            "description": "CPM card types for SR OS",
             "enum": [
                 "cpm-x20",
                 "cpm-v",
@@ -1573,7 +1573,7 @@
         },
         "sros-mda-types": {
             "type": "string",
-            "description": "MDA types for SR-OS",
+            "description": "MDA types for SR OS",
             "enum": [
                 "x12-400g-qsfpdd",
                 "x6-200g-cfp2-dco",
@@ -1680,7 +1680,7 @@
         },
         "sros-xiom-types": {
             "type": "string",
-            "description": "XIOM types for SR-OS",
+            "description": "XIOM types for SR OS",
             "enum": [
                 "iom-s-3.0t",
                 "iom-s-1.5t",
@@ -1692,7 +1692,7 @@
         },
         "sros-xiom-mda-types": {
             "type": "string",
-            "description": "XIOM MDA types for SR-OS",
+            "description": "XIOM MDA types for SR OS",
             "enum": [
                 "ms6-200gb-cfp2-dco",
                 "ms3-200gb-cfp2-dco",
@@ -1717,7 +1717,7 @@
         },
         "sros-sfm-types": {
             "type": "string",
-            "description": "SFM types for SR-OS",
+            "description": "SFM types for SR OS",
             "enum": [
                 "m-sfm5-12",
                 "m-sfm5-7",

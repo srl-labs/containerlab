@@ -9,7 +9,7 @@ kind_display_name: Nokia SR OS
 <small>VM-based</small>
 
 /// warning
-There is a newer and more flexible fully containerized simulator for SR-OS called [SR-SIM](sros.md), which is the preferred way to emulate Nokia SR OS network OS.
+There is a newer and more flexible fully containerized simulator for SR OS called [SR-SIM](sros.md), which is the preferred way to emulate Nokia SR OS network OS.
 ///
 
 [Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) vSIM router is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a QEMU VM packaged in a docker container format. Do not mistake with the fully containeraized version of SR OS named [SR-SIM](sros.md).

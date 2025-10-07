@@ -1792,7 +1792,7 @@ func (n *sros) GetContainerName() string {
 //   - exitChan: channel which will signal an error for postdeploy to skip.
 //
 // The method returns when the context is cancelled, when the reader is exhausted or if
-// it detects that SR-OS rejected the config as per the const srosRejectedCfgMsg
+// it detects that SR OS rejected the config as per the const srosRejectedCfgMsg.
 func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan chan<- error) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
@@ -1811,7 +1811,7 @@ func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan c
 		}
 
 		if strings.Contains(line, srosRejectedCfgMsg) {
-			exitChan <- errors.New("configuration rejected by SR-OS")
+			exitChan <- errors.New("configuration rejected by SR OS")
 			return
 		}
 
