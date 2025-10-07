@@ -443,10 +443,14 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 					n.Cfg.ShortName,
 				)
 			}
-			err = n.saveConfigWithAddr(ctx, addr)
-			if err != nil {
-				return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
+			// don't save config if full config is sent.. it might not have NETCONF
+			if !isNonPartialConfigFile(n.Cfg.StartupConfig) {
+				err = n.saveConfigWithAddr(ctx, addr)
+				if err != nil {
+					return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
+				}
 			}
+
 			return nil
 		}
 
@@ -1503,9 +1507,22 @@ func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
+// isNonPartialConfigFile returns true if the config file doesn't contain .partial substring
+// and the config file is NOT nil (ie. startup config IS defined).
+// it is intended that the 'c' arg is n.Cfg.StartupConfig.
+func isNonPartialConfigFile(c string) bool {
+	return c != "" && !isPartialConfigFile(c)
+}
+
 func (n *sros) IsHealthy(_ context.Context) (bool, error) {
 	if !n.isCPM("") {
 		return true, fmt.Errorf("node %q is not a CPM, healthcheck has no effect", n.Cfg.LongName)
+	}
+	// non-partial user startup config might not have any netconf config
+	// so we shouldn't check for this.
+	if isNonPartialConfigFile(n.Cfg.StartupConfig) {
+		log.Debug("node has full startup config, skipping NETCONF check", "kind", n.Cfg.Kind, "node", n.Cfg.ShortName)
+		return true, nil
 	}
 	addr, err := n.MgmtIPAddr()
 	if err != nil {
