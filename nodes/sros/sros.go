@@ -5,9 +5,11 @@
 package sros
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -75,6 +77,10 @@ const (
 
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
+
+	srosMinorError     = "MINOR:"
+	srosCriticalError  = "CRITICAL:"
+	srosRejectedCfgMsg = "Configuration load failed - using default configuration"
 )
 
 var (
@@ -373,12 +379,25 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		return err
 	}
 
+	errChan := make(chan error, 1)
+
+	logs, err := n.Runtime.StreamLogs(ctx, n.GetContainerName())
+	if err != nil {
+		log.Debug("Failed to get container log stream", "node", n.Cfg.ShortName, "err", err)
+	} else {
+		// Start monitoring in a goroutine
+		monitoringCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		defer logs.Close()
+
+		go n.MonitorLogs(monitoringCtx, logs, errChan)
+	}
+
 	// Populate /etc/hosts for service discovery on mgmt interface
-	if err := n.populateHosts(ctx, params.Nodes); err != nil {
+	if err = n.populateHosts(ctx, params.Nodes); err != nil {
 		log.Warn("Unable to populate hosts list", "node", n.Cfg.ShortName, "err", err)
 	}
 
-	var err error
 	n.swVersion, err = n.RunningVersion(ctx)
 	if err != nil {
 		return err
@@ -435,6 +454,10 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case err := <-errChan:
+			log.With("kind", n.Cfg.Kind, "node", n.Cfg.ShortName).Debugf("got %q on errChan", err)
+			log.Info("Skipping postdeploy actions", "kind", n.Cfg.Kind, "node", n.Cfg.ShortName)
+			return nil
 		case <-time.After(retryTimer):
 			// continue to next iteration
 		}
@@ -1687,7 +1710,11 @@ func (n *sros) generateComponentConfig() string {
 			// not all types may have preprovisioned card
 			// so the following configs will fail if card
 			// doesn't have valid type explicitly set.
-			log.Warnf("SR-SIM node %q, has no type set for component in slot %q, skipping component SR-OS config generation.", n.Cfg.ShortName, slot)
+			log.Warn("SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
+				"node",
+				n.Cfg.ShortName,
+				"slot",
+				slot)
 			continue
 		}
 
@@ -1753,4 +1780,45 @@ func (n *sros) GetContainerName() string {
 		return n.cpmContainerName
 	}
 	return n.DefaultNode.GetContainerName()
+}
+
+// MonitorLogs monitors log output from the provided reader during the PostDeploy phase of SRSIM.
+// It scans each line for SR OS error messages (minor or critical) and logs them as warnings
+// The method checks for context cancellation on each line and returns immediately if the
+// context is cancelled.
+// Parameters:
+//   - ctx: context for cancellation; if cancelled, the method returns.
+//   - reader: io.ReadCloser providing log lines to scan.
+//   - exitChan: channel which will signal an error for postdeploy to skip.
+//
+// The method returns when the context is cancelled, when the reader is exhausted or if
+// it detects that SR OS rejected the config as per the const srosRejectedCfgMsg.
+func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan chan<- error) {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = clabutils.StripNonPrintChars(line)
+
+		if strings.Contains(line, srosMinorError) ||
+			strings.Contains(line, srosCriticalError) {
+			log.Warn(
+				"Got SR OS log message",
+				"node",
+				n.Cfg.ShortName,
+				"message",
+				line+"\n",
+			)
+		}
+
+		if strings.Contains(line, srosRejectedCfgMsg) {
+			exitChan <- errors.New("configuration rejected by SR OS")
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+	}
 }

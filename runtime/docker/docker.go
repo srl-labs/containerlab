@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strconv"
@@ -1329,4 +1330,24 @@ func (*DockerRuntime) GetCooCBindMounts() clabtypes.Binds {
 		clabtypes.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
 		clabtypes.NewBind("/run/netns", "/run/netns", ""),
 	}
+}
+
+func (d *DockerRuntime) StreamLogs(
+	ctx context.Context,
+	containerName string,
+) (io.ReadCloser, error) {
+	logOptions := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+		Timestamps: false,
+		Since:      time.Now().Format(time.RFC3339),
+	}
+
+	logStream, err := d.Client.ContainerLogs(ctx, containerName, logOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get container logs: %v", err)
+	}
+
+	return logStream, nil
 }

@@ -1,5 +1,5 @@
 {{ .SNMPConfig }}
-{{ .LoggingConfig }} 
+{{ .LoggingConfig }}
 {{ .GRPCConfig }}
 {{ .SNMPConfig }}
 {{ .NetconfConfig }}

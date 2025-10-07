@@ -3,6 +3,7 @@ package ignite
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -517,4 +518,8 @@ func (*IgniteRuntime) GetRuntimeSocket() (string, error) {
 
 func (*IgniteRuntime) GetCooCBindMounts() clabtypes.Binds {
 	return nil
+}
+
+func (*IgniteRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("StreamLogs not implemented for Ignite runtime")
 }

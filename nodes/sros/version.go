@@ -42,7 +42,7 @@ var (
 	sshConfig string
 )
 
-// SrosVersion represents an SR-OS version as a set of fields.
+// SrosVersion represents an SR OS version as a set of fields.
 type SrosVersion struct {
 	Major string
 	Minor string

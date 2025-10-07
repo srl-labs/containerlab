@@ -6,6 +6,7 @@ package podman
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"time"
@@ -488,4 +489,8 @@ func (r *PodmanRuntime) GetRuntimeSocket() (string, error) {
 		}
 	}
 	return socket, nil
+}
+
+func (*PodmanRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("StreamLogs not implemented for Podman runtime")
 }
