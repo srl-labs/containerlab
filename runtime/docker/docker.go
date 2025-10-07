@@ -1332,7 +1332,10 @@ func (*DockerRuntime) GetCooCBindMounts() clabtypes.Binds {
 	}
 }
 
-func (d *DockerRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
+func (d *DockerRuntime) StreamLogs(
+	ctx context.Context,
+	containerName string,
+) (io.ReadCloser, error) {
 	logOptions := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,

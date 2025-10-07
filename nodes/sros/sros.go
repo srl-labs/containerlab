@@ -1702,7 +1702,11 @@ func (n *sros) generateComponentConfig() string {
 			// not all types may have preprovisioned card
 			// so the following configs will fail if card
 			// doesn't have valid type explicitly set.
-			log.Warnf("SR-SIM node %q, has no type set for component in slot %q, skipping component SR-OS config generation.", n.Cfg.ShortName, slot)
+			log.Warn("SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
+				"node",
+				n.Cfg.ShortName,
+				"slot",
+				slot)
 			continue
 		}
 
@@ -1771,21 +1775,29 @@ func (n *sros) GetContainerName() string {
 }
 
 // MonitorLogs monitors log output from the provided reader during the PostDeploy phase of SRSIM.
-// It scans each line for SR-OS error messages (minor or critical) and logs them as warnings or errors.
-// The method checks for context cancellation on each line and returns immediately if the context is cancelled.
+// It scans each line for SR OS error messages (minor or critical) and logs them as warnings
+// The method checks for context cancellation on each line and returns immediately if the
+// context is cancelled.
 // Parameters:
 //   - ctx: context for cancellation; if cancelled, the method returns.
 //   - reader: io.ReadCloser providing log lines to scan.
+//
 // The method returns when the context is cancelled or the reader is exhausted.
 func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		line := scanner.Text()
+		line = clabutils.StripNonPrintChars(line)
 
-		if strings.Contains(line, srosMinorError) {
-			log.Warnf("Got SR-OS log message on: %q\n\t%s", n.Cfg.ShortName, line)
-		} else if strings.Contains(line, srosCriticalError) {
-			log.Errorf("Got SR-OS log message on: %q\n\t%s", n.Cfg.ShortName, line)
+		if strings.Contains(line, srosMinorError) ||
+			strings.Contains(line, srosCriticalError) {
+			log.Warn(
+				"Got SR OS log message. Deployment may hang",
+				"node",
+				n.Cfg.ShortName,
+				"message",
+				line+"\n",
+			)
 		}
 
 		select {
