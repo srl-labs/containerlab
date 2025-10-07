@@ -29,11 +29,11 @@ const (
 	generateable     = true
 	generateIfFormat = "eth%d"
 
-	// C8000v modes
+	// C8000v modes.
 	modeAutonomous = "autonomous"
 	modeController = "controller"
 
-	// Default mode if not specified
+	// Default mode if not specified.
 	defaultMode = modeAutonomous
 )
 

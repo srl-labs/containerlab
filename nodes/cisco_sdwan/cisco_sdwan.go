@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	kindNames          = []string{"vr_cisco_sdwan"}
+	kindNames          = []string{"cisco_sdwan"}
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`eth(?P<port>\d+)$`)
@@ -35,12 +35,12 @@ const (
 	generateable     = true
 	generateIfFormat = "eth%d"
 
-	// Component types
+	// Component types.
 	componentTypeManager    = "manager"
 	componentTypeController = "controller"
 	componentTypeValidator  = "validator"
 
-	// Default component type if not specified
+	// Default component type if not specified.
 	defaultComponentType = componentTypeManager
 )
 

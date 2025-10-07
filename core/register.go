@@ -11,7 +11,7 @@ import (
 	clabnodesc8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	clabnodesceos "github.com/srl-labs/containerlab/nodes/ceos"
 	clabnodescheckpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
-	clabnodesvrCiscoSdwan "github.com/srl-labs/containerlab/nodes/vr_cisco_sdwan"
+	clabnodescisco_sdwan "github.com/srl-labs/containerlab/nodes/cisco_sdwan"
 	clabnodescjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
 	clabnodescrpd "github.com/srl-labs/containerlab/nodes/crpd"
 	clabnodescvx "github.com/srl-labs/containerlab/nodes/cvx"
@@ -59,11 +59,11 @@ import (
 )
 
 // RegisterNodes registers all the nodes/kinds supported by containerlab.
-func (c *CLab) RegisterNodes() {
+func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesbridge.Register(c.Reg)
 	clabnodesceos.Register(c.Reg)
 	clabnodescheckpoint_cloudguard.Register(c.Reg)
-	clabnodesvrCiscoSdwan.Register(c.Reg)
+	clabnodescisco_sdwan.Register(c.Reg)
 	clabnodescrpd.Register(c.Reg)
 	clabnodescvx.Register(c.Reg)
 	clabnodesext_container.Register(c.Reg)
