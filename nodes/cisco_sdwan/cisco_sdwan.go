@@ -58,16 +58,16 @@ func Register(r *clabnodes.NodeRegistry) {
 	)
 
 	r.Register(kindNames, func() clabnodes.Node {
-		return new(ciscoSdwan)
+		return new(cisco_sdwan)
 	}, nrea)
 }
 
-type ciscoSdwan struct {
+type cisco_sdwan struct {
 	clabnodes.VRNode
 	componentType string
 }
 
-func (n *ciscoSdwan) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
+func (n *cisco_sdwan) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init VRNode
 	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
@@ -88,7 +88,8 @@ func (n *ciscoSdwan) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOptio
 	// Validate component type
 	if !isValidComponentType(n.componentType) {
 		return fmt.Errorf(
-			"invalid component type %q for vr_cisco_sdwan node %q. Must be one of: manager, controller, validator",
+			"invalid component type %q for cisco_sdwan node %q."+
+				" Must be one of: manager, controller, validator",
 			n.componentType,
 			n.Cfg.ShortName,
 		)
@@ -132,8 +133,9 @@ func (n *ciscoSdwan) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOptio
 	return nil
 }
 
-func (n *ciscoSdwan) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *cisco_sdwan) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return err
@@ -142,7 +144,7 @@ func (n *ciscoSdwan) PreDeploy(_ context.Context, params *clabnodes.PreDeployPar
 	return createCiscoSdwanFiles(n)
 }
 
-func (n *ciscoSdwan) GetImages(_ context.Context) map[string]string {
+func (n *cisco_sdwan) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
 
 	// Determine image name based on component type
@@ -171,7 +173,7 @@ func isValidComponentType(componentType string) bool {
 
 // createCiscoSdwanFiles handles startup configuration files for Cisco SD-WAN nodes.
 // It supports both cloud-init.yaml (full) and zcloud.xml (partial) configuration files.
-func createCiscoSdwanFiles(node *ciscoSdwan) error {
+func createCiscoSdwanFiles(node *cisco_sdwan) error {
 	nodeCfg := node.Config()
 
 	// Skip if no startup config is specified
@@ -186,20 +188,24 @@ func createCiscoSdwanFiles(node *ciscoSdwan) error {
 	clabutils.CreateDirectory(configDir, clabconstants.PermissionsOpen)
 
 	var dstFilename string
+
 	ext := strings.ToLower(filepath.Ext(nodeCfg.StartupConfig))
 
-	switch {
-	case ext == ".yaml" || ext == ".yml":
+	switch ext {
+	case ".yaml", ".yml":
 		// Full cloud-init file
 		dstFilename = "cloud-init.yaml"
-		log.Debugf("Using cloud-init configuration file for node %s", nodeCfg.ShortName)
-	case ext == ".xml":
+
+		log.Debug("Using cloud-init configuration file", "node", nodeCfg.ShortName)
+	case ".xml":
 		// zCloud XML configuration
 		dstFilename = "zcloud.xml"
-		log.Debugf("Using zCloud XML configuration file for node %s", nodeCfg.ShortName)
+
+		log.Debug("Using zCloud XML configuration file", "node", nodeCfg.ShortName)
 	default:
 		return fmt.Errorf(
-			"unsupported startup config file format for node %s: %s. Supported formats: .yaml/.yml (cloud-init) or .xml (zcloud)",
+			"unsupported startup config file format for node %s: %s."+
+				" Supported formats: .yaml/.yml (cloud-init) or .xml (zcloud)",
 			nodeCfg.ShortName,
 			nodeCfg.StartupConfig,
 		)
@@ -220,7 +226,7 @@ func createCiscoSdwanFiles(node *ciscoSdwan) error {
 			nodeCfg.StartupConfig, dst, err)
 	}
 
-	log.Debugf("Copied startup config: %s -> %s", nodeCfg.StartupConfig, dst)
+	log.Debug("Copied startup config", "source", nodeCfg.StartupConfig, "destination", dst)
 
 	return nil
 }

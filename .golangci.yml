@@ -2,7 +2,7 @@ version: "2"
 linters:
   default: all
   disable:
-    # disabling for *now* so ci can pass nicely, but (some?) of these likely should be adressed
+    # disabling for *now* so ci can pass nicely, but (some?) of these likely should be addressed
     - contextcheck
     - cyclop
     - depguard
@@ -111,10 +111,13 @@ linters:
       - links
       - mocks
       - netconf
-      - nodes
+      # - nodes
       - runtime
       - utils
       - virt
+    # slowly adding linters to the nodes
+    paths-except:
+      - "nodes/cisco_sdwan"
     warn-unused: true
 formatters:
   enable:
