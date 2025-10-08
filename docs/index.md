@@ -50,6 +50,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Cisco Catalyst 9000v](manual/kinds/vr-cat9kv.md)
 * [Cisco Nexus 9000v](manual/kinds/vr-n9kv.md)
 * [Cisco c8000v](manual/kinds/vr-c8000v.md)
+* [Cisco SD-WAN](manual/kinds/cisco_sdwan.md)
 * [Cisco CSR 1000v](manual/kinds/vr-csr.md)
 * [Cisco FTDv](manual/kinds/vr-ftdv.md)
 * [Dell FTOS10v](manual/kinds/vr-ftosv.md)

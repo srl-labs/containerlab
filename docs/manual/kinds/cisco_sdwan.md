@@ -48,9 +48,9 @@ docker exec -it <container-name/id> bash
 
 ///
 
-/// note
+### Credentials
+
 Default credentials: `admin:admin`
-///
 
 ## Component Types
 
@@ -170,7 +170,7 @@ If no `startup-config` is provided, the component will boot with auto-generated 
 
 ## Lab examples
 
-### Basic SD-WAN Controllers
+/// tab | Basic SD-WAN Controllers
 
 ```yaml
 name: sdwan-controllers
@@ -197,7 +197,9 @@ topology:
     - endpoints: ["sdwan-controller:eth1", "sdwan-validator:eth1"]
 ```
 
-### SD-WAN with Edge Devices
+///
+
+/// tab | SD-WAN with Edge Devices
 
 ```yaml
 name: sdwan-fabric
@@ -230,7 +232,9 @@ topology:
     - endpoints: ["edge1:Gi2", "sdwan-validator:eth1"]
 ```
 
-### With Custom Configuration
+///
+
+/// tab | With Custom Configuration
 
 ```yaml
 name: sdwan-custom
@@ -254,3 +258,5 @@ topology:
       type: validator
       image: vrnetlab/cisco_sdwan-validator:20.16.1
 ```
+
+///
