@@ -39,7 +39,8 @@ require (
 	github.com/pmorjan/kmod v1.1.1
 	github.com/scrapli/scrapligo v1.3.3
 	github.com/scrapli/scrapligocfg v1.0.0
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.1
+	github.com/spf13/viper v1.21.0
 	github.com/steiler/acls v0.1.1
 	github.com/stretchr/testify v1.11.1
 	github.com/tklauser/numcpus v0.9.0
@@ -143,7 +144,6 @@ require (
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/viper v1.21.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.2 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
@@ -247,7 +247,7 @@ require (
 	github.com/safchain/ethtool v0.5.9 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/sirikothe/gotextfsm v1.0.1-0.20200816110946-6aa2cfd355e4 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/spf13/pflag v1.0.10
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6 // indirect
 	github.com/sylabs/sif/v2 v2.20.2 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635 // indirect
