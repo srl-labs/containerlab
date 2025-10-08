@@ -444,7 +444,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 				)
 			}
 			// don't save config if full config is sent.. it might not have NETCONF
-			if !isFullConfgFile(n.Cfg.StartupConfig) {
+			if !isFullConfigFile(n.Cfg.StartupConfig) {
 				err = n.saveConfigWithAddr(ctx, addr)
 				if err != nil {
 					return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
@@ -1065,7 +1065,7 @@ func (n *sros) addDefaultConfig() error {
 	componentConfig := ""
 
 	// Generate component configuration IF no startup-config, or partial is defined.
-	if !isFullConfgFile(n.Cfg.StartupConfig) {
+	if !isFullConfigFile(n.Cfg.StartupConfig) {
 		componentConfig = n.generateComponentConfig()
 	} else {
 		log.Debugf("SR-SIM node %q has non-partial startup-config defined, skipping component config gen", n.Cfg.LongName)
@@ -1507,10 +1507,10 @@ func isPartialConfigFile(c string) bool {
 	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
-// isFullConfgFile returns true if the config file doesn't contain .partial substring
+// isFullConfigFile returns true if the config file doesn't contain .partial substring
 // and the config file is NOT nil (ie. startup config IS defined).
 // it is intended that the 'c' arg is n.Cfg.StartupConfig.
-func isFullConfgFile(c string) bool {
+func isFullConfigFile(c string) bool {
 	return c != "" && !isPartialConfigFile(c)
 }
 
@@ -1520,8 +1520,14 @@ func (n *sros) IsHealthy(_ context.Context) (bool, error) {
 	}
 	// non-partial user startup config might not have any netconf config
 	// so we shouldn't check for this.
-	if isFullConfgFile(n.Cfg.StartupConfig) {
-		log.Debug("node has full startup config, skipping NETCONF check", "kind", n.Cfg.Kind, "node", n.Cfg.ShortName)
+	if isFullConfigFile(n.Cfg.StartupConfig) {
+		log.Debug(
+			"node has full startup config, skipping NETCONF check",
+			"kind",
+			n.Cfg.Kind,
+			"node",
+			n.Cfg.ShortName,
+		)
 		return true, nil
 	}
 	addr, err := n.MgmtIPAddr()
