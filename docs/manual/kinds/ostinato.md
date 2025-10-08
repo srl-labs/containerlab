@@ -5,6 +5,7 @@ kind_code_name: linux
 kind_display_name: Ostinato
 ---
 # -{{ kind_display_name }}-
+
 -{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
 [-{{ kind_display_name }}-](https://ostinato.org/) network traffic generator is currently identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). This will change to its own kind in the future.
@@ -34,7 +35,7 @@ Replace `{tag}` above with the tag shown in the output of `docker images`
 
 Ostinato has a GUI and a Python API. The Ostinato image includes both the Ostinato agent (called _Drone_) which does the actual traffic generation and the Ostinato GUI that is used to configure and monitor the Drone agent.
 
-The GUI is the primary way to work with Ostinato and is accessible over VNC. To use the Ostinato API, you will need [Ostinato PyApi](https://ostinato.org/pricing/pyapi).
+The GUI is the primary way to work with Ostinato and is accessible over VNC. To use the Ostinato API, you will need [Ostinato PyApi](https://apiguide.ostinato.org/tutorial/).
 
 /// tab | Using GUI
 Once the lab is deployed, connect any VNC client to `<host-ip>:5900` - this will bring up the Ostinato GUI.
@@ -55,6 +56,7 @@ Ostinato **does not have any CLI or commands to generate traffic - use the GUI**
 ```
 docker exec -it <container-name/id> bash
 ```
+
 ///
 
 ## Interfaces mapping
