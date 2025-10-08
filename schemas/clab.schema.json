@@ -1932,6 +1932,9 @@
                         "cisco_c8000v": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "cisco_sdwan": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "linux": {
                             "$ref": "#/definitions/node-config"
                         },
