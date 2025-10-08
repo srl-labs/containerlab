@@ -6,7 +6,7 @@ kind_display_name: Cisco SD-WAN Controllers
 ---
 # Cisco SD-WAN
 
-Cisco SD-WAN controller components are identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+Cisco SD-WAN controller components are identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab/tree/master/cisco/sdwan-components) project and essentially is a Qemu VM packaged in a container format.
 
 This kind supports all three Cisco SD-WAN controller components:
 
