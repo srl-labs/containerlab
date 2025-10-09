@@ -31,13 +31,10 @@ const (
 type LinkCommonParams struct {
 	MTU             int                 `yaml:"mtu,omitempty"`
 	Labels          map[string]string   `yaml:"labels,omitempty"`
-	Vars            *LinkVars           `yaml:"vars,omitempty"`
+	IPv4            []string            `yaml:"ipv4,omitempty"`
+	IPv6            []string            `yaml:"ipv6,omitempty"`
+	Vars            map[string]any      `yaml:"vars,omitempty"`
 	DeploymentState LinkDeploymentState `yaml:",omitempty"`
-}
-
-type LinkVars struct {
-	IPv4 []string `yaml:"ipv4,omitempty"`
-	IPv6 []string `yaml:"ipv6,omitempty"`
 }
 
 // GetMTU returns the MTU of the link.
@@ -386,18 +383,15 @@ func extractHostNodeInterfaceData(
 }
 
 func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) error {
-	if lb.LinkCommonParams.Vars == nil {
-		return nil
-	}
-
-	if len(lb.LinkCommonParams.Vars.IPv4) > 0 {
-		if err := parseVarIPBrief("ipv4", lb.LinkCommonParams.Vars.IPv4, endpoints); err != nil {
+	if len(lb.LinkCommonParams.IPv4) > 0 {
+		if err := parseVarIPBrief("ipv4", lb.LinkCommonParams.IPv4, endpoints); err != nil {
 			return err
 		}
 	}
 
-	if len(lb.LinkCommonParams.Vars.IPv6) > 0 {
-		if err := parseVarIPBrief("ipv6", lb.LinkCommonParams.Vars.IPv6, endpoints); err != nil {
+	// Map IPv6 addresses from link-level to endpoints
+	if len(lb.LinkCommonParams.IPv6) > 0 {
+		if err := parseVarIPBrief("ipv6", lb.LinkCommonParams.IPv6, endpoints); err != nil {
 			return err
 		}
 	}
@@ -415,9 +409,6 @@ func parseVarIPBrief(af string, vals []string, endpoints []*EndpointRaw) error {
 
 	for i, cidr := range vals {
 		cidr = strings.TrimSpace(cidr)
-		if endpoints[i].Vars == nil {
-			endpoints[i].Vars = &EndpointVars{}
-		}
 		if cidr == "" {
 			// empty entry = no addr on this interface
 			continue
@@ -431,12 +422,12 @@ func parseVarIPBrief(af string, vals []string, endpoints []*EndpointRaw) error {
 			if !prefix.Addr().Is4() {
 				return fmt.Errorf("endpoint %s var has non-IPv4 prefix %q", af, prefix)
 			}
-			endpoints[i].Vars.IPv4 = cidr
+			endpoints[i].IPv4 = cidr
 		case "ipv6":
 			if !prefix.Addr().Is6() {
 				return fmt.Errorf("endpoint %s var has non-IPv6 prefix %q", af, prefix)
 			}
-			endpoints[i].Vars.IPv6 = cidr
+			endpoints[i].IPv6 = cidr
 		}
 	}
 	return nil
