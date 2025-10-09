@@ -22,6 +22,8 @@ topology:
           interface: e1-3
           ipv4: 192.168.3.1/24
           ipv6: 2001:db8:abc3::1/64
+          vars:
+            foo: bar
         - node: n2
           interface: e1-3
           ipv4: 192.168.3.2/24
@@ -29,4 +31,6 @@ topology:
     - endpoints: [n1:e1-4, n3:e1-1]
       ipv4: ["", 192.168.0.3/24]
       ipv6: ["", 2001:db8:abc1::3/64]
+      vars:
+        foo: bar
 
