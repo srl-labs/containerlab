@@ -173,11 +173,11 @@ topology:
       startup-config: configuration.txt.partial
 ```
 
-#### Link variables
+#### Link addressing
 
-Cisco IOL kind supports [IPv4/IPv6 link variables](../topo-def-file.md#ipv4ipv6) that are used to configure IP addresses on the point to point links between the nodes by providing `ipv4` and/or `ipv6` variables in the link definition. Refer to the linked section for more information and examples.
+Cisco IOL kind supports [IPv4/IPv6 link addresses](../topo-def-file.md#ip-addresses) that are used to configure IP addresses on the point to point links between the nodes by usage of `ipv4` and/or `ipv6` fields in the link definition. Refer to the linked section for more information and examples.
 
-The result of using IPv4/IPv6 link variables in the links section is that the IPv4 and/or IPv6 addresses will be configured under the `interface` section of the configuration block.
+The result of defining IPv4/IPv6 addresses via the respective fields in the links section is that the IPv4 and/or IPv6 addresses will be configured under the `interface` section of the configuration block.
 
 ## Usage and sample topology
 
