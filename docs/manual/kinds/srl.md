@@ -308,10 +308,10 @@ Containerlab will take the `myconfig.json` file, copy it to the lab directory fo
 
 #### Link addressing
 
-Nokia SR Linux kind supports [IPv4/IPv6 link variables](../topo-def-file.md#ipv4ipv6) that are used to configure IP addresses on the point to point links between the nodes by providing `ipv4` and/or `ipv6` variables in the link definition.
+Nokia SR Linux kind supports [IPv4/IPv6 link addresses](../topo-def-file.md#ip-addresses) that are used to configure IP addresses on the point to point links between the nodes by usage of `ipv4` and/or `ipv6` fields in the link definition.
 
 ```yaml
-name: ip-vars-brief
+name: ip-addresses-brief
 topology:
   nodes:
     srl1:
@@ -322,12 +322,11 @@ topology:
       image: ghcr.io/nokia/srlinux
   links:
     - endpoints: ["srl1:e1-1", "srl2:e1-1"]
-      vars:
-        ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
-        ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
+      ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
+      ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
 ```
 
-The result of providing the IPv4/IPv6 variables will result in configuration of `subinterface 0` and the respective IP addresses under it.
+The result of providing the IPv4/IPv6 addresses is that containerlab will generate configuration of the interfaces' `subinterface 0` and the respective IP addresses under it.
 
 #### Saving configuration
 

@@ -120,8 +120,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv4: [10.10.10.1/24]
+                    ipv4: [10.10.10.1/24]
                 `),
 			},
 			wantErr: false,
@@ -129,12 +128,12 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
 					Endpoints: []*EndpointRaw{
-						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
-						{Node: "n2", Iface: "e1-1", Vars: nil},
+						{Node: "n1", Iface: "e1-1", IPv4: "10.10.10.1/24"},
+						{Node: "n2", Iface: "e1-1"},
 					},
 					LinkCommonParams: LinkCommonParams{
 						MTU:  clabconstants.DefaultLinkMTU,
-						Vars: &LinkVars{IPv4: []string{"10.10.10.1/24"}},
+						IPv4: []string{"10.10.10.1/24"},
 					},
 				},
 			},
@@ -146,8 +145,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv4: ["", 10.10.10.1/24]
+                    ipv4: ["", 10.10.10.1/24]
                 `),
 			},
 			wantErr: false,
@@ -155,12 +153,12 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
 					Endpoints: []*EndpointRaw{
-						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{}},
-						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
+						{Node: "n1", Iface: "e1-1"},
+						{Node: "n2", Iface: "e1-1", IPv4: "10.10.10.1/24"},
 					},
 					LinkCommonParams: LinkCommonParams{
 						MTU:  clabconstants.DefaultLinkMTU,
-						Vars: &LinkVars{IPv4: []string{"", "10.10.10.1/24"}},
+						IPv4: []string{"", "10.10.10.1/24"},
 					},
 				},
 			},
@@ -172,8 +170,8 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv6: ["", 123::4/127]
+
+                    ipv6: ["", 123::4/127]
                 `),
 			},
 			wantErr: false,
@@ -181,12 +179,12 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
 					Endpoints: []*EndpointRaw{
-						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{}},
-						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{IPv6: "123::4/127"}},
+						{Node: "n1", Iface: "e1-1"},
+						{Node: "n2", Iface: "e1-1", IPv6: "123::4/127"},
 					},
 					LinkCommonParams: LinkCommonParams{
 						MTU:  clabconstants.DefaultLinkMTU,
-						Vars: &LinkVars{IPv6: []string{"", "123::4/127"}},
+						IPv6: []string{"", "123::4/127"},
 					},
 				},
 			},
@@ -198,8 +196,8 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv4: [10.10.10.1/24, 10.10.10.2/24]
+
+                    ipv4: [10.10.10.1/24, 10.10.10.2/24]
                 `),
 			},
 			wantErr: false,
@@ -207,12 +205,12 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 				Type: string(LinkTypeBrief),
 				Link: &LinkVEthRaw{
 					Endpoints: []*EndpointRaw{
-						{Node: "n1", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.1/24"}},
-						{Node: "n2", Iface: "e1-1", Vars: &EndpointVars{IPv4: "10.10.10.2/24"}},
+						{Node: "n1", Iface: "e1-1", IPv4: "10.10.10.1/24"},
+						{Node: "n2", Iface: "e1-1", IPv4: "10.10.10.2/24"},
 					},
 					LinkCommonParams: LinkCommonParams{
 						MTU:  clabconstants.DefaultLinkMTU,
-						Vars: &LinkVars{IPv4: []string{"10.10.10.1/24", "10.10.10.2/24"}},
+						IPv4: []string{"10.10.10.1/24", "10.10.10.2/24"},
 					},
 				},
 			},
@@ -224,8 +222,8 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv4: ["foo"]
+
+                    ipv4: ["foo"]
                 `),
 			},
 			wantErr: true,
@@ -237,8 +235,8 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv6: ["foo"]
+
+                    ipv6: ["foo"]
                 `),
 			},
 			wantErr: true,
@@ -250,8 +248,8 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv4: ["2001:db8::1/64"]
+
+                    ipv4: ["2001:db8::1/64"]
                 `),
 			},
 			wantErr: true,
@@ -263,8 +261,8 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv6: ["10.10.10.1/24"]
+
+                    ipv6: ["10.10.10.1/24"]
                 `),
 			},
 			wantErr: true,
@@ -276,8 +274,8 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv4: ["10.10.10.1/24", "10.10.10.2/24", "10.10.10.3/24"]
+
+                    ipv4: ["10.10.10.1/24", "10.10.10.2/24", "10.10.10.3/24"]
                 `),
 			},
 			wantErr: true,
@@ -289,8 +287,7 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                         - "n1:e1-1"
                         - "n2:e1-1"
-                    vars:
-                      ipv4: ["123::4/127", "123::5/127", "123::6/127"]
+                    ipv6: ["123::4/127", "123::5/127", "123::6/127"]
                 `),
 			},
 			wantErr: true,
@@ -315,6 +312,36 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 					},
 					LinkCommonParams: LinkCommonParams{
 						MTU: 1500,
+					},
+				},
+			},
+		},
+		{
+			name: "brief link with generic vars",
+			args: args{
+				yaml: []byte(`
+                    endpoints:
+                        - "srl1:e1-5"
+                        - "srl2:e1-5"
+                    vars:
+                      foo: bar
+                      baz: 123
+                `),
+			},
+			wantErr: false,
+			want: LinkDefinition{
+				Type: string(LinkTypeBrief),
+				Link: &LinkVEthRaw{
+					Endpoints: []*EndpointRaw{
+						NewEndpointRaw("srl1", "e1-5", ""),
+						NewEndpointRaw("srl2", "e1-5", ""),
+					},
+					LinkCommonParams: LinkCommonParams{
+						MTU: clabconstants.DefaultLinkMTU,
+						Vars: map[string]any{
+							"foo": "bar",
+							"baz": 123,
+						},
 					},
 				},
 			},
@@ -412,14 +439,12 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
                     endpoints:
                       - node: n1
                         interface: e1-1
-                        vars:
-                          ipv4: 10.10.10.1/24
-                          ipv6: 2001:db8::1/64
+                        ipv4: 10.10.10.1/24
+                        ipv6: 2001:db8::1/64
                       - node: n2
                         interface: e1-2
-                        vars:
-                          ipv4: 10.10.10.2/24
-                          ipv6: 2001:db8::2/64
+                        ipv4: 10.10.10.2/24
+                        ipv6: 2001:db8::2/64
                 `),
 			},
 			wantErr: false,
@@ -430,12 +455,14 @@ func TestUnmarshalRawLinksYaml(t *testing.T) {
 						{
 							Node:  "n1",
 							Iface: "e1-1",
-							Vars:  &EndpointVars{IPv4: "10.10.10.1/24", IPv6: "2001:db8::1/64"},
+							IPv4:  "10.10.10.1/24",
+							IPv6:  "2001:db8::1/64",
 						},
 						{
 							Node:  "n2",
 							Iface: "e1-2",
-							Vars:  &EndpointVars{IPv4: "10.10.10.2/24", IPv6: "2001:db8::2/64"},
+							IPv4:  "10.10.10.2/24",
+							IPv6:  "2001:db8::2/64",
 						},
 					},
 				},
@@ -684,27 +711,4 @@ func TestSanitizeInterfaceName(t *testing.T) {
 			}
 		})
 	}
-}
-
-// cover the getter for endpoint IPv4/v6 vars.
-func TestEndpointVarIPGetter(t *testing.T) {
-	t.Run("nil Vars returns empty strings", func(t *testing.T) {
-		eg := &EndpointGeneric{Vars: nil}
-		if got := eg.GetIPv4Addr(); got != "" {
-			t.Errorf("GetIPv4Addr() = %q; want empty", got)
-		}
-		if got := eg.GetIPv6Addr(); got != "" {
-			t.Errorf("GetIPv6Addr() = %q; want empty", got)
-		}
-	})
-
-	t.Run("non-nil Vars returns set values", func(t *testing.T) {
-		eg := &EndpointGeneric{Vars: &EndpointVars{IPv4: "192.0.2.1/31", IPv6: "2001:db8::1/64"}}
-		if got := eg.GetIPv4Addr(); got != "192.0.2.1/31" {
-			t.Errorf("GetIPv4Addr() = %q; want %q", got, "192.0.2.1/31")
-		}
-		if got := eg.GetIPv6Addr(); got != "2001:db8::1/64" {
-			t.Errorf("GetIPv6Addr() = %q; want %q", got, "2001:db8::1/64")
-		}
-	})
 }

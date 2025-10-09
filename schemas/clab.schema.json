@@ -710,6 +710,28 @@
                 "mtu": {
                     "$ref": "#/definitions/mtu"
                 },
+                "ipv4": {
+                    "description": "Assign IPv4 per endpoint in brief links. Accepts ordered list of IPv4 prefixes as strings",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?:$|(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[0-2]))$"
+                    },
+                    "uniqueItems": true
+                },
+                "ipv6": {
+                    "description": "Assign IPv6 per endpoint in brief links. Accepts ordered list of IPv6 prefixes as strings",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?:$|(?:(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,7}:|(?:[A-Fa-f0-9]{1,4}:){1,6}:[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,5}(?::[A-Fa-f0-9]{1,4}){1,2}|(?:[A-Fa-f0-9]{1,4}:){1,4}(?::[A-Fa-f0-9]{1,4}){1,3}|(?:[A-Fa-f0-9]{1,4}:){1,3}(?::[A-Fa-f0-9]{1,4}){1,4}|(?:[A-Fa-f0-9]{1,4}:){1,2}(?::[A-Fa-f0-9]{1,4}){1,5}|[A-Fa-f0-9]{1,4}:(?::[A-Fa-f0-9]{1,4}){1,6}|:(?:(?::[A-Fa-f0-9]{1,4}){1,7}|:))/(?:[0-9]|[1-9][0-9]|1[01][0-9]|12[0-8]))$"
+                    },
+                    "uniqueItems": true
+                },
                 "vars": {
                     "$ref": "#/definitions/link-vars"
                 }
@@ -736,6 +758,28 @@
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
+                },
+                "ipv4": {
+                    "description": "Assign IPv4 per endpoint. Accepts ordered list of IPv4 prefixes as strings",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?:$|(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[0-2]))$"
+                    },
+                    "uniqueItems": true
+                },
+                "ipv6": {
+                    "description": "Assign IPv6 per endpoint. Accepts ordered list of IPv6 prefixes as strings",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?:$|(?:(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,7}:|(?:[A-Fa-f0-9]{1,4}:){1,6}:[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,5}(?::[A-Fa-f0-9]{1,4}){1,2}|(?:[A-Fa-f0-9]{1,4}:){1,4}(?::[A-Fa-f0-9]{1,4}){1,3}|(?:[A-Fa-f0-9]{1,4}:){1,3}(?::[A-Fa-f0-9]{1,4}){1,4}|(?:[A-Fa-f0-9]{1,4}:){1,2}(?::[A-Fa-f0-9]{1,4}){1,5}|[A-Fa-f0-9]{1,4}:(?::[A-Fa-f0-9]{1,4}){1,6}|:(?:(?::[A-Fa-f0-9]{1,4}){1,7}|:))/(?:[0-9]|[1-9][0-9]|1[01][0-9]|12[0-8]))$"
+                    },
+                    "uniqueItems": true
                 },
                 "vars": {
                     "$ref": "#/definitions/link-vars"
@@ -974,6 +1018,16 @@
                     "description": "",
                     "pattern": "^(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})"
                 },
+                "ipv4": {
+                    "$ref": "#/definitions/ipv4-prefix",
+                    "description": "IPv4 address (in CIDR notation) to configure on this interface",
+                    "markdownDescription": "Interface IPv4 address in CIDR notation, e.g. 10.0.0.1/24"
+                },
+                "ipv6": {
+                    "$ref": "#/definitions/ipv6-prefix",
+                    "description": "IPv6 address (in CIDR notation) to configure on this interface",
+                    "markdownDescription": "Interface IPv6 address in CIDR notation, e.g. 2001:db8::1/64"
+                },
                 "vars": {
                     "$ref": "#/definitions/endpoint-vars"
                 }
@@ -987,21 +1041,7 @@
         "endpoint-vars": {
             "type": "object",
             "description": "per-endpoint variables",
-            "properties": {
-                "ipv4": {
-                    "type": "string",
-                    "description": "IPv4 address (in CIDR notation) to configure on this interface",
-                    "markdownDescription": "Interface IPv4 address in CIDR notation, e.g. 10.0.0.1/24",
-                    "pattern": "^(?:[^\\s:]+:\\s*)?(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[0-2])$"
-                },
-                "ipv6": {
-                    "type": "string",
-                    "description": "IPv6 address (in CIDR notation) to configure on this interface",
-                    "markdownDescription": "Interface IPv6 address in CIDR notation, e.g. 2001:db8::1/64",
-                    "pattern": "^(?:[^\\s:]+:\\s*)?(?:[A-Fa-f0-9]{1,4}(?::[A-Fa-f0-9]{1,4}){7}|(?:[A-Fa-f0-9]{1,4}(?::[A-Fa-f0-9]{1,4}){0,6})?::(?:[A-Fa-f0-9]{1,4}(?::[A-Fa-f0-9]{1,4}){0,6})?)/(?:[0-9]|[1-9][0-9]|1[01][0-9]|12[0-8])$"
-                }
-            },
-            "additionalProperties": false
+            "additionalProperties": true
         },
         "link-vxlan-remote": {
             "anyOf": [
@@ -1034,31 +1074,7 @@
         "link-vars": {
             "type": "object",
             "description": "link-scoped variables used by config engine",
-            "markdownDescription": "link-scoped variables used by config engine and brief per-endpoint IP assignment",
-            "properties": {
-                "ipv4": {
-                    "description": "Assign IPv4 per endpoint in brief links. Accepts ordered list of IPv4 prefixes as strings",
-                    "type": "array",
-                    "minItems": 1,
-                    "maxItems": 2,
-                    "items": {
-                        "type": "string",
-                        "pattern": "^(?:$|(?:(?:[^\\s:]+:\\s*)?(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[0-2])))$"
-                    },
-                    "uniqueItems": true
-                },
-                "ipv6": {
-                    "description": "Assign IPv6 per endpoint in brief links. Accepts ordered list of IPv6 prefixes as strings",
-                    "type": "array",
-                    "minItems": 1,
-                    "maxItems": 2,
-                    "items": {
-                        "type": "string",
-                        "pattern": "^(?:$|(?:(?:[^\\s:]+:\\s*)?(?:[A-Fa-f0-9]{1,4}(?::[A-Fa-f0-9]{1,4}){7}|(?:[A-Fa-f0-9]{1,4}(?::[A-Fa-f0-9]{1,4}){0,6})?::(?:[A-Fa-f0-9]{1,4}(?::[A-Fa-f0-9]{1,4}){0,6})?)/(?:[0-9]|[1-9][0-9]|1[01][0-9]|12[0-8]))))$"
-                    },
-                    "uniqueItems": true
-                }
-            },
+            "markdownDescription": "link-scoped variables used by config engine",
             "additionalProperties": true
         },
         "labels": {
@@ -1481,6 +1497,18 @@
             "markdownDescription": "IPv6 address",
             "type": "string",
             "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
+        },
+        "ipv4-prefix": {
+            "description": "IPv4 address in CIDR notation",
+            "markdownDescription": "IPv4 address in CIDR notation, e.g. 10.0.0.1/24",
+            "type": "string",
+            "pattern": "^(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[0-2])$"
+        },
+        "ipv6-prefix": {
+            "description": "IPv6 address in CIDR notation",
+            "markdownDescription": "IPv6 address in CIDR notation, e.g. 2001:db8::1/64",
+            "type": "string",
+            "pattern": "^(?:(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,7}:|(?:[A-Fa-f0-9]{1,4}:){1,6}:[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,5}(?::[A-Fa-f0-9]{1,4}){1,2}|(?:[A-Fa-f0-9]{1,4}:){1,4}(?::[A-Fa-f0-9]{1,4}){1,3}|(?:[A-Fa-f0-9]{1,4}:){1,3}(?::[A-Fa-f0-9]{1,4}){1,4}|(?:[A-Fa-f0-9]{1,4}:){1,2}(?::[A-Fa-f0-9]{1,4}){1,5}|[A-Fa-f0-9]{1,4}:(?::[A-Fa-f0-9]{1,4}){1,6}|:(?:(?::[A-Fa-f0-9]{1,4}){1,7}|:))/(?:[0-9]|[1-9][0-9]|1[01][0-9]|12[0-8])$"
         },
         "sros-card-types": {
             "type": "string",

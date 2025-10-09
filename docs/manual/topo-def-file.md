@@ -258,9 +258,13 @@ links:
       - node: <NodeA-Name>                  # mandatory
         interface: <NodeA-Interface-Name>   # mandatory
         mac: <NodeA-Interface-Mac>          # optional
+        ipv4: <NodeA-IPv4-Address>          # optional e.g. 192.168.0.1/24
+        ipv6: <NodeA-IPv6-Address>          # optional e.g. 2001:db8::1/64
       - node: <NodeB-Name>                  # mandatory
         interface: <NodeB-Interface-Name>   # mandatory
         mac: <NodeB-Interface-Mac>          # optional
+        ipv4: <NodeB-IPv4-Address>          # optional
+        ipv6: <NodeB-IPv6-Address>          # optional
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
@@ -274,9 +278,9 @@ The mgmt-net link type represents a veth pair that is connected to a container n
   links:
   - type: mgmt-net
     endpoint:
-      node: <NodeA-Name>                  # mandatory
-      interface: <NodeA-Interface-Name>   # mandatory
-      mac: <NodeA-Interface-Mac>          # optional
+      node: <NodeA-Name>                    # mandatory
+      interface: <NodeA-Interface-Name>     # mandatory
+      mac: <NodeA-Interface-Mac>            # optional
     host-interface: <interface-name>        # mandatory
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
@@ -387,18 +391,20 @@ Such interfaces are useful for testing and debugging purposes where we want to m
 
 ##### Variables
 
-Link variables are a way to supply additional link-related information that can be passed to the configuration templates.
+Link variables are a way to supply additional link-related information that can be passed to the configuration templates and will be rendered in the topology json file.
 
-Some kinds will use these variables to configure the interfaces or supply the tune the base configuration based on the link variables. Not all kinds make use of the variables, those that do, will mentioned it in their respective documentation.
+##### IP Addresses
 
-###### ipv4/ipv6
+The `ipv4` and `ipv6` fields allow for you to set the IPv4 and/or IPv6 address on an interface respectively; directly from the topology file.
 
-The `ipv4` and `ipv6` link variables allow for you to set the IPv4 and/or IPv6 address on an interface respectively; directly from the topology file.
+/// note
+Currently only the [Nokia SR Linux](../manual/kinds/srl.md) and [Cisco IOL](../manual/kinds/cisco_iol.md) kind(s) support this feature. Contributions to add support for other kinds are welcomed.
+///
 
 Refer to the below example, where we configure some addressing on the node interfaces using the [brief](#brief-format) format where addresses are passed as an ordered list matching the order of which the endpoint interfaces are defined.
 
 ```yaml
-name: ip-vars-brief
+name: ip-addr-brief
 topology:
   nodes:
     srl1:
@@ -409,12 +415,10 @@ topology:
       image: ghcr.io/nokia/srlinux
   links:
     - endpoints: ["srl1:e1-1", "srl2:e1-1"]
-      vars:
-        ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
-        ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
+      ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
+      ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
     - endpoints: ["srl1:e1-2", "srl2:e1-2"]
-      vars:
-        ipv4: ["192.168.2.1/24"] #(1)!
+      ipv4: ["192.168.2.1/24"] #(1)!
 ```
 
 1. In this case, only the `srl1` node's `e1-2` interface will be provided with the ipv4 variable, since the list contains only one entry and the first entry always corresponds to the first endpoint defined in the `endpoints` list.
@@ -438,20 +442,17 @@ topology:
       endpoints:
         - node: srl1
           interface: e1-2
-          vars:
-            ipv4: 192.168.0.1/24
-            ipv6: 2001:db8::1/64
+          ipv4: 192.168.0.1/24
+          ipv6: 2001:db8::1/64
         - node: srl2
           interface: e1-2
-          vars:
-            ipv4: 192.168.0.2/24
-            ipv6: 2001:db8::2/64
+          ipv4: 192.168.0.2/24
+          ipv6: 2001:db8::2/64
     - type: veth
       endpoints:
         - node: srl1
           interface: e1-2
-          vars:
-            ipv4: 192.168.2.1/24
+          ipv4: 192.168.2.1/24
         - node: srl2
           interface: e1-2
 ```
@@ -459,10 +460,6 @@ topology:
 In both examples, we configure the `192.168.0.0/24`, and `2001:db8::/64` subnets on the link between srl1 and srl2's `e1-1` interfaces, where the least significant value represents the host, `1` for srl1, and `2` for srl2.
 
 We can also set the IP for only one side, which is shown using IPv4 as an example on the link between srl1 and srl2 on the `e1-2` interfaces. Where the IPv4 address `192.168.2.1` is only set for `srl1`.
-
-/// note
-Currently only the [Nokia SR Linux](../manual/kinds/srl.md) and [Cisco IOL](../manual/kinds/cisco_iol.md) kind(s) support this feature. Contributions to add support for other kinds are welcomed.
-///
 
 #### Groups
 

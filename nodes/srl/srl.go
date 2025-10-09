@@ -716,12 +716,12 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 			iface.Mtu = m
 		}
 
-		if a := e.GetIPv4Addr(); a != "" {
-			iface.IPv4 = a
+		if a := e.GetIPv4Addr(); a.IsValid() {
+			iface.IPv4 = a.String()
 		}
 
-		if a := e.GetIPv6Addr(); a != "" {
-			iface.IPv6 = a
+		if a := e.GetIPv6Addr(); a.IsValid() {
+			iface.IPv6 = a.String()
 		}
 
 		// add the template interface definition to the template data
