@@ -258,8 +258,8 @@ links:
       - node: <NodeA-Name>                  # mandatory
         interface: <NodeA-Interface-Name>   # mandatory
         mac: <NodeA-Interface-Mac>          # optional
-        ipv4: <NodeA-IPv4-Address>          # optional
-        ipv6: <NodeA-IPv6-Address>          # optional
+        ipv4: <NodeA-IPv4-Address>          # optional e.g. 192.168.0.1/24
+        ipv6: <NodeA-IPv6-Address>          # optional e.g. 2001:db8::1/64
       - node: <NodeB-Name>                  # mandatory
         interface: <NodeB-Interface-Name>   # mandatory
         mac: <NodeB-Interface-Mac>          # optional
@@ -278,9 +278,9 @@ The mgmt-net link type represents a veth pair that is connected to a container n
   links:
   - type: mgmt-net
     endpoint:
-      node: <NodeA-Name>                  # mandatory
-      interface: <NodeA-Interface-Name>   # mandatory
-      mac: <NodeA-Interface-Mac>          # optional
+      node: <NodeA-Name>                    # mandatory
+      interface: <NodeA-Interface-Name>     # mandatory
+      mac: <NodeA-Interface-Mac>            # optional
     host-interface: <interface-name>        # mandatory
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
@@ -391,7 +391,7 @@ Such interfaces are useful for testing and debugging purposes where we want to m
 
 ##### Variables
 
-Link variables are a way to supply additional link-related information that can be passed to the configuration templates.
+Link variables are a way to supply additional link-related information that can be passed to the configuration templates and will be rendered in the topology json file.
 
 ##### IP Addresses
 
