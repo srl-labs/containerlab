@@ -26,10 +26,8 @@ func TestLinkVEthRaw_ToLinkBriefRaw(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars: &LinkVars{
-						IPv4: []string{"node1:10.10.10.1/24"},
-						IPv6: []string{"node1:2001:db8::1/64"},
-					},
+					IPv4:   []string{"node1:10.10.10.1/24"},
+					IPv6:   []string{"node1:2001:db8::1/64"},
 				},
 				Endpoints: []*EndpointRaw{
 					{
@@ -47,10 +45,8 @@ func TestLinkVEthRaw_ToLinkBriefRaw(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars: &LinkVars{
-						IPv4: []string{"node1:10.10.10.1/24"},
-						IPv6: []string{"node1:2001:db8::1/64"},
-					},
+					IPv4:   []string{"node1:10.10.10.1/24"},
+					IPv6:   []string{"node1:2001:db8::1/64"},
 				},
 			},
 		},
@@ -127,10 +123,8 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars: &LinkVars{
-						IPv4: []string{"node1:10.10.10.1/24"},
-						IPv6: []string{"node1:2001:db8::1/64"},
-					},
+					IPv4:   []string{"node1:10.10.10.1/24"},
+					IPv6:   []string{"node1:2001:db8::1/64"},
 				},
 				Endpoints: []*EndpointRaw{
 					{
@@ -155,10 +149,8 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars: &LinkVars{
-						IPv4: []string{"node1:10.10.10.1/24"},
-						IPv6: []string{"node1:2001:db8::1/64"},
-					},
+					IPv4:   []string{"node1:10.10.10.1/24"},
+					IPv6:   []string{"node1:2001:db8::1/64"},
 				},
 				Endpoints: []Endpoint{
 					&EndpointVeth{
@@ -228,9 +220,7 @@ func TestLinkVEthRaw_InvalidEndpointVarAFParsing(t *testing.T) {
 				{
 					Node:  "node1",
 					Iface: "eth1",
-					Vars: &EndpointVars{
-						IPv4: "2001:db8::1/64",
-					},
+					IPv4:  "2001:db8::1/64",
 				},
 				{
 					Node:  "node2",
@@ -250,9 +240,7 @@ func TestLinkVEthRaw_InvalidEndpointVarAFParsing(t *testing.T) {
 				{
 					Node:  "node1",
 					Iface: "eth1",
-					Vars: &EndpointVars{
-						IPv6: "10.10.10.1/24",
-					},
+					IPv6:  "10.10.10.1/24",
 				},
 				{
 					Node:  "node2",
