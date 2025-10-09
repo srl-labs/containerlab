@@ -13,24 +13,20 @@ topology:
       image: ghcr.io/nokia/srlinux
   links:
     - endpoints: [n1:e1-1, n2:e1-1]
-      vars:
-        ipv4: [192.168.0.1/24, 192.168.0.2/24]
-        ipv6: [2001:db8:abc1::1/64, 2001:db8:abc1::2/64]
+      ipv4: [192.168.0.1/24, 192.168.0.2/24]
+      ipv6: [2001:db8:abc1::1/64, 2001:db8:abc1::2/64]
     - endpoints: [n1:e1-2, n2:e1-2]
     - type: veth
       endpoints:
         - node: n1
           interface: e1-3
-          vars:
-            ipv4: 192.168.3.1/24
-            ipv6: 2001:db8:abc3::1/64
+          ipv4: 192.168.3.1/24
+          ipv6: 2001:db8:abc3::1/64
         - node: n2
           interface: e1-3
-          vars:
-            ipv4: 192.168.3.2/24
-            ipv6: 2001:db8:abc3::2/64
+          ipv4: 192.168.3.2/24
+          ipv6: 2001:db8:abc3::2/64
     - endpoints: [n1:e1-4, n3:e1-1]
-      vars:
-        ipv4: ["", 192.168.0.3/24]
-        ipv6: ["", 2001:db8:abc1::3/64]
+      ipv4: ["", 192.168.0.3/24]
+      ipv6: ["", 2001:db8:abc1::3/64]
 
