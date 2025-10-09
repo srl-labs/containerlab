@@ -9,7 +9,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"net/netip"
 	"os"
 	"path"
 	"path/filepath"
@@ -210,12 +209,16 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 		// populate template array for config
 		ipv4Addr := ""
 		ipv4Mask := ""
-		v4Addr := intf.GetIPv4Addr()
+		v4Prefix := intf.GetIPv4Addr()
+		ipv6Addr := ""
 
-		if v4Addr != "" {
-			p, _ := netip.ParsePrefix(v4Addr)
-			ipv4Addr = p.Addr().String()
-			ipv4Mask = clabutils.CIDRToDDN(p.Bits())
+		if v4Prefix.IsValid() {
+			ipv4Addr = v4Prefix.Addr().String()
+			ipv4Mask = clabutils.CIDRToDDN(v4Prefix.Bits())
+		}
+
+		if a := intf.GetIPv6Addr(); a.IsValid() {
+			ipv6Addr = a.String()
 		}
 
 		n.interfaces = append(n.interfaces,
@@ -226,7 +229,7 @@ func (n *iol) GenInterfaceConfig(_ context.Context) error {
 				Port:      port,
 				IPv4Addr:  ipv4Addr,
 				IPv4Mask:  ipv4Mask,
-				IPv6Addr:  intf.GetIPv6Addr(),
+				IPv6Addr:  ipv6Addr,
 			},
 		)
 	}
