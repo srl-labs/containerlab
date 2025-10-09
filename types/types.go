@@ -182,6 +182,8 @@ type NodeConfig struct {
 	TLSCert              string `json:"tls-cert,omitempty"`
 	TLSKey               string `json:"-"` // Do not marshal into JSON - highly sensitive data
 	TLSAnchor            string `json:"tls-anchor,omitempty"`
+	// TemplateInterfaces contains interface data for use in configuration templates
+	TemplateInterfaces []TemplateInterface `json:"template-interfaces,omitempty"`
 	// TLS Certificate configuration
 	Certificate *CertificateConfig
 	// Healthcheck configuration parameters
@@ -441,4 +443,17 @@ type ImpairmentData struct {
 	PacketLoss float64 `json:"packet_loss"`
 	Rate       int     `json:"rate"`
 	Corruption float64 `json:"corruption"`
+}
+
+// TemplateInterface represents a generic interface for use in config templates.
+type TemplateInterface struct {
+	// interface name as accepted in the NOS config
+	Name string
+	// interface name as defined in endpoints (could be ethX, gi0-0-0-0...)
+	RawName string
+	// ipv4 addr link var (inc cidr mask)
+	IPv4Addr string
+	// ipv6 addr link var (inc cidr mask)
+	IPv6Addr string
+	MTU      int
 }
