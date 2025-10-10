@@ -173,7 +173,7 @@ func ToEnvKey(s string) string {
 }
 
 // NormalizeMapForJSON recursively converts map[any]any to map[string]any
-// and []interface{} elements to ensure JSON serialization compatibility.
+// and []any elements to ensure JSON serialization compatibility.
 // This is needed because yaml.v2 unmarshals nested maps as map[any]any
 // which cannot be serialized to JSON.
 func NormalizeMapForJSON(i any) any {

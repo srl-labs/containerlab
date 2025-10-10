@@ -69,15 +69,9 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 		genericEndpoint.IPv6 = p
 	}
 
-	if er.Vars != nil {
-		// Normalize vars to ensure JSON serialization compatibility
-		// (converts map[interface{}]interface{} to map[string]any)
-		normalizedVars := make(map[string]any)
-		for k, v := range er.Vars {
-			normalizedVars[k] = clabutils.NormalizeMapForJSON(v)
-		}
-		genericEndpoint.Vars = normalizedVars
-	}
+	// Normalize vars to ensure JSON serialization compatibility
+	// (converts map[interface{}]interface{} to map[string]any)
+	genericEndpoint.Vars = normalizeVars(er.Vars)
 
 	var err error
 	if er.MAC == "" {
