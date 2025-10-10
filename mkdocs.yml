@@ -174,6 +174,7 @@ nav:
           - 5-stage Clos topology: lab-examples/templated02.md
       - Generic VM: lab-examples/generic_vm01.md
   - Release notes:
+      - "0.71": rn/0.71.md
       - "0.70": rn/0.70.md
       - "0.69": rn/0.69.md
       - "0.68": rn/0.68.md
