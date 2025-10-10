@@ -50,6 +50,9 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	l := NewLinkVEth()
 	l.LinkCommonParams = r.LinkCommonParams
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	l.Vars = normalizeVars(l.Vars)
+
 	// resolve raw endpoints (epr) to endpoints (ep)
 	for _, epr := range r.Endpoints {
 		ep, err := epr.Resolve(params, l)

@@ -33,6 +33,9 @@ func (r *LinkDummyRaw) Resolve(params *ResolveParams) (Link, error) {
 	l := NewLinkDummy()
 	l.LinkCommonParams = r.LinkCommonParams
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	l.Vars = normalizeVars(l.Vars)
+
 	// resolve raw endpoints (epr) to endpoints (ep)
 	ep, err := r.Endpoint.Resolve(params, l)
 	if err != nil {

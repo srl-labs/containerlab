@@ -71,6 +71,10 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	link := &LinkMacVlan{
 		LinkCommonParams: r.LinkCommonParams,
 	}
+
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	// create the host side MacVlan Endpoint
 	link.HostEndpoint = &EndpointMacVlan{
 		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),

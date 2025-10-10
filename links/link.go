@@ -42,6 +42,11 @@ func (l *LinkCommonParams) GetMTU() int {
 	return l.MTU
 }
 
+// GetVars returns the link-level vars.
+func (l *LinkCommonParams) GetVars() map[string]any {
+	return l.Vars
+}
+
 // LinkDefinition represents a link definition in the topology file.
 type LinkDefinition struct {
 	Type string  `yaml:"type,omitempty"`
@@ -337,6 +342,8 @@ type Link interface {
 	GetEndpoints() []Endpoint
 	// GetMTU returns the Link MTU.
 	GetMTU() int
+	// GetVars returns the link-level vars.
+	GetVars() map[string]any
 }
 
 func extractHostNodeInterfaceData(

@@ -46,6 +46,9 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 		LinkCommonParams: r.LinkCommonParams,
 	}
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	mgmtBridgeNode := GetMgmtBrLinkNode()
 
 	bridgeEp := NewEndpointBridge(NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link), true)

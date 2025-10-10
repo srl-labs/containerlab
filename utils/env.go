@@ -171,3 +171,43 @@ func ToEnvKey(s string) string {
 
 	return strings.ToUpper(result)
 }
+
+// NormalizeMapForJSON recursively converts map[any]any to map[string]any
+// and []any elements to ensure JSON serialization compatibility.
+// This is needed because yaml.v2 unmarshals nested maps as map[any]any
+// which cannot be serialized to JSON.
+func NormalizeMapForJSON(i any) any {
+	switch v := i.(type) {
+	case map[any]any:
+		// Convert map[any]any to map[string]any
+		result := make(map[string]any)
+		for key, val := range v {
+			var strKey string
+			if k, ok := key.(string); ok {
+				strKey = k
+			} else {
+				strKey = fmt.Sprint(key)
+			}
+
+			result[strKey] = NormalizeMapForJSON(val)
+		}
+		return result
+	case map[string]any:
+		// Recursively process existing map[string]any
+		result := make(map[string]any)
+		for key, val := range v {
+			result[key] = NormalizeMapForJSON(val)
+		}
+		return result
+	case []any:
+		// Recursively process slices
+		result := make([]any, len(v))
+		for i, val := range v {
+			result[i] = NormalizeMapForJSON(val)
+		}
+		return result
+	default:
+		// Return as-is for primitive types
+		return v
+	}
+}

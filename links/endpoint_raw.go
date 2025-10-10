@@ -69,9 +69,9 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 		genericEndpoint.IPv6 = p
 	}
 
-	if er.Vars != nil {
-		genericEndpoint.Vars = er.Vars
-	}
+	// Normalize vars to ensure JSON serialization compatibility
+	// (converts map[interface{}]interface{} to map[string]any)
+	genericEndpoint.Vars = normalizeVars(er.Vars)
 
 	var err error
 	if er.MAC == "" {

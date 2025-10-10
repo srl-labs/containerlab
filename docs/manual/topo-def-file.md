@@ -391,7 +391,146 @@ Such interfaces are useful for testing and debugging purposes where we want to m
 
 ##### Variables
 
-Link variables are a way to supply additional link-related information that can be passed to the configuration templates and will be rendered in the topology json file.
+Link variables are a way to supply additional link-related information that can be passed to the configuration templates and will be rendered in the [topology data](../manual/inventory.md#topology-data) json file.
+
+You can provide link variables using link's brief and extended format. When using the brief format, the vars are defined under the link map and they will be available under the link container in the topology json file:
+
+/// tab | brief format
+
+```yaml
+  links:
+    - endpoints: [srl1:e1-1, srl2:e1-1]
+      vars:
+        foo: bar
+        baz:
+          - one
+          - two
+          - three
+        three:
+          a: b
+          c: d
+```
+
+///
+/// tab | topology data file
+
+```json
+"links": [
+  {
+    "endpoints": {
+      "a": {
+        "node": "srl1",
+        "interface": "e1-1",
+        "mac": "aa:c1:ab:12:bb:44",
+        "peer": "z"
+      },
+      "z": {
+        "node": "srl2",
+        "interface": "e1-1",
+        "mac": "aa:c1:ab:96:1c:d1",
+        "peer": "a"
+      }
+    },
+    "vars": {
+      "baz": [
+        "one",
+        "two",
+        "three"
+      ],
+      "foo": "bar",
+      "three": {
+        "a": "b",
+        "c": "d"
+      }
+    }
+  }
+]
+```
+
+///
+
+In the extended format, the vars can be defined for the entire link or for each endpoint individually.
+
+/// tab | extended format
+
+```yaml
+  links:
+    - type: veth
+      endpoints:
+        - node: srl1
+          interface: e1-2
+          vars:
+            srl1ep1var1: "val1"
+            srl1ep1var2:
+              a: "b"
+              c: "d"
+            srl1ep1var3:
+              - "x"
+              - "y"
+              - "z"
+        - node: srl2
+          interface: e1-2
+          vars:
+            srl2ep1var1: "val2"
+            srl2ep1var2:
+              x: "y"
+              z: "a"
+            srl2ep1var3:
+              - 1
+              - 2
+              - 3
+
+```
+
+///
+/// tab | topology data file
+
+```json
+  "links": [
+    {
+      "endpoints": {
+        "a": {
+          "node": "srl1",
+          "interface": "e1-2",
+          "mac": "aa:c1:ab:56:36:28",
+          "vars": {
+            "srl1ep1var1": "val1",
+            "srl1ep1var2": {
+              "a": "b",
+              "c": "d"
+            },
+            "srl1ep1var3": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "peer": "z"
+        },
+        "z": {
+          "node": "srl2",
+          "interface": "e1-2",
+          "mac": "aa:c1:ab:09:2f:ea",
+          "vars": {
+            "srl2ep1var1": "val2",
+            "srl2ep1var2": {
+              "x": "y",
+              "z": "a"
+            },
+            "srl2ep1var3": [
+              1,
+              2,
+              3
+            ]
+          },
+          "peer": "a"
+        }
+      }
+    }
+  ]
+```
+
+///
 
 ##### IP Addresses
 

@@ -63,6 +63,10 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	link := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,
 	}
+
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	// resolve and populate the endpoint
 	ep, err := r.Endpoint.Resolve(params, link)
 	if err != nil {

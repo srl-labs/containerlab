@@ -44,6 +44,8 @@ type Endpoint interface {
 	// Setters for ifaceName and Alias
 	SetIfaceName(string)
 	SetIfaceAlias(string)
+	// GetVars returns the endpoint-level vars.
+	GetVars() map[string]any
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -110,6 +112,10 @@ func (e *EndpointGeneric) GetIPv4Addr() netip.Prefix {
 
 func (e *EndpointGeneric) GetIPv6Addr() netip.Prefix {
 	return e.IPv6
+}
+
+func (e *EndpointGeneric) GetVars() map[string]any {
+	return e.Vars
 }
 
 func (e *EndpointGeneric) GetLink() Link {

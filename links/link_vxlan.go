@@ -109,6 +109,9 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 		LinkCommonParams: lr.LinkCommonParams,
 	}
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	link.localEndpoint, err = lr.resolveLocalEndpoint(stitched, params, link)
 	if err != nil {
 		return nil, err
