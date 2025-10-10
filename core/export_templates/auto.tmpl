@@ -54,7 +54,7 @@
           {{- if $ipv6.IsValid }}
           "ipv6": "{{ $ipv6.String }}",
           {{- end }}
-          {{- $vars := $ep.Vars -}}
+          {{- $vars := $ep.GetVars -}}
           {{- if and $vars (gt (len $vars) 0) }}
           "vars": {{ ToJSONPretty $vars "          " "  " }},
           {{- end }}
@@ -74,7 +74,7 @@
           {{- if $ipv6.IsValid }}
           "ipv6": "{{ $ipv6.String }}",
           {{- end }}
-          {{- $vars := $ep.Vars -}}
+          {{- $vars := $ep.GetVars -}}
           {{- if and $vars (gt (len $vars) 0) }}
           "vars": {{ ToJSONPretty $vars "          " "  " }},
           {{- end }}
