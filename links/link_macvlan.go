@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -71,6 +72,16 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	link := &LinkMacVlan{
 		LinkCommonParams: r.LinkCommonParams,
 	}
+
+	// Normalize link vars to ensure JSON serialization compatibility
+	if link.Vars != nil {
+		normalizedVars := make(map[string]any)
+		for k, v := range link.Vars {
+			normalizedVars[k] = clabutils.NormalizeMapForJSON(v)
+		}
+		link.Vars = normalizedVars
+	}
+
 	// create the host side MacVlan Endpoint
 	link.HostEndpoint = &EndpointMacVlan{
 		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),

@@ -70,7 +70,13 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 	}
 
 	if er.Vars != nil {
-		genericEndpoint.Vars = er.Vars
+		// Normalize vars to ensure JSON serialization compatibility
+		// (converts map[interface{}]interface{} to map[string]any)
+		normalizedVars := make(map[string]any)
+		for k, v := range er.Vars {
+			normalizedVars[k] = clabutils.NormalizeMapForJSON(v)
+		}
+		genericEndpoint.Vars = normalizedVars
 	}
 
 	var err error

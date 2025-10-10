@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -32,6 +33,15 @@ func (r *LinkDummyRaw) Resolve(params *ResolveParams) (Link, error) {
 	// create LinkDummyRaw struct
 	l := NewLinkDummy()
 	l.LinkCommonParams = r.LinkCommonParams
+
+	// Normalize link vars to ensure JSON serialization compatibility
+	if l.Vars != nil {
+		normalizedVars := make(map[string]any)
+		for k, v := range l.Vars {
+			normalizedVars[k] = clabutils.NormalizeMapForJSON(v)
+		}
+		l.Vars = normalizedVars
+	}
 
 	// resolve raw endpoints (epr) to endpoints (ep)
 	ep, err := r.Endpoint.Resolve(params, l)

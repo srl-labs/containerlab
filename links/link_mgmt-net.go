@@ -46,6 +46,15 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 		LinkCommonParams: r.LinkCommonParams,
 	}
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	if link.Vars != nil {
+		normalizedVars := make(map[string]any)
+		for k, v := range link.Vars {
+			normalizedVars[k] = clabutils.NormalizeMapForJSON(v)
+		}
+		link.Vars = normalizedVars
+	}
+
 	mgmtBridgeNode := GetMgmtBrLinkNode()
 
 	bridgeEp := NewEndpointBridge(NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link), true)

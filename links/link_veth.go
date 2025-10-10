@@ -50,6 +50,15 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	l := NewLinkVEth()
 	l.LinkCommonParams = r.LinkCommonParams
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	if l.Vars != nil {
+		normalizedVars := make(map[string]any)
+		for k, v := range l.Vars {
+			normalizedVars[k] = clabutils.NormalizeMapForJSON(v)
+		}
+		l.Vars = normalizedVars
+	}
+
 	// resolve raw endpoints (epr) to endpoints (ep)
 	for _, epr := range r.Endpoints {
 		ep, err := epr.Resolve(params, l)
