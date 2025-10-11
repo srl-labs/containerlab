@@ -109,7 +109,7 @@ VyOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-di
 
 #### Default node configuration
 
-When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/vyos/vyos.config.boot) and copy it to the config directory of the node.
+When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/vyosnetworks_vyos/vyos.config.boot) and copy it to the config directory of the node.
 
 ```yaml
 # example of a topo file that does not define a custom config
