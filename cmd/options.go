@@ -217,7 +217,7 @@ type GlobalOptions struct {
 	CleanOnCancel bool
 
 	// special flag that is only set on deploy,
-	// if true, the topology file backup is create at /tmp/.clab/bak
+	// if true, the topology file backup is created at /tmp/.clab/bak
 	BackupTopologyFile bool
 }
 
@@ -247,7 +247,7 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName))
 	}
 
-	if o.BackupTopologyFile {
+	if o.BackupTopologyFile && o.TopologyFile != "" {
 		options = append(options, clabcore.WithTopoBackup(o.TopologyFile))
 	}
 
