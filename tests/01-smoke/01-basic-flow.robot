@@ -47,6 +47,25 @@ Deploy ${lab-name} lab
     # save output to be used in next steps
     Set Suite Variable    ${deploy-output}    ${output}
 
+Verify topology backup file is created
+    [Documentation]    This test ensures that when a lab is deployed,
+    ...    exactly one backup of the topology file
+    ...    is created at /tmp/.clab/bak, and its name contains the topology file name.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ls /tmp/.clab/bak | grep ${lab-file}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    ${files} =    List Files In Directory    /tmp/.clab/bak    pattern=*${lab-file}*
+    Log    ${files}
+    Length Should Be    ${files}    1
+    Should Contain    ${files}[0]    ${lab-file}
+
+    # Compare the contents of the original and backup file line by line
+    ${orig} =    Get File    ${CURDIR}/${lab-file}
+    ${backup} =    Get File    /tmp/.clab/bak/${files}[0]
+    Should Be Equal    ${orig}    ${backup}
+
 Ensure exec node option works
     [Documentation]    This tests ensures that the node's exec property that sets commands to be executed upon node deployment works.
     # ensure exec commands work
