@@ -41,7 +41,7 @@ jobs:
         run: sudo mkdir -p /opt/nokia/sros/ && echo $SRSIM_LICENSE > /opt/nokia/sros/license-sros25.txt
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
           version: "0.5.28"
