@@ -137,6 +137,8 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	// when deploying we cleanup if root context is canceled
 	o.Global.CleanOnCancel = true
 
+	o.Global.BackupTopologyFile = true
+
 	var err error
 
 	log.Info("Containerlab started", "version", Version)

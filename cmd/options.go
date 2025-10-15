@@ -215,6 +215,10 @@ type GlobalOptions struct {
 	// special flag that should only be set by deploy, informs the context handler to destroy
 	// (or not) when root context is canceled
 	CleanOnCancel bool
+
+	// special flag that is only set on deploy,
+	// if true, the topology file backup is create at /tmp/.clab/bak
+	BackupTopologyFile bool
 }
 
 func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
@@ -241,6 +245,10 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 
 	if o.TopologyFile == "" && o.TopologyName != "" {
 		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName))
+	}
+
+	if o.BackupTopologyFile {
+		options = append(options, clabcore.WithTopoBackup(o.TopologyFile))
 	}
 
 	return options
