@@ -187,7 +187,7 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 }
 
 // genInterfacesEnv populates the content of a required env var that sets the interface mapping
-// rules.
+// rules + fills interface data for template use.
 func (n *xrd) genInterfacesEnv() {
 	// xrd-control-plane variant needs XR_INTERFACE ENV var to be populated for all active interface
 	// here we take the number of links users set in the topology to get the right # of links
@@ -197,6 +197,25 @@ func (n *xrd) genInterfacesEnv() {
 		// ifName is a linux interface name with dashes swapped for slashes to be used in the config
 		ifName := strings.ReplaceAll(ep.GetIfaceName(), "-", "/")
 		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", ep.GetIfaceName(), ifName)
+
+		templateIf := clabtypes.TemplateInterface{
+			Name:    ifName,
+			RawName: ep.GetIfaceName(),
+		}
+
+		if a := ep.GetIPv4Addr(); a != "" {
+			templateIf.IPv4Addr = a
+		}
+
+		if a := ep.GetIPv6Addr(); a != "" {
+			templateIf.IPv6Addr = a
+		}
+
+		if m := ep.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
+			templateIf.MTU = m
+		}
+
+		n.Cfg.TemplateInterfaces = append(n.Cfg.TemplateInterfaces, templateIf)
 	}
 
 	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvVar}
