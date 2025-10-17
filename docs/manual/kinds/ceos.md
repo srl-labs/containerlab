@@ -326,6 +326,68 @@ To start an Arista cEOS node containerlab uses the following configuration:
     `MAPETH0:1`
     `MGMT_INTF:eth0`
 
+### Arista forwarding agent
+While CloudEOS has a DPDK dataplane, cEOS-lab and vEOS-lab use their own software dataplane.
+
+Two versions of the forwarding agent exist. `Arfa` (**AR** ista **F** orwarding **A** gent) is the new forwarding agent, that is supposed to be faster and more scalable. It has nearly reached feature parity with the older `python` forwarding agent and even has some features that do not exist in the older agent.
+`python` is the legacy mode, which supports some features `Arfa` does not support.
+
+Starting with `EOS-4.30.1F`, cEOS-lab and vEOS-lab use `Arfa` by default if not configured otherwise.
+
+You can manually switch between the two forwarding agents using
+```
+platform tfa
+
+personality python
+personality arfa
+```
+or via the magic file `/mnt/flash/ceos-config`.
+
+For `python`, use
+```title="/mnt/flash/ceos-config"
+TFA_VERSION=1
+``` 
+For `Arfa`, use
+```title="/mnt/flash/ceos-config"
+TFA_VERSION=2
+```
+
+
+The environment variable `ETBA` is not properly documented by Arista, but apparently it is necessary for correct operation.
+
+The following features are not supported in `Arfa` mode:
+
+- Multicast
+- FlexEncap
+- Q-in-Q subinterface encapsulation
+- Pseudowire dual tagging
+
+The following features are not supported in `python` mode:
+
+- PBR
+- VRF Selection Policy
+- Sflow Egress interface
+
+### Interface mode
+In release `EOS-4.34.1F` the interface mode configuration was added. It introduces the `relay mode`.
+The following features require relay mode to be enabled:
+
+- CFM Alarm Indication
+- Dot1x MBA
+- Inband Telemetry
+- PTP
+- sFlow
+
+Interface mode can be configured using
+```
+platform tfa
+
+interface mode relaying
+interface mode default
+```
+
+It is not documented which other advantages or disadvantages relay mode has compared to default mode.
+
 ### File mounts
 
 When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `-{{ kind_code_name }}-` kind containerlab creates `flash` directory for each ceos node and mounts these folders by `/mnt/flash` paths.
