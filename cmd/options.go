@@ -52,6 +52,9 @@ func GetOptions() *Options {
 				MermaidDirection: "TD",
 				DrawIOVersion:    "latest",
 			},
+			Events: &EventsOptions{
+				Format: "plain",
+			},
 			ToolsAPI: &ToolsApiOptions{
 				Image:          "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
 				Name:           "clab-api-server",
@@ -121,6 +124,7 @@ type Options struct {
 	Exec           *ExecOptions
 	Inspect        *InspectOptions
 	Graph          *GraphOptions
+	Events         *EventsOptions
 	ToolsAPI       *ToolsApiOptions
 	ToolsCert      *ToolsCertOptions
 	ToolsTxOffload *ToolsDisableTxOffloadOptions
@@ -351,6 +355,10 @@ type GraphOptions struct {
 	DrawIOVersion    string
 	DrawIOArgs       []string
 	StaticDirectory  string
+}
+
+type EventsOptions struct {
+	Format string
 }
 
 type ToolsApiOptions struct {

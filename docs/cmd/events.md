@@ -1,0 +1,50 @@
+# events command
+
+## Description
+
+The `events` command streams lifecycle updates for every Containerlab resource and augments them with interface change notifications collected from the container network namespaces. The output combines Docker's event feed with the netlink information that powers `containerlab inspect interfaces`, so you can observe container activity and interface state changes in real time without selecting a specific lab.
+
+
+## Usage
+
+`containerlab [global-flags] events`
+
+The command respects the global flags such as `--runtime`, `--debug`, or `--log-level`. It adds a local `--format` option that controls the output representation. When invoked with no arguments it discovers all running labs and immediately begins streaming events; new labs that start after the command begins are picked up automatically.
+
+## Event format
+
+In the default `plain` format every line mirrors the `docker events` format:
+
+```
+<timestamp> <type> <action> <actor> (<key>=<value>, ...)
+```
+
+* **Docker events** show the short container ID as the actor and include the original Docker attributes (for example `image`, `name`, `containerlab`, `scope`, …).
+* **Interface events** use `type` `interface` and `origin=netlink` in the attribute list. They also report interface-specific data such as `ifname`, `state`, `mtu`, `mac`, `type`, `alias`, and the lab label. The actor is still the container short ID, and the container name is supplied in the attributes (`name=...`).
+* Interface notifications are emitted when a link appears, disappears, or when its relevant properties (operational state, MTU, alias, MAC address, type) change.
+
+When `--format json` is used, each event becomes a single JSON object on its own line. The fields match the plain output (`timestamp`, `type`, `action`, `actor_id`, `actor_name`, `actor_full_id`) and include an `attributes` map with the same key/value pairs that the plain formatter prints.
+
+## Examples
+
+### Watch an existing lab and new deployments
+
+```
+$ sudo containerlab events
+2024-07-01T11:02:56.123456000Z container start 5d0b5a9ad3f1 (containerlab=frr-lab, image=ghcr.io/srl-labs/frr, name=clab-frr-lab-frr01)
+2024-07-01T11:02:57.004321000Z interface create 5d0b5a9ad3f1 (ifname=eth0, index=22, lab=frr-lab, mac=02:42:ac:14:00:02, mtu=1500, name=clab-frr-lab-frr01, origin=netlink, state=up, type=veth)
+2024-07-01T11:02:57.104512000Z interface update 5d0b5a9ad3f1 (ifname=eth0, index=22, lab=frr-lab, mac=02:42:ac:14:00:02, mtu=9000, name=clab-frr-lab-frr01, origin=netlink, state=up, type=veth)
+2024-07-01T11:05:12.918273000Z container die 5d0b5a9ad3f1 (containerlab=frr-lab, exitCode=0, image=ghcr.io/srl-labs/frr, name=clab-frr-lab-frr01)
+2024-07-01T11:05:13.018456000Z interface delete 5d0b5a9ad3f1 (ifname=eth0, index=22, lab=frr-lab, name=clab-frr-lab-frr01, origin=netlink, state=up, type=veth)
+```
+
+The stream contains all currently running labs and stays active to capture subsequent deployments, restarts, or interface adjustments.
+
+### Use with alternative runtimes
+
+The command currently supports the Docker runtime. When `--runtime` selects another backend (for example Podman) the command exits with an explanatory error so that you can adjust the configuration or fall back to Docker.
+
+## See also
+
+* [`inspect interfaces`](inspect/interfaces.md) – produces a point-in-time view of the same interface details that `events` reports continuously.
+* `docker events` – the raw runtime feed that Containerlab builds upon.
