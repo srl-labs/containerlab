@@ -99,6 +99,7 @@ nav:
       - inspect:
           - cmd/inspect/index.md
           - interfaces: cmd/inspect/interfaces.md
+      - events: cmd/events.md
       - save: cmd/save.md
       - exec: cmd/exec.md
       - generate: cmd/generate.md

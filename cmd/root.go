@@ -29,6 +29,7 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		execCmd,
 		generateCmd,
 		graphCmd,
+		eventsCmd,
 		inspectCmd,
 		redeployCmd,
 		saveCmd,
