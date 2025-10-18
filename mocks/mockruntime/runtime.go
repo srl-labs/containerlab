@@ -365,6 +365,22 @@ func (mr *MockContainerRuntimeMockRecorder) StopContainer(arg0, arg1 any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockContainerRuntime)(nil).StopContainer), arg0, arg1)
 }
 
+// StreamEvents mocks base method.
+func (m *MockContainerRuntime) StreamEvents(ctx context.Context, opts runtime.EventStreamOptions) (<-chan runtime.ContainerEvent, <-chan error, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamEvents", ctx, opts)
+	ret0, _ := ret[0].(<-chan runtime.ContainerEvent)
+	ret1, _ := ret[1].(<-chan error)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// StreamEvents indicates an expected call of StreamEvents.
+func (mr *MockContainerRuntimeMockRecorder) StreamEvents(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEvents", reflect.TypeOf((*MockContainerRuntime)(nil).StreamEvents), ctx, opts)
+}
+
 // StreamLogs mocks base method.
 func (m *MockContainerRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
 	m.ctrl.T.Helper()
