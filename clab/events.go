@@ -12,14 +12,9 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	dockerTypes "github.com/docker/docker/api/types"
-	dockerEvents "github.com/docker/docker/api/types/events"
-	"github.com/docker/docker/api/types/filters"
-	dockerClient "github.com/docker/docker/client"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
-	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
@@ -48,11 +43,6 @@ func Events(ctx context.Context, opts EventsOptions) error { //nolint:cyclop,fun
 	runtime, ok := c.Runtimes[opts.Runtime]
 	if !ok {
 		return fmt.Errorf("runtime %q is not initialized", opts.Runtime)
-	}
-
-	dockerRuntime, ok := runtime.(*clabruntimedocker.DockerRuntime)
-	if !ok {
-		return fmt.Errorf("events command currently supports only the %s runtime", clabruntimedocker.RuntimeName)
 	}
 
 	format := strings.TrimSpace(strings.ToLower(opts.Format))
@@ -88,7 +78,18 @@ func Events(ctx context.Context, opts EventsOptions) error { //nolint:cyclop,fun
 		registry.Start(ctx, &container)
 	}
 
-	go streamDockerEvents(ctx, dockerRuntime.Client, dockerRuntime, registry, eventCh, errCh)
+	streamOpts := clabruntime.EventStreamOptions{
+		Labels: map[string]string{
+			clabconstants.Containerlab: "",
+		},
+	}
+
+	runtimeEvents, runtimeErrs, err := runtime.StreamEvents(ctx, streamOpts)
+	if err != nil {
+		return fmt.Errorf("failed to stream events for runtime %q: %w", opts.Runtime, err)
+	}
+
+	go forwardRuntimeEvents(ctx, runtime, registry, runtimeEvents, runtimeErrs, eventCh, errCh)
 
 	for {
 		select {
@@ -116,35 +117,46 @@ type aggregatedEvent struct {
 	Attributes  map[string]string `json:"attributes,omitempty"`
 }
 
-func dockerMessageToEvent(msg dockerEvents.Message) aggregatedEvent {
-	ts := time.Unix(0, msg.TimeNano)
-	if ts.IsZero() {
-		ts = time.Unix(msg.Time, 0)
-	}
+func aggregatedEventFromContainerEvent(ev clabruntime.ContainerEvent) aggregatedEvent {
+	ts := ev.Timestamp
 	if ts.IsZero() {
 		ts = time.Now()
 	}
 
-	attributes := make(map[string]string, len(msg.Actor.Attributes)+1)
-	for k, v := range msg.Actor.Attributes {
-		if v == "" {
-			continue
-		}
+	attributes := copyStringMap(ev.Attributes)
 
-		attributes[k] = v
+	actorFullID := ev.ActorFullID
+	if actorFullID == "" {
+		actorFullID = ev.ActorID
 	}
 
-	if msg.Scope != "" {
-		attributes["scope"] = msg.Scope
+	actorName := ev.ActorName
+	if actorName == "" && attributes != nil {
+		actorName = attributes["name"]
+	}
+
+	short := ev.ActorID
+	if short == "" {
+		short = actorFullID
+	}
+
+	action := strings.ToLower(ev.Action)
+	if action == "" {
+		action = ev.Action
+	}
+
+	eventType := strings.ToLower(ev.Type)
+	if eventType == "" {
+		eventType = ev.Type
 	}
 
 	return aggregatedEvent{
 		Timestamp:   ts,
-		Type:        string(msg.Type),
-		Action:      string(msg.Action),
-		ActorID:     shortID(msg.Actor.ID),
-		ActorName:   attributes["name"],
-		ActorFullID: msg.Actor.ID,
+		Type:        eventType,
+		Action:      action,
+		ActorID:     shortID(short),
+		ActorName:   actorName,
+		ActorFullID: actorFullID,
 		Attributes:  attributes,
 	}
 }
@@ -227,26 +239,22 @@ func mergedEventAttributes(ev aggregatedEvent) map[string]string {
 	return attrs
 }
 
-func streamDockerEvents(
+func forwardRuntimeEvents(
 	ctx context.Context,
-	client *dockerClient.Client,
 	runtime clabruntime.ContainerRuntime,
 	registry *netlinkRegistry,
+	runtimeEvents <-chan clabruntime.ContainerEvent,
+	runtimeErrs <-chan error,
 	eventSink chan<- aggregatedEvent,
 	errSink chan<- error,
 ) {
-	filtersArgs := filters.NewArgs()
-	filtersArgs.Add("label", clabconstants.Containerlab)
-
-	messages, errs := client.Events(ctx, dockerTypes.EventsOptions{Filters: filtersArgs})
-
 	for {
 		select {
 		case <-ctx.Done():
 			errSink <- nil
 
 			return
-		case err, ok := <-errs:
+		case err, ok := <-runtimeErrs:
 			if !ok {
 				errSink <- nil
 
@@ -258,15 +266,24 @@ func streamDockerEvents(
 
 				return
 			}
-		case msg, ok := <-messages:
+		case ev, ok := <-runtimeEvents:
 			if !ok {
 				errSink <- nil
 
 				return
 			}
 
-			registry.HandleDockerMessage(ctx, runtime, msg)
-			eventSink <- dockerMessageToEvent(msg)
+			registry.HandleContainerEvent(ctx, runtime, ev)
+
+			aggregated := aggregatedEventFromContainerEvent(ev)
+
+			select {
+			case eventSink <- aggregated:
+			case <-ctx.Done():
+				errSink <- nil
+
+				return
+			}
 		}
 	}
 }
@@ -352,25 +369,27 @@ func (r *netlinkRegistry) remove(id string, watcher *netlinkWatcher) {
 	}
 }
 
-func (r *netlinkRegistry) HandleDockerMessage(
+func (r *netlinkRegistry) HandleContainerEvent(
 	ctx context.Context,
 	runtime clabruntime.ContainerRuntime,
-	msg dockerEvents.Message,
+	ev clabruntime.ContainerEvent,
 ) {
-	if msg.Type != dockerEvents.ContainerEventType {
+	if !strings.EqualFold(ev.Type, clabruntime.EventTypeContainer) {
 		return
 	}
 
-	switch msg.Action {
-	case dockerEvents.ActionStart, dockerEvents.ActionUnPause, dockerEvents.ActionRestart:
-		container := containerFromDockerMessage(runtime, msg)
+	action := strings.ToLower(ev.Action)
+
+	switch action {
+	case clabruntime.EventActionStart, clabruntime.EventActionUnpause, clabruntime.EventActionRestart:
+		container := containerFromEvent(runtime, ev)
 		if container != nil {
 			r.Start(ctx, container)
 		}
-	case dockerEvents.ActionDie, dockerEvents.ActionStop, dockerEvents.ActionDestroy, dockerEvents.ActionKill:
-		id := msg.Actor.ID
+	case clabruntime.EventActionDie, clabruntime.EventActionStop, clabruntime.EventActionDestroy, clabruntime.EventActionKill:
+		id := ev.ActorFullID
 		if id == "" {
-			id = msg.ID
+			id = ev.ActorID
 		}
 
 		r.Stop(id)
@@ -674,32 +693,52 @@ func copyStringMap(input map[string]string) map[string]string {
 	return result
 }
 
-func containerFromDockerMessage(
+func containerFromEvent(
 	runtime clabruntime.ContainerRuntime,
-	msg dockerEvents.Message,
+	ev clabruntime.ContainerEvent,
 ) *clabruntime.GenericContainer {
-	name := msg.Actor.Attributes["name"]
-	if msg.Actor.ID == "" && name == "" {
+	attributes := ev.Attributes
+
+	name := ev.ActorName
+	if name == "" && attributes != nil {
+		name = attributes["name"]
+	}
+
+	id := ev.ActorFullID
+	if id == "" {
+		id = ev.ActorID
+	}
+
+	if id == "" && name == "" {
 		return nil
 	}
 
+	short := ev.ActorID
+	if short == "" {
+		short = id
+	}
+
 	container := &clabruntime.GenericContainer{
-		Names:   []string{name},
-		ID:      msg.Actor.ID,
-		ShortID: shortID(msg.Actor.ID),
-		Labels:  map[string]string{},
+		ID:      id,
+		ShortID: shortID(short),
 	}
 
-	if lab, ok := msg.Actor.Attributes[clabconstants.Containerlab]; ok && lab != "" {
-		container.Labels[clabconstants.Containerlab] = lab
+	if name != "" {
+		container.Names = []string{name}
 	}
 
-	if runtime != nil {
-		container.SetRuntime(runtime)
+	if attributes != nil {
+		if lab := attributes[clabconstants.Containerlab]; lab != "" {
+			container.Labels = map[string]string{clabconstants.Containerlab: lab}
+		}
 	}
 
 	if container.ShortID == "" {
 		container.ShortID = shortID(container.ID)
+	}
+
+	if runtime != nil {
+		container.SetRuntime(runtime)
 	}
 
 	return container
