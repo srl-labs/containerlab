@@ -29,10 +29,6 @@ func DockerMessageToEventData(msg dockerEvents.Message) DockerEventData {
 
 	attributes := make(map[string]string, len(msg.Actor.Attributes)+1)
 	for k, v := range msg.Actor.Attributes {
-		if v == "" {
-			continue
-		}
-
 		attributes[k] = v
 	}
 
