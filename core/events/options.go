@@ -6,6 +6,7 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 )
 
+// Options configure how runtime and interface events are sourced and rendered.
 type Options struct {
 	Format      string
 	Runtime     string

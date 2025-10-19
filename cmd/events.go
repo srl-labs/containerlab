@@ -10,7 +10,7 @@ func eventsCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "events",
 		Short: "stream lab lifecycle and interface events",
-		Long: "stream docker runtime events as well as container interface updates for all running labs\n" +
+		Long: "stream container runtime events and interface updates for all running labs using the selected runtime\n" +
 			"reference: https://containerlab.dev/cmd/events/",
 		Aliases: []string{"ev"},
 		PreRunE: func(*cobra.Command, []string) error {

@@ -1,17 +1,18 @@
 # events command
 
-## Description
+### Description
 
-The `events` command streams lifecycle updates for every Containerlab resource and augments them with interface change notifications collected from the container network namespaces. The output combines Docker's event feed with the netlink information that powers `containerlab inspect interfaces`, so you can observe container activity and interface state changes in real time without selecting a specific lab.
+The `events` command streams lifecycle updates for every Containerlab resource and augments them with interface change notifications collected from the container network namespaces. The output combines the selected runtime's event feed (for example Docker) with the netlink information that powers `containerlab inspect interfaces`, so you can observe container activity and interface state changes in real time without selecting a specific lab.
 
+### Usage
 
-## Usage
+`containerlab [global-flags] events [local-flags]`
 
-`containerlab [global-flags] events`
+**aliases:** `ev`
 
 The command respects the global flags such as `--runtime`, `--debug`, or `--log-level`. It adds a local `--format` option that controls the output representation. When invoked with no arguments it discovers all running labs and immediately begins streaming events; new labs that start after the command begins are picked up automatically.
 
-## Event format
+### Event format
 
 In the default `plain` format every line mirrors the `docker events` format:
 
@@ -19,15 +20,15 @@ In the default `plain` format every line mirrors the `docker events` format:
 <timestamp> <type> <action> <actor> (<key>=<value>, ...)
 ```
 
-* **Docker events** show the short container ID as the actor and include the original Docker attributes (for example `image`, `name`, `containerlab`, `scope`, …).
+* **Runtime events** show the short container ID as the actor and include the original attributes supplied by the container runtime (for example `image`, `name`, `containerlab`, `scope`, …).
 * **Interface events** use `type` `interface` and `origin=netlink` in the attribute list. They also report interface-specific data such as `ifname`, `state`, `mtu`, `mac`, `type`, `alias`, and the lab label. The actor is still the container short ID, and the container name is supplied in the attributes (`name=...`).
 * Interface notifications are emitted when a link appears, disappears, or when its relevant properties (operational state, MTU, alias, MAC address, type) change.
 
 When `--format json` is used, each event becomes a single JSON object on its own line. The fields match the plain output (`timestamp`, `type`, `action`, `actor_id`, `actor_name`, `actor_full_id`) and include an `attributes` map with the same key/value pairs that the plain formatter prints.
 
-## Examples
+### Examples
 
-### Watch an existing lab and new deployments
+#### Watch an existing lab and new deployments
 
 ```
 $ sudo containerlab events
@@ -40,11 +41,14 @@ $ sudo containerlab events
 
 The stream contains all currently running labs and stays active to capture subsequent deployments, restarts, or interface adjustments.
 
-### Use with alternative runtimes
+#### Use with alternative runtimes
 
-The command currently supports the Docker runtime. When `--runtime` selects another backend (for example Podman) the command exits with an explanatory error so that you can adjust the configuration or fall back to Docker.
+Containerlab streams events from the runtime selected via the global `--runtime` flag.
 
-## See also
+> **Currently supported runtime:** `docker`  
+> Runtimes that do not implement the `events` API (or are not yet supported by Containerlab) will exit with an explanatory error.
+
+### See also
 
 * [`inspect interfaces`](inspect/interfaces.md) – produces a point-in-time view of the same interface details that `events` reports continuously.
 * `docker events` – the raw runtime feed that Containerlab builds upon.

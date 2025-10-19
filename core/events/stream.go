@@ -13,6 +13,8 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
+// Stream subscribes to the selected runtime and netlink sources and forwards
+// aggregated events to the configured writer.
 func Stream(ctx context.Context, opts Options) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
