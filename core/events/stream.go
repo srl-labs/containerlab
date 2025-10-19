@@ -11,6 +11,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // Stream subscribes to the selected runtime and netlink sources and forwards
@@ -132,7 +133,7 @@ func forwardRuntimeEvents(
 
 			registry.HandleContainerEvent(runtime, ev)
 
-			aggregated := aggregatedEventFromContainerEvent(ev)
+			aggregated := aggregatedEventFromContainerEvent(ctx, runtime, ev)
 			select {
 			case eventSink <- aggregated:
 			case <-ctx.Done():
@@ -142,7 +143,11 @@ func forwardRuntimeEvents(
 	}
 }
 
-func aggregatedEventFromContainerEvent(ev clabruntime.ContainerEvent) aggregatedEvent {
+func aggregatedEventFromContainerEvent(
+	ctx context.Context,
+	runtime clabruntime.ContainerRuntime,
+	ev clabruntime.ContainerEvent,
+) aggregatedEvent {
 	ts := ev.Timestamp
 	if ts.IsZero() {
 		ts = time.Now()
@@ -159,6 +164,8 @@ func aggregatedEventFromContainerEvent(ev clabruntime.ContainerEvent) aggregated
 	if actorName == "" && attributes != nil {
 		actorName = attributes["name"]
 	}
+
+	attributes = ensureMgmtIPAttributes(ctx, runtime, attributes, actorFullID, actorName)
 
 	short := ev.ActorID
 	if short == "" {
@@ -184,6 +191,114 @@ func aggregatedEventFromContainerEvent(ev clabruntime.ContainerEvent) aggregated
 		ActorFullID: actorFullID,
 		Attributes:  attributes,
 	}
+}
+
+func ensureMgmtIPAttributes(
+	ctx context.Context,
+	runtime clabruntime.ContainerRuntime,
+	attributes map[string]string,
+	actorFullID, actorName string,
+) map[string]string {
+	if runtime == nil {
+		return attributes
+	}
+
+	hasIPv4 := attributes != nil && attributes["mgmt_ipv4"] != ""
+	hasIPv6 := attributes != nil && attributes["mgmt_ipv6"] != ""
+
+	if hasIPv4 && hasIPv6 {
+		return attributes
+	}
+
+	filters := make([]*clabtypes.GenericFilter, 0, 2)
+
+	if actorName == "" && attributes != nil {
+		actorName = attributes["name"]
+	}
+
+	if actorName != "" {
+		filters = append(filters, &clabtypes.GenericFilter{FilterType: "name", Match: actorName})
+	}
+
+	if actorFullID != "" {
+		filters = append(filters, &clabtypes.GenericFilter{FilterType: "id", Match: actorFullID})
+	}
+
+	if len(filters) == 0 {
+		return attributes
+	}
+
+	containers, err := runtime.ListContainers(ctx, filters)
+	if err != nil {
+		log.Debugf("failed to resolve container for event: %v", err)
+
+		return attributes
+	}
+
+	container := selectContainerForEvent(containers, actorFullID, actorName)
+	if container == nil {
+		return attributes
+	}
+
+	if attributes == nil {
+		attributes = make(map[string]string)
+	}
+
+	if !hasIPv4 {
+		if ipv4 := container.GetContainerIPv4(); ipv4 != "" && ipv4 != clabconstants.NotApplicable {
+			attributes["mgmt_ipv4"] = ipv4
+		}
+	}
+
+	if !hasIPv6 {
+		if ipv6 := container.GetContainerIPv6(); ipv6 != "" && ipv6 != clabconstants.NotApplicable {
+			attributes["mgmt_ipv6"] = ipv6
+		}
+	}
+
+	if len(attributes) == 0 {
+		return nil
+	}
+
+	return attributes
+}
+
+func selectContainerForEvent(
+	containers []clabruntime.GenericContainer,
+	actorFullID, actorName string,
+) *clabruntime.GenericContainer {
+	if len(containers) == 0 {
+		return nil
+	}
+
+	if actorFullID != "" {
+		for idx := range containers {
+			container := &containers[idx]
+
+			switch {
+			case container.ID == actorFullID:
+				return container
+			case strings.HasPrefix(container.ID, actorFullID):
+				return container
+			case container.ShortID == actorFullID:
+				return container
+			}
+		}
+	}
+
+	if actorName != "" {
+		for idx := range containers {
+			container := &containers[idx]
+
+			for _, name := range container.Names {
+				if name == actorName {
+					return container
+				}
+			}
+		}
+	}
+
+	return &containers[0]
 }
 
 func emitContainerSnapshots(
