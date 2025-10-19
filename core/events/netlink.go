@@ -17,17 +17,19 @@ import (
 )
 
 type netlinkRegistry struct {
-	ctx      context.Context
-	mu       sync.Mutex
-	watchers map[string]*netlinkWatcher
-	events   chan<- aggregatedEvent
+	ctx                    context.Context
+	mu                     sync.Mutex
+	watchers               map[string]*netlinkWatcher
+	events                 chan<- aggregatedEvent
+	includeInitialSnapshot bool
 }
 
-func newNetlinkRegistry(ctx context.Context, events chan<- aggregatedEvent) *netlinkRegistry {
+func newNetlinkRegistry(ctx context.Context, events chan<- aggregatedEvent, includeInitialSnapshot bool) *netlinkRegistry {
 	return &netlinkRegistry{
-		ctx:      ctx,
-		watchers: make(map[string]*netlinkWatcher),
-		events:   events,
+		ctx:                    ctx,
+		watchers:               make(map[string]*netlinkWatcher),
+		events:                 events,
+		includeInitialSnapshot: includeInitialSnapshot,
 	}
 }
 
@@ -55,9 +57,10 @@ func (r *netlinkRegistry) Start(container *clabruntime.GenericContainer) {
 
 	watcherCtx, cancel := context.WithCancel(r.ctx)
 	watcher := &netlinkWatcher{
-		container: clone,
-		cancel:    cancel,
-		done:      make(chan struct{}),
+		container:       clone,
+		cancel:          cancel,
+		done:            make(chan struct{}),
+		includeSnapshot: r.includeInitialSnapshot,
 	}
 
 	r.watchers[id] = watcher
@@ -202,9 +205,10 @@ func containerFromEvent(
 }
 
 type netlinkWatcher struct {
-	container *clabruntime.GenericContainer
-	cancel    context.CancelFunc
-	done      chan struct{}
+	container       *clabruntime.GenericContainer
+	cancel          context.CancelFunc
+	done            chan struct{}
+	includeSnapshot bool
 }
 
 func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
@@ -241,6 +245,12 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 	if err != nil {
 		log.Debugf("failed to snapshot interfaces for container %s: %v", containerName, err)
 		states = make(map[int]ifaceSnapshot)
+	}
+
+	if w.includeSnapshot {
+		for _, snapshot := range states {
+			registry.emitInterfaceEvent(w.container, "snapshot", snapshot)
+		}
 	}
 
 	updates := make(chan netlink.LinkUpdate, 32)

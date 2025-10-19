@@ -35,11 +35,15 @@ func Stream(ctx context.Context, opts Options) error {
 	}
 
 	eventCh := make(chan aggregatedEvent, 128)
-	registry := newNetlinkRegistry(ctx, eventCh)
+	registry := newNetlinkRegistry(ctx, eventCh, opts.IncludeInitialState)
 
 	containers, err := clab.ListContainers(ctx, clabcore.WithListclabLabelExists())
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	if opts.IncludeInitialState {
+		go emitContainerSnapshots(ctx, containers, eventCh)
 	}
 
 	for idx := range containers {
@@ -178,6 +182,99 @@ func aggregatedEventFromContainerEvent(ev clabruntime.ContainerEvent) aggregated
 		ActorID:     shortID(short),
 		ActorName:   actorName,
 		ActorFullID: actorFullID,
+		Attributes:  attributes,
+	}
+}
+
+func emitContainerSnapshots(
+	ctx context.Context,
+	containers []clabruntime.GenericContainer,
+	sink chan<- aggregatedEvent,
+) {
+	for idx := range containers {
+		container := containers[idx]
+		if !isRunningContainer(&container) {
+			continue
+		}
+
+		event := aggregatedEventFromContainerSnapshot(&container)
+		if event.ActorID == "" && event.ActorName == "" {
+			continue
+		}
+
+		select {
+		case sink <- event:
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func aggregatedEventFromContainerSnapshot(
+	container *clabruntime.GenericContainer,
+) aggregatedEvent {
+	if container == nil {
+		return aggregatedEvent{}
+	}
+
+	state := strings.ToLower(container.State)
+
+	short := container.ShortID
+	if short == "" {
+		short = shortID(container.ID)
+	}
+
+	attributes := cloneStringMap(container.Labels)
+	if attributes == nil {
+		attributes = make(map[string]string)
+	}
+
+	if _, ok := attributes["origin"]; !ok {
+		attributes["origin"] = "snapshot"
+	}
+
+	if container.Image != "" {
+		attributes["image"] = container.Image
+	}
+
+	if container.Status != "" {
+		attributes["status"] = container.Status
+	}
+
+	if state != "" {
+		attributes["state"] = state
+	}
+
+	if container.NetworkName != "" {
+		attributes["network"] = container.NetworkName
+	}
+
+	if container.NetworkSettings.IPv4addr != "" {
+		attributes["mgmt_ipv4"] = container.GetContainerIPv4()
+	}
+
+	if container.NetworkSettings.IPv6addr != "" {
+		attributes["mgmt_ipv6"] = container.GetContainerIPv6()
+	}
+
+	if len(attributes) == 0 {
+		attributes = nil
+	}
+
+	actorName := firstContainerName(container)
+
+	action := state
+	if action == "" {
+		action = "snapshot"
+	}
+
+	return aggregatedEvent{
+		Timestamp:   time.Now(),
+		Type:        "container",
+		Action:      action,
+		ActorID:     shortID(short),
+		ActorName:   actorName,
+		ActorFullID: container.ID,
 		Attributes:  attributes,
 	}
 }

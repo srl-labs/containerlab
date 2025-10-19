@@ -358,7 +358,8 @@ type GraphOptions struct {
 }
 
 type EventsOptions struct {
-	Format string
+	Format              string
+	IncludeInitialState bool
 }
 
 type ToolsApiOptions struct {

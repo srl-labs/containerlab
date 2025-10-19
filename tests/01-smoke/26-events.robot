@@ -42,6 +42,29 @@ Events Command Streams Plain Output
         Remove File If Exists    ${plain-err}
     END
 
+Events Command Emits Initial State Snapshot
+    [Documentation]    Verify that enabling --initial-state emits running containers and their interfaces before live updates.
+    ${snapshot-log}    Set Variable    /tmp/clab-events-snapshot.log
+    ${snapshot-err}    Set Variable    /tmp/clab-events-snapshot.err
+    Remove File If Exists    ${snapshot-log}
+    Remove File If Exists    ${snapshot-err}
+    TRY
+        Deploy Lab For Events
+        Sleep    3s
+        Start Events Process    events_snapshot    plain    ${snapshot-log}    ${snapshot-err}    True
+        Sleep    3s
+        Stop Events Process    events_snapshot
+        ${snapshot-output} =    Get File    ${snapshot-log}
+        Log    ${snapshot-output}
+        Should Contain    ${snapshot-output}    container running
+        Should Contain    ${snapshot-output}    origin=snapshot
+        Should Contain    ${snapshot-output}    interface snapshot
+    FINALLY
+        Cleanup Events Scenario    events_snapshot
+        Remove File If Exists    ${snapshot-log}
+        Remove File If Exists    ${snapshot-err}
+    END
+
 Events Command Streams JSON Output
     [Documentation]    Verify that JSON formatted events remain valid JSON lines and retain interface metadata.
     ${json-log}    Set Variable    /tmp/clab-events-json.log
@@ -81,8 +104,9 @@ Remove File If Exists
     Run Keyword And Ignore Error    Remove File    ${path}
 
 Start Events Process
-    [Arguments]    ${alias}    ${format}    ${stdout}    ${stderr}
+    [Arguments]    ${alias}    ${format}    ${stdout}    ${stderr}    ${initial}=False
     ${cmd}    Set Variable    ${CLAB_BIN} --runtime ${runtime} events --format ${format}
+    ${cmd}    Run Keyword If    '${initial}'=='True'    Catenate    ${cmd}    --initial-state    ELSE    Set Variable    ${cmd}
     Start Process    ${cmd}    shell=True    alias=${alias}    stdout=${stdout}    stderr=${stderr}
     Sleep    1s
 

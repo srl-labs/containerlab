@@ -29,6 +29,14 @@ func eventsCmd(o *Options) (*cobra.Command, error) {
 		"output format. One of [plain, json]",
 	)
 
+	c.Flags().BoolVarP(
+		&o.Events.IncludeInitialState,
+		"initial-state",
+		"i",
+		o.Events.IncludeInitialState,
+		"emit the current container and interface states before streaming new events",
+	)
+
 	c.Example = `# Stream container and interface events in plain text
 containerlab events
 
@@ -40,10 +48,11 @@ containerlab events --format json`
 
 func eventsFn(cmd *cobra.Command, o *Options) error {
 	opts := clabevents.Options{
-		Format:      o.Events.Format,
-		Runtime:     o.Global.Runtime,
-		ClabOptions: o.ToClabOptions(),
-		Writer:      cmd.OutOrStdout(),
+		Format:              o.Events.Format,
+		Runtime:             o.Global.Runtime,
+		IncludeInitialState: o.Events.IncludeInitialState,
+		ClabOptions:         o.ToClabOptions(),
+		Writer:              cmd.OutOrStdout(),
 	}
 
 	return clabevents.Stream(cmd.Context(), opts)
