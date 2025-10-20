@@ -317,14 +317,18 @@ To start an Arista cEOS node containerlab uses the following configuration:
 === "Startup command"
     `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
 === "Environment variables"
-    `CEOS:1`
-    `EOS_PLATFORM":ceoslab`
-    `container:docker`
-    `ETBA:1`
-    `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`
-    `INTFTYPE:eth`
-    `MAPETH0:1`
-    `MGMT_INTF:eth0`
+    [//]: # (These lines have trailing spaces to force line break for proper formatting. DO NOT REMOVE!)
+    `CEOS:1`  
+    `EOS_PLATFORM:ceoslab`  
+    `container:docker`  
+    `ETBA:1`  (1)  
+    `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`  
+    `INTFTYPE:eth`  
+    `MAPETH0:1`  
+    `MGMT_INTF:eth0`  
+    { .annotate }
+
+    1. This environment variable is related to the forwarding plane and must be set for cEOS to work properly.
 
 ### Arista forwarding agent
 While CloudEOS has a DPDK dataplane, cEOS-lab and vEOS-lab use their own software dataplane.
@@ -351,9 +355,6 @@ For `Arfa`, use
 ```title="/mnt/flash/ceos-config"
 TFA_VERSION=2
 ```
-
-
-The environment variable `ETBA` is not properly documented by Arista, but apparently it is necessary for correct operation.
 
 The following features are not supported in `Arfa` mode:
 
