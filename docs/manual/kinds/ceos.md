@@ -330,64 +330,30 @@ To start an Arista cEOS node containerlab uses the following configuration:
 
     1. This environment variable is related to the forwarding plane and must be set for cEOS to work properly.
 
-### Arista forwarding agent
+### Arista forwarding agent (cEOS dataplane)
 While CloudEOS has a DPDK dataplane, cEOS-lab and vEOS-lab use their own software dataplane.
 
-Two versions of the forwarding agent exist. `Arfa` (**AR** ista **F** orwarding **A** gent) is the new forwarding agent, that is supposed to be faster and more scalable. It has nearly reached feature parity with the older `python` forwarding agent and even has some features that do not exist in the older agent.
-`python` is the legacy mode, which supports some features `Arfa` does not support.
+Two versions of the forwarding agent exist. `Arfa` (**AR** ista **F** orwarding **A** gent) is the new forwarding agent, that is supposed to be faster and more scalable. It has *nearly* reached feature parity with the older `python` forwarding agent and even has some features that do not exist in the older agent. `python` should be considered deprecated.
 
-Starting with `EOS-4.30.1F`, cEOS-lab and vEOS-lab use `Arfa` by default if not configured otherwise.
-
-You can manually switch between the two forwarding agents using
+Starting with `EOS-4.30.1F`, cEOS-lab and vEOS-lab use `Arfa` by default and the following snippet is included in the configuration by default:
 ```
 platform tfa
-
-personality python
-personality arfa
+    personality arfa
 ```
-or via the magic file `/mnt/flash/ceos-config`.
 
-For `python`, use
+The `Arfa` agent is constantly being improved and more features are being added. If you believe you've hit a limitation in `Arfa` that did not exist in `python`, contact your SE at Arista.
+
+!!!note
+    Some very advanced features such as `PTP` or `sFlow` may require additional configuration, such as `interface mode` to be set to `relay`. Please check the Arista docs for more details.
+
+### The ceos-config file
+cEOS supports an additional config file at `/mnt/flash/ceos-config` that allows some advanced configuration like system mac address (e.g. for certain CVP/CVaaS lab cases)
+
 ```title="/mnt/flash/ceos-config"
-TFA_VERSION=1
-``` 
-For `Arfa`, use
-```title="/mnt/flash/ceos-config"
-TFA_VERSION=2
+SERIALNUMBER=<Serialnumber>
+SYSTEMMACADDR=aaaa.bbbb.cccc
 ```
-
-The following features are not supported in `Arfa` mode:
-
-- Multicast
-- FlexEncap
-- Q-in-Q subinterface encapsulation
-- Pseudowire dual tagging
-
-The following features are not supported in `python` mode:
-
-- PBR
-- VRF Selection Policy
-- Sflow Egress interface
-
-### Interface mode
-In release `EOS-4.34.1F` the interface mode configuration was added. It introduces the `relay mode`.
-The following features require relay mode to be enabled:
-
-- CFM Alarm Indication
-- Dot1x MBA
-- Inband Telemetry
-- PTP
-- sFlow
-
-Interface mode can be configured using
-```
-platform tfa
-
-interface mode relaying
-interface mode default
-```
-
-It is not documented which other advantages or disadvantages relay mode has compared to default mode.
+While it is possible to change the forwarding agent between `Arfa` and `python` via this file, it is not recommended.
 
 ### File mounts
 
