@@ -38,6 +38,8 @@ import (
 	clabnodesvr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
 	clabnodesvr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
 	clabnodesvr_freebsd "github.com/srl-labs/containerlab/nodes/vr_freebsd"
+	clabnodesvr_vios "github.com/srl-labs/containerlab/nodes/vr_vios"
+	clabnodesvr_viosl2 "github.com/srl-labs/containerlab/nodes/vr_viosl2"
 	clabnodesvr_ftdv "github.com/srl-labs/containerlab/nodes/vr_ftdv"
 	clabnodesvr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
 	clabnodesvr_n9kv "github.com/srl-labs/containerlab/nodes/vr_n9kv"
@@ -80,6 +82,8 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesvr_csr.Register(c.Reg)
 	clabnodesvr_c8000v.Register(c.Reg)
 	clabnodesvr_freebsd.Register(c.Reg)
+	clabnodesvr_vios.Register(c.Reg)
+	clabnodesvr_viosl2.Register(c.Reg)
 	clabnodesgeneric_vm.Register(c.Reg)
 	clabnodesdell_sonic.Register(c.Reg)
 	clabnodesvr_ftosv.Register(c.Reg)
