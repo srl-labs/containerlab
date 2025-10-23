@@ -102,6 +102,12 @@ func GetOptions() *Options {
 				SrcPort:        0,
 				DeletionPrefix: "vx-",
 			},
+			ToolsSnapshot: &ToolsSnapshotOptions{
+				OutputDir:     "./snapshots",
+				Format:        "table",
+				Timeout:       5 * time.Minute,
+				MaxConcurrent: 0,
+			},
 			Version: &VersionOptions{
 				Short: false,
 				JSON:  false,
@@ -129,6 +135,7 @@ type Options struct {
 	ToolsSSHX      *ToolsSSHXOptions
 	ToolsVeth      *ToolsVethOptions
 	ToolsVxlan     *ToolsVxlanOptions
+	ToolsSnapshot  *ToolsSnapshotOptions
 	Version        *VersionOptions
 }
 
@@ -276,6 +283,8 @@ type DeployOptions struct {
 	SkipLabDirectoryFileACLs bool
 	ExportTemplate           string
 	LabOwner                 string
+	RestoreAll               string
+	RestoreNodeSnapshots     []string
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {
@@ -441,6 +450,13 @@ type ToolsVxlanOptions struct {
 	Remote         string
 	ParentDevice   string
 	DeletionPrefix string
+}
+
+type ToolsSnapshotOptions struct {
+	OutputDir     string
+	Format        string
+	Timeout       time.Duration
+	MaxConcurrent int
 }
 
 type VersionOptions struct {
