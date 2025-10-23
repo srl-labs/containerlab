@@ -24,7 +24,7 @@ var (
 )
 
 const (
-	scrapliPlatformName = "cisco_iosxe"
+	scrapliPlatformName = "cisco_ios"
 )
 
 // Register registers the node in the NodeRegistry.
