@@ -241,10 +241,26 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 	}
 	defer nsHandle.Close()
 
-	states, err := snapshotInterfaces(nsHandle)
+	netHandle, err := netlink.NewHandleAt(nsHandle)
+	if err != nil {
+		log.Debugf("failed to create netlink handle for container %s: %v", containerName, err)
+
+		return
+	}
+	defer netHandle.Close()
+
+	states, err := snapshotInterfaces(netHandle)
 	if err != nil {
 		log.Debugf("failed to snapshot interfaces for container %s: %v", containerName, err)
 		states = make(map[int]ifaceSnapshot)
+	}
+
+	statsSamples := make(map[int]ifaceStatsSample, len(states))
+	now := time.Now()
+	for idx, snapshot := range states {
+		if sample, ok := newStatsSample(snapshot, now); ok {
+			statsSamples[idx] = sample
+		}
 	}
 
 	if w.includeSnapshot {
@@ -263,8 +279,13 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		return
 	}
 
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
+		case <-ticker.C:
+			w.collectAndEmitStats(netHandle, states, statsSamples, registry)
 		case <-ctx.Done():
 			close(done)
 
@@ -274,13 +295,14 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 				return
 			}
 
-			w.processUpdate(states, update, registry)
+			w.processUpdate(states, statsSamples, update, registry)
 		}
 	}
 }
 
 func (w *netlinkWatcher) processUpdate(
 	states map[int]ifaceSnapshot,
+	statsSamples map[int]ifaceStatsSample,
 	update netlink.LinkUpdate,
 	registry *netlinkRegistry,
 ) {
@@ -303,6 +325,7 @@ func (w *netlinkWatcher) processUpdate(
 		}
 
 		delete(states, snapshot.Index)
+		delete(statsSamples, snapshot.Index)
 		registry.emitInterfaceEvent(w.container, "delete", snapshot)
 	case unix.RTM_NEWLINK:
 		if exists && snapshot.equal(previous) {
@@ -315,6 +338,9 @@ func (w *netlinkWatcher) processUpdate(
 		}
 
 		states[snapshot.Index] = snapshot
+		if sample, ok := newStatsSample(snapshot, time.Now()); ok {
+			statsSamples[snapshot.Index] = sample
+		}
 		registry.emitInterfaceEvent(w.container, action, snapshot)
 	}
 }
@@ -343,15 +369,10 @@ func shortID(id string) string {
 	return id
 }
 
-func (r *netlinkRegistry) emitInterfaceEvent(
+func interfaceAttributes(
 	container *clabruntime.GenericContainer,
-	action string,
 	snapshot ifaceSnapshot,
-) {
-	if container == nil {
-		return
-	}
-
+) map[string]string {
 	attributes := map[string]string{
 		"ifname": snapshot.Name,
 		"index":  strconv.Itoa(snapshot.Index),
@@ -376,6 +397,20 @@ func (r *netlinkRegistry) emitInterfaceEvent(
 	if name := firstContainerName(container); name != "" {
 		attributes["name"] = name
 	}
+
+	return attributes
+}
+
+func (r *netlinkRegistry) emitInterfaceEvent(
+	container *clabruntime.GenericContainer,
+	action string,
+	snapshot ifaceSnapshot,
+) {
+	if container == nil {
+		return
+	}
+
+	attributes := interfaceAttributes(container, snapshot)
 
 	event := aggregatedEvent{
 		Timestamp:   time.Now(),
@@ -429,12 +464,46 @@ func waitForNamespacePath(
 	return "", fmt.Errorf("namespace path not ready for container %s", containerID)
 }
 
-func snapshotInterfaces(nsHandle netns.NsHandle) (map[int]ifaceSnapshot, error) {
-	netHandle, err := netlink.NewHandleAt(nsHandle)
-	if err != nil {
-		return nil, fmt.Errorf("unable to enter namespace: %w", err)
+func (r *netlinkRegistry) emitInterfaceStatsEvent(
+	container *clabruntime.GenericContainer,
+	snapshot ifaceSnapshot,
+	metrics ifaceStatsMetrics,
+) {
+	if container == nil || !snapshot.HasStats {
+		return
 	}
-	defer netHandle.Close()
+
+	attributes := interfaceAttributes(container, snapshot)
+	attributes["rx_bytes"] = strconv.FormatUint(metrics.RxBytes, 10)
+	attributes["tx_bytes"] = strconv.FormatUint(metrics.TxBytes, 10)
+	attributes["rx_packets"] = strconv.FormatUint(metrics.RxPackets, 10)
+	attributes["tx_packets"] = strconv.FormatUint(metrics.TxPackets, 10)
+	attributes["rx_bps"] = strconv.FormatFloat(metrics.RxBps, 'f', -1, 64)
+	attributes["tx_bps"] = strconv.FormatFloat(metrics.TxBps, 'f', -1, 64)
+	attributes["rx_pps"] = strconv.FormatFloat(metrics.RxPps, 'f', -1, 64)
+	attributes["tx_pps"] = strconv.FormatFloat(metrics.TxPps, 'f', -1, 64)
+	attributes["interval_seconds"] = strconv.FormatFloat(metrics.Interval.Seconds(), 'f', -1, 64)
+
+	event := aggregatedEvent{
+		Timestamp:   metrics.Timestamp,
+		Type:        "interface",
+		Action:      "stats",
+		ActorID:     container.ShortID,
+		ActorName:   firstContainerName(container),
+		ActorFullID: container.ID,
+		Attributes:  attributes,
+	}
+
+	select {
+	case r.events <- event:
+	case <-r.ctx.Done():
+	}
+}
+
+func snapshotInterfaces(netHandle *netlink.Handle) (map[int]ifaceSnapshot, error) {
+	if netHandle == nil {
+		return nil, fmt.Errorf("netlink handle is nil")
+	}
 
 	links, err := netHandle.LinkList()
 	if err != nil {
@@ -466,6 +535,13 @@ func snapshotFromLink(link netlink.Link) ifaceSnapshot {
 			snapshot.MAC = attrs.HardwareAddr.String()
 		}
 		snapshot.OperState = attrs.OperState.String()
+		if stats := attrs.Statistics; stats != nil {
+			snapshot.HasStats = true
+			snapshot.RxBytes = stats.RxBytes
+			snapshot.TxBytes = stats.TxBytes
+			snapshot.RxPackets = stats.RxPackets
+			snapshot.TxPackets = stats.TxPackets
+		}
 	}
 
 	return snapshot
@@ -479,6 +555,11 @@ type ifaceSnapshot struct {
 	MAC       string
 	OperState string
 	Type      string
+	HasStats  bool
+	RxBytes   uint64
+	TxBytes   uint64
+	RxPackets uint64
+	TxPackets uint64
 }
 
 func (s ifaceSnapshot) equal(other ifaceSnapshot) bool {
@@ -489,4 +570,154 @@ func (s ifaceSnapshot) equal(other ifaceSnapshot) bool {
 		s.MAC == other.MAC &&
 		s.OperState == other.OperState &&
 		s.Type == other.Type
+}
+
+type ifaceStatsSample struct {
+	RxBytes   uint64
+	TxBytes   uint64
+	RxPackets uint64
+	TxPackets uint64
+	Timestamp time.Time
+}
+
+type ifaceStatsMetrics struct {
+	RxBytes   uint64
+	TxBytes   uint64
+	RxPackets uint64
+	TxPackets uint64
+	RxBps     float64
+	TxBps     float64
+	RxPps     float64
+	TxPps     float64
+	Interval  time.Duration
+	Timestamp time.Time
+}
+
+func newStatsSample(snapshot ifaceSnapshot, timestamp time.Time) (ifaceStatsSample, bool) {
+	if !snapshot.HasStats {
+		return ifaceStatsSample{}, false
+	}
+
+	return ifaceStatsSample{
+		RxBytes:   snapshot.RxBytes,
+		TxBytes:   snapshot.TxBytes,
+		RxPackets: snapshot.RxPackets,
+		TxPackets: snapshot.TxPackets,
+		Timestamp: timestamp,
+	}, true
+}
+
+func (w *netlinkWatcher) collectAndEmitStats(
+	netHandle *netlink.Handle,
+	states map[int]ifaceSnapshot,
+	statsSamples map[int]ifaceStatsSample,
+	registry *netlinkRegistry,
+) {
+	if netHandle == nil {
+		return
+	}
+
+	now := time.Now()
+
+	for idx, state := range states {
+		link, err := netHandle.LinkByIndex(idx)
+		if err != nil {
+			continue
+		}
+
+		current := snapshotFromLink(link)
+		state.Name = current.Name
+		state.Alias = current.Alias
+		state.MTU = current.MTU
+		state.MAC = current.MAC
+		state.OperState = current.OperState
+		state.Type = current.Type
+		state.HasStats = current.HasStats
+		state.RxBytes = current.RxBytes
+		state.TxBytes = current.TxBytes
+		state.RxPackets = current.RxPackets
+		state.TxPackets = current.TxPackets
+		states[idx] = state
+
+		if !state.HasStats {
+			delete(statsSamples, idx)
+
+			continue
+		}
+
+		prev, ok := statsSamples[idx]
+		if !ok || now.Sub(prev.Timestamp) <= 0 {
+			statsSamples[idx] = ifaceStatsSample{
+				RxBytes:   state.RxBytes,
+				TxBytes:   state.TxBytes,
+				RxPackets: state.RxPackets,
+				TxPackets: state.TxPackets,
+				Timestamp: now,
+			}
+
+			continue
+		}
+
+		interval := now.Sub(prev.Timestamp)
+		if interval <= 0 {
+			statsSamples[idx] = ifaceStatsSample{
+				RxBytes:   state.RxBytes,
+				TxBytes:   state.TxBytes,
+				RxPackets: state.RxPackets,
+				TxPackets: state.TxPackets,
+				Timestamp: now,
+			}
+
+			continue
+		}
+
+		rxBytesDelta := deltaCounter(prev.RxBytes, state.RxBytes)
+		txBytesDelta := deltaCounter(prev.TxBytes, state.TxBytes)
+		rxPacketsDelta := deltaCounter(prev.RxPackets, state.RxPackets)
+		txPacketsDelta := deltaCounter(prev.TxPackets, state.TxPackets)
+
+		seconds := interval.Seconds()
+		if seconds <= 0 {
+			statsSamples[idx] = ifaceStatsSample{
+				RxBytes:   state.RxBytes,
+				TxBytes:   state.TxBytes,
+				RxPackets: state.RxPackets,
+				TxPackets: state.TxPackets,
+				Timestamp: now,
+			}
+
+			continue
+		}
+
+		metrics := ifaceStatsMetrics{
+			RxBytes:   state.RxBytes,
+			TxBytes:   state.TxBytes,
+			RxPackets: state.RxPackets,
+			TxPackets: state.TxPackets,
+			RxBps:     float64(rxBytesDelta) * 8 / seconds,
+			TxBps:     float64(txBytesDelta) * 8 / seconds,
+			RxPps:     float64(rxPacketsDelta) / seconds,
+			TxPps:     float64(txPacketsDelta) / seconds,
+			Interval:  interval,
+			Timestamp: now,
+		}
+
+		registry.emitInterfaceStatsEvent(w.container, state, metrics)
+
+		statsSamples[idx] = ifaceStatsSample{
+			RxBytes:   state.RxBytes,
+			TxBytes:   state.TxBytes,
+			RxPackets: state.RxPackets,
+			TxPackets: state.TxPackets,
+			Timestamp: now,
+		}
+	}
+}
+
+func deltaCounter(previous, current uint64) uint64 {
+	if current >= previous {
+		return current - previous
+	}
+
+	return current
 }
