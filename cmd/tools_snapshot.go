@@ -93,16 +93,7 @@ func snapshotSaveFn(cmd *cobra.Command, o *Options) error {
 	}
 
 	// Get containers to snapshot (respects node-filter)
-	listOptions := []clabcore.ListOption{
-		clabcore.WithListFromCliArgs(o.Filter.LabelFilter),
-	}
-	if o.Global.TopologyFile != "" {
-		listOptions = append(listOptions,
-			clabcore.WithListLabName(c.Config.Name),
-		)
-	}
-
-	containers, err := c.ListContainers(ctx, listOptions...)
+	containers, err := c.ListNodesContainers(ctx)
 	if err != nil {
 		return err
 	}
@@ -331,8 +322,13 @@ func waitForSnapshotFile(ctx context.Context, runtime clabruntime.ContainerRunti
 				return fmt.Errorf("log stream closed before snapshot completed")
 			}
 
-			// Check for completion message
-			if strings.Contains(line, "Snapshot saved to /snapshot.tar") {
+			// Check for failure message first
+			if strings.Contains(line, "Snapshot save failed:") {
+				return fmt.Errorf("snapshot save failed: %s", line)
+			}
+
+			// Check for completion message (vrnetlab now saves to /snapshot-output.tar)
+			if strings.Contains(line, "Snapshot saved to /snapshot-output.tar") {
 				log.Debugf("%s: snapshot creation complete", containerName)
 				return nil
 			}
@@ -355,8 +351,9 @@ func waitForSnapshotFile(ctx context.Context, runtime clabruntime.ContainerRunti
 // copySnapshotFromContainer copies the snapshot file from container to host.
 func copySnapshotFromContainer(ctx context.Context, containerName, outputPath string) error {
 	// Use docker cp command to copy snapshot from container
+	// vrnetlab saves to /snapshot-output.tar when triggered by /snapshot-save
 	cmd := exec.CommandContext(ctx, "docker", "cp",
-		containerName+":/snapshot.tar",
+		containerName+":/snapshot-output.tar",
 		outputPath)
 
 	if output, err := cmd.CombinedOutput(); err != nil {
