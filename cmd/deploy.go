@@ -129,6 +129,23 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		"lab owner name (only for users in clab_admins group)",
 	)
 
+	c.Flags().StringVar(
+		&o.Deploy.RestoreAll,
+		"restore-all",
+		"",
+		"restore all nodes that have snapshots in this directory (default: ./snapshots)",
+	)
+	// Allow flag without value to default to ./snapshots
+	c.Flags().Lookup("restore-all").NoOptDefVal = "./snapshots"
+
+	c.Flags().StringArrayVar(
+		&o.Deploy.RestoreNodeSnapshots,
+		"restore",
+		nil,
+		"restore specific node from snapshot file (format: node=path/to/snapshot.tar). "+
+			"Can be specified multiple times. Overrides --restore-all for specified nodes.",
+	)
+
 	return c, nil
 }
 
@@ -157,7 +174,9 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		SetReconfigure(o.Deploy.Reconfigure).
 		SetGraph(o.Deploy.GenerateGraph).
 		SetSkipPostDeploy(o.Deploy.SkipPostDeploy).
-		SetSkipLabDirFileACLs(o.Deploy.SkipLabDirectoryFileACLs)
+		SetSkipLabDirFileACLs(o.Deploy.SkipLabDirectoryFileACLs).
+		SetRestoreAll(o.Deploy.RestoreAll).
+		SetRestoreNodeSnapshots(o.Deploy.RestoreNodeSnapshots)
 
 	containers, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {
