@@ -1,4 +1,4 @@
-package vr_vios
+package cisco_vios
 
 import (
 	"testing"

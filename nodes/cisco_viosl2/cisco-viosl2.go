@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package vr_viosl2
+package cisco_viosl2
 
 import (
 	"fmt"

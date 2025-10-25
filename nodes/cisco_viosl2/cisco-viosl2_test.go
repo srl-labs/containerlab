@@ -1,4 +1,4 @@
-package vr_viosl2
+package cisco_viosl2
 
 import (
 	"testing"
