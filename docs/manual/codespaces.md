@@ -7,7 +7,7 @@ comments: true
 
 The best labs are the labs that you can run anywhere, anytime, with a single click and preferably for free.
 
-Containerlab commoditized the labbing experience by providing a simple and easy to use tool to create and manage network topologies. But still you have to think a machine to run the lab on.  
+Containerlab commoditized the labbing experience by providing a simple and easy to use tool to create and manage network topologies. But still you have to think a machine to run the lab on.
 Or, rather, you **had**.
 
 We started to ship a [Dev Container][devcontainers-doc][^1] package for Containerlab that allows you to run containerlab-based labs in a [GitHub Codespaces][codespaces-doc] for free[^2] unlocking a whole new level of flexibility and convenience for users.
@@ -120,10 +120,10 @@ All users by default have a $0 spending limit[^7], which means that if you excee
 
 To avoid any surprises and lower your anxiety levels, GitHub Codespaces have two important settings that you configure at [github.com/settings/codespaces](https://github.com/settings/codespaces):
 
-1. **[Idle timeout](https://docs.github.com/en/codespaces/setting-your-user-preferences/setting-your-timeout-period-for-github-codespaces)**  
+1. **[Idle timeout](https://docs.github.com/en/codespaces/setting-your-user-preferences/setting-your-timeout-period-for-github-codespaces)**
     This setting allows you to "suspend" the running environment after a certain period of inactivity and defaults to 30 minutes. You can increase/decrease the timeout as you see fit. Consult with the docs to see what counts as activity and what doesn't.
-2. **[Retention period](https://docs.github.com/en/codespaces/setting-your-user-preferences/configuring-automatic-deletion-of-your-codespaces)**  
-    When you stopped the codespaces environment or it was suspended due to inactivity, it will be automatically deleted after a certain period of time. The default (and maximum) retention period is 30 days, but you can change it to a shorter period.  
+2. **[Retention period](https://docs.github.com/en/codespaces/setting-your-user-preferences/configuring-automatic-deletion-of-your-codespaces)**
+    When you stopped the codespaces environment or it was suspended due to inactivity, it will be automatically deleted after a certain period of time. The default (and maximum) retention period is 30 days, but you can change it to a shorter period.
     The stopped environment won't count against your cpu-hours quota, but it will still consume storage space, hence you might want to remove the stopped environments to free up the space.
 
 /// admonition | Safe settings
@@ -209,8 +209,8 @@ Once you are satisfied with the environment, you can add a nice button to the RE
 <a href="https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1">
 <img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/d78a6f9f6869b3ac3c286928dd52fa08/run_in_codespaces-v1.svg?sanitize=true" style="width:50%"/></a>
 
-**[Run](https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1) this lab in GitHub Codespaces for free**.  
-[Learn more](https://containerlab.dev/manual/codespaces){data-proofer-ignore} about Containerlab for Codespaces.  
+**[Run](https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1) this lab in GitHub Codespaces for free**.
+[Learn more](https://containerlab.dev/manual/codespaces){data-proofer-ignore} about Containerlab for Codespaces.
 <small>Machine type: 2 vCPU · 8 GB RAM</small>
 </div>
 ///
@@ -226,8 +226,8 @@ The URL used in the link uses deep link configuration provided by Codespaces, re
 <a href="https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1">
 <img src="https://gitlab.com/rdodin/pics/-/wikis/uploads/d78a6f9f6869b3ac3c286928dd52fa08/run_in_codespaces-v1.svg?sanitize=true" style="width:50%"/></a>
 
-**[Run](https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1) this lab in GitHub Codespaces for free**.  
-[Learn more](https://containerlab.dev/manual/codespaces) about Containerlab for Codespaces.  
+**[Run](https://codespaces.new/srl-labs/srlinux-vlan-handling-lab?quickstart=1) this lab in GitHub Codespaces for free**.
+[Learn more](https://containerlab.dev/manual/codespaces) about Containerlab for Codespaces.
 <small>Machine type: 2 vCPU · 8 GB RAM</small>
 </div>
 
@@ -256,7 +256,7 @@ Containerlab has four devcontainer images that differ in the way the docker is s
 1. Docker in Docker (dind) - is the devcontainer that is meant to contain an isolated docker environment inside the container. This image is **suitable for Codespaces**.
 2. Docker outside of Docker (dood) - is a devcontainer image that mounts the docker socket from the outside, and therefore can reuse the images existing on the host machine. This image is mostly used with [DevPod](../macos.md#devpod).
 
-You will find the devcontainer definition files in [containerlab/.devcontianer](https://github.com/srl-labs/containerlab/tree/main/.devcontainer) directory where:
+You will find the devcontainer definition files in [containerlab/.devcontainer](https://github.com/srl-labs/containerlab/tree/main/.devcontainer) directory where:
 
 1. devcontainer.json - the Dev Container configuration file that defines how the environment is built, configured and launched.
 2. Dockerfile and slim.Dockerfile - the Dockerfile files that the Dev Container is built from.
