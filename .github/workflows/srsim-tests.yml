@@ -82,7 +82,7 @@ jobs:
           ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
       # upload test reports as a zip file
       - name: Upload test logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: 13-srsim-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
@@ -91,7 +91,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: coverage-srsim-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
