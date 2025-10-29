@@ -120,9 +120,9 @@ All users by default have a $0 spending limit[^7], which means that if you excee
 
 To avoid any surprises and lower your anxiety levels, GitHub Codespaces have two important settings that you configure at [github.com/settings/codespaces](https://github.com/settings/codespaces):
 
-1. **[Idle timeout](https://docs.github.com/en/codespaces/setting-your-user-preferences/setting-your-timeout-period-for-github-codespaces)**.  
+1. **[Idle timeout](https://docs.github.com/en/codespaces/setting-your-user-preferences/setting-your-timeout-period-for-github-codespaces)**  
     This setting allows you to "suspend" the running environment after a certain period of inactivity and defaults to 30 minutes. You can increase/decrease the timeout as you see fit. Consult with the docs to see what counts as activity and what doesn't.
-2. **[Retention period](https://docs.github.com/en/codespaces/setting-your-user-preferences/configuring-automatic-deletion-of-your-codespaces)**.  
+2. **[Retention period](https://docs.github.com/en/codespaces/setting-your-user-preferences/configuring-automatic-deletion-of-your-codespaces)**  
     When you stopped the codespaces environment or it was suspended due to inactivity, it will be automatically deleted after a certain period of time. The default (and maximum) retention period is 30 days, but you can change it to a shorter period.  
     The stopped environment won't count against your cpu-hours quota, but it will still consume storage space, hence you might want to remove the stopped environments to free up the space.
 
