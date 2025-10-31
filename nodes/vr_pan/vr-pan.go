@@ -63,6 +63,7 @@ func (n *vrPan) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 		"RAM":                "6144",
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
+		"QEMU_CPU": "qemu64",
 	}
 	n.Cfg.Env = clabutils.MergeStringMaps(defEnv, n.Cfg.Env)
 
