@@ -109,7 +109,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 		}
 
 		// add network_os to the node
-		ansibleKindProps.setNetworkOS(n.Config().Kind)
+		ansibleKindProps.setNetworkOS(n.Config())
 		// add ansible_connection to the node
 		ansibleKindProps.setAnsibleConnection(n.Config().Kind)
 
@@ -148,13 +148,18 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	return err
 }
 
-// setNetworkOS sets the network_os variable for the kind.
-func (n *AnsibleKindProps) setNetworkOS(kind string) {
-	switch kind {
+// setNetworkOS sets the NetworkOS field based on the node kind and presence of environment variables.
+func (n *AnsibleKindProps) setNetworkOS(cfg *clabtypes.NodeConfig) {
+	switch cfg.Kind {
 	case "nokia_srlinux", "srl":
 		n.NetworkOS = "nokia.srlinux.srlinux"
+
 	case "nokia_sros", "vr-sros", "nokia_srsim":
-		n.NetworkOS = "nokia.sros.md"
+		if _, ok := cfg.Env["NOKIA_SROS_CLASSIC"]; ok {
+			n.NetworkOS = "nokia.sros.classic"
+		} else {
+			n.NetworkOS = "nokia.sros.md"
+		}
 	}
 }
 

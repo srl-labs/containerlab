@@ -656,6 +656,24 @@ configure {
 }
 ```
 
+/// details | Switching to SR OS Classic Management
+    type: tip
+
+To run SR OS nodes in Classic CLI mode, you can provide a partial startup configuration. Although the file (or embedded config snippet) still follows MD-CLI syntax, once the node has booted successfully, containerlab automatically switches the management interface to classic-mode.
+
+To control this behavior, add the environment variable `NOKIA_SROS_CLASSIC`. When enabled, containerlab also updates the generated Ansible inventory accordingly.
+
+```yaml hl_lines="6-7"
+topology:
+  nodes:
+    sr-sim1:
+      kind: nokia_srsim
+      startup-config: myconfig.partial.txt
+      env:
+        NOKIA_SROS_CLASSIC: True
+```
+///
+
 ##### Remote partial files
 
 It is possible to provide a partial config file that is located on a remote HTTP(S) server. This can be done by providing a URL to the file. The URL must start with `http://` or `https://` and must point to a file that is accessible from the containerlab host.

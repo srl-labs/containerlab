@@ -74,6 +74,7 @@ const (
 	envNokiaSrosXIOM             = "NOKIA_SROS_XIOM"
 	envNokiaSrosMDA              = "NOKIA_SROS_MDA"
 	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
+	envNokiaSrosClassic          = "NOKIA_SROS_CLASSIC"
 
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
@@ -448,6 +449,35 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 				err = n.saveConfigWithAddr(ctx, addr)
 				if err != nil {
 					return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
+				}
+			}
+
+			// move to classic mode if env var is set
+			if _, exists := n.Cfg.Env[envNokiaSrosClassic]; exists {
+				d, err := clabutils.SpawnCLIviaExec(scrapliPlatformName, n.Cfg.LongName, n.Runtime.GetName())
+				if err != nil {
+					return err
+				}
+
+				defer d.Close()
+
+				cfgs := []string{
+					"edit-config private",
+					"/configure system management-interface cli cli-engine [classic-cli md-cli]",
+					"/configure system management-interface configuration-mode classic",
+					"commit",
+					"/!classic-cli",
+					"file md cf3:/rollbacks",
+					"configure system rollback rollback-location cf3:/rollbacks/config",
+					"admin rollback save",
+				}
+
+				// resp, err := d.SendCommands(cfgs)
+				resp, err := d.SendConfigs(cfgs)
+				if err != nil {
+					return err
+				} else if resp.Failed != nil {
+					return fmt.Errorf("Activation of SR OS classic-mode failed!")
 				}
 			}
 
