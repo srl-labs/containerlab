@@ -30,6 +30,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/opoptions"
+	"github.com/scrapli/scrapligo/driver/options"
+	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/response"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -369,6 +371,86 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	return nil
 }
 
+func enableClassicMode(host string, hostname string, username string, password string) error {
+	log.Infof("Connect to node %q via CLI (SSH2)", hostname)
+
+	p, err := platform.NewPlatform(
+		"nokia_sros_classic",
+		host,
+		options.WithAuthNoStrictKey(),
+		options.WithAuthUsername(username),
+		options.WithAuthPassword(password),
+	)
+	if err != nil {
+		return err
+	}
+
+	d, err := p.GetNetworkDriver()
+	if err != nil {
+		return err
+	}
+	if err := d.Open(); err != nil {
+		return fmt.Errorf("failed to open ssh2/cli session; error: %+v", err)
+	}
+	defer d.Close()
+
+	// check configuration mode
+	log.Infof("Check Operational Configuration Mode on %q", hostname)
+	resp, err := d.SendCommand("show system information | match Configuration | match Oper")
+	if err != nil {
+		return err
+	}
+	if resp.Failed != nil {
+		return fmt.Errorf("failed to check configuration mode on %q", hostname)
+	}
+	if strings.Contains(resp.Result, "classic") {
+		log.Infof("Node %q is already in classic mode, nothing to be done", hostname)
+		return nil
+	}
+
+	// switch configure mode to classic
+	log.Infof("Switch to Configuration Mode Classic on %q", hostname)
+
+	cfgs := []string{
+		"edit-config private",
+		"/configure system management-interface cli cli-engine [classic-cli md-cli]",
+		"/configure system management-interface configuration-mode classic",
+		"commit",
+		"/!classic-cli",
+		"sleep 1",
+		"file md cf3:/rollbacks",
+		"configure system security snmp community private rwa version both",
+		"configure system rollback rollback-location cf3:/rollbacks/config",
+		"admin rollback save",
+		"bof persist on",
+		"admin save",
+		"bof save",
+	}
+	mresp, err := d.SendCommands(cfgs)
+	if err != nil {
+		return err
+	}
+
+	var sb strings.Builder
+	sb.WriteString("CLI batch result:\n")
+
+	for _, r := range mresp.Responses {
+		if r.Failed != nil {
+			fmt.Fprintf(&sb, "\033[1m%s ❌\033[0m\n\033[31m%s\033[0m\n", r.Input, r.Result)
+		} else {
+			fmt.Fprintf(&sb, "\033[1m%s ✅\033[0m\n%s\n", r.Input, r.Result)
+		}
+	}
+	log.Infof(sb.String())
+
+	if resp.Failed != nil {
+		return fmt.Errorf("post classic mode activation tasks failed!")
+	}
+
+	log.Infof("Successfully copied running configuration to startup configuration file for node: %q", hostname)
+	return nil
+}
+
 // Post Deploy func for SR-SIM kind.
 func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
@@ -431,6 +513,8 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			}
 			// TLS bootstrap in case of n.Cfg.Certificate.Issue flag
 			if *n.Cfg.Certificate.Issue {
+				log.Infof("TLS cert/key bootstrap for node %q", n.Cfg.LongName)
+
 				err = n.tlsCertBootstrap(ctx, addr)
 				if err != nil {
 					return fmt.Errorf(
@@ -444,40 +528,21 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 					n.Cfg.ShortName,
 				)
 			}
-			// don't save config if full config is sent.. it might not have NETCONF
+
+			// Partial Config Provided
 			if !isFullConfigFile(n.Cfg.StartupConfig) {
-				err = n.saveConfigWithAddr(ctx, addr)
-				if err != nil {
-					return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
-				}
-			}
+				if _, exists := n.Cfg.Env[envNokiaSrosClassic]; exists {
+					err := enableClassicMode(addr, n.Cfg.LongName, defaultCredentials.GetUsername(), defaultCredentials.GetPassword())
+					if err != nil {
+						return err
+					}
+				} else {
+					log.Infof("Save config as startup config for node %q (requires NETCONF)", n.Cfg.LongName)
 
-			// move to classic mode if env var is set
-			if _, exists := n.Cfg.Env[envNokiaSrosClassic]; exists {
-				d, err := clabutils.SpawnCLIviaExec(scrapliPlatformName, n.Cfg.LongName, n.Runtime.GetName())
-				if err != nil {
-					return err
-				}
-
-				defer d.Close()
-
-				cfgs := []string{
-					"edit-config private",
-					"/configure system management-interface cli cli-engine [classic-cli md-cli]",
-					"/configure system management-interface configuration-mode classic",
-					"commit",
-					"/!classic-cli",
-					"file md cf3:/rollbacks",
-					"configure system rollback rollback-location cf3:/rollbacks/config",
-					"admin rollback save",
-				}
-
-				// resp, err := d.SendCommands(cfgs)
-				resp, err := d.SendConfigs(cfgs)
-				if err != nil {
-					return err
-				} else if resp.Failed != nil {
-					return fmt.Errorf("Activation of SR OS classic-mode failed!")
+					err = n.saveConfigWithAddr(ctx, addr)
+					if err != nil {
+						return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
+					}
 				}
 			}
 

@@ -90,30 +90,14 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	}
 
 	for _, n := range c.Nodes {
+		kind, props := c.getAnsibleKindAndProps(n.Config())
+		inv.Kinds[kind] = props
+
 		ansibleNode := &AnsibleInventoryNode{
 			NodeConfig: n.Config(),
 		}
 
-		// add AnsibleKindProps to the inventory struct
-		// the ansibleKindProps is passed as a ref and is populated
-		// down below
-		ansibleKindProps := &AnsibleKindProps{}
-		inv.Kinds[n.Config().Kind] = ansibleKindProps
-
-		// add username and password to kind properties
-		// assumption is that all nodes of the same kind have the same credentials
-		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
-		if nodeRegEntry != nil {
-			ansibleKindProps.Username = nodeRegEntry.GetCredentials().GetUsername()
-			ansibleKindProps.Password = nodeRegEntry.GetCredentials().GetPassword()
-		}
-
-		// add network_os to the node
-		ansibleKindProps.setNetworkOS(n.Config())
-		// add ansible_connection to the node
-		ansibleKindProps.setAnsibleConnection(n.Config().Kind)
-
-		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], ansibleNode)
+		inv.Nodes[kind] = append(inv.Nodes[kind], ansibleNode)
 
 		if n.Config().Labels["ansible-group"] != "" {
 			inv.Groups[n.Config().Labels["ansible-group"]] =
@@ -148,29 +132,39 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	return err
 }
 
-// setNetworkOS sets the NetworkOS field based on the node kind and presence of environment variables.
-func (n *AnsibleKindProps) setNetworkOS(cfg *clabtypes.NodeConfig) {
-	switch cfg.Kind {
-	case "nokia_srlinux", "srl":
-		n.NetworkOS = "nokia.srlinux.srlinux"
+// Determine Ansible kind and properties for containerlab node
+func (c *CLab) getAnsibleKindAndProps(cfg *clabtypes.NodeConfig) (string, *AnsibleKindProps) {
+	ansibleGroup := cfg.Kind
+	ansibleProps := &AnsibleKindProps{}
 
-	case "nokia_sros", "vr-sros", "nokia_srsim":
-		if _, ok := cfg.Env["NOKIA_SROS_CLASSIC"]; ok {
-			n.NetworkOS = "nokia.sros.classic"
-		} else {
-			n.NetworkOS = "nokia.sros.md"
-		}
+	// Set `ansible_user` and `ansible_password`
+	// Assumption: All nodes of the same kind share same credentials
+	nodeRegEntry := c.Reg.Kind(ansibleGroup)
+	if nodeRegEntry != nil {
+		ansibleProps.Username = nodeRegEntry.GetCredentials().GetUsername()
+		ansibleProps.Password = nodeRegEntry.GetCredentials().GetPassword()
 	}
-}
 
-// setAnsibleConnection sets the ansible_connection variable for the kind.
-func (n *AnsibleKindProps) setAnsibleConnection(kind string) {
-	switch kind {
-	case "nokia_srlinux", "srl":
-		n.AnsibleConn = "ansible.netcommon.httpapi"
-	case "nokia_sros", "vr-sros", "nokia_srsim":
-		n.AnsibleConn = "ansible.netcommon.network_cli"
+	// Generally we use the containerlab kind for grouping in Ansible Inventory.
+	// Special case: For SROS we differentiate between classic and model-driven.
+	if _, ok := cfg.Env["NOKIA_SROS_CLASSIC"]; ok {
+		ansibleGroup = "nokia_srsim_classic"
 	}
+
+	// Set `ansible_network_os` and `ansible_connection`
+	switch ansibleGroup {
+	case "nokia_srlinux", "srl":
+		ansibleProps.NetworkOS = "nokia.srlinux.srlinux"
+		ansibleProps.AnsibleConn = "ansible.netcommon.httpapi"
+	case "nokia_sros", "vr-sros", "nokia_srsim":
+		ansibleProps.NetworkOS = "nokia.sros.md"
+		ansibleProps.AnsibleConn = "ansible.netcommon.network_cli"
+	case "nokia_srsim_classic":
+		ansibleProps.NetworkOS = "nokia.sros.classic"
+		ansibleProps.AnsibleConn = "ansible.netcommon.network_cli"
+	}
+
+	return ansibleGroup, ansibleProps
 }
 
 // Nornir Simple Inventory
