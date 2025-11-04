@@ -1,0 +1,22 @@
+# Copyright 2025 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: sr04
+
+topology:
+  kinds:
+    nokia_srsim:
+      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R1
+      license: /opt/nokia/sros/license-sros25.txt
+  nodes:
+    srsim-classic:
+      kind: nokia_srsim
+      type: sr-1
+      mgmt-ipv4: 172.20.20.220
+      env:
+        CLAB_SROS_CONFIG_MODE: classic
+      startup-config: |
+        /configure card 1 card-type iom-1
+        /configure card 1 mda 1 mda-type me6-100gb-qsfp28
+        /configure card 1 mda 2 mda-type me12-100gb-qsfp28

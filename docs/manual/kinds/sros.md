@@ -656,12 +656,10 @@ configure {
 }
 ```
 
-/// details | Switching to SR OS Classic Management
+/// details | Start SR-OS with Classic Management
     type: tip
 
-To run SR OS nodes in Classic CLI mode, you can provide a partial startup configuration. Although the file (or embedded config snippet) still follows MD-CLI syntax, once the node has booted successfully, containerlab automatically switches the management interface to classic-mode.
-
-To control this behavior, add the environment variable `NOKIA_SROS_CLASSIC`. When enabled, containerlab also updates the generated Ansible inventory accordingly.
+To start  `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the environment variable `CLAB_SROS_CONFIG_MODE`. When set to `classic`, containerlab will switch the node default CLI and update the generated Ansible inventory accordingly during PostDeploy phase. Note that if you provide a partial configuration, you still need to use the MD-CLI syntax as there is NO support for partial CLI classic config.
 
 ```yaml hl_lines="6-7"
 topology:
@@ -670,7 +668,7 @@ topology:
       kind: nokia_srsim
       startup-config: myconfig.partial.txt
       env:
-        NOKIA_SROS_CLASSIC: True
+        CLAB_SROS_CONFIG_MODE: classic
 ```
 ///
 

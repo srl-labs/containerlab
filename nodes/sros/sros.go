@@ -31,6 +31,10 @@ import (
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/opoptions"
 	"github.com/scrapli/scrapligo/driver/options"
+	scraplilogging "github.com/scrapli/scrapligo/logging"
+	"github.com/scrapli/scrapligo/transport"
+	"github.com/scrapli/scrapligo/util"
+
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/response"
 
@@ -61,6 +65,7 @@ const (
 	retryTimer = 1 * time.Second
 
 	scrapliPlatformName          = "nokia_sros"
+	scrapliPlatformNameClassic   = "nokia_sros_classic"
 	configCf3                    = "config/cf3"
 	configCf2                    = "config/cf2"
 	configCf1                    = "config/cf1"
@@ -76,7 +81,7 @@ const (
 	envNokiaSrosXIOM             = "NOKIA_SROS_XIOM"
 	envNokiaSrosMDA              = "NOKIA_SROS_MDA"
 	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
-	envNokiaSrosClassic          = "NOKIA_SROS_CLASSIC"
+	envSrosConfigMode            = "CLAB_SROS_CONFIG_MODE"
 
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
@@ -111,6 +116,7 @@ var (
 		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
+		envSrosConfigMode:         "md",                // Default
 	}
 
 	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
@@ -157,7 +163,6 @@ func Register(r *clabnodes.NodeRegistry) {
 	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
-
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(
 		defaultCredentials,
 		generateNodeAttributes,
@@ -371,86 +376,6 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	return nil
 }
 
-func enableClassicMode(host string, hostname string, username string, password string) error {
-	log.Infof("Connect to node %q via CLI (SSH2)", hostname)
-
-	p, err := platform.NewPlatform(
-		"nokia_sros_classic",
-		host,
-		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(username),
-		options.WithAuthPassword(password),
-	)
-	if err != nil {
-		return err
-	}
-
-	d, err := p.GetNetworkDriver()
-	if err != nil {
-		return err
-	}
-	if err := d.Open(); err != nil {
-		return fmt.Errorf("failed to open ssh2/cli session; error: %+v", err)
-	}
-	defer d.Close()
-
-	// check configuration mode
-	log.Infof("Check Operational Configuration Mode on %q", hostname)
-	resp, err := d.SendCommand("show system information | match Configuration | match Oper")
-	if err != nil {
-		return err
-	}
-	if resp.Failed != nil {
-		return fmt.Errorf("failed to check configuration mode on %q", hostname)
-	}
-	if strings.Contains(resp.Result, "classic") {
-		log.Infof("Node %q is already in classic mode, nothing to be done", hostname)
-		return nil
-	}
-
-	// switch configure mode to classic
-	log.Infof("Switch to Configuration Mode Classic on %q", hostname)
-
-	cfgs := []string{
-		"edit-config private",
-		"/configure system management-interface cli cli-engine [classic-cli md-cli]",
-		"/configure system management-interface configuration-mode classic",
-		"commit",
-		"/!classic-cli",
-		"sleep 1",
-		"file md cf3:/rollbacks",
-		"configure system security snmp community private rwa version both",
-		"configure system rollback rollback-location cf3:/rollbacks/config",
-		"admin rollback save",
-		"bof persist on",
-		"admin save",
-		"bof save",
-	}
-	mresp, err := d.SendCommands(cfgs)
-	if err != nil {
-		return err
-	}
-
-	var sb strings.Builder
-	sb.WriteString("CLI batch result:\n")
-
-	for _, r := range mresp.Responses {
-		if r.Failed != nil {
-			fmt.Fprintf(&sb, "\033[1m%s ❌\033[0m\n\033[31m%s\033[0m\n", r.Input, r.Result)
-		} else {
-			fmt.Fprintf(&sb, "\033[1m%s ✅\033[0m\n%s\n", r.Input, r.Result)
-		}
-	}
-	log.Infof(sb.String())
-
-	if resp.Failed != nil {
-		return fmt.Errorf("post classic mode activation tasks failed!")
-	}
-
-	log.Infof("Successfully copied running configuration to startup configuration file for node: %q", hostname)
-	return nil
-}
-
 // Post Deploy func for SR-SIM kind.
 func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
@@ -529,16 +454,16 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 				)
 			}
 
-			// Partial Config Provided
+			// Partial or NO Config Provided
 			if !isFullConfigFile(n.Cfg.StartupConfig) {
-				if _, exists := n.Cfg.Env[envNokiaSrosClassic]; exists {
-					err := enableClassicMode(addr, n.Cfg.LongName, defaultCredentials.GetUsername(), defaultCredentials.GetPassword())
+				if strings.ToLower(n.Cfg.Env[envSrosConfigMode]) == "classic" {
+					log.Infof("Switch to classic CLI for node %q via SSH", n.Cfg.LongName)
+					err := n.enableClassicMode(ctx)
 					if err != nil {
 						return err
 					}
 				} else {
-					log.Infof("Save config as startup config for node %q (requires NETCONF)", n.Cfg.LongName)
-
+					log.Infof("Saving node %q config as startup via NETCONF...", n.Cfg.LongName)
 					err = n.saveConfigWithAddr(ctx, addr)
 					if err != nil {
 						return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
@@ -1508,7 +1433,7 @@ func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
 		return err
 	}
 
-	log.Info("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr)
+	log.Info("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr, "config-mode", n.Cfg.Env[envSrosConfigMode])
 
 	return nil
 }
@@ -1939,4 +1864,87 @@ func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan c
 		default:
 		}
 	}
+}
+
+// Switches CLI to classic mode during Post Deploy
+func (n *sros) enableClassicMode(_ context.Context) error {
+	addr, err := n.MgmtIPAddr()
+	if err != nil {
+		return err
+	}
+	sl := log.StandardLog(log.StandardLogOptions{
+		ForceLevel: log.DebugLevel,
+	})
+	li, err := scraplilogging.NewInstance(
+		scraplilogging.WithLevel("debug"),
+		scraplilogging.WithLogger(sl.Print))
+	if err != nil {
+		return err
+	}
+
+	opts := []util.Option{
+		options.WithAuthNoStrictKey(),
+		options.WithAuthUsername(defaultCredentials.GetUsername()),
+		options.WithAuthPassword(defaultCredentials.GetPassword()),
+		options.WithTransportType(transport.StandardTransport),
+		options.WithTimeoutOps(5 * time.Second),
+		options.WithLogger(li),
+	}
+	p, err := platform.NewPlatform(scrapliPlatformNameClassic, fmt.Sprintf("[%s]", addr), opts...)
+	if err != nil {
+		return fmt.Errorf("%q-%q: failed to create platform: %+v", n.Cfg.ShortName, addr, err)
+	}
+
+	d, err := p.GetNetworkDriver()
+	if err != nil {
+		return fmt.Errorf("%q-%q: could not create the driver: %+v", n.Cfg.ShortName, addr, err)
+	}
+	if err := d.Open(); err != nil {
+		return fmt.Errorf("%q failed to open ssh2/cli session; error: %+v", n.Cfg.ShortName, err)
+	}
+	defer d.Close()
+
+	// check configuration mode
+	log.Debugf("Check Operational Configuration Mode on %q", n.Cfg.ShortName)
+	resp, err := d.SendCommand("show system information | match Configuration | match Oper")
+	if err != nil {
+		return err
+	}
+	if resp.Failed != nil {
+		return fmt.Errorf("failed to check configuration mode on %q", n.Cfg.ShortName)
+	}
+	if strings.Contains(resp.Result, "classic") {
+		log.Infof("Node %q is already in classic mode, nothing to be done", n.Cfg.ShortName)
+		return nil
+	}
+
+	// switch configure mode to classic
+	log.Debugf("Switching to Configuration Mode Classic on %q", n.Cfg.ShortName)
+
+	cfgs := []string{
+		"environment more false",
+		"edit-config private",
+		"/configure system management-interface cli cli-engine [classic-cli md-cli]",
+		"/configure system management-interface configuration-mode classic",
+		"commit",
+		"/!classic-cli",
+		"sleep 2",
+		"file md cf3:/rollbacks",
+		"configure system security snmp community private rwa version both",
+		"configure system rollback rollback-location cf3:/rollbacks/config",
+		"admin rollback save",
+		"bof persist on",
+		"admin save",
+		"bof save",
+	}
+	mresp, err := d.SendCommands(cfgs)
+	if err != nil || (mresp != nil && mresp.Failed != nil) {
+		if mresp != nil {
+			return fmt.Errorf("failed to apply config; error: %+v %+v", err, mresp.Failed)
+		} else {
+			return fmt.Errorf("failed to apply config; error: %+v", err)
+		}
+	}
+	log.Info("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr, "config-mode", n.Cfg.Env[envSrosConfigMode])
+	return nil
 }

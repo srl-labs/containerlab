@@ -147,7 +147,7 @@ func (c *CLab) getAnsibleKindAndProps(cfg *clabtypes.NodeConfig) (string, *Ansib
 
 	// Generally we use the containerlab kind for grouping in Ansible Inventory.
 	// Special case: For SROS we differentiate between classic and model-driven.
-	if _, ok := cfg.Env["NOKIA_SROS_CLASSIC"]; ok {
+	if cfg.Env["CLAB_SROS_CONFIG_MODE"] == "classic" {
 		ansibleGroup = "nokia_srsim_classic"
 	}
 
