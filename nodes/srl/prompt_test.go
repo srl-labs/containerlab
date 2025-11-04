@@ -31,6 +31,7 @@ func Test_getPrompt(t *testing.T) {
 				t.Errorf("getPrompt() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if got != tt.want {
 				t.Errorf("getPrompt() = %v, want %v", got, tt.want)
 			}

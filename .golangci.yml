@@ -118,6 +118,7 @@ linters:
     # slowly adding linters to the nodes
     paths-except:
       - "nodes/cisco_sdwan"
+      - "nodes/srl"
     warn-unused: true
 formatters:
   enable:
