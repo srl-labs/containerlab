@@ -9,6 +9,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -226,7 +227,7 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	if n.Cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
 		// the additional touch is needed to support non docker runtimes
-		n.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+		n.Cfg.Cmd = "sudo -E bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
 	n.Cfg.Env = clabutils.MergeStringMaps(srlEnv, n.Cfg.Env)
@@ -235,9 +236,8 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	if n.Cfg.User == "" {
 		n.Cfg.User = "0:0"
 	}
-	for k, v := range srlSysctl {
-		n.Cfg.Sysctls[k] = v
-	}
+
+	maps.Copy(n.Cfg.Sysctls, srlSysctl)
 
 	if n.Cfg.License != "" {
 		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will
