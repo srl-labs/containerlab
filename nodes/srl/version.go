@@ -28,18 +28,14 @@ var aclConfig string
 //go:embed version_configs/grpc.cfg
 var grpcConfig string
 
-var (
-	netconfConfig = `set / system netconf-server mgmt admin-state enable ssh-server mgmt-netconf
-set / system ssh-server mgmt-netconf admin-state enable
-set / system ssh-server mgmt-netconf network-instance mgmt
-set / system ssh-server mgmt-netconf port 830
-set / system ssh-server mgmt-netconf disable-shell true
-`
+//go:embed version_configs/netconf.cfg
+var netconfConfig string
 
-	ocServerConfig = `set / system management openconfig admin-state enable`
+//go:embed version_configs/oc.cfg
+var ocServerConfig string
 
-	ndkServerConfig = `set / system ndk-server admin-state enable`
-)
+//go:embed version_configs/ndk.cfg
+var ndkServerConfig string
 
 // SrlVersion represents an sr linux version as a set of fields.
 type SrlVersion struct {
