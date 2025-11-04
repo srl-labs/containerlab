@@ -366,6 +366,7 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 
 func (n *srl) SaveConfig(ctx context.Context) error {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
+
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
@@ -390,9 +391,11 @@ func (n *srl) SaveConfig(ctx context.Context) error {
 func (n *srl) Ready(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
+
 	var err error
 
 	log.Debugf("Waiting for SR Linux node %q to boot...", n.Cfg.ShortName)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -404,6 +407,7 @@ func (n *srl) Ready(ctx context.Context) error {
 		default:
 			// two commands are checked, first if the mgmt_server is running
 			cmd, _ := clabexec.NewExecCmdFromString(mgmtServerRdyCmd)
+
 			execResult, err := n.RunExec(ctx, cmd)
 			if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
 				logMsg := "mgmt_server status check failed"
@@ -440,16 +444,19 @@ func (n *srl) Ready(ctx context.Context) error {
 			// commands
 			// this is done with checking readyForConfigCmd
 			cmd, _ = clabexec.NewExecCmdFromString(readyForConfigCmd)
+
 			execResult, err = n.RunExec(ctx, cmd)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
 			if execResult.GetStdErrString() != "" {
 				log.Debugf("readyForConfigCmd stderr: %s", execResult.GetStdErrString())
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
@@ -459,6 +466,7 @@ func (n *srl) Ready(ctx context.Context) error {
 					execResult.GetStdOutString(),
 				)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
@@ -500,16 +508,19 @@ func (n *srl) CheckDeploymentConditions(ctx context.Context) error {
 
 func (n *srl) createSRLFiles() error {
 	log.Debugf("Creating directory structure for SRL container: %s", n.Cfg.ShortName)
+
 	var src string
 
 	if n.Cfg.License != "" {
 		// copy license file to node specific directory in lab
 		src = n.Cfg.License
+
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
 		if err := clabutils.CopyFile(context.Background(), src, licPath,
 			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
+
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
 	}
 
@@ -533,6 +544,7 @@ func (n *srl) createSRLFiles() error {
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
 	var cfgTemplate string
+
 	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.json")
 	if n.Cfg.StartupConfig != "" {
 		log.Debug("Reading startup-config", "file", n.Cfg.StartupConfig)
@@ -551,6 +563,7 @@ func (n *srl) createSRLFiles() error {
 		// Get slice of data with optional leading whitespace removed.
 		// See RFC 7159, Section 2 for the definition of JSON whitespace.
 		x := bytes.TrimLeft(cBuf.Bytes(), " \t\r\n")
+
 		isJSON := len(x) > 0 && x[0] == '{'
 		if !isJSON {
 			log.Debugf(
@@ -564,6 +577,7 @@ func (n *srl) createSRLFiles() error {
 			// as we will apply it over the top of a default config in the post deploy stage
 			return nil
 		}
+
 		cfgTemplate = cBuf.String()
 	}
 
@@ -1027,12 +1041,14 @@ gpgcheck=0`
 	aptRepo := `deb [trusted=yes] https://srlinux.fury.site/apt/ /`
 
 	yumPath := n.Cfg.LabDir + "/yum.repo"
+
 	err := clabutils.CreateFile(yumPath, yumRepo)
 	if err != nil {
 		return err
 	}
 
 	aptPath := n.Cfg.LabDir + "/apt.list"
+
 	err = clabutils.CreateFile(aptPath, aptRepo)
 	if err != nil {
 		return err
