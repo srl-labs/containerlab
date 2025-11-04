@@ -27,7 +27,6 @@ func Test_getPrompt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := getPrompt(tt.s)
-
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getPrompt() error = %v, wantErr %v", err, tt.wantErr)
 				return

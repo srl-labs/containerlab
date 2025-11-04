@@ -432,11 +432,13 @@ func (n *srl) Ready(ctx context.Context) error {
 					execResult.GetStdErrString(),
 				)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
 			if !strings.Contains(execResult.GetStdOutString(), "running") {
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
@@ -493,6 +495,7 @@ func (*srl) checkKernelVersion() error {
 			kv,
 		)
 	}
+
 	return nil
 }
 
@@ -667,7 +670,7 @@ type tplIFace struct {
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
-func (n *srl) addDefaultConfig(ctx context.Context) error {
+func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 	b, err := n.banner()
 	if err != nil {
 		return err

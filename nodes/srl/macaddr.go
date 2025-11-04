@@ -19,7 +19,6 @@ func genMac(cfg *clabtypes.NodeConfig) mac {
 	// first byte  - `1a` - fixed for easy identification of SRL Mac addresses
 	// second byte - random, to distinguish projects
 	// third byte  - index of the topology node
-
 	const macProjectIDMax = 256 // max value for project ID byte
 
 	projID, _ := rand.Int(rand.Reader, big.NewInt(macProjectIDMax))

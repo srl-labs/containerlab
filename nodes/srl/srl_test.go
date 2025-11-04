@@ -119,7 +119,6 @@ func TestSRLInterfaceParsing(t *testing.T) {
 
 			for _, ep := range tc.endpoints {
 				gotEndpointErr := tc.node.AddEndpoint(ep)
-
 				if gotEndpointErr != nil {
 					foundError = true
 
@@ -129,7 +128,6 @@ func TestSRLInterfaceParsing(t *testing.T) {
 
 			if !foundError {
 				gotCheckErr := tc.node.CheckInterfaceName()
-
 				if gotCheckErr != nil {
 					foundError = true
 
