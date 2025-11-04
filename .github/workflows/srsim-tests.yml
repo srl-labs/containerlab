@@ -20,6 +20,7 @@ jobs:
         test-suite:
           - "01*.robot"
           - "03*.robot"
+          - "04*.robot"
           - "05*.robot"
           - "07*.robot"
           - "08*.robot"
