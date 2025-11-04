@@ -137,8 +137,8 @@ var (
 			Parse(srlConfigCmdsTpl)
 
 	requiredKernelVersion = &clabutils.KernelVersion{
-		Major:    4,
-		Minor:    10,
+		Major:    4,  //nolint:mnd
+		Minor:    10, //nolint:mnd
 		Revision: 0,
 	}
 
@@ -683,38 +683,28 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
 
 	// prepare the endpoints
+	const ethernetSplitParts = 3
+	const ethernetMTUOverhead = 14
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
 		if ifName == "mgmt0" {
-			// if the endpoint has a custom MTU set, use it in the template logic
-			// otherwise we don't set the mtu as srlinux will use the default max value 9232
 			if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 				tplData.MgmtMTU = m
-				// MgmtMTU seems to be only set when we use macvlan interface
-				// with network-mode: none. For this super narrow use case
-				// we setup mgmt port mtu to match the mtu of the macvlan parent interface
-				// but then we need to make sure that IP MTU is smaller by 14B
-				tplData.MgmtIPMTU = m - 14
+				tplData.MgmtIPMTU = m - ethernetMTUOverhead
 			}
-			// the rest is just for traffic carrying interfaces
 			continue
 		}
-		// split the interface identifier into their parts
-		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
+		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", ethernetSplitParts)
 
-		// create a template interface struct
 		iface := tplIFace{}
 		iface.BaseName = fmt.Sprintf("ethernet-%s/%s", ifNameParts[0], ifNameParts[1])
-		// if it is a breakout port add the breakout identifier
-		if len(ifNameParts) == 3 {
+		if len(ifNameParts) == ethernetSplitParts {
 			iface.FullName = fmt.Sprintf("%s/%s", iface.BaseName, ifNameParts[2])
 			iface.HasBreakout = true
 		} else {
 			iface.FullName = iface.BaseName
 		}
 
-		// if the endpoint has a custom MTU set, use it in the template logic
-		// otherwise we don't set the mtu as srlinux will use the default max value 9232
 		if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 			iface.Mtu = m
 		}
@@ -727,7 +717,6 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 			iface.IPv6 = a.String()
 		}
 
-		// add the template interface definition to the template data
 		tplData.IFaces[ifName] = iface
 	}
 
@@ -908,7 +897,9 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node
 	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
 	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 
-	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0o666) // skipcq: GSC-G302
+	// world-writable for container /etc/hosts
+	const hostsFilePerm = 0o666
+	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, hostsFilePerm) // skipcq: GSC-G302
 	if err != nil {
 		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
 		return err

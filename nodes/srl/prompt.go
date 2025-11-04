@@ -52,7 +52,8 @@ func getPrompt(s string) (string, error) {
 	re := regexp.MustCompile(`value\s+=\s+"(.+)"`)
 	v := re.FindStringSubmatch(s)
 
-	if len(v) != 2 {
+	const promptMatchGroups = 2
+	if len(v) != promptMatchGroups {
 		return "", fmt.Errorf("failed to parse prompt from string: %s", s)
 	}
 
