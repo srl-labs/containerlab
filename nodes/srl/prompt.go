@@ -23,7 +23,9 @@ func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
 	prompt, err := n.currentPrompt(context.Background())
 	if err != nil {
 		log.Errorf("failed to get current prompt: %v", err)
+
 		tplData.EnableCustomPrompt = false
+
 		return
 	}
 

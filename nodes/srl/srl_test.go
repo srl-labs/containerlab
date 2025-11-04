@@ -116,18 +116,23 @@ func TestSRLInterfaceParsing(t *testing.T) {
 		t.Run(name, func(tt *testing.T) {
 			foundError := false
 			tc.node.OverwriteNode = tc.node
+
 			for _, ep := range tc.endpoints {
 				gotEndpointErr := tc.node.AddEndpoint(ep)
+
 				if gotEndpointErr != nil {
 					foundError = true
+
 					t.Errorf("got error for endpoint %+v", gotEndpointErr)
 				}
 			}
 
 			if !foundError {
 				gotCheckErr := tc.node.CheckInterfaceName()
+
 				if gotCheckErr != nil {
 					foundError = true
+
 					if tc.checkErrContains != "" && !(strings.Contains(
 						fmt.Sprint(gotCheckErr), tc.checkErrContains)) {
 						t.Errorf(

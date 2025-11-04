@@ -21,6 +21,7 @@ func genMac(cfg *clabtypes.NodeConfig) mac {
 	// third byte  - index of the topology node
 
 	const macProjectIDMax = 256 // max value for project ID byte
+
 	projID, _ := rand.Int(rand.Reader, big.NewInt(macProjectIDMax))
 	macPrefix := fmt.Sprintf("1a:%02x", projID)
 

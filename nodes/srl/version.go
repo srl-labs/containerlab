@@ -69,6 +69,7 @@ func (*srl) parseVersionString(s string) *SrlVersion {
 	re := regexp.MustCompile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
 
 	v := re.FindStringSubmatch(s)
+
 	const versionMatchGroups = 6
 	// 6 matches must be returned if all goes well
 	if len(v) != versionMatchGroups {

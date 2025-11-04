@@ -223,6 +223,7 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
+
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
 			n.Cfg.NodeType, strings.Join(keys, ", "))
 	}
@@ -684,7 +685,9 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	// prepare the endpoints
 	const ethernetSplitParts = 3
+
 	const ethernetMTUOverhead = 14
+
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
 		if ifName == "mgmt0" {
@@ -692,11 +695,14 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 				tplData.MgmtMTU = m
 				tplData.MgmtIPMTU = m - ethernetMTUOverhead
 			}
+
 			continue
 		}
+
 		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", ethernetSplitParts)
 
 		iface := tplIFace{}
+
 		iface.BaseName = fmt.Sprintf("ethernet-%s/%s", ifNameParts[0], ifNameParts[1])
 		if len(ifNameParts) == ethernetSplitParts {
 			iface.FullName = fmt.Sprintf("%s/%s", iface.BaseName, ifNameParts[2])
@@ -721,6 +727,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	}
 
 	buf := new(bytes.Buffer)
+
 	err = srlCfgTpl.Execute(buf, tplData)
 	if err != nil {
 		return err
@@ -732,6 +739,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", buf.String(), defaultCfgPath),
 	})
+
 	_, err = n.RunExec(ctx, execCmd)
 	if err != nil {
 		return err
@@ -785,6 +793,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", cfgStr, overlayCfgPath),
 	})
+
 	_, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -794,6 +803,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 		"bash", "-c",
 		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", overlayCfgPath),
 	})
+
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -821,6 +831,7 @@ func (n *srl) commitConfig(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -877,7 +888,9 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node
 		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
 		return err
 	}
+
 	var entriesv4, entriesv6 bytes.Buffer
+
 	const (
 		v4Prefix = "###### CLAB-v4-START ######"
 		v4Suffix = "###### CLAB-v4-END ######"
@@ -886,19 +899,23 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node
 	)
 	fmt.Fprintf(&entriesv4, "\n%s\n", v4Prefix)
 	fmt.Fprintf(&entriesv6, "\n%s\n", v6Prefix)
+
 	for node, params := range nodes {
 		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
 			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
 		}
+
 		if v6 := params.Config().MgmtIPv6Address; v6 != "" {
 			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
 		}
 	}
+
 	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
 	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 
 	// world-writable for container /etc/hosts
 	const hostsFilePerm = 0o666
+
 	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, hostsFilePerm) // skipcq: GSC-G302
 	if err != nil {
 		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
@@ -909,6 +926,7 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node
 	if err != nil {
 		return err
 	}
+
 	_, err = file.Write(entriesv6.Bytes())
 	if err != nil {
 		return err
@@ -930,6 +948,7 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 	for _, indexKey := range indexGroups {
 		if index, found := captureGroups[indexKey]; found && index != "" {
 			foundIndices[indexKey] = true
+
 			parsedIndices[indexKey], err = strconv.Atoi(index)
 			if err != nil {
 				return "", fmt.Errorf(
@@ -939,6 +958,7 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 					index,
 				)
 			}
+
 			if parsedIndices[indexKey] < 1 {
 				return "", fmt.Errorf(
 					"%q parsed %q index %q does not match requirement >= 1",
