@@ -127,7 +127,8 @@ var (
 	topologies embed.FS
 
 	saveCmd          = `/opt/srlinux/bin/sr_cli -d "tools system configuration save"`
-	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
+	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d ` +
+		`"info from state system app-management application mgmt_server state | grep running"`
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the
 	// mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
@@ -205,7 +206,9 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		log.Warn(
 			"Deprecation notice",
 			"notice",
-			"You are using a deprecated SR Linux node type name. Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\nDeprecated type format will be removed after January 2026",
+			"You are using a deprecated SR Linux node type name. "+
+				"Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\n"+
+				"Deprecated type format will be removed after January 2026",
 			"deprecated type",
 			n.Cfg.NodeType,
 		)
@@ -850,7 +853,8 @@ func (n *srl) commitConfig(ctx context.Context) error {
 
 func (n *srl) generateCheckpoint(ctx context.Context) error {
 	cmd, err := clabexec.NewExecCmdFromString(
-		`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`,
+		`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint ` +
+			`name clab-initial comment \"set by containerlab\"'`,
 	)
 	if err != nil {
 		return err
