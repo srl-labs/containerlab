@@ -27,7 +27,7 @@ Deploy ${lab-name} lab
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
-    ...    address=clab-${lab-name}-sros
+    ...    address=clab-${lab-name}-srsim-classic
     ...    username=admin
     ...    password=NokiaSros1!
     ...    try_for=10
