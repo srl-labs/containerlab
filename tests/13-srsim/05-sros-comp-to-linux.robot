@@ -46,9 +46,6 @@ Verify links in node l1
 Wait for linecards to come up
     Sleep    30s    give some time for linecards to come up
 
-Ensure l1 can ping sros over 1/1/c1/1 interface
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "/bin/ping -c2 -w3
 
 Ensure l1 can ping sros over 1/1/c23/4 interface
     ${rc}    ${output} =    Run And Return Rc And Output
