@@ -50,7 +50,7 @@ Juniper vJunos-router node launched with containerlab can be managed via the fol
 
 You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in -{{ kind_display_name }}-.
 
-The interface naming convention is: `ge-0/0/X` (or `et-0/0/X`, `xe-0/0/X`, all are accepted), where X denotes the port number.
+The interface naming convention is: `ge-0/0/X`, where X denotes the port number.
 
 With that naming convention in mind:
 
@@ -64,10 +64,11 @@ Data port numbering starts at `0`.
 
 The example ports above would be mapped to the following Linux interfaces inside the container running the -{{ kind_display_name }}- VM:
 
-Juniper vJunos-Router container can have up to 13 interfaces (1 management + 12 data-plane interfaces) and uses the following mapping rules:
+Juniper vJunos-router container by default has 1 management and 10 data interfaces, but can support up to 96 data interfaces if the following CLI is used:
+set chassis fpc 0 pic 0 number-of-ports 96
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to a first data port of vJunos-Router VM, which is `ge-0/0/0` **and not `ge-0/0/1`**.
+* `eth1` - first data interface, mapped to a first data port of vJunos-router VM, which is `ge-0/0/0` **and not `ge-0/0/1`**.
 * `eth2+` - second and subsequent data interface
 
 When containerlab launches -{{ kind_display_name }}- node the management interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the -{{ kind_display_name }}- using containerlab's assigned IP.
@@ -98,5 +99,5 @@ Configuration is applied after the node is started, thus it can contain partial 
 
 ## Known issues and limitations
 
-* vJunos-router requires Linux kernel 4.17+
-* To check the boot log, use `docker logs -f <node-name>`.
+* Due to its nested architecture, vJunos-router cannot be used in any deployments that launch it from within a VM.
+* The [vJunos-router Deployment Guide for KVM](https://www.juniper.net/documentation/us/en/software/vjunos-router/vjunos-router-kvm/topics/vjunos-router-overview-understanding.html#concept_jhq_5yc_xwb) lists additional limitations.
