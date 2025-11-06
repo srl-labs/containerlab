@@ -93,8 +93,12 @@ const (
 
 var (
 
-	//go:embed sros_default_config.go.tpl
-	srosConfigCmdsTpl string
+	//go:embed sros_config_sros25.go.tpl
+	cfgTplSROS25 string
+
+	//go:embed sros_config_classic.go.tpl
+	cfgTplClassic string
+
 	kindNames         = []string{"nokia_srsim"}
 	srosSysctl        = map[string]string{
 		"net.ipv4.ip_forward":                "0",
@@ -122,9 +126,6 @@ var (
 	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
 	readyCmdBoth = `/usr/bin/pgrep ^both$`
 	readyCmdIom  = `/usr/bin/pgrep ^iom$`
-
-	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(clabutils.CreateFuncs()).
-			Parse(srosConfigCmdsTpl)
 
 	requiredKernelVersion = &clabutils.KernelVersion{
 		Major:    5,
@@ -458,10 +459,10 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			if !isFullConfigFile(n.Cfg.StartupConfig) {
 				if strings.ToLower(n.Cfg.Env[envSrosConfigMode]) == "classic" {
 					log.Infof("Switch to classic CLI for node %q via SSH", n.Cfg.LongName)
-					err := n.enableClassicMode(ctx)
-					if err != nil {
-						return err
-					}
+					// err := n.enableClassicMode(ctx)
+					// if err != nil {
+					//	return err
+					// }
 				} else {
 					log.Infof("Saving node %q config as startup via NETCONF...", n.Cfg.LongName)
 					err = n.saveConfigWithAddr(ctx, addr)
@@ -1097,6 +1098,7 @@ func (n *sros) addDefaultConfig() error {
 		TLSKey:          n.Cfg.TLSKey,
 		TLSCert:         n.Cfg.TLSCert,
 		TLSAnchor:       n.Cfg.TLSAnchor,
+		SecureGrpc:      *n.Cfg.Certificate.Issue,
 		Banner:          b,
 		IFaces:          map[string]tplIFace{},
 		MgmtMTU:         0,
@@ -1128,6 +1130,15 @@ func (n *sros) addDefaultConfig() error {
 	}
 
 	n.prepareSSHPubKeys(&tplData)
+
+	var srosCfgTpl *template.Template
+	if strings.ToLower(n.Cfg.Env[envSrosConfigMode]) == "classic" {
+		log.Debugf("Prepare CLASSIC config for %q", n.Cfg.LongName)
+		srosCfgTpl, _ = template.New("clab-sros-config-classic").Funcs(clabutils.CreateFuncs()).Parse(cfgTplClassic)
+	} else {
+		log.Debugf("Prepare MD config for %q", n.Cfg.LongName)
+		srosCfgTpl, _ = template.New("clab-sros-config-sros25").Funcs(clabutils.CreateFuncs()).Parse(cfgTplSROS25)
+	}
 
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
 	buf := new(bytes.Buffer)
@@ -1491,11 +1502,11 @@ func buildTLSProfileXML() string {
 	return buf.String()
 }
 
-// TLS bootstrap via NETCONF to enable secure gRPC:
-//   - `imports cf3:\node.key` in PEM format as `cf3:\system-pki\node.key“ (encrypted DER)
-//   - `imports cf3:\node.crt` in PEM format as `cf3:\system-pki\node.crt“ (encrypted DER)
-//   - administratively enables TLS profile `grpc-tls-certs`
+// TLS bootstrap via NETCONF to enable secure gRPC
 func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
+	// Always import PKI key and cert:
+	// 	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
+	//   import "cf3:\node.crt" in PEM format as "cf3:\system-pki\node.crt" (encrypted DER)
 	operations := []clabnetconf.Operation{
 		func(d *netconf.Driver) (*response.NetconfResponse, error) {
 			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
@@ -1505,12 +1516,22 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
 				fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate")))
 		},
-		func(d *netconf.Driver) (*response.NetconfResponse, error) {
-			return d.EditConfig("candidate", buildTLSProfileXML())
-		},
-		func(d *netconf.Driver) (*response.NetconfResponse, error) {
-			return d.Commit()
-		},
+	}
+
+	// Activate cert-profile when running in MD mode only
+	//  enable enables cert-profile "clab-grpc-certs" administratively
+
+	if strings.ToLower(n.Cfg.Env[envSrosConfigMode]) != "classic" {
+		operations = append(operations,
+			func(d *netconf.Driver) (*response.NetconfResponse, error) {
+				return d.EditConfig("candidate", buildTLSProfileXML())
+			},
+			func(d *netconf.Driver) (*response.NetconfResponse, error) {
+				return d.Commit()
+			},
+		)
+	} else {
+		log.Infof("[%s] Keep TLS profile disabled (classic mode)", n.Cfg.ShortName)
 	}
 
 	err := clabnetconf.MultiExec(

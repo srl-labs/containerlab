@@ -6,6 +6,7 @@ type srosTemplateData struct {
 	TLSKey          string
 	TLSCert         string
 	TLSAnchor       string
+	SecureGrpc      bool
 	Banner          string
 	IFaces          map[string]tplIFace
 	SSHPubKeysRSA   []string
