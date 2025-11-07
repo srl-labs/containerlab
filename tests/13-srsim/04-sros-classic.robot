@@ -18,16 +18,16 @@ Set key-path Variable
     ${key-path} =    OperatingSystem.Normalize Path    ~/.ssh/${key-name}
     Set Suite Variable    ${key-path}
 
+Create SSH keypair - ecdsa512
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ssh-keygen -t ecdsa -b 521 -N "" -f ${key-path}-ecdsa512
+
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-
-Create SSH keypair - ecdsa512
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ssh-keygen -t ecdsa -b 521 -N "" -f ${key-path}-ecdsa512
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
