@@ -20,11 +20,11 @@ Cisco vIOS node launched with containerlab can be managed via the following inte
 === "CLI"
     to connect to the vIOS CLI
     ```bash
-    ssh cisco@<container-name/id>
+    ssh admin@<container-name/id>
     ```
 
 !!!info
-    Default user credentials: `cisco:cisco`
+    Default user credentials: `admin:admin`
 
 ## Interface naming
 
@@ -51,7 +51,7 @@ Data interfaces `GigabitEthernet0+` need to be configured with IP addressing man
 
 ### Node configuration
 
-Cisco vIOS nodes come up with a basic configuration where only `cisco` user and management interface are provisioned.
+Cisco vIOS nodes come up with a basic configuration where only `admin` user and management interface are provisioned.
 
 #### Startup configuration
 

@@ -20,11 +20,11 @@ Cisco vIOSL2 node launched with containerlab can be managed via the following in
 === "CLI"
     to connect to the vIOSL2 CLI
     ```bash
-    ssh cisco@<container-name/id>
+    ssh admin@<container-name/id>
     ```
 
 !!!info
-    Default user credentials: `cisco:cisco`
+    Default user credentials: `admin:admin`
 
 ## Interface naming
 
@@ -51,7 +51,7 @@ Data interfaces `GigabitEthernet0+` need to be configured with IP addressing man
 
 ### Node configuration
 
-Cisco vIOSL2 nodes come up with a basic configuration where only `cisco` user and management interface are provisioned.
+Cisco vIOSL2 nodes come up with a basic configuration where only `admin` user and management interface are provisioned.
 
 #### Startup configuration
 

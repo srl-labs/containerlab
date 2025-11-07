@@ -16,7 +16,7 @@ import (
 
 var (
 	kindnames          = []string{"cisco_vios", "vr-vios", "vr-cisco_vios"}
-	defaultCredentials = clabnodes.NewCredentials("cisco", "cisco")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`)
 	InterfaceOffset = 0
