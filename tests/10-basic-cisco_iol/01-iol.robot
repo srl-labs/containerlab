@@ -25,7 +25,7 @@ Wait 45s for nodes to boot
 
 Verify links in node router1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-router1 sh ip int br | head -5
+    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-router1 sh ip int br Ethernet0/0
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    172.20.20.
@@ -33,7 +33,15 @@ Verify links in node router1
 
 Verify links in node switch
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-switch sh ip int br | head -5 | tail -1
+    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-switch sh int Ethernet0/0 status
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    999
+    Should Contain    ${output}    connected
+
+Verify SVI in node switch
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-switch sh ip int br Vlan999
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    172.20.20.
@@ -138,7 +146,7 @@ Verify connectivity via new management addresses on switch
     Log    \n--> LOG: IPv6 addr - ${ipv6_addr}    console=True
 
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-switch "sh run interface Ethernet0/0"
+    ...    sshpass -p "admin" ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-switch "sh run interface Vlan999"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    ${ipv4_addr.upper()}
