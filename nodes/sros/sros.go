@@ -115,7 +115,7 @@ var (
 		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
-		envSrosConfigMode:         "md",                // Default
+		envSrosConfigMode:         "model-driven",      // Default
 	}
 
 	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
@@ -1080,23 +1080,24 @@ func (n *sros) addDefaultConfig() error {
 
 	// tplData holds data used in templating of the default config snippet
 	tplData := srosTemplateData{
-		Name:            n.Cfg.ShortName,
-		TLSKey:          n.Cfg.TLSKey,
-		TLSCert:         n.Cfg.TLSCert,
-		TLSAnchor:       n.Cfg.TLSAnchor,
-		SecureGrpc:      *n.Cfg.Certificate.Issue,
-		Banner:          b,
-		IFaces:          map[string]tplIFace{},
-		MgmtMTU:         0,
-		MgmtIPMTU:       0,
-		SystemConfig:    systemCfg,
-		SNMPConfig:      snmpv2Config,
-		GRPCConfig:      grpcConfig,
-		NetconfConfig:   netconfConfig,
-		LoggingConfig:   loggingConfig,
-		SSHConfig:       sshConfig,
-		NodeType:        strings.ToLower(n.Cfg.NodeType),
-		ComponentConfig: componentConfig,
+		Name:              n.Cfg.ShortName,
+		TLSKey:            n.Cfg.TLSKey,
+		TLSCert:           n.Cfg.TLSCert,
+		TLSAnchor:         n.Cfg.TLSAnchor,
+		SecureGrpc:        *n.Cfg.Certificate.Issue,
+		Banner:            b,
+		IFaces:            map[string]tplIFace{},
+		MgmtMTU:           0,
+		MgmtIPMTU:         0,
+		SystemConfig:      systemCfg,
+		SNMPConfig:        snmpv2Config,
+		GRPCConfig:        grpcConfig,
+		NetconfConfig:     netconfConfig,
+		LoggingConfig:     loggingConfig,
+		SSHConfig:         sshConfig,
+		ConfigurationMode: strings.ToLower(n.Cfg.Env[envSrosConfigMode]),
+		NodeType:          strings.ToLower(n.Cfg.NodeType),
+		ComponentConfig:   componentConfig,
 	}
 	if strings.Contains(tplData.NodeType, "ixr-") {
 		tplData.GRPCConfig = grpcConfigIXR
@@ -1120,7 +1121,7 @@ func (n *sros) addDefaultConfig() error {
 	var srosCfgTpl *template.Template
 	log.Debugf("Prepare %q config for %q", n.Cfg.Env[envSrosConfigMode], n.Cfg.LongName)
 
-	if strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "classic") {
+	if n.isConfigClassic() {
 		srosCfgTpl, _ = template.New("clab-sros-config-classic").Funcs(clabutils.CreateFuncs()).Parse(cfgTplClassic)
 	} else {
 		srosCfgTpl, _ = template.New("clab-sros-config-sros25").Funcs(clabutils.CreateFuncs()).Parse(cfgTplSROS25)
@@ -1421,8 +1422,8 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 
 // saveConfigWithAddr will use the addr string to try to save the config of the node.
 func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
-	if strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "classic") {
-		cmd := []string{"/admin save"}
+	if n.isConfigClassic() {
+		cmd := []string{"/admin save", "/bof persist on", "/bof save"}
 		return n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
 	}
 	err := clabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
@@ -1511,7 +1512,7 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	// Activate cert-profile in MD is via NETCONF, in Classic mode is via SSH
 	//  enable enables cert-profile "clab-grpc-certs" administratively
 	cmd := []string{}
-	if strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "classic") {
+	if n.isConfigClassic() {
 		cmd = append(cmd, fmt.Sprintf("/configure system security tls cert-profile %s no shutdown", tlsCertProfileName))
 	} else {
 		operations = append(operations,
@@ -1537,6 +1538,14 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 		}
 	}
 	return err
+}
+
+// isPartialConfigFile returns true if the env var for configuration contains "mixed" or "classic" strings
+func (n *sros) isConfigClassic() bool {
+	if strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "classic") || strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "mixed") {
+		return true
+	}
+	return false
 }
 
 // isPartialConfigFile returns true if the config file name contains .partial substring.
@@ -1738,7 +1747,7 @@ func (n *sros) generateComponentConfig() string {
 	}
 
 	// Skipping magic if using classic for NOW
-	if strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "classic") {
+	if n.isConfigClassic() {
 		return ""
 	}
 

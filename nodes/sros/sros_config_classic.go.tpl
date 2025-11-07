@@ -271,7 +271,7 @@ echo "System Configuration Mode Configuration"
 #--------------------------------------------------
     system
         management-interface
-            configuration-mode classic
+            configuration-mode {{ .ConfigurationMode }}
             cli
                 cli-engine classic-cli md-cli
             exit
