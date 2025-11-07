@@ -25,11 +25,22 @@ Deploy ${lab-name} lab
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
+Create SSH keypair - ecdsa512
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ssh-keygen -t ecdsa -b 521 -N "" -f ${key-path}-ecdsa512
+
 Ensure sros is reachable over ssh
     Login via SSH with username and password
     ...    address=clab-${lab-name}-srsim-classic
     ...    username=admin
     ...    password=NokiaSros1!
+    ...    try_for=10
+
+Ensure sros is reachable over ssh with public key ECDSA auth
+    Login via SSH with public key
+    ...    address=clab-${lab-name}-srsim-classic
+    ...    username=admin
+    ...    keyfile=${key-path}-ecdsa512
     ...    try_for=10
 
 Check Classic Config Mode on srsim

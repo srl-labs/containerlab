@@ -659,7 +659,7 @@ configure {
 /// details | Start SR-OS with Classic Management
     type: tip
 
-To start  `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the environment variable `CLAB_SROS_CONFIG_MODE`. When set to `classic`, containerlab will switch the node default CLI and update the generated Ansible inventory accordingly during PostDeploy phase. Note that if you provide a partial configuration, you still need to use the MD-CLI syntax as there is NO support for partial CLI classic config.
+To start  `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the environment variable `CLAB_SROS_CONFIG_MODE`. When set to `classic`, containerlab will switch the node default CLI and update the generated Ansible inventory accordingly during PostDeploy phase. Note that if you provide a partial configuration, you will have to use the Classic-CLI syntax. 
 
 ```yaml hl_lines="6-7"
 topology:

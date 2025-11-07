@@ -13,6 +13,8 @@ topology:
     srsim-classic:
       kind: nokia_srsim
       type: sr-1
+      certificate:
+        issue: true
       mgmt-ipv4: 172.20.20.220
       env:
         CLAB_SROS_CONFIG_MODE: classic

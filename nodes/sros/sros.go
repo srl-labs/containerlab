@@ -30,12 +30,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/opoptions"
-	"github.com/scrapli/scrapligo/driver/options"
-	scraplilogging "github.com/scrapli/scrapligo/logging"
-	"github.com/scrapli/scrapligo/transport"
-	"github.com/scrapli/scrapligo/util"
 
-	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/response"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -99,8 +94,8 @@ var (
 	//go:embed sros_config_classic.go.tpl
 	cfgTplClassic string
 
-	kindNames         = []string{"nokia_srsim"}
-	srosSysctl        = map[string]string{
+	kindNames  = []string{"nokia_srsim"}
+	srosSysctl = map[string]string{
 		"net.ipv4.ip_forward":                "0",
 		"net.ipv6.conf.all.disable_ipv6":     "0",
 		"net.ipv6.conf.default.disable_ipv6": "0",
@@ -450,28 +445,19 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 					)
 				}
 				log.Infof(
-					"Completed NETCONF bootstrap for gRPC-TLS profile on node %s",
+					"Completed bootstrap for gRPC-TLS profile on node %s",
 					n.Cfg.ShortName,
 				)
 			}
 
 			// Partial or NO Config Provided
 			if !isFullConfigFile(n.Cfg.StartupConfig) {
-				if strings.ToLower(n.Cfg.Env[envSrosConfigMode]) == "classic" {
-					log.Infof("Switch to classic CLI for node %q via SSH", n.Cfg.LongName)
-					// err := n.enableClassicMode(ctx)
-					// if err != nil {
-					//	return err
-					// }
-				} else {
-					log.Infof("Saving node %q config as startup via NETCONF...", n.Cfg.LongName)
-					err = n.saveConfigWithAddr(ctx, addr)
-					if err != nil {
-						return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
-					}
+				log.Infof("Saving node %q config as startup...", n.Cfg.LongName)
+				err = n.saveConfigWithAddr(ctx, addr)
+				if err != nil {
+					return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
 				}
 			}
-
 			return nil
 		}
 
@@ -1132,11 +1118,11 @@ func (n *sros) addDefaultConfig() error {
 	n.prepareSSHPubKeys(&tplData)
 
 	var srosCfgTpl *template.Template
-	if strings.ToLower(n.Cfg.Env[envSrosConfigMode]) == "classic" {
-		log.Debugf("Prepare CLASSIC config for %q", n.Cfg.LongName)
+	log.Debugf("Prepare %q config for %q", n.Cfg.Env[envSrosConfigMode], n.Cfg.LongName)
+
+	if strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "classic") {
 		srosCfgTpl, _ = template.New("clab-sros-config-classic").Funcs(clabutils.CreateFuncs()).Parse(cfgTplClassic)
 	} else {
-		log.Debugf("Prepare MD config for %q", n.Cfg.LongName)
 		srosCfgTpl, _ = template.New("clab-sros-config-sros25").Funcs(clabutils.CreateFuncs()).Parse(cfgTplSROS25)
 	}
 
@@ -1434,7 +1420,11 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 }
 
 // saveConfigWithAddr will use the addr string to try to save the config of the node.
-func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
+func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
+	if strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "classic") {
+		cmd := []string{"/admin save"}
+		return n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
+	}
 	err := clabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
@@ -1503,7 +1493,7 @@ func buildTLSProfileXML() string {
 }
 
 // TLS bootstrap via NETCONF to enable secure gRPC
-func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
+func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	// Always import PKI key and cert:
 	// 	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
 	//   import "cf3:\node.crt" in PEM format as "cf3:\system-pki\node.crt" (encrypted DER)
@@ -1518,10 +1508,12 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 		},
 	}
 
-	// Activate cert-profile when running in MD mode only
+	// Activate cert-profile in MD is via NETCONF, in Classic mode is via SSH
 	//  enable enables cert-profile "clab-grpc-certs" administratively
-
-	if strings.ToLower(n.Cfg.Env[envSrosConfigMode]) != "classic" {
+	cmd := []string{}
+	if strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "classic") {
+		cmd = append(cmd, fmt.Sprintf("/configure system security tls cert-profile %s no shutdown", tlsCertProfileName))
+	} else {
 		operations = append(operations,
 			func(d *netconf.Driver) (*response.NetconfResponse, error) {
 				return d.EditConfig("candidate", buildTLSProfileXML())
@@ -1530,8 +1522,6 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 				return d.Commit()
 			},
 		)
-	} else {
-		log.Infof("[%s] Keep TLS profile disabled (classic mode)", n.Cfg.ShortName)
 	}
 
 	err := clabnetconf.MultiExec(
@@ -1540,6 +1530,12 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 		defaultCredentials.GetPassword(),
 		operations,
 	)
+	if len(cmd) > 0 {
+		err := n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
+		if err != nil {
+			return err
+		}
+	}
 	return err
 }
 
@@ -1741,6 +1737,11 @@ func (n *sros) generateComponentConfig() string {
 		return ""
 	}
 
+	// Skipping magic if using classic for NOW
+	if strings.EqualFold(n.Cfg.Env[envSrosConfigMode], "classic") {
+		return ""
+	}
+
 	if n.isStandaloneNode() {
 		// skip integrated for now
 		return ""
@@ -1885,87 +1886,4 @@ func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan c
 		default:
 		}
 	}
-}
-
-// Switches CLI to classic mode during Post Deploy
-func (n *sros) enableClassicMode(_ context.Context) error {
-	addr, err := n.MgmtIPAddr()
-	if err != nil {
-		return err
-	}
-	sl := log.StandardLog(log.StandardLogOptions{
-		ForceLevel: log.DebugLevel,
-	})
-	li, err := scraplilogging.NewInstance(
-		scraplilogging.WithLevel("debug"),
-		scraplilogging.WithLogger(sl.Print))
-	if err != nil {
-		return err
-	}
-
-	opts := []util.Option{
-		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(defaultCredentials.GetUsername()),
-		options.WithAuthPassword(defaultCredentials.GetPassword()),
-		options.WithTransportType(transport.StandardTransport),
-		options.WithTimeoutOps(5 * time.Second),
-		options.WithLogger(li),
-	}
-	p, err := platform.NewPlatform(scrapliPlatformNameClassic, fmt.Sprintf("[%s]", addr), opts...)
-	if err != nil {
-		return fmt.Errorf("%q-%q: failed to create platform: %+v", n.Cfg.ShortName, addr, err)
-	}
-
-	d, err := p.GetNetworkDriver()
-	if err != nil {
-		return fmt.Errorf("%q-%q: could not create the driver: %+v", n.Cfg.ShortName, addr, err)
-	}
-	if err := d.Open(); err != nil {
-		return fmt.Errorf("%q failed to open ssh2/cli session; error: %+v", n.Cfg.ShortName, err)
-	}
-	defer d.Close()
-
-	// check configuration mode
-	log.Debugf("Check Operational Configuration Mode on %q", n.Cfg.ShortName)
-	resp, err := d.SendCommand("show system information | match Configuration | match Oper")
-	if err != nil {
-		return err
-	}
-	if resp.Failed != nil {
-		return fmt.Errorf("failed to check configuration mode on %q", n.Cfg.ShortName)
-	}
-	if strings.Contains(resp.Result, "classic") {
-		log.Infof("Node %q is already in classic mode, nothing to be done", n.Cfg.ShortName)
-		return nil
-	}
-
-	// switch configure mode to classic
-	log.Debugf("Switching to Configuration Mode Classic on %q", n.Cfg.ShortName)
-
-	cfgs := []string{
-		"environment more false",
-		"edit-config private",
-		"/configure system management-interface cli cli-engine [classic-cli md-cli]",
-		"/configure system management-interface configuration-mode classic",
-		"commit",
-		"/!classic-cli",
-		"sleep 2",
-		"file md cf3:/rollbacks",
-		"configure system security snmp community private rwa version both",
-		"configure system rollback rollback-location cf3:/rollbacks/config",
-		"admin rollback save",
-		"bof persist on",
-		"admin save",
-		"bof save",
-	}
-	mresp, err := d.SendCommands(cfgs)
-	if err != nil || (mresp != nil && mresp.Failed != nil) {
-		if mresp != nil {
-			return fmt.Errorf("failed to apply config; error: %+v %+v", err, mresp.Failed)
-		} else {
-			return fmt.Errorf("failed to apply config; error: %+v", err)
-		}
-	}
-	log.Info("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr, "config-mode", n.Cfg.Env[envSrosConfigMode])
-	return nil
 }

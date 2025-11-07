@@ -1,10 +1,18 @@
 package sros
 
 import (
+	"context"
 	_ "embed"
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/scrapli/scrapligo/driver/options"
+	scraplilogging "github.com/scrapli/scrapligo/logging"
+	"github.com/scrapli/scrapligo/platform"
+	"github.com/scrapli/scrapligo/transport"
+	"github.com/scrapli/scrapligo/util"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -60,4 +68,52 @@ func (n *sros) mapSSHPubKeys(supportedSSHKeyAlgos map[string]*[]string) {
 
 		*sshKeys = append(*sshKeys, keyFields[1])
 	}
+}
+
+func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c []string) error {
+	addr, err := n.MgmtIPAddr()
+	if err != nil {
+		return err
+	}
+	sl := log.StandardLog(log.StandardLogOptions{
+		ForceLevel: log.DebugLevel,
+	})
+	li, err := scraplilogging.NewInstance(
+		scraplilogging.WithLevel("debug"),
+		scraplilogging.WithLogger(sl.Print))
+	if err != nil {
+		return err
+	}
+
+	opts := []util.Option{
+		options.WithAuthNoStrictKey(),
+		options.WithAuthUsername(defaultCredentials.GetUsername()),
+		options.WithAuthPassword(defaultCredentials.GetPassword()),
+		options.WithTransportType(transport.StandardTransport),
+		options.WithTimeoutOps(5 * time.Second),
+		options.WithLogger(li),
+	}
+	p, err := platform.NewPlatform(scrapli_platform, fmt.Sprintf("[%s]", addr), opts...)
+	if err != nil {
+		return fmt.Errorf("%q-%q: failed to create platform: %+v", n.Cfg.ShortName, addr, err)
+	}
+
+	d, err := p.GetNetworkDriver()
+	if err != nil {
+		return fmt.Errorf("%q-%q: could not create the driver: %+v", n.Cfg.ShortName, addr, err)
+	}
+	if err := d.Open(); err != nil {
+		return fmt.Errorf("%q failed to open ssh2/cli session; error: %+v", n.Cfg.ShortName, err)
+	}
+	defer d.Close()
+	mresp, err := d.SendCommands(c)
+	if err != nil || (mresp != nil && mresp.Failed != nil) {
+		if mresp != nil {
+			return fmt.Errorf("failed to send command; error: %+v %+v", err, mresp.Failed)
+		} else {
+			return fmt.Errorf("failed to send command; error: %+v", err)
+		}
+	}
+	log.Debug("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr, "config-mode", n.Cfg.Env[envSrosConfigMode])
+	return nil
 }
