@@ -429,15 +429,31 @@ func isPartialConfigFile(c string) bool {
 }
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
-	mgmt_str := fmt.Sprintf(
-		"\renable\rconfig terminal\rinterface Ethernet0/0\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
-		n.Cfg.MgmtIPv4Address,
-		clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
-		n.Cfg.MgmtIPv6Address,
-		n.Cfg.MgmtIPv6PrefixLength,
-		n.Cfg.MgmtIPv4Gateway,
-		n.Cfg.MgmtIPv6Gateway,
-	)
+	var mgmt_str string
+	
+	if n.isL2Node {
+		// L2 switch needs SVI-based management
+		mgmt_str = fmt.Sprintf(
+			"\renable\rconfig terminal\rvlan 999\rname clab-mgmt\rexit\rinterface Ethernet0/0\rswitchport mode access\rswitchport access vlan 999\rno shutdown\rexit\rinterface Vlan999\rvrf forwarding clab-mgmt\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rno shutdown\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 %s\ripv6 route vrf clab-mgmt ::/0 %s\rend\rwr\r",
+			n.Cfg.MgmtIPv4Address,
+			clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
+			n.Cfg.MgmtIPv6Address,
+			n.Cfg.MgmtIPv6PrefixLength,
+			n.Cfg.MgmtIPv4Gateway,
+			n.Cfg.MgmtIPv6Gateway,
+		)
+	} else {
+		// L3 router/switch can have routed interface
+		mgmt_str = fmt.Sprintf(
+			"\renable\rconfig terminal\rinterface Ethernet0/0\rno switchport\rvrf forwarding clab-mgmt\rip address %s %s\rno ipv6 address\ripv6 address %s/%d\rno shutdown\rexit\rip route vrf clab-mgmt 0.0.0.0 0.0.0.0 Ethernet0/0 %s\ripv6 route vrf clab-mgmt ::/0 Ethernet0/0 %s\rend\rwr\r",
+			n.Cfg.MgmtIPv4Address,
+			clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),
+			n.Cfg.MgmtIPv6Address,
+			n.Cfg.MgmtIPv6PrefixLength,
+			n.Cfg.MgmtIPv4Gateway,
+			n.Cfg.MgmtIPv6Gateway,
+		)
+	}
 
 	return n.Runtime.WriteToStdinNoWait(ctx, n.Cfg.ContainerID, []byte(mgmt_str))
 }
