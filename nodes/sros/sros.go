@@ -681,17 +681,21 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 
 // isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a
 // distributed setup.
+// isDistributedCardNode returns true if this node is a card (linecard/IOM)
+// in a distributed SR-SIM deployment. A distributed card has a slot assignment
+// but no components of its own.
 func (n *sros) isDistributedCardNode() bool {
 	_, exists := n.Cfg.Env[envNokiaSrosSlot]
-	// is distributed if components is > 1 and the slot var exists.
 	return exists && len(n.Cfg.Components) == 0
 }
 
-// check if SR-SIM is distributed: `components` key is present.
+// isDistributedBaseNode returns true if this is the base node of a distributed
+// SR-SIM deployment. The base node orchestrates multiple component nodes.
 func (n *sros) isDistributedBaseNode() bool {
 	return len(n.Cfg.Components) > 1
 }
 
+// isStandaloneNode returns true if this is a standalone (non-distributed) SR-SIM node.
 func (n *sros) isStandaloneNode() bool {
 	return !n.isDistributedBaseNode() && !n.isDistributedCardNode()
 }
@@ -1033,21 +1037,27 @@ func SlotIsInteger(s string) bool {
 }
 
 // Check if a container is a CPM.
+// isCPM checks if a container is a CPM (Control Processing Module).
+// Returns false if the slot is a linecard (integer slot).
+// If a specific CPM name is provided, returns false if this is a different CPM.
 func (n *sros) isCPM(cpm string) bool {
-	// Check if container is a linecard
-	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
-		SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) {
+	slot, exists := n.Cfg.Env[envNokiaSrosSlot]
+	if !exists {
+		// No slot specified - this is a CPM
+		return true
+	}
+
+	// If slot is an integer, it's a linecard, not a CPM
+	if SlotIsInteger(slot) {
 		return false
 	}
-	// check if container is the CPM given by the string cpm
-	if cpm != "" {
-		if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
-			!SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) &&
-			!strings.EqualFold(n.Cfg.Env[envNokiaSrosSlot], cpm) {
-			return false
-		}
+
+	// Slot is non-integer (CPM slot). If a specific CPM was requested,
+	// check if this is that CPM
+	if cpm != "" && !strings.EqualFold(slot, cpm) {
+		return false
 	}
-	// None of the previous conditions are meet
+
 	return true
 }
 

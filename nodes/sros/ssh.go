@@ -16,8 +16,19 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// limitSSHKeys truncates SSH keys to SROS maximum of 32 per type.
+func limitSSHKeys(keys *[]string, keyType string) {
+	if len(*keys) > 32 {
+		log.Warnf(
+			"More than 32 public %s SSH keys found on the system. Selecting first 32 keys since SROS supports max 32 per key type",
+			keyType,
+		)
+		*keys = (*keys)[:32]
+	}
+}
+
 // prepareSSHPubKeys maps the ssh pub keys into the SSH key type based slice
-// and checks that not more then 32 keys per type are present, otherwise truncates
+// and checks that not more than 32 keys per type are present, otherwise truncates
 // the slices since SROS allows a max of 32 public keys per algorithm.
 func (n *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 	// a map of supported SSH key algorithms and the template slices
@@ -32,19 +43,8 @@ func (n *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 
 	n.mapSSHPubKeys(supportedSSHKeyAlgos)
 
-	if len(tplData.SSHPubKeysRSA) > 32 {
-		log.Warn(
-			"more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type",
-		)
-		tplData.SSHPubKeysRSA = tplData.SSHPubKeysRSA[:32]
-	}
-
-	if len(tplData.SSHPubKeysECDSA) > 32 {
-		log.Warn(
-			"more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type",
-		)
-		tplData.SSHPubKeysECDSA = tplData.SSHPubKeysECDSA[:32]
-	}
+	limitSSHKeys(&tplData.SSHPubKeysRSA, "RSA")
+	limitSSHKeys(&tplData.SSHPubKeysECDSA, "ECDSA")
 }
 
 // mapSSHPubKeys goes over s.sshPubKeys and puts the supported keys to the corresponding
@@ -106,14 +106,18 @@ func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c
 		return fmt.Errorf("%q failed to open ssh2/cli session; error: %+v", n.Cfg.ShortName, err)
 	}
 	defer d.Close()
+	
 	mresp, err := d.SendCommands(c)
-	if err != nil || (mresp != nil && mresp.Failed != nil) {
-		if mresp != nil {
-			return fmt.Errorf("failed to send command; error: %+v %+v", err, mresp.Failed)
-		} else {
-			return fmt.Errorf("failed to send command; error: %+v", err)
+	if err != nil {
+		if mresp != nil && mresp.Failed != nil {
+			return fmt.Errorf("failed to send command: %w (failed responses: %+v)", err, mresp.Failed)
 		}
+		return fmt.Errorf("failed to send command: %w", err)
 	}
+	if mresp != nil && mresp.Failed != nil {
+		return fmt.Errorf("failed to send command (failed responses: %+v)", mresp.Failed)
+	}
+	
 	log.Debug("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr, "config-mode", n.Cfg.Env[envSrosConfigMode])
 	return nil
 }
