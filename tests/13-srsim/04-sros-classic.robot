@@ -11,6 +11,8 @@ ${lab-name}         sr04
 ${lab-file-name}    04-srsim-classic.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
+${gnmic_image}      ghcr.io/openconfig/gnmic:0.42.1
+${gnmic_flags}      --username admin --password NokiaSros1! --values-only --skip-verify
 
 
 *** Test Cases ***
@@ -45,9 +47,10 @@ Ensure sros is reachable over ssh with public key ECDSA auth
 
 Check Classic Config Mode on srsim
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    echo "show system information | match Configuration | match Oper" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-srsim get --path /state/system/management-interface/configuration-oper-mode
     Log    ${output}
     Should Contain    ${output}    classic
+
 
 
 *** Keywords ***
