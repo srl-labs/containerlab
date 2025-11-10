@@ -106,7 +106,6 @@ func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c
 		return fmt.Errorf("%q failed to open ssh2/cli session; error: %+v", n.Cfg.ShortName, err)
 	}
 	defer d.Close()
-	
 	mresp, err := d.SendCommands(c)
 	if err != nil {
 		if mresp != nil && mresp.Failed != nil {
