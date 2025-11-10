@@ -132,7 +132,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	return err
 }
 
-// Determine Ansible kind and properties for containerlab node
+// Determine Ansible kind and properties for containerlab node.
 func (c *CLab) getAnsibleKindAndProps(cfg *clabtypes.NodeConfig) (string, *AnsibleKindProps) {
 	ansibleGroup := cfg.Kind
 	ansibleProps := &AnsibleKindProps{}

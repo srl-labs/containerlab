@@ -1122,9 +1122,12 @@ func (n *sros) addDefaultConfig() error {
 	log.Debugf("Prepare %q config for %q", n.Cfg.Env[envSrosConfigMode], n.Cfg.LongName)
 
 	if n.isConfigClassic() {
-		srosCfgTpl, _ = template.New("clab-sros-config-classic").Funcs(clabutils.CreateFuncs()).Parse(cfgTplClassic)
+		srosCfgTpl, _ = template.New("clab-sros-config-classic").
+			Funcs(clabutils.CreateFuncs()).
+			Parse(cfgTplClassic)
 	} else {
-		srosCfgTpl, _ = template.New("clab-sros-config-sros25").Funcs(clabutils.CreateFuncs()).Parse(cfgTplSROS25)
+		srosCfgTpl, _ = template.New("clab-sros-config-sros25").Funcs(
+			clabutils.CreateFuncs()).Parse(cfgTplSROS25)
 	}
 
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
@@ -1435,7 +1438,15 @@ func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
 		return err
 	}
 
-	log.Info("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr, "config-mode", n.Cfg.Env[envSrosConfigMode])
+	log.Info(
+		"Saved running configuration",
+		"node",
+		n.Cfg.ShortName,
+		"addr",
+		addr,
+		"config-mode",
+		n.Cfg.Env[envSrosConfigMode],
+	)
 
 	return nil
 }
@@ -1493,7 +1504,7 @@ func buildTLSProfileXML() string {
 	return buf.String()
 }
 
-// TLS bootstrap via NETCONF to enable secure gRPC
+// TLS bootstrap via NETCONF to enable secure gRPC.
 func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	// Always import PKI key and cert:
 	// 	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
@@ -1513,7 +1524,13 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	//  enable enables cert-profile "clab-grpc-certs" administratively
 	cmd := []string{}
 	if n.isConfigClassic() {
-		cmd = append(cmd, fmt.Sprintf("/configure system security tls cert-profile %s no shutdown", tlsCertProfileName))
+		cmd = append(
+			cmd,
+			fmt.Sprintf(
+				"/configure system security tls cert-profile %s no shutdown",
+				tlsCertProfileName,
+			),
+		)
 	} else {
 		operations = append(operations,
 			func(d *netconf.Driver) (*response.NetconfResponse, error) {
@@ -1540,7 +1557,8 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	return err
 }
 
-// isConfigClassic returns true if the env var for configuration contains "mixed" or "classic" strings
+// isConfigClassic returns true if the env var for configuration contains "mixed" or "classic"
+// strings.
 func (n *sros) isConfigClassic() bool {
 	cfgMode := strings.ToLower(n.Cfg.Env[envSrosConfigMode])
 	return cfgMode == "classic" || cfgMode == "mixed"

@@ -109,14 +109,26 @@ func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c
 	mresp, err := d.SendCommands(c)
 	if err != nil {
 		if mresp != nil && mresp.Failed != nil {
-			return fmt.Errorf("failed to send command: %w (failed responses: %+v)", err, mresp.Failed)
+			return fmt.Errorf(
+				"failed to send command: %w (failed responses: %+v)",
+				err,
+				mresp.Failed,
+			)
 		}
 		return fmt.Errorf("failed to send command: %w", err)
 	}
 	if mresp != nil && mresp.Failed != nil {
 		return fmt.Errorf("failed to send command (failed responses: %+v)", mresp.Failed)
 	}
-	
-	log.Debug("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr, "config-mode", n.Cfg.Env[envSrosConfigMode])
+
+	log.Debug(
+		"Saved running configuration",
+		"node",
+		n.Cfg.ShortName,
+		"addr",
+		addr,
+		"config-mode",
+		n.Cfg.Env[envSrosConfigMode],
+	)
 	return nil
 }
