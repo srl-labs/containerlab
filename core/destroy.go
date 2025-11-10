@@ -274,6 +274,11 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		}
 	}
 
+	// destroy infrastructure components (like Tailscale) before deleting the network
+	if err := c.DestroyInfrastructure(ctx); err != nil {
+		log.Warnf("errors during infrastructure destruction: %v", err)
+	}
+
 	// delete lab management network
 	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
 		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)

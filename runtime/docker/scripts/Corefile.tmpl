@@ -1,0 +1,21 @@
+# CoreDNS configuration for containerlab {{.LabName}}
+
+# Forward DNS zone
+{{.Domain}} {
+    log . "{remote} - {>id} \"{type} {class} {name} {proto} {size} {>do} {>bufsize}\" {rcode} {>rflags} {rsize} {duration}"
+    errors
+    hosts /etc/coredns/hosts {{.Domain}} {
+        fallthrough
+    }
+    forward . /etc/resolv.conf
+}
+
+# Forward all other queries
+# TODO: Reverse DNS (PTR) support is not currently configured.
+# The hosts plugin can auto-generate PTR records, but requires proper
+# zone configuration to be authoritative for in-addr.arpa zones.
+. {
+    log . "{remote} - {>id} \"{type} {class} {name} {proto} {size} {>do} {>bufsize}\" {rcode} {>rflags} {rsize} {duration}"
+    errors
+    forward . /etc/resolv.conf
+}

@@ -44,6 +44,11 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
+	// Deploy infrastructure components (like Tailscale) after network creation but before nodes
+	if err := c.DeployInfrastructure(ctx); err != nil {
+		return nil, err
+	}
+
 	err = clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
@@ -150,6 +155,11 @@ func (c *CLab) Deploy( //nolint: funlen
 	}
 
 	execCollection.Log()
+
+	// Update infrastructure DNS with deployed node records
+	if err := c.UpdateInfrastructureDNS(ctx); err != nil {
+		log.Warnf("Failed to update infrastructure DNS: %v", err)
+	}
 
 	if err := c.GenerateInventories(); err != nil {
 		return nil, err

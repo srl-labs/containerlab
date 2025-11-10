@@ -572,6 +572,10 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	// the lab name of a currently deploying lab
 	// this ensures lab uniqueness
 	for idx := range containers {
+		// Skip infrastructure containers (e.g., Tailscale, future VPN/DNS/proxy containers)
+		if containers[idx].Labels[clabconstants.IsInfrastructure] == "true" {
+			continue
+		}
 		if containers[idx].Labels[clabconstants.Containerlab] == c.Config.Name {
 			return fmt.Errorf(
 				"the '%s' lab has already been deployed. Destroy the lab before deploying a "+
