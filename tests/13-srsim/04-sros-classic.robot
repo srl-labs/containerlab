@@ -31,21 +31,21 @@ Deploy ${lab-name} lab
 
 Ensure sros is reachable over ssh
     Login via SSH with username and password
-    ...    address=clab-${lab-name}-srsim-classic
+    ...    address=clab-${lab-name}-srsim
     ...    username=admin
     ...    password=NokiaSros1!
     ...    try_for=10
 
 Ensure sros is reachable over ssh with public key ECDSA auth
     Login via SSH with public key
-    ...    address=clab-${lab-name}-srsim-classic
+    ...    address=clab-${lab-name}-srsim
     ...    username=admin
     ...    keyfile=${key-path}-ecdsa512
     ...    try_for=10
 
 Check Classic Config Mode on srsim
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    echo "show system information | match Configuration | match Oper" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim-classic
+    ...    echo "show system information | match Configuration | match Oper" | sshpass -p 'NokiaSros1!' ssh -o "IdentitiesOnly=yes" admin@clab-${lab-name}-srsim
     Log    ${output}
     Should Contain    ${output}    classic
 
