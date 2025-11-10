@@ -159,6 +159,14 @@ This section logs the most notable blogs, streams, and and demos delivered by co
 Do you have a blog around containerlab that you want to share with the community? Please let us know by mentioning it in the [Comments](#__comments) section at the bottom of this page.
 ///
 
+### Creating custom Containerlab node kinds
+
+<small>:material-text: [Blog](https://torbjorn.dev/blog/creating-clab-node-kinds/) by [Torbjørn Bang](https://www.linkedin.com/in/torbjornbang/) · :material-calendar: 2025-10-26</small>
+
+In this post Torbjørn guides us through adding new vrnetlab based node kinds to Containerlab.
+He covers both building container images for your VM based NOS using vrnetlab, and subsequently adding support for them in containerlab.
+This is a great read if you are looking to get started modifying/adding containerlab node kinds!
+
 ### Extending the Kubernetes (host) network with EVPN tunnels
 
 <small>:material-text: [Blog](https://fedepaol.github.io/blog/2024/06/14/extending-the-kubernetes-host-network-with-evpn-tunnels-and-frr/) by [Federico Paolinelli](https://fedepaol.github.io/about/) · :material-calendar: 2024-06-14</small>
