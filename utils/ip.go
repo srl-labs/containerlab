@@ -99,8 +99,12 @@ func GetRoutableAddresses() ([]string, error) {
 	return routableAddrs, nil
 }
 
-// LastHostIPInSubnet returns the last host IP address in a subnet
-// (excludes the broadcast address for IPv4)
+// LastHostIPInSubnet returns the last host IP address in a subnet.
+// For IPv4:
+//   - /32 (single host): returns the only IP
+//   - /31 (point-to-point): returns the second IP (no broadcast in RFC 3021)
+//   - /30 and larger: excludes broadcast address (last - 1)
+// For IPv6: the last address is always usable (no broadcast concept)
 func LastHostIPInSubnet(ipnet *net.IPNet) net.IP {
 	ip := make(net.IP, len(ipnet.IP))
 	copy(ip, ipnet.IP)
@@ -110,16 +114,26 @@ func LastHostIPInSubnet(ipnet *net.IPNet) net.IP {
 		ip[i] |= ^ipnet.Mask[i]
 	}
 
-	// For IPv4, decrement by 1 to avoid broadcast address
-	// For IPv6, the last address is usable (no broadcast)
+	// For IPv4, handle special cases
 	if ip.To4() != nil {
-		// Decrement the IP by 1
-		for i := len(ip) - 1; i >= 0; i-- {
-			if ip[i] > 0 {
-				ip[i]--
-				break
+		ones, _ := ipnet.Mask.Size()
+		
+		switch ones {
+		case 32:
+			// /32 - single host, return the only IP
+			return ip
+		case 31:
+			// /31 - point-to-point (RFC 3021), no broadcast, return second IP
+			return ip
+		default:
+			// /30 and larger - exclude broadcast address
+			for i := len(ip) - 1; i >= 0; i-- {
+				if ip[i] > 0 {
+					ip[i]--
+					break
+				}
+				ip[i] = 255
 			}
-			ip[i] = 255
 		}
 	}
 
