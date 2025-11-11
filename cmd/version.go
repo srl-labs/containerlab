@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/charmbracelet/log"
 	gover "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -53,7 +54,7 @@ func versionCmd(o *Options) (*cobra.Command, error) {
 				defer cancel()
 
 				m := getVersionManager()
-				m.DisplayNewVersionAvailable(ctx)
+				m.DisplayNewVersionAvailable(ctx, true)
 
 				return nil
 			},
@@ -147,11 +148,11 @@ func printVersionInfoFn(_ *cobra.Command, o *Options) error {
 // newer version, so we don't duplicate that string in multiple places.
 func printNewVersionInfo(ver string) {
 	relSlug := docsLinkFromVer(ver)
-	fmt.Printf("🎉 A newer containerlab version (%s) is available!\n", ver)
-	fmt.Printf("Release notes: https://containerlab.dev/rn/%s\n", relSlug)
-	fmt.Println(
-		"Run 'sudo clab version upgrade' or see https://containerlab.dev/install/ " +
-			"for installation options.",
+	log.Info(
+		"containerlab version", "🎉", fmt.Sprintf(
+			"A newer containerlab version (%s) is available!\nRelease notes: https://containerlab.dev/rn/%s\nRun 'clab version upgrade' or see https://containerlab.dev/install/ for other installation options.",
+			ver, relSlug,
+		),
 	)
 }
 
