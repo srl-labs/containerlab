@@ -7,12 +7,15 @@ import (
 	"io"
 	"maps"
 	"math"
+	"math/big"
+	"net/netip"
 	"reflect"
 	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/hellt/envsubst"
+	"github.com/srl-labs/containerlab/internal/cidr"
 )
 
 func CreateFuncs() template.FuncMap {
@@ -29,6 +32,7 @@ func CreateFuncs() template.FuncMap {
 	}
 	maps.Copy(f, CreateStringFuncs())
 	maps.Copy(f, CreateConvFuncs())
+	maps.Copy(f, CreateNetFuncs())
 
 	return f
 }
@@ -589,6 +593,43 @@ func (ConvFuncs) ToInt(in any) (int, error) {
 
 	// maybe we're on a 32-bit system, so we can't represent this number
 	return 0, fmt.Errorf("could not convert %v to int", in)
+}
+
+// CreateNetFuncs returns a new mapping of template NetFuncs.
+func CreateNetFuncs() map[string]any {
+	f := map[string]any{}
+
+	ns := &NetFuncs{}
+	f["net"] = func() any { return ns }
+
+	return f
+}
+
+// NetFuncs holds network related functions for templates.
+type NetFuncs struct{}
+
+// CIDRHost takes a parent CIDR range and turns it into a host IP address with
+// the given host number.
+//
+// For example, 10.3.0.0/16 with a host number of 2 gives 10.3.0.2.
+// Copied from gomplate.
+func (nf *NetFuncs) CIDRHost(hostnum any, prefix any) (string, error) {
+	network, err := netip.ParsePrefix(ToString(prefix))
+	if err != nil {
+		return "", err
+	}
+
+	n, err := ToInt64(hostnum)
+	if err != nil {
+		return "", fmt.Errorf("expected a number: %w", err)
+	}
+
+	ip, err := cidr.HostBig(network, big.NewInt(n))
+	if err != nil {
+		return "", err
+	}
+
+	return ip.String(), nil
 }
 
 // SubstituteEnvsAndTemplate substitutes environment variables and template the reader `r`
