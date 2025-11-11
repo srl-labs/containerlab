@@ -453,9 +453,12 @@ mgmt:
    **Important for NAT users:** If you configured `one-to-one-nat`, use the **NAT IP** in MagicDNS settings, not the real management IP. The DNS proxy will automatically return NAT-translated IPs to Tailscale clients.
 
 3. **Deploy your lab**:
-   ```bash
-   sudo containerlab deploy -t my-lab.clab.yml
-```#### Step 3: Test DNS Resolution
+
+    ```bash
+    sudo containerlab deploy -t my-lab.clab.yml
+    ```
+
+#### Step 3: Test DNS Resolution
 
 From any device connected to your Tailscale network:
 
