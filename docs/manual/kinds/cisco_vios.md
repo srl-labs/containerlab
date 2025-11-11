@@ -6,7 +6,32 @@ kind_display_name: Cisco vIOS
 ---
 # Cisco vIOS
 
-Cisco vIOS virtualized router is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+Cisco vIOS virtualized router/switch is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+
+The `cisco_vios` kind supports both router (vIOS) and Layer 2 switch (vIOSL2) images. The type is specified using the `type` parameter in the node configuration.
+
+## Node Types
+
+The `cisco_vios` kind supports two node types:
+
+* `router` (default) - Cisco vIOS router image
+* `switch` - Cisco vIOSL2 Layer 2 switch image
+
+The node type is specified using the `type` parameter:
+
+```yaml
+topology:
+  nodes:
+    router1:
+      kind: cisco_vios
+      type: router  # or omit for default router type
+      image: vrnetlab/cisco_vios:159-3.M10
+
+    switch1:
+      kind: cisco_vios
+      type: switch
+      image: vrnetlab/cisco_vios:L2-20200929
+```
 
 ## Managing Cisco vIOS nodes
 

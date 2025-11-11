@@ -8,23 +8,29 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"strings"
 
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
+const (
+	typeRouter = "router"
+	typeSwitch = "switch"
+
+	scrapliPlatformName = "cisco_ios"
+)
+
 var (
-	kindnames          = []string{"cisco_vios", "vr-vios", "vr-cisco_vios"}
+	kindnames          = []string{"cisco_vios"}
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	InterfaceRegexp = regexp.MustCompile(`(?:Gi|GigabitEthernet)\s?(?P<port>\d+)$`)
 	InterfaceOffset = 0
 	InterfaceHelp   = "GiX or GigabitEthernetX (where X >= 0) or ethX (where X >= 1)"
-)
 
-const (
-	scrapliPlatformName = "cisco_ios"
+	validTypes = []string{typeRouter, typeSwitch}
 )
 
 // Register registers the node in the NodeRegistry.
@@ -54,6 +60,19 @@ func (n *vrVios) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	for _, o := range opts {
 		o(n)
 	}
+
+	// Validate node type
+	nodeType := strings.ToLower(n.Cfg.NodeType)
+	switch nodeType {
+	case "", typeRouter:
+		// Default to router type
+	case typeSwitch:
+		// L2 switch type
+	default:
+		return fmt.Errorf("invalid node type '%s'. Valid types are: %s",
+			n.Cfg.NodeType, strings.Join(validTypes, ", "))
+	}
+
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
