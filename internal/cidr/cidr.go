@@ -32,7 +32,11 @@ func HostBig(base netip.Prefix, num *big.Int) (netip.Addr, error) {
 	}
 
 	if num2.Cmp(maxHostNum) == 1 {
-		return netip.Addr{}, fmt.Errorf("prefix of %d does not accommodate a host numbered %d", parentLen, num)
+		return netip.Addr{}, fmt.Errorf(
+			"prefix of %d does not accommodate a host numbered %d",
+			parentLen,
+			num,
+		)
 	}
 
 	return insertNumIntoIP(base.Masked().Addr(), num, addrLen), nil
