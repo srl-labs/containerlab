@@ -101,7 +101,8 @@ func (m *manager) GetLatestVersion(ctx context.Context) *gover.Version {
 }
 
 // DisplayNewVersionAvailable checks and displays if a new version is available.
-// If printCurrentVersion is true, it will also print a message if the user is on the latest version,
+// If printCurrentVersion is true, it will also print a message if the user is on the latest
+// version,
 // which is used in the "version check" command.
 func (m *manager) DisplayNewVersionAvailable(ctx context.Context, printCurrentVersion bool) {
 	latestVersion := m.GetLatestVersion(ctx)

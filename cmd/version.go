@@ -151,7 +151,8 @@ func printNewVersionInfo(ver string) {
 	log.Info(
 		"containerlab version", "🎉", fmt.Sprintf(
 			"A newer containerlab version (%s) is available!\nRelease notes: https://containerlab.dev/rn/%s\nRun 'clab version upgrade' or see https://containerlab.dev/install/ for other installation options.",
-			ver, relSlug,
+			ver,
+			relSlug,
 		),
 	)
 }
