@@ -96,7 +96,6 @@ Local Client → DNS Proxy (port 53) → CoreDNS (port 5353)
 4. Downloads CoreDNS release tarball from GitHub
 5. Extracts binary to `/usr/local/bin/coredns`
 6. Creates `/etc/coredns` directory for configuration
-7. Cleans up downloaded files
 
 **Why Embedded**: Single installation script that handles all dependencies based on configuration.
 
