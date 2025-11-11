@@ -6,7 +6,7 @@ Rewrites DNS queries and responses for bidirectional translation:
 - A record responses: Rewrites real IP -> NAT IP (in response data)
 
 NOTE: This is a template file. Variables will be replaced by Go's text/template.
-      The {{.Variable}} syntax is NOT valid Python but will be substituted before execution.
+      The { { . Variable } } syntax is NOT valid Python but will be substituted before execution.
 """
 
 import socket
@@ -39,7 +39,10 @@ def translate_ip_to_nat(ip_str):
             offset = ip - MGMT_BASE
             nat_ip = NAT_BASE + offset
             return socket.inet_ntoa(struct.pack('!I', nat_ip))
-    except:
+    except (OSError, ValueError, struct.error) as e:
+        # OSError: invalid IP address format
+        # ValueError: invalid IP string
+        # struct.error: pack/unpack errors
         pass
     return ip_str
 
@@ -51,7 +54,10 @@ def translate_ip_to_real(ip_str):
             offset = ip - NAT_BASE
             real_ip = MGMT_BASE + offset
             return socket.inet_ntoa(struct.pack('!I', real_ip))
-    except:
+    except (OSError, ValueError, struct.error) as e:
+        # OSError: invalid IP address format
+        # ValueError: invalid IP string
+        # struct.error: pack/unpack errors
         pass
     return ip_str
 
@@ -227,7 +233,10 @@ def main():
         container_ip = result.stdout.strip().split()[0]  # First IP
         print(f"Binding to {container_ip}:{LISTEN_PORT}", flush=True)
         bind_addr = container_ip
-    except:
+    except (subprocess.CalledProcessError, IndexError, OSError) as e:
+        # subprocess.CalledProcessError: hostname command failed
+        # IndexError: no IP addresses returned
+        # OSError: subprocess execution error
         print(f"Could not determine container IP, binding to 0.0.0.0", flush=True)
         bind_addr = '0.0.0.0'
     
