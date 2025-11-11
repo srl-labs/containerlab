@@ -109,7 +109,7 @@ func (m *manager) DisplayNewVersionAvailable(ctx context.Context, printCurrentVe
 
 	switch {
 	case latestVersion == nil:
-		log.Info("Failed fetching latest version information\n")
+		log.Info("Failed fetching latest version information")
 	case latestVersion.GreaterThan(m.currentVersion):
 		printNewVersionInfo(latestVersion.String())
 	default:
