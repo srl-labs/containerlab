@@ -4,6 +4,9 @@ DNS Proxy for ContainerLab Tailscale integration with 1:1 NAT.
 Rewrites DNS queries and responses for bidirectional translation:
 - PTR queries: Rewrites NAT IP -> real IP (in query name)
 - A record responses: Rewrites real IP -> NAT IP (in response data)
+
+NOTE: This is a template file. Variables will be replaced by Go's text/template.
+      The {{.Variable}} syntax is NOT valid Python but will be substituted before execution.
 """
 
 import socket
@@ -12,11 +15,11 @@ import sys
 import select
 import subprocess
 
-# Configuration - these will be replaced by Go template
-LISTEN_PORT = {{.ListenPort}}
-BACKEND_PORT = {{.BackendPort}}
-MGMT_SUBNET = '{{.MgmtSubnet}}'  # Real management subnet
-NAT_SUBNET = '{{.NatSubnet}}'   # NAT subnet advertised to Tailscale
+# Configuration - these will be replaced by Go template at runtime
+LISTEN_PORT = int('{{.ListenPort}}')  # Template variable - will be replaced with actual port number
+BACKEND_PORT = int('{{.BackendPort}}')  # Template variable - will be replaced with backend port
+MGMT_SUBNET = '{{.MgmtSubnet}}'  # Template variable - real management subnet
+NAT_SUBNET = '{{.NatSubnet}}'    # Template variable - NAT subnet advertised to Tailscale
 
 # Parse subnet to get base IP and mask
 def parse_subnet(subnet):
