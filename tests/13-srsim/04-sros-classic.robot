@@ -52,6 +52,11 @@ Check Classic Config Mode on srsim
     Should Contain    ${output}    classic
 
 
+Check Mixed Config Mode on srsim
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-srsim-ixr get --path /state/system/management-interface/configuration-oper-mode
+    Log    ${output}
+    Should Contain    ${output}    mixed
 
 *** Keywords ***
 Cleanup

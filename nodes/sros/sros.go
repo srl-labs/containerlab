@@ -94,6 +94,9 @@ var (
 	//go:embed sros_config_classic.go.tpl
 	cfgTplClassic string
 
+	//go:embed ixr_config_classic.go.tpl
+	cfgTplClassicIxr string
+
 	kindNames  = []string{"nokia_srsim"}
 	srosSysctl = map[string]string{
 		"net.ipv4.ip_forward":                "0",
@@ -1121,10 +1124,16 @@ func (n *sros) addDefaultConfig() error {
 	var srosCfgTpl *template.Template
 	log.Debugf("Prepare %q config for %q", n.Cfg.Env[envSrosConfigMode], n.Cfg.LongName)
 
+	var tmpl string
 	if n.isConfigClassic() {
+		if strings.Contains(tplData.NodeType, "ixr-") {
+			tmpl = cfgTplClassicIxr
+		} else {
+			tmpl = cfgTplClassic
+		}
 		srosCfgTpl, _ = template.New("clab-sros-config-classic").
 			Funcs(clabutils.CreateFuncs()).
-			Parse(cfgTplClassic)
+			Parse(tmpl)
 	} else {
 		srosCfgTpl, _ = template.New("clab-sros-config-sros25").Funcs(
 			clabutils.CreateFuncs()).Parse(cfgTplSROS25)
