@@ -12,7 +12,7 @@ ${lab-file-name}    04-srsim-classic.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
 ${gnmic_image}      ghcr.io/openconfig/gnmic:0.42.1
-${gnmic_flags}      --username admin --password NokiaSros1! --values-only --skip-verify
+${gnmic_flags}      --username admin --password NokiaSros1! --values-only
 
 
 *** Test Cases ***
@@ -47,14 +47,14 @@ Ensure sros is reachable over ssh with public key ECDSA auth
 
 Check Classic Config Mode on srsim
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-srsim get --path /state/system/management-interface/configuration-oper-mode
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --skip-verify --address clab-${lab-name}-srsim get --path /state/system/management-interface/configuration-oper-mode
     Log    ${output}
     Should Contain    ${output}    classic
 
 
 Check Mixed Config Mode on srsim
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-srsim-ixr get --path /state/system/management-interface/configuration-oper-mode
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --insecure --address clab-${lab-name}-srsim-ixr get --path /state/system/management-interface/configuration-oper-mode
     Log    ${output}
     Should Contain    ${output}    mixed
 
