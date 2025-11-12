@@ -90,12 +90,11 @@ Local Client → DNS Proxy (port 53) → CoreDNS (port 5353)
 - `{{.NeedsPython}}` - Boolean string ("true"/"false") indicating if Python is needed
 
 **What It Does**:
-1. Updates Alpine package manager
-2. Installs wget (always required)
-3. Installs Python3 (only if NAT is enabled for dns-proxy.py)
-4. Downloads CoreDNS release tarball from GitHub
-5. Extracts binary to `/usr/local/bin/coredns`
-6. Creates `/etc/coredns` directory for configuration
+1. Installs wget (always required)
+2. Installs Python3 (only if NAT is enabled for dns-proxy.py)
+3. Downloads CoreDNS release tarball from GitHub
+4. Extracts binary to `/usr/local/bin/coredns`
+5. Creates `/etc/coredns` directory for configuration
 
 **Why Embedded**: Single installation script that handles all dependencies based on configuration.
 
