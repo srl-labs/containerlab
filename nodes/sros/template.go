@@ -6,6 +6,7 @@ type srosTemplateData struct {
 	TLSKey          string
 	TLSCert         string
 	TLSAnchor       string
+	SecureGrpc      bool
 	Banner          string
 	IFaces          map[string]tplIFace
 	SSHPubKeysRSA   []string
@@ -32,6 +33,8 @@ type srosTemplateData struct {
 	PartialConfig string
 	// ComponentConfig stores config lines for installed component HW
 	ComponentConfig string
+	// Configuration Mode can be "model-driven", "classic" or "mixed"
+	ConfigurationMode string
 }
 
 // tplIFace template interface struct.
