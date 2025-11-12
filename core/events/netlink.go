@@ -22,14 +22,16 @@ type netlinkRegistry struct {
 	watchers               map[string]*netlinkWatcher
 	events                 chan<- aggregatedEvent
 	includeInitialSnapshot bool
+	includeStats           bool
 }
 
-func newNetlinkRegistry(ctx context.Context, events chan<- aggregatedEvent, includeInitialSnapshot bool) *netlinkRegistry {
+func newNetlinkRegistry(ctx context.Context, events chan<- aggregatedEvent, includeInitialSnapshot, includeStats bool) *netlinkRegistry {
 	return &netlinkRegistry{
 		ctx:                    ctx,
 		watchers:               make(map[string]*netlinkWatcher),
 		events:                 events,
 		includeInitialSnapshot: includeInitialSnapshot,
+		includeStats:           includeStats,
 	}
 }
 
@@ -61,6 +63,7 @@ func (r *netlinkRegistry) Start(container *clabruntime.GenericContainer) {
 		cancel:          cancel,
 		done:            make(chan struct{}),
 		includeSnapshot: r.includeInitialSnapshot,
+		includeStats:    r.includeStats,
 	}
 
 	r.watchers[id] = watcher
@@ -209,6 +212,7 @@ type netlinkWatcher struct {
 	cancel          context.CancelFunc
 	done            chan struct{}
 	includeSnapshot bool
+	includeStats    bool
 }
 
 func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
@@ -255,11 +259,14 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		states = make(map[int]ifaceSnapshot)
 	}
 
-	statsSamples := make(map[int]ifaceStatsSample, len(states))
-	now := time.Now()
-	for idx, snapshot := range states {
-		if sample, ok := newStatsSample(snapshot, now); ok {
-			statsSamples[idx] = sample
+	var statsSamples map[int]ifaceStatsSample
+	if w.includeStats {
+		statsSamples = make(map[int]ifaceStatsSample, len(states))
+		now := time.Now()
+		for idx, snapshot := range states {
+			if sample, ok := newStatsSample(snapshot, now); ok {
+				statsSamples[idx] = sample
+			}
 		}
 	}
 
@@ -279,12 +286,19 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		return
 	}
 
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
+	var (
+		ticker  *time.Ticker
+		tickerC <-chan time.Time
+	)
+	if w.includeStats {
+		ticker = time.NewTicker(time.Second)
+		tickerC = ticker.C
+		defer ticker.Stop()
+	}
 
 	for {
 		select {
-		case <-ticker.C:
+		case <-tickerC:
 			w.collectAndEmitStats(netHandle, states, statsSamples, registry)
 		case <-ctx.Done():
 			close(done)
@@ -338,8 +352,10 @@ func (w *netlinkWatcher) processUpdate(
 		}
 
 		states[snapshot.Index] = snapshot
-		if sample, ok := newStatsSample(snapshot, time.Now()); ok {
-			statsSamples[snapshot.Index] = sample
+		if w.includeStats && statsSamples != nil {
+			if sample, ok := newStatsSample(snapshot, time.Now()); ok {
+				statsSamples[snapshot.Index] = sample
+			}
 		}
 		registry.emitInterfaceEvent(w.container, action, snapshot)
 	}
@@ -469,7 +485,7 @@ func (r *netlinkRegistry) emitInterfaceStatsEvent(
 	snapshot ifaceSnapshot,
 	metrics ifaceStatsMetrics,
 ) {
-	if container == nil || !snapshot.HasStats {
+	if !r.includeStats || container == nil || !snapshot.HasStats {
 		return
 	}
 
@@ -613,7 +629,7 @@ func (w *netlinkWatcher) collectAndEmitStats(
 	statsSamples map[int]ifaceStatsSample,
 	registry *netlinkRegistry,
 ) {
-	if netHandle == nil {
+	if netHandle == nil || statsSamples == nil {
 		return
 	}
 

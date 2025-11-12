@@ -36,7 +36,7 @@ func Stream(ctx context.Context, opts Options) error {
 	}
 
 	eventCh := make(chan aggregatedEvent, 128)
-	registry := newNetlinkRegistry(ctx, eventCh, opts.IncludeInitialState)
+	registry := newNetlinkRegistry(ctx, eventCh, opts.IncludeInitialState, opts.IncludeInterfaceStats)
 
 	containers, err := clab.ListContainers(ctx, clabcore.WithListclabLabelExists())
 	if err != nil {

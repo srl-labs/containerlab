@@ -14,6 +14,7 @@ The command respects the global flags such as `--runtime`, `--debug`, or `--log-
 
 - `--format` controls the output representation (`plain`, `json`).
 - `--initial-state` emits a snapshot of currently running containers and their interface states before following live updates.
+- `--interface-stats` enables periodic interface counter sampling; leave unset to report only lifecycle and state changes.
 
 When invoked with no arguments it discovers all running labs and immediately begins streaming events; new labs that start after the command begins are picked up automatically.
 
@@ -27,7 +28,7 @@ In the default `plain` format every line mirrors the `docker events` format:
 
 * **Runtime events** show the short container ID as the actor and include the original attributes supplied by the container runtime (for example `image`, `name`, `containerlab`, `scope`, …). When `--initial-state` is enabled the stream starts with `container <state>` snapshots (for example `container running`) that carry an `origin=snapshot` attribute.
 * **Interface events** use `type` `interface` and `origin=netlink` in the attribute list. They also report interface-specific data such as `ifname`, `state`, `mtu`, `mac`, `type`, `alias`, and the lab label. The actor is still the container short ID, and the container name is supplied in the attributes (`name=...`).
-* Interface notifications are emitted when a link appears, disappears, or when its relevant properties (operational state, MTU, alias, MAC address, type) change. Initial snapshots use the `snapshot` action when `--initial-state` is requested.
+* Interface notifications are emitted when a link appears, disappears, or when its relevant properties (operational state, MTU, alias, MAC address, type) change. Initial snapshots use the `snapshot` action when `--initial-state` is requested. When interface statistics are enabled the stream also includes `interface stats` updates with byte/packet counters and rate estimates.
 
 When `--format json` is used, each event becomes a single JSON object on its own line. The fields match the plain output (`timestamp`, `type`, `action`, `actor_id`, `actor_name`, `actor_full_id`) and include an `attributes` map with the same key/value pairs that the plain formatter prints.
 
@@ -56,6 +57,14 @@ $ sudo containerlab events --initial-state
 ```
 
 This mode begins with a point-in-time view of every running container and interface before switching to live updates.
+
+#### Include interface statistics
+
+```
+$ sudo containerlab events --interface-stats
+```
+
+Statistics are disabled by default. Enabling them augments the feed with periodic counter samples in addition to lifecycle and state changes.
 
 #### Use with alternative runtimes
 

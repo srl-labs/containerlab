@@ -53,7 +53,8 @@ func GetOptions() *Options {
 				DrawIOVersion:    "latest",
 			},
 			Events: &EventsOptions{
-				Format: "plain",
+				Format:                "plain",
+				IncludeInterfaceStats: false,
 			},
 			ToolsAPI: &ToolsApiOptions{
 				Image:          "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
@@ -358,8 +359,9 @@ type GraphOptions struct {
 }
 
 type EventsOptions struct {
-	Format              string
-	IncludeInitialState bool
+	Format                string
+	IncludeInitialState   bool
+	IncludeInterfaceStats bool
 }
 
 type ToolsApiOptions struct {

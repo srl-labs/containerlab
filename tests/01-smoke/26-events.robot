@@ -36,10 +36,34 @@ Events Command Streams Plain Output
         Should Contain    ${plain-output}    container die
         Should Contain    ${plain-output}    interface create
         Should Contain    ${plain-output}    origin=netlink
+        Should Not Contain    ${plain-output}    interface stats
     FINALLY
         Cleanup Events Scenario    events_plain
         Remove File If Exists    ${plain-log}
         Remove File If Exists    ${plain-err}
+    END
+
+Events Command Emits Interface Statistics When Enabled
+    [Documentation]    Verify that enabling interface statistics augments the stream with periodic counter samples.
+    ${stats-log}    Set Variable    /tmp/clab-events-stats.log
+    ${stats-err}    Set Variable    /tmp/clab-events-stats.err
+    Remove File If Exists    ${stats-log}
+    Remove File If Exists    ${stats-err}
+    TRY
+        Start Events Process    events_stats    plain    ${stats-log}    ${stats-err}    False    True
+        Deploy Lab For Events
+        Sleep    5s
+        Destroy Lab For Events
+        Sleep    3s
+        Stop Events Process    events_stats
+        ${stats-output} =    Get File    ${stats-log}
+        Log    ${stats-output}
+        Should Contain    ${stats-output}    container create
+        Should Contain    ${stats-output}    interface stats
+    FINALLY
+        Cleanup Events Scenario    events_stats
+        Remove File If Exists    ${stats-log}
+        Remove File If Exists    ${stats-err}
     END
 
 Events Command Emits Initial State Snapshot
@@ -104,9 +128,10 @@ Remove File If Exists
     Run Keyword And Ignore Error    Remove File    ${path}
 
 Start Events Process
-    [Arguments]    ${alias}    ${format}    ${stdout}    ${stderr}    ${initial}=False
+    [Arguments]    ${alias}    ${format}    ${stdout}    ${stderr}    ${initial}=False    ${interface_stats}=
     ${cmd}    Set Variable    ${CLAB_BIN} --runtime ${runtime} events --format ${format}
     ${cmd}    Run Keyword If    '${initial}'=='True'    Catenate    ${cmd}    --initial-state    ELSE    Set Variable    ${cmd}
+    ${cmd}    Run Keyword If    '${interface_stats}'=='True'    Catenate    ${cmd}    --interface-stats    ELSE IF    '${interface_stats}'=='False'    Catenate    ${cmd}    --interface-stats=false    ELSE    Set Variable    ${cmd}
     Start Process    ${cmd}    shell=True    alias=${alias}    stdout=${stdout}    stderr=${stderr}
     Sleep    1s
 

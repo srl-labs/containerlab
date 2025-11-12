@@ -8,11 +8,12 @@ import (
 
 // Options configure how runtime and interface events are sourced and rendered.
 type Options struct {
-	Format              string
-	Runtime             string
-	IncludeInitialState bool
-	ClabOptions         []clabcore.ClabOption
-	Writer              io.Writer
+	Format                string
+	Runtime               string
+	IncludeInitialState   bool
+	IncludeInterfaceStats bool
+	ClabOptions           []clabcore.ClabOption
+	Writer                io.Writer
 }
 
 func (o Options) writer() io.Writer {
