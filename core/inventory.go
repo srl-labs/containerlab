@@ -90,7 +90,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	}
 
 	for _, n := range c.Nodes {
-		kind, props := c.getAnsibleKindAndProps(n.Config())
+		kind, props := c.ansibleKindAndProps(n.Config())
 		inv.Kinds[kind] = props
 
 		ansibleNode := &AnsibleInventoryNode{
@@ -132,8 +132,8 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	return err
 }
 
-// Determine Ansible kind and properties for containerlab node.
-func (c *CLab) getAnsibleKindAndProps(cfg *clabtypes.NodeConfig) (string, *AnsibleKindProps) {
+// ansibleKindAndProps returns kind and properties for a provided containerlab node config.
+func (c *CLab) ansibleKindAndProps(cfg *clabtypes.NodeConfig) (string, *AnsibleKindProps) {
 	ansibleGroup := cfg.Kind
 	ansibleProps := &AnsibleKindProps{}
 
@@ -147,7 +147,7 @@ func (c *CLab) getAnsibleKindAndProps(cfg *clabtypes.NodeConfig) (string, *Ansib
 
 	// Generally we use the containerlab kind for grouping in Ansible Inventory.
 	// Special case: For SROS we differentiate between classic and model-driven.
-	if cfg.Env["CLAB_SROS_CONFIG_MODE"] == "classic" {
+	if strings.EqualFold(cfg.Env["CLAB_SROS_CONFIG_MODE"], "classic") {
 		ansibleGroup = "nokia_srsim_classic"
 	}
 

@@ -656,10 +656,10 @@ configure {
 }
 ```
 
-/// details | Start SR-OS with Classic Management
+/// details | Start SR OS with Classic Management
     type: tip
 
-To start  `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the environment variable `CLAB_SROS_CONFIG_MODE`. When set to `classic` or `mixed`, containerlab will switch the node default CLI and update the generated Ansible inventory accordingly during PostDeploy phase. Note that if you provide a partial configuration, you will have to use the Classic-CLI syntax. To understand the differences between `classic`, `mixed` and `model-driven` modes see the [system management guide](https://documentation.nokia.com/sr/25-10/7x50-shared/system-management/model-driven-management-interfaces.html).
+To start `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the `CLAB_SROS_CONFIG_MODE` environment variable. When set to `classic` or `mixed`, containerlab will switch the node default config to the desired mode and update the generated Ansible inventory accordingly. Note that if you provide a partial configuration, you will have to use the Classic CLI syntax. To understand the differences between `classic`, `mixed` and `model-driven` modes see the [system management guide](https://documentation.nokia.com/sr/25-10/7x50-shared/system-management/model-driven-management-interfaces.html).
 
 ```yaml hl_lines="6-7"
 topology:
@@ -670,6 +670,7 @@ topology:
       env:
         CLAB_SROS_CONFIG_MODE: classic
 ```
+
 ///
 
 ##### Remote partial files
