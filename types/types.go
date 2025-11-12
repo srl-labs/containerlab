@@ -90,6 +90,8 @@ type TailscaleConfig struct {
 	EphemeralState *bool `json:"ephemeral-state,omitempty" yaml:"ephemeral-state,omitempty"`
 	// DNS server configuration for MagicDNS split DNS
 	DNS *TailscaleDNSConfig `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// Healthcheck configuration (optional, defaults provided)
+	Healthcheck *HealthcheckConfig `json:"healthcheck,omitempty" yaml:"healthcheck,omitempty"`
 }
 
 // TailscaleDNSConfig contains DNS server settings for the Tailscale container.

@@ -176,13 +176,26 @@ func (d *DockerRuntime) DeployTailscale(ctx context.Context, labCtx *LabContext)
 			"containerlab.tailscale":        "true",
 			"containerlab.mgmt-network":     d.mgmt.Network,
 		},
-		Healthcheck: &container.HealthConfig{
+	}
+
+	// Configure healthcheck - use custom if provided, otherwise use defaults
+	if d.mgmt.Tailscale.Healthcheck != nil {
+		containerConfig.Healthcheck = &container.HealthConfig{
+			Test:        d.mgmt.Tailscale.Healthcheck.Test,
+			Interval:    d.mgmt.Tailscale.Healthcheck.GetIntervalDuration(),
+			Timeout:     d.mgmt.Tailscale.Healthcheck.GetTimeoutDuration(),
+			StartPeriod: d.mgmt.Tailscale.Healthcheck.GetStartPeriodDuration(),
+			Retries:     d.mgmt.Tailscale.Healthcheck.Retries,
+		}
+	} else {
+		// Default healthcheck: verify Tailscale is running
+		containerConfig.Healthcheck = &container.HealthConfig{
 			Test:        []string{"CMD-SHELL", "tailscale status --json | grep -q '\"BackendState\": \"Running\"'"},
-			Interval:    30000000000,  // 30 seconds
-			Timeout:     10000000000,  // 10 seconds
-			StartPeriod: 60000000000,  // 60 seconds
+			Interval:    30 * time.Second,
+			Timeout:     10 * time.Second,
+			StartPeriod: 60 * time.Second,
 			Retries:     3,
-		},
+		}
 	}
 
 	hostConfig := &container.HostConfig{
