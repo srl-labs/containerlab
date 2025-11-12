@@ -913,7 +913,7 @@ func (d *DockerRuntime) writeFileToContainer(ctx context.Context, containerID, p
 		return fmt.Errorf("failed to create exec for write: %w", err)
 	}
 
-	// Attach to exec to send stdin
+	// Attach to exec (this implicitly starts the exec)
 	attachResp, err := d.Client.ContainerExecAttach(ctx, execID.ID, container.ExecAttachOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to attach to exec: %w", err)
@@ -926,9 +926,14 @@ func (d *DockerRuntime) writeFileToContainer(ctx context.Context, containerID, p
 	}
 	attachResp.CloseWrite()
 
-	// Start the exec
-	if err := d.Client.ContainerExecStart(ctx, execID.ID, container.ExecStartOptions{}); err != nil {
-		return fmt.Errorf("failed to start exec: %w", err)
+	// Wait for exec to complete
+	inspectResp, err := d.Client.ContainerExecInspect(ctx, execID.ID)
+	if err != nil {
+		return fmt.Errorf("failed to inspect exec: %w", err)
+	}
+
+	if inspectResp.ExitCode != 0 {
+		return fmt.Errorf("write command failed with exit code %d", inspectResp.ExitCode)
 	}
 
 	return nil
