@@ -15,6 +15,7 @@ The command respects the global flags such as `--runtime`, `--debug`, or `--log-
 - `--format` controls the output representation (`plain`, `json`).
 - `--initial-state` emits a snapshot of currently running containers and their interface states before following live updates.
 - `--interface-stats` enables periodic interface counter sampling; leave unset to report only lifecycle and state changes.
+- `--interface-stats-interval` customizes how frequently statistics are collected (for example `500ms`, `2s`, `1m`).
 
 When invoked with no arguments it discovers all running labs and immediately begins streaming events; new labs that start after the command begins are picked up automatically.
 
@@ -64,7 +65,7 @@ This mode begins with a point-in-time view of every running container and interf
 $ sudo containerlab events --interface-stats
 ```
 
-Statistics are disabled by default. Enabling them augments the feed with periodic counter samples in addition to lifecycle and state changes.
+Statistics are disabled by default. Enabling them augments the feed with periodic counter samples in addition to lifecycle and state changes. Use `--interface-stats-interval` to balance fidelity with overhead: values between `1s` and `5s` work well for most labs, while larger deployments may prefer longer intervals (for example `10s`) to avoid excessive sampling load.
 
 #### Use with alternative runtimes
 

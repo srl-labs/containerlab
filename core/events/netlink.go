@@ -23,15 +23,23 @@ type netlinkRegistry struct {
 	events                 chan<- aggregatedEvent
 	includeInitialSnapshot bool
 	includeStats           bool
+	statsInterval          time.Duration
 }
 
-func newNetlinkRegistry(ctx context.Context, events chan<- aggregatedEvent, includeInitialSnapshot, includeStats bool) *netlinkRegistry {
+func newNetlinkRegistry(
+	ctx context.Context,
+	events chan<- aggregatedEvent,
+	includeInitialSnapshot bool,
+	includeStats bool,
+	statsInterval time.Duration,
+) *netlinkRegistry {
 	return &netlinkRegistry{
 		ctx:                    ctx,
 		watchers:               make(map[string]*netlinkWatcher),
 		events:                 events,
 		includeInitialSnapshot: includeInitialSnapshot,
 		includeStats:           includeStats,
+		statsInterval:          statsInterval,
 	}
 }
 
@@ -64,6 +72,7 @@ func (r *netlinkRegistry) Start(container *clabruntime.GenericContainer) {
 		done:            make(chan struct{}),
 		includeSnapshot: r.includeInitialSnapshot,
 		includeStats:    r.includeStats,
+		statsInterval:   r.statsInterval,
 	}
 
 	r.watchers[id] = watcher
@@ -213,6 +222,7 @@ type netlinkWatcher struct {
 	done            chan struct{}
 	includeSnapshot bool
 	includeStats    bool
+	statsInterval   time.Duration
 }
 
 func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
@@ -290,8 +300,8 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		ticker  *time.Ticker
 		tickerC <-chan time.Time
 	)
-	if w.includeStats {
-		ticker = time.NewTicker(time.Second)
+	if w.includeStats && w.statsInterval > 0 {
+		ticker = time.NewTicker(w.statsInterval)
 		tickerC = ticker.C
 		defer ticker.Stop()
 	}

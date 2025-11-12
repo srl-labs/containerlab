@@ -2,6 +2,7 @@ package events
 
 import (
 	"io"
+	"time"
 
 	clabcore "github.com/srl-labs/containerlab/core"
 )
@@ -12,6 +13,7 @@ type Options struct {
 	Runtime               string
 	IncludeInitialState   bool
 	IncludeInterfaceStats bool
+	StatsInterval         time.Duration
 	ClabOptions           []clabcore.ClabOption
 	Writer                io.Writer
 }

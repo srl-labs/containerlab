@@ -50,7 +50,7 @@ Events Command Emits Interface Statistics When Enabled
     Remove File If Exists    ${stats-log}
     Remove File If Exists    ${stats-err}
     TRY
-        Start Events Process    events_stats    plain    ${stats-log}    ${stats-err}    False    True
+        Start Events Process    events_stats    plain    ${stats-log}    ${stats-err}    False    True    2s
         Deploy Lab For Events
         Sleep    5s
         Destroy Lab For Events
@@ -128,10 +128,11 @@ Remove File If Exists
     Run Keyword And Ignore Error    Remove File    ${path}
 
 Start Events Process
-    [Arguments]    ${alias}    ${format}    ${stdout}    ${stderr}    ${initial}=False    ${interface_stats}=
+    [Arguments]    ${alias}    ${format}    ${stdout}    ${stderr}    ${initial}=False    ${interface_stats}=    ${stats_interval}=
     ${cmd}    Set Variable    ${CLAB_BIN} --runtime ${runtime} events --format ${format}
     ${cmd}    Run Keyword If    '${initial}'=='True'    Catenate    ${cmd}    --initial-state    ELSE    Set Variable    ${cmd}
     ${cmd}    Run Keyword If    '${interface_stats}'=='True'    Catenate    ${cmd}    --interface-stats    ELSE IF    '${interface_stats}'=='False'    Catenate    ${cmd}    --interface-stats=false    ELSE    Set Variable    ${cmd}
+    ${cmd}    Run Keyword If    '${stats_interval}'!=''    Catenate    ${cmd}    --interface-stats-interval=${stats_interval}    ELSE    Set Variable    ${cmd}
     Start Process    ${cmd}    shell=True    alias=${alias}    stdout=${stdout}    stderr=${stderr}
     Sleep    1s
 

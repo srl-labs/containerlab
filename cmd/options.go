@@ -55,6 +55,7 @@ func GetOptions() *Options {
 			Events: &EventsOptions{
 				Format:                "plain",
 				IncludeInterfaceStats: false,
+				StatsInterval:         time.Second,
 			},
 			ToolsAPI: &ToolsApiOptions{
 				Image:          "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
@@ -362,6 +363,7 @@ type EventsOptions struct {
 	Format                string
 	IncludeInitialState   bool
 	IncludeInterfaceStats bool
+	StatsInterval         time.Duration
 }
 
 type ToolsApiOptions struct {

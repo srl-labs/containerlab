@@ -44,6 +44,13 @@ func eventsCmd(o *Options) (*cobra.Command, error) {
 		"include interface statistics updates when streaming events",
 	)
 
+	c.Flags().DurationVar(
+		&o.Events.StatsInterval,
+		"interface-stats-interval",
+		o.Events.StatsInterval,
+		"interval between interface statistics samples (requires --interface-stats)",
+	)
+
 	c.Example = `# Stream container and interface events in plain text
 containerlab events
 
@@ -59,6 +66,7 @@ func eventsFn(cmd *cobra.Command, o *Options) error {
 		Runtime:               o.Global.Runtime,
 		IncludeInitialState:   o.Events.IncludeInitialState,
 		IncludeInterfaceStats: o.Events.IncludeInterfaceStats,
+		StatsInterval:         o.Events.StatsInterval,
 		ClabOptions:           o.ToClabOptions(),
 		Writer:                cmd.OutOrStdout(),
 	}
