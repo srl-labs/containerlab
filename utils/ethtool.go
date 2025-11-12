@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/vishvananda/netlink"
 )
 
 const (
@@ -82,4 +83,47 @@ func EthtoolTXOff(name string) error {
 
 	value = EthtoolValue{ETHTOOL_STXCSUM, 0}
 	return ioctlEthtool(socket, uintptr(unsafe.Pointer(&request))) // skipcq: GSC-G103
+}
+
+// GetVethPeerIndex will get the intfindex of the veth peer for
+// the given interface name on the container.
+func GetVethPeerIndex(ifaceName string, peerIndex *int) func(ns.NetNS) error {
+	return func(_ ns.NetNS) error {
+		link, err := netlink.LinkByName(ifaceName)
+		if err != nil {
+			return fmt.Errorf("failed to find %s in container: %w", ifaceName, err)
+		}
+
+		// confirm it's a veth.
+		veth, ok := link.(*netlink.Veth)
+		if !ok {
+			return fmt.Errorf("%s is not a veth interface", ifaceName)
+		}
+
+		*peerIndex, err = netlink.VethPeerIndex(veth)
+		if err != nil {
+			return fmt.Errorf("failed to get peer interface index: %w", err)
+		}
+
+		return nil
+	}
+}
+
+// DisableTxOffloadByIndex disables TX checksum offload on an interface by intf index
+func DisableTxOffloadByIndex(index int) error {
+	link, err := netlink.LinkByIndex(index)
+	if err != nil {
+		return fmt.Errorf("failed to find interface with ifindex %d: %v", index, err)
+	}
+
+	ifaceName := link.Attrs().Name
+	log.Debugf("Disabling TX offload on interface %s (index %d)", ifaceName, index)
+
+	if err := EthtoolTXOff(ifaceName); err != nil {
+		return fmt.Errorf("failed to disable TX offload on %s: %v", ifaceName, err)
+	}
+
+	log.Debug("Successfully disabled TX offload on host ns interface", "interface", ifaceName)
+
+	return nil
 }
