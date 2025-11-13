@@ -15,7 +15,6 @@ import (
 	"text/template"
 
 	"github.com/hellt/envsubst"
-	"github.com/srl-labs/containerlab/internal/cidr"
 )
 
 func CreateFuncs() template.FuncMap {
@@ -624,7 +623,7 @@ func (nf *NetFuncs) CIDRHost(hostnum any, prefix any) (string, error) {
 		return "", fmt.Errorf("expected a number: %w", err)
 	}
 
-	ip, err := cidr.HostBig(network, big.NewInt(n))
+	ip, err := HostBig(network, big.NewInt(n))
 	if err != nil {
 		return "", err
 	}
