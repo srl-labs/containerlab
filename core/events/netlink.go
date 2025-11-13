@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"golang.org/x/sys/unix"
@@ -158,7 +159,7 @@ func cloneContainer(container *clabruntime.GenericContainer) *clabruntime.Generi
 	}
 
 	if clone.ShortID == "" {
-		clone.ShortID = shortID(clone.ID)
+		clone.ShortID = clabutils.ShortID(clone.ID)
 	}
 
 	if container.Runtime == nil {
@@ -197,7 +198,7 @@ func containerFromEvent(
 
 	container := &clabruntime.GenericContainer{
 		ID:      id,
-		ShortID: shortID(short),
+		ShortID: clabutils.ShortID(short),
 	}
 
 	if name != "" {
@@ -211,7 +212,7 @@ func containerFromEvent(
 	}
 
 	if container.ShortID == "" {
-		container.ShortID = shortID(container.ID)
+		container.ShortID = clabutils.ShortID(container.ID)
 	}
 
 	if runtime != nil {
@@ -394,14 +395,6 @@ func containerLabel(container *clabruntime.GenericContainer) string {
 	}
 
 	return container.Labels[clabconstants.Containerlab]
-}
-
-func shortID(id string) string {
-	if len(id) > 12 {
-		return id[:12]
-	}
-
-	return id
 }
 
 func interfaceAttributes(

@@ -39,7 +39,7 @@ func DockerMessageToEventData(msg dockerEvents.Message) DockerEventData {
 		Timestamp:   ts,
 		Type:        string(msg.Type),
 		Action:      string(msg.Action),
-		ActorID:     msg.Actor.ID,
+		ActorID:     ShortID(msg.Actor.ID),
 		ActorName:   attributes["name"],
 		ActorFullID: msg.Actor.ID,
 		Attributes:  attributes,

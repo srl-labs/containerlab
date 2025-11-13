@@ -12,6 +12,7 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // Stream subscribes to the selected runtime and netlink sources and forwards
@@ -192,7 +193,7 @@ func aggregatedEventFromContainerEvent(
 		Timestamp:   ts,
 		Type:        eventType,
 		Action:      action,
-		ActorID:     shortID(short),
+		ActorID:     clabutils.ShortID(short),
 		ActorName:   actorName,
 		ActorFullID: actorFullID,
 		Attributes:  attributes,
@@ -342,7 +343,7 @@ func aggregatedEventFromContainerSnapshot(
 
 	short := container.ShortID
 	if short == "" {
-		short = shortID(container.ID)
+		short = clabutils.ShortID(container.ID)
 	}
 
 	attributes := cloneStringMap(container.Labels)
@@ -393,7 +394,7 @@ func aggregatedEventFromContainerSnapshot(
 		Timestamp:   time.Now(),
 		Type:        "container",
 		Action:      action,
-		ActorID:     shortID(short),
+		ActorID:     clabutils.ShortID(short),
 		ActorName:   actorName,
 		ActorFullID: container.ID,
 		Attributes:  attributes,
