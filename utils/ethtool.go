@@ -85,9 +85,9 @@ func EthtoolTXOff(name string) error {
 	return ioctlEthtool(socket, uintptr(unsafe.Pointer(&request))) // skipcq: GSC-G103
 }
 
-// GetVethPeerIndex will get the intfindex of the veth peer for
-// the given interface name on the container.
-func GetVethPeerIndex(ifaceName string, peerIndex *int) func(ns.NetNS) error {
+// VethPeerIndex gets the interface index of the veth peer for
+// the given interface name in the container.
+func VethPeerIndex(ifaceName string, peerIndex *int) func(ns.NetNS) error {
 	return func(_ ns.NetNS) error {
 		link, err := netlink.LinkByName(ifaceName)
 		if err != nil {
@@ -109,21 +109,21 @@ func GetVethPeerIndex(ifaceName string, peerIndex *int) func(ns.NetNS) error {
 	}
 }
 
-// DisableTxOffloadByIndex disables TX checksum offload on an interface by intf index
+// DisableTxOffloadByIndex disables TX checksum offload on an interface by its index.
 func DisableTxOffloadByIndex(index int) error {
 	link, err := netlink.LinkByIndex(index)
 	if err != nil {
-		return fmt.Errorf("failed to find interface with ifindex %d: %v", index, err)
+		return fmt.Errorf("failed to find interface with index %d: %w", index, err)
 	}
 
 	ifaceName := link.Attrs().Name
 	log.Debugf("Disabling TX offload on interface %s (index %d)", ifaceName, index)
 
 	if err := EthtoolTXOff(ifaceName); err != nil {
-		return fmt.Errorf("failed to disable TX offload on %s: %v", ifaceName, err)
+		return fmt.Errorf("failed to disable TX offload on %s: %w", ifaceName, err)
 	}
 
-	log.Debug("Successfully disabled TX offload on host ns interface", "interface", ifaceName)
+	log.Debug("Successfully disabled TX offload on the host ns interface", "interface", ifaceName)
 
 	return nil
 }

@@ -379,15 +379,15 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		return err
 	}
 
-	// Disable TX checksum offload on host NS veth for mgmt intf.
-	var peerIntfindex int
-	err := n.ExecFunction(ctx, clabutils.GetVethPeerIndex("eth0", &peerIntfindex))
+	// Disable TX checksum offload on the host NS veth for the mgmt interface.
+	var peerIfIndex int
+	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
 	if err != nil {
 		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
 			"node", n.Cfg.ShortName,
 			"error", err)
 	} else {
-		if err := clabutils.DisableTxOffloadByIndex(peerIntfindex); err != nil {
+		if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
 			log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
 				"node", n.Cfg.ShortName,
 				"error", err)
