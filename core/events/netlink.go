@@ -125,12 +125,17 @@ func (r *netlinkRegistry) HandleContainerEvent(
 	action := strings.ToLower(ev.Action)
 
 	switch action {
-	case clabruntime.EventActionStart, clabruntime.EventActionUnpause, clabruntime.EventActionRestart:
+	case clabruntime.EventActionStart,
+		clabruntime.EventActionUnpause,
+		clabruntime.EventActionRestart:
 		container := containerFromEvent(runtime, ev)
 		if container != nil {
 			r.Start(container)
 		}
-	case clabruntime.EventActionDie, clabruntime.EventActionStop, clabruntime.EventActionDestroy, clabruntime.EventActionKill:
+	case clabruntime.EventActionDie,
+		clabruntime.EventActionStop,
+		clabruntime.EventActionDestroy,
+		clabruntime.EventActionKill:
 		id := ev.ActorFullID
 		if id == "" {
 			id = ev.ActorID
@@ -291,7 +296,11 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 	opts := netlink.LinkSubscribeOptions{Namespace: &nsHandle}
 
 	if err := netlink.LinkSubscribeWithOptions(updates, done, opts); err != nil {
-		log.Debugf("failed to subscribe to netlink updates for container %s: %v", containerName, err)
+		log.Debugf(
+			"failed to subscribe to netlink updates for container %s: %v",
+			containerName,
+			err,
+		)
 
 		return
 	}

@@ -60,7 +60,15 @@ func plainFormatter(w io.Writer) formatter {
 			suffix = " (" + strings.Join(parts, ", ") + ")"
 		}
 
-		_, err := fmt.Fprintf(w, "%s %s %s %s%s\n", ts.Format(time.RFC3339Nano), ev.Type, ev.Action, actor, suffix)
+		_, err := fmt.Fprintf(
+			w,
+			"%s %s %s %s%s\n",
+			ts.Format(time.RFC3339Nano),
+			ev.Type,
+			ev.Action,
+			actor,
+			suffix,
+		)
 
 		return err
 	}
