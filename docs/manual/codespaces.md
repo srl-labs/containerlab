@@ -256,7 +256,7 @@ Containerlab has four devcontainer images that differ in the way the docker is s
 1. Docker in Docker (dind) - is the devcontainer that is meant to contain an isolated docker environment inside the container. This image is **suitable for Codespaces**.
 2. Docker outside of Docker (dood) - is a devcontainer image that mounts the docker socket from the outside, and therefore can reuse the images existing on the host machine. This image is mostly used with [DevPod](../macos.md#devpod).
 
-You will find the devcontainer definition files in [containerlab/.devcontianer](https://github.com/srl-labs/containerlab/tree/main/.devcontainer) directory where:
+You will find the devcontainer definition files in [containerlab/.devcontainer](https://github.com/srl-labs/containerlab/tree/main/.devcontainer) directory where:
 
 1. devcontainer.json - the Dev Container configuration file that defines how the environment is built, configured and launched.
 2. Dockerfile and slim.Dockerfile - the Dockerfile files that the Dev Container is built from.
