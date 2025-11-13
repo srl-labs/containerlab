@@ -524,6 +524,14 @@ func (*IgniteRuntime) GetCooCBindMounts() clabtypes.Binds {
 func (*IgniteRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("StreamLogs not implemented for Ignite runtime")
 }
+
+func (*IgniteRuntime) StreamEvents(
+	context.Context,
+	clabruntime.EventStreamOptions,
+) (<-chan clabruntime.ContainerEvent, <-chan error, error) {
+	return nil, nil, fmt.Errorf("StreamEvents is not implemented for Ignite runtime")
+}
+
 func (*IgniteRuntime) InspectImage(ctx context.Context, imageName string) (*runtime.ImageInspect, error) {
 	return nil, fmt.Errorf("InspectImage not implemented for Ignite runtime")
 }

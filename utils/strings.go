@@ -14,3 +14,12 @@ func StripNonPrintChars(s string) string {
 		return r
 	}, s)
 }
+
+// ShortID trims the supplied identifier to the first 12 characters, matching Docker's short ID format.
+func ShortID(id string) string {
+	if len(id) > 12 {
+		return id[:12]
+	}
+
+	return id
+}

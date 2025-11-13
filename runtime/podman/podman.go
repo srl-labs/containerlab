@@ -5,7 +5,6 @@ package podman
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -496,39 +495,13 @@ func (*PodmanRuntime) StreamLogs(ctx context.Context, containerName string) (io.
 	return nil, fmt.Errorf("StreamLogs not implemented for Podman runtime")
 }
 
-// InspectImage returns detailed information about a container image
+func (*PodmanRuntime) StreamEvents(
+	context.Context,
+	runtime.EventStreamOptions,
+) (<-chan runtime.ContainerEvent, <-chan error, error) {
+	return nil, nil, fmt.Errorf("StreamEvents is not implemented for Podman runtime")
+}
+
 func (p *PodmanRuntime) InspectImage(ctx context.Context, imageName string) (*runtime.ImageInspect, error) {
-	// Use podman inspect command
-	cmd := exec.CommandContext(ctx, "podman", "image", "inspect", imageName)
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to inspect image %s: %w", imageName, err)
-	}
-
-	var inspectData []struct {
-		ID     string `json:"Id"`
-		Config struct {
-			Labels map[string]string `json:"Labels"`
-		} `json:"Config"`
-	}
-
-	if err := json.Unmarshal(output, &inspectData); err != nil {
-		return nil, fmt.Errorf("failed to parse inspect output: %w", err)
-	}
-
-	if len(inspectData) == 0 {
-		return nil, fmt.Errorf("no inspect data returned for image %s", imageName)
-	}
-
-	labels := inspectData[0].Config.Labels
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-
-	return &runtime.ImageInspect{
-		ID: inspectData[0].ID,
-		Config: runtime.ImageConfig{
-			Labels: labels,
-		},
-	}, nil
+	return nil, fmt.Errorf("InspectImage not implemented for Podman runtime")
 }
