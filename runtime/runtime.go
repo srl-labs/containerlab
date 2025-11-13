@@ -78,6 +78,11 @@ type ContainerRuntime interface {
 	// StreamLogs returns a reader for the container's logs
 	// The caller needs to close the returned ReadCloser.
 	StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error)
+	// StreamEvents streams runtime events that match provided options.
+	StreamEvents(
+		ctx context.Context,
+		opts EventStreamOptions,
+	) (<-chan ContainerEvent, <-chan error, error)
 }
 
 type ContainerStatus string
@@ -87,6 +92,34 @@ const (
 	Running  = "Running"
 	Stopped  = "Stopped"
 )
+
+const (
+	EventTypeContainer = "container"
+)
+
+const (
+	EventActionStart   = "start"
+	EventActionUnpause = "unpause"
+	EventActionRestart = "restart"
+	EventActionDie     = "die"
+	EventActionStop    = "stop"
+	EventActionDestroy = "destroy"
+	EventActionKill    = "kill"
+)
+
+type EventStreamOptions struct {
+	Labels map[string]string
+}
+
+type ContainerEvent struct {
+	Timestamp   time.Time
+	Type        string
+	Action      string
+	ActorID     string
+	ActorName   string
+	ActorFullID string
+	Attributes  map[string]string
+}
 
 type Initializer func() ContainerRuntime
 
