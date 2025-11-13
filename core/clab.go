@@ -702,3 +702,69 @@ func (c *CLab) CheckConnectivity(ctx context.Context) error {
 
 	return nil
 }
+
+// DeployInfrastructure deploys infrastructure components like Tailscale VPN
+// after the network is created but before nodes are deployed.
+func (c *CLab) DeployInfrastructure(ctx context.Context) error {
+	// Get the docker runtime and deploy infrastructure
+	if dockerRuntime, ok := c.Runtimes[clabruntimedocker.RuntimeName]; ok {
+		if dr, ok := dockerRuntime.(*clabruntimedocker.DockerRuntime); ok {
+			// Create LabContext with the necessary information
+			labCtx := &clabruntimedocker.LabContext{
+				Name:     c.Config.Name,
+				Prefix:   *c.Config.Prefix,
+				Owner:    clabutils.GetOwner(),
+				LabDir:   c.TopoPaths.TopologyLabDir(),
+				TopoFile: c.TopoPaths.TopologyFilenameAbsPath(),
+			}
+			
+			// Call DeployTailscale with the lab context
+			// DeployTailscale will check if Tailscale is configured and enabled
+			if err := dr.DeployTailscale(ctx, labCtx); err != nil {
+				return fmt.Errorf("failed to deploy Tailscale: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// DestroyInfrastructure removes infrastructure components like Tailscale VPN.
+func (c *CLab) DestroyInfrastructure(ctx context.Context) error {
+	// Get the docker runtime and destroy infrastructure
+	if dockerRuntime, ok := c.Runtimes[clabruntimedocker.RuntimeName]; ok {
+		if dr, ok := dockerRuntime.(*clabruntimedocker.DockerRuntime); ok {
+
+			// Call DestroyTailscale with the lab name
+			// DestroyTailscale will check if Tailscale is configured and enabled
+			// We don't return errors here to allow cleanup to continue
+			if err := dr.DestroyTailscale(ctx, c.Config.Name); err != nil {
+				log.Warnf("errors during Tailscale destruction: %v", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// UpdateInfrastructureDNS updates DNS records in infrastructure components (like Tailscale DNS).
+// This should be called after nodes are deployed to populate DNS with node information.
+func (c *CLab) UpdateInfrastructureDNS(ctx context.Context) error {
+	// Get the docker runtime and update DNS
+	if dockerRuntime, ok := c.Runtimes[clabruntimedocker.RuntimeName]; ok {
+		if dr, ok := dockerRuntime.(*clabruntimedocker.DockerRuntime); ok {
+			// Convert Nodes map to interface{} map for UpdateTailscaleDNS
+			nodesMap := make(map[string]interface{})
+			for name, node := range c.Nodes {
+				nodesMap[name] = node
+			}
+
+			// Update Tailscale DNS with node records
+			if err := dr.UpdateTailscaleDNS(ctx, c.Config.Name, nodesMap); err != nil {
+				log.Warnf("Failed to update Tailscale DNS: %v", err)
+			}
+		}
+	}
+
+	return nil
+}

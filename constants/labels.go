@@ -12,4 +12,6 @@ const (
 	NodeMgmtNetBr = "clab-mgmt-net-bridge"
 	Owner         = "clab-owner"
 	ToolType      = "tool-type"
+	// IsInfrastructure marks containers that are infrastructure components (not user nodes)
+	IsInfrastructure = "clab-is-infrastructure"
 )

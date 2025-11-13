@@ -70,6 +70,7 @@ nav:
           - Host: manual/kinds/host.md
       - Configuration artifacts: manual/conf-artifacts.md
       - Network: manual/network.md
+      - Tailscale VPN: manual/tailscale.md
       - Packet capture & Wireshark: manual/wireshark.md
       - VM based routers integration: manual/vrnetlab.md
       - Clabernetes:

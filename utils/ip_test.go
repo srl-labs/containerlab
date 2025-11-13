@@ -133,3 +133,91 @@ func TestCIDRToDDN(t *testing.T) {
 		})
 	}
 }
+
+func TestLastHostIPInSubnet(t *testing.T) {
+	tests := []struct {
+		name   string
+		subnet string
+		want   string
+	}{
+		{
+			name:   "ipv4_slash_24",
+			subnet: "172.20.20.0/24",
+			want:   "172.20.20.254",
+		},
+		{
+			name:   "ipv4_slash_16",
+			subnet: "10.0.0.0/16",
+			want:   "10.0.255.254",
+		},
+		{
+			name:   "ipv4_slash_8",
+			subnet: "192.0.0.0/8",
+			want:   "192.255.255.254",
+		},
+		{
+			name:   "ipv4_slash_30",
+			subnet: "192.168.1.0/30",
+			want:   "192.168.1.2",
+		},
+		{
+			name:   "ipv4_slash_31",
+			subnet: "192.168.1.0/31",
+			want:   "192.168.1.1",
+		},
+		{
+			name:   "ipv4_slash_32",
+			subnet: "192.168.1.1/32",
+			want:   "192.168.1.1",
+		},
+		{
+			name:   "ipv6_slash_64",
+			subnet: "3fff:172:20:20::/64",
+			want:   "3fff:172:20:20:ffff:ffff:ffff:ffff",
+		},
+		{
+			name:   "ipv6_slash_48",
+			subnet: "fd00:1234:5678::/48",
+			want:   "fd00:1234:5678:ffff:ffff:ffff:ffff:ffff",
+		},
+		{
+			name:   "ipv6_slash_128",
+			subnet: "2001:db8::1/128",
+			want:   "2001:db8::1",
+		},
+		{
+			name:   "ipv4_100_64",
+			subnet: "100.64.0.0/24",
+			want:   "100.64.0.254",
+		},
+		{
+			name:   "ipv4_slash_25",
+			subnet: "172.20.20.0/25",
+			want:   "172.20.20.126",
+		},
+		{
+			name:   "ipv4_slash_31_different_base",
+			subnet: "10.0.0.254/31",
+			want:   "10.0.0.255",
+		},
+		{
+			name:   "ipv4_slash_32_different_ip",
+			subnet: "10.10.10.10/32",
+			want:   "10.10.10.10",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, ipnet, err := net.ParseCIDR(tt.subnet)
+			if err != nil {
+				t.Fatalf("failed to parse CIDR %q: %v", tt.subnet, err)
+			}
+
+			got := LastHostIPInSubnet(ipnet)
+			if diff := cmp.Diff(tt.want, got.String()); diff != "" {
+				t.Fatalf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}

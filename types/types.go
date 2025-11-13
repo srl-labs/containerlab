@@ -60,6 +60,50 @@ type MgmtNet struct {
 	ExternalAccess *bool `json:"external-access,omitempty" yaml:"external-access,omitempty"`
 
 	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
+
+	// Tailscale VPN configuration
+	Tailscale *TailscaleConfig `json:"tailscale,omitempty" yaml:"tailscale,omitempty"`
+}
+
+// TailscaleConfig contains Tailscale VPN settings for the management network.
+type TailscaleConfig struct {
+	// Enable Tailscale VPN for management network
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	// Tailscale authentication key
+	AuthKey string `json:"authkey,omitempty" yaml:"authkey,omitempty"`
+	// Image name for Tailscale container
+	Image string `json:"image,omitempty" yaml:"image,omitempty"`
+	// IPv4/IPv6 address for the Tailscale container in the management network
+	IPv4Address string `json:"ipv4-address,omitempty" yaml:"ipv4-address,omitempty"`
+	IPv6Address string `json:"ipv6-address,omitempty" yaml:"ipv6-address,omitempty"`
+	// Tags to apply to the Tailscale node
+	Tags []string `json:"tags,omitempty" yaml:"tags,omitempty"`
+	// Enable SNAT from mgmt subnet to tailnet (default: true)
+	SNAT *bool `json:"snat,omitempty" yaml:"snat,omitempty"`
+	// Accept Routes from Tailnet (default: false)
+	AcceptRoutes *bool `json:"accept-routes,omitempty" yaml:"accept-routes,omitempty"`
+	// Accept DNS settings from Tailnet (default: false)
+	AcceptDNS *bool `json:"accept-dns,omitempty" yaml:"accept-dns,omitempty"`
+	// Optional 1:1 NAT mapping - maps mgmt subnet to this subnet in tailnet
+	OneToOneNAT string `json:"one-to-one-nat,omitempty" yaml:"one-to-one-nat,omitempty"`
+	// Use ephemeral/in-memory state - device auto-removed from tailnet on container stop (default: false)
+	EphemeralState *bool `json:"ephemeral-state,omitempty" yaml:"ephemeral-state,omitempty"`
+	// DNS server configuration for MagicDNS split DNS
+	DNS *TailscaleDNSConfig `json:"dns,omitempty" yaml:"dns,omitempty"`
+	// Healthcheck configuration (optional, defaults provided)
+	Healthcheck *HealthcheckConfig `json:"healthcheck,omitempty" yaml:"healthcheck,omitempty"`
+}
+
+// TailscaleDNSConfig contains DNS server settings for the Tailscale container.
+type TailscaleDNSConfig struct {
+	// Enable DNS server in Tailscale container (default: false)
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	// DNS domain suffix for containerlab nodes (default: "<lab-name>.clab")
+	Domain string `json:"domain,omitempty" yaml:"domain,omitempty"`
+	// DNS server listen port (default: 53)
+	Port int `json:"port,omitempty" yaml:"port,omitempty"`
+	// CoreDNS version to use (default: "1.13.1")
+	CoreDNSVersion string `json:"coredns-version,omitempty" yaml:"coredns-version,omitempty"`
 }
 
 // Interface compliance.

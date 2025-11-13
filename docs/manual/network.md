@@ -298,6 +298,21 @@ topology:
 
 1. When set to `false`, containerlab will not touch iptables rules. On most docker installations this will result in restricted external access.
 
+#### Tailscale VPN
+
+Containerlab supports automatic deployment of [Tailscale](https://tailscale.com/) VPN to enable secure remote access to your lab's management network. Simply add a `tailscale` section under your management network configuration with your Tailscale auth key, and containerlab will automatically deploy and configure a Tailscale container that advertises your management network routes.
+
+```yaml
+name: mylab
+mgmt:
+  network: clab
+  ipv4-subnet: 172.20.20.0/24
+  tailscale:
+    authkey: "tskey-auth-xxxxx-yyyyy"
+```
+
+For comprehensive documentation including advanced configuration options, 1:1 NAT support, security considerations, and troubleshooting, see the [Tailscale VPN guide](tailscale.md)
+
 ///details | Errors and warnings
 External access feature requires nftables kernel API to be present. Kernels newer than v4 typically have this API enabled by default. To understand which API is in use one can issue the following command:
 
