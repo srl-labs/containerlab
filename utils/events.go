@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"maps"
 	"time"
 
 	dockerEvents "github.com/docker/docker/api/types/events"
@@ -28,9 +29,7 @@ func DockerMessageToEventData(msg dockerEvents.Message) DockerEventData {
 	}
 
 	attributes := make(map[string]string, len(msg.Actor.Attributes)+1)
-	for k, v := range msg.Actor.Attributes {
-		attributes[k] = v
-	}
+	maps.Copy(attributes, msg.Actor.Attributes)
 
 	if msg.Scope != "" {
 		attributes["scope"] = msg.Scope
