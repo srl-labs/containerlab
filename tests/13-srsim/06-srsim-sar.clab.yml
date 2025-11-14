@@ -3,19 +3,19 @@ topology:
   nodes:
     sar1:
       image: registry.srlinux.dev/pub/nokia_srsim:25.10.R1
-      license: /opt/nokia/sros/license.txt
+      license: /opt/nokia/sros/license-sros25.txt
       kind: nokia_srsim
       type: sar-1
       certificate:
         issue: true
     sar2:
       image: registry.srlinux.dev/pub/nokia_srsim:25.10.R1
-      license: /opt/nokia/sros/license.txt
+      license: /opt/nokia/sros/license-sros25.txt
       kind: nokia_srsim
       type: sar-1
     sar3:
       image: registry.srlinux.dev/pub/nokia_srsim:25.10.R1
-      license: /opt/nokia/sros/license.txt
+      license: /opt/nokia/sros/license-sros25.txt
       kind: nokia_srsim
       type: sar-hm
       certificate:
