@@ -157,7 +157,7 @@ var (
       e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
       e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
 	  eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
-	// Auxiliary regexps for IXR/SAR detection
+	// Auxiliary regexps for IXR/SAR detection.
 	sarRegexp   = regexp.MustCompile(`(?i)\bsar-`)
 	sarHmRegexp = regexp.MustCompile(`(?i)\b(sar-hm|sar-hmc)\b`)
 
@@ -1156,7 +1156,6 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 
 // applyNodeTypeSpecificConfig applies node-type and security specific overrides.
 func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
-
 	// SR OS nodes with insecure gRPC, non-IXR/SAR
 	if !tplData.IsSecureGrpc {
 		tplData.GRPCConfig = grpcConfigInsecure
@@ -1179,22 +1178,25 @@ func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
 	if isSAR {
 		tplData.SystemConfig = systemCfgSAR
 		tplData.GRPCConfig = grpcConfigSAR
-		//SAR with insecure gRPC
+		// SAR with insecure gRPC
 		if !tplData.IsSecureGrpc {
 			tplData.GRPCConfig = grpcConfigSARInsecure
 		}
 		isSARHm := sarHmRegexp.MatchString(n.Cfg.NodeType)
-		if isSARHm { //MD disabled on SAR-Hm nodes
+		if isSARHm { // MD disabled on SAR-Hm nodes
 			if tplData.ConfigurationMode != "classic" {
-				log.Warn("SAR-Hm nodes only support classic configuration mode. Overriding configuration mode to 'classic'",
-					"node", n.Cfg.LongName,
-					"node-type", tplData.NodeType)
+				log.Warn(
+					"SAR-Hm nodes only support classic configuration mode. Overriding configuration mode to 'classic'",
+					"node",
+					n.Cfg.LongName,
+					"node-type",
+					tplData.NodeType,
+				)
 				tplData.ConfigurationMode = "classic"
 				n.Cfg.Env[envSrosConfigMode] = "classic"
 			}
 		}
 	}
-
 }
 
 // selectConfigTemplate chooses the appropriate config template based on template data.
