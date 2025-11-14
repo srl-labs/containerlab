@@ -33,7 +33,6 @@ import (
 	"github.com/moby/term"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/runtime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -1357,7 +1356,7 @@ func (d *DockerRuntime) StreamLogs(
 func (d *DockerRuntime) InspectImage(
 	ctx context.Context,
 	imageName string,
-) (*runtime.ImageInspect, error) {
+) (*clabruntime.ImageInspect, error) {
 	imageData, _, err := d.Client.ImageInspectWithRaw(ctx, imageName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect image %s: %w", imageName, err)
@@ -1370,9 +1369,9 @@ func (d *DockerRuntime) InspectImage(
 	}
 
 	// Extract GraphDriver data
-	graphDriver := runtime.GraphDriver{
+	graphDriver := clabruntime.GraphDriver{
 		Name: imageData.GraphDriver.Name,
-		Data: runtime.GraphDriverData{},
+		Data: clabruntime.GraphDriverData{},
 	}
 
 	// GraphDriver.Data is a map[string]string in Docker
@@ -1386,12 +1385,12 @@ func (d *DockerRuntime) InspectImage(
 		graphDriver.Data.MergedDir = mergedDir
 	}
 
-	return &runtime.ImageInspect{
+	return &clabruntime.ImageInspect{
 		ID: imageData.ID,
-		Config: runtime.ImageConfig{
+		Config: clabruntime.ImageConfig{
 			Labels: labels,
 		},
-		RootFS: runtime.RootFS{
+		RootFS: clabruntime.RootFS{
 			Type:   imageData.RootFS.Type,
 			Layers: imageData.RootFS.Layers,
 		},
