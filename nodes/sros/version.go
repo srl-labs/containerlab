@@ -26,6 +26,12 @@ var (
 	//go:embed configs/grpc_ixr_insecure.cfg
 	grpcConfigIXRInsecure string
 
+	//go:embed configs/grpc_sar.cfg
+	grpcConfigSAR string
+
+	//go:embed configs/grpc_insecure_sar.cfg
+	grpcConfigSARInsecure string
+
 	//go:embed configs/netconf.cfg
 	netconfConfig string
 
@@ -37,6 +43,9 @@ var (
 
 	//go:embed configs/system_ixr.cfg
 	systemCfgIXR string
+
+	//go:embed configs/system_sar.cfg
+	systemCfgSAR string
 
 	//go:embed configs/ssh.cfg
 	sshConfig string

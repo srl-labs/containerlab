@@ -1130,6 +1130,19 @@ func (n *sros) addDefaultConfig() error {
 		}
 	}
 
+	if strings.Contains(tplData.NodeType, "sar-") {
+		tplData.GRPCConfig = grpcConfigSAR
+		tplData.SystemConfig = systemCfgSAR
+	}
+	if !*n.Cfg.Certificate.Issue {
+		log.Debugf("Using insecure cert configuration for node %s, found certificate.issue flag %v",
+			n.Cfg.ShortName, *n.Cfg.Certificate.Issue)
+		tplData.GRPCConfig = grpcConfigInsecure
+		if strings.Contains(tplData.NodeType, "sar-") {
+			tplData.GRPCConfig = grpcConfigSARInsecure
+		}
+	}
+
 	if n.Config().DNS != nil {
 		tplData.DNSServers = append(tplData.DNSServers, n.Config().DNS.Servers...)
 	}
