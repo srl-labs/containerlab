@@ -11,12 +11,12 @@ function check_os {
         if [ "$ID" = "debian" ]; then
             DISTRO_TYPE="debian"
             if [ "$VERSION_ID" = "13" ]; then
-                DOCKER_VERSION="25.8.2"
+                DOCKER_VERSION="28.5.2"
             fi
         elif [ "$ID" = "ubuntu" ]; then
             DISTRO_TYPE="ubuntu"
             if [ "$VERSION_ID" = "25.04" ]; then
-                DOCKER_VERSION="25.8.2"
+                DOCKER_VERSION="28.5.2"
             fi
         elif [ "$ID" = "fedora" ]; then
             DISTRO_TYPE="fedora"
