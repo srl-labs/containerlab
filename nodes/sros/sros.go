@@ -30,6 +30,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/netconf"
 	"github.com/scrapli/scrapligo/driver/opoptions"
+
 	"github.com/scrapli/scrapligo/response"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -59,6 +60,7 @@ const (
 	retryTimer = 1 * time.Second
 
 	scrapliPlatformName          = "nokia_sros"
+	scrapliPlatformNameClassic   = "nokia_sros_classic"
 	configCf3                    = "config/cf3"
 	configCf2                    = "config/cf2"
 	configCf1                    = "config/cf1"
@@ -74,6 +76,7 @@ const (
 	envNokiaSrosXIOM             = "NOKIA_SROS_XIOM"
 	envNokiaSrosMDA              = "NOKIA_SROS_MDA"
 	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
+	envSrosConfigMode            = "CLAB_SROS_CONFIG_MODE"
 
 	defaultSrosPowerType       = "dc"
 	defaultSrosPowerModuleType = "ps-a-dc-6000"
@@ -85,10 +88,17 @@ const (
 
 var (
 
-	//go:embed sros_default_config.go.tpl
-	srosConfigCmdsTpl string
-	kindNames         = []string{"nokia_srsim"}
-	srosSysctl        = map[string]string{
+	//go:embed sros_config_sros25.go.tpl
+	cfgTplSROS25 string
+
+	//go:embed sros_config_classic.go.tpl
+	cfgTplClassic string
+
+	//go:embed ixr_config_classic.go.tpl
+	cfgTplClassicIxr string
+
+	kindNames  = []string{"nokia_srsim"}
+	srosSysctl = map[string]string{
 		"net.ipv4.ip_forward":                "0",
 		"net.ipv6.conf.all.disable_ipv6":     "0",
 		"net.ipv6.conf.default.disable_ipv6": "0",
@@ -108,14 +118,12 @@ var (
 		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
+		envSrosConfigMode:         "model-driven",      // Default
 	}
 
 	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
 	readyCmdBoth = `/usr/bin/pgrep ^both$`
 	readyCmdIom  = `/usr/bin/pgrep ^iom$`
-
-	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(clabutils.CreateFuncs()).
-			Parse(srosConfigCmdsTpl)
 
 	requiredKernelVersion = &clabutils.KernelVersion{
 		Major:    5,
@@ -154,7 +162,6 @@ func Register(r *clabnodes.NodeRegistry) {
 	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
-
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(
 		defaultCredentials,
 		generateNodeAttributes,
@@ -303,9 +310,7 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 		}
 	}
 
-	for k, v := range slotA.Env {
-		vars[k] = v
-	}
+	maps.Copy(vars, slotA.Env)
 
 	return vars, nil
 }
@@ -379,6 +384,21 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		return err
 	}
 
+	// Disable TX checksum offload on the host NS veth for the mgmt interface.
+	var peerIfIndex int
+	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
+	if err != nil {
+		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
+			"node", n.Cfg.ShortName,
+			"error", err)
+	} else {
+		if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
+			log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
+				"node", n.Cfg.ShortName,
+				"error", err)
+		}
+	}
+
 	errChan := make(chan error, 1)
 
 	logs, err := n.Runtime.StreamLogs(ctx, n.GetContainerName())
@@ -430,6 +450,8 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			}
 			// TLS bootstrap in case of n.Cfg.Certificate.Issue flag
 			if *n.Cfg.Certificate.Issue {
+				log.Infof("TLS cert/key bootstrap for node %q", n.Cfg.LongName)
+
 				err = n.tlsCertBootstrap(ctx, addr)
 				if err != nil {
 					return fmt.Errorf(
@@ -439,18 +461,19 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 					)
 				}
 				log.Infof(
-					"Completed NETCONF bootstrap for gRPC-TLS profile on node %s",
+					"Completed bootstrap for gRPC-TLS profile on node %s",
 					n.Cfg.ShortName,
 				)
 			}
-			// don't save config if full config is sent.. it might not have NETCONF
+
+			// Partial or NO Config Provided
 			if !isFullConfigFile(n.Cfg.StartupConfig) {
+				log.Infof("Saving node %q config as startup...", n.Cfg.LongName)
 				err = n.saveConfigWithAddr(ctx, addr)
 				if err != nil {
 					return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
 				}
 			}
-
 			return nil
 		}
 
@@ -578,34 +601,8 @@ func (n *sros) setupComponentNodes() error {
 			componentConfig.Env[k] = v
 		}
 
-		// set the type var if type is set
-		if c.Type != "" {
-			componentConfig.Env[envNokiaSrosCard] = c.Type
-		}
-
-		if c.SFM != "" {
-			componentConfig.Env[envNokiaSrosSFM] = c.SFM
-		}
-
-		if len(c.XIOM) > 0 {
-			for _, x := range c.XIOM {
-				key := fmt.Sprintf("%s_X%d", envNokiaSrosXIOM, x.Slot)
-				componentConfig.Env[key] = x.Type
-				// add the nested MDA
-				for _, m := range x.MDA {
-					key := fmt.Sprintf("%s_X%d_%d", envNokiaSrosMDA, x.Slot, m.Slot)
-					componentConfig.Env[key] = m.Type
-				}
-			}
-		}
-
-		if len(c.MDA) > 0 {
-			for _, m := range c.MDA {
-				key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
-				componentConfig.Env[key] = m.Type
-			}
-		}
-
+		// set component environment variables
+		n.setComponentEnvVars(componentConfig, c)
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
 
 		// adjust label based env vars
@@ -642,6 +639,32 @@ func (n *sros) setupComponentNodes() error {
 	return nil
 }
 
+// setComponentEnvVars sets environment variables for a component.
+func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *clabtypes.Component) {
+	if c.Type != "" {
+		componentConfig.Env[envNokiaSrosCard] = c.Type
+	}
+
+	if c.SFM != "" {
+		componentConfig.Env[envNokiaSrosSFM] = c.SFM
+	}
+
+	for _, x := range c.XIOM {
+		key := fmt.Sprintf("%s_X%d", envNokiaSrosXIOM, x.Slot)
+		componentConfig.Env[key] = x.Type
+		// add the nested MDA
+		for _, m := range x.MDA {
+			key := fmt.Sprintf("%s_X%d_%d", envNokiaSrosMDA, x.Slot, m.Slot)
+			componentConfig.Env[key] = m.Type
+		}
+	}
+
+	for _, m := range c.MDA {
+		key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
+		componentConfig.Env[key] = m.Type
+	}
+}
+
 // deployFabric deploys the distributed SR-SIM when the `components` key is present.
 func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
 	// loop through the components, creating them
@@ -676,17 +699,21 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 
 // isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a
 // distributed setup.
+// isDistributedCardNode returns true if this node is a card (linecard/IOM)
+// in a distributed SR-SIM deployment. A distributed card has a slot assignment
+// but no components of its own.
 func (n *sros) isDistributedCardNode() bool {
 	_, exists := n.Cfg.Env[envNokiaSrosSlot]
-	// is distributed if components is > 1 and the slot var exists.
 	return exists && len(n.Cfg.Components) == 0
 }
 
-// check if SR-SIM is distributed: `components` key is present.
+// isDistributedBaseNode returns true if this is the base node of a distributed
+// SR-SIM deployment. The base node orchestrates multiple component nodes.
 func (n *sros) isDistributedBaseNode() bool {
 	return len(n.Cfg.Components) > 1
 }
 
+// isStandaloneNode returns true if this is a standalone (non-distributed) SR-SIM node.
 func (n *sros) isStandaloneNode() bool {
 	return !n.isDistributedBaseNode() && !n.isDistributedCardNode()
 }
@@ -749,25 +776,21 @@ func (n *sros) cpmNode() (clabnodes.Node, error) {
 }
 
 // cpmSlot returns the Slot of the preferred CPM Node (used when Distributed mode).
+// It prefers slot A if present, otherwise returns slot B.
 func (n *sros) cpmSlot() (string, error) {
-	slot := ""
-
-search:
+	// Prefer slot A, fall back to slot B
 	for _, comp := range n.Cfg.Components {
-		switch comp.Slot {
-		case slotAName:
-			slot = slotAName
-			// now we can break because the slot A is preferred, does not matter if B also exists
-			break search
-		case slotBName:
-			slot = slotBName
-			// we continue searching, because we prefer slot A
+		if comp.Slot == slotAName {
+			return slotAName, nil
 		}
 	}
-	if slot == "" {
-		return "", fmt.Errorf("node %s: unable to determine default slot", n.GetShortName())
+	// Check for slot B as fallback
+	for _, comp := range n.Cfg.Components {
+		if comp.Slot == slotBName {
+			return slotBName, nil
+		}
 	}
-	return slot, nil
+	return "", fmt.Errorf("node %s: unable to determine default slot", n.GetShortName())
 }
 
 // Deploy deploys the SR-SIM kind.
@@ -966,15 +989,8 @@ func (n *sros) createSROSCertificates() error {
 	return nil
 }
 
-// Func that handles the config generation for the SR-SIM kind.
+// createSROSConfigFiles handles the config generation for the SR-SIM kind.
 func (n *sros) createSROSConfigFiles() error {
-	// generate a startup config file
-	// if the node has a `startup-config:` statement, the file specified in that section
-	// will be used as a template in GenerateConfig()
-
-	var cfgTemplate string
-	var err error
-
 	// Path pointing to the target config file under configCf3 dir
 	cf3CfgFile := filepath.Join(
 		n.Cfg.LabDir,
@@ -987,29 +1003,10 @@ func (n *sros) createSROSConfigFiles() error {
 	// generate config and use that to boot node
 	log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
 		n.Cfg.StartupConfig, "isPartial", isPartial)
-	if n.Cfg.StartupConfig != "" && !isPartial { // User provides startup config
-		c, err := os.ReadFile(n.Cfg.StartupConfig)
-		if err != nil {
-			return err
-		}
 
-		cBuf, err := clabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
-		if err != nil {
-			return err
-		}
-
-		cfgTemplate = cBuf.String()
-	} else { // Cases default config or default+partial
-		err = n.addDefaultConfig()
-		if err != nil {
-			return err
-		}
-		// Adds partial config if present
-		err = n.addPartialConfig()
-		if err != nil {
-			return err
-		}
-		cfgTemplate = string(n.startupCliCfg)
+	cfgTemplate, err := n.getConfigTemplate(isPartial)
+	if err != nil {
+		return err
 	}
 
 	if cfgTemplate == "" {
@@ -1021,12 +1018,34 @@ func (n *sros) createSROSConfigFiles() error {
 		return nil
 	}
 
-	err = n.GenerateConfig(cf3CfgFile, cfgTemplate)
-	if err != nil {
-		return fmt.Errorf("failed to generate config for node %q: %v", n.Cfg.ShortName, err)
-	} else {
-		return nil
+	return n.GenerateConfig(cf3CfgFile, cfgTemplate)
+}
+
+// getConfigTemplate retrieves the configuration template based on startup config settings.
+func (n *sros) getConfigTemplate(isPartial bool) (string, error) {
+	// User provides full startup config
+	if n.Cfg.StartupConfig != "" && !isPartial {
+		c, err := os.ReadFile(n.Cfg.StartupConfig)
+		if err != nil {
+			return "", err
+		}
+
+		cBuf, err := clabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		if err != nil {
+			return "", err
+		}
+		return cBuf.String(), nil
 	}
+
+	// Generate default config and optionally add partial config
+	if err := n.addDefaultConfig(); err != nil {
+		return "", err
+	}
+	if err := n.addPartialConfig(); err != nil {
+		return "", err
+	}
+
+	return string(n.startupCliCfg), nil
 }
 
 // SlotIsInteger checks if the slot string represents a valid integer.
@@ -1036,21 +1055,27 @@ func SlotIsInteger(s string) bool {
 }
 
 // Check if a container is a CPM.
+// isCPM checks if a container is a CPM (Control Processing Module).
+// Returns false if the slot is a linecard (integer slot).
+// If a specific CPM name is provided, returns false if this is a different CPM.
 func (n *sros) isCPM(cpm string) bool {
-	// Check if container is a linecard
-	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
-		SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) {
+	slot, exists := n.Cfg.Env[envNokiaSrosSlot]
+	if !exists {
+		// No slot specified - this is a CPM
+		return true
+	}
+
+	// If slot is an integer, it's a linecard, not a CPM
+	if SlotIsInteger(slot) {
 		return false
 	}
-	// check if container is the CPM given by the string cpm
-	if cpm != "" {
-		if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
-			!SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) &&
-			!strings.EqualFold(n.Cfg.Env[envNokiaSrosSlot], cpm) {
-			return false
-		}
+
+	// Slot is non-integer (CPM slot). If a specific CPM was requested,
+	// check if this is that CPM
+	if cpm != "" && !strings.EqualFold(slot, cpm) {
+		return false
 	}
-	// None of the previous conditions are meet
+
 	return true
 }
 
@@ -1073,22 +1098,24 @@ func (n *sros) addDefaultConfig() error {
 
 	// tplData holds data used in templating of the default config snippet
 	tplData := srosTemplateData{
-		Name:            n.Cfg.ShortName,
-		TLSKey:          n.Cfg.TLSKey,
-		TLSCert:         n.Cfg.TLSCert,
-		TLSAnchor:       n.Cfg.TLSAnchor,
-		Banner:          b,
-		IFaces:          map[string]tplIFace{},
-		MgmtMTU:         0,
-		MgmtIPMTU:       0,
-		SystemConfig:    systemCfg,
-		SNMPConfig:      snmpv2Config,
-		GRPCConfig:      grpcConfig,
-		NetconfConfig:   netconfConfig,
-		LoggingConfig:   loggingConfig,
-		SSHConfig:       sshConfig,
-		NodeType:        strings.ToLower(n.Cfg.NodeType),
-		ComponentConfig: componentConfig,
+		Name:              n.Cfg.ShortName,
+		TLSKey:            n.Cfg.TLSKey,
+		TLSCert:           n.Cfg.TLSCert,
+		TLSAnchor:         n.Cfg.TLSAnchor,
+		SecureGrpc:        *n.Cfg.Certificate.Issue,
+		Banner:            b,
+		IFaces:            map[string]tplIFace{},
+		MgmtMTU:           0,
+		MgmtIPMTU:         0,
+		SystemConfig:      systemCfg,
+		SNMPConfig:        snmpv2Config,
+		GRPCConfig:        grpcConfig,
+		NetconfConfig:     netconfConfig,
+		LoggingConfig:     loggingConfig,
+		SSHConfig:         sshConfig,
+		ConfigurationMode: strings.ToLower(n.Cfg.Env[envSrosConfigMode]),
+		NodeType:          strings.ToLower(n.Cfg.NodeType),
+		ComponentConfig:   componentConfig,
 	}
 	if strings.Contains(tplData.NodeType, "ixr-") {
 		tplData.GRPCConfig = grpcConfigIXR
@@ -1108,6 +1135,24 @@ func (n *sros) addDefaultConfig() error {
 	}
 
 	n.prepareSSHPubKeys(&tplData)
+
+	var srosCfgTpl *template.Template
+	log.Debugf("Prepare %q config for %q", n.Cfg.Env[envSrosConfigMode], n.Cfg.LongName)
+
+	var tmpl string
+	if n.isConfigClassic() {
+		if strings.Contains(tplData.NodeType, "ixr-") {
+			tmpl = cfgTplClassicIxr
+		} else {
+			tmpl = cfgTplClassic
+		}
+		srosCfgTpl, _ = template.New("clab-sros-config-classic").
+			Funcs(clabutils.CreateFuncs()).
+			Parse(tmpl)
+	} else {
+		srosCfgTpl, _ = template.New("clab-sros-config-sros25").Funcs(
+			clabutils.CreateFuncs()).Parse(cfgTplSROS25)
+	}
 
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
 	buf := new(bytes.Buffer)
@@ -1403,7 +1448,11 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 }
 
 // saveConfigWithAddr will use the addr string to try to save the config of the node.
-func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
+func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
+	if n.isConfigClassic() {
+		cmd := []string{"/admin save", "/bof persist on", "/bof save"}
+		return n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
+	}
 	err := clabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
@@ -1413,7 +1462,15 @@ func (n *sros) saveConfigWithAddr(_ context.Context, addr string) error {
 		return err
 	}
 
-	log.Info("Saved running configuration", "node", n.Cfg.ShortName, "addr", addr)
+	log.Info(
+		"Saved running configuration",
+		"node",
+		n.Cfg.ShortName,
+		"addr",
+		addr,
+		"config-mode",
+		n.Cfg.Env[envSrosConfigMode],
+	)
 
 	return nil
 }
@@ -1471,11 +1528,11 @@ func buildTLSProfileXML() string {
 	return buf.String()
 }
 
-// TLS bootstrap via NETCONF to enable secure gRPC:
-//   - `imports cf3:\node.key` in PEM format as `cf3:\system-pki\node.key“ (encrypted DER)
-//   - `imports cf3:\node.crt` in PEM format as `cf3:\system-pki\node.crt“ (encrypted DER)
-//   - administratively enables TLS profile `grpc-tls-certs`
-func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
+// TLS bootstrap via NETCONF to enable secure gRPC.
+func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
+	// Always import PKI key and cert:
+	// 	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
+	//   import "cf3:\node.crt" in PEM format as "cf3:\system-pki\node.crt" (encrypted DER)
 	operations := []clabnetconf.Operation{
 		func(d *netconf.Driver) (*response.NetconfResponse, error) {
 			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
@@ -1485,12 +1542,28 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
 				fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate")))
 		},
-		func(d *netconf.Driver) (*response.NetconfResponse, error) {
-			return d.EditConfig("candidate", buildTLSProfileXML())
-		},
-		func(d *netconf.Driver) (*response.NetconfResponse, error) {
-			return d.Commit()
-		},
+	}
+
+	// Activate cert-profile in MD is via NETCONF, in Classic mode is via SSH
+	//  enable enables cert-profile "clab-grpc-certs" administratively
+	cmd := []string{}
+	if n.isConfigClassic() {
+		cmd = append(
+			cmd,
+			fmt.Sprintf(
+				"/configure system security tls cert-profile %s no shutdown",
+				tlsCertProfileName,
+			),
+		)
+	} else {
+		operations = append(operations,
+			func(d *netconf.Driver) (*response.NetconfResponse, error) {
+				return d.EditConfig("candidate", buildTLSProfileXML())
+			},
+			func(d *netconf.Driver) (*response.NetconfResponse, error) {
+				return d.Commit()
+			},
+		)
 	}
 
 	err := clabnetconf.MultiExec(
@@ -1499,7 +1572,20 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 		defaultCredentials.GetPassword(),
 		operations,
 	)
+	if len(cmd) > 0 && n.isConfigClassic() {
+		err := n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
+		if err != nil {
+			return err
+		}
+	}
 	return err
+}
+
+// isConfigClassic returns true if the env var for configuration contains "mixed" or "classic"
+// strings.
+func (n *sros) isConfigClassic() bool {
+	cfgMode := strings.ToLower(n.Cfg.Env[envSrosConfigMode])
+	return cfgMode == "classic" || cfgMode == "mixed"
 }
 
 // isPartialConfigFile returns true if the config file name contains .partial substring.
@@ -1697,6 +1783,11 @@ func (n *sros) MgmtIPAddr() (string, error) {
 // for explicitly defined components using components nodeConfig.
 func (n *sros) generateComponentConfig() string {
 	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
+		return ""
+	}
+
+	// Skipping magic if using classic for NOW
+	if n.isConfigClassic() {
 		return ""
 	}
 

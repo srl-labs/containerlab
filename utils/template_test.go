@@ -1262,3 +1262,110 @@ func TestRemFunc(t *testing.T) {
 		})
 	}
 }
+
+func TestNetCIDRHost(t *testing.T) {
+	tests := map[string]struct {
+		hostnum any
+		prefix  any
+		want    string
+		err     string
+	}{
+		"basic IPv4 host": {
+			hostnum: 16,
+			prefix:  "10.12.127.0/20",
+			want:    "10.12.112.16",
+		},
+		"IPv4 host with larger number": {
+			hostnum: 268,
+			prefix:  "10.12.127.0/20",
+			want:    "10.12.113.12",
+		},
+		"IPv6 host": {
+			hostnum: 34,
+			prefix:  "fd00:fd12:3456:7890:00a2::/72",
+			want:    "fd00:fd12:3456:7890::22",
+		},
+		"first host in subnet": {
+			hostnum: 0,
+			prefix:  "192.168.1.0/24",
+			want:    "192.168.1.0",
+		},
+		"last host in /24 subnet": {
+			hostnum: 255,
+			prefix:  "192.168.1.0/24",
+			want:    "192.168.1.255",
+		},
+		"host number as string": {
+			hostnum: "10",
+			prefix:  "10.0.0.0/16",
+			want:    "10.0.0.10",
+		},
+		"prefix as string": {
+			hostnum: 5,
+			prefix:  "172.16.0.0/12",
+			want:    "172.16.0.5",
+		},
+		"negative host number": {
+			hostnum: -1,
+			prefix:  "10.0.0.0/24",
+			want:    "10.0.0.255",
+		},
+		"negative host number second to last": {
+			hostnum: -2,
+			prefix:  "10.0.0.0/24",
+			want:    "10.0.0.254",
+		},
+		"host number exceeds subnet size": {
+			hostnum: 256,
+			prefix:  "192.168.1.0/24",
+			err:     "does not accommodate a host numbered",
+		},
+		"invalid prefix format": {
+			hostnum: 1,
+			prefix:  "invalid",
+			err:     "netip.ParsePrefix",
+		},
+		"non-numeric hostnum": {
+			hostnum: "invalid",
+			prefix:  "10.0.0.0/24",
+			err:     "expected a number",
+		},
+		"large IPv6 host number": {
+			hostnum: 1000,
+			prefix:  "2001:db8::/32",
+			want:    "2001:db8::3e8",
+		},
+		"/32 subnet (single host)": {
+			hostnum: 0,
+			prefix:  "192.168.1.1/32",
+			want:    "192.168.1.1",
+		},
+		"small subnet /30": {
+			hostnum: 2,
+			prefix:  "192.168.1.0/30",
+			want:    "192.168.1.2",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			nf := &NetFuncs{}
+			got, err := nf.CIDRHost(tc.hostnum, tc.prefix)
+			if tc.err != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.err)
+				}
+				if !strings.Contains(err.Error(), tc.err) {
+					t.Fatalf("expected error containing %q, got %q", tc.err, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !cmp.Equal(got, tc.want) {
+				t.Fatalf("wanted %v, got %v", tc.want, got)
+			}
+		})
+	}
+}
