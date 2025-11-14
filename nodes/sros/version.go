@@ -121,8 +121,8 @@ func (n *sros) getSrosVersionFromImage(ctx context.Context) (*SrosVersion, error
 	if err != nil {
 		log.Warn("Failed to extract SR OS version from image layers, using default",
 			"node", n.Cfg.ShortName, "error", err)
-		// Return a default version
-		return &SrosVersion{Major: "0", Minor: "0", Build: "0"}, err
+		// Return nil for version when error occurs
+		return nil, err
 	}
 
 	return n.parseVersionString(version), nil
