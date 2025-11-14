@@ -15,34 +15,43 @@ import (
 )
 
 var (
-	//go:embed configs/snmpv2.cfg
+	//go:embed configs/10_snmpv2.cfg
 	snmpv2Config string
 
-	//go:embed configs/grpc.cfg
-	grpcConfig string
-
-	//go:embed configs/grpc_insecure.cfg
-	grpcConfigInsecure string
-
-	//go:embed configs/grpc_ixr.cfg
-	grpcConfigIXR string
-
-	//go:embed configs/grpc_ixr_insecure.cfg
-	grpcConfigIXRInsecure string
-
-	//go:embed configs/netconf.cfg
-	netconfConfig string
-
-	//go:embed configs/logging.cfg
+	//go:embed configs/11_logging.cfg
 	loggingConfig string
 
-	//go:embed configs/system.cfg
+	//go:embed configs/12_grpc.cfg
+	grpcConfig string
+
+	//go:embed configs/12_grpc_insecure.cfg
+	grpcConfigInsecure string
+
+	//go:embed configs/ixr/12_grpc.cfg
+	grpcConfigIXR string
+
+	//go:embed configs/ixr/12_grpc_insecure.cfg
+	grpcConfigIXRInsecure string
+
+	//go:embed configs/sar/12_grpc.cfg
+	grpcConfigSAR string
+
+	//go:embed configs/sar/12_grpc_insecure.cfg
+	grpcConfigSARInsecure string
+
+	//go:embed configs/13_netconf.cfg
+	netconfConfig string
+
+	//go:embed configs/14_system.cfg
 	systemCfg string
 
-	//go:embed configs/system_ixr.cfg
+	//go:embed configs/ixr/14_system.cfg
 	systemCfgIXR string
 
-	//go:embed configs/ssh.cfg
+	//go:embed configs/sar/14_system.cfg
+	systemCfgSAR string
+
+	//go:embed configs/15_ssh.cfg
 	sshConfig string
 )
 
