@@ -3,6 +3,7 @@ package sros
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -151,13 +152,26 @@ func (n *sros) readVersionFromImageLayers(
 			"node", n.Cfg.ShortName,
 			"path", versionPath)
 
-		if content, err := os.ReadFile(versionPath); err == nil {
+		content, err := os.ReadFile(versionPath)
+		if err == nil {
 			version := strings.TrimSpace(string(content))
 			log.Debug("Found SR OS version in UpperDir",
 				"node", n.Cfg.ShortName,
 				"version", version)
 			return version, nil
 		}
+
+		// Log the error and only fallback if it's a "file not found" error
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Warn("Failed to read sros-version from UpperDir",
+				"node", n.Cfg.ShortName,
+				"path", versionPath,
+				"error", err)
+			return "", fmt.Errorf("failed to read sros-version from UpperDir: %w", err)
+		}
+
+		log.Debug("sros-version file not found in UpperDir, trying MergedDir",
+			"node", n.Cfg.ShortName)
 	}
 
 	// Fallback: try MergedDir if available
@@ -168,13 +182,26 @@ func (n *sros) readVersionFromImageLayers(
 			"node", n.Cfg.ShortName,
 			"path", versionPath)
 
-		if content, err := os.ReadFile(versionPath); err == nil {
+		content, err := os.ReadFile(versionPath)
+		if err == nil {
 			version := strings.TrimSpace(string(content))
 			log.Debug("Found SR OS version in MergedDir",
 				"node", n.Cfg.ShortName,
 				"version", version)
 			return version, nil
 		}
+
+		// Log the specific error
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Warn("Failed to read sros-version from MergedDir",
+				"node", n.Cfg.ShortName,
+				"path", versionPath,
+				"error", err)
+			return "", fmt.Errorf("failed to read sros-version from MergedDir: %w", err)
+		}
+
+		log.Debug("sros-version file not found in MergedDir",
+			"node", n.Cfg.ShortName)
 	}
 
 	return "", fmt.Errorf("sros-version file not found in image graph driver directories or layers")
