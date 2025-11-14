@@ -10,8 +10,14 @@ function check_os {
         . /etc/os-release
         if [ "$ID" = "debian" ]; then
             DISTRO_TYPE="debian"
+            if [ "$VERSION_ID" = "13" ]; then
+                DOCKER_VERSION="25.8.2"
+            fi
         elif [ "$ID" = "ubuntu" ]; then
             DISTRO_TYPE="ubuntu"
+            if [ "$VERSION_ID" = "25.04" ]; then
+                DOCKER_VERSION="25.8.2"
+            fi
         elif [ "$ID" = "fedora" ]; then
             DISTRO_TYPE="fedora"
         elif [[ "$ID" = "rocky" || "$ID" = "rhel" || "$ID" = "centos" || "$ID" = "almalinux" ]]; then
