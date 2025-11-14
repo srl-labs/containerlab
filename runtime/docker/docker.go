@@ -1353,8 +1353,11 @@ func (d *DockerRuntime) StreamLogs(
 	return logStream, nil
 }
 
-// InspectImage returns detailed information about a container image
-func (d *DockerRuntime) InspectImage(ctx context.Context, imageName string) (*runtime.ImageInspect, error) {
+// InspectImage returns detailed information about a container image.
+func (d *DockerRuntime) InspectImage(
+	ctx context.Context,
+	imageName string,
+) (*runtime.ImageInspect, error) {
 	imageData, _, err := d.Client.ImageInspectWithRaw(ctx, imageName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect image %s: %w", imageName, err)

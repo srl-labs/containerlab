@@ -130,7 +130,10 @@ func (n *sros) getSrosVersionFromImage(ctx context.Context) (*SrosVersion, error
 
 // readVersionFromImageLayers reads the sros-version file directly from image layers
 // using the Docker graph driver's UpperDir without extracting the entire image.
-func (n *sros) readVersionFromImageLayers(_ context.Context, imageInspect *runtime.ImageInspect) (string, error) {
+func (n *sros) readVersionFromImageLayers(
+	_ context.Context,
+	imageInspect *runtime.ImageInspect,
+) (string, error) {
 	// First, try to use the GraphDriver.Data.UpperDir if available
 	if imageInspect.GraphDriver.Data.UpperDir != "" {
 		versionPath := filepath.Join(imageInspect.GraphDriver.Data.UpperDir, "etc", "sros-version")

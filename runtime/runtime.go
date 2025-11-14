@@ -135,7 +135,7 @@ type RuntimeConfig struct {
 	VerifyLinkParams *clablinks.VerifyLinkParams
 }
 
-// ImageInspect holds relevant image inspection data
+// ImageInspect holds relevant image inspection data.
 type ImageInspect struct {
 	ID          string
 	Config      ImageConfig
@@ -143,24 +143,24 @@ type ImageInspect struct {
 	GraphDriver GraphDriver
 }
 
-// ImageConfig holds image configuration data
+// ImageConfig holds image configuration data.
 type ImageConfig struct {
 	Labels map[string]string
 }
 
-// RootFS holds the root filesystem information of an image
+// RootFS holds the root filesystem information of an image.
 type RootFS struct {
 	Type   string
 	Layers []string
 }
 
-// GraphDriver holds information about the storage driver
+// GraphDriver holds information about the storage driver.
 type GraphDriver struct {
 	Name string
 	Data GraphDriverData
 }
 
-// GraphDriverData holds the driver-specific data
+// GraphDriverData holds the driver-specific data.
 type GraphDriverData struct {
 	UpperDir  string
 	WorkDir   string

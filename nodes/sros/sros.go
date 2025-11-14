@@ -1094,7 +1094,7 @@ func (n *sros) isCPM(cpm string) bool {
 	return true
 }
 
-// prepareConfigTemplateData prepares all data needed for template selection and execution
+// prepareConfigTemplateData prepares all data needed for template selection and execution.
 func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	b, err := n.banner()
 	if err != nil {
@@ -1145,7 +1145,7 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	return tplData, nil
 }
 
-// applyNodeTypeSpecificConfig applies node-type and security specific overrides
+// applyNodeTypeSpecificConfig applies node-type and security specific overrides.
 func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
 	isIXR := strings.Contains(tplData.NodeType, "ixr-")
 
@@ -1169,7 +1169,7 @@ func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
 	}
 }
 
-// selectConfigTemplate chooses the appropriate config template based on template data
+// selectConfigTemplate chooses the appropriate config template based on template data.
 func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Template, error) {
 	var tmpl string
 	var tplName string

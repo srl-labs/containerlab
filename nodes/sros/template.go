@@ -1,6 +1,6 @@
 package sros
 
-// srosTemplateData holds all data needed for template selection and execution
+// srosTemplateData holds all data needed for template selection and execution.
 type srosTemplateData struct {
 	// Template selection criteria
 	NodeType          string
