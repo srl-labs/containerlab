@@ -531,14 +531,10 @@ func (*IgniteRuntime) StreamEvents(
 ) (<-chan clabruntime.ContainerEvent, <-chan error, error) {
 	return nil, nil, fmt.Errorf("StreamEvents is not implemented for Ignite runtime")
 }
-
-<<<<<<< HEAD
-func (*IgniteRuntime) InspectImage(ctx context.Context, imageName string) (*runtime.ImageInspect, error) {
-=======
 func (*IgniteRuntime) InspectImage(
 	ctx context.Context,
 	imageName string,
 ) (*runtime.ImageInspect, error) {
->>>>>>> ab8d49f22 (fix lint)
 	return nil, fmt.Errorf("InspectImage not implemented for Ignite runtime")
 }
+
