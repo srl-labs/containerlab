@@ -1154,18 +1154,30 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	return tplData, nil
 }
 
-// applyNodeTypeSpecificConfig applies node-type and security specific overrides.
+// isIXRNode returns true if this is an IXR node type (case-insensitive).
+func (n *sros) isIXRNode() bool {
+	return ixrRegexp.MatchString(n.Cfg.NodeType)
+}
+
+// isSARNode returns true if this is a SAR node type (case-insensitive).
+func (n *sros) isSARNode() bool {
+	return sarRegexp.MatchString(n.Cfg.NodeType)
+}
+
+// isSARHmNode returns true if this is a SAR-Hm or SAR-Hmc node type (case-insensitive).
+func (n *sros) isSARHmNode() bool {
+	return sarHmRegexp.MatchString(n.Cfg.NodeType)
+}
+
+// applyNodeTypeSpecificConfig applies node-type and security specific overrides for Model-Driven
+// Config.
 func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
 	// SR OS nodes with insecure gRPC, non-IXR/SAR
 	if !tplData.IsSecureGrpc {
 		tplData.GRPCConfig = grpcConfigInsecure
 	}
-
-	isIXR := ixrRegexp.MatchString(tplData.NodeType)
-	isSAR := sarRegexp.MatchString(tplData.NodeType)
-
 	// Apply IXR-specific configs
-	if isIXR {
+	if n.isIXRNode() {
 		tplData.SystemConfig = systemCfgIXR
 		tplData.GRPCConfig = grpcConfigIXR
 
@@ -1175,15 +1187,14 @@ func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
 		}
 	}
 
-	if isSAR {
+	if n.isSARNode() {
 		tplData.SystemConfig = systemCfgSAR
 		tplData.GRPCConfig = grpcConfigSAR
 		// SAR with insecure gRPC
 		if !tplData.IsSecureGrpc {
 			tplData.GRPCConfig = grpcConfigSARInsecure
 		}
-		isSARHm := sarHmRegexp.MatchString(n.Cfg.NodeType)
-		if isSARHm { // MD disabled on SAR-Hm nodes
+		if n.isSARHmNode() { // MD disabled on SAR-Hm nodes
 			if tplData.ConfigurationMode != "classic" {
 				log.Warn(
 					"SAR-Hm nodes only support classic configuration mode. Overriding configuration mode to 'classic'",
@@ -1199,7 +1210,8 @@ func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
 	}
 }
 
-// selectConfigTemplate chooses the appropriate config template based on template data.
+// selectConfigTemplate chooses the appropriate config template based on template data either MD or
+// classic.
 func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Template, error) {
 	var tmpl string
 	var tplName string
@@ -1217,17 +1229,15 @@ func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Templa
 
 	// Classic configuration mode
 	if tplData.ConfigurationMode == "classic" || tplData.ConfigurationMode == "mixed" {
-		isIXR := ixrRegexp.MatchString(tplData.NodeType)
-		isSAR := sarRegexp.MatchString(tplData.NodeType)
 		// Default to classic template
 		tmpl = cfgTplClassic
 		tplName = "clab-sros-config-classic"
 
-		if isIXR {
+		if n.isIXRNode() {
 			tmpl = cfgTplClassicIxr
 			tplName = "clab-sros-config-classic-ixr"
 		}
-		if isSAR {
+		if n.isSARNode() {
 			tmpl = cfgTplClassicSar
 			tplName = "clab-sros-config-classic-sar"
 			// We choose not to support gRPC on classic mode at all
