@@ -93,7 +93,7 @@ function install-docker-ubuntu {
 
     DOCKER_PKG_NAME=$(apt-cache madison docker-ce | awk '{ print $3 }' | grep ${DOCKER_VERSION} | head -n 1)
 
-    sudo apt-get -y install docker-ce=${DOCKER_PKG_NAME} docker-ce-cli=${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo apt-get -y install docker-ce=${DOCKER_PKG_NAME} docker-ce-cli=${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin  --allow-downgrades
 }
 
 function install-docker-rhel {
