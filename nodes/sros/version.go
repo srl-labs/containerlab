@@ -11,7 +11,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/runtime"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 var (
@@ -141,7 +141,7 @@ func (n *sros) getSrosVersionFromImage(ctx context.Context) (*SrosVersion, error
 // using the Docker graph driver's UpperDir without extracting the entire image.
 func (n *sros) readVersionFromImageLayers(
 	_ context.Context,
-	imageInspect *runtime.ImageInspect,
+	imageInspect *clabruntime.ImageInspect,
 ) (string, error) {
 	// First, try to use the GraphDriver.Data.UpperDir if available
 	if imageInspect.GraphDriver.Data.UpperDir != "" {
