@@ -991,6 +991,21 @@ func (n *sros) createSROSCertificates() error {
 
 // createSROSConfigFiles handles the config generation for the SR-SIM kind.
 func (n *sros) createSROSConfigFiles() error {
+	// Get version from image before generating config
+	if n.swVersion == nil {
+		ctx := context.Background()
+		version, err := n.getSrosVersionFromImage(ctx)
+		if err != nil {
+			log.Warn("Failed to get SR OS version from image",
+				"node", n.Cfg.ShortName, "error", err)
+		} else {
+			n.swVersion = version
+			log.Info("Retrieved SR OS version from image",
+				"node", n.Cfg.ShortName,
+				"version", fmt.Sprintf("%s.%s.%s", version.Major, version.Minor, version.Build))
+		}
+	}
+
 	// Path pointing to the target config file under configCf3 dir
 	cf3CfgFile := filepath.Join(
 		n.Cfg.LabDir,
@@ -1079,97 +1094,156 @@ func (n *sros) isCPM(cpm string) bool {
 	return true
 }
 
-// addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner,
-// ssh keys.
-func (n *sros) addDefaultConfig() error {
+// prepareConfigTemplateData prepares all data needed for template selection and execution
+func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	b, err := n.banner()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	componentConfig := ""
-
-	// Generate component configuration IF no startup-config, or partial is defined.
 	if !isFullConfigFile(n.Cfg.StartupConfig) {
 		componentConfig = n.generateComponentConfig()
 	} else {
 		log.Debugf("SR-SIM node %q has non-partial startup-config defined, skipping component config gen", n.Cfg.LongName)
 	}
 
-	// tplData holds data used in templating of the default config snippet
-	tplData := srosTemplateData{
-		Name:              n.Cfg.ShortName,
-		TLSKey:            n.Cfg.TLSKey,
-		TLSCert:           n.Cfg.TLSCert,
-		TLSAnchor:         n.Cfg.TLSAnchor,
-		SecureGrpc:        *n.Cfg.Certificate.Issue,
-		Banner:            b,
-		IFaces:            map[string]tplIFace{},
-		MgmtMTU:           0,
-		MgmtIPMTU:         0,
-		SystemConfig:      systemCfg,
-		SNMPConfig:        snmpv2Config,
-		GRPCConfig:        grpcConfig,
-		NetconfConfig:     netconfConfig,
-		LoggingConfig:     loggingConfig,
-		SSHConfig:         sshConfig,
-		ConfigurationMode: strings.ToLower(n.Cfg.Env[envSrosConfigMode]),
+	tplData := &srosTemplateData{
+		// Selection criteria
 		NodeType:          strings.ToLower(n.Cfg.NodeType),
-		ComponentConfig:   componentConfig,
-	}
-	if strings.Contains(tplData.NodeType, "ixr-") {
-		tplData.GRPCConfig = grpcConfigIXR
-		tplData.SystemConfig = systemCfgIXR
-	}
-	if !*n.Cfg.Certificate.Issue {
-		log.Debugf("Using insecure cert configuration for node %s, found certificate.issue flag %v",
-			n.Cfg.ShortName, *n.Cfg.Certificate.Issue)
-		tplData.GRPCConfig = grpcConfigInsecure
-		if strings.Contains(tplData.NodeType, "ixr-") {
-			tplData.GRPCConfig = grpcConfigIXRInsecure
-		}
+		ConfigurationMode: strings.ToLower(n.Cfg.Env[envSrosConfigMode]),
+		SwVersion:         n.swVersion,
+		IsSecureGrpc:      *n.Cfg.Certificate.Issue,
+
+		// Node data
+		Name:            n.Cfg.ShortName,
+		TLSKey:          n.Cfg.TLSKey,
+		TLSCert:         n.Cfg.TLSCert,
+		TLSAnchor:       n.Cfg.TLSAnchor,
+		Banner:          b,
+		IFaces:          map[string]tplIFace{},
+		MgmtMTU:         0,
+		MgmtIPMTU:       n.Runtime.Mgmt().MTU,
+		ComponentConfig: componentConfig,
+
+		// Default service configs (will be overridden based on node type)
+		SystemConfig:  systemCfg,
+		SNMPConfig:    snmpv2Config,
+		GRPCConfig:    grpcConfig,
+		NetconfConfig: netconfConfig,
+		LoggingConfig: loggingConfig,
+		SSHConfig:     sshConfig,
 	}
 
 	if n.Config().DNS != nil {
 		tplData.DNSServers = append(tplData.DNSServers, n.Config().DNS.Servers...)
 	}
 
-	n.prepareSSHPubKeys(&tplData)
+	n.prepareSSHPubKeys(tplData)
+	n.applyNodeTypeSpecificConfig(tplData)
 
-	var srosCfgTpl *template.Template
-	log.Debugf("Prepare %q config for %q", n.Cfg.Env[envSrosConfigMode], n.Cfg.LongName)
+	return tplData, nil
+}
 
-	var tmpl string
-	if n.isConfigClassic() {
-		if strings.Contains(tplData.NodeType, "ixr-") {
-			tmpl = cfgTplClassicIxr
-		} else {
-			tmpl = cfgTplClassic
+// applyNodeTypeSpecificConfig applies node-type and security specific overrides
+func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
+	isIXR := strings.Contains(tplData.NodeType, "ixr-")
+
+	// Apply IXR-specific configs
+	if isIXR {
+		tplData.SystemConfig = systemCfgIXR
+		tplData.GRPCConfig = grpcConfigIXR
+
+		// IXR with insecure cert
+		if !tplData.IsSecureGrpc {
+			tplData.GRPCConfig = grpcConfigIXRInsecure
 		}
-		srosCfgTpl, _ = template.New("clab-sros-config-classic").
-			Funcs(clabutils.CreateFuncs()).
-			Parse(tmpl)
-	} else {
-		srosCfgTpl, _ = template.New("clab-sros-config-sros25").Funcs(
-			clabutils.CreateFuncs()).Parse(cfgTplSROS25)
+		return
 	}
 
-	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
+	// Non-IXR nodes with insecure certs
+	if !tplData.IsSecureGrpc {
+		log.Debugf("Using insecure cert configuration for node %s, found certificate.issue flag %v",
+			n.Cfg.ShortName, tplData.IsSecureGrpc)
+		tplData.GRPCConfig = grpcConfigInsecure
+	}
+}
+
+// selectConfigTemplate chooses the appropriate config template based on template data
+func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Template, error) {
+	var tmpl string
+	var tplName string
+
+	// Classic configuration mode
+	if tplData.ConfigurationMode == "classic" || tplData.ConfigurationMode == "mixed" {
+		isIXR := strings.Contains(tplData.NodeType, "ixr-")
+
+		if isIXR {
+			tmpl = cfgTplClassicIxr
+			tplName = "clab-sros-config-classic-ixr"
+		} else {
+			tmpl = cfgTplClassic
+			tplName = "clab-sros-config-classic"
+		}
+
+		return template.New(tplName).
+			Funcs(clabutils.CreateFuncs()).
+			Parse(tmpl)
+	}
+
+	// Model-driven configuration mode (SROS25+)
+	// Future version-specific template selection:
+	// if tplData.SwVersion != nil && tplData.SwVersion.Major >= 26 {
+	//     tmpl = cfgTplSROS26
+	//     tplName = "clab-sros-config-sros26"
+	// } else {
+	//     tmpl = cfgTplSROS25
+	//     tplName = "clab-sros-config-sros25"
+	// }
+
+	tmpl = cfgTplSROS25
+	tplName = "clab-sros-config-sros25"
+
+	return template.New(tplName).
+		Funcs(clabutils.CreateFuncs()).
+		Parse(tmpl)
+}
+
+// addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner,
+// ssh keys.
+func (n *sros) addDefaultConfig() error {
+	// Prepare all template data
+	tplData, err := n.prepareConfigTemplateData()
+	if err != nil {
+		return err
+	}
+
+	// Select appropriate template
+	srosCfgTpl, err := n.selectConfigTemplate(tplData)
+	if err != nil {
+		return fmt.Errorf("failed to select config template: %w", err)
+	}
+
+	log.Debugf("Prepare %q config for %q using template %q",
+		tplData.ConfigurationMode, n.Cfg.LongName, srosCfgTpl.Name())
+
+	// Execute template
 	buf := new(bytes.Buffer)
 	err = srosCfgTpl.Execute(buf, tplData)
 	if err != nil {
 		return err
 	}
+
 	if buf.Len() == 0 {
 		log.Warn(
 			"Buffer empty, template parsing error",
-			"node",
-			n.Cfg.ShortName,
-			"template",
-			srosCfgTpl.Name(),
+			"node", n.Cfg.ShortName,
+			"template", srosCfgTpl.Name(),
 		)
 	} else {
-		log.Debug("Additional default config parsed", "node", n.Cfg.ShortName, "template", srosCfgTpl.Name())
+		log.Debug("Additional default config parsed",
+			"node", n.Cfg.ShortName,
+			"template", srosCfgTpl.Name())
 		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
 	}
 

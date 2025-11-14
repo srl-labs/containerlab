@@ -78,6 +78,8 @@ type ContainerRuntime interface {
 	// StreamLogs returns a reader for the container's logs
 	// The caller needs to close the returned ReadCloser.
 	StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error)
+	// InspectImage returns detailed information about a container image
+	InspectImage(ctx context.Context, imageName string) (*ImageInspect, error)
 }
 
 type ContainerStatus string
@@ -98,6 +100,38 @@ type RuntimeConfig struct {
 	Debug            bool
 	KeepMgmtNet      bool
 	VerifyLinkParams *clablinks.VerifyLinkParams
+}
+
+// ImageInspect holds relevant image inspection data
+type ImageInspect struct {
+	ID          string
+	Config      ImageConfig
+	RootFS      RootFS
+	GraphDriver GraphDriver
+}
+
+// ImageConfig holds image configuration data
+type ImageConfig struct {
+	Labels map[string]string
+}
+
+// RootFS holds the root filesystem information of an image
+type RootFS struct {
+	Type   string
+	Layers []string
+}
+
+// GraphDriver holds information about the storage driver
+type GraphDriver struct {
+	Name string
+	Data GraphDriverData
+}
+
+// GraphDriverData holds the driver-specific data
+type GraphDriverData struct {
+	UpperDir  string
+	WorkDir   string
+	MergedDir string
 }
 
 var ContainerRuntimes = map[string]Initializer{}

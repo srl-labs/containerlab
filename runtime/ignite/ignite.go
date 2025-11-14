@@ -24,6 +24,7 @@ import (
 	"github.com/weaveworks/ignite/pkg/util"
 
 	clabexec "github.com/srl-labs/containerlab/exec"
+	"github.com/srl-labs/containerlab/runtime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -522,4 +523,7 @@ func (*IgniteRuntime) GetCooCBindMounts() clabtypes.Binds {
 
 func (*IgniteRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("StreamLogs not implemented for Ignite runtime")
+}
+func (*IgniteRuntime) InspectImage(ctx context.Context, imageName string) (*runtime.ImageInspect, error) {
+	return nil, fmt.Errorf("InspectImage not implemented for Ignite runtime")
 }

@@ -1,3 +1,4 @@
+
 # CLAB SR OS CLASSIC CONFIGURATION
 
 exit all
@@ -161,7 +162,7 @@ echo "Log Configuration"
 #--------------------------------------------------
     log
     exit
-{{if .SecureGrpc}}
+{{if .IsSecureGrpc}}
 #--------------------------------------------------
 echo "System Security Cpm Hw Filters, PKI, TLS and LDAP Configuration"
 #--------------------------------------------------
@@ -205,7 +206,7 @@ echo "System gRPC Configuration"
 #--------------------------------------------------
     system
         grpc
-{{if .SecureGrpc}}
+{{if .IsSecureGrpc}}
             tls-server-profile "clab-grpc-tls"
 {{else}}
             allow-unsecure-connection

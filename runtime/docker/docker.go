@@ -33,6 +33,7 @@ import (
 	"github.com/moby/term"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
+	"github.com/srl-labs/containerlab/runtime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -1350,4 +1351,47 @@ func (d *DockerRuntime) StreamLogs(
 	}
 
 	return logStream, nil
+}
+
+// InspectImage returns detailed information about a container image
+func (d *DockerRuntime) InspectImage(ctx context.Context, imageName string) (*runtime.ImageInspect, error) {
+	imageData, _, err := d.Client.ImageInspectWithRaw(ctx, imageName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect image %s: %w", imageName, err)
+	}
+
+	// Convert Docker image inspect to our runtime ImageInspect
+	labels := imageData.Config.Labels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	// Extract GraphDriver data
+	graphDriver := runtime.GraphDriver{
+		Name: imageData.GraphDriver.Name,
+		Data: runtime.GraphDriverData{},
+	}
+
+	// GraphDriver.Data is a map[string]string in Docker
+	if upperDir, ok := imageData.GraphDriver.Data["UpperDir"]; ok {
+		graphDriver.Data.UpperDir = upperDir
+	}
+	if workDir, ok := imageData.GraphDriver.Data["WorkDir"]; ok {
+		graphDriver.Data.WorkDir = workDir
+	}
+	if mergedDir, ok := imageData.GraphDriver.Data["MergedDir"]; ok {
+		graphDriver.Data.MergedDir = mergedDir
+	}
+
+	return &runtime.ImageInspect{
+		ID: imageData.ID,
+		Config: runtime.ImageConfig{
+			Labels: labels,
+		},
+		RootFS: runtime.RootFS{
+			Type:   imageData.RootFS.Type,
+			Layers: imageData.RootFS.Layers,
+		},
+		GraphDriver: graphDriver,
+	}, nil
 }
