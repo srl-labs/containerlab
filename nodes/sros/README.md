@@ -184,8 +184,9 @@ The configuration generation process follows a sophisticated pipeline that adapt
                ├─> selectConfigTemplate()
                └─> Execute template → final config
 
+2. Store the config file on the node filesystem
 2. PostDeploy Phase
-   └─> Apply generated configuration to running container
+   └─> Apply extra configuration to running container that could not be applied during bootime
 ```
 
 ### Detailed Process Breakdown
@@ -203,7 +204,6 @@ func (n *sros) getImageSrosVersion(ctx context.Context) (*SrosVersion, error)
 InspectImage(image) → Check imageInspect.Config.Labels["sros.version"]
 ```
 - Checks if the container image has a `sros.version` label
-- Most efficient method (no filesystem access)
 - Requires images to be built with version labels
 
 **Method 2: Graph Driver Access (Fast)**
@@ -230,7 +230,7 @@ InspectImage(image) → Iterate through imageInspect.RootFS.Layers[]
 Return &SrosVersion{Major: "25", Minor: "0", Build: "0"}
 ```
 - Used when all other methods fail
-- Assumes SR OS 25.0
+- Assumes SR OS 25+
 
 **Version String Parsing**
 
@@ -513,9 +513,9 @@ Check: ConfigurationMode
 |-----------|-------------|---------------|----------|
 | SR/VSR | Model-Driven | `cfgTplSROS25` | Full MD config, gRPC, NETCONF |
 | SR/VSR | Classic | `cfgTplClassic` | Classic CLI, gRPC, NETCONF |
-| IXR | Model-Driven | `cfgTplSROS25` | Full MD config, gRPC, NETCONF |
-| IXR | Classic | `cfgTplClassicIxr` | IXR classic CLI, no gRPC |
-| SAR | Model-Driven | `cfgTplSROS25` | Full MD config, gRPC, NETCONF |
+| IXR | Model-Driven | `cfgTplSROS25` | Full MD config, gRPC (no RIB), NETCONF |
+| IXR | Classic | `cfgTplClassicIxr` | IXR classic CLI, gRPC (no RIB), NETCONF |
+| SAR | Model-Driven | `cfgTplSROS25` | Full MD config, gRPC (no RIB), NETCONF |
 | SAR | Classic | `cfgTplClassicSar` | SAR classic CLI, no gRPC |
 | SAR-Hm | Classic (forced) | `cfgTplClassicSar` | SAR classic CLI, no gRPC |
 
@@ -695,7 +695,7 @@ if buf.Len() == 0 {
 
 The generated configuration is:
 1. Stored in `n.startupCliCfg` (byte slice)
-2. Later written to disk at: `<lab-dir>/<node-name>/tftpboot/config.txt`
+2. Later written to disk at: `<lab-dir>/<node-name>/A/config/cf3/config.cfg`
 3. Mounted into the container at boot time
 4. Applied by SR OS during initialization
 
@@ -952,15 +952,12 @@ Each platform type has tailored configurations embedded in the `configs/` direct
         }
         grpc {
             admin-state enable
-            rib-api {
-                admin-state enable
-            }
         }
     }
 }
 ```
 **Key Differences:**
-- IXR includes RIB API for routing table access
+- IXR excludes RIB API config
 - Different process management settings
 - Platform-specific resource limits
 
@@ -976,15 +973,11 @@ Each platform type has tailored configurations embedded in the `configs/` direct
                 }
             }
         }
-        satellite {
-            admin-state enable
-        }
     }
 }
 ```
 **Key Differences:**
-- SAR-specific satellite management
-- Service aggregation features
+- SAR-specific 
 - Different card/MDA configuration
 
 #### gRPC Configurations
@@ -1044,9 +1037,6 @@ Each platform type has tailored configurations embedded in the `configs/` direct
             gnmi {
                 admin-state enable
                 auto-config-save true
-            }
-            rib-api {
-                admin-state enable
             }
         }
     }
@@ -1150,9 +1140,9 @@ When `certificate.issue: true` is set, the system generates and injects TLS cert
    └─> Store in node configuration
 
 3. Certificate Injection
-   ├─> Write TLS key to: /tftpboot/certs/key.pem
-   ├─> Write TLS cert to: /tftpboot/certs/cert.pem
-   └─> Write CA cert to: /tftpboot/certs/ca.pem
+   ├─> Write TLS key to: <labdir>/.tls/<node-name>/node.key
+   ├─> Write TLS cert to: <labdir>/.tls/<node-name>/node.pem
+   └─> Write CA cert to: <labdir>/.tls/ca/ca.(key|pem)
 
 4. SR OS Configuration
    └─> Reference certificates in config:
@@ -1247,13 +1237,10 @@ After generation, validate the configuration:
 
 ```bash
 # SSH into the container
-docker exec -it clab-mylab-router1 sr_cli
+ssh admin@clab-mylab-router1 
 
 # Check configuration
-A:admin@router1# show configuration
-
-# Validate syntax
-A:admin@router1# validate
+A:admin@router1# admin display-config
 ```
 
 ### Future Enhancements
@@ -1283,51 +1270,51 @@ func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Templa
 ```
 
 **Use Cases:**
-- SR OS 26 introduces new configuration syntax
+- SR OS 26 might introduce new configuration syntax
 - Different feature sets across versions
 - Backwards compatibility maintenance
 
-#### Additional Platform Support
+#### Additional Platform Support for Configuration
 
-To add a new platform type (e.g., "SR-2e"):
+To add a new platform type (e.g., "DMS"):
 
 1. **Add regexp pattern:**
    ```go
-   sr2eRegexp = regexp.MustCompile(`(?i)\bsr-2e\b`)
+   dmsRegexp = regexp.MustCompile(`(?i)\dms-1\b`)
    ```
 
 2. **Create helper method:**
    ```go
-   func (n *sros) isSR2eNode() bool {
-       return sr2eRegexp.MatchString(n.Cfg.NodeType)
+   func (n *sros) isDMSNode() bool {
+       return dmsRegexp.MatchString(n.Cfg.NodeType)
    }
    ```
 
 3. **Add configuration files:**
    ```
-   configs/sr2e/12_grpc.cfg
-   configs/sr2e/14_system.cfg
+   configs/dms/12_grpc.cfg
+   configs/dms/14_system.cfg
    ```
 
 4. **Update `applyNodeTypeSpecificConfig`:**
    ```go
-   if n.isSR2eNode() {
-       tplData.SystemConfig = systemCfgSR2e
-       tplData.GRPCConfig = grpcConfigSR2e
+   if n.isDMSeNode() {
+       tplData.SystemConfig = systemCfgDMS
+       tplData.GRPCConfig = grpcConfigDMS
    }
    ```
 
 5. **Add template (if needed):**
    ```go
-   //go:embed configs/sr2e_config_classic.go.tpl
-   cfgTplClassicSR2e string
+   //go:embed configs/dms_config_classic.go.tpl
+   cfgTplClassicDMS string
    ```
 
 6. **Update `selectConfigTemplate`:**
    ```go
-   if n.isSR2eNode() {
-       tmpl = cfgTplClassicSR2e
-       tplName = "clab-sros-config-classic-sr2e"
+   if n.isDMSNode() {
+       tmpl = cfgTplClassicDMS
+       tplName = "clab-sros-config-classic-dms"
    }
    ```
 
@@ -1339,9 +1326,7 @@ sros/
 │   ├── Node lifecycle methods
 │   ├── Helper methods (isIXRNode, isSARNode, etc.)
 │   ├── Distributed deployment logic
-│   └── Container management
-│
-├── sros_config.go                    # Configuration generation
+│   ├── Container management
 │   ├── prepareConfigTemplateData()
 │   ├── applyNodeTypeSpecificConfig()
 │   ├── selectConfigTemplate()
@@ -1415,10 +1400,10 @@ Test complete configuration generation:
 sudo clab deploy -t test-topology.yml --debug
 
 # Verify generated configuration
-cat clab-test/router1/tftpboot/config.txt
+cat clab-test/router1/A/cf3/config.cfg
 
 # Check running configuration
-docker exec -it clab-test-router1 sr_cli "show configuration"
+ssh admin@clab-test-router1 "admin display-config"
 
 # Verify gRPC is working
 gnmic -a clab-test-router1:57400 --insecure capabilities
@@ -1484,13 +1469,13 @@ LABEL sros.version="25.10.R1"
 **Debug:**
 ```bash
 # Check if config file was written
-ls -la clab-mylab/router1/tftpboot/config.txt
+ls -la clab-mylab/router1/A/cf3/config.cfg
 
 # Check container logs for boot errors
 docker logs clab-mylab-router1 2>&1 | grep -i error
 
 # Verify file is mounted
-docker exec clab-mylab-router1 ls -la /tftpboot/
+docker exec clab-mylab-router1 ls -la clab-mylab/router1/A/
 ```
 
 **Common Causes:**
@@ -1501,8 +1486,11 @@ docker exec clab-mylab-router1 ls -la /tftpboot/
 **Solution:**
 ```bash
 # Validate configuration manually
-docker exec -it clab-mylab-router1 sr_cli
-# Then paste config and check for errors
+ssh admin@clab-mylab-router1
+/configure private
+# Then paste config 
+/commit
+#and check for errors
 ```
 
 ### gRPC Not Working
@@ -1512,7 +1500,7 @@ docker exec -it clab-mylab-router1 sr_cli
 **Debug:**
 ```bash
 # Check if gRPC is enabled in config
-docker exec clab-mylab-router1 sr_cli "show system grpc"
+ssh admin@clab-mylab-router1  "show system grpc"
 
 # Verify port is listening
 docker exec clab-mylab-router1 netstat -tulpn | grep 57400
@@ -1535,24 +1523,6 @@ nodes:
       issue: false  # This will select insecure gRPC config
 ```
 
-### SAR-Hm Classic Mode Override Not Working
-
-**Symptom:** SAR-Hm node tries to boot with model-driven config
-
-**Debug:**
-```bash
-# Check logs for mode override warning
-docker logs clab-mylab-sarhm1 2>&1 | grep "configuration mode"
-```
-
-**Verification:**
-```go
-// Check if isSARHmNode() correctly identifies your node type
-// Test the regexp pattern
-sarHmRegexp.MatchString("SAR-Hm")  // should return true
-sarHmRegexp.MatchString("sar-hmc") // should return true
-```
-
 ### Distributed Deployment Issues
 
 **Symptom:** CPMs or line cards not appearing in configuration
@@ -1560,13 +1530,13 @@ sarHmRegexp.MatchString("sar-hmc") // should return true
 **Debug:**
 ```bash
 # Verify component configuration was generated
-cat clab-mylab/chassis1/tftpboot/config.txt | grep "card"
+cat clab-mylab/chassis1/A/cf3/config.cfg | grep "card"
 
 # Check if all component containers started
 docker ps | grep chassis1
 
 # Verify slot assignments
-docker exec clab-mylab-chassis1-cpm-a sr_cli "show card"
+ssh admin@clab-mylab-chassis1-cpm-a "show card state"
 ```
 
 **Common Causes:**
@@ -1670,5 +1640,5 @@ BSD 3-Clause License - See LICENSE file for details
 - Nokia Containerlab Team
 - Community Contributors
 
-**Last Updated:** 2025-01-XX
-**SR OS Versions Supported:** 23.x, 24.x, 25.x, 26.x (planned)
+**Last Updated:** 2025-11-15
+**SR OS Versions Supported:**  25.7+, 26.x (planned)
