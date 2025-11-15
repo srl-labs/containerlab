@@ -3,42 +3,56 @@ package sros
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
 var (
-	//go:embed configs/snmpv2.cfg
+	//go:embed configs/10_snmpv2.cfg
 	snmpv2Config string
 
-	//go:embed configs/grpc.cfg
-	grpcConfig string
-
-	//go:embed configs/grpc_insecure.cfg
-	grpcConfigInsecure string
-
-	//go:embed configs/grpc_ixr.cfg
-	grpcConfigIXR string
-
-	//go:embed configs/grpc_ixr_insecure.cfg
-	grpcConfigIXRInsecure string
-
-	//go:embed configs/netconf.cfg
-	netconfConfig string
-
-	//go:embed configs/logging.cfg
+	//go:embed configs/11_logging.cfg
 	loggingConfig string
 
-	//go:embed configs/system.cfg
+	//go:embed configs/12_grpc.cfg
+	grpcConfig string
+
+	//go:embed configs/12_grpc_insecure.cfg
+	grpcConfigInsecure string
+
+	//go:embed configs/ixr/12_grpc.cfg
+	grpcConfigIXR string
+
+	//go:embed configs/ixr/12_grpc_insecure.cfg
+	grpcConfigIXRInsecure string
+
+	//go:embed configs/sar/12_grpc.cfg
+	grpcConfigSAR string
+
+	//go:embed configs/sar/12_grpc_insecure.cfg
+	grpcConfigSARInsecure string
+
+	//go:embed configs/13_netconf.cfg
+	netconfConfig string
+
+	//go:embed configs/14_system.cfg
 	systemCfg string
 
-	//go:embed configs/system_ixr.cfg
+	//go:embed configs/ixr/14_system.cfg
 	systemCfgIXR string
 
-	//go:embed configs/ssh.cfg
+	//go:embed configs/sar/14_system.cfg
+	systemCfgSAR string
+
+	//go:embed configs/15_ssh.cfg
 	sshConfig string
 )
 
@@ -73,7 +87,7 @@ func (n *sros) RunningVersion(ctx context.Context) (*SrosVersion, error) {
 }
 
 func (*sros) parseVersionString(s string) *SrosVersion {
-	re := regexp.MustCompile(`v(\d+)\.(\d+)\.([A-Za-z0-9]+)`)
+	re := regexp.MustCompile(`v?(\d+)\.(\d+)\.([A-Za-z0-9]+)`)
 
 	v := re.FindStringSubmatch(s)
 	// 4 matches must be returned if all goes well
@@ -93,4 +107,102 @@ func (v *SrosVersion) String() string {
 // v.
 func (v *SrosVersion) MajorMinorSemverString() string {
 	return fmt.Sprintf("v%s.%s", v.Major, v.Minor)
+}
+
+// getSrosVersionFromImage retrieves the SR OS version from the container image
+// by inspecting the image layers without spawning a container.
+func (n *sros) getSrosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
+	// Try to read from image config labels first (if set by image build)
+	log.Debugf("Inspecting image %v for SR OS version retrieval", n.Cfg.Image)
+	imageInspect, err := n.Runtime.InspectImage(ctx, n.Cfg.Image)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect image %s: %w", n.Cfg.Image, err)
+	}
+
+	if version, exists := imageInspect.Config.Labels["sros.version"]; exists {
+		return n.parseVersionString(version), nil
+	}
+
+	// Fallback: read directly from image layers via graph driver
+	log.Debug("Image label not found, reading version from image layers",
+		"node", n.Cfg.ShortName, "image", n.Cfg.Image)
+
+	version, err := n.readVersionFromImageLayers(ctx, imageInspect)
+	if err != nil {
+		log.Warn("Failed to extract SR OS version from image layers, using default",
+			"node", n.Cfg.ShortName, "error", err)
+		// Return nil for version when error occurs
+		return nil, err
+	}
+
+	return n.parseVersionString(version), nil
+}
+
+// readVersionFromImageLayers reads the sros-version file directly from image layers
+// using the Docker graph driver's UpperDir without extracting the entire image.
+func (n *sros) readVersionFromImageLayers(
+	_ context.Context,
+	imageInspect *clabruntime.ImageInspect,
+) (string, error) {
+	// First, try to use the GraphDriver.Data.UpperDir if available
+	if imageInspect.GraphDriver.Data.UpperDir != "" {
+		versionPath := filepath.Join(imageInspect.GraphDriver.Data.UpperDir, "etc", "sros-version")
+
+		log.Debug("Attempting to read sros-version from UpperDir",
+			"node", n.Cfg.ShortName,
+			"path", versionPath)
+
+		content, err := os.ReadFile(versionPath)
+		if err == nil {
+			version := strings.TrimSpace(string(content))
+			log.Debug("Found SR OS version in UpperDir",
+				"node", n.Cfg.ShortName,
+				"version", version)
+			return version, nil
+		}
+
+		// Log the error and only fallback if it's a "file not found" error
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Warn("Failed to read sros-version from UpperDir",
+				"node", n.Cfg.ShortName,
+				"path", versionPath,
+				"error", err)
+			return "", fmt.Errorf("failed to read sros-version from UpperDir: %w", err)
+		}
+
+		log.Debug("sros-version file not found in UpperDir, trying MergedDir",
+			"node", n.Cfg.ShortName)
+	}
+
+	// Fallback: try MergedDir if available
+	if imageInspect.GraphDriver.Data.MergedDir != "" {
+		versionPath := filepath.Join(imageInspect.GraphDriver.Data.MergedDir, "etc", "sros-version")
+
+		log.Debug("Attempting to read sros-version from MergedDir",
+			"node", n.Cfg.ShortName,
+			"path", versionPath)
+
+		content, err := os.ReadFile(versionPath)
+		if err == nil {
+			version := strings.TrimSpace(string(content))
+			log.Debug("Found SR OS version in MergedDir",
+				"node", n.Cfg.ShortName,
+				"version", version)
+			return version, nil
+		}
+
+		// Log the specific error
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Warn("Failed to read sros-version from MergedDir",
+				"node", n.Cfg.ShortName,
+				"path", versionPath,
+				"error", err)
+			return "", fmt.Errorf("failed to read sros-version from MergedDir: %w", err)
+		}
+
+		log.Debug("sros-version file not found in MergedDir",
+			"node", n.Cfg.ShortName)
+	}
+
+	return "", fmt.Errorf("sros-version file not found in image graph driver directories or layers")
 }

@@ -264,6 +264,21 @@ func (mr *MockContainerRuntimeMockRecorder) Init(arg0 ...any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockContainerRuntime)(nil).Init), arg0...)
 }
 
+// InspectImage mocks base method.
+func (m *MockContainerRuntime) InspectImage(ctx context.Context, imageName string) (*runtime.ImageInspect, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InspectImage", ctx, imageName)
+	ret0, _ := ret[0].(*runtime.ImageInspect)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InspectImage indicates an expected call of InspectImage.
+func (mr *MockContainerRuntimeMockRecorder) InspectImage(ctx, imageName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectImage", reflect.TypeOf((*MockContainerRuntime)(nil).InspectImage), ctx, imageName)
+}
+
 // IsHealthy mocks base method.
 func (m *MockContainerRuntime) IsHealthy(ctx context.Context, cID string) (bool, error) {
 	m.ctrl.T.Helper()

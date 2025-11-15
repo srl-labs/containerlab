@@ -1351,3 +1351,49 @@ func (d *DockerRuntime) StreamLogs(
 
 	return logStream, nil
 }
+
+// InspectImage returns detailed information about a container image.
+func (d *DockerRuntime) InspectImage(
+	ctx context.Context,
+	imageName string,
+) (*clabruntime.ImageInspect, error) {
+	imageData, _, err := d.Client.ImageInspectWithRaw(ctx, imageName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect image %s: %w", imageName, err)
+	}
+
+	// Convert Docker image inspect to our runtime ImageInspect
+	labels := imageData.Config.Labels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	// Extract GraphDriver data
+	graphDriver := clabruntime.GraphDriver{
+		Name: imageData.GraphDriver.Name,
+		Data: clabruntime.GraphDriverData{},
+	}
+
+	// GraphDriver.Data is a map[string]string in Docker
+	if upperDir, ok := imageData.GraphDriver.Data["UpperDir"]; ok {
+		graphDriver.Data.UpperDir = upperDir
+	}
+	if workDir, ok := imageData.GraphDriver.Data["WorkDir"]; ok {
+		graphDriver.Data.WorkDir = workDir
+	}
+	if mergedDir, ok := imageData.GraphDriver.Data["MergedDir"]; ok {
+		graphDriver.Data.MergedDir = mergedDir
+	}
+
+	return &clabruntime.ImageInspect{
+		ID: imageData.ID,
+		Config: clabruntime.ImageConfig{
+			Labels: labels,
+		},
+		RootFS: clabruntime.RootFS{
+			Type:   imageData.RootFS.Type,
+			Layers: imageData.RootFS.Layers,
+		},
+		GraphDriver: graphDriver,
+	}, err
+}
