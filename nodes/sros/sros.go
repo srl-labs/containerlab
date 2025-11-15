@@ -94,10 +94,10 @@ var (
 	//go:embed configs/sros_config_classic.go.tpl
 	cfgTplClassic string
 
-	//go:embed configs/ixr_config_classic.go.tpl
+	//go:embed configs/ixr/ixr_config_classic.go.tpl
 	cfgTplClassicIxr string
 
-	//go:embed configs/sar_config_classic.go.tpl
+	//go:embed configs/sar/sar_config_classic.go.tpl
 	cfgTplClassicSar string
 
 	kindNames  = []string{"nokia_srsim"}
