@@ -1395,5 +1395,5 @@ func (d *DockerRuntime) InspectImage(
 			Layers: imageData.RootFS.Layers,
 		},
 		GraphDriver: graphDriver,
-	}, nil
+	}, err
 }
