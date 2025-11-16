@@ -27,6 +27,7 @@ nav:
               - Cisco SD-WAN: manual/kinds/cisco_sdwan.md
               - Cisco Catalyst 9000v: manual/kinds/vr-cat9kv.md
               - Cisco IOL: manual/kinds/cisco_iol.md
+              - Cisco ASAv: manual/kinds/vr-asav.md
               - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Juniper:
               - Juniper cRPD: manual/kinds/crpd.md
@@ -169,6 +170,7 @@ nav:
       - RARE/freeRtr: lab-examples/rare-freertr.md
       - Juniper vSRX: lab-examples/vsrx01.md
       - OpenBSD: lab-examples/openbsd01.md
+      - Cisco ASAv: lab-examples/asav01.md
       - Cisco FTDv: lab-examples/ftdv01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
