@@ -34,6 +34,7 @@ import (
 	clabnodessrl "github.com/srl-labs/containerlab/nodes/srl"
 	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
 	clabnodesvr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
+	clabnodesvr_asav "github.com/srl-labs/containerlab/nodes/vr_asav"
 	clabnodesvr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
 	clabnodesvr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
 	clabnodesvr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
@@ -77,6 +78,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodessrl.Register(c.Reg)
 	clabnodessros.Register(c.Reg)
 	clabnodesvr_aoscx.Register(c.Reg)
+	clabnodesvr_asav.Register(c.Reg)
 	clabnodesvr_csr.Register(c.Reg)
 	clabnodesvr_c8000v.Register(c.Reg)
 	clabnodesvr_freebsd.Register(c.Reg)
