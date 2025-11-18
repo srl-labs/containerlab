@@ -15,9 +15,6 @@ echo "System Configuration"
                 no shutdown
             exit
         exit
-        rollback
-            rollback-location "cf3:/rollbacks/config"
-        exit
         snmp
             streaming
                 no shutdown
@@ -143,6 +140,7 @@ echo "System Security Configuration"
                 community "public" r version both
                 community "private" rwa version v2c
             exit
+            per-peer-queuing
             telnet
             exit
         exit
@@ -161,7 +159,7 @@ echo "Log Configuration"
 #--------------------------------------------------
     log
     exit
-{{if .SecureGrpc}}
+{{if .IsSecureGrpc}}
 #--------------------------------------------------
 echo "System Security Cpm Hw Filters, PKI, TLS and LDAP Configuration"
 #--------------------------------------------------
@@ -205,7 +203,7 @@ echo "System gRPC Configuration"
 #--------------------------------------------------
     system
         grpc
-{{if .SecureGrpc}}
+{{if .IsSecureGrpc}}
             tls-server-profile "clab-grpc-tls"
 {{else}}
             allow-unsecure-connection
@@ -222,6 +220,9 @@ echo "System gRPC Configuration"
                 exit
             exit
             md-cli
+                no shutdown
+            exit
+            rib-api
                 no shutdown
             exit
             no shutdown
