@@ -145,7 +145,7 @@ func (n *vios) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 			return err
 		}
 
-		if isPartialConfigFile(n.Cfg.StartupConfig) {
+		if clabutils.IsPartialConfigFile(n.Cfg.StartupConfig) {
 			n.partialStartupCfg = string(cfg)
 		} else {
 			n.bootCfg = string(cfg)
@@ -209,8 +209,4 @@ type ViosTemplateData struct {
 	MgmtIPv6PrefixLen  int
 	MgmtIPv6GW         string
 	PartialCfg         string
-}
-
-func isPartialConfigFile(c string) bool {
-	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }

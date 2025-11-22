@@ -982,7 +982,7 @@ func (n *sros) createSROSConfigFiles() error {
 		configCf3,
 		startupCfgName,
 	)
-	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
+	isPartial := clabutils.IsPartialConfigFile(n.Cfg.StartupConfig)
 
 	// generate config and use that to boot node
 	log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
@@ -1137,7 +1137,7 @@ func (n *sros) addPartialConfig() error {
 		// b holds the configuration to be applied to the node
 		b := &bytes.Buffer{}
 		// apply partial configs if partial config is used
-		if isPartialConfigFile(n.Cfg.StartupConfig) && n.isCPM("") {
+		if clabutils.IsPartialConfigFile(n.Cfg.StartupConfig) && n.isCPM("") {
 			log.Info("Adding configuration",
 				"node", n.Cfg.LongName,
 				"type", "partial",
@@ -1502,16 +1502,11 @@ func (n *sros) tlsCertBootstrap(_ context.Context, addr string) error {
 	return err
 }
 
-// isPartialConfigFile returns true if the config file name contains .partial substring.
-func isPartialConfigFile(c string) bool {
-	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
-}
-
 // isFullConfigFile returns true if the config file doesn't contain .partial substring
 // and the config file is NOT nil (ie. startup config IS defined).
 // it is intended that the 'c' arg is n.Cfg.StartupConfig.
 func isFullConfigFile(c string) bool {
-	return c != "" && !isPartialConfigFile(c)
+	return c != "" && !clabutils.IsPartialConfigFile(c)
 }
 
 func (n *sros) IsHealthy(_ context.Context) (bool, error) {
