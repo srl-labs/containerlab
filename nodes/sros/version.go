@@ -15,6 +15,8 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
+const srosVersionFilePath = "/etc/sros-version"
+
 var (
 	//go:embed configs/10_snmpv2.cfg
 	snmpv2Config string
@@ -109,9 +111,9 @@ func (v *SrosVersion) MajorMinorSemverString() string {
 	return fmt.Sprintf("v%s.%s", v.Major, v.Minor)
 }
 
-// getSrosVersionFromImage retrieves the SR OS version from the container image
+// srosVersionFromImage retrieves the SR OS version from the container image
 // by inspecting the image layers without spawning a container.
-func (n *sros) getSrosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
+func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 	// Try to read from image config labels first (if set by image build)
 	log.Debugf("Inspecting image %v for SR OS version retrieval", n.Cfg.Image)
 	imageInspect, err := n.Runtime.InspectImage(ctx, n.Cfg.Image)
@@ -120,7 +122,7 @@ func (n *sros) getSrosVersionFromImage(ctx context.Context) (*SrosVersion, error
 	}
 
 	if version, exists := imageInspect.Config.Labels["sros.version"]; exists {
-		return n.parseVersionString(version), nil
+		return n.parseVersionString(version), err
 	}
 
 	// Fallback: read directly from image layers via graph driver
@@ -130,25 +132,26 @@ func (n *sros) getSrosVersionFromImage(ctx context.Context) (*SrosVersion, error
 	version, err := n.readVersionFromImageLayers(ctx, imageInspect)
 	if err != nil {
 		log.Warn("Failed to extract SR OS version from image layers, using default",
-			"node", n.Cfg.ShortName, "error", err)
+			"node", n.Cfg.ShortName, "image", n.Cfg.Image, "error", err)
 		// Return nil for version when error occurs
 		return nil, err
 	}
 
-	return n.parseVersionString(version), nil
+	return n.parseVersionString(version), err
 }
 
-// readVersionFromImageLayers reads the sros-version file directly from image layers
-// using the Docker graph driver's UpperDir without extracting the entire image.
+// readVersionFromImageLayers reads the SR OS version from the /etc/sros-version file
+// directly from image layers using the Docker graph driver's UpperDir
+// without extracting the entire image.
 func (n *sros) readVersionFromImageLayers(
 	_ context.Context,
 	imageInspect *clabruntime.ImageInspect,
 ) (string, error) {
 	// First, try to use the GraphDriver.Data.UpperDir if available
 	if imageInspect.GraphDriver.Data.UpperDir != "" {
-		versionPath := filepath.Join(imageInspect.GraphDriver.Data.UpperDir, "etc", "sros-version")
+		versionPath := filepath.Join(imageInspect.GraphDriver.Data.UpperDir, srosVersionFilePath)
 
-		log.Debug("Attempting to read sros-version from UpperDir",
+		log.Debug("Attempting to read SR OS version from UpperDir",
 			"node", n.Cfg.ShortName,
 			"path", versionPath)
 
@@ -163,11 +166,11 @@ func (n *sros) readVersionFromImageLayers(
 
 		// Log the error and only fallback if it's a "file not found" error
 		if !errors.Is(err, os.ErrNotExist) {
-			log.Warn("Failed to read sros-version from UpperDir",
+			log.Warn("Failed to read SR OS version from UpperDir",
 				"node", n.Cfg.ShortName,
 				"path", versionPath,
 				"error", err)
-			return "", fmt.Errorf("failed to read sros-version from UpperDir: %w", err)
+			return "", fmt.Errorf("failed to read SR OS version from UpperDir: %w", err)
 		}
 
 		log.Debug("sros-version file not found in UpperDir, trying MergedDir",
@@ -176,7 +179,7 @@ func (n *sros) readVersionFromImageLayers(
 
 	// Fallback: try MergedDir if available
 	if imageInspect.GraphDriver.Data.MergedDir != "" {
-		versionPath := filepath.Join(imageInspect.GraphDriver.Data.MergedDir, "etc", "sros-version")
+		versionPath := filepath.Join(imageInspect.GraphDriver.Data.MergedDir, srosVersionFilePath)
 
 		log.Debug("Attempting to read sros-version from MergedDir",
 			"node", n.Cfg.ShortName,
@@ -193,16 +196,17 @@ func (n *sros) readVersionFromImageLayers(
 
 		// Log the specific error
 		if !errors.Is(err, os.ErrNotExist) {
-			log.Warn("Failed to read sros-version from MergedDir",
+			log.Warn("Failed to read SR OS version from MergedDir",
 				"node", n.Cfg.ShortName,
 				"path", versionPath,
 				"error", err)
-			return "", fmt.Errorf("failed to read sros-version from MergedDir: %w", err)
+			return "", fmt.Errorf("failed to read SR OS version from MergedDir: %w", err)
 		}
 
-		log.Debug("sros-version file not found in MergedDir",
+		log.Debug("%s file not found in MergedDir",
+			srosVersionFilePath,
 			"node", n.Cfg.ShortName)
 	}
 
-	return "", fmt.Errorf("sros-version file not found in image graph driver directories or layers")
+	return "", fmt.Errorf("%s file not found in image graph driver directories or layers", srosVersionFilePath)
 }
