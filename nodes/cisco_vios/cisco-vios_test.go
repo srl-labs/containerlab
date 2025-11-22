@@ -11,7 +11,7 @@ import (
 func TestVIOSInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
 		endpoints []*clablinks.EndpointVeth
-		node      *vrVios
+		node      *vios
 		resultEps []string
 	}{
 		"alias-parse": {
@@ -32,7 +32,7 @@ func TestVIOSInterfaceParsing(t *testing.T) {
 					},
 				},
 			},
-			node: &vrVios{
+			node: &vios{
 				VRNode: clabnodes.VRNode{
 					DefaultNode: clabnodes.DefaultNode{
 						Cfg: &clabtypes.NodeConfig{
@@ -65,7 +65,7 @@ func TestVIOSInterfaceParsing(t *testing.T) {
 					},
 				},
 			},
-			node: &vrVios{
+			node: &vios{
 				VRNode: clabnodes.VRNode{
 					DefaultNode: clabnodes.DefaultNode{
 						Cfg: &clabtypes.NodeConfig{
