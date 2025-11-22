@@ -1003,7 +1003,7 @@ func (n *sros) createSROSConfigFiles() error {
 	// Get version from image before generating config
 	if n.swVersion == nil {
 		ctx := context.Background()
-		version, err := n.getSrosVersionFromImage(ctx)
+		version, err := n.srosVersionFromImage(ctx)
 		if err != nil {
 			log.Warn("Failed to get SR OS version from image",
 				"node", n.Cfg.ShortName, "error", err)
