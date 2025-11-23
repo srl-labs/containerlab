@@ -181,7 +181,7 @@ func (n *sros) readVersionFromImageLayers(
 	if imageInspect.GraphDriver.Data.MergedDir != "" {
 		versionPath := filepath.Join(imageInspect.GraphDriver.Data.MergedDir, srosVersionFilePath)
 
-		log.Debug("Attempting to read sros-version from MergedDir",
+		log.Debug("Attempting to read SR OS version from MergedDir",
 			"node", n.Cfg.ShortName,
 			"path", versionPath)
 
@@ -203,7 +203,8 @@ func (n *sros) readVersionFromImageLayers(
 			return "", fmt.Errorf("failed to read SR OS version from MergedDir: %w", err)
 		}
 
-		log.Debug("%s file not found in MergedDir",
+		log.Debug("SR OS version file not found in MergedDir",
+			"path",
 			srosVersionFilePath,
 			"node", n.Cfg.ShortName)
 	}
