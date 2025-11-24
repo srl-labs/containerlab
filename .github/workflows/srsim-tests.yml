@@ -20,7 +20,9 @@ jobs:
         test-suite:
           - "01*.robot"
           - "03*.robot"
+          - "04*.robot"
           - "05*.robot"
+          - "06*.robot"
           - "07*.robot"
           - "08*.robot"
           - "09*.robot"
@@ -72,7 +74,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull and re-tag srsim image
-        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R1 registry.srlinux.dev/pub/nokia_srsim:25.10.R1
 
       # - name: setup tmate session
       #   uses: mxschmitt/action-tmate@v3

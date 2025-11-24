@@ -10,7 +10,7 @@ Suite Teardown      Run Keyword    Cleanup
 ${lab-name}         comp-cfg-gen-test
 ${lab-file-name}    08-srsim-comp-cfg-test.clab.yml
 ${runtime}          docker
-${gnmic_image}      ghcr.io/openconfig/gnmic:0.42.0
+${gnmic_image}      ghcr.io/openconfig/gnmic:0.42.1
 ${gnmic_flags}      --username admin --password NokiaSros1! --values-only --insecure
 
 
