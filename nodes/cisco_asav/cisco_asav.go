@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package vr_asav
+package asav
 
 import (
 	"fmt"
@@ -36,15 +36,15 @@ func Register(r *clabnodes.NodeRegistry) {
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformAttrs)
 
 	r.Register(kindNames, func() clabnodes.Node {
-		return new(vrAsav)
+		return new(asav)
 	}, nrea)
 }
 
-type vrAsav struct {
+type asav struct {
 	clabnodes.VRNode
 }
 
-func (n *vrAsav) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
+func (n *asav) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init VRNode
 	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
