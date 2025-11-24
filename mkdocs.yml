@@ -29,6 +29,7 @@ nav:
               - Cisco IOL: manual/kinds/cisco_iol.md
               - Cisco ASAv: manual/kinds/vr-asav.md
               - Cisco FTDv: manual/kinds/vr-ftdv.md
+              - Cisco ASAv: manual/kinds/cisco_asav.md
           - Juniper:
               - Juniper cRPD: manual/kinds/crpd.md
               - Juniper vMX: manual/kinds/vr-vmx.md
