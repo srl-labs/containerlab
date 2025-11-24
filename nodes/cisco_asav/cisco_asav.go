@@ -18,7 +18,7 @@ var (
 	kindNames          = []string{"cisco_asav"}
 	defaultCredentials = clabnodes.NewCredentials("admin", "CiscoAsa1!")
 
-	InterfaceRegexp = regexp.MustCompile(`(?:GigabitEthernet|Gi)0/(?P<port>\d+)`)
+	InterfaceRegexp = regexp.MustCompile(`(?:GigabitEthernet|Gi)\s?0/(?P<port>\d+)`)
 	InterfaceOffset = 0
 	InterfaceHelp   = "GigabitEthernet0/X or Gi0/X (where X >= 0) or ethX (where X >= 1)"
 )
