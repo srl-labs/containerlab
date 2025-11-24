@@ -6,7 +6,7 @@ require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/beevik/etree v1.6.0
 	github.com/brunoga/deep v1.2.5
-	github.com/charmbracelet/fang v0.3.0
+	github.com/charmbracelet/fang v0.4.4
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
 	github.com/containernetworking/plugins v1.8.0
@@ -57,6 +57,7 @@ require (
 
 require (
 	al.essio.dev/pkg/shellescape v1.5.1 // indirect
+	charm.land/lipgloss/v2 v2.0.0-beta.3.0.20251106193318-19329a3e8410 // indirect
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/AdaLogics/go-fuzz-headers v0.0.0-20230811130428-ced1acdcaa24 // indirect
 	github.com/AdamKorcz/go-118-fuzz-build v0.0.0-20230306123547-8075edf89bb0 // indirect
@@ -64,12 +65,17 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/carlmontanari/difflibgo v0.0.0-20210718194309-31b9e131c298 // indirect
-	github.com/charmbracelet/colorprofile v0.3.1 // indirect
-	github.com/charmbracelet/lipgloss/v2 v2.0.0-beta.2 // indirect
-	github.com/charmbracelet/x/ansi v0.8.0 // indirect
+	github.com/charmbracelet/colorprofile v0.3.3 // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20251106190538-99ea45596692 // indirect
+	github.com/charmbracelet/x/ansi v0.11.0 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
 	github.com/charmbracelet/x/exp/charmtone v0.0.0-20250603201427-c31516f43444 // indirect
-	github.com/charmbracelet/x/term v0.2.1 // indirect
+	github.com/charmbracelet/x/term v0.2.2 // indirect
+	github.com/charmbracelet/x/termios v0.1.1 // indirect
+	github.com/charmbracelet/x/windows v0.2.2 // indirect
+	github.com/clipperhouse/displaywidth v0.4.1 // indirect
+	github.com/clipperhouse/stringish v0.1.1 // indirect
+	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/containerd/cgroups/v3 v3.0.3 // indirect
 	github.com/containerd/containerd v1.7.23 // indirect
@@ -106,7 +112,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20240620165639-de9c06129bec // indirect
-	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-sqlite3 v1.14.24 // indirect
 	github.com/mdlayher/socket v0.5.1 // indirect
@@ -222,7 +228,7 @@ require (
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/manifoldco/promptui v0.9.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/mdlayher/netlink v1.7.2
 	github.com/miekg/dns v1.1.58 // indirect
 	github.com/miekg/pkcs11 v1.1.1 // indirect
