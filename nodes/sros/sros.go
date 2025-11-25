@@ -334,10 +334,6 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
 
-	if strings.HasPrefix(n.Cfg.NetworkMode, "container:") {
-		n.Cfg.ExtraHosts = nil
-	}
-
 	// Create files/dir structure for standalone nodes or distributed CPM nodes
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
 		// generate the certificate
