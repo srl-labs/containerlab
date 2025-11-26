@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: containerlab
 
@@ -65,7 +65,7 @@ jobs:
           bash ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/12-basic-vyos/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: always()
         with:
           name: 12-basic-vyos-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
@@ -74,7 +74,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: coverage-vyosnetworks_vyos-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}

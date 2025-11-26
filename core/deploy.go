@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -127,7 +128,9 @@ func (c *CLab) Deploy( //nolint: funlen
 	}
 
 	for _, n := range c.Nodes {
-		n.Config().ExtraHosts = extraHosts
+		if !strings.HasPrefix(n.Config().NetworkMode, "container:") {
+			n.Config().ExtraHosts = extraHosts
+		}
 	}
 
 	nodesWg, execCollection, err := c.createNodes(ctx, options.maxWorkers, options.skipPostDeploy)

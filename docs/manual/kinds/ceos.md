@@ -5,18 +5,18 @@ kind_code_name: arista_ceos
 kind_display_name: Arista cEOS
 ---
 # -{{ kind_display_name }}-
+
 -{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 The `-{{ kind_code_name }}-` kind defines a supported feature set and a startup procedure of a `ceos` node.
 
-
-cEOS nodes launched with containerlab comes up with
+cEOS nodes launched with containerlab come up with
 
 * their management interface `eth0` configured with IPv4/6 addresses as assigned by docker
 * hostname assigned to the node name
 * gNMI, Netconf and eAPI services enabled
 * `admin` user created with password `admin`
 
-## Getting cEOS image
+## Getting -{{ kind_display_name }}- image
 <!-- --8<-- [start:ceos-get-image] -->
 Arista requires its users to register with arista.com before downloading any images. Once you created an account and logged in, go to the [software downloads](https://www.arista.com/en/support/software-download) section and download ceos64 tar archive for a given release.
 
@@ -31,32 +31,45 @@ docker import cEOS64-lab-4.32.0F.tar.xz ceos:4.32.0F
 
 Arista cEOS node launched with containerlab can be managed via the following interfaces:
 
-=== "bash"
-    to connect to a `bash` shell of a running ceos container:
-    ```bash
-    docker exec -it <container-name/id> bash
-    ```
-=== "CLI"
-    to connect to the ceos CLI
-    ```bash
-    docker exec -it <container-name/id> Cli
-    ```
-=== "NETCONF"
-    NETCONF server is running over port 830
-    ```bash
-    ssh root@<container-name> -p 830 -s netconf
-    ```
-=== "gNMI"
-    gNMI server is running over port 6030 in non-secure mode
-    using the best in class [gnmic](https://gnmic.openconfig.net/) gNMI client as an example:
-    ```bash
-    gnmic -a <container-name/node-mgmt-address>:6030 --insecure \
-    -u admin -p admin \
-    capabilities
-    ```
+/// tab | bash
+to connect to a `bash` shell of a running ceos container:
 
-!!!info
-    Default user credentials: `admin:admin`
+```bash
+docker exec -it <container-name/id> bash
+```
+
+///
+/// tab | CLI
+to connect to the ceos CLI
+
+```bash
+docker exec -it <container-name/id> Cli
+```
+
+///
+/// tab | NETCONF
+NETCONF server is running over port 830
+
+```bash
+ssh root@<container-name> -p 830 -s netconf
+```
+
+///
+/// tab | gNMI
+gNMI server is running over port 6030 in non-secure mode
+using the best in class [gnmic](https://gnmic.openconfig.net/) gNMI client as an example:
+
+```bash
+gnmic -a <container-name/node-mgmt-address>:6030 --insecure \
+-u admin -p admin \
+capabilities
+```
+
+///
+
+### Credentials
+
+Default user credentials: `admin:admin`
 
 ## Interfaces mapping
 
@@ -105,8 +118,9 @@ When containerlab launches ceos node, it will set IPv4/6 addresses as assigned b
 
 ### User-defined interface mapping
 
-!!!note
-    Supported in cEOS >= 4.28.0F
+/// note
+Supported in cEOS >= 4.28.0F
+///
 
 It is possible to make ceos nodes boot up with a user-defined interface layout. With the [`binds`](../nodes.md#binds) property, a user sets the path to the interface mapping file that will be mounted to a container and used during bootup. The underlying linux `eth` interfaces (used in the containerlab topology file) are mapped to cEOS interfaces in this file. The following shows an example of how this mapping file is structured:
 
@@ -210,8 +224,9 @@ topology:
 
 This topology will be equivalent to `ceos1:Ethernet1/1` connected to `ceos2:Ethernet2/1/1`.
 
-!!!note
-    This feature can not be used together with interface mapping. If the interface mapping is in use, all names must be redefined in the map and the underscore naming option will not work. Also, it's only possible to rename Ethernet interfaces this way, not management ports.
+/// note
+This feature can not be used together with interface mapping. If the interface mapping is in use, all names must be redefined in the map and the underscore naming option will not work. Also, it's only possible to rename Ethernet interfaces this way, not management ports.
+///
 
 ## Features and options
 
@@ -314,17 +329,57 @@ In addition to cli commands such as `write memory` user can take advantage of th
 
 To start an Arista cEOS node containerlab uses the following configuration:
 
-=== "Startup command"
-    `/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0`
-=== "Environment variables"
-    `CEOS:1`
-    `EOS_PLATFORM":ceoslab`
-    `container:docker`
-    `ETBA:1`
-    `SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`
-    `INTFTYPE:eth`
-    `MAPETH0:1`
-    `MGMT_INTF:eth0`
+/// tab | Startup command
+
+```
+/sbin/init systemd.setenv=INTFTYPE=eth systemd.setenv=ETBA=1 systemd.setenv=SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT=1 systemd.setenv=CEOS=1 systemd.setenv=EOS_PLATFORM=ceoslab systemd.setenv=container=docker systemd.setenv=MAPETH0=1 systemd.setenv=MGMT_INTF=eth0
+```
+
+///
+/// tab | Environment variables
+[//]: # (These lines have trailing spaces to force line break for proper formatting. DO NOT REMOVE!)
+`CEOS:1`  
+`EOS_PLATFORM:ceoslab`  
+`container:docker`  
+`ETBA:1`  (1)  
+`SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT:1`  
+`INTFTYPE:eth`  
+`MAPETH0:1`  
+`MGMT_INTF:eth0`  
+{ .annotate }
+
+1. This environment variable is related to the forwarding plane and must be set for cEOS to work properly.
+///
+
+### Arista forwarding agent (cEOS dataplane)
+
+While CloudEOS has a DPDK dataplane, cEOS-lab and vEOS-lab use their own software dataplane.
+
+Two versions of the forwarding agent exist. `Arfa` (**AR** ista **F** orwarding **A** gent) is the new forwarding agent, that is supposed to be faster and more scalable. It has *nearly* reached feature parity with the older `python` forwarding agent and even has some features that do not exist in the older agent. `python` should be considered deprecated.
+
+Starting with `EOS-4.30.1F`, cEOS-lab and vEOS-lab use `Arfa` by default and the following snippet is included in the configuration by default:
+
+```
+platform tfa
+    personality arfa
+```
+
+The `Arfa` agent is constantly being improved and more features are being added. If you believe you've hit a limitation in `Arfa` that did not exist in `python`, contact your SE at Arista.
+
+/// note
+Some very advanced features such as `PTP` or `sFlow` may require additional configuration, such as `interface mode` to be set to `relay`. Please check the Arista docs for more details.
+///
+
+### The ceos-config file
+
+cEOS supports an additional config file at `/mnt/flash/ceos-config` that allows some advanced configuration like system mac address (e.g. for certain CVP/CVaaS lab cases)
+
+```title="/mnt/flash/ceos-config"
+SERIALNUMBER=<Serialnumber>
+SYSTEMMACADDR=aaaa.bbbb.cccc
+```
+
+While it is possible to change the forwarding agent between `Arfa` and `python` via this file, it is not recommended.
 
 ### File mounts
 
