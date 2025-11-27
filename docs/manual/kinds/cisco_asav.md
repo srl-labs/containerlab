@@ -38,7 +38,7 @@ telnet <container-name> 5000
 You can also connect to the container and use `telnet localhost 5000` if telnet is not available on your container host.
 
 /// note
-Default user credentials: `admin:CiscoAsa1!`
+Default user credentials (non-standard due to complexity length requirement): `admin:CiscoAsa1!`
 ///
 
 ## Interface naming
