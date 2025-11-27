@@ -7,7 +7,7 @@ kind_display_name: Cisco ASAv
 
 # Cisco ASAv
 
-[Cisco ASAv](https://www.cisco.com/c/en/us/products/security/adaptive-security-virtual-appliance-asav/index.html) is identified with `cisco_asav` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Cisco ASAv](https://www.cisco.com/c/en/us/products/collateral/security/adaptive-security-virtual-appliance-asav/adapt-security-virtual-appliance-ds.html) is identified with `cisco_asav` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 ## Managing ASAv nodes
 
@@ -38,7 +38,7 @@ telnet <container-name> 5000
 You can also connect to the container and use `telnet localhost 5000` if telnet is not available on your container host.
 
 /// note
-Default user credentials: `admin:CiscaoAsa1!`
+Default user credentials: `admin:CiscoAsa1!`
 ///
 
 ## Interface naming

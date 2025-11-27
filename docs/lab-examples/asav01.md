@@ -3,7 +3,7 @@
 | **Description**               | A Cisco ASAv connected to two Alpine Linux Hosts                     |
 | **Components**                | [Cisco ASAv][asav], [Multitool Alpine Linux][client]                 |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 1 <br/>:fontawesome-solid-memory: 2 GB |
-| **Topology file**             | [asav01.yml][topofile]                                               |
+| **Topology file**             | [asav01.clab.yml][topofile]                                          |
 | **Name**                      | asav01                                                               |
 | **Version information**[^2]   | `asav9-23-1.qcow2`, `docker:24.0.6`                                  |
 
@@ -82,4 +82,4 @@ From 172.20.20.2 icmp_seq=2 Destination Host Unreachable
 From 172.20.20.2 icmp_seq=3 Destination Host Unreachable
 ```
 
-[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/asav01/asav01.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/asav01/asav01.clab.yml
