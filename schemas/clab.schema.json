@@ -105,6 +105,7 @@
                         "cisco_c8000v",
                         "cisco_cat9kv",
                         "cisco_iol",
+                        "cisco_asav",
                         "cumulus_cvx",
                         "huawei_vrp",
                         "openbsd",
@@ -1986,6 +1987,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_sdwan": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_asav": {
                             "$ref": "#/definitions/node-config"
                         },
                         "linux": {
