@@ -12,6 +12,9 @@ import (
 	"sort"
 	"strings"
 
+	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+
 	"github.com/charmbracelet/log"
 	"github.com/pmorjan/kmod"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -37,6 +40,10 @@ const (
 	clabDirVar  = "__clabDir__"
 	nodeDirVar  = "__clabNodeDir__"
 	nodeNameVar = "__clabNodeName__"
+
+	// clab name specific variables
+	gitBranchVar = "__gitBranch__"
+	gitHashVar   = "__gitHash__"
 )
 
 // Config defines lab configuration as it is provided in the YAML file.
@@ -54,6 +61,13 @@ type Config struct {
 // ParseTopology parses the lab topology.
 func (c *CLab) parseTopology() error {
 	log.Info("Parsing & checking topology", "file", c.TopoPaths.TopologyFilenameBase())
+
+	if strings.Contains(c.Config.Name, gitBranchVar) || strings.Contains(c.Config.Name, gitHashVar) {
+		r := c.magicTopoNameReplacer()
+		oldName := c.Config.Name
+		c.Config.Name = r.Replace(c.Config.Name)
+		log.Debugf("Topology name contains Git variables, substituted topology name: %q -> %q", oldName, c.Config.Name)
+	}
 
 	err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name)
 	if err != nil {
@@ -775,5 +789,49 @@ func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
 		clabDirVar, c.TopoPaths.TopologyLabDir(),
 		nodeDirVar, c.TopoPaths.NodeDir(nodeName),
 		nodeNameVar, nodeName,
+	)
+}
+
+// magicVarReplacer returns a string replacer that replaces all supported magic variables.
+func (c *CLab) magicTopoNameReplacer() *strings.Replacer {
+	gitBranch := "none"
+	gitHash := "none"
+
+	repo, err := gogit.PlainOpen(c.TopoPaths.TopologyFileDir())
+	if err != nil {
+		log.Warnf("topology name uses git variables, but no Git repository found at %q - variables will be replaced with 'none'", c.TopoPaths.TopologyFileDir())
+		return strings.NewReplacer(
+			gitBranchVar, gitBranch,
+			gitHashVar, gitHash,
+		)
+	}
+
+	repoHead, err := repo.Head()
+	if err != nil {
+		log.Warn("no commits have been made yet on the current topology Git branch - hash will be 'none'")
+		// Try symbolic head
+		symbolicHead, err := repo.Storer.Reference(plumbing.HEAD)
+		if err != nil || symbolicHead.Type() != plumbing.SymbolicReference {
+			log.Error("could not get information about the head of Git repository while resolving topology git variables")
+			return strings.NewReplacer(
+				gitBranchVar, gitBranch,
+				gitHashVar, gitHash,
+			)
+		}
+		gitBranch = strings.TrimPrefix(symbolicHead.Target().String(), "refs/heads/")
+	} else {
+		gitBranch = repoHead.Name().Short()
+		gitHash = repoHead.Hash().String()
+
+	}
+
+	log.Debugf("Git repo variables will be the following: branch: %q hash: %q", gitBranch, gitHash)
+
+	// Replace illegal characters in branch name
+	gitBranch = strings.Replace(gitBranch, "/", "-", -1)
+
+	return strings.NewReplacer(
+		gitBranchVar, gitBranch,
+		gitHashVar, gitHash,
 	)
 }
