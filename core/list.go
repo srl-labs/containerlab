@@ -163,11 +163,12 @@ func (c *CLab) ListContainersInterfaces(
 	for idx := range containers {
 		cIfs, err := c.ListContainerInterfaces(ctx, &containers[idx])
 		if err != nil {
-			return nil, fmt.Errorf(
-				"error getting container interfaces for %v: %w",
-				cIfs.ContainerName,
-				err,
-			)
+			containerName := ""
+			if len(containers[idx].Names) > 0 {
+				containerName = containers[idx].Names[0]
+			}
+			log.Warn("Skipping interface detection", "node", containerName, "err", err)
+			continue
 		}
 
 		if len(cIfs.Interfaces) > 0 {
@@ -181,17 +182,9 @@ func (c *CLab) ListContainersInterfaces(
 		containerInterfaces = append(containerInterfaces, cIfs)
 	}
 
-	if len(containerInterfaces) == len(containers) {
-		sort.Slice(containerInterfaces, func(i, j int) bool {
-			return containerInterfaces[i].ContainerName < containerInterfaces[j].ContainerName
-		})
-	} else {
-		return nil, fmt.Errorf(
-			"could not retrieve interfaces for all containers, expected %v, got %v",
-			len(containers),
-			len(containerInterfaces),
-		)
-	}
+	sort.Slice(containerInterfaces, func(i, j int) bool {
+		return containerInterfaces[i].ContainerName < containerInterfaces[j].ContainerName
+	})
 
 	return containerInterfaces, nil
 }
