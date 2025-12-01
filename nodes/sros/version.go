@@ -16,6 +16,11 @@ import (
 )
 
 const srosVersionFilePath = "/etc/sros-version"
+const srosImageTitleLabel = "org.opencontainers.image.title"
+const srosImageTitle = "srsim"
+const srosImageVendorLabel = "org.opencontainers.image.vendor"
+const srosImageVendor = "Nokia"
+const srosImageVersionLabel = "org.opencontainers.image.version"
 
 var (
 	//go:embed configs/10_snmpv2.cfg
@@ -120,8 +125,12 @@ func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect image %s: %w", n.Cfg.Image, err)
 	}
+	// log.Infof("ImageInspect is %+v", imageInspect)
+	vendor, okVendor := imageInspect.Config.Labels[srosImageVendorLabel]
+	image, okTitle := imageInspect.Config.Labels[srosImageTitleLabel]
+	version, okVersion := imageInspect.Config.Labels[srosImageVersionLabel]
 
-	if version, exists := imageInspect.Config.Labels["sros.version"]; exists {
+	if okVendor && okTitle && okVersion && vendor == srosImageVendor && image == srosImageTitle {
 		return n.parseVersionString(version), err
 	}
 
@@ -129,7 +138,7 @@ func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 	log.Debug("Image label not found, reading version from image layers",
 		"node", n.Cfg.ShortName, "image", n.Cfg.Image)
 
-	version, err := n.readVersionFromImageLayers(ctx, imageInspect)
+	version, err = n.readVersionFromImageLayers(ctx, imageInspect)
 	if err != nil {
 		log.Warn("Failed to extract SR OS version from image layers, using default",
 			"node", n.Cfg.ShortName, "image", n.Cfg.Image, "error", err)
