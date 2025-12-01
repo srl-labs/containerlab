@@ -15,12 +15,14 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
-const srosVersionFilePath = "/etc/sros-version"
-const srosImageTitleLabel = "org.opencontainers.image.title"
-const srosImageTitle = "srsim"
-const srosImageVendorLabel = "org.opencontainers.image.vendor"
-const srosImageVendor = "Nokia"
-const srosImageVersionLabel = "org.opencontainers.image.version"
+const (
+	srosVersionFilePath   = "/etc/sros-version"
+	srosImageTitleLabel   = "org.opencontainers.image.title"
+	srosImageTitle        = "srsim"
+	srosImageVendorLabel  = "org.opencontainers.image.vendor"
+	srosImageVendor       = "Nokia"
+	srosImageVersionLabel = "org.opencontainers.image.version"
+)
 
 var (
 	//go:embed configs/10_snmpv2.cfg
@@ -218,5 +220,8 @@ func (n *sros) readVersionFromImageLayers(
 			"node", n.Cfg.ShortName)
 	}
 
-	return "", fmt.Errorf("%s file not found in image graph driver directories or layers", srosVersionFilePath)
+	return "", fmt.Errorf(
+		"%s file not found in image graph driver directories or layers",
+		srosVersionFilePath,
+	)
 }
