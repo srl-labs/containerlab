@@ -127,13 +127,12 @@ func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect image %s: %w", n.Cfg.Image, err)
 	}
-	// log.Infof("ImageInspect is %+v", imageInspect)
 	vendor, okVendor := imageInspect.Config.Labels[srosImageVendorLabel]
 	image, okTitle := imageInspect.Config.Labels[srosImageTitleLabel]
 	version, okVersion := imageInspect.Config.Labels[srosImageVersionLabel]
 
 	if okVendor && okTitle && okVersion && vendor == srosImageVendor && image == srosImageTitle {
-		return n.parseVersionString(version), err
+		return n.parseVersionString(version), nil
 	}
 
 	// Fallback: read directly from image layers via graph driver
