@@ -134,6 +134,7 @@ nav:
               - detach: cmd/tools/gotty/detach.md
               - reattach: cmd/tools/gotty/reattach.md
               - list: cmd/tools/gotty/list.md
+          - snapshot save: cmd/tools/snapshot/save.md
       - version:
           - cmd/version/index.md
           - check: cmd/version/check.md

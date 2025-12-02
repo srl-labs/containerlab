@@ -19,6 +19,7 @@ func toolsSubcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		disableTxOffloadCmd,
 		gottyCmd,
 		netemCmd,
+		snapshotCmd,
 		sshxCmd,
 		vethCmd,
 		vxlanCmd,
