@@ -1905,6 +1905,9 @@
                         "nokia_srsim": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "nokia_sros": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "arista_ceos": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -1924,9 +1927,6 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "dell_sonic": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "nokia_sros": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vmx": {
@@ -2041,6 +2041,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "arrcus_arcos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "mikrotik_ros": {
                             "$ref": "#/definitions/node-config"
                         }
                     },
