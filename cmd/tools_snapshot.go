@@ -127,7 +127,8 @@ func snapshotSaveFn(cmd *cobra.Command, o *Options) error {
 			} else if result.Status == "skipped" {
 				log.Infof("%s: skipping (%s)", nodeName, result.Reason)
 			} else {
-				log.Infof("%s: snapshot saved",
+				log.Info("snapshot saved",
+					"node",
 					nodeName,
 					"path", result.SnapshotPath,
 					"size", formatBytes(result.SizeBytes),
