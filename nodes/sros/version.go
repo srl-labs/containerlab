@@ -15,7 +15,14 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
-const srosVersionFilePath = "/etc/sros-version"
+const (
+	srosVersionFilePath   = "/etc/sros-version"
+	srosImageTitleLabel   = "org.opencontainers.image.title"
+	srosImageTitle        = "srsim"
+	srosImageVendorLabel  = "org.opencontainers.image.vendor"
+	srosImageVendor       = "Nokia"
+	srosImageVersionLabel = "org.opencontainers.image.version"
+)
 
 var (
 	//go:embed configs/10_snmpv2.cfg
@@ -120,16 +127,19 @@ func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to inspect image %s: %w", n.Cfg.Image, err)
 	}
+	vendor, okVendor := imageInspect.Config.Labels[srosImageVendorLabel]
+	image, okTitle := imageInspect.Config.Labels[srosImageTitleLabel]
+	version, okVersion := imageInspect.Config.Labels[srosImageVersionLabel]
 
-	if version, exists := imageInspect.Config.Labels["sros.version"]; exists {
-		return n.parseVersionString(version), err
+	if okVendor && okTitle && okVersion && vendor == srosImageVendor && image == srosImageTitle {
+		return n.parseVersionString(version), nil
 	}
 
 	// Fallback: read directly from image layers via graph driver
 	log.Debug("Image label not found, reading version from image layers",
 		"node", n.Cfg.ShortName, "image", n.Cfg.Image)
 
-	version, err := n.readVersionFromImageLayers(ctx, imageInspect)
+	version, err = n.readVersionFromImageLayers(ctx, imageInspect)
 	if err != nil {
 		log.Warn("Failed to extract SR OS version from image layers, using default",
 			"node", n.Cfg.ShortName, "image", n.Cfg.Image, "error", err)
@@ -209,5 +219,8 @@ func (n *sros) readVersionFromImageLayers(
 			"node", n.Cfg.ShortName)
 	}
 
-	return "", fmt.Errorf("%s file not found in image graph driver directories or layers", srosVersionFilePath)
+	return "", fmt.Errorf(
+		"%s file not found in image graph driver directories or layers",
+		srosVersionFilePath,
+	)
 }
