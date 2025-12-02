@@ -201,7 +201,8 @@ func (sc *SnapshotCollection) Summary() string {
 
 // createNodeSnapshot creates a snapshot for a single node.
 func createNodeSnapshot(ctx context.Context, container clabruntime.GenericContainer,
-	outputPath string, timeout time.Duration) *SnapshotResult {
+	outputPath string, timeout time.Duration,
+) *SnapshotResult {
 	start := time.Now()
 	result := &SnapshotResult{
 		NodeName:     container.Labels[clabconstants.NodeName],
@@ -212,7 +213,11 @@ func createNodeSnapshot(ctx context.Context, container clabruntime.GenericContai
 	if !isVrnetlabNode(container) {
 		kind := container.Labels[clabconstants.NodeKind]
 		result.Status = "skipped"
-		result.Reason = fmt.Sprintf("not a vrnetlab node (kind=%s, image=%s)", kind, container.Image)
+		result.Reason = fmt.Sprintf(
+			"not a vrnetlab node (kind=%s, image=%s)",
+			kind,
+			container.Image,
+		)
 		return result
 	}
 
@@ -260,7 +265,8 @@ func createNodeSnapshot(ctx context.Context, container clabruntime.GenericContai
 // waitForSnapshotFile waits for vrnetlab to complete snapshot creation by monitoring logs.
 // Vrnetlab logs "Snapshot saved to /snapshot.tar" when the snapshot is complete.
 func waitForSnapshotFile(ctx context.Context, runtime clabruntime.ContainerRuntime,
-	containerName string, timeout time.Duration) error {
+	containerName string, timeout time.Duration,
+) error {
 	deadline := time.Now().Add(timeout)
 
 	// Get log stream from container

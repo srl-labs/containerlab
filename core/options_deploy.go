@@ -102,7 +102,8 @@ func (d *DeployOptions) RestoreAll() string {
 	return d.restoreAll
 }
 
-// SetRestoreNodeSnapshots sets the restoreNodeSnapshots option and returns the updated DeployOptions instance.
+// SetRestoreNodeSnapshots sets the restoreNodeSnapshots option and returns the updated
+// DeployOptions instance.
 func (d *DeployOptions) SetRestoreNodeSnapshots(snapshots []string) *DeployOptions {
 	d.restoreNodeSnapshots = snapshots
 	return d

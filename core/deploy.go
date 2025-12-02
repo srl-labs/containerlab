@@ -367,7 +367,11 @@ func (c *CLab) configureSnapshotRestore(options *DeployOptions) error {
 
 // resolveNodeSnapshot determines the snapshot file path for a given node.
 // Priority: per-node override > restore-all directory > none.
-func resolveNodeSnapshot(nodeName string, restoreMap map[string]string, restoreAll string) (string, bool) {
+func resolveNodeSnapshot(
+	nodeName string,
+	restoreMap map[string]string,
+	restoreAll string,
+) (string, bool) {
 	// 1. Check per-node overrides first (highest priority)
 	if snapshotPath, ok := restoreMap[nodeName]; ok {
 		return snapshotPath, true
