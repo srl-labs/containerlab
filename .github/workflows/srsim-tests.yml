@@ -20,7 +20,9 @@ jobs:
         test-suite:
           - "01*.robot"
           - "03*.robot"
+          - "04*.robot"
           - "05*.robot"
+          - "06*.robot"
           - "07*.robot"
           - "08*.robot"
           - "09*.robot"
@@ -30,7 +32,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           name: containerlab
 
@@ -72,7 +74,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull and re-tag srsim image
-        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R1 registry.srlinux.dev/pub/nokia_srsim:25.10.R1
 
       # - name: setup tmate session
       #   uses: mxschmitt/action-tmate@v3
@@ -82,7 +84,7 @@ jobs:
           ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
       # upload test reports as a zip file
       - name: Upload test logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: 13-srsim-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
@@ -91,7 +93,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: coverage-srsim-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}

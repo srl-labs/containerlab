@@ -264,6 +264,21 @@ func (mr *MockContainerRuntimeMockRecorder) Init(arg0 ...any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockContainerRuntime)(nil).Init), arg0...)
 }
 
+// InspectImage mocks base method.
+func (m *MockContainerRuntime) InspectImage(ctx context.Context, imageName string) (*runtime.ImageInspect, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InspectImage", ctx, imageName)
+	ret0, _ := ret[0].(*runtime.ImageInspect)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InspectImage indicates an expected call of InspectImage.
+func (mr *MockContainerRuntimeMockRecorder) InspectImage(ctx, imageName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectImage", reflect.TypeOf((*MockContainerRuntime)(nil).InspectImage), ctx, imageName)
+}
+
 // IsHealthy mocks base method.
 func (m *MockContainerRuntime) IsHealthy(ctx context.Context, cID string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -363,6 +378,22 @@ func (m *MockContainerRuntime) StopContainer(arg0 context.Context, arg1 string) 
 func (mr *MockContainerRuntimeMockRecorder) StopContainer(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockContainerRuntime)(nil).StopContainer), arg0, arg1)
+}
+
+// StreamEvents mocks base method.
+func (m *MockContainerRuntime) StreamEvents(ctx context.Context, opts runtime.EventStreamOptions) (<-chan runtime.ContainerEvent, <-chan error, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamEvents", ctx, opts)
+	ret0, _ := ret[0].(<-chan runtime.ContainerEvent)
+	ret1, _ := ret[1].(<-chan error)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// StreamEvents indicates an expected call of StreamEvents.
+func (mr *MockContainerRuntimeMockRecorder) StreamEvents(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEvents", reflect.TypeOf((*MockContainerRuntime)(nil).StreamEvents), ctx, opts)
 }
 
 // StreamLogs mocks base method.

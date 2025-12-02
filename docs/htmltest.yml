@@ -26,6 +26,7 @@ IgnoreURLs:
   - x.com # started to give 400
   - virtualizestuff.com
   - hashnode.com
+  - https://nleiva.medium.com # started to give 403
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true

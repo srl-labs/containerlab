@@ -8,7 +8,7 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license-sros25.txt
-      image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R1
   nodes:
     srsim10:
       kind: nokia_srsim
@@ -17,13 +17,6 @@ topology:
         issue: true
         sans: ["10.78.140.2","fd00:10:78:140::2"]
       startup-config: |
-        /configure sfm 1 sfm-type m-sfm6-7/12
-        /configure sfm 2 sfm-type m-sfm6-7/12
-        /configure card 1 card-type iom5-e
-        /configure card 2 card-type iom5-e
-        /configure card 1 mda 1 mda-type me6-100gb-qsfp28
-        /configure card 1 mda 2 mda-type me3-400gb-qsfpdd
-        /configure card 2 mda 1 mda-type me6-100gb-qsfp28
         /configure port 1/1/c1 admin-state enable
         /configure port 1/1/c1 connector breakout c4-10g
         /configure port 2/1/c1 admin-state enable
@@ -43,16 +36,11 @@ topology:
         /configure router "Base" interface "ptp2" port 2/1/c1/1
         /configure router "Base" interface "ptp2" ipv4 primary address 10.0.1.10
         /configure router "Base" interface "ptp2" ipv4 primary prefix-length 24
-        /configure router "Base" interface "l1" admin-state enable
-        /configure router "Base" interface "l1" port 1/1/c1/2
-        /configure router "Base" interface "l1" ipv4 primary address 10.110.0.100
-        /configure router "Base" interface "l1" ipv4 primary prefix-length 24
         /configure router "Base" isis 0 admin-state enable
         /configure router "Base" isis 0 area-address [49.0001]
         /configure router "Base" isis 0 advertise-passive-only true
         /configure router "Base" isis 0 interface "ptp1" { }
         /configure router "Base" isis 0 interface "ptp2" { }
-        /configure router "Base" isis 0 interface "l1" passive true
         /configure router "Base" isis 0 interface "system" passive true
       mgmt-ipv4: 10.78.140.2
       mgmt-ipv6: fd00:10:78:140::2
@@ -62,7 +50,6 @@ topology:
         - 10022:22
       components:
         - slot: A
-        - slot: B
         - slot: 1
           type: iom5-e
           sfm: m-sfm6-7/12
@@ -72,6 +59,11 @@ topology:
             - slot: 2
               type: me3-400gb-qsfpdd
         - slot: 2
+          type: iom5-e
+          sfm: m-sfm6-7/12
+          mda: 
+             - slot: 1
+               type: me6-100gb-qsfp28
     SRSIM11-a:
       kind: nokia_srsim
       type: sr-7
@@ -102,28 +94,16 @@ topology:
         /configure router "Base" interface "ptp2" port 2/1/c1/1
         /configure router "Base" interface "ptp2" ipv4 primary address 10.0.1.11
         /configure router "Base" interface "ptp2" ipv4 primary prefix-length 24
-        /configure router "Base" interface "l2" admin-state enable
-        /configure router "Base" interface "l2" port 2/1/c1/2
-        /configure router "Base" interface "l2" ipv4 primary address 10.111.0.100
-        /configure router "Base" interface "l2" ipv4 primary prefix-length 24
         /configure router "Base" isis 0 admin-state enable
         /configure router "Base" isis 0 area-address [49.0001]
         /configure router "Base" isis 0 advertise-passive-only true
         /configure router "Base" isis 0 interface "ptp1" { }
         /configure router "Base" isis 0 interface "ptp2" { }
-        /configure router "Base" isis 0 interface "l2" passive true
         /configure router "Base" isis 0 interface "system" passive true
       mgmt-ipv4: 10.78.140.3
       mgmt-ipv6: fd00:10:78:140::3
       env:
         NOKIA_SROS_SYSTEM_BASE_MAC: 02:f3:11:00:00:00
-    srsim11-b:
-      kind: nokia_srsim
-      type: sr-7
-      network-mode: container:SRSIM11-a
-      env:
-        NOKIA_SROS_SYSTEM_BASE_MAC: 02:f3:11:00:00:00
-        NOKIA_SROS_SLOT: B
     srsim11-1:
       kind: nokia_srsim
       type: sr-7
@@ -140,27 +120,7 @@ topology:
         NOKIA_SROS_MDA_1: me6-100gb-qsfp28
         NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
         NOKIA_SROS_SFM: m-sfm6-7/12
-    l1:
-      kind: linux
-      image: ghcr.io/srl-labs/network-multitool
-      exec:
-        - >
-          ash -c '
-          ip l set dev eth1 up &&
-          ip addr add dev eth1 10.110.0.1/24 &&
-          ip route add 10.111.0.0/24 via 10.110.0.100'
-    l2:
-      kind: linux
-      image: ghcr.io/srl-labs/network-multitool
-      exec:
-        - >
-          ash -c '
-          ip l set dev eth1 up &&
-          ip addr add dev eth1 10.111.0.1/24 &&
-          ip route add 10.110.0.0/24 via 10.111.0.100'
   links:
     # # DATA LINKS
     - endpoints: ["srsim10:1/1/c1/1", "srsim11-1:1/1/c1/1"]
-    - endpoints: ["srsim10:1/1/c1/2", "l1:eth1"]
     - endpoints: ["srsim10:2/1/c1/1", "srsim11-2:2/1/c1/1"]
-    - endpoints: ["srsim11-2:2/1/c1/2", "l2:eth1"]

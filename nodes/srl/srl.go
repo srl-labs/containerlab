@@ -9,6 +9,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,7 +20,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 
 	clabcert "github.com/srl-labs/containerlab/cert"
@@ -126,7 +126,8 @@ var (
 	topologies embed.FS
 
 	saveCmd          = `/opt/srlinux/bin/sr_cli -d "tools system configuration save"`
-	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
+	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d ` +
+		`"info from state system app-management application mgmt_server state | grep running"`
 	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the
 	// mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
@@ -135,8 +136,8 @@ var (
 			Parse(srlConfigCmdsTpl)
 
 	requiredKernelVersion = &clabutils.KernelVersion{
-		Major:    4,
-		Minor:    10,
+		Major:    4,  //nolint:mnd
+		Minor:    10, //nolint:mnd
 		Revision: 0,
 	}
 
@@ -204,7 +205,9 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		log.Warn(
 			"Deprecation notice",
 			"notice",
-			"You are using a deprecated SR Linux node type name. Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\nDeprecated type format will be removed after January 2026",
+			"You are using a deprecated SR Linux node type name. "+
+				"Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\n"+
+				"Deprecated type format will be removed after January 2026",
 			"deprecated type",
 			n.Cfg.NodeType,
 		)
@@ -219,6 +222,7 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
+
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
 			n.Cfg.NodeType, strings.Join(keys, ", "))
 	}
@@ -226,7 +230,7 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	if n.Cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
 		// the additional touch is needed to support non docker runtimes
-		n.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+		n.Cfg.Cmd = "sudo -E bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
 	n.Cfg.Env = clabutils.MergeStringMaps(srlEnv, n.Cfg.Env)
@@ -235,9 +239,8 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	if n.Cfg.User == "" {
 		n.Cfg.User = "0:0"
 	}
-	for k, v := range srlSysctl {
-		n.Cfg.Sysctls[k] = v
-	}
+
+	maps.Copy(n.Cfg.Sysctls, srlSysctl)
 
 	if n.Cfg.License != "" {
 		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will
@@ -362,6 +365,7 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 
 func (n *srl) SaveConfig(ctx context.Context) error {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
+
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
@@ -386,9 +390,11 @@ func (n *srl) SaveConfig(ctx context.Context) error {
 func (n *srl) Ready(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
+
 	var err error
 
 	log.Debugf("Waiting for SR Linux node %q to boot...", n.Cfg.ShortName)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -400,6 +406,7 @@ func (n *srl) Ready(ctx context.Context) error {
 		default:
 			// two commands are checked, first if the mgmt_server is running
 			cmd, _ := clabexec.NewExecCmdFromString(mgmtServerRdyCmd)
+
 			execResult, err := n.RunExec(ctx, cmd)
 			if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
 				logMsg := "mgmt_server status check failed"
@@ -424,11 +431,13 @@ func (n *srl) Ready(ctx context.Context) error {
 					execResult.GetStdErrString(),
 				)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
 			if !strings.Contains(execResult.GetStdOutString(), "running") {
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
@@ -436,16 +445,19 @@ func (n *srl) Ready(ctx context.Context) error {
 			// commands
 			// this is done with checking readyForConfigCmd
 			cmd, _ = clabexec.NewExecCmdFromString(readyForConfigCmd)
+
 			execResult, err = n.RunExec(ctx, cmd)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
 			if execResult.GetStdErrString() != "" {
 				log.Debugf("readyForConfigCmd stderr: %s", execResult.GetStdErrString())
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
@@ -455,6 +467,7 @@ func (n *srl) Ready(ctx context.Context) error {
 					execResult.GetStdOutString(),
 				)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
@@ -481,6 +494,7 @@ func (*srl) checkKernelVersion() error {
 			kv,
 		)
 	}
+
 	return nil
 }
 
@@ -496,16 +510,19 @@ func (n *srl) CheckDeploymentConditions(ctx context.Context) error {
 
 func (n *srl) createSRLFiles() error {
 	log.Debugf("Creating directory structure for SRL container: %s", n.Cfg.ShortName)
+
 	var src string
 
 	if n.Cfg.License != "" {
 		// copy license file to node specific directory in lab
 		src = n.Cfg.License
+
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
 		if err := clabutils.CopyFile(context.Background(), src, licPath,
 			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
+
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
 	}
 
@@ -529,6 +546,7 @@ func (n *srl) createSRLFiles() error {
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
 	var cfgTemplate string
+
 	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.json")
 	if n.Cfg.StartupConfig != "" {
 		log.Debug("Reading startup-config", "file", n.Cfg.StartupConfig)
@@ -547,6 +565,7 @@ func (n *srl) createSRLFiles() error {
 		// Get slice of data with optional leading whitespace removed.
 		// See RFC 7159, Section 2 for the definition of JSON whitespace.
 		x := bytes.TrimLeft(cBuf.Bytes(), " \t\r\n")
+
 		isJSON := len(x) > 0 && x[0] == '{'
 		if !isJSON {
 			log.Debugf(
@@ -560,6 +579,7 @@ func (n *srl) createSRLFiles() error {
 			// as we will apply it over the top of a default config in the post deploy stage
 			return nil
 		}
+
 		cfgTemplate = cBuf.String()
 	}
 
@@ -585,7 +605,7 @@ func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
 
 	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
 	if err != nil {
-		return errors.Wrap(err, "failed to get srl topology file")
+		return fmt.Errorf("failed to get srl topology file: %w", err)
 	}
 
 	mac := genMac(cfg)
@@ -649,7 +669,7 @@ type tplIFace struct {
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
-func (n *srl) addDefaultConfig(ctx context.Context) error {
+func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 	b, err := n.banner()
 	if err != nil {
 		return err
@@ -680,38 +700,33 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
 
 	// prepare the endpoints
+	const ethernetSplitParts = 3
+
+	const ethernetMTUOverhead = 14
+
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
 		if ifName == "mgmt0" {
-			// if the endpoint has a custom MTU set, use it in the template logic
-			// otherwise we don't set the mtu as srlinux will use the default max value 9232
 			if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 				tplData.MgmtMTU = m
-				// MgmtMTU seems to be only set when we use macvlan interface
-				// with network-mode: none. For this super narrow use case
-				// we setup mgmt port mtu to match the mtu of the macvlan parent interface
-				// but then we need to make sure that IP MTU is smaller by 14B
-				tplData.MgmtIPMTU = m - 14
+				tplData.MgmtIPMTU = m - ethernetMTUOverhead
 			}
-			// the rest is just for traffic carrying interfaces
+
 			continue
 		}
-		// split the interface identifier into their parts
-		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
 
-		// create a template interface struct
+		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", ethernetSplitParts)
+
 		iface := tplIFace{}
+
 		iface.BaseName = fmt.Sprintf("ethernet-%s/%s", ifNameParts[0], ifNameParts[1])
-		// if it is a breakout port add the breakout identifier
-		if len(ifNameParts) == 3 {
+		if len(ifNameParts) == ethernetSplitParts {
 			iface.FullName = fmt.Sprintf("%s/%s", iface.BaseName, ifNameParts[2])
 			iface.HasBreakout = true
 		} else {
 			iface.FullName = iface.BaseName
 		}
 
-		// if the endpoint has a custom MTU set, use it in the template logic
-		// otherwise we don't set the mtu as srlinux will use the default max value 9232
 		if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 			iface.Mtu = m
 		}
@@ -724,11 +739,11 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 			iface.IPv6 = a.String()
 		}
 
-		// add the template interface definition to the template data
 		tplData.IFaces[ifName] = iface
 	}
 
 	buf := new(bytes.Buffer)
+
 	err = srlCfgTpl.Execute(buf, tplData)
 	if err != nil {
 		return err
@@ -740,6 +755,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", buf.String(), defaultCfgPath),
 	})
+
 	_, err = n.RunExec(ctx, execCmd)
 	if err != nil {
 		return err
@@ -793,6 +809,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", cfgStr, overlayCfgPath),
 	})
+
 	_, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -802,6 +819,7 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 		"bash", "-c",
 		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", overlayCfgPath),
 	})
+
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -829,6 +847,7 @@ func (n *srl) commitConfig(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
@@ -850,7 +869,8 @@ func (n *srl) commitConfig(ctx context.Context) error {
 
 func (n *srl) generateCheckpoint(ctx context.Context) error {
 	cmd, err := clabexec.NewExecCmdFromString(
-		`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`,
+		`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint ` +
+			`name clab-initial comment \"set by containerlab\"'`,
 	)
 	if err != nil {
 		return err
@@ -884,7 +904,9 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node
 		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
 		return err
 	}
+
 	var entriesv4, entriesv6 bytes.Buffer
+
 	const (
 		v4Prefix = "###### CLAB-v4-START ######"
 		v4Suffix = "###### CLAB-v4-END ######"
@@ -893,18 +915,24 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node
 	)
 	fmt.Fprintf(&entriesv4, "\n%s\n", v4Prefix)
 	fmt.Fprintf(&entriesv6, "\n%s\n", v6Prefix)
+
 	for node, params := range nodes {
 		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
 			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
 		}
+
 		if v6 := params.Config().MgmtIPv6Address; v6 != "" {
 			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
 		}
 	}
+
 	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
 	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 
-	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0o666) // skipcq: GSC-G302
+	// world-writable for container /etc/hosts
+	const hostsFilePerm = 0o666
+
+	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, hostsFilePerm) // skipcq: GSC-G302
 	if err != nil {
 		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
 		return err
@@ -914,6 +942,7 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node
 	if err != nil {
 		return err
 	}
+
 	_, err = file.Write(entriesv6.Bytes())
 	if err != nil {
 		return err
@@ -935,6 +964,7 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 	for _, indexKey := range indexGroups {
 		if index, found := captureGroups[indexKey]; found && index != "" {
 			foundIndices[indexKey] = true
+
 			parsedIndices[indexKey], err = strconv.Atoi(index)
 			if err != nil {
 				return "", fmt.Errorf(
@@ -944,6 +974,7 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 					index,
 				)
 			}
+
 			if parsedIndices[indexKey] < 1 {
 				return "", fmt.Errorf(
 					"%q parsed %q index %q does not match requirement >= 1",
@@ -1012,12 +1043,14 @@ gpgcheck=0`
 	aptRepo := `deb [trusted=yes] https://srlinux.fury.site/apt/ /`
 
 	yumPath := n.Cfg.LabDir + "/yum.repo"
+
 	err := clabutils.CreateFile(yumPath, yumRepo)
 	if err != nil {
 		return err
 	}
 
 	aptPath := n.Cfg.LabDir + "/apt.list"
+
 	err = clabutils.CreateFile(aptPath, aptRepo)
 	if err != nil {
 		return err

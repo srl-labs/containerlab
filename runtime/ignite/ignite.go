@@ -37,7 +37,6 @@ const (
 	defaultContainerNetworkPlugin = igniteNetwork.PluginDockerBridge
 	udevRuleTemplate              = "SUBSYSTEM==\"net\", ACTION==\"add\", DRIVERS==\"?*\", ATTR{address}==\"%s\", ATTR{type}==\"1\", KERNEL==\"eth*\", NAME=\"%s\""
 	udevRulesPath                 = "/etc/udev/rules.d/70-persistent-net.rules"
-	hostnamePath                  = "/etc/hostname"
 )
 
 var runtimePaths = []string{
@@ -522,4 +521,18 @@ func (*IgniteRuntime) GetCooCBindMounts() clabtypes.Binds {
 
 func (*IgniteRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("StreamLogs not implemented for Ignite runtime")
+}
+
+func (*IgniteRuntime) StreamEvents(
+	context.Context,
+	clabruntime.EventStreamOptions,
+) (<-chan clabruntime.ContainerEvent, <-chan error, error) {
+	return nil, nil, fmt.Errorf("StreamEvents is not implemented for Ignite runtime")
+}
+
+func (*IgniteRuntime) InspectImage(
+	ctx context.Context,
+	imageName string,
+) (*clabruntime.ImageInspect, error) {
+	return nil, fmt.Errorf("InspectImage not implemented for Ignite runtime")
 }

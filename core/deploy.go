@@ -130,7 +130,9 @@ func (c *CLab) Deploy( //nolint: funlen
 	}
 
 	for _, n := range c.Nodes {
-		n.Config().ExtraHosts = extraHosts
+		if !strings.HasPrefix(n.Config().NetworkMode, "container:") {
+			n.Config().ExtraHosts = extraHosts
+		}
 	}
 
 	// Apply snapshot restore configuration to nodes

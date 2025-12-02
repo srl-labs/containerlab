@@ -494,3 +494,17 @@ func (r *PodmanRuntime) GetRuntimeSocket() (string, error) {
 func (*PodmanRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("StreamLogs not implemented for Podman runtime")
 }
+
+func (*PodmanRuntime) StreamEvents(
+	context.Context,
+	runtime.EventStreamOptions,
+) (<-chan runtime.ContainerEvent, <-chan error, error) {
+	return nil, nil, fmt.Errorf("StreamEvents is not implemented for Podman runtime")
+}
+
+func (p *PodmanRuntime) InspectImage(
+	ctx context.Context,
+	imageName string,
+) (*runtime.ImageInspect, error) {
+	return nil, fmt.Errorf("InspectImage not implemented for Podman runtime")
+}

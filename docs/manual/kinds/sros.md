@@ -180,7 +180,7 @@ Data interfaces need to be configured with IP addressing manually using the SR O
 
 ## SR-SIM variants
 
-The SR-SIM can emulate different hardware platforms as explained in the [SR-SIM Installation, deployment and setup guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html). These variants can be set using the `type` directive in the clab topology file, or by overriding the different available environment variables such as the ones for the chassis (`NOKIA_SROS_CHASSIS`) or card (`NOKIA_SROS_CARD`).  
+The SR-SIM can emulate different hardware platforms as explained in the [SR-SIM Installation, deployment and setup guide](https://documentation.nokia.com/sr/25-10/7750-sr/titles/sr-sim-installation-setup.html). These variants can be set using the `type` directive in the clab topology file, or by overriding the different available environment variables such as the ones for the chassis (`NOKIA_SROS_CHASSIS`) or card (`NOKIA_SROS_CARD`).  
 
 Users can then use environment variables to change the default behavior of a given container. If there is a conflict between the `type` field in the topology file and an environment variable in the topology file, the environment variable will take precedence.
 
@@ -246,7 +246,7 @@ topology:
 When the emulated platform is chassis-based, like SR-7, SR-14s, etc., the SR-SIM node must be defined in a distributed mode in the topology file.
 
 A distributed SR-SIM node consists of two or more containers with a specific role: CPM or IOM. A node can boot in either mode depending on the settings of the `NOKIA_SROS_SLOT` environment variable and the SR-SIM node type.
-There are several other variables that will modify the default settings for a simulated chassis (e.g. SFM, XIOM, MDA, etc.), so please check the [SR-SIM Installation guide](https://documentation.nokia.com/sr/25-7/7750-sr/titles/sr-sim-installation-setup.html) for a full list of options.
+There are several other variables that will modify the default settings for a simulated chassis (e.g. SFM, XIOM, MDA, etc.), so please check the [SR-SIM Installation guide](https://documentation.nokia.com/sr/25-10/7750-sr/titles/sr-sim-installation-setup.html) for a full list of options.
 
 Containerlab provides two ways to define the distributed variant:
 
@@ -656,6 +656,23 @@ configure {
 }
 ```
 
+/// details | Start SR OS with Classic Management
+    type: tip
+
+To start `-{{ kind_code_name }}-` nodes in Classic CLI mode, you can use the `CLAB_SROS_CONFIG_MODE` environment variable. When set to `classic` or `mixed`, containerlab will switch the node default config to the desired mode and update the generated Ansible inventory accordingly. Note that if you provide a partial configuration, you will have to use the Classic CLI syntax. To understand the differences between `classic`, `mixed` and `model-driven` modes see the [system management guide](https://documentation.nokia.com/sr/25-10/7x50-shared/system-management/model-driven-management-interfaces.html).
+
+```yaml hl_lines="6-7"
+topology:
+  nodes:
+    sr-sim1:
+      kind: nokia_srsim
+      startup-config: myconfig.partial.txt
+      env:
+        CLAB_SROS_CONFIG_MODE: classic
+```
+
+///
+
 ##### Remote partial files
 
 It is possible to provide a partial config file that is located on a remote HTTP(S) server. This can be done by providing a URL to the file. The URL must start with `http://` or `https://` and must point to a file that is accessible from the containerlab host.
@@ -718,7 +735,7 @@ Next, it will filter out public keys that are not of RSA/ECDSA type. The remaini
 
 ## Packet Capture
 
-Currently, a packet capture on the veth interfaces of the `-{{ kind_display_name }}-` will only display traffic at the ingress direction[^10]. In order to capture traffic bidirectionally, a user needs to create a [mirror service](https://documentation.nokia.com/sr/25-7/7750-sr/books/oam-diagnostics/mirror-services.html) in the SR OS configuration. A simple example topology using [bridges in container namespace](bridge.md#bridges-in-container-namespace) and mirror configuration is provided below for convenience.
+Currently, a packet capture on the veth interfaces of the `-{{ kind_display_name }}-` will only display traffic at the ingress direction[^10]. In order to capture traffic bidirectionally, a user needs to create a [mirror service](https://documentation.nokia.com/sr/25-10/7750-sr/books/oam-diagnostics/mirror-services.html) in the SR OS configuration. A simple example topology using [bridges in container namespace](bridge.md#bridges-in-container-namespace) and mirror configuration is provided below for convenience.
 
 /// tab | Topology with mirror service
 

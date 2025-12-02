@@ -55,10 +55,7 @@ func (n *sros) generatePowerConfig() string {
 
 	cfg := srosPowerConfig[nodeType]
 
-	shelves := 1
-	if s := cfg.Shelves; s != 0 {
-		shelves = s
-	}
+	shelves := max(cfg.Shelves, 1)
 
 	modules := 0
 	switch m := cfg.Modules.(type) {

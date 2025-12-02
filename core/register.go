@@ -11,6 +11,7 @@ import (
 	clabnodesc8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	clabnodesceos "github.com/srl-labs/containerlab/nodes/ceos"
 	clabnodescheckpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
+	clabnodescisco_asav "github.com/srl-labs/containerlab/nodes/cisco_asav"
 	clabnodescisco_sdwan "github.com/srl-labs/containerlab/nodes/cisco_sdwan"
 	clabnodescjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
 	clabnodescrpd "github.com/srl-labs/containerlab/nodes/crpd"
@@ -77,6 +78,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodessrl.Register(c.Reg)
 	clabnodessros.Register(c.Reg)
 	clabnodesvr_aoscx.Register(c.Reg)
+	clabnodescisco_asav.Register(c.Reg)
 	clabnodesvr_csr.Register(c.Reg)
 	clabnodesvr_c8000v.Register(c.Reg)
 	clabnodesvr_freebsd.Register(c.Reg)

@@ -193,7 +193,7 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	defer cancel()
 
 	m := getVersionManager()
-	m.DisplayNewVersionAvailable(versionCheckContext)
+	m.DisplayNewVersionAvailable(versionCheckContext, false)
 
 	// print table summary
 	return PrintContainerInspect(containers, o)
