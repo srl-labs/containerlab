@@ -36,6 +36,34 @@ Ensure sros is reachable over ssh
     ...    password=NokiaSros1!
     ...    try_for=10
 
+Confirm sros CPM component container has clab-root-node-name label
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    docker inspect -f '{{index .Config.Labels "clab-root-node-name"}}' clab-${lab-name}-sros-a
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Strings    ${output}    sros
+
+Confirm sros CPM component component container has clab-root-node-longname label
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    docker inspect -f '{{index .Config.Labels "clab-root-node-longname"}}' clab-${lab-name}-sros-a
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Strings    ${output}    clab-${lab-name}-sros
+
+Confirm sros LC component container has clab-root-node-name label
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    docker inspect -f '{{index .Config.Labels "clab-root-node-name"}}' clab-${lab-name}-sros-1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Strings    ${output}    sros
+
+Confirm sros LC component component container has clab-root-node-longname label
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    docker inspect -f '{{index .Config.Labels "clab-root-node-longname"}}' clab-${lab-name}-sros-1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Strings    ${output}    clab-${lab-name}-sros
+
 Verify links in node l1
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ip link show eth1"

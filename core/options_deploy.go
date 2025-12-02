@@ -7,12 +7,14 @@ import (
 
 // DeployOptions represents the options for deploying a lab.
 type DeployOptions struct {
-	reconfigure        bool   // reconfigure indicates whether to reconfigure the lab.
-	skipPostDeploy     bool   // skipPostDeploy indicates whether to skip post-deployment steps.
-	graph              bool   // graph indicates whether to generate a graph of the lab.
-	maxWorkers         uint   // maxWorkers is the maximum number of workers for node creation.
-	exportTemplate     string // exportTemplate is the path to the export template.
-	skipLabDirFileACLs bool   // skip setting the extended File ACL entries on the lab directory.
+	reconfigure          bool     // reconfigure indicates whether to reconfigure the lab.
+	skipPostDeploy       bool     // skipPostDeploy indicates whether to skip post-deployment steps.
+	graph                bool     // graph indicates whether to generate a graph of the lab.
+	maxWorkers           uint     // maxWorkers is the maximum number of workers for node creation.
+	exportTemplate       string   // exportTemplate is the path to the export template.
+	skipLabDirFileACLs   bool     // skip setting the extended File ACL entries on the lab directory.
+	restoreAll           string   // restoreAll specifies a directory to scan for snapshot files.
+	restoreNodeSnapshots []string // restoreNodeSnapshots maps node names to specific snapshot file paths.
 }
 
 // NewDeployOptions creates a new DeployOptions instance with the specified maxWorkers value.
@@ -87,6 +89,29 @@ func (d *DeployOptions) SetExportTemplate(templatePath string) *DeployOptions {
 // ExportTemplate returns the exportTemplate option value.
 func (d *DeployOptions) ExportTemplate() string {
 	return d.exportTemplate
+}
+
+// SetRestoreAll sets the restoreAll option and returns the updated DeployOptions instance.
+func (d *DeployOptions) SetRestoreAll(path string) *DeployOptions {
+	d.restoreAll = path
+	return d
+}
+
+// RestoreAll returns the restoreAll option value.
+func (d *DeployOptions) RestoreAll() string {
+	return d.restoreAll
+}
+
+// SetRestoreNodeSnapshots sets the restoreNodeSnapshots option and returns the updated
+// DeployOptions instance.
+func (d *DeployOptions) SetRestoreNodeSnapshots(snapshots []string) *DeployOptions {
+	d.restoreNodeSnapshots = snapshots
+	return d
+}
+
+// RestoreNodeSnapshots returns the restoreNodeSnapshots option value.
+func (d *DeployOptions) RestoreNodeSnapshots() []string {
+	return d.restoreNodeSnapshots
 }
 
 // initWorkerCount calculates the number of workers used for node creation.

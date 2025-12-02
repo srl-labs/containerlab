@@ -49,6 +49,8 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Cisco SD-WAN](https://containerlab.dev/manual/kinds/cisco_sdwan/)
 * [Cisco CSR 1000v](https://containerlab.dev/manual/kinds/vr-csr)
 * [Cisco vIOS](https://containerlab.dev/manual/kinds/cisco_vios/)
+* [Cisco ASAv](https://containerlab.dev/manual/kinds/cisco_asav/)
+* [Cisco FTDv](https://containerlab.dev/manual/kinds/vr-ftdv/)
 * [Dell FTOS10v](https://containerlab.dev/manual/kinds/vr-ftosv)
 * [Arista vEOS](https://containerlab.dev/manual/kinds/vr-veos)
 * [Palo Alto PAN](https://containerlab.dev/manual/kinds/vr-pan)

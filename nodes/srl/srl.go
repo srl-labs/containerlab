@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 
 	clabcert "github.com/srl-labs/containerlab/cert"
@@ -606,7 +605,7 @@ func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
 
 	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
 	if err != nil {
-		return errors.Wrap(err, "failed to get srl topology file")
+		return fmt.Errorf("failed to get srl topology file: %w", err)
 	}
 
 	mac := genMac(cfg)

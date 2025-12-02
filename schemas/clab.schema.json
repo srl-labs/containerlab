@@ -105,6 +105,7 @@
                         "cisco_c8000v",
                         "cisco_cat9kv",
                         "cisco_iol",
+                        "cisco_asav",
                         "cumulus_cvx",
                         "huawei_vrp",
                         "openbsd",
@@ -1904,6 +1905,9 @@
                         "nokia_srsim": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "nokia_sros": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "arista_ceos": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -1923,9 +1927,6 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "dell_sonic": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "nokia_sros": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vmx": {
@@ -1988,6 +1989,9 @@
                         "cisco_sdwan": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "cisco_asav": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "linux": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -2037,6 +2041,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "arrcus_arcos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "mikrotik_ros": {
                             "$ref": "#/definitions/node-config"
                         }
                     },

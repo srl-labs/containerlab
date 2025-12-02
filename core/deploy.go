@@ -2,7 +2,9 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -131,6 +133,11 @@ func (c *CLab) Deploy( //nolint: funlen
 		if !strings.HasPrefix(n.Config().NetworkMode, "container:") {
 			n.Config().ExtraHosts = extraHosts
 		}
+	}
+
+	// Apply snapshot restore configuration to nodes
+	if err := c.configureSnapshotRestore(options); err != nil {
+		return nil, err
 	}
 
 	nodesWg, execCollection, err := c.createNodes(ctx, options.maxWorkers, options.skipPostDeploy)
@@ -295,4 +302,94 @@ func (c *CLab) createNodes(
 	NodesWg, execCollection := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy)
 
 	return NodesWg, execCollection, nil
+}
+
+// configureSnapshotRestore configures nodes for snapshot restoration.
+// It resolves snapshot files for each node and adds the necessary volume mounts
+// and environment variables to restore from snapshots.
+func (c *CLab) configureSnapshotRestore(options *DeployOptions) error {
+	// Build restore map from per-node specifications
+	restoreMap := make(map[string]string)
+	for _, mapping := range options.restoreNodeSnapshots {
+		parts := strings.SplitN(mapping, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid restore format: %s (expected: node=path)", mapping)
+		}
+		restoreMap[parts[0]] = parts[1]
+	}
+
+	// Track statistics for logging
+	var restoredCount, freshCount int
+
+	// Configure each node
+	for _, node := range c.Nodes {
+		nodeName := node.Config().ShortName
+
+		// Resolve snapshot path for this node
+		snapshotPath, shouldRestore := resolveNodeSnapshot(nodeName, restoreMap, options.restoreAll)
+
+		if shouldRestore {
+			// Validate snapshot file exists
+			if _, err := os.Stat(snapshotPath); os.IsNotExist(err) {
+				return fmt.Errorf("snapshot file not found for node %s: %s", nodeName, snapshotPath)
+			}
+
+			// Get absolute path for bind mount
+			absPath, err := filepath.Abs(snapshotPath)
+			if err != nil {
+				return fmt.Errorf("failed to get absolute path for %s: %w", snapshotPath, err)
+			}
+
+			// Add volume mount for snapshot (read-only)
+			node.Config().Binds = append(node.Config().Binds,
+				fmt.Sprintf("%s:/snapshot.tar:ro", absPath))
+
+			// Add restore environment variable
+			if node.Config().Env == nil {
+				node.Config().Env = make(map[string]string)
+			}
+			node.Config().Env["RESTORE_SNAPSHOT"] = "1"
+
+			log.Infof("Node %s will restore from: %s", nodeName, snapshotPath)
+			restoredCount++
+		} else {
+			freshCount++
+		}
+	}
+
+	// Log deployment mode summary if any restores are configured
+	if restoredCount > 0 {
+		log.Infof("Deploying %d nodes from snapshots, %d nodes fresh", restoredCount, freshCount)
+	}
+
+	return nil
+}
+
+// resolveNodeSnapshot determines the snapshot file path for a given node.
+// Priority: per-node override > restore-all directory > none.
+func resolveNodeSnapshot(
+	nodeName string,
+	restoreMap map[string]string,
+	restoreAll string,
+) (string, bool) {
+	// 1. Check per-node overrides first (highest priority)
+	if snapshotPath, ok := restoreMap[nodeName]; ok {
+		return snapshotPath, true
+	}
+
+	// 2. Check restore-all directory
+	if restoreAll != "" {
+		// Look for {nodename}.tar in directory
+		snapshotPath := filepath.Join(restoreAll, nodeName+".tar")
+		if _, err := os.Stat(snapshotPath); err == nil {
+			return snapshotPath, true
+		}
+
+		// Not found - this is OK, just deploy normally
+		log.Debugf("No snapshot found for node %s in %s, deploying normally", nodeName, restoreAll)
+		return "", false
+	}
+
+	// 3. No restore specified
+	return "", false
 }

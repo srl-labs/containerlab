@@ -621,6 +621,8 @@ func (n *sros) setupComponentNodes() error {
 		// adjust labels
 		componentConfig.Labels[clabconstants.NodeName] = componentConfig.ShortName
 		componentConfig.Labels[clabconstants.LongName] = componentConfig.LongName
+		componentConfig.Labels[clabconstants.RootNodeName] = n.Cfg.ShortName
+		componentConfig.Labels[clabconstants.RootNodeLongName] = n.Cfg.LongName
 
 		// init the component
 		err = componentNode.Init(componentConfig)

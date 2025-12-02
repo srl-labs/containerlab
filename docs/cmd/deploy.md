@@ -166,6 +166,59 @@ Example:
 containerlab deploy -t mylab.clab.yml --owner alice
 ```
 
+#### restore-all
+
+The local `--restore-all` flag enables restoring vrnetlab-based nodes from previously saved snapshots. When specified, containerlab will look for snapshot files named `{nodename}.tar` in the provided directory and automatically restore nodes that have matching snapshots.
+
+Nodes without snapshots in the directory will deploy normally (fresh deployment).
+
+**Default directory**: `./snapshots` (if flag is used without a value)
+
+```bash
+# Restore all nodes that have snapshots in ./snapshots directory
+containerlab deploy -t mylab.clab.yml --restore-all
+
+# Restore from custom directory
+containerlab deploy -t mylab.clab.yml --restore-all /backups/lab1
+```
+
+**Note**: Only vrnetlab-based nodes support snapshot restore. The snapshot feature requires vrnetlab images with snapshot support.
+
+#### restore
+
+The local `--restore` flag allows per-node snapshot restoration by explicitly specifying the snapshot file path for individual nodes. This flag can be specified multiple times to restore different nodes from different snapshot files.
+
+**Format**: `--restore node=path/to/snapshot.tar`
+
+```bash
+# Restore only r1 from a specific snapshot
+containerlab deploy -t mylab.clab.yml --restore r1=./snapshots/r1.tar
+
+# Restore multiple nodes with specific snapshots
+containerlab deploy -t mylab.clab.yml \
+  --restore r1=./snapshots/r1.tar \
+  --restore r2=./snapshots/r2.tar
+```
+
+**Priority**: Per-node `--restore` specifications override `--restore-all` for the specified nodes.
+
+**Combined usage**:
+
+```bash
+# Restore all from ./snapshots, but override r3 with a different snapshot
+containerlab deploy -t mylab.clab.yml \
+  --restore-all ./snapshots \
+  --restore r3=./backups/r3-old.tar
+```
+
+In this example:
+
+* Nodes with snapshots in `./snapshots/` will restore from there
+* Node `r3` will restore from `./backups/r3-old.tar` (override)
+* Nodes without snapshots will deploy fresh
+
+> See [tools snapshot save](tools/snapshot/save.md) for information on creating snapshots.
+
 ### Environment variables
 
 #### `CLAB_RUNTIME`
