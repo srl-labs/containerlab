@@ -212,11 +212,12 @@ containerlab deploy -t mylab.clab.yml \
 ```
 
 In this example:
-- Nodes with snapshots in `./snapshots/` will restore from there
-- Node `r3` will restore from `./backups/r3-old.tar` (override)
-- Nodes without snapshots will deploy fresh
 
-See [tools snapshot save](tools/snapshot/save.md) for information on creating snapshots.
+* Nodes with snapshots in `./snapshots/` will restore from there
+* Node `r3` will restore from `./backups/r3-old.tar` (override)
+* Nodes without snapshots will deploy fresh
+
+> See [tools snapshot save](tools/snapshot/save.md) for information on creating snapshots.
 
 ### Environment variables
 
