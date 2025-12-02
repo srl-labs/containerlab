@@ -147,7 +147,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 	b := &bytes.Buffer{}
 
 	// apply partial configs if partial config is used and existing node config does not exist
-	if isPartialConfigFile(s.Cfg.StartupConfig) && !nodeConfigExists(s.Cfg.LabDir) {
+	if clabutils.IsPartialConfigFile(s.Cfg.StartupConfig) && !nodeConfigExists(s.Cfg.LabDir) {
 		log.Info("Adding configuration",
 			"node", s.Cfg.LongName,
 			"type", "partial",
@@ -217,7 +217,7 @@ func createVrSROSFiles(node clabnodes.Node) error {
 	nodeCfg := node.Config()
 
 	// use default startup config load function if config in full form is provided
-	if !isPartialConfigFile(nodeCfg.StartupConfig) {
+	if !clabutils.IsPartialConfigFile(nodeCfg.StartupConfig) {
 		// do not create new config file if there's existing config file
 		if nodeConfigExists(nodeCfg.LabDir) {
 			log.Infof("Using existing config file (%s) instead of applying a new one",
@@ -239,11 +239,6 @@ func createVrSROSFiles(node clabnodes.Node) error {
 	}
 
 	return nil
-}
-
-// isPartialConfigFile returns true if the config file name contains .partial substring.
-func isPartialConfigFile(c string) bool {
-	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
 // nodeConfigExists returns true if a file at <labdir>/<node>/tftpboot/config.txt exists.

@@ -253,7 +253,7 @@ func (n *iol) GenBootConfig(_ context.Context) error {
 			return err
 		}
 
-		if isPartialConfigFile(n.Cfg.StartupConfig) {
+		if clabutils.IsPartialConfigFile(n.Cfg.StartupConfig) {
 			n.partialStartupCfg = string(cfg)
 		} else {
 			n.bootCfg = string(cfg)
@@ -420,12 +420,6 @@ func (n *iol) CheckInterfaceName() error {
 	}
 
 	return nil
-}
-
-// from vr-sros.go
-// isPartialConfigFile returns true if the config file name contains .partial substring.
-func isPartialConfigFile(c string) bool {
-	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
 }
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
