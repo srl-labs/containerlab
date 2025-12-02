@@ -105,6 +105,7 @@
                         "cisco_c8000v",
                         "cisco_cat9kv",
                         "cisco_iol",
+                        "cisco_asav",
                         "cumulus_cvx",
                         "huawei_vrp",
                         "openbsd",
@@ -620,6 +621,7 @@
                                 "anyOf": [
                                     {
                                         "enum": [
+                                            "dms-1-24d",
                                             "ixr-10",
                                             "ixr-6",
                                             "ixr-e2c",
@@ -633,6 +635,9 @@
                                             "ixr-s",
                                             "ixr-x3",
                                             "ixr-x",
+                                            "sar-1",
+                                            "sar-hm",
+                                            "sar-hmc",
                                             "sr-1-24d",
                                             "sr-12e",
                                             "sr-12",
@@ -654,6 +659,7 @@
                                             "sr-7",
                                             "sr-a4",
                                             "sr-a8",
+                                            "vsr-i",
                                             "xrs-20e",
                                             "xrs-20",
                                             "ess-7",
@@ -1831,6 +1837,26 @@
                     "type": "boolean",
                     "description": "controls whether the management network has external access or not",
                     "markdownDescription": "controls whether the [management network has external access](https://containerlab.dev/manual/network/#external-access) or not"
+                },
+                "driver-opts": {
+                    "type": "object",
+                    "description": "overrides for container runtime network driver options",
+                    "markdownDescription": "[driver-opts](https://containerlab.dev/manual/network/#bridge-network-driver-options) lets you set overrides for the network driver of the container runtime",
+                    "patternProperties": {
+                        ".+": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "number"
+                                },
+                                {
+                                    "type": "boolean"
+                                }
+                            ]
+                        }
+                    }
                 }
             },
             "minProperties": 1,
@@ -1879,6 +1905,9 @@
                         "nokia_srsim": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "nokia_sros": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "arista_ceos": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -1898,9 +1927,6 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "dell_sonic": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "nokia_sros": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vmx": {
@@ -1963,6 +1989,9 @@
                         "cisco_sdwan": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "cisco_asav": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "linux": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -2012,6 +2041,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "arrcus_arcos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "mikrotik_ros": {
                             "$ref": "#/definitions/node-config"
                         }
                     },

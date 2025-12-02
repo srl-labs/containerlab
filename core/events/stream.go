@@ -315,7 +315,7 @@ func emitContainerSnapshots(
 ) {
 	for idx := range containers {
 		container := containers[idx]
-		if !isRunningContainer(&container) {
+		if !isRunningContainer(&container) && !strings.EqualFold(container.State, "exited") {
 			continue
 		}
 

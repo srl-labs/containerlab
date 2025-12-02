@@ -501,3 +501,10 @@ func (*PodmanRuntime) StreamEvents(
 ) (<-chan runtime.ContainerEvent, <-chan error, error) {
 	return nil, nil, fmt.Errorf("StreamEvents is not implemented for Podman runtime")
 }
+
+func (p *PodmanRuntime) InspectImage(
+	ctx context.Context,
+	imageName string,
+) (*runtime.ImageInspect, error) {
+	return nil, fmt.Errorf("InspectImage not implemented for Podman runtime")
+}

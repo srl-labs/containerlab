@@ -1,7 +1,7 @@
 ---
 vr_rns:
   "0.20.1": >-
-    New platforms: [Cisco IOL](kinds/cisco_iol.md), [Cisco vIOS](https://github.com/srl-labs/vrnetlab/tree/master/cisco/vios), [Huawei VRP](kinds/huawei_vrp.md)<br/>
+    New platforms: [Cisco IOL](kinds/cisco_iol.md), [Cisco vIOS](kinds/cisco_vios.md), [Huawei VRP](kinds/huawei_vrp.md)<br/>
     The vrnetlab version (commit) is now part of the image labels under the `vrnetlab-version` name. This should help you identify what version of vrnetlab is used to build the image.
 ---
 # VM-based routers integration
@@ -111,7 +111,9 @@ The images that work with containerlab will appear in the supported list as we i
 | Cisco XRv             | [cisco_xrv](kinds/vr-xrv.md)                            | [SRL & XRv](../lab-examples/vr-xrv.md)     |                                                                                                                                                                                                              |
 | Cisco XRv9k           | [cisco_xrv9k](kinds/vr-xrv9k.md)                        | [SRL & XRv9k](../lab-examples/vr-xrv9k.md) |                                                                                                                                                                                                              |
 | Cisco CSR1000v        | [cisco_csr](kinds/vr-csr.md)                            |                                            |                                                                                                                                                                                                              |
+| Cisco vIOS            | [cisco_vios](kinds/cisco_vios.md)                       |                                            |                                                                                                                                                                                                              |
 | Cisco Nexus 9000v     | [cisco_nexus9kv](kinds/vr-n9kv.md)                      |                                            |                                                                                                                                                                                                              |
+| Cisco ASAv            | [cisco_asav](kinds/cisco_asav.md)                          |                                            |                                                                                                                                                                                                              |
 | Cisco FTDv            | [cisco_ftdv](kinds/vr-ftdv.md)                          |                                            |                                                                                                                                                                                                              |
 | Arista vEOS           | [arista_veos](kinds/vr-veos.md)                         |                                            |                                                                                                                                                                                                              |
 | MikroTik RouterOS     | [mikrotik_ros](kinds/vr-ros.md)                         |                                            |                                                                                                                                                                                                              |

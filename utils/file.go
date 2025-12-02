@@ -656,3 +656,8 @@ func GetOSRelease() string {
 
 	return osRelease
 }
+
+// IsPartialConfigFile returns true if the config file name contains .partial substring (case insensitive).
+func IsPartialConfigFile(configPath string) bool {
+	return strings.Contains(strings.ToUpper(configPath), ".PARTIAL")
+}

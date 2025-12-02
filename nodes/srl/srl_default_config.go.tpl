@@ -55,7 +55,7 @@ set / interface {{ $ep.BaseName }} mtu {{ $ep.Mtu }}
   {{- end }}
 
   {{- if $ep.HasBreakout }}
-set / interface {{ $ep.BaseName }} breakout-mode num-channels 4 channel-speed 25G
+set / interface {{ $ep.BaseName }} breakout-mode num-breakout-ports 4 breakout-port-speed 25G
 set / interface {{ $ep.FullName }} admin-state enable
   {{- end }}
 
