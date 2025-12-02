@@ -3,20 +3,14 @@ package core
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/charmbracelet/log"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
-)
-
-// contextKey is a custom type for context keys to avoid collisions.
-type contextKey string
-
-const (
-	// InventoryCredsKey is the context key for the inventory credentials map.
-	InventoryCredsKey contextKey = "inventoryCredentials"
+	"gopkg.in/yaml.v2"
 )
 
 func (c *CLab) Save(
@@ -27,55 +21,34 @@ func (c *CLab) Save(
 		return err
 	}
 
-	// Read ansible inventory to get credentials for all NETCONF-based nodes
-	inventoryPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
+	// Load credentials from ansible-inventory.yml for Nokia SROS/SRSIM nodes only
+	credsMap := make(map[string]*NodeCredentials)
 
-	// Load credentials into a map for all NETCONF-based node kinds
-	// These node kinds use NETCONF for save operations and need credentials
-	credsMap := make(map[string]*AnsibleInventoryCredentials)
-	netconfKinds := []string{
-		"nokia_sros", "vr-sros", "nokia_srsim", // Nokia SROS variants
-		"nokia_srlinux", "srl",                  // Nokia SRL (for consistency, though uses local CLI)
-		"c8000",                                 // Cisco 8000
-		"xrd",                                   // Cisco XRd
-		"vr-vmx", "vr-veos", "vr-sros", "vr-xrv", "vr-xrv9k", "vr-vqfx", "vr-csr", "vr-nxos", // vrnetlab variants
-		"vr-ros", "vr-openbsd", "vr-freebsd",   // other vrnetlab variants
+	// Check if we have any Nokia SROS/SRSIM nodes
+	hasTargetNodes := false
+	for _, node := range c.Nodes {
+		nodeKind := node.Config().Kind
+		if nodeKind == "nokia_sros" || nodeKind == "nokia_srsim" {
+			hasTargetNodes = true
+			break
+		}
 	}
-	
-	for _, nodeKind := range netconfKinds {
-		// Check if this kind exists in topology
-		hasKind := false
-		for _, node := range c.Nodes {
-			if node.Config().Kind == nodeKind {
-				hasKind = true
-				break
-			}
-		}
-		
-		if !hasKind {
-			continue
-		}
-		
-		// Try to read credentials from inventory
-		creds, err := ReadAnsibleInventoryCredentials(inventoryPath, nodeKind)
-		if err != nil {
-			log.Debugf("Could not read credentials for kind %s from inventory, using defaults", nodeKind)
-			// Use default credentials from registry
-			if regEntry := c.Reg.Kind(nodeKind); regEntry != nil &&
-				regEntry.GetCredentials() != nil {
-				credsMap[nodeKind] = &AnsibleInventoryCredentials{
-					Username: regEntry.GetCredentials().GetUsername(),
-					Password: regEntry.GetCredentials().GetPassword(),
+
+	// Only read ansible-inventory if we have target nodes
+	if hasTargetNodes {
+		inventoryPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
+		if data, err := os.ReadFile(inventoryPath); err == nil {
+			var inventoryYAML AnsibleInventoryYAML
+			if err := yaml.Unmarshal(data, &inventoryYAML); err == nil {
+				// Process both nokia_sros and nokia_srsim
+				for _, kind := range []string{"nokia_sros", "nokia_srsim"} {
+					if group, ok := inventoryYAML.All.Children[kind]; ok {
+						c.loadGroupCredentials(kind, group, credsMap)
+					}
 				}
 			}
-		} else {
-			log.Infof("Using credentials from ansible-inventory.yml for %s nodes (user: %s)", nodeKind, creds.Username)
-			credsMap[nodeKind] = creds
 		}
 	}
-
-	// Add credentials map to context
-	ctx = context.WithValue(ctx, InventoryCredsKey, credsMap)
 
 	var wg sync.WaitGroup
 
@@ -86,59 +59,29 @@ func (c *CLab) Save(
 			defer wg.Done()
 
 			nodeKind := node.Config().Kind
+			nodeName := node.Config().ShortName
 
-			// For NETCONF-based nodes (except SRL which uses local CLI), intercept and save with custom credentials
-			// SROS variants
-			if nodeKind == "nokia_sros" || nodeKind == "vr-sros" || nodeKind == "nokia_srsim" {
-				creds := credsMap[nodeKind]
-				if creds != nil {
-					err := c.saveNetconfConfig(ctx, node, creds.Username, creds.Password, "nokia_sros")
+			// For Nokia SROS/SRSIM nodes, use NETCONF with credentials from ansible-inventory.yml
+			if nodeKind == "nokia_sros" || nodeKind == "nokia_srsim" {
+				if creds, ok := credsMap[nodeName]; ok {
+					err := c.saveNetconfConfig(
+						ctx,
+						node,
+						creds.Username,
+						creds.Password,
+						"nokia_sros",
+					)
 					if err != nil {
-						log.Errorf("Failed to save config for %s: %v", node.Config().ShortName, err)
+						log.Errorf("Failed to save config for %s: %v", nodeName, err)
 					}
 					return
 				}
 			}
 
-			// Cisco c8000
-			if nodeKind == "c8000" {
-				creds := credsMap[nodeKind]
-				if creds != nil {
-					err := c.saveNetconfConfig(ctx, node, creds.Username, creds.Password, "cisco_iosxe")
-					if err != nil {
-						log.Errorf("Failed to save config for %s: %v", node.Config().ShortName, err)
-					}
-					return
-				}
-			}
-
-			// Cisco XRd
-			if nodeKind == "xrd" {
-				creds := credsMap[nodeKind]
-				if creds != nil {
-					err := c.saveNetconfConfig(ctx, node, creds.Username, creds.Password, "cisco_iosxr")
-					if err != nil {
-						log.Errorf("Failed to save config for %s: %v", node.Config().ShortName, err)
-					}
-					return
-				}
-			}
-
-			// vrnetlab-based nodes (generic handling)
-			if isVrnetlabKind(nodeKind) {
-				creds := credsMap[nodeKind]
-				if creds != nil {
-					// vrnetlab nodes use their own SaveConfig which calls GetConfig
-					// We can't easily override this without modifying VRNode.SaveConfig
-					// So for now, let them use their default SaveConfig which reads from registry
-					// TODO: Could be enhanced to pass credentials to VRNode.SaveConfig
-				}
-			}
-
-			// For all other nodes (including SRL which uses local CLI), use default SaveConfig
+			// For all other nodes, use default SaveConfig behavior
 			err := node.SaveConfig(ctx)
 			if err != nil {
-				log.Errorf("Failed to save config for %s: %v", node.Config().ShortName, err)
+				log.Errorf("Failed to save config for %s: %v", nodeName, err)
 			}
 		}(node)
 	}
@@ -148,22 +91,79 @@ func (c *CLab) Save(
 	return nil
 }
 
-// isVrnetlabKind checks if a node kind is a vrnetlab variant.
-func isVrnetlabKind(kind string) bool {
-	vrnetlabKinds := []string{
-		"vr-vmx", "vr-veos", "vr-sros", "vr-xrv", "vr-xrv9k",
-		"vr-vqfx", "vr-csr", "vr-nxos", "vr-ros", "vr-openbsd", "vr-freebsd",
+// loadGroupCredentials loads credentials for a specific node kind from ansible inventory.
+func (c *CLab) loadGroupCredentials(
+	kind string,
+	group AnsibleInventoryGroup,
+	credsMap map[string]*NodeCredentials,
+) {
+	// Group-level credentials (default for all hosts)
+	groupUser := group.Vars.AnsibleUser
+	groupPass := group.Vars.AnsiblePassword
+
+	if groupUser != "" && groupPass != "" {
+		log.Infof("Using credentials from ansible-inventory.yml for %s nodes (user: %s)", kind, groupUser)
 	}
-	for _, vr := range vrnetlabKinds {
-		if kind == vr {
-			return true
+
+	for nodeName, hostVars := range group.Hosts {
+		// Host-level credentials override group-level
+		username := groupUser
+		password := groupPass
+
+		if hostVars.AnsibleUser != "" {
+			username = hostVars.AnsibleUser
+		}
+		if hostVars.AnsiblePassword != "" {
+			password = hostVars.AnsiblePassword
+		}
+
+		if username != "" && password != "" {
+			credsMap[nodeName] = &NodeCredentials{
+				Username: username,
+				Password: password,
+			}
+			if hostVars.AnsibleUser != "" || hostVars.AnsiblePassword != "" {
+				log.Debugf("Loaded host-specific credentials for %s node %s (user: %s)", kind, nodeName, username)
+			} else {
+				log.Debugf("Loaded group credentials for %s node %s", kind, nodeName)
+			}
 		}
 	}
-	return false
 }
 
-// saveNetconfConfig saves configuration using NETCONF with credentials from inventory.
-// This handles the NETCONF-specific save logic with custom credentials.
+// NodeCredentials holds username and password for a node.
+type NodeCredentials struct {
+	Username string
+	Password string
+}
+
+// AnsibleInventoryYAML represents the structure of the generated ansible-inventory.yml file.
+type AnsibleInventoryYAML struct {
+	All struct {
+		Children map[string]AnsibleInventoryGroup `yaml:"children"`
+	} `yaml:"all"`
+}
+
+// AnsibleInventoryGroup represents a group in the ansible inventory YAML.
+type AnsibleInventoryGroup struct {
+	Vars  AnsibleInventoryVars            `yaml:"vars"`
+	Hosts map[string]AnsibleInventoryHost `yaml:"hosts"`
+}
+
+// AnsibleInventoryVars represents the vars section in ansible inventory YAML.
+type AnsibleInventoryVars struct {
+	AnsibleUser     string `yaml:"ansible_user"`
+	AnsiblePassword string `yaml:"ansible_password"`
+}
+
+// AnsibleInventoryHost represents a host entry in ansible inventory YAML.
+type AnsibleInventoryHost struct {
+	AnsibleHost     string `yaml:"ansible_host"`
+	AnsibleUser     string `yaml:"ansible_user"`
+	AnsiblePassword string `yaml:"ansible_password"`
+}
+
+// saveNetconfConfig saves configuration using NETCONF with custom credentials.
 func (c *CLab) saveNetconfConfig(
 	ctx context.Context,
 	node clabnodes.Node,
@@ -172,7 +172,6 @@ func (c *CLab) saveNetconfConfig(
 	cfg := node.Config()
 
 	// Use management IPv4 address for NETCONF connection
-	// IPv6 addresses need to be enclosed in brackets for netconf library
 	addr := cfg.MgmtIPv4Address
 	if addr == "" {
 		addr = cfg.MgmtIPv6Address
@@ -195,7 +194,6 @@ func (c *CLab) saveNetconfConfig(
 		return fmt.Errorf("failed to save config via NETCONF: %w", err)
 	}
 
-	// Log using the same format as the original SaveConfig methods
-	log.Info("Saved running configuration", "node", cfg.ShortName, "addr", cfg.ShortName)
+	log.Infof("saved %s running configuration to startup configuration file\n", cfg.ShortName)
 	return nil
 }
