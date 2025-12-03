@@ -44,7 +44,7 @@ topology:
         mac: 02:00:00:00:00:04
       remote: 172.20.25.22
       vni: 100
-      udp-port: 14788
+      dst-port: 14788
 
     - type: vxlan-stitch
       endpoint:
@@ -52,4 +52,4 @@ topology:
         interface: e1-1
       remote: 172.20.25.23
       vni: 101
-      udp-port: 14789
+      dst-port: 14789

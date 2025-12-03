@@ -11,7 +11,6 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/docker/go-connections/nat"
-	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
 )
 
@@ -21,7 +20,7 @@ type Link struct {
 	B      *Endpoint
 	MTU    int
 	Labels map[string]string
-	Vars   map[string]interface{}
+	Vars   map[string]any
 }
 
 func (link *Link) String() string {
@@ -45,52 +44,66 @@ func (e *Endpoint) String() string {
 
 // MgmtNet struct defines the management network options.
 type MgmtNet struct {
-	Network string `yaml:"network,omitempty" json:"network,omitempty"` // container runtime network name
-	Bridge  string `yaml:"bridge,omitempty" json:"bridge,omitempty"`
+	// container runtime network name
+	Network string `json:"network,omitempty" yaml:"network,omitempty"`
+	Bridge  string `json:"bridge,omitempty"  yaml:"bridge,omitempty"`
+
 	// linux bridge backing the runtime network
-	IPv4Subnet     string            `yaml:"ipv4-subnet,omitempty" json:"ipv4-subnet,omitempty"`
-	IPv4Gw         string            `yaml:"ipv4-gw,omitempty" json:"ipv4-gw,omitempty"`
-	IPv4Range      string            `yaml:"ipv4-range,omitempty" json:"ipv4-range,omitempty"`
-	IPv6Subnet     string            `yaml:"ipv6-subnet,omitempty" json:"ipv6-subnet,omitempty"`
-	IPv6Gw         string            `yaml:"ipv6-gw,omitempty" json:"ipv6-gw,omitempty"`
-	IPv6Range      string            `yaml:"ipv6-range,omitempty" json:"ipv6-range,omitempty"`
-	MTU            int               `yaml:"mtu,omitempty" json:"mtu,omitempty"`
-	ExternalAccess *bool             `yaml:"external-access,omitempty" json:"external-access,omitempty"`
-	DriverOpts     map[string]string `yaml:"driver-opts,omitempty" json:"driver-opts,omitempty"`
+	IPv4Subnet string `json:"ipv4-subnet,omitempty" yaml:"ipv4-subnet,omitempty"`
+	IPv4Gw     string `json:"ipv4-gw,omitempty"     yaml:"ipv4-gw,omitempty"`
+	IPv4Range  string `json:"ipv4-range,omitempty"  yaml:"ipv4-range,omitempty"`
+	IPv6Subnet string `json:"ipv6-subnet,omitempty" yaml:"ipv6-subnet,omitempty"`
+	IPv6Gw     string `json:"ipv6-gw,omitempty"     yaml:"ipv6-gw,omitempty"`
+	IPv6Range  string `json:"ipv6-range,omitempty"  yaml:"ipv6-range,omitempty"`
+	MTU        int    `json:"mtu,omitempty"         yaml:"mtu,omitempty"`
+
+	ExternalAccess *bool `json:"external-access,omitempty" yaml:"external-access,omitempty"`
+
+	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
 }
 
 // Interface compliance.
 var _ yaml.Unmarshaler = &MgmtNet{}
 
 // UnmarshalYAML is a custom unmarshaller for MgmtNet that allows to map old attributes to new ones.
-func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// define an alias type to avoid recursion during unmarshalling
+func (m *MgmtNet) UnmarshalYAML(unmarshal func(any) error) error {
+	// define an alias type to avoid recursion during unmarshaling
 	type MgmtNetAlias MgmtNet
 
 	type MgmtNetWithDeprecatedFields struct {
 		MgmtNetAlias         `yaml:",inline"`
-		DeprecatedIPv4Subnet string `yaml:"ipv4_subnet,omitempty" json:"ipv4_subnet,omitempty"`
-		DeprecatedIPv6Subnet string `yaml:"ipv6_subnet,omitempty" json:"ipv6_subnet,omitempty"`
+		DeprecatedIPv4Subnet string `json:"ipv4_subnet,omitempty" yaml:"ipv4_subnet,omitempty"`
+		DeprecatedIPv6Subnet string `json:"ipv6_subnet,omitempty" yaml:"ipv6_subnet,omitempty"`
 	}
+
 	mn := &MgmtNetWithDeprecatedFields{}
 
-	mn.MgmtNetAlias = (MgmtNetAlias)(*m)
+	mn.MgmtNetAlias = MgmtNetAlias(*m)
 	if err := unmarshal(mn); err != nil {
 		return err
 	}
 
 	// process deprecated fields and use their values for new fields if new fields are not set
-	if len(mn.DeprecatedIPv4Subnet) > 0 && len(mn.IPv4Subnet) == 0 {
-		log.Warnf("Attribute \"ipv4_subnet\" is deprecated and will be removed in the future. Change it to \"ipv4-subnet\"")
+	if mn.DeprecatedIPv4Subnet != "" && mn.IPv4Subnet == "" {
+		log.Warnf(
+			"Attribute \"ipv4_subnet\" is deprecated and will be removed " +
+				"in the future. Change it to \"ipv4-subnet\"",
+		)
+
 		mn.IPv4Subnet = mn.DeprecatedIPv4Subnet
 	}
+
 	// map old to new if old defined but new not
-	if len(mn.DeprecatedIPv6Subnet) > 0 && len(mn.IPv6Subnet) == 0 {
-		log.Warnf("Attribute \"ipv6_subnet\" is deprecated and will be removed in the future. Change it to \"ipv6-subnet\"")
+	if mn.DeprecatedIPv6Subnet != "" && mn.IPv6Subnet == "" {
+		log.Warnf(
+			"Attribute \"ipv6_subnet\" is deprecated and will be removed " +
+				"in the future. Change it to \"ipv6-subnet\"",
+		)
+
 		mn.IPv6Subnet = mn.DeprecatedIPv6Subnet
 	}
 
-	*m = (MgmtNet)(mn.MgmtNetAlias)
+	*m = MgmtNet(mn.MgmtNetAlias)
 
 	return nil
 }
@@ -102,7 +115,8 @@ type NodeConfig struct {
 	// containerlab-prefixed unique container name
 	LongName string `json:"longname,omitempty"`
 	Fqdn     string `json:"fqdn,omitempty"`
-	// LabDir is a directory related to the node, it contains config items and/or other persistent state
+	// LabDir is a directory related to the node, it contains config items and/or other persistent
+	// state
 	LabDir string `json:"labdir,omitempty"`
 	Index  int    `json:"index,omitempty"`
 	Group  string `json:"group,omitempty"`
@@ -111,9 +125,11 @@ type NodeConfig struct {
 	StartupConfig string `json:"startup-config,omitempty"`
 	// optional delay (in seconds) to wait before creating this node
 	StartupDelay uint `json:"startup-delay,omitempty"`
-	// when set to true will enforce the use of startup-config, even when config is present in the lab directory
+	// when set to true will enforce the use of startup-config, even when config is present in the
+	// lab directory
 	EnforceStartupConfig bool `json:"enforce-startup-config,omitempty"`
-	// when set to true will prevent creation of a startup-config, for auto-provisioning testing (ZTP)
+	// when set to true will prevent creation of a startup-config, for auto-provisioning testing
+	// (ZTP)
 	SuppressStartupConfig bool `json:"suppress-startup-config,omitempty"`
 	// when set to true will auto-remove a stopped/failed container
 	AutoRemove    bool   `json:"auto-remove,omitempty"`
@@ -202,41 +218,6 @@ type NodeConfig struct {
 	Components          []*Component
 }
 
-func (n *NodeConfig) Copy() *NodeConfig {
-	if n == nil {
-		return nil
-	}
-
-	copyConfig := *n
-
-	// Deep copy maps
-	copyConfig.Sysctls = utils.CopyMap(n.Sysctls)
-	copyConfig.Env = utils.CopyMap(n.Env)
-	copyConfig.Labels = utils.CopyMap(n.Labels)
-
-	// Deep copy slices
-	copyConfig.Exec = utils.CopySlice(n.Exec)
-	copyConfig.Binds = utils.CopySlice(n.Binds)
-	copyConfig.Devices = utils.CopySlice(n.Devices)
-	copyConfig.CapAdd = utils.CopySlice(n.CapAdd)
-	copyConfig.Aliases = utils.CopySlice(n.Aliases)
-	copyConfig.ExtraHosts = utils.CopySlice(n.ExtraHosts)
-	copyConfig.ResultingPortBindings = utils.CopyObjectSlice(n.ResultingPortBindings)
-	copyConfig.Components = utils.CopyObjectSlice(n.Components)
-
-	// Deep copy pointers
-	// copyConfig.Config = n.Config.Copy()
-	// copyConfig.Certificate = n.Certificate.Copy()
-	copyConfig.Healthcheck = n.Healthcheck.Copy()
-	copyConfig.Extras = n.Extras.Copy()
-	copyConfig.DNS = n.DNS.Copy()
-	// copyConfig.Stages = n.Stages.Copy()
-	// copyConfig.PortBindings = n.PortBindings.Copy()
-	// copyConfig.PortSet = n.PortSet.Copy()
-
-	return &copyConfig
-}
-
 type GenericFilter struct {
 	// defined by now "label" / "name" [then only Match is required]
 	FilterType string
@@ -248,43 +229,18 @@ type GenericFilter struct {
 	Match string
 }
 
-// FilterFromLabelStrings creates a GenericFilter based on the list of label=value pairs or just label entries.
-// A filter of type `label` is created.
-// For each label=value input label, a filter with the Field matching the label and Match matching the value is created.
-// For each standalone label, a filter with Operator=exists and Field matching the label is created.
-func FilterFromLabelStrings(labels []string) []*GenericFilter {
-	var gfl []*GenericFilter
-	var gf *GenericFilter
-	for _, s := range labels {
-		gf = &GenericFilter{
-			FilterType: "label",
-		}
-		if strings.Contains(s, "=") {
-			gf.Operator = "="
-			subs := strings.Split(s, "=")
-			gf.Field = strings.TrimSpace(subs[0])
-			gf.Match = strings.TrimSpace(subs[1])
-		} else {
-			gf.Operator = "exists"
-			gf.Field = strings.TrimSpace(s)
-		}
-
-		gfl = append(gfl, gf)
-	}
-	return gfl
-}
-
 // ConfigDispatcher represents the config of a configuration machine
 // that is responsible to execute configuration commands on the nodes
 // after they started.
 type ConfigDispatcher struct {
-	Vars map[string]interface{} `yaml:"vars,omitempty"`
+	Vars map[string]any `yaml:"vars,omitempty"`
 }
 
-func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
+func (cd *ConfigDispatcher) GetVars() map[string]any {
 	if cd == nil {
 		return nil
 	}
+
 	return cd.Vars
 }
 
@@ -300,37 +256,9 @@ type Extras struct {
 	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
 }
 
-func (e *Extras) Copy() *Extras {
-	if e == nil {
-		return nil
-	}
-
-	srlAgentsCopy := append([]string(nil), e.SRLAgents...)
-	ceosCopyToFlashCopy := append([]string(nil), e.CeosCopyToFlash...)
-
-	var k8sKindCopy *K8sKindExtras
-	if e.K8sKind != nil {
-		k8sKindCopy = e.K8sKind.Copy() // assumes K8sKindExtras has a Copy() method
-	}
-
-	return &Extras{
-		SRLAgents:       srlAgentsCopy,
-		MysocketProxy:   e.MysocketProxy,
-		CeosCopyToFlash: ceosCopyToFlashCopy,
-		K8sKind:         k8sKindCopy,
-	}
-}
-
 // K8sKindExtras represents the k8s-kind-specific extra options.
 type K8sKindExtras struct {
 	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
-}
-
-func (k *K8sKindExtras) Copy() *K8sKindExtras {
-	copy := &K8sKindExtras{
-		Deploy: k.Deploy.Copy(),
-	}
-	return copy
 }
 
 // K8sKindDeployExtras represents the options used for the kind cluster creation.
@@ -338,11 +266,6 @@ func (k *K8sKindExtras) Copy() *K8sKindExtras {
 // only the ones that are relevant for containerlab.
 type K8sKindDeployExtras struct {
 	Wait *string `yaml:"wait,omitempty"`
-}
-
-func (k *K8sKindDeployExtras) Copy() *K8sKindDeployExtras {
-	copy := *k
-	return &copy
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
@@ -392,18 +315,16 @@ type GenericPortBinding struct {
 
 func (p *GenericPortBinding) String() string {
 	var result string
+
 	if strings.Contains(p.HostIP, ":") {
 		result = fmt.Sprintf("[%s]", p.HostIP)
 	} else {
 		result = p.HostIP
 	}
-	result += fmt.Sprintf(":%d/%s -> %d", p.HostPort, p.Protocol, p.ContainerPort)
-	return result
-}
 
-func (p *GenericPortBinding) Copy() *GenericPortBinding {
-	copy := *p
-	return &copy
+	result += fmt.Sprintf(":%d/%s -> %d", p.HostPort, p.Protocol, p.ContainerPort)
+
+	return result
 }
 
 type LabData struct {
@@ -418,22 +339,6 @@ type DNSConfig struct {
 	Options []string `yaml:"options,omitempty"`
 	// DNS Search Domains
 	Search []string `yaml:"search,omitempty"`
-}
-
-func (d *DNSConfig) Copy() *DNSConfig {
-	if d == nil {
-		return nil
-	}
-
-	serversCopy := append([]string(nil), d.Servers...)
-	optionsCopy := append([]string(nil), d.Options...)
-	searchCopy := append([]string(nil), d.Search...)
-
-	return &DNSConfig{
-		Servers: serversCopy,
-		Options: optionsCopy,
-		Search:  searchCopy,
-	}
 }
 
 // CertificateConfig represents TLS parameters set for a node.
@@ -486,8 +391,7 @@ const (
 // a valid PullPolicyValue. Defaults to PullPolicyIfNotPresent.
 func ParsePullPolicyValue(s string) PullPolicyValue {
 	// remove whitespace and convert to lower
-	s = strings.TrimSpace(strings.ToLower(s))
-	switch s {
+	switch strings.TrimSpace(strings.ToLower(s)) {
 	case "always":
 		return PullPolicyAlways
 	case "never":
@@ -513,23 +417,6 @@ type HealthcheckConfig struct {
 	// StartPeriod is the time to wait for the container to initialize
 	// before starting health-retries countdown in seconds
 	StartPeriod int `yaml:"start-period,omitempty"`
-}
-
-func (h *HealthcheckConfig) Copy() *HealthcheckConfig {
-	if h == nil {
-		return nil
-	}
-
-	// Copy the slice manually to avoid shared references
-	testCopy := append([]string(nil), h.Test...)
-
-	return &HealthcheckConfig{
-		Test:        testCopy,
-		Interval:    h.Interval,
-		Timeout:     h.Timeout,
-		Retries:     h.Retries,
-		StartPeriod: h.StartPeriod,
-	}
 }
 
 // GetIntervalDuration returns the interval as time.Duration.

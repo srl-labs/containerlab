@@ -260,6 +260,21 @@ func (mr *MockNodeMockRecorder) GetEndpoints() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEndpoints", reflect.TypeOf((*MockNode)(nil).GetEndpoints))
 }
 
+// GetHostsEntries mocks base method.
+func (m *MockNode) GetHostsEntries(ctx context.Context) (types.HostEntries, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHostsEntries", ctx)
+	ret0, _ := ret[0].(types.HostEntries)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHostsEntries indicates an expected call of GetHostsEntries.
+func (mr *MockNodeMockRecorder) GetHostsEntries(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHostsEntries", reflect.TypeOf((*MockNode)(nil).GetHostsEntries), ctx)
+}
+
 // GetImages mocks base method.
 func (m *MockNode) GetImages(arg0 context.Context) map[string]string {
 	m.ctrl.T.Helper()
@@ -419,6 +434,20 @@ func (m *MockNode) PreDeploy(ctx context.Context, params *nodes.PreDeployParams)
 func (mr *MockNodeMockRecorder) PreDeploy(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreDeploy", reflect.TypeOf((*MockNode)(nil).PreDeploy), ctx, params)
+}
+
+// PullImage mocks base method.
+func (m *MockNode) PullImage(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PullImage", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PullImage indicates an expected call of PullImage.
+func (mr *MockNodeMockRecorder) PullImage(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullImage", reflect.TypeOf((*MockNode)(nil).PullImage), ctx)
 }
 
 // RunExec mocks base method.

@@ -12,129 +12,140 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	AEnd = ""
-	BEnd = ""
-	MTU  = links.DefaultLinkMTU
+const (
+	linkEndpointTypeVethPartCount   = 2
+	linkEndpointTypeBridgePartCount = 3
 )
 
-func init() {
-	toolsCmd.AddCommand(vethCmd)
-	vethCmd.AddCommand(vethCreateCmd)
-	vethCreateCmd.Flags().StringVarP(&AEnd, "a-endpoint", "a", "",
-		"veth endpoint A in the format of <containerA-name>:<interface-name> or <endpointA-type>:<endpoint-name>:<interface-name>")
-	vethCreateCmd.Flags().StringVarP(&BEnd, "b-endpoint", "b", "",
-		"veth endpoint B in the format of <containerB-name>:<interface-name> or <endpointB-type>:<endpoint-name>:<interface-name>")
-	vethCreateCmd.Flags().IntVarP(&MTU, "mtu", "m", MTU, "link MTU")
+func vethCmd(o *Options) (*cobra.Command, error) {
+	c := &cobra.Command{
+		Use:   "veth",
+		Short: "veth operations",
+	}
+
+	vethCreateCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a veth interface and attach its sides to the specified containers",
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return vethCreate(o)
+		},
+	}
+
+	c.AddCommand(vethCreateCmd)
+	vethCreateCmd.Flags().StringVarP(
+		&o.ToolsVeth.AEndpoint,
+		"a-endpoint",
+		"a",
+		o.ToolsVeth.AEndpoint,
+		"veth endpoint A in the format of <containerA-name>:<interface-name> "+
+			"or <endpointA-type>:<endpoint-name>:<interface-name>",
+	)
+	vethCreateCmd.Flags().StringVarP(
+		&o.ToolsVeth.BEndpoint,
+		"b-endpoint",
+		"b",
+		o.ToolsVeth.BEndpoint,
+		"veth endpoint B in the format of <containerB-name>:<interface-name> "+
+			"or <endpointB-type>:<endpoint-name>:<interface-name>",
+	)
+	vethCreateCmd.Flags().IntVarP(
+		&o.ToolsVeth.MTU,
+		"mtu",
+		"m", o.ToolsVeth.MTU,
+		"link MTU",
+	)
+
+	return c, nil
 }
 
-var vethCmd = &cobra.Command{
-	Use:   "veth",
-	Short: "veth operations",
-}
+func vethCreate(o *Options) error {
+	var err error
 
-var vethCreateCmd = &cobra.Command{
-	Use:     "create",
-	Short:   "Create a veth interface and attach its sides to the specified containers",
-	PreRunE: common.CheckAndGetRootPrivs,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		var err error
+	parsedAEnd, err := parseVethEndpoint(o.ToolsVeth.AEndpoint)
+	if err != nil {
+		return err
+	}
 
-		parsedAEnd, err := parseVethEndpoint(AEnd)
-		if err != nil {
-			return err
-		}
+	parsedBEnd, err := parseVethEndpoint(o.ToolsVeth.BEndpoint)
+	if err != nil {
+		return err
+	}
 
-		parsedBEnd, err := parseVethEndpoint(BEnd)
-		if err != nil {
-			return err
-		}
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
+	if err != nil {
+		return err
+	}
 
-		opts := []core.ClabOption{
-			core.WithTimeout(common.Timeout),
-			core.WithRuntime(common.Runtime,
-				&runtime.RuntimeConfig{
-					Debug:            common.Debug,
-					Timeout:          common.Timeout,
-					GracefulShutdown: common.Graceful,
-				},
-			),
-			core.WithDebug(common.Debug),
-		}
-		c, err := core.NewContainerLab(opts...)
-		if err != nil {
-			return err
-		}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+	rtName, _, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	if err != nil {
+		return err
+	}
 
-		rtName, _, err := core.RuntimeInitializer(common.Runtime)
-		if err != nil {
-			return err
-		}
+	// create fake nodes to make links resolve work
+	err = createNodes(ctx, c, parsedAEnd, parsedBEnd, rtName)
+	if err != nil {
+		return err
+	}
 
-		// create fake nodes to make links resolve work
-		err = createNodes(ctx, c, parsedAEnd, parsedBEnd, rtName)
-		if err != nil {
-			return err
-		}
+	// now create link brief as if the link was passed via topology file
+	linkBrief := &clablinks.LinkBriefRaw{
+		Endpoints: []string{
+			fmt.Sprintf("%s:%s", parsedAEnd.Node, parsedAEnd.Iface),
+			fmt.Sprintf("%s:%s", parsedBEnd.Node, parsedBEnd.Iface),
+		},
+		LinkCommonParams: clablinks.LinkCommonParams{
+			MTU: o.ToolsVeth.MTU,
+		},
+	}
 
-		// now create link brief as if the link was passed via topology file
-		linkBrief := &links.LinkBriefRaw{
-			Endpoints: []string{
-				fmt.Sprintf("%s:%s", parsedAEnd.Node, parsedAEnd.Iface),
-				fmt.Sprintf("%s:%s", parsedBEnd.Node, parsedBEnd.Iface),
-			},
-			LinkCommonParams: links.LinkCommonParams{
-				MTU: MTU,
-			},
-		}
+	linkRaw, err := linkBrief.ToTypeSpecificRawLink()
+	if err != nil {
+		return err
+	}
 
-		linkRaw, err := linkBrief.ToTypeSpecificRawLink()
-		if err != nil {
-			return err
-		}
+	// we need to copy nodes.Nodes to links.Nodes since two interfaces
+	// are not identical, but a subset
+	resolveNodes := make(map[string]clablinks.Node, len(c.Nodes))
+	for k, v := range c.Nodes {
+		resolveNodes[k] = v
+	}
 
-		// we need to copy nodes.Nodes to links.Nodes since two interfaces
-		// are not identical, but a subset
-		resolveNodes := make(map[string]links.Node, len(c.Nodes))
-		for k, v := range c.Nodes {
-			resolveNodes[k] = v
-		}
+	link, err := linkRaw.Resolve(&clablinks.ResolveParams{Nodes: resolveNodes})
+	if err != nil {
+		return err
+	}
 
-		link, err := linkRaw.Resolve(&links.ResolveParams{Nodes: resolveNodes})
-		if err != nil {
-			return err
-		}
+	// deploy the endpoints of the Link
+	for _, ep := range link.GetEndpoints() {
+		ep.Deploy(ctx)
+	}
 
-		// deploy the endpoints of the Link
-		for _, ep := range link.GetEndpoints() {
-			ep.Deploy(ctx)
-		}
+	log.Info("veth interface successfully created!")
 
-		log.Info("veth interface successfully created!")
-		return nil
-	},
+	return nil
 }
 
 // createNodes creates fake nodes in c.Nodes map to make link resolve work.
 // It checks which endpoint type is set by a user and creates a node that matches the type.
-func createNodes(_ context.Context, c *core.CLab, AEnd, BEnd parsedEndpoint, rt string) error {
-	for _, epDefinition := range []parsedEndpoint{AEnd, BEnd} {
+func createNodes(_ context.Context, c *clabcore.CLab, aEnd, bEnd parsedEndpoint, rt string) error {
+	for _, epDefinition := range []parsedEndpoint{aEnd, bEnd} {
 		switch epDefinition.Kind {
-		case links.LinkEndpointTypeHost:
-			err := createFakeNode(c, "host", &types.NodeConfig{
+		case clablinks.LinkEndpointTypeHost:
+			err := createFakeNode(c, "host", &clabtypes.NodeConfig{
 				ShortName: epDefinition.Node,
 				LongName:  epDefinition.Node,
 				Runtime:   rt,
@@ -143,8 +154,9 @@ func createNodes(_ context.Context, c *core.CLab, AEnd, BEnd parsedEndpoint, rt 
 				return err
 			}
 
-		case links.LinkEndpointTypeBridge, links.LinkEndpointTypeBridgeNS:
-			err := createFakeNode(c, "bridge", &types.NodeConfig{
+		case clablinks.LinkEndpointTypeBridge,
+			clablinks.LinkEndpointTypeBridgeNS:
+			err := createFakeNode(c, "bridge", &clabtypes.NodeConfig{
 				ShortName: epDefinition.Node,
 				LongName:  epDefinition.Node,
 				Runtime:   rt,
@@ -158,7 +170,7 @@ func createNodes(_ context.Context, c *core.CLab, AEnd, BEnd parsedEndpoint, rt 
 			// its namespace path.
 			// techinically we don't care which node this is, as long as it uses
 			// standard veth interface attachment process.
-			err := createFakeNode(c, "linux", &types.NodeConfig{
+			err := createFakeNode(c, "linux", &clabtypes.NodeConfig{
 				ShortName: epDefinition.Node,
 				LongName:  epDefinition.Node,
 				Runtime:   rt,
@@ -176,7 +188,7 @@ func createNodes(_ context.Context, c *core.CLab, AEnd, BEnd parsedEndpoint, rt 
 type parsedEndpoint struct {
 	Node  string
 	Iface string
-	Kind  links.LinkEndpointType
+	Kind  clablinks.LinkEndpointType
 }
 
 // parseVethEndpoint parses the veth endpoint definition as passed in the veth create command.
@@ -187,31 +199,35 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 
 	arr := strings.Split(s, ":")
 
-	var kind links.LinkEndpointType
+	var kind clablinks.LinkEndpointType
 
 	switch len(arr) {
-	case 2:
-		ep.Kind = links.LinkEndpointTypeVeth
+	case linkEndpointTypeVethPartCount:
+		ep.Kind = clablinks.LinkEndpointTypeVeth
 
 		if arr[0] == "host" {
-			ep.Kind = links.LinkEndpointTypeHost
+			ep.Kind = clablinks.LinkEndpointTypeHost
 		}
 
 		ep.Node = arr[0]
 		ep.Iface = arr[1]
 
-	case 3:
-		if _, ok := utils.StringInSlice([]string{"ovs-bridge", "bridge"}, arr[0]); !ok {
-			return ep, fmt.Errorf("only bride and ovs-bridge can be used as a first block in the link definition. Got: %s", arr[0])
+	case linkEndpointTypeBridgePartCount:
+		if _, ok := clabutils.StringInSlice([]string{"ovs-bridge", "bridge"}, arr[0]); !ok {
+			return ep, fmt.Errorf(
+				"only bride and ovs-bridge can be used as a first block in the link definition. "+
+					"Got: %s",
+				arr[0],
+			)
 		}
 
 		switch arr[0] {
 		case "bridge", "ovs-bridge":
-			kind = links.LinkEndpointTypeBridge
+			kind = clablinks.LinkEndpointTypeBridge
 		case "bridge-ns":
-			kind = links.LinkEndpointTypeBridgeNS
+			kind = clablinks.LinkEndpointTypeBridgeNS
 		default:
-			kind = links.LinkEndpointTypeVeth
+			kind = clablinks.LinkEndpointTypeVeth
 		}
 
 		ep.Kind = kind
@@ -227,7 +243,7 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 }
 
 // createFakeNode creates a fake node in c.Nodes map using the provided node kind and its config.
-func createFakeNode(c *core.CLab, kind string, nodeCfg *types.NodeConfig) error {
+func createFakeNode(c *clabcore.CLab, kind string, nodeCfg *clabtypes.NodeConfig) error {
 	name := nodeCfg.ShortName
 	// construct node
 	n, err := c.Reg.NewNodeOfKind(kind)
@@ -236,13 +252,13 @@ func createFakeNode(c *core.CLab, kind string, nodeCfg *types.NodeConfig) error 
 	}
 
 	// Init
-	err = n.Init(nodeCfg, nodes.WithRuntime(c.Runtimes[nodeCfg.Runtime]))
+	err = n.Init(nodeCfg, clabnodes.WithRuntime(c.Runtimes[nodeCfg.Runtime]))
 	if err != nil {
 		return fmt.Errorf("failed to initialize node %s: %v", name, err)
 	}
 
 	// fake node is always assumed to be deployed in case of tools veth command
-	n.SetState(state.Deployed)
+	n.SetState(clabnodesstate.Deployed)
 
 	c.Nodes[name] = n
 

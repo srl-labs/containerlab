@@ -4,15 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/netip"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/vishvananda/netlink"
-)
-
-const (
-	// containerlab's reserved OUI.
-	ClabOUI = "aa:c1:ab"
 )
 
 // Endpoint is the interface that all endpoint types implement.
@@ -24,6 +20,8 @@ type Endpoint interface {
 	GetIfaceDisplayName() string
 	GetRandIfaceName() string
 	GetMac() net.HardwareAddr
+	GetIPv4Addr() netip.Prefix
+	GetIPv6Addr() netip.Prefix
 	String() string
 	// GetLink retrieves the link that the endpoint is assigned to
 	GetLink() Link
@@ -39,12 +37,15 @@ type Endpoint interface {
 	Deploy(context.Context) error
 	// IsNodeless returns true for the endpoints that has no explicit node defined in the topology.
 	// E.g. host endpoints, mgmt bridge endpoints.
-	// Because there is no node that would deploy this side of the link they should be deployed along
+	// Because there is no node that would deploy this side of the link they should be deployed
+	// along
 	// with the A side of the veth link.
 	IsNodeless() bool
 	// Setters for ifaceName and Alias
 	SetIfaceName(string)
 	SetIfaceAlias(string)
+	// GetVars returns the endpoint-level vars.
+	GetVars() map[string]any
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -56,6 +57,9 @@ type EndpointGeneric struct {
 	Link     Link
 	MAC      net.HardwareAddr
 	randName string
+	IPv4     netip.Prefix
+	IPv6     netip.Prefix
+	Vars     map[string]any
 }
 
 func NewEndpointGeneric(node Node, iface string, link Link) *EndpointGeneric {
@@ -67,6 +71,7 @@ func NewEndpointGeneric(node Node, iface string, link Link) *EndpointGeneric {
 		// when it is first deployed in the root namespace
 		randName: genRandomIfName(),
 		Link:     link,
+		Vars:     make(map[string]any),
 	}
 }
 
@@ -101,6 +106,18 @@ func (e *EndpointGeneric) GetMac() net.HardwareAddr {
 	return e.MAC
 }
 
+func (e *EndpointGeneric) GetIPv4Addr() netip.Prefix {
+	return e.IPv4
+}
+
+func (e *EndpointGeneric) GetIPv6Addr() netip.Prefix {
+	return e.IPv6
+}
+
+func (e *EndpointGeneric) GetVars() map[string]any {
+	return e.Vars
+}
+
 func (e *EndpointGeneric) GetLink() Link {
 	return e.Link
 }
@@ -110,7 +127,7 @@ func (e *EndpointGeneric) GetNode() Node {
 }
 
 func (e *EndpointGeneric) Remove(ctx context.Context) error {
-	return e.GetNode().ExecFunction(ctx, func(n ns.NetNS) error {
+	return e.GetNode().ExecFunction(ctx, func(ns.NetNS) error {
 		brSideEp, err := netlink.LinkByName(e.GetIfaceName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 
@@ -121,7 +138,11 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 		case err != nil:
 			return err
 		}
-		log.Debugf("Removing interface %q from namespace %q", e.GetIfaceName(), e.GetNode().GetShortName())
+		log.Debugf(
+			"Removing interface %q from namespace %q",
+			e.GetIfaceName(),
+			e.GetNode().GetShortName(),
+		)
 		return netlink.LinkDel(brSideEp)
 	})
 }
@@ -181,6 +202,10 @@ func CheckEndpointDoesNotExistYet(ctx context.Context, e Endpoint) error {
 			return nil
 		}
 
-		return fmt.Errorf("interface %s is defined via topology but does already exist: %v", e.String(), err)
+		return fmt.Errorf(
+			"interface %s is defined via topology but already exists: %v",
+			e.String(),
+			err,
+		)
 	})
 }

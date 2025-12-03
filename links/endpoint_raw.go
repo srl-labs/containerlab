@@ -3,24 +3,29 @@ package links
 import (
 	"fmt"
 	"net"
+	"net/netip"
 
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // EndpointRaw is the raw (string) representation of an endpoint as defined in the topology file
 // for a given link definition.
 type EndpointRaw struct {
-	Node  string `yaml:"node"`
-	Iface string `yaml:"interface"`
-	MAC   string `yaml:"mac,omitempty"`
+	Node  string         `yaml:"node"`
+	Iface string         `yaml:"interface"`
+	MAC   string         `yaml:"mac,omitempty"`
+	IPv4  string         `yaml:"ipv4,omitempty"`
+	IPv6  string         `yaml:"ipv6,omitempty"`
+	Vars  map[string]any `yaml:"vars,omitempty"`
 }
 
 // NewEndpointRaw creates a new EndpointRaw struct.
-func NewEndpointRaw(node, nodeIf, Mac string) *EndpointRaw {
+func NewEndpointRaw(node, nodeIf, mac string) *EndpointRaw {
 	return &EndpointRaw{
 		Node:  node,
 		Iface: nodeIf,
-		MAC:   Mac,
+		MAC:   mac,
 	}
 }
 
@@ -38,10 +43,40 @@ func (er *EndpointRaw) Resolve(params *ResolveParams, l Link) (Endpoint, error) 
 
 	genericEndpoint := NewEndpointGeneric(node, er.Iface, l)
 
+	if er.IPv4 != "" {
+		p, err := netip.ParsePrefix(er.IPv4)
+		if err != nil || !p.Addr().Is4() {
+			return nil, fmt.Errorf(
+				"invalid ipv4 address %q for %s:%s",
+				er.IPv4,
+				er.Node,
+				er.Iface,
+			)
+		}
+		genericEndpoint.IPv4 = p
+	}
+
+	if er.IPv6 != "" {
+		p, err := netip.ParsePrefix(er.IPv6)
+		if err != nil || !p.Addr().Is6() {
+			return nil, fmt.Errorf(
+				"invalid ipv6 address %q for %s:%s",
+				er.IPv6,
+				er.Node,
+				er.Iface,
+			)
+		}
+		genericEndpoint.IPv6 = p
+	}
+
+	// Normalize vars to ensure JSON serialization compatibility
+	// (converts map[interface{}]interface{} to map[string]any)
+	genericEndpoint.Vars = normalizeVars(er.Vars)
+
 	var err error
 	if er.MAC == "" {
 		// if mac is not present generate one
-		genericEndpoint.MAC, err = utils.GenMac(ClabOUI)
+		genericEndpoint.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 		if err != nil {
 			return nil, err
 		}

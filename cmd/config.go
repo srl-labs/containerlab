@@ -6,77 +6,146 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/core/config"
-	"github.com/srl-labs/containerlab/core/config/transport"
-	"github.com/srl-labs/containerlab/nodes"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabcoreconfig "github.com/srl-labs/containerlab/core/config"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 
 	"github.com/charmbracelet/log"
 )
 
-// Node Filter for config.
-var configFilter []string
+func configCmd(o *Options) (*cobra.Command, error) {
+	c := &cobra.Command{
+		Use:   "config",
+		Short: "configure a lab",
+		Long: "configure a lab based on templates and variables from the topology definition " +
+			"file\n reference: https://containerlab.dev/cmd/config/",
+		Aliases:      []string{"conf"},
+		ValidArgs:    []string{"commit", "send", "compare", "template"},
+		SilenceUsage: true,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			return configRun(cobraCmd, args, o)
+		},
+	}
 
-// configCmd represents the config command.
-var configCmd = &cobra.Command{
-	Use:          "config",
-	Short:        "configure a lab",
-	Long:         "configure a lab based on templates and variables from the topology definition file\nreference: https://containerlab.dev/cmd/config/",
-	Aliases:      []string{"conf"},
-	ValidArgs:    []string{"commit", "send", "compare", "template"},
-	SilenceUsage: true,
-	RunE:         configRun,
+	c.Flags().StringSliceVarP(
+		&clabcoreconfig.TemplatePaths,
+		"template-path",
+		"p",
+		[]string{},
+		"comma separated list of paths to search for templates",
+	)
+
+	c.Flags().StringSliceVarP(
+		&clabcoreconfig.TemplateNames,
+		"template-list",
+		"l",
+		[]string{},
+		"comma separated list of template names to render",
+	)
+
+	c.Flags().StringSliceVarP(
+		&o.Filter.LabelFilter,
+		"filter",
+		"f",
+		o.Filter.LabelFilter,
+		"comma separated list of nodes (by labels) to include",
+	)
+
+	c.Flags().StringSliceVarP(
+		&o.Filter.NodeFilter,
+		"node-filter",
+		"",
+		o.Filter.NodeFilter,
+		"comma separated list of nodes to include",
+	)
+
+	c.Flags().SortFlags = false
+
+	err := c.MarkFlagDirname("template-path")
+	if err != nil {
+		return nil, err
+	}
+
+	configSubCmds(c, o)
+
+	return c, nil
 }
 
-var configSendCmd = &cobra.Command{
-	Use:          "send",
-	Short:        "send raw configuration to a lab",
-	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) > 0 {
-			return fmt.Errorf("unexpected arguments: %s", args)
-		}
-		return configRun(cmd, []string{"send"})
-	},
+func configSubCmds(c *cobra.Command, o *Options) {
+	sendC := &cobra.Command{
+		Use:          "send",
+		Short:        "send raw configuration to a lab",
+		SilenceUsage: true,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("unexpected arguments: %s", args)
+			}
+
+			return configRun(cobraCmd, []string{"send"}, o)
+		},
+	}
+
+	c.AddCommand(sendC)
+	sendC.Flags().AddFlagSet(c.Flags())
+
+	compareC := &cobra.Command{
+		Use:          "compare",
+		Short:        "compare configuration to a running lab",
+		SilenceUsage: true,
+		RunE: func(cobraCmd *cobra.Command, args []string) error {
+			if len(args) > 0 {
+				return fmt.Errorf("unexpected arguments: %s", args)
+			}
+
+			return configRun(cobraCmd, []string{"compare"}, o)
+		},
+	}
+
+	c.AddCommand(compareC)
+	compareC.Flags().AddFlagSet(c.Flags())
+
+	templateC := &cobra.Command{
+		Use:   "template",
+		Short: "render a template",
+		Long: "render a template based on variables from the topology definition file\n" +
+			"reference: https://containerlab.dev/cmd/config/template",
+		Aliases:      []string{"conf"},
+		SilenceUsage: true,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return configTemplate(o)
+		},
+	}
+
+	c.AddCommand(templateC)
+	templateC.Flags().AddFlagSet(c.Flags())
+	templateC.Flags().BoolVarP(
+		&o.Config.TemplateVarOnly,
+		"vars",
+		"v",
+		o.Config.TemplateVarOnly,
+		"show variable used for template rendering",
+	)
+	templateC.Flags().SortFlags = false
 }
 
-var configCompareCmd = &cobra.Command{
-	Use:          "compare",
-	Short:        "compare configuration to a running lab",
-	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) > 0 {
-			return fmt.Errorf("unexpected arguments: %s", args)
-		}
-		return configRun(cmd, []string{"compare"})
-	},
-}
-
-func configRun(_ *cobra.Command, args []string) error {
+func configRun(_ *cobra.Command, args []string, o *Options) error {
 	var err error
 
-	transport.DebugCount = debugCount
-	config.DebugCount = debugCount
+	clabcoreconfig.DebugCount = o.Global.DebugCount
 
-	c, err := core.NewContainerLab(
-		core.WithTimeout(common.Timeout),
-		core.WithTopoPath(common.Topo, common.VarsFile),
-		core.WithNodeFilter(common.NodeFilter),
-		core.WithDebug(common.Debug),
-	)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}
 
-	err = validateFilter(c.Nodes)
+	err = validateFilter(c.Nodes, o)
 	if err != nil {
 		return err
 	}
 
-	allConfig := config.PrepareVars(c)
+	allConfig := clabcoreconfig.PrepareVars(c)
 
-	err = config.RenderAll(allConfig)
+	err = clabcoreconfig.RenderAll(allConfig)
 	if err != nil {
 		return err
 	}
@@ -99,22 +168,26 @@ func configRun(_ *cobra.Command, args []string) error {
 	}
 
 	var wg sync.WaitGroup
+
 	deploy := func(n string) {
 		defer wg.Done()
 
 		cs, ok := allConfig[n]
 		if !ok {
 			log.Errorf("Invalid node in filter: %s", n)
+
 			return
 		}
 
-		err = config.Send(cs, action)
+		err = clabcoreconfig.Send(cs, action, o.Global.DebugCount > 0)
 		if err != nil {
 			log.Warnf("%s: %s", cs.TargetNode.ShortName, err)
 		}
 	}
-	wg.Add(len(configFilter))
-	for _, node := range configFilter {
+
+	wg.Add(len(o.Filter.LabelFilter))
+
+	for _, node := range o.Filter.LabelFilter {
 		// On debug this will not be executed concurrently
 		if log.GetLevel() == (log.DebugLevel) {
 			deploy(node)
@@ -122,48 +195,70 @@ func configRun(_ *cobra.Command, args []string) error {
 			go deploy(node)
 		}
 	}
+
 	wg.Wait()
 
 	return nil
 }
 
-func validateFilter(nodes map[string]nodes.Node) error {
-	if len(configFilter) == 0 {
-		for n := range nodes {
-			configFilter = append(configFilter, n)
+func configTemplate(o *Options) error {
+	var err error
+
+	clabcoreconfig.DebugCount = o.Global.DebugCount
+
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
+	if err != nil {
+		return err
+	}
+
+	err = validateFilter(c.Nodes, o)
+	if err != nil {
+		return err
+	}
+
+	allConfig := clabcoreconfig.PrepareVars(c)
+
+	if o.Config.TemplateVarOnly {
+		for _, n := range o.Filter.LabelFilter {
+			conf := allConfig[n]
+			conf.Print(true, false)
 		}
+
+		return nil
+	}
+
+	err = clabcoreconfig.RenderAll(allConfig)
+	if err != nil {
+		return err
+	}
+
+	for _, n := range o.Filter.LabelFilter {
+		allConfig[n].Print(false, true)
+	}
+
+	return nil
+}
+
+func validateFilter(nodes map[string]clabnodes.Node, o *Options) error {
+	if len(o.Filter.LabelFilter) == 0 {
+		for n := range nodes {
+			o.Filter.LabelFilter = append(o.Filter.LabelFilter, n)
+		}
+
 		return nil
 	}
 
 	var mis []string
-	for _, nn := range configFilter {
+
+	for _, nn := range o.Filter.LabelFilter {
 		if _, ok := nodes[nn]; !ok {
 			mis = append(mis, nn)
 		}
 	}
+
 	if len(mis) > 0 {
 		return fmt.Errorf("invalid nodes in filter: %s", strings.Join(mis, ", "))
 	}
+
 	return nil
-}
-
-func init() {
-	RootCmd.AddCommand(configCmd)
-	configCmd.Flags().StringSliceVarP(&config.TemplatePaths, "template-path", "p", []string{},
-		"comma separated list of paths to search for templates")
-	_ = configCmd.MarkFlagDirname("template-path")
-	configCmd.Flags().StringSliceVarP(&config.TemplateNames, "template-list", "l", []string{},
-		"comma separated list of template names to render")
-	configCmd.Flags().StringSliceVarP(&configFilter, "filter", "f", []string{},
-		"comma separated list of nodes to include")
-	configCmd.Flags().SortFlags = false
-
-	configCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include")
-
-	configCmd.AddCommand(configSendCmd)
-	configSendCmd.Flags().AddFlagSet(configCmd.Flags())
-
-	configCmd.AddCommand(configCompareCmd)
-	configCompareCmd.Flags().AddFlagSet(configCmd.Flags())
 }

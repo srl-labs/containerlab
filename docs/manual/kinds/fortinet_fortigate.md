@@ -6,7 +6,7 @@ kind_display_name: Fortinet Fortigate
 ---
 # -{{ kind_display_name }}-
 
--{{ kind_display_name }}- virtualized security appliance is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using the [hellt/vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+-{{ kind_display_name }}- virtualized security appliance is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using the [srl-labs/vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 The integration of -{{ kind_display_name }}- has been tested with v7.0.14 release. Note, that releases >= 7.2.0 would require a valid license and internet access to activate the -{{ kind_display_name }}- VM.
 
@@ -14,7 +14,7 @@ The integration of -{{ kind_display_name }}- has been tested with v7.0.14 releas
 
 Users can obtain the qcow2 disk image for -{{ kind_display_name }}- VM from the [official support site](https://support.fortinet.com/Download/VMImages.aspx); a free account required. Download the "New deployment" variant of the FGVM64 VM for the KVM platform.
 
-Extract the downloaded zip file and rename the `fortios.qcow2` to `fortios-vX.Y.Z.qcow2` where `X.Y.Z` is the version of the Fortigate VM. Put the renamed file in the `fortigate` directory of the cloned [hellt/vrnetlab](https://github.com/hellt/vrnetlab) project and run `make` to build the container image.
+Extract the downloaded zip file and rename the `fortios.qcow2` to `fortios-vX.Y.Z.qcow2` where `X.Y.Z` is the version of the Fortigate VM. Put the renamed file in the `fortigate` directory of the cloned [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab) project and run `make` to build the container image.
 
 ## Managing -{{ kind_display_name }}- nodes
 

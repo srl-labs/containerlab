@@ -9,7 +9,7 @@ kind_display_name: Nokia SR OS
 <small>VM-based</small>
 
 /// warning
-There is a newer and more flexible fully containerized simulator for SR-OS called [SR-SIM](sros.md), which is the preferred way to emulate Nokia SR OS network OS.
+There is a newer and more flexible fully containerized simulator for SR OS called [SR-SIM](sros.md), which is the preferred way to emulate Nokia SR OS network OS.
 ///
 
 [Nokia SR OS](https://www.nokia.com/networks/products/service-router-operating-system/) vSIM router is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a QEMU VM packaged in a docker container format. Do not mistake with the fully containeraized version of SR OS named [SR-SIM](sros.md).
@@ -129,7 +129,7 @@ Interfaces can be defined in a non-sequential way, for example:
 
 vSIM SR OS simulator can be run in multiple HW variants as explained in [the vSIM installation guide](https://documentation.nokia.com/cgi-bin/dbaccessfilename.cgi/3HE15836AAADTQZZA01_V1_vSIM%20Installation%20and%20Setup%20Guide%2020.10.R1.pdf).
 
-Nokia SR OS VM container images come with [pre-packaged SR OS VM variants](https://github.com/hellt/vrnetlab/tree/master/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/hellt/vrnetlab/tree/master/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. On the other hand, custom variants give users total flexibility in emulated hardware configuration, but cards and MDAs must be configured manually.
+Nokia SR OS VM container images come with [pre-packaged SR OS VM variants](https://github.com/srl-labs/vrnetlab/tree/master/nokia/sros#variants) as defined in the upstream repo as well as support [custom variant definition](https://github.com/srl-labs/vrnetlab/tree/master/nokia/sros#custom-variant). The pre-packaged variants are identified by the variant name and come up with cards and mda already configured. On the other hand, custom variants give users total flexibility in emulated hardware configuration, but cards and MDAs must be configured manually.
 
 To make Nokia SR OS VM to boot in one of the packaged variants, set the type to one of the predefined variant values:
 
@@ -221,7 +221,7 @@ Nokia SR OS VM nodes come up with a basic "blank" configuration where only the c
 
 #### User-defined config
 
-SR OS VM nodes launched with [hellt/vrnetlab](https://github.com/hellt/vrnetlab) come up with some basic configuration that configures the management interfaces, line cards, mdas and power modules. This configuration is applied right after the node is booted.
+SR OS VM nodes launched with [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab) come up with some basic configuration that configures the management interfaces, line cards, mdas and power modules. This configuration is applied right after the node is booted.
 
 Since this initial configuration is meant to provide a bare minimum configuration to make the node operational, users will likely want to apply their own configuration to the node to enable some features or to configure some interfaces. This can be done by providing a user-defined configuration file using [`startup-config`](../nodes.md#startup-config) property of the node/kind.
 

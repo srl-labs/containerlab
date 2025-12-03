@@ -12,8 +12,8 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // GenerateExports generates various export files and writes it to a file in the lab directory.
@@ -23,12 +23,15 @@ func (c *CLab) GenerateExports(ctx context.Context, f io.Writer, p string) error
 	err := c.exportTopologyDataWithTemplate(ctx, f, p)
 	if err != nil {
 		log.Warn("Failed to execute the export template", "template", p, "err", err)
-		// a minimal topology data file that just provides the name of a lab that failed to generate a proper export data
+
+		// a minimal topology data file that just provides the name of a lab that failed to
+		// generate a proper export data
 		err = c.exportTopologyDataWithMinimalTemplate(f)
 		if err != nil {
 			return err
 		}
 	}
+
 	return err
 }
 
@@ -39,8 +42,8 @@ type TopologyExport struct {
 	Type string `json:"type"`
 	Clab *CLab  `json:"clab,omitempty"`
 	// SSHPubKeys is a list of string representations of SSH public keys.
-	SSHPubKeys  []string                     `json:"SSHPubKeys,omitempty"`
-	NodeConfigs map[string]*types.NodeConfig `json:"nodeconfigs,omitempty"`
+	SSHPubKeys  []string                         `json:"SSHPubKeys,omitempty"`
+	NodeConfigs map[string]*clabtypes.NodeConfig `json:"nodeconfigs,omitempty"`
 }
 
 //go:embed export_templates/auto.tmpl
@@ -49,7 +52,8 @@ var defaultExportTemplate string
 //go:embed export_templates/full.tmpl
 var fullExportTemplate string
 
-// exportTopologyDataWithTemplate generates and writes topology data file to w using a template referenced by path `p`.
+// exportTopologyDataWithTemplate generates and writes topology data file to w using a template
+// referenced by path `p`.
 func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p string) error {
 	name := "export"
 	if p != "" {
@@ -57,7 +61,7 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 	}
 
 	t := template.New(name).
-		Funcs(utils.CreateFuncs())
+		Funcs(clabutils.CreateFuncs())
 
 	var err error
 
@@ -78,8 +82,8 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 		Name:        c.Config.Name,
 		Type:        "clab",
 		Clab:        c,
-		SSHPubKeys:  utils.MarshalSSHPubKeys(c.SSHPubKeys),
-		NodeConfigs: make(map[string]*types.NodeConfig),
+		SSHPubKeys:  clabutils.MarshalSSHPubKeys(c.SSHPubKeys),
+		NodeConfigs: make(map[string]*clabtypes.NodeConfig),
 	}
 
 	for _, n := range c.Nodes {
@@ -90,6 +94,7 @@ func (c *CLab) exportTopologyDataWithTemplate(_ context.Context, w io.Writer, p 
 	if err != nil {
 		return err
 	}
+
 	log.Debugf("Exported topology data using %s template", p)
 
 	return err
@@ -116,6 +121,8 @@ func (c *CLab) exportTopologyDataWithMinimalTemplate(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+
 	log.Debug("Exported topology data using built-in template")
+
 	return err
 }

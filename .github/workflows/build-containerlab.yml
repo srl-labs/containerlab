@@ -11,8 +11,8 @@ jobs:
   build-clab:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: WillAbides/setup-go-faster@v1.14.0
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ inputs.go_ver }}
 
@@ -33,7 +33,7 @@ jobs:
         run: make build-with-podman-debug BINARY=containerlab
       # store clab binary as artifact
       - name: Upload containerlab binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: containerlab
           path: containerlab

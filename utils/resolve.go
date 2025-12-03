@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"io/fs"
 	"net"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"golang.org/x/exp/slices"
 )
 
 // ExtractDNSServersFromResolvConf extracts IP addresses

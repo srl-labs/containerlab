@@ -6,6 +6,7 @@ hide:
 
 [![github release](https://img.shields.io/github/release/srl-labs/containerlab.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 [![Github all releases](https://img.shields.io/github/downloads/srl-labs/containerlab/total.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
+[![DeepWiki](https://img.shields.io/badge/deepwiki-1DA1F2?logo=wikipedia&style=flat-square&color=00c9ff&labelColor=bec8d2&logoColor=black)](https://deepwiki.com/srl-labs/containerlab)
 [![Bluesky](https://img.shields.io/badge/follow-containerlab-1DA1F2?logo=bluesky&style=flat-square&color=00c9ff&labelColor=bec8d2)](https://bsky.app/profile/containerlab.dev)
 [![Discord](https://img.shields.io/discord/860500297297821756?style=flat-square&label=discord&logo=discord&color=00c9ff&labelColor=bec8d2)](https://discord.gg/vAyddtaEV9)
 
@@ -22,7 +23,7 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 Containerlab focuses on the containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
 * [Nokia SR Linux](manual/kinds/srl.md)
-* [Nokia SR-OS (SR-SIM)](manual/kinds/sros.md)
+* [Nokia SR OS (SR-SIM)](manual/kinds/sros.md)
 * [Arista cEOS](manual/kinds/ceos.md)
 * [Cisco XRd](manual/kinds/xrd.md)
 * [SONiC](manual/kinds/sonic-vs.md)
@@ -34,6 +35,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [6WIND VSR](manual/kinds/6wind_vsr.md)
 * [FD.io VPP](manual/kinds/fdio_vpp.md)
 * [VyOS Networks VyOS](manual/kinds/vyosnetworks_vyos.md)
+* [Arrcus ArcOS](manual/kinds/arrcus_arcos.md)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](manual/vrnetlab.md):
 
@@ -48,7 +50,10 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Cisco Catalyst 9000v](manual/kinds/vr-cat9kv.md)
 * [Cisco Nexus 9000v](manual/kinds/vr-n9kv.md)
 * [Cisco c8000v](manual/kinds/vr-c8000v.md)
+* [Cisco SD-WAN](manual/kinds/cisco_sdwan.md)
 * [Cisco CSR 1000v](manual/kinds/vr-csr.md)
+* [Cisco vIOS](manual/kinds/cisco_vios.md)
+* [Cisco ASAv](manual/kinds/cisco_asav.md)
 * [Cisco FTDv](manual/kinds/vr-ftdv.md)
 * [Dell FTOS10v](manual/kinds/vr-ftosv.md)
 * [Arista vEOS](manual/kinds/vr-veos.md)

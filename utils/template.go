@@ -7,6 +7,8 @@ import (
 	"io"
 	"maps"
 	"math"
+	"math/big"
+	"net/netip"
 	"reflect"
 	"strconv"
 	"strings"
@@ -23,11 +25,13 @@ func CreateFuncs() template.FuncMap {
 		"subtract":     subtract,
 		"mul":          mul,
 		"div":          div,
+		"idiv":         idiv,
 		"rem":          rem,
 		"seq":          seq,
 	}
 	maps.Copy(f, CreateStringFuncs())
 	maps.Copy(f, CreateConvFuncs())
+	maps.Copy(f, CreateNetFuncs())
 
 	return f
 }
@@ -142,6 +146,27 @@ func div(a, b any) (any, error) {
 	}
 
 	dividend, err := ToFloat64(b)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	if dividend == 0 {
+		return 0, fmt.Errorf("error: division by 0")
+	}
+
+	return divisor / dividend, nil
+}
+
+// integer divide a by b
+// idiv(10, 2) = 5 (10 / 2 = 5)
+// idiv(7, 3) = 2 (7 / 3 = 2, truncates remainder).
+func idiv(a, b any) (any, error) {
+	divisor, err := ToInt64(a)
+	if err != nil {
+		return nil, fmt.Errorf("expected a number: %w", err)
+	}
+
+	dividend, err := ToInt64(b)
 	if err != nil {
 		return nil, fmt.Errorf("expected a number: %w", err)
 	}
@@ -285,7 +310,7 @@ func isInt(n any) bool {
 	return false
 }
 
-func ToFloat64(v interface{}) (float64, error) {
+func ToFloat64(v any) (float64, error) {
 	if str, ok := v.(string); ok {
 		return strToFloat64(str)
 	}
@@ -330,7 +355,7 @@ func strToInt64(str string) (int64, error) {
 	return iv, nil
 }
 
-func ToInt64(v interface{}) (int64, error) {
+func ToInt64(v any) (int64, error) {
 	if str, ok := v.(string); ok {
 		return strToInt64(str)
 	}
@@ -446,7 +471,7 @@ func ToString(in any) string {
 	return fmt.Sprint(in)
 }
 
-// CreateStringFuncs.
+// CreateStringFuncs returns a new mapping of template StringFuncs.
 func CreateStringFuncs() map[string]any {
 	f := map[string]any{}
 
@@ -456,11 +481,14 @@ func CreateStringFuncs() map[string]any {
 	return f
 }
 
-// StringFuncs.
+// StringFuncs holds string related functions for templates.
 type StringFuncs struct{}
 
-// Split slices input into the substrings separated by separator, returning a slice of the substrings between those separators. If input does not contain separator and separator is not empty, returns a single-element slice whose only element is input.
-// If separator is empty, it will split after each UTF-8 sequence. If both inputs are empty (i.e. strings.Split "" ""), it will return an empty slice.
+// Split slices input into the substrings separated by separator, returning a slice of the
+// substrings between those separators. If input does not contain separator and separator is not
+// empty, returns a single-element slice whose only element is input. If separator is empty, it will
+// split after each UTF-8 sequence. If both inputs are empty (i.e. strings.Split "" ""), it will
+// return an empty slice.
 // This is equivalent to strings.SplitN with a count of -1.
 // Note that the delimiter is not included in the resulting elements.
 func (sf *StringFuncs) Split(sep string, s any) []string {
@@ -468,17 +496,17 @@ func (sf *StringFuncs) Split(sep string, s any) []string {
 }
 
 // ReplaceAll replaces all occurrences of a given string with another.
-func (sf *StringFuncs) ReplaceAll(old, new string, s any) string {
+func (sf *StringFuncs) ReplaceAll(old, replacement string, s any) string {
 	if old == "" {
 		return ToString(s)
 	}
 	if s == nil {
 		return ""
 	}
-	return strings.ReplaceAll(ToString(s), old, new)
+	return strings.ReplaceAll(ToString(s), old, replacement)
 }
 
-// CreateConvFuncs.
+// CreateConvFuncs returns a new mapping of template ConvFuncs.
 func CreateConvFuncs() map[string]any {
 	f := map[string]any{}
 
@@ -488,7 +516,7 @@ func CreateConvFuncs() map[string]any {
 	return f
 }
 
-// ConvFuncs.
+// ConvFuncs holds conversion related functions for templates.
 type ConvFuncs struct{}
 
 // Join concatenates the elements of a to create a single string.
@@ -543,9 +571,12 @@ func InterfaceSlice(slice any) ([]any, error) {
 	}
 }
 
-// ToInt converts the input to an int (signed integer, 32- or 64-bit depending on platform). This is similar to conv.ToInt64 on 64-bit platforms, but is useful when input to another function must be provided as an int.
+// ToInt converts the input to an int (signed integer, 32- or 64-bit depending on platform). This is
+// similar to conv.ToInt64 on 64-bit platforms, but is useful when input to another function must be
+// provided as an int.
 // Unconvertible inputs will result in errors.
-// On 32-bit systems, given a number that is too large to fit in an int, the result is -1. This is done to protect against CWE-190 and CWE-681.
+// On 32-bit systems, given a number that is too large to fit in an int, the result is -1. This is
+// done to protect against CWE-190 and CWE-681.
 func (ConvFuncs) ToInt(in any) (int, error) {
 	i, err := ToInt64(in)
 	if err != nil {
@@ -561,6 +592,43 @@ func (ConvFuncs) ToInt(in any) (int, error) {
 
 	// maybe we're on a 32-bit system, so we can't represent this number
 	return 0, fmt.Errorf("could not convert %v to int", in)
+}
+
+// CreateNetFuncs returns a new mapping of template NetFuncs.
+func CreateNetFuncs() map[string]any {
+	f := map[string]any{}
+
+	ns := &NetFuncs{}
+	f["net"] = func() any { return ns }
+
+	return f
+}
+
+// NetFuncs holds network related functions for templates.
+type NetFuncs struct{}
+
+// CIDRHost takes a parent CIDR range and turns it into a host IP address with
+// the given host number.
+//
+// For example, 10.3.0.0/16 with a host number of 2 gives 10.3.0.2.
+// Copied from gomplate.
+func (nf *NetFuncs) CIDRHost(hostnum any, prefix any) (string, error) {
+	network, err := netip.ParsePrefix(ToString(prefix))
+	if err != nil {
+		return "", err
+	}
+
+	n, err := ToInt64(hostnum)
+	if err != nil {
+		return "", fmt.Errorf("expected a number: %w", err)
+	}
+
+	ip, err := HostBig(network, big.NewInt(n))
+	if err != nil {
+		return "", err
+	}
+
+	return ip.String(), nil
 }
 
 // SubstituteEnvsAndTemplate substitutes environment variables and template the reader `r`

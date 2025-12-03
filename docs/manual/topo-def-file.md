@@ -1,3 +1,10 @@
+---
+search:
+  boost: 8
+---
+
+# Topology definition
+
 Containerlab builds labs based on the topology information that users pass to it. This topology information is expressed as a code contained in the _topology definition file_ which structure is the prime focus of this document.
 
 -{{diagram(url='srl-labs/containerlab/diagrams/containerlab.drawio', page='4', title='', zoom='1.5')}}-
@@ -17,7 +24,7 @@ topology:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
     ceos:
-      kind: ceos
+      kind: arista_ceos
       image: ceos:4.32.0F
 
   links:
@@ -106,10 +113,10 @@ topology:
   nodes:
     srl:                    # this is a name of the 1st node
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       image: ghcr.io/nokia/srlinux
     ceos:                   # this is a name of the 2nd node
-      kind: ceos
+      kind: arista_ceos
       image: ceos:4.32.0F
 ```
 
@@ -120,7 +127,7 @@ Each node can have multiple configuration properties which make containerlab qui
 ```yaml
 srl:
   kind: nokia_srlinux
-  type: ixrd2l
+  type: ixr-d2l
   image: ghcr.io/nokia/srlinux
 ```
 
@@ -251,9 +258,13 @@ links:
       - node: <NodeA-Name>                  # mandatory
         interface: <NodeA-Interface-Name>   # mandatory
         mac: <NodeA-Interface-Mac>          # optional
+        ipv4: <NodeA-IPv4-Address>          # optional e.g. 192.168.0.1/24
+        ipv6: <NodeA-IPv6-Address>          # optional e.g. 2001:db8::1/64
       - node: <NodeB-Name>                  # mandatory
         interface: <NodeB-Interface-Name>   # mandatory
         mac: <NodeB-Interface-Mac>          # optional
+        ipv4: <NodeB-IPv4-Address>          # optional
+        ipv6: <NodeB-IPv6-Address>          # optional
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
@@ -267,10 +278,10 @@ The mgmt-net link type represents a veth pair that is connected to a container n
   links:
   - type: mgmt-net
     endpoint:
-      node: <NodeA-Name>                  # mandatory
-      interface: <NodeA-Interface-Name>   # mandatory
-      mac: <NodeA-Interface-Mac>          # optional
-    host-interface: <interface-name         # mandatory
+      node: <NodeA-Name>                    # mandatory
+      interface: <NodeA-Interface-Name>     # mandatory
+      mac: <NodeA-Interface-Mac>            # optional
+    host-interface: <interface-name>        # mandatory
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
@@ -325,14 +336,15 @@ The vxlan type results in a vxlan tunnel interface that is created in the host n
 
 ```yaml
   links:
-    - type: vxlan                       
+    - type: vxlan
       endpoint:                              # mandatory
         node: <Node-Name>                    # mandatory
         interface: <Node-Interface-Name>     # mandatory
         mac: <Node-Interface-Mac>            # optional
       remote: <Remote-VTEP-IP>               # mandatory
       vni: <VNI>                             # mandatory
-      udp-port: <VTEP-UDP-Port>              # mandatory
+      dst-port: <VTEP-UDP-Port>              # mandatory
+      src-port: <Source-UDP-Port>            # optional
       mtu: <link-mtu>                        # optional
       vars: <link-variables>                 # optional (used in templating)
       labels: <link-labels>                  # optional (used in templating)
@@ -352,7 +364,8 @@ In addition to these interfaces, tc rules are being provisioned to stitch the vx
         mac: <Node-Interface-Mac>            # optional
       remote: <Remote-VTEP-IP>               # mandatory
       vni: <VNI>                             # mandatory
-      udp-port: <VTEP-UDP-Port>              # mandatory
+      dst-port: <VTEP-UDP-Port>              # mandatory
+      src-port: <Source-UDP-Port>            # optional
       mtu: <link-mtu>                        # optional
       vars: <link-variables>                 # optional (used in templating)
       labels: <link-labels>                  # optional (used in templating)
@@ -375,6 +388,217 @@ Such interfaces are useful for testing and debugging purposes where we want to m
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
 ```
+
+##### Variables
+
+Link variables are a way to supply additional link-related information that can be passed to the configuration templates and will be rendered in the [topology data](../manual/inventory.md#topology-data) json file.
+
+You can provide link variables using link's brief and extended format. When using the brief format, the vars are defined under the link map and they will be available under the link container in the topology json file:
+
+/// tab | brief format
+
+```yaml
+  links:
+    - endpoints: [srl1:e1-1, srl2:e1-1]
+      vars:
+        foo: bar
+        baz:
+          - one
+          - two
+          - three
+        three:
+          a: b
+          c: d
+```
+
+///
+/// tab | topology data file
+
+```json
+"links": [
+  {
+    "endpoints": {
+      "a": {
+        "node": "srl1",
+        "interface": "e1-1",
+        "mac": "aa:c1:ab:12:bb:44",
+        "peer": "z"
+      },
+      "z": {
+        "node": "srl2",
+        "interface": "e1-1",
+        "mac": "aa:c1:ab:96:1c:d1",
+        "peer": "a"
+      }
+    },
+    "vars": {
+      "baz": [
+        "one",
+        "two",
+        "three"
+      ],
+      "foo": "bar",
+      "three": {
+        "a": "b",
+        "c": "d"
+      }
+    }
+  }
+]
+```
+
+///
+
+In the extended format, the vars can be defined for the entire link or for each endpoint individually.
+
+/// tab | extended format
+
+```yaml
+  links:
+    - type: veth
+      endpoints:
+        - node: srl1
+          interface: e1-2
+          vars:
+            srl1ep1var1: "val1"
+            srl1ep1var2:
+              a: "b"
+              c: "d"
+            srl1ep1var3:
+              - "x"
+              - "y"
+              - "z"
+        - node: srl2
+          interface: e1-2
+          vars:
+            srl2ep1var1: "val2"
+            srl2ep1var2:
+              x: "y"
+              z: "a"
+            srl2ep1var3:
+              - 1
+              - 2
+              - 3
+
+```
+
+///
+/// tab | topology data file
+
+```json
+  "links": [
+    {
+      "endpoints": {
+        "a": {
+          "node": "srl1",
+          "interface": "e1-2",
+          "mac": "aa:c1:ab:56:36:28",
+          "vars": {
+            "srl1ep1var1": "val1",
+            "srl1ep1var2": {
+              "a": "b",
+              "c": "d"
+            },
+            "srl1ep1var3": [
+              "x",
+              "y",
+              "z"
+            ]
+          },
+          "peer": "z"
+        },
+        "z": {
+          "node": "srl2",
+          "interface": "e1-2",
+          "mac": "aa:c1:ab:09:2f:ea",
+          "vars": {
+            "srl2ep1var1": "val2",
+            "srl2ep1var2": {
+              "x": "y",
+              "z": "a"
+            },
+            "srl2ep1var3": [
+              1,
+              2,
+              3
+            ]
+          },
+          "peer": "a"
+        }
+      }
+    }
+  ]
+```
+
+///
+
+##### IP Addresses
+
+The `ipv4` and `ipv6` fields allow for you to set the IPv4 and/or IPv6 address on an interface respectively; directly from the topology file.
+
+/// note
+Currently only the [Nokia SR Linux](../manual/kinds/srl.md) and [Cisco IOL](../manual/kinds/cisco_iol.md) kind(s) support this feature. Contributions to add support for other kinds are welcomed.
+///
+
+Refer to the below example, where we configure some addressing on the node interfaces using the [brief](#brief-format) format where addresses are passed as an ordered list matching the order of which the endpoint interfaces are defined.
+
+```yaml
+name: ip-addr-brief
+topology:
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+    srl2:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+  links:
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
+      ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
+      ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
+    - endpoints: ["srl1:e1-2", "srl2:e1-2"]
+      ipv4: ["192.168.2.1/24"] #(1)!
+```
+
+1. In this case, only the `srl1` node's `e1-2` interface will be provided with the ipv4 variable, since the list contains only one entry and the first entry always corresponds to the first endpoint defined in the `endpoints` list.
+
+    In case you only need to provide the variable to the 2nd endpoint, you keep the first element of the list empty, like so: `ipv4: ["", "192.168.2.1/24"]`.
+
+The [extended](#extended-format) format also supports providing the variables, in a more structured way:
+
+```yaml
+name: ip-vars-extended
+topology:
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+    srl2:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+  links:
+    - type: veth
+      endpoints:
+        - node: srl1
+          interface: e1-2
+          ipv4: 192.168.0.1/24
+          ipv6: 2001:db8::1/64
+        - node: srl2
+          interface: e1-2
+          ipv4: 192.168.0.2/24
+          ipv6: 2001:db8::2/64
+    - type: veth
+      endpoints:
+        - node: srl1
+          interface: e1-2
+          ipv4: 192.168.2.1/24
+        - node: srl2
+          interface: e1-2
+```
+
+In both examples, we configure the `192.168.0.0/24`, and `2001:db8::/64` subnets on the link between srl1 and srl2's `e1-1` interfaces, where the least significant value represents the host, `1` for srl1, and `2` for srl2.
+
+We can also set the IP for only one side, which is shown using IPv4 as an example on the link between srl1 and srl2 on the `e1-2` interfaces. Where the IPv4 address `192.168.2.1` is only set for `srl1`.
 
 #### Groups
 
@@ -436,7 +660,7 @@ Kinds define the behavior and the nature of a node, it says if the node is a spe
 topology:
   kinds:
     nokia_srlinux:
-      type: ixrd2l
+      type: ixr-d2l
       image: ghcr.io/nokia/srlinux
   nodes:
     srl1:
@@ -447,7 +671,7 @@ topology:
       kind: nokia_srlinux
 ```
 
-In the example above the `topology.kinds` element has `srl` kind referenced. With this, we set some values for the properties of the `srl` kind. A configuration like that says that nodes of `srl` kind will also inherit the properties (type, image) defined on the _kind level_.
+In the example above the `topology.kinds` element has `nokia_srlinux` kind referenced. With this, we set some values for the properties of the `nokia_srlinux` kind. A configuration like that says that nodes of `nokia_srlinux` kind will also inherit the properties (type, image) defined on the _kind level_.
 
 Essentially, what `kinds` section allows us to do is to shorten the lab definition in cases when we have a number of nodes of a same kind. All the nodes (`srl1`, `srl2`, `srl3`) will have the same values for their `type` and `image` properties.
 
@@ -458,19 +682,19 @@ topology:
   nodes:
     srl1:
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       image: ghcr.io/nokia/srlinux
     srl2:
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       image: ghcr.io/nokia/srlinux
     srl3:
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       image: ghcr.io/nokia/srlinux
 ```
 
-A lot of unnecessary repetition is eliminated when we set `srl` kind properties on kind level.
+A lot of unnecessary repetition is eliminated when we set `nokia_srlinux` kind properties on kind level.
 
 #### Defaults
 
@@ -525,6 +749,75 @@ In the example above, the `ALPINE_VERSION` environment variable is used to set t
 | `${var+$OTHER}`    | If var set, evaluate expression as $OTHER, otherwise as empty string |
 | `${var:+$OTHER}`   | If var set, evaluate expression as $OTHER, otherwise as empty string |
 | `$$var`            | Escape expressions. Result will be `$var`.                           |
+
+## Magic Variables
+
+Magic variables are special strings that get replaced with actual values during the topology parsing.to make your lab configurations more dynamic and less verbose. These variables are surrounded by double underscores (`__variable__`) and can be seen in some of the advanced topology examples.
+
+These variables can be used in startup-config paths, bind paths, and exec commands. They are replaced with actual values during lab deployment:
+
+| Variable | Description | Example Usage | Expands To |
+|----------|-------------|---------------|------------|
+| `__clabNodeName__` {: style='white-space: nowrap;'} | Current node's short name | `startup-config: cfg/__clabNodeName__.cfg` | `cfg/node1.cfg` (for node named "node1") |
+| `__clabNodeDir__` {: style='white-space: nowrap;'} | Path to the node's lab directory | `binds: __clabNodeDir__/conf:/conf` | `clab-mylab/node1/conf:/conf` |
+| `__clabDir__` {: style='white-space: nowrap;'} | Path to the lab's main directory | `binds: __clabDir__/data.json:/data.json:ro` | `clab-mylab/data.json:/data.json:ro` |
+
+Here are some practical examples when using magic variables can greatly simplify your topology definitions:
+
+/// tab | Dynamic startup configuration
+
+A common pattern found in many labs is to have a separate startup configuration file for each node. For regular network nodes it can be provided using `startup-config` property, for Linux containers it is often done using the file binds.
+
+Regardless of the target node, at the end of the day, these startup configuration files are often named after the node they belong to. Using `__clabNodeName__` magic variable, we can simplify the topology definition and avoid repeating the node names in the config file paths by setting the `startup-config` or `binds` property once in the `defaults` or `kinds` section and then containerlab will take care of resolving it to the actual node.
+
+Consider the following example where we set the `startup-config` property in the `defaults` section:
+
+```yaml
+name: mylab
+topology:
+  defaults:
+    startup-config: configs/__clabNodeName__.cfg
+  nodes:
+    router1:
+    router2:
+```
+
+Both `router1` and `router2` nodes will get their own startup configuration files: `configs/router1.cfg` and `configs/router2.cfg` respectively.
+
+///
+
+/// tab | Node-specific and lab-wide file binds
+
+Using the `__clabNodeDir__` and `__clabDir__` magic variables, it is possible to bind node-specific files as well as lab-wide shared files into the nodes.
+
+```yaml
+name: mylab
+topology:
+  nodes:
+    node1:
+      binds:
+        # Node-specific files
+        - __clabNodeDir__/custom.conf:/etc/custom.conf
+        # Lab-wide shared files
+        - __clabDir__/shared-data.json:/shared.json:ro
+```
+
+///
+
+/// tab | Customized exec commands
+
+Another popular use case for the `__clabNodeName__` magic variable is to customize the `exec` commands on a per-node basis.
+
+```yaml
+name: mylab
+topology:
+  nodes:
+    node1:
+      exec:
+        - echo "Node __clabNodeName__ started"  # Will output "Node node1 started"
+```
+
+///
 
 ## Generated topologies
 

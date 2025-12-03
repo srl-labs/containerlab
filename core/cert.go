@@ -3,11 +3,12 @@ package core
 import (
 	"fmt"
 
-	"github.com/srl-labs/containerlab/cert"
+	clabcert "github.com/srl-labs/containerlab/cert"
 )
 
-// LoadOrGenerateCA loads the CA certificate from the storage, or generates a new one if it does not exist.
-func (c *CLab) LoadOrGenerateCA(caCertInput *cert.CACSRInput) error {
+// LoadOrGenerateCA loads the CA certificate from the storage, or generates a new one if it does not
+// exist.
+func (c *CLab) LoadOrGenerateCA(caCertInput *clabcert.CACSRInput) error {
 	// try loading the CA cert, and if it fails, generate a new one
 	caCertificate, err := c.Cert.LoadCaCert()
 	if err != nil {

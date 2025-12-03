@@ -4,6 +4,8 @@
 
 The `completion` command generates shell completions for bash/zsh/fish shells.
 
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
+
 ## Usage
 
 `containerlab completion [arg]`
@@ -59,13 +61,21 @@ sed '1,2c\#compdef containerlab clab\ncompdef _containerlab containerlab clab' >
 
 /// admonition | Completion script location
     type: subtle-note
-`echo $fpath` will show the directories zsh reads files from. You can either use one of the available completions directories from this list or add a new directory to the list by adding this in your .zshrc file:
+The example above uses the `~/.oh-my-zsh/custom/completions` directory, which might not exist by default.
+
+`echo $fpath` will show the directories zsh reads files from. You can either use one of the available completions directories from this list or add a new directory:
+
+```
+mkdir -p ~/.oh-my-zsh/custom/completions
+```
+
+and then add this directory to the `fpath` list by adding it in your .zshrc file:
 
 ```bash
 fpath=(~/.oh-my-zsh/custom/completions $fpath)
 ```
 
-And then using `~/.oh-my-zsh/custom/completions` for your completions.
+Now you can use `~/.oh-my-zsh/custom/completions` for your completions as shown above.
 ///
 
 Start a new shell for this setup to take effect.
@@ -76,8 +86,10 @@ Start a new shell for this setup to take effect.
 containerlab completion fish | source
 ```
 
-To load completions for each session, execute once:
+To load `clab` and `containerlab` completions for each session, execute once:
 
 ```
 containerlab completion fish > ~/.config/fish/completions/containerlab.fish
+echo "complete --command clab --wraps containerlab" > ~/.config/fish/completions/clab.fish
+fish_update_completions
 ```

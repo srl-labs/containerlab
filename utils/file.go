@@ -30,6 +30,7 @@ import (
 	"github.com/steiler/acls"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 )
 
 var (
@@ -64,7 +65,7 @@ func DirExists(filename string) bool {
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherwise, copy the file contents from src to dst.
 // mode is the desired target file permissions, e.g. "0644".
-func CopyFile(src, dst string, mode os.FileMode) (err error) {
+func CopyFile(ctx context.Context, src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
 	if !IsHttpURL(src, false) && !IsS3URL(src) {
 		sfi, err = os.Stat(src)
@@ -75,7 +76,12 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		if !sfi.Mode().IsRegular() {
 			// cannot copy non-regular files (e.g., directories,
 			// symlinks, devices, etc.)
-			return fmt.Errorf("file copy failed: source file %s (%q): %w", sfi.Name(), sfi.Mode().String(), errNonRegularFile)
+			return fmt.Errorf(
+				"file copy failed: source file %s (%q): %w",
+				sfi.Name(),
+				sfi.Mode().String(),
+				errNonRegularFile,
+			)
 		}
 	}
 
@@ -95,7 +101,13 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		}
 	}
 
-	return CopyFileContents(src, dst, mode)
+	out, cleanup, err := CreateFileWithPermissions(dst, mode)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	return CopyFileContents(ctx, src, out)
 }
 
 // IsHttpURL checks if the url is a downloadable HTTP URL.
@@ -160,20 +172,81 @@ func ParseS3URL(s3URL string) (bucket, key string, err error) {
 	return bucket, key, nil
 }
 
+func copyFileContentsS3(src string) (io.ReadCloser, error) {
+	bucket, key, err := ParseS3URL(src)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get region from environment, default to us-east-1
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	// Create credential chain that mimics AWS SDK behavior
+	credProviders := []credentials.Provider{
+		&credentials.EnvAWS{},             // 1. Environment variables
+		&credentials.FileAWSCredentials{}, // 2. ~/.aws/credentials (default profile)
+		&credentials.IAM{
+			Client: &http.Client{Timeout: 10 * time.Second},
+		}, // 3. IAM role (EC2/ECS/Lambda)
+	}
+
+	// Create MinIO client with chained credentials
+	client, err := minio.New("s3.amazonaws.com", &minio.Options{
+		Creds:  credentials.NewChainCredentials(credProviders),
+		Secure: true,
+		Region: region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create S3 client: %w", err)
+	}
+
+	// Get object from S3
+	object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
+	}
+
+	// Verify object exists by reading its stats
+	_, err = object.Stat()
+	if err != nil {
+		object.Close()
+		return nil, fmt.Errorf(
+			"%w: %s: object not found or access denied: %v",
+			errS3Fetch,
+			src,
+			err,
+		)
+	}
+
+	return object, nil
+}
+
 // CopyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
 // src can be an http(s) URL or an S3 URL.
-func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
+func CopyFileContents(ctx context.Context, src string, dst *os.File) (err error) {
 	var in io.ReadCloser
 
 	switch {
 	case IsHttpURL(src, false):
-		client := NewHTTPClient()
+		client := &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+		}
 
 		// download using client
-		resp, err := client.Get(src)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, http.NoBody)
+		if err != nil {
+			return err
+		}
+
+		resp, err := client.Do(req)
 		if err != nil || resp.StatusCode != 200 {
 			return fmt.Errorf("%w: %s", errHTTPFetch, src)
 		}
@@ -183,49 +256,10 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		in = resp.Body
 
 	case IsS3URL(src):
-		bucket, key, err := ParseS3URL(src)
+		in, err = copyFileContentsS3(src)
 		if err != nil {
 			return err
 		}
-
-		// Get region from environment, default to us-east-1
-		region := os.Getenv("AWS_REGION")
-		if region == "" {
-			region = "us-east-1"
-		}
-
-		// Create credential chain that mimics AWS SDK behavior
-		credProviders := []credentials.Provider{
-			&credentials.EnvAWS{},                                             // 1. Environment variables
-			&credentials.FileAWSCredentials{},                                 // 2. ~/.aws/credentials (default profile)
-			&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
-		}
-
-		// Create MinIO client with chained credentials
-		client, err := minio.New("s3.amazonaws.com", &minio.Options{
-			Creds:  credentials.NewChainCredentials(credProviders),
-			Secure: true,
-			Region: region,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create S3 client: %w", err)
-		}
-
-		// Get object from S3
-		object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
-		if err != nil {
-			return fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
-		}
-
-		// Verify object exists by reading its stats
-		_, err = object.Stat()
-		if err != nil {
-			object.Close()
-			return fmt.Errorf("%w: %s: object not found or access denied: %v", errS3Fetch, src, err)
-		}
-
-		in = object
-
 	default:
 		in, err = os.Open(src)
 		if err != nil {
@@ -234,43 +268,49 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	}
 	defer in.Close() // skipcq: GO-S2307
 
-	// create directories if needed, since we promise to create the file
-	// if it doesn't exist
-	err = os.MkdirAll(filepath.Dir(dst), 0o750)
+	_, err = io.Copy(dst, in)
 	if err != nil {
 		return err
 	}
 
-	out, err := os.Create(dst)
+	return dst.Sync()
+}
+
+// CreateFileWithPermissions creates a file with proper directory structure,
+// ownership, and permissions. It returns the file handle and a cleanup function.
+// The caller is responsible for calling the cleanup function to close the file.
+func CreateFileWithPermissions(filePath string, mode os.FileMode) (*os.File, func(), error) {
+	// Create parent directories
+	err := os.MkdirAll(filepath.Dir(filePath), 0o750)
 	if err != nil {
-		return err
+		return nil, nil, err
+	}
+
+	// Create the file
+	file, err := os.Create(filePath)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Change file ownership to user running Containerlab instead of effective UID
-	err = SetUIDAndGID(dst)
+	err = SetUIDAndGID(filePath)
 	if err != nil {
-		return err
+		_ = file.Close()
+		return nil, nil, err
 	}
 
-	err = out.Chmod(mode)
+	// Set file permissions
+	err = file.Chmod(mode)
 	if err != nil {
-		return err
+		_ = file.Close()
+		return nil, nil, err
 	}
 
-	defer func() {
-		cerr := out.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-
-	if _, err = io.Copy(out, in); err != nil {
-		return err
+	cleanup := func() {
+		// should only err on repeated calls to close anyway
+		_ = file.Close()
 	}
-
-	err = out.Sync()
-
-	return err
+	return file, cleanup, nil
 }
 
 // CreateFile writes content to a file by path `file`.
@@ -368,7 +408,10 @@ func lookupUserHomeDirViaGetent(userId string) string {
 	// we need to extract home dir
 	parts := strings.Split(string(out), ":")
 	if len(parts) < 6 {
-		log.Debugf("error while looking up user by id using getent command %v: unexpected output format", userId)
+		log.Debugf(
+			"error while looking up user by id using getent command %v: unexpected output format",
+			userId,
+		)
 		return ""
 	}
 
@@ -403,7 +446,7 @@ const (
 
 // FilenameForURL extracts a filename from a given url
 // returns "undefined" when unsuccessful.
-func FilenameForURL(rawUrl string) string {
+func FilenameForURL(ctx context.Context, rawUrl string) string {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
 		return UndefinedFileName
@@ -411,7 +454,14 @@ func FilenameForURL(rawUrl string) string {
 
 	// try extracting the filename from "content-disposition" header
 	if IsHttpURL(rawUrl, false) {
-		resp, err := http.Head(rawUrl)
+		client := NewHTTPClient()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, rawUrl, http.NoBody)
+		if err != nil {
+			return filepath.Base(u.Path)
+		}
+
+		resp, err := client.Do(req)
 		if err != nil {
 			return filepath.Base(u.Path)
 		}
@@ -467,11 +517,8 @@ func NewHTTPClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-func GetRealUserIDs() (int, int, error) {
+func GetRealUserIDs() (userUID, userGID int, err error) {
 	// Here we check whether SUDO set the SUDO_UID and SUDO_GID variables
-	var userUID, userGID int
-	var err error
-
 	sudoUID, isSudoUIDSet := os.LookupEnv("SUDO_UID")
 	if isSudoUIDSet {
 		userUID, err = strconv.Atoi(sudoUID)
@@ -494,7 +541,8 @@ func GetRealUserIDs() (int, int, error) {
 	return userUID, userGID, nil
 }
 
-// AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds ACL rules:
+// AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds
+// ACL rules:
 // rwx for the real UID user and r-x for the real GID group.
 func AdjustFileACLs(fsPath string) error {
 	userUID, userGID, err := GetRealUserIDs()
@@ -542,7 +590,8 @@ func AdjustFileACLs(fsPath string) error {
 	return a.Apply(fsPath, acls.PosixACLDefault)
 }
 
-// SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from getRealUserIDs,
+// SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from
+// getRealUserIDs,
 // which should reflect the non-root user's UID and GID.
 func SetUIDAndGID(fsPath string) error {
 	userUID, userGID, err := GetRealUserIDs()
@@ -582,7 +631,7 @@ func GetOSRelease() string {
 	if osRelease != "" {
 		return osRelease
 	}
-	osRelease = "N/A"
+	osRelease = clabconstants.NotApplicable
 
 	matches, err := filepath.Glob("/etc/*-release")
 	if err != nil {
@@ -606,4 +655,9 @@ func GetOSRelease() string {
 	}
 
 	return osRelease
+}
+
+// IsPartialConfigFile returns true if the config file name contains .partial substring (case insensitive).
+func IsPartialConfigFile(configPath string) bool {
+	return strings.Contains(strings.ToUpper(configPath), ".PARTIAL")
 }

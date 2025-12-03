@@ -14,9 +14,10 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -32,7 +33,7 @@ const (
 
 var (
 	KindNames          = []string{"vyosnetworks_vyos"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	//go:embed vyos.config.boot
 	cfgTemplate string
@@ -47,32 +48,35 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	log.Debug("Registering vyos ")
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
-	r.Register(KindNames, func() nodes.Node {
+	r.Register(KindNames, func() clabnodes.Node {
 		return new(vyos)
 	}, nrea)
 }
 
 type vyos struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 	configDir  string
 	SSHPubKeys []ssh.PublicKey
-	creds      *nodes.Credentials
+	creds      *clabnodes.Credentials
 }
 
-func (n *vyos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vyos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
 	log.Debug("Initializating Vyos node")
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -88,14 +92,14 @@ func (n *vyos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *vyos) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *vyos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	if err := n.fixdirACL(); err != nil {
 		return err
 	}
 
 	issueTrue := true
-	n.Cfg.Certificate = &types.CertificateConfig{
+	n.Cfg.Certificate = &clabtypes.CertificateConfig{
 		Issue: &issueTrue,
 	}
 	cert, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
@@ -129,14 +133,14 @@ func (n *vyos) SaveConfig(ctx context.Context) error {
 	}
 	defer cli.Close()
 
-	if err = n.save(ctx, cli); err != nil {
+	if err := n.save(ctx, cli); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	nodeCfg := n.Config()
 	cli, err := n.newCli()
 	if err != nil {
@@ -188,7 +192,7 @@ func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	} else if resp.Failed != nil {
 		return errors.New("failed to configure management interface")
 	}
-	if err = n.save(ctx, cli); err != nil {
+	if err := n.save(ctx, cli); err != nil {
 		return err
 	}
 	log.Info("PostDeploy complete", "node", n.Cfg.ShortName)
@@ -202,7 +206,11 @@ func (n *vyos) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`eth[1-9]$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("vyos node %q has an interface named %q which doesn't match the required pattern. Interfaces may only be named ethX where X is any number greater than 0", n.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf(
+				"vyos node %q has an interface named %q which doesn't match the required pattern. Interfaces may only be named ethX where X is any number greater than 0",
+				n.Cfg.ShortName,
+				e.GetIfaceName(),
+			)
 		}
 	}
 

@@ -6,6 +6,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -14,7 +15,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
@@ -36,33 +38,37 @@ func (c *CLab) createAuthzKeysFile() error {
 	}
 
 	clabAuthzKeysFPath := c.TopoPaths.AuthorizedKeysFilename()
-	if err := utils.CreateFile(clabAuthzKeysFPath, b.String()); err != nil {
+	if err := clabutils.CreateFile(clabAuthzKeysFPath, b.String()); err != nil {
 		return err
 	}
 
 	// ensure authz_keys will have the permissions allowing it to be read by anyone
-	return os.Chmod(clabAuthzKeysFPath, 0o644) // skipcq: GSC-G302
+	return os.Chmod(
+		clabAuthzKeysFPath,
+		clabconstants.PermissionsFileDefault,
+	) // skipcq: GSC-G302
 }
 
 // RetrieveSSHPubKeysFromFiles retrieves public keys from the ~/.ssh/*.authorized_keys
 // and ~/.ssh/*.pub files.
 func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
 	var keys []ssh.PublicKey
-	p := utils.ResolvePath(pubKeysGlob, "")
+
+	p := clabutils.ResolvePath(pubKeysGlob, "")
 
 	all, err := filepath.Glob(p)
 	if err != nil {
 		return nil, fmt.Errorf("failed globbing the path %s", p)
 	}
 
-	f := utils.ResolvePath(authzKeysFPath, "")
+	f := clabutils.ResolvePath(authzKeysFPath, "")
 
-	if utils.FileExists(f) {
+	if clabutils.FileExists(f) {
 		log.Debugf("%s found, adding it to the list of files to get public keys from", f)
 		all = append(all, f)
 	}
 
-	keys, err = utils.LoadSSHPubKeysFromFiles(all)
+	keys, err = clabutils.LoadSSHPubKeysFromFiles(all)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +78,7 @@ func RetrieveSSHPubKeysFromFiles() ([]ssh.PublicKey, error) {
 
 // RetrieveSSHPubKeys retrieves the PubKeys from the different sources
 // SSHAgent as well as all home dir based /.ssh/*.pub files.
-func (c *CLab) RetrieveSSHPubKeys() ([]ssh.PublicKey, error) {
+func (c *CLab) RetrieveSSHPubKeys(ctx context.Context) ([]ssh.PublicKey, error) {
 	keys := make([]ssh.PublicKey, 0)
 
 	var errs error
@@ -84,7 +90,7 @@ func (c *CLab) RetrieveSSHPubKeys() ([]ssh.PublicKey, error) {
 		errs = errors.Join(err)
 	}
 
-	agentKeys, err := RetrieveSSHAgentKeys()
+	agentKeys, err := RetrieveSSHAgentKeys(ctx)
 	if err != nil {
 		errs = errors.Join(err)
 	}
@@ -109,18 +115,22 @@ func addKeyToBuffer(b *bytes.Buffer, key string) {
 }
 
 // RetrieveSSHAgentKeys retrieves public keys registered with the ssh-agent.
-func RetrieveSSHAgentKeys() ([]ssh.PublicKey, error) {
+func RetrieveSSHAgentKeys(ctx context.Context) ([]ssh.PublicKey, error) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
-	if len(socket) == 0 {
+	if socket == "" {
 		log.Debug("SSH_AUTH_SOCK not set, skipping pubkey fetching")
 		return nil, nil
 	}
-	conn, err := net.Dial("unix", socket)
+
+	dialer := net.Dialer{}
+
+	conn, err := dialer.DialContext(ctx, "unix", socket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open SSH_AUTH_SOCK: %w", err)
 	}
 
 	agentClient := agent.NewClient(conn)
+
 	keys, err := agentClient.List()
 	if err != nil {
 		return nil, fmt.Errorf("error listing agent's pub keys %w", err)
@@ -128,14 +138,15 @@ func RetrieveSSHAgentKeys() ([]ssh.PublicKey, error) {
 
 	log.Debugf("extracted %d keys from ssh-agent", len(keys))
 
-	var pubKeys []ssh.PublicKey
+	pubKeys := make([]ssh.PublicKey, len(keys))
 
-	for _, key := range keys {
+	for idx, key := range keys {
 		pkey, err := ssh.ParsePublicKey(key.Blob)
 		if err != nil {
 			return nil, err
 		}
-		pubKeys = append(pubKeys, pkey)
+
+		pubKeys[idx] = pkey
 	}
 
 	return pubKeys, nil

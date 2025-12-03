@@ -5,150 +5,196 @@
 package cmd
 
 import (
-	"net"
-	"os"
+	"context"
+	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
-	"github.com/srl-labs/containerlab/cmd/inspect"
-	"github.com/srl-labs/containerlab/cmd/version"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/core/dependency_manager"
-	"github.com/srl-labs/containerlab/runtime"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-// name of the container management network.
-var mgmtNetName string
-
-// IPv4/6 address range for container management network.
-var (
-	mgmtIPv4Subnet net.IPNet
-	mgmtIPv6Subnet net.IPNet
+const (
+	postDeployVersionCheckTimeout = 3 * time.Second
 )
 
-// reconfigure flag.
-var reconfigure bool
+func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
+	c := &cobra.Command{
+		Use:   "deploy",
+		Short: "deploy a lab",
+		Long: "deploy a lab based defined by means of the topology definition " +
+			"file\nreference: https://containerlab.dev/cmd/deploy/",
+		Aliases:      []string{"dep"},
+		SilenceUsage: true,
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return deployFn(cobraCmd, o)
+		},
+	}
 
-// max-workers flag.
-var maxWorkers uint
+	c.Flags().BoolVarP(
+		&o.Deploy.GenerateGraph,
+		"graph",
+		"g",
+		o.Deploy.GenerateGraph,
+		"generate topology graph",
+	)
 
-// skipPostDeploy flag.
-var skipPostDeploy bool
+	c.Flags().StringVarP(
+		&o.Deploy.ManagementNetworkName,
+		"network",
+		"",
+		o.Deploy.ManagementNetworkName,
+		"management network name",
+	)
 
-// template file for topology data export.
-var exportTemplate string
+	c.Flags().IPNetVarP(
+		&o.Deploy.ManagementIPv4Subnet,
+		"ipv4-subnet",
+		"4",
+		o.Deploy.ManagementIPv4Subnet,
+		"management network IPv4 subnet range",
+	)
 
-var deployFormat string
+	c.Flags().IPNetVarP(
+		&o.Deploy.ManagementIPv6Subnet,
+		"ipv6-subnet",
+		"6",
+		o.Deploy.ManagementIPv6Subnet,
+		"management network IPv6 subnet range",
+	)
 
-// skipLabDirFileACLs skips provisioning of extended File ACLs for the Lab directory.
-var skipLabDirFileACLs bool
+	c.Flags().StringVarP(
+		&o.Inspect.Format,
+		"format",
+		"f",
+		o.Inspect.Format,
+		"output format. One of [table, json]",
+	)
 
-// labOwner flag for setting the owner label.
-var labOwner string
+	c.Flags().BoolVarP(
+		&o.Deploy.Reconfigure,
+		"reconfigure",
+		"c",
+		o.Deploy.Reconfigure,
+		"regenerate configuration artifacts and overwrite previous ones if any",
+	)
 
-// deployCmd represents the deploy command.
-var deployCmd = &cobra.Command{
-	Use:          "deploy",
-	Short:        "deploy a lab",
-	Long:         "deploy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/deploy/",
-	Aliases:      []string{"dep"},
-	SilenceUsage: true,
-	PreRunE:      common.CheckAndGetRootPrivs,
-	RunE:         deployFn,
-}
+	c.Flags().UintVarP(
+		&o.Deploy.MaxWorkers,
+		"max-workers",
+		"",
+		o.Deploy.MaxWorkers,
+		"limit the maximum number of workers creating nodes and virtual wires",
+	)
 
-func init() {
-	RootCmd.AddCommand(deployCmd)
-	deployCmd.Flags().BoolVarP(&common.Graph, "graph", "g", false, "generate topology graph")
-	deployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
-	deployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	deployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	deployCmd.Flags().StringVarP(&deployFormat, "format", "f", "table", "output format. One of [table, json]")
-	deployCmd.Flags().BoolVarP(&reconfigure, "reconfigure", "c", false,
-		"regenerate configuration artifacts and overwrite previous ones if any")
-	deployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
-		"limit the maximum number of workers creating nodes and virtual wires")
-	deployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
-	deployCmd.Flags().StringVarP(&exportTemplate, "export-template", "",
-		"", "template file for topology data export")
-	deployCmd.Flags().StringSliceVarP(&common.NodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include")
-	deployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
-		"skip the lab directory extended ACLs provisioning")
-	deployCmd.Flags().StringVarP(&labOwner, "owner", "", "",
-		"lab owner name (only for users in clab_admins group)")
+	c.Flags().BoolVarP(
+		&o.Deploy.SkipPostDeploy,
+		"skip-post-deploy", "",
+		o.Deploy.SkipPostDeploy,
+		"skip post deploy action",
+	)
+
+	c.Flags().StringVarP(
+		&o.Deploy.ExportTemplate,
+		"export-template",
+		o.Deploy.ExportTemplate,
+		"",
+		"template file for topology data export",
+	)
+
+	c.Flags().StringSliceVarP(
+		&o.Filter.NodeFilter,
+		"node-filter",
+		"",
+		o.Filter.NodeFilter,
+		"comma separated list of nodes to include",
+	)
+
+	c.Flags().BoolVarP(
+		&o.Deploy.SkipLabDirectoryFileACLs,
+		"skip-labdir-acl",
+		"",
+		o.Deploy.SkipLabDirectoryFileACLs,
+		"skip the lab directory extended ACLs provisioning",
+	)
+
+	c.Flags().StringVarP(
+		&o.Deploy.LabOwner,
+		"owner",
+		"",
+		o.Deploy.LabOwner,
+		"lab owner name (only for users in clab_admins group)",
+	)
+
+	c.Flags().StringVar(
+		&o.Deploy.RestoreAll,
+		"restore-all",
+		"",
+		"restore all nodes that have snapshots in this directory (default: ./snapshots)",
+	)
+	// Allow flag without value to default to ./snapshots
+	c.Flags().Lookup("restore-all").NoOptDefVal = "./snapshots"
+
+	c.Flags().StringArrayVar(
+		&o.Deploy.RestoreNodeSnapshots,
+		"restore",
+		nil,
+		"restore specific node from snapshot file (format: node=path/to/snapshot.tar). "+
+			"Can be specified multiple times. Overrides --restore-all for specified nodes.",
+	)
+
+	return c, nil
 }
 
 // deployFn function runs deploy sub command.
-func deployFn(cobraCmd *cobra.Command, _ []string) error {
+func deployFn(cobraCmd *cobra.Command, o *Options) error {
+	// when deploying we cleanup if root context is canceled
+	o.Global.CleanOnCancel = true
+
+	o.Global.BackupTopologyFile = true
+
 	var err error
 
-	log.Info("Containerlab started", "version", version.Version)
+	log.Info("Containerlab started", "version", Version)
 
-	// Check for owner from environment (set by generate command)
-	if labOwner == "" && os.Getenv("CLAB_OWNER") != "" {
-		labOwner = os.Getenv("CLAB_OWNER")
-	}
-
-	opts := []core.ClabOption{
-		core.WithTimeout(common.Timeout),
-		core.WithTopoPath(common.Topo, common.VarsFile),
-		core.WithTopoBackup(common.Topo),
-		core.WithNodeFilter(common.NodeFilter),
-		core.WithRuntime(
-			common.Runtime,
-			&runtime.RuntimeConfig{
-				Debug:            common.Debug,
-				Timeout:          common.Timeout,
-				GracefulShutdown: common.Graceful,
-			},
-		),
-		core.WithDependencyManager(dependency_manager.NewDependencyManager()),
-		core.WithDebug(common.Debug),
-	}
-
-	// process optional settings
-	if common.Name != "" {
-		opts = append(opts, core.WithLabName(common.Name))
-	}
-	if labOwner != "" {
-		opts = append(opts, core.WithLabOwner(labOwner))
-	}
-	if mgmtNetName != "" {
-		opts = append(opts, core.WithManagementNetworkName(mgmtNetName))
-	}
-	if v4 := mgmtIPv4Subnet.String(); v4 != "<nil>" {
-		opts = append(opts, core.WithManagementIpv4Subnet(v4))
-	}
-	if v6 := mgmtIPv6Subnet.String(); v6 != "<nil>" {
-		opts = append(opts, core.WithManagementIpv6Subnet(v6))
-	}
-
-	c, err := core.NewContainerLab(opts...)
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
 	}
 
-	deploymentOptions, err := core.NewDeployOptions(maxWorkers)
+	deploymentOptions, err := clabcore.NewDeployOptions(o.Deploy.MaxWorkers)
 	if err != nil {
 		return err
 	}
 
-	deploymentOptions.SetExportTemplate(exportTemplate).
-		SetReconfigure(reconfigure).
-		SetGraph(common.Graph).
-		SetSkipPostDeploy(skipPostDeploy).
-		SetSkipLabDirFileACLs(skipLabDirFileACLs)
+	deploymentOptions.SetExportTemplate(o.Deploy.ExportTemplate).
+		SetReconfigure(o.Deploy.Reconfigure).
+		SetGraph(o.Deploy.GenerateGraph).
+		SetSkipPostDeploy(o.Deploy.SkipPostDeploy).
+		SetSkipLabDirFileACLs(o.Deploy.SkipLabDirectoryFileACLs).
+		SetRestoreAll(o.Deploy.RestoreAll).
+		SetRestoreNodeSnapshots(o.Deploy.RestoreNodeSnapshots)
 
 	containers, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {
 		return err
 	}
 
-	m := version.GetManager()
-	m.DisplayNewVersionAvailable(cobraCmd.Context())
+	// historically i think this was 5s, but we will already have had at least some time for
+	// the manager to have gone off and fetched the version, so 3s max to wrap that up and print
+	// seems reasonable
+	versionCheckContext, cancel := context.WithTimeout(
+		cobraCmd.Context(),
+		postDeployVersionCheckTimeout,
+	)
+	defer cancel()
+
+	m := getVersionManager()
+	m.DisplayNewVersionAvailable(versionCheckContext, false)
 
 	// print table summary
-	return inspect.PrintContainerInspect(containers, deployFormat)
+	return PrintContainerInspect(containers, o)
 }

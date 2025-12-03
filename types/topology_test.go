@@ -1,11 +1,11 @@
 package types
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/srl-labs/containerlab/utils"
-	"golang.org/x/exp/slices"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var topologyTestSet = map[string]struct {
@@ -19,14 +19,14 @@ var topologyTestSet = map[string]struct {
 					Kind:       "nokia_srlinux",
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: utils.Pointer(true),
+					AutoRemove: clabutils.Pointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
 						Options: []string{"someopt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: utils.Pointer(true),
+						Issue: clabutils.Pointer(true),
 					},
 				},
 			},
@@ -36,15 +36,17 @@ var topologyTestSet = map[string]struct {
 				Kind:       "nokia_srlinux",
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: utils.Pointer(true),
+				AutoRemove: clabutils.Pointer(true),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(true),
+					Issue: clabutils.Pointer(true),
 				},
+				Env:    map[string]string{},
+				Labels: map[string]string{},
 			},
 		},
 	},
@@ -81,14 +83,14 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: utils.Pointer(true),
+					AutoRemove: clabutils.Pointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: utils.Pointer(true),
+						Issue: clabutils.Pointer(true),
 					},
 				},
 			},
@@ -102,7 +104,7 @@ var topologyTestSet = map[string]struct {
 						"label2": "notv2",
 					},
 					Memory:     "2G",
-					AutoRemove: utils.Pointer(false),
+					AutoRemove: clabutils.Pointer(false),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
@@ -143,14 +145,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: utils.Pointer(false),
+				AutoRemove: clabutils.Pointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(true),
+					Issue: clabutils.Pointer(true),
 				},
 			},
 		},
@@ -163,7 +165,7 @@ var topologyTestSet = map[string]struct {
 				CPU:  1,
 				Binds: []string{
 					"x:z",
-					"m:n", // overriden by node
+					"m:n", // overridden by node
 				},
 			},
 			Kinds: map[string]*NodeDefinition{
@@ -253,7 +255,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: clabutils.Pointer(false),
 				},
 			},
 		},
@@ -331,14 +333,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "1G",
-				AutoRemove: utils.Pointer(false),
+				AutoRemove: clabutils.Pointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: clabutils.Pointer(false),
 				},
 			},
 		},
@@ -376,14 +378,14 @@ var topologyTestSet = map[string]struct {
 					},
 					CPU:        1,
 					Memory:     "1G",
-					AutoRemove: utils.Pointer(true),
+					AutoRemove: clabutils.Pointer(true),
 					DNS: &DNSConfig{
 						Servers: []string{"8.8.8.8"},
 						Search:  []string{"bar.com"},
 						Options: []string{"someotheropt"},
 					},
 					Certificate: &CertificateConfig{
-						Issue: utils.Pointer(true),
+						Issue: clabutils.Pointer(true),
 					},
 				},
 			},
@@ -397,7 +399,7 @@ var topologyTestSet = map[string]struct {
 						"label2": "notv2",
 					},
 					Memory:     "2G",
-					AutoRemove: utils.Pointer(false),
+					AutoRemove: clabutils.Pointer(false),
 					DNS: &DNSConfig{
 						Servers: []string{"1.1.1.1"},
 						Search:  []string{"foo.com"},
@@ -438,14 +440,14 @@ var topologyTestSet = map[string]struct {
 				},
 				CPU:        1,
 				Memory:     "2G",
-				AutoRemove: utils.Pointer(false),
+				AutoRemove: clabutils.Pointer(false),
 				DNS: &DNSConfig{
 					Servers: []string{"1.1.1.1"},
 					Search:  []string{"foo.com"},
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(true),
+					Issue: clabutils.Pointer(true),
 				},
 			},
 		},
@@ -458,7 +460,7 @@ var topologyTestSet = map[string]struct {
 					CPU:  1,
 					Binds: []string{
 						"x:z",
-						"m:n", // overriden by group
+						"m:n", // overridden by group
 					},
 				},
 			},
@@ -551,7 +553,7 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: clabutils.Pointer(false),
 				},
 			},
 		},
@@ -559,12 +561,12 @@ var topologyTestSet = map[string]struct {
 	"node_group_default": {
 		input: &Topology{
 			Defaults: &NodeDefinition{
-				Kind: "linux", // overriden by group
+				Kind: "linux", // overridden by group
 				User: "user1",
 				CPU:  1,
 				Binds: []string{
 					"x:z",
-					"m:n", // overriden by node
+					"m:n", // overridden by node
 				},
 			},
 			Groups: map[string]*NodeDefinition{
@@ -655,7 +657,35 @@ var topologyTestSet = map[string]struct {
 					Options: []string{"someopt"},
 				},
 				Certificate: &CertificateConfig{
-					Issue: utils.Pointer(false),
+					Issue: clabutils.Pointer(false),
+				},
+			},
+		},
+	},
+	// see #2852
+	"type_from_kind_via_defaults": {
+		input: &Topology{
+			Nodes: map[string]*NodeDefinition{
+				"node1": {},
+			},
+			Kinds: map[string]*NodeDefinition{
+				"default_kind": {
+					Type: "fooer",
+				},
+			},
+			Defaults: &NodeDefinition{
+				Kind: "default_kind",
+			},
+		},
+		want: map[string]*NodeDefinition{
+			"node1": {
+				Kind:   "default_kind",
+				Type:   "fooer",
+				Env:    map[string]string{},
+				Labels: map[string]string{},
+				DNS:    &DNSConfig{},
+				Certificate: &CertificateConfig{
+					Issue: clabutils.Pointer(false),
 				},
 			},
 		},
@@ -665,7 +695,9 @@ var topologyTestSet = map[string]struct {
 func TestGetNodeKind(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		kind := item.input.GetNodeKind("node1")
+
 		if diff := cmp.Diff(item.want["node1"].Kind, kind); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -675,8 +707,11 @@ func TestGetNodeKind(t *testing.T) {
 func TestGetNodeGroup(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		group := item.input.GetNodeGroup("node1")
+
 		t.Logf("%q test item result: %v", name, group)
+
 		if diff := cmp.Diff(item.want["node1"].Group, group); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -686,8 +721,11 @@ func TestGetNodeGroup(t *testing.T) {
 func TestGetNodeType(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		typ := item.input.GetNodeType("node1")
+
 		t.Logf("%q test item result: %v", name, typ)
+
 		if diff := cmp.Diff(item.want["node1"].Type, typ); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -697,9 +735,13 @@ func TestGetNodeType(t *testing.T) {
 func TestGetNodeConfig(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		config := item.input.GetNodeStartupConfig("node1")
+
 		wantedConfig := item.want["node1"].StartupConfig
+
 		t.Logf("%q test item result: %v", name, config)
+
 		if diff := cmp.Diff(wantedConfig, config); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -709,20 +751,70 @@ func TestGetNodeConfig(t *testing.T) {
 func TestGetNodeImage(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		image := item.input.GetNodeImage("node1")
+
 		t.Logf("%q test item result: %v", name, image)
+
 		if diff := cmp.Diff(item.want["node1"].Image, image); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
 	}
 }
 
+// TestGetNodeImageOnlyViaDefault tests that the node
+// inherits image from kinds via defaults.
+func TestGetNodeImageOnlyViaDefault(t *testing.T) {
+	// This represents the exact scenario from the GitHub issue
+	topology := &Topology{
+		Defaults: &NodeDefinition{
+			Kind: "nokia_srlinux",
+		},
+		Kinds: map[string]*NodeDefinition{
+			"nokia_srlinux": {
+				Image: "ghcr.io/nokia/srlinux:latest",
+			},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"sw01": nil, // This simulates YAML parsing where "sw01:" creates a nil entry
+			"sw02": nil,
+			"host01": {
+				Kind:  "linux",
+				Image: "debian-host:latest",
+			},
+		},
+	}
+
+	// Test that nil nodes inherit image from kinds via defaults
+	tests := []struct {
+		nodeName string
+		want     string
+	}{
+		{"sw01", "ghcr.io/nokia/srlinux:latest"},
+		{"sw02", "ghcr.io/nokia/srlinux:latest"},
+		{"host01", "debian-host:latest"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.nodeName, func(t *testing.T) {
+			got := topology.GetNodeImage(tt.nodeName)
+			if got != tt.want {
+				t.Errorf("GetNodeImage(%s) = %q, want %q", tt.nodeName, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetNodeLicense(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		lic := item.input.GetNodeLicense("node1")
+
 		wantedLicense := item.want["node1"].License
+
 		t.Logf("%q test item result: %v", name, lic)
+
 		if diff := cmp.Diff(wantedLicense, lic); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -732,8 +824,11 @@ func TestGetNodeLicense(t *testing.T) {
 func TestGetNodePosition(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		pos := item.input.GetNodePosition("node1")
+
 		t.Logf("%q test item result: %v", name, pos)
+
 		if diff := cmp.Diff(item.want["node1"].Position, pos); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -743,8 +838,11 @@ func TestGetNodePosition(t *testing.T) {
 func TestGetNodeCmd(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		cmd := item.input.GetNodeCmd("node1")
+
 		t.Logf("%q test item result: %v", name, cmd)
+
 		if diff := cmp.Diff(item.want["node1"].Cmd, cmd); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -754,8 +852,11 @@ func TestGetNodeCmd(t *testing.T) {
 func TestGetNodeExec(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		exec := item.input.GetNodeExec("node1")
+
 		t.Logf("%q test item result: %v", name, exec)
+
 		if diff := cmp.Diff(item.want["node1"].Exec, exec); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -765,8 +866,11 @@ func TestGetNodeExec(t *testing.T) {
 func TestGetNodeUser(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		user := item.input.GetNodeUser("node1")
+
 		t.Logf("%q test item result: %v", name, user)
+
 		if diff := cmp.Diff(item.want["node1"].User, user); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -782,7 +886,12 @@ func TestGetNodeBinds(t *testing.T) {
 		slices.Sort(item.want["node1"].Binds)
 
 		if diff := cmp.Diff(item.want["node1"].Binds, binds); diff != "" {
-			t.Fatalf("Binds resolve failed.\nGot: %q\nWant: %q\nDiff\n%s", binds, item.want["node1"].Binds, diff)
+			t.Fatalf(
+				"Binds resolve failed.\nGot: %q\nWant: %q\nDiff\n%s",
+				binds,
+				item.want["node1"].Binds,
+				diff,
+			)
 		}
 	}
 }
@@ -790,8 +899,11 @@ func TestGetNodeBinds(t *testing.T) {
 func TestGetNodeEnv(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		envs := item.input.GetNodeEnv("node1")
+
 		t.Logf("%q test item result: %v", name, envs)
+
 		if diff := cmp.Diff(item.want["node1"].Env, envs); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -801,8 +913,11 @@ func TestGetNodeEnv(t *testing.T) {
 func TestGetNodeLabels(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		labels := item.input.GetNodeLabels("node1")
+
 		t.Logf("%q test item result: %v", name, labels)
+
 		if diff := cmp.Diff(item.want["node1"].Labels, labels); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -812,12 +927,17 @@ func TestGetNodeLabels(t *testing.T) {
 func TestGetNodeAutoRemove(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
+
 		autoremove := item.input.GetNodeAutoRemove("node1")
+
 		t.Logf("%q test item result: %v", name, autoremove)
+
 		want := false
+
 		if item.want["node1"].AutoRemove != nil {
 			want = *item.want["node1"].AutoRemove
 		}
+
 		if diff := cmp.Diff(want, autoremove); diff != "" {
 			t.Errorf("item %q failed: (-want +got)\n%s", name, diff)
 		}
@@ -833,7 +953,12 @@ func TestGetNodeDNS(t *testing.T) {
 		t.Logf("%q test item result: %v", name, dns)
 
 		if diff := cmp.Diff(item.want["node1"].DNS, dns); diff != "" {
-			t.Fatalf("DNS config object doesn't match.\nGot: %+v\nWant: %+v\nDiff\n%s", dns, item.want["node1"].DNS, diff)
+			t.Fatalf(
+				"DNS config object doesn't match.\nGot: %+v\nWant: %+v\nDiff\n%s",
+				dns,
+				item.want["node1"].DNS,
+				diff,
+			)
 		}
 	}
 }

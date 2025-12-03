@@ -243,7 +243,7 @@ Example of exported data when using default `auto.tmpl` template:
 
   topology:
     kinds:
-      srl:
+      nokia_srlinux:
         type: ixrd3
         image: ghcr.io/nokia/srlinux
     nodes:

@@ -46,9 +46,9 @@ With that we make a new image named `sros:20.10.R3` that references the same ori
 
 ### Pushing to a new registry
 
-Same `docker tag` command can be used to rename the image so it can be pushed to another registry. For example consider the newly built SR OS 21.2.R1 [vrnetlab](vrnetlab.md) image that by default will have a name of `vrnetlab/vr-sros:21.2.R1`. This container image can't be pushed anywhere in its current form, but retagging will help us out.
+That same `docker tag` command can be used to rename the image so it can be pushed to another registry. For example consider the newly built SR OS 21.2.R1 [vrnetlab](vrnetlab.md) image that by default will have a name of `vrnetlab/vr-sros:21.2.R1`. This container image can't be pushed anywhere in its current form, but retagging will help us out.
 
-If we wanted to push this image to a public registry like Github Container Registry, we could do the following:
+If we wanted to push this image to a public registry like the Github Container Registry, we could do the following:
 
 ```bash
 # retag the image to a fully qualified name that is suitable for

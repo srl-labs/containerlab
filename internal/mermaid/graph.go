@@ -3,8 +3,7 @@ package mermaid
 import (
 	"fmt"
 	"io"
-
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 // A very minimalistic Mermaid flowchart generator
@@ -41,7 +40,7 @@ func (fc *FlowChart) SetDirection(direction string) error {
 	return nil
 }
 
-func (fc *FlowChart) AddEdge(nodeA string, nodeB string) {
+func (fc *FlowChart) AddEdge(nodeA, nodeB string) {
 	fc.edges = append(fc.edges, Edge{nodeA: nodeA, nodeB: nodeB})
 }
 

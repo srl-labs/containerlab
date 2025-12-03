@@ -3,6 +3,7 @@
 [![github release](https://img.shields.io/github/release/srl-labs/containerlab.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 [![Github all releases](https://img.shields.io/github/downloads/srl-labs/containerlab/total.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 [![Doc](https://img.shields.io/badge/Docs-containerlab.dev-blue?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://containerlab.dev)
+[![DeepWiki](https://img.shields.io/badge/deepwiki-1DA1F2?logo=wikipedia&style=flat-square&color=00c9ff&labelColor=bec8d2&logoColor=black)](https://deepwiki.com/srl-labs/containerlab)
 [![Bluesky](https://img.shields.io/badge/follow-containerlab-1DA1F2?logo=bluesky&style=flat-square&color=00c9ff&labelColor=bec8d2)](https://bsky.app/profile/containerlab.dev)
 [![Discord](https://img.shields.io/discord/860500297297821756?style=flat-square&label=discord&logo=discord&color=00c9ff&labelColor=bec8d2)](https://discord.gg/vAyddtaEV9)
 
@@ -31,6 +32,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [6WIND VSR](https://containerlab.dev/manual/kinds/6wind_vsr/)
 * [FD.io VPP](https://containerlab.dev/manual/kinds/fdio_vpp/)
 * [VyOS Networks VyOS](https://containerlab.dev/manual/kinds/vyosnetworks_vyos/)
+* [Arrcus ArcOS](https://containerlab.dev/manual/kinds/arrcus_arcos/)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](https://containerlab.dev/manual/vrnetlab/):
 
@@ -44,7 +46,11 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Cisco IOS XRv9k](https://containerlab.dev/manual/kinds/vr-xrv9k/)
 * [Cisco Nexus 9000v](https://containerlab.dev/manual/kinds/vr-n9kv)
 * [Cisco c8000v](https://containerlab.dev/manual/kinds/vr-c8000v/)
+* [Cisco SD-WAN](https://containerlab.dev/manual/kinds/cisco_sdwan/)
 * [Cisco CSR 1000v](https://containerlab.dev/manual/kinds/vr-csr)
+* [Cisco vIOS](https://containerlab.dev/manual/kinds/cisco_vios/)
+* [Cisco ASAv](https://containerlab.dev/manual/kinds/cisco_asav/)
+* [Cisco FTDv](https://containerlab.dev/manual/kinds/vr-ftdv/)
 * [Dell FTOS10v](https://containerlab.dev/manual/kinds/vr-ftosv)
 * [Arista vEOS](https://containerlab.dev/manual/kinds/vr-veos)
 * [Palo Alto PAN](https://containerlab.dev/manual/kinds/vr-pan)

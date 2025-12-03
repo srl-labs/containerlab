@@ -6,7 +6,7 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/go-cmp/cmp"
-	"github.com/srl-labs/containerlab/nodes/state"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
 
@@ -26,7 +26,8 @@ func TestLinkVEthRaw_ToLinkBriefRaw(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars:   map[string]any{"foo": "bar"},
+					IPv4:   []string{"node1:10.10.10.1/24"},
+					IPv6:   []string{"node1:2001:db8::1/64"},
 				},
 				Endpoints: []*EndpointRaw{
 					{
@@ -44,7 +45,8 @@ func TestLinkVEthRaw_ToLinkBriefRaw(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars:   map[string]any{"foo": "bar"},
+					IPv4:   []string{"node1:10.10.10.1/24"},
+					IPv6:   []string{"node1:2001:db8::1/64"},
 				},
 			},
 		},
@@ -121,7 +123,8 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars:   map[string]any{"foo": "bar"},
+					IPv4:   []string{"node1:10.10.10.1/24"},
+					IPv6:   []string{"node1:2001:db8::1/64"},
 				},
 				Endpoints: []*EndpointRaw{
 					{
@@ -146,7 +149,8 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 				LinkCommonParams: LinkCommonParams{
 					MTU:    1500,
 					Labels: map[string]string{"foo": "bar"},
-					Vars:   map[string]any{"foo": "bar"},
+					IPv4:   []string{"node1:10.10.10.1/24"},
+					IPv6:   []string{"node1:2001:db8::1/64"},
 				},
 				Endpoints: []Endpoint{
 					&EndpointVeth{
@@ -198,11 +202,63 @@ func TestLinkVEthRaw_Resolve(t *testing.T) {
 	}
 }
 
+func TestLinkVEthRaw_InvalidEndpointVarAFParsing(t *testing.T) {
+	fn1 := newFakeNode("node1")
+	fn2 := newFakeNode("node2")
+
+	params := &ResolveParams{
+		Nodes: map[string]Node{
+			"node1": fn1,
+			"node2": fn2,
+		},
+	}
+
+	t.Run("IPv4 endpoint var has IPv6 prefix", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			LinkCommonParams: LinkCommonParams{},
+			Endpoints: []*EndpointRaw{
+				{
+					Node:  "node1",
+					Iface: "eth1",
+					IPv4:  "2001:db8::1/64",
+				},
+				{
+					Node:  "node2",
+					Iface: "eth2",
+				},
+			},
+		}
+		if _, err := r.Resolve(params); err == nil {
+			t.Fatalf("want error for non-IPv4 prefix in IPv4 var")
+		}
+	})
+
+	t.Run("IPv6 endpoint var has IPv4 prefix", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			LinkCommonParams: LinkCommonParams{},
+			Endpoints: []*EndpointRaw{
+				{
+					Node:  "node1",
+					Iface: "eth1",
+					IPv6:  "10.10.10.1/24",
+				},
+				{
+					Node:  "node2",
+					Iface: "eth2",
+				},
+			},
+		}
+		if _, err := r.Resolve(params); err == nil {
+			t.Fatalf("want error for non-IPv6 prefix in IPv6 var")
+		}
+	})
+}
+
 // fakeNode is a fake implementation of Node for testing.
 type fakeNode struct {
 	Name      string
 	Endpoints []Endpoint
-	State     state.NodeState
+	State     clabnodesstate.NodeState
 	Links     []Link
 }
 
@@ -210,7 +266,11 @@ func newFakeNode(name string) *fakeNode {
 	return &fakeNode{Name: name}
 }
 
-func (*fakeNode) AddLinkToContainer(_ context.Context, _ netlink.Link, _ func(ns.NetNS) error) error {
+func (*fakeNode) AddLinkToContainer(
+	_ context.Context,
+	_ netlink.Link,
+	_ func(ns.NetNS) error,
+) error {
 	panic("not implemented")
 }
 
@@ -241,7 +301,7 @@ func (*fakeNode) ExecFunction(_ context.Context, _ func(ns.NetNS) error) error {
 	panic("not implemented")
 }
 
-func (f *fakeNode) GetState() state.NodeState {
+func (f *fakeNode) GetState() clabnodesstate.NodeState {
 	return f.State
 }
 

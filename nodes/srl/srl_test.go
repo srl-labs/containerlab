@@ -5,44 +5,44 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestSRLInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints        []*links.EndpointVeth
+		endpoints        []*clablinks.EndpointVeth
 		node             *srl
 		checkErrContains string
 		resultEps        []string
 	}{
 		"alias-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ethernet-1/1",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ethernet-3/2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ethernet-2/3/4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ethernet-1/5",
 					},
 				},
 			},
 			node: &srl{
-				DefaultNode: nodes.DefaultNode{
-					Cfg: &types.NodeConfig{
+				DefaultNode: clabnodes.DefaultNode{
+					Cfg: &clabtypes.NodeConfig{
 						ShortName: "srl",
 					},
 					InterfaceRegexp: InterfaceRegexp,
@@ -54,31 +54,31 @@ func TestSRLInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "e1-2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "e1-2-4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "e3-6",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "mgmt0",
 					},
 				},
 			},
 			node: &srl{
-				DefaultNode: nodes.DefaultNode{
-					Cfg: &types.NodeConfig{
+				DefaultNode: clabnodes.DefaultNode{
+					Cfg: &clabtypes.NodeConfig{
 						ShortName:   "srl",
 						NetworkMode: "none",
 					},
@@ -91,16 +91,16 @@ func TestSRLInterfaceParsing(t *testing.T) {
 			},
 		},
 		"parse-fail": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth0",
 					},
 				},
 			},
 			node: &srl{
-				DefaultNode: nodes.DefaultNode{
-					Cfg: &types.NodeConfig{
+				DefaultNode: clabnodes.DefaultNode{
+					Cfg: &clabtypes.NodeConfig{
 						ShortName: "srl",
 					},
 					InterfaceRegexp: InterfaceRegexp,
@@ -116,10 +116,12 @@ func TestSRLInterfaceParsing(t *testing.T) {
 		t.Run(name, func(tt *testing.T) {
 			foundError := false
 			tc.node.OverwriteNode = tc.node
+
 			for _, ep := range tc.endpoints {
 				gotEndpointErr := tc.node.AddEndpoint(ep)
 				if gotEndpointErr != nil {
 					foundError = true
+
 					t.Errorf("got error for endpoint %+v", gotEndpointErr)
 				}
 			}
@@ -128,9 +130,14 @@ func TestSRLInterfaceParsing(t *testing.T) {
 				gotCheckErr := tc.node.CheckInterfaceName()
 				if gotCheckErr != nil {
 					foundError = true
+
 					if tc.checkErrContains != "" && !(strings.Contains(
 						fmt.Sprint(gotCheckErr), tc.checkErrContains)) {
-						t.Errorf("got error for check %+v, want %+v", gotCheckErr, tc.checkErrContains)
+						t.Errorf(
+							"got error for check %+v, want %+v",
+							gotCheckErr,
+							tc.checkErrContains,
+						)
 					}
 				}
 

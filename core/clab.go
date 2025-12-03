@@ -10,46 +10,45 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/cert"
-	depMgr "github.com/srl-labs/containerlab/core/dependency_manager"
-	containerlaberrors "github.com/srl-labs/containerlab/errors"
-	"github.com/srl-labs/containerlab/exec"
-	containerlablabels "github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
+	claberrors "github.com/srl-labs/containerlab/errors"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
-	"github.com/srl-labs/containerlab/runtime/docker"
-	"github.com/srl-labs/containerlab/runtime/ignite"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/exp/slices"
 )
 
 var ErrNodeNotFound = errors.New("node not found")
 
 type CLab struct {
 	Config    *Config `json:"config,omitempty"`
-	TopoPaths *types.TopoPaths
-	Nodes     map[string]nodes.Node `json:"nodes,omitempty"`
-	Links     map[int]links.Link    `json:"links,omitempty"`
-	Endpoints []links.Endpoint
-	Runtimes  map[string]runtime.ContainerRuntime `json:"runtimes,omitempty"`
+	TopoPaths *clabtypes.TopoPaths
+	Nodes     map[string]clabnodes.Node `json:"nodes,omitempty"`
+	Links     map[int]clablinks.Link    `json:"links,omitempty"`
+	Endpoints []clablinks.Endpoint
+	Runtimes  map[string]clabruntime.ContainerRuntime `json:"runtimes,omitempty"`
 	// reg is a registry of node kinds
-	Reg  *nodes.NodeRegistry
-	Cert *cert.Cert
+	Reg  *clabnodes.NodeRegistry
+	Cert *clabcert.Cert
 	// List of SSH public keys extracted from the ~/.ssh/authorized_keys file
 	// and ~/.ssh/*.pub files.
 	// The keys are used to enable key-based SSH access for the nodes.
 	SSHPubKeys []ssh.PublicKey
 
-	dependencyManager depMgr.DependencyManager
+	dependencyManager clabcoredependency_manager.DependencyManager
 	m                 *sync.RWMutex
 	timeout           time.Duration
 	globalRuntimeName string
@@ -67,19 +66,20 @@ type CLab struct {
 func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	c := &CLab{
 		Config: &Config{
-			Mgmt:     new(types.MgmtNet),
-			Topology: types.NewTopology(),
+			Mgmt:     new(clabtypes.MgmtNet),
+			Topology: clabtypes.NewTopology(),
 		},
-		m:               new(sync.RWMutex),
-		Nodes:           make(map[string]nodes.Node),
-		Links:           make(map[int]links.Link),
-		Runtimes:        make(map[string]runtime.ContainerRuntime),
-		Cert:            &cert.Cert{},
-		checkBindsPaths: true,
+		TopoPaths:         &clabtypes.TopoPaths{},
+		m:                 new(sync.RWMutex),
+		Nodes:             make(map[string]clabnodes.Node),
+		Links:             make(map[int]clablinks.Link),
+		Runtimes:          make(map[string]clabruntime.ContainerRuntime),
+		Cert:              &clabcert.Cert{},
+		checkBindsPaths:   true,
+		dependencyManager: clabcoredependency_manager.NewDependencyManager(),
 	}
 
-	// init a new NodeRegistry
-	c.Reg = nodes.NewNodeRegistry()
+	c.Reg = clabnodes.NewNodeRegistry()
 	c.RegisterNodes()
 
 	for _, opt := range opts {
@@ -104,43 +104,9 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 	return c, err
 }
 
-// NewContainerlabFromTopologyFileOrLabName creates a containerlab instance using either a topology file path
-// or a lab name. It returns the initialized CLab structure with the
-// topology loaded.
-func NewContainerlabFromTopologyFileOrLabName(ctx context.Context,
-	topoPath, labName, varsFile, runtimeName string, debug bool, timeout time.Duration, graceful bool,
-) (*CLab, error) {
-	if topoPath == "" && labName == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get current working directory and no topology path or lab name provided: %w", err)
-		}
-		topoPath = cwd
-	}
-
-	opts := []ClabOption{
-		WithTimeout(timeout),
-		WithRuntime(runtimeName, &runtime.RuntimeConfig{
-			Debug:            debug,
-			Timeout:          timeout,
-			GracefulShutdown: graceful,
-		}),
-		WithDebug(debug),
-	}
-
-	switch {
-	case topoPath != "":
-		opts = append(opts, WithTopoPath(topoPath, varsFile))
-	case labName != "":
-		opts = append(opts, WithTopoFromLab(labName))
-	}
-
-	return NewContainerLab(opts...)
-}
-
 // RuntimeInitializer returns a runtime initializer function for a provided runtime name.
 // Order of preference: cli flag -> env var -> default value of docker.
-func RuntimeInitializer(name string) (string, runtime.Initializer, error) {
+func RuntimeInitializer(name string) (string, clabruntime.Initializer, error) {
 	envN := os.Getenv("CLAB_RUNTIME")
 	log.Debugf("env runtime var value is %v", envN)
 
@@ -149,10 +115,10 @@ func RuntimeInitializer(name string) (string, runtime.Initializer, error) {
 	case envN != "":
 		name = envN
 	default:
-		name = docker.RuntimeName
+		name = clabruntimedocker.RuntimeName
 	}
 
-	runtimeInitializer, ok := runtime.ContainerRuntimes[name]
+	runtimeInitializer, ok := clabruntime.ContainerRuntimes[name]
 	if !ok {
 		return name, nil, fmt.Errorf("unknown container runtime %q", name)
 	}
@@ -164,25 +130,30 @@ func RuntimeInitializer(name string) (string, runtime.Initializer, error) {
 // or stdin or a URL (HTTP/HTTPS/S3) and returns the topology file name if found.
 func (c *CLab) ProcessTopoPath(path string) (string, error) {
 	var file string
+
 	var err error
 
 	switch {
 	case path == "-" || path == "stdin":
 		log.Debugf("interpreting topo %q as stdin", path)
+
 		file, err = readFromStdin(c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
 		}
 	// if the path is not a local file and a URL, download the file and store it in the tmp dir
-	case !utils.FileOrDirExists(path) && utils.IsHttpURL(path, true):
+	case !clabutils.FileOrDirExists(path) &&
+		clabutils.IsHttpURL(path, true):
 		log.Debugf("interpreting topo %q as remote URL", path)
+
 		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
 		}
 	// if the path is an S3 URL, download the file and store it in the tmp dir
-	case utils.IsS3URL(path):
+	case clabutils.IsS3URL(path):
 		log.Debugf("interpreting topo %q as S3 URL", path)
+
 		file, err = downloadTopoFile(path, c.TopoPaths.ClabTmpDir())
 		if err != nil {
 			return "", err
@@ -193,11 +164,13 @@ func (c *CLab) ProcessTopoPath(path string) (string, error) {
 
 	default:
 		log.Debugf("interpreting topo %q as file path", path)
+
 		file, err = FindTopoFileByPath(path)
 		if err != nil {
 			return "", err
 		}
 	}
+
 	return file, nil
 }
 
@@ -212,7 +185,7 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 	for _, n := range nodeFilter {
 		if _, ok := c.Config.Topology.Nodes[n]; !ok {
 			return fmt.Errorf("%w: node %q is not present in the topology",
-				containerlaberrors.ErrIncorrectInput, n)
+				claberrors.ErrIncorrectInput, n)
 		}
 	}
 
@@ -232,6 +205,7 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 // initMgmtNetwork sets management network config.
 func (c *CLab) initMgmtNetwork() error {
 	log.Debugf("method initMgmtNetwork was called mgmt params %+v", c.Config.Mgmt)
+
 	if c.Config.Mgmt.Network == "" {
 		c.Config.Mgmt.Network = dockerNetName
 	}
@@ -252,39 +226,44 @@ func (c *CLab) initMgmtNetwork() error {
 	return nil
 }
 
-func (c *CLab) globalRuntime() runtime.ContainerRuntime {
+func (c *CLab) globalRuntime() clabruntime.ContainerRuntime {
 	return c.Runtimes[c.globalRuntimeName]
 }
 
 // GetNode retrieve a node from the clab instance.
-func (c *CLab) GetNode(name string) (nodes.Node, error) {
+func (c *CLab) GetNode(name string) (clabnodes.Node, error) {
 	if node, exists := c.Nodes[name]; exists {
 		return node, nil
 	}
+
 	return nil, fmt.Errorf("%w: %s", ErrNodeNotFound, name)
 }
 
 // create a set of dependencies, that makes the ignite nodes start one after the other.
 func (c *CLab) createIgniteSerialDependency() error {
-	var prevIgniteNode *depMgr.DependencyNode
+	var prevIgniteNode *clabcoredependency_manager.DependencyNode
 	// iterate through the nodes
 	for _, n := range c.dependencyManager.GetNodes() {
 		// find nodes that should run with IgniteRuntime
-		if n.GetRuntime().GetName() == ignite.RuntimeName {
+		if n.GetRuntime().GetName() == clabruntimeignite.RuntimeName {
 			if prevIgniteNode != nil {
-				err := n.AddDepender(types.WaitForCreate, prevIgniteNode, types.WaitForCreate)
+				err := n.AddDepender(clabtypes.WaitForCreate,
+					prevIgniteNode, clabtypes.WaitForCreate)
 				if err != nil {
 					return err
 				}
 			}
+
 			prevIgniteNode = n
 		}
 	}
+
 	return nil
 }
 
-// createNamespaceSharingDependency adds dependency between the containerlab nodes that share a common network namespace.
-// When a node_a in the topology configured to be started in the netns of a node_b as such:
+// createNamespaceSharingDependency adds dependency between the containerlab nodes that share a
+// common network namespace. When a node_a in the topology configured to be started in the netns
+// of a node_b as such:
 //
 // node_a:
 //
@@ -294,28 +273,36 @@ func (c *CLab) createIgniteSerialDependency() error {
 func (c *CLab) createNamespaceSharingDependency() {
 	for _, n := range c.dependencyManager.GetNodes() {
 		nodeConfig := n.Config()
-		netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2)
+
+		netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2) //nolint: mnd
 		if netModeArr[0] != "container" {
 			// we only care about nodes with shared netns network-mode ("container:<CONTAINERNAME>")
 			continue
 		}
 
 		referenceNodeName := netModeArr[1]
+
 		referenceNode, err := c.dependencyManager.GetNode(referenceNodeName)
 		if err != nil {
-			log.Warnf("node %s referenced in namespace sharing not found in topology definition, considering it an external dependency.", referenceNodeName)
+			log.Warnf(
+				"node %s referenced in namespace sharing not found in topology definition, "+
+					"considering it an external dependency.",
+				referenceNodeName,
+			)
+
 			continue
 		}
 
-		referenceNode.AddDepender(types.WaitForCreate, n, types.WaitForCreate)
+		referenceNode.AddDepender(clabtypes.WaitForCreate, n, clabtypes.WaitForCreate)
 	}
 }
 
-// createStaticDynamicDependency creates the dependencies between the nodes such that all nodes with dynamic mgmt IP
-// are dependent on the nodes with static mgmt IP. This results in nodes with static mgmt IP to be scheduled before dynamic ones.
+// createStaticDynamicDependency creates the dependencies between the nodes such that all nodes
+// with dynamic mgmt IP are dependent on the nodes with static mgmt IP. This results in nodes with
+// static mgmt IP to be scheduled before dynamic ones.
 func (c *CLab) createStaticDynamicDependency() error {
-	staticIPNodes := make(map[string]*depMgr.DependencyNode)
-	dynIPNodes := make(map[string]*depMgr.DependencyNode)
+	staticIPNodes := make(map[string]*clabcoredependency_manager.DependencyNode)
+	dynIPNodes := make(map[string]*clabcoredependency_manager.DependencyNode)
 
 	// divide the nodes into static and dynamic mgmt IP nodes.
 	for name, n := range c.dependencyManager.GetNodes() {
@@ -323,19 +310,21 @@ func (c *CLab) createStaticDynamicDependency() error {
 			staticIPNodes[name] = n
 			continue
 		}
+
 		dynIPNodes[name] = n
 	}
 
 	// go through all the dynamic ip nodes
 	for _, dynNode := range dynIPNodes {
-		// and add their wait group to the the static nodes, while increasing the waitgroup
+		// and add their wait group to the static nodes, while increasing the waitgroup
 		for _, staticNode := range staticIPNodes {
-			err := staticNode.AddDepender(types.WaitForCreate, dynNode, types.WaitForCreate)
+			err := staticNode.AddDepender(clabtypes.WaitForCreate, dynNode, clabtypes.WaitForCreate)
 			if err != nil {
 				return err
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -362,144 +351,167 @@ func (c *CLab) createWaitForDependency() error {
 	return nil
 }
 
-// skipcq: GO-R1005
-func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection) {
-	concurrentChan := make(chan *depMgr.DependencyNode)
+func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
+	ctx context.Context,
+	i int,
+	input chan *clabcoredependency_manager.DependencyNode,
+	wg *sync.WaitGroup,
+	skipPostDeploy bool,
+	execCollection *clabexec.ExecCollection,
+) {
+	defer wg.Done()
 
-	execCollection := exec.NewExecCollection()
-
-	workerFunc := func(i int, input chan *depMgr.DependencyNode, wg *sync.WaitGroup) {
-		defer wg.Done()
-		for {
-			select {
-			case node, ok := <-input:
-				if node == nil || !ok {
-					log.Debugf("Worker %d terminating...", i)
-					return
-				}
-
-				log.Debugf("Worker %d received node: %+v", i, node.Config())
-
-				// Apply startup delay
-				delay := node.Config().StartupDelay
-				if delay > 0 {
-					log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
-					time.Sleep(time.Duration(delay) * time.Second)
-				}
-
-				// Pre-deploy stage
-				err := node.PreDeploy(
-					ctx,
-					&nodes.PreDeployParams{
-						Cert:         c.Cert,
-						TopologyName: c.Config.Name,
-						TopoPaths:    c.TopoPaths,
-						SSHPubKeys:   c.SSHPubKeys,
-					},
-				)
-				if err != nil {
-					log.Errorf("failed pre-deploy stage for node %q: %v", node.Config().ShortName, err)
-					continue
-				}
-
-				// Deploy
-				err = node.Deploy(ctx, &nodes.DeployParams{Nodes: c.Nodes})
-				if err != nil {
-					log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
-					continue
-				}
-
-				// we need to update the node's state with runtime info (e.g. the mgmt net ip addresses)
-				// before continuing with the post-deploy stage (for e.g. certificate creation)
-				err = node.UpdateConfigWithRuntimeInfo(ctx)
-				if err != nil {
-					log.Errorf("failed to update node runtime information for node %s: %v", node.Config().ShortName, err)
-				}
-
-				node.Done(ctx, types.WaitForCreate)
-
-				node.EnterStage(ctx, types.WaitForCreateLinks)
-
-				// Deploy the Nodes link endpoints
-				err = node.DeployEndpoints(ctx)
-				if err != nil {
-					log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
-					continue
-				}
-
-				node.Done(ctx, types.WaitForCreateLinks)
-
-				// start config stage
-				node.EnterStage(ctx, types.WaitForConfigure)
-
-				// if postdeploy should be skipped we do not call it
-				if !skipPostDeploy {
-					err = node.PostDeploy(ctx, &nodes.PostDeployParams{Nodes: c.Nodes})
-					if err != nil {
-						log.Errorf("failed to run postdeploy task for node %s: %v", node.Config().ShortName, err)
-					}
-				}
-
-				node.Done(ctx, types.WaitForConfigure)
-
-				// run execs
-				err = node.RunExecFromConfig(ctx, execCollection)
-				if err != nil {
-					log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
-				}
-
-				// health state processing
-				if node.MustWait(types.WaitForHealthy) {
-					node.EnterStage(ctx, types.WaitForHealthy)
-					// if there is a dependecy on the healthy state of this node, enter the checking procedure
-					for {
-						healthy, err := node.IsHealthy(ctx)
-						if err != nil {
-							log.Errorf("error checking for node health %v. Continuing deployment anyways", err)
-							break
-						}
-						if healthy {
-							log.Infof("node %q turned healthy, continuing", node.GetShortName())
-							node.Done(ctx, types.WaitForHealthy)
-							break
-						}
-						time.Sleep(time.Second)
-					}
-				}
-
-				// exit state processing
-				if node.MustWait(types.WaitForExit) {
-					node.EnterStage(ctx, types.WaitForExit)
-					// if there is a dependency on the healthy state of this node, enter the checking procedure
-					for {
-						status := node.GetContainerStatus(ctx)
-						if status == runtime.Stopped {
-							log.Infof("node %q stopped", node.GetShortName())
-							node.Done(ctx, types.WaitForExit)
-							break
-						}
-						time.Sleep(time.Second)
-					}
-				}
-
-			case <-ctx.Done():
+	for {
+		select {
+		case node, ok := <-input:
+			if node == nil || !ok {
+				log.Debugf("Worker %d terminating...", i)
 				return
 			}
+
+			log.Debugf("Worker %d received node: %+v", i, node.Config())
+
+			delay := node.Config().StartupDelay
+			if delay > 0 {
+				log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
+				time.Sleep(time.Duration(delay) * time.Second)
+			}
+
+			err := node.PreDeploy(
+				ctx,
+				&clabnodes.PreDeployParams{
+					Cert:         c.Cert,
+					TopologyName: c.Config.Name,
+					TopoPaths:    c.TopoPaths,
+					SSHPubKeys:   c.SSHPubKeys,
+				},
+			)
+			if err != nil {
+				log.Errorf("failed pre-deploy stage for node %q: %v", node.Config().ShortName, err)
+				continue
+			}
+
+			err = node.Deploy(ctx, &clabnodes.DeployParams{Nodes: c.Nodes})
+			if err != nil {
+				log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
+				continue
+			}
+
+			// we need to update the node's state with runtime info (e.g. the mgmt net ip addresses)
+			// before continuing with the post-deploy stage (for e.g. certificate creation)
+			err = node.UpdateConfigWithRuntimeInfo(ctx)
+			if err != nil {
+				log.Errorf(
+					"failed to update node runtime information for node %s: %v",
+					node.Config().ShortName,
+					err,
+				)
+			}
+
+			node.Done(ctx, clabtypes.WaitForCreate)
+
+			node.EnterStage(ctx, clabtypes.WaitForCreateLinks)
+
+			// Deploy the Nodes link endpoints
+			err = node.DeployEndpoints(ctx)
+			if err != nil {
+				log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
+				continue
+			}
+
+			node.Done(ctx, clabtypes.WaitForCreateLinks)
+			node.EnterStage(ctx, clabtypes.WaitForConfigure)
+
+			if !skipPostDeploy {
+				err = node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes})
+				if err != nil {
+					log.Errorf(
+						"failed to run postdeploy task for node %s: %v",
+						node.Config().ShortName,
+						err,
+					)
+				}
+			}
+
+			node.Done(ctx, clabtypes.WaitForConfigure)
+
+			err = node.RunExecFromConfig(ctx, execCollection)
+			if err != nil {
+				log.Errorf("failed to run exec commands for %s: %v", node.GetShortName(), err)
+			}
+
+			if node.MustWait(clabtypes.WaitForHealthy) {
+				node.EnterStage(ctx, clabtypes.WaitForHealthy)
+				// if there is a dependecy on the healthy state of this node, enter the
+				// checking procedure
+				for {
+					healthy, err := node.IsHealthy(ctx)
+					if err != nil {
+						log.Errorf(
+							"error checking for node health %v. Continuing deployment anyways",
+							err,
+						)
+
+						break
+					}
+
+					if healthy {
+						log.Infof("node %q turned healthy, continuing", node.GetShortName())
+						node.Done(ctx, clabtypes.WaitForHealthy)
+
+						break
+					}
+
+					time.Sleep(time.Second)
+				}
+			}
+
+			if node.MustWait(clabtypes.WaitForExit) {
+				node.EnterStage(ctx, clabtypes.WaitForExit)
+				// if there is a dependency on the healthy state of this node, enter the
+				// checking procedure
+				for {
+					status := node.GetContainerStatus(ctx)
+					if status == clabruntime.Stopped {
+						log.Infof("node %q stopped", node.GetShortName())
+						node.Done(ctx, clabtypes.WaitForExit)
+
+						break
+					}
+
+					time.Sleep(time.Second)
+				}
+			}
+
+		case <-ctx.Done():
+			return
 		}
 	}
+}
+
+// skipcq: GO-R1005
+func (c *CLab) scheduleNodes(
+	ctx context.Context,
+	maxWorkers int,
+	skipPostDeploy bool,
+) (*sync.WaitGroup, *clabexec.ExecCollection) {
+	concurrentChan := make(chan *clabcoredependency_manager.DependencyNode)
+
+	execCollection := clabexec.NewExecCollection()
 
 	numScheduledNodes := len(c.Nodes)
 	if numScheduledNodes < maxWorkers {
 		maxWorkers = numScheduledNodes
 	}
+
 	wg := new(sync.WaitGroup)
 
 	// start concurrent workers
 	wg.Add(maxWorkers)
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
-	for i := 0; i < maxWorkers; i++ {
-		go workerFunc(i, concurrentChan, wg)
+	for i := range maxWorkers {
+		go c.scheduleNodeWorkerF(ctx, i, concurrentChan, wg, skipPostDeploy, execCollection)
 	}
 
 	// Waitgroup protects the channel towards the workers of being closed too early
@@ -511,8 +523,9 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 			workerFuncChWG.Add(1)
 			// start a func for all the containers, then will wait for their own waitgroups
 			// to be set to zero by their depending containers, then enqueue to the creation channel
-			go func(node *depMgr.DependencyNode, _ depMgr.DependencyManager,
-				workerChan chan<- *depMgr.DependencyNode, wfcwg *sync.WaitGroup,
+			go func(node *clabcoredependency_manager.DependencyNode,
+				_ clabcoredependency_manager.DependencyManager,
+				workerChan chan<- *clabcoredependency_manager.DependencyNode, wfcwg *sync.WaitGroup,
 			) {
 				// we are entering the create stage here and not in the workerFunc
 				// to avoid blocking the worker.
@@ -522,19 +535,20 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 				// the nodes stuck in waiting.
 				// Entering the Create stage here would not consume a worker and let other nodes
 				// to be scheduled.
-
-				node.EnterStage(ctx, types.WaitForCreate)
+				node.EnterStage(ctx, clabtypes.WaitForCreate)
 
 				// wait for possible external dependencies
 				c.waitForExternalNodeDependencies(ctx, node.Config().ShortName)
 				// when all nodes that this node depends on are created, push it into the channel
 				workerChan <- node
-				// indicate we are done, such that only when all of these functions are done, the workerChan is being closed
+				// indicate we are done, such that only when all of these functions are done,
+				// the workerChan is being closed
 				wfcwg.Done()
-			}(dn, c.dependencyManager, concurrentChan, workerFuncChWG) // execute this function straight away
+			}(dn, c.dependencyManager, concurrentChan, workerFuncChWG)
 		}
 
-		// Gate to make sure the channel is not closed before all the nodes made it though the channel
+		// Gate to make sure the channel is not closed before all the nodes made it though the
+		// channel
 		workerFuncChWG.Wait()
 		// close the channel and thereby terminate the workerFuncs
 		close(concurrentChan)
@@ -543,21 +557,25 @@ func (c *CLab) scheduleNodes(ctx context.Context, maxWorkers int, skipPostDeploy
 	return wg, execCollection
 }
 
-// waitForExternalNodeDependencies makes nodes that have a reference to an external container network-namespace (network-mode: container:<NAME>)
-// to wait until the referenced container is in started status.
-// The wait time is 15 minutes by default.
+// waitForExternalNodeDependencies makes nodes that have a reference to an external container
+// network-namespace (network-mode: container:<NAME>) to wait until the referenced container is
+// in started status. The wait time is 15 minutes by default.
 func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName string) {
 	if _, exists := c.Nodes[nodeName]; !exists {
 		log.Errorf("unable to find referenced node %q", nodeName)
 		return
 	}
+
 	nodeConfig := c.Nodes[nodeName].Config()
-	netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2)
+
+	netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2) //nolint: mnd
 	if netModeArr[0] != "container" {
 		// we only care about nodes with NetMode "container:<CONTAINERNAME>"
 		return
 	}
-	// the referenced container might be an external pre-existing or a container created also by the given clab topology.
+
+	// the referenced container might be an external pre-existing or a container created also by
+	// the given clab topology.
 	contName := netModeArr[1]
 
 	// if the container does not exist in the list of container, it must be an external dependency
@@ -566,124 +584,18 @@ func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName str
 		return
 	}
 
-	runtime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntimeName], contName, nodeName)
+	clabruntime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntimeName], contName, nodeName)
 }
 
-func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
-	wg := new(sync.WaitGroup)
-
-	concurrentChan := make(chan nodes.Node)
-	serialChan := make(chan nodes.Node)
-
-	workerFunc := func(i uint, input chan nodes.Node, wg *sync.WaitGroup) {
-		defer wg.Done()
-		for {
-			select {
-			case n := <-input:
-				if n == nil {
-					log.Debugf("Worker %d terminating...", i)
-					return
-				}
-				err := n.Delete(ctx)
-				if err != nil {
-					log.Errorf("could not remove container %q: %v", n.Config().LongName, err)
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
-	}
-
-	// start concurrent workers
-	wg.Add(int(workers))
-	for i := uint(0); i < workers; i++ {
-		go workerFunc(i, concurrentChan, wg)
-	}
-
-	// start the serial worker
-	if len(serialNodes) > 0 {
-		wg.Add(1)
-		go workerFunc(workers, serialChan, wg)
-	}
-
-	// send nodes to workers
-	for _, n := range c.Nodes {
-		if _, ok := serialNodes[n.Config().LongName]; ok {
-			serialChan <- n
-			continue
-		}
-		concurrentChan <- n
-	}
-
-	// close channel to terminate the workers
-	close(concurrentChan)
-	close(serialChan)
-
-	// also call delete on the special nodes
-	for _, n := range c.getSpecialLinkNodes() {
-		err := n.Delete(ctx)
-		if err != nil {
-			log.Warn(err)
-		}
-	}
-
-	wg.Wait()
-}
-
-func (c *CLab) deleteToolContainers(ctx context.Context) {
-	toolTypes := []string{"sshx", "gotty"}
-
-	for _, toolType := range toolTypes {
-		toolFilter := []*types.GenericFilter{
-			{
-				FilterType: "label",
-				Field:      containerlablabels.ToolType,
-				Operator:   "=",
-				Match:      toolType,
-			},
-			{
-				FilterType: "label",
-				Field:      containerlablabels.Containerlab,
-				Operator:   "=",
-				Match:      c.Config.Name,
-			},
-		}
-
-		containers, err := c.globalRuntime().ListContainers(ctx, toolFilter)
-		if err != nil {
-			log.Error("Failed to list tool containers", "tool", toolType, "error", err)
-			return
-		}
-
-		if len(containers) == 0 {
-			log.Debug("No tool containers found for lab", "tool", toolType, "lab", c.Config.Name)
-			return
-		}
-
-		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab",
-			c.Config.Name, "count", len(containers))
-
-		for _, container := range containers {
-			containerName := strings.TrimPrefix(container.Names[0], "/")
-			log.Info("Removing tool container", "tool", toolType, "container", containerName)
-			if err := c.globalRuntime().DeleteContainer(ctx, containerName); err != nil {
-				log.Error("Failed to remove tool container", "tool", toolType,
-					"container", containerName, "error", err)
-			} else {
-				log.Info("Tool container removed successfully", "tool", toolType, "container", containerName)
-			}
-		}
-	}
-}
-
-// GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes - host and mgmt-net.
-// The CLab nodes are copied to a new map and thus clab.Node interface is converted to link.Node.
-func (c *CLab) getLinkNodes() map[string]links.Node {
+// GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes -
+// host and mgmt-net. The CLab nodes are copied to a new map and thus clab.Node interface is
+// converted to link.Node.
+func (c *CLab) getLinkNodes() map[string]clablinks.Node {
 	// resolveNodes is a map of all nodes in the topology
 	// that is artificially created to combat circular dependencies.
 	// If no circ deps were in place we could've used c.Nodes map instead.
 	// The map is used to resolve links between the nodes by passing it in the ResolveParams struct.
-	resolveNodes := make(map[string]links.Node, len(c.Nodes))
+	resolveNodes := make(map[string]clablinks.Node, len(c.Nodes))
 	for k, v := range c.Nodes {
 		resolveNodes[k] = v
 	}
@@ -700,11 +612,11 @@ func (c *CLab) getLinkNodes() map[string]links.Node {
 // GetSpecialLinkNodes returns a map of special nodes that are used to resolve links.
 // Special nodes are host and mgmt-bridge nodes that are not typically present in the topology file
 // but are required to resolve links.
-func (*CLab) getSpecialLinkNodes() map[string]links.Node {
+func (*CLab) getSpecialLinkNodes() map[string]clablinks.Node {
 	// add the virtual host and mgmt-bridge nodes to the resolve nodes
-	specialNodes := map[string]links.Node{
-		"host":     links.GetHostLinkNode(),
-		"mgmt-net": links.GetMgmtBrLinkNode(),
+	specialNodes := map[string]clablinks.Node{
+		"host":     clablinks.GetHostLinkNode(),
+		"mgmt-net": clablinks.GetMgmtBrLinkNode(),
 	}
 
 	return specialNodes
@@ -712,7 +624,7 @@ func (*CLab) getSpecialLinkNodes() map[string]links.Node {
 
 // ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
 func (c *CLab) ResolveLinks() error {
-	resolveParams := &links.ResolveParams{
+	resolveParams := &clablinks.ResolveParams{
 		Nodes:          c.getLinkNodes(),
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
 		NodesFilter:    c.nodeFilter,
@@ -740,7 +652,7 @@ func (c *CLab) ResolveLinks() error {
 // and populates the Nodes DNS Config with these if not specifically provided.
 func (c *CLab) extractDNSServers(filesys fs.FS) error {
 	// extract DNS servers from the relevant resolv.conf files
-	DNSServers, err := utils.ExtractDNSServersFromResolvConf(filesys,
+	DNSServers, err := clabutils.ExtractDNSServersFromResolvConf(filesys,
 		[]string{"etc/resolv.conf", "run/systemd/resolve/resolv.conf"})
 	if err != nil {
 		return err
@@ -758,12 +670,16 @@ func (c *CLab) extractDNSServers(filesys fs.FS) error {
 		// skip nodes in container network mode since docker doesn't allow
 		// setting dns config for them
 		if strings.HasPrefix(config.NetworkMode, "container") {
-			log.Debugf("Skipping DNS config for node %s as it is in container network mode", config.ShortName)
+			log.Debugf(
+				"Skipping DNS config for node %s as it is in container network mode",
+				config.ShortName,
+			)
+
 			continue
 		}
 
 		if config.DNS == nil {
-			config.DNS = &types.DNSConfig{}
+			config.DNS = &clabtypes.DNSConfig{}
 		}
 
 		if n.Config().DNS.Servers == nil {
@@ -774,7 +690,8 @@ func (c *CLab) extractDNSServers(filesys fs.FS) error {
 	return nil
 }
 
-// CheckConnectivity checks the connectivity to all container runtimes, returns an error if it encounters any, otherwise nil.
+// CheckConnectivity checks the connectivity to all container runtimes, returns an error if it
+// encounters any, otherwise nil.
 func (c *CLab) CheckConnectivity(ctx context.Context) error {
 	for _, r := range c.Runtimes {
 		err := r.CheckConnection(ctx)

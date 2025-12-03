@@ -5,8 +5,6 @@ topology:
       license: /opt/nokia/sros/license-sros25.txt
       image: nokia_srsim:25.7.R1
   nodes:
-    fab:
-      kind: bridge
     sr-2s-a:
       kind: nokia_srsim
       type: SR-2s

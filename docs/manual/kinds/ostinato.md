@@ -1,10 +1,14 @@
 ---
 search:
   boost: 4
+kind_code_name: linux
+kind_display_name: Ostinato
 ---
-# Ostinato
+# -{{ kind_display_name }}-
 
-[Ostinato](https://ostinato.org/) network traffic generator is currently identified with `linux` kind in the [topology file](../topo-def-file.md). This will change to its own kind in the future.
+-{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+
+[-{{ kind_display_name }}-](https://ostinato.org/) network traffic generator is currently identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). This will change to its own kind in the future.
 
 ## Getting Ostinato image
 
@@ -18,7 +22,7 @@ Add a topology definition for the Ostinato node in `.clab.yml` as shown below -
 topology:
   nodes:
     ost:
-      kind: linux
+      kind: -{{ kind_code_name }}-
       image: ostinato/ostinato:{tag}
       ports:
         - 5900:5900/tcp
@@ -27,11 +31,11 @@ topology:
 
 Replace `{tag}` above with the tag shown in the output of `docker images`
 
-## Managing Ostinato nodes
+## Managing -{{ kind_display_name }}- nodes
 
 Ostinato has a GUI and a Python API. The Ostinato image includes both the Ostinato agent (called _Drone_) which does the actual traffic generation and the Ostinato GUI that is used to configure and monitor the Drone agent.
 
-The GUI is the primary way to work with Ostinato and is accessible over VNC. To use the Ostinato API, you will need [Ostinato PyApi](https://ostinato.org/pricing/pyapi).
+The GUI is the primary way to work with Ostinato and is accessible over VNC. To use the Ostinato API, you will need [Ostinato PyApi](https://apiguide.ostinato.org/tutorial/).
 
 /// tab | Using GUI
 Once the lab is deployed, connect any VNC client to `<host-ip>:5900` - this will bring up the Ostinato GUI.
@@ -52,6 +56,7 @@ Ostinato **does not have any CLI or commands to generate traffic - use the GUI**
 ```
 docker exec -it <container-name/id> bash
 ```
+
 ///
 
 ## Interfaces mapping
@@ -69,7 +74,7 @@ Ostinato allows you to save and load files - traffic streams, pcaps and session 
 topology:
   nodes:
     ost:
-      kind: linux
+      kind: -{{ kind_code_name }}-
       image: ostinato/ostinato:{tag}
       ports:
         - 5900:5900/tcp

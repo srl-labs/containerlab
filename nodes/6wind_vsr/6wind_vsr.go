@@ -17,10 +17,11 @@ import (
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -35,24 +36,28 @@ var (
 	vsrConfigCmdsTpl string
 
 	kindnames          = []string{"6wind_vsr"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
-	vsrCfgTpl, _       = template.New("clab-vsr-default-config").Funcs(utils.CreateFuncs()).
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
+	vsrCfgTpl, _       = template.New("clab-vsr-default-config").Funcs(clabutils.CreateFuncs()).
 				Parse(vsrConfigCmdsTpl)
 	saveCmd = `bash -c "echo 'show config nodefault fullpath' | nc-cli"`
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		nil,
+	)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(sixwind_vsr)
 	}, nrea)
 }
 
 type sixwind_vsr struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
@@ -61,17 +66,19 @@ type sixwind_vsr struct {
 	UserStartupConfig  string
 }
 
-func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
+func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
 
 	// If user-defined startup exists, copy it into the Consolidated config file
-	if utils.FileExists(n.UserStartupConfig) {
-		utils.CopyFile(n.UserStartupConfig, n.ConsolidatedConfig, 0o644)
+	if clabutils.FileExists(n.UserStartupConfig) {
+		clabutils.CopyFile(ctx, n.UserStartupConfig, n.ConsolidatedConfig,
+			clabconstants.PermissionsFileDefault)
 	} else {
 		if n.Cfg.StartupConfig != "" {
 			// Copy startup-config in the Labdir
-			utils.CopyFile(n.Cfg.StartupConfig, n.ConsolidatedConfig, 0o644)
+			clabutils.CopyFile(ctx, n.Cfg.StartupConfig, n.ConsolidatedConfig,
+				clabconstants.PermissionsFileDefault)
 		}
 		// Consolidate the startup config with the default template
 		if err := n.addDefaultConfig(ctx); err != nil {
@@ -82,9 +89,9 @@ func (n *sixwind_vsr) PreDeploy(ctx context.Context, params *nodes.PreDeployPara
 	return nil
 }
 
-func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *sixwind_vsr) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
 	// Default value for 6WIND VSR
@@ -92,7 +99,7 @@ func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) erro
 		n.Cfg.ShmSize = "512M"
 	}
 
-	// Containers are run in priviledge mode so it should not matter now
+	// Containers are run in privileged mode so it should not matter now
 	// If it changes, add the capabilities to run 6WIND VSR
 	n.Cfg.CapAdd = append(n.Cfg.CapAdd,
 		"NET_ADMIN",
@@ -115,10 +122,10 @@ func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) erro
 	)
 
 	// Creating if-wait script in lab dir
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	n.itfwaitpath = path.Join(n.Cfg.LabDir, "if-wait.sh")
-	utils.CreateFile(n.itfwaitpath, utils.IfWaitScript)
-	os.Chmod(n.itfwaitpath, 0o777)
+	clabutils.CreateFile(n.itfwaitpath, clabutils.IfWaitScript)
+	os.Chmod(n.itfwaitpath, clabconstants.PermissionsOpen)
 
 	// Adding if-wait.sh script to the filesystem
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.itfwaitpath, ":", ifWaitScriptContainerPath))
@@ -145,22 +152,27 @@ func (n *sixwind_vsr) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) erro
 }
 
 func (n *sixwind_vsr) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
 	}
 
-	err = os.WriteFile(n.UserStartupConfig, execResult.GetStdOutByteSlice(), 0o777)
+	err = os.WriteFile(n.UserStartupConfig, execResult.GetStdOutByteSlice(),
+		clabconstants.PermissionsOpen)
 	if err != nil {
 		return fmt.Errorf("failed to write config by %s path from %s container: %v",
 			n.UserStartupConfig, n.Cfg.ShortName, err)
 	}
-	log.Infof("saved 6WIND VSR configuration from %s node to %s\n", n.Cfg.ShortName, n.UserStartupConfig)
+	log.Infof(
+		"saved 6WIND VSR configuration from %s node to %s\n",
+		n.Cfg.ShortName,
+		n.UserStartupConfig,
+	)
 
 	return nil
 }
@@ -171,7 +183,10 @@ func (n *sixwind_vsr) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 	for _, e := range n.Endpoints {
 		if e.GetIfaceName() == "eth0" && nm != "none" {
-			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+			return fmt.Errorf(
+				"eth0 interface name is not allowed for %s node when network mode is not set to none",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 	return nil
@@ -205,7 +220,7 @@ func (n *sixwind_vsr) addDefaultConfig(_ context.Context) error {
 	// tplData holds data used in templating of the default config snippet
 	tplData := vsrTemplateData{
 		Banner:     banner,
-		SSHPubKeys: utils.MarshalSSHPubKeys(n.sshPubKeys),
+		SSHPubKeys: clabutils.MarshalSSHPubKeys(n.sshPubKeys),
 	}
 
 	if n.Cfg.License != "" {
@@ -224,7 +239,8 @@ func (n *sixwind_vsr) addDefaultConfig(_ context.Context) error {
 
 	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
-	out, err := os.OpenFile(n.ConsolidatedConfig, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	out, err := os.OpenFile(n.ConsolidatedConfig, os.O_CREATE|os.O_APPEND|os.O_WRONLY,
+		clabconstants.PermissionsFileDefault)
 	if err != nil {
 		log.Errorf("failed to open consolidated config file: %v", err)
 	}

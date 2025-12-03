@@ -53,7 +53,8 @@ type NodeDefinition struct {
 	User string `yaml:"user,omitempty"`
 	// container labels
 	Labels map[string]string `yaml:"labels,omitempty"`
-	// container networking mode. if set to `host` the host networking will be used for this node, else bridged network
+	// container networking mode. if set to `host` the host networking will be used for this node,
+	//  else bridged network
 	NetworkMode string `yaml:"network-mode,omitempty"`
 	// Ignite sandbox and kernel imageNames
 	Sandbox string `yaml:"sandbox,omitempty"`
@@ -86,14 +87,16 @@ type NodeDefinition struct {
 // Interface compliance.
 var _ yaml.Unmarshaler = &NodeDefinition{}
 
-// UnmarshalYAML is a custom unmarshaler for NodeDefinition type that allows to map old attributes to new ones.
+// UnmarshalYAML is a custom unmarshaler for NodeDefinition type that allows to map old attributes
+// to new ones.
 func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 	// define an alias type to avoid recursion during unmarshaling
 	type NodeDefinitionAlias NodeDefinition
 
 	// NodeDefinitionWithDeprecatedFields can contain fields that are deprecated
 	// but still supported for backward compatibility.
-	// see https://github.com/srl-labs/containerlab/blob/6eb44ca5a64cb427a5c43e31c35ac50145a8397f/types/node_definition.go#L96
+	// see https://github.com/srl-labs/containerlab/blob/6eb44ca5a64cb427a5c43e31c35ac50145a8397f \
+	// /types/node_definition.go#L96
 	// for how it was used.
 	type NodeDefinitionWithDeprecatedFields struct {
 		NodeDefinitionAlias `yaml:",inline"`
@@ -101,316 +104,14 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 
 	nd := &NodeDefinitionWithDeprecatedFields{}
 
-	nd.NodeDefinitionAlias = (NodeDefinitionAlias)(*n)
+	nd.NodeDefinitionAlias = NodeDefinitionAlias(*n)
 	if err := unmarshal(nd); err != nil {
 		return err
 	}
 
-	*n = (NodeDefinition)(nd.NodeDefinitionAlias)
+	*n = NodeDefinition(nd.NodeDefinitionAlias)
 
 	return nil
-}
-
-func (n *NodeDefinition) GetKind() string {
-	if n == nil {
-		return ""
-	}
-	return n.Kind
-}
-
-func (n *NodeDefinition) GetGroup() string {
-	if n == nil {
-		return ""
-	}
-	return n.Group
-}
-
-func (n *NodeDefinition) GetType() string {
-	if n == nil {
-		return ""
-	}
-	return n.Type
-}
-
-func (n *NodeDefinition) GetStartupConfig() string {
-	if n == nil {
-		return ""
-	}
-	return n.StartupConfig
-}
-
-func (n *NodeDefinition) GetStartupDelay() uint {
-	if n == nil {
-		return 0
-	}
-	return n.StartupDelay
-}
-
-func (n *NodeDefinition) GetEnforceStartupConfig() *bool {
-	if n == nil {
-		return nil
-	}
-	return n.EnforceStartupConfig
-}
-
-func (n *NodeDefinition) GetSuppressStartupConfig() *bool {
-	if n == nil {
-		return nil
-	}
-	return n.SuppressStartupConfig
-}
-
-func (n *NodeDefinition) GetAutoRemove() *bool {
-	if n == nil {
-		return nil
-	}
-	return n.AutoRemove
-}
-
-func (n *NodeDefinition) GetRestartPolicy() string {
-	if n == nil {
-		return ""
-	}
-	return n.RestartPolicy
-}
-
-func (n *NodeDefinition) GetConfigDispatcher() *ConfigDispatcher {
-	if n == nil {
-		return nil
-	}
-	return n.Config
-}
-
-func (n *NodeDefinition) GetImage() string {
-	if n == nil {
-		return ""
-	}
-	return n.Image
-}
-
-func (n *NodeDefinition) GetImagePullPolicy() string {
-	if n == nil {
-		return ""
-	}
-	return n.ImagePullPolicy
-}
-
-func (n *NodeDefinition) GetLicense() string {
-	if n == nil {
-		return ""
-	}
-	return n.License
-}
-
-func (n *NodeDefinition) GetPostion() string {
-	if n == nil {
-		return ""
-	}
-	return n.Position
-}
-
-func (n *NodeDefinition) GetEntrypoint() string {
-	if n == nil {
-		return ""
-	}
-	return n.Entrypoint
-}
-
-func (n *NodeDefinition) GetCmd() string {
-	if n == nil {
-		return ""
-	}
-	return n.Cmd
-}
-
-func (n *NodeDefinition) GetBinds() []string {
-	if n == nil {
-		return nil
-	}
-	return n.Binds
-}
-
-func (n *NodeDefinition) GetDevices() []string {
-	if n == nil {
-		return nil
-	}
-	return n.Devices
-}
-
-func (n *NodeDefinition) GetCapAdd() []string {
-	if n == nil {
-		return nil
-	}
-	return n.CapAdd
-}
-
-func (n *NodeDefinition) GetComponents() []*Component {
-	if n == nil {
-		return nil
-	}
-	return n.Components
-}
-
-func (n *NodeDefinition) GetNodeShmSize() string {
-	if n == nil {
-		return ""
-	}
-	return n.ShmSize
-}
-
-func (n *NodeDefinition) GetPorts() []string {
-	if n == nil {
-		return nil
-	}
-	return n.Ports
-}
-
-func (n *NodeDefinition) GetMgmtIPv4() string {
-	if n == nil {
-		return ""
-	}
-	return n.MgmtIPv4
-}
-
-func (n *NodeDefinition) GetMgmtIPv6() string {
-	if n == nil {
-		return ""
-	}
-	return n.MgmtIPv6
-}
-
-func (n *NodeDefinition) GetEnv() map[string]string {
-	if n == nil {
-		return nil
-	}
-	return n.Env
-}
-
-func (n *NodeDefinition) GetEnvFiles() []string {
-	if n == nil {
-		return nil
-	}
-	return n.EnvFiles
-}
-
-func (n *NodeDefinition) GetUser() string {
-	if n == nil {
-		return ""
-	}
-	return n.User
-}
-
-func (n *NodeDefinition) GetLabels() map[string]string {
-	if n == nil {
-		return nil
-	}
-	return n.Labels
-}
-
-func (n *NodeDefinition) GetNetworkMode() string {
-	if n == nil {
-		return ""
-	}
-	return n.NetworkMode
-}
-
-func (n *NodeDefinition) GetNodeSandbox() string {
-	if n == nil {
-		return ""
-	}
-	return n.Sandbox
-}
-
-func (n *NodeDefinition) GetNodeKernel() string {
-	if n == nil {
-		return ""
-	}
-	return n.Kernel
-}
-
-func (n *NodeDefinition) GetNodeRuntime() string {
-	if n == nil {
-		return ""
-	}
-	return n.Runtime
-}
-
-func (n *NodeDefinition) GetNodeCPU() float64 {
-	if n == nil {
-		return 0
-	}
-	return n.CPU
-}
-
-func (n *NodeDefinition) GetNodeCPUSet() string {
-	if n == nil {
-		return ""
-	}
-	return n.CPUSet
-}
-
-func (n *NodeDefinition) GetNodeMemory() string {
-	if n == nil {
-		return ""
-	}
-	return n.Memory
-}
-
-func (n *NodeDefinition) GetExec() []string {
-	if n == nil {
-		return nil
-	}
-	return n.Exec
-}
-
-func (n *NodeDefinition) GetSysctls() map[string]string {
-	if n == nil || n.Sysctls == nil {
-		return map[string]string{}
-	}
-
-	return n.Sysctls
-}
-
-func (n *NodeDefinition) GetExtras() *Extras {
-	if n == nil {
-		return nil
-	}
-	return n.Extras
-}
-
-func (n *NodeDefinition) GetStages() *Stages {
-	if n == nil {
-		return nil
-	}
-	return n.Stages
-}
-
-func (n *NodeDefinition) GetDns() *DNSConfig {
-	if n == nil {
-		return nil
-	}
-	return n.DNS
-}
-
-func (n *NodeDefinition) GetCertificateConfig() *CertificateConfig {
-	if n == nil {
-		return nil
-	}
-	return n.Certificate
-}
-
-func (n *NodeDefinition) GetHealthcheckConfig() *HealthcheckConfig {
-	if n == nil {
-		return nil
-	}
-	return n.HealthCheck
-}
-
-func (n *NodeDefinition) GetAliases() []string {
-	if n == nil {
-		return nil
-	}
-	return n.Aliases
 }
 
 // ImportEnvs imports all environment variables defined in the shell

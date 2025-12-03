@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
+	clabexec "github.com/srl-labs/containerlab/exec"
 )
 
 func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
@@ -23,7 +23,9 @@ func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
 	prompt, err := n.currentPrompt(context.Background())
 	if err != nil {
 		log.Errorf("failed to get current prompt: %v", err)
+
 		tplData.EnableCustomPrompt = false
+
 		return
 	}
 
@@ -33,7 +35,7 @@ func (n *srl) setCustomPrompt(tplData *srlTemplateData) {
 
 // currentPrompt returns the current prompt extracted from the environment.
 func (n *srl) currentPrompt(ctx context.Context) (string, error) {
-	cmd, _ := exec.NewExecCmdFromString(`sr_cli -d "environment show | grep -A 2 prompt"`)
+	cmd, _ := clabexec.NewExecCmdFromString(`sr_cli -d "environment show | grep -A 2 prompt"`)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
@@ -49,10 +51,11 @@ func (n *srl) currentPrompt(ctx context.Context) (string, error) {
 // getPrompt returns the prompt value from a string blob containing the prompt.
 // The s is the output of the "environment show | grep -A 2 prompt" command.
 func getPrompt(s string) (string, error) {
-	re, _ := regexp.Compile(`value\s+=\s+"(.+)"`)
+	re := regexp.MustCompile(`value\s+=\s+"(.+)"`)
 	v := re.FindStringSubmatch(s)
 
-	if len(v) != 2 {
+	const promptMatchGroups = 2
+	if len(v) != promptMatchGroups {
 		return "", fmt.Errorf("failed to parse prompt from string: %s", s)
 	}
 

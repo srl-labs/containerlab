@@ -5,12 +5,14 @@ import (
 	"fmt"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	"github.com/vishvananda/netlink"
 )
 
-// LinkMacVlanRaw is the raw (string) representation of a macvlan link as defined in the topology file.
+// LinkMacVlanRaw is the raw (string) representation of a macvlan link as defined in the topology
+// file.
 type LinkMacVlanRaw struct {
-	LinkCommonParams `yaml:",inline"`
+	LinkCommonParams `             yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 	Mode             string       `yaml:"mode"`
@@ -50,7 +52,7 @@ func macVlanLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMacVlanRaw
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -69,6 +71,10 @@ func (r *LinkMacVlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	link := &LinkMacVlan{
 		LinkCommonParams: r.LinkCommonParams,
 	}
+
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	// create the host side MacVlan Endpoint
 	link.HostEndpoint = &EndpointMacVlan{
 		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
@@ -156,8 +162,13 @@ func (l *LinkMacVlan) Deploy(ctx context.Context, _ Endpoint) error {
 	// enable promiscuous mode
 	err = netlink.SetPromiscOn(mvInterface)
 	if err != nil {
-		return fmt.Errorf("failed setting promiscuous mode for interface %s (%s:%s): %v",
-			l.NodeEndpoint.GetRandIfaceName(), l.NodeEndpoint.GetNode().GetShortName(), l.NodeEndpoint.GetIfaceName(), err)
+		return fmt.Errorf(
+			"failed setting promiscuous mode for interface %s (%s:%s): %v",
+			l.NodeEndpoint.GetRandIfaceName(),
+			l.NodeEndpoint.GetNode().GetShortName(),
+			l.NodeEndpoint.GetIfaceName(),
+			err,
+		)
 	}
 
 	// add the link to the Node Namespace

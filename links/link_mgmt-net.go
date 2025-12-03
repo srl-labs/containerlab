@@ -6,12 +6,13 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
 type LinkMgmtNetRaw struct {
-	LinkCommonParams `yaml:",inline"`
+	LinkCommonParams `             yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
@@ -45,12 +46,15 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 		LinkCommonParams: r.LinkCommonParams,
 	}
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	mgmtBridgeNode := GetMgmtBrLinkNode()
 
 	bridgeEp := NewEndpointBridge(NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link), true)
 
 	var err error
-	bridgeEp.MAC, err = utils.GenMac(ClabOUI)
+	bridgeEp.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +72,7 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -92,7 +96,7 @@ func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -110,9 +114,13 @@ func (*mgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func (b *mgmtBridgeLinkNode) AddLinkToContainer(_ context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (b *mgmtBridgeLinkNode) AddLinkToContainer(
+	_ context.Context,
+	link netlink.Link,
+	f func(ns.NetNS) error,
+) error {
 	// retrieve the namespace handle
-	ns, err := ns.GetCurrentNS()
+	curNamespace, err := ns.GetCurrentNS()
 	if err != nil {
 		return err
 	}
@@ -130,7 +138,7 @@ func (b *mgmtBridgeLinkNode) AddLinkToContainer(_ context.Context, link netlink.
 	}
 
 	// execute the given function
-	return ns.Do(f)
+	return curNamespace.Do(f)
 }
 
 func getMgmtBrLinkNode() *mgmtBridgeLinkNode {

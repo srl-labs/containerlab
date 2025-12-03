@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var kindNames = []string{"rare"}
@@ -22,22 +23,22 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, nil)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(rare)
 	}, nrea)
 }
 
 type rare struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *rare) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *rare) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -46,7 +47,8 @@ func (n *rare) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	// make ipv6 disabled on all rare node interfaces unconditionally
 	// as ipv6 will be handled by rare/freertr
-	// The setting 'net.ipv6.conf.all.disable_ipv6' 1 - interferes with IPv6 out-of-band management. Commenting it out for now as a workaround.
+	// The setting 'net.ipv6.conf.all.disable_ipv6' 1 - interferes with IPv6 out-of-band management.
+	// Commenting it out for now as a workaround.
 	// cfg.Sysctls["net.ipv6.conf.all.disable_ipv6"] = "1"
 
 	n.Cfg.Binds = append(n.Cfg.Binds,
@@ -56,8 +58,8 @@ func (n *rare) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *rare) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil
@@ -69,7 +71,8 @@ func (n *rare) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 func (n *rare) createRAREFiles() error {
 	nodeCfg := n.Config()
 	// create "run" directory that will be bind mounted to rare node
-	utils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"), 0o777)
+	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "run"),
+		clabconstants.PermissionsOpen)
 
 	return nil
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/jsimonetti/rtnetlink/rtnl"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	"github.com/vishvananda/netlink"
 )
 
@@ -32,7 +33,7 @@ func BridgeByName(name string) (*netlink.Bridge, error) {
 // LinkContainerNS creates a symlink for containers network namespace
 // so that it can be managed by iproute2 utility.
 func LinkContainerNS(nspath, containerName string) error {
-	CreateDirectory("/run/netns/", 0o755)
+	CreateDirectory("/run/netns/", clabconstants.PermissionsDirDefault)
 	dst := "/run/netns/" + containerName
 	if _, err := os.Lstat(dst); err == nil {
 		os.Remove(dst)
@@ -53,7 +54,8 @@ func GenMac(oui string) (net.HardwareAddr, error) {
 	return hwa, err
 }
 
-// DeleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS func.
+// DeleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS
+// func.
 func DeleteNetnsSymlink(n string) error {
 	log.Debug("Deleting netns symlink: ", n)
 	sl := fmt.Sprintf("/run/netns/%s", n)

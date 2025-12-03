@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -19,14 +20,17 @@ const (
 
 // LinkVxlanRaw is the raw (string) representation of a vxlan link as defined in the topology file.
 type LinkVxlanRaw struct {
-	LinkCommonParams `yaml:",inline"`
+	LinkCommonParams `            yaml:",inline"`
 	Remote           string      `yaml:"remote"`
 	VNI              int         `yaml:"vni"`
 	Endpoint         EndpointRaw `yaml:"endpoint"`
-	UDPPort          int         `yaml:"udp-port,omitempty"`
+	UdpPort          int         `yaml:"udp-port,omitempty"` // deprecated
+	DstPort          int         `yaml:"dst-port,omitempty"`
 	ParentInterface  string      `yaml:"parent-interface,omitempty"`
+	SrcPort          int         `yaml:"src-port,omitempty"`
 
-	// we use the same struct for vxlan and vxlan stitch, so we need to differentiate them in the raw format
+	// we use the same struct for vxlan and vxlan stitch, so we need to differentiate them in the
+	// raw format
 	LinkType LinkType
 }
 
@@ -45,7 +49,9 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 
 // resolveStitchedVEthComponent creates the veth link and returns it, the endpoint that is
 // supposed to be stitched is returned separately for further processing.
-func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(params *ResolveParams) (*LinkVEth, Endpoint, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(
+	params *ResolveParams,
+) (*LinkVEth, Endpoint, error) {
 	var err error
 
 	// hostIface is the name of the host interface that will be created
@@ -103,6 +109,9 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 		LinkCommonParams: lr.LinkCommonParams,
 	}
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	link.localEndpoint, err = lr.resolveLocalEndpoint(stitched, params, link)
 	if err != nil {
 		return nil, err
@@ -127,7 +136,7 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 		log.Debugf("looked up hostname %s, received IP addresses [%s]", lr.Remote, sb.String()[2:])
 
 		// always use the first address
-		if len(ips) <= 0 {
+		if len(ips) == 0 {
 			return nil, fmt.Errorf("unable to resolve %s", lr.Remote)
 		}
 		ip = ips[0]
@@ -136,7 +145,7 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	parentIf := lr.ParentInterface
 
 	if parentIf == "" {
-		r, err := utils.GetRouteForIP(ip)
+		r, err := clabutils.GetRouteForIP(ip)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find a route to VxLAN remote address %s", ip.String())
 		}
@@ -147,16 +156,21 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	// resolve remote endpoint
 	link.remoteEndpoint = NewEndpointVxlan(params.Nodes["host"], link)
 	link.remoteEndpoint.parentIface = parentIf
-	link.remoteEndpoint.udpPort = lr.UDPPort
-	if lr.UDPPort == 0 {
-		link.remoteEndpoint.udpPort = VxLANDefaultPort
+	// If the deprecated udp-port is used in the topology, copy it over to the dst-port
+	if lr.UdpPort != 0 && lr.DstPort == 0 {
+		lr.DstPort = lr.UdpPort
+	}
+	link.remoteEndpoint.dstPort = lr.DstPort
+	link.remoteEndpoint.srcPort = lr.SrcPort
+	if lr.DstPort == 0 {
+		link.remoteEndpoint.dstPort = VxLANDefaultPort
 	}
 	link.remoteEndpoint.remote = ip
 	link.remoteEndpoint.vni = lr.VNI
 	// check if MAC-Addr is set in the raw vxlan link
 	if lr.Endpoint.MAC == "" {
 		// if it is not set generate a MAC
-		link.remoteEndpoint.MAC, err = utils.GenMac(ClabOUI)
+		link.remoteEndpoint.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 		if err != nil {
 			return nil, err
 		}
@@ -172,7 +186,11 @@ func (lr *LinkVxlanRaw) resolveVxlan(params *ResolveParams, stitched bool) (*Lin
 	return link, nil
 }
 
-func (lr *LinkVxlanRaw) resolveLocalEndpoint(stitched bool, params *ResolveParams, link *LinkVxlan) (Endpoint, error) {
+func (lr *LinkVxlanRaw) resolveLocalEndpoint(
+	stitched bool,
+	params *ResolveParams,
+	link *LinkVxlan,
+) (Endpoint, error) {
 	if stitched {
 		// point the vxlan endpoint to the host system
 		vxlanRawEp := lr.Endpoint
@@ -227,7 +245,11 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 	// retrieve the parent interface netlink handle
 	parentIface, err := netlink.LinkByName(l.remoteEndpoint.parentIface)
 	if err != nil {
-		return fmt.Errorf("error looking up vxlan parent interface %s: %w", l.remoteEndpoint.parentIface, err)
+		return fmt.Errorf(
+			"error looking up vxlan parent interface %s: %w",
+			l.remoteEndpoint.parentIface,
+			err,
+		)
 	}
 
 	// create the Vxlan struct
@@ -242,9 +264,15 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 		Group:        l.remoteEndpoint.remote,
 		Learning:     true,
 	}
-	// set the upd port if defined in the input
-	if l.remoteEndpoint.udpPort != 0 {
-		vxlanconf.Port = l.remoteEndpoint.udpPort
+	// set the destination UDP port
+	if l.remoteEndpoint.dstPort != 0 {
+		vxlanconf.Port = l.remoteEndpoint.dstPort
+	}
+
+	// set the source UDP port
+	if l.remoteEndpoint.srcPort != 0 {
+		vxlanconf.PortLow = l.remoteEndpoint.srcPort
+		vxlanconf.PortHigh = l.remoteEndpoint.srcPort + 1
 	}
 
 	// define the MTU if defined in the input
@@ -262,7 +290,11 @@ func (l *LinkVxlan) deployVxlanInterface() error {
 	if l.MTU == 0 {
 		interf, err := netlink.LinkByName(l.localEndpoint.GetRandIfaceName())
 		if err != nil {
-			return fmt.Errorf("error looking up local vxlan endpoint of %s : %w", l.localEndpoint.String(), err)
+			return fmt.Errorf(
+				"error looking up local vxlan endpoint of %s : %w",
+				l.localEndpoint.String(),
+				err,
+			)
 		}
 		l.MTU = interf.Attrs().MTU
 	}

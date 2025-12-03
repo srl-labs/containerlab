@@ -75,9 +75,9 @@ func SetImpairments(tcnl *tc.Tc, nodeName string, link *net.Interface, delay, ji
 		return nil, fmt.Errorf("could not get all qdiscs: %v", err)
 	}
 
-	for _, qdisc := range qdiscs {
-		if qdisc.Ifindex == uint32(link.Index) {
-			return &qdisc, nil
+	for idx := range qdiscs {
+		if qdiscs[idx].Ifindex == uint32(link.Index) {
+			return &qdiscs[idx], nil
 		}
 	}
 

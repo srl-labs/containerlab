@@ -1,6 +1,10 @@
 package exec
 
-import "testing"
+import (
+	"testing"
+
+	clabconstants "github.com/srl-labs/containerlab/constants"
+)
 
 func TestParseExecOutputFormat(t *testing.T) {
 	type args struct {
@@ -14,7 +18,7 @@ func TestParseExecOutputFormat(t *testing.T) {
 	}{
 		{
 			name:    "Valid value: plain",
-			want:    ExecFormatPlain,
+			want:    clabconstants.FormatPlain,
 			wantErr: false,
 			args: args{
 				s: "plain",
@@ -22,7 +26,7 @@ func TestParseExecOutputFormat(t *testing.T) {
 		},
 		{
 			name:    "Valid value: pLAiN",
-			want:    ExecFormatPlain,
+			want:    clabconstants.FormatPlain,
 			wantErr: false,
 			args: args{
 				s: "plain",
@@ -30,15 +34,15 @@ func TestParseExecOutputFormat(t *testing.T) {
 		},
 		{
 			name:    "Valid value: json",
-			want:    ExecFormatJSON,
+			want:    clabconstants.FormatJSON,
 			wantErr: false,
 			args: args{
-				s: "json",
+				s: clabconstants.FormatJSON,
 			},
 		},
 		{
 			name:    "Valid value: table (mapped to plain)",
-			want:    ExecFormatPlain,
+			want:    clabconstants.FormatPlain,
 			wantErr: false,
 			args: args{
 				s: "table",

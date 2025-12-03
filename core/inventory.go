@@ -13,10 +13,9 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/srl-labs/containerlab/types"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
-
-const NornirPlatformNameSchemaEnvVar = "CLAB_NORNIR_PLATFORM_NAME_SCHEMA"
 
 //go:embed assets/inventory_ansible.go.tpl
 var ansibleInvT string
@@ -25,7 +24,7 @@ var ansibleInvT string
 // It embeds the NodeConfig struct and adds the Username and Password fields extracted from
 // the node registry.
 type AnsibleInventoryNode struct {
-	*types.NodeConfig
+	*clabtypes.NodeConfig
 }
 
 // AnsibleKindProps is the kind properties structure used to generate the ansible inventory file.
@@ -51,7 +50,6 @@ func (c *CLab) GenerateInventories() error {
 	// generate Ansible Inventory
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 
-	var err error
 	ansibleFile, err := os.Create(ansibleInvFPath)
 	if err != nil {
 		return err
@@ -69,6 +67,7 @@ func (c *CLab) GenerateInventories() error {
 
 	// generate Nornir Simple Inventory
 	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
+
 	nornirFile, err := os.Create(nornirSimpleInvFPath)
 	if err != nil {
 		return err
@@ -91,30 +90,14 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	}
 
 	for _, n := range c.Nodes {
+		kind, props := c.ansibleKindAndProps(n.Config())
+		inv.Kinds[kind] = props
+
 		ansibleNode := &AnsibleInventoryNode{
 			NodeConfig: n.Config(),
 		}
 
-		// add AnsibleKindProps to the inventory struct
-		// the ansibleKindProps is passed as a ref and is populated
-		// down below
-		ansibleKindProps := &AnsibleKindProps{}
-		inv.Kinds[n.Config().Kind] = ansibleKindProps
-
-		// add username and password to kind properties
-		// assumption is that all nodes of the same kind have the same credentials
-		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
-		if nodeRegEntry != nil {
-			ansibleKindProps.Username = nodeRegEntry.GetCredentials().GetUsername()
-			ansibleKindProps.Password = nodeRegEntry.GetCredentials().GetPassword()
-		}
-
-		// add network_os to the node
-		ansibleKindProps.setNetworkOS(n.Config().Kind)
-		// add ansible_connection to the node
-		ansibleKindProps.setAnsibleConnection(n.Config().Kind)
-
-		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], ansibleNode)
+		inv.Nodes[kind] = append(inv.Nodes[kind], ansibleNode)
 
 		if n.Config().Labels["ansible-group"] != "" {
 			inv.Groups[n.Config().Labels["ansible-group"]] =
@@ -140,6 +123,7 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+
 	err = t.Execute(w, inv)
 	if err != nil {
 		return err
@@ -148,24 +132,39 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	return err
 }
 
-// setNetworkOS sets the network_os variable for the kind.
-func (n *AnsibleKindProps) setNetworkOS(kind string) {
-	switch kind {
-	case "nokia_srlinux", "srl":
-		n.NetworkOS = "nokia.srlinux.srlinux"
-	case "nokia_sros", "vr-sros", "nokia_srsim":
-		n.NetworkOS = "nokia.sros.md"
-	}
-}
+// ansibleKindAndProps returns kind and properties for a provided containerlab node config.
+func (c *CLab) ansibleKindAndProps(cfg *clabtypes.NodeConfig) (string, *AnsibleKindProps) {
+	ansibleGroup := cfg.Kind
+	ansibleProps := &AnsibleKindProps{}
 
-// setAnsibleConnection sets the ansible_connection variable for the kind.
-func (n *AnsibleKindProps) setAnsibleConnection(kind string) {
-	switch kind {
-	case "nokia_srlinux", "srl":
-		n.AnsibleConn = "ansible.netcommon.httpapi"
-	case "nokia_sros", "vr-sros", "nokia_srsim":
-		n.AnsibleConn = "ansible.netcommon.network_cli"
+	// Set `ansible_user` and `ansible_password`
+	// Assumption: All nodes of the same kind share same credentials
+	nodeRegEntry := c.Reg.Kind(ansibleGroup)
+	if nodeRegEntry != nil {
+		ansibleProps.Username = nodeRegEntry.GetCredentials().GetUsername()
+		ansibleProps.Password = nodeRegEntry.GetCredentials().GetPassword()
 	}
+
+	// Generally we use the containerlab kind for grouping in Ansible Inventory.
+	// Special case: For SROS we differentiate between classic and model-driven.
+	if strings.EqualFold(cfg.Env["CLAB_SROS_CONFIG_MODE"], "classic") {
+		ansibleGroup = "nokia_srsim_classic"
+	}
+
+	// Set `ansible_network_os` and `ansible_connection`
+	switch ansibleGroup {
+	case "nokia_srlinux", "srl":
+		ansibleProps.NetworkOS = "nokia.srlinux.srlinux"
+		ansibleProps.AnsibleConn = "ansible.netcommon.httpapi"
+	case "nokia_sros", "vr-sros", "nokia_srsim":
+		ansibleProps.NetworkOS = "nokia.sros.md"
+		ansibleProps.AnsibleConn = "ansible.netcommon.network_cli"
+	case "nokia_srsim_classic":
+		ansibleProps.NetworkOS = "nokia.sros.classic"
+		ansibleProps.AnsibleConn = "ansible.netcommon.network_cli"
+	}
+
+	return ansibleGroup, ansibleProps
 }
 
 // Nornir Simple Inventory
@@ -174,22 +173,24 @@ func (n *AnsibleKindProps) setAnsibleConnection(kind string) {
 //go:embed assets/inventory_nornir_simple.go.tpl
 var nornirSimpleInvT string
 
-// NornirSimpleInventoryKindProps is the kind properties structure used to generate the nornir simple inventory file.
+// NornirSimpleInventoryKindProps is the kind properties structure used to generate the nornir
+// simple inventory file.
 type NornirSimpleInventoryKindProps struct {
 	Username string
 	Password string
 	Platform string
 }
 
-// NornirSimpleInventoryNode represents the data structure used to generate the nornir simple inventory file.
-// It embeds the NodeConfig struct and adds the Username and Password fields extracted from
-// the node registry.
+// NornirSimpleInventoryNode represents the data structure used to generate the nornir simple
+// inventory file. It embeds the NodeConfig struct and adds the Username and Password fields
+// extracted from the node registry.
 type NornirSimpleInventoryNode struct {
-	*types.NodeConfig
+	*clabtypes.NodeConfig
 	NornirGroups []string
 }
 
-// NornirSimpleInventory represents the data structure used to generate the nornir simple inventory file.
+// NornirSimpleInventory represents the data structure used to generate the nornir simple inventory
+// file.
 type NornirSimpleInventory struct {
 	// clab node kinds
 	Kinds map[string]*NornirSimpleInventoryKindProps
@@ -207,7 +208,7 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 		Groups: make(map[string][]*NornirSimpleInventoryNode),
 	}
 
-	platformNameSchema := os.Getenv(NornirPlatformNameSchemaEnvVar)
+	platformNameSchema := os.Getenv(clabconstants.ClabEnvNornirPlatformNameSchema)
 
 	for _, n := range c.Nodes {
 		nornirNode := &NornirSimpleInventoryNode{
@@ -222,7 +223,7 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 
 		// the nornir platform is set by default to the node's kind
 		// and is overwritten with the proper Nornir Inventory Platform
-		// based on the the value of CLAB_PLATFORM_NAME_SCHEMA (nornir or scrapi).
+		// based on the value of CLAB_PLATFORM_NAME_SCHEMA (nornir or scrapi).
 		// defaults to Nornir-Napalm/Netmiko compatible platform name
 		nornirSimpleInventoryKindProps.Platform = n.Config().Kind
 
@@ -246,11 +247,13 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 				}
 			}
 		}
+
 		for key, value := range n.Config().Labels {
 			if strings.HasPrefix(key, "nornir-group") {
 				nornirNode.NornirGroups = append(nornirNode.NornirGroups, value)
 			}
 		}
+
 		// sort by group name so it's deterministic
 		slices.Sort(nornirNode.NornirGroups)
 
@@ -268,6 +271,7 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+
 	err = t.Execute(w, inv)
 	if err != nil {
 		return err

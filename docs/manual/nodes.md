@@ -15,7 +15,7 @@ topology:
   nodes:
     node1:  # node name
       kind: nokia_srlinux
-      type: ixrd2l
+      type: ixr-d2l
       image: ghcr.io/nokia/srlinux
       startup-config: /root/mylab/node1.cfg
       binds:
@@ -48,7 +48,7 @@ The `kind` property selects which kind this node is of. Kinds are essentially a 
 
 ### type
 
-With `type` the user sets a type of the node. Types work in combination with the kinds, such as the type value of `ixrd2l` sets the chassis type for SR Linux node, thus this value only makes sense to nodes of kind `nokia_srlinux`.
+With `type` the user sets a type of the node. Types work in combination with the kinds, such as the type value of `ixr-d2l` sets the chassis type for SR Linux node, thus this value only makes sense to nodes of kind `nokia_srlinux`.
 
 Other nodes might treat `type` field differently, that will depend on the kind of the node. The `type` values and effects defined in the documentation for a specific kind.
 
@@ -308,7 +308,7 @@ topology:
     nokia_srlinux:
       env:
         ENV1: 2 # ENV1=2 will be set to if it's not set on node level
-        ENV3: kind # ENV3=kind will be set for all nodes of srl kind
+        ENV3: kind # ENV3=kind will be set for all nodes of nokia_srlinux kind
   nodes:
     node1:
       env:
@@ -872,9 +872,9 @@ topology:
 
 ### healthcheck
 
-Containerlab supports the [docker healthcheck](https://docs.docker.com/engine/reference/builder/#healthcheck) configuration for the nodes. The healthcheck instruction can be set on the `defaults`, `kind` or `node` level, with the node level likely being the most used one.
+Containerlab supports the [docker healthcheck](https://docs.docker.com/reference/dockerfile/#healthcheck) configuration for the nodes. The healthcheck instruction can be set on the `defaults`, `kind` or `node` level, with the node level likely being the most used one.
 
-Healtcheck allows containerlab users to define the healthcheck configuration that will be used by the container runtime to check the health of the container.
+Healthcheck allows containerlab users to define the healthcheck configuration that will be used by the container runtime to check the health of the container.
 
 ```yaml
 topology:

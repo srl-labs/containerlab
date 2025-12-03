@@ -2,21 +2,28 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/utils"
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // Deploy the given topology.
 // skipcq: GO-R1005
-func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.GenericContainer, error) {
+func (c *CLab) Deploy( //nolint: funlen
+	ctx context.Context,
+	options *DeployOptions,
+) ([]clabruntime.GenericContainer, error) {
 	var err error
 
 	err = c.ResolveLinks()
@@ -25,39 +32,41 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	}
 
 	log.Debugf("lab Conf: %+v", c.Config)
+
 	if options.reconfigure {
-		_ = c.Destroy(ctx, uint(len(c.Nodes)), true)
+		_ = c.destroy(ctx, uint(len(c.Nodes)), true)
 		log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
+
 		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
 			return nil, err
 		}
 	}
 
 	// create management network or use existing one
-	if err = c.CreateNetwork(ctx); err != nil {
+	if err := c.CreateNetwork(ctx); err != nil {
 		return nil, err
 	}
 
-	err = links.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+	err = clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = c.checkTopologyDefinition(ctx); err != nil {
+	if err := c.checkTopologyDefinition(ctx); err != nil {
 		return nil, err
 	}
 
-	if err = c.loadKernelModules(); err != nil {
+	if err := c.loadKernelModules(); err != nil {
 		return nil, err
 	}
 
 	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
-	utils.CreateDirectory(c.TopoPaths.TopologyLabDir(), 0o755)
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabconstants.PermissionsDirDefault)
 
 	if !options.skipLabDirFileACLs {
 		// adjust ACL for Labdir such that SUDO_UID Users will
 		// also have access to lab directory files
-		err = utils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
+		err = clabutils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
 		if err != nil {
 			log.Infof("unable to adjust Labdir file ACLs: %v", err)
 		}
@@ -66,6 +75,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	// create an empty ansible inventory file that will get populated later
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
+
 	_, err = os.Create(ansibleInvFPath)
 	if err != nil {
 		return nil, err
@@ -74,6 +84,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	// create an empty nornir simple inventory file that will get populated later
 	// we create it here first, so that bind mounts of nornir-simple-inventory.yml file could work
 	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
+
 	_, err = os.Create(nornirSimpleInvFPath)
 	if err != nil {
 		return nil, err
@@ -81,6 +92,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 
 	// in an similar fashion, create an empty topology data file
 	topoDataFPath := c.TopoPaths.TopoExportFile()
+
 	topoDataF, err := os.Create(topoDataFPath)
 	if err != nil {
 		return nil, err
@@ -90,7 +102,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		return nil, err
 	}
 
-	c.SSHPubKeys, err = c.RetrieveSSHPubKeys()
+	c.SSHPubKeys, err = c.RetrieveSSHPubKeys(ctx)
 	if err != nil {
 		log.Warn(err)
 	}
@@ -118,7 +130,14 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	}
 
 	for _, n := range c.Nodes {
-		n.Config().ExtraHosts = extraHosts
+		if !strings.HasPrefix(n.Config().NetworkMode, "container:") {
+			n.Config().ExtraHosts = extraHosts
+		}
+	}
+
+	// Apply snapshot restore configuration to nodes
+	if err := c.configureSnapshotRestore(options); err != nil {
+		return nil, err
 	}
 
 	nodesWg, execCollection, err := c.createNodes(ctx, options.maxWorkers, options.skipPostDeploy)
@@ -140,7 +159,6 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 		nodesWg.Wait()
 	}
 
-	// write to log
 	execCollection.Log()
 
 	if err := c.GenerateInventories(); err != nil {
@@ -153,7 +171,7 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 
 	// generate graph of the lab topology
 	if options.graph {
-		if err = c.GenerateDotGraph(); err != nil {
+		if err = c.GenerateDotGraph(ctx); err != nil {
 			log.Error(err)
 		}
 	}
@@ -164,12 +182,14 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 	}
 
 	log.Info("Adding host entries", "path", "/etc/hosts")
+
 	err = c.appendHostsFileEntries(ctx)
 	if err != nil {
 		log.Errorf("failed to create hosts file: %v", err)
 	}
 
 	log.Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
+
 	err = c.addSSHConfig()
 	if err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
@@ -181,8 +201,8 @@ func (c *CLab) Deploy(ctx context.Context, options *DeployOptions) ([]runtime.Ge
 // certificateAuthoritySetup sets up the certificate authority parameters.
 func (c *CLab) certificateAuthoritySetup() error {
 	// init the Cert storage and CA
-	c.Cert.CertStorage = cert.NewLocalDirCertStorage(c.TopoPaths)
-	c.Cert.CA = cert.NewCA()
+	c.Cert.CertStorage = clabcert.NewLocalDirCertStorage(c.TopoPaths)
+	c.Cert.CA = clabcert.NewCA()
 
 	s := c.Config.Settings
 
@@ -202,7 +222,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 			keySize = s.CertificateAuthority.KeySize
 		}
 
-		// if external CA cert and and key are set, propagate to topopaths
+		// if external CA cert and key are set, propagate to topopaths
 		extCACert := s.CertificateAuthority.Cert
 		extCAKey := s.CertificateAuthority.Key
 
@@ -224,7 +244,7 @@ func (c *CLab) certificateAuthoritySetup() error {
 	}
 
 	// define the attributes used to generate the CA Cert
-	caCertInput := &cert.CACSRInput{
+	caCertInput := &clabcert.CACSRInput{
 		CommonName:   c.Config.Name + " lab CA",
 		Country:      "US",
 		Expiry:       validityDuration,
@@ -240,7 +260,11 @@ func (c *CLab) certificateAuthoritySetup() error {
 // The exec collection is returned to the caller to ensure that the execution log
 // is printed after the nodes are created.
 // Nodes interdependencies are created in this function.
-func (c *CLab) createNodes(ctx context.Context, maxWorkers uint, skipPostDeploy bool) (*sync.WaitGroup, *exec.ExecCollection, error) {
+func (c *CLab) createNodes(
+	ctx context.Context,
+	maxWorkers uint,
+	skipPostDeploy bool,
+) (*sync.WaitGroup, *clabexec.ExecCollection, error) {
 	for _, node := range c.Nodes {
 		c.dependencyManager.AddNode(node)
 	}
@@ -278,4 +302,94 @@ func (c *CLab) createNodes(ctx context.Context, maxWorkers uint, skipPostDeploy 
 	NodesWg, execCollection := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy)
 
 	return NodesWg, execCollection, nil
+}
+
+// configureSnapshotRestore configures nodes for snapshot restoration.
+// It resolves snapshot files for each node and adds the necessary volume mounts
+// and environment variables to restore from snapshots.
+func (c *CLab) configureSnapshotRestore(options *DeployOptions) error {
+	// Build restore map from per-node specifications
+	restoreMap := make(map[string]string)
+	for _, mapping := range options.restoreNodeSnapshots {
+		parts := strings.SplitN(mapping, "=", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid restore format: %s (expected: node=path)", mapping)
+		}
+		restoreMap[parts[0]] = parts[1]
+	}
+
+	// Track statistics for logging
+	var restoredCount, freshCount int
+
+	// Configure each node
+	for _, node := range c.Nodes {
+		nodeName := node.Config().ShortName
+
+		// Resolve snapshot path for this node
+		snapshotPath, shouldRestore := resolveNodeSnapshot(nodeName, restoreMap, options.restoreAll)
+
+		if shouldRestore {
+			// Validate snapshot file exists
+			if _, err := os.Stat(snapshotPath); os.IsNotExist(err) {
+				return fmt.Errorf("snapshot file not found for node %s: %s", nodeName, snapshotPath)
+			}
+
+			// Get absolute path for bind mount
+			absPath, err := filepath.Abs(snapshotPath)
+			if err != nil {
+				return fmt.Errorf("failed to get absolute path for %s: %w", snapshotPath, err)
+			}
+
+			// Add volume mount for snapshot (read-only)
+			node.Config().Binds = append(node.Config().Binds,
+				fmt.Sprintf("%s:/snapshot.tar:ro", absPath))
+
+			// Add restore environment variable
+			if node.Config().Env == nil {
+				node.Config().Env = make(map[string]string)
+			}
+			node.Config().Env["RESTORE_SNAPSHOT"] = "1"
+
+			log.Infof("Node %s will restore from: %s", nodeName, snapshotPath)
+			restoredCount++
+		} else {
+			freshCount++
+		}
+	}
+
+	// Log deployment mode summary if any restores are configured
+	if restoredCount > 0 {
+		log.Infof("Deploying %d nodes from snapshots, %d nodes fresh", restoredCount, freshCount)
+	}
+
+	return nil
+}
+
+// resolveNodeSnapshot determines the snapshot file path for a given node.
+// Priority: per-node override > restore-all directory > none.
+func resolveNodeSnapshot(
+	nodeName string,
+	restoreMap map[string]string,
+	restoreAll string,
+) (string, bool) {
+	// 1. Check per-node overrides first (highest priority)
+	if snapshotPath, ok := restoreMap[nodeName]; ok {
+		return snapshotPath, true
+	}
+
+	// 2. Check restore-all directory
+	if restoreAll != "" {
+		// Look for {nodename}.tar in directory
+		snapshotPath := filepath.Join(restoreAll, nodeName+".tar")
+		if _, err := os.Stat(snapshotPath); err == nil {
+			return snapshotPath, true
+		}
+
+		// Not found - this is OK, just deploy normally
+		log.Debugf("No snapshot found for node %s in %s, deploying normally", nodeName, restoreAll)
+		return "", false
+	}
+
+	// 3. No restore specified
+	return "", false
 }

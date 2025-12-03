@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/types"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 const (
@@ -30,17 +30,17 @@ const (
 	vkLinkNum  = "clab_link_num"  // optional, link number in case you have multiple, used to calculate the name
 )
 
-type Dict map[string]interface{}
+type Dict map[string]any
 
 // PrepareVars variables for all nodes. This will also prepare all variables for the links.
-func PrepareVars(c *core.CLab) map[string]*NodeConfig {
+func PrepareVars(c *clabcore.CLab) map[string]*NodeConfig {
 	res := make(map[string]*NodeConfig)
 
 	// preparing all nodes vars
 	for _, node := range c.Nodes {
 		nodeCfg := node.Config()
 		name := nodeCfg.ShortName
-		vars := make(map[string]interface{})
+		vars := make(map[string]any)
 		vars[vkNodeName] = name
 		vars[vkKind] = nodeCfg.Kind
 		vars[vkManagementIPv4] = nodeCfg.MgmtIPv4Address
@@ -50,14 +50,18 @@ func PrepareVars(c *core.CLab) map[string]*NodeConfig {
 		// Init array for this node
 		for key, val := range nodeCfg.Config.Vars {
 			if key == vkNodes || key == vkNodeName {
-				log.Warnf("the variable %s on %s will be ignored, it hides other nodes", vkNodes, name)
+				log.Warnf(
+					"the variable %s on %s will be ignored, it hides other nodes",
+					vkNodes,
+					name,
+				)
 				continue
 			}
 			vars[key] = val
 		}
 
 		// Create link array
-		vars[vkLinks] = []interface{}{}
+		vars[vkLinks] = []any{}
 
 		// Ensure role or Kind
 		if _, ok := vars[vkRole]; !ok {
@@ -72,20 +76,6 @@ func PrepareVars(c *core.CLab) map[string]*NodeConfig {
 			Credentials: creds,
 		}
 	}
-
-	// // prepare all links
-	// for lIdx, link := range c.Links {
-	// 	varsA := make(Dict)
-	// 	varsB := make(Dict)
-	// 	err := prepareLinkVars(link, varsA, varsB)
-	// 	if err != nil {
-	// 		log.Errorf("cannot prepare link vars for %d. %s: %s", lIdx, link.String(), err)
-	// 	}
-	// 	res[link.A.Node.ShortName].Vars[vkLinks] =
-	// 		append(res[link.A.Node.ShortName].Vars[vkLinks].([]interface{}), varsA)
-	// 	res[link.B.Node.ShortName].Vars[vkLinks] =
-	// 		append(res[link.B.Node.ShortName].Vars[vkLinks].([]interface{}), varsB)
-	// }
 
 	// Prepare top-level map of nodes
 	// copy 1-level deep
@@ -102,14 +92,14 @@ func PrepareVars(c *core.CLab) map[string]*NodeConfig {
 }
 
 // Prepare variables for a specific link.
-func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
+func prepareLinkVars(link *clabtypes.Link, varsA, varsB Dict) error {
 	// Add a Dict for the far-end link vars and the far-end node name
 	varsA[vkFarEnd] = Dict{vkNodeName: link.B.Node.ShortName}
 	varsB[vkFarEnd] = Dict{vkNodeName: link.A.Node.ShortName}
 
 	// Add a key/value(s) pairs to the links vars (varsA & varsB)
 	// If multiple vars are specified, each links also gets the far end value
-	addValues := func(key string, v1 interface{}, v2 interface{}) {
+	addValues := func(key string, v1 any, v2 any) {
 		varsA[key] = v1
 		(varsA[vkFarEnd]).(Dict)[key] = v2
 		varsB[key] = v2
@@ -126,7 +116,13 @@ func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 		if vv.Kind() == reflect.Slice || vv.Kind() == reflect.Array {
 			// Array/slice should contain 2 values, one for each end of the link
 			if vv.Len() != 2 {
-				return fmt.Errorf("%s: variable %s should contain 2 elements, found %d: %v", link.String(), k, vv.Len(), v)
+				return fmt.Errorf(
+					"%s: variable %s should contain 2 elements, found %d: %v",
+					link.String(),
+					k,
+					vv.Len(),
+					v,
+				)
 			}
 			addValues(k, vv.Index(0).Interface(), vv.Index(1).Interface())
 			continue
@@ -147,7 +143,7 @@ func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 	}
 
 	// Add additional values if they are not present
-	add := map[string]func(link *types.Link) (string, string, error){
+	add := map[string]func(link *clabtypes.Link) (string, string, error){
 		vkLinkIP:   linkIP,
 		vkLinkName: linkName,
 	}
@@ -169,7 +165,7 @@ func prepareLinkVars(link *types.Link, varsA, varsB Dict) error {
 }
 
 // Create a link name using the node names and optional link_num.
-func linkName(link *types.Link) (string, string, error) { //nolint: unparam
+func linkName(link *clabtypes.Link) (string, string, error) { //nolint: unparam,gocritic
 	var linkNo string
 	if v, ok := link.Vars[vkLinkNum]; ok {
 		linkNo = fmt.Sprintf("_%v", v)
@@ -179,7 +175,7 @@ func linkName(link *types.Link) (string, string, error) { //nolint: unparam
 }
 
 // Calculate link IP from the system IPs at both ends.
-func linkIP(link *types.Link) (string, string, error) {
+func linkIP(link *clabtypes.Link) (string, string, error) { //nolint: gocritic
 	var ipA netip.Prefix
 	var err error
 	//
@@ -193,11 +189,21 @@ func linkIP(link *types.Link) (string, string, error) {
 	}
 	sysA, err := netip.ParsePrefix(fmt.Sprintf("%v", link.A.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
-		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.A.Node.ShortName, err)
+		return "", "", fmt.Errorf(
+			"no 'ip' on link & the '%s' of %s: %s",
+			vkSystemIP,
+			link.A.Node.ShortName,
+			err,
+		)
 	}
 	sysB, err := netip.ParsePrefix(fmt.Sprintf("%v", link.B.Node.Config.Vars[vkSystemIP]))
 	if err != nil {
-		return "", "", fmt.Errorf("no 'ip' on link & the '%s' of %s: %s", vkSystemIP, link.B.Node.ShortName, err)
+		return "", "", fmt.Errorf(
+			"no 'ip' on link & the '%s' of %s: %s",
+			vkSystemIP,
+			link.B.Node.ShortName,
+			err,
+		)
 	}
 
 	o4 := 0
@@ -291,7 +297,10 @@ func GetTemplateNamesInDirs(dirs []fs.FS) ([]string, error) {
 		}
 	}
 	if len(tnames) == 0 {
-		return nil, fmt.Errorf("no templates files were found in specified paths: %v", TemplatePaths)
+		return nil, fmt.Errorf(
+			"no templates files were found in specified paths: %v",
+			TemplatePaths,
+		)
 	}
 	return tnames, nil
 }

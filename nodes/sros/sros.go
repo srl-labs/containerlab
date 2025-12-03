@@ -5,9 +5,11 @@
 package sros
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -16,24 +18,30 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
+	"unicode"
 
+	"github.com/beevik/etree"
+	"github.com/brunoga/deep"
 	"github.com/charmbracelet/log"
+	"github.com/scrapli/scrapligo/driver/netconf"
+	"github.com/scrapli/scrapligo/driver/opoptions"
 
+	"github.com/scrapli/scrapligo/response"
+
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnetconf "github.com/srl-labs/containerlab/netconf"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
-
-	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/netconf"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -47,26 +55,53 @@ const (
 	slotAName = "A"
 	slotBName = "B"
 
+	standaloneSlotName = slotAName
+
 	retryTimer = 1 * time.Second
-	// additional config that clab adds on top of the factory config.
-	scrapliPlatformName       = "nokia_sros"
-	configStartup             = "config/startup"
-	configCf3                 = "config/cf3"
-	configCf2                 = "config/cf2"
-	configCf1                 = "config/cf1"
-	startupCfgFName           = "config.cfg"
-	envNokiaSrosSlot          = "NOKIA_SROS_SLOT"
-	envNokiaSrosChassis       = "NOKIA_SROS_CHASSIS"
-	envNokiaSrosSystemBaseMac = "NOKIA_SROS_SYSTEM_BASE_MAC"
-	envNokiaSrosCard          = "NOKIA_SROS_CARD"
+
+	scrapliPlatformName          = "nokia_sros"
+	scrapliPlatformNameClassic   = "nokia_sros_classic"
+	configCf3                    = "config/cf3"
+	configCf2                    = "config/cf2"
+	configCf1                    = "config/cf1"
+	startupCfgName               = "config.cfg"
+	tlsKeyFile                   = "node.key"
+	tlsCertFile                  = "node.crt"
+	tlsCertProfileName           = "clab-grpc-certs"
+	envNokiaSrosSlot             = "NOKIA_SROS_SLOT"
+	envNokiaSrosChassis          = "NOKIA_SROS_CHASSIS"
+	envNokiaSrosSystemBaseMac    = "NOKIA_SROS_SYSTEM_BASE_MAC"
+	envNokiaSrosCard             = "NOKIA_SROS_CARD"
+	envNokiaSrosSFM              = "NOKIA_SROS_SFM"
+	envNokiaSrosXIOM             = "NOKIA_SROS_XIOM"
+	envNokiaSrosMDA              = "NOKIA_SROS_MDA"
+	envDisableComponentConfigGen = "CLAB_SROS_DISABLE_COMPONENT_CONFIG"
+	envSrosConfigMode            = "CLAB_SROS_CONFIG_MODE"
+
+	defaultSrosPowerType       = "dc"
+	defaultSrosPowerModuleType = "ps-a-dc-6000"
+
+	srosMinorError     = "MINOR:"
+	srosCriticalError  = "CRITICAL:"
+	srosRejectedCfgMsg = "Configuration load failed - using default configuration"
 )
 
 var (
 
-	//go:embed sros_default_config.go.tpl
-	srosConfigCmdsTpl string
-	kindNames         = []string{"nokia_srsim"}
-	srosSysctl        = map[string]string{
+	//go:embed configs/sros_config_sros25.go.tpl
+	cfgTplSROS25 string
+
+	//go:embed configs/sros_config_classic.go.tpl
+	cfgTplClassic string
+
+	//go:embed configs/ixr/ixr_config_classic.go.tpl
+	cfgTplClassicIxr string
+
+	//go:embed configs/sar/sar_config_classic.go.tpl
+	cfgTplClassicSar string
+
+	kindNames  = []string{"nokia_srsim"}
+	srosSysctl = map[string]string{
 		"net.ipv4.ip_forward":                "0",
 		"net.ipv6.conf.all.disable_ipv6":     "0",
 		"net.ipv6.conf.default.disable_ipv6": "0",
@@ -79,37 +114,38 @@ var (
 		"net.ipv6.conf.default.accept_ra":    "0",
 		"net.ipv4.conf.default.rp_filter":    "0",
 	}
-	defaultCredentials = nodes.NewCredentials("admin", "NokiaSros1!")
+	defaultCredentials = clabnodes.NewCredentials("admin", "NokiaSros1!")
 
 	srosEnv = map[string]string{
 		"SRSIM":                   "1",
 		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
+		envSrosConfigMode:         "model-driven",      // Default
 	}
 
 	readyCmdCpm  = `/usr/bin/pgrep ^cpm$`
 	readyCmdBoth = `/usr/bin/pgrep ^both$`
 	readyCmdIom  = `/usr/bin/pgrep ^iom$`
 
-	srosCfgTpl, _ = template.New("clab-sros-default-config").Funcs(utils.CreateFuncs()).
-			Parse(srosConfigCmdsTpl)
-
-	requiredKernelVersion = &utils.KernelVersion{
+	requiredKernelVersion = &clabutils.KernelVersion{
 		Major:    5,
 		Minor:    5,
 		Revision: 0,
 	}
 	// Internal directories inside SR-SIM container.
-	cfgDir = "/nokia/config" // Where the startup config will be stored
 	cf1Dir = "/home/sros/flash1"
 	cf2Dir = "/home/sros/flash2"
 	cf3Dir = "/home/sros/flash3" // Where the running config will be stored
 	licDir = "/nokia/license"
 
-	InterfaceRegexp       = regexp.MustCompile(`^(?P<card>\d+)/(?:x(?P<xiom>\d+)/)?(?P<mda>\d+)(?:/c(?P<connector>\d+))?/(?P<port>\d+)$`)
-	MappedInterfaceRegexp = regexp.MustCompile(`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`)
-	InterfaceHelp         = `The format of the interface name need to be one of:
+	InterfaceRegexp = regexp.MustCompile(
+		`^(?P<card>\d+)/(?:x(?P<xiom>\d+)/)?(?P<mda>\d+)(?:/c(?P<connector>\d+))?/(?P<port>\d+)$`,
+	)
+	MappedInterfaceRegexp = regexp.MustCompile(
+		`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`,
+	)
+	InterfaceHelp = `The format of the interface name need to be one of:
 	  Regular SR OS interface names, that is:
 	  1/2/3       -> card 1, mda 2, port 3
       1/2/c3/4    -> card 1, mda 2, connector 3, port 4
@@ -121,63 +157,78 @@ var (
       e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
       e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
 	  eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
+	// Auxiliary regexps for IXR/SAR detection.
+	sarRegexp   = regexp.MustCompile(`(?i)\bsar-`)
+	sarHmRegexp = regexp.MustCompile(`(?i)\b(sar-hm|sar-hmc)\b`)
+
+	ixrRegexp = regexp.MustCompile(`(?i)\bixr-`)
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformOpts := &nodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformOpts,
+	)
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
-
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(sros)
 	}, nrea)
 }
 
 // sros SR-SIM Kind structure.
 type sros struct {
-	nodes.DefaultNode
-	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
+	clabnodes.DefaultNode
+	// startup-config passed as a path to a file with CLI instructions will be read into this byte
+	// slice
 	startupCliCfg []byte
 
-	// Params provided in Pre-Deploy, that sros uses in Post-Deploy phase
-	// to generate certificates
-	cert         *cert.Cert
-	topologyName string
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
+
 	// software version SR OS x node runs
 	swVersion      *SrosVersion
-	componentNodes []nodes.Node
-	// in distributed mode we rename the Cfg.LongName and Cfg.Shortname and Cfg.Fqdn attributes when deploying.
-	// e.g. inspect is either called after deploy or independently. Hence we need to differentiate if we need to perform the
+	componentNodes []clabnodes.Node
+
+	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when
+	// deploying. e.g. inspect is either called after deploy or independently. Hence we need to
+	// differentiate if we need to perform the
 	// component cpm based rename or not. This field indicates just that
 	renameDone bool
+	// rootComponents stores the OG components from root node for dist setups
+	// ..allows children of the distributed root node to access root components (ie. for cfg gen)
+	rootComponents []*clabtypes.Component
+	// store the longname with cpm suffix
+	cpmContainerName string
+	// for component nodes, store base nodes
+	baseShortName string
+	baseLongName  string
 
-	preDeployParams *nodes.PreDeployParams
+	preDeployParams *clabnodes.PreDeployParams
 }
 
 // Init Function for SR-SIM kind.
-func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.SSSE3 = true
 	n.HostRequirements.MinVCPU = 4
-	n.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
+	n.HostRequirements.MinVCPUFailAction = clabtypes.FailBehaviourError
 	n.HostRequirements.MinAvailMemoryGb = 4
-	n.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
+	n.HostRequirements.MinAvailMemoryGbFailAction = clabtypes.FailBehaviourLog
+
+	n.LicensePolicy = clabtypes.LicensePolicyRequired
 
 	n.Cfg = cfg
 
 	n.InterfaceHelp = InterfaceHelp
 	n.InterfaceRegexp = InterfaceRegexp
-
-	// force cert creation for sros nodes as they by make use of tls certificate in the default config
-	n.Cfg.Certificate.Issue = utils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
@@ -194,7 +245,7 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	for _, c := range n.Cfg.Components {
 		c.Slot = strings.ToUpper(c.Slot)
 	}
-	// Merge Enviroment
+	// Merge Environment
 	if n.Cfg.NodeType == "" {
 		n.Cfg.NodeType = SrosDefaultType
 	}
@@ -202,20 +253,78 @@ func (n *sros) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 
 	mac := genMac(n.Cfg)
 	srosEnv[envNokiaSrosSystemBaseMac] = mac
+	// Ensure n.Cfg.Certificate.Issue is not nil
+	if n.Cfg.Certificate.Issue == nil {
+		n.Cfg.Certificate.Issue = clabutils.Pointer(false)
+	}
+	if n.isStandaloneNode() {
+		log.Debugf("%q is standalone node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
 
-	n.Cfg.Env = utils.MergeStringMaps(srosEnv, n.Cfg.Env)
-	log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
+		vars, err := n.setupStandaloneComponents()
+		if err != nil {
+			return err
+		}
 
-	err := n.setupComponentNodes()
-	if err != nil {
-		return err
+		// n.Cfg.Env overrides component vars, overrides default srosEnv
+		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, vars, n.Cfg.Env)
+		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
+	} else {
+		log.Debugf("%q is distributed node. %v", n.Cfg.ShortName, len(n.Cfg.Components))
+
+		n.Cfg.Env = clabutils.MergeStringMaps(srosEnv, n.Cfg.Env)
+		log.Debug("Merged env file", "env", fmt.Sprintf("%+v", n.Cfg.Env), "node", n.Cfg.ShortName)
+
+		err := n.setupComponentNodes()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
+// integrated -> pull component info from slot A components.
+func (n *sros) setupStandaloneComponents() (map[string]string, error) {
+	vars := map[string]string{}
+
+	if len(n.Cfg.Components) == 0 {
+		return nil, nil
+	}
+
+	slotA := n.Cfg.Components[0]
+
+	slotName := strings.ToUpper(strings.TrimSpace(slotA.Slot))
+	// single undefined slot is implicitly set to A
+	if slotName == "" {
+		slotName = standaloneSlotName
+	}
+
+	if slotName != standaloneSlotName {
+		return nil, fmt.Errorf(
+			"expected no slot, or slot %q for components of standalone SR-SIM node: %q",
+			standaloneSlotName,
+			n.Cfg.ShortName,
+		)
+	}
+
+	if slotA.Type != "" {
+		vars[envNokiaSrosCard] = slotA.Type
+	}
+
+	if len(slotA.MDA) > 0 {
+		for _, m := range slotA.MDA {
+			key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
+			vars[key] = m.Type
+		}
+	}
+
+	maps.Copy(vars, slotA.Env)
+
+	return vars, nil
+}
+
 // Pre Deploy func for SR-SIM kind.
-func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	log.Debug("Running pre-deploy")
 	// store the preDeployParams
 	n.preDeployParams = params
@@ -225,34 +334,40 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
 
-	// store the certificate-related parameters
-	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
-	n.cert = params.Cert
-
-	n.topologyName = params.TopologyName
-
-	// either the non-distributed OR distributed AND is a CPM
+	// Create files/dir structure for standalone nodes or distributed CPM nodes
 	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.isCPM("")) {
-		utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
+		// generate the certificate
+		if *n.Cfg.Certificate.Issue {
+			n.Cfg.Certificate.SANs = append(n.Cfg.Certificate.SANs, n.baseShortName, n.baseLongName)
+			certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+			if err != nil {
+				return err
+			}
+
+			// set the certificate data
+			n.Config().TLSCert = string(certificate.Cert)
+			n.Config().TLSKey = string(certificate.Key)
+		}
+		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]),
+			clabconstants.PermissionsOpen)
 		slot := n.Cfg.Env[envNokiaSrosSlot]
 		if slot == "" {
 			return fmt.Errorf("fail to init node because Env var %q is set to %q",
 				envNokiaSrosSlot, n.Cfg.Env[envNokiaSrosSlot])
 		}
 		// add the config specific mounts
-		cfgPath := filepath.Join(n.Cfg.LabDir, slot, configStartup)
 		cf1Path := filepath.Join(n.Cfg.LabDir, slot, configCf1)
 		cf2Path := filepath.Join(n.Cfg.LabDir, slot, configCf2)
 		cf3Path := filepath.Join(n.Cfg.LabDir, slot, configCf3)
 		n.Cfg.Binds = append(n.Cfg.Binds,
-			fmt.Sprint(cfgPath, ":", cfgDir, ":rw"),
 			fmt.Sprint(cf1Path, ":", cf1Dir, "/:rw"),
 			fmt.Sprint(cf2Path, ":", cf2Dir, "/:rw"),
 			fmt.Sprint(cf3Path, ":", cf3Dir, "/:rw"),
 		)
 
 		if n.Cfg.License != "" && (n.isCPM("") || n.isStandaloneNode()) {
-			// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+			// we mount a fixed path node.Labdir/license.key as the license referenced in topo file
+			// will be copied to that path
 			n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 		}
@@ -263,20 +378,50 @@ func (n *sros) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error
 }
 
 // Post Deploy func for SR-SIM kind.
-func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
 		"node", n.Cfg.ShortName)
-	var err error
+
 	// start waiting for container ready (PID based check)
-	if err = n.Ready(ctx); err != nil {
+	if err := n.Ready(ctx); err != nil {
 		return err
+	}
+
+	// Disable TX checksum offload on the host NS veth for the mgmt interface.
+	var peerIfIndex int
+	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
+	if err != nil {
+		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
+			"node", n.Cfg.ShortName,
+			"error", err)
+	} else {
+		if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
+			log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
+				"node", n.Cfg.ShortName,
+				"error", err)
+		}
+	}
+
+	errChan := make(chan error, 1)
+
+	logs, err := n.Runtime.StreamLogs(ctx, n.GetContainerName())
+	if err != nil {
+		log.Debug("Failed to get container log stream", "node", n.Cfg.ShortName, "err", err)
+	} else {
+		// Start monitoring in a goroutine
+		monitoringCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		defer logs.Close()
+
+		go n.MonitorLogs(monitoringCtx, logs, errChan)
 	}
 
 	// Populate /etc/hosts for service discovery on mgmt interface
 	if err = n.populateHosts(ctx, params.Nodes); err != nil {
 		log.Warn("Unable to populate hosts list", "node", n.Cfg.ShortName, "err", err)
 	}
+
 	n.swVersion, err = n.RunningVersion(ctx)
 	if err != nil {
 		return err
@@ -284,22 +429,55 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 	if !n.isCPM(slotAName) {
 		return nil
 	}
+
 	// Execute SaveConfig after boot. This code should only run on active CPM
 	for time.Now().Before(time.Now().Add(readyTimeout)) {
-		// Check if context is cancelled
+		// Check if context is canceled
 		if err := ctx.Err(); err != nil {
-			return fmt.Errorf("context cancelled: %w", err)
+			return fmt.Errorf("context canceled: %w", err)
 		}
 
 		isHealthy, err := n.IsHealthy(ctx)
 		if err != nil {
-			log.Debug(fmt.Errorf("health check failed, check 'docker logs -f %s': %w", n.Cfg.LongName, err))
+			log.Debug(
+				fmt.Errorf(
+					"health check failed, check 'docker logs -f %s': %w",
+					n.Cfg.LongName,
+					err,
+				),
+			)
 		}
 
 		if isHealthy {
-			err = n.SaveConfig(ctx)
+			addr, err := n.MgmtIPAddr()
 			if err != nil {
-				return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
+				return err
+			}
+			// TLS bootstrap in case of n.Cfg.Certificate.Issue flag
+			if *n.Cfg.Certificate.Issue {
+				log.Infof("TLS cert/key bootstrap for node %q", n.Cfg.LongName)
+
+				err = n.tlsCertBootstrap(ctx, addr)
+				if err != nil {
+					return fmt.Errorf(
+						"TLS cert/key bootstrap to node %q failed: %w",
+						n.Cfg.LongName,
+						err,
+					)
+				}
+				log.Infof(
+					"Completed bootstrap for gRPC-TLS profile on node %s",
+					n.Cfg.ShortName,
+				)
+			}
+
+			// Partial or NO Config Provided
+			if !isFullConfigFile(n.Cfg.StartupConfig) {
+				log.Infof("Saving node %q config as startup...", n.Cfg.LongName)
+				err = n.saveConfigWithAddr(ctx, addr)
+				if err != nil {
+					return fmt.Errorf("save config to node %q, failed: %w", n.Cfg.LongName, err)
+				}
 			}
 			return nil
 		}
@@ -308,6 +486,10 @@ func (n *sros) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case err := <-errChan:
+			log.With("kind", n.Cfg.Kind, "node", n.Cfg.ShortName).Debugf("got %q on errChan", err)
+			log.Info("Skipping postdeploy actions", "kind", n.Cfg.Kind, "node", n.Cfg.ShortName)
+			return nil
 		case <-time.After(retryTimer):
 			// continue to next iteration
 		}
@@ -326,7 +508,7 @@ func (n *sros) Delete(ctx context.Context) error {
 	for _, componentNodes := range n.componentNodes {
 		err := componentNodes.Delete(ctx)
 		if err != nil {
-			return err
+			log.Warn(err)
 		}
 	}
 	return nil
@@ -348,13 +530,42 @@ func (n *sros) DeleteNetnsSymlink() error {
 	return n.DefaultNode.DeleteNetnsSymlink()
 }
 
+// sortComponents ensure components are in order of
+// LCs first, then CPMs (cpm b comes first if present).
+func (n *sros) sortComponents() {
+	slices.SortFunc(n.Cfg.Components, func(a, b *clabtypes.Component) int {
+		s1 := strings.ToUpper(strings.TrimSpace(a.Slot))
+		s2 := strings.ToUpper(strings.TrimSpace(b.Slot))
+
+		p1 := n.getSortOrder(s1)
+		p2 := n.getSortOrder(s2)
+
+		return p1 - p2
+	})
+}
+
+func (n *sros) getSortOrder(slot string) int {
+	r := rune(slot[0])
+	if unicode.IsLetter(r) {
+		// for letters, B before A, letters after numbers
+		// B=66 -> 34
+		// A=65 -> 35
+		return 100 - int(r)
+	} else {
+		num, _ := strconv.Atoi(slot)
+		return num // 1, 2, 3... smaller than CPM slots, so will come first
+	}
+}
+
 func (n *sros) setupComponentNodes() error {
 	if !n.isDistributedBaseNode() {
 		return nil
 	}
 
+	n.sortComponents()
+
 	// Registry, because it is not a package Var
-	nr := nodes.NewNodeRegistry()
+	nr := clabnodes.NewNodeRegistry()
 	Register(nr)
 
 	// loop through the components, creating them
@@ -365,13 +576,17 @@ func (n *sros) setupComponentNodes() error {
 			return err
 		}
 
-		// copy the original nodes NodeConfig
-		componentConfig := n.Cfg.Copy()
+		// copy the original node's NodeConfig to the component
+		componentConfig, err := deep.Copy(n.Cfg)
+		if err != nil {
+			return fmt.Errorf("failed to deep copy node config for component: %w", err)
+		}
 
 		// the first node will create the namespace, so NetworkMode remains unchanged.
 		// all consecutive need to be attached to specifically that Namespace via NetworkMode
 		if idx > 0 {
-			componentConfig.NetworkMode = fmt.Sprintf("container:%s", n.componentNodes[0].GetShortName())
+			componentConfig.NetworkMode = fmt.Sprintf("container:%s",
+				n.componentNodes[0].GetShortName())
 		}
 
 		// adjust the config values from the original node
@@ -382,6 +597,8 @@ func (n *sros) setupComponentNodes() error {
 		componentConfig.Fqdn = n.calcComponentFqdn(c.Slot)
 		if idx != 0 {
 			componentConfig.DNS = nil
+			componentConfig.PortBindings = nil
+			componentConfig.PortSet = nil
 		}
 
 		// add the component env to the componentConfig env
@@ -389,24 +606,23 @@ func (n *sros) setupComponentNodes() error {
 			componentConfig.Env[k] = v
 		}
 
-		// set the type var if type is set
-		if c.Type != "" {
-			componentConfig.Env[envNokiaSrosCard] = c.Type
-		}
-
+		// set component environment variables
+		n.setComponentEnvVars(componentConfig, c)
 		componentConfig.Env[envNokiaSrosSlot] = c.Slot
 
 		// adjust label based env vars
-		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.NodeName)] = componentConfig.ShortName
-		componentConfig.Env["CLAB_LABEL_"+utils.ToEnvKey(labels.LongName)] = componentConfig.LongName
+		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clabconstants.NodeName)] = componentConfig.ShortName
+		componentConfig.Env["CLAB_LABEL_"+clabutils.ToEnvKey(clabconstants.LongName)] = componentConfig.LongName
 
 		if componentConfig.Labels == nil {
 			componentConfig.Labels = map[string]string{}
 		}
 
 		// adjust labels
-		componentConfig.Labels[labels.NodeName] = componentConfig.ShortName
-		componentConfig.Labels[labels.LongName] = componentConfig.LongName
+		componentConfig.Labels[clabconstants.NodeName] = componentConfig.ShortName
+		componentConfig.Labels[clabconstants.LongName] = componentConfig.LongName
+		componentConfig.Labels[clabconstants.RootNodeName] = n.Cfg.ShortName
+		componentConfig.Labels[clabconstants.RootNodeLongName] = n.Cfg.LongName
 
 		// init the component
 		err = componentNode.Init(componentConfig)
@@ -415,14 +631,49 @@ func (n *sros) setupComponentNodes() error {
 		}
 		// set the runtime by copying it from the general node
 		componentNode.WithRuntime(n.GetRuntime())
+
+		// store root components for cpms, for config gen
+		if srosNode, ok := componentNode.(*sros); ok {
+			srosNode.rootComponents = n.Cfg.Components
+			// store base node name
+			srosNode.baseShortName = n.Cfg.ShortName
+			srosNode.baseLongName = n.Cfg.LongName
+		}
+
 		// store the node in the componentNodes
 		n.componentNodes = append(n.componentNodes, componentNode)
 	}
 	return nil
 }
 
+// setComponentEnvVars sets environment variables for a component.
+func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *clabtypes.Component) {
+	if c.Type != "" {
+		componentConfig.Env[envNokiaSrosCard] = c.Type
+	}
+
+	if c.SFM != "" {
+		componentConfig.Env[envNokiaSrosSFM] = c.SFM
+	}
+
+	for _, x := range c.XIOM {
+		key := fmt.Sprintf("%s_X%d", envNokiaSrosXIOM, x.Slot)
+		componentConfig.Env[key] = x.Type
+		// add the nested MDA
+		for _, m := range x.MDA {
+			key := fmt.Sprintf("%s_X%d_%d", envNokiaSrosMDA, x.Slot, m.Slot)
+			componentConfig.Env[key] = m.Type
+		}
+	}
+
+	for _, m := range c.MDA {
+		key := fmt.Sprintf("%s_%d", envNokiaSrosMDA, m.Slot)
+		componentConfig.Env[key] = m.Type
+	}
+}
+
 // deployFabric deploys the distributed SR-SIM when the `components` key is present.
-func (n *sros) deployFabric(ctx context.Context, deployParams *nodes.DeployParams) error {
+func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
 	// loop through the components, creating them
 	for _, c := range n.componentNodes {
 		c.PreDeploy(ctx, n.preDeployParams)
@@ -437,41 +688,39 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *nodes.DeployParam
 	if err != nil {
 		return err
 	}
-
-	// adjust general node to be represented as the cpm node
-	n.Cfg.ShortName = n.calcComponentName(n.Cfg.ShortName, cpmSlot)
-	n.Cfg.LongName = n.calcComponentName(n.Cfg.LongName, cpmSlot)
-	n.Cfg.Fqdn = n.calcComponentFqdn(cpmSlot)
+	// store the CPM container name
+	n.cpmContainerName = n.calcComponentName(n.Cfg.LongName, cpmSlot)
 	n.renameDone = true
 
-	cpmNode, err := n.cpmNode()
+	// adjust also the mgmt IP addresses of the general node
+	ips, err := n.distNodeMgmtIPs()
 	if err != nil {
 		return err
 	}
 
-	// adjust also the mgmt IP addresses of the general node
-	contList, err := cpmNode.GetContainers(ctx)
-	if err != nil {
-		return err
-	}
-	n.Cfg.MgmtIPv4Address = contList[0].GetContainerIPv4()
-	n.Cfg.MgmtIPv6Address = contList[0].GetContainerIPv6()
+	n.Cfg.MgmtIPv4Address = ips.IPv4
+	n.Cfg.MgmtIPv6Address = ips.IPv6
 
 	return nil
 }
 
-// isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a distributed setup.
+// isDistributedCard checks if the slot variable is set, hence it is an instance (slot) of a
+// distributed setup.
+// isDistributedCardNode returns true if this node is a card (linecard/IOM)
+// in a distributed SR-SIM deployment. A distributed card has a slot assignment
+// but no components of its own.
 func (n *sros) isDistributedCardNode() bool {
 	_, exists := n.Cfg.Env[envNokiaSrosSlot]
-	// is distributed if components is > 1 and the slot var exists.
-	return exists && !n.isDistributedBaseNode()
+	return exists && len(n.Cfg.Components) == 0
 }
 
-// check if SR-SIM is distributed: `components` key is present.
+// isDistributedBaseNode returns true if this is the base node of a distributed
+// SR-SIM deployment. The base node orchestrates multiple component nodes.
 func (n *sros) isDistributedBaseNode() bool {
 	return len(n.Cfg.Components) > 1
 }
 
+// isStandaloneNode returns true if this is a standalone (non-distributed) SR-SIM node.
 func (n *sros) isStandaloneNode() bool {
 	return !n.isDistributedBaseNode() && !n.isDistributedCardNode()
 }
@@ -509,12 +758,17 @@ func (n *sros) calcComponentFqdn(slot string) string {
 		return n.Cfg.Fqdn
 	}
 	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
-	result := fmt.Sprintf("%s-%s%s", n.Cfg.Fqdn[:fqdnDotIndex], strings.ToLower(slot), n.Cfg.Fqdn[fqdnDotIndex:])
+	result := fmt.Sprintf(
+		"%s-%s%s",
+		n.Cfg.Fqdn[:fqdnDotIndex],
+		strings.ToLower(slot),
+		n.Cfg.Fqdn[fqdnDotIndex:],
+	)
 	return result
 }
 
 // cpmNode returns a CPM Node (used in Distributed mode).
-func (n *sros) cpmNode() (nodes.Node, error) {
+func (n *sros) cpmNode() (clabnodes.Node, error) {
 	defaultSlot, err := n.cpmSlot()
 	if err != nil {
 		return nil, err
@@ -529,29 +783,25 @@ func (n *sros) cpmNode() (nodes.Node, error) {
 }
 
 // cpmSlot returns the Slot of the preferred CPM Node (used when Distributed mode).
+// It prefers slot A if present, otherwise returns slot B.
 func (n *sros) cpmSlot() (string, error) {
-	slot := ""
-
-search:
+	// Prefer slot A, fall back to slot B
 	for _, comp := range n.Cfg.Components {
-		switch comp.Slot {
-		case slotAName:
-			slot = slotAName
-			// now we can break because the slot A is prefered, does not matter if B also exists
-			break search
-		case slotBName:
-			slot = slotBName
-			// we continue searching, because we prefer slot A
+		if comp.Slot == slotAName {
+			return slotAName, nil
 		}
 	}
-	if slot == "" {
-		return "", fmt.Errorf("node %s: unable to determine default slot", n.GetShortName())
+	// Check for slot B as fallback
+	for _, comp := range n.Cfg.Components {
+		if comp.Slot == slotBName {
+			return slotBName, nil
+		}
 	}
-	return slot, nil
+	return "", fmt.Errorf("node %s: unable to determine default slot", n.GetShortName())
 }
 
 // Deploy deploys the SR-SIM kind.
-func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) error {
+func (n *sros) Deploy(ctx context.Context, deployParams *clabnodes.DeployParams) error {
 	// if it is a chassis with multiple cards (i.e. components)
 	if n.isDistributedBaseNode() {
 		err := n.deployFabric(ctx, deployParams)
@@ -560,7 +810,7 @@ func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) err
 		}
 
 		// Update the nodes state
-		n.SetState(state.Deployed)
+		n.SetState(clabnodesstate.Deployed)
 		return nil
 	}
 
@@ -573,7 +823,8 @@ func (n *sros) Deploy(ctx context.Context, deployParams *nodes.DeployParams) err
 	return nil
 }
 
-// Ready returns when the node boot sequence reached the stage when it is ready to accept config commands
+// Ready returns when the node boot sequence reached the stage when it is ready to accept config
+// commands
 // returns an error if not ready by the expiry of the timer readyTimeout.
 func (n *sros) Ready(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
@@ -585,19 +836,30 @@ func (n *sros) Ready(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timed out waiting for SR OS node %s to boot: %v", n.Cfg.ShortName, err)
+			return fmt.Errorf(
+				"timed out waiting for SR OS node %s to boot: %v",
+				n.Cfg.ShortName,
+				err,
+			)
 		default:
 			// check if cpm is running
 			for k, cmd := range readyCmds {
-				cmd, _ := exec.NewExecCmdFromString(cmd)
+				cmd, _ := clabexec.NewExecCmdFromString(cmd)
 				execResult, err := n.RunExec(ctx, cmd)
 				if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
-					logMsg := fmt.Sprintf("status check %s failed on %s retrying", readyCmdsStrings[k], n.Cfg.ShortName)
+					logMsg := fmt.Sprintf(
+						"status check %s failed on %s retrying",
+						readyCmdsStrings[k],
+						n.Cfg.ShortName,
+					)
 					if err != nil {
 						logMsg += fmt.Sprintf(" error: %v", err)
 					}
 					if execResult != nil && execResult.GetReturnCode() != 0 {
-						logMsg += fmt.Sprintf(", output:%s", strings.ReplaceAll(execResult.String(), "\n", "; "))
+						logMsg += fmt.Sprintf(
+							", output:%s",
+							strings.ReplaceAll(execResult.String(), "\n", "; "),
+						)
 					}
 					log.Debug(logMsg)
 				}
@@ -614,14 +876,18 @@ func (n *sros) Ready(ctx context.Context) error {
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
 func (*sros) checkKernelVersion() error {
 	// retrieve running kernel version
-	kv, err := utils.GetKernelVersion()
+	kv, err := clabutils.GetKernelVersion()
 	if err != nil {
 		return err
 	}
 
 	// do the comparison
 	if !kv.GreaterOrEqual(requiredKernelVersion) {
-		log.Warnf("Nokia SR OS requires a kernel version greater than %s. Detected kernel version: %s. Not all features might function properly!", requiredKernelVersion, kv)
+		log.Warnf(
+			"Nokia SR OS requires a kernel version greater than %s. Detected kernel version: %s. Not all features might function properly!",
+			requiredKernelVersion,
+			kv,
+		)
 	}
 	return nil
 }
@@ -636,10 +902,15 @@ func (n *sros) checkComponentSlotsConfig() error {
 		// check if slot exists
 		_, exists := componentNames[slot]
 		if exists {
-			return fmt.Errorf("node %s slot %s duplicate definition", n.GetShortName(), component.Slot)
+			return fmt.Errorf(
+				"node %s slot %s duplicate definition",
+				n.GetShortName(),
+				component.Slot,
+			)
 		}
 		// addd to component names map
 		componentNames[component.Slot] = struct{}{}
+
 	}
 	return nil
 }
@@ -669,21 +940,36 @@ func (n *sros) createSROSFiles() error {
 	if n.Cfg.License != "" && (n.isCPM("") || n.isStandaloneNode()) {
 		// copy license file to node specific directory in lab
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(n.Cfg.License, licPath, 0o644); err != nil {
-			return fmt.Errorf("license copying src %s -> dst %s failed: %v", n.Cfg.License, licPath, err)
+		if err := clabutils.CopyFile(context.Background(), n.Cfg.License, licPath,
+			clabconstants.PermissionsFileDefault); err != nil {
+			return fmt.Errorf(
+				"license copying src %s -> dst %s failed: %v",
+				n.Cfg.License,
+				licPath,
+				err,
+			)
 		}
 		log.Debug("SR OS license copied", "src", n.Cfg.License, "dst", licPath)
 	}
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3), 0o777)
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup), 0o777)
-
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot]),
+		clabconstants.PermissionsOpen)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], "config"),
+		clabconstants.PermissionsOpen)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf1),
+		clabconstants.PermissionsOpen)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf2),
+		clabconstants.PermissionsOpen)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
+		clabconstants.PermissionsOpen)
+	if n.isCPM(slotAName) || n.isStandaloneNode() {
+		err = n.createSROSCertificates()
+	}
+	if err != nil {
+		return err
+	}
 	// Skip config if node is not CPM
 	if n.isCPM("") || n.isStandaloneNode() {
-		err = n.createSROSFilesConfig()
+		err = n.createSROSConfigFiles()
 		if err != nil {
 			return err
 		}
@@ -691,62 +977,97 @@ func (n *sros) createSROSFiles() error {
 	return nil
 }
 
-// Func that handles the config generation for the SR-SIM kind.
-func (n *sros) createSROSFilesConfig() error {
-	// generate a startup config file
-	// if the node has a `startup-config:` statement, the file specified in that section
-	// will be used as a template in GenerateConfig()
-
-	var cfgTemplate string
-	var err error
-
-	cfgPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configStartup, startupCfgFName)
-	isPartial := isPartialConfigFile(n.Cfg.StartupConfig)
-	if n.Cfg.StartupConfig != "" && !isPartial {
-		// User provides startup config
-		log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
-			n.Cfg.StartupConfig, "isPartial", isPartial)
-
-		c, err := os.ReadFile(n.Cfg.StartupConfig)
-		if err != nil {
+// Func that Places the Certificates in the right place and format.
+func (n *sros) createSROSCertificates() error {
+	if *n.Cfg.Certificate.Issue {
+		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
+			clabconstants.PermissionsOpen)
+		keyPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, tlsKeyFile)
+		if err := clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
 			return err
 		}
 
-		cBuf, err := utils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		certPath := filepath.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3, tlsCertFile)
+		err := clabutils.CreateFile(certPath, n.Config().TLSCert)
 		if err != nil {
 			return err
 		}
+	}
+	return nil
+}
 
-		cfgTemplate = cBuf.String()
-	} else {
-		// Use default clab config from the embedded template
-		log.Debug("Rendering SR OS default containerlab startup config", "node",
-			n.Cfg.ShortName, "type", n.Cfg.NodeType)
-
-		err = n.addDefaultConfig()
+// createSROSConfigFiles handles the config generation for the SR-SIM kind.
+func (n *sros) createSROSConfigFiles() error {
+	// Get version from image before generating config
+	if n.swVersion == nil {
+		ctx := context.Background()
+		version, err := n.srosVersionFromImage(ctx)
 		if err != nil {
-			return err
+			log.Warn("Failed to get SR OS version from image",
+				"node", n.Cfg.ShortName, "error", err)
+		} else {
+			n.swVersion = version
+			log.Info("Retrieved SR OS version from image",
+				"node", n.Cfg.ShortName,
+				"version", fmt.Sprintf("%s.%s.%s", version.Major, version.Minor, version.Build))
 		}
+	}
 
-		log.Debug("Rendered default startup config", "node", n.Cfg.ShortName,
-			"startup-config", string(n.startupCliCfg))
+	// Path pointing to the target config file under configCf3 dir
+	cf3CfgFile := filepath.Join(
+		n.Cfg.LabDir,
+		n.Cfg.Env[envNokiaSrosSlot],
+		configCf3,
+		startupCfgName,
+	)
+	isPartial := clabutils.IsPartialConfigFile(n.Cfg.StartupConfig)
 
-		if err := utils.CreateFile(cfgPath, string(n.startupCliCfg)); err != nil {
-			return fmt.Errorf("failed to create startup-config file %s for node %s failed: %v", cfgPath, n.Cfg.ShortName, err)
-		}
+	// generate config and use that to boot node
+	log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
+		n.Cfg.StartupConfig, "isPartial", isPartial)
+
+	cfgTemplate, err := n.getConfigTemplate(isPartial)
+	if err != nil {
+		return err
 	}
 
 	if cfgTemplate == "" {
-		log.Debug("configuration template is empty, skipping startup config file generation", "node", n.Cfg.ShortName)
+		log.Debug(
+			"configuration template is empty, skipping startup config file generation",
+			"node",
+			n.Cfg.ShortName,
+		)
 		return nil
 	}
 
-	err = n.GenerateConfig(cfgPath, cfgTemplate)
-	if err != nil {
-		return fmt.Errorf("failed to generate config for node %q: %v", n.Cfg.ShortName, err)
+	return n.GenerateConfig(cf3CfgFile, cfgTemplate)
+}
+
+// getConfigTemplate retrieves the configuration template based on startup config settings.
+func (n *sros) getConfigTemplate(isPartial bool) (string, error) {
+	// User provides full startup config
+	if n.Cfg.StartupConfig != "" && !isPartial {
+		c, err := os.ReadFile(n.Cfg.StartupConfig)
+		if err != nil {
+			return "", err
+		}
+
+		cBuf, err := clabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		if err != nil {
+			return "", err
+		}
+		return cBuf.String(), nil
 	}
 
-	return nil
+	// Generate default config and optionally add partial config
+	if err := n.addDefaultConfig(); err != nil {
+		return "", err
+	}
+	if err := n.addPartialConfig(); err != nil {
+		return "", err
+	}
+
+	return string(n.startupCliCfg), nil
 }
 
 // SlotIsInteger checks if the slot string represents a valid integer.
@@ -756,75 +1077,214 @@ func SlotIsInteger(s string) bool {
 }
 
 // Check if a container is a CPM.
+// isCPM checks if a container is a CPM (Control Processing Module).
+// Returns false if the slot is a linecard (integer slot).
+// If a specific CPM name is provided, returns false if this is a different CPM.
 func (n *sros) isCPM(cpm string) bool {
-	// Check if container is a linecard
-	if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
-		SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) {
+	slot, exists := n.Cfg.Env[envNokiaSrosSlot]
+	if !exists {
+		// No slot specified - this is a CPM
+		return true
+	}
+
+	// If slot is an integer, it's a linecard, not a CPM
+	if SlotIsInteger(slot) {
 		return false
 	}
-	// check if container is the CPM given by the string cpm
-	if cpm != "" {
-		if _, exists := n.Cfg.Env[envNokiaSrosSlot]; exists &&
-			!SlotIsInteger(n.Cfg.Env[envNokiaSrosSlot]) &&
-			!strings.EqualFold(n.Cfg.Env[envNokiaSrosSlot], cpm) {
-			return false
-		}
+
+	// Slot is non-integer (CPM slot). If a specific CPM was requested,
+	// check if this is that CPM
+	if cpm != "" && !strings.EqualFold(slot, cpm) {
+		return false
 	}
-	// None of the previous conditions are meet
+
 	return true
 }
 
-// addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner, ssh keys.
-func (n *sros) addDefaultConfig() error {
+// prepareConfigTemplateData prepares all data needed for template selection and execution.
+func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	b, err := n.banner()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// tplData holds data used in templating of the default config snippet
-	tplData := srosTemplateData{
-		Name:          n.Cfg.ShortName,
-		TLSKey:        n.Cfg.TLSKey,
-		TLSCert:       n.Cfg.TLSCert,
-		TLSAnchor:     n.Cfg.TLSAnchor,
-		Banner:        b,
-		IFaces:        map[string]tplIFace{},
-		MgmtMTU:       0,
-		MgmtIPMTU:     0,
+
+	componentConfig := ""
+	if !isFullConfigFile(n.Cfg.StartupConfig) {
+		componentConfig = n.generateComponentConfig()
+	} else {
+		log.Debugf("SR-SIM node %q has non-partial startup-config defined, skipping component config gen", n.Cfg.LongName)
+	}
+
+	tplData := &srosTemplateData{
+		// Selection criteria
+		NodeType:          strings.ToLower(n.Cfg.NodeType),
+		ConfigurationMode: strings.ToLower(n.Cfg.Env[envSrosConfigMode]),
+		SwVersion:         n.swVersion,
+		IsSecureGrpc:      *n.Cfg.Certificate.Issue,
+
+		// Node data
+		Name:            n.Cfg.ShortName,
+		TLSKey:          n.Cfg.TLSKey,
+		TLSCert:         n.Cfg.TLSCert,
+		TLSAnchor:       n.Cfg.TLSAnchor,
+		Banner:          b,
+		IFaces:          map[string]tplIFace{},
+		MgmtMTU:         0,
+		MgmtIPMTU:       n.Runtime.Mgmt().MTU,
+		ComponentConfig: componentConfig,
+
+		// Default service configs (will be overridden based on node type)
 		SystemConfig:  systemCfg,
 		SNMPConfig:    snmpv2Config,
 		GRPCConfig:    grpcConfig,
 		NetconfConfig: netconfConfig,
 		LoggingConfig: loggingConfig,
 		SSHConfig:     sshConfig,
-		NodeType:      strings.ToLower(n.Cfg.NodeType),
-	}
-	if strings.Contains(tplData.NodeType, "ixr-") {
-		tplData.GRPCConfig = grpcConfigIXR
-		tplData.SystemConfig = systemCfgIXR
 	}
 
 	if n.Config().DNS != nil {
 		tplData.DNSServers = append(tplData.DNSServers, n.Config().DNS.Servers...)
 	}
 
-	n.prepareSSHPubKeys(&tplData)
+	n.prepareSSHPubKeys(tplData)
+	n.applyNodeTypeSpecificConfig(tplData)
 
-	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
+	return tplData, nil
+}
+
+// isIXRNode returns true if this is an IXR node type (case-insensitive).
+func (n *sros) isIXRNode() bool {
+	return ixrRegexp.MatchString(n.Cfg.NodeType)
+}
+
+// isSARNode returns true if this is a SAR node type (case-insensitive).
+func (n *sros) isSARNode() bool {
+	return sarRegexp.MatchString(n.Cfg.NodeType)
+}
+
+// isSARHmNode returns true if this is a SAR-Hm or SAR-Hmc node type (case-insensitive).
+func (n *sros) isSARHmNode() bool {
+	return sarHmRegexp.MatchString(n.Cfg.NodeType)
+}
+
+// applyNodeTypeSpecificConfig applies node-type and security specific overrides for Model-Driven
+// Config.
+func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
+	// SR OS nodes with insecure gRPC, non-IXR/SAR
+	if !tplData.IsSecureGrpc {
+		tplData.GRPCConfig = grpcConfigInsecure
+	}
+	// Apply IXR-specific configs
+	if n.isIXRNode() {
+		tplData.SystemConfig = systemCfgIXR
+		tplData.GRPCConfig = grpcConfigIXR
+
+		// IXR with insecure gRPC
+		if !tplData.IsSecureGrpc {
+			tplData.GRPCConfig = grpcConfigIXRInsecure
+		}
+	}
+
+	if n.isSARNode() {
+		tplData.SystemConfig = systemCfgSAR
+		tplData.GRPCConfig = grpcConfigSAR
+		// SAR with insecure gRPC
+		if !tplData.IsSecureGrpc {
+			tplData.GRPCConfig = grpcConfigSARInsecure
+		}
+		if n.isSARHmNode() { // MD disabled on SAR-Hm nodes
+			if tplData.ConfigurationMode != "classic" {
+				log.Warn(
+					"SAR-Hm nodes only support classic configuration mode. Overriding configuration mode to 'classic'",
+					"node",
+					n.Cfg.LongName,
+					"node-type",
+					tplData.NodeType,
+				)
+				tplData.ConfigurationMode = "classic"
+				n.Cfg.Env[envSrosConfigMode] = "classic"
+			}
+		}
+	}
+}
+
+// selectConfigTemplate chooses the appropriate config template based on template data either MD or
+// classic.
+func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Template, error) {
+	var tmpl string
+	var tplName string
+	// Model-driven configuration mode (SROS25+)
+	// Future version-specific template selection:
+	// if tplData.SwVersion != nil && tplData.SwVersion.Major >= 26 {
+	//     tmpl = cfgTplSROS26
+	//     tplName = "clab-sros-config-sros26"
+	// } else {
+	//     tmpl = cfgTplSROS25
+	//     tplName = "clab-sros-config-sros25"
+	// }
+	tmpl = cfgTplSROS25
+	tplName = "clab-sros-config-sros25"
+
+	// Classic configuration mode
+	if tplData.ConfigurationMode == "classic" || tplData.ConfigurationMode == "mixed" {
+		// Default to classic template
+		tmpl = cfgTplClassic
+		tplName = "clab-sros-config-classic"
+
+		if n.isIXRNode() {
+			tmpl = cfgTplClassicIxr
+			tplName = "clab-sros-config-classic-ixr"
+		}
+		if n.isSARNode() {
+			tmpl = cfgTplClassicSar
+			tplName = "clab-sros-config-classic-sar"
+			// We choose not to support gRPC on classic mode at all
+		}
+	}
+	return template.New(tplName).
+		Funcs(clabutils.CreateFuncs()).
+		Parse(tmpl)
+}
+
+// addDefaultConfig adds sros default configuration such as tls certs, gnmi/json-rpc, login-banner,
+// ssh keys.
+func (n *sros) addDefaultConfig() error {
+	// Prepare all template data
+	tplData, err := n.prepareConfigTemplateData()
+	if err != nil {
+		return err
+	}
+
+	// Select appropriate template
+	srosCfgTpl, err := n.selectConfigTemplate(tplData)
+	if err != nil {
+		return fmt.Errorf("failed to select config template: %w", err)
+	}
+	log.Debug("Prepare SR OS config template", "template", srosCfgTpl.Name(),
+		"node", n.Cfg.LongName,
+		"configuration-mode", tplData.ConfigurationMode,
+		"node-type", tplData.NodeType,
+		"secure-grpc", tplData.IsSecureGrpc,
+		"sw-version", tplData.SwVersion)
+
+	// Execute template
 	buf := new(bytes.Buffer)
 	err = srosCfgTpl.Execute(buf, tplData)
 	if err != nil {
 		return err
 	}
-	if buf.Len() == 0 {
-		log.Warn("Buffer empty, template parsing error", "node", n.Cfg.ShortName, "template", srosCfgTpl.Name())
-	} else {
-		log.Debug("Additional default config parsed", "node", n.Cfg.ShortName, "template", srosCfgTpl.Name())
-		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
-	}
 
-	err = n.addPartialConfig()
-	if err != nil {
-		return err
+	if buf.Len() == 0 {
+		log.Warn(
+			"Buffer empty, template parsing error",
+			"node", n.Cfg.ShortName,
+			"template", srosCfgTpl.Name(),
+		)
+	} else {
+		log.Debug("Additional default config parsed",
+			"node", n.Cfg.ShortName,
+			"template", srosCfgTpl.Name())
+		n.startupCliCfg = append(n.startupCliCfg, buf.String()...)
 	}
 
 	return nil
@@ -836,7 +1296,7 @@ func (n *sros) addPartialConfig() error {
 		// b holds the configuration to be applied to the node
 		b := &bytes.Buffer{}
 		// apply partial configs if partial config is used
-		if isPartialConfigFile(n.Cfg.StartupConfig) && n.isCPM("") {
+		if clabutils.IsPartialConfigFile(n.Cfg.StartupConfig) && n.isCPM("") {
 			log.Info("Adding configuration",
 				"node", n.Cfg.LongName,
 				"type", "partial",
@@ -854,25 +1314,29 @@ func (n *sros) addPartialConfig() error {
 				return err
 			}
 
-			configContent, err := utils.SubstituteEnvsAndTemplate(b, n.Cfg)
+			configContent, err := clabutils.SubstituteEnvsAndTemplate(b, n.Cfg)
 			if err != nil {
 				return err
 			}
 			if configContent.Len() == 0 {
-				log.Warn("Buffer empty, PARTIAL config template parsing error", "node", n.Cfg.ShortName)
+				log.Warn(
+					"Buffer empty, PARTIAL config template parsing error",
+					"node",
+					n.Cfg.ShortName,
+				)
 			} else {
 				log.Debug("Additional PARTIAL config parsed", "node",
 					n.Cfg.ShortName, "partial-config", configContent.String())
 				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
 			}
 		} else {
-			log.Warn("Passed startup-config optio, but it will not have any effect", "node", n.Cfg.ShortName)
+			log.Warn("Passed startup-config option, but it will not have any effect", "node", n.Cfg.ShortName)
 		}
 	}
 	return nil
 }
 
-func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
+func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error) {
 	// if not a distributed setup call regular GetContainers
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetContainers(ctx)
@@ -884,7 +1348,7 @@ func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, e
 	}
 	containerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
 
-	cnts, err := n.Runtime.ListContainers(ctx, []*types.GenericFilter{
+	cnts, err := n.Runtime.ListContainers(ctx, []*clabtypes.GenericFilter{
 		{
 			FilterType: "name",
 			Match:      containerName,
@@ -896,7 +1360,24 @@ func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, e
 	// check that we retrieved some container information
 	// otherwise throw ErrContainersNotFound error
 	if len(cnts) == 0 {
-		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(), nodes.ErrContainersNotFound)
+		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(),
+			clabnodes.ErrContainersNotFound)
+	}
+
+	// Forge the IP address to be the actual IP of mgmt
+	// because the CPM A might not own the netns & mgmt IP
+	if len(n.Cfg.Components) > 0 {
+		ips, err := n.distNodeMgmtIPs()
+		if err == nil {
+			if ips.IPv4 != "" {
+				cnts[0].NetworkSettings.IPv4addr = ips.IPv4
+				cnts[0].NetworkSettings.IPv4pLen = ips.IPv4pLen
+			}
+			if ips.IPv6 != "" {
+				cnts[0].NetworkSettings.IPv6addr = ips.IPv6
+				cnts[0].NetworkSettings.IPv6pLen = ips.IPv6pLen
+			}
+		}
 	}
 
 	return cnts, err
@@ -905,8 +1386,13 @@ func (n *sros) GetContainers(ctx context.Context) ([]runtime.GenericContainer, e
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
-func (n *sros) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
-	hosts, err := n.Runtime.GetHostsPath(ctx, n.Cfg.LongName)
+func (n *sros) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node) error {
+	containerName := n.Cfg.LongName
+	if n.isDistributedBaseNode() && n.cpmContainerName != "" {
+		containerName = n.cpmContainerName
+	}
+
+	hosts, err := n.Runtime.GetHostsPath(ctx, containerName)
 	if err != nil {
 		log.Warn("Unable to locate SR OS node /etc/hosts file", "node", n.Cfg.ShortName, "err", err)
 		return err
@@ -950,7 +1436,7 @@ func (n *sros) populateHosts(ctx context.Context, nodes map[string]nodes.Node) e
 }
 
 func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
-	captureGroups, err := utils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
+	captureGroups, err := clabutils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
 	if err != nil {
 		return "", err
 	}
@@ -964,10 +1450,20 @@ func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
 			foundIndices[indexKey] = true
 			parsedIndices[indexKey], err = strconv.Atoi(index)
 			if err != nil {
-				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %s index %q could not be cast to an integer",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
 			if parsedIndices[indexKey] < 1 {
-				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 1", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %q index %q does not match requirement >= 1",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
 		} else {
 			foundIndices[indexKey] = false
@@ -976,19 +1472,29 @@ func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
 
 	// Card, MDA and port are present
 	if foundIndices["card"] && foundIndices["mda"] && foundIndices["port"] {
-		if foundIndices["xiom"] && foundIndices["connector"] {
-			// XIOM and connector are present, format will be: e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
-			return fmt.Sprintf("e%d-x%d-%d-c%d-%d", parsedIndices["card"],
-				parsedIndices["xiom"], parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"]), nil
-		} else if foundIndices["xiom"] {
+		switch {
+		case foundIndices["xiom"] && foundIndices["connector"]:
+			// XIOM and connector are present, format will be: e1-x2-3-c4-5 -> card 1, xiom 2, mda
+			// 3, connector 4, port 5
+			return fmt.Sprintf(
+				"e%d-x%d-%d-c%d-%d",
+				parsedIndices["card"],
+				parsedIndices["xiom"],
+				parsedIndices["mda"],
+				parsedIndices["connector"],
+				parsedIndices["port"],
+			), nil
+
+		case foundIndices["xiom"]:
 			// Only XIOM present, format will be: e1-x2-3-4 -> card 1, xiom 2, mda 3, port 4
 			return fmt.Sprintf("e%d-x%d-%d-%d", parsedIndices["card"],
 				parsedIndices["xiom"], parsedIndices["mda"], parsedIndices["port"]), nil
-		} else if foundIndices["connector"] {
-			// Only connector present, format will be: e1-2-c3-4 -> card 1, mda 2, connector 3, port 4
+		case foundIndices["connector"]:
+			// Only connector present, format will be: e1-2-c3-4 -> card 1, mda 2, connector 3, port
+			// 4
 			return fmt.Sprintf("e%d-%d-c%d-%d", parsedIndices["card"],
 				parsedIndices["mda"], parsedIndices["connector"], parsedIndices["port"]), nil
-		} else {
+		default:
 			// No XIOM or connector present, format will be: e1-2-3 -> card 1, mda 2, port 3
 			return fmt.Sprintf("e%d-%d-%d", parsedIndices["card"],
 				parsedIndices["mda"], parsedIndices["port"]), nil
@@ -1000,7 +1506,7 @@ func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *sros) CheckInterfaceName() error {
-	nm := strings.ToLower(n.Cfg.NetworkMode)
+	nm := n.Cfg.NetworkMode
 
 	err := n.CheckInterfaceOverlap()
 	if err != nil {
@@ -1009,24 +1515,59 @@ func (n *sros) CheckInterfaceName() error {
 
 	for _, e := range n.Endpoints {
 		if !MappedInterfaceRegexp.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern: %s", e.GetIfaceName(), n.InterfaceHelp)
+			return fmt.Errorf(
+				"nokia SR OS interface name %q doesn't match the required pattern: %s",
+				e.GetIfaceName(),
+				n.InterfaceHelp,
+			)
 		}
 
 		if e.GetIfaceName() == "eth0" && nm != "none" {
-			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+			return fmt.Errorf(
+				"eth0 interface name is not allowed for %s node when network mode is not set to none",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 
 	return nil
 }
 
-func (n *sros) SaveConfig(_ context.Context) error {
-	// s.Cfg.MgmtIPv4Address
-	addr, err := n.MgmtIPAddr()
-	if err != nil {
-		return err
+func (n *sros) SaveConfig(ctx context.Context) error {
+	fqdn := ""
+	switch {
+	case n.isStandaloneNode():
+		// check if it is a cpm node. return without error if not
+		if !n.isCPM("") {
+			return nil
+		}
+		// if it is a standalone node use the fqdn
+		fqdn = n.Cfg.Fqdn
+	case n.isDistributedBaseNode():
+		// if it is the
+		cmpNode, err := n.cpmNode()
+		if err != nil {
+			return err
+		}
+		// delegate to cpm node
+		return cmpNode.SaveConfig(ctx)
+	case n.isDistributedCardNode():
+		// check if it is a cpm node. return without error if not
+		if !n.isCPM("") {
+			return nil
+		}
+		fqdn = n.Cfg.LongName
 	}
-	err = netconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
+	return n.saveConfigWithAddr(ctx, fqdn)
+}
+
+// saveConfigWithAddr will use the addr string to try to save the config of the node.
+func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
+	if n.isConfigClassic() {
+		cmd := []string{"/admin save", "/bof persist on", "/bof save"}
+		return n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
+	}
+	err := clabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
@@ -1035,30 +1576,177 @@ func (n *sros) SaveConfig(_ context.Context) error {
 		return err
 	}
 
-	log.Info("Saved running configuration", "node", n.Cfg.LongName)
+	log.Info(
+		"Saved running configuration",
+		"node",
+		n.Cfg.ShortName,
+		"addr",
+		addr,
+		"config-mode",
+		n.Cfg.Env[envSrosConfigMode],
+	)
 
 	return nil
 }
 
-// isPartialConfigFile returns true if the config file name contains .partial substring.
-func isPartialConfigFile(c string) bool {
-	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
+// BuildPKIImportXML.
+func buildPKIImportXML(inputURL, outputFile, importType string) string {
+	action := etree.NewElement("action")
+	action.CreateAttr("xmlns", "urn:ietf:params:xml:ns:yang:1")
+
+	admin := action.CreateElement("admin")
+	admin.CreateAttr("xmlns", "urn:nokia.com:sros:ns:yang:sr:oper-admin")
+
+	importElem := admin.CreateElement("system").
+		CreateElement("security").
+		CreateElement("pki").
+		CreateElement("import")
+
+	// Add import parameters
+	importElem.CreateElement("input-url").SetText(inputURL)
+	importElem.CreateElement("output-file").SetText(outputFile)
+	importElem.CreateElement("type").SetText(importType)
+	importElem.CreateElement("format").SetText("pem")
+	var buf bytes.Buffer
+	action.WriteTo(&buf, &etree.WriteSettings{
+		CanonicalText:    false,
+		CanonicalAttrVal: false,
+	})
+	return buf.String()
+}
+
+// BuildTLSProfileXML builds the TLS profile configuration XML.
+func buildTLSProfileXML() string {
+	config := etree.NewElement("config")
+	configure := config.CreateElement("configure")
+	configure.CreateAttr("xmlns", "urn:nokia.com:sros:ns:yang:sr:conf")
+	configure.CreateAttr("xmlns:nc", "urn:ietf:params:xml:ns:netconf:base:1.0")
+
+	certProfile := configure.CreateElement("system").
+		CreateElement("security").
+		CreateElement("tls").
+		CreateElement("cert-profile")
+
+	// Set operation attribute
+	certProfile.CreateAttr("nc:operation", "merge")
+
+	// Add profile configuration
+	certProfile.CreateElement("cert-profile-name").SetText(tlsCertProfileName)
+	certProfile.CreateElement("admin-state").SetText("enable")
+
+	var buf bytes.Buffer
+	config.WriteTo(&buf, &etree.WriteSettings{
+		CanonicalText:    false,
+		CanonicalAttrVal: false,
+	})
+	return buf.String()
+}
+
+// TLS bootstrap via NETCONF to enable secure gRPC.
+func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
+	// Always import PKI key and cert:
+	// 	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
+	//   import "cf3:\node.crt" in PEM format as "cf3:\system-pki\node.crt" (encrypted DER)
+	operations := []clabnetconf.Operation{
+		func(d *netconf.Driver) (*response.NetconfResponse, error) {
+			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
+				fmt.Sprintf("cf3:/%s", tlsKeyFile), tlsKeyFile, "key")))
+		},
+		func(d *netconf.Driver) (*response.NetconfResponse, error) {
+			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
+				fmt.Sprintf("cf3:/%s", tlsCertFile), tlsCertFile, "certificate")))
+		},
+	}
+
+	// Activate cert-profile in MD is via NETCONF, in Classic mode is via SSH
+	//  enable enables cert-profile "clab-grpc-certs" administratively
+	cmd := []string{}
+	if n.isConfigClassic() {
+		cmd = append(
+			cmd,
+			fmt.Sprintf(
+				"/configure system security tls cert-profile %s no shutdown",
+				tlsCertProfileName,
+			),
+		)
+	} else {
+		operations = append(operations,
+			func(d *netconf.Driver) (*response.NetconfResponse, error) {
+				return d.EditConfig("candidate", buildTLSProfileXML())
+			},
+			func(d *netconf.Driver) (*response.NetconfResponse, error) {
+				return d.Commit()
+			},
+		)
+	}
+
+	err := clabnetconf.MultiExec(
+		fmt.Sprintf("[%s]", addr),
+		defaultCredentials.GetUsername(),
+		defaultCredentials.GetPassword(),
+		operations,
+	)
+	if len(cmd) > 0 && n.isConfigClassic() {
+		err := n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
+// isConfigClassic returns true if the env var for configuration contains "mixed" or "classic"
+// strings.
+func (n *sros) isConfigClassic() bool {
+	cfgMode := strings.ToLower(n.Cfg.Env[envSrosConfigMode])
+	return cfgMode == "classic" || cfgMode == "mixed"
+}
+
+// isFullConfigFile returns true if the config file doesn't contain .partial substring
+// and the config file is NOT nil (ie. startup config IS defined).
+// it is intended that the 'c' arg is n.Cfg.StartupConfig.
+func isFullConfigFile(c string) bool {
+	return c != "" && !clabutils.IsPartialConfigFile(c)
 }
 
 func (n *sros) IsHealthy(_ context.Context) (bool, error) {
 	if !n.isCPM("") {
 		return true, fmt.Errorf("node %q is not a CPM, healthcheck has no effect", n.Cfg.LongName)
 	}
+	// non-partial user startup config might not have any netconf config
+	// so we shouldn't check for this.
+	if isFullConfigFile(n.Cfg.StartupConfig) {
+		log.Debug(
+			"node has full startup config, skipping NETCONF check",
+			"kind",
+			n.Cfg.Kind,
+			"node",
+			n.Cfg.ShortName,
+		)
+		return true, nil
+	}
 	addr, err := n.MgmtIPAddr()
 	if err != nil {
 		return false, err
 	}
-	log.Debug("Checking netconf connection", "node", n.Cfg.LongName, "addr", fmt.Sprintf("%q:830", addr))
+	log.Debug(
+		"Checking netconf connection",
+		"node",
+		n.Cfg.LongName,
+		"addr",
+		fmt.Sprintf("%q:830", addr),
+	)
 	return CheckPortWithRetry(addr, 830, readyTimeout, 5, retryTimer)
 }
 
 // CheckPortWithRetry checks if a port is open with retry logic.
-func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries int, retryDelay time.Duration) (bool, error) {
+func CheckPortWithRetry(
+	host string,
+	port int,
+	timeout time.Duration,
+	maxRetries int,
+	retryDelay time.Duration,
+) (bool, error) {
 	var lastErr error
 
 	for i := range maxRetries {
@@ -1078,14 +1766,282 @@ func CheckPortWithRetry(host string, port int, timeout time.Duration, maxRetries
 	return false, lastErr
 }
 
+// MgmtIP represents the management IPv4/v6 addresses of a node.
+type MgmtIP struct {
+	IPv4     string
+	IPv4pLen int
+	IPv6     string
+	IPv6pLen int
+}
+
+// distNodeMgmtIPs returns both ipv4 and ipv6 management IP address of a
+// distributed node defined via components.
+// It returns an error if neither is set in the node config.
+func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
+	ips := MgmtIP{}
+
+	var components []*clabtypes.Component
+
+	if n.isDistributedBaseNode() {
+		components = n.Cfg.Components
+	} else {
+		components = n.rootComponents
+	}
+
+	// for distributed nodes, get the IP from the
+	// 0th component container
+	if len(components) > 0 {
+		c := components[0]
+		slot := c.Slot
+
+		componentName := n.Cfg.LongName + "-" + slot
+
+		containers, err := n.Runtime.ListContainers(
+			context.Background(),
+			[]*clabtypes.GenericFilter{
+				{
+					FilterType: "name",
+					Match:      componentName,
+				},
+			},
+		)
+		if err != nil {
+			return MgmtIP{}, fmt.Errorf("unable to get container %q: %v", componentName, err)
+		}
+
+		for _, container := range containers {
+			if container.NetworkSettings.IPv4addr != "" {
+				ips.IPv4 = container.NetworkSettings.IPv4addr
+				ips.IPv4pLen = container.NetworkSettings.IPv4pLen
+
+			}
+			if container.NetworkSettings.IPv6addr != "" {
+				ips.IPv6 = container.NetworkSettings.IPv6addr
+				ips.IPv6pLen = container.NetworkSettings.IPv6pLen
+			}
+		}
+	}
+
+	return ips, nil
+}
+
+// custom override for hosts file entry to write basename when using component nodes.
+func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error) {
+	result, err := n.DefaultNode.GetHostsEntries(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if n.isDistributedBaseNode() {
+		ips, err := n.distNodeMgmtIPs()
+		if err != nil {
+			return clabtypes.HostEntries{}, err
+		}
+
+		if ips.IPv4 != "" { // v4
+			result = append(result, clabtypes.NewHostEntry(
+				ips.IPv4,
+				n.Cfg.LongName,
+				clabtypes.IpVersionV4,
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+		}
+
+		if ips.IPv6 != "" {
+			result = append(result, clabtypes.NewHostEntry(
+				ips.IPv6,
+				n.Cfg.LongName,
+				clabtypes.IpVersionV6,
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+		}
+	}
+
+	return result, nil
+}
+
 // MgmtIPAddr returns ipv4 or ipv6 management IP address of the node.
 // It returns an error if neither is set in the node config.
 func (n *sros) MgmtIPAddr() (string, error) {
-	if n.Cfg.MgmtIPv4Address != "" {
-		return n.Cfg.MgmtIPv4Address, nil
-	} else if n.Cfg.MgmtIPv6Address != "" {
+	switch {
+	case n.Cfg.MgmtIPv6Address != "":
 		return n.Cfg.MgmtIPv6Address, nil
-	} else {
-		return n.Cfg.LongName, fmt.Errorf("no management IP address (IPv4 or IPv6) configured for node %q", n.Cfg.LongName)
+	case n.Cfg.MgmtIPv4Address != "":
+		return n.Cfg.MgmtIPv4Address, nil
+	}
+
+	if !n.isStandaloneNode() {
+		ips, err := n.distNodeMgmtIPs()
+		if err != nil {
+			return "", err
+		}
+
+		switch {
+		case ips.IPv6 != "":
+			return ips.IPv6, nil
+		case ips.IPv4 != "":
+			return ips.IPv4, nil
+		}
+	}
+
+	return n.Cfg.LongName, fmt.Errorf(
+		"no management IP address (IPv4 or IPv6) configured for node %q",
+		n.Cfg.LongName,
+	)
+}
+
+// generateComponentConfig generates SR OS configuration
+// for explicitly defined components using components nodeConfig.
+func (n *sros) generateComponentConfig() string {
+	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
+		return ""
+	}
+
+	// Skipping magic if using classic for NOW
+	if n.isConfigClassic() {
+		return ""
+	}
+
+	if n.isStandaloneNode() {
+		// skip integrated for now
+		return ""
+	}
+
+	components := n.rootComponents
+
+	if len(components) == 0 {
+		return ""
+	}
+
+	var config strings.Builder
+
+	for _, component := range components {
+		slot := strings.ToUpper(component.Slot)
+
+		if slot == "A" || slot == "B" {
+			// cpm -> skip
+			continue
+		}
+
+		if component.Type != "" {
+			config.WriteString(
+				fmt.Sprintf(
+					"/configure card %s card-type %s admin-state enable\n",
+					slot,
+					component.Type,
+				),
+			)
+		} else {
+			// not all types may have preprovisioned card
+			// so the following configs will fail if card
+			// doesn't have valid type explicitly set.
+			log.Warn("SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
+				"node",
+				n.Cfg.ShortName,
+				"slot",
+				slot)
+			continue
+		}
+
+		if component.SFM != "" {
+			config.WriteString(
+				fmt.Sprintf(
+					"/configure sfm %s sfm-type %s admin-state enable\n",
+					slot,
+					component.SFM,
+				),
+			)
+		}
+
+		for _, xiom := range component.XIOM {
+			if xiom.Type != "" {
+				config.WriteString(
+					fmt.Sprintf(
+						"/configure card %s xiom x%d xiom-type %s admin-state enable\n",
+						slot,
+						xiom.Slot,
+						xiom.Type,
+					),
+				)
+			}
+
+			for _, mda := range xiom.MDA {
+				if mda.Type != "" {
+					config.WriteString(
+						fmt.Sprintf(
+							"/configure card %s xiom x%d mda %d mda-type %s admin-state enable\n",
+							slot,
+							xiom.Slot,
+							mda.Slot,
+							mda.Type,
+						),
+					)
+				}
+			}
+		}
+
+		for _, mda := range component.MDA {
+			if mda.Type != "" {
+				config.WriteString(
+					fmt.Sprintf(
+						"/configure card %s mda %d mda-type %s admin-state enable\n",
+						slot,
+						mda.Slot,
+						mda.Type,
+					),
+				)
+			}
+		}
+	}
+
+	config.WriteString(n.generatePowerConfig())
+
+	return config.String()
+}
+
+// override to fetch CPM to avoid renaming the base node to CPM A.
+func (n *sros) GetContainerName() string {
+	if n.isDistributedBaseNode() && n.cpmContainerName != "" {
+		return n.cpmContainerName
+	}
+	return n.DefaultNode.GetContainerName()
+}
+
+// MonitorLogs monitors log output from the provided reader during the PostDeploy phase of SRSIM.
+// It scans each line for SR OS error messages (minor or critical) and logs them as warnings
+// The method checks for context cancellation on each line and returns immediately if the
+// context is cancelled.
+// Parameters:
+//   - ctx: context for cancellation; if cancelled, the method returns.
+//   - reader: io.ReadCloser providing log lines to scan.
+//   - exitChan: channel which will signal an error for postdeploy to skip.
+//
+// The method returns when the context is cancelled, when the reader is exhausted or if
+// it detects that SR OS rejected the config as per the const srosRejectedCfgMsg.
+func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan chan<- error) {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = clabutils.StripNonPrintChars(line)
+
+		if strings.Contains(line, srosMinorError) ||
+			strings.Contains(line, srosCriticalError) {
+			log.Warn(
+				"Got SR OS log message",
+				"node",
+				n.Cfg.ShortName,
+				"message",
+				line+"\n",
+			)
+		}
+
+		if strings.Contains(line, srosRejectedCfgMsg) {
+			exitChan <- errors.New("configuration rejected by SR OS")
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 	}
 }

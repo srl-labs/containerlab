@@ -43,7 +43,7 @@ A [topology definition deep-dive](manual/topo-def-file.md) document provides a c
 * The lab topology is defined under the `topology` element.
 * Topology is a set of [`nodes`](manual/nodes.md) and [`links`](manual/topo-def-file.md#links) between them.
 * The nodes are always of a certain [`kind`](manual/kinds/index.md). The `kind` defines the node configuration and behavior.
-* Containerlab supports a fixed number of `kinds`. In the example above, the `srl` and `ceos` are one of the [supported kinds](manual/kinds/index.md).
+* Containerlab supports a fixed number of `kinds`. In the example above, the `nokia_srlinux` and `arista_ceos` kinds are used from the [supported catalog](manual/kinds/index.md).
 * The actual [nodes](manual/nodes.md) of the topology are defined in the `nodes` section which holds a map of node names. In the example above, nodes with names `srl` and `ceos` are defined.
 * Node elements must have a `kind` parameter to indicate which kind this node belongs to. Under the nodes section you typically provide node-specific parameters. This lab uses a node-specific parameters - [`image`](manual/nodes.md#image).  
 * `nodes` are interconnected with `links`. Each `link` is [defined](manual/topo-def-file.md#links) by a set of `endpoints`.
@@ -151,8 +151,8 @@ A:srl#
 
 /// note
 For each supported kind we document the management interfaces and the ways to leverage them.  
-For example, `srl` kind documentation [provides](manual/kinds/srl.md) the commands to leverage SSH and gNMI interfaces.  
-`ceos` kind has its own [instructions](manual/kinds/ceos.md).
+For example, `nokia_srlinux` kind documentation [provides](manual/kinds/srl.md) the commands to leverage SSH and gNMI interfaces.  
+`arista_ceos` kind has its own [instructions](manual/kinds/ceos.md).
 ///
 
 The following tab view aggregates the ways to get CLI access per the lab node:
@@ -195,6 +195,10 @@ sudo containerlab destroy
 To get a broader view on the containerlab features and components, refer to the **User manual** section.
 
 Do not forget to check out the [Lab examples](lab-examples/lab-examples.md) section where we provide complete and ready-to-run topology definition files. This is a great starting point to explore containerlab by doing.
+
+## Command Line Reference
+
+Containerlab CLI has a rich set of commands and flags. Check out the [**Command reference**](cmd/deploy.md) section to get familiar with all the commands and their usage.
 
 [^1]: For other installation options such as package managers, manual binary downloads or instructions to get containerlab for non-RHEL/Debian distros, refer to the [installation guide](install.md).
 

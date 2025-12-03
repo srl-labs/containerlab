@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -30,19 +31,29 @@ const (
 var clabTmpDir = filepath.Join(os.TempDir(), ".clab")
 
 // TopoPaths creates all the required absolute paths and filenames for a topology.
-// generally all these paths are deduced from two main paths. The topology file path and the lab dir path.
+// generally all these paths are deduced from two main paths. The topology file path and the lab
+// dir path.
 type TopoPaths struct {
-	topoFile           string
-	labDir             string
-	topoName           string
-	externalCACertFile string // if an external CA certificate is used the path to the Cert file is stored here
-	externalCAKeyFile  string // if an external CA certificate is used the path to the Key file is stored here
+	topoFile string
+	varsFile string
+	labDir   string
+	topoName string
+	// if an external CA certificate is used the path to the Cert file is stored here
+	externalCACertFile string
+	// if an external CA certificate is used the path to the Key file is stored here
+	externalCAKeyFile string
 }
 
 // NewTopoPaths constructs a new TopoPaths instance.
-func NewTopoPaths(topologyFile string) (*TopoPaths, error) {
+func NewTopoPaths(topologyFile, varsFile string) (*TopoPaths, error) {
 	t := &TopoPaths{}
+
 	err := t.SetTopologyFilePath(topologyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	err = t.SetTopologyVarsFilePath(varsFile)
 	if err != nil {
 		return nil, err
 	}
@@ -68,39 +79,68 @@ func (t *TopoPaths) SetTopologyFilePath(topologyFile string) error {
 	return nil
 }
 
-func (t *TopoPaths) SetLabDir(p string) (err error) {
-	if !utils.DirExists(p) {
-		return fmt.Errorf("folder %s does not exist or is not accessible", p)
+// SetTopologyVarsFilePath sets the topology vars path.
+func (t *TopoPaths) SetTopologyVarsFilePath(varsFile string) error {
+	if varsFile == "" {
+		return nil
 	}
-	t.labDir = p
+
+	absVarsFile, err := filepath.Abs(varsFile)
+	if err != nil {
+		return err
+	}
+
+	// make sure vars file exists
+	_, err = os.Stat(absVarsFile)
+	if err != nil {
+		return err
+	}
+
+	t.varsFile = absVarsFile
+
 	return nil
 }
 
-// SetLabDirByPrefix sets the labDir foldername (no abs path, but the last element) usually the topology name.
+func (t *TopoPaths) SetLabDir(p string) (err error) {
+	if !clabutils.DirExists(p) {
+		return fmt.Errorf("folder %s does not exist or is not accessible", p)
+	}
+
+	t.labDir = p
+
+	return nil
+}
+
+// SetLabDirByPrefix sets the labDir foldername (no abs path, but the last element) usually the
+// topology name.
 func (t *TopoPaths) SetLabDirByPrefix(topologyName string) (err error) {
 	t.topoName = topologyName
+
 	// if "CLAB_LABDIR_BASE" Env Var is set, use that dir as a base
 	// for the labDir, otherwise use dir where topology clab file is.
 	baseDir := os.Getenv("CLAB_LABDIR_BASE")
 	if baseDir == "" {
 		baseDir = t.TopologyFileDir()
 	}
+
 	// construct the path
 	t.labDir = filepath.Join(baseDir, labDirPrefix+topologyName)
+
 	return nil
 }
 
-// SetExternalCaFiles sets the paths for the cert and key files if externally generated should be used.
+// SetExternalCaFiles sets the paths for the cert and key files if externally generated should be
+// used.
 func (t *TopoPaths) SetExternalCaFiles(certFile, keyFile string) error {
 	// resolve the provided paths to external CA files
-	certFile = utils.ResolvePath(certFile, t.TopologyFileDir())
-	keyFile = utils.ResolvePath(keyFile, t.TopologyFileDir())
+	certFile = clabutils.ResolvePath(certFile, t.TopologyFileDir())
+	keyFile = clabutils.ResolvePath(keyFile, t.TopologyFileDir())
 
-	if !utils.FileExists(certFile) {
+	if !clabutils.FileExists(certFile) {
 		return fmt.Errorf("external CA cert file %s does not exist", certFile)
 	}
 
-	if !utils.FileExists(keyFile) {
+	if !clabutils.FileExists(keyFile) {
 		return fmt.Errorf("external CA key file %s does not exist", keyFile)
 	}
 
@@ -138,7 +178,7 @@ func (t *TopoPaths) GraphDir() string {
 // GraphFilename returns the filename for a given graph file with the provided extension.
 func (t *TopoPaths) GraphFilename(ext string) string {
 	// add `.` to the extension if not provided
-	if len(ext) > 0 && !strings.HasPrefix(ext, ".") {
+	if ext != "" && !strings.HasPrefix(ext, ".") {
 		ext = "." + ext
 	}
 
@@ -170,11 +210,16 @@ func (t *TopoPaths) TopologyFilenameAbsPath() string {
 	return t.topoFile
 }
 
-// ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or downloaded files.
-// Creates the directory if it does not exist.
+// VarsFilenameAbsPath returns the absolute path to the topology vars file.
+func (t *TopoPaths) VarsFilenameAbsPath() string {
+	return t.varsFile
+}
+
+// ClabTmpDir returns the path to the temporary directory where clab stores temporary and/or
+// downloaded files. Creates the directory if it does not exist.
 func (*TopoPaths) ClabTmpDir() string {
-	if !utils.DirExists(clabTmpDir) {
-		utils.CreateDirectory(clabTmpDir, 0o755)
+	if !clabutils.DirExists(clabTmpDir) {
+		clabutils.CreateDirectory(clabTmpDir, clabconstants.PermissionsDirDefault)
 	}
 
 	return clabTmpDir
@@ -184,8 +229,8 @@ func (*TopoPaths) ClabTmpDir() string {
 // Creates the directory if it does not exist.
 func (t *TopoPaths) ClabBakDir() string {
 	d := filepath.Join(t.ClabTmpDir(), backupDirName)
-	if !utils.DirExists(d) {
-		utils.CreateDirectory(d, 0o755)
+	if !clabutils.DirExists(d) {
+		clabutils.CreateDirectory(d, clabconstants.PermissionsDirDefault)
 	}
 
 	return d
@@ -221,7 +266,8 @@ func (t *TopoPaths) TopologyFileIsSet() bool {
 	return t.topoFile != ""
 }
 
-// TopologyBakFileAbsPath returns the backup topology file name in /tmp/.clab directory with a timestamp prefix.
+// TopologyBakFileAbsPath returns the backup topology file name in /tmp/.clab directory with a
+// timestamp prefix.
 func (t *TopoPaths) TopologyBakFileAbsPath() string {
 	ts := time.Now().Format("060102_150405") // YYMMDD_HHMMSS
 	return filepath.Join(t.ClabBakDir(), ts+"_"+t.TopologyFilenameBase())

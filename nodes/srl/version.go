@@ -5,109 +5,37 @@ import (
 	"os"
 	"regexp"
 
+	_ "embed"
+
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/utils"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"
 )
 
-const (
-	snmpv2Config = `set / system snmp access-group SNMPv2-RO-Community security-level no-auth-no-priv community-entry RO-Community community public
-set / system snmp network-instance mgmt admin-state enable`
+//go:embed version_configs/snmpv2.cfg
+var snmpv2Config string
 
-	snmpv2ConfigPre24_3 = `set / system snmp community public
-set / system snmp network-instance mgmt admin-state enable`
+//go:embed version_configs/snmpv2_pre24_3.cfg
+var snmpv2ConfigPre24_3 string
 
-	// grpcConfigPre24_3 contains the gnmi server configuration for srlinux versions < 24.3.
-	grpcConfigPre24_3 = `set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile clab-profile
-set / system gnmi-server rate-limit 65000
-set / system gnmi-server trace-options [ request response common ]
-set / system gnmi-server unix-socket admin-state enable`
+//go:embed version_configs/grpc_pre24_3.cfg
+var grpcConfigPre24_3 string
 
-	// aclConfig contains the ACL configuration for srlinux versions >= 24.3 to enable
-	// non secure telnet and http access to the router which are useful for labs.
-	aclConfig = `set / acl acl-filter cpm type ipv4 entry 88 description "Containerlab-added rule: Accept incoming Telnet when the other host initiates the TCP connection"
-set / acl acl-filter cpm type ipv4 entry 88 match ipv4 protocol tcp
-set / acl acl-filter cpm type ipv4 entry 88 match transport source-port operator eq
-set / acl acl-filter cpm type ipv4 entry 88 match transport source-port value 23
-set / acl acl-filter cpm type ipv4 entry 88 action accept
+//go:embed version_configs/acl.cfg
+var aclConfig string
 
-set / acl acl-filter cpm type ipv4 entry 98 description "Containerlab-added rule: Accept incoming Telnet when this router initiates the TCP connection"
-set / acl acl-filter cpm type ipv4 entry 98 match ipv4 protocol tcp
-set / acl acl-filter cpm type ipv4 entry 98 match transport destination-port operator eq
-set / acl acl-filter cpm type ipv4 entry 98 match transport destination-port value 23
-set / acl acl-filter cpm type ipv4 entry 98 action accept
+//go:embed version_configs/grpc.cfg
+var grpcConfig string
 
-set / acl acl-filter cpm type ipv4 entry 158 description "Containerlab-added rule: Accept incoming HTTP(JSON-RPC) when the other host initiates the TCP connection"
-set / acl acl-filter cpm type ipv4 entry 158 match ipv4 protocol tcp
-set / acl acl-filter cpm type ipv4 entry 158 match transport destination-port operator eq
-set / acl acl-filter cpm type ipv4 entry 158 match transport destination-port value 80
-set / acl acl-filter cpm type ipv4 entry 158 action accept
+//go:embed version_configs/netconf.cfg
+var netconfConfig string
 
-set / acl acl-filter cpm type ipv6 entry 128 description "Containerlab-added rule: Accept incoming Telnet when the other host initiates the TCP connection"
-set / acl acl-filter cpm type ipv6 entry 128 match ipv6 next-header tcp
-set / acl acl-filter cpm type ipv6 entry 128 match transport source-port operator eq
-set / acl acl-filter cpm type ipv6 entry 128 match transport source-port value 23
-set / acl acl-filter cpm type ipv6 entry 128 action accept
+//go:embed version_configs/oc.cfg
+var ocServerConfig string
 
-set / acl acl-filter cpm type ipv6 entry 138 description "Containerlab-added rule: Accept incoming Telnet when this router initiates the TCP connection"
-set / acl acl-filter cpm type ipv6 entry 138 match ipv6 next-header tcp
-set / acl acl-filter cpm type ipv6 entry 138 match transport destination-port operator eq
-set / acl acl-filter cpm type ipv6 entry 138 match transport destination-port value 23
-set / acl acl-filter cpm type ipv6 entry 138 action accept
-
-set / acl acl-filter cpm type ipv6 entry 188 description "Containerlab-added rule: Accept incoming HTTP(JSON-RPC) when the other host initiates the TCP connection"
-set / acl acl-filter cpm type ipv6 entry 188 match ipv6 next-header tcp
-set / acl acl-filter cpm type ipv6 entry 188 match transport destination-port operator eq
-set / acl acl-filter cpm type ipv6 entry 188 match transport destination-port value 80
-set / acl acl-filter cpm type ipv6 entry 188 action accept`
-
-	// grpc contains the grpc server(s) configuration for srlinux versions >= 24.3.
-	// It consists of the gNMI, gNOI, gNSI, gRIBI, and p4RT services enabled on the `mgmt`
-	// grpc server instance with a custom TLS profile.
-	// And in addition to the TLS secured services, the `insecure-mgmt` server instance
-	// is created that provides the same services but without TLS.
-	grpcConfig = `set / system grpc-server mgmt services [ gnmi gnoi gnsi gribi p4rt ]
-set / system grpc-server mgmt tls-profile clab-profile
-set / system grpc-server mgmt rate-limit 65000
-set / system grpc-server mgmt network-instance mgmt
-set / system grpc-server mgmt trace-options [ request response common ]
-set / system grpc-server mgmt unix-socket admin-state enable
-set / system grpc-server mgmt admin-state enable
-delete / system grpc-server mgmt default-tls-profile
-
-set / system grpc-server insecure-mgmt services [ gnmi gnoi gnsi gribi p4rt ]
-set / system grpc-server insecure-mgmt port 57401
-set / system grpc-server insecure-mgmt rate-limit 65000
-set / system grpc-server insecure-mgmt network-instance mgmt
-set / system grpc-server insecure-mgmt trace-options [ request response common ]
-set / system grpc-server insecure-mgmt unix-socket admin-state enable
-set / system grpc-server insecure-mgmt admin-state enable
-
-# ACL rules allowing incoming tcp/57401 for the insecure-mgmt grpc server
-set / acl acl-filter cpm type ipv4 entry 358 description "Containerlab-added rule: Accept incoming gRPC over port 57401 for the insecure-mgmt gRPC server"
-set / acl acl-filter cpm type ipv4 entry 358 match ipv4 protocol tcp
-set / acl acl-filter cpm type ipv4 entry 358 match transport destination-port operator eq
-set / acl acl-filter cpm type ipv4 entry 358 match transport destination-port value 57401
-set / acl acl-filter cpm type ipv4 entry 358 action accept
-
-set / acl acl-filter cpm type ipv6 entry 368 description "Containerlab-added rule: Accept incoming gRPC over port 57401 for the insecure-mgmt gRPC server"
-set / acl acl-filter cpm type ipv6 entry 368 match ipv6 next-header tcp
-set / acl acl-filter cpm type ipv6 entry 368 match transport destination-port operator eq
-set / acl acl-filter cpm type ipv6 entry 368 match transport destination-port value 57401
-set / acl acl-filter cpm type ipv6 entry 368 action accept`
-
-	netconfConfig = `set / system netconf-server mgmt admin-state enable ssh-server mgmt-netconf
-set / system ssh-server mgmt-netconf admin-state enable
-set / system ssh-server mgmt-netconf network-instance mgmt
-set / system ssh-server mgmt-netconf port 830
-set / system ssh-server mgmt-netconf disable-shell true
-`
-
-	ocServerConfig = `set / system management openconfig admin-state enable`
-
-	ndkServerConfig = `set / system ndk-server admin-state enable`
-)
+//go:embed version_configs/ndk.cfg
+var ndkServerConfig string
 
 // SrlVersion represents an sr linux version as a set of fields.
 type SrlVersion struct {
@@ -122,7 +50,9 @@ type SrlVersion struct {
 // by executing the "info from state /system information version | grep version" command
 // and parsing the output.
 func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
-	cmd, _ := exec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
+	cmd, _ := clabexec.NewExecCmdFromString(
+		`sr_cli -d "info from state /system information version | grep version"`,
+	)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
@@ -136,11 +66,13 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 }
 
 func (*srl) parseVersionString(s string) *SrlVersion {
-	re, _ := regexp.Compile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
+	re := regexp.MustCompile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
 
 	v := re.FindStringSubmatch(s)
+
+	const versionMatchGroups = 6
 	// 6 matches must be returned if all goes well
-	if len(v) != 6 {
+	if len(v) != versionMatchGroups {
 		// return all zeroes if failed to parse
 		return &SrlVersion{"0", "0", "0", "0", "0"}
 	}
@@ -153,7 +85,8 @@ func (v *SrlVersion) String() string {
 	return "v" + v.Major + "." + v.Minor + "." + v.Patch + "-" + v.Build + "-" + v.Commit
 }
 
-// MajorMinorSemverString returns a string representation of the major.minor version with a leading v.
+// MajorMinorSemverString returns a string representation of the major.minor version with a leading
+// v.
 func (v *SrlVersion) MajorMinorSemverString() string {
 	return "v" + v.Major + "." + v.Minor
 }
@@ -168,7 +101,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
 	// so we add the keys to the template data for rendering.
 	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.Major == "0") {
-		tplData.SSHPubKeys = utils.MarshalAndCatenateSSHPubKeys(n.sshPubKeys)
+		tplData.SSHPubKeys = clabutils.MarshalAndCatenateSSHPubKeys(n.sshPubKeys)
 	}
 
 	// in srlinux >= v24.3+ we add ACL rules to enable http and telnet access

@@ -5,7 +5,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // LinkHostRaw is the raw (string) representation of a host link as defined in the topology file.
@@ -41,7 +42,7 @@ func hostLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkHostRaw, erro
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -62,6 +63,10 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	link := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,
 	}
+
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	// resolve and populate the endpoint
 	ep, err := r.Endpoint.Resolve(params, link)
 	if err != nil {
@@ -71,7 +76,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
 	}
 
-	hostEp.MAC, err = utils.GenMac(ClabOUI)
+	hostEp.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +88,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil

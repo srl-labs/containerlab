@@ -1,12 +1,14 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // FindTopoFileByPath takes a topology path, which might be the path to a directory
@@ -43,7 +45,12 @@ func FindTopoFileByPath(path string) (string, error) {
 				filenames = append(filenames, filepath.Base(match))
 			}
 
-			return "", fmt.Errorf("found multiple topology definitions [ %s ] in a given directory %q. Provide the specific filename", strings.Join(filenames, ", "), path)
+			return "", fmt.Errorf(
+				"found multiple topology definitions [ %s ] in a given directory %q. "+
+					"Provide the specific filename",
+				strings.Join(filenames, ", "),
+				path,
+			)
 		}
 	}
 
@@ -56,7 +63,8 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 		return "", err
 	}
 
-	err = utils.CopyFile(url, tmpFile.Name(), 0o644)
+	err = clabutils.CopyFile(context.Background(), url, tmpFile.Name(),
+		clabconstants.PermissionsFileDefault)
 
 	return tmpFile.Name(), err
 }

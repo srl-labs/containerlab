@@ -1027,6 +1027,137 @@ func TestDivFunc(t *testing.T) {
 	}
 }
 
+func TestIdivFunc(t *testing.T) {
+	tests := map[string]struct {
+		a, b   any
+		want   any
+		errStr string
+	}{
+		// Examples:
+		// idiv(10, 2) = 5 (10 / 2 = 5)
+		// idiv(7, 3) = 2 (7 / 3 = 2, truncates remainder)
+		// idiv(7.9, 3) = 2 (7.9 converts to 7, then 7 / 3 = 2)
+		// idiv(-10, 3) = -3 (-10 / 3 = -3 in integer division)
+		// idiv(10, 0) = error: division by 0
+		"divide two positive ints": {
+			a:    10,
+			b:    2,
+			want: int64(5),
+		},
+		"divide with remainder truncation": {
+			a:    7,
+			b:    3,
+			want: int64(2),
+		},
+		"divide negative dividend": {
+			a:    -10,
+			b:    3,
+			want: int64(-3),
+		},
+		"divide by negative divisor": {
+			a:    10,
+			b:    -3,
+			want: int64(-3),
+		},
+		"divide two negatives": {
+			a:    -10,
+			b:    -3,
+			want: int64(3),
+		},
+		"divide zero by number": {
+			a:    0,
+			b:    5,
+			want: int64(0),
+		},
+		"divide by zero": {
+			a:      5,
+			b:      0,
+			errStr: "division by 0",
+		},
+		"divide string numbers": {
+			a:    "10",
+			b:    "2",
+			want: int64(5),
+		},
+		"divide float numbers (truncated)": {
+			a:    7.9,
+			b:    3.1,
+			want: int64(2), // 7 / 3 = 2
+		},
+		"divide float by int": {
+			a:    9.0,
+			b:    2,
+			want: int64(4),
+		},
+		"divide int by float": {
+			a:    9,
+			b:    2.0,
+			want: int64(4),
+		},
+		"divide bool true by int": {
+			a:    true,
+			b:    2,
+			want: int64(0), // true = 1, 1 / 2 = 0
+		},
+		"divide int by bool true": {
+			a:    5,
+			b:    true,
+			want: int64(5), // 5 / 1 = 5
+		},
+		"divide bool false by int": {
+			a:    false,
+			b:    2,
+			want: int64(0), // false = 0, 0 / 2 = 0
+		},
+		"divide int by bool false": {
+			a:      5,
+			b:      false,
+			errStr: "division by 0",
+		},
+		"divide invalid string": {
+			a:      "foo",
+			b:      2,
+			errStr: "expected a number",
+		},
+		"divide int by invalid string": {
+			a:      2,
+			b:      "bar",
+			errStr: "expected a number",
+		},
+		"divide nil by int": {
+			a:      nil,
+			b:      2,
+			errStr: "expected a number",
+		},
+		"divide int by nil": {
+			a:      2,
+			b:      nil,
+			errStr: "expected a number",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := idiv(tc.a, tc.b)
+			if tc.errStr != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.errStr)
+				}
+				if !strings.Contains(err.Error(), tc.errStr) {
+					t.Fatalf("expected error containing %q, got %q", tc.errStr, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Fatalf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestRemFunc(t *testing.T) {
 	tests := map[string]struct {
 		a, b   any
@@ -1127,6 +1258,113 @@ func TestRemFunc(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.want, got); diff != "" {
 				t.Fatalf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestNetCIDRHost(t *testing.T) {
+	tests := map[string]struct {
+		hostnum any
+		prefix  any
+		want    string
+		err     string
+	}{
+		"basic IPv4 host": {
+			hostnum: 16,
+			prefix:  "10.12.127.0/20",
+			want:    "10.12.112.16",
+		},
+		"IPv4 host with larger number": {
+			hostnum: 268,
+			prefix:  "10.12.127.0/20",
+			want:    "10.12.113.12",
+		},
+		"IPv6 host": {
+			hostnum: 34,
+			prefix:  "fd00:fd12:3456:7890:00a2::/72",
+			want:    "fd00:fd12:3456:7890::22",
+		},
+		"first host in subnet": {
+			hostnum: 0,
+			prefix:  "192.168.1.0/24",
+			want:    "192.168.1.0",
+		},
+		"last host in /24 subnet": {
+			hostnum: 255,
+			prefix:  "192.168.1.0/24",
+			want:    "192.168.1.255",
+		},
+		"host number as string": {
+			hostnum: "10",
+			prefix:  "10.0.0.0/16",
+			want:    "10.0.0.10",
+		},
+		"prefix as string": {
+			hostnum: 5,
+			prefix:  "172.16.0.0/12",
+			want:    "172.16.0.5",
+		},
+		"negative host number": {
+			hostnum: -1,
+			prefix:  "10.0.0.0/24",
+			want:    "10.0.0.255",
+		},
+		"negative host number second to last": {
+			hostnum: -2,
+			prefix:  "10.0.0.0/24",
+			want:    "10.0.0.254",
+		},
+		"host number exceeds subnet size": {
+			hostnum: 256,
+			prefix:  "192.168.1.0/24",
+			err:     "does not accommodate a host numbered",
+		},
+		"invalid prefix format": {
+			hostnum: 1,
+			prefix:  "invalid",
+			err:     "netip.ParsePrefix",
+		},
+		"non-numeric hostnum": {
+			hostnum: "invalid",
+			prefix:  "10.0.0.0/24",
+			err:     "expected a number",
+		},
+		"large IPv6 host number": {
+			hostnum: 1000,
+			prefix:  "2001:db8::/32",
+			want:    "2001:db8::3e8",
+		},
+		"/32 subnet (single host)": {
+			hostnum: 0,
+			prefix:  "192.168.1.1/32",
+			want:    "192.168.1.1",
+		},
+		"small subnet /30": {
+			hostnum: 2,
+			prefix:  "192.168.1.0/30",
+			want:    "192.168.1.2",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			nf := &NetFuncs{}
+			got, err := nf.CIDRHost(tc.hostnum, tc.prefix)
+			if tc.err != "" {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.err)
+				}
+				if !strings.Contains(err.Error(), tc.err) {
+					t.Fatalf("expected error containing %q, got %q", tc.err, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !cmp.Equal(got, tc.want) {
+				t.Fatalf("wanted %v, got %v", tc.want, got)
 			}
 		})
 	}

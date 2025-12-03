@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: dell_sonic
+kind_display_name: Dell Enterprise SONiC
 ---
-# Dell Enterprise SONiC
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- VM is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-Dell Enterprise SONiC VM is identified with `dell_sonic` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 ## Managing Dell SONiC nodes
 

@@ -6,15 +6,15 @@ name: 03-01-two-ceos
 
 topology:
   kinds:
-    ceos:
+    arista_ceos:
       image: ceos:4.32.0F
       env:
         CLAB_MGMT_VRF: MGMT
   nodes:
     n1:
-      kind: ceos
+      kind: arista_ceos
     n2:
-      kind: ceos
+      kind: arista_ceos
       mgmt-ipv4: 172.20.20.22
 
   links:

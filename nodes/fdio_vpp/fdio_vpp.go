@@ -15,10 +15,11 @@ import (
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -35,7 +36,7 @@ const (
 
 var (
 	kindNames          = []string{"fdio_vpp"}
-	defaultCredentials = nodes.NewCredentials("root", "vpp")
+	defaultCredentials = clabnodes.NewCredentials("root", "vpp")
 	saveCmd            = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
 
 	// vppStartupConfigTpl is the template for the vpp startup config itself
@@ -45,17 +46,21 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		nil,
+	)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(fdio_vpp)
 	}, nrea)
 }
 
 type fdio_vpp struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
@@ -66,9 +71,9 @@ type fdio_vpp struct {
 	vppCfgSrcPath string
 }
 
-func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *fdio_vpp) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
 	// Containers are run in privileged mode so it should not matter now
@@ -113,12 +118,12 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *fdio_vpp) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	nodeCfg := n.Config()
 
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
-	utils.CreateFile(n.ifWaitSrcPath, utils.IfWaitScript)
-	os.Chmod(n.ifWaitSrcPath, 0o777)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+	clabutils.CreateFile(n.ifWaitSrcPath, clabutils.IfWaitScript)
+	os.Chmod(n.ifWaitSrcPath, clabconstants.PermissionsOpen)
 
 	// record pubkeys extracted by clab
 	// with the vpp struct
@@ -152,13 +157,13 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) e
 }
 
 func (n *fdio_vpp) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
+	if execResult.GetStdErrString() != "" {
 		return fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
 	}
 
@@ -173,18 +178,21 @@ func (n *fdio_vpp) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 	for _, e := range n.Endpoints {
 		if e.GetIfaceName() == "eth0" && nm != "none" {
-			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+			return fmt.Errorf(
+				"eth0 interface name is not allowed for %s node when network mode is not set to none",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 	return nil
 }
 
-func (n *fdio_vpp) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *fdio_vpp) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	// add public keys extracted by containerlab from the host
 	// to the vpp's root linux user authorized keys
 	// to enable passwordless ssh
-	keys := strings.Join(utils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
-	execCmd := exec.NewExecCmdFromSlice([]string{
+	keys := strings.Join(clabutils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
+	execCmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", keys, targetAuthzKeysPath),
 	})

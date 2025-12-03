@@ -22,6 +22,13 @@ Juniper cJunosEvolved nodes launched with containerlab can be provisioned to ena
 
 The container image can be freely downloaded from the [Juniper support portal](https://support.juniper.net/support/downloads/?p=cjunos-evolved) without a Juniper account. Type cJunosEvolved in the `Find a Product` search box.
 
+Once downloaded, load the Docker image:
+
+```bash
+# load cJunosEvolved container image, shows up as cjunosevolved:25.2R1.8-EVO in docker images
+sudo docker load -i cJunosEvolved-25.2R1.8-EVO.tar.gz
+```
+
 ## Managing Juniper cJunosEvolved nodes
 
 /// note
@@ -48,7 +55,7 @@ cJunosEvolved has to be fully booted before this succeeds.
 docker exec -ti <container-name> cli
 ```
 A sample output of above command is shown here. Once the system is ready and configurable,
-the CLI prompt will be shown and the user can then make login and make additional configuraion changes:
+the CLI prompt will be shown and the user can then make login and make additional configuration changes:
 ```bash
 # docker exec -ti clab-srlcjunosevo-cevo cli
   System is not yet ready...
@@ -76,7 +83,7 @@ Default user credentials: `admin:admin@123`
 
 You can refer to the following document for details of the interface mapping (https://www.juniper.net/documentation/product/us/en/cjunosevolved/)
 
-The default unchannelized interface mode is described here. This provides 36 interfaces for BX and 12 for BT flavors of cJunosEvolved. The channelized mode provides 144 interfaces for BX and 72 for BT. The mapping for all of these is described in the Juniper deployment document referenced above.
+The default unchannelized interface mode is described here. This provides 36 interfaces for BX and 12 for BT flavors of cJunosEvolved. The interface mapping is described in the Juniper deployment document referenced above.
 
 The Linux host side interfaces are mapped to the JunosEvolved CLI notation as described in the document. To summarize:
 
@@ -139,4 +146,5 @@ The following labs feature the Juniper cJunosEvolved node:
 
 ## Known issues and limitations
 
-* To check the boot log, use `docker logs -f <node-name>`
+* The [cJunosEvolved Deployment Guide](https://www.juniper.net/documentation/us/en/software/cjunos-evolved/cjunos-evolved-docker/topics/cjunos-evolved-understand.html#concept_lyl_nml_cxb) lists the product limitations.
+* Channelized interfaces are not supported for cJunosEvolved Containerlab deployments.

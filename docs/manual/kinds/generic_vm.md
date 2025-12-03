@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: generic_vm
+kind_display_name: Generic VM
 ---
-# Generic VM
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+It is built using [vrnetlab](../vrnetlab.md) project and offers containerlab users to launch arbitrary VMs that are packaged in a container using vrnetlab.
 
-Generic VM is identified with `generic_vm` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and offers containerlab users to launch arbitrary VMs that are packaged in a container using vrnetlab.
 
 A typical use case for this kind is to launch a regular Linux VM such as Ubuntu, AlmaLinux, Redhat, etc. The term generic here means that containerlab does not provide any specific configuration for the VM, it just launches the VM and it is up to a user to confiugre it further.
 
@@ -12,7 +15,7 @@ A typical use case for this kind is to launch a regular Linux VM such as Ubuntu,
 
 To build a docker container for a generic VM you will need to download a `qcow2` VM image for your distribution.
 
-For Ubuntu images use [hellt/vrnetlab/ubuntu](https://github.com/hellt/vrnetlab/tree/master/ubuntu) repository and the associated build instructions.
+For Ubuntu images use [srl-labs/vrnetlab/ubuntu](https://github.com/srl-labs/vrnetlab/tree/master/ubuntu) repository and the associated build instructions.
 
 ## Managing Linux VM nodes
 
@@ -54,7 +57,7 @@ You can also connect to the container and use `telnet localhost 5000` if telnet 
 
 ## Credentials
 
-Default credentials for the Generic VM nodes are `clab:clab@123`.
+Default credentials for the -{{ kind_display_name }}- nodes are `clab:clab@123`.
 
 ## Interfaces mapping
 

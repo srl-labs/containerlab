@@ -13,6 +13,8 @@ The exact command that performs configuration save depends on a given kind. The 
 | **Arista cEOS**    | `Cli -p 15 -c wr`                           |                                                         |
 | **Cisco IOL**      | `write memory`                              |                                                         |
 
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
+
 ### Usage
 
 `containerlab [global-flags] save [local-flags]`

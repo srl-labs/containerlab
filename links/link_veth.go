@@ -7,13 +7,14 @@ import (
 	"sync"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
 // LinkVEthRaw is the raw (string) representation of a veth link as defined in the topology file.
 type LinkVEthRaw struct {
-	LinkCommonParams `yaml:",inline"`
+	LinkCommonParams `               yaml:",inline"`
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
@@ -49,6 +50,9 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	l := NewLinkVEth()
 	l.LinkCommonParams = r.LinkCommonParams
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	l.Vars = normalizeVars(l.Vars)
+
 	// resolve raw endpoints (epr) to endpoints (ep)
 	for _, epr := range r.Endpoints {
 		ep, err := epr.Resolve(params, l)
@@ -62,7 +66,7 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if l.MTU == 0 {
-		l.MTU = DefaultLinkMTU
+		l.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return l, nil
@@ -83,9 +87,14 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 		},
 	}
 
+	// populate vars
+	if err := mapBriefVarsToEndpoints(lb, link.Endpoints); err != nil {
+		return nil, err
+	}
+
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -136,7 +145,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 	}
 
 	// disable TXOffloading
-	if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+	if err := clabutils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
 		return err
 	}
 
@@ -176,7 +185,7 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	}
 
 	// disable TXOffloading
-	if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+	if err := clabutils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
 		return err
 	}
 
@@ -217,7 +226,11 @@ func (l *LinkVEth) getEndpointIndex(ep Endpoint) (int, error) {
 		epStrings = append(epStrings, e.String())
 	}
 
-	return -1, fmt.Errorf("endpoint %s does not belong to link [ %s ]", ep.String(), strings.Join(epStrings, ", "))
+	return -1, fmt.Errorf(
+		"endpoint %s does not belong to link [ %s ]",
+		ep.String(),
+		strings.Join(epStrings, ", "),
+	)
 }
 
 // Deploy deploys the veth link by creating the A and B sides of the veth pair independently

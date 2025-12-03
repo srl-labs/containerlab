@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: comp-sort-mgmt
+
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R1
+
+  nodes:
+
+    sr14s:
+      kind: nokia_srsim
+      type: sr-14s
+      components:
+        - slot: A
+          type: cpm2-s
+          sfm: sfm2-s
+        - slot: 2
+          sfm: sfm2-s
+          type: xcm2-14s
+          mda:
+            - slot: 1
+              type: x2-s36-800g-qsfpdd-18.0t
+        - slot: B
+          type: cpm2-s
+          sfm: sfm2-s
+        - slot: 1
+          sfm: sfm2-s
+          type: xcm2-14s
+          mda:
+            - slot: 1
+              type: x2-s36-800g-qsfpdd-18.0t

@@ -9,7 +9,8 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 type GoGit struct {
@@ -56,7 +57,10 @@ func (g *GoGit) getDefaultBranch() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("unable to determine default branch for %q", g.gitRepo.GetCloneURL().String())
+	return "", fmt.Errorf(
+		"unable to determine default branch for %q",
+		g.gitRepo.GetCloneURL().String(),
+	)
 }
 
 func (g *GoGit) openRepo() error {
@@ -213,8 +217,8 @@ func (g *GoGit) cloneNonExisting() error {
 		co.ReferenceName = plumbing.NewBranchReferenceName(branchName)
 	}
 	// pre-create the repo directory and adjust the ACLs
-	utils.CreateDirectory(g.gitRepo.GetName(), 0o755)
-	err = utils.AdjustFileACLs(g.gitRepo.GetName())
+	clabutils.CreateDirectory(g.gitRepo.GetName(), clabconstants.PermissionsDirDefault)
+	err = clabutils.AdjustFileACLs(g.gitRepo.GetName())
 	if err != nil {
 		log.Warnf("failed to adjust repository (%s) ACLs. continuin anyways", g.gitRepo.GetName())
 	}

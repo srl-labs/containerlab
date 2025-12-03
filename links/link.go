@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/netip"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/uuid"
-	"github.com/srl-labs/containerlab/internal/slices"
-	"github.com/srl-labs/containerlab/nodes/state"
+	clabinternalslices "github.com/srl-labs/containerlab/internal/slices"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
@@ -17,8 +19,6 @@ import (
 type LinkDeploymentState uint8
 
 const (
-	DefaultLinkMTU = 9500
-
 	LinkDeploymentStateNotDeployed = iota
 	// LinkDeploymentStateHalfDeployed is a state in which one of the endpoints
 	// of the links finished deploying and the other one is not yet deployed.
@@ -29,15 +29,22 @@ const (
 
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
-	MTU             int                    `yaml:"mtu,omitempty"`
-	Labels          map[string]string      `yaml:"labels,omitempty"`
-	Vars            map[string]interface{} `yaml:"vars,omitempty"`
-	DeploymentState LinkDeploymentState    `yaml:",omitempty"`
+	MTU             int                 `yaml:"mtu,omitempty"`
+	Labels          map[string]string   `yaml:"labels,omitempty"`
+	IPv4            []string            `yaml:"ipv4,omitempty"`
+	IPv6            []string            `yaml:"ipv6,omitempty"`
+	Vars            map[string]any      `yaml:"vars,omitempty"`
+	DeploymentState LinkDeploymentState `yaml:",omitempty"`
 }
 
 // GetMTU returns the MTU of the link.
 func (l *LinkCommonParams) GetMTU() int {
 	return l.MTU
+}
+
+// GetVars returns the link-level vars.
+func (l *LinkCommonParams) GetVars() map[string]any {
+	return l.Vars
 }
 
 // LinkDefinition represents a link definition in the topology file.
@@ -101,8 +108,10 @@ var _ yaml.Unmarshaler = (*LinkDefinition)(nil)
 
 // UnmarshalYAML deserializes links passed via topology file into LinkDefinition struct.
 // It supports both the brief and specific link type notations.
-func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error { // skipcq: GO-R1005
-	// struct to avoid recursion when unmarshalling
+func (ld *LinkDefinition) UnmarshalYAML( //nolint: funlen
+	unmarshal func(any) error,
+) error { // skipcq: GO-R1005
+	// struct to avoid recursion when unmarshaling
 	// used only to unmarshal the type field.
 	var a struct {
 		Type string `yaml:"type"`
@@ -246,7 +255,7 @@ func (ld *LinkDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
 // As of now it falls back to converting the LinkConfig into a
 // RawVEthLink, such that the generated LinkConfigs adhere to the new LinkDefinition
 // format instead of the brief one.
-func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
+func (r *LinkDefinition) MarshalYAML() (any, error) {
 	switch r.Link.GetType() {
 	case LinkTypeHost:
 		x := struct {
@@ -313,7 +322,7 @@ func (r *LinkDefinition) MarshalYAML() (interface{}, error) {
 
 // RawLink is an interface that all raw link types must implement.
 // Raw link types define the links as they are defined in the topology file
-// and solely a product of unmarshalling.
+// and solely a product of unmarshaling.
 // Raw links are later "resolved" to concrete link types (e.g LinkVeth).
 type RawLink interface {
 	Resolve(params *ResolveParams) (Link, error)
@@ -333,9 +342,14 @@ type Link interface {
 	GetEndpoints() []Endpoint
 	// GetMTU returns the Link MTU.
 	GetMTU() int
+	// GetVars returns the link-level vars.
+	GetVars() map[string]any
 }
 
-func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, hostIf, node, nodeIf string, err error) {
+func extractHostNodeInterfaceData(
+	lb *LinkBriefRaw,
+	specialEPIndex int,
+) (host, hostIf, node, nodeIf string, err error) {
 	// the index of the node is the specialEndpointIndex +1  modulo 2
 	nodeindex := (specialEPIndex + 1) % 2
 
@@ -344,12 +358,18 @@ func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, h
 
 	if len(hostData) != 2 {
 		return "", "", "", "",
-			fmt.Errorf("invalid link endpoint format. expected <node>:<port>, got %s", lb.Endpoints[specialEPIndex])
+			fmt.Errorf(
+				"invalid link endpoint format. expected <node>:<port>, got %s",
+				lb.Endpoints[specialEPIndex],
+			)
 	}
 
 	if len(nodeData) != 2 {
 		return "", "", "", "",
-			fmt.Errorf("invalid link endpoint format. expected <node>:<port>, got %s", lb.Endpoints[nodeindex])
+			fmt.Errorf(
+				"invalid link endpoint format. expected <node>:<port>, got %s",
+				lb.Endpoints[nodeindex],
+			)
 	}
 
 	host = hostData[0]
@@ -357,7 +377,67 @@ func extractHostNodeInterfaceData(lb *LinkBriefRaw, specialEPIndex int) (host, h
 	node = nodeData[0]
 	nodeIf = nodeData[1]
 
+	log.Debugf(
+		"extractHostNodeInterfaceData: eps=%v specialIndex=%d -> host=%s hostIf=%s node=%s nodeIf=%s",
+		lb.Endpoints,
+		specialEPIndex,
+		host,
+		hostIf,
+		node,
+		nodeIf,
+	)
 	return host, hostIf, node, nodeIf, nil
+}
+
+func mapBriefVarsToEndpoints(lb *LinkBriefRaw, endpoints []*EndpointRaw) error {
+	if len(lb.LinkCommonParams.IPv4) > 0 {
+		if err := parseVarIPBrief("ipv4", lb.LinkCommonParams.IPv4, endpoints); err != nil {
+			return err
+		}
+	}
+
+	// Map IPv6 addresses from link-level to endpoints
+	if len(lb.LinkCommonParams.IPv6) > 0 {
+		if err := parseVarIPBrief("ipv6", lb.LinkCommonParams.IPv6, endpoints); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func parseVarIPBrief(af string, vals []string, endpoints []*EndpointRaw) error {
+	nVals := len(vals)
+
+	if nVals == 0 {
+		return nil
+	} else if nVals > len(endpoints) {
+		return fmt.Errorf("number of defined %s vars exceed number of endpoints", af)
+	}
+
+	for i, cidr := range vals {
+		cidr = strings.TrimSpace(cidr)
+		if cidr == "" {
+			// empty entry = no addr on this interface
+			continue
+		}
+		prefix, err := netip.ParsePrefix(cidr)
+		if err != nil {
+			return fmt.Errorf("endpoint %s var has invalid prefix %q (%v)", af, cidr, err)
+		}
+		switch af {
+		case "ipv4":
+			if !prefix.Addr().Is4() {
+				return fmt.Errorf("endpoint %s var has non-IPv4 prefix %q", af, prefix)
+			}
+			endpoints[i].IPv4 = cidr
+		case "ipv6":
+			if !prefix.Addr().Is6() {
+				return fmt.Errorf("endpoint %s var has non-IPv6 prefix %q", af, prefix)
+			}
+			endpoints[i].IPv6 = cidr
+		}
+	}
+	return nil
 }
 
 func genRandomIfName() string {
@@ -376,9 +456,11 @@ type Node interface {
 	// AddLinkToContainer adds a link to the node (container).
 	// In case of a regular container, it will push the link into the
 	// network namespace and then run the function f within the namespace
-	// this is to rename the link, set mtu, set the interface up, e.g. see link.SetNameMACAndUpInterface()
+	// this is to rename the link, set mtu, set the interface up, e.g. see
+	// link.SetNameMACAndUpInterface()
 	//
-	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make the bridge
+	// In case of a bridge node (ovs or regular linux bridge) it will take the interface and make
+	// the bridge
 	// the master of the interface and bring the interface up.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
 	// AddEndpoint adds the Endpoint to the node
@@ -387,7 +469,7 @@ type Node interface {
 	GetShortName() string
 	GetEndpoints() []Endpoint
 	ExecFunction(context.Context, func(ns.NetNS) error) error
-	GetState() state.NodeState
+	GetState() clabnodesstate.NodeState
 	Delete(ctx context.Context) error
 }
 
@@ -413,8 +495,8 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			}
 		} else {
 			// when the name is too long, we add a sanitized interface name as AltName
-			sanitisedIfaceName := SanitiseInterfaceName(endpt.GetIfaceName())
-			err := netlink.LinkAddAltName(l, sanitisedIfaceName)
+			sanitizedIfaceName := SanitizeInterfaceName(endpt.GetIfaceName())
+			err := netlink.LinkAddAltName(l, sanitizedIfaceName)
 			if err != nil {
 				return fmt.Errorf(
 					"failed to add altname: %v", err)
@@ -434,9 +516,9 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			if err != nil {
 				return err
 			}
-			// Set a sanitised altname for ease of access. '/', and ' ' are changed to '-'
-			sanitisedIfaceName := SanitiseInterfaceName(endpt.GetIfaceAlias())
-			err = netlink.LinkAddAltName(l, sanitisedIfaceName)
+			// Set a sanitized altname for ease of access. '/', and ' ' are changed to '-'
+			sanitizedIfaceName := SanitizeInterfaceName(endpt.GetIfaceAlias())
+			err = netlink.LinkAddAltName(l, sanitizedIfaceName)
 			if err != nil {
 				return err
 			}
@@ -489,7 +571,7 @@ func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
 	}
 
 	for _, e := range endpoints {
-		if !slices.Contains(params.NodesFilter, e.Node) {
+		if !clabinternalslices.Contains(params.NodesFilter, e.Node) {
 			return false
 		}
 	}
@@ -497,9 +579,9 @@ func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
 	return true
 }
 
-// SanitiseInterfaceName sanitises the interface name by replacing '/' and ' ' with '-'.
+// SanitizeInterfaceName sanitizes the interface name by replacing '/' and ' ' with '-'.
 // Making it suitable to write as AltName for the interface.
-func SanitiseInterfaceName(ifaceName string) string {
+func SanitizeInterfaceName(ifaceName string) string {
 	var sb strings.Builder
 	sb.Grow(len(ifaceName))
 

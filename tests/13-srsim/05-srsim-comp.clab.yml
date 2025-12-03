@@ -1,24 +1,24 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
 name: sr05
 
 topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license-sros25.txt
-      image: registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R1
   nodes:
     l1:
       kind: linux
-      image: alpine:latest
+      image: ghcr.io/srl-labs/network-multitool
       exec:
         - >
           ash -c '
-          apk add iproute2 &&
           ip l set dev eth1 up &&
           ip addr add dev eth1 10.0.0.1/30'
     sros:
       kind: nokia_srsim
       type: sr-1-92s
-      components: 
+      components:
         - slot: A
         - slot: 1
       startup-config: |
@@ -29,5 +29,86 @@ topology:
         /configure router "Base" interface "to-linux" port 1/1/c23/4:0
         /configure router "Base" interface "to-linux" ipv4 primary address 10.0.0.2
         /configure router "Base" interface "to-linux" ipv4 primary prefix-length 24
+
+    sr1-01:
+      kind: nokia_srsim
+      type: sr-1
+      components:
+        - slot: A # override integrated MDA explicit slot
+          mda:
+            - slot: 1
+              type: me12-100gb-qsfp28
+      startup-config: |
+        /configure card 1 admin-state enable
+        /configure card 1 card-type iom-1
+
+    sr1-02:
+      kind: nokia_srsim
+      type: sr-1
+      components:
+        - mda: # override integrated MDA implicit slot
+            - slot: 1
+              type: me12-100gb-qsfp28
+      startup-config: |
+        /configure card 1 admin-state enable
+        /configure card 1 card-type iom-1
+
+    sr1-03:
+      kind: nokia_srsim
+      type: sr-1
+      components:
+        - env:
+            NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # verify env MDA override on component
+          mda:
+            - slot: 1
+              type: me6-100gb-qsfp28
+      startup-config: |
+        /configure card 1 admin-state enable
+        /configure card 1 card-type iom-1
+
+    sr1-04:
+      kind: nokia_srsim
+      type: sr-1
+      env:
+        NOKIA_SROS_MDA_1: me12-100gb-qsfp28 # verify env MDA override on node config
+      components:
+        - mda:
+            - slot: 1
+              type: me6-100gb-qsfp28
+      startup-config: |
+        /configure card 1 admin-state enable
+        /configure card 1 card-type iom-1
+
+    sr2s-01:
+      kind: nokia_srsim
+      type: sr-2s
+      components:
+        - slot: A
+          sfm: sfm-2s
+        - slot: 1
+          sfm: sfm-2s
+          type: xcm-2s
+          xiom:
+            - slot: 1 # xiom 1/x1
+              type: iom-s-3.0t
+              mda:
+                - slot: 1 # mda 1/x1/1
+                  type: ms18-100gb-qsfp28
+      startup-config: |
+        /configure chassis router chassis-number 1 power-shelf 1 admin-state enable
+        /configure chassis router chassis-number 1 power-shelf 1 power-shelf-type ps-a4-shelf-dc
+        /configure chassis router chassis-number 1 power-shelf 1 power-module 1 admin-state enable
+        /configure chassis router chassis-number 1 power-shelf 1 power-module 1 power-module-type ps-a-dc-6000
+        /configure system power-management power-zone 1 mode none
+        /configure system power-management power-zone 1 power-safety-level 0
+        /configure sfm 1 admin-state enable
+        /configure sfm 1 sfm-type sfm-2s
+        /configure card 1 admin-state enable
+        /configure card 1 card-type xcm-2s
+        /configure card 1 xiom x1 admin-state enable
+        /configure card 1 xiom x1 xiom-type iom-s-3.0t
+        /configure card 1 xiom x1 mda 1 admin-state enable
+        /configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28
+
   links:
     - endpoints: ["l1:eth1", "sros:1/1/c23/4"]

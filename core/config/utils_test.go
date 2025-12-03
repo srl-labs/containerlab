@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/srl-labs/containerlab/types"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestFarEndIP(t *testing.T) {
@@ -67,33 +67,33 @@ func TestIPLastOctect(t *testing.T) {
 	}
 }
 
-func gettestLink() *types.Link {
-	return &types.Link{
-		A: &types.Endpoint{
-			Node: &types.NodeConfig{
+func gettestLink() *clabtypes.Link {
+	return &clabtypes.Link{
+		A: &clabtypes.Endpoint{
+			Node: &clabtypes.NodeConfig{
 				ShortName: "a",
-				Config: &types.ConfigDispatcher{
-					Vars: map[string]interface{}{
+				Config: &clabtypes.ConfigDispatcher{
+					Vars: map[string]any{
 						vkSystemIP: "10.0.0.1/32",
 					},
 				},
 			},
 		},
-		B: &types.Endpoint{
-			Node: &types.NodeConfig{
+		B: &clabtypes.Endpoint{
+			Node: &clabtypes.NodeConfig{
 				ShortName: "b",
-				Config: &types.ConfigDispatcher{
-					Vars: map[string]interface{}{
+				Config: &clabtypes.ConfigDispatcher{
+					Vars: map[string]any{
 						vkSystemIP: "10.0.0.2/32",
 					},
 				},
 			},
 		},
-		Vars: map[string]interface{}{},
+		Vars: map[string]any{},
 	}
 }
 
-func assert(t *testing.T, val, exp interface{}) {
+func assert(t *testing.T, val, exp any) {
 	if !cmp.Equal(val, exp) {
 		_, fn, line, _ := runtime.Caller(1)
 		t.Errorf("assert failed on line %v in %s\n%s", line, fn, cmp.Diff(val, exp))

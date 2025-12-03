@@ -1,41 +1,44 @@
 version: "2"
 linters:
-  enable:
-    - asciicheck
-    - bodyclose
-    - dogsled
-    - godot
-    - godox
-    - goprintffuncname
-    - govet
-    - ineffassign
-    - importas
-    - nakedret
-    - nolintlint
-    - staticcheck
-    - unconvert
-    - unparam
-    - unused
-    - whitespace
+  default: all
   disable:
-    # disabling for *now* so ci can pass nicely, but (some?) of these likely should be adressed
+    # disabling for *now* so ci can pass nicely, but (some?) of these likely should be addressed
+    - contextcheck
+    - cyclop
+    - depguard
     - dupl
+    - embeddedstructfieldcheck
+    - err113
     - errcheck
+    - errorlint
     - exhaustive
-    - funlen
+    - exhaustruct
+    - exptostd
+    - forbidigo
+    - forcetypeassert
+    - funcorder
+    - gochecknoglobals
     - gocognit
-    - goconst
-    - gocritic
     - gocyclo
+    - gomoddirectives
     - gosec
-    - lll
-    - misspell
-    - mnd
+    - ireturn
+    - musttag
     - nestif
-    - noctx
-    - prealloc
+    - nilnil
+    - nlreturn
+    - noinlineerr
+    - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
+    - perfsprint
     - revive
-    - wsl_v5
+    - tagliatelle
+    - testpackage
+    - usetesting
+    - varnamelen
+    - wrapcheck
+    - wsl # deprecated, wsl_v5 included in all ofc
   settings:
     dupl:
       threshold: 100
@@ -44,14 +47,10 @@ linters:
       statements: 50
     goconst:
       min-len: 2
-      min-occurrences: 2
+      min-occurrences: 3
     gocritic:
       disabled-checks:
-        - dupImport
-        - ifElseChain
-        - octalLiteral
         - whyNoLint
-        - wrapperFunc
       enabled-tags:
         - diagnostic
         - experimental
@@ -70,12 +69,13 @@ linters:
             - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
     importas:
       alias:
-        # we can add more layers here (containerlab$1$2 etc.) as we tidy/get more consistent
         - pkg: github.com/srl-labs/containerlab/(\w+)
-          alias: containerlab$1
-      # imo this should be enforced as well, and anything we want to alias should be defined
-      # here for consistency
-      # no-extra-aliases: true
+          alias: clab$1
+        - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)
+          alias: clab$1$2
+        - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)/(\w+)
+          alias: clab$1$2$3
+      no-unaliased: true
     lll:
       line-length: 100
     misspell:
@@ -85,38 +85,55 @@ linters:
       require-specific: false
       allow-unused: false
   exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
     rules:
+      # we *care* about tests, but... like less :P
       - linters:
           - mnd
+          - dupl
+          - lll
+          - goconst
+          - funlen
         path: _test\.go
+      # its nice to be explicit, this feels less explicit
       - linters:
           - staticcheck
-        # its nice to be explicit, this feels less explicit
         text: could remove embedded field
+      # ssh bits have a lot of mnd that is pretty clear what it is for/doing, so just ignore
+      - linters:
+          - mnd
+        path: core/config/transport/
+    # slowly enforcing things, excluding these packages (for now!)
     paths:
-      - third_party$
-      - builtin$
-      - examples$
+      - cert
+      - exec
+      - git
+      - internal
+      - links
+      - mocks
+      - netconf
+      # - nodes
+      - runtime
+      - utils
+      - virt
+    # slowly adding linters to the nodes
+    paths-except:
+      - "nodes/cisco_sdwan"
+      - "nodes/srl"
+    warn-unused: true
 formatters:
   enable:
     - gofmt
     - goimports
+    - golines
   settings:
     goimports:
       local-prefixes:
         - github.com/golangci/golangci-lint
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    golines:
+      # default line length is 100
+      # Shorten single-line comments.
+      shorten-comments: true
+      reformat-tags: false
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

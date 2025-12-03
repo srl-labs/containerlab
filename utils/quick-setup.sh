@@ -10,8 +10,14 @@ function check_os {
         . /etc/os-release
         if [ "$ID" = "debian" ]; then
             DISTRO_TYPE="debian"
+            if [ "$VERSION_ID" = "13" ]; then
+                DOCKER_VERSION="28.5.2"
+            fi
         elif [ "$ID" = "ubuntu" ]; then
             DISTRO_TYPE="ubuntu"
+            if [ "$VERSION_ID" = "25.04" ]; then
+                DOCKER_VERSION="28.5.2"
+            fi
         elif [ "$ID" = "fedora" ]; then
             DISTRO_TYPE="fedora"
         elif [[ "$ID" = "rocky" || "$ID" = "rhel" || "$ID" = "centos" || "$ID" = "almalinux" ]]; then
@@ -51,7 +57,7 @@ function install-docker-debian {
     sudo apt-get update -y
     sudo apt-get install -y ca-certificates curl
     sudo install -m 0755 -d /etc/apt/keyrings
-    sudo curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+    sudo -E curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
     sudo chmod a+r /etc/apt/keyrings/docker.asc
 
     # Add the repository to Apt sources:
@@ -75,7 +81,7 @@ function install-docker-ubuntu {
     sudo apt-get update -y
     sudo apt-get install -y ca-certificates curl
     sudo install -m 0755 -d /etc/apt/keyrings
-    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo -E curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     sudo chmod a+r /etc/apt/keyrings/docker.asc
 
     # Add the repository to Apt sources:
@@ -87,7 +93,7 @@ function install-docker-ubuntu {
 
     DOCKER_PKG_NAME=$(apt-cache madison docker-ce | awk '{ print $3 }' | grep ${DOCKER_VERSION} | head -n 1)
 
-    sudo apt-get -y install docker-ce=${DOCKER_PKG_NAME} docker-ce-cli=${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo apt-get -y install docker-ce=${DOCKER_PKG_NAME} docker-ce-cli=${DOCKER_PKG_NAME} containerd.io docker-buildx-plugin docker-compose-plugin  --allow-downgrades
 }
 
 function install-docker-rhel {
