@@ -3,8 +3,7 @@ package mermaid
 import (
 	"fmt"
 	"io"
-
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 // A very minimalistic Mermaid flowchart generator

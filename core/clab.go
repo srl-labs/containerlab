@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -28,7 +29,6 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/exp/slices"
 )
 
 var ErrNodeNotFound = errors.New("node not found")
