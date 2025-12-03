@@ -5,9 +5,9 @@ kind_code_name: cisco_xrd
 kind_display_name: Cisco XRd
 ---
 # -{{ kind_display_name }}-
+
 [-{{ kind_display_name }}-](https://www.cisco.com/c/en/us/support/routers/ios-xrd/series.html) Network OS is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 A kind defines a supported feature set and a startup procedure of a node.
-
 
 XRd comes in two [variants](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-xrd-images-where-can-one-get-them/#xrd-form-factors):
 
@@ -65,10 +65,10 @@ There are several management interfaces supported by XRd nodes:
     `ssh clab@<container-name>`  
     Password: `clab@123`
 === "gNMI"
-    gNMI server runs on `57400` port in the insecure mode (no TLS).  
+    gNMI server runs on `9339` port in the insecure mode (no TLS).  
     Using [gnmic](https://gnmic.openconfig.net) gNMI client as an example:
     ```bash
-    gnmic -a <container-name/node-mgmt-address>:57400 --insecure \
+    gnmic -a <container-name/node-mgmt-address>:9339 --insecure \
       -u clab -p clab@123 \
       capabilities
     ```
