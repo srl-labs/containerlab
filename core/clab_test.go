@@ -7,6 +7,7 @@ package core
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -18,7 +19,6 @@ import (
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"go.uber.org/mock/gomock"
-	"golang.org/x/exp/slices"
 )
 
 // getNodeMap return a map of nodes for testing purpose.

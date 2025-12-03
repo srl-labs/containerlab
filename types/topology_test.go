@@ -1,11 +1,11 @@
 package types
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	clabutils "github.com/srl-labs/containerlab/utils"
-	"golang.org/x/exp/slices"
 )
 
 var topologyTestSet = map[string]struct {

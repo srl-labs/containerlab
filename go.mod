@@ -47,7 +47,6 @@ require (
 	github.com/weaveworks/ignite v0.10.0
 	go.uber.org/mock v0.5.0
 	golang.org/x/crypto v0.43.0
-	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329
 	golang.org/x/sys v0.37.0
 	golang.org/x/term v0.36.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -155,6 +154,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.56.0 // indirect
 	go.opentelemetry.io/otel/metric v1.31.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	golang.org/x/exp v0.0.0-20250103183323-7d7fa50e5329 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250102185135-69823020774d // indirect
 	sigs.k8s.io/knftables v0.0.18 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
