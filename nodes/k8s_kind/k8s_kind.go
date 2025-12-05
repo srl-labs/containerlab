@@ -95,6 +95,12 @@ func (n *k8s_kind) Deploy(_ context.Context, _ *clabnodes.DeployParams) error {
 		n.Cfg.Extras.K8sKind.Deploy != nil {
 		opts := n.Cfg.Extras.K8sKind.Deploy
 
+		// Sets the explicit --kubeconfig path
+		if opts.KubeconfigPath != nil {
+			clusterCreateOptions = append(clusterCreateOptions,
+				cluster.CreateWithKubeconfigPath(*opts.KubeconfigPath))
+		}
+
 		// Override the default wait duration
 		if opts.Wait != nil {
 			duration, err := time.ParseDuration(*opts.Wait)
