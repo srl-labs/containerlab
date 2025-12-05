@@ -115,6 +115,8 @@ topology:
       extras:
         k8s_kind:
           deploy:
+            # Corresponds to --kubeconfig option.
+            kubeconfig: ./kubeconfig
             # Corresponds to --wait option. Wait given duration until the cluster becomes ready.
             wait: 0s
 ```
