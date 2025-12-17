@@ -679,6 +679,16 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 	}
 
 	cfg.Labels[clabconstants.Owner] = owner
+
+	gitBranch, gitHash := c.getGitInfo()
+
+	if gitBranch != "none" {
+		cfg.Labels[clabconstants.GitBranch] = gitBranch
+		if gitHash != "none" {
+			cfg.Labels[clabconstants.GitHash] = gitHash
+		}
+	}
+
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
@@ -792,46 +802,48 @@ func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
 	)
 }
 
-// magicVarReplacer returns a string replacer that replaces all supported magic variables.
+// magicTopoNameReplacer returns a string replacer that replaces all git branch variables in the topology name.
 func (c *CLab) magicTopoNameReplacer() *strings.Replacer {
-	gitBranch := "none"
-	gitHash := "none"
 
-	repo, err := gogit.PlainOpen(c.TopoPaths.TopologyFileDir())
-	if err != nil {
+	gitBranch, gitHash := c.getGitInfo()
+
+	if gitHash == "none" && gitBranch == "none" {
 		log.Warnf("topology name uses git variables, but no Git repository found at %q - variables will be replaced with 'none'", c.TopoPaths.TopologyFileDir())
-		return strings.NewReplacer(
-			gitBranchVar, gitBranch,
-			gitHashVar, gitHash,
-		)
 	}
-
-	repoHead, err := repo.Head()
-	if err != nil {
-		log.Warn("no commits have been made yet on the current topology Git branch - hash will be 'none'")
-		// Try symbolic head
-		symbolicHead, err := repo.Storer.Reference(plumbing.HEAD)
-		if err != nil || symbolicHead.Type() != plumbing.SymbolicReference {
-			log.Error("could not get information about the head of Git repository while resolving topology git variables")
-			return strings.NewReplacer(
-				gitBranchVar, gitBranch,
-				gitHashVar, gitHash,
-			)
-		}
-		gitBranch = strings.TrimPrefix(symbolicHead.Target().String(), "refs/heads/")
-	} else {
-		gitBranch = repoHead.Name().Short()
-		gitHash = repoHead.Hash().String()
-
-	}
-
-	log.Debugf("Git repo variables will be the following: branch: %q hash: %q", gitBranch, gitHash)
 
 	// Replace illegal characters in branch name
-	gitBranch = strings.Replace(gitBranch, "/", "-", -1)
+	gitBranch = strings.ReplaceAll(gitBranch, "/", "-")
+
+	log.Debugf("Git repo variables will be the following: branch: %q hash: %q", gitBranch, gitHash)
 
 	return strings.NewReplacer(
 		gitBranchVar, gitBranch,
 		gitHashVar, gitHash,
 	)
+}
+
+func (c *CLab) getGitInfo() (string, string) {
+	gitBranch := "none"
+	gitHash := "none"
+
+	repo, err := gogit.PlainOpen(c.TopoPaths.TopologyFileDir())
+	if err != nil {
+		return gitBranch, gitHash
+	}
+
+	repoHead, err := repo.Head()
+	if err != nil {
+		// Try symbolic head
+		symbolicHead, err := repo.Storer.Reference(plumbing.HEAD)
+		if err != nil || symbolicHead.Type() != plumbing.SymbolicReference {
+			log.Error("could not get information about the head of Git repository while resolving topology git variables")
+			return gitBranch, gitHash
+		}
+		gitBranch = strings.TrimPrefix(symbolicHead.Target().String(), "refs/heads/")
+	} else {
+		gitBranch = repoHead.Name().Short()
+		gitHash = repoHead.Hash().String()
+	}
+
+	return gitBranch, gitHash
 }
