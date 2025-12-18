@@ -74,7 +74,7 @@ func (r *PodmanRuntime) createContainerSpec(
 		Remove:     utils.Pointer(false),
 	}
 	// Storage, image and mounts
-	mounts, err := r.convertMounts(ctx, cfg.Binds)
+	mounts, err := r.convertMounts(ctx, cfg.Binds, cfg.Volumes)
 	if err != nil {
 		log.Errorf("Cannot convert mounts %v: %v", cfg.Binds, err)
 		mounts = nil
@@ -287,35 +287,55 @@ func (r *PodmanRuntime) createContainerSpec(
 	return sg, nil
 }
 
-// convertMounts takes a list of filesystem mount binds in docker/clab format (src:dest:options)
-// and converts it into an opencontainers spec format.
-func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs.Mount, error) {
-	if len(mounts) == 0 {
+// convertMounts takes a list of host bind mounts and volumes in docker/clab format (src:dest:options)
+// and converts them into an opencontainers spec format.
+func (*PodmanRuntime) convertMounts(_ context.Context, binds []string, volumes []string) ([]specs.Mount, error) {
+	if len(binds) == 0 && len(volumes) == 0 {
 		return nil, nil
 	}
-	mntSpec := make([]specs.Mount, len(mounts))
-	// Note: we don't do any input validation here
-	for i, mnt := range mounts {
-		mntSplit := strings.SplitN(mnt, ":", 3)
-
-		if len(mntSplit) == 1 {
-			return nil, fmt.Errorf("%w: %s", errInvalidBind, mnt)
+	mntSpec := make([]specs.Mount, 0, len(binds)+len(volumes))
+	// Note: we don't do any options input validation here
+	for _, mnt := range binds {
+		bind, err := types.NewBindFromString(mnt)
+		if err != nil {
+			return nil, err
 		}
 
-		mntSpec[i] = specs.Mount{
-			Destination: mntSplit[1],
+		mntSpec = append(mntSpec, specs.Mount{
+			Destination: bind.Dst(),
 			Type:        "bind",
-			Source:      mntSplit[0],
-		}
+			Source:      bind.Src(),
+		})
 
 		// when options are provided in the bind mount spec
-		if len(mntSplit) == 3 {
-			mntSpec[i].Options = strings.Split(mntSplit[2], ",")
+		if bind.Mode() != "" {
+			mntSpec[len(mntSpec)-1].Options = strings.Split(bind.Mode(), ",")
 		}
 	}
+
+	for _, vol := range volumes {
+		v, err := types.NewVolumeFromString(vol)
+		if err != nil {
+			return nil, err
+		}
+
+		m := specs.Mount{
+			Type:        "volume",
+			Destination: v.Dst(),
+			Source:      v.Src(),
+		}
+
+		if opts := v.Options(); len(opts) > 0 {
+			m.Options = opts
+		}
+
+		mntSpec = append(mntSpec, m)
+	}
+
 	log.Debugf(
-		"convertMounts method received mounts %v and produced %+v as a result",
-		mounts,
+		"convertMounts method received mounts %v (volumes %v) and produced %+v as a result",
+		binds,
+		volumes,
 		mntSpec,
 	)
 	return mntSpec, nil
