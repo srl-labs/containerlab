@@ -71,7 +71,7 @@ jobs:
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: 08-vxlan-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
@@ -80,7 +80,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-vxlan-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
