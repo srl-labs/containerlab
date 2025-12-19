@@ -9,7 +9,7 @@ kind_display_name: Generic VM
 It is built using [vrnetlab](../vrnetlab.md) project and offers containerlab users to launch arbitrary VMs that are packaged in a container using vrnetlab.
 
 
-A typical use case for this kind is to launch a regular Linux VM such as Ubuntu, AlmaLinux, Redhat, etc. The term generic here means that containerlab does not provide any specific configuration for the VM, it just launches the VM and it is up to a user to confiugre it further.
+A typical use case for this kind is to launch a regular Linux VM such as Ubuntu, AlmaLinux, Redhat, etc. The term generic here means that containerlab does not provide any specific configuration for the VM, it just launches the VM and it is up to a user to configure it further.
 
 ## Generic VM images
 
