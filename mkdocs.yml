@@ -57,6 +57,7 @@ nav:
           - Ostinato: manual/kinds/ostinato.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
+          - F5 BIG-IP VE: manual/kinds/f5_bigip_ve.md
           - Palo Alto PAN: manual/kinds/vr-pan.md
           - 6WIND VSR: manual/kinds/6wind_vsr.md
           - Arrcus ArcOS: manual/kinds/arrcus_arcos.md
@@ -173,6 +174,7 @@ nav:
       - OpenBSD: lab-examples/openbsd01.md
       - Cisco ASAv: lab-examples/asav01.md
       - Cisco FTDv: lab-examples/ftdv01.md
+      - F5 BIG-IP VE: lab-examples/f5bigipve01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
