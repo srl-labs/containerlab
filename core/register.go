@@ -19,7 +19,6 @@ import (
 	clabnodescvx "github.com/srl-labs/containerlab/nodes/cvx"
 	clabnodesdell_sonic "github.com/srl-labs/containerlab/nodes/dell_sonic"
 	clabnodesext_container "github.com/srl-labs/containerlab/nodes/ext_container"
-	clabnodesf5_bigip "github.com/srl-labs/containerlab/nodes/f5_bigip"
 	clabnodesfdio_vpp "github.com/srl-labs/containerlab/nodes/fdio_vpp"
 	clabnodesfortinet_fortigate "github.com/srl-labs/containerlab/nodes/fortinet_fortigate"
 	clabnodesgeneric_vm "github.com/srl-labs/containerlab/nodes/generic_vm"
@@ -40,6 +39,7 @@ import (
 	clabnodesvr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
 	clabnodesvr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
 	clabnodesvr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
+	clabnodesvr_f5bigipve "github.com/srl-labs/containerlab/nodes/vr_f5bigipve"
 	clabnodesvr_freebsd "github.com/srl-labs/containerlab/nodes/vr_freebsd"
 	clabnodesvr_ftdv "github.com/srl-labs/containerlab/nodes/vr_ftdv"
 	clabnodesvr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
@@ -70,7 +70,6 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodescrpd.Register(c.Reg)
 	clabnodescvx.Register(c.Reg)
 	clabnodesext_container.Register(c.Reg)
-	clabnodesf5_bigip.Register(c.Reg)
 	clabnodesfortinet_fortigate.Register(c.Reg)
 	clabnodeshost.Register(c.Reg)
 	clabnodesipinfusion_ocnos.Register(c.Reg)
@@ -106,6 +105,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodessonic_vm.Register(c.Reg)
 	clabnodesvr_cat9kv.Register(c.Reg)
 	clabnodesvr_openwrt.Register(c.Reg)
+	clabnodesvr_f5bigipve.Register(c.Reg)
 	clabnodesxrd.Register(c.Reg)
 	clabnodesrare.Register(c.Reg)
 	clabnodesc8000.Register(c.Reg)

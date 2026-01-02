@@ -9,7 +9,7 @@
 
 ## Description
 
-This lab demonstrates how to deploy an [F5 BIG-IP VE](../manual/kinds/f5_bigip_ve.md) node using containerlab and connect a dataplane interface (`1.1`) to a simple Linux peer.
+This lab demonstrates how to deploy an [F5 BIG-IP VE](../manual/kinds/vr-f5bigipve.md) node using containerlab and connect a dataplane interface (`1.1`) to a simple Linux peer.
 
 ```
 peer1:eth1 <----> bigip1:1.1
@@ -26,7 +26,7 @@ BIG-IP VE is proprietary software and requires a valid license to fully function
 
 - A Linux host with hardware virtualization support (KVM) available as `/dev/kvm`.
 - A locally built vrnetlab BIG-IP VE container image (the topology references `vrnetlab/f5_bigip-ve:17.5.1.3-0.0.19`).
-  - See the upstream build steps in the vrnetlab `f5_bigip` image documentation and the containerlab kind documentation: [F5 BIG-IP VE](../manual/kinds/f5_bigip_ve.md).
+  - See the upstream build steps in the vrnetlab `f5_bigip` image documentation and the containerlab kind documentation: [F5 BIG-IP VE](../manual/kinds/vr-f5bigipve.md).
 - A BIG-IP VE license (demo/evaluation licenses are available via an F5 registered account, subject to eligibility/terms).
 
 ## Deployment
@@ -67,7 +67,7 @@ Use the IPv4 management address reported by `containerlab inspect` (e.g., `172.2
 - SSH (CLI):
 
 ```bash
-ssh admin@<bigip-mgmt-ip>
+ssh root@<bigip-mgmt-ip>
 ```
 
 - HTTPS (Web UI/API):
@@ -76,7 +76,9 @@ ssh admin@<bigip-mgmt-ip>
 https://<bigip-mgmt-ip>
 ```
 
-Default credentials and override options are documented in [F5 BIG-IP VE](../manual/kinds/f5_bigip_ve.md).
+This lab also publishes BIG-IP HTTPS `443` to host port `8443` (`ports: - 8443:443`), so you can also access the GUI as `https://localhost:8443`.
+
+Default credentials and override options are documented in [F5 BIG-IP VE](../manual/kinds/vr-f5bigipve.md).
 
 ## Verify dataplane interface wiring
 
@@ -108,9 +110,9 @@ Destroy the lab:
 sudo containerlab destroy -t f5bigipve01.clab.yml
 ```
 
-[bigip]: ../manual/kinds/f5_bigip_ve.md
+[bigip]: ../manual/kinds/vr-f5bigipve.md
 [multitool]: https://github.com/wbitt/Network-MultiTool
-[topofile]: f5bigipve01.clab.yml
+[topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/f5bigipve01/f5bigipve01.clab.yml
 
 [^1]: Resource requirements are provisional. Consult with the BIG-IP VE and vrnetlab documentation for additional information.
 [^2]: Version information is provided as an example reference; adjust image tags to match the artifacts you built.

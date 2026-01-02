@@ -1,4 +1,4 @@
-package f5_bigip
+package vr_f5bigipve
 
 import (
 	"strings"
@@ -12,7 +12,7 @@ import (
 func TestF5BigIPVEInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
 		endpoints   []*clablinks.EndpointVeth
-		node        *f5BigIPVE
+		node        *vrF5BigIPVE
 		resultEps   []string
 		errContains string
 		wantAddErr  bool
@@ -23,14 +23,12 @@ func TestF5BigIPVEInterfaceParsing(t *testing.T) {
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "1.3"}},
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "1.5"}},
 			},
-			node: &f5BigIPVE{
-				VRNode: clabnodes.VRNode{
-					DefaultNode: clabnodes.DefaultNode{
-						Cfg:             &clabtypes.NodeConfig{ShortName: "bigip"},
-						InterfaceRegexp: InterfaceRegexp,
-						InterfaceOffset: InterfaceOffset,
-						InterfaceHelp:   InterfaceHelp,
-					},
+			node: &vrF5BigIPVE{
+				DefaultNode: clabnodes.DefaultNode{
+					Cfg:             &clabtypes.NodeConfig{ShortName: "bigip"},
+					InterfaceRegexp: InterfaceRegexp,
+					InterfaceOffset: InterfaceOffset,
+					InterfaceHelp:   InterfaceHelp,
 				},
 			},
 			resultEps: []string{"eth1", "eth3", "eth5"},
@@ -41,14 +39,12 @@ func TestF5BigIPVEInterfaceParsing(t *testing.T) {
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "eth4"}},
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "eth6"}},
 			},
-			node: &f5BigIPVE{
-				VRNode: clabnodes.VRNode{
-					DefaultNode: clabnodes.DefaultNode{
-						Cfg:             &clabtypes.NodeConfig{ShortName: "bigip"},
-						InterfaceRegexp: InterfaceRegexp,
-						InterfaceOffset: InterfaceOffset,
-						InterfaceHelp:   InterfaceHelp,
-					},
+			node: &vrF5BigIPVE{
+				DefaultNode: clabnodes.DefaultNode{
+					Cfg:             &clabtypes.NodeConfig{ShortName: "bigip"},
+					InterfaceRegexp: InterfaceRegexp,
+					InterfaceOffset: InterfaceOffset,
+					InterfaceHelp:   InterfaceHelp,
 				},
 			},
 			resultEps: []string{"eth2", "eth4", "eth6"},
@@ -57,14 +53,12 @@ func TestF5BigIPVEInterfaceParsing(t *testing.T) {
 			endpoints: []*clablinks.EndpointVeth{
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "1.a"}},
 			},
-			node: &f5BigIPVE{
-				VRNode: clabnodes.VRNode{
-					DefaultNode: clabnodes.DefaultNode{
-						Cfg:             &clabtypes.NodeConfig{ShortName: "bigip"},
-						InterfaceRegexp: InterfaceRegexp,
-						InterfaceOffset: InterfaceOffset,
-						InterfaceHelp:   InterfaceHelp,
-					},
+			node: &vrF5BigIPVE{
+				DefaultNode: clabnodes.DefaultNode{
+					Cfg:             &clabtypes.NodeConfig{ShortName: "bigip"},
+					InterfaceRegexp: InterfaceRegexp,
+					InterfaceOffset: InterfaceOffset,
+					InterfaceHelp:   InterfaceHelp,
 				},
 			},
 			wantAddErr:  true,
