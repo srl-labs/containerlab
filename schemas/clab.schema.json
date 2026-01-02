@@ -116,7 +116,8 @@
                         "fdio_vpp",
                         "vyosnetworks_vyos",
                         "juniper_cjunosevolved",
-                        "arrcus_arcos"
+                        "arrcus_arcos",
+                        "f5_bigip_ve"
                     ]
                 },
                 "license": {
