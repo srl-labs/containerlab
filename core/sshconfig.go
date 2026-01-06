@@ -23,7 +23,7 @@ type SSHConfigTmpl struct {
 // SSHConfigNodeTmpl represents values for a single node
 // in the sshconfig template.
 type SSHConfigNodeTmpl struct {
-	Name      string
+	Names     []string
 	Username  string
 	SSHConfig *clabtypes.SSHConfig
 }
@@ -73,7 +73,7 @@ func (c *CLab) addSSHConfig() error {
 		// the kind registered Username
 		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
 		nodeData := SSHConfigNodeTmpl{
-			Name:      n.Config().LongName,
+			Names:     []string{n.Config().LongName, n.Config().ContainerID[:12]},
 			Username:  NodeRegistryEntry.GetCredentials().GetUsername(),
 			SSHConfig: n.GetSSHConfig(),
 		}
