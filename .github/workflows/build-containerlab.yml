@@ -33,7 +33,7 @@ jobs:
         run: make build-with-podman-debug BINARY=containerlab
       # store clab binary as artifact
       - name: Upload containerlab binary
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: containerlab
           path: containerlab
