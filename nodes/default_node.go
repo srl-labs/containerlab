@@ -604,14 +604,14 @@ func (d *DefaultNode) GetHostsEntries(ctx context.Context) (clabtypes.HostEntrie
 				containers[idx].NetworkSettings.IPv4addr,
 				containers[idx].Names[0],
 				clabtypes.IpVersionV4,
-			).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+			).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)).SetContainerID(containers[idx].ID))
 		}
 		if containers[idx].NetworkSettings.IPv6addr != "" {
 			result = append(result, clabtypes.NewHostEntry(
 				containers[idx].NetworkSettings.IPv6addr,
 				containers[idx].Names[0],
 				clabtypes.IpVersionV6,
-			).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+			).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)).SetContainerID(containers[idx].ID))
 		}
 	}
 	return result, nil
