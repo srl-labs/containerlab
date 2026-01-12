@@ -23,7 +23,6 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 	return []func(*Options) (*cobra.Command, error){
 		versionCmd,
 		completionCmd,
-		configCmd,
 		deployCmd,
 		destroyCmd,
 		execCmd,
