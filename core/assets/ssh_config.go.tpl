@@ -2,8 +2,7 @@
 
 {{- range .Nodes }}
 {{- $node := . }}
-{{- range .Names }}
-Host {{ . }}
+Host{{- range .Names }} {{ . }}{{- end }}
 	{{-  if ne $node.Username ""}}
 	User {{ $node.Username }}
 	{{- end }}
@@ -13,4 +12,3 @@ Host {{ . }}
 	PubkeyAuthentication={{ $node.SSHConfig.PubkeyAuthentication.String }}
 	{{- end }}
 {{ end }}
-{{- end }}
