@@ -73,9 +73,12 @@ func (c *CLab) addSSHConfig() error {
 		// the kind registered Username
 		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
 		nodeData := SSHConfigNodeTmpl{
-			Names:     []string{n.Config().LongName, n.Config().ContainerID[:12]},
+			Names:     []string{n.Config().LongName},
 			Username:  NodeRegistryEntry.GetCredentials().GetUsername(),
 			SSHConfig: n.GetSSHConfig(),
+		}
+		if len(n.Config().ContainerID) >= 12 {
+			nodeData.Names = append(nodeData.Names, n.Config().ContainerID[:12])
 		}
 
 		// if we couldn't parse the ssh version we assume we can't use unbound option
