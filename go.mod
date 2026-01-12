@@ -29,7 +29,6 @@ require (
 	github.com/jedib0t/go-pretty/v6 v6.6.6
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.2
-	github.com/kellerza/template v0.0.6
 	github.com/klauspost/cpuid/v2 v2.2.11
 	github.com/mackerelio/go-osstat v0.2.6
 	github.com/minio/minio-go/v7 v7.0.95
