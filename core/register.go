@@ -13,6 +13,7 @@ import (
 	clabnodescheckpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
 	clabnodescisco_asav "github.com/srl-labs/containerlab/nodes/cisco_asav"
 	clabnodescisco_sdwan "github.com/srl-labs/containerlab/nodes/cisco_sdwan"
+	clabnodescisco_vios "github.com/srl-labs/containerlab/nodes/cisco_vios"
 	clabnodescjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
 	clabnodescrpd "github.com/srl-labs/containerlab/nodes/crpd"
 	clabnodescvx "github.com/srl-labs/containerlab/nodes/cvx"
@@ -38,8 +39,8 @@ import (
 	clabnodesvr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
 	clabnodesvr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
 	clabnodesvr_csr "github.com/srl-labs/containerlab/nodes/vr_csr"
+	clabnodesvr_f5bigipve "github.com/srl-labs/containerlab/nodes/vr_f5bigipve"
 	clabnodesvr_freebsd "github.com/srl-labs/containerlab/nodes/vr_freebsd"
-	clabnodescisco_vios "github.com/srl-labs/containerlab/nodes/cisco_vios"
 	clabnodesvr_ftdv "github.com/srl-labs/containerlab/nodes/vr_ftdv"
 	clabnodesvr_ftosv "github.com/srl-labs/containerlab/nodes/vr_ftosv"
 	clabnodesvr_n9kv "github.com/srl-labs/containerlab/nodes/vr_n9kv"
@@ -104,6 +105,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodessonic_vm.Register(c.Reg)
 	clabnodesvr_cat9kv.Register(c.Reg)
 	clabnodesvr_openwrt.Register(c.Reg)
+	clabnodesvr_f5bigipve.Register(c.Reg)
 	clabnodesxrd.Register(c.Reg)
 	clabnodesrare.Register(c.Reg)
 	clabnodesc8000.Register(c.Reg)
