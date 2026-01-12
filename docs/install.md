@@ -407,6 +407,6 @@ Containerlab installers will **not** attempt to set the SUID flag or create the 
 This file is automatically created during the first installation of Containerlab `0.63.0` or newer.
 
 [^1]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. IPv6 should not be disabled in the kernel.
-[^2]: Installs the latest stable release of containerlab. For installing a specific version, provide the `CLAB_VERSION` environment variable before running the script, e.g. `curl -sL https://containerlab.dev/setup | CLAB_VERSION=0.72.0 sudo -E bash quick-setup.sh -s "all"`.
+[^2]: Installs the latest stable release of containerlab. For installing a specific version, provide the `CLAB_VERSION` environment variable before running the script, e.g. `curl -sL https://containerlab.dev/setup | CLAB_VERSION=0.72.0 sudo -E bash -s "all"`.
 [^3]: only available if installed from packages
 [^4]: SUID, or "set user ID", is a special permission bit that can be set on Unix systems. SUID binaries run as the owner of the file, rather than as the executing user.
