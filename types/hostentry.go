@@ -9,6 +9,7 @@ type HostEntry struct {
 	ip          string
 	name        string
 	ipversion   IpVersion
+	containerId string
 	description string
 }
 
@@ -22,13 +23,20 @@ func NewHostEntry(ip, name string, ipversion IpVersion) *HostEntry {
 
 func (h *HostEntry) SetDescription(d string) *HostEntry {
 	h.description = d
+	return h
+}
 
+func (h *HostEntry) SetContainerID(id string) *HostEntry {
+	h.containerId = id
 	return h
 }
 
 func (h *HostEntry) ToHostEntryString() string {
 	result := fmt.Sprintf("%s\t%s", h.ip, h.name)
 
+	if len(h.containerId) >= 12 {
+		result = fmt.Sprintf("%s %s", result, h.containerId[:12])
+	}
 	if h.description != "" {
 		result = fmt.Sprintf("%s\t# %s", result, h.description)
 	}
