@@ -79,6 +79,16 @@ func TestNewBindFromString(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "trailing_colon_empty_mode",
+			bind: "/host/path:/container/path:",
+			want: &Bind{
+				src:  "/host/path",
+				dst:  "/container/path",
+				mode: "",
+			},
+			wantErr: false,
+		},
+		{
 			name: "no_mode",
 			bind: "/host/path:/container/path",
 			want: &Bind{
@@ -96,7 +106,8 @@ func TestNewBindFromString(t *testing.T) {
 				dst:  "/container/path",
 				mode: "",
 			},
-			wantErr: false,
+			wantErr: true,
+			errStr:  "bind \"/container/path\" looks like an anonymous volume target, please use the volumes stanza instead",
 		},
 		{
 			name: "empty_string",
@@ -106,7 +117,8 @@ func TestNewBindFromString(t *testing.T) {
 				dst:  "",
 				mode: "",
 			},
-			wantErr: false,
+			wantErr: true,
+			errStr:  "unable to parse bind",
 		},
 		{
 			name:    "too_many_colons",
