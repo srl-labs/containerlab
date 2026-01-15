@@ -73,6 +73,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Palo Alto PAN-OS**       | [`paloalto_panos`](vr-pan.md)                       | supported |    VM     |
 | **Fortinet Fortigate**     | [`fortinet_fortigate`](fortinet_fortigate.md)       | supported |    VM     |
 | **Check Point Cloudguard** | [`checkpoint_cloudguard`](checkpoint_cloudguard.md) | supported |    VM     |
+| **Ciena SAOS**             | [`ciena_saos`](ciena_saos.md)                       | supported |    VM     |
 | **6WIND VSR**              | [`6wind_vsr`](6wind_vsr.md)                         | supported | container |
 | **Keysight ixia-c-one**    | [`keysight_ixia-c-one`](keysight_ixia-c-one.md)     | supported | container |
 | **Arrcus ArcOS**           | [`arrcus_arcos`](arrcus_arcos.md)                   | supported | container |
@@ -92,4 +93,3 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Host**                   | [`host`](host.md)                                   | supported |    N/A    |
 
 Refer to a specific kind documentation article for kind-specific details.
-
