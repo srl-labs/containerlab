@@ -98,6 +98,7 @@
                         "keysight_ixia-c-one",
                         "ipinfusion_ocnos",
                         "checkpoint_cloudguard",
+                        "ciena_saos",
                         "ext-container",
                         "rare",
                         "cisco_xrd",
