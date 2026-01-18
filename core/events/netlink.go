@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/log"
 	gotc "github.com/florianl/go-tc"
 	clabconstants "github.com/srl-labs/containerlab/constants"
-	clabtc "github.com/srl-labs/containerlab/internal/tc"
+	clabnetem "github.com/srl-labs/containerlab/netem"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -870,14 +870,14 @@ const msPerSec = 1000
 func queryNetemInfo(nsHandle netns.NsHandle) map[int]netemInfo {
 	result := make(map[int]netemInfo)
 
-	tcnl, err := clabtc.NewTC(int(nsHandle))
+	tcnl, err := clabnetem.NewTC(int(nsHandle))
 	if err != nil {
 		log.Debugf("failed to open tc socket for netem query: %v", err)
 		return result
 	}
 	defer tcnl.Close()
 
-	qdiscs, err := clabtc.Impairments(tcnl)
+	qdiscs, err := clabnetem.Impairments(tcnl)
 	if err != nil {
 		log.Debugf("failed to query tc qdiscs: %v", err)
 		return result
