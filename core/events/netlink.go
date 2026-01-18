@@ -3,13 +3,16 @@ package events
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
+	gotc "github.com/florianl/go-tc"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabtc "github.com/srl-labs/containerlab/internal/tc"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -229,6 +232,7 @@ type netlinkWatcher struct {
 	includeSnapshot bool
 	includeStats    bool
 	statsInterval   time.Duration
+	nsHandle        netns.NsHandle
 }
 
 func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
@@ -261,6 +265,8 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 	}
 	defer nsHandle.Close()
 
+	w.nsHandle = nsHandle
+
 	netHandle, err := netlink.NewHandleAt(nsHandle)
 	if err != nil {
 		log.Debugf("failed to create netlink handle for container %s: %v", containerName, err)
@@ -274,6 +280,10 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		log.Debugf("failed to snapshot interfaces for container %s: %v", containerName, err)
 		states = make(map[int]ifaceSnapshot)
 	}
+
+	// Query and apply netem info to snapshots
+	netemInfos := queryNetemInfo(nsHandle)
+	applyNetemToSnapshots(states, netemInfos)
 
 	var statsSamples map[int]ifaceStatsSample
 	if w.includeStats {
@@ -362,6 +372,17 @@ func (w *netlinkWatcher) processUpdate(
 		delete(statsSamples, snapshot.Index)
 		registry.emitInterfaceEvent(w.container, "delete", snapshot)
 	case unix.RTM_NEWLINK:
+		// Query netem info for this interface
+		netemInfos := queryNetemInfo(w.nsHandle)
+		if info, ok := netemInfos[snapshot.Index]; ok {
+			snapshot.HasNetem = true
+			snapshot.Delay = info.Delay
+			snapshot.Jitter = info.Jitter
+			snapshot.PacketLoss = info.PacketLoss
+			snapshot.Rate = info.Rate
+			snapshot.Corruption = info.Corruption
+		}
+
 		if exists && snapshot.equal(previous) {
 			return
 		}
@@ -424,6 +445,25 @@ func interfaceAttributes(
 
 	if name := firstContainerName(container); name != "" {
 		attributes["name"] = name
+	}
+
+	// Add netem attributes if present
+	if snapshot.HasNetem {
+		if snapshot.Delay != "" {
+			attributes["netem_delay"] = snapshot.Delay
+		}
+		if snapshot.Jitter != "" {
+			attributes["netem_jitter"] = snapshot.Jitter
+		}
+		if snapshot.PacketLoss != 0 {
+			attributes["netem_loss"] = strconv.FormatFloat(snapshot.PacketLoss, 'f', 2, 64) + "%"
+		}
+		if snapshot.Rate != 0 {
+			attributes["netem_rate"] = strconv.Itoa(snapshot.Rate) + "kbit"
+		}
+		if snapshot.Corruption != 0 {
+			attributes["netem_corruption"] = strconv.FormatFloat(snapshot.Corruption, 'f', 2, 64) + "%"
+		}
 	}
 
 	return attributes
@@ -547,6 +587,21 @@ func snapshotInterfaces(netHandle *netlink.Handle) (map[int]ifaceSnapshot, error
 	return states, nil
 }
 
+// applyNetemToSnapshots applies netem information to interface snapshots.
+func applyNetemToSnapshots(states map[int]ifaceSnapshot, netemInfos map[int]netemInfo) {
+	for idx, info := range netemInfos {
+		if snapshot, ok := states[idx]; ok {
+			snapshot.HasNetem = true
+			snapshot.Delay = info.Delay
+			snapshot.Jitter = info.Jitter
+			snapshot.PacketLoss = info.PacketLoss
+			snapshot.Rate = info.Rate
+			snapshot.Corruption = info.Corruption
+			states[idx] = snapshot
+		}
+	}
+}
+
 func snapshotFromLink(link netlink.Link) ifaceSnapshot {
 	attrs := link.Attrs()
 
@@ -588,6 +643,13 @@ type ifaceSnapshot struct {
 	TxBytes   uint64
 	RxPackets uint64
 	TxPackets uint64
+	// Netem fields
+	HasNetem   bool
+	Delay      string
+	Jitter     string
+	PacketLoss float64
+	Rate       int
+	Corruption float64
 }
 
 func (s ifaceSnapshot) equal(other ifaceSnapshot) bool {
@@ -597,7 +659,13 @@ func (s ifaceSnapshot) equal(other ifaceSnapshot) bool {
 		s.MTU == other.MTU &&
 		s.MAC == other.MAC &&
 		s.OperState == other.OperState &&
-		s.Type == other.Type
+		s.Type == other.Type &&
+		s.HasNetem == other.HasNetem &&
+		s.Delay == other.Delay &&
+		s.Jitter == other.Jitter &&
+		s.PacketLoss == other.PacketLoss &&
+		s.Rate == other.Rate &&
+		s.Corruption == other.Corruption
 }
 
 type ifaceStatsSample struct {
@@ -748,4 +816,83 @@ func deltaCounter(previous, current uint64) uint64 {
 	}
 
 	return current
+}
+
+const msPerSec = 1000
+
+// queryNetemInfo queries the TC qdiscs in the namespace and returns a map
+// of interface index to netem data.
+func queryNetemInfo(nsHandle netns.NsHandle) map[int]netemInfo {
+	result := make(map[int]netemInfo)
+
+	tcnl, err := clabtc.NewTC(int(nsHandle))
+	if err != nil {
+		log.Debugf("failed to open tc socket for netem query: %v", err)
+		return result
+	}
+	defer tcnl.Close()
+
+	qdiscs, err := clabtc.Impairments(tcnl)
+	if err != nil {
+		log.Debugf("failed to query tc qdiscs: %v", err)
+		return result
+	}
+
+	for idx := range qdiscs {
+		qdisc := &qdiscs[idx]
+		if qdisc.Attribute.Kind != "netem" || qdisc.Netem == nil {
+			continue
+		}
+
+		info := netemInfoFromQdisc(qdisc)
+		if info.hasValues() {
+			result[int(qdisc.Ifindex)] = info
+		}
+	}
+
+	return result
+}
+
+type netemInfo struct {
+	Delay      string
+	Jitter     string
+	PacketLoss float64
+	Rate       int
+	Corruption float64
+}
+
+func (n netemInfo) hasValues() bool {
+	return n.Delay != "" || n.Jitter != "" || n.PacketLoss != 0 || n.Rate != 0 || n.Corruption != 0
+}
+
+func netemInfoFromQdisc(qdisc *gotc.Object) netemInfo {
+	var info netemInfo
+
+	if qdisc.Netem == nil {
+		return info
+	}
+
+	if qdisc.Netem.Latency64 != nil && *qdisc.Netem.Latency64 != 0 {
+		info.Delay = (time.Duration(*qdisc.Netem.Latency64) * time.Nanosecond).String()
+	}
+
+	if qdisc.Netem.Jitter64 != nil && *qdisc.Netem.Jitter64 != 0 {
+		info.Jitter = (time.Duration(*qdisc.Netem.Jitter64) * time.Nanosecond).String()
+	}
+
+	if qdisc.Netem.Rate != nil && qdisc.Netem.Rate.Rate != 0 {
+		info.Rate = int(qdisc.Netem.Rate.Rate * 8 / msPerSec)
+	}
+
+	if qdisc.Netem.Corrupt != nil && qdisc.Netem.Corrupt.Probability != 0 {
+		info.Corruption = math.Round((float64(qdisc.Netem.Corrupt.Probability)/
+			float64(math.MaxUint32)*100)*100) / 100
+	}
+
+	if qdisc.Netem.Qopt.Loss != 0 {
+		info.PacketLoss = math.Round(
+			(float64(qdisc.Netem.Qopt.Loss)/float64(math.MaxUint32)*100)*100) / 100
+	}
+
+	return info
 }
