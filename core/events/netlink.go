@@ -316,6 +316,14 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		return
 	}
 
+	// Set up netem polling interval (reuse stats interval or default to 1s)
+	netemPollInterval := w.statsInterval
+	if netemPollInterval == 0 {
+		netemPollInterval = time.Second
+	}
+	netemTicker := time.NewTicker(netemPollInterval)
+	defer netemTicker.Stop()
+
 	var (
 		ticker  *time.Ticker
 		tickerC <-chan time.Time
@@ -330,6 +338,8 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		select {
 		case <-tickerC:
 			w.collectAndEmitStats(netHandle, states, statsSamples, registry)
+		case <-netemTicker.C:
+			w.pollNetemChanges(states, registry)
 		case <-ctx.Done():
 			close(done)
 
@@ -399,6 +409,41 @@ func (w *netlinkWatcher) processUpdate(
 			}
 		}
 		registry.emitInterfaceEvent(w.container, action, snapshot)
+	}
+}
+
+// pollNetemChanges checks for netem changes and emits update events.
+func (w *netlinkWatcher) pollNetemChanges(
+	states map[int]ifaceSnapshot,
+	registry *netlinkRegistry,
+) {
+	netemInfos := queryNetemInfo(w.nsHandle)
+
+	for idx, snapshot := range states {
+		previous := snapshot
+		info, hasNetem := netemInfos[idx]
+
+		if hasNetem {
+			snapshot.HasNetem = true
+			snapshot.Delay = info.Delay
+			snapshot.Jitter = info.Jitter
+			snapshot.PacketLoss = info.PacketLoss
+			snapshot.Rate = info.Rate
+			snapshot.Corruption = info.Corruption
+		} else if snapshot.HasNetem {
+			// Netem was removed
+			snapshot.HasNetem = false
+			snapshot.Delay = ""
+			snapshot.Jitter = ""
+			snapshot.PacketLoss = 0
+			snapshot.Rate = 0
+			snapshot.Corruption = 0
+		}
+
+		if !snapshot.equal(previous) {
+			states[idx] = snapshot
+			registry.emitInterfaceEvent(w.container, "update", snapshot)
+		}
 	}
 }
 
