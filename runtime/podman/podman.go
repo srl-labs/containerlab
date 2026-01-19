@@ -521,12 +521,12 @@ func (p *PodmanRuntime) CopyToContainer(
 		return fmt.Errorf("error creating tar stream from source file %s: %w", srcPath, err)
 	}
 
-	opts := podmanTypes.CopyOptions{
-		NoOverwriteDirNonDir: true,
+	opts := &containers.CopyOptions{
+		NoOverwriteDirNonDir: utils.Pointer(true),
 	}
 
 	log.Debugf("copying path %v -> %v to container %v", srcPath, dstPath, cID)
-	err = containers.CopyFromArchiveWithOptions(ctx, cID, filepath.Dir(dstPath), tarBuf, opts)
+	_, err = containers.CopyFromArchiveWithOptions(ctx, cID, filepath.Dir(dstPath), tarBuf, opts)
 	if err != nil {
 		return fmt.Errorf("error copying path %v -> %v to container (%v): %w", srcPath, dstPath, cID, err)
 	}
