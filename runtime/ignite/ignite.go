@@ -536,3 +536,12 @@ func (*IgniteRuntime) InspectImage(
 ) (*clabruntime.ImageInspect, error) {
 	return nil, fmt.Errorf("InspectImage not implemented for Ignite runtime")
 }
+
+func (*IgniteRuntime) CopyToContainer(
+	ctx context.Context,
+	cID string,
+	dstPath string,
+	srcPath string,
+) error {
+	return fmt.Errorf("CopyToContainer not implemented for Ignite runtime")
+}
