@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -507,4 +508,28 @@ func (p *PodmanRuntime) InspectImage(
 	imageName string,
 ) (*runtime.ImageInspect, error) {
 	return nil, fmt.Errorf("InspectImage not implemented for Podman runtime")
+}
+
+func (p *PodmanRuntime) CopyToContainer(
+	ctx context.Context,
+	cID string,
+	dstPath string,
+	srcPath string,
+) error {
+	tarBuf, err := utils.FileToTarStream(dstPath, srcPath)
+	if err != nil {
+		return fmt.Errorf("error creating tar stream from source file %s: %w", srcPath, err)
+	}
+
+	opts := podmanTypes.CopyOptions{
+		NoOverwriteDirNonDir: true,
+	}
+
+	log.Infof("copying path %v -> %v to container %v", srcPath, dstPath, cID)
+	err = containers.CopyFromArchiveWithOptions(ctx, cID, filepath.Dir(dstPath), tarBuf, opts)
+	if err != nil {
+		return fmt.Errorf("error copying path %v -> %v to container (%v): %w", srcPath, dstPath, cID, err)
+	}
+
+	return nil
 }
