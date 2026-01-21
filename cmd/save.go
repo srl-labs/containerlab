@@ -39,6 +39,12 @@ the exact command used per node's kind`,
 		o.Filter.NodeFilter,
 		"comma separated list of nodes to include",
 	)
+	c.Flags().StringVar(
+		&o.Save.Dst,
+		"dst",
+		o.Save.Dst,
+		"directory to store saved configs (created if missing; relative to topo dir; uses <dst>/clab-<labname>/<node>)",
+	)
 
 	return c, nil
 }

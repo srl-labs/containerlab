@@ -39,6 +39,7 @@ func GetOptions() *Options {
 				LabOwner: os.Getenv("CLAB_OWNER"),
 			},
 			Destroy: &DestroyOptions{},
+			Save:    &SaveOptions{},
 			Exec: &ExecOptions{
 				Format: "plain",
 			},
@@ -127,6 +128,7 @@ type Options struct {
 	Filter         *FilterOptions
 	Deploy         *DeployOptions
 	Destroy        *DestroyOptions
+	Save           *SaveOptions
 	Exec           *ExecOptions
 	Inspect        *InspectOptions
 	Graph          *GraphOptions
@@ -334,6 +336,10 @@ func (o *DestroyOptions) toClabOptions() []clabcore.ClabOption {
 	}
 
 	return options
+}
+
+type SaveOptions struct {
+	Dst string
 }
 
 type ExecOptions struct {

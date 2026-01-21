@@ -1,0 +1,52 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "Intent Manager",
+			"uri": "im:/"
+		},
+		{
+			"name": "Workflow Manager",
+			"uri": "wfm:/"
+		}
+	],
+	"settings": {
+		"json.schemas": [
+			{
+				"fileMatch": [
+					"*.viewConfig"
+				],
+				"schema": false,
+				"url": "file:///home/aarafat/.vscode-server/extensions/nokia.nokia-intent-manager-4.0.4/media/viewconfig-schema.json"
+			}
+		],
+		"files.associations": {
+			"/*_v*/views/*": "json",
+			"/actions/*": "yaml",
+			"/templates/*": "jinja",
+			"/workflows/*": "yaml"
+		},
+		"workbench.colorCustomizations": {
+			"activityBar.activeBackground": "#9e82e4",
+			"activityBar.background": "#9e82e4",
+			"activityBar.foreground": "#15202b",
+			"activityBar.inactiveForeground": "#15202b99",
+			"activityBarBadge.background": "#9d4522",
+			"activityBarBadge.foreground": "#e7e7e7",
+			"commandCenter.border": "#e7e7e799",
+			"sash.hoverBorder": "#9e82e4",
+			"statusBar.background": "#7e58db",
+			"statusBar.foreground": "#e7e7e7",
+			"statusBarItem.hoverBackground": "#9e82e4",
+			"statusBarItem.remoteBackground": "#7e58db",
+			"statusBarItem.remoteForeground": "#e7e7e7",
+			"titleBar.activeBackground": "#7e58db",
+			"titleBar.activeForeground": "#e7e7e7",
+			"titleBar.inactiveBackground": "#7e58db99",
+			"titleBar.inactiveForeground": "#e7e7e799"
+		},
+		"peacock.remoteColor": "#7e58db"
+	}
+}
