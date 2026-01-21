@@ -93,6 +93,19 @@ func (n *c8000) SaveConfig(_ context.Context) error {
 	return nil
 }
 
+// SavedConfigPaths returns the persisted startup config path for c8000 nodes.
+func (n *c8000) SavedConfigPaths() []string {
+	if n.Cfg == nil {
+		return nil
+	}
+
+	if n.Cfg.ResStartupConfig != "" {
+		return []string{n.Cfg.ResStartupConfig}
+	}
+
+	return []string{filepath.Join(n.Cfg.LabDir, "first-boot.cfg")}
+}
+
 func (n *c8000) create8000Files(_ context.Context) error {
 	nodeCfg := n.Config()
 

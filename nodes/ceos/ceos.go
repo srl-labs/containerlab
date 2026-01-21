@@ -154,6 +154,15 @@ func (n *ceos) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
+// SavedConfigPaths returns the startup config path persisted for cEOS nodes.
+func (n *ceos) SavedConfigPaths() []string {
+	if n.Cfg == nil {
+		return nil
+	}
+
+	return []string{filepath.Join(n.Cfg.LabDir, "flash", "startup-config")}
+}
+
 func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	nodeCfg := n.Config()
 	// generate config directory

@@ -132,6 +132,15 @@ func (n *sonic_vm) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
+// SavedConfigPaths returns the persisted SONiC config path in the lab directory.
+func (n *sonic_vm) SavedConfigPaths() []string {
+	if n.Cfg == nil {
+		return nil
+	}
+
+	return []string{path.Join(n.Cfg.LabDir, configDirName, startupCfgFName)}
+}
+
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *sonic_vm) CheckInterfaceName() error {
 	return clabnodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)

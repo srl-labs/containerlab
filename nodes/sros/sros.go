@@ -1561,6 +1561,20 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 	return n.saveConfigWithAddr(ctx, fqdn)
 }
 
+// SavedConfigPaths returns the persisted SR OS config path in the lab directory.
+func (n *sros) SavedConfigPaths() []string {
+	if n.Cfg == nil {
+		return nil
+	}
+
+	slot := n.Cfg.Env[envNokiaSrosSlot]
+	if slot == "" {
+		slot = standaloneSlotName
+	}
+
+	return []string{filepath.Join(n.Cfg.LabDir, slot, configCf3, startupCfgName)}
+}
+
 // saveConfigWithAddr will use the addr string to try to save the config of the node.
 func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
 	if n.isConfigClassic() {

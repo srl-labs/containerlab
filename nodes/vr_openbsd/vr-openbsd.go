@@ -125,3 +125,12 @@ func (n *vrOpenBSD) SaveConfig(ctx context.Context) error {
 
 	return nil
 }
+
+// SavedConfigPaths returns the backup archive path saved for OpenBSD nodes.
+func (n *vrOpenBSD) SavedConfigPaths() []string {
+	if n.Cfg == nil {
+		return nil
+	}
+
+	return []string{path.Join(n.Cfg.LabDir, configDirName, "backup.tar.gz")}
+}

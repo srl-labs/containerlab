@@ -384,6 +384,15 @@ func (n *srl) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
+// SavedConfigPaths returns the persisted SR Linux config path in the lab directory.
+func (n *srl) SavedConfigPaths() []string {
+	if n.Cfg == nil {
+		return nil
+	}
+
+	return []string{filepath.Join(n.Cfg.LabDir, "config", "config.json")}
+}
+
 // Ready returns when the node boot sequence reached the stage when it is ready to accept config
 // commands
 // returns an error if not ready by the expiry of the timer readyTimeout.

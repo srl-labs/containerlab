@@ -139,3 +139,12 @@ func (n *VRNode) SaveConfig(_ context.Context) error {
 
 	return nil
 }
+
+// SavedConfigPaths returns the generated startup config path for VR-based nodes.
+func (n *VRNode) SavedConfigPaths() []string {
+	if n.Cfg == nil || n.ConfigDirName == "" || n.StartupCfgFName == "" {
+		return nil
+	}
+
+	return []string{filepath.Join(n.Cfg.LabDir, n.ConfigDirName, n.StartupCfgFName)}
+}

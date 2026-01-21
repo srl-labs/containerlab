@@ -97,6 +97,11 @@ func (d *DefaultNode) SaveConfig(_ context.Context) error {
 	return nil
 }
 
+// SavedConfigPaths returns saved config artifacts for kinds that support saving.
+func (d *DefaultNode) SavedConfigPaths() []string {
+	return nil
+}
+
 // CheckDeploymentConditions wraps individual functions that check if a node
 // satisfies deployment requirements.
 func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
