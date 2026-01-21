@@ -28,7 +28,7 @@ the exact command used per node's kind`,
 				return err
 			}
 
-			return c.Save(cobraCmd.Context())
+			return c.Save(cobraCmd.Context(), o.ToClabSaveOptions()...)
 		},
 	}
 

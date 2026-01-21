@@ -215,6 +215,16 @@ func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 	return destroyOptions
 }
 
+func (o *Options) ToClabSaveOptions() []clabcore.SaveOption {
+	if o.Save == nil || o.Save.Dst == "" {
+		return nil
+	}
+
+	return []clabcore.SaveOption{
+		clabcore.WithSaveDst(o.Save.Dst),
+	}
+}
+
 type GlobalOptions struct {
 	TopologyFile     string
 	VarsFile         string

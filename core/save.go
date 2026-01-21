@@ -2,19 +2,38 @@ package core
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 func (c *CLab) Save(
 	ctx context.Context,
+	options ...SaveOption,
 ) error {
+	opts := NewSaveOptions()
+	for _, opt := range options {
+		opt(opts)
+	}
+
 	err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return err
+	}
+
+	if opts.dst != "" {
+		resolvedDst, err := c.resolveSaveDst(opts.dst)
+		if err != nil {
+			return err
+		}
+		opts.dst = resolvedDst
 	}
 
 	var wg sync.WaitGroup
@@ -35,4 +54,25 @@ func (c *CLab) Save(
 	wg.Wait()
 
 	return nil
+}
+
+func (c *CLab) resolveSaveDst(dst string) (string, error) {
+	baseDir := c.TopoPaths.TopologyFileDir()
+	if baseDir == "" {
+		return "", fmt.Errorf("failed to resolve save dst: topology directory is empty")
+	}
+
+	resolvedDst := clabutils.ResolvePath(dst, baseDir)
+	labDir := c.TopoPaths.TopologyLabDir()
+	labDirName := filepath.Base(labDir)
+	if labDirName == "" || labDirName == "." {
+		return "", fmt.Errorf("failed to resolve save dst: lab directory is empty")
+	}
+
+	dstLabDir := filepath.Join(resolvedDst, labDirName)
+	if err := os.MkdirAll(dstLabDir, clabconstants.PermissionsDirDefault); err != nil {
+		return "", fmt.Errorf("failed to create save dst directory %q: %w", dstLabDir, err)
+	}
+
+	return dstLabDir, nil
 }
