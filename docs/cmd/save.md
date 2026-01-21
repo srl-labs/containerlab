@@ -37,6 +37,10 @@ The local `--node-filter` flag allows users to specify a subset of topology node
 
 When a subset of nodes is specified, containerlab will only attempt to save configuration on the selected nodes.
 
+#### dst
+
+The local `--dst` flag allows users to copy saved configuration artifacts to a dedicated directory, resolved relative to the topology directory unless an absolute path is provided. Containerlab writes the latest saved artifacts into `<dst>/clab-<labname>/<node>/...` and also creates a timestamped compressed copy for rollback (`.gz` for files, `.tar.gz` for directories).
+
 ### Examples
 
 #### Save the configuration of the containers in a specific lab
@@ -51,3 +55,11 @@ INFO[0001] clab-srl02-srl1: stdout: /system:
 INFO[0002] clab-srl02-srl2: stdout: /system:
     Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-11-18T09:00:56.444Z' and comment ''
 ```
+
+#### Save configs to a reusable directory
+
+```bash
+❯ containerlab save -t srl02.clab.yml --dst ./startup-config
+```
+
+The latest artifacts are written to `./startup-config/clab-srl02/<node>/...`, and timestamped compressed copies are created alongside them (e.g., `config-240101_010101.cfg.gz`).
