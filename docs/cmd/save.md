@@ -31,6 +31,8 @@ When the topology file flag is omitted, containerlab will try to find the matchi
 
 If more than one file is found for directory-based path or when the flag is omitted entirely, containerlab will fail with an error.
 
+Alternatively, use the global `--name` flag to derive the topology from a running lab. This requires the lab to be running and its containers to have the `topo-file` label; otherwise the save command will fail.
+
 #### node-filter
 
 The local `--node-filter` flag allows users to specify a subset of topology nodes targeted by `save` command. The value of this flag is a comma-separated list of node names as they appear in the topology.
@@ -48,7 +50,7 @@ The local `--dst` flag allows users to copy saved configuration artifacts to a d
 Save the configuration of the containers running in lab named srl02
 
 ```bash
-❯ containerlab save -n srl02
+❯ containerlab save --name srl02
 INFO[0001] clab-srl02-srl1: stdout: /system:
     Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-11-18T09:00:54.998Z' and comment ''
 
