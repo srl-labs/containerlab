@@ -35,6 +35,7 @@ func (c *CLab) Save(
 		}
 		opts.dst = resolvedDst
 	}
+	dst := opts.dst
 
 	var wg sync.WaitGroup
 
@@ -44,9 +45,17 @@ func (c *CLab) Save(
 		go func(node clabnodes.Node) {
 			defer wg.Done()
 
-			err := node.SaveConfig(ctx)
-			if err != nil {
-				log.Errorf("err: %v", err)
+			if err := node.SaveConfig(ctx); err != nil {
+				log.Errorf("node %q save failed: %v", node.GetShortName(), err)
+				return
+			}
+
+			if dst == "" {
+				return
+			}
+
+			if err := c.copySavedConfigs(ctx, node, dst); err != nil {
+				log.Errorf("node %q save copy failed: %v", node.GetShortName(), err)
 			}
 		}(node)
 	}
