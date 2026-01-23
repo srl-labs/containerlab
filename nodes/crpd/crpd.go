@@ -167,15 +167,6 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-// SavedConfigPaths returns the persisted cRPD config path in the lab directory.
-func (s *crpd) SavedConfigPaths() []string {
-	if s.Cfg == nil {
-		return nil
-	}
-
-	return []string{filepath.Join(s.Cfg.LabDir, "config", "juniper.conf")}
-}
-
 func createCRPDFiles(node clabnodes.Node) error {
 	nodeCfg := node.Config()
 	// create config and logs directory that will be bind mounted to crpd

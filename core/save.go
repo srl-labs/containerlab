@@ -66,9 +66,12 @@ func (c *CLab) Save(
 }
 
 func (c *CLab) resolveSaveDst(dst string) (string, error) {
-	baseDir := c.TopoPaths.TopologyFileDir()
+	baseDir, err := os.Getwd()
+	if err != nil || baseDir == "" {
+		baseDir = c.TopoPaths.TopologyFileDir()
+	}
 	if baseDir == "" {
-		return "", fmt.Errorf("failed to resolve save dst: topology directory is empty")
+		return "", fmt.Errorf("failed to resolve save dst: current working directory is empty")
 	}
 
 	resolvedDst := clabutils.ResolvePath(dst, baseDir)

@@ -124,12 +124,3 @@ func (n *vrFreeBSD) SaveConfig(ctx context.Context) error {
 
 	return nil
 }
-
-// SavedConfigPaths returns the backup archive path saved for FreeBSD nodes.
-func (n *vrFreeBSD) SavedConfigPaths() []string {
-	if n.Cfg == nil {
-		return nil
-	}
-
-	return []string{path.Join(n.Cfg.LabDir, configDirName, "backup.tar.gz")}
-}

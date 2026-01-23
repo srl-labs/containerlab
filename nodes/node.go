@@ -138,11 +138,6 @@ type Node interface {
 	GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error)
 }
 
-// SavedConfigPathProvider exposes saved configuration artifact paths for a node.
-type SavedConfigPathProvider interface {
-	SavedConfigPaths() []string
-}
-
 type NodeOption func(Node)
 
 func WithMgmtNet(mgmt *clabtypes.MgmtNet) NodeOption {

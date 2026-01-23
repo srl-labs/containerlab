@@ -473,12 +473,3 @@ func (n *iol) SaveConfig(_ context.Context) error {
 	)
 	return nil
 }
-
-// SavedConfigPaths returns the NVRAM file that stores the saved configuration.
-func (n *iol) SavedConfigPaths() []string {
-	if n.Cfg == nil || n.nvramFile == "" {
-		return nil
-	}
-
-	return []string{filepath.Join(n.Cfg.LabDir, n.nvramFile)}
-}

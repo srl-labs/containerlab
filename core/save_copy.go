@@ -1,7 +1,6 @@
 package core
 
 import (
-	"archive/tar"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -13,25 +12,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 func (c *CLab) copySavedConfigs(ctx context.Context, node clabnodes.Node, dstRoot string) error {
-	provider, ok := node.(clabnodes.SavedConfigPathProvider)
-	if !ok {
-		return nil
-	}
-
-	paths := provider.SavedConfigPaths()
-	if len(paths) == 0 {
-		return nil
-	}
-
 	nodeCfg := node.Config()
 	if nodeCfg == nil {
 		return fmt.Errorf("node config missing")
+	}
+
+	if nodeCfg.LabDir == "" {
+		return fmt.Errorf("node lab directory is empty")
 	}
 
 	nodeDstDir := filepath.Join(dstRoot, nodeCfg.ShortName)
@@ -41,73 +35,108 @@ func (c *CLab) copySavedConfigs(ctx context.Context, node clabnodes.Node, dstRoo
 
 	timestamp := time.Now().UTC().Format("060102_150405")
 
-	var errs []error
-	for _, src := range paths {
-		if src == "" {
-			continue
-		}
-
-		if err := copySavedPath(ctx, src, nodeCfg.LabDir, nodeDstDir, timestamp); err != nil {
-			errs = append(errs, err)
-		}
+	if err := copyLabDirContents(ctx, nodeCfg.LabDir, nodeDstDir, timestamp); err != nil {
+		return err
 	}
 
-	if len(errs) > 0 {
-		return errors.Join(errs...)
-	}
+	log.Info(
+		"copied saved configs",
+		"node",
+		nodeCfg.ShortName,
+		"dst",
+		nodeDstDir,
+	)
 
 	return nil
 }
 
-func copySavedPath(
-	ctx context.Context,
-	src,
-	nodeLabDir,
-	dstNodeDir,
-	timestamp string,
-) error {
-	info, err := os.Stat(src)
+func copyLabDirContents(ctx context.Context, srcDir, dstDir, timestamp string) error {
+	info, err := os.Stat(srcDir)
 	if err != nil {
-		return fmt.Errorf("stat %q: %w", src, err)
+		return fmt.Errorf("stat %q: %w", srcDir, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("expected directory at %q", srcDir)
 	}
 
-	rel := relPathWithinDir(src, nodeLabDir)
-	dstLatest := filepath.Join(dstNodeDir, rel)
-
-	if info.IsDir() {
-		if err := os.RemoveAll(dstLatest); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("remove %q: %w", dstLatest, err)
+	var errs []error
+	walkErr := filepath.WalkDir(srcDir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			errs = append(errs, err)
+			return nil
 		}
 
-		if err := copyDir(ctx, src, dstLatest); err != nil {
-			return fmt.Errorf("copy dir %q: %w", src, err)
+		rel := relPathWithinDir(path, srcDir)
+		if rel == "." {
+			return nil
 		}
 
-		archivePath := timestampedDirArchivePath(dstLatest, timestamp)
-		if err := archiveDir(src, archivePath); err != nil {
-			return fmt.Errorf("archive dir %q: %w", src, err)
+		target := filepath.Join(dstDir, rel)
+		info, err := os.Lstat(path)
+		if err != nil {
+			errs = append(errs, err)
+			return nil
+		}
+
+		if entry.IsDir() {
+			if err := os.MkdirAll(target, info.Mode().Perm()); err != nil {
+				errs = append(errs, err)
+			}
+			return nil
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			linkTarget, err := os.Readlink(path)
+			if err != nil {
+				errs = append(errs, err)
+				return nil
+			}
+
+			if err := os.MkdirAll(filepath.Dir(target), clabconstants.PermissionsDirDefault); err != nil {
+				errs = append(errs, err)
+				return nil
+			}
+
+			_ = os.RemoveAll(target)
+			if err := os.Symlink(linkTarget, target); err != nil {
+				errs = append(errs, err)
+			}
+			return nil
+		}
+
+		if !info.Mode().IsRegular() {
+			errs = append(errs, fmt.Errorf("unsupported file type %q", path))
+			return nil
+		}
+
+		if err := os.MkdirAll(filepath.Dir(target), clabconstants.PermissionsDirDefault); err != nil {
+			errs = append(errs, err)
+			return nil
+		}
+
+		if err := clabutils.CopyFile(ctx, path, target, info.Mode().Perm()); err != nil {
+			errs = append(errs, err)
+			return nil
+		}
+
+		tsPath, compress := timestampedFilePath(target, timestamp)
+		if compress {
+			if err := gzipFile(path, tsPath, clabconstants.PermissionsFileDefault); err != nil {
+				errs = append(errs, err)
+			}
+		} else {
+			if err := clabutils.CopyFile(ctx, path, tsPath, clabconstants.PermissionsFileDefault); err != nil {
+				errs = append(errs, err)
+			}
 		}
 
 		return nil
+	})
+	if walkErr != nil {
+		return walkErr
 	}
-
-	if err := os.MkdirAll(filepath.Dir(dstLatest), clabconstants.PermissionsDirDefault); err != nil {
-		return fmt.Errorf("create dst dir for %q: %w", dstLatest, err)
-	}
-
-	if err := clabutils.CopyFile(ctx, src, dstLatest, info.Mode().Perm()); err != nil {
-		return fmt.Errorf("copy file %q: %w", src, err)
-	}
-
-	tsPath, compress := timestampedFilePath(dstLatest, timestamp)
-	if compress {
-		if err := gzipFile(src, tsPath, clabconstants.PermissionsFileDefault); err != nil {
-			return fmt.Errorf("compress file %q: %w", src, err)
-		}
-	} else {
-		if err := clabutils.CopyFile(ctx, src, tsPath, clabconstants.PermissionsFileDefault); err != nil {
-			return fmt.Errorf("copy compressed file %q: %w", src, err)
-		}
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	return nil
@@ -130,122 +159,6 @@ func relPathWithinDir(path, base string) string {
 	return rel
 }
 
-func copyDir(ctx context.Context, src, dst string) error {
-	return filepath.WalkDir(src, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		rel, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-
-		target := filepath.Join(dst, rel)
-		info, err := os.Lstat(path)
-		if err != nil {
-			return err
-		}
-
-		if entry.IsDir() {
-			return os.MkdirAll(target, info.Mode().Perm())
-		}
-
-		if info.Mode()&os.ModeSymlink != 0 {
-			linkTarget, err := os.Readlink(path)
-			if err != nil {
-				return err
-			}
-
-			if err := os.MkdirAll(filepath.Dir(target), clabconstants.PermissionsDirDefault); err != nil {
-				return err
-			}
-
-			return os.Symlink(linkTarget, target)
-		}
-
-		if !info.Mode().IsRegular() {
-			return fmt.Errorf("unsupported file type %q", path)
-		}
-
-		return clabutils.CopyFile(ctx, path, target, info.Mode().Perm())
-	})
-}
-
-func archiveDir(srcDir, dstTarGz string) error {
-	out, cleanup, err := clabutils.CreateFileWithPermissions(
-		dstTarGz,
-		clabconstants.PermissionsFileDefault,
-	)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
-	gzipWriter := gzip.NewWriter(out)
-	defer gzipWriter.Close()
-
-	tarWriter := tar.NewWriter(gzipWriter)
-	defer tarWriter.Close()
-
-	base := filepath.Base(srcDir)
-
-	return filepath.WalkDir(srcDir, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		info, err := os.Lstat(path)
-		if err != nil {
-			return err
-		}
-
-		rel, err := filepath.Rel(srcDir, path)
-		if err != nil {
-			return err
-		}
-
-		name := filepath.Join(base, rel)
-		if rel == "." {
-			name = base
-		}
-
-		var linkTarget string
-		if info.Mode()&os.ModeSymlink != 0 {
-			linkTarget, err = os.Readlink(path)
-			if err != nil {
-				return err
-			}
-		}
-
-		header, err := tar.FileInfoHeader(info, linkTarget)
-		if err != nil {
-			return err
-		}
-		header.Name = filepath.ToSlash(name)
-
-		if err := tarWriter.WriteHeader(header); err != nil {
-			return err
-		}
-
-		if !info.Mode().IsRegular() {
-			return nil
-		}
-
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-
-		_, err = io.Copy(tarWriter, file)
-		closeErr := file.Close()
-		if err != nil {
-			return err
-		}
-		return closeErr
-	})
-}
-
 func gzipFile(src, dst string, mode os.FileMode) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -264,13 +177,6 @@ func gzipFile(src, dst string, mode os.FileMode) error {
 
 	_, err = io.Copy(gzipWriter, in)
 	return err
-}
-
-func timestampedDirArchivePath(dstLatest, timestamp string) string {
-	dir := filepath.Dir(dstLatest)
-	base := filepath.Base(dstLatest)
-
-	return filepath.Join(dir, fmt.Sprintf("%s-%s.tar.gz", base, timestamp))
 }
 
 func timestampedFilePath(dstLatest, timestamp string) (string, bool) {

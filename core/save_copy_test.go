@@ -1,7 +1,6 @@
 package core
 
 import (
-	"archive/tar"
 	"compress/gzip"
 	"context"
 	"fmt"
@@ -133,7 +132,7 @@ func TestTimestampedFilePath(t *testing.T) {
 	}
 }
 
-func TestCopySavedPathFile(t *testing.T) {
+func TestCopyLabDirContentsFile(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -151,8 +150,8 @@ func TestCopySavedPathFile(t *testing.T) {
 	dstNodeDir := filepath.Join(tmp, "dst", "node1")
 	ts := "240101_010101"
 
-	if err := copySavedPath(ctx, srcPath, labDir, dstNodeDir, ts); err != nil {
-		t.Fatalf("copySavedPath: %v", err)
+	if err := copyLabDirContents(ctx, labDir, dstNodeDir, ts); err != nil {
+		t.Fatalf("copyLabDirContents: %v", err)
 	}
 
 	latest := filepath.Join(dstNodeDir, "config", "config.cfg")
@@ -170,7 +169,7 @@ func TestCopySavedPathFile(t *testing.T) {
 	}
 }
 
-func TestCopySavedPathDir(t *testing.T) {
+func TestCopyLabDirContentsDir(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -189,8 +188,8 @@ func TestCopySavedPathDir(t *testing.T) {
 	dstNodeDir := filepath.Join(tmp, "dst", "node1")
 	ts := "240101_010101"
 
-	if err := copySavedPath(ctx, srcDir, labDir, dstNodeDir, ts); err != nil {
-		t.Fatalf("copySavedPath: %v", err)
+	if err := copyLabDirContents(ctx, labDir, dstNodeDir, ts); err != nil {
+		t.Fatalf("copyLabDirContents: %v", err)
 	}
 
 	latest := filepath.Join(dstNodeDir, "xr-storage", "config.txt")
@@ -202,9 +201,9 @@ func TestCopySavedPathDir(t *testing.T) {
 		t.Fatalf("latest content = %q, want %q", string(got), "config")
 	}
 
-	archive := filepath.Join(dstNodeDir, "xr-storage-240101_010101.tar.gz")
-	if err := assertTarGzContains(archive, filepath.ToSlash(filepath.Join("xr-storage", "config.txt"))); err != nil {
-		t.Fatalf("archive check: %v", err)
+	tsPath := filepath.Join(dstNodeDir, "xr-storage", "config-240101_010101.txt.gz")
+	if err := assertGzipContains(tsPath, "config"); err != nil {
+		t.Fatalf("timestamped gzip: %v", err)
 	}
 }
 
@@ -231,34 +230,4 @@ func assertGzipContains(path, want string) error {
 	}
 
 	return nil
-}
-
-func assertTarGzContains(path, want string) error {
-	f, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	gr, err := gzip.NewReader(f)
-	if err != nil {
-		return err
-	}
-	defer gr.Close()
-
-	tr := tar.NewReader(gr)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-		if hdr.Name == want {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("archive %q missing %q", path, want)
 }

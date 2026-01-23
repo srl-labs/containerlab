@@ -140,19 +140,6 @@ func (n *vyos) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-// SavedConfigPaths returns the persisted VyOS config path in the lab directory.
-func (n *vyos) SavedConfigPaths() []string {
-	if n.Cfg == nil {
-		return nil
-	}
-
-	if n.Cfg.ResStartupConfig != "" {
-		return []string{n.Cfg.ResStartupConfig}
-	}
-
-	return []string{filepath.Join(n.Cfg.LabDir, "config", "config.boot")}
-}
-
 func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	nodeCfg := n.Config()
 	cli, err := n.newCli()

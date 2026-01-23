@@ -146,15 +146,6 @@ func (n *xrd) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-// SavedConfigPaths returns the XRd persistent storage directory.
-func (n *xrd) SavedConfigPaths() []string {
-	if n.Cfg == nil {
-		return nil
-	}
-
-	return []string{filepath.Join(n.Cfg.LabDir, "xr-storage")}
-}
-
 func (n *xrd) createXRDFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate xr-storage directory

@@ -41,7 +41,7 @@ When a subset of nodes is specified, containerlab will only attempt to save conf
 
 #### dst
 
-The local `--dst` flag allows users to copy saved configuration artifacts to a dedicated directory, resolved relative to the topology directory unless an absolute path is provided. Containerlab writes the latest saved artifacts into `<dst>/clab-<labname>/<node>/...` and also creates a timestamped compressed copy for rollback (`.gz` for files, `.tar.gz` for directories).
+The local `--dst` flag allows users to copy saved configuration artifacts to a dedicated directory, resolved relative to the current working directory unless an absolute path is provided. Containerlab writes the latest saved artifacts into `<dst>/clab-<labname>/<node>/...` and also creates timestamped compressed copies for rollback (`.gz` alongside each file).
 
 ### Examples
 

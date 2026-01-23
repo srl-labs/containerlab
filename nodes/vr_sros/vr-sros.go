@@ -213,15 +213,6 @@ func (s *vrSROS) SaveConfig(_ context.Context) error {
 	return nil
 }
 
-// SavedConfigPaths returns the persisted vR-SROS config path in the lab directory.
-func (s *vrSROS) SavedConfigPaths() []string {
-	if s.Cfg == nil {
-		return nil
-	}
-
-	return []string{filepath.Join(s.Cfg.LabDir, configDirName, startupCfgFName)}
-}
-
 func createVrSROSFiles(node clabnodes.Node) error {
 	nodeCfg := node.Config()
 

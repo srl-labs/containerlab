@@ -177,15 +177,6 @@ func (n *sixwind_vsr) SaveConfig(ctx context.Context) error {
 	return nil
 }
 
-// SavedConfigPaths returns the persisted 6WIND VSR config path in the lab directory.
-func (n *sixwind_vsr) SavedConfigPaths() []string {
-	if n.UserStartupConfig == "" {
-		return nil
-	}
-
-	return []string{n.UserStartupConfig}
-}
-
 // CheckInterfaceName allows any interface name for 6wind_vsr nodes, but checks
 // if eth0 is only used with network-mode=none.
 func (n *sixwind_vsr) CheckInterfaceName() error {
