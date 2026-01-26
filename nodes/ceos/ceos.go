@@ -35,6 +35,7 @@ const (
 
 	tlsKeyFile  = "node.key"
 	tlsCertFile = "node.crt"
+	tlsCAFile   = "ca.crt"
 )
 
 var (
@@ -127,10 +128,12 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	if *n.Cfg.Certificate.Issue {
 		keyPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsKeyFile)
 		certPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCertFile)
+		caPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCAFile)
 
 		n.Cfg.Binds = append(n.Cfg.Binds,
 			fmt.Sprintf("%s:/persist/secure/ssl/keys/%s", keyPath, tlsKeyFile),
 			fmt.Sprintf("%s:/persist/secure/ssl/certs/%s", certPath, tlsCertFile),
+			fmt.Sprintf("%s:/persist/secure/ssl/certs/%s", caPath, tlsCAFile),
 		)
 	}
 
@@ -142,11 +145,17 @@ func (n *ceos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 	if *n.Cfg.Certificate.Issue {
 		certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 		if err != nil {
-			return nil
+			return err
+		}
+
+		caCertificate, err := params.Cert.LoadCaCert()
+		if err != nil {
+			return err
 		}
 
 		n.Config().TLSCert = string(certificate.Cert)
 		n.Config().TLSKey = string(certificate.Key)
+		n.Config().TLSAnchor = string(caCertificate.Cert)
 	}
 	return n.createCEOSFiles(ctx)
 }
@@ -260,14 +269,19 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 func (n *ceos) createCEOSCertificates() error {
 	if *n.Cfg.Certificate.Issue {
 		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "ssl"), clabconstants.PermissionsOpen)
+
 		keyPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsKeyFile)
 		if err := clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
 			return err
 		}
 
 		certPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCertFile)
-		err := clabutils.CreateFile(certPath, n.Config().TLSCert)
-		if err != nil {
+		if err := clabutils.CreateFile(certPath, n.Config().TLSCert); err != nil {
+			return err
+		}
+
+		caPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCAFile)
+		if err := clabutils.CreateFile(caPath, n.Config().TLSAnchor); err != nil {
 			return err
 		}
 	}
