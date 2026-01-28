@@ -210,11 +210,11 @@
                     "anyOf": [
                         {
                             "type": "string",
-                            "minItems": 1
+                            "minLength": 1
                         },
                         {
                             "type": "number",
-                            "minItems": 1
+                            "minimum": 0
                         }
                     ]
                 },
@@ -1093,11 +1093,11 @@
                     "anyOf": [
                         {
                             "type": "string",
-                            "minItems": 1
+                            "minLength": 1
                         },
                         {
                             "type": "number",
-                            "minItems": 1
+                            "minimum": 0
                         }
                     ]
                 }
@@ -1772,7 +1772,8 @@
     "properties": {
         "name": {
             "description": "topology name",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[A-Za-z0-9-_]+$"
         },
         "prefix": {
             "description": "lab prefix",
@@ -1873,7 +1874,7 @@
                     "markdownDescription": "topology [nodes](https://containerlab.dev/manual/nodes/) configuration container",
                     "type": "object",
                     "patternProperties": {
-                        ".*": {
+                        "^[A-Za-z0-9-_]+$": {
                             "oneOf": [
                                 {
                                     "type": "null"
