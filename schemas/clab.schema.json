@@ -106,6 +106,7 @@
                         "cisco_cat9kv",
                         "cisco_iol",
                         "cisco_asav",
+                        "cisco_vios",
                         "cumulus_cvx",
                         "huawei_vrp",
                         "openbsd",

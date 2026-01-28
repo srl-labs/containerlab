@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clabinternaltc "github.com/srl-labs/containerlab/internal/tc"
+	clabnetem "github.com/srl-labs/containerlab/netem"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -200,7 +200,7 @@ func netemSetFn(ctx context.Context, o *Options) error {
 		return err
 	}
 
-	tcnl, err := clabinternaltc.NewTC(int(nodeNs.Fd()))
+	tcnl, err := clabnetem.NewTC(int(nodeNs.Fd()))
 	if err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func netemSetFn(ctx context.Context, o *Options) error {
 			return err
 		}
 
-		qdisc, err := clabinternaltc.SetImpairments(
+		qdisc, err := clabnetem.SetImpairments(
 			tcnl,
 			o.ToolsNetem.ContainerName,
 			link,
@@ -437,7 +437,7 @@ func netemShowFn(o *Options) error {
 		return err
 	}
 
-	tcnl, err := clabinternaltc.NewTC(int(nodeNs.Fd()))
+	tcnl, err := clabnetem.NewTC(int(nodeNs.Fd()))
 	if err != nil {
 		return err
 	}
@@ -449,7 +449,7 @@ func netemShowFn(o *Options) error {
 	}()
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
-		qdiscs, err := clabinternaltc.Impairments(tcnl)
+		qdiscs, err := clabnetem.Impairments(tcnl)
 		if err != nil {
 			return err
 		}
@@ -521,7 +521,7 @@ func netemResetFn(o *Options) error {
 		return err
 	}
 
-	tcnl, err := clabinternaltc.NewTC(int(nodeNs.Fd()))
+	tcnl, err := clabnetem.NewTC(int(nodeNs.Fd()))
 	if err != nil {
 		return err
 	}
@@ -544,7 +544,7 @@ func netemResetFn(o *Options) error {
 			return err
 		}
 
-		if err := clabinternaltc.DeleteImpairments(tcnl, netemIfIface); err != nil {
+		if err := clabnetem.DeleteImpairments(tcnl, netemIfIface); err != nil {
 			return err
 		}
 

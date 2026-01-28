@@ -60,6 +60,10 @@ type CLab struct {
 	checkBindsPaths bool
 	// customOwner is the user-specified owner label for the lab
 	customOwner string
+	// gitBranch and gitHash cache Git repository information
+	// to avoid repeated repository opens. Empty strings indicate not yet cached.
+	gitBranch string
+	gitHash   string
 }
 
 // NewContainerLab function defines a new container lab.

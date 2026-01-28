@@ -27,6 +27,8 @@ IgnoreURLs:
   - virtualizestuff.com
   - hashnode.com
   - https://nleiva.medium.com # started to give 403
+  - https://xrdocs.io # started to give 403
+  - https://dn42.eu # started to give timeouts
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true

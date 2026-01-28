@@ -27,6 +27,7 @@ nav:
               - Cisco SD-WAN: manual/kinds/cisco_sdwan.md
               - Cisco Catalyst 9000v: manual/kinds/vr-cat9kv.md
               - Cisco IOL: manual/kinds/cisco_iol.md
+              - Cisco VIOS: manual/kinds/cisco_vios.md
               - Cisco ASAv: manual/kinds/cisco_asav.md
               - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Juniper:
