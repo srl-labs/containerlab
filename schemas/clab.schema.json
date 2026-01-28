@@ -1884,7 +1884,8 @@
                                 }
                             ]
                         }
-                    }
+                    },
+                    "additionalProperties": false
                 },
                 "groups": {
                     "description": "topology groups configuration container",
