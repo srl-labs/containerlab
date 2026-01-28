@@ -1,4 +1,4 @@
-package vr_f5bigipve
+package f5_bigipve
 
 import (
 	"strings"
@@ -12,7 +12,7 @@ import (
 func TestF5BigIPVEInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
 		endpoints   []*clablinks.EndpointVeth
-		node        *vrF5BigIPVE
+		node        *F5BigIPVE
 		resultEps   []string
 		errContains string
 		wantAddErr  bool
@@ -23,7 +23,7 @@ func TestF5BigIPVEInterfaceParsing(t *testing.T) {
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "1.3"}},
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "1.5"}},
 			},
-			node: &vrF5BigIPVE{
+			node: &F5BigIPVE{
 				DefaultNode: clabnodes.DefaultNode{
 					Cfg:             &clabtypes.NodeConfig{ShortName: "bigip"},
 					InterfaceRegexp: InterfaceRegexp,
@@ -39,7 +39,7 @@ func TestF5BigIPVEInterfaceParsing(t *testing.T) {
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "eth4"}},
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "eth6"}},
 			},
-			node: &vrF5BigIPVE{
+			node: &F5BigIPVE{
 				DefaultNode: clabnodes.DefaultNode{
 					Cfg:             &clabtypes.NodeConfig{ShortName: "bigip"},
 					InterfaceRegexp: InterfaceRegexp,
@@ -53,7 +53,7 @@ func TestF5BigIPVEInterfaceParsing(t *testing.T) {
 			endpoints: []*clablinks.EndpointVeth{
 				{EndpointGeneric: clablinks.EndpointGeneric{IfaceName: "1.a"}},
 			},
-			node: &vrF5BigIPVE{
+			node: &F5BigIPVE{
 				DefaultNode: clabnodes.DefaultNode{
 					Cfg:             &clabtypes.NodeConfig{ShortName: "bigip"},
 					InterfaceRegexp: InterfaceRegexp,

@@ -118,7 +118,7 @@
                         "vyosnetworks_vyos",
                         "juniper_cjunosevolved",
                         "arrcus_arcos",
-                        "f5_bigip_ve"
+                        "f5_bigip-ve"
                     ]
                 },
                 "license": {

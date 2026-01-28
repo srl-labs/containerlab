@@ -1,4 +1,4 @@
-package vr_f5bigipve
+package f5_bigipve
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	kindNames          = []string{"f5_bigip_ve", "vr-f5_bigip_ve", "vr-f5_bigip"}
+	kindNames          = []string{"f5_bigip-ve"}
 	defaultCredentials = clabnodes.NewCredentials("admin", "Labl@b!234")
 
 	InterfaceRegexp = regexp.MustCompile(`^1\.(?P<port>\d+)$`)
@@ -24,11 +24,9 @@ var (
 )
 
 const (
-	// defaultRootPassword = "default"
-	// defaultPassword     = "Labl@b!234"
-	defaultQemuMemory   = "8192"
-	defaultQemuSMP      = "4"
-	defaultQemuCPU      = "host"
+	defaultQemuMemory = "8192"
+	defaultQemuSMP    = "4"
+	defaultQemuCPU    = "host"
 
 	configDirName = "config"
 )
@@ -37,15 +35,15 @@ const (
 func Register(r *clabnodes.NodeRegistry) {
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, nil)
 	r.Register(kindNames, func() clabnodes.Node {
-		return new(vrF5BigIPVE)
+		return new(F5BigIPVE)
 	}, nrea)
 }
 
-type vrF5BigIPVE struct {
+type F5BigIPVE struct {
 	clabnodes.DefaultNode
 }
 
-func (n *vrF5BigIPVE) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
+func (n *F5BigIPVE) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	// set virtualization requirement
@@ -68,7 +66,6 @@ func (n *vrF5BigIPVE) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 		"F5_HOSTNAME":     n.Cfg.ShortName,
 		"USERNAME":        defaultCredentials.GetUsername(),
 		"PASSWORD":        defaultCredentials.GetPassword(),
-		// "ROOT_PASSWORD":   defaultRootPassword,
 		"CONNECTION_MODE": clabnodes.VrDefConnMode,
 		"QEMU_MEMORY":     defaultQemuMemory,
 		"QEMU_SMP":        defaultQemuSMP,
@@ -105,7 +102,7 @@ func (n *vrF5BigIPVE) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	return nil
 }
 
-func (n *vrF5BigIPVE) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *F5BigIPVE) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	// create config directory that will be bind mounted to vrnetlab container at /config path
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, configDirName), clabconstants.PermissionsOpen)
@@ -117,12 +114,12 @@ func (n *vrF5BigIPVE) PreDeploy(_ context.Context, params *clabnodes.PreDeployPa
 	return err
 }
 
-func (n *vrF5BigIPVE) CheckInterfaceName() error {
+func (n *F5BigIPVE) CheckInterfaceName() error {
 	return clabnodes.GenericVMInterfaceCheck(n.Cfg.ShortName, n.Endpoints)
 }
 
 // AddEndpoint maps BIG-IP interface aliases (e.g. 1.1) to container ethX interfaces.
-func (n *vrF5BigIPVE) AddEndpoint(e clablinks.Endpoint) error {
+func (n *F5BigIPVE) AddEndpoint(e clablinks.Endpoint) error {
 	endpointName := e.GetIfaceName()
 	if n.InterfaceRegexp != nil && !clabnodes.VMInterfaceRegexp.MatchString(endpointName) {
 		mappedName, err := n.GetMappedInterfaceName(endpointName)
@@ -149,7 +146,7 @@ func (n *vrF5BigIPVE) AddEndpoint(e clablinks.Endpoint) error {
 
 // GetMappedInterfaceName wraps the DefaultNode mapping to return an actionable error containing the
 // expected interface patterns if alias parsing fails.
-func (n *vrF5BigIPVE) GetMappedInterfaceName(ifName string) (string, error) {
+func (n *F5BigIPVE) GetMappedInterfaceName(ifName string) (string, error) {
 	mappedIfName, err := n.DefaultNode.GetMappedInterfaceName(ifName)
 	if err != nil {
 		return "", fmt.Errorf("%w (expected %s)", err, n.InterfaceHelp)

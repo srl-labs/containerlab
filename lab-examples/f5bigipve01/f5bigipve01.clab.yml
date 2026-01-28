@@ -3,7 +3,7 @@ name: f5bigipve01
 topology:
   nodes:
     bigip1:
-      kind: f5_bigip_ve
+      kind: f5_bigip-ve
       # BIG-IP VE is proprietary. Build this image locally via vrnetlab before deploy.
       image: vrnetlab/f5_bigip-ve:17.5.1.3-0.0.19
       ports:

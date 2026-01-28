@@ -1,21 +1,20 @@
 ---
 search:
   boost: 4
-kind_code_name: f5_bigip_ve
+kind_code_name: f5_bigip-ve
 kind_display_name: F5 BIG-IP VE
 ---
 # -{{ kind_display_name }}-
 
--{{ kind_display_name }}- is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). Aliases: `vr-f5_bigip_ve`, `vr-f5_bigip`. It is built using the [srl-labs/vrnetlab](../vrnetlab.md) project and runs a QEMU/KVM VM packaged in a docker container.
+-{{ kind_display_name }}- is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using the [srl-labs/vrnetlab](../vrnetlab.md) project and runs a QEMU/KVM VM packaged in a docker container.
 
 ## Getting F5 BIG-IP VE disk image
 
 BIG-IP VE is a proprietary image. You must download the BIG-IP VE KVM/qcow2 image from F5 (requires a registered account and appropriate entitlement) and build a vrnetlab container image yourself.
 
-Refer to the build steps in the `f5_bigip` image documentation in the upstream vrnetlab project.
+To build the containerlab-compatible container image from the BIG-IP VE KVM/qcow2 image refer to the [vrnetlab/f5_bigip](https://github.com/srl-labs/vrnetlab/tree/master/f5_bigip) documentation.
 
-/// admonition
-    type: warning
+/// note
 Containerlab does not ship BIG-IP VE images or licenses and does not provide guidance for bypassing licensing requirements.
 ///
 
@@ -27,7 +26,7 @@ Containers with F5 BIG-IP VE inside will take a while to fully boot (often 10+ m
 You can monitor the progress with `docker logs -f <container-name>` and wait for the `Startup complete` log message.
 ///
 
-Management networking uses vrnetlab management *passthrough*: the BIG-IP management IP is the same as the containerlab management IP for the node.
+Management networking uses vrnetlab's management *passthrough mode* where the BIG-IP management IP is the same as the containerlab-assigned management IP for the node.
 
 ### Day-0 automation
 
@@ -44,8 +43,6 @@ Default credentials:
 
 - BIG-IP GUI admin: `admin:Labl@b!234`
 - BIG-IP CLI root: `root:Labl@b!234`
-
-```
 
 /// details | Example day-0 automation logs (successful startup)
     type: tip
@@ -77,6 +74,7 @@ These `docker logs` lines show a successful boot where the automation detects th
 2026-01-02 03:22:20,128: launch         INFO Console mgmt provisioning complete
 2026-01-02 03:22:20,128: launch         INFO Startup complete in: 0:03:04.868472
 ```
+
 ///
 
 F5 BIG-IP VE nodes launched with containerlab can be managed via the following interfaces:
@@ -131,6 +129,8 @@ Then open:
 https://localhost:8443
 ```
 
+///
+
 ### Credentials overrides
 
 You can override BIG-IP credentials with the node [`env`](../topo-def-file.md#environment-variables) map.
@@ -159,14 +159,14 @@ The traffic interface naming convention is: `1.X`, where `X` is the port number.
 
 With that naming convention in mind:
 
-* `1.1` - first traffic (dataplane) interface
-* `1.2` - second traffic (dataplane) interface, and so on...
+- `1.1` - first traffic (dataplane) interface
+- `1.2` - second traffic (dataplane) interface, and so on...
 
 The example ports above would be mapped to the following Linux interfaces inside the container running the F5 BIG-IP VE VM:
 
-* `eth0` - management interface connected to the containerlab management network (passthrough)
-* `eth1` - first dataplane interface, mapped to the first traffic interface of the VM (rendered as `1.1`)
-* `eth2+` - second and subsequent dataplane interfaces, mapped to the second and subsequent traffic interfaces of the VM (rendered as `1.2` and so on)
+- `eth0` - management interface connected to the containerlab management network (passthrough)
+- `eth1` - first dataplane interface, mapped to the first traffic interface of the VM (rendered as `1.1`)
+- `eth2+` - second and subsequent dataplane interfaces, mapped to the second and subsequent traffic interfaces of the VM (rendered as `1.2` and so on)
 
 Data interfaces `1.1+` need to be configured with IP addressing manually using the CLI/GUI.
 
@@ -208,6 +208,10 @@ Demo/evaluation licenses can be obtained via the official F5 licensing portal wi
     type: warning
 This documentation does not provide guidance for bypassing licensing, and containerlab does not ship licenses.
 ///
+
+## Lab examples
+
+[F5 BIG-IP VE connected in a p2p fashion to a Linux container.](../../lab-examples/f5bigipve01.md)
 
 ## Troubleshooting
 
