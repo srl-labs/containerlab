@@ -31,11 +31,17 @@ When the topology file flag is omitted, containerlab will try to find the matchi
 
 If more than one file is found for directory-based path or when the flag is omitted entirely, containerlab will fail with an error.
 
+Alternatively, use the global `--name` flag to derive the topology from a running lab. This requires the lab to be running and its containers to have the `topo-file` label; otherwise the save command will fail.
+
 #### node-filter
 
 The local `--node-filter` flag allows users to specify a subset of topology nodes targeted by `save` command. The value of this flag is a comma-separated list of node names as they appear in the topology.
 
 When a subset of nodes is specified, containerlab will only attempt to save configuration on the selected nodes.
+
+#### dst
+
+The local `--dst` flag allows users to copy saved configuration artifacts to a dedicated directory, resolved relative to the current working directory unless an absolute path is provided. Containerlab writes the latest saved artifacts into `<dst>/clab-<labname>/<node>/...` and also creates timestamped compressed copies for rollback (`.gz` alongside each file).
 
 ### Examples
 
@@ -44,10 +50,18 @@ When a subset of nodes is specified, containerlab will only attempt to save conf
 Save the configuration of the containers running in lab named srl02
 
 ```bash
-❯ containerlab save -n srl02
+❯ containerlab save --name srl02
 INFO[0001] clab-srl02-srl1: stdout: /system:
     Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-11-18T09:00:54.998Z' and comment ''
 
 INFO[0002] clab-srl02-srl2: stdout: /system:
     Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-11-18T09:00:56.444Z' and comment ''
 ```
+
+#### Save configs to a reusable directory
+
+```bash
+❯ containerlab save -t srl02.clab.yml --dst ./startup-config
+```
+
+The latest artifacts are written to `./startup-config/clab-srl02/<node>/...`, and timestamped compressed copies are created alongside them (e.g., `config-240101_010101.cfg.gz`).
