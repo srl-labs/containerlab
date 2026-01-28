@@ -57,8 +57,8 @@ func setupTestGitRepo(t *testing.T, branchName string) (string, string, func()) 
 	})
 	require.NoError(t, err)
 
-	// Get commit hash
-	commitHash := commit.String()
+	// Get commit hash (short version - 7 characters)
+	commitHash := commit.String()[:7]
 
 	// Create and checkout branch if specified
 	if branchName != "" {
