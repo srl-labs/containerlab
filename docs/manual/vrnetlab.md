@@ -126,6 +126,7 @@ The images that work with containerlab will appear in the supported list as we i
 | OpenBSD               | [openbsd](kinds/openbsd.md)                             |                                            |                                                                                                                                                                                                              |
 | FreeBSD               | [freebsd](kinds/freebsd.md)                             |                                            |                                                                                                                                                                                                              |
 | SONiC (VM)            | [sonic-vm](kinds/sonic-vm.md)                           |                                            |                                                                                                                                                                                                              |
+| F5 BIG IP VE            | [f5_bigip-ve](kinds/f5_bigipve.md)                           |                                            |                                                                                                                                                                                                              |
 
 ### Tuning qemu parameters
 

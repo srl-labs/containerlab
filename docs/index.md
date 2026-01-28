@@ -63,6 +63,7 @@ In addition to native containerized NOSes, containerlab can launch traditional v
 * [Fortinet Fortigate](manual/kinds/fortinet_fortigate.md)
 * [Aruba AOS-CX](manual/kinds/vr-aoscx.md)
 * [Huawei VRP](manual/kinds/huawei_vrp.md)
+* [F5 BIG-IP VE](manual/kinds/f5_bigipve.md)
 * [OpenBSD](manual/kinds/openbsd.md)
 * [FreeBSD](manual/kinds/freebsd.md)
 * [SONiC](manual/kinds/sonic-vm.md)
