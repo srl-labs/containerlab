@@ -823,11 +823,24 @@ func (c *CLab) magicTopoNameReplacer() *strings.Replacer {
 }
 
 func (c *CLab) getGitInfo() (string, string) {
+	// Return cached values if available (non-empty gitBranch indicates cached)
+	if c.gitBranch != "" {
+		// If hash wasn't set, return "none" for hash
+		if c.gitHash == "" {
+			return c.gitBranch, "none"
+		}
+		return c.gitBranch, c.gitHash
+	}
+
+	// Initialize defaults
 	gitBranch := "none"
 	gitHash := "none"
 
 	repo, err := gogit.PlainOpen(c.TopoPaths.TopologyFileDir())
 	if err != nil {
+		// Not a git repository - cache and return defaults
+		c.gitBranch = gitBranch
+		c.gitHash = gitHash
 		return gitBranch, gitHash
 	}
 
@@ -836,14 +849,23 @@ func (c *CLab) getGitInfo() (string, string) {
 		// Try symbolic head
 		symbolicHead, err := repo.Storer.Reference(plumbing.HEAD)
 		if err != nil || symbolicHead.Type() != plumbing.SymbolicReference {
-			log.Error("could not get information about the head of Git repository while resolving topology git variables")
+			log.Debugf("Could not determine Git branch/hash: %v", err)
+			// Cache the defaults
+			c.gitBranch = gitBranch
+			c.gitHash = gitHash
 			return gitBranch, gitHash
 		}
 		gitBranch = strings.TrimPrefix(symbolicHead.Target().String(), "refs/heads/")
+		// For symbolic refs, we might not have a hash readily available
+		gitHash = "none"
 	} else {
 		gitBranch = repoHead.Name().Short()
 		gitHash = repoHead.Hash().String()
 	}
+
+	// Cache the results
+	c.gitBranch = gitBranch
+	c.gitHash = gitHash
 
 	return gitBranch, gitHash
 }
