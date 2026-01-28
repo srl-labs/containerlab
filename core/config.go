@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	gogit "github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
+	gogitplumbing "github.com/go-git/go-git/v5/plumbing"
 
 	"github.com/charmbracelet/log"
 	"github.com/pmorjan/kmod"
@@ -847,8 +847,8 @@ func (c *CLab) getGitInfo() (string, string) {
 	repoHead, err := repo.Head()
 	if err != nil {
 		// Try symbolic head
-		symbolicHead, err := repo.Storer.Reference(plumbing.HEAD)
-		if err != nil || symbolicHead.Type() != plumbing.SymbolicReference {
+		symbolicHead, err := repo.Storer.Reference(gogitplumbing.HEAD)
+		if err != nil || symbolicHead.Type() != gogitplumbing.SymbolicReference {
 			log.Debugf("Could not determine Git branch/hash: %v", err)
 			// Cache the defaults
 			c.gitBranch = gitBranch
