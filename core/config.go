@@ -860,7 +860,8 @@ func (c *CLab) getGitInfo() (string, string) {
 		gitHash = "none"
 	} else {
 		gitBranch = repoHead.Name().Short()
-		gitHash = repoHead.Hash().String()
+		// Use short hash (7 characters) instead of full 40-character hash
+		gitHash = repoHead.Hash().String()[:7]
 	}
 
 	// Cache the results
