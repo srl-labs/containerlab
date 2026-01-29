@@ -265,7 +265,8 @@ type K8sKindExtras struct {
 // It is aligned with the `kind create cluster` command options, but exposes
 // only the ones that are relevant for containerlab.
 type K8sKindDeployExtras struct {
-	Wait *string `yaml:"wait,omitempty"`
+	KubeconfigPath *string `yaml:"kubeconfig,omitempty"`
+	Wait           *string `yaml:"wait,omitempty"`
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.

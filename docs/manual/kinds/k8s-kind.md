@@ -116,6 +116,9 @@ topology:
       extras:
         k8s_kind:
           deploy:
+            # Corresponds to --kubeconfig option.
+            # Path can be absolute or relative to the topology file
+            kubeconfig: ./kubeconfig
             # Corresponds to --wait option. Wait given duration until the cluster becomes ready.
             wait: 0s
 ```

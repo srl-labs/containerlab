@@ -565,7 +565,10 @@ my-node:
   exec:
     - echo test123
     - bash /myscript.sh
+    - bash -c 'echo "foobar" > /root/wg-priv.key' #(1)!
 ```
+
+1. If you use shell tokens such as `>`, you need to wrap the command in the shell
 
 The `exec` is particularly helpful to provide some startup configuration for linux nodes such as IP addressing and routing instructions.
 

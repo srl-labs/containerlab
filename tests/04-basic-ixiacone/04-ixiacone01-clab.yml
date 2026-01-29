@@ -8,7 +8,7 @@ topology:
   nodes:
     ixia:
       kind: keysight_ixia-c-one
-      image: ghcr.io/open-traffic-generator/ixia-c-one:1.42.1-4
+      image: ghcr.io/open-traffic-generator/ixia-c-one:1.43.0-7
     linux:
       kind: linux
       image: alpine:3
