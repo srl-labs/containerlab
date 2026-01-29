@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -44,7 +45,13 @@ const (
 	// clab name specific variables
 	gitBranchVar = "__gitBranch__"
 	gitHashVar   = "__gitHash__"
+
+	// clab validation variables
+	namePattern = "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
+	maxNameLength = 60
 )
+
+var namePatternRe = regexp.MustCompile(namePattern)
 
 // Config defines lab configuration as it is provided in the YAML file.
 type Config struct {
@@ -69,6 +76,10 @@ func (c *CLab) parseTopology() error {
 		log.Debugf("Topology name contains Git variables, substituted topology name: %q -> %q", oldName, c.Config.Name)
 	}
 
+	if !namePatternRe.MatchString(c.Config.Name) {
+		return fmt.Errorf("Topology name is invalid: %s", c.Config.Name)
+	}
+
 	err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name)
 	if err != nil {
 		return err
@@ -79,6 +90,10 @@ func (c *CLab) parseTopology() error {
 		*c.Config.Prefix = defaultPrefix
 	}
 
+	if !namePatternRe.MatchString(*c.Config.Prefix) {
+		return fmt.Errorf("Topology prefix is invalid: %s", c.Config.Prefix)
+	}
+
 	// initialize Nodes and Links variable
 	c.Nodes = make(map[string]clabnodes.Node)
 	c.Links = make(map[int]clablinks.Link)
@@ -86,6 +101,9 @@ func (c *CLab) parseTopology() error {
 	// initialize the Node information from the topology map
 	nodeNames := make([]string, 0, len(c.Config.Topology.Nodes))
 	for nodeName := range c.Config.Topology.Nodes {
+		if !namePatternRe.MatchString(nodeName) {
+			return fmt.Errorf("Node name is invalid: %s", nodeName)
+		}
 		nodeNames = append(nodeNames, nodeName)
 	}
 
@@ -202,6 +220,10 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		longName = nodeName
 	case "__lab-name":
 		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
+	}
+
+	if len(longName) > maxNameLength {
+		return nil, fmt.Errorf("Node name cannot be longer than %d characters: %s", maxNameLength, longName)
 	}
 
 	nodeCfg := &clabtypes.NodeConfig{
