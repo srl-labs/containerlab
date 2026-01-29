@@ -13,6 +13,9 @@ name: srsim-tests
 jobs:
   srsim-tests:
     runs-on: ubuntu-24.04
+    # Skip this job if running from a fork PR (secrets are not available)
+    # github.event.pull_request.head.repo.full_name will be different from github.repository for fork PRs
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     env:
       SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
     strategy:
