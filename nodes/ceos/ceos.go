@@ -106,7 +106,7 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	var envSb strings.Builder
 	envSb.WriteString("bash -c '" + ifWaitScriptContainerPath + " ; exec /sbin/init ")
 	for k, v := range n.Cfg.Env {
-		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
+		envSb.WriteString("systemd.setenv=\"" + k + "=" + v + "\" ")
 	}
 	envSb.WriteString("'")
 

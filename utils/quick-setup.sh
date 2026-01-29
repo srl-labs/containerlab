@@ -5,6 +5,10 @@ CLAB_ADMINS="${CLAB_ADMINS:-true}"
 # Docker version that will be installed by this install script.
 DOCKER_VERSION="27.5.1"
 
+# Containerlab version to install. If not set, the latest version is installed.
+# The version should be provided without the 'v' prefix, e.g., "0.72.0"
+CLAB_VERSION="${CLAB_VERSION:-}"
+
 function check_os {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -249,11 +253,17 @@ function install-containerlab {
         check_os
     fi
 
+    # Determine package name with optional version suffix
+    local CLAB_PKG="containerlab"
+    if [ -n "${CLAB_VERSION}" ]; then
+        CLAB_PKG="containerlab-${CLAB_VERSION}"
+    fi
+
     if [ "${DISTRO_TYPE}" = "rhel" ]; then
         sudo yum-config-manager -y --add-repo=https://netdevops.fury.site/yum/ && \
         echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
 
-        sudo yum install -y containerlab
+        sudo yum install -y ${CLAB_PKG}
 
     elif [ "${DISTRO_TYPE}" = "fedora" ]; then
         # Fedora 41 onwards ships with dnf5 instead of dnf 4 (packaged just as 'dnf')
@@ -266,13 +276,18 @@ function install-containerlab {
             echo "gpgcheck=0" | sudo tee -a /etc/yum.repos.d/netdevops.fury.site_yum_.repo
         fi
 
-        sudo dnf install -y containerlab
+        sudo dnf install -y ${CLAB_PKG}
 
     else
         echo "deb [trusted=yes] https://netdevops.fury.site/apt/ /" | \
         sudo tee -a /etc/apt/sources.list.d/netdevops.list
 
-        sudo apt update -y && sudo apt install containerlab -y
+        # For apt, version is specified with = separator
+        if [ -n "${CLAB_VERSION}" ]; then
+            sudo apt update -y && sudo apt install containerlab=${CLAB_VERSION} -y
+        else
+            sudo apt update -y && sudo apt install containerlab -y
+        fi
     fi
 }
 

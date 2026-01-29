@@ -1768,10 +1768,11 @@ func CheckPortWithRetry(
 
 // MgmtIP represents the management IPv4/v6 addresses of a node.
 type MgmtIP struct {
-	IPv4     string
-	IPv4pLen int
-	IPv6     string
-	IPv6pLen int
+	IPv4        string
+	IPv4pLen    int
+	IPv6        string
+	IPv6pLen    int
+	ContainerID string
 }
 
 // distNodeMgmtIPs returns both ipv4 and ipv6 management IP address of a
@@ -1813,12 +1814,14 @@ func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
 			if container.NetworkSettings.IPv4addr != "" {
 				ips.IPv4 = container.NetworkSettings.IPv4addr
 				ips.IPv4pLen = container.NetworkSettings.IPv4pLen
-
+				ips.ContainerID = container.ID
 			}
 			if container.NetworkSettings.IPv6addr != "" {
 				ips.IPv6 = container.NetworkSettings.IPv6addr
 				ips.IPv6pLen = container.NetworkSettings.IPv6pLen
+				ips.ContainerID = container.ID
 			}
+
 		}
 	}
 
@@ -1843,7 +1846,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 				ips.IPv4,
 				n.Cfg.LongName,
 				clabtypes.IpVersionV4,
-			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)).SetContainerID(ips.ContainerID))
 		}
 
 		if ips.IPv6 != "" {
@@ -1851,7 +1854,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 				ips.IPv6,
 				n.Cfg.LongName,
 				clabtypes.IpVersionV6,
-			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)).SetContainerID(ips.ContainerID))
 		}
 	}
 

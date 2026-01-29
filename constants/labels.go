@@ -14,4 +14,6 @@ const (
 	ToolType         = "tool-type"
 	RootNodeName     = "clab-root-node-name"
 	RootNodeLongName = "clab-root-node-longname"
+	GitBranch        = "clab-git-branch"
+	GitHash          = "clab-git-hash"
 )

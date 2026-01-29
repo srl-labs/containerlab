@@ -20,7 +20,7 @@ The following requirements must be satisfied to let containerlab tool run succes
 The easiest way to get started with containerlab is to use the [quick setup script](https://github.com/srl-labs/containerlab/blob/main/utils/quick-setup.sh) that installs all of the following components in one go (or allows to install them separately):
 
 * docker (docker-ce), docker compose
-* Containerlab (using the package repository)
+* Containerlab[^2] using the package repository.
 * [`gh`](https://cli.github.com/) CLI tool
 
 The script has been tested on the following OSes:
@@ -260,7 +260,7 @@ mv /etc/containerlab/containerlab /usr/bin && chmod a+x /usr/bin/containerlab
 
 ## Upgrade
 
-To upgrade `containerlab` to the latest available version issue the following command[^2]:
+To upgrade `containerlab` to the latest available version issue the following command[^3]:
 
 ```
 sudo -E containerlab version upgrade
@@ -333,7 +333,7 @@ sudo setsebool -P selinuxuser_execmod 1
 
 Containerlab requires root privileges to perform certain operations.
 
-To simplify usage, by default, Containerlab is installed as a _SUID binary_[^3] to permit sudo-less operation.
+To simplify usage, by default, Containerlab is installed as a _SUID binary_[^4] to permit sudo-less operation.
 
 /// details | Enabling sudo-less operations for manually built/installed Containerlab
     type: subtle-note
@@ -407,5 +407,6 @@ Containerlab installers will **not** attempt to set the SUID flag or create the 
 This file is automatically created during the first installation of Containerlab `0.63.0` or newer.
 
 [^1]: Most containerized NOS will require >1 vCPU. RAM size depends on the lab size. IPv6 should not be disabled in the kernel.
-[^2]: only available if installed from packages
-[^3]: SUID, or "set user ID", is a special permission bit that can be set on Unix systems. SUID binaries run as the owner of the file, rather than as the executing user.
+[^2]: Installs the latest stable release of containerlab. For installing a specific version, provide the `CLAB_VERSION` environment variable before running the script, e.g. `curl -sL https://containerlab.dev/setup | CLAB_VERSION=0.72.0 sudo -E bash -s "all"`.
+[^3]: only available if installed from packages
+[^4]: SUID, or "set user ID", is a special permission bit that can be set on Unix systems. SUID binaries run as the owner of the file, rather than as the executing user.

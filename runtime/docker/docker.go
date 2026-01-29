@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -1396,4 +1397,28 @@ func (d *DockerRuntime) InspectImage(
 		},
 		GraphDriver: graphDriver,
 	}, err
+}
+
+func (d *DockerRuntime) CopyToContainer(
+	ctx context.Context,
+	cID string,
+	dstPath string,
+	srcPath string,
+) error {
+	tarBuf, err := clabutils.FileToTarStream(dstPath, srcPath)
+	if err != nil {
+		return fmt.Errorf("error creating tar stream from source file %s: %w", srcPath, err)
+	}
+
+	opts := container.CopyToContainerOptions{
+		AllowOverwriteDirWithFile: false,
+	}
+
+	log.Debugf("copying path %v -> %v to container %v", srcPath, dstPath, cID)
+	err = d.Client.CopyToContainer(ctx, cID, filepath.Dir(dstPath), tarBuf, opts)
+	if err != nil {
+		return fmt.Errorf("error copying path %v -> %v to container (%v): %w", srcPath, dstPath, cID, err)
+	}
+
+	return nil
 }
