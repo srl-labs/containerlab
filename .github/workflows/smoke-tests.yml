@@ -55,7 +55,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: containerlab
 
@@ -99,7 +99,7 @@ jobs:
 
       # upload test reports as a zip file
       - name: Upload test report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: 01-smoke-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
@@ -108,7 +108,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-smoke-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
