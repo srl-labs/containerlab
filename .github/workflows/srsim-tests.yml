@@ -13,6 +13,8 @@ name: srsim-tests
 jobs:
   srsim-tests:
     runs-on: ubuntu-24.04
+    # Skip this job if running from a fork (not from srl-labs org)
+    if: github.repository_owner == 'srl-labs'
     env:
       SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
     strategy:
