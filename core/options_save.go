@@ -5,7 +5,7 @@ type SaveOption func(o *SaveOptions)
 
 // SaveOptions represents the options for saving lab configs.
 type SaveOptions struct {
-	dst string
+	copyOutDst string
 }
 
 // NewSaveOptions returns a new save options object.
@@ -13,9 +13,9 @@ func NewSaveOptions() *SaveOptions {
 	return &SaveOptions{}
 }
 
-// WithSaveDst sets the destination directory for saved configs.
-func WithSaveDst(dst string) SaveOption {
+// WithCopyOut sets the destination directory for the copied saved configs.
+func WithCopyOut(dst string) SaveOption {
 	return func(o *SaveOptions) {
-		o.dst = dst
+		o.copyOutDst = dst
 	}
 }

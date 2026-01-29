@@ -216,12 +216,12 @@ func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 }
 
 func (o *Options) ToClabSaveOptions() []clabcore.SaveOption {
-	if o.Save == nil || o.Save.Dst == "" {
+	if o.Save == nil || o.Save.CopyOut == "" {
 		return nil
 	}
 
 	return []clabcore.SaveOption{
-		clabcore.WithSaveDst(o.Save.Dst),
+		clabcore.WithCopyOut(o.Save.CopyOut),
 	}
 }
 
@@ -349,7 +349,9 @@ func (o *DestroyOptions) toClabOptions() []clabcore.ClabOption {
 }
 
 type SaveOptions struct {
-	Dst string
+	// CopyOut is the directory to copy the saved running config to.
+	// If unset, the config is not copied and stays in clab-<labname>/<node>/
+	CopyOut string
 }
 
 type ExecOptions struct {

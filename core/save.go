@@ -28,14 +28,14 @@ func (c *CLab) Save(
 		return err
 	}
 
-	if opts.dst != "" {
-		resolvedDst, err := c.resolveSaveDst(opts.dst)
+	if opts.copyOutDst != "" {
+		resolvedDst, err := c.resolveSaveDst(opts.copyOutDst)
 		if err != nil {
 			return err
 		}
-		opts.dst = resolvedDst
+		opts.copyOutDst = resolvedDst
 	}
-	dst := opts.dst
+	dst := opts.copyOutDst
 
 	var wg sync.WaitGroup
 

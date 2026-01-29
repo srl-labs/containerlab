@@ -14,8 +14,8 @@ import (
 func saveCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "save",
-		Short: "save containers configuration",
-		Long: `save performs a configuration save. The exact command that is used to save the config
+		Short: "Save running configuration for all nodes in a lab. It saves the config locally for each OS with an option to copy it to a user-specified directory",
+		Long: `Save saves a running configuration as startup config for all nodes in a lab. It saves the config locally for each OS with an option to copy it to a user-specified directory. The exact command that is used to save the config
 depends on the node kind. Refer to the https://containerlab.dev/cmd/save/ documentation to see
 the exact command used per node's kind`,
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {
@@ -40,10 +40,10 @@ the exact command used per node's kind`,
 		"comma separated list of nodes to include",
 	)
 	c.Flags().StringVar(
-		&o.Save.Dst,
-		"dst",
-		o.Save.Dst,
-		"directory to store saved configs (created if missing; relative to topo dir; uses <dst>/clab-<labname>/<node>)",
+		&o.Save.CopyOut,
+		"copy-out",
+		"",
+		"copy the saved running config to this directory (created if missing; relative to topo dir; when unset, config stays in clab-<labname>/<node>/)",
 	)
 
 	return c, nil
