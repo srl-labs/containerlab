@@ -1773,11 +1773,12 @@
         "name": {
             "description": "topology name",
             "type": "string",
-            "pattern": "^[A-Za-z0-9-_]+$"
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$"
         },
         "prefix": {
             "description": "lab prefix",
             "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-]*$",
             "markdownDescription": "[lab prefix](https://containerlab.dev/manual/topo-def-file/#prefix)"
         },
         "mgmt": {
@@ -1874,7 +1875,7 @@
                     "markdownDescription": "topology [nodes](https://containerlab.dev/manual/nodes/) configuration container",
                     "type": "object",
                     "patternProperties": {
-                        "^[A-Za-z0-9-_]+$": {
+                        "^[a-zA-Z0-9][a-zA-Z0-9-]*$": {
                             "oneOf": [
                                 {
                                     "type": "null"
