@@ -61,14 +61,14 @@ of real-world networks.`,
 		"node",
 		"n",
 		o.ToolsNetem.NodeName,
-		"containerlab node name to apply impairment to",
+		"node name from topology to apply impairment to (requires -t/--topo)",
 	)
 	netemSetCmd.Flags().StringVarP(
 		&o.ToolsNetem.ContainerName,
-		"node",
-		"n",
+		"container",
+		"c",
 		o.ToolsNetem.ContainerName,
-		"container node to apply impairment to",
+		"container name to apply impairment to (direct container access)",
 	)
 	netemSetCmd.Flags().StringVarP(
 		&o.ToolsNetem.Interface,
@@ -128,14 +128,14 @@ of real-world networks.`,
 		"node",
 		"n",
 		o.ToolsNetem.NodeName,
-		"node to apply impairment to",
+		"node name from topology to show impairments for (requires -t/--topo)",
 	)
 	netemShowCmd.Flags().StringVarP(
 		&o.ToolsNetem.ContainerName,
-		"node",
-		"n",
+		"container",
+		"c",
 		o.ToolsNetem.ContainerName,
-		"node to apply impairment to",
+		"container name to show impairments for (direct container access)",
 	)
 	netemShowCmd.Flags().StringVarP(
 		&o.ToolsNetem.Format,
@@ -157,10 +157,10 @@ of real-world networks.`,
 		},
 	}
 	c.AddCommand(netemResetCmd)
-	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "container", "c",
-		o.ToolsNetem.ContainerName, "container name to reset impairment on the container name")
 	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.NodeName, "node", "n",
 		o.ToolsNetem.NodeName, "node name from topology to reset impairment on (requires -t/--topo)")
+	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "container", "c",
+		o.ToolsNetem.ContainerName, "container name to reset impairment on (direct container access)")
 	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.Interface, "interface", "i",
 		o.ToolsNetem.Interface, "interface to reset impairment on")
 	netemResetCmd.MarkFlagRequired("interface")
@@ -181,7 +181,8 @@ func netemSetFn(ctx context.Context, o *Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// retrieve the containers NSPath
+	// retrieve the node NSPath, and displayName in resolveNetemNSPath
+	// The resolution needed because of the sr-sim has different container layout
 	nodeNsPath, displayName, err := resolveNetemNSPath(ctx, o)
 	if err != nil {
 		return err
@@ -249,11 +250,13 @@ func validateInputAndRoot(o *Options) error {
 		return fmt.Errorf("jitter cannot be set without setting delay")
 	}
 
-	// Check the conditions one more time with the tests
+	// TODO: Check the conditions one more time with the tests
+	// Validates that either --node or --container is specified
 	if o.ToolsNetem.NodeName != "" && o.ToolsNetem.ContainerName != "" {
 		return fmt.Errorf("cannot specify both --node/-n and --container/-c; use one or the other")
 	}
 
+	// Validates that either --node or --container is specified
 	if o.ToolsNetem.NodeName == "" && o.ToolsNetem.ContainerName != "" {
 		return fmt.Errorf("either --node/-n (with --topo/-t) or --container/-c must be specified")
 	}
@@ -276,12 +279,20 @@ func resolveNetemNSPath(ctx context.Context, o *Options) (string, string, error)
 
 		node, err := c.GetNode(o.ToolsNetem.NodeName)
 		if err != nil {
-			return "", "", fmt.Errorf("node %q not found in topology: %w", o.ToolsNetem.NodeName, err)
+			return "", "", fmt.Errorf(
+				"node %q not found in topology: %w",
+				o.ToolsNetem.NodeName,
+				err,
+			)
 		}
 
 		nsPath, err := node.GetNSPath(ctx)
 		if err != nil {
-			return "", "", fmt.Errorf("failed to get namespace path for node %q: %w", o.ToolsNetem.NodeName, err)
+			return "", "", fmt.Errorf(
+				"failed to get namespace path for node %q: %w",
+				o.ToolsNetem.NodeName,
+				err,
+			)
 		}
 		return nsPath, o.ToolsNetem.NodeName, nil
 	}
@@ -310,7 +321,6 @@ func resolveNetemNSPath(ctx context.Context, o *Options) (string, string, error)
 	}
 
 	return nsPath, o.ToolsNetem.ContainerName, nil
-
 }
 
 func printImpairments(qdiscs []gotc.Object) {
@@ -464,6 +474,7 @@ func netemShowFn(o *Options) error {
 		return err
 	}
 
+	// Retrieve the container's NSPath
 	var nodeNs ns.NetNS
 	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
 		return err
@@ -528,6 +539,7 @@ func netemResetFn(o *Options) error {
 		return err
 	}
 
+	// Retrieve the container's NSPath
 	var nodeNs ns.NetNS
 	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
 		return err
