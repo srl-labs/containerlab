@@ -23,8 +23,8 @@ import (
 	"github.com/spf13/cobra"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
-	clabnetem "github.com/srl-labs/containerlab/netem"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabnetem "github.com/srl-labs/containerlab/netem"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -57,11 +57,18 @@ of real-world networks.`,
 
 	c.AddCommand(netemSetCmd)
 	netemSetCmd.Flags().StringVarP(
+		&o.ToolsNetem.NodeName,
+		"node",
+		"n",
+		o.ToolsNetem.NodeName,
+		"containerlab node name to apply impairment to",
+	)
+	netemSetCmd.Flags().StringVarP(
 		&o.ToolsNetem.ContainerName,
 		"node",
 		"n",
 		o.ToolsNetem.ContainerName,
-		"node to apply impairment to",
+		"container node to apply impairment to",
 	)
 	netemSetCmd.Flags().StringVarP(
 		&o.ToolsNetem.Interface,
@@ -103,7 +110,6 @@ of real-world networks.`,
 		0,
 		"random packet corruption probability expressed in percentage (e.g. 0.1 means 0.1%)",
 	)
-	netemSetCmd.MarkFlagRequired("node")
 	netemSetCmd.MarkFlagRequired("interface")
 
 	netemShowCmd := &cobra.Command{
@@ -117,6 +123,13 @@ of real-world networks.`,
 		},
 	}
 	c.AddCommand(netemShowCmd)
+	netemShowCmd.Flags().StringVarP(
+		&o.ToolsNetem.NodeName,
+		"node",
+		"n",
+		o.ToolsNetem.NodeName,
+		"node to apply impairment to",
+	)
 	netemShowCmd.Flags().StringVarP(
 		&o.ToolsNetem.ContainerName,
 		"node",
@@ -144,11 +157,12 @@ of real-world networks.`,
 		},
 	}
 	c.AddCommand(netemResetCmd)
-	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "node", "n",
-		o.ToolsNetem.ContainerName, "node to reset impairment on")
+	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.ContainerName, "container", "c",
+		o.ToolsNetem.ContainerName, "container name to reset impairment on the container name")
+	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.NodeName, "node", "n",
+		o.ToolsNetem.NodeName, "node name from topology to reset impairment on (requires -t/--topo)")
 	netemResetCmd.Flags().StringVarP(&o.ToolsNetem.Interface, "interface", "i",
 		o.ToolsNetem.Interface, "interface to reset impairment on")
-	netemResetCmd.MarkFlagRequired("node")
 	netemResetCmd.MarkFlagRequired("interface")
 
 	return c, nil
@@ -164,32 +178,11 @@ func netemSetFn(ctx context.Context, o *Options) error {
 		)
 	}
 
-	// Get the runtime initializer.
-	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
-	if err != nil {
-		return err
-	}
-
-	// init the runtime
-	rt := rinit()
-
-	// init runtime with timeout
-	err = rt.Init(
-		clabruntime.WithConfig(
-			&clabruntime.RuntimeConfig{
-				Timeout: o.Global.Timeout,
-			},
-		),
-	)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// retrieve the containers NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
+	nodeNsPath, displayName, err := resolveNetemNSPath(ctx, o)
 	if err != nil {
 		return err
 	}
@@ -227,7 +220,7 @@ func netemSetFn(ctx context.Context, o *Options) error {
 
 		qdisc, err := clabnetem.SetImpairments(
 			tcnl,
-			o.ToolsNetem.ContainerName,
+			displayName,
 			link,
 			o.ToolsNetem.Delay,
 			o.ToolsNetem.Jitter,
@@ -256,9 +249,68 @@ func validateInputAndRoot(o *Options) error {
 		return fmt.Errorf("jitter cannot be set without setting delay")
 	}
 
+	// Check the conditions one more time with the tests
+	if o.ToolsNetem.NodeName != "" && o.ToolsNetem.ContainerName != "" {
+		return fmt.Errorf("cannot specify both --node/-n and --container/-c; use one or the other")
+	}
+
+	if o.ToolsNetem.NodeName == "" && o.ToolsNetem.ContainerName != "" {
+		return fmt.Errorf("either --node/-n (with --topo/-t) or --container/-c must be specified")
+	}
+
+	if o.ToolsNetem.NodeName != "" && o.Global.TopologyFile == "" && o.Global.TopologyName == "" {
+		return fmt.Errorf("--node/-n requires a topology file (--topo/-t) or lab name (--name)")
+	}
+
 	clabutils.CheckAndGetRootPrivs()
 
 	return nil
+}
+
+func resolveNetemNSPath(ctx context.Context, o *Options) (string, string, error) {
+	if o.ToolsNetem.NodeName != "" {
+		c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to load topology: %w", err)
+		}
+
+		node, err := c.GetNode(o.ToolsNetem.NodeName)
+		if err != nil {
+			return "", "", fmt.Errorf("node %q not found in topology: %w", o.ToolsNetem.NodeName, err)
+		}
+
+		nsPath, err := node.GetNSPath(ctx)
+		if err != nil {
+			return "", "", fmt.Errorf("failed to get namespace path for node %q: %w", o.ToolsNetem.NodeName, err)
+		}
+		return nsPath, o.ToolsNetem.NodeName, nil
+	}
+
+	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	if err != nil {
+		return "", "", err
+	}
+
+	rt := rinit()
+
+	err = rt.Init(
+		clabruntime.WithConfig(
+			&clabruntime.RuntimeConfig{
+				Timeout: o.Global.Timeout,
+			},
+		),
+	)
+	if err != nil {
+		return "", "", err
+	}
+
+	nsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
+	if err != nil {
+		return "", "", err
+	}
+
+	return nsPath, o.ToolsNetem.ContainerName, nil
+
 }
 
 func printImpairments(qdiscs []gotc.Object) {
@@ -403,31 +455,11 @@ func qdiscToJSONData(qdisc *gotc.Object) clabtypes.ImpairmentData {
 }
 
 func netemShowFn(o *Options) error {
-	// Get the runtime initializer.
-	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
-	if err != nil {
-		return err
-	}
-
-	// init the runtime
-	rt := rinit()
-
-	err = rt.Init(
-		clabruntime.WithConfig(
-			&clabruntime.RuntimeConfig{
-				Timeout: o.Global.Timeout,
-			},
-		),
-	)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// retrieve the container's NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
+	nodeNsPath, displayName, err := resolveNetemNSPath(ctx, o)
 	if err != nil {
 		return err
 	}
@@ -467,7 +499,7 @@ func netemShowFn(o *Options) error {
 
 			// Structure output as a map keyed by the node name.
 			outputData := map[string][]clabtypes.ImpairmentData{
-				o.ToolsNetem.ContainerName: impairments,
+				displayName: impairments,
 			}
 
 			jsonData, err := json.MarshalIndent(outputData, "", "  ")
@@ -487,31 +519,11 @@ func netemShowFn(o *Options) error {
 }
 
 func netemResetFn(o *Options) error {
-	// Get the runtime initializer.
-	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
-	if err != nil {
-		return err
-	}
-
-	// init the runtime
-	rt := rinit()
-
-	err = rt.Init(
-		clabruntime.WithConfig(
-			&clabruntime.RuntimeConfig{
-				Timeout: o.Global.Timeout,
-			},
-		),
-	)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// retrieve the container's NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
+	nodeNsPath, displayName, err := resolveNetemNSPath(ctx, o)
 	if err != nil {
 		return err
 	}
@@ -549,7 +561,7 @@ func netemResetFn(o *Options) error {
 		}
 
 		fmt.Printf("Reset impairments on node %q, interface %q\n",
-			o.ToolsNetem.ContainerName, netemIfLink.Attrs().Name)
+			displayName, netemIfLink.Attrs().Name)
 
 		return nil
 	})
