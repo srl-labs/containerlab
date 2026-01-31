@@ -169,6 +169,11 @@ of real-world networks.`,
 }
 
 func netemSetFn(ctx context.Context, o *Options) error {
+	// set requires a specific node or container
+	if o.ToolsNetem.NodeName == "" && o.ToolsNetem.ContainerName == "" {
+		return fmt.Errorf("--node/-n or --container/-c must be specified for 'set' command")
+	}
+
 	// Ensure that the sch_netem kernel module is loaded (for Fedora/RHEL compatibility)
 	if err := exec.CommandContext(ctx, "modprobe", "sch_netem").Run(); err != nil {
 		log.Warn(
@@ -250,15 +255,9 @@ func validateInputAndRoot(o *Options) error {
 		return fmt.Errorf("jitter cannot be set without setting delay")
 	}
 
-	// TODO: Check the conditions one more time with the tests
-	// Validates that either --node or --container is specified
+	// Validates that --node and --container are mutually exclusive
 	if o.ToolsNetem.NodeName != "" && o.ToolsNetem.ContainerName != "" {
 		return fmt.Errorf("cannot specify both --node/-n and --container/-c; use one or the other")
-	}
-
-	// Validates that either --node or --container is specified
-	if o.ToolsNetem.NodeName == "" && o.ToolsNetem.ContainerName != "" {
-		return fmt.Errorf("either --node/-n (with --topo/-t) or --container/-c must be specified")
 	}
 
 	if o.ToolsNetem.NodeName != "" && o.Global.TopologyFile == "" && o.Global.TopologyName == "" {
@@ -468,14 +467,36 @@ func netemShowFn(o *Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// If no specific node/container is specified but topology is provided,
+	// show impairments for all nodes in the topology
+	if o.ToolsNetem.NodeName == "" && o.ToolsNetem.ContainerName == "" {
+		if o.Global.TopologyFile == "" && o.Global.TopologyName == "" {
+			return fmt.Errorf(
+				"either --node/-n, --container/-c, or --topo/-t (to show all nodes) must be specified",
+			)
+		}
+		return netemShowAllNodesFn(ctx, o)
+	}
+
 	// retrieve the container's NSPath
 	nodeNsPath, displayName, err := resolveNetemNSPath(ctx, o)
 	if err != nil {
 		return err
 	}
 
-	// Retrieve the container's NSPath
+	return showNodeImpairments(ctx, o, nodeNsPath, displayName)
+}
+
+func showNodeImpairments(
+	ctx context.Context,
+	o *Options,
+	nodeNsPath string,
+	displayName string,
+) error {
+	_ = ctx // reserved for future use
+
 	var nodeNs ns.NetNS
+	var err error
 	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
 		return err
 	}
@@ -529,7 +550,102 @@ func netemShowFn(o *Options) error {
 	return err
 }
 
+func netemShowAllNodesFn(ctx context.Context, o *Options) error {
+	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
+	if err != nil {
+		return fmt.Errorf("failed to load topology: %w", err)
+	}
+
+	// Collect all node impairments for JSON output
+	allImpairments := make(map[string][]clabtypes.ImpairmentData)
+
+	// Track nodes we've already processed (for distributed nodes sharing namespace)
+	processedNSPaths := make(map[string]bool)
+
+	for nodeName, node := range c.Nodes {
+		nsPath, err := node.GetNSPath(ctx)
+		if err != nil {
+			log.Warnf("failed to get namespace path for node %q: %v", nodeName, err)
+			continue
+		}
+
+		// Skip nodes that share namespace with already processed nodes
+		if processedNSPaths[nsPath] {
+			continue
+		}
+		processedNSPaths[nsPath] = true
+
+		if o.ToolsNetem.Format == clabconstants.FormatJSON {
+			impairments, err := getNodeImpairments(nsPath)
+			if err != nil {
+				log.Warnf("failed to get impairments for node %q: %v", nodeName, err)
+				continue
+			}
+			allImpairments[nodeName] = impairments
+		} else {
+			fmt.Printf("\n=== Node: %s ===\n", nodeName)
+			if err := showNodeImpairments(ctx, o, nsPath, nodeName); err != nil {
+				log.Warnf("failed to show impairments for node %q: %v", nodeName, err)
+			}
+		}
+	}
+
+	if o.ToolsNetem.Format == clabconstants.FormatJSON {
+		jsonData, err := json.MarshalIndent(allImpairments, "", "  ")
+		if err != nil {
+			return fmt.Errorf("error marshaling JSON: %v", err)
+		}
+		fmt.Println(string(jsonData))
+	}
+
+	return nil
+}
+
+func getNodeImpairments(nsPath string) ([]clabtypes.ImpairmentData, error) {
+	var nodeNs ns.NetNS
+	var err error
+	if nodeNs, err = ns.GetNS(nsPath); err != nil {
+		return nil, err
+	}
+
+	tcnl, err := clabnetem.NewTC(int(nodeNs.Fd()))
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err := tcnl.Close(); err != nil {
+			log.Errorf("could not close rtnetlink socket: %v", err)
+		}
+	}()
+
+	var impairments []clabtypes.ImpairmentData
+
+	err = nodeNs.Do(func(_ ns.NetNS) error {
+		qdiscs, err := clabnetem.Impairments(tcnl)
+		if err != nil {
+			return err
+		}
+
+		for idx := range qdiscs {
+			if qdiscs[idx].Attribute.Kind != "netem" {
+				continue
+			}
+			impairments = append(impairments, qdiscToJSONData(&qdiscs[idx]))
+		}
+
+		return nil
+	})
+
+	return impairments, err
+}
+
 func netemResetFn(o *Options) error {
+	// reset requires a specific node or container
+	if o.ToolsNetem.NodeName == "" && o.ToolsNetem.ContainerName == "" {
+		return fmt.Errorf("--node/-n or --container/-c must be specified for 'reset' command")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
