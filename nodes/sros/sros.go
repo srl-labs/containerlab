@@ -1151,12 +1151,12 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 		ComponentConfig: componentConfig,
 
 		// Service configs from variant (single source of truth)
-		SystemConfig:    snippets.SystemConfig,
-		GRPCConfig:      snippets.GRPCConfig,
-		SNMPConfig:      snippets.SNMPConfig,
-		NetconfConfig:   snippets.NetconfConfig,
-		LoggingConfig:   snippets.LoggingConfig,
-		SSHConfig:       snippets.SSHConfig,
+		SystemConfig:  snippets.SystemConfig,
+		GRPCConfig:    snippets.GRPCConfig,
+		SNMPConfig:    snippets.SNMPConfig,
+		NetconfConfig: snippets.NetconfConfig,
+		LoggingConfig: snippets.LoggingConfig,
+		SSHConfig:     snippets.SSHConfig,
 	}
 
 	if n.Config().DNS != nil {
@@ -1759,7 +1759,7 @@ func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
 	// 0th component container
 	if len(components) > 0 {
 		c := components[0]
-		slot := c.Slot
+		slot := strings.ToLower(c.Slot)
 
 		componentName := n.Cfg.LongName + "-" + slot
 
