@@ -1765,7 +1765,10 @@
                 "sfm-x20-b",
                 "sfm-x20s-b",
                 "sfm2-s",
-                "sfm2-x20s"
+                "sfm2-x20s",
+                "sfm-ixr-6",
+                "sfm-ixr-10",
+                "m-sfm6-12e"
             ]
         }
     },
