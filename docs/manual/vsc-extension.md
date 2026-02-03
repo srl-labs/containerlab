@@ -421,7 +421,6 @@ Used to set the runtime that containerlab is using in the system. Options are:
 
 - `docker`
 - `podman`
-- `ignite`
 
 It is not recommended to change this unless you know what you are doing.
 
