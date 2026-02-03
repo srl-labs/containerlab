@@ -10,7 +10,6 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
 	github.com/containernetworking/plugins v1.9.0
-	github.com/containers/common v0.64.2
 	github.com/containers/podman/v5 v5.7.1
 	github.com/digitalocean/go-openvswitch v0.0.0-20251118231545-85aec29b8ee6
 	github.com/distribution/reference v0.6.0
@@ -33,7 +32,7 @@ require (
 	github.com/mackerelio/go-osstat v0.2.6
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/opencontainers/runtime-spec v1.3.0
+	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/pmorjan/kmod v1.1.1
 	github.com/scrapli/scrapligo v1.3.3
 	github.com/scrapli/scrapligocfg v1.0.0
@@ -43,6 +42,8 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tklauser/numcpus v0.11.0
 	github.com/vishvananda/netlink v1.3.1
+	go.podman.io/common v0.66.1
+	go.podman.io/image/v5 v5.38.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/crypto v0.47.0
 	golang.org/x/sys v0.40.0
@@ -132,8 +133,6 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
 	go.opentelemetry.io/otel/metric v1.36.0 // indirect
-	go.podman.io/common v0.66.1 // indirect
-	go.podman.io/image/v5 v5.38.0 // indirect
 	go.podman.io/storage v1.61.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
@@ -153,11 +152,9 @@ require (
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.17.0 // indirect
 	github.com/containers/buildah v1.42.2 // indirect
-	github.com/containers/image/v5 v5.36.2
 	github.com/containers/libtrust v0.0.0-20230121012942-c1716e8a8d01 // indirect
 	github.com/containers/ocicrypt v1.2.1 // indirect
 	github.com/containers/psgo v1.9.1-0.20250826150930-4ae76f200c86 // indirect
-	github.com/containers/storage v1.59.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.6.0 // indirect
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/cyphar/filepath-securejoin v0.5.2 // indirect
