@@ -17,7 +17,7 @@ import (
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/bindings/images"
 	"github.com/containers/podman/v5/pkg/bindings/network"
-	dockerTypes "github.com/docker/docker/api/types"
+	dockerContainer "github.com/docker/docker/api/types/container"
 	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
@@ -309,7 +309,7 @@ func (r *PodmanRuntime) Exec(
 		return nil, err
 	}
 	execCreateConf := handlers.ExecCreateConfig{
-		ExecConfig: dockerTypes.ExecConfig{
+		ExecOptions: dockerContainer.ExecOptions{
 			User:         "root",
 			AttachStderr: true,
 			AttachStdout: true,
@@ -362,7 +362,7 @@ func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec *exec.
 		return err
 	}
 	execCreateConf := handlers.ExecCreateConfig{
-		ExecConfig: dockerTypes.ExecConfig{
+		ExecOptions: dockerContainer.ExecOptions{
 			Tty:          false,
 			AttachStderr: false,
 			AttachStdout: false,
