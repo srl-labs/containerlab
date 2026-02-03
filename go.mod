@@ -1,6 +1,6 @@
 module github.com/srl-labs/containerlab
 
-go 1.25.0
+go 1.24.5
 
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
@@ -11,7 +11,7 @@ require (
 	github.com/charmbracelet/log v0.4.2
 	github.com/containernetworking/plugins v1.9.0
 	github.com/containers/podman/v5 v5.7.1
-	github.com/digitalocean/go-openvswitch v0.0.0-20251118231545-85aec29b8ee6
+	github.com/digitalocean/go-openvswitch v0.0.0-20250625173537-a00eb8d2cfce
 	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
@@ -223,7 +223,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apimachinery v0.35.0
+	k8s.io/apimachinery v0.34.3
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )

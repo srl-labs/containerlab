@@ -10,7 +10,7 @@ on:
       go_ver:
         description: "Go version"
         required: false
-        default: "1.25.0"
+        default: "1.24.5"
 jobs:
   golangci:
     name: lint
@@ -38,5 +38,5 @@ jobs:
         run: |
           curl -sSfL \
             https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh |
-            sh -s -- -b $(go env GOPATH)/bin v2.6.2
+            sh -s -- -b $(go env GOPATH)/bin v2.2.1
           make lint
