@@ -158,9 +158,6 @@ func Test_sros_verifyNokiaSrsimImage(t *testing.T) {
 	})
 }
 
-// boolPtr returns a pointer to b.
-func boolPtr(b bool) *bool { return &b }
-
 func Test_sros_buildStartupConfig(t *testing.T) {
 	t.Run("full_config_from_file", func(t *testing.T) {
 		dir := t.TempDir()
@@ -186,7 +183,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 		mockRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 		mockRt.EXPECT().Mgmt().Return(&clabtypes.MgmtNet{MTU: 1500}).AnyTimes()
 
-		issueFalse := false
+		issueCert := false
 		n := &sros{}
 		n.DefaultNode = *clabnodes.NewDefaultNode(n)
 		n.Cfg = &clabtypes.NodeConfig{
@@ -197,7 +194,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			Env: map[string]string{
 				envSrosConfigMode: "model-driven",
 			},
-			Certificate: &clabtypes.CertificateConfig{Issue: &issueFalse},
+			Certificate: &clabtypes.CertificateConfig{Issue: &issueCert},
 			TLSKey:      "",
 			TLSCert:     "",
 			TLSAnchor:   "",
