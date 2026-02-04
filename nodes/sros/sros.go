@@ -324,8 +324,13 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 }
 
 // Pre Deploy func for SR-SIM kind.
-func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	log.Debug("Running pre-deploy")
+
+	if err := n.verifyNokiaSrsimImage(ctx); err != nil {
+		return err
+	}
+
 	// store the preDeployParams
 	n.preDeployParams = params
 
@@ -1941,4 +1946,35 @@ func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan c
 		default:
 		}
 	}
+}
+
+// verifyNokiaSrosImage ensures the image used with kind nokia_srsim has the correct labels
+// It inspects the image label
+// org.opencontainers.image.title and returns an error if it is not "srsim".
+func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
+	if n.GetRuntime() == nil {
+		return nil
+	}
+	insp, err := n.GetRuntime().InspectImage(ctx, n.Cfg.Image)
+	if err != nil {
+		// Skip check when runtime does not support image inspection (e.g. Podman).
+		if strings.Contains(err.Error(), "not implemented") {
+			log.Debug("Skipping nokia_srsim image kind check: runtime does not support image inspection")
+			return nil
+		}
+		return err
+	}
+	if insp != nil && insp.Config.Labels != nil {
+		if _, hasVrnetlab := insp.Config.Labels[vrnetlabVersionLabel]; hasVrnetlab {
+			return fmt.Errorf(
+				"node %q: kind is nokia_srsim but the image is a vrnetlab image; use kind: nokia_sros with this image, or use the SR-SIM container image for kind: nokia_srsim",
+				n.Cfg.ShortName,
+			)
+		}
+		if title, ok := insp.Config.Labels[srosImageTitleLabel]; ok && title == srosImageTitle {
+			return nil
+		}
+	}
+	log.Warnf("node %q: kind is nokia_srsim but the provided image does not have the correct labels; please use a valid SR-SIM container image or run a more recent version of the SR-SIM container image to suppress this warning", n.Cfg.ShortName)
+	return nil
 }
