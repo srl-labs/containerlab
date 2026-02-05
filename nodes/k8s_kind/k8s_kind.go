@@ -17,6 +17,7 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/sync/semaphore"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/kind/pkg/apis/config/v1alpha4"
@@ -94,6 +95,14 @@ func (n *k8s_kind) Deploy(_ context.Context, _ *clabnodes.DeployParams) error {
 	if n.Cfg.Extras != nil && n.Cfg.Extras.K8sKind != nil &&
 		n.Cfg.Extras.K8sKind.Deploy != nil {
 		opts := n.Cfg.Extras.K8sKind.Deploy
+
+		// Sets the explicit --kubeconfig path
+		if opts.KubeconfigPath != nil {
+			// Resolve the kubeconfig path relative to the clab file location.
+			resolvedPath := clabutils.ResolvePath(*opts.KubeconfigPath, n.Cfg.LabDir)
+			clusterCreateOptions = append(clusterCreateOptions,
+				cluster.CreateWithKubeconfigPath(resolvedPath))
+		}
 
 		// Override the default wait duration
 		if opts.Wait != nil {

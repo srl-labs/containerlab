@@ -13,6 +13,9 @@ name: srsim-tests
 jobs:
   srsim-tests:
     runs-on: ubuntu-24.04
+    # Skip this job if running from a fork PR (secrets are not available)
+    # github.event.pull_request.head.repo.full_name will be different from github.repository for fork PRs
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     env:
       SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
     strategy:
@@ -74,7 +77,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull and re-tag srsim image
-        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R1 registry.srlinux.dev/pub/nokia_srsim:25.10.R1
+        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R2 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R2 registry.srlinux.dev/pub/nokia_srsim:25.10.R2
 
       # - name: setup tmate session
       #   uses: mxschmitt/action-tmate@v3

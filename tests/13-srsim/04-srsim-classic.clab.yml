@@ -7,7 +7,7 @@ name: sr04
 topology:
   kinds:
     nokia_srsim:
-      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R1
+      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R2
       license: /opt/nokia/sros/license-sros25.txt
   nodes:
     srsim:

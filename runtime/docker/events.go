@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	dockerTypes "github.com/docker/docker/api/types"
+	dockerEvents "github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/api/types/filters"
 
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -42,7 +42,7 @@ func (d *DockerRuntime) streamDockerEvents(
 		}
 	}
 
-	messages, errs := d.Client.Events(ctx, dockerTypes.EventsOptions{Filters: filtersArgs})
+	messages, errs := d.Client.Events(ctx, dockerEvents.ListOptions{Filters: filtersArgs})
 
 	for {
 		select {
