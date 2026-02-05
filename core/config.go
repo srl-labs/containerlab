@@ -47,7 +47,7 @@ const (
 	gitHashVar   = "__gitHash__"
 
 	// clab validation variables
-	containerNamePattern = "^[a-zA-Z0-9][a-zA-Z0-9.-_]+$"
+	containerNamePattern = "^[a-zA-Z0-9][a-zA-Z0-9-._]+$"
 	dnsIncompatibleChars = "._"
 	maxNameLength = 60
 )
