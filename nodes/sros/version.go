@@ -111,6 +111,47 @@ func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 	return n.parseVersionString(version), err
 }
 
+// ReadFileFromImageInspect reads a file from the image filesystem using the graph driver's
+// UpperDir or MergedDir (same approach as srosVersionFromImage), without spawning a container.
+// containerPath is the path inside the image (e.g. "/opt/nokia/chassis_info.json").
+// Returns the file contents or an error if the path is not available in the graph driver.
+func ReadFileFromImageInspect(imageInspect *clabruntime.ImageInspect, containerPath string) ([]byte, error) {
+	// Path in graph driver is relative to root (no leading slash).
+	relPath := strings.TrimPrefix(filepath.Clean(containerPath), string(filepath.Separator))
+	if relPath == "" {
+		relPath = containerPath
+	}
+	// Ensure we use forward slashes for the path inside the image.
+	relPath = filepath.ToSlash(relPath)
+
+	if imageInspect.GraphDriver.Data.UpperDir != "" {
+		hostPath := filepath.Join(imageInspect.GraphDriver.Data.UpperDir, relPath)
+		content, err := os.ReadFile(hostPath)
+		if err == nil {
+			return content, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("read %s from UpperDir: %w", containerPath, err)
+		}
+	}
+
+	if imageInspect.GraphDriver.Data.MergedDir != "" {
+		hostPath := filepath.Join(imageInspect.GraphDriver.Data.MergedDir, relPath)
+		content, err := os.ReadFile(hostPath)
+		if err == nil {
+			return content, nil
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("read %s from MergedDir: %w", containerPath, err)
+		}
+	}
+
+	return nil, fmt.Errorf(
+		"%s not found in image graph driver (UpperDir/MergedDir)",
+		containerPath,
+	)
+}
+
 // readVersionFromImageLayers reads the SR OS version from the /etc/sros-version file
 // directly from image layers using the Docker graph driver's UpperDir
 // without extracting the entire image.
@@ -118,70 +159,13 @@ func (n *sros) readVersionFromImageLayers(
 	_ context.Context,
 	imageInspect *clabruntime.ImageInspect,
 ) (string, error) {
-	// First, try to use the GraphDriver.Data.UpperDir if available
-	if imageInspect.GraphDriver.Data.UpperDir != "" {
-		versionPath := filepath.Join(imageInspect.GraphDriver.Data.UpperDir, srosVersionFilePath)
-
-		log.Debug("Attempting to read SR OS version from UpperDir",
-			"node", n.Cfg.ShortName,
-			"path", versionPath)
-
-		content, err := os.ReadFile(versionPath)
-		if err == nil {
-			version := strings.TrimSpace(string(content))
-			log.Debug("Found SR OS version in UpperDir",
-				"node", n.Cfg.ShortName,
-				"version", version)
-			return version, nil
-		}
-
-		// Log the error and only fallback if it's a "file not found" error
-		if !errors.Is(err, os.ErrNotExist) {
-			log.Warn("Failed to read SR OS version from UpperDir",
-				"node", n.Cfg.ShortName,
-				"path", versionPath,
-				"error", err)
-			return "", fmt.Errorf("failed to read SR OS version from UpperDir: %w", err)
-		}
-
-		log.Debug("sros-version file not found in UpperDir, trying MergedDir",
-			"node", n.Cfg.ShortName)
+	content, err := ReadFileFromImageInspect(imageInspect, srosVersionFilePath)
+	if err != nil {
+		return "", err
 	}
-
-	// Fallback: try MergedDir if available
-	if imageInspect.GraphDriver.Data.MergedDir != "" {
-		versionPath := filepath.Join(imageInspect.GraphDriver.Data.MergedDir, srosVersionFilePath)
-
-		log.Debug("Attempting to read SR OS version from MergedDir",
-			"node", n.Cfg.ShortName,
-			"path", versionPath)
-
-		content, err := os.ReadFile(versionPath)
-		if err == nil {
-			version := strings.TrimSpace(string(content))
-			log.Debug("Found SR OS version in MergedDir",
-				"node", n.Cfg.ShortName,
-				"version", version)
-			return version, nil
-		}
-
-		// Log the specific error
-		if !errors.Is(err, os.ErrNotExist) {
-			log.Warn("Failed to read SR OS version from MergedDir",
-				"node", n.Cfg.ShortName,
-				"path", versionPath,
-				"error", err)
-			return "", fmt.Errorf("failed to read SR OS version from MergedDir: %w", err)
-		}
-
-		log.Debug("SR OS version file not found in MergedDir",
-			"path",
-			srosVersionFilePath,
-			"node", n.Cfg.ShortName)
-	}
-
-	return "", fmt.Errorf(
-		"%s file not found in image graph driver directories or layers",
-		srosVersionFilePath,
-	)
+	version := strings.TrimSpace(string(content))
+	log.Debug("Found SR OS version in image layers",
+		"node", n.Cfg.ShortName,
+		"version", version)
+	return version, nil
 }
