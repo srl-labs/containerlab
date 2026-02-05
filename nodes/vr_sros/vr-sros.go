@@ -50,6 +50,10 @@ const (
 	configDirName       = "tftpboot"
 	startupCfgFName     = "config.txt"
 	licenseFName        = "license.txt"
+
+	// OCI image title label used to detect SR-SIM container image (must use kind nokia_srsim).
+	ociImageTitleLabel = "org.opencontainers.image.title"
+	srsimImageTitle    = "srsim"
 )
 
 // SROSTemplateData holds ssh keys for template generation.
@@ -126,10 +130,14 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	s.InterfaceOffset = InterfaceOffset
 	s.InterfaceHelp = InterfaceHelp
 
+	if len(s.Cfg.Components) > 0 {
+		log.Warnf("node %q: kind nokia_sros (vrnetlab) does not support components; components are ignored. Use kind nokia_srsim for distributed/chassis topologies with components", s.Cfg.ShortName)
+	}
+
 	return nil
 }
 
-func (s *vrSROS) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (s *vrSROS) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
@@ -139,7 +147,38 @@ func (s *vrSROS) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams)
 	// store public keys extracted from clab host
 	s.sshPubKeys = params.SSHPubKeys
 
+	if err := s.verifyNokiaSrosImage(ctx); err != nil {
+		return err
+	}
+
 	return createVrSROSFiles(s)
+}
+
+// verifyNokiaSrosImage ensures the image used with kind nokia_sros is not the SRsim
+// container image (use kind nokia_srsim for that). It inspects the image label
+// org.opencontainers.image.title and returns an error if it is "srsim".
+func (s *vrSROS) verifyNokiaSrosImage(ctx context.Context) error {
+	if s.GetRuntime() == nil {
+		return nil
+	}
+	insp, err := s.GetRuntime().InspectImage(ctx, s.Cfg.Image)
+	if err != nil {
+		// Skip check when runtime does not support image inspection (e.g. Podman).
+		if strings.Contains(err.Error(), "not implemented") {
+			log.Debug("Skipping nokia_sros image kind check: runtime does not support image inspection")
+			return nil
+		}
+		return err
+	}
+	if insp != nil && insp.Config.Labels != nil {
+		if title, ok := insp.Config.Labels[ociImageTitleLabel]; ok && title == srsimImageTitle {
+			return fmt.Errorf(
+				"node %q: kind is nokia_sros (vrnetlab) but the provided image is for the nokia_srsim container image; use kind: nokia_srsim with this image, or use a vrnetlab nokia_sros image for kind: nokia_sros",
+				s.Cfg.ShortName,
+			)
+		}
+	}
+	return nil
 }
 
 func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {

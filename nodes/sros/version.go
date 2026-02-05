@@ -21,6 +21,9 @@ const (
 	srosImageVendorLabel  = "org.opencontainers.image.vendor"
 	srosImageVendor       = "Nokia"
 	srosImageVersionLabel = "org.opencontainers.image.version"
+
+	// vrnetlabVersionLabel is set on vrnetlab-built images; nokia_srsim kind must not use such images.
+	vrnetlabVersionLabel = "vrnetlab-version"
 )
 
 // SrosVersion represents an SR OS version as a set of fields.
