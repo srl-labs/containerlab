@@ -49,7 +49,7 @@ const (
 	// clab validation variables
 	containerNamePattern = "^[a-zA-Z0-9][a-zA-Z0-9-._]+$"
 	dnsIncompatibleChars = "._"
-	maxNameLength = 60
+	maxNameLength        = 60
 )
 
 var containerNamePatternRe = regexp.MustCompile(containerNamePattern)
@@ -213,15 +213,15 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	}
 
 	if !containerNamePatternRe.MatchString(longName) {
-		return nil, fmt.Errorf("Container name is invalid: %s", longName)
+		return nil, fmt.Errorf("Node name contains invalid characters: %s", longName)
 	}
 
 	if len(longName) > maxNameLength {
-		log.Warnf("DNS lookup will not work for node names longer than %d characters: %s", maxNameLength, longName)
+		log.Warn("Node name will not resolve via DNS", "name", longName, "reason", fmt.Sprintf("name exceeds %d characters", maxNameLength))
 	}
 
 	if strings.ContainsAny(longName, dnsIncompatibleChars) {
-		log.Warnf("DNS lookup will not work for node names with '.' and '_': %s", longName)
+		log.Warn("Node name will not resolve via DNS", "name", longName, "reason", "name contains invalid characters such as '.' and/or '_'")
 	}
 
 	nodeCfg := &clabtypes.NodeConfig{
