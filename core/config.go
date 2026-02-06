@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -45,14 +44,7 @@ const (
 	// clab name specific variables
 	gitBranchVar = "__gitBranch__"
 	gitHashVar   = "__gitHash__"
-
-	// clab validation variables
-	containerNamePattern = "^[a-zA-Z0-9][a-zA-Z0-9-._]+$"
-	dnsIncompatibleChars = "._"
-	maxNameLength        = 60
 )
-
-var containerNamePatternRe = regexp.MustCompile(containerNamePattern)
 
 // Config defines lab configuration as it is provided in the YAML file.
 type Config struct {
@@ -210,18 +202,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		longName = nodeName
 	case "__lab-name":
 		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
-	}
-
-	if !containerNamePatternRe.MatchString(longName) {
-		return nil, fmt.Errorf("Node name contains invalid characters: %s", longName)
-	}
-
-	if len(longName) > maxNameLength {
-		log.Warn("Node name will not resolve via DNS", "name", longName, "reason", fmt.Sprintf("name exceeds %d characters", maxNameLength))
-	}
-
-	if strings.ContainsAny(longName, dnsIncompatibleChars) {
-		log.Warn("Node name will not resolve via DNS", "name", longName, "reason", "name contains invalid characters such as '.' and/or '_'")
 	}
 
 	nodeCfg := &clabtypes.NodeConfig{
