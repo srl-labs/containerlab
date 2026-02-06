@@ -121,6 +121,11 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	}
 	n.Cfg.MacAddress = hwa.String()
 
+	// create TLS certificates for the node by default.
+	// The cert, key and CA files are mounted into the container
+	// and can be validated with `show management security ssl certificate`.
+	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
+
 	// mount config dir
 	cfgPath := filepath.Join(n.Cfg.LabDir, "flash")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprintf("%s:/mnt/flash/", cfgPath))
