@@ -145,8 +145,8 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	// also call deploy on the special nodes endpoints (only host is required for the
-	// vxlan stitched endpoints)
+	// also call deploy on the special nodes endpoints (this will not handle
+  // vxlan-stitched endpoints, but only their underlying veth and vxlan links).
 	eps := c.getSpecialLinkNodes()["host"].GetEndpoints()
 	for _, ep := range eps {
 		err = ep.Deploy(ctx)
@@ -154,6 +154,23 @@ func (c *CLab) Deploy( //nolint: funlen
 			log.Warnf("failed deploying endpoint %s", ep)
 		}
 	}
+
+  // none of the vxlan-stitched links will have had deploy called, so we do it now.
+  for _, l := range c.Links {
+		if l.GetType() != clablinks.LinkTypeVxlanStitch {
+			continue
+		}
+		vxlanStitchLink, ok := l.(*clablinks.VxlanStitched)
+		if !ok {
+			log.Warnf("link reported type vxlan-stitch but has unexpected concrete type %T", l)
+			continue
+		}
+		// the veth and vxlan underlying links have already been deployed.
+		err = vxlanStitchLink.DeployWithExistingVethAndVxlan(ctx)
+		if err != nil {
+			log.Warnf("failed deploying vxlan-stitch endpoint %s", vxlanStitchLink)
+		}
+  }
 
 	if nodesWg != nil {
 		nodesWg.Wait()

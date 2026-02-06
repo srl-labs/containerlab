@@ -37,35 +37,44 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 // veth interface does already exist, hence it is not created as part of this
 // deployment.
 func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
-	return l.internalDeploy(ctx, nil, true)
+	return l.internalDeploy(ctx, nil, true, false)
+}
+
+// DeployWithExistingVethAndVxlan stitches the veth and vxlan interface whilst both interfaces already exist.
+func (l *VxlanStitched) DeployWithExistingVethAndVxlan(ctx context.Context) error {
+	return l.internalDeploy(ctx, nil, true, true)
 }
 
 // Deploy provisions the stitched vxlan link with all its underlying sub-links.
 func (l *VxlanStitched) Deploy(ctx context.Context, ep Endpoint) error {
-	return l.internalDeploy(ctx, ep, false)
+	return l.internalDeploy(ctx, ep, false, false)
 }
 
 func (l *VxlanStitched) internalDeploy(
 	ctx context.Context,
 	ep Endpoint,
 	skipVethCreation bool,
+	skipVxlanCreation bool,
 ) error {
-	// deploy the vxlan link
-	err := l.vxlanLink.Deploy(ctx, ep)
-	if err != nil {
-		return err
+	// the vxlan creation might be skipped if it already exists
+	if !skipVxlanCreation {
+		// deploy the vxlan link
+		err := l.vxlanLink.Deploy(ctx, ep)
+		if err != nil {
+			return err
+		}
 	}
 
 	// the veth creation might be skipped if it already exists
 	if !skipVethCreation {
-		err = l.vethLink.Deploy(ctx, ep)
+		err := l.vethLink.Deploy(ctx, ep)
 		if err != nil {
 			return err
 		}
 	}
 
 	// unidirectionally stitch the vxlan endpoint to the veth endpoint
-	err = stitch(l.vxlanLink.localEndpoint, l.vethStitchEp)
+	err := stitch(l.vxlanLink.localEndpoint, l.vethStitchEp)
 	if err != nil {
 		return err
 	}
