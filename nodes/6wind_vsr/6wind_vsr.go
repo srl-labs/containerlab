@@ -151,21 +151,21 @@ func (n *sixwind_vsr) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	return nil
 }
 
-func (n *sixwind_vsr) SaveConfig(ctx context.Context) error {
+func (n *sixwind_vsr) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
+		return nil, fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
 	}
 
 	err = os.WriteFile(n.UserStartupConfig, execResult.GetStdOutByteSlice(),
 		clabconstants.PermissionsOpen)
 	if err != nil {
-		return fmt.Errorf("failed to write config by %s path from %s container: %v",
+		return nil, fmt.Errorf("failed to write config by %s path from %s container: %v",
 			n.UserStartupConfig, n.Cfg.ShortName, err)
 	}
 	log.Infof(
@@ -174,7 +174,7 @@ func (n *sixwind_vsr) SaveConfig(ctx context.Context) error {
 		n.UserStartupConfig,
 	)
 
-	return nil
+	return nil, nil
 }
 
 // CheckInterfaceName allows any interface name for 6wind_vsr nodes, but checks

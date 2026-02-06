@@ -28,12 +28,12 @@ func (c *CLab) Save(
 		return err
 	}
 
-	if opts.copyOutDst != "" {
-		resolvedDst, err := c.resolveCopyOutDst(opts.copyOutDst)
+	if opts.copyDst != "" {
+		resolvedDst, err := c.resolveCopyOutDst(opts.copyDst)
 		if err != nil {
 			return err
 		}
-		opts.copyOutDst = resolvedDst
+		opts.copyDst = resolvedDst
 	}
 
 	var wg sync.WaitGroup
@@ -44,16 +44,17 @@ func (c *CLab) Save(
 		go func(node clabnodes.Node) {
 			defer wg.Done()
 
-			if err := node.SaveConfig(ctx); err != nil {
+			result, err := node.SaveConfig(ctx)
+			if err != nil {
 				log.Errorf("node %q save failed: %v", node.GetShortName(), err)
 				return
 			}
 
-			if opts.copyOutDst == "" {
+			if opts.copyDst == "" {
 				return
 			}
 
-			if err := c.copySavedConfig(ctx, node, opts.copyOutDst); err != nil {
+			if err := c.copySavedConfig(ctx, result, node, opts.copyDst); err != nil {
 				log.Errorf("node %q save copy failed: %v", node.GetShortName(), err)
 			}
 		}(node)
@@ -86,4 +87,40 @@ func (c *CLab) resolveCopyOutDst(dst string) (string, error) {
 	}
 
 	return dstLabDir, nil
+}
+
+// copySavedConfig copies the saved configuration file from the path in the SaveConfigResult
+// to the user-specified destination directory.
+// The destination layout is: <dstRoot>/<nodeName>/<configFileName>.
+func (c *CLab) copySavedConfig(ctx context.Context, result *clabnodes.SaveConfigResult, node clabnodes.Node, dstRoot string) error {
+	if result == nil || result.ConfigPath == "" {
+		log.Debug("no saved config path reported, skipping copy", "node", node.GetShortName())
+		return nil
+	}
+
+	nodeCfg := node.Config()
+	if nodeCfg == nil {
+		return fmt.Errorf("node config missing")
+	}
+
+	nodeDstDir := filepath.Join(dstRoot, nodeCfg.ShortName)
+	if err := os.MkdirAll(nodeDstDir, clabconstants.PermissionsDirDefault); err != nil {
+		return fmt.Errorf("failed to create save dst node dir %q: %w", nodeDstDir, err)
+	}
+
+	dstPath := filepath.Join(nodeDstDir, filepath.Base(result.ConfigPath))
+
+	if err := clabutils.CopyFile(ctx, result.ConfigPath, dstPath, clabconstants.PermissionsFileDefault); err != nil {
+		return fmt.Errorf("failed to copy saved config from %q to %q: %w",
+			result.ConfigPath, dstPath, err)
+	}
+
+	log.Info(
+		"copied saved config",
+		"node", nodeCfg.ShortName,
+		"src", result.ConfigPath,
+		"dst", dstPath,
+	)
+
+	return nil
 }
