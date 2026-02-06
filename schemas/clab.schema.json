@@ -211,11 +211,11 @@
                     "anyOf": [
                         {
                             "type": "string",
-                            "minItems": 1
+                            "minLength": 1
                         },
                         {
                             "type": "number",
-                            "minItems": 1
+                            "minimum": 0
                         }
                     ]
                 },
@@ -1086,11 +1086,11 @@
                     "anyOf": [
                         {
                             "type": "string",
-                            "minItems": 1
+                            "minLength": 1
                         },
                         {
                             "type": "number",
-                            "minItems": 1
+                            "minimum": 0
                         }
                     ]
                 }
@@ -1768,11 +1768,13 @@
     "properties": {
         "name": {
             "description": "topology name",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-._]*$"
         },
         "prefix": {
             "description": "lab prefix",
             "type": "string",
+            "pattern": "^$|^[a-zA-Z0-9][a-zA-Z0-9-._]*$",
             "markdownDescription": "[lab prefix](https://containerlab.dev/manual/topo-def-file/#prefix)"
         },
         "mgmt": {
@@ -1869,7 +1871,7 @@
                     "markdownDescription": "topology [nodes](https://containerlab.dev/manual/nodes/) configuration container",
                     "type": "object",
                     "patternProperties": {
-                        ".*": {
+                        "^[a-zA-Z0-9][a-zA-Z0-9-._|]*$": {
                             "oneOf": [
                                 {
                                     "type": "null"
@@ -1879,7 +1881,8 @@
                                 }
                             ]
                         }
-                    }
+                    },
+                    "additionalProperties": false
                 },
                 "groups": {
                     "description": "topology groups configuration container",
