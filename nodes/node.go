@@ -25,9 +25,7 @@ const (
 	// default connection mode for vrnetlab based containers.
 	VrDefConnMode = "tc"
 	// keys for the map returned by GetImages.
-	ImageKey   = "image"
-	KernelKey  = "kernel"
-	SandboxKey = "sandbox"
+	ImageKey = "image"
 )
 
 var (

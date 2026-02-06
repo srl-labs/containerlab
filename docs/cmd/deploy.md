@@ -103,13 +103,12 @@ With `--max-workers` flag, it is possible to limit the number of concurrent work
 
 #### runtime
 
-Containerlab nodes can be started by different runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman`, and `ignite` runtimes.
+Containerlab nodes can be started by different runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman` runtime.
 
 A global runtime can be selected with a global `--runtime | -r` flag that will select a runtime to use. The possible value are:
 
 * `docker` - default
 * `podman` - experimental support
-* `ignite`
 
 #### timeout
 
