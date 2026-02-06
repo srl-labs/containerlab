@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -45,11 +44,6 @@ func (c *CLab) Save(
 		go func(node clabnodes.Node) {
 			defer wg.Done()
 
-			saveStart := time.Time{}
-			if opts.copyOutDst != "" {
-				saveStart = time.Now().UTC()
-			}
-
 			if err := node.SaveConfig(ctx); err != nil {
 				log.Errorf("node %q save failed: %v", node.GetShortName(), err)
 				return
@@ -59,13 +53,7 @@ func (c *CLab) Save(
 				return
 			}
 
-			saveResult, err := c.discoverSavedConfigResult(node, saveStart)
-			if err != nil {
-				log.Errorf("node %q save discovery failed: %v", node.GetShortName(), err)
-				return
-			}
-
-			if err := c.copySavedConfig(ctx, node, opts.copyOutDst, saveResult); err != nil {
+			if err := c.copySavedConfig(ctx, node, opts.copyOutDst); err != nil {
 				log.Errorf("node %q save copy failed: %v", node.GetShortName(), err)
 			}
 		}(node)
