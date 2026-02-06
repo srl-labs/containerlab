@@ -325,6 +325,12 @@ It is possible to change the default config which every ceos node will start wit
 
 In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a startup config file effectively calling the `write` CLI command.
 
+### TLS certificates
+
+By default, containerlab creates the TLS certificates for ceos nodes and mounts them into the container, making it possible to use the certificates for secure management. The certificates are generated for the node names and node IPs and are signed by a local self-signed CA.
+
+The `node.crt`, `node.key` and `ca.crt` files can be found in the node's lab directory and are mounted into the container at `/persist/secure/ssl/` path. The certificates can be displayed with `show management security ssl certificate` command in the EOS CLI.
+
 ## Container configuration
 
 To start an Arista cEOS node containerlab uses the following configuration:
@@ -496,7 +502,7 @@ sudo sysctl --load /etc/sysctl.d/99-zceoslab.conf
 
 where 75000 is `60 (# of nodes) * 1250`.
 
-2. Bind newly created file into the ceos-lab containers:
+1. Bind newly created file into the ceos-lab containers:
 
 ```
 ...
