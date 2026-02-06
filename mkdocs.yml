@@ -79,6 +79,7 @@ nav:
           - manual/clabernetes/index.md
           - Install: manual/clabernetes/install.md
           - Quickstart: manual/clabernetes/quickstart.md
+          - Configuration: manual/clabernetes/configuration.md
           - Packet capture in c9s: manual/clabernetes/pcap.md
       - Node filtering: manual/node-filtering.md
       - Multi-node labs: manual/multi-node.md
