@@ -43,12 +43,12 @@ type snippetSet struct {
 // FullSnippetSet holds all config snippet strings for a variant (system, grpc, snmp, netconf, logging, ssh).
 // Single table-driven result for "which snippets apply to this variant."
 type FullSnippetSet struct {
-	SystemConfig    string
-	GRPCConfig      string
-	SNMPConfig      string
-	NetconfConfig   string
-	LoggingConfig   string
-	SSHConfig       string
+	SystemConfig  string
+	GRPCConfig    string
+	SNMPConfig    string
+	NetconfConfig string
+	LoggingConfig string
+	SSHConfig     string
 }
 
 // getFullSnippetSet returns the full set of snippet strings for the given variant.

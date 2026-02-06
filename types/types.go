@@ -191,9 +191,6 @@ type NodeConfig struct {
 	// Extra /etc/hosts entries for all nodes.
 	ExtraHosts []string          `json:"extra-hosts,omitempty"`
 	Labels     map[string]string `json:"labels,omitempty"` // container labels
-	// Ignite sandbox and kernel imageNames
-	Sandbox string `json:"sandbox,omitempty"`
-	Kernel  string `json:"kernel,omitempty"`
 	// Configured container runtime
 	Runtime string `json:"runtime,omitempty"`
 	// Resource limits

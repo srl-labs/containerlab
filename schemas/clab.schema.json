@@ -238,7 +238,7 @@
                     "markdownDescription": "[Runtime](https://containerlab.dev/manual/nodes/#runtime) for the node",
                     "enum": [
                         "docker",
-                        "ignite"
+                        "podman"
                     ]
                 },
                 "mgmt-ipv4": {
@@ -272,14 +272,6 @@
                     "type": "string",
                     "description": "CPU cores to use by this node/container",
                     "markdownDescription": "[CPU cores](https://containerlab.dev/manual/nodes/#cpu-set) to be used by the node/container"
-                },
-                "sandbox": {
-                    "type": "string",
-                    "description": "ignite's sandbox image name"
-                },
-                "kernel": {
-                    "type": "string",
-                    "description": "ignite's kernel image name"
                 },
                 "extras": {
                     "type": "object",

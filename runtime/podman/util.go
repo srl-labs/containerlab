@@ -12,8 +12,8 @@ import (
 	"strconv"
 	"strings"
 
-	netTypes "github.com/containers/common/libnetwork/types"
-	"github.com/containers/image/v5/manifest"
+	netTypes "go.podman.io/common/libnetwork/types"
+	"go.podman.io/image/v5/manifest"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	"github.com/containers/podman/v5/pkg/specgen"
