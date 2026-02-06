@@ -43,13 +43,14 @@ When a subset of nodes is specified, containerlab will only attempt to save conf
 
 The local `--copy` flag allows users to copy saved configuration files to a dedicated directory. The path is resolved relative to the current working directory unless an absolute path is provided.
 
-When `--copy` is specified, containerlab copies the saved configuration file from its original location in the lab directory to:
+When `--copy` is specified, containerlab copies the saved configuration file from its original location in the lab directory to the destination with a UTC timestamp embedded in the filename. A symlink with the original filename is created (or updated) to always point to the latest timestamped copy.
 
 ```
-<copy-path>/clab-<labname>/<node-name>/<config-file>
+<copy-path>/clab-<labname>/<node-name>/<config>-<YYMMDD_HHMMSS>.<ext>   # timestamped copy
+<copy-path>/clab-<labname>/<node-name>/<config>.<ext>                    # symlink → latest
 ```
 
-The destination directory is created automatically if it does not exist.
+The destination directory is created automatically if it does not exist. Running `save --copy` multiple times to the same directory preserves all previous saves, allowing easy rollback to an earlier configuration.
 
 The exact file that is copied depends on the node kind and corresponds to the configuration file produced by the save operation:
 
@@ -82,4 +83,13 @@ INFO[0002] clab-srl02-srl2: stdout: /system:
 ❯ containerlab save -t srl02.clab.yml --copy ./startup-configs
 ```
 
-The saved config files are copied to `./startup-configs/clab-srl02/<node>/...`. For example, an SR Linux node named `srl1` would have its config copied to `./startup-configs/clab-srl02/srl1/config.json`.
+This creates timestamped copies with symlinks pointing to the latest save:
+
+```
+./startup-configs/clab-srl02/srl1/config-260207_091500.json   # timestamped copy
+./startup-configs/clab-srl02/srl1/config.json                 # symlink → config-260207_091500.json
+./startup-configs/clab-srl02/srl2/config-260207_091500.json
+./startup-configs/clab-srl02/srl2/config.json
+```
+
+Running the same command again creates new timestamped files and updates the symlinks, while the previous saves remain in the directory.
