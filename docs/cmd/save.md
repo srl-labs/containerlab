@@ -39,9 +39,27 @@ The local `--node-filter` flag allows users to specify a subset of topology node
 
 When a subset of nodes is specified, containerlab will only attempt to save configuration on the selected nodes.
 
-#### dst
+#### copy
 
-The local `--dst` flag allows users to copy saved configuration artifacts to a dedicated directory, resolved relative to the current working directory unless an absolute path is provided. Containerlab writes the latest saved artifacts into `<dst>/clab-<labname>/<node>/...` and also creates timestamped compressed copies for rollback (`.gz` alongside each file).
+The local `--copy` flag allows users to copy saved configuration files to a dedicated directory. The path is resolved relative to the current working directory unless an absolute path is provided.
+
+When `--copy` is specified, containerlab copies the saved configuration file from its original location in the lab directory to:
+
+```
+<copy-path>/clab-<labname>/<node-name>/<config-file>
+```
+
+The destination directory is created automatically if it does not exist.
+
+The exact file that is copied depends on the node kind and corresponds to the configuration file produced by the save operation:
+
+| Kind               | Copied file                                  |
+| ------------------ | -------------------------------------------- |
+| **Nokia SR Linux** | `config/config.json`                         |
+| **Nokia SR OS**    | `<slot>/config/cf3/config.cfg`               |
+| **Arista cEOS**    | `flash/startup-config`                       |
+
+Node kinds that do not report a saved config path are silently skipped.
 
 ### Examples
 
@@ -58,10 +76,10 @@ INFO[0002] clab-srl02-srl2: stdout: /system:
     Generated checkpoint '/etc/opt/srlinux/checkpoint/checkpoint-0.json' with name 'checkpoint-2020-11-18T09:00:56.444Z' and comment ''
 ```
 
-#### Save configs to a reusable directory
+#### Save and copy configs to a reusable directory
 
 ```bash
-❯ containerlab save -t srl02.clab.yml --dst ./startup-config
+❯ containerlab save -t srl02.clab.yml --copy ./startup-configs
 ```
 
-The latest artifacts are written to `./startup-config/clab-srl02/<node>/...`, and timestamped compressed copies are created alongside them (e.g., `config-240101_010101.cfg.gz`).
+The saved config files are copied to `./startup-configs/clab-srl02/<node>/...`. For example, an SR Linux node named `srl1` would have its config copied to `./startup-configs/clab-srl02/srl1/config.json`.
