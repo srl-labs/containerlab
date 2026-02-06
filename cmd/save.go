@@ -43,7 +43,7 @@ the exact command used per node's kind`,
 		&o.Save.CopyOut,
 		"copy-out",
 		"",
-		"copy the saved running config to this directory (created if missing; relative to topo dir; when unset, config stays in clab-<labname>/<node>/)",
+		"copy the saved running config to a directory path provided by this flag (created if missing; relative to the topo dir; when unset, defaults to the node directory in the lab dir)",
 	)
 
 	return c, nil

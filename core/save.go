@@ -29,13 +29,12 @@ func (c *CLab) Save(
 	}
 
 	if opts.copyOutDst != "" {
-		resolvedDst, err := c.resolveSaveDst(opts.copyOutDst)
+		resolvedDst, err := c.resolveCopyOutDst(opts.copyOutDst)
 		if err != nil {
 			return err
 		}
 		opts.copyOutDst = resolvedDst
 	}
-	dst := opts.copyOutDst
 
 	var wg sync.WaitGroup
 
@@ -50,11 +49,11 @@ func (c *CLab) Save(
 				return
 			}
 
-			if dst == "" {
+			if opts.copyOutDst == "" {
 				return
 			}
 
-			if err := c.copySavedConfigs(ctx, node, dst); err != nil {
+			if err := c.copySavedConfig(ctx, node, opts.copyOutDst); err != nil {
 				log.Errorf("node %q save copy failed: %v", node.GetShortName(), err)
 			}
 		}(node)
@@ -65,7 +64,7 @@ func (c *CLab) Save(
 	return nil
 }
 
-func (c *CLab) resolveSaveDst(dst string) (string, error) {
+func (c *CLab) resolveCopyOutDst(dst string) (string, error) {
 	baseDir, err := os.Getwd()
 	if err != nil || baseDir == "" {
 		baseDir = c.TopoPaths.TopologyFileDir()

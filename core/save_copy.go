@@ -18,7 +18,7 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-func (c *CLab) copySavedConfigs(ctx context.Context, node clabnodes.Node, dstRoot string) error {
+func (c *CLab) copySavedConfig(ctx context.Context, node clabnodes.Node, dstRoot string) error {
 	nodeCfg := node.Config()
 	if nodeCfg == nil {
 		return fmt.Errorf("node config missing")

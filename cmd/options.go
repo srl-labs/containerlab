@@ -350,7 +350,7 @@ func (o *DestroyOptions) toClabOptions() []clabcore.ClabOption {
 
 type SaveOptions struct {
 	// CopyOut is the directory to copy the saved running config to.
-	// If unset, the config is not copied and stays in clab-<labname>/<node>/
+	// If unset, the config stays in clab-<labname>/<node>/
 	CopyOut string
 }
 
