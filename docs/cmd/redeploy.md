@@ -86,6 +86,17 @@ Do not try to remove the management network during destroy phase. Usually the ma
 
 The `--skip-post-deploy` flag can be used to skip the post-deploy phase of the lab deployment. This is a global flag that affects all nodes in the lab.
 
+The post-deploy phase runs after containers are created and network endpoints are deployed. During this phase, nodes perform essential startup tasks such as:
+
+- **Waiting for node readiness:** Polling the node until it is fully booted and responsive.
+- **Generating or loading TLS certificates:** Provisioning certificates used for secure management access.
+- **Applying configuration:** Pushing default and user-provided overlay CLI configuration and committing it.
+- **Saving startup configuration:** Persisting the running configuration so it survives restarts.
+- **Populating `/etc/hosts`:** Adding peer node entries for in-band name resolution.
+- **Disabling TX checksum offload:** Adjusting management interface settings where required.
+
+The exact set of actions depends on the node kind (e.g. Nokia SR Linux, Nokia SR OS, cEOS each have their own post-deploy logic). Skipping this phase is useful when you want a faster redeployment and do not need the nodes to be fully configured. For example, during topology testing or CI/CD pipelines that only verify connectivity.
+
 #### export-template
 
 The local `--export-template` flag allows a user to specify a custom Go template that will be used for exporting topology data into `topology-data.json` file under the lab directory.

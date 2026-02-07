@@ -6,8 +6,8 @@ The `deploy` command spins up a lab using the topology expressed via [topology d
 <!-- --8<-- [start:env-vars-flags] -->
 > All command line arguments can be also provided via environment variables (CLI flags take precedence). The environment variable names are constructed by prepending `CLAB_` to the flag name, then adding the command path and ending with the flag name in its full form, all in uppercase and with hyphens replaced by underscores.
 >
-> For example, the `--max-workers` flag for the `deploy` command can be set via `CLAB_DEPLOY_MAX_WORKERS` environment variable.  
-> Or `CLAB_INSPECT_ALL=1` to set `--all` flag for the `inspect` command.  
+> For example, the `--max-workers` flag for the `deploy` command can be set via `CLAB_DEPLOY_MAX_WORKERS` environment variable.
+> Or `CLAB_INSPECT_ALL=1` to set `--all` flag for the `inspect` command.
 > Or `CLAB_TOPO=srlinux.dev/clab-srl clab dep -c` to deploy a lab with the topology passed via environment variable.
 <!-- --8<-- [end:env-vars-flags] -->
 
@@ -145,6 +145,17 @@ Read more about [node filtering](../manual/node-filtering.md) in the documentati
 #### skip-post-deploy
 
 The `--skip-post-deploy` flag can be used to skip the post-deploy phase of the lab deployment. This is a global flag that affects all nodes in the lab.
+
+The post-deploy phase runs after containers are created and network endpoints are deployed. During this phase, nodes perform essential startup tasks such as:
+
+- **Waiting for node readiness:** Polling the node until it is fully booted and responsive.
+- **Generating or loading TLS certificates:** Provisioning certificates used for secure management access.
+- **Applying configuration:** Pushing default and user-provided overlay CLI configuration and committing it.
+- **Saving startup configuration:** Persisting the running configuration so it survives restarts.
+- **Populating `/etc/hosts`:** Adding peer node entries for in-band name resolution.
+- **Disabling TX checksum offload:** Adjusting management interface settings where required.
+
+The exact set of actions depends on the node kind (e.g. Nokia SR Linux, Nokia SR OS, cEOS each have their own post-deploy logic). Skipping this phase is useful when you want a faster deployment and do not need the nodes to be fully configured. For example, during topology testing or CI/CD pipelines that only verify connectivity.
 
 #### skip-labdir-acl
 
