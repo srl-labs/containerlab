@@ -431,7 +431,8 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 	}
 
 	// Execute SaveConfig after boot. This code should only run on active CPM
-	for time.Now().Before(time.Now().Add(readyTimeout)) {
+	deadline := time.Now().Add(readyTimeout)
+	for time.Now().Before(deadline) {
 		// Check if context is canceled
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("context canceled: %w", err)
