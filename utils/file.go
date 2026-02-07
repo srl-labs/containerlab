@@ -420,7 +420,7 @@ func lookupUserHomeDirViaGetent(userId string) string {
 	return parts[5]
 }
 
-// ResolvePath resolves a string path by expanding `~` to home dir
+// ResolvePath resolves path p by expanding ~ to home dir
 // or resolving a relative path by joining it with the base path.
 // When resolving `~` the function uses the home dir of a sudo user, so that -E sudo
 // flag can be omitted.

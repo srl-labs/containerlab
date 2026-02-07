@@ -72,6 +72,36 @@ Ensure n2 is reachable over ssh
     ...    password=admin
     ...    try_for=120
 
+Verify saving config
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    ERRO
+
+Verify saving config with copy flag
+    [Documentation]
+    ...    Save config with --copy flag and verify that the startup-config
+    ...    files are copied to the specified destination directory.
+    ${copy_dst} =    Set Variable    ${CURDIR}/save-copy-test
+    # clean up any leftover from previous runs
+    Run    rm -rf ${copy_dst}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --copy ${copy_dst}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    ERRO
+    # verify that startup-config files have been copied for both ceos nodes
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/${node1-name}/startup-config
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/${node2-name}/startup-config
+    # verify the copied files are not empty
+    ${size1} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/${node1-name}/startup-config
+    Should Be True    ${size1} > 0
+    ${size2} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/${node2-name}/startup-config
+    Should Be True    ${size2} > 0
+    # clean up
+    [Teardown]    Run    rm -rf ${copy_dst}
+
 
 *** Keywords ***
 Cleanup

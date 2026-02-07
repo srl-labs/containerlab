@@ -623,30 +623,6 @@ func (t *Topology) GetNodeNetworkMode(nodeName string) string {
 	)
 }
 
-func (t *Topology) GetNodeSandbox(nodeName string) string {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) string { return node.Sandbox },
-		func(group *NodeDefinition) string { return group.Sandbox },
-		func(kind *NodeDefinition) string { return kind.Sandbox },
-		func(defaults *NodeDefinition) string { return defaults.Sandbox },
-		func(v string) bool { return v != "" },
-	)
-}
-
-func (t *Topology) GetNodeKernel(nodeName string) string {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) string { return node.Kernel },
-		func(group *NodeDefinition) string { return group.Kernel },
-		func(kind *NodeDefinition) string { return kind.Kernel },
-		func(defaults *NodeDefinition) string { return defaults.Kernel },
-		func(v string) bool { return v != "" },
-	)
-}
-
 func (t *Topology) GetNodeRuntime(nodeName string) string {
 	return getField(
 		t,

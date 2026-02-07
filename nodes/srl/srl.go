@@ -363,17 +363,19 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 	return n.generateCheckpoint(ctx)
 }
 
-func (n *srl) SaveConfig(ctx context.Context) error {
+func (n *srl) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+		return nil, fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
+
+	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.json")
 
 	log.Infof(
 		"saved SR Linux configuration from %s node. Output:\n%s",
@@ -381,7 +383,9 @@ func (n *srl) SaveConfig(ctx context.Context) error {
 		execResult.GetStdOutString(),
 	)
 
-	return nil
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
 // Ready returns when the node boot sequence reached the stage when it is ready to accept config

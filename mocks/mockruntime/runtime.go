@@ -74,17 +74,17 @@ func (mr *MockContainerRuntimeMockRecorder) Config() *gomock.Call {
 }
 
 // CopyToContainer mocks base method.
-func (m *MockContainerRuntime) CopyToContainer(ctx context.Context, cID, srcPath, dstPath string) error {
+func (m *MockContainerRuntime) CopyToContainer(ctx context.Context, cID, dstPath, srcPath string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CopyToContainer", ctx, cID, srcPath, dstPath)
+	ret := m.ctrl.Call(m, "CopyToContainer", ctx, cID, dstPath, srcPath)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CopyToContainer indicates an expected call of CopyToContainer.
-func (mr *MockContainerRuntimeMockRecorder) CopyToContainer(ctx, cID, srcPath, dstPath any) *gomock.Call {
+func (mr *MockContainerRuntimeMockRecorder) CopyToContainer(ctx, cID, dstPath, srcPath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyToContainer", reflect.TypeOf((*MockContainerRuntime)(nil).CopyToContainer), ctx, cID, srcPath, dstPath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyToContainer", reflect.TypeOf((*MockContainerRuntime)(nil).CopyToContainer), ctx, cID, dstPath, srcPath)
 }
 
 // CreateContainer mocks base method.

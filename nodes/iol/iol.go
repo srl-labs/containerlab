@@ -438,7 +438,7 @@ func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
 
 // SaveConfig is used for "clab save" functionality -- it saves the running config to the startup
 // configuration.
-func (n *iol) SaveConfig(_ context.Context) error {
+func (n *iol) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	p, err := platform.NewPlatform(
 		"cisco_iosxe",
 		n.Cfg.LongName,
@@ -447,29 +447,29 @@ func (n *iol) SaveConfig(_ context.Context) error {
 		options.WithAuthPassword(defaultCredentials.GetPassword()),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create platform; error: %+v", err)
+		return nil, fmt.Errorf("failed to create platform; error: %+v", err)
 	}
 
 	d, err := p.GetNetworkDriver()
 	if err != nil {
-		return fmt.Errorf("failed to fetch network driver from the platform; error: %+v", err)
+		return nil, fmt.Errorf("failed to fetch network driver from the platform; error: %+v", err)
 	}
 
 	err = d.Open()
 	if err != nil {
-		return fmt.Errorf("failed to open driver; error: %+v", err)
+		return nil, fmt.Errorf("failed to open driver; error: %+v", err)
 	}
 
 	defer d.Close()
 
 	_, err = d.SendCommand("write memory")
 	if err != nil {
-		return fmt.Errorf("failed to send command; error: %+v", err)
+		return nil, fmt.Errorf("failed to send command; error: %+v", err)
 	}
 
 	log.Infof(
 		"Successfully copied running configuration to startup configuration file for node: %q\n",
 		n.Cfg.ShortName,
 	)
-	return nil
+	return nil, nil
 }

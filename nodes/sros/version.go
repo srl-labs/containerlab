@@ -2,7 +2,6 @@ package sros
 
 import (
 	"context"
-	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -22,47 +21,9 @@ const (
 	srosImageVendorLabel  = "org.opencontainers.image.vendor"
 	srosImageVendor       = "Nokia"
 	srosImageVersionLabel = "org.opencontainers.image.version"
-)
 
-var (
-	//go:embed configs/10_snmpv2.cfg
-	snmpv2Config string
-
-	//go:embed configs/11_logging.cfg
-	loggingConfig string
-
-	//go:embed configs/12_grpc.cfg
-	grpcConfig string
-
-	//go:embed configs/12_grpc_insecure.cfg
-	grpcConfigInsecure string
-
-	//go:embed configs/ixr/12_grpc.cfg
-	grpcConfigIXR string
-
-	//go:embed configs/ixr/12_grpc_insecure.cfg
-	grpcConfigIXRInsecure string
-
-	//go:embed configs/sar/12_grpc.cfg
-	grpcConfigSAR string
-
-	//go:embed configs/sar/12_grpc_insecure.cfg
-	grpcConfigSARInsecure string
-
-	//go:embed configs/13_netconf.cfg
-	netconfConfig string
-
-	//go:embed configs/14_system.cfg
-	systemCfg string
-
-	//go:embed configs/ixr/14_system.cfg
-	systemCfgIXR string
-
-	//go:embed configs/sar/14_system.cfg
-	systemCfgSAR string
-
-	//go:embed configs/15_ssh.cfg
-	sshConfig string
+	// vrnetlabVersionLabel is set on vrnetlab-built images; nokia_srsim kind must not use such images.
+	vrnetlabVersionLabel = "vrnetlab-version"
 )
 
 // SrosVersion represents an SR OS version as a set of fields.
