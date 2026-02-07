@@ -1342,26 +1342,43 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 		return n.DefaultNode.GetContainers(ctx)
 	}
 
+	// For distributed base nodes, find all component containers (CPM + line cards)
+	// so that callers like `clab inspect` see every container spawned by this node.
 	cpmSlot, err := n.cpmSlot()
 	if err != nil {
 		return nil, err
 	}
-	containerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
 
-	cnts, err := n.Runtime.ListContainers(ctx, []*clabtypes.GenericFilter{
-		{
-			FilterType: "name",
-			Match:      containerName,
-		},
-	})
-	if err != nil {
-		return nil, err
+	var allContainers []clabruntime.GenericContainer
+	cpmIdx := -1
+
+	for _, comp := range n.Cfg.Components {
+		containerName := n.calcComponentName(n.GetContainerName(), comp.Slot)
+		cnts, err := n.Runtime.ListContainers(ctx, []*clabtypes.GenericFilter{
+			{
+				FilterType: "name",
+				Match:      containerName,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		if comp.Slot == cpmSlot && len(cnts) > 0 {
+			cpmIdx = len(allContainers)
+		}
+		allContainers = append(allContainers, cnts...)
 	}
+
 	// check that we retrieved some container information
 	// otherwise throw ErrContainersNotFound error
-	if len(cnts) == 0 {
+	if len(allContainers) == 0 {
 		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(),
 			clabnodes.ErrContainersNotFound)
+	}
+
+	// Put CPM container first — callers expect the primary container at index 0.
+	if cpmIdx > 0 {
+		allContainers[0], allContainers[cpmIdx] = allContainers[cpmIdx], allContainers[0]
 	}
 
 	// Forge the IP address to be the actual IP of mgmt
@@ -1370,17 +1387,17 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 		ips, err := n.distNodeMgmtIPs()
 		if err == nil {
 			if ips.IPv4 != "" {
-				cnts[0].NetworkSettings.IPv4addr = ips.IPv4
-				cnts[0].NetworkSettings.IPv4pLen = ips.IPv4pLen
+				allContainers[0].NetworkSettings.IPv4addr = ips.IPv4
+				allContainers[0].NetworkSettings.IPv4pLen = ips.IPv4pLen
 			}
 			if ips.IPv6 != "" {
-				cnts[0].NetworkSettings.IPv6addr = ips.IPv6
-				cnts[0].NetworkSettings.IPv6pLen = ips.IPv6pLen
+				allContainers[0].NetworkSettings.IPv6addr = ips.IPv6
+				allContainers[0].NetworkSettings.IPv6pLen = ips.IPv6pLen
 			}
 		}
 	}
 
-	return cnts, err
+	return allContainers, nil
 }
 
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
