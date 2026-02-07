@@ -585,12 +585,16 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	// check that none of the existing containers has a label that matches
 	// the lab name of a currently deploying lab
 	// this ensures lab uniqueness
-	for idx := range containers {
-		if containers[idx].Labels[clabconstants.Containerlab] == c.Config.Name {
-			return fmt.Errorf(
-				"the '%s' lab has already been deployed. Destroy the lab before deploying a "+
-					"lab with the same name", c.Config.Name,
-			)
+	// Skip this check when node-filter is used, as we intentionally want to
+	// deploy a subset of nodes in an existing lab
+	if len(c.nodeFilter) == 0 {
+		for idx := range containers {
+			if containers[idx].Labels[clabconstants.Containerlab] == c.Config.Name {
+				return fmt.Errorf(
+					"the '%s' lab has already been deployed. Destroy the lab before deploying a "+
+						"lab with the same name", c.Config.Name,
+				)
+			}
 		}
 	}
 

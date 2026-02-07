@@ -71,6 +71,17 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		}
 	}()
 
+	// If no containers found but we have a topology file provided via CLI,
+	// use that topology file directly. This handles cases where:
+	// - Containers were already removed
+	// - Containers don't have containerlab labels (e.g., kinD)
+	// - Using --node-filter for nodes that never got deployed
+	if len(topos) == 0 && c.TopoPaths.TopologyFilenameAbsPath() != "" {
+		log.Debug("No containers with topology labels found, using topology file from CLI",
+			"path", c.TopoPaths.TopologyFilenameAbsPath())
+		topos[c.TopoPaths.TopologyFilenameAbsPath()] = c.TopoPaths.TopologyLabDir()
+	}
+
 	if len(topos) == 0 {
 		return nil
 	}
