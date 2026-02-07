@@ -26,9 +26,9 @@ Deploy ${lab-name} lab
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Add link impairments
+Add link impairments via container flag
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools netem set -n clab-${lab-name}-l1 -i eth3 --delay 100ms --jitter 2ms --loss 10 --rate 1000 --corruption 2
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem set -c clab-${lab-name}-l1 -i eth3 --delay 100ms --jitter 2ms --loss 10 --rate 1000 --corruption 2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    100ms
@@ -37,9 +37,9 @@ Add link impairments
     Should Contain    ${output}    1000
     Should Contain    ${output}    2.00%
 
-Show link impairments
+Show link impairments via container flag
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-l1
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -c clab-${lab-name}-l1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    100ms
@@ -47,9 +47,9 @@ Show link impairments
     Should Contain    ${output}    10.00%
     Should Contain    ${output}    1000
 
-Show link impairments in JSON format
+Show link impairments in JSON format via container flag
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-l1 --format json
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -c clab-${lab-name}-l1 --format json
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # Verify that the output contains the node key
@@ -68,16 +68,16 @@ Show link impairments in JSON format
     Should Contain    ${output}    1000
     Should Contain    ${output}    2
 
-Reset link impairments
+Reset link impairments via container flag
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools netem reset -n clab-${lab-name}-l1 -i eth3
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem reset -c clab-${lab-name}-l1 -i eth3
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Reset impairments on node "clab-${lab-name}-l1", interface "eth3"
 
     # Show impairments again to verify they have been reset.
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -n clab-${lab-name}-l1
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -c clab-${lab-name}-l1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # Verify that the previous impairment values are no longer present.
@@ -85,3 +85,48 @@ Reset link impairments
     Should Not Contain    ${output}    2ms
     Should Not Contain    ${output}    10.00%
     Should Not Contain    ${output}    1000
+
+Add link impairments via node flag
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem set -n l1 -t ${topo} -i eth3 --delay 50ms --jitter 1ms --loss 5 --rate 500
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    50ms
+    Should Contain    ${output}    1ms
+    Should Contain    ${output}    5.00%
+    Should Contain    ${output}    500
+
+Show link impairments via node flag
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -n l1 -t ${topo}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    50ms
+    Should Contain    ${output}    1ms
+    Should Contain    ${output}    5.00%
+    Should Contain    ${output}    500
+
+Show all nodes impairments
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -t ${topo}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    # Verify that at least one node header is displayed
+    Should Contain    ${output}    === Node:
+
+Reset link impairments via node flag
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem reset -n l1 -t ${topo} -i eth3
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    Reset impairments on node "l1", interface "eth3"
+
+    # Show impairments again to verify they have been reset.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} tools netem show -n l1 -t ${topo}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    50ms
+    Should Not Contain    ${output}    1ms
+    Should Not Contain    ${output}    5.00%
+    Should Not Contain    ${output}    500
