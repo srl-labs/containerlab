@@ -86,16 +86,16 @@ Do not try to remove the management network during destroy phase. Usually the ma
 
 The `--skip-post-deploy` flag can be used to skip the post-deploy phase of the lab deployment. This is a global flag that affects all nodes in the lab.
 
-The post-deploy phase runs after containers are created and network endpoints are deployed. During this phase, nodes perform essential startup tasks such as:
+The post-deploy phase runs after containers are created and network endpoints are deployed. Node startup configuration is already loaded at boot time (mounted during the deploy phase). The post-deploy phase performs validation and additional setup on top of the booted node:
 
-- **Waiting for node readiness:** Polling the node until it is fully booted and responsive.
-- **Generating or loading TLS certificates:** Provisioning certificates used for secure management access.
-- **Applying configuration:** Pushing default and user-provided overlay CLI configuration and committing it.
-- **Saving startup configuration:** Persisting the running configuration so it survives restarts.
+- **Readiness and health checks:** Polling the node until it is fully booted and verifying it is healthy. Container logs are monitored for errors such as rejected configurations.
+- **TLS certificate provisioning:** Generating or loading certificates used for secure management access.
+- **Saving startup configuration:** Persisting the running configuration so it survives restarts (Nokia SR OS).
+- **Overlay CLI configuration:** Applying additional CLI configuration on top of the startup config and committing it (Nokia SR Linux).
 - **Populating `/etc/hosts`:** Adding peer node entries for in-band name resolution.
 - **Disabling TX checksum offload:** Adjusting management interface settings where required.
 
-The exact set of actions depends on the node kind (e.g. Nokia SR Linux, Nokia SR OS, cEOS each have their own post-deploy logic). Skipping this phase is useful when you want a faster redeployment and do not need the nodes to be fully configured. For example, during topology testing or CI/CD pipelines that only verify connectivity.
+The exact set of actions depends on the node kind (e.g. Nokia SR Linux, Nokia SR OS, Arista cEOS each have their own post-deploy logic). The most common reason to use this flag is to bypass post-deploy validation failures when the nodes encounter issues during health checks or configuration validation. It is also useful when you want a faster redeployment and only need the containers running without full post-deploy setup.
 
 #### export-template
 
