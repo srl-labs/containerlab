@@ -185,6 +185,12 @@ func (c *CLab) makeCopyForDestroy(
 }
 
 func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
+	// When node-filter is active, never remove the entire lab directory
+	// to preserve other nodes' state and configuration.
+	if len(c.nodeFilter) > 0 {
+		return nil
+	}
+
 	if len(topos) == 0 {
 		log.Info("no containerlab containers found")
 
@@ -262,6 +268,21 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	c.deleteNodes(ctx, maxWorkers, serialNodes)
 
+	// delete container network namespaces symlinks
+	for _, node := range c.Nodes {
+		err = node.DeleteNetnsSymlink()
+		if err != nil {
+			return fmt.Errorf("error while deleting netns symlinks: %w", err)
+		}
+	}
+
+	// When node-filter is used, skip lab-wide cleanup operations
+	// because other nodes from the same lab are still running and
+	// depend on these shared resources.
+	if len(c.nodeFilter) > 0 {
+		return nil
+	}
+
 	c.deleteToolContainers(ctx)
 
 	log.Info("Removing host entries", "path", "/etc/hosts")
@@ -276,14 +297,6 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	err = c.RemoveSSHConfig(c.TopoPaths)
 	if err != nil {
 		log.Errorf("failed to remove ssh config file: %v", err)
-	}
-
-	// delete container network namespaces symlinks
-	for _, node := range c.Nodes {
-		err = node.DeleteNetnsSymlink()
-		if err != nil {
-			return fmt.Errorf("error while deleting netns symlinks: %w", err)
-		}
 	}
 
 	// delete lab management network
