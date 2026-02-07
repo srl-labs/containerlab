@@ -897,7 +897,7 @@ func (*sros) checkKernelVersion() error {
 	return nil
 }
 
-// checkComponentSlotsConfig check the sros component slot config for validaity.
+// checkComponentSlotsConfig check the sros component slot config for validity.
 func (n *sros) checkComponentSlotsConfig() error {
 	// check Slots are unique
 	componentNames := map[string]struct{}{}
@@ -913,7 +913,7 @@ func (n *sros) checkComponentSlotsConfig() error {
 				component.Slot,
 			)
 		}
-		// addd to component names map
+		// add to component names map
 		componentNames[component.Slot] = struct{}{}
 
 	}
@@ -1504,13 +1504,13 @@ func (n *sros) CheckInterfaceName() error {
 	return nil
 }
 
-func (n *sros) SaveConfig(ctx context.Context) error {
+func (n *sros) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	fqdn := ""
 	switch {
 	case n.isStandaloneNode():
 		// check if it is a cpm node. return without error if not
 		if !n.isCPM("") {
-			return nil
+			return nil, nil
 		}
 		// if it is a standalone node use the fqdn
 		fqdn = n.Cfg.Fqdn
@@ -1518,18 +1518,32 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 		// if it is the
 		cmpNode, err := n.cpmNode()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// delegate to cpm node
 		return cmpNode.SaveConfig(ctx)
 	case n.isDistributedCardNode():
 		// check if it is a cpm node. return without error if not
 		if !n.isCPM("") {
-			return nil
+			return nil, nil
 		}
 		fqdn = n.Cfg.LongName
 	}
-	return n.saveConfigWithAddr(ctx, fqdn)
+
+	if err := n.saveConfigWithAddr(ctx, fqdn); err != nil {
+		return nil, err
+	}
+
+	cfgPath := filepath.Join(
+		n.Cfg.LabDir,
+		n.Cfg.Env[envNokiaSrosSlot],
+		configCf3,
+		startupCfgName,
+	)
+
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
 // saveConfigWithAddr will use the addr string to try to save the config of the node.

@@ -99,11 +99,11 @@ func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) erro
 	return nil
 }
 
-func (d *DefaultNode) SaveConfig(_ context.Context) error {
+func (d *DefaultNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	// nodes should have the save method defined on their respective structs.
 	// By default SaveConfig is a noop.
 	log.Debugf("Save operation is currently not supported for %q node kind", d.Cfg.Kind)
-	return nil
+	return nil, nil
 }
 
 // CheckDeploymentConditions wraps individual functions that check if a node

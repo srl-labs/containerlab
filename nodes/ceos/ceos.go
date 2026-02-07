@@ -170,21 +170,23 @@ func (n *ceos) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	return n.ceosPostDeploy(ctx)
 }
 
-func (n *ceos) SaveConfig(ctx context.Context) error {
+func (n *ceos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+		return nil, fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
-	confPath := n.Cfg.LabDir + "/flash/startup-config"
-	log.Infof("saved cEOS configuration from %s node to %s\n", n.Cfg.ShortName, confPath)
+	cfgPath := filepath.Join(n.Cfg.LabDir, "flash", "startup-config")
+	log.Infof("saved cEOS configuration from %s node to %s\n", n.Cfg.ShortName, cfgPath)
 
-	return nil
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
 func (n *ceos) createCEOSFiles(ctx context.Context) error {

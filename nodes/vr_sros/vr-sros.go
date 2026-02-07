@@ -238,18 +238,18 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 	return nil
 }
 
-func (s *vrSROS) SaveConfig(_ context.Context) error {
+func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	err := clabnetconf.SaveRunningConfig(s.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
-	return nil
+	return nil, nil
 }
 
 func createVrSROSFiles(node clabnodes.Node) error {
