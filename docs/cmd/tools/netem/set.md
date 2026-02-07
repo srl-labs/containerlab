@@ -15,7 +15,7 @@ For example, on some RHEL 8 systems the following commands might be needed to ru
 ```bash
 dnf install kernel-debug-modules-extra
 dnf install kernel-modules-extra
-systemctl reboot now 
+systemctl reboot now
 ```
 
 ///
@@ -34,7 +34,13 @@ containerlab tools netem set [local-flags]
 
 ### node
 
-With the mandatory `--node | -n` flag a user specifies the name of the containerlab node to set link impairments on.
+With the `--node | -n` flag a user specifies the node name as defined in the topology file. This flag requires a topology file to be provided via `--topo | -t` (or a lab name via `--name`).
+
+### container
+
+With the `--container | -c` flag a user specifies the container name directly. This mode does not require a topology file.
+
+One of `--node` or `--container` must be specified. These flags are mutually exclusive.
 
 ### interface
 
@@ -68,24 +74,36 @@ Example: corruption of 10 means 10% corruption probability for a traffic passing
 
 ## Examples
 
-### Setting delay and jitter
+### Setting delay and jitter using node name
 
-For `clab-netem-r1` node and its `eth1` interface set delay of 5ms and jitter of 1ms:
+For node `r1` defined in the topology and its `eth1` interface, set delay of 5ms and jitter of 1ms:
 
 ```bash
-containerlab tools netem set -n clab-netem-r1 -i eth1 --delay 5ms --jitter 1ms
+containerlab tools netem set -n r1 -t netem.clab.yml -i eth1 --delay 5ms --jitter 1ms
+```
+
+### Setting delay and jitter using container name
+
+For container `clab-netem-r1` and its `eth1` interface, set delay of 5ms and jitter of 1ms:
+
+```bash
+containerlab tools netem set -c clab-netem-r1 -i eth1 --delay 5ms --jitter 1ms
 ```
 
 ### Setting packet loss
 
-```bash title="setting packet loss at 10% rate"
-containerlab tools netem set -n clab-netem-r1 -i eth1 --loss 10
+```bash title="setting packet loss at 10% rate using node name"
+containerlab tools netem set -n r1 -t netem.clab.yml -i eth1 --loss 10
+```
+
+```bash title="setting packet loss at 10% rate using container name"
+containerlab tools netem set -c clab-netem-r1 -i eth1 --loss 10
 ```
 
 ### Clear any existing impairments
 
 ```bash
-containerlab tools netem set -n clab-netem-r1 -i eth1
+containerlab tools netem set -c clab-netem-r1 -i eth1
 +-----------+-------+--------+-------------+-------------+
 | Interface | Delay | Jitter | Packet Loss | Rate (kbit) |
 +-----------+-------+--------+-------------+-------------+
