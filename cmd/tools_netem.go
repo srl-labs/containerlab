@@ -493,8 +493,6 @@ func showNodeImpairments(
 	nodeNsPath string,
 	displayName string,
 ) error {
-	_ = ctx // reserved for future use
-
 	var nodeNs ns.NetNS
 	var err error
 	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
@@ -559,8 +557,9 @@ func netemShowAllNodesFn(ctx context.Context, o *Options) error {
 	// Collect all node impairments for JSON output
 	allImpairments := make(map[string][]clabtypes.ImpairmentData)
 
-	// Track nodes we've already processed (for distributed nodes sharing namespace)
-	processedNSPaths := make(map[string]bool)
+	// Cache impairments by namespace path so nodes sharing a namespace
+	// reuse the cached result instead of being skipped entirely.
+	nsPathImpairments := make(map[string][]clabtypes.ImpairmentData)
 
 	for nodeName, node := range c.Nodes {
 		nsPath, err := node.GetNSPath(ctx)
@@ -569,19 +568,19 @@ func netemShowAllNodesFn(ctx context.Context, o *Options) error {
 			continue
 		}
 
-		// Skip nodes that share namespace with already processed nodes
-		if processedNSPaths[nsPath] {
-			continue
-		}
-		processedNSPaths[nsPath] = true
-
 		if o.ToolsNetem.Format == clabconstants.FormatJSON {
-			impairments, err := getNodeImpairments(nsPath)
-			if err != nil {
-				log.Warnf("failed to get impairments for node %q: %v", nodeName, err)
-				continue
+			// Check cache first; query only on first encounter of this namespace.
+			cached, ok := nsPathImpairments[nsPath]
+			if !ok {
+				impairments, err := getNodeImpairments(nsPath)
+				if err != nil {
+					log.Warnf("failed to get impairments for node %q: %v", nodeName, err)
+					continue
+				}
+				nsPathImpairments[nsPath] = impairments
+				cached = impairments
 			}
-			allImpairments[nodeName] = impairments
+			allImpairments[nodeName] = cached
 		} else {
 			fmt.Printf("\n=== Node: %s ===\n", nodeName)
 			if err := showNodeImpairments(ctx, o, nsPath, nodeName); err != nil {
