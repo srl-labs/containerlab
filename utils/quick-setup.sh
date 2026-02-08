@@ -26,6 +26,9 @@ function check_os {
             DISTRO_TYPE="fedora"
         elif [[ "$ID" = "rocky" || "$ID" = "rhel" || "$ID" = "centos" || "$ID" = "almalinux" ]]; then
             DISTRO_TYPE="rhel"
+            if [[ "$ID" = "rocky" ]] && [ "${VERSION_ID:0:2}" = "10" ]; then
+                DOCKER_VERSION="28.5.2"
+            fi
         else
             echo "This is not a supported OS. (Debian, Ubuntu, Fedora, Rocky, CentOS, RHEL, AlmaLinux)"
         fi
