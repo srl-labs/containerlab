@@ -38,7 +38,6 @@ func (c *CLab) Deploy( //nolint: funlen
 
 		if len(c.nodeFilter) > 0 {
 			// When node-filter is used, only remove the filtered nodes' directories
-			// instead of the entire lab directory, to preserve other nodes' state.
 			for _, node := range c.Nodes {
 				nodeDir := node.Config().LabDir
 				log.Info("Removing node directory", "path", nodeDir)

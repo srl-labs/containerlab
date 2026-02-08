@@ -1343,7 +1343,6 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 	}
 
 	// For distributed base nodes, find all component containers (CPM + line cards)
-	// so that callers like `clab inspect` see every container spawned by this node.
 	cpmSlot, err := n.cpmSlot()
 	if err != nil {
 		return nil, err

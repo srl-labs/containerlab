@@ -41,7 +41,7 @@ const (
 	nodeDirVar  = "__clabNodeDir__"
 	nodeNameVar = "__clabNodeName__"
 
-	// clab name specific variables
+	// clab name specific variables.
 	gitBranchVar = "__gitBranch__"
 	gitHashVar   = "__gitHash__"
 )
@@ -62,11 +62,16 @@ type Config struct {
 func (c *CLab) parseTopology() error {
 	log.Info("Parsing & checking topology", "file", c.TopoPaths.TopologyFilenameBase())
 
-	if strings.Contains(c.Config.Name, gitBranchVar) || strings.Contains(c.Config.Name, gitHashVar) {
+	if strings.Contains(c.Config.Name, gitBranchVar) ||
+		strings.Contains(c.Config.Name, gitHashVar) {
 		r := c.magicTopoNameReplacer()
 		oldName := c.Config.Name
 		c.Config.Name = r.Replace(c.Config.Name)
-		log.Debugf("Topology name contains Git variables, substituted topology name: %q -> %q", oldName, c.Config.Name)
+		log.Debugf(
+			"Topology name contains Git variables, substituted topology name: %q -> %q",
+			oldName,
+			c.Config.Name,
+		)
 	}
 
 	err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name)
@@ -585,8 +590,7 @@ func (c *CLab) verifyContainersUniqueness(ctx context.Context) error {
 	// check that none of the existing containers has a label that matches
 	// the lab name of a currently deploying lab
 	// this ensures lab uniqueness
-	// Skip this check when node-filter is used, as we intentionally want to
-	// deploy a subset of nodes in an existing lab
+	// Skip this check when node-filter is used for a subset deployment
 	if len(c.nodeFilter) == 0 {
 		for idx := range containers {
 			if containers[idx].Labels[clabconstants.Containerlab] == c.Config.Name {
@@ -692,7 +696,6 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 			cfg.Labels[clabconstants.GitHash] = gitHash
 		}
 	}
-
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
@@ -806,13 +809,16 @@ func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
 	)
 }
 
-// magicTopoNameReplacer returns a string replacer that replaces all git branch variables in the topology name.
+// magicTopoNameReplacer returns a string replacer that replaces all git branch variables in the
+// topology name.
 func (c *CLab) magicTopoNameReplacer() *strings.Replacer {
-
 	gitBranch, gitHash := c.getGitInfo()
 
 	if gitHash == "none" && gitBranch == "none" {
-		log.Warnf("topology name uses git variables, but no Git repository found at %q - variables will be replaced with 'none'", c.TopoPaths.TopologyFileDir())
+		log.Warnf(
+			"topology name uses git variables, but no Git repository found at %q - variables will be replaced with 'none'",
+			c.TopoPaths.TopologyFileDir(),
+		)
 	}
 
 	// Replace illegal characters in branch name

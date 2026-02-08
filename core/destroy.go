@@ -74,7 +74,7 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 	// If no containers found but we have a topology file provided via CLI,
 	// use that topology file directly. This handles cases where:
 	// - Containers were already removed
-	// - Containers don't have containerlab labels (e.g., kinD)
+	// - Containers don't have containerlab labels (e.g. node, kind)
 	// - Using --node-filter for nodes that never got deployed
 	if len(topos) == 0 && c.TopoPaths.TopologyFilenameAbsPath() != "" {
 		log.Debug("No containers with topology labels found, using topology file from CLI",
@@ -186,7 +186,6 @@ func (c *CLab) makeCopyForDestroy(
 
 func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
 	// When node-filter is active, never remove the entire lab directory
-	// to preserve other nodes' state and configuration.
 	if len(c.nodeFilter) > 0 {
 		return nil
 	}
@@ -268,7 +267,6 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	c.deleteNodes(ctx, maxWorkers, serialNodes)
 
-	// delete container network namespaces symlinks
 	for _, node := range c.Nodes {
 		err = node.DeleteNetnsSymlink()
 		if err != nil {
@@ -443,7 +441,7 @@ func cliPromptToDestroyAll(topos map[string]string) error {
 	idx := 1
 
 	for topo, labDir := range topos {
-		sb.WriteString(fmt.Sprintf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labDir))
+		fmt.Fprintf(&sb, "	%d. Topology: %s\n		 Lab Dir: %s\n", idx, topo, labDir)
 		idx++
 	}
 
