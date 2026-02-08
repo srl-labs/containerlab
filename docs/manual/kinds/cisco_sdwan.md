@@ -79,6 +79,24 @@ topology:
       image: vrnetlab/cisco_sdwan-validator:20.16.1
 ```
 
+### Using the Orchestrator Image as vEdge
+
+The validator (orchestrator/vBond) image can be repurposed as a vEdge device. 
+To do this you set `type: validator` and set `cpu: 2`.
+The default vbond configuration does permit reconfiguring as a vEdge, but you can supply a regular vEdge bootstrap configuration via `startup-config` (both zcloud.xml and bootstrap configs are supported).
+
+```yaml
+topology:
+  nodes:
+    vedge1:
+      kind: cisco_sdwan
+      type: validator
+      image: vrnetlab/cisco_sdwan-validator:20.16.1
+      cpu: 2
+      memory: 2Gb
+      startup-config: vedge1-bootstrap.cfg
+```
+
 ## Interface naming
 
 You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in the device.
