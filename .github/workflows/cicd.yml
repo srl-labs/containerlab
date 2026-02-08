@@ -582,7 +582,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER gh-deploy --force --strict
+      - run: |
+          docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
+            -e GITHUB_TOKEN \
+            --entrypoint /bin/sh \
+            ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER \
+            -c 'git -C /docs config --local user.name "github-actions[bot]"; \
+                git -C /docs config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"; \
+                git -C /docs config --local url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \
+                mkdocs gh-deploy --force --strict'
 
   build-devcontainer:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -613,4 +621,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER gh-deploy --force --strict
+      # checkout@v6 does not set the git user config, which is required for mkdocs gh-deploy to work, thus we need to set it manually in the container
+      - run: |
+          docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
+            -e GITHUB_TOKEN \
+            --entrypoint /bin/sh \
+            ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER \
+            -c 'git -C /docs config --local user.name "github-actions[bot]"; \
+                git -C /docs config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"; \
+                git -C /docs config --local url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \
+                mkdocs gh-deploy --force --strict'
