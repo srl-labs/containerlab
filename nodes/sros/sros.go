@@ -146,17 +146,17 @@ var (
 		`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`,
 	)
 	InterfaceHelp = `The format of the interface name need to be one of:
-	  Regular SR OS interface names, that is:
-	  1/2/3       -> card 1, mda 2, port 3
-      1/2/c3/4    -> card 1, mda 2, connector 3, port 4
-      1/x2/3/4    -> card 1, xiom 2, mda 3, port 4
-      1/x2/3/c4/5 -> card 1, xiom 2, mda 3, connector 4, port 5
-	  The mapped Linux interface names, that is:
-      e1-2-3       -> card 1, mda 2, port 3
-      e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
-      e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
-      e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
-	  eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
+		Regular SR OS interface names, that is:
+		1/2/3				-> card 1, mda 2, port 3
+			1/2/c3/4		-> card 1, mda 2, connector 3, port 4
+			1/x2/3/4		-> card 1, xiom 2, mda 3, port 4
+			1/x2/3/c4/5 -> card 1, xiom 2, mda 3, connector 4, port 5
+		The mapped Linux interface names, that is:
+			e1-2-3			 -> card 1, mda 2, port 3
+			e1-2-c3-4		 -> card 1, mda 2, connector 3, port 4
+			e1-x2-3-4		 -> card 1, xiom 2, mda 3, port 4
+			e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
+		eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
 	// Auxiliary regexps for IXR/SAR detection.
 	sarRegexp   = regexp.MustCompile(`(?i)\bsar-`)
 	sarHmRegexp = regexp.MustCompile(`(?i)\b(sar-hm|sar-hmc)\b`)
@@ -377,14 +377,8 @@ func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 	return nil
 }
 
-// Post Deploy func for SR-SIM kind.
-func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
-	log.Info("Running postdeploy actions",
-		"kind", n.Cfg.Kind,
-		"node", n.Cfg.ShortName)
-
-	// start waiting for container ready (PID based check)
-	if err := n.Ready(ctx); err != nil {
+func (n *sros) DeployEndpoints(ctx context.Context) error {
+	if err := n.DefaultNode.DeployEndpoints(ctx); err != nil {
 		return err
 	}
 
@@ -395,12 +389,27 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
 			"node", n.Cfg.ShortName,
 			"error", err)
-	} else {
-		if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
-			log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
-				"node", n.Cfg.ShortName,
-				"error", err)
-		}
+		return nil
+	}
+
+	if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
+		log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
+			"node", n.Cfg.ShortName,
+			"error", err)
+	}
+
+	return nil
+}
+
+// Post Deploy func for SR-SIM kind.
+func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
+	log.Info("Running postdeploy actions",
+		"kind", n.Cfg.Kind,
+		"node", n.Cfg.ShortName)
+
+	// start waiting for container ready (PID based check)
+	if err := n.Ready(ctx); err != nil {
+		return err
 	}
 
 	errChan := make(chan error, 1)
@@ -1217,11 +1226,11 @@ func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Templa
 	// Model-driven configuration mode (SROS25+)
 	// Future version-specific template selection:
 	// if tplData.SwVersion != nil && tplData.SwVersion.Major >= 26 {
-	//     tmpl = cfgTplSROS26
-	//     tplName = "clab-sros-config-sros26"
+	//		 tmpl = cfgTplSROS26
+	//		 tplName = "clab-sros-config-sros26"
 	// } else {
-	//     tmpl = cfgTplSROS25
-	//     tplName = "clab-sros-config-sros25"
+	//		 tmpl = cfgTplSROS25
+	//		 tplName = "clab-sros-config-sros25"
 	// }
 	tmpl = cfgTplSROS25
 	tplName = "clab-sros-config-sros25"
@@ -1646,8 +1655,8 @@ func buildTLSProfileXML() string {
 // TLS bootstrap via NETCONF to enable secure gRPC.
 func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	// Always import PKI key and cert:
-	// 	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
-	//   import "cf3:\node.crt" in PEM format as "cf3:\system-pki\node.crt" (encrypted DER)
+	//	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
+	//	 import "cf3:\node.crt" in PEM format as "cf3:\system-pki\node.crt" (encrypted DER)
 	operations := []clabnetconf.Operation{
 		func(d *netconf.Driver) (*response.NetconfResponse, error) {
 			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
@@ -1660,7 +1669,7 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	}
 
 	// Activate cert-profile in MD is via NETCONF, in Classic mode is via SSH
-	//  enable enables cert-profile "clab-grpc-certs" administratively
+	//	enable enables cert-profile "clab-grpc-certs" administratively
 	cmd := []string{}
 	if n.isConfigClassic() {
 		cmd = append(
