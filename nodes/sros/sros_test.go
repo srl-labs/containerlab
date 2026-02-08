@@ -168,9 +168,9 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 		n := &sros{}
 		n.DefaultNode = *clabnodes.NewDefaultNode(n)
 		n.Cfg = &clabtypes.NodeConfig{
-			ShortName:      "n1",
-			LongName:       "lab-n1",
-			StartupConfig:  cfgPath,
+			ShortName:     "n1",
+			LongName:      "lab-n1",
+			StartupConfig: cfgPath,
 		}
 
 		cfg, err := n.buildStartupConfig(false) // full config, not partial

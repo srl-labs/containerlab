@@ -100,7 +100,12 @@ func (c *CLab) resolveCopyOutDst(dst string) (string, error) {
 //
 //	<dstRoot>/<nodeName>/config-060102_150405.json   # timestamped copy
 //	<dstRoot>/<nodeName>/config.json                 # symlink -> timestamped copy
-func (c *CLab) copySavedConfig(ctx context.Context, result *clabnodes.SaveConfigResult, node clabnodes.Node, dstRoot string) error {
+func (c *CLab) copySavedConfig(
+	ctx context.Context,
+	result *clabnodes.SaveConfigResult,
+	node clabnodes.Node,
+	dstRoot string,
+) error {
 	if result == nil || result.ConfigPath == "" {
 		log.Debug("no saved config path reported, skipping copy", "node", node.GetShortName())
 		return nil
@@ -120,7 +125,8 @@ func (c *CLab) copySavedConfig(ctx context.Context, result *clabnodes.SaveConfig
 	tsFileName := timestampedFileName(fileName, time.Now())
 
 	tsPath := filepath.Join(nodeDstDir, tsFileName)
-	if err := clabutils.CopyFile(ctx, result.ConfigPath, tsPath, clabconstants.PermissionsFileDefault); err != nil {
+	if err := clabutils.CopyFile(ctx, result.ConfigPath, tsPath,
+		clabconstants.PermissionsFileDefault); err != nil {
 		return fmt.Errorf("failed to copy saved config from %q to %q: %w",
 			result.ConfigPath, tsPath, err)
 	}
@@ -145,7 +151,8 @@ func (c *CLab) copySavedConfig(ctx context.Context, result *clabnodes.SaveConfig
 
 // timestampedFileName inserts a timestamp before the file extension.
 // e.g. "config.json" with ts 2026-02-06 23:59:00 UTC -> "config-260206_235900.json".
-// Files without an extension get the timestamp appended: "startup-config" -> "startup-config-260206_235900".
+// Files without an extension get the timestamp appended: "startup-config" ->
+// "startup-config-260206_235900".
 func timestampedFileName(name string, t time.Time) string {
 	ts := t.UTC().Format("060102_150405")
 	ext := filepath.Ext(name)

@@ -42,7 +42,8 @@ func (l componentCfgLine) String() string {
 	}
 }
 
-// buildComponentCfgLines turns root components into a slice of config lines (card, sfm, xiom, xiomMda, mda).
+// buildComponentCfgLines turns root components into a slice of config lines (card, sfm, xiom,
+// xiomMda, mda).
 // CPM slots (A, B) are skipped. Components without Type are skipped (caller may log).
 func buildComponentCfgLines(components []*clabtypes.Component) []componentCfgLine {
 	var lines []componentCfgLine
@@ -60,7 +61,15 @@ func buildComponentCfgLines(components []*clabtypes.Component) []componentCfgLin
 		}
 		for _, xiom := range component.XIOM {
 			if xiom.Type != "" {
-				lines = append(lines, componentCfgLine{Kind: "xiom", Slot: slot, Type: xiom.Type, XiomSlot: xiom.Slot})
+				lines = append(
+					lines,
+					componentCfgLine{
+						Kind:     "xiom",
+						Slot:     slot,
+						Type:     xiom.Type,
+						XiomSlot: xiom.Slot,
+					},
+				)
 			}
 			for _, mda := range xiom.MDA {
 				if mda.Type != "" {
@@ -73,7 +82,10 @@ func buildComponentCfgLines(components []*clabtypes.Component) []componentCfgLin
 		}
 		for _, mda := range component.MDA {
 			if mda.Type != "" {
-				lines = append(lines, componentCfgLine{Kind: "mda", Slot: slot, Type: mda.Type, MdaSlot: mda.Slot})
+				lines = append(
+					lines,
+					componentCfgLine{Kind: "mda", Slot: slot, Type: mda.Type, MdaSlot: mda.Slot},
+				)
 			}
 		}
 	}

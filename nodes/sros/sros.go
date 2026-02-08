@@ -1130,8 +1130,10 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	if v.ForceClassic {
 		log.Warn(
 			"SAR-Hm nodes only support classic configuration mode. Overriding configuration mode to 'classic'",
-			"node", n.Cfg.LongName,
-			"node-type", strings.ToLower(n.Cfg.NodeType),
+			"node",
+			n.Cfg.LongName,
+			"node-type",
+			strings.ToLower(n.Cfg.NodeType),
 		)
 		configMode = string(ConfigModeClassic)
 		n.Cfg.Env[envSrosConfigMode] = string(ConfigModeClassic)
@@ -1192,7 +1194,8 @@ func (n *sros) isSARHmNode() bool {
 func getTemplateForVariant(v ConfigVariant, swVersion *SrosVersion) (tmpl string, tplName string) {
 	// Model-driven (or mixed treated as classic below when family is classic)
 	if v.Mode == ConfigModeModelDriven {
-		// Placeholder for version-specific template: if swVersion != nil && swVersion.Major >= "26" { return cfgTplSROS26, "clab-sros-config-sros26" }
+		// Placeholder for version-specific template: if swVersion != nil && swVersion.Major >= "26"
+		// { return cfgTplSROS26, "clab-sros-config-sros26" }
 		return cfgTplSROS25, "clab-sros-config-sros25"
 	}
 	// Classic (or mixed)
@@ -1899,8 +1902,13 @@ func (n *sros) generateComponentConfig() string {
 			continue
 		}
 		if c.Type == "" {
-			log.Warn("SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
-				"node", n.Cfg.ShortName, "slot", slot)
+			log.Warn(
+				"SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
+				"node",
+				n.Cfg.ShortName,
+				"slot",
+				slot,
+			)
 		}
 	}
 
@@ -1973,7 +1981,9 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 	if err != nil {
 		// Skip check when runtime does not support image inspection (e.g. Podman).
 		if strings.Contains(err.Error(), "not implemented") {
-			log.Debug("Skipping nokia_srsim image kind check: runtime does not support image inspection")
+			log.Debug(
+				"Skipping nokia_srsim image kind check: runtime does not support image inspection",
+			)
 			return nil
 		}
 		return err
@@ -1989,6 +1999,9 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 			return nil
 		}
 	}
-	log.Warnf("node %q: kind is nokia_srsim but the provided image does not have the correct labels; please use a valid SR-SIM container image or run a more recent version of the SR-SIM container image to suppress this warning", n.Cfg.ShortName)
+	log.Warnf(
+		"node %q: kind is nokia_srsim but the provided image does not have the correct labels; please use a valid SR-SIM container image or run a more recent version of the SR-SIM container image to suppress this warning",
+		n.Cfg.ShortName,
+	)
 	return nil
 }

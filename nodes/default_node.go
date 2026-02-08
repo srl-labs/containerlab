@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	// container validation variables
+	// container validation variables.
 	containerNamePattern = "^[a-zA-Z0-9][a-zA-Z0-9-._]+$"
 	dnsIncompatibleChars = "._"
 	maxNameLength        = 60
@@ -480,17 +480,29 @@ func (d *DefaultNode) GetContainerName() string {
 }
 
 func (d *DefaultNode) VerifyContainerName() error {
-	var containerName = d.GetContainerName()
+	containerName := d.GetContainerName()
 	if !containerNamePatternRe.MatchString(containerName) {
 		return fmt.Errorf("Node name contains invalid characters: %s", containerName)
 	}
 
 	if len(containerName) > maxNameLength {
-		log.Warn("Node name will not resolve via DNS", "name", containerName, "reason", fmt.Sprintf("name exceeds %d characters", maxNameLength))
+		log.Warn(
+			"Node name will not resolve via DNS",
+			"name",
+			containerName,
+			"reason",
+			fmt.Sprintf("name exceeds %d characters", maxNameLength),
+		)
 	}
 
 	if strings.ContainsAny(containerName, dnsIncompatibleChars) {
-		log.Warn("Node name will not resolve via DNS", "name", containerName, "reason", "name contains invalid characters such as '.' and/or '_'")
+		log.Warn(
+			"Node name will not resolve via DNS",
+			"name",
+			containerName,
+			"reason",
+			"name contains invalid characters such as '.' and/or '_'",
+		)
 	}
 
 	return nil

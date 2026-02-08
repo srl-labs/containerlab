@@ -507,7 +507,12 @@ func interfaceAttributes(
 			attributes["netem_rate"] = strconv.Itoa(snapshot.Rate) + "kbit"
 		}
 		if snapshot.Corruption != 0 {
-			attributes["netem_corruption"] = strconv.FormatFloat(snapshot.Corruption, 'f', 2, 64) + "%"
+			attributes["netem_corruption"] = strconv.FormatFloat(
+				snapshot.Corruption,
+				'f',
+				2,
+				64,
+			) + "%"
 		}
 	}
 

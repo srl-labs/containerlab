@@ -131,7 +131,10 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	s.InterfaceHelp = InterfaceHelp
 
 	if len(s.Cfg.Components) > 0 {
-		log.Warnf("node %q: kind nokia_sros (vrnetlab) does not support components; components are ignored. Use kind nokia_srsim for distributed/chassis topologies with components", s.Cfg.ShortName)
+		log.Warnf(
+			"node %q: kind nokia_sros (vrnetlab) does not support components; components are ignored. Use kind nokia_srsim for distributed/chassis topologies with components",
+			s.Cfg.ShortName,
+		)
 	}
 
 	return nil
@@ -165,7 +168,9 @@ func (s *vrSROS) verifyNokiaSrosImage(ctx context.Context) error {
 	if err != nil {
 		// Skip check when runtime does not support image inspection (e.g. Podman).
 		if strings.Contains(err.Error(), "not implemented") {
-			log.Debug("Skipping nokia_sros image kind check: runtime does not support image inspection")
+			log.Debug(
+				"Skipping nokia_sros image kind check: runtime does not support image inspection",
+			)
 			return nil
 		}
 		return err
