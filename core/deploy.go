@@ -168,7 +168,7 @@ func (c *CLab) Deploy( //nolint: funlen
 		// the veth and vxlan underlying links have already been deployed.
 		err = vxlanStitchLink.DeployWithExistingVethAndVxlan(ctx)
 		if err != nil {
-			log.Warnf("failed deploying vxlan-stitch endpoint %s", vxlanStitchLink)
+			log.Warnf("failed deploying vxlan-stitch endpoint %+v", vxlanStitchLink)
 		}
   }
 
