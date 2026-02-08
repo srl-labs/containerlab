@@ -12,9 +12,7 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
-var (
-	kindnames = []string{"cvx", "cumulus_cvx"}
-)
+var kindnames = []string{"cvx", "cumulus_cvx"}
 
 var memoryReqs = map[string]string{
 	"4.3.0": "512MB",

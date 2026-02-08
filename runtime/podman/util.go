@@ -12,13 +12,13 @@ import (
 	"strconv"
 	"strings"
 
-	netTypes "go.podman.io/common/libnetwork/types"
-	"go.podman.io/image/v5/manifest"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	netTypes "go.podman.io/common/libnetwork/types"
+	"go.podman.io/image/v5/manifest"
 
 	"github.com/charmbracelet/log"
 	"github.com/containers/podman/v5/pkg/bindings"

@@ -528,7 +528,13 @@ func (p *PodmanRuntime) CopyToContainer(
 	log.Debugf("copying path %v -> %v to container %v", srcPath, dstPath, cID)
 	_, err = containers.CopyFromArchiveWithOptions(ctx, cID, filepath.Dir(dstPath), tarBuf, opts)
 	if err != nil {
-		return fmt.Errorf("error copying path %v -> %v to container (%v): %w", srcPath, dstPath, cID, err)
+		return fmt.Errorf(
+			"error copying path %v -> %v to container (%v): %w",
+			srcPath,
+			dstPath,
+			cID,
+			err,
+		)
 	}
 
 	return nil
