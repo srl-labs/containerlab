@@ -480,11 +480,12 @@ func (mr *MockNodeMockRecorder) RunExecFromConfig(arg0, arg1 any) *gomock.Call {
 }
 
 // SaveConfig mocks base method.
-func (m *MockNode) SaveConfig(arg0 context.Context) error {
+func (m *MockNode) SaveConfig(arg0 context.Context) (*nodes.SaveConfigResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SaveConfig", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*nodes.SaveConfigResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // SaveConfig indicates an expected call of SaveConfig.

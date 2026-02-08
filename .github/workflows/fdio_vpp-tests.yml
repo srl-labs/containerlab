@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v7
         with:
           name: containerlab
 
@@ -65,7 +65,7 @@ jobs:
           bash ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/11-fdio-vpp/${{ matrix.test-suite }}
 
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: 11-fdio_vpp-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
@@ -74,7 +74,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-fdio_vpp-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}

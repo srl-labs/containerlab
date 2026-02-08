@@ -5,7 +5,9 @@
 package utils
 
 import (
+	"archive/tar"
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -418,7 +420,7 @@ func lookupUserHomeDirViaGetent(userId string) string {
 	return parts[5]
 }
 
-// ResolvePath resolves a string path by expanding `~` to home dir
+// ResolvePath resolves path p by expanding ~ to home dir
 // or resolving a relative path by joining it with the base path.
 // When resolving `~` the function uses the home dir of a sudo user, so that -E sudo
 // flag can be omitted.
@@ -657,7 +659,56 @@ func GetOSRelease() string {
 	return osRelease
 }
 
-// IsPartialConfigFile returns true if the config file name contains .partial substring (case insensitive).
+// IsPartialConfigFile returns true if the config file name contains .partial substring (case
+// insensitive).
 func IsPartialConfigFile(configPath string) bool {
 	return strings.Contains(strings.ToUpper(configPath), ".PARTIAL")
+}
+
+func FileToTarStream(dstFile string, filePath string) (*bytes.Buffer, error) {
+	// Check if file exists and get length
+	fileStat, err := os.Stat(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get file info for %s: %w", filePath, err)
+	}
+
+	// Create tar stream to copy (because Docker can only copy from a tar)
+	tarBuf := new(bytes.Buffer)
+	tarWriter := tar.NewWriter(tarBuf)
+
+	header, err := tar.FileInfoHeader(fileStat, filepath.Base(dstFile))
+	if err != nil {
+		return nil, fmt.Errorf("cannot create tar file header for %s: %w", fileStat.Name(), err)
+	}
+	header.Mode = 0o666
+	header.Name = filepath.Base(dstFile)
+	tarWriter.WriteHeader(header)
+
+	fileReader, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open %s: %w", filePath, err)
+	}
+	_, err = io.Copy(tarWriter, fileReader)
+	if err != nil {
+		return nil, fmt.Errorf("error reading %s: %w", filePath, err)
+	}
+
+	tarWriter.Close()
+
+	return tarBuf, nil
+}
+
+func WriteToTempFile(contents string) (string, error) {
+	tmpFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("unable to create temporary file: %w", err)
+	}
+	defer tmpFile.Close()
+
+	_, err = tmpFile.WriteString(contents)
+	if err != nil {
+		return "", fmt.Errorf("unable to write to temporary file: %w", err)
+	}
+
+	return tmpFile.Name(), nil
 }

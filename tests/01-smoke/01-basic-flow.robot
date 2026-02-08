@@ -482,6 +482,27 @@ Verify Hosts entries exist
     IF    '${runtime}' == 'podman'    Should Contain    ${output}    6
     IF    '${runtime}' == 'docker'    Should Contain    ${output}    6
 
+Verify Hosts entries contain container ID
+    [Documentation]    Verify that /etc/hosts entries contain the truncated container ID (first 12 chars) as added by PR #2991.
+    # Get the container ID for l1 node
+    ${rc}    ${container_id} =    Run And Return Rc And Output
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 --format '{{.Id}}'
+    Log    ${container_id}
+    Should Be Equal As Integers    ${rc}    0
+
+    # Container IDs are 64 characters long, truncate to 12 as containerlab does
+    ${truncated_id} =    Get Substring    ${container_id}    0    12
+    Log    Truncated container ID: ${truncated_id}
+
+    # Get the hosts entry for l1 node
+    ${rc}    ${hosts_entry} =    Run And Return Rc And Output
+    ...    cat /etc/hosts | grep "clab-${lab-name}-l1" | head -1
+    Log    ${hosts_entry}
+    Should Be Equal As Integers    ${rc}    0
+
+    # Verify the hosts entry contains the truncated container ID
+    Should Contain    ${hosts_entry}    ${truncated_id}
+
 Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -574,7 +595,7 @@ Verify Exec rc != 0 on no containers match
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
     Log    ${output}
     Should Not Contain    ${output}    test
-    Should Contain    ${output}    filter did not match any containers
+    Should Match Regexp    ${output}    (?i)filter did not match any containers
     Should Not Be Equal As Integers    ${rc}    0
 
 Verify l1 node is healthy

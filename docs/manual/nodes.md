@@ -530,7 +530,7 @@ If you want to completely disable the networking stack on a container, you can u
 
 ### runtime
 
-By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman`, and `ignite` runtimes.
+By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman` runtime.
 
 It is possible to specify a global runtime with a global `--runtime` flag, or set the runtime on a per-node basis:
 
@@ -538,7 +538,6 @@ Options for the runtime parameter are:
 
 - `docker`
 - `podman`
-- `ignite`
 
 The default runtime can also be influenced via the `CLAB_RUNTIME` environment variable, which takes the same values as mentioned above.
 
@@ -565,7 +564,10 @@ my-node:
   exec:
     - echo test123
     - bash /myscript.sh
+    - bash -c 'echo "foobar" > /root/wg-priv.key' #(1)!
 ```
+
+1. If you use shell tokens such as `>`, you need to wrap the command in the shell
 
 The `exec` is particularly helpful to provide some startup configuration for linux nodes such as IP addressing and routing instructions.
 

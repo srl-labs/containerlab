@@ -754,13 +754,15 @@ In the example above, the `ALPINE_VERSION` environment variable is used to set t
 
 Magic variables are special strings that get replaced with actual values during the topology parsing.to make your lab configurations more dynamic and less verbose. These variables are surrounded by double underscores (`__variable__`) and can be seen in some of the advanced topology examples.
 
-These variables can be used in startup-config paths, bind paths, and exec commands. They are replaced with actual values during lab deployment:
+Most variables can be used in startup-config paths, bind paths, and exec commands. The Git variables (`__gitBranch__` and `__gitHash__`) are special and today can only be used in the topology `name` field. All variables are replaced with actual values during lab deployment:
 
 | Variable | Description | Example Usage | Expands To |
 |----------|-------------|---------------|------------|
 | `__clabNodeName__` {: style='white-space: nowrap;'} | Current node's short name | `startup-config: cfg/__clabNodeName__.cfg` | `cfg/node1.cfg` (for node named "node1") |
 | `__clabNodeDir__` {: style='white-space: nowrap;'} | Path to the node's lab directory | `binds: __clabNodeDir__/conf:/conf` | `clab-mylab/node1/conf:/conf` |
 | `__clabDir__` {: style='white-space: nowrap;'} | Path to the lab's main directory | `binds: __clabDir__/data.json:/data.json:ro` | `clab-mylab/data.json:/data.json:ro` |
+| `__gitBranch__` {: style='white-space: nowrap;'} | Current Git branch name (slashes replaced with hyphens). Only usable in topology `name` field. Returns "none" if not in a Git repository. | `name: lab-__gitBranch__` | `lab-feature-test` (for branch "feature/test") |
+| `__gitHash__` {: style='white-space: nowrap;'} | Current Git commit hash (short, 7 characters). Only usable in topology `name` field. Returns "none" if not in a Git repository. | `name: lab-__gitHash__` | `lab-abc1234` (7-character short hash) |
 
 Here are some practical examples when using magic variables can greatly simplify your topology definitions:
 
@@ -816,6 +818,24 @@ topology:
       exec:
         - echo "Node __clabNodeName__ started"  # Will output "Node node1 started"
 ```
+
+///
+
+/// tab | Git-based topology naming
+
+The `__gitBranch__` and `__gitHash__` magic variables allow you to create dynamic topology names based on Git repository information. This is particularly useful in multi-tenant environments and CI/CD pipelines where you want to identify labs by their Git branch and commit.
+
+```yaml
+name: lab-__gitBranch__-__gitHash__
+topology:
+  nodes:
+    node1:
+      kind: nokia_srlinux
+```
+
+When deployed from a Git repository on branch `feature/test` with commit hash `abc1234`, the topology name will be `lab-feature-test-abc1234`. Branch names with slashes (like `feature/test`) are automatically sanitized by replacing slashes with hyphens.
+
+If the topology file is not in a Git repository, both variables will be replaced with `none`, resulting in a topology name like `lab-none-none`.
 
 ///
 

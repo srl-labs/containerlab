@@ -40,7 +40,8 @@ The GUI is the primary way to work with Ostinato and is accessible over VNC. To 
 /// tab | Using GUI
 Once the lab is deployed, connect any VNC client to `<host-ip>:5900` - this will bring up the Ostinato GUI.
 
-![Ostinato GUI](https://ostinato.org/images/ostinato-clab.png)
+<!-- link is dead -->
+<!-- ![Ostinato GUI](https://ostinato.org/images/ostinato-clab.png) -->
 
 The GUI only lists the data interfaces and hence, `eth0` will not be included
 ///

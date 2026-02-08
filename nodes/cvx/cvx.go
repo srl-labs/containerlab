@@ -6,19 +6,13 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
+	"github.com/distribution/reference"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
-	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
 	clabtypes "github.com/srl-labs/containerlab/types"
-	meta "github.com/weaveworks/ignite/pkg/apis/meta/v1alpha1"
-	"github.com/weaveworks/ignite/pkg/operations"
 )
 
-var (
-	kindnames                 = []string{"cvx", "cumulus_cvx"}
-	defaultCvxKernelImageRef  = "docker.io/networkop/kernel:4.19"
-	defaultIgniteSandboxImage = "networkop/ignite:dev"
-)
+var kindnames = []string{"cvx", "cumulus_cvx"}
 
 var memoryReqs = map[string]string{
 	"4.3.0": "512MB",
@@ -30,12 +24,10 @@ func Register(r *clabnodes.NodeRegistry) {
 	r.Register(kindnames, func() clabnodes.Node {
 		return new(cvx)
 	}, nil)
-	clabnodes.SetNonDefaultRuntimePerKind(kindnames, clabruntimeignite.RuntimeName)
 }
 
 type cvx struct {
 	clabnodes.DefaultNode
-	vmChans *operations.VMChannels
 }
 
 func (c *cvx) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -47,22 +39,19 @@ func (c *cvx) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		o(c)
 	}
 
-	if c.Cfg.Kernel == "" {
-		c.Cfg.Kernel = defaultCvxKernelImageRef
-	}
-
-	if c.Cfg.Sandbox == "" {
-		c.Cfg.Sandbox = defaultIgniteSandboxImage
-	}
-
-	ociRef, err := meta.NewOCIImageRef(cfg.Image)
+	imageRef, err := reference.ParseNormalizedNamed(cfg.Image)
 	if err != nil {
-		return fmt.Errorf("failed to parse OCI image ref %q: %s", cfg.Image, err)
+		return fmt.Errorf("failed to parse image ref %q: %w", cfg.Image, err)
 	}
 
 	// if Memory is not statically set, apply the defaults
 	if cfg.Memory == "" {
-		mem, ok := memoryReqs[ociRef.Ref().Tag()]
+		tag := ""
+		if tagged, ok := imageRef.(reference.Tagged); ok {
+			tag = tagged.Tag()
+		}
+
+		mem, ok := memoryReqs[tag]
 		cfg.Memory = mem
 
 		// by default setting the limit to 768MB
@@ -75,17 +64,13 @@ func (c *cvx) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 }
 
 func (c *cvx) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
-	// CreateContainer is no-op in case of ignite runtime
 	cID, err := c.Runtime.CreateContainer(ctx, c.Cfg)
 	if err != nil {
 		return err
 	}
-	intf, err := c.Runtime.StartContainer(ctx, cID, c)
+	_, err = c.Runtime.StartContainer(ctx, cID, c)
 	if err != nil {
 		return err
-	}
-	if vmChans, ok := intf.(*operations.VMChannels); ok {
-		c.vmChans = vmChans
 	}
 
 	c.SetState(clabnodesstate.Deployed)
@@ -95,23 +80,12 @@ func (c *cvx) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 
 func (c *cvx) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for cvx '%s' node", c.Cfg.ShortName)
-	if c.vmChans == nil {
-		return nil
-	}
-
-	return <-c.vmChans.SpawnFinished
+	return nil
 }
 
 func (c *cvx) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
 	images[clabnodes.ImageKey] = c.Cfg.Image
-
-	if c.Runtime.GetName() != clabruntimeignite.RuntimeName {
-		return images
-	}
-
-	images[clabnodes.KernelKey] = c.Cfg.Kernel
-	images[clabnodes.SandboxKey] = c.Cfg.Sandbox
 	return images
 }
 

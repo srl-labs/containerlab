@@ -14,10 +14,8 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
-	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
-	"github.com/weaveworks/ignite/pkg/operations"
 )
 
 const (
@@ -39,7 +37,6 @@ func Register(r *clabnodes.NodeRegistry) {
 
 type linux struct {
 	clabnodes.DefaultNode
-	vmChans *operations.VMChannels
 }
 
 func (n *linux) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -78,11 +75,7 @@ func (n *linux) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 	if err != nil {
 		return err
 	}
-	intf, err := n.Runtime.StartContainer(ctx, cID, n)
-
-	if vmChans, ok := intf.(*operations.VMChannels); ok {
-		n.vmChans = vmChans
-	}
+	_, err = n.Runtime.StartContainer(ctx, cID, n)
 
 	n.SetState(clabnodesstate.Deployed)
 
@@ -97,11 +90,6 @@ func (n *linux) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) e
 		log.Error(err)
 	}
 
-	// when ignite runtime is in use
-	if n.vmChans != nil {
-		return <-n.vmChans.SpawnFinished
-	}
-
 	return nil
 }
 
@@ -109,12 +97,6 @@ func (n *linux) GetImages(_ context.Context) map[string]string {
 	images := make(map[string]string)
 	images[clabnodes.ImageKey] = n.Cfg.Image
 
-	// ignite runtime additionally needs a kernel and sandbox image
-	if n.Runtime.GetName() != clabruntimeignite.RuntimeName {
-		return images
-	}
-	images[clabnodes.KernelKey] = n.Cfg.Kernel
-	images[clabnodes.SandboxKey] = n.Cfg.Sandbox
 	return images
 }
 

@@ -324,8 +324,13 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 }
 
 // Pre Deploy func for SR-SIM kind.
-func (n *sros) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	log.Debug("Running pre-deploy")
+
+	if err := n.verifyNokiaSrsimImage(ctx); err != nil {
+		return err
+	}
+
 	// store the preDeployParams
 	n.preDeployParams = params
 
@@ -892,7 +897,7 @@ func (*sros) checkKernelVersion() error {
 	return nil
 }
 
-// checkComponentSlotsConfig check the sros component slot config for validaity.
+// checkComponentSlotsConfig check the sros component slot config for validity.
 func (n *sros) checkComponentSlotsConfig() error {
 	// check Slots are unique
 	componentNames := map[string]struct{}{}
@@ -908,7 +913,7 @@ func (n *sros) checkComponentSlotsConfig() error {
 				component.Slot,
 			)
 		}
-		// addd to component names map
+		// add to component names map
 		componentNames[component.Slot] = struct{}{}
 
 	}
@@ -996,7 +1001,8 @@ func (n *sros) createSROSCertificates() error {
 	return nil
 }
 
-// createSROSConfigFiles handles the config generation for the SR-SIM kind.
+// createSROSConfigFiles handles config generation for the SR-SIM kind.
+// Flow: version detection → buildStartupConfig (default + partial) → GenerateConfig(dst, config).
 func (n *sros) createSROSConfigFiles() error {
 	// Get version from image before generating config
 	if n.swVersion == nil {
@@ -1026,25 +1032,27 @@ func (n *sros) createSROSConfigFiles() error {
 	log.Debug("Reading startup-config", "node", n.Cfg.ShortName, "startup-config",
 		n.Cfg.StartupConfig, "isPartial", isPartial)
 
-	cfgTemplate, err := n.getConfigTemplate(isPartial)
+	startupConfig, err := n.buildStartupConfig(isPartial)
 	if err != nil {
 		return err
 	}
 
-	if cfgTemplate == "" {
+	if startupConfig == "" {
 		log.Debug(
-			"configuration template is empty, skipping startup config file generation",
+			"startup config is empty, skipping startup config file generation",
 			"node",
 			n.Cfg.ShortName,
 		)
 		return nil
 	}
 
-	return n.GenerateConfig(cf3CfgFile, cfgTemplate)
+	return n.GenerateConfig(cf3CfgFile, startupConfig)
 }
 
-// getConfigTemplate retrieves the configuration template based on startup config settings.
-func (n *sros) getConfigTemplate(isPartial bool) (string, error) {
+// buildStartupConfig returns the full startup config string: either from user file (full config)
+// or from default + partial config generation. It does not return a template; the name is
+// historical.
+func (n *sros) buildStartupConfig(isPartial bool) (string, error) {
 	// User provides full startup config
 	if n.Cfg.StartupConfig != "" && !isPartial {
 		c, err := os.ReadFile(n.Cfg.StartupConfig)
@@ -1102,6 +1110,7 @@ func (n *sros) isCPM(cpm string) bool {
 }
 
 // prepareConfigTemplateData prepares all data needed for template selection and execution.
+// Service configs are filled from a single table-driven result: variant → getFullSnippetSet(v).
 func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	b, err := n.banner()
 	if err != nil {
@@ -1115,10 +1124,25 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 		log.Debugf("SR-SIM node %q has non-partial startup-config defined, skipping component config gen", n.Cfg.LongName)
 	}
 
+	v := n.resolveConfigVariant()
+	snippets := getFullSnippetSet(v)
+	configMode := string(v.Mode)
+	if v.ForceClassic {
+		log.Warn(
+			"SAR-Hm nodes only support classic configuration mode. Overriding configuration mode to 'classic'",
+			"node",
+			n.Cfg.LongName,
+			"node-type",
+			strings.ToLower(n.Cfg.NodeType),
+		)
+		configMode = string(ConfigModeClassic)
+		n.Cfg.Env[envSrosConfigMode] = string(ConfigModeClassic)
+	}
+
 	tplData := &srosTemplateData{
 		// Selection criteria
 		NodeType:          strings.ToLower(n.Cfg.NodeType),
-		ConfigurationMode: strings.ToLower(n.Cfg.Env[envSrosConfigMode]),
+		ConfigurationMode: configMode,
 		SwVersion:         n.swVersion,
 		IsSecureGrpc:      *n.Cfg.Certificate.Issue,
 
@@ -1133,13 +1157,13 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 		MgmtIPMTU:       n.Runtime.Mgmt().MTU,
 		ComponentConfig: componentConfig,
 
-		// Default service configs (will be overridden based on node type)
-		SystemConfig:  systemCfg,
-		SNMPConfig:    snmpv2Config,
-		GRPCConfig:    grpcConfig,
-		NetconfConfig: netconfConfig,
-		LoggingConfig: loggingConfig,
-		SSHConfig:     sshConfig,
+		// Service configs from variant (single source of truth)
+		SystemConfig:  snippets.SystemConfig,
+		GRPCConfig:    snippets.GRPCConfig,
+		SNMPConfig:    snippets.SNMPConfig,
+		NetconfConfig: snippets.NetconfConfig,
+		LoggingConfig: snippets.LoggingConfig,
+		SSHConfig:     snippets.SSHConfig,
 	}
 
 	if n.Config().DNS != nil {
@@ -1147,8 +1171,6 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	}
 
 	n.prepareSSHPubKeys(tplData)
-	n.applyNodeTypeSpecificConfig(tplData)
-
 	return tplData, nil
 }
 
@@ -1167,80 +1189,32 @@ func (n *sros) isSARHmNode() bool {
 	return sarHmRegexp.MatchString(n.Cfg.NodeType)
 }
 
-// applyNodeTypeSpecificConfig applies node-type and security specific overrides for Model-Driven
-// Config.
-func (n *sros) applyNodeTypeSpecificConfig(tplData *srosTemplateData) {
-	// SR OS nodes with insecure gRPC, non-IXR/SAR
-	if !tplData.IsSecureGrpc {
-		tplData.GRPCConfig = grpcConfigInsecure
+// getTemplateForVariant returns the template string and name for the given config variant.
+// swVersion is for future SR OS 26+ template selection (e.g. cfgTplSROS26 when Major >= "26").
+func getTemplateForVariant(v ConfigVariant, swVersion *SrosVersion) (tmpl string, tplName string) {
+	// Model-driven (or mixed treated as classic below when family is classic)
+	if v.Mode == ConfigModeModelDriven {
+		// Placeholder for version-specific template: if swVersion != nil && swVersion.Major >= "26"
+		// { return cfgTplSROS26, "clab-sros-config-sros26" }
+		return cfgTplSROS25, "clab-sros-config-sros25"
 	}
-	// Apply IXR-specific configs
-	if n.isIXRNode() {
-		tplData.SystemConfig = systemCfgIXR
-		tplData.GRPCConfig = grpcConfigIXR
-
-		// IXR with insecure gRPC
-		if !tplData.IsSecureGrpc {
-			tplData.GRPCConfig = grpcConfigIXRInsecure
-		}
-	}
-
-	if n.isSARNode() {
-		tplData.SystemConfig = systemCfgSAR
-		tplData.GRPCConfig = grpcConfigSAR
-		// SAR with insecure gRPC
-		if !tplData.IsSecureGrpc {
-			tplData.GRPCConfig = grpcConfigSARInsecure
-		}
-		if n.isSARHmNode() { // MD disabled on SAR-Hm nodes
-			if tplData.ConfigurationMode != "classic" {
-				log.Warn(
-					"SAR-Hm nodes only support classic configuration mode. Overriding configuration mode to 'classic'",
-					"node",
-					n.Cfg.LongName,
-					"node-type",
-					tplData.NodeType,
-				)
-				tplData.ConfigurationMode = "classic"
-				n.Cfg.Env[envSrosConfigMode] = "classic"
-			}
-		}
+	// Classic (or mixed)
+	tmpl = cfgTplClassic
+	tplName = "clab-sros-config-classic"
+	switch v.Family {
+	case ConfigFamilyIXR:
+		return cfgTplClassicIxr, "clab-sros-config-classic-ixr"
+	case ConfigFamilySAR:
+		return cfgTplClassicSar, "clab-sros-config-classic-sar"
+	default:
+		return tmpl, tplName
 	}
 }
 
-// selectConfigTemplate chooses the appropriate config template based on template data either MD or
-// classic.
+// selectConfigTemplate chooses the config template from the config variant (mode + family).
 func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Template, error) {
-	var tmpl string
-	var tplName string
-	// Model-driven configuration mode (SROS25+)
-	// Future version-specific template selection:
-	// if tplData.SwVersion != nil && tplData.SwVersion.Major >= 26 {
-	//     tmpl = cfgTplSROS26
-	//     tplName = "clab-sros-config-sros26"
-	// } else {
-	//     tmpl = cfgTplSROS25
-	//     tplName = "clab-sros-config-sros25"
-	// }
-	tmpl = cfgTplSROS25
-	tplName = "clab-sros-config-sros25"
-
-	// Classic configuration mode
-	if tplData.ConfigurationMode == "classic" || tplData.ConfigurationMode == "mixed" {
-		// Default to classic template
-		tmpl = cfgTplClassic
-		tplName = "clab-sros-config-classic"
-
-		if n.isIXRNode() {
-			tmpl = cfgTplClassicIxr
-			tplName = "clab-sros-config-classic-ixr"
-		}
-		if n.isSARNode() {
-			tmpl = cfgTplClassicSar
-			tplName = "clab-sros-config-classic-sar"
-			// We choose not to support gRPC on classic mode at all
-		}
-	}
+	v := n.resolveConfigVariant()
+	tmpl, tplName := getTemplateForVariant(v, tplData.SwVersion)
 	return template.New(tplName).
 		Funcs(clabutils.CreateFuncs()).
 		Parse(tmpl)
@@ -1533,13 +1507,13 @@ func (n *sros) CheckInterfaceName() error {
 	return nil
 }
 
-func (n *sros) SaveConfig(ctx context.Context) error {
+func (n *sros) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	fqdn := ""
 	switch {
 	case n.isStandaloneNode():
 		// check if it is a cpm node. return without error if not
 		if !n.isCPM("") {
-			return nil
+			return nil, nil
 		}
 		// if it is a standalone node use the fqdn
 		fqdn = n.Cfg.Fqdn
@@ -1547,18 +1521,32 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 		// if it is the
 		cmpNode, err := n.cpmNode()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// delegate to cpm node
 		return cmpNode.SaveConfig(ctx)
 	case n.isDistributedCardNode():
 		// check if it is a cpm node. return without error if not
 		if !n.isCPM("") {
-			return nil
+			return nil, nil
 		}
 		fqdn = n.Cfg.LongName
 	}
-	return n.saveConfigWithAddr(ctx, fqdn)
+
+	if err := n.saveConfigWithAddr(ctx, fqdn); err != nil {
+		return nil, err
+	}
+
+	cfgPath := filepath.Join(
+		n.Cfg.LabDir,
+		n.Cfg.Env[envNokiaSrosSlot],
+		configCf3,
+		startupCfgName,
+	)
+
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
 // saveConfigWithAddr will use the addr string to try to save the config of the node.
@@ -1768,10 +1756,11 @@ func CheckPortWithRetry(
 
 // MgmtIP represents the management IPv4/v6 addresses of a node.
 type MgmtIP struct {
-	IPv4     string
-	IPv4pLen int
-	IPv6     string
-	IPv6pLen int
+	IPv4        string
+	IPv4pLen    int
+	IPv6        string
+	IPv6pLen    int
+	ContainerID string
 }
 
 // distNodeMgmtIPs returns both ipv4 and ipv6 management IP address of a
@@ -1792,7 +1781,7 @@ func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
 	// 0th component container
 	if len(components) > 0 {
 		c := components[0]
-		slot := c.Slot
+		slot := strings.ToLower(c.Slot)
 
 		componentName := n.Cfg.LongName + "-" + slot
 
@@ -1813,12 +1802,14 @@ func (n *sros) distNodeMgmtIPs() (MgmtIP, error) {
 			if container.NetworkSettings.IPv4addr != "" {
 				ips.IPv4 = container.NetworkSettings.IPv4addr
 				ips.IPv4pLen = container.NetworkSettings.IPv4pLen
-
+				ips.ContainerID = container.ID
 			}
 			if container.NetworkSettings.IPv6addr != "" {
 				ips.IPv6 = container.NetworkSettings.IPv6addr
 				ips.IPv6pLen = container.NetworkSettings.IPv6pLen
+				ips.ContainerID = container.ID
 			}
+
 		}
 	}
 
@@ -1843,7 +1834,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 				ips.IPv4,
 				n.Cfg.LongName,
 				clabtypes.IpVersionV4,
-			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)).SetContainerID(ips.ContainerID))
 		}
 
 		if ips.IPv6 != "" {
@@ -1851,7 +1842,7 @@ func (n *sros) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, erro
 				ips.IPv6,
 				n.Cfg.LongName,
 				clabtypes.IpVersionV6,
-			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)))
+			).SetDescription(fmt.Sprintf("Kind: %s", n.Cfg.Kind)).SetContainerID(ips.ContainerID))
 		}
 	}
 
@@ -1888,112 +1879,45 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	)
 }
 
-// generateComponentConfig generates SR OS configuration
-// for explicitly defined components using components nodeConfig.
+// generateComponentConfig generates SR OS configuration for explicitly defined
+// components (cards, SFMs, XIOMs, MDAs) using a struct + loop; power config is appended.
 func (n *sros) generateComponentConfig() string {
 	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
 		return ""
 	}
-
-	// Skipping magic if using classic for NOW
 	if n.isConfigClassic() {
 		return ""
 	}
-
 	if n.isStandaloneNode() {
-		// skip integrated for now
 		return ""
 	}
-
 	components := n.rootComponents
-
 	if len(components) == 0 {
 		return ""
 	}
 
-	var config strings.Builder
-
-	for _, component := range components {
-		slot := strings.ToUpper(component.Slot)
-
-		if slot == "A" || slot == "B" {
-			// cpm -> skip
+	for _, c := range components {
+		slot := strings.ToUpper(strings.TrimSpace(c.Slot))
+		if slot == slotAName || slot == slotBName {
 			continue
 		}
-
-		if component.Type != "" {
-			config.WriteString(
-				fmt.Sprintf(
-					"/configure card %s card-type %s admin-state enable\n",
-					slot,
-					component.Type,
-				),
-			)
-		} else {
-			// not all types may have preprovisioned card
-			// so the following configs will fail if card
-			// doesn't have valid type explicitly set.
-			log.Warn("SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
+		if c.Type == "" {
+			log.Warn(
+				"SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
 				"node",
 				n.Cfg.ShortName,
 				"slot",
-				slot)
-			continue
-		}
-
-		if component.SFM != "" {
-			config.WriteString(
-				fmt.Sprintf(
-					"/configure sfm %s sfm-type %s admin-state enable\n",
-					slot,
-					component.SFM,
-				),
+				slot,
 			)
-		}
-
-		for _, xiom := range component.XIOM {
-			if xiom.Type != "" {
-				config.WriteString(
-					fmt.Sprintf(
-						"/configure card %s xiom x%d xiom-type %s admin-state enable\n",
-						slot,
-						xiom.Slot,
-						xiom.Type,
-					),
-				)
-			}
-
-			for _, mda := range xiom.MDA {
-				if mda.Type != "" {
-					config.WriteString(
-						fmt.Sprintf(
-							"/configure card %s xiom x%d mda %d mda-type %s admin-state enable\n",
-							slot,
-							xiom.Slot,
-							mda.Slot,
-							mda.Type,
-						),
-					)
-				}
-			}
-		}
-
-		for _, mda := range component.MDA {
-			if mda.Type != "" {
-				config.WriteString(
-					fmt.Sprintf(
-						"/configure card %s mda %d mda-type %s admin-state enable\n",
-						slot,
-						mda.Slot,
-						mda.Type,
-					),
-				)
-			}
 		}
 	}
 
+	lines := buildComponentCfgLines(components)
+	var config strings.Builder
+	for _, l := range lines {
+		config.WriteString(l.String())
+	}
 	config.WriteString(n.generatePowerConfig())
-
 	return config.String()
 }
 
@@ -2044,4 +1968,40 @@ func (n *sros) MonitorLogs(ctx context.Context, reader io.ReadCloser, exitChan c
 		default:
 		}
 	}
+}
+
+// verifyNokiaSrosImage ensures the image used with kind nokia_srsim has the correct labels
+// It inspects the image label
+// org.opencontainers.image.title and returns an error if it is not "srsim".
+func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
+	if n.GetRuntime() == nil {
+		return nil
+	}
+	insp, err := n.GetRuntime().InspectImage(ctx, n.Cfg.Image)
+	if err != nil {
+		// Skip check when runtime does not support image inspection (e.g. Podman).
+		if strings.Contains(err.Error(), "not implemented") {
+			log.Debug(
+				"Skipping nokia_srsim image kind check: runtime does not support image inspection",
+			)
+			return nil
+		}
+		return err
+	}
+	if insp != nil && insp.Config.Labels != nil {
+		if _, hasVrnetlab := insp.Config.Labels[vrnetlabVersionLabel]; hasVrnetlab {
+			return fmt.Errorf(
+				"node %q: kind is nokia_srsim but the image is a vrnetlab image; use kind: nokia_sros with this image, or use the SR-SIM container image for kind: nokia_srsim",
+				n.Cfg.ShortName,
+			)
+		}
+		if title, ok := insp.Config.Labels[srosImageTitleLabel]; ok && title == srosImageTitle {
+			return nil
+		}
+	}
+	log.Warnf(
+		"node %q: kind is nokia_srsim but the provided image does not have the correct labels; please use a valid SR-SIM container image or run a more recent version of the SR-SIM container image to suppress this warning",
+		n.Cfg.ShortName,
+	)
+	return nil
 }

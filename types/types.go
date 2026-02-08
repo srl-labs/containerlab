@@ -191,9 +191,6 @@ type NodeConfig struct {
 	// Extra /etc/hosts entries for all nodes.
 	ExtraHosts []string          `json:"extra-hosts,omitempty"`
 	Labels     map[string]string `json:"labels,omitempty"` // container labels
-	// Ignite sandbox and kernel imageNames
-	Sandbox string `json:"sandbox,omitempty"`
-	Kernel  string `json:"kernel,omitempty"`
 	// Configured container runtime
 	Runtime string `json:"runtime,omitempty"`
 	// Resource limits
@@ -265,7 +262,8 @@ type K8sKindExtras struct {
 // It is aligned with the `kind create cluster` command options, but exposes
 // only the ones that are relevant for containerlab.
 type K8sKindDeployExtras struct {
-	Wait *string `yaml:"wait,omitempty"`
+	KubeconfigPath *string `yaml:"kubeconfig,omitempty"`
+	Wait           *string `yaml:"wait,omitempty"`
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.

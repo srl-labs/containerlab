@@ -6,6 +6,7 @@ kind_display_name: Kubernetes in docker (kind) cluster
 ---
 
 # -{{ kind_display_name }}-
+
 -{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
@@ -86,7 +87,7 @@ In order to connect cluster nodes to the network underlay created by containerla
 
 Since the `eth1+` interfaces come up unconfigured, we may configure them using the `exec` property and set the IP addresses.
 
-Given the lab above, we configure `eth1` interface on all nodes. For example, we can check that worker node of cluster `k01` got its `eth1` inteface configured with the IP address:
+Given the lab above, we configure `eth1` interface on all nodes. For example, we can check that worker node of cluster `k01` got its `eth1` interface configured with the IP address:
 
 ```bash
 ❯ docker exec -it k01-worker ip a show eth1
@@ -107,7 +108,7 @@ With `-{{ kind_code_name }}-` nodes it is possible to use the following configur
 
 In addition to the generic node parameters, `-{{ kind_code_name }}-` can take following extra parameters from `extras` field.
 
-```
+```yaml
 topology:
   nodes:
     kind0:
@@ -115,6 +116,9 @@ topology:
       extras:
         k8s_kind:
           deploy:
+            # Corresponds to --kubeconfig option.
+            # Path can be absolute or relative to the topology file
+            kubeconfig: ./kubeconfig
             # Corresponds to --wait option. Wait given duration until the cluster becomes ready.
             wait: 0s
 ```
@@ -130,5 +134,9 @@ When you deploy a lab with `-{{ kind_code_name }}-` nodes you may notice that th
 When you run `clab inspect --all` command you may notice that the output doesn't list the `-{{ kind_code_name }}-` nodes nor the `ext-container` nodes.
 
 For now, use `clab inspect -t <topology-file>` to see the full topology output.
+
+### Worker nodes naming convention
+
+When multiple worker nodes are defined, the first worker node must be named with `-worker` suffix, and subsequent worker nodes must be have the `-worker2`, `-worker3`, etc, suffixes.
 
 [kind-url]: https://kind.sigs.k8s.io/

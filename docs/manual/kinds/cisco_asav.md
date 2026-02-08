@@ -22,7 +22,7 @@ To connect to a `bash` shell of a running ASAv container:
 docker exec -it <container-name/id> bash
 ```
 
-To connect to the ASAv CLI (password `CiscaoAsa1!`):
+To connect to the ASAv CLI (password `CiscoAsa1!`):
 
 ```bash
 ssh admin@<container-name>

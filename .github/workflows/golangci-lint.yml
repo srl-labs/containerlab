@@ -22,7 +22,7 @@ jobs:
           go-version: ${{ inputs.go_ver }}
 
       - name: Cache go modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           # In order:
           # * Module download cache

@@ -79,18 +79,18 @@ func (n *c8000) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams
 	return n.create8000Files(ctx)
 }
 
-func (n *c8000) SaveConfig(_ context.Context) error {
+func (n *c8000) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	err := clabnetconf.SaveRunningConfig(n.Cfg.LongName,
 		defaultCredentials.GetUsername(),
 		defaultCredentials.GetPassword(),
 		scrapliPlatformName,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
-	return nil
+	return nil, nil
 }
 
 func (n *c8000) create8000Files(_ context.Context) error {

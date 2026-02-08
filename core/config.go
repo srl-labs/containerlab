@@ -12,6 +12,9 @@ import (
 	"sort"
 	"strings"
 
+	gogit "github.com/go-git/go-git/v5"
+	gogitplumbing "github.com/go-git/go-git/v5/plumbing"
+
 	"github.com/charmbracelet/log"
 	"github.com/pmorjan/kmod"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -37,6 +40,10 @@ const (
 	clabDirVar  = "__clabDir__"
 	nodeDirVar  = "__clabNodeDir__"
 	nodeNameVar = "__clabNodeName__"
+
+	// clab name specific variables.
+	gitBranchVar = "__gitBranch__"
+	gitHashVar   = "__gitHash__"
 )
 
 // Config defines lab configuration as it is provided in the YAML file.
@@ -54,6 +61,18 @@ type Config struct {
 // ParseTopology parses the lab topology.
 func (c *CLab) parseTopology() error {
 	log.Info("Parsing & checking topology", "file", c.TopoPaths.TopologyFilenameBase())
+
+	if strings.Contains(c.Config.Name, gitBranchVar) ||
+		strings.Contains(c.Config.Name, gitHashVar) {
+		r := c.magicTopoNameReplacer()
+		oldName := c.Config.Name
+		c.Config.Name = r.Replace(c.Config.Name)
+		log.Debugf(
+			"Topology name contains Git variables, substituted topology name: %q -> %q",
+			oldName,
+			c.Config.Name,
+		)
+	}
 
 	err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name)
 	if err != nil {
@@ -209,8 +228,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Env:             c.Config.Topology.GetNodeEnv(nodeName),
 		NetworkMode:     c.Config.Topology.GetNodeNetworkMode(nodeName),
 		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
-		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
-		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 		Devices:         c.Config.Topology.GetNodeDevices(nodeName),
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
@@ -665,6 +682,15 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 	}
 
 	cfg.Labels[clabconstants.Owner] = owner
+
+	gitBranch, gitHash := c.getGitInfo()
+
+	if gitBranch != "none" {
+		cfg.Labels[clabconstants.GitBranch] = gitBranch
+		if gitHash != "none" {
+			cfg.Labels[clabconstants.GitHash] = gitHash
+		}
+	}
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
@@ -776,4 +802,76 @@ func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
 		nodeDirVar, c.TopoPaths.NodeDir(nodeName),
 		nodeNameVar, nodeName,
 	)
+}
+
+// magicTopoNameReplacer returns a string replacer that replaces all git branch variables in the
+// topology name.
+func (c *CLab) magicTopoNameReplacer() *strings.Replacer {
+	gitBranch, gitHash := c.getGitInfo()
+
+	if gitHash == "none" && gitBranch == "none" {
+		log.Warnf(
+			"topology name uses git variables, but no Git repository found at %q - variables will be replaced with 'none'",
+			c.TopoPaths.TopologyFileDir(),
+		)
+	}
+
+	// Replace illegal characters in branch name
+	gitBranch = strings.ReplaceAll(gitBranch, "/", "-")
+
+	log.Debugf("Git repo variables will be the following: branch: %q hash: %q", gitBranch, gitHash)
+
+	return strings.NewReplacer(
+		gitBranchVar, gitBranch,
+		gitHashVar, gitHash,
+	)
+}
+
+func (c *CLab) getGitInfo() (string, string) {
+	// Return cached values if available (non-empty gitBranch indicates cached)
+	if c.gitBranch != "" {
+		// If hash wasn't set, return "none" for hash
+		if c.gitHash == "" {
+			return c.gitBranch, "none"
+		}
+		return c.gitBranch, c.gitHash
+	}
+
+	// Initialize defaults
+	gitBranch := "none"
+	gitHash := "none"
+
+	repo, err := gogit.PlainOpen(c.TopoPaths.TopologyFileDir())
+	if err != nil {
+		// Not a git repository - cache and return defaults
+		c.gitBranch = gitBranch
+		c.gitHash = gitHash
+		return gitBranch, gitHash
+	}
+
+	repoHead, err := repo.Head()
+	if err != nil {
+		// Try symbolic head
+		symbolicHead, err := repo.Storer.Reference(gogitplumbing.HEAD)
+		if err != nil || symbolicHead.Type() != gogitplumbing.SymbolicReference {
+			log.Debugf("Could not determine Git branch/hash: %v", err)
+			// Cache the defaults
+			c.gitBranch = gitBranch
+			c.gitHash = gitHash
+			return gitBranch, gitHash
+		}
+		gitBranch = strings.TrimPrefix(symbolicHead.Target().String(), "refs/heads/")
+		// For symbolic refs, we might not have a hash readily available
+		gitHash = "none"
+	} else {
+		gitBranch = repoHead.Name().Short()
+		// Use short hash (7 characters) instead of full 40-character hash
+		gitHash = repoHead.Hash().String()[:7]
+	}
+
+	// Cache the results
+	c.gitBranch = gitBranch
+	c.gitHash = gitHash
+
+	return gitBranch, gitHash
 }

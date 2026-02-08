@@ -1,4 +1,4 @@
-package tc
+package netem
 
 import (
 	"fmt"
@@ -11,6 +11,12 @@ import (
 	"github.com/mdlayher/netlink"
 	"golang.org/x/sys/unix"
 )
+
+func init() {
+	// Initialize the clock parameters from /proc/net/psched.
+	// This is required for accurate tick-to-time conversion in the go-tc library.
+	_ = core.InitializeClock()
+}
 
 // NewTC returns a new tc client opened for a given network namespace.
 // Must be closed after use.

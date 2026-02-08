@@ -32,6 +32,10 @@ const (
 
 	scrapliPlatformName = "arista_eos"
 	NapalmPlatformName  = "eos"
+
+	tlsKeyFile  = "node.key"
+	tlsCertFile = "node.crt"
+	tlsCAFile   = "ca.crt"
 )
 
 var (
@@ -106,7 +110,7 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	var envSb strings.Builder
 	envSb.WriteString("bash -c '" + ifWaitScriptContainerPath + " ; exec /sbin/init ")
 	for k, v := range n.Cfg.Env {
-		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
+		envSb.WriteString("systemd.setenv=\"" + k + "=" + v + "\" ")
 	}
 	envSb.WriteString("'")
 
@@ -117,17 +121,46 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	}
 	n.Cfg.MacAddress = hwa.String()
 
+	// create TLS certificates for the node by default.
+	// The cert, key and CA files are mounted into the container
+	// and can be validated with `show management security ssl certificate`.
+	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
+
 	// mount config dir
 	cfgPath := filepath.Join(n.Cfg.LabDir, "flash")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprintf("%s:/mnt/flash/", cfgPath))
+
+	if *n.Cfg.Certificate.Issue {
+		keyPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsKeyFile)
+		certPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCertFile)
+		caPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCAFile)
+
+		n.Cfg.Binds = append(n.Cfg.Binds,
+			fmt.Sprintf("%s:/persist/secure/ssl/keys/%s", keyPath, tlsKeyFile),
+			fmt.Sprintf("%s:/persist/secure/ssl/certs/%s", certPath, tlsCertFile),
+			fmt.Sprintf("%s:/persist/secure/ssl/certs/%s", caPath, tlsCAFile),
+		)
+	}
+
 	return nil
 }
 
 func (n *ceos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
+	if *n.Cfg.Certificate.Issue {
+		certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+		if err != nil {
+			return err
+		}
+
+		caCertificate, err := params.Cert.LoadCaCert()
+		if err != nil {
+			return err
+		}
+
+		n.Config().TLSCert = string(certificate.Cert)
+		n.Config().TLSKey = string(certificate.Key)
+		n.Config().TLSAnchor = string(caCertificate.Cert)
 	}
 	return n.createCEOSFiles(ctx)
 }
@@ -137,21 +170,23 @@ func (n *ceos) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	return n.ceosPostDeploy(ctx)
 }
 
-func (n *ceos) SaveConfig(ctx context.Context) error {
+func (n *ceos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+		return nil, fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
-	confPath := n.Cfg.LabDir + "/flash/startup-config"
-	log.Infof("saved cEOS configuration from %s node to %s\n", n.Cfg.ShortName, confPath)
+	cfgPath := filepath.Join(n.Cfg.LabDir, "flash", "startup-config")
+	log.Infof("saved cEOS configuration from %s node to %s\n", n.Cfg.ShortName, cfgPath)
 
-	return nil
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
 func (n *ceos) createCEOSFiles(ctx context.Context) error {
@@ -221,12 +256,43 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 		err = clabutils.CreateFile(sysMacPath, m.String())
 	}
 
+	if err != nil {
+		return err
+	}
+
 	// adding if-wait.sh script to flash dir
 	ifScriptP := path.Join(nodeCfg.LabDir, "flash", "if-wait.sh")
 	clabutils.CreateFile(ifScriptP, clabutils.IfWaitScript)
 	os.Chmod(ifScriptP, clabconstants.PermissionsOpen) // skipcq: GSC-G302
 
+	if *n.Cfg.Certificate.Issue {
+		err = n.createCEOSCertificates()
+	}
+
 	return err
+}
+
+// Func that Places the Certificates in the right place and format.
+func (n *ceos) createCEOSCertificates() error {
+	if *n.Cfg.Certificate.Issue {
+		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "ssl"), clabconstants.PermissionsOpen)
+
+		keyPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsKeyFile)
+		if err := clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
+			return err
+		}
+
+		certPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCertFile)
+		if err := clabutils.CreateFile(certPath, n.Config().TLSCert); err != nil {
+			return err
+		}
+
+		caPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCAFile)
+		if err := clabutils.CreateFile(caPath, n.Config().TLSAnchor); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func setMgmtInterface(node *clabtypes.NodeConfig) error {

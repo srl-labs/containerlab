@@ -121,6 +121,42 @@ Events Command Streams JSON Output
         Remove File If Exists    ${json-err}
     END
 
+Events Command Emits Netem Changes
+    [Documentation]    Verify that netem impairment changes are emitted as interface update events with netem attributes.
+    ${netem-log}    Set Variable    /tmp/clab-events-netem.log
+    ${netem-err}    Set Variable    /tmp/clab-events-netem.err
+    Remove File If Exists    ${netem-log}
+    Remove File If Exists    ${netem-err}
+    TRY
+        Deploy Lab For Events
+        Sleep    3s
+        # Start events with initial state to capture current interface state
+        Start Events Process    events_netem    json    ${netem-log}    ${netem-err}    True
+        Sleep    3s
+        # Set netem impairments on eth1
+        ${rc}    ${output} =    Run And Return Rc And Output
+        ...    ${CLAB_BIN} --runtime ${runtime} tools netem set -n clab-${lab-name}-l1 -i eth1 --delay 50ms
+        Log    ${output}
+        Should Be Equal As Integers    ${rc}    0
+        # Wait for polling to detect the change (polling interval is 1s, wait longer to be safe)
+        Sleep    5s
+        Stop Events Process    events_netem
+        ${netem-output} =    Get File    ${netem-log}
+        Log    ${netem-output}
+        Validate JSON Lines    ${netem-log}
+        # Verify netem_delay appears in an update event after setting impairments
+        ${rc}    ${netem-events} =    Run And Return Rc And Output
+        ...    bash -lc "grep netem_delay ${netem-log} | grep update | grep eth1"
+        Log    ${netem-events}
+        Should Be Equal As Integers    ${rc}    0
+        Should Contain    ${netem-events}    netem_delay
+        Should Contain    ${netem-events}    50ms
+    FINALLY
+        Cleanup Events Scenario    events_netem
+        Remove File If Exists    ${netem-log}
+        Remove File If Exists    ${netem-err}
+    END
+
 
 *** Keywords ***
 Remove File If Exists

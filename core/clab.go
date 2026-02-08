@@ -25,7 +25,6 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	_ "github.com/srl-labs/containerlab/runtime/all"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
-	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
@@ -60,6 +59,10 @@ type CLab struct {
 	checkBindsPaths bool
 	// customOwner is the user-specified owner label for the lab
 	customOwner string
+	// gitBranch and gitHash cache Git repository information
+	// to avoid repeated repository opens. Empty strings indicate not yet cached.
+	gitBranch string
+	gitHash   string
 }
 
 // NewContainerLab function defines a new container lab.
@@ -237,28 +240,6 @@ func (c *CLab) GetNode(name string) (clabnodes.Node, error) {
 	}
 
 	return nil, fmt.Errorf("%w: %s", ErrNodeNotFound, name)
-}
-
-// create a set of dependencies, that makes the ignite nodes start one after the other.
-func (c *CLab) createIgniteSerialDependency() error {
-	var prevIgniteNode *clabcoredependency_manager.DependencyNode
-	// iterate through the nodes
-	for _, n := range c.dependencyManager.GetNodes() {
-		// find nodes that should run with IgniteRuntime
-		if n.GetRuntime().GetName() == clabruntimeignite.RuntimeName {
-			if prevIgniteNode != nil {
-				err := n.AddDepender(clabtypes.WaitForCreate,
-					prevIgniteNode, clabtypes.WaitForCreate)
-				if err != nil {
-					return err
-				}
-			}
-
-			prevIgniteNode = n
-		}
-	}
-
-	return nil
 }
 
 // createNamespaceSharingDependency adds dependency between the containerlab nodes that share a

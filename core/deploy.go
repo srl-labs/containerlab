@@ -281,12 +281,6 @@ func (c *CLab) createNodes(
 		return nil, nil, err
 	}
 
-	// create a set of dependencies, that makes the ignite nodes start one after the other
-	err = c.createIgniteSerialDependency()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	// make network namespace shared containers start in the right order
 	c.createNamespaceSharingDependency()
 

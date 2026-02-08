@@ -88,6 +88,8 @@ func (n *genericVM) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 
 func (n *genericVM) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+	// create config directory that will be bind mounted to vrnetlab container at /config path
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, configDirName), clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return nil

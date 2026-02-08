@@ -363,17 +363,19 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 	return n.generateCheckpoint(ctx)
 }
 
-func (n *srl) SaveConfig(ctx context.Context) error {
+func (n *srl) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+		return nil, fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
+
+	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.json")
 
 	log.Infof(
 		"saved SR Linux configuration from %s node. Output:\n%s",
@@ -381,7 +383,9 @@ func (n *srl) SaveConfig(ctx context.Context) error {
 		execResult.GetStdOutString(),
 	)
 
-	return nil
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
 // Ready returns when the node boot sequence reached the stage when it is ready to accept config
@@ -751,14 +755,16 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 
 	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
-	execCmd := clabexec.NewExecCmdFromSlice([]string{
-		"bash", "-c",
-		fmt.Sprintf("echo '%s' > %s", buf.String(), defaultCfgPath),
-	})
-
-	_, err = n.RunExec(ctx, execCmd)
+	// Copy overlay config to container
+	tmpFilePath, err := clabutils.WriteToTempFile(buf.String())
 	if err != nil {
 		return err
+	}
+	defer os.Remove(tmpFilePath)
+
+	err = n.Runtime.CopyToContainer(ctx, n.Cfg.LongName, defaultCfgPath, tmpFilePath)
+	if err != nil {
+		return fmt.Errorf("error copying configuration to container: %w", err)
 	}
 
 	// su to admin user to apply the default config
@@ -805,17 +811,20 @@ func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 		cfgStr,
 	)
 
-	cmd := clabexec.NewExecCmdFromSlice([]string{
-		"bash", "-c",
-		fmt.Sprintf("echo '%s' > %s", cfgStr, overlayCfgPath),
-	})
-
-	_, err := n.RunExec(ctx, cmd)
+	// Copy overlay config to container
+	tmpFilePath, err := clabutils.WriteToTempFile(cfgStr)
 	if err != nil {
 		return err
 	}
+	defer os.Remove(tmpFilePath)
 
-	cmd = clabexec.NewExecCmdFromSlice([]string{
+	err = n.Runtime.CopyToContainer(ctx, n.Cfg.LongName, overlayCfgPath, tmpFilePath)
+	if err != nil {
+		return fmt.Errorf("error copying configuration to container: %w", err)
+	}
+
+	// Load overlay config
+	cmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", overlayCfgPath),
 	})
