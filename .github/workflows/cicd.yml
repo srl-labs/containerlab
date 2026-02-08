@@ -569,6 +569,8 @@ jobs:
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') != true
     needs: build-and-release
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -582,7 +584,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: |
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
             -e GITHUB_TOKEN \
             --entrypoint /bin/sh \
@@ -608,6 +612,8 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/docs-publish'
     needs: docs-test
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -622,7 +628,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # checkout@v6 does not set the git user config, which is required for mkdocs gh-deploy to work, thus we need to set it manually in the container
-      - run: |
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
           docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
             -e GITHUB_TOKEN \
             --entrypoint /bin/sh \
