@@ -126,18 +126,18 @@ func (n *vyos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 	return n.createVyosFiles(ctx)
 }
 
-func (n *vyos) SaveConfig(ctx context.Context) error {
+func (n *vyos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cli, err := n.newCli()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer cli.Close()
 
 	if err := n.save(ctx, cli); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {

@@ -172,17 +172,18 @@ The configuration generation process follows a sophisticated pipeline that adapt
    │       ├─> Fallback to layer traversal
    │       └─> Store in n.swVersion
    │
-   ├─> Template Selection Phase
-   │   └─> getConfigTemplate()
-   │       ├─> Check for partial config
-   │       └─> Return appropriate template string
+   ├─> Startup config build phase
+   │   └─> buildStartupConfig()
+   │       ├─> If full user config: read file, substitute, return
+   │       └─> Else: addDefaultConfig() then addPartialConfig()
+   │           └─> addDefaultConfig()
+   │               ├─> prepareConfigTemplateData() (variant → snippet set)
+   │               ├─> selectConfigTemplate() (variant → template)
+   │               └─> Execute template → append to startup config
+   │       └─> Return full startup config string
    │
-   └─> Configuration Generation Phase
-       └─> GenerateConfig()
-           └─> addDefaultConfig()
-               ├─> prepareConfigTemplateData()
-               ├─> selectConfigTemplate()
-               └─> Execute template → final config
+   └─> Write config to node
+       └─> GenerateConfig(dst, startupConfig)
 
 2. Store the config file on the node filesystem
 2. PostDeploy Phase

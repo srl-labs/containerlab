@@ -20,18 +20,7 @@ CVX nodes launched with containerlab come up with:
 
 ## Mode of operation
 
-CVX supports two modes of operation:
-
-* Using only the container runtime -- this mode runs Cumulus VX container image directly inside the container runtime (e.g. Docker). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notable one being MLAG. In order to use this mode, add `runtime: docker` under the cvx node definition (see also [this example](https://github.com/srl-labs/containerlab/blob/main/lab-examples/cvx02/topo.clab.yml)).
-* Using Firecracker micro-VMs -- this mode runs Cumulus VX inside a micro-VM on top of the native Cumulus kernel. This mode uses `ignite` runtime and is the default way of running CVX nodes.
-
-    !!!warning
-        This mode was broken in containerlab between v0.27.1 and v0.32.1 due to dependencies issues in ignite[^2].
-
-!!! note
-    When running in the default `ignite` runtime mode, the only host OS dependency is `/dev/kvm`[^1] required to support hardware-assisted virtualisation. Firecracker VMs are spun up inside a special "sandbox" container that has all the right tools and dependencies required to run micro-VMs.
-
-    Additionally, containerlab creates a number of directories under `/var/lib/firecracker` for nodes running in `ignite` runtime to store runtime metadata; these directories are managed by containerlab.
+CVX runs directly inside the container runtime (e.g. Docker or Podman). Due to the lack of Cumulus VX kernel modules, some features are not supported, most notably MLAG. To be explicit about the runtime, add `runtime: docker` under the cvx node definition (see also [this example](https://github.com/srl-labs/containerlab/blob/main/lab-examples/cvx02/topo.clab.yml)).
 
 ## Managing cvx nodes
 
@@ -71,11 +60,6 @@ topology:
         - cvx/frr.conf:/etc/frr/frr.conf
 ```
 
-### Configuration persistency
-
-When running inside the `ignite` runtime, all mount binds work one way -- from host OS to the cvx node, but not the other way around. Currently, it's up to a user to manually update individual files if configuration updates need to be persisted.
-This will be addressed in the future releases.
-
 ## Lab examples
 
 The following labs feature CVX node:
@@ -84,10 +68,3 @@ The following labs feature CVX node:
 * [Cumulus in Docker runtime and Host](https://github.com/srl-labs/containerlab/blob/main/lab-examples/cvx02/topo.clab.yml)
 * [Cumulus Linux Test Drive](https://clabs.netdevops.me/rs/cvx03/)
 * [EVPN with MLAG and multi-homing scenarios](https://clabs.netdevops.me/rs/cvx04/)
-
-## Known issues or limitations
-
-* CVX in Ignite is always attached to the default docker bridge network
-
-[^1]: this device is already part of the linux kernel, therefore this can be read as "no external dependencies are needed for running cvx with `ignite` runtime".
-[^2]: see <https://github.com/srl-labs/containerlab/pull/1037> and <https://github.com/srl-labs/containerlab/issues/1039>

@@ -196,7 +196,7 @@ func (n *vios) genBootConfig() error {
 	return nil
 }
 
-// Stores the vars exposed in the config template
+// Stores the vars exposed in the config template.
 type ViosTemplateData struct {
 	Hostname           string
 	Username           string

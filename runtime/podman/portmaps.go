@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	netTypes "github.com/containers/common/libnetwork/types"
+	netTypes "go.podman.io/common/libnetwork/types"
 
 	"github.com/charmbracelet/log"
 	"github.com/docker/go-connections/nat"
