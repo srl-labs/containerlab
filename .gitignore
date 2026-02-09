@@ -4,8 +4,8 @@
 *.dll
 *.so
 *.dylib
-# min
-# bin/*
+bin
+bin/*
 rpm
 rpm/*
 dist
@@ -29,7 +29,7 @@ graph/*
 
 license.key
 container-lab
-# containerlab
+containerlab
 site/
 .vscode/
 .idea/
