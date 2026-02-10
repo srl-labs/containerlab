@@ -721,12 +721,23 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 		displayName = cID
 	}
 
-	if cJSON.State.Pid == 0 {
-		d.logExitedContainerOutput(nctx, cID, displayName, cJSON.Config.Tty)
-		return "", fmt.Errorf("container %q is not running", displayName)
+	// If the container is running we use /proc/$pid/ns/net.
+	// For stopped containers the PID is 0 and we fall back to a /run/netns/<name> link
+	// (containerlab creates and manages it, and node lifecycle may repoint it to a parking netns).
+	if cJSON.State != nil && cJSON.State.Pid > 0 {
+		nspath := filepath.Join("/proc", strconv.Itoa(cJSON.State.Pid), "ns/net")
+		if clabutils.FileOrDirExists(nspath) {
+			return nspath, nil
+		}
 	}
 
-	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
+	runNetns := filepath.Join("/run/netns", cID)
+	if clabutils.FileOrDirExists(runNetns) {
+		return runNetns, nil
+	}
+
+	d.logExitedContainerOutput(nctx, cID, displayName, cJSON.Config.Tty)
+	return "", fmt.Errorf("namespace path not available for container %q", displayName)
 }
 
 // LogNonRunningContainerOutput implements runtime.ContainerRuntime.
@@ -1227,7 +1238,8 @@ func setSysctl(sysctl string, newVal int) error {
 }
 
 func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {
-	return d.Client.ContainerKill(ctx, name, "kill")
+	timeout := int(d.config.Timeout.Seconds())
+	return d.Client.ContainerStop(ctx, name, container.StopOptions{Timeout: &timeout})
 }
 
 // GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container.
