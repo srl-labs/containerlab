@@ -18,6 +18,7 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netns"
 	"golang.org/x/term"
 )
 
@@ -255,6 +256,15 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		err = node.DeleteNetnsSymlink()
 		if err != nil {
 			return fmt.Errorf("error while deleting netns symlinks: %w", err)
+		}
+	}
+
+	// delete parking netns instances created by node lifecycle operations.
+	// best-effort cleanup: a missing netns is fine and should not fail destroy.
+	for _, node := range c.Nodes {
+		parkName := parkingNetnsName(node.Config().LongName)
+		if err := netns.DeleteNamed(parkName); err != nil {
+			log.Debugf("failed deleting parking netns %q: %v", parkName, err)
 		}
 	}
 

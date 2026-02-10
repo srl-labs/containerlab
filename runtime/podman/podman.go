@@ -294,9 +294,27 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	if err != nil {
 		return "", err
 	}
+	// Prefer podman's reported sandbox key when it exists, but fall back to /run/netns/<name>
+	// to support stopped containers and containerlab-managed netns links.
 	nspath := inspect.NetworkSettings.SandboxKey
-	log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
-	return nspath, nil
+	if nspath != "" && utils.FileOrDirExists(nspath) {
+		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		return nspath, nil
+	}
+
+	runNetns := filepath.Join("/run/netns", cID)
+	if utils.FileOrDirExists(runNetns) {
+		log.Debugf("Method GetNSPath falling back to %q", runNetns)
+		return runNetns, nil
+	}
+
+	// For host network containers sandbox key is typically empty.
+	if nspath == "" {
+		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		return "", nil
+	}
+
+	return "", fmt.Errorf("namespace path not available for container %s", cID)
 }
 
 func (r *PodmanRuntime) Exec(
