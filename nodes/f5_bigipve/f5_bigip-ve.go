@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -142,6 +143,13 @@ func (n *F5BigIPVE) AddEndpoint(e clablinks.Endpoint) error {
 
 	n.Endpoints = append(n.Endpoints, e)
 	return nil
+}
+
+// RunExec overrides DefaultNode.RunExec to forward commands to the VM guest
+// via SSH, rather than executing them in the vrnetlab container namespace.
+func (n *F5BigIPVE) RunExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	return clabnodes.RunVMExec(ctx, n.Cfg.LongName,
+		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], execCmd)
 }
 
 // GetMappedInterfaceName wraps the DefaultNode mapping to return an actionable error containing the

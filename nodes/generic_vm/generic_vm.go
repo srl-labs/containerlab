@@ -10,6 +10,7 @@ import (
 	"path"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -96,6 +97,13 @@ func (n *genericVM) PreDeploy(_ context.Context, params *clabnodes.PreDeployPara
 	}
 
 	return err
+}
+
+// RunExec overrides DefaultNode.RunExec to forward commands to the VM guest
+// via SSH, rather than executing them in the vrnetlab container namespace.
+func (n *genericVM) RunExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	return clabnodes.RunVMExec(ctx, n.Cfg.LongName,
+		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], execCmd)
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.

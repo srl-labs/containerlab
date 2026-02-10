@@ -111,7 +111,8 @@ func (n *vrOpenBSD) PreDeploy(_ context.Context, params *clabnodes.PreDeployPara
 
 func (n *vrOpenBSD) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
-	execResult, err := n.RunExec(ctx, cmd)
+	// Use RunContainerExec to run backup.sh in the container, not the VM.
+	execResult, err := n.RunContainerExec(ctx, cmd)
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}

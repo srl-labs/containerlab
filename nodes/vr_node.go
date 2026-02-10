@@ -9,6 +9,7 @@ import (
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -108,6 +109,32 @@ func (vr *VRNode) CheckInterfaceName() error {
 	}
 
 	return nil
+}
+
+// RunExec overrides DefaultNode.RunExec to forward commands to the VM guest
+// via SSH, rather than executing them in the vrnetlab container namespace.
+// This ensures that topology-defined exec commands and `clab exec` commands
+// run inside the actual VM guest OS.
+func (n *VRNode) RunExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	username := n.Credentials.GetUsername()
+	password := n.Credentials.GetPassword()
+
+	// Fall back to env vars for kinds that set credentials there.
+	if username == "" {
+		username = n.Cfg.Env["USERNAME"]
+	}
+	if password == "" {
+		password = n.Cfg.Env["PASSWORD"]
+	}
+
+	return RunVMExec(ctx, n.Cfg.LongName, username, password, execCmd)
+}
+
+// RunContainerExec executes a command in the vrnetlab container namespace
+// (not the VM guest). This is needed for internal operations like backup.sh
+// that must run inside the container, not the VM.
+func (n *VRNode) RunContainerExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	return n.DefaultNode.RunExec(ctx, execCmd)
 }
 
 func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {

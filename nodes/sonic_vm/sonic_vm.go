@@ -107,13 +107,21 @@ func (n *sonic_vm) PreDeploy(_ context.Context, params *clabnodes.PreDeployParam
 	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
+// RunExec overrides DefaultNode.RunExec to forward commands to the VM guest
+// via SSH, rather than executing them in the vrnetlab container namespace.
+func (n *sonic_vm) RunExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	return clabnodes.RunVMExec(ctx, n.Cfg.LongName,
+		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], execCmd)
+}
+
 func (n *sonic_vm) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, err := clabexec.NewExecCmdFromString(saveCmd)
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to create execute cmd: %w", n.Cfg.ShortName, err)
 	}
 
-	execResult, err := n.RunExec(ctx, cmd)
+	// Use DefaultNode.RunExec to run backup.sh in the container, not the VM.
+	execResult, err := n.DefaultNode.RunExec(ctx, cmd)
 	if err != nil {
 		return nil, fmt.Errorf("%s: failed to execute cmd: %w", n.Cfg.ShortName, err)
 	}
