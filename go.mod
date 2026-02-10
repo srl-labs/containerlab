@@ -32,7 +32,7 @@ require (
 	github.com/mackerelio/go-osstat v0.2.6
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/opencontainers/runtime-spec v1.2.1
+	github.com/opencontainers/runtime-spec v1.3.0
 	github.com/pmorjan/kmod v1.1.1
 	github.com/scrapli/scrapligo v1.3.3
 	github.com/scrapli/scrapligocfg v1.0.0
