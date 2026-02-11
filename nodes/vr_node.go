@@ -127,7 +127,7 @@ func (n *VRNode) RunExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabe
 		password = n.Cfg.Env["PASSWORD"]
 	}
 
-	return RunVMExec(ctx, n.Cfg.LongName, username, password, execCmd)
+	return RunVMExec(ctx, n.Cfg.MgmtIPv4Address, username, password, execCmd)
 }
 
 // RunContainerExec executes a command in the vrnetlab container namespace

@@ -102,7 +102,7 @@ func (n *genericVM) PreDeploy(_ context.Context, params *clabnodes.PreDeployPara
 // RunExec overrides DefaultNode.RunExec to forward commands to the VM guest
 // via SSH, rather than executing them in the vrnetlab container namespace.
 func (n *genericVM) RunExec(ctx context.Context, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
-	return clabnodes.RunVMExec(ctx, n.Cfg.LongName,
+	return clabnodes.RunVMExec(ctx, n.Cfg.MgmtIPv4Address,
 		n.Cfg.Env["USERNAME"], n.Cfg.Env["PASSWORD"], execCmd)
 }
 
