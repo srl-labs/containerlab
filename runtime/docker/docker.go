@@ -55,6 +55,7 @@ const (
 	bridgeGatewayModeIPv4Option = "com.docker.network.bridge.gateway_mode_ipv4"
 	bridgeGatewayModeIPv6Option = "com.docker.network.bridge.gateway_mode_ipv6"
 	ceosStopSignal              = "SIGRTMIN+3"
+	linuxStopSignal             = "SIGKILL"
 )
 
 // DeviceMapping represents the device mapping between the host and the container.
@@ -1177,8 +1178,13 @@ func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {
 
 func stopSignalForKind(kind string) string {
 	switch strings.ToLower(kind) {
-	case "arista_ceos":
+	case "arista_ceos", "ceos":
 		return ceosStopSignal
+	case "linux":
+		// linux kind containers often run shell-style PID1 processes that do not
+		// terminate promptly on SIGTERM. Use SIGKILL for lifecycle stop/restart to
+		// avoid long stop timeouts.
+		return linuxStopSignal
 	default:
 		return ""
 	}
