@@ -559,38 +559,39 @@ func (*CLab) preStopCleanup(ctx context.Context, n clabnodes.Node) {
 		preStopPrepareVrnetlabQcowAlias(ctx, n)
 	}
 
-	switch n.Config().Kind {
-	case "srl", "nokia_srlinux":
-		// SR Linux creates internal named network namespaces under /run/netns
-		// (e.g. srbase-mgmt, srbase-default). When the container is stopped and started again,
-		// these paths may persist as regular files without nsfs mounts, causing SRL net_inst_mgr
-		// to assert and leaving interfaces down. Remove them before stopping so that SRL can
-		// recreate the namespaces cleanly on next start.
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		defer cancel()
+	preStopCleanupNamedNetns(ctx, n)
+}
 
-		cmd := `for ns in srbase-default srbase-mgmt; do ` +
-			`if grep -q " /run/netns/$ns " /proc/self/mountinfo 2>/dev/null; then ` +
-			`umount -l /run/netns/$ns 2>/dev/null || true; ` +
-			`fi; ` +
-			`rm -f /run/netns/$ns 2>/dev/null || true; ` +
-			`done`
+func preStopCleanupNamedNetns(ctx context.Context, n clabnodes.Node) {
+	// Best-effort cleanup for containers that create named network namespaces under /run/netns.
+	// We lazily unmount active nsfs mounts and remove stale entries to avoid namespace artifacts
+	// breaking subsequent starts.
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
-		execCmd := clabexec.NewExecCmdFromSlice([]string{"bash", "-lc", cmd})
-		if res, err := n.RunExec(ctx, execCmd); err != nil {
-			log.Warnf(
-				"node %q pre-stop cleanup failed: %v",
-				n.Config().ShortName,
-				err,
-			)
-		} else if res != nil && res.ReturnCode != 0 {
-			log.Warnf(
-				"node %q pre-stop cleanup returned code %d (stderr: %s)",
-				n.Config().ShortName,
-				res.ReturnCode,
-				res.Stderr,
-			)
-		}
+	cmd := `if [ -d /run/netns ]; then ` +
+		`awk '$5 ~ "^/run/netns/" {print $5}' /proc/self/mountinfo 2>/dev/null | ` +
+		`while IFS= read -r mp; do ` +
+		`umount -l "$mp" 2>/dev/null || true; ` +
+		`rm -f "$mp" 2>/dev/null || true; ` +
+		`done; ` +
+		`for f in /run/netns/*; do [ -e "$f" ] || break; rm -f "$f" 2>/dev/null || true; done; ` +
+		`fi`
+
+	execCmd := clabexec.NewExecCmdFromSlice([]string{"sh", "-lc", cmd})
+	if res, err := n.RunExec(ctx, execCmd); err != nil {
+		log.Debugf(
+			"node %q generic pre-stop named-netns cleanup skipped/failed: %v",
+			n.Config().ShortName,
+			err,
+		)
+	} else if res != nil && res.ReturnCode != 0 {
+		log.Debugf(
+			"node %q generic pre-stop named-netns cleanup returned code %d (stderr: %s)",
+			n.Config().ShortName,
+			res.ReturnCode,
+			res.Stderr,
+		)
 	}
 }
 
