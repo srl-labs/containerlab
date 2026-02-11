@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	goruntime "runtime"
 	"strings"
 	"time"
@@ -29,6 +30,11 @@ const (
 	parkingNetnsPrefix = "clab-park-"
 	// Be conservative and keep the name comfortably within Linux NAME_MAX (255 bytes).
 	maxParkingNetnsNameLen = 200
+	vrnetlabVersionLabel   = "vrnetlab-version"
+)
+
+var (
+	imageTagRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 )
 
 // StopNodes stops one or more deployed nodes without losing their dataplane links by parking
@@ -549,6 +555,10 @@ func setEndpointsUp(nodeNS ns.NetNS, endpoints []clablinks.Endpoint) error {
 }
 
 func (*CLab) preStopCleanup(ctx context.Context, n clabnodes.Node) {
+	if isVrnetlabNode(ctx, n) {
+		preStopPrepareVrnetlabQcowAlias(ctx, n)
+	}
+
 	switch n.Config().Kind {
 	case "srl", "nokia_srlinux":
 		// SR Linux creates internal named network namespaces under /run/netns
@@ -582,4 +592,118 @@ func (*CLab) preStopCleanup(ctx context.Context, n clabnodes.Node) {
 			)
 		}
 	}
+}
+
+func isVrnetlabNode(ctx context.Context, n clabnodes.Node) bool {
+	containers, err := n.GetContainers(ctx)
+	if err != nil {
+		log.Debugf(
+			"node %q vrnetlab detection skipped: failed to get container metadata: %v",
+			n.Config().ShortName,
+			err,
+		)
+		return false
+	}
+
+	for _, container := range containers {
+		if _, ok := container.Labels[vrnetlabVersionLabel]; ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func preStopPrepareVrnetlabQcowAlias(ctx context.Context, n clabnodes.Node) {
+	aliasName, ok := vrnetlabQcowAliasName(n.Config().Image)
+	if !ok {
+		log.Debugf(
+			"node %q pre-stop vrnetlab qcow alias skipped: unable to infer tag from image %q",
+			n.Config().ShortName,
+			n.Config().Image,
+		)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// Some vrnetlab nodes rename the original versioned qcow image after first boot and fail on
+	// subsequent starts when they try to rediscover a versioned qcow filename. If there is exactly
+	// one non-overlay qcow file in / and our alias is absent, create a hardlink alias based on the
+	// image tag.
+	cmd := fmt.Sprintf(
+		`alias="/%s"; `+
+			`[ -e "$alias" ] && exit 0; `+
+			`src=""; `+
+			`if [ -f /sros.qcow2 ] && [ "/sros.qcow2" != "$alias" ]; then `+
+			`src="/sros.qcow2"; `+
+			`else `+
+			`set -- /*.qcow2; `+
+			`if [ "$1" != "/*.qcow2" ]; then `+
+			`for f in "$@"; do `+
+			`[ "$f" = "$alias" ] && continue; `+
+			`base="${f##*/}"; `+
+			`case "$base" in *overlay*.qcow2) continue ;; esac; `+
+			`if [ -n "$src" ]; then src=""; break; fi; `+
+			`src="$f"; `+
+			`done; `+
+			`fi; `+
+			`fi; `+
+			`[ -n "$src" ] || exit 0; `+
+			`ln "$src" "$alias"`,
+		aliasName,
+	)
+
+	execCmd := clabexec.NewExecCmdFromSlice([]string{"sh", "-lc", cmd})
+	res, err := n.RunExec(ctx, execCmd)
+	if err != nil {
+		log.Warnf(
+			"node %q pre-stop vrnetlab qcow alias preparation failed: %v",
+			n.Config().ShortName,
+			err,
+		)
+		return
+	}
+
+	if res != nil && res.ReturnCode != 0 {
+		log.Warnf(
+			"node %q pre-stop vrnetlab qcow alias prep returned code %d (stderr: %s)",
+			n.Config().ShortName,
+			res.ReturnCode,
+			res.Stderr,
+		)
+	}
+}
+
+func vrnetlabQcowAliasName(image string) (string, bool) {
+	tag, ok := imageTag(image)
+	if !ok {
+		return "", false
+	}
+
+	return "clab-" + tag + ".qcow2", true
+}
+
+func imageTag(image string) (string, bool) {
+	if at := strings.LastIndex(image, "@"); at != -1 {
+		image = image[:at]
+	}
+
+	lastSlash := strings.LastIndex(image, "/")
+	lastColon := strings.LastIndex(image, ":")
+	if lastColon == -1 || lastColon < lastSlash {
+		return "", false
+	}
+
+	tag := image[lastColon+1:]
+	if tag == "" {
+		return "", false
+	}
+
+	if !imageTagRE.MatchString(tag) {
+		return "", false
+	}
+
+	return tag, true
 }
