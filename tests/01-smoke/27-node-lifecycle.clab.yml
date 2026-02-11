@@ -16,13 +16,9 @@ topology:
           ip link set dev eth1 up &&
           ip addr add dev eth1 10.10.10.1/30'
     l2:
-      kind: linux
-      image: alpine:3
-      exec:
-        - >
-          ash -c '
-          ip link set dev eth1 up &&
-          ip addr add dev eth1 10.10.10.2/30'
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+      startup-config: 27-node-lifecycle-l2-startup.cli
 
   links:
-    - endpoints: ["l1:eth1", "l2:eth1"]
+    - endpoints: ["l1:eth1", "l2:e1-1"]

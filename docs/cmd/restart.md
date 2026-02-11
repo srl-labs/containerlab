@@ -34,7 +34,7 @@ containerlab restart -t mylab.clab.yml --node r1 --node r2
 containerlab restart -t mylab.clab.yml --node r1,r2
 ```
 
-At least one `--node` value is required.
+If `--node` is omitted, all nodes in the selected lab are restarted.
 
 ### Limitations
 
@@ -58,4 +58,11 @@ containerlab restart -t mylab.clab.yml --node r1
 
 ```bash
 containerlab restart --name mylab --node r1,r2
+```
+
+#### Restart all nodes in a lab
+
+```bash
+containerlab restart -t mylab.clab.yml
+containerlab restart --name mylab
 ```

@@ -10,8 +10,9 @@ import (
 
 // RestartNodes performs stop+start for each node, restoring parked interfaces.
 func (c *CLab) RestartNodes(ctx context.Context, nodeNames []string) error {
+	nodeNames = resolveLifecycleNodeNames(c.Nodes, nodeNames)
 	if len(nodeNames) == 0 {
-		return fmt.Errorf("%w: at least one node name is required", claberrors.ErrIncorrectInput)
+		return fmt.Errorf("%w: lab has no nodes", claberrors.ErrIncorrectInput)
 	}
 
 	return c.withLabLock(func() error {

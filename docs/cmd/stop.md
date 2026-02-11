@@ -32,7 +32,7 @@ containerlab stop -t mylab.clab.yml --node r1 --node r2
 containerlab stop -t mylab.clab.yml --node r1,r2
 ```
 
-At least one `--node` value is required.
+If `--node` is omitted, all nodes in the selected lab are stopped.
 
 ### Limitations
 
@@ -56,4 +56,11 @@ containerlab stop -t mylab.clab.yml --node r1
 
 ```bash
 containerlab stop --name mylab --node r1,r2
+```
+
+#### Stop all nodes in a lab
+
+```bash
+containerlab stop -t mylab.clab.yml
+containerlab stop --name mylab
 ```

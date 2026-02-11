@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	goruntime "runtime"
+	"slices"
 	"strings"
 	"time"
 
@@ -38,8 +39,9 @@ var imageTagRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 // StopNodes stops one or more deployed nodes without losing their dataplane links by parking
 // the node's interfaces in a dedicated network namespace before stopping the container.
 func (c *CLab) StopNodes(ctx context.Context, nodeNames []string) error {
+	nodeNames = resolveLifecycleNodeNames(c.Nodes, nodeNames)
 	if len(nodeNames) == 0 {
-		return fmt.Errorf("%w: at least one node name is required", claberrors.ErrIncorrectInput)
+		return fmt.Errorf("%w: lab has no nodes", claberrors.ErrIncorrectInput)
 	}
 
 	return c.withLabLock(func() error {
@@ -70,6 +72,21 @@ func (c *CLab) StopNodes(ctx context.Context, nodeNames []string) error {
 
 		return nil
 	})
+}
+
+func resolveLifecycleNodeNames(allNodes map[string]clabnodes.Node, requested []string) []string {
+	if len(requested) > 0 {
+		return requested
+	}
+
+	nodeNames := make([]string, 0, len(allNodes))
+	for nodeName := range allNodes {
+		nodeNames = append(nodeNames, nodeName)
+	}
+
+	slices.Sort(nodeNames)
+
+	return nodeNames
 }
 
 func (c *CLab) stopNode(ctx context.Context, n clabnodes.Node) error {

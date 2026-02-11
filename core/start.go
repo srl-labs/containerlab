@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	claberrors "github.com/srl-labs/containerlab/errors"
+	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -18,8 +19,9 @@ import (
 // StartNodes starts one or more stopped nodes and restores their parked interfaces back into the
 // container network namespace.
 func (c *CLab) StartNodes(ctx context.Context, nodeNames []string) error {
+	nodeNames = resolveLifecycleNodeNames(c.Nodes, nodeNames)
 	if len(nodeNames) == 0 {
-		return fmt.Errorf("%w: at least one node name is required", claberrors.ErrIncorrectInput)
+		return fmt.Errorf("%w: lab has no nodes", claberrors.ErrIncorrectInput)
 	}
 
 	return c.withLabLock(func() error {
@@ -131,6 +133,14 @@ func (c *CLab) startNode(ctx context.Context, n clabnodes.Node) error {
 		_ = n.GetRuntime().StopContainer(ctx, cfg.LongName)
 		return fmt.Errorf("node %q failed enabling interfaces: %w", cfg.ShortName, err)
 	}
+
+	// Re-run topology exec commands on lifecycle start to restore node-local interface config
+	// (for example IP addresses added during deploy exec phase).
+	execCollection := clabexec.NewExecCollection()
+	if err := n.RunExecFromConfig(ctx, execCollection); err != nil {
+		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
+	}
+	execCollection.Log()
 
 	return nil
 }
