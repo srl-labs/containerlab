@@ -32,6 +32,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
 	"github.com/moby/term"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
@@ -53,6 +54,7 @@ const (
 	natUnprotectedValue         = "nat-unprotected"
 	bridgeGatewayModeIPv4Option = "com.docker.network.bridge.gateway_mode_ipv4"
 	bridgeGatewayModeIPv6Option = "com.docker.network.bridge.gateway_mode_ipv6"
+	ceosStopSignal              = "SIGRTMIN+3"
 )
 
 // DeviceMapping represents the device mapping between the host and the container.
@@ -1149,7 +1151,37 @@ func setSysctl(sysctl string, newVal int) error {
 
 func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {
 	timeout := int(d.config.Timeout.Seconds())
-	return d.Client.ContainerStop(ctx, name, container.StopOptions{Timeout: &timeout})
+	stopOpts := container.StopOptions{Timeout: &timeout}
+
+	inspect, err := d.Client.ContainerInspect(ctx, name)
+	if err != nil {
+		log.Debugf("failed to inspect container %q before stop: %v", name, err)
+		return d.Client.ContainerStop(ctx, name, stopOpts)
+	}
+
+	if inspect.Config != nil {
+		kind := strings.ToLower(inspect.Config.Labels[clabconstants.NodeKind])
+		if signal := stopSignalForKind(kind); signal != "" {
+			stopOpts.Signal = signal
+			log.Debugf(
+				"using custom stop signal %q for container %q (kind %q)",
+				signal,
+				name,
+				kind,
+			)
+		}
+	}
+
+	return d.Client.ContainerStop(ctx, name, stopOpts)
+}
+
+func stopSignalForKind(kind string) string {
+	switch strings.ToLower(kind) {
+	case "arista_ceos":
+		return ceosStopSignal
+	default:
+		return ""
+	}
 }
 
 // GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container.
