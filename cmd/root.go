@@ -185,8 +185,16 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 		return nil
 	}
 
+	// start/stop/restart topology lookup applies only to top-level lifecycle commands.
+	// nested commands like tools api-server start|stop are excluded.
+	if (cobraCmd.Name() == "start" || cobraCmd.Name() == "stop" || cobraCmd.Name() == "restart") &&
+		(cobraCmd.Parent() == nil || cobraCmd.Parent().Name() != "containerlab") {
+		return nil
+	}
+
 	// inspect and destroy commands with --all flag don't use file find functionality
 	if (cobraCmd.Name() == "inspect" || cobraCmd.Name() == "destroy") &&
+		cobraCmd.Flag("all") != nil &&
 		cobraCmd.Flag("all").Value.String() == "true" {
 		return nil
 	}

@@ -10,7 +10,6 @@ topology:
     l1:
       kind: linux
       image: alpine:3
-      cmd: ash -c "sleep 9999"
       exec:
         - >
           ash -c '
@@ -19,7 +18,6 @@ topology:
     l2:
       kind: linux
       image: alpine:3
-      cmd: ash -c "sleep 9999"
       exec:
         - >
           ash -c '
