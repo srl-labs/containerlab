@@ -26,7 +26,7 @@ func stopCmd(o *Options) (*cobra.Command, error) {
 		"node",
 		"n",
 		o.NodeLifecycle.Nodes,
-		"node(s) to stop (repeatable or comma-separated)",
+		"node(s) to stop (repeatable or comma-separated). If omitted, stop all nodes",
 	)
 
 	return c, nil
@@ -35,9 +35,6 @@ func stopCmd(o *Options) (*cobra.Command, error) {
 func stopFn(cmd *cobra.Command, o *Options) error {
 	if o.Global.TopologyName == "" && o.Global.TopologyFile == "" {
 		return fmt.Errorf("provide either a lab name (--name) or a topology file path (--topo)")
-	}
-	if len(o.NodeLifecycle.Nodes) == 0 {
-		return fmt.Errorf("provide at least one node name via --node/-n")
 	}
 
 	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)

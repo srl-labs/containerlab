@@ -34,7 +34,7 @@ containerlab start -t mylab.clab.yml --node r1 --node r2
 containerlab start -t mylab.clab.yml --node r1,r2
 ```
 
-At least one `--node` value is required.
+If `--node` is omitted, all nodes in the selected lab are started.
 
 ### Limitations
 
@@ -58,4 +58,11 @@ containerlab start -t mylab.clab.yml --node r1
 
 ```bash
 containerlab start --name mylab --node r1,r2
+```
+
+#### Start all nodes in a lab
+
+```bash
+containerlab start -t mylab.clab.yml
+containerlab start --name mylab
 ```
