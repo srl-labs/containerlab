@@ -6,8 +6,8 @@ The `deploy` command spins up a lab using the topology expressed via [topology d
 <!-- --8<-- [start:env-vars-flags] -->
 > All command line arguments can be also provided via environment variables (CLI flags take precedence). The environment variable names are constructed by prepending `CLAB_` to the flag name, then adding the command path and ending with the flag name in its full form, all in uppercase and with hyphens replaced by underscores.
 >
-> For example, the `--max-workers` flag for the `deploy` command can be set via `CLAB_DEPLOY_MAX_WORKERS` environment variable.  
-> Or `CLAB_INSPECT_ALL=1` to set `--all` flag for the `inspect` command.  
+> For example, the `--max-workers` flag for the `deploy` command can be set via `CLAB_DEPLOY_MAX_WORKERS` environment variable.
+> Or `CLAB_INSPECT_ALL=1` to set `--all` flag for the `inspect` command.
 > Or `CLAB_TOPO=srlinux.dev/clab-srl clab dep -c` to deploy a lab with the topology passed via environment variable.
 <!-- --8<-- [end:env-vars-flags] -->
 
@@ -143,7 +143,20 @@ Read more about [node filtering](../manual/node-filtering.md) in the documentati
 
 #### skip-post-deploy
 
-The `--skip-post-deploy` flag can be used to skip the post-deploy phase of the lab deployment. This is a global flag that affects all nodes in the lab.
+The `--skip-post-deploy` flag skips the post-deploy phase of the lab deployment, affecting all nodes.
+
+The post-deploy phase runs after containers and network endpoints are created. Depending on the node kind, it may include:
+
+- Readiness and health checks
+- TLS certificate provisioning
+- Saving startup configuration
+- Applying overlay CLI configuration
+- Populating `/etc/hosts` with peer node entries
+- Disabling TX checksum offload
+
+Node kinds with notable post-deploy actions include Nokia SR Linux, Nokia SR OS, Arista cEOS, Juniper cRPD, Linux, and vrnetlab-based nodes. Kinds without a post-deploy phase are unaffected by this flag.
+
+This flag is useful to bypass post-deploy validation failures or to speed up deployment when only the running containers are needed.
 
 #### skip-labdir-acl
 

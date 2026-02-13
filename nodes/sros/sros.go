@@ -382,14 +382,8 @@ func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 	return nil
 }
 
-// Post Deploy func for SR-SIM kind.
-func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
-	log.Info("Running postdeploy actions",
-		"kind", n.Cfg.Kind,
-		"node", n.Cfg.ShortName)
-
-	// start waiting for container ready (PID based check)
-	if err := n.Ready(ctx); err != nil {
+func (n *sros) DeployEndpoints(ctx context.Context) error {
+	if err := n.DefaultNode.DeployEndpoints(ctx); err != nil {
 		return err
 	}
 
@@ -400,12 +394,27 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
 			"node", n.Cfg.ShortName,
 			"error", err)
-	} else {
-		if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
-			log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
-				"node", n.Cfg.ShortName,
-				"error", err)
-		}
+		return nil
+	}
+
+	if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
+		log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
+			"node", n.Cfg.ShortName,
+			"error", err)
+	}
+
+	return nil
+}
+
+// Post Deploy func for SR-SIM kind.
+func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
+	log.Info("Running postdeploy actions",
+		"kind", n.Cfg.Kind,
+		"node", n.Cfg.ShortName)
+
+	// start waiting for container ready (PID based check)
+	if err := n.Ready(ctx); err != nil {
+		return err
 	}
 
 	errChan := make(chan error, 1)
@@ -436,7 +445,8 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 	}
 
 	// Execute SaveConfig after boot. This code should only run on active CPM
-	for time.Now().Before(time.Now().Add(readyTimeout)) {
+	deadline := time.Now().Add(readyTimeout)
+	for time.Now().Before(deadline) {
 		// Check if context is canceled
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("context canceled: %w", err)

@@ -84,7 +84,20 @@ Do not try to remove the management network during destroy phase. Usually the ma
 
 #### skip-post-deploy
 
-The `--skip-post-deploy` flag can be used to skip the post-deploy phase of the lab deployment. This is a global flag that affects all nodes in the lab.
+The `--skip-post-deploy` flag skips the post-deploy phase of the lab deployment, affecting all nodes.
+
+The post-deploy phase runs after containers and network endpoints are created. Depending on the node kind, it may include:
+
+- Readiness and health checks
+- TLS certificate provisioning
+- Saving startup configuration
+- Applying overlay CLI configuration
+- Populating `/etc/hosts` with peer node entries
+- Disabling TX checksum offload
+
+Node kinds with notable post-deploy actions include Nokia SR Linux, Nokia SR OS, Arista cEOS, Juniper cRPD, Linux, and vrnetlab-based nodes. Kinds without a post-deploy phase are unaffected by this flag.
+
+This flag is useful to bypass post-deploy validation failures or to speed up redeployment when only the running containers are needed.
 
 #### export-template
 
