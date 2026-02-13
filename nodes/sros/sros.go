@@ -68,6 +68,8 @@ const (
 	tlsKeyFile                   = "node.key"
 	tlsCertFile                  = "node.crt"
 	tlsCertProfileName           = "clab-grpc-certs"
+	envSRSIM                     = "SRSIM"
+	envVSR                       = "VSR"
 	envNokiaSrosSlot             = "NOKIA_SROS_SLOT"
 	envNokiaSrosChassis          = "NOKIA_SROS_CHASSIS"
 	envNokiaSrosSystemBaseMac    = "NOKIA_SROS_SYSTEM_BASE_MAC"
@@ -117,7 +119,7 @@ var (
 	defaultCredentials = clabnodes.NewCredentials("admin", "NokiaSros1!")
 
 	srosEnv = map[string]string{
-		"SRSIM":                   "1",
+		envSRSIM:                  "1",
 		envNokiaSrosChassis:       SrosDefaultType,     // filler to be overridden
 		envNokiaSrosSystemBaseMac: "fa:ac:ff:ff:10:00", // filler to be overridden
 		envNokiaSrosSlot:          slotAName,           // filler to be overridden
@@ -157,11 +159,11 @@ var (
       e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
       e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
 	  eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
-	// Auxiliary regexps for IXR/SAR detection.
+	// Auxiliary regexps for IXR/SAR/VSR detection.
 	sarRegexp   = regexp.MustCompile(`(?i)\bsar-`)
 	sarHmRegexp = regexp.MustCompile(`(?i)\b(sar-hm|sar-hmc)\b`)
-
-	ixrRegexp = regexp.MustCompile(`(?i)\bixr-`)
+	ixrRegexp   = regexp.MustCompile(`(?i)\bixr-`)
+	vsrRegexp   = regexp.MustCompile(`(?i)\bvsr-i$`)
 )
 
 // Register registers the node in the NodeRegistry.
@@ -376,7 +378,6 @@ func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 			n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 		}
-
 		return n.createSROSFiles()
 	}
 	return nil
@@ -2005,7 +2006,13 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 				n.Cfg.ShortName,
 			)
 		}
-		if title, ok := insp.Config.Labels[srosImageTitleLabel]; ok && title == srosImageTitle {
+		title, hasTitle := insp.Config.Labels[srosImageTitleLabel]
+		if hasTitle && title == srosImageTitle {
+			return nil
+		}
+		if hasTitle && vsrRegexp.MatchString(n.Cfg.NodeType) && title == vsrImageTitle {
+			n.Cfg.Env[envVSR] = "1"
+			n.Cfg.Env[envSRSIM] = "0"
 			return nil
 		}
 	}

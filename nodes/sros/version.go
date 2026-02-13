@@ -18,6 +18,7 @@ const (
 	srosVersionFilePath   = "/etc/sros-version"
 	srosImageTitleLabel   = "org.opencontainers.image.title"
 	srosImageTitle        = "srsim"
+	vsrImageTitle         = "vsr"
 	srosImageVendorLabel  = "org.opencontainers.image.vendor"
 	srosImageVendor       = "Nokia"
 	srosImageVersionLabel = "org.opencontainers.image.version"
@@ -93,7 +94,7 @@ func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 	image, okTitle := imageInspect.Config.Labels[srosImageTitleLabel]
 	version, okVersion := imageInspect.Config.Labels[srosImageVersionLabel]
 
-	if okVendor && okTitle && okVersion && vendor == srosImageVendor && image == srosImageTitle {
+	if okVendor && okTitle && okVersion && vendor == srosImageVendor && (image == srosImageTitle || image == vsrImageTitle) {
 		return n.parseVersionString(version), nil
 	}
 
