@@ -262,7 +262,7 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	// delete parking netns instances created by node lifecycle operations.
 	// best-effort cleanup: a missing netns is fine and should not fail destroy.
 	for _, node := range c.Nodes {
-		parkName := parkingNetnsName(node.Config().LongName)
+		parkName := clabutils.ParkingNetnsName(node.Config().LongName)
 		if err := netns.DeleteNamed(parkName); err != nil {
 			log.Debugf("failed deleting parking netns %q: %v", parkName, err)
 		}

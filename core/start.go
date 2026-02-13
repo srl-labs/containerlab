@@ -3,15 +3,10 @@ package core
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/charmbracelet/log"
 	claberrors "github.com/srl-labs/containerlab/errors"
-	clabexec "github.com/srl-labs/containerlab/exec"
-	clablinks "github.com/srl-labs/containerlab/links"
-	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
-	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // StartNodes starts one or more stopped nodes and restores their parked interfaces back into the
@@ -46,72 +41,11 @@ func (c *CLab) StartNodes(ctx context.Context, nodeNames []string) error {
 				return fmt.Errorf("node %q container %q not found", nodeName, n.Config().LongName)
 			}
 
-			if err := c.startNode(ctx, n); err != nil {
+			if err := n.Start(ctx); err != nil {
 				return err
 			}
 		}
 
 		return nil
 	})
-}
-
-func (c *CLab) startNode(ctx context.Context, n clabnodes.Node) error {
-	cfg := n.Config()
-
-	parkName := parkingNetnsName(cfg.LongName)
-	parkPath := filepath.Join("/run/netns", parkName)
-	if !clabutils.FileOrDirExists(parkPath) {
-		return fmt.Errorf(
-			"node %q has no parking netns %q; seamless start requires stopping via containerlab",
-			cfg.ShortName,
-			parkName,
-		)
-	}
-	parkingNode := clablinks.NewGenericLinkNode(parkName, parkPath)
-
-	if _, err := n.GetRuntime().StartContainer(ctx, cfg.LongName, n); err != nil {
-		return fmt.Errorf("node %q failed starting container: %w", cfg.ShortName, err)
-	}
-
-	if _, err := n.GetNSPath(ctx); err != nil {
-		// Try to keep destroy/inspect operational by repointing back to the parking netns.
-		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
-		_ = n.GetRuntime().StopContainer(ctx, cfg.LongName)
-		return fmt.Errorf("node %q failed getting netns path: %w", cfg.ShortName, err)
-	}
-
-	// Move interfaces back into the container netns.
-	moved, err := moveEndpoints(n.GetEndpoints(), func(ep clablinks.Endpoint) error {
-		return ep.MoveFrom(ctx, parkingNode, nil)
-	})
-	if err != nil {
-		// Attempt rollback to keep the node in a consistent stopped+parked state.
-		_ = rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
-			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
-		})
-		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
-		_ = n.GetRuntime().StopContainer(ctx, cfg.LongName)
-		return fmt.Errorf("node %q failed restoring interfaces: %w", cfg.ShortName, err)
-	}
-
-	// Bring restored interfaces up.
-	if err := setEndpointsUp(ctx, moved); err != nil {
-		// Attempt rollback to keep the node in a consistent stopped+parked state.
-		_ = rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
-			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
-		})
-		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
-		_ = n.GetRuntime().StopContainer(ctx, cfg.LongName)
-		return fmt.Errorf("node %q failed enabling interfaces: %w", cfg.ShortName, err)
-	}
-
-	// Re-run topology exec commands on lifecycle start to restore node-local interface config
-	// (for example IP addresses added during deploy exec phase).
-	execCollection := clabexec.NewExecCollection()
-	if err := n.RunExecFromConfig(ctx, execCollection); err != nil {
-		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
-	}
-	execCollection.Log()
-
-	return nil
 }

@@ -34,13 +34,13 @@ func (c *CLab) RestartNodes(ctx context.Context, nodeNames []string) error {
 			}
 
 			if status == clabruntime.Running {
-				if err := c.stopNode(ctx, n); err != nil {
+				if err := n.Stop(ctx); err != nil {
 					return err
 				}
 			}
 
 			// Start/restore is only meaningful when a node is stopped and its interfaces are parked.
-			if err := c.startNode(ctx, n); err != nil {
+			if err := n.Start(ctx); err != nil {
 				return err
 			}
 		}
