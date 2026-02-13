@@ -6,6 +6,8 @@ package utils
 
 import (
 	"crypto/rand"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"os"
@@ -15,6 +17,12 @@ import (
 	"github.com/jsimonetti/rtnetlink/rtnl"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	"github.com/vishvananda/netlink"
+)
+
+const (
+	parkingNetnsPrefix = "clab-park-"
+	// Be conservative and keep the name comfortably within Linux NAME_MAX (255 bytes).
+	maxParkingNetnsNameLen = 200
 )
 
 // BridgeByName returns a *netlink.Bridge referenced by its name.
@@ -64,6 +72,26 @@ func DeleteNetnsSymlink(n string) error {
 		log.Debug("Failed to delete netns symlink by path:", sl)
 	}
 	return nil
+}
+
+// ParkingNetnsName returns the deterministic named-netns identifier used to park
+// a container's dataplane interfaces while the container is stopped.
+func ParkingNetnsName(containerName string) string {
+	name := parkingNetnsPrefix + containerName
+	if len(name) <= maxParkingNetnsNameLen {
+		return name
+	}
+
+	sum := sha1.Sum([]byte(containerName))
+	suffix := hex.EncodeToString(sum[:])[:10]
+
+	// leave room for "-" + suffix
+	maxBaseLen := maxParkingNetnsNameLen - 1 - len(suffix)
+	if maxBaseLen < 1 {
+		return suffix
+	}
+
+	return name[:maxBaseLen] + "-" + suffix
 }
 
 // LinkIPs returns IPv4/IPv6 addresses assigned to a link referred by its name.

@@ -48,8 +48,6 @@ type Endpoint interface {
 	GetVars() map[string]any
 	// MoveTo moves the endpoint interface from its owning node namespace to dst.
 	MoveTo(context.Context, Node, *MoveOptions) error
-	// MoveFrom moves the endpoint interface from src namespace back to its owning node namespace.
-	MoveFrom(context.Context, Node, *MoveOptions) error
 	// SetUp sets the endpoint interface up in its owning node namespace.
 	SetUp(context.Context) error
 }
@@ -166,14 +164,6 @@ func (e *EndpointGeneric) MoveTo(
 	return e.moveBetween(ctx, e.GetNode(), dst, opts)
 }
 
-func (e *EndpointGeneric) MoveFrom(
-	ctx context.Context,
-	src Node,
-	opts *MoveOptions,
-) error {
-	return e.moveBetween(ctx, src, e.GetNode(), opts)
-}
-
 func (e *EndpointGeneric) moveBetween(
 	ctx context.Context,
 	from Node,
@@ -181,7 +171,7 @@ func (e *EndpointGeneric) moveBetween(
 	opts *MoveOptions,
 ) error {
 	return from.ExecFunction(ctx, func(_ ns.NetNS) error {
-		link, err := findLinkForEndpoint(e)
+		link, err := e.resolveLink()
 		if err != nil {
 			return err
 		}
@@ -206,7 +196,7 @@ func (e *EndpointGeneric) moveBetween(
 
 func (e *EndpointGeneric) SetUp(ctx context.Context) error {
 	return e.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
-		link, err := findLinkForEndpoint(e)
+		link, err := e.resolveLink()
 		if err != nil {
 			return err
 		}
@@ -282,14 +272,9 @@ func CheckEndpointDoesNotExistYet(ctx context.Context, e Endpoint) error {
 	})
 }
 
-type endpointLookup interface {
-	GetIfaceName() string
-	GetIfaceAlias() string
-	String() string
-}
-
-func findLinkForEndpoint(ep endpointLookup) (netlink.Link, error) {
-	ifaceName := ep.GetIfaceName()
+// resolveLink locates the netlink.Link for this endpoint by name, alias, or alt-name.
+func (e *EndpointGeneric) resolveLink() (netlink.Link, error) {
+	ifaceName := e.GetIfaceName()
 	if ifaceName != "" {
 		if l, err := netlink.LinkByName(ifaceName); err == nil {
 			return l, nil
@@ -301,8 +286,8 @@ func findLinkForEndpoint(ep endpointLookup) (netlink.Link, error) {
 		return nil, err
 	}
 
-	wantAlt := SanitizeInterfaceName(ep.GetIfaceName())
-	wantAlias := ep.GetIfaceAlias()
+	wantAlt := SanitizeInterfaceName(e.GetIfaceName())
+	wantAlias := e.GetIfaceAlias()
 	wantAltAlias := ""
 	if wantAlias != "" {
 		wantAltAlias = SanitizeInterfaceName(wantAlias)
@@ -319,5 +304,5 @@ func findLinkForEndpoint(ep endpointLookup) (netlink.Link, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("interface for endpoint %s not found", ep.String())
+	return nil, fmt.Errorf("interface for endpoint %s not found", e.String())
 }
