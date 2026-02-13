@@ -87,6 +87,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **OpenBSD**                | [`openbsd`](openbsd.md)                             | supported |    VM     |
 | **Kubernetes in Docker**   | [`k8s-kind`](k8s-kind.md)                           | supported | service   |
 | **Linux bridge**           | [`bridge`](bridge.md)                               | supported |    N/A    |
+| **v::n osvbng**            | [`veesix_osvbng`](veesix_osvbng.md)                 | supported | container |
 | **Openvswitch bridge**     | [`ovs-bridge`](ovs-bridge.md)                       | supported |    N/A    |
 | **External container**     | [`ext-container`](ext-container.md)                 | supported | container |
 | **Host**                   | [`host`](host.md)                                   | supported |    N/A    |

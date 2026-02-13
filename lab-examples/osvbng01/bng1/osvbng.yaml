@@ -1,0 +1,92 @@
+interfaces:
+    eth1:
+        description: Access Interface (subscriber)
+        enabled: true
+        bng_mode: access
+    eth2:
+        description: Core Link (corerouter1)
+        enabled: true
+        lcp: true
+        address:
+            ipv4:
+                - 10.0.0.1/24
+            ipv6:
+                - 2001:db8:c0:e::1/64
+    loop0:
+        description: Subscriber Gateway Loopback
+        enabled: true
+        address:
+            ipv4:
+                - 10.255.0.1/32
+            ipv6:
+                - 2001:db8:0:1::1/128
+        lcp: true
+subscriber-groups:
+    groups:
+        default:
+            access-type: ipoe
+            vlans:
+                - svlan: "100"
+                  cvlan: any
+                  interface: loop0
+            address-pools:
+                - name: subscriber-pool
+                  network: 10.255.0.0/16
+                  gateway: 10.255.0.1
+                  dns:
+                    - 10.254.0.10
+                    - 10.254.1.10
+                  priority: 1
+            iana-pool: wan-link-pool
+            pd-pool: subscriber-pd-pool
+            dhcp:
+                auto-generate: true
+                lease-time: "3600"
+            aaa-policy: default-policy
+dhcp:
+    provider: local
+dhcpv6:
+    provider: local
+    iana_pools:
+        - name: wan-link-pool
+          network: 2001:db8:0:1::/64
+          range_start: 2001:db8:0:1::1000
+          range_end: 2001:db8:0:1::ffff
+          gateway: 2001:db8:0:1::1
+          preferred_time: 3600
+          valid_time: 7200
+    pd_pools:
+        - name: subscriber-pd-pool
+          network: 2001:db8:100::/40
+          prefix_length: 56
+          preferred_time: 3600
+          valid_time: 7200
+    dns_servers:
+        - 2001:4860:4860::8888
+        - 2001:4860:4860::8844
+    ra:
+        router_lifetime: 1800
+        max_interval: 600
+        min_interval: 200
+aaa:
+    auth_provider: local
+    nas_identifier: osvbng
+    policy:
+        - name: default-policy
+          format: $remote-id$
+          max_concurrent_sessions: 1
+plugins:
+    subscriber.auth.local:
+        allow_all: true
+        database_path: /tmp/osvbng.db
+protocols:
+    isis:
+        enabled: true
+        net: "49.0001.0100.0000.0001.00"
+        is-type: level-1
+        metric-style: wide
+        log-adjacency-changes: true
+        interfaces:
+            eth2:
+                network: point-to-point
+                circuit-type: level-1

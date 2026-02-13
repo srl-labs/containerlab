@@ -63,6 +63,7 @@ nav:
           - 6WIND VSR: manual/kinds/6wind_vsr.md
           - Arrcus ArcOS: manual/kinds/arrcus_arcos.md
           - FD.io VPP: manual/kinds/fdio_vpp.md
+          - v::n osvbng: manual/kinds/veesix_osvbng.md
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
