@@ -1774,7 +1774,7 @@
         "prefix": {
             "description": "lab prefix",
             "type": "string",
-            "pattern": "^$|^[a-zA-Z0-9][a-zA-Z0-9-._]*$",
+            "pattern": "^$|^__lab-name$|^[a-zA-Z0-9][a-zA-Z0-9-._]*$",
             "markdownDescription": "[lab prefix](https://containerlab.dev/manual/topo-def-file/#prefix)"
         },
         "mgmt": {
