@@ -46,6 +46,17 @@ type Endpoint interface {
 	SetIfaceAlias(string)
 	// GetVars returns the endpoint-level vars.
 	GetVars() map[string]any
+	// MoveBetween moves the endpoint interface between source and destination nodes.
+	MoveBetween(context.Context, Node, Node, *MoveOptions) error
+	// SetUpIn sets the endpoint interface up in the provided node namespace.
+	SetUpIn(context.Context, Node) error
+	// SetDownIn sets the endpoint interface down in the provided node namespace.
+	SetDownIn(context.Context, Node) error
+}
+
+type MoveOptions struct {
+	PreMove  func(netlink.Link) error
+	PostMove func(netlink.Link) error
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -147,6 +158,66 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 	})
 }
 
+func (e *EndpointGeneric) MoveBetween(
+	ctx context.Context,
+	from Node,
+	to Node,
+	opts *MoveOptions,
+) error {
+	return from.ExecFunction(ctx, func(_ ns.NetNS) error {
+		link, err := findLinkForEndpoint(e)
+		if err != nil {
+			return err
+		}
+
+		if opts != nil && opts.PreMove != nil {
+			if err := opts.PreMove(link); err != nil {
+				return fmt.Errorf("pre-move hook failed for %s: %w", e.String(), err)
+			}
+		}
+
+		return to.AddLinkToContainer(ctx, link, func(_ ns.NetNS) error {
+			if opts != nil && opts.PostMove != nil {
+				if err := opts.PostMove(link); err != nil {
+					return fmt.Errorf("post-move hook failed for %s: %w", e.String(), err)
+				}
+			}
+
+			return nil
+		})
+	})
+}
+
+func (e *EndpointGeneric) SetUpIn(ctx context.Context, in Node) error {
+	return in.ExecFunction(ctx, func(_ ns.NetNS) error {
+		link, err := findLinkForEndpoint(e)
+		if err != nil {
+			return err
+		}
+
+		if err := netlink.LinkSetUp(link); err != nil {
+			return fmt.Errorf("failed setting %s up: %w", e.String(), err)
+		}
+
+		return nil
+	})
+}
+
+func (e *EndpointGeneric) SetDownIn(ctx context.Context, in Node) error {
+	return in.ExecFunction(ctx, func(_ ns.NetNS) error {
+		link, err := findLinkForEndpoint(e)
+		if err != nil {
+			return err
+		}
+
+		if err := netlink.LinkSetDown(link); err != nil {
+			return fmt.Errorf("failed setting %s down: %w", e.String(), err)
+		}
+
+		return nil
+	})
+}
+
 // HasSameNodeAndInterface returns true if the given endpoint has the same node and interface name
 // as the `ept` endpoint.
 func (e *EndpointGeneric) HasSameNodeAndInterface(ept Endpoint) bool {
@@ -208,4 +279,44 @@ func CheckEndpointDoesNotExistYet(ctx context.Context, e Endpoint) error {
 			err,
 		)
 	})
+}
+
+type endpointLookup interface {
+	GetIfaceName() string
+	GetIfaceAlias() string
+	String() string
+}
+
+func findLinkForEndpoint(ep endpointLookup) (netlink.Link, error) {
+	ifaceName := ep.GetIfaceName()
+	if ifaceName != "" {
+		if l, err := netlink.LinkByName(ifaceName); err == nil {
+			return l, nil
+		}
+	}
+
+	links, err := netlink.LinkList()
+	if err != nil {
+		return nil, err
+	}
+
+	wantAlt := SanitizeInterfaceName(ep.GetIfaceName())
+	wantAlias := ep.GetIfaceAlias()
+	wantAltAlias := ""
+	if wantAlias != "" {
+		wantAltAlias = SanitizeInterfaceName(wantAlias)
+	}
+
+	for _, l := range links {
+		if wantAlias != "" && l.Attrs().Alias == wantAlias {
+			return l, nil
+		}
+		for _, an := range l.Attrs().AltNames {
+			if an == wantAlt || (wantAltAlias != "" && an == wantAltAlias) {
+				return l, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("interface for endpoint %s not found", ep.String())
 }

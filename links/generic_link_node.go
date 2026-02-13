@@ -14,6 +14,14 @@ type GenericLinkNode struct {
 	nspath    string
 }
 
+func NewGenericLinkNode(shortname, nspath string) *GenericLinkNode {
+	return &GenericLinkNode{
+		shortname: shortname,
+		endpoints: []Endpoint{},
+		nspath:    nspath,
+	}
+}
+
 func (g *GenericLinkNode) AddLinkToContainer(
 	_ context.Context,
 	link netlink.Link,
@@ -54,6 +62,10 @@ func (g *GenericLinkNode) GetShortName() string {
 
 func (g *GenericLinkNode) GetEndpoints() []Endpoint {
 	return g.endpoints
+}
+
+func (*GenericLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeVeth
 }
 
 func (*GenericLinkNode) GetState() clabnodesstate.NodeState {
