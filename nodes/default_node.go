@@ -833,7 +833,7 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 		// Roll back any endpoints already moved to the parking namespace.
 		if len(moved) > 0 {
 			if rbErr := rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
-				return moveEndpointToOwner(ctx, ep, parkingNode, nil)
+				return ep.MoveTo(ctx, d, nil)
 			}); rbErr != nil {
 				return fmt.Errorf(
 					"node %q failed parking interfaces: %w (rollback failed: %v)",
@@ -868,7 +868,7 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 			log.Warnf("node %q failed restoring /run/netns symlink after stop error: %v", cfg.ShortName, linkErr)
 		}
 		if rbErr := rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
-			return moveEndpointToOwner(ctx, ep, parkingNode, nil)
+			return ep.MoveTo(ctx, d, nil)
 		}); rbErr != nil {
 			return fmt.Errorf(
 				"node %q failed stopping container: %w (rollback failed restoring interfaces: %v)",
@@ -911,9 +911,16 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 		return fmt.Errorf("node %q failed getting netns path: %w", cfg.ShortName, err)
 	}
 
+	// Reparent endpoints to the parking node so MoveTo knows where to find them.
+	// Stop and Start are separate process invocations, so the in-memory node
+	// reference from Stop does not survive; we restore it here.
+	for _, ep := range d.GetEndpoints() {
+		ep.SetNode(parkingNode)
+	}
+
 	// Move interfaces back into the container netns.
 	moved, err := moveEndpoints(d.GetEndpoints(), func(ep clablinks.Endpoint) error {
-		return moveEndpointToOwner(ctx, ep, parkingNode, nil)
+		return ep.MoveTo(ctx, d, nil)
 	})
 	if err != nil {
 		// Attempt rollback to keep the node in a consistent stopped+parked state.
@@ -979,18 +986,6 @@ func ensureNamedNetns(name string) (string, error) {
 	newNS.Close()
 
 	return nspath, nil
-}
-
-func moveEndpointToOwner(
-	ctx context.Context,
-	ep clablinks.Endpoint,
-	src clablinks.Node,
-	opts *clablinks.MoveOptions,
-) error {
-	srcEp := clablinks.NewEndpointGeneric(src, ep.GetIfaceName(), ep.GetLink())
-	srcEp.SetIfaceAlias(ep.GetIfaceAlias())
-
-	return srcEp.MoveTo(ctx, ep.GetNode(), opts)
 }
 
 func preMoveSetDownOptions() *clablinks.MoveOptions {

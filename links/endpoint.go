@@ -41,14 +41,16 @@ type Endpoint interface {
 	// along
 	// with the A side of the veth link.
 	IsNodeless() bool
-	// Setters for ifaceName and Alias
+	// Setters for ifaceName, Alias and Node
 	SetIfaceName(string)
 	SetIfaceAlias(string)
+	SetNode(Node)
 	// GetVars returns the endpoint-level vars.
 	GetVars() map[string]any
-	// MoveTo moves the endpoint interface from its owning node namespace to dst.
-	MoveTo(context.Context, Node, *MoveOptions) error
-	// SetUp sets the endpoint interface up in its owning node namespace.
+	// MoveTo moves the endpoint interface from its current node to dst,
+	// updating the endpoint's node reference on success.
+	MoveTo(ctx context.Context, dst Node, opts *MoveOptions) error
+	// SetUp sets the endpoint interface up in its current node namespace.
 	SetUp(context.Context) error
 }
 
@@ -111,6 +113,10 @@ func (e *EndpointGeneric) SetIfaceAlias(ifaceAlias string) {
 	e.IfaceAlias = ifaceAlias
 }
 
+func (e *EndpointGeneric) SetNode(n Node) {
+	e.Node = n
+}
+
 func (e *EndpointGeneric) GetMac() net.HardwareAddr {
 	return e.MAC
 }
@@ -161,16 +167,9 @@ func (e *EndpointGeneric) MoveTo(
 	dst Node,
 	opts *MoveOptions,
 ) error {
-	return e.moveBetween(ctx, e.GetNode(), dst, opts)
-}
+	src := e.GetNode()
 
-func (e *EndpointGeneric) moveBetween(
-	ctx context.Context,
-	from Node,
-	to Node,
-	opts *MoveOptions,
-) error {
-	return from.ExecFunction(ctx, func(_ ns.NetNS) error {
+	err := src.ExecFunction(ctx, func(_ ns.NetNS) error {
 		link, err := e.resolveLink()
 		if err != nil {
 			return err
@@ -182,7 +181,7 @@ func (e *EndpointGeneric) moveBetween(
 			}
 		}
 
-		return to.AddLinkToContainer(ctx, link, func(_ ns.NetNS) error {
+		return dst.AddLinkToContainer(ctx, link, func(_ ns.NetNS) error {
 			if opts != nil && opts.PostMove != nil {
 				if err := opts.PostMove(link); err != nil {
 					return fmt.Errorf("post-move hook failed for %s: %w", e.String(), err)
@@ -192,6 +191,13 @@ func (e *EndpointGeneric) moveBetween(
 			return nil
 		})
 	})
+	if err != nil {
+		return err
+	}
+
+	e.Node = dst
+
+	return nil
 }
 
 func (e *EndpointGeneric) SetUp(ctx context.Context) error {
