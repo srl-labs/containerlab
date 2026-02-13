@@ -46,12 +46,12 @@ type Endpoint interface {
 	SetIfaceAlias(string)
 	// GetVars returns the endpoint-level vars.
 	GetVars() map[string]any
-	// MoveBetween moves the endpoint interface between source and destination nodes.
-	MoveBetween(context.Context, Node, Node, *MoveOptions) error
-	// SetUpIn sets the endpoint interface up in the provided node namespace.
-	SetUpIn(context.Context, Node) error
-	// SetDownIn sets the endpoint interface down in the provided node namespace.
-	SetDownIn(context.Context, Node) error
+	// MoveTo moves the endpoint interface from its owning node namespace to dst.
+	MoveTo(context.Context, Node, *MoveOptions) error
+	// MoveFrom moves the endpoint interface from src namespace back to its owning node namespace.
+	MoveFrom(context.Context, Node, *MoveOptions) error
+	// SetUp sets the endpoint interface up in its owning node namespace.
+	SetUp(context.Context) error
 }
 
 type MoveOptions struct {
@@ -158,7 +158,23 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 	})
 }
 
-func (e *EndpointGeneric) MoveBetween(
+func (e *EndpointGeneric) MoveTo(
+	ctx context.Context,
+	dst Node,
+	opts *MoveOptions,
+) error {
+	return e.moveBetween(ctx, e.GetNode(), dst, opts)
+}
+
+func (e *EndpointGeneric) MoveFrom(
+	ctx context.Context,
+	src Node,
+	opts *MoveOptions,
+) error {
+	return e.moveBetween(ctx, src, e.GetNode(), opts)
+}
+
+func (e *EndpointGeneric) moveBetween(
 	ctx context.Context,
 	from Node,
 	to Node,
@@ -188,8 +204,8 @@ func (e *EndpointGeneric) MoveBetween(
 	})
 }
 
-func (e *EndpointGeneric) SetUpIn(ctx context.Context, in Node) error {
-	return in.ExecFunction(ctx, func(_ ns.NetNS) error {
+func (e *EndpointGeneric) SetUp(ctx context.Context) error {
+	return e.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
 		link, err := findLinkForEndpoint(e)
 		if err != nil {
 			return err
@@ -197,21 +213,6 @@ func (e *EndpointGeneric) SetUpIn(ctx context.Context, in Node) error {
 
 		if err := netlink.LinkSetUp(link); err != nil {
 			return fmt.Errorf("failed setting %s up: %w", e.String(), err)
-		}
-
-		return nil
-	})
-}
-
-func (e *EndpointGeneric) SetDownIn(ctx context.Context, in Node) error {
-	return in.ExecFunction(ctx, func(_ ns.NetNS) error {
-		link, err := findLinkForEndpoint(e)
-		if err != nil {
-			return err
-		}
-
-		if err := netlink.LinkSetDown(link); err != nil {
-			return fmt.Errorf("failed setting %s down: %w", e.String(), err)
 		}
 
 		return nil

@@ -81,19 +81,25 @@ func (c *CLab) startNode(ctx context.Context, n clabnodes.Node) error {
 	}
 
 	// Move interfaces back into the container netns.
-	moved, err := moveEndpointsBetweenNodes(ctx, parkingNode, n, n.GetEndpoints(), nil)
+	moved, err := moveEndpoints(n.GetEndpoints(), func(ep clablinks.Endpoint) error {
+		return ep.MoveFrom(ctx, parkingNode, nil)
+	})
 	if err != nil {
 		// Attempt rollback to keep the node in a consistent stopped+parked state.
-		_ = rollbackMovedEndpoints(ctx, n, parkingNode, moved, preMoveSetDownOptions())
+		_ = rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
+			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
+		})
 		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
 		_ = n.GetRuntime().StopContainer(ctx, cfg.LongName)
 		return fmt.Errorf("node %q failed restoring interfaces: %w", cfg.ShortName, err)
 	}
 
 	// Bring restored interfaces up.
-	if err := setEndpointsUp(ctx, n, moved); err != nil {
+	if err := setEndpointsUp(ctx, moved); err != nil {
 		// Attempt rollback to keep the node in a consistent stopped+parked state.
-		_ = rollbackMovedEndpoints(ctx, n, parkingNode, moved, preMoveSetDownOptions())
+		_ = rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
+			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
+		})
 		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
 		_ = n.GetRuntime().StopContainer(ctx, cfg.LongName)
 		return fmt.Errorf("node %q failed enabling interfaces: %w", cfg.ShortName, err)
