@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/containernetworking/plugins/pkg/ns"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	claberrors "github.com/srl-labs/containerlab/errors"
 	clabexec "github.com/srl-labs/containerlab/exec"
@@ -92,53 +91,30 @@ func resolveLifecycleNodeNames(allNodes map[string]clabnodes.Node, requested []s
 func (c *CLab) stopNode(ctx context.Context, n clabnodes.Node) error {
 	cfg := n.Config()
 
-	// Validate link types up-front to avoid partial parking.
-	for _, ep := range n.GetEndpoints() {
-		if ep.GetLink().GetType() != clablinks.LinkTypeVEth {
-			return fmt.Errorf(
-				"node %q lifecycle supports only veth links, got %q for endpoint %s",
-				cfg.ShortName,
-				ep.GetLink().GetType(),
-				ep.String(),
-			)
-		}
-	}
-
 	parkName := parkingNetnsName(cfg.LongName)
 	parkPath, err := ensureNamedNetns(parkName)
 	if err != nil {
 		return fmt.Errorf("node %q failed creating parking netns: %w", cfg.ShortName, err)
 	}
-
-	parkNS, err := ns.GetNS(parkPath)
-	if err != nil {
-		return fmt.Errorf("node %q failed opening parking netns: %w", cfg.ShortName, err)
-	}
-	defer parkNS.Close()
+	parkingNode := clablinks.NewGenericLinkNode(parkName, parkPath)
 
 	nodeNSPath, err := n.GetNSPath(ctx)
 	if err != nil {
 		return fmt.Errorf("node %q failed getting netns path: %w", cfg.ShortName, err)
 	}
 
-	nodeNS, err := ns.GetNS(nodeNSPath)
-	if err != nil {
-		return fmt.Errorf("node %q failed opening netns: %w", cfg.ShortName, err)
-	}
-	defer nodeNS.Close()
-
 	// Move dataplane interfaces into the parking netns while the container netns is still alive.
-	moved, err := moveEndpointsBetweenNetNS(nodeNS, parkNS, n.GetEndpoints(), func(l netlink.Link, ep clablinks.Endpoint) error {
-		// Ensure peers observe link-down while the node is stopped.
-		if err := netlink.LinkSetDown(l); err != nil {
-			return fmt.Errorf("failed setting %s down: %w", ep.String(), err)
-		}
-		return nil
-	})
+	moved, err := moveEndpointsBetweenNodes(
+		ctx,
+		n,
+		parkingNode,
+		n.GetEndpoints(),
+		preMoveSetDownOptions(),
+	)
 	if err != nil {
 		// Roll back any endpoints already moved to the parking namespace.
 		if len(moved) > 0 {
-			if _, rbErr := moveEndpointsBetweenNetNS(parkNS, nodeNS, moved, nil); rbErr != nil {
+			if rbErr := rollbackMovedEndpoints(ctx, parkingNode, n, moved, nil); rbErr != nil {
 				return fmt.Errorf(
 					"node %q failed parking interfaces: %w (rollback failed: %v)",
 					cfg.ShortName,
@@ -146,7 +122,7 @@ func (c *CLab) stopNode(ctx context.Context, n clabnodes.Node) error {
 					rbErr,
 				)
 			}
-			_ = setEndpointsUp(nodeNS, moved)
+			_ = setEndpointsUp(ctx, n, moved)
 		}
 		return fmt.Errorf("node %q failed parking interfaces: %w", cfg.ShortName, err)
 	}
@@ -171,7 +147,7 @@ func (c *CLab) stopNode(ctx context.Context, n clabnodes.Node) error {
 		if linkErr := clabutils.LinkContainerNS(nodeNSPath, cfg.LongName); linkErr != nil {
 			log.Warnf("node %q failed restoring /run/netns symlink after stop error: %v", cfg.ShortName, linkErr)
 		}
-		if _, rbErr := moveEndpointsBetweenNetNS(parkNS, nodeNS, moved, nil); rbErr != nil {
+		if rbErr := rollbackMovedEndpoints(ctx, parkingNode, n, moved, nil); rbErr != nil {
 			return fmt.Errorf(
 				"node %q failed stopping container: %w (rollback failed restoring interfaces: %v)",
 				cfg.ShortName,
@@ -179,7 +155,7 @@ func (c *CLab) stopNode(ctx context.Context, n clabnodes.Node) error {
 				rbErr,
 			)
 		}
-		_ = setEndpointsUp(nodeNS, moved)
+		_ = setEndpointsUp(ctx, n, moved)
 
 		return fmt.Errorf("node %q failed stopping container: %w", cfg.ShortName, err)
 	}
@@ -330,83 +306,55 @@ func ensureNamedNetns(name string) (string, error) {
 	return nspath, nil
 }
 
-func findLinkForEndpoint(ep clablinks.Endpoint) (netlink.Link, error) {
-	ifaceName := ep.GetIfaceName()
-	if ifaceName != "" {
-		if l, err := netlink.LinkByName(ifaceName); err == nil {
-			return l, nil
-		}
+func preMoveSetDownOptions() *clablinks.MoveOptions {
+	return &clablinks.MoveOptions{
+		PreMove: netlink.LinkSetDown,
 	}
-
-	links, err := netlink.LinkList()
-	if err != nil {
-		return nil, err
-	}
-
-	wantAlt := clablinks.SanitizeInterfaceName(ep.GetIfaceName())
-	wantAlias := ep.GetIfaceAlias()
-	wantAltAlias := ""
-	if wantAlias != "" {
-		wantAltAlias = clablinks.SanitizeInterfaceName(wantAlias)
-	}
-
-	for _, l := range links {
-		if wantAlias != "" && l.Attrs().Alias == wantAlias {
-			return l, nil
-		}
-		for _, an := range l.Attrs().AltNames {
-			if an == wantAlt || (wantAltAlias != "" && an == wantAltAlias) {
-				return l, nil
-			}
-		}
-	}
-
-	return nil, fmt.Errorf("interface for endpoint %s not found", ep.String())
 }
 
-func moveEndpointsBetweenNetNS(
-	fromNS ns.NetNS,
-	toNS ns.NetNS,
+func moveEndpointsBetweenNodes(
+	ctx context.Context,
+	from clablinks.Node,
+	to clablinks.Node,
 	endpoints []clablinks.Endpoint,
-	preMove func(netlink.Link, clablinks.Endpoint) error,
+	opts *clablinks.MoveOptions,
 ) ([]clablinks.Endpoint, error) {
 	moved := make([]clablinks.Endpoint, 0, len(endpoints))
 
-	err := fromNS.Do(func(_ ns.NetNS) error {
-		for _, ep := range endpoints {
-			link, err := findLinkForEndpoint(ep)
-			if err != nil {
-				return err
-			}
-			if preMove != nil {
-				if err := preMove(link, ep); err != nil {
-					return err
-				}
-			}
-			if err := netlink.LinkSetNsFd(link, int(toNS.Fd())); err != nil {
-				return fmt.Errorf("failed moving %s: %w", ep.String(), err)
-			}
-			moved = append(moved, ep)
+	for _, ep := range endpoints {
+		if err := ep.MoveBetween(ctx, from, to, opts); err != nil {
+			return moved, err
 		}
-		return nil
-	})
+		moved = append(moved, ep)
+	}
 
-	return moved, err
+	return moved, nil
 }
 
-func setEndpointsUp(nodeNS ns.NetNS, endpoints []clablinks.Endpoint) error {
-	return nodeNS.Do(func(_ ns.NetNS) error {
-		for _, ep := range endpoints {
-			link, err := findLinkForEndpoint(ep)
-			if err != nil {
-				return err
-			}
-			if err := netlink.LinkSetUp(link); err != nil {
-				return fmt.Errorf("failed setting %s up: %w", ep.String(), err)
-			}
+func rollbackMovedEndpoints(
+	ctx context.Context,
+	from clablinks.Node,
+	to clablinks.Node,
+	moved []clablinks.Endpoint,
+	opts *clablinks.MoveOptions,
+) error {
+	for i := len(moved) - 1; i >= 0; i-- {
+		if err := moved[i].MoveBetween(ctx, from, to, opts); err != nil {
+			return err
 		}
-		return nil
-	})
+	}
+
+	return nil
+}
+
+func setEndpointsUp(ctx context.Context, node clablinks.Node, endpoints []clablinks.Endpoint) error {
+	for _, ep := range endpoints {
+		if err := ep.SetUpIn(ctx, node); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (*CLab) preStopCleanup(ctx context.Context, n clabnodes.Node) {
