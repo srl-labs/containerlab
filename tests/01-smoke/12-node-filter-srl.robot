@@ -7,17 +7,17 @@ Suite Teardown      Cleanup
 
 
 *** Variables ***
-${lab-file}                 ${EXECDIR}/lab-examples/srl02/srl02.clab.yml
-${lab-name}                 srl02
+${lab-file-name}            12-node-filter-srl.clab.yml
+${lab-name}                 nf-srl
 ${runtime}                  docker
 ${runtime-cli-exec-cmd}     sudo docker exec
 
 
 *** Test Cases ***
 Deploy full lab
-    [Documentation]    Deploy the full srl02 lab as a baseline
+    [Documentation]    Deploy the full srl lab as a baseline
     ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab-file}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -28,7 +28,7 @@ Deploy full lab
 Destroy with node-filter srl1
     [Documentation]    Destroy only srl1. Expect srl1 removed, srl2 still running, lab dir preserved.
     ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${lab-file} --node-filter srl1
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --node-filter srl1
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -47,21 +47,18 @@ Destroy with node-filter srl1
 
     # Lab directory should be preserved
     ${rc}    ${out} =    Run And Return Rc And Output
-    ...    test -d ${EXECDIR}/lab-examples/srl02/clab-${lab-name}
+    ...    test -d ${CURDIR}/clab-${lab-name}
     Should Be Equal As Integers    ${rc}    0
 
     # srl1's link endpoint (e1-1) should be cleared on srl2
-    ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${lab-file} --label clab-node-name\=srl2 --cmd 'ip link show e1-1'
-    ...    shell=True
-    Log    ${output.stdout}
-    Log    ${output.stderr}
-    Should Not Be Equal As Integers    ${output.rc}    0
+    ${rc}    ${out} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-srl2 ip link show e1-1 2>&1
+    Should Not Be Equal As Integers    ${rc}    0
 
 Deploy with node-filter srl1
     [Documentation]    Redeploy srl1 into the existing lab. Expect srl1 created and links reconnected.
     ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab-file} --node-filter srl1
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} --node-filter srl1 --reconfigure
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -80,19 +77,15 @@ Deploy with node-filter srl1
     Should Contain    ${out}    true
 
     # Link e1-1 should be reconnected on both nodes
-    ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${lab-file} --label clab-node-name\=srl1 --cmd 'ip link show e1-1'
-    ...    shell=True
-    Log    ${output.stderr}
-    Should Be Equal As Integers    ${output.rc}    0
-    Should Contain    ${output.stderr}    e1-1
+    ${rc}    ${out} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-srl1 ip link show e1-1 2>&1
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${out}    e1-1
 
-    ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${lab-file} --label clab-node-name\=srl2 --cmd 'ip link show e1-1'
-    ...    shell=True
-    Log    ${output.stderr}
-    Should Be Equal As Integers    ${output.rc}    0
-    Should Contain    ${output.stderr}    e1-1
+    ${rc}    ${out} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-srl2 ip link show e1-1 2>&1
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${out}    e1-1
 
 Reconfigure with node-filter srl1
     [Documentation]    Reconfigure srl1 only. srl1 destroyed and redeployed, srl2 untouched.
@@ -102,7 +95,7 @@ Reconfigure with node-filter srl1
     Should Be Equal As Integers    ${rc}    0
 
     ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${lab-file} --node-filter srl1 --reconfigure
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} --node-filter srl1 --reconfigure
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -122,14 +115,13 @@ Reconfigure with node-filter srl1
 
     # srl1 node directory should exist (recreated)
     ${rc}    ${out} =    Run And Return Rc And Output
-    ...    test -d ${EXECDIR}/lab-examples/srl02/clab-${lab-name}/srl1
+    ...    test -d ${CURDIR}/clab-${lab-name}/srl1
     Should Be Equal As Integers    ${rc}    0
-
 
 Invalid node filter returns error
     [Documentation]    Using a non-existent node in the filter should return an error.
     ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${lab-file} --node-filter nonexistent
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --node-filter nonexistent
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -140,5 +132,5 @@ Invalid node filter returns error
 *** Keywords ***
 Cleanup
     Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${lab-file} --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     ...    shell=True
