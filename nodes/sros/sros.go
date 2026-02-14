@@ -146,17 +146,17 @@ var (
 		`^(?:e(?P<card>\d+)-(?:x(?P<xiom>\d+)-)?(?P<mda>\d+)(?:-c(?P<connector>\d+))?-(?P<port>\d+)|eth(?P<mgmtPort>\d+))$`,
 	)
 	InterfaceHelp = `The format of the interface name need to be one of:
-	  Regular SR OS interface names, that is:
-	  1/2/3       -> card 1, mda 2, port 3
-      1/2/c3/4    -> card 1, mda 2, connector 3, port 4
-      1/x2/3/4    -> card 1, xiom 2, mda 3, port 4
-      1/x2/3/c4/5 -> card 1, xiom 2, mda 3, connector 4, port 5
-	  The mapped Linux interface names, that is:
-      e1-2-3       -> card 1, mda 2, port 3
-      e1-2-c3-4    -> card 1, mda 2, connector 3, port 4
-      e1-x2-3-4    -> card 1, xiom 2, mda 3, port 4
-      e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
-	  eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
+		Regular SR OS interface names, that is:
+		1/2/3				-> card 1, mda 2, port 3
+			1/2/c3/4		-> card 1, mda 2, connector 3, port 4
+			1/x2/3/4		-> card 1, xiom 2, mda 3, port 4
+			1/x2/3/c4/5 -> card 1, xiom 2, mda 3, connector 4, port 5
+		The mapped Linux interface names, that is:
+			e1-2-3			 -> card 1, mda 2, port 3
+			e1-2-c3-4		 -> card 1, mda 2, connector 3, port 4
+			e1-x2-3-4		 -> card 1, xiom 2, mda 3, port 4
+			e1-x2-3-c4-5 -> card 1, xiom 2, mda 3, connector 4, port 5
+		eth[0-9], for management interfaces of CPM-A/CPM-B or for fabric interfaces`
 	// Auxiliary regexps for IXR/SAR detection.
 	sarRegexp   = regexp.MustCompile(`(?i)\bsar-`)
 	sarHmRegexp = regexp.MustCompile(`(?i)\b(sar-hm|sar-hmc)\b`)
@@ -532,6 +532,7 @@ func (n *sros) DeleteNetnsSymlink() error {
 
 // sortComponents ensure components are in order of
 // LCs first, then CPMs (cpm b comes first if present).
+// LCs own the network namespace so CPMs can be cycled independently.
 func (n *sros) sortComponents() {
 	slices.SortFunc(n.Cfg.Components, func(a, b *clabtypes.Component) int {
 		s1 := strings.ToUpper(strings.TrimSpace(a.Slot))
@@ -1216,11 +1217,11 @@ func (n *sros) selectConfigTemplate(tplData *srosTemplateData) (*template.Templa
 	// Model-driven configuration mode (SROS25+)
 	// Future version-specific template selection:
 	// if tplData.SwVersion != nil && tplData.SwVersion.Major >= 26 {
-	//     tmpl = cfgTplSROS26
-	//     tplName = "clab-sros-config-sros26"
+	//		 tmpl = cfgTplSROS26
+	//		 tplName = "clab-sros-config-sros26"
 	// } else {
-	//     tmpl = cfgTplSROS25
-	//     tplName = "clab-sros-config-sros25"
+	//		 tmpl = cfgTplSROS25
+	//		 tplName = "clab-sros-config-sros25"
 	// }
 	tmpl = cfgTplSROS25
 	tplName = "clab-sros-config-sros25"
@@ -1347,37 +1348,22 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 	if err != nil {
 		return nil, err
 	}
+	containerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
 
-	var allContainers []clabruntime.GenericContainer
-	cpmIdx := -1
-
-	for _, comp := range n.Cfg.Components {
-		containerName := n.calcComponentName(n.GetContainerName(), comp.Slot)
-		cnts, err := n.Runtime.ListContainers(ctx, []*clabtypes.GenericFilter{
-			{
-				FilterType: "name",
-				Match:      containerName,
-			},
-		})
-		if err != nil {
-			return nil, err
-		}
-		if comp.Slot == cpmSlot && len(cnts) > 0 {
-			cpmIdx = len(allContainers)
-		}
-		allContainers = append(allContainers, cnts...)
+	counts, err := n.Runtime.ListContainers(ctx, []*clabtypes.GenericFilter{
+		{
+			FilterType: "name",
+			Match:      containerName,
+		},
+	})
+	if err != nil {
+		return nil, err
 	}
-
 	// check that we retrieved some container information
 	// otherwise throw ErrContainersNotFound error
-	if len(allContainers) == 0 {
+	if len(counts) == 0 {
 		return nil, fmt.Errorf("node: %s. %w", n.GetContainerName(),
 			clabnodes.ErrContainersNotFound)
-	}
-
-	// Put CPM container first — callers expect the primary container at index 0.
-	if cpmIdx > 0 {
-		allContainers[0], allContainers[cpmIdx] = allContainers[cpmIdx], allContainers[0]
 	}
 
 	// Forge the IP address to be the actual IP of mgmt
@@ -1386,17 +1372,17 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 		ips, err := n.distNodeMgmtIPs()
 		if err == nil {
 			if ips.IPv4 != "" {
-				allContainers[0].NetworkSettings.IPv4addr = ips.IPv4
-				allContainers[0].NetworkSettings.IPv4pLen = ips.IPv4pLen
+				counts[0].NetworkSettings.IPv4addr = ips.IPv4
+				counts[0].NetworkSettings.IPv4pLen = ips.IPv4pLen
 			}
 			if ips.IPv6 != "" {
-				allContainers[0].NetworkSettings.IPv6addr = ips.IPv6
-				allContainers[0].NetworkSettings.IPv6pLen = ips.IPv6pLen
+				counts[0].NetworkSettings.IPv6addr = ips.IPv6
+				counts[0].NetworkSettings.IPv6pLen = ips.IPv6pLen
 			}
 		}
 	}
 
-	return allContainers, nil
+	return counts, err
 }
 
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
@@ -1661,8 +1647,8 @@ func buildTLSProfileXML() string {
 // TLS bootstrap via NETCONF to enable secure gRPC.
 func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	// Always import PKI key and cert:
-	// 	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
-	//   import "cf3:\node.crt" in PEM format as "cf3:\system-pki\node.crt" (encrypted DER)
+	//	 import "cf3:\node.key" in PEM format as "cf3:\system-pki\node.key" (encrypted DER)
+	//	 import "cf3:\node.crt" in PEM format as "cf3:\system-pki\node.crt" (encrypted DER)
 	operations := []clabnetconf.Operation{
 		func(d *netconf.Driver) (*response.NetconfResponse, error) {
 			return d.RPC(opoptions.WithFilter(buildPKIImportXML(
@@ -1675,7 +1661,7 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 	}
 
 	// Activate cert-profile in MD is via NETCONF, in Classic mode is via SSH
-	//  enable enables cert-profile "clab-grpc-certs" administratively
+	// enable enables cert-profile "clab-grpc-certs" administratively
 	cmd := []string{}
 	if n.isConfigClassic() {
 		cmd = append(

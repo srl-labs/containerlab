@@ -105,11 +105,12 @@ Redeploy line card with node-filter
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${out}    true
 
-    # srsim10-1 should share network namespace of srsim10-a
+    # srsim10-1 should share network namespace of srsim10-a (Docker stores container ID in NetworkMode)
     ${rc}    ${out} =    Run And Return Rc And Output
     ...    sudo docker inspect -f '{{.HostConfig.NetworkMode}}' clab-${lab-name}-srsim10-1 2>&1
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${out}    container:clab-${lab-name}-srsim10-a
+    Should Start With    ${out}    container:
+    Should Contain    ${out}    ${cpm_id_before}
 
     # CPM-A should be the same container (not recreated)
     ${rc}    ${cpm_id_after} =    Run And Return Rc And Output

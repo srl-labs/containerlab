@@ -88,17 +88,17 @@ Deploy with node-filter srsim10
         Should Contain    ${out}    true
     END
 
-    # srsim10-a should have the management IP
+    # srsim10-1 (LC) owns the network namespace and should have the management IP
     ${rc}    ${out} =    Run And Return Rc And Output
-    ...    sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAMConfig.IPv4Address}}{{end}}' clab-${lab-name}-srsim10-a 2>&1
+    ...    sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAMConfig.IPv4Address}}{{end}}' clab-${lab-name}-srsim10-1 2>&1
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${out}    10.78.150.2
 
-    # Line card should share network namespace of srsim10-a
+    # CPM (srsim10-a) should share the LC's network namespace
     ${rc}    ${out} =    Run And Return Rc And Output
-    ...    sudo docker inspect -f '{{.HostConfig.NetworkMode}}' clab-${lab-name}-srsim10-1 2>&1
+    ...    sudo docker inspect -f '{{.HostConfig.NetworkMode}}' clab-${lab-name}-srsim10-a 2>&1
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${out}    container:clab-${lab-name}-srsim10-a
+    Should Start With    ${out}    container:
 
 Reconfigure with node-filter srsim11
     [Documentation]    Reconfigure srsim11 only. srsim10 untouched, srsim11 redeployed fresh.

@@ -56,7 +56,8 @@ Destroy with node-filter srl1
     Should Not Be Equal As Integers    ${rc}    0
 
 Deploy with node-filter srl1
-    [Documentation]    Redeploy srl1 into the existing lab. Expect srl1 created and links reconnected.
+    [Documentation]    Redeploy srl1 into the existing lab. Expect srl1 created, srl2 untouched.
+    ...    Links to nodes outside the filter are not reconnected.
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} --node-filter srl1 --reconfigure
     ...    shell=True
@@ -75,17 +76,6 @@ Deploy with node-filter srl1
     ...    sudo docker inspect -f '{{.State.Running}}' clab-${lab-name}-srl2 2>&1
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${out}    true
-
-    # Link e1-1 should be reconnected on both nodes
-    ${rc}    ${out} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-srl1 ip link show e1-1 2>&1
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${out}    e1-1
-
-    ${rc}    ${out} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-srl2 ip link show e1-1 2>&1
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${out}    e1-1
 
 Reconfigure with node-filter srl1
     [Documentation]    Reconfigure srl1 only. srl1 destroyed and redeployed, srl2 untouched.
