@@ -16,7 +16,6 @@ import (
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
-	clabruntimeignite "github.com/srl-labs/containerlab/runtime/ignite"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/term"
@@ -247,25 +246,9 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		maxWorkers = uint(len(c.Nodes))
 	}
 
-	// a set of workers that do not support concurrency
-	serialNodes := make(map[string]struct{})
-
-	for _, n := range c.Nodes {
-		if n.GetRuntime().GetName() == clabruntimeignite.RuntimeName {
-			serialNodes[n.Config().LongName] = struct{}{}
-			// decreasing the num of maxWorkers as they are used for concurrent nodes
-			maxWorkers--
-		}
-	}
-
-	// Serializing ignite workers due to busy device error
-	if _, ok := c.Runtimes[clabruntimeignite.RuntimeName]; ok {
-		maxWorkers = 1
-	}
-
 	log.Info("Destroying lab", "name", c.Config.Name)
 
-	c.deleteNodes(ctx, maxWorkers, serialNodes)
+	c.deleteNodes(ctx, maxWorkers)
 
 	for _, node := range c.Nodes {
 		err = node.DeleteNetnsSymlink()
@@ -315,11 +298,10 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	return nil
 }
 
-func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[string]struct{}) {
+func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 	wg := new(sync.WaitGroup)
 
 	concurrentChan := make(chan clabnodes.Node)
-	serialChan := make(chan clabnodes.Node)
 
 	workerFunc := func(i uint, input chan clabnodes.Node, wg *sync.WaitGroup) {
 		defer wg.Done()
@@ -349,26 +331,13 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint, serialNodes map[st
 		go workerFunc(i, concurrentChan, wg)
 	}
 
-	// start the serial worker
-	if len(serialNodes) > 0 {
-		wg.Add(1)
-
-		go workerFunc(workers, serialChan, wg)
-	}
-
 	// send nodes to workers
 	for _, n := range c.Nodes {
-		if _, ok := serialNodes[n.Config().LongName]; ok {
-			serialChan <- n
-			continue
-		}
-
 		concurrentChan <- n
 	}
 
 	// close channel to terminate the workers
 	close(concurrentChan)
-	close(serialChan)
 
 	// also call delete on the special nodes
 	for _, n := range c.getSpecialLinkNodes() {

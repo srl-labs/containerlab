@@ -211,11 +211,11 @@
                     "anyOf": [
                         {
                             "type": "string",
-                            "minItems": 1
+                            "minLength": 1
                         },
                         {
                             "type": "number",
-                            "minItems": 1
+                            "minimum": 0
                         }
                     ]
                 },
@@ -238,7 +238,7 @@
                     "markdownDescription": "[Runtime](https://containerlab.dev/manual/nodes/#runtime) for the node",
                     "enum": [
                         "docker",
-                        "ignite"
+                        "podman"
                     ]
                 },
                 "mgmt-ipv4": {
@@ -272,14 +272,6 @@
                     "type": "string",
                     "description": "CPU cores to use by this node/container",
                     "markdownDescription": "[CPU cores](https://containerlab.dev/manual/nodes/#cpu-set) to be used by the node/container"
-                },
-                "sandbox": {
-                    "type": "string",
-                    "description": "ignite's sandbox image name"
-                },
-                "kernel": {
-                    "type": "string",
-                    "description": "ignite's kernel image name"
                 },
                 "extras": {
                     "type": "object",
@@ -1094,11 +1086,11 @@
                     "anyOf": [
                         {
                             "type": "string",
-                            "minItems": 1
+                            "minLength": 1
                         },
                         {
                             "type": "number",
-                            "minItems": 1
+                            "minimum": 0
                         }
                     ]
                 }
@@ -1765,7 +1757,10 @@
                 "sfm-x20-b",
                 "sfm-x20s-b",
                 "sfm2-s",
-                "sfm2-x20s"
+                "sfm2-x20s",
+                "sfm-ixr-6",
+                "sfm-ixr-10",
+                "m-sfm6-12e"
             ]
         }
     },
@@ -1773,11 +1768,13 @@
     "properties": {
         "name": {
             "description": "topology name",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-._]*$"
         },
         "prefix": {
             "description": "lab prefix",
             "type": "string",
+            "pattern": "^$|^__lab-name$|^[a-zA-Z0-9][a-zA-Z0-9-._]*$",
             "markdownDescription": "[lab prefix](https://containerlab.dev/manual/topo-def-file/#prefix)"
         },
         "mgmt": {
@@ -1874,7 +1871,7 @@
                     "markdownDescription": "topology [nodes](https://containerlab.dev/manual/nodes/) configuration container",
                     "type": "object",
                     "patternProperties": {
-                        ".*": {
+                        "^[a-zA-Z0-9][a-zA-Z0-9-._|]*$": {
                             "oneOf": [
                                 {
                                     "type": "null"
@@ -1884,7 +1881,8 @@
                                 }
                             ]
                         }
-                    }
+                    },
+                    "additionalProperties": false
                 },
                 "groups": {
                     "description": "topology groups configuration container",

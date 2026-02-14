@@ -100,19 +100,19 @@ func (n *dell_sonic) PreDeploy(_ context.Context, params *clabnodes.PreDeployPar
 	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
-func (n *dell_sonic) SaveConfig(ctx context.Context) error {
+func (n *dell_sonic) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, err := clabexec.NewExecCmdFromString(saveCmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to create execute cmd: %w", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to create execute cmd: %w", n.Cfg.ShortName, err)
 	}
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %w", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to execute cmd: %w", n.Cfg.ShortName, err)
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+		return nil, fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
 	confPath := n.Cfg.LabDir + "/" + configDirName
@@ -122,7 +122,7 @@ func (n *dell_sonic) SaveConfig(ctx context.Context) error {
 		confPath,
 	)
 
-	return nil
+	return nil, nil
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file is correct.

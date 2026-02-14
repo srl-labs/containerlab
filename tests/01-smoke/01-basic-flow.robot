@@ -595,7 +595,7 @@ Verify Exec rc != 0 on no containers match
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
     Log    ${output}
     Should Not Contain    ${output}    test
-    Should Contain    ${output}    filter did not match any containers
+    Should Match Regexp    ${output}    (?i)filter did not match any containers
     Should Not Be Equal As Integers    ${rc}    0
 
 Verify l1 node is healthy

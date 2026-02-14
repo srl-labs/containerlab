@@ -228,8 +228,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Env:             c.Config.Topology.GetNodeEnv(nodeName),
 		NetworkMode:     c.Config.Topology.GetNodeNetworkMode(nodeName),
 		Sysctls:         c.Config.Topology.GetSysCtl(nodeName),
-		Sandbox:         c.Config.Topology.GetNodeSandbox(nodeName),
-		Kernel:          c.Config.Topology.GetNodeKernel(nodeName),
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 		Devices:         c.Config.Topology.GetNodeDevices(nodeName),
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),

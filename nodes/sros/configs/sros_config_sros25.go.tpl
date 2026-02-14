@@ -1,7 +1,6 @@
 {{ .SNMPConfig }}
 {{ .LoggingConfig }}
 {{ .GRPCConfig }}
-{{ .SNMPConfig }}
 {{ .NetconfConfig }}
 {{ .SystemConfig }}
 {{- if .Name }}

@@ -28,6 +28,15 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+const (
+	// container validation variables.
+	containerNamePattern = "^[a-zA-Z0-9][a-zA-Z0-9-._]+$"
+	dnsIncompatibleChars = "._"
+	maxNameLength        = 60
+)
+
+var containerNamePatternRe = regexp.MustCompile(containerNamePattern)
+
 // DefaultNode implements the Node interface and is embedded to the structs of all other nodes.
 // It has common fields and methods that every node should typically have. Nodes can override
 // methods if needed.
@@ -90,11 +99,11 @@ func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) erro
 	return nil
 }
 
-func (d *DefaultNode) SaveConfig(_ context.Context) error {
+func (d *DefaultNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	// nodes should have the save method defined on their respective structs.
 	// By default SaveConfig is a noop.
 	log.Debugf("Save operation is currently not supported for %q node kind", d.Cfg.Kind)
-	return nil
+	return nil, nil
 }
 
 // CheckDeploymentConditions wraps individual functions that check if a node
@@ -116,6 +125,11 @@ func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
 	}
 
 	err = d.OverwriteNode.VerifyLicenseFileExists(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = d.OverwriteNode.VerifyContainerName()
 	if err != nil {
 		return err
 	}
@@ -424,6 +438,7 @@ type NodeOverwrites interface {
 	GetImages(ctx context.Context) map[string]string
 	GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error)
 	GetContainerName() string
+	VerifyContainerName() error
 	VerifyLicenseFileExists(context.Context) error
 	RunExec(context.Context, *clabexec.ExecCmd) (*clabexec.ExecResult, error)
 	GetNSPath(ctx context.Context) (string, error)
@@ -462,6 +477,35 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 // use long (prefixed) name.
 func (d *DefaultNode) GetContainerName() string {
 	return d.Cfg.LongName
+}
+
+func (d *DefaultNode) VerifyContainerName() error {
+	containerName := d.GetContainerName()
+	if !containerNamePatternRe.MatchString(containerName) {
+		return fmt.Errorf("Node name contains invalid characters: %s", containerName)
+	}
+
+	if len(containerName) > maxNameLength {
+		log.Warn(
+			"Node name will not resolve via DNS",
+			"name",
+			containerName,
+			"reason",
+			fmt.Sprintf("name exceeds %d characters", maxNameLength),
+		)
+	}
+
+	if strings.ContainsAny(containerName, dnsIncompatibleChars) {
+		log.Warn(
+			"Node name will not resolve via DNS",
+			"name",
+			containerName,
+			"reason",
+			"name contains invalid characters such as '.' and/or '_'",
+		)
+	}
+
+	return nil
 }
 
 // RunExec executes a single command for a node.

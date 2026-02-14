@@ -139,15 +139,15 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	return err
 }
 
-func (s *crpd) SaveConfig(ctx context.Context) error {
+func (s *crpd) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
+		return nil, fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
 	}
 
 	// path by which to save a config
@@ -155,7 +155,7 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(),
 		clabconstants.PermissionsOpen) // skipcq: GO-S2306
 	if err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"failed to write config by %s path from %s container: %v",
 			confPath,
 			s.Cfg.ShortName,
@@ -164,7 +164,7 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	}
 	log.Infof("saved cRPD configuration from %s node to %s\n", s.Cfg.ShortName, confPath)
 
-	return nil
+	return nil, nil
 }
 
 func createCRPDFiles(node clabnodes.Node) error {

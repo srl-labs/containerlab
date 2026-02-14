@@ -80,6 +80,27 @@ Do a gNMI GET and see if config changes after redeploy are persistent
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    thisismynewname
 
+Verify saving config with copy flag
+    [Documentation]
+    ...    Save config with --copy flag and verify that the config.cfg
+    ...    file is copied to the specified destination directory.
+    ${copy_dst} =    Set Variable    ${CURDIR}/save-copy-test
+    # clean up any leftover from previous runs
+    Run    rm -rf ${copy_dst}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --copy ${copy_dst}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    ERRO
+    # verify that config.cfg has been copied for the sros node
+    # standalone srsim uses slot A, so the saved config is at A/config/cf3/config.cfg
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/sros/config.cfg
+    # verify the copied file is not empty
+    ${size} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/sros/config.cfg
+    Should Be True    ${size} > 0
+    # clean up
+    [Teardown]    Run    rm -rf ${copy_dst}
+
 
 *** Keywords ***
 Cleanup

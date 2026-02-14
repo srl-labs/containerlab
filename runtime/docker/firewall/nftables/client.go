@@ -1,9 +1,9 @@
 package nftables
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/google/nftables"
@@ -348,8 +348,9 @@ func (nftC *NftablesClient) ruleExists(
 				}
 			case *expr.Match:
 				if v.Name == "comment" {
-					if val, ok := v.Info.(*xt.Unknown); ok {
-						if bytes.HasPrefix(*val, []byte(definitions.ContainerlabComment)) {
+					// In nftables v0.3.0+, comments are returned as *xt.Comment
+					if val, ok := v.Info.(*xt.Comment); ok {
+						if strings.HasPrefix(string(*val), definitions.ContainerlabComment) {
 							commentMatch = true
 						}
 					}
@@ -370,8 +371,7 @@ func (nftC *NftablesClient) ruleExists(
 }
 
 // getClabRulesForInterface returns rules that have the provided interface name (regardless in which
-// direction)
-// with a comment that is setup by containerlab from the list of `rules`.
+// direction) with a comment that is setup by containerlab from the list of `rules`.
 func (*NftablesClient) getClabRulesForInterface(
 	iface string,
 	rules []*nftables.Rule,
@@ -396,8 +396,9 @@ func (*NftablesClient) getClabRulesForInterface(
 			// a comment extension with the comment set by containerlab
 			case *expr.Match:
 				if v.Name == "comment" {
-					if val, ok := v.Info.(*xt.Unknown); ok {
-						if bytes.HasPrefix(*val, []byte(definitions.ContainerlabComment)) {
+					// In nftables v0.3.0+, comments are returned as *xt.Comment
+					if val, ok := v.Info.(*xt.Comment); ok {
+						if strings.HasPrefix(string(*val), definitions.ContainerlabComment) {
 							commentMatch = true
 						}
 					}
