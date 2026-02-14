@@ -1,0 +1,31 @@
+name: sr10
+mgmt:
+  network: sr10_mgmt
+  ipv4-subnet: 10.78.150.0/24
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R2
+  nodes:
+    srsim10:
+      kind: nokia_srsim
+      type: SR-7
+      mgmt-ipv4: 10.78.150.2
+      components:
+        - slot: A
+        - slot: 1
+          env:
+            NOKIA_SROS_CARD: iom5-e
+            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+            NOKIA_SROS_SFM: m-sfm6-7/12
+    srsim11:
+      kind: nokia_srsim
+      type: SR-7
+      mgmt-ipv4: 10.78.150.3
+      components:
+        - slot: A
+        - slot: 1
+
+  links:
+    - endpoints: ["srsim10:1/1/c1/1", "srsim11:1/1/c1/1"]
