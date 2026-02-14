@@ -15,8 +15,18 @@ ${runtime}          docker
 *** Test Cases ***
 Deploy full components lab
     [Documentation]    Deploy the distributed components lab with srsim10 and srsim11 (2 components each).
+    ...    Nodes are deployed sequentially (one at a time) because each nokia_srsim node
+    ...    requires 4 GB of memory and resource-constrained environments may not have
+    ...    enough headroom to start both simultaneously in a single clab deploy call.
     ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} --node-filter srsim11
+    ...    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name} --node-filter srsim10
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -61,9 +71,12 @@ Destroy with node-filter srsim10
     ...    test -d ${CURDIR}/clab-${lab-name}
     Should Be Equal As Integers    ${rc}    0
 
-    # Inspect should still work with partial lab (srsim11 only)
+    # Inspect should still work with partial lab (srsim11 only).
+    # Use --name instead of --topo: when --topo is given, inspect queries every node
+    # defined in the topology and errors if any container is missing. Using --name performs
+    # a label-based lookup that returns only the containers that are actually running.
     ${output} =    Process.Run Process
-    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
