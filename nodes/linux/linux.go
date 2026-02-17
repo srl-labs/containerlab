@@ -44,7 +44,7 @@ func (n *linux) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
-	n.StopSignal = "SIGKILL"
+	n.StopSignal = clabtypes.SIGKILL
 
 	// linux kind uses `always` as a default restart policy
 	// since often they run auxiliary services that might fail because

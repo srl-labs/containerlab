@@ -66,7 +66,7 @@ type DefaultNode struct {
 	// State of the node
 	state      clabnodesstate.NodeState
 	statemutex sync.RWMutex
-	StopSignal string
+	StopSignal clabtypes.Signal
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
