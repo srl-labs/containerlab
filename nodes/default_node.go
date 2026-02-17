@@ -66,6 +66,7 @@ type DefaultNode struct {
 	// State of the node
 	state      clabnodesstate.NodeState
 	statemutex sync.RWMutex
+	StopSignal string
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -854,7 +855,7 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 
 	preStopCleanup(ctx, d)
 
-	if err := d.Runtime.StopContainer(ctx, cfg.LongName); err != nil {
+	if err := d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal); err != nil {
 		// Docker/podman may return an error while the container is already stopped (timeout, API hiccup).
 		// Treat this as success if the desired state is reached.
 		status := d.Runtime.GetContainerStatus(ctx, cfg.LongName)
@@ -907,7 +908,7 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 	if _, err := d.GetNSPath(ctx); err != nil {
 		// Try to keep destroy/inspect operational by repointing back to the parking netns.
 		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
-		_ = d.Runtime.StopContainer(ctx, cfg.LongName)
+		_ = d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal)
 		return fmt.Errorf("node %q failed getting netns path: %w", cfg.ShortName, err)
 	}
 
@@ -928,7 +929,7 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
 		})
 		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
-		_ = d.Runtime.StopContainer(ctx, cfg.LongName)
+		_ = d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal)
 		return fmt.Errorf("node %q failed restoring interfaces: %w", cfg.ShortName, err)
 	}
 
@@ -939,7 +940,7 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
 		})
 		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
-		_ = d.Runtime.StopContainer(ctx, cfg.LongName)
+		_ = d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal)
 		return fmt.Errorf("node %q failed enabling interfaces: %w", cfg.ShortName, err)
 	}
 

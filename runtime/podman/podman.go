@@ -255,12 +255,19 @@ func (r *PodmanRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 	return containers.Unpause(ctx, cID, &containers.UnpauseOptions{})
 }
 
-func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
+func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string, stopSignal string) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
 	}
-	err = containers.Stop(ctx, cID, &containers.StopOptions{})
+
+	stopOpts := new(containers.StopOptions)
+	if stopSignal != "" {
+		log.Debugf("using custom stop signal %q for container %q", stopSignal, name)
+		stopOpts = stopOpts.WithSignal(stopSignal)
+	}
+
+	err = containers.Stop(ctx, cID, stopOpts)
 	if err != nil {
 		return err
 	}
