@@ -30,7 +30,7 @@ func (c *CLab) StartNodes(ctx context.Context, nodeNames []string) error {
 				return err
 			}
 
-			status := n.GetRuntime().GetContainerStatus(ctx, n.Config().LongName)
+			status := n.GetContainerStatus(ctx)
 			switch status {
 			case clabruntime.Running:
 				log.Debugf("node %q already running, skipping", nodeName)

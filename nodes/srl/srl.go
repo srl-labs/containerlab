@@ -363,6 +363,46 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 	return n.generateCheckpoint(ctx)
 }
 
+func (n *srl) ParkEndpoints(ctx context.Context) error {
+	if err := n.DefaultNode.ParkEndpoints(ctx); err != nil {
+		return err
+	}
+
+	n.cleanupNamedNetns(ctx)
+
+	return nil
+}
+
+func (n *srl) cleanupNamedNetns(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	cmd := `if [ -d /run/netns ]; then ` +
+		`awk '$5 ~ "^/run/netns/" {print $5}' /proc/self/mountinfo 2>/dev/null | ` +
+		`while IFS= read -r mp; do ` +
+		`umount -l "$mp" 2>/dev/null || true; ` +
+		`rm -f "$mp" 2>/dev/null || true; ` +
+		`done; ` +
+		`for f in /run/netns/*; do [ -e "$f" ] || break; rm -f "$f" 2>/dev/null || true; done; ` +
+		`fi`
+
+	execCmd := clabexec.NewExecCmdFromSlice([]string{"sh", "-lc", cmd})
+	if res, err := n.RunExec(ctx, execCmd); err != nil {
+		log.Debugf(
+			"node %q named-netns cleanup skipped/failed: %v",
+			n.Config().ShortName,
+			err,
+		)
+	} else if res != nil && res.ReturnCode != 0 {
+		log.Debugf(
+			"node %q named-netns cleanup returned code %d (stderr: %s)",
+			n.Config().ShortName,
+			res.ReturnCode,
+			res.Stderr,
+		)
+	}
+}
+
 func (n *srl) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 

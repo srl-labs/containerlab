@@ -40,7 +40,7 @@ func (c *CLab) StopNodes(ctx context.Context, nodeNames []string) error {
 				return err
 			}
 
-			status := n.GetRuntime().GetContainerStatus(ctx, n.Config().LongName)
+			status := n.GetContainerStatus(ctx)
 			switch status {
 			case clabruntime.Running:
 				if err := n.Stop(ctx); err != nil {
