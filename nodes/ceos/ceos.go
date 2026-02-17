@@ -99,7 +99,7 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 
 	n.Cfg = cfg
 
-	n.StopSignal = "SIGRTMIN+3"
+	n.StopSignal = clabtypes.SIGRTMIN3
 
 	for _, o := range opts {
 		o(n)

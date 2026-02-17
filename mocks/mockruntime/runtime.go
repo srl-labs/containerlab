@@ -381,7 +381,7 @@ func (mr *MockContainerRuntimeMockRecorder) StartContainer(arg0, arg1, arg2 any)
 }
 
 // StopContainer mocks base method.
-func (m *MockContainerRuntime) StopContainer(ctx context.Context, name, stopSignal string) error {
+func (m *MockContainerRuntime) StopContainer(ctx context.Context, name string, stopSignal types.Signal) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StopContainer", ctx, name, stopSignal)
 	ret0, _ := ret[0].(error)

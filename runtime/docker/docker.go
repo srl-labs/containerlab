@@ -1147,12 +1147,12 @@ func setSysctl(sysctl string, newVal int) error {
 	return os.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0o600)
 }
 
-func (d *DockerRuntime) StopContainer(ctx context.Context, name string, stopSignal string) error {
+func (d *DockerRuntime) StopContainer(ctx context.Context, name string, stopSignal clabtypes.Signal) error {
 	timeout := int(d.config.Timeout.Seconds())
 	stopOpts := container.StopOptions{Timeout: &timeout}
 
 	if stopSignal != "" {
-		stopOpts.Signal = stopSignal
+		stopOpts.Signal = string(stopSignal)
 		log.Debugf("using custom stop signal %q for container %q", stopSignal, name)
 	}
 

@@ -40,7 +40,7 @@ type ContainerRuntime interface {
 	// about the container life-cycle after it was created, e.g. for post-deploy tasks
 	StartContainer(context.Context, string, Node) (any, error)
 	// Stop running container by its name AND signal to use
-	StopContainer(ctx context.Context, name string, stopSignal string) error
+	StopContainer(ctx context.Context, name string, stopSignal clabtypes.Signal) error
 	// Pause a container identified by its name
 	PauseContainer(context.Context, string) error
 	// UnPause / resume a container identified by its name

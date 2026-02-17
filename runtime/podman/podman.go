@@ -255,7 +255,7 @@ func (r *PodmanRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 	return containers.Unpause(ctx, cID, &containers.UnpauseOptions{})
 }
 
-func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string, stopSignal string) error {
+func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string, stopSignal types.Signal) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
