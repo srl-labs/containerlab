@@ -40,6 +40,8 @@ const (
 
 	retryTimer = time.Second
 
+	netnsCleanupTimeout = 10 * time.Second
+
 	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory
 	// config. Default config is a config that adds some basic configuration to the node, such as
 	// tls certs, gnmi/json-rpc, login-banner.
@@ -374,7 +376,7 @@ func (n *srl) ParkEndpoints(ctx context.Context) error {
 }
 
 func (n *srl) cleanupNamedNetns(ctx context.Context) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, netnsCleanupTimeout)
 	defer cancel()
 
 	cmd := `if [ -d /run/netns ]; then ` +
