@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -829,8 +828,8 @@ func (d *DefaultNode) IsHealthy(ctx context.Context) (bool, error) {
 // Lifecycle: Stop / Start
 // ---------------------------------------------------------------------------
 
-// Stop parks dataplane interfaces into a dedicated network namespace and stops the container.
-func (d *DefaultNode) Stop(ctx context.Context) error {
+// ParkEndpoints parks dataplane interfaces into a dedicated network namespace
+func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
 	cfg := d.Config()
 
 	parkName := clabutils.ParkingNetnsName(cfg.LongName)
@@ -839,11 +838,6 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 		return fmt.Errorf("node %q failed creating parking netns: %w", cfg.ShortName, err)
 	}
 	parkingNode := clablinks.NewGenericLinkNode(parkName, parkPath)
-
-	nodeNSPath, err := d.GetNSPath(ctx)
-	if err != nil {
-		return fmt.Errorf("node %q failed getting netns path: %w", cfg.ShortName, err)
-	}
 
 	// Move dataplane interfaces into the parking netns while the container netns is still alive.
 	moved, err := moveEndpoints(
@@ -875,7 +869,73 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 		return fmt.Errorf("node %q failed linking parking netns: %w", cfg.ShortName, err)
 	}
 
-	preStopCleanupNamedNetns(ctx, d)
+	return nil
+}
+
+func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
+	cfg := d.Config()
+
+	parkName := clabutils.ParkingNetnsName(cfg.LongName)
+	parkPath := filepath.Join("/run/netns", parkName)
+	if !clabutils.FileOrDirExists(parkPath) {
+		return fmt.Errorf(
+			"node %q has no parking netns %q; seamless start requires stopping via containerlab",
+			cfg.ShortName,
+			parkName,
+		)
+	}
+	parkingNode := clablinks.NewGenericLinkNode(parkName, parkPath)
+
+	// Reparent endpoints to the parking node so MoveTo knows where to find them.
+	// Stop and Start are separate process invocations, so the in-memory node
+	// reference from Stop does not survive; we restore it here.
+	for _, ep := range d.GetEndpoints() {
+		ep.SetNode(parkingNode)
+	}
+
+	// Move interfaces back into the container netns.
+	moved, err := moveEndpoints(d.GetEndpoints(), func(ep clablinks.Endpoint) error {
+		return ep.MoveTo(ctx, d, nil)
+	})
+	if err != nil {
+		// Attempt rollback to keep the node in a consistent stopped+parked state.
+		_ = rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
+			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
+		})
+		return fmt.Errorf("node %q failed restoring interfaces: %w", cfg.ShortName, err)
+	}
+
+	// Bring restored interfaces up.
+	if err := setEndpointsUp(ctx, moved); err != nil {
+		// Attempt rollback to keep the node in a consistent stopped+parked state.
+		_ = rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
+			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
+		})
+		return fmt.Errorf("node %q failed enabling interfaces: %w", cfg.ShortName, err)
+	}
+
+	// Re-run topology exec commands on lifecycle start to restore node-local interface config
+	// (for example IP addresses added during deploy exec phase).
+	execCollection := clabexec.NewExecCollection()
+	if err := d.RunExecFromConfig(ctx, execCollection); err != nil {
+		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
+	}
+	execCollection.Log()
+
+	return nil
+}
+
+func (d *DefaultNode) Stop(ctx context.Context) error {
+	cfg := d.Config()
+
+	nodeNSPath, err := d.GetNSPath(ctx)
+	if err != nil {
+		return fmt.Errorf("node %q failed getting netns path: %w", cfg.ShortName, err)
+	}
+
+	if err := d.ParkEndpoints(ctx); err != nil {
+		return err
+	}
 
 	if err := d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal); err != nil {
 		// Docker/podman may return an error while the container is already stopped (timeout, API hiccup).
@@ -890,7 +950,7 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 		if linkErr := clabutils.LinkContainerNS(nodeNSPath, cfg.LongName); linkErr != nil {
 			log.Warnf("node %q failed restoring /run/netns symlink after stop error: %v", cfg.ShortName, linkErr)
 		}
-		if rbErr := rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
+		if rbErr := rollbackEndpoints(d.GetEndpoints(), func(ep clablinks.Endpoint) error {
 			return ep.MoveTo(ctx, d, nil)
 		}); rbErr != nil {
 			return fmt.Errorf(
@@ -900,7 +960,7 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 				rbErr,
 			)
 		}
-		_ = setEndpointsUp(ctx, moved)
+		_ = setEndpointsUp(ctx, d.GetEndpoints())
 
 		return fmt.Errorf("node %q failed stopping container: %w", cfg.ShortName, err)
 	}
@@ -921,7 +981,6 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 			parkName,
 		)
 	}
-	parkingNode := clablinks.NewGenericLinkNode(parkName, parkPath)
 
 	if _, err := d.Runtime.StartContainer(ctx, cfg.LongName, d); err != nil {
 		return fmt.Errorf("node %q failed starting container: %w", cfg.ShortName, err)
@@ -934,45 +993,11 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 		return fmt.Errorf("node %q failed getting netns path: %w", cfg.ShortName, err)
 	}
 
-	// Reparent endpoints to the parking node so MoveTo knows where to find them.
-	// Stop and Start are separate process invocations, so the in-memory node
-	// reference from Stop does not survive; we restore it here.
-	for _, ep := range d.GetEndpoints() {
-		ep.SetNode(parkingNode)
-	}
-
-	// Move interfaces back into the container netns.
-	moved, err := moveEndpoints(d.GetEndpoints(), func(ep clablinks.Endpoint) error {
-		return ep.MoveTo(ctx, d, nil)
-	})
-	if err != nil {
-		// Attempt rollback to keep the node in a consistent stopped+parked state.
-		_ = rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
-			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
-		})
+	if err := d.RestoreEndpoints(ctx); err != nil {
 		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
 		_ = d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal)
-		return fmt.Errorf("node %q failed restoring interfaces: %w", cfg.ShortName, err)
+		return err
 	}
-
-	// Bring restored interfaces up.
-	if err := setEndpointsUp(ctx, moved); err != nil {
-		// Attempt rollback to keep the node in a consistent stopped+parked state.
-		_ = rollbackEndpoints(moved, func(ep clablinks.Endpoint) error {
-			return ep.MoveTo(ctx, parkingNode, preMoveSetDownOptions())
-		})
-		_ = clabutils.LinkContainerNS(parkPath, cfg.LongName)
-		_ = d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal)
-		return fmt.Errorf("node %q failed enabling interfaces: %w", cfg.ShortName, err)
-	}
-
-	// Re-run topology exec commands on lifecycle start to restore node-local interface config
-	// (for example IP addresses added during deploy exec phase).
-	execCollection := clabexec.NewExecCollection()
-	if err := d.RunExecFromConfig(ctx, execCollection); err != nil {
-		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
-	}
-	execCollection.Log()
 
 	return nil
 }
@@ -1055,37 +1080,3 @@ func setEndpointsUp(ctx context.Context, endpoints []clablinks.Endpoint) error {
 
 	return nil
 }
-
-func preStopCleanupNamedNetns(ctx context.Context, d *DefaultNode) {
-	// Best-effort cleanup for containers that create named network namespaces under /run/netns.
-	// We lazily unmount active nsfs mounts and remove stale entries to avoid namespace artifacts
-	// breaking subsequent starts.
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	cmd := `if [ -d /run/netns ]; then ` +
-		`awk '$5 ~ "^/run/netns/" {print $5}' /proc/self/mountinfo 2>/dev/null | ` +
-		`while IFS= read -r mp; do ` +
-		`umount -l "$mp" 2>/dev/null || true; ` +
-		`rm -f "$mp" 2>/dev/null || true; ` +
-		`done; ` +
-		`for f in /run/netns/*; do [ -e "$f" ] || break; rm -f "$f" 2>/dev/null || true; done; ` +
-		`fi`
-
-	execCmd := clabexec.NewExecCmdFromSlice([]string{"sh", "-lc", cmd})
-	if res, err := d.RunExec(ctx, execCmd); err != nil {
-		log.Debugf(
-			"node %q generic pre-stop named-netns cleanup skipped/failed: %v",
-			d.Config().ShortName,
-			err,
-		)
-	} else if res != nil && res.ReturnCode != 0 {
-		log.Debugf(
-			"node %q generic pre-stop named-netns cleanup returned code %d (stderr: %s)",
-			d.Config().ShortName,
-			res.ReturnCode,
-			res.Stderr,
-		)
-	}
-}
-
