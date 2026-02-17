@@ -260,14 +260,7 @@ func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string, stopSigna
 	if err != nil {
 		return err
 	}
-
-	stopOpts := new(containers.StopOptions)
-	if stopSignal != "" {
-		log.Debugf("using custom stop signal %q for container %q", stopSignal, name)
-		stopOpts = stopOpts.WithSignal(stopSignal)
-	}
-
-	err = containers.Stop(ctx, cID, stopOpts)
+	err = containers.Stop(ctx, cID, &containers.StopOptions{})
 	if err != nil {
 		return err
 	}
