@@ -209,3 +209,23 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 		assert.Contains(t, cfg, "Welcome to Nokia SR OS")
 	})
 }
+
+func Test_sros_isVSRNode(t *testing.T) {
+	t.Run("env_VSR_1_returns_true", func(t *testing.T) {
+		n := &sros{}
+		n.Cfg = &clabtypes.NodeConfig{
+			Env: map[string]string{envVSR: "1"},
+		}
+		assert.True(t, n.isVSRNode())
+	})
+	t.Run("NodeType_vsr_i_without_env_returns_false", func(t *testing.T) {
+		n := &sros{}
+		n.Cfg = &clabtypes.NodeConfig{NodeType: "vsr-i", Env: map[string]string{}}
+		assert.False(t, n.isVSRNode(), "values.cfg only for VSR image; type vsr-i may use different image")
+	})
+	t.Run("env_VSR_not_1_returns_false", func(t *testing.T) {
+		n := &sros{}
+		n.Cfg = &clabtypes.NodeConfig{Env: map[string]string{envVSR: "0"}}
+		assert.False(t, n.isVSRNode())
+	})
+}

@@ -65,11 +65,13 @@ const (
 	configCf2                    = "config/cf2"
 	configCf1                    = "config/cf1"
 	startupCfgName               = "config.cfg"
+	vsrValuesCfgName             = "values.cfg"
 	tlsKeyFile                   = "node.key"
 	tlsCertFile                  = "node.crt"
 	tlsCertProfileName           = "clab-grpc-certs"
 	envSRSIM                     = "SRSIM"
 	envVSR                       = "VSR"
+	envVSRDeploymentModel        = "VSR_DEPLOYMENT_MODEL"
 	envNokiaSrosSlot             = "NOKIA_SROS_SLOT"
 	envNokiaSrosChassis          = "NOKIA_SROS_CHASSIS"
 	envNokiaSrosSystemBaseMac    = "NOKIA_SROS_SYSTEM_BASE_MAC"
@@ -101,6 +103,9 @@ var (
 
 	//go:embed configs/sar/sar_config_classic.go.tpl
 	cfgTplClassicSar string
+
+	//go:embed configs/vsr_values.go.tpl
+	cfgTplVSRValues string
 
 	kindNames  = []string{"nokia_srsim"}
 	srosSysctl = map[string]string{
@@ -378,7 +383,15 @@ func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 			n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 		}
-		return n.createSROSFiles()
+		if err := n.createSROSFiles(); err != nil {
+			return err
+		}
+		if n.isVSRNode() {
+			if err := n.setupVSRValuesCfg(); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 	return nil
 }
@@ -818,6 +831,13 @@ func (n *sros) cpmSlot() (string, error) {
 
 // Deploy deploys the SR-SIM kind.
 func (n *sros) Deploy(ctx context.Context, deployParams *clabnodes.DeployParams) error {
+	// Regenerate VSR values.cfg now that Endpoints are populated (ResolveLinks has run).
+	if n.isVSRNode() {
+		if err := n.writeVSRValuesCfg(); err != nil {
+			return err
+		}
+	}
+
 	// if it is a chassis with multiple cards (i.e. components)
 	if n.isDistributedBaseNode() {
 		err := n.deployFabric(ctx, deployParams)
@@ -993,6 +1013,17 @@ func (n *sros) createSROSFiles() error {
 	return nil
 }
 
+// setupVSRValuesCfg creates an empty values.cfg under LabDir and adds the bind for /nokia/config/values.cfg.
+// Call from PreDeploy when the image is VSR so the bind is applied when the container is created.
+func (n *sros) setupVSRValuesCfg() error {
+	valuesPath := filepath.Join(n.Cfg.LabDir, vsrValuesCfgName)
+	if err := clabutils.CreateFile(valuesPath, ""); err != nil {
+		return fmt.Errorf("creating VSR values.cfg placeholder: %w", err)
+	}
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprintf("%s:%s", valuesPath, vsrValuesCfgContainerPath))
+	return nil
+}
+
 // Func that Places the Certificates in the right place and format.
 func (n *sros) createSROSCertificates() error {
 	if *n.Cfg.Certificate.Issue {
@@ -1058,6 +1089,107 @@ func (n *sros) createSROSConfigFiles() error {
 	}
 
 	return n.GenerateConfig(cf3CfgFile, startupConfig)
+}
+
+// vsrValuesCfgContainerPath is the path where values.cfg must appear inside the container.
+const vsrValuesCfgContainerPath = "/nokia/config/values.cfg"
+
+// writeVSRValuesCfg renders the embedded vsr_values template and writes values.cfg under the node LabDir.
+// The empty file and bind are created in PreDeploy; this is called once from Deploy when Endpoints are populated.
+func (n *sros) writeVSRValuesCfg() error {
+	data := n.buildVSRValuesTemplateData()
+
+	tpl, err := template.New("vsr_values").Parse(cfgTplVSRValues)
+	if err != nil {
+		return fmt.Errorf("parsing VSR values template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, data); err != nil {
+		return fmt.Errorf("executing VSR values template: %w", err)
+	}
+
+	valuesPath := filepath.Join(n.Cfg.LabDir, vsrValuesCfgName)
+	if err := clabutils.CreateFile(valuesPath, buf.String()); err != nil {
+		return fmt.Errorf("writing VSR values.cfg: %w", err)
+	}
+	log.Debug("Generated VSR values.cfg", "node", n.Cfg.ShortName, "path", valuesPath, "containerPath", vsrValuesCfgContainerPath)
+	return nil
+}
+
+// buildVSRValuesTemplateData builds template data for values.cfg from node config and endpoints.
+func (n *sros) buildVSRValuesTemplateData() *vsrValuesTemplateData {
+	// Interfaces: endpoint names from node links. Rendered as-is.
+	var interfaces []string
+	for _, e := range n.Endpoints {
+		interfaces = append(interfaces, e.GetIfaceName())
+	}
+	slices.Sort(interfaces)
+
+	// Management is always eth0
+	prefixV4 := n.Cfg.MgmtIPv4PrefixLength
+	if prefixV4 == 0 {
+		prefixV4 = 24
+	}
+	prefixV6 := n.Cfg.MgmtIPv6PrefixLength
+	if prefixV6 == 0 {
+		prefixV6 = 64
+	}
+	mgmtIPv4 := ""
+	if n.Cfg.MgmtIPv4Address != "" {
+		mgmtIPv4 = fmt.Sprintf("%s/%d", n.Cfg.MgmtIPv4Address, prefixV4)
+	}
+	mgmtIPv6 := ""
+	if n.Cfg.MgmtIPv6Address != "" {
+		mgmtIPv6 = fmt.Sprintf("%s/%d", n.Cfg.MgmtIPv6Address, prefixV6)
+	}
+	// Gateway is set on the node after container creation; use runtime mgmt config when building before deploy.
+	nextHop := n.Cfg.MgmtIPv4Gateway
+	if nextHop == "" {
+		nextHop = n.Cfg.MgmtIPv6Gateway
+	}
+	if nextHop == "" && n.Runtime != nil && n.Runtime.Mgmt() != nil {
+		if n.Runtime.Mgmt().IPv4Gw != "" {
+			nextHop = n.Runtime.Mgmt().IPv4Gw
+		}
+		if nextHop == "" && n.Runtime.Mgmt().IPv6Gw != "" {
+			nextHop = n.Runtime.Mgmt().IPv6Gw
+		}
+	}
+
+	// DNS: from node config when set, otherwise env vars; empty means use system DNS.
+	dnsPrimary := ""
+	dnsDomain := ""
+	if n.Cfg.DNS != nil {
+		if len(n.Cfg.DNS.Servers) > 0 {
+			dnsPrimary = n.Cfg.DNS.Servers[0]
+		}
+		if len(n.Cfg.DNS.Search) > 0 {
+			dnsDomain = n.Cfg.DNS.Search[0]
+		}
+	}
+
+	// Base MAC from srosEnv[envNokiaSrosSystemBaseMac] (merged into n.Cfg.Env at init, set by genMac).
+	baseMac := n.Cfg.Env[envNokiaSrosSystemBaseMac]
+
+	deploymentModel := n.Cfg.Env[envVSRDeploymentModel]
+	if deploymentModel == "" {
+		deploymentModel = os.Getenv(envVSRDeploymentModel)
+	}
+	if deploymentModel == "" {
+		deploymentModel = "route-reflector"
+	}
+
+	return &vsrValuesTemplateData{
+		Interfaces:      interfaces,
+		MgmtIPv4:        mgmtIPv4,
+		MgmtIPv6:        mgmtIPv6,
+		NextHop:         nextHop,
+		DNSPrimary:      dnsPrimary,
+		DNSDomain:       dnsDomain,
+		BaseMacAddress:  baseMac,
+		DeploymentModel: deploymentModel,
+	}
 }
 
 // buildStartupConfig returns the full startup config string: either from user file (full config)
@@ -1188,6 +1320,13 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 // isIXRNode returns true if this is an IXR node type (case-insensitive).
 func (n *sros) isIXRNode() bool {
 	return ixrRegexp.MatchString(n.Cfg.NodeType)
+}
+
+// isVSRNode returns true when the node is running the VSR container image (envVSR is set to "1"
+// by image inspection in PreDeploy). NodeType vsr-i alone is not used: the same type could be
+// deployed with a different image, so values.cfg is only created when the image is actually VSR.
+func (n *sros) isVSRNode() bool {
+	return n.Cfg.Env[envVSR] == "1"
 }
 
 // isSARNode returns true if this is a SAR node type (case-insensitive).
@@ -1772,6 +1911,18 @@ type MgmtIP struct {
 	IPv6        string
 	IPv6pLen    int
 	ContainerID string
+}
+
+// vsrValuesTemplateData is the data passed to the VSR values.cfg template.
+type vsrValuesTemplateData struct {
+	Interfaces      []string // vsr-net0, vsr-net1, ... from node links (excluding eth0)
+	MgmtIPv4        string   // e.g. 192.168.209.52/18
+	MgmtIPv6        string   // e.g. 3023::192.168.209.52/114
+	NextHop         string   // default gateway for mgmt
+	DNSPrimary      string
+	DNSDomain       string
+	BaseMacAddress  string
+	DeploymentModel string
 }
 
 // distNodeMgmtIPs returns both ipv4 and ipv6 management IP address of a
