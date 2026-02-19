@@ -11,12 +11,15 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	goruntime "runtime"
 	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/jsimonetti/rtnetlink/rtnl"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 const (
@@ -166,4 +169,43 @@ func GetRouteForIP(ip net.IP) (*rtnl.Route, error) {
 	r, err := conn.RouteGet(ip)
 
 	return r, err
+}
+
+func CreateNamedNetNS(name string) (string, error) {
+	nsPath := filepath.Join("/run/netns", name)
+
+	goruntime.LockOSThread()
+	defer goruntime.UnlockOSThread()
+
+	currentNS, err := netns.Get()
+	if err != nil {
+		return "", err
+	}
+	defer currentNS.Close()
+
+	defer func() {
+		_ = netns.Set(currentNS)
+	}()
+
+	newNS, err := netns.NewNamed(name)
+	if err != nil {
+		if os.IsExist(err) && FileOrDirExists(nsPath) {
+			return nsPath, nil
+		}
+		return "", err
+	}
+
+	newNS.Close()
+
+	return nsPath, nil
+}
+
+// create a new netns or return the nspath if it exists
+func CreateOrGetNamedNetNS(name string) (string, error) {
+	nsPath := filepath.Join("/run/netns", name)
+	if FileOrDirExists(nsPath) {
+		return nsPath, nil
+	}
+
+	return CreateNamedNetNS(name)
 }
