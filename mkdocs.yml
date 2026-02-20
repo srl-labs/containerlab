@@ -56,6 +56,7 @@ nav:
           - OpenWRT: manual/kinds/openwrt.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
           - Ostinato: manual/kinds/ostinato.md
+          - Spirent TestCenter: manual/kinds/spirent_stc.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
           - F5 BIG-IP VE: manual/kinds/f5_bigipve.md
