@@ -5,17 +5,23 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"runtime"
 
 	"github.com/charmbracelet/log"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var kindNames = []string{"spirent_stc"}
+var (
+	kindNames       = []string{"spirent_stc"}
+	InterfaceRegexp = regexp.MustCompile(`port(?P<port>[1-9])`)
+	InterfaceHelp   = "portX (where X is 1-9)"
+)
 
 const (
 	generateable     = true
@@ -55,6 +61,10 @@ func (n *spirentStc) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOptio
 	}
 
 	n.Cfg.Env = clabutils.MergeStringMaps(env, n.Cfg.Env)
+
+	n.InterfaceRegexp = InterfaceRegexp
+	n.InterfaceHelp = InterfaceHelp
+	n.InterfaceOffset = 0
 
 	// capture_0 is the last process that starts before it's deemed up.
 	n.Cfg.Healthcheck = &clabtypes.HealthcheckConfig{
@@ -136,4 +146,14 @@ func createCgroupV1Files(labDir string) error {
 	}
 
 	return nil
+}
+
+func (n *spirentStc) AddEndpoint(e clablinks.Endpoint) error {
+	endpointName := e.GetIfaceName()
+	if !InterfaceRegexp.MatchString(endpointName) {
+		return fmt.Errorf("%q interface name %q doesn't match %s",
+			n.Cfg.ShortName, endpointName, InterfaceHelp)
+	}
+
+	return n.DefaultNode.AddEndpoint(e)
 }
