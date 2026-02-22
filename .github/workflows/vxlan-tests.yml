@@ -12,7 +12,7 @@ name: vxlan-test
 
 jobs:
   vxlan-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         test-suite:
@@ -62,6 +62,31 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Temporary workaround for ubuntu-24.04 runner image regression:
+      # https://github.com/actions/runner-images/issues/13669
+      - name: Install iproute2 workaround
+        run: |
+          set -euxo pipefail
+          UPSTREAM_VER="6.18.0"
+          PKG_VER="6.18.0-1ubuntu1"
+          BASE_URL="https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/iproute2/${PKG_VER}"
+
+          wget "${BASE_URL}/iproute2_${UPSTREAM_VER}.orig.tar.xz"
+          wget "${BASE_URL}/iproute2_${PKG_VER}.debian.tar.xz"
+          wget "${BASE_URL}/iproute2_${PKG_VER}.dsc"
+
+          sudo sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dh-package-notes libnsl-dev
+          sudo apt-get build-dep -y iproute2
+
+          dpkg-source -x "iproute2_${PKG_VER}.dsc"
+          cd "iproute2-${UPSTREAM_VER}"
+          dpkg-buildpackage -us -uc -b
+          sudo apt-get install -y --no-install-recommends "./../iproute2_${PKG_VER}_amd64.deb"
+
+          ip -Version
 
       - name: Run tests
         run: |
