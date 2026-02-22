@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -172,7 +173,7 @@ func aggregatedEventFromContainerEvent(
 		actorName = attributes["name"]
 	}
 
-	attributes = ensureMgmtIPAttributes(ctx, runtime, attributes, actorFullID, actorName)
+	attributes = ensureContainerAttributes(ctx, runtime, attributes, actorFullID, actorName)
 
 	short := ev.ActorID
 	if short == "" {
@@ -200,7 +201,7 @@ func aggregatedEventFromContainerEvent(
 	}
 }
 
-func ensureMgmtIPAttributes(
+func ensureContainerAttributes(
 	ctx context.Context,
 	runtime clabruntime.ContainerRuntime,
 	attributes map[string]string,
@@ -212,8 +213,9 @@ func ensureMgmtIPAttributes(
 
 	hasIPv4 := attributes != nil && attributes["mgmt_ipv4"] != ""
 	hasIPv6 := attributes != nil && attributes["mgmt_ipv6"] != ""
+	hasPorts := attributes != nil && attributes["ports"] != ""
 
-	if hasIPv4 && hasIPv6 {
+	if hasIPv4 && hasIPv6 && hasPorts {
 		return attributes
 	}
 
@@ -260,6 +262,12 @@ func ensureMgmtIPAttributes(
 	if !hasIPv6 {
 		if ipv6 := container.GetContainerIPv6(); ipv6 != "" && ipv6 != clabconstants.NotApplicable {
 			attributes["mgmt_ipv6"] = ipv6
+		}
+	}
+
+	if !hasPorts {
+		if ports := exposedPortsAttributeValue(container.Ports); ports != "" {
+			attributes["ports"] = ports
 		}
 	}
 
@@ -379,6 +387,10 @@ func aggregatedEventFromContainerSnapshot(
 		attributes["mgmt_ipv6"] = container.GetContainerIPv6()
 	}
 
+	if ports := exposedPortsAttributeValue(container.Ports); ports != "" {
+		attributes["ports"] = ports
+	}
+
 	if len(attributes) == 0 {
 		attributes = nil
 	}
@@ -420,4 +432,86 @@ func isRunningContainer(container *clabruntime.GenericContainer) bool {
 	}
 
 	return strings.EqualFold(container.State, "running")
+}
+
+func exposedPortsAttributeValue(ports []*clabtypes.GenericPortBinding) string {
+	if len(ports) == 0 {
+		return ""
+	}
+
+	sortedPorts := make([]*clabtypes.GenericPortBinding, 0, len(ports))
+	for idx := range ports {
+		if ports[idx] != nil {
+			sortedPorts = append(sortedPorts, ports[idx])
+		}
+	}
+
+	if len(sortedPorts) == 0 {
+		return ""
+	}
+
+	sort.Slice(sortedPorts, func(i, j int) bool {
+		left := sortedPorts[i]
+		right := sortedPorts[j]
+
+		switch {
+		case left.ContainerPort != right.ContainerPort:
+			return left.ContainerPort < right.ContainerPort
+		case left.Protocol != right.Protocol:
+			return left.Protocol < right.Protocol
+		case left.HostPort != right.HostPort:
+			return left.HostPort < right.HostPort
+		default:
+			return left.HostIP < right.HostIP
+		}
+	})
+
+	result := make([]string, 0, len(sortedPorts))
+	for idx := range sortedPorts {
+		formatted := formatExposedPort(sortedPorts[idx])
+		if formatted != "" {
+			result = append(result, formatted)
+		}
+	}
+
+	if len(result) == 0 {
+		return ""
+	}
+
+	return strings.Join(result, ";")
+}
+
+func formatExposedPort(port *clabtypes.GenericPortBinding) string {
+	if port == nil {
+		return ""
+	}
+
+	proto := strings.TrimSpace(strings.ToLower(port.Protocol))
+	protoSuffix := ""
+	if proto != "" {
+		protoSuffix = "/" + proto
+	}
+
+	if port.HostPort > 0 {
+		hostIP := port.HostIP
+		if hostIP == "" {
+			hostIP = "0.0.0.0"
+		}
+
+		if strings.Contains(hostIP, ":") {
+			hostIP = fmt.Sprintf("[%s]", hostIP)
+		}
+
+		if port.ContainerPort > 0 {
+			return fmt.Sprintf("%s:%d%s->%d", hostIP, port.HostPort, protoSuffix, port.ContainerPort)
+		}
+
+		return fmt.Sprintf("%s:%d%s", hostIP, port.HostPort, protoSuffix)
+	}
+
+	if port.ContainerPort <= 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("%d%s", port.ContainerPort, protoSuffix)
 }
