@@ -4,7 +4,7 @@ topology:
   nodes:
     bng1:
       kind: veesix_osvbng
-      image: veesixnetworks/osvbng:v0.1.2
+      image: veesixnetworks/osvbng:v0.3.1
       startup-config: bng1/osvbng.yaml
     corerouter1:
       kind: linux
@@ -12,16 +12,12 @@ topology:
       binds:
         - corerouter1/daemons:/etc/frr/daemons
         - corerouter1/frr.conf:/etc/frr/frr.conf
-    subscriber:
+    subscribers:
       kind: linux
-      image: alpine:latest
-      exec:
-        - ip link add link eth1 name eth1.100 type vlan id 100 protocol 802.1ad
-        - ip link add link eth1.100 name eth1.100.10 type vlan id 10
-        - ip link set eth1.100 up
-        - ip link set eth1.100.10 up
-        - udhcpc -i eth1.100.10 -q
+      image: veesixnetworks/bngblaster:0.9.30
+      binds:
+        - subscribers/config.json:/config/qinq.json
 
   links:
-    - endpoints: ["subscriber:eth1", "bng1:eth1"]
+    - endpoints: ["subscribers:eth1", "bng1:eth1"]
     - endpoints: ["bng1:eth2", "corerouter1:eth1"]

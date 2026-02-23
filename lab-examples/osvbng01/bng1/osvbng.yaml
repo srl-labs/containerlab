@@ -25,42 +25,48 @@ subscriber-groups:
     groups:
         default:
             access-type: ipoe
+            ipv4-profile: default
+            ipv6-profile: default-v6
             vlans:
                 - svlan: "100"
                   cvlan: any
                   interface: loop0
-            address-pools:
-                - name: subscriber-pool
-                  network: 10.255.0.0/16
-                  gateway: 10.255.0.1
-                  dns:
-                    - 10.254.0.10
-                    - 10.254.1.10
-                  priority: 1
-            iana-pool: wan-link-pool
-            pd-pool: subscriber-pd-pool
-            dhcp:
-                auto-generate: true
-                lease-time: "3600"
             aaa-policy: default-policy
+ipv4-profiles:
+    default:
+        gateway: 10.255.0.1
+        dns:
+            - 10.254.0.10
+            - 10.254.1.10
+        pools:
+            - name: subscriber-pool
+              network: 10.255.0.0/16
+              priority: 1
+        dhcp:
+            lease-time: 3600
+ipv6-profiles:
+    default-v6:
+        iana-pools:
+            - name: wan-link-pool
+              network: 2001:db8:0:1::/64
+              range_start: 2001:db8:0:1::1000
+              range_end: 2001:db8:0:1::ffff
+              gateway: 2001:db8:0:1::1
+              preferred_time: 3600
+              valid_time: 7200
+        pd-pools:
+            - name: subscriber-pd-pool
+              network: 2001:db8:100::/40
+              prefix_length: 56
+              preferred_time: 3600
+              valid_time: 7200
+        dns:
+            - 2001:4860:4860::8888
+            - 2001:4860:4860::8844
 dhcp:
     provider: local
 dhcpv6:
     provider: local
-    iana_pools:
-        - name: wan-link-pool
-          network: 2001:db8:0:1::/64
-          range_start: 2001:db8:0:1::1000
-          range_end: 2001:db8:0:1::ffff
-          gateway: 2001:db8:0:1::1
-          preferred_time: 3600
-          valid_time: 7200
-    pd_pools:
-        - name: subscriber-pd-pool
-          network: 2001:db8:100::/40
-          prefix_length: 56
-          preferred_time: 3600
-          valid_time: 7200
     dns_servers:
         - 2001:4860:4860::8888
         - 2001:4860:4860::8844
@@ -80,13 +86,23 @@ plugins:
         allow_all: true
         database_path: /tmp/osvbng.db
 protocols:
-    isis:
+    ospf:
         enabled: true
-        net: "49.0001.0100.0000.0001.00"
-        is-type: level-1
-        metric-style: wide
+        router-id: 10.255.0.1
         log-adjacency-changes: true
-        interfaces:
-            eth2:
-                network: point-to-point
-                circuit-type: level-1
+        areas:
+            "0.0.0.0":
+                interfaces:
+                    eth2:
+                        network: point-to-point
+                    loop0:
+                        passive: true
+    ospf6:
+        enabled: true
+        router-id: 10.255.0.1
+        log-adjacency-changes: true
+        areas:
+            "0.0.0.0":
+                interfaces:
+                    eth2:
+                        network: point-to-point

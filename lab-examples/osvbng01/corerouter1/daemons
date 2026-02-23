@@ -1,10 +1,10 @@
 zebra=yes
 bgpd=no
-ospfd=no
-ospf6d=no
+ospfd=yes
+ospf6d=yes
 ripd=no
 ripngd=no
-isisd=yes
+isisd=no
 pimd=no
 ldpd=no
 nhrpd=no
@@ -17,5 +17,6 @@ bfdd=no
 fabricd=no
 
 vtysh_enable=yes
-zebra_options=" -s 90000000 --daemon -A 127.0.0.1"
-isisd_options="  --daemon -A 127.0.0.1"
+zebra_options="  -A 127.0.0.1"
+ospfd_options="  -A 127.0.0.1"
+ospf6d_options=" -A ::1"
