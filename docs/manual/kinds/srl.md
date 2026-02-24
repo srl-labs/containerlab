@@ -171,13 +171,15 @@ The breakout interfaces will have the mapped Linux interface name `eX-Y-Z` where
 
 For SR Linux nodes [`type`](../nodes.md#type) defines the hardware variant that this node will emulate.
 
+The Nokia 7215 IXS model range consists of `ixs-a1` platform.
+
 The available Nokia 7220 IXR models support the following types: `ixr-d1`, `ixr-d2`, `ixr-d3`, `ixr-d2l`, `ixr-d3l`, `ixr-d4`, `ixr-d5`, `ixr-h2`, `ixr-h3`, `ixr-h4`, `ixr-h4-32d`,`ixr-h5-32d`, `ixr-h5-64d`,`ixr-h5-64o`.
 
 Nokia 7250 IXR chassis-based systems have types `ixr-6e`, `ixr-10e`, `ixr-18e`, `ixr-x1b` and `ixr-x3b`. The chassis-based systems require a license file. Check with your Nokia representative for eligibility.
 
 Nokia 7730 SXR routers have types `sxr-1x-44s` and `sxr-1d-32d`. SXR platforms requires a license file.
 
-If type is not set in the clab file `ixr-d2l` value will be used by containerlab.
+If the type is not set in the clab file, the `ixr-d2l` type will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.
 
