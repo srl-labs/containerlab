@@ -79,6 +79,14 @@ func Stream(ctx context.Context, opts Options) error {
 	go forwardRuntimeEvents(ctx, runtime, registry, runtimeEvents, runtimeErrs, eventCh, errCh)
 
 	runtimeErrors := errCh
+	var trafficErrors <-chan error
+
+	if opts.IncludeTrafficTypes {
+		trafficErrors, err = startTrafficCollector(ctx, eventCh, opts.TrafficInterval, containers)
+		if err != nil {
+			return err
+		}
+	}
 
 	for {
 		select {
@@ -89,6 +97,16 @@ func Stream(ctx context.Context, opts Options) error {
 		case err, ok := <-runtimeErrors:
 			if !ok {
 				runtimeErrors = nil
+
+				continue
+			}
+
+			if err != nil && !errors.Is(err, context.Canceled) {
+				return err
+			}
+		case err, ok := <-trafficErrors:
+			if !ok {
+				trafficErrors = nil
 
 				continue
 			}

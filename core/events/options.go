@@ -14,6 +14,8 @@ type Options struct {
 	IncludeInitialState   bool
 	IncludeInterfaceStats bool
 	StatsInterval         time.Duration
+	IncludeTrafficTypes   bool
+	TrafficInterval       time.Duration
 	ClabOptions           []clabcore.ClabOption
 	Writer                io.Writer
 }

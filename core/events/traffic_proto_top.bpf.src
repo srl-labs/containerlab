@@ -1,0 +1,257 @@
+#include <linux/bpf.h>
+#include <linux/if_ether.h>
+#include <linux/in.h>
+#include <linux/ip.h>
+#include <linux/ipv6.h>
+#include <linux/pkt_cls.h>
+#include <linux/tcp.h>
+#include <linux/udp.h>
+
+#ifndef __always_inline
+#define __always_inline inline __attribute__((always_inline))
+#endif
+
+#define SEC(name) __attribute__((section(name), used))
+
+#ifndef __uint
+#define __uint(name, val) int (*name)[val]
+#endif
+
+#ifndef __type
+#define __type(name, val) val *name
+#endif
+
+#ifndef bpf_ntohs
+#define bpf_ntohs(x) __builtin_bswap16(x)
+#endif
+
+static void *(*bpf_map_lookup_elem)(void *map, const void *key) = (void *)BPF_FUNC_map_lookup_elem;
+static long (*bpf_map_update_elem)(void *map, const void *key, const void *value, __u64 flags) =
+    (void *)BPF_FUNC_map_update_elem;
+
+enum bucket_type {
+  BUCKET_IPV4 = 1,
+  BUCKET_IPV6 = 2,
+  BUCKET_ARP = 3,
+  BUCKET_ICMP = 4,
+  BUCKET_ICMPV6 = 5,
+  BUCKET_TCP = 6,
+  BUCKET_UDP = 7,
+  BUCKET_BGP = 8,
+  BUCKET_STP = 9,
+  BUCKET_LLDP = 10,
+  BUCKET_OTHER_L2 = 11
+};
+
+struct proto_key {
+  __u32 ifindex;
+  __u8 direction;
+  __u8 bucket;
+  __u16 port;
+};
+
+struct proto_value {
+  __u64 packets;
+  __u64 bytes;
+};
+
+struct vlan_hdr_local {
+  __be16 h_vlan_TCI;
+  __be16 h_vlan_encapsulated_proto;
+};
+
+struct {
+  __uint(type, BPF_MAP_TYPE_LRU_HASH);
+  __uint(max_entries, 262144);
+  __type(key, struct proto_key);
+  __type(value, struct proto_value);
+} proto_counters SEC(".maps");
+
+static __always_inline void count_bucket(struct __sk_buff *skb, __u8 direction, __u8 bucket, __u16 port) {
+  struct proto_key key = {
+      .ifindex = skb->ifindex,
+      .direction = direction,
+      .bucket = bucket,
+      .port = port,
+  };
+
+  struct proto_value *val = bpf_map_lookup_elem(&proto_counters, &key);
+  if (!val) {
+    struct proto_value init = {
+        .packets = 1,
+        .bytes = (__u64)skb->len,
+    };
+    bpf_map_update_elem(&proto_counters, &key, &init, BPF_ANY);
+    return;
+  }
+
+  __sync_fetch_and_add(&val->packets, 1);
+  __sync_fetch_and_add(&val->bytes, (__u64)skb->len);
+}
+
+static __always_inline __u16 pick_service_port(__u16 sport, __u16 dport, __u8 is_tcp) {
+  if (sport == 179 || dport == 179) {
+    return 179;
+  }
+  if (is_tcp && (sport == 646 || dport == 646)) {
+    return 646;
+  }
+  if (!is_tcp && (sport == 3784 || dport == 3784)) {
+    return 3784;
+  }
+  if (!is_tcp && (sport == 3785 || dport == 3785)) {
+    return 3785;
+  }
+  if (sport <= 1024 && dport > 1024) {
+    return sport;
+  }
+  if (dport <= 1024 && sport > 1024) {
+    return dport;
+  }
+  if (sport <= 1024 && dport <= 1024) {
+    return sport < dport ? sport : dport;
+  }
+  return 0;
+}
+
+static __always_inline int parse_and_count(struct __sk_buff *skb, __u8 direction) {
+  void *data = (void *)(long)skb->data;
+  void *data_end = (void *)(long)skb->data_end;
+  struct ethhdr *eth = data;
+  __u16 proto;
+  __u64 nhoff = sizeof(*eth);
+
+  if ((void *)(eth + 1) > data_end) {
+    return TC_ACT_OK;
+  }
+
+  proto = bpf_ntohs(eth->h_proto);
+
+  if (eth->h_dest[0] == 0x01 && eth->h_dest[1] == 0x80 && eth->h_dest[2] == 0xc2 &&
+      eth->h_dest[3] == 0x00 && eth->h_dest[4] == 0x00 && eth->h_dest[5] == 0x00 &&
+      proto <= 1500) {
+    count_bucket(skb, direction, BUCKET_STP, 0);
+    return TC_ACT_OK;
+  }
+
+  if (proto == ETH_P_8021Q || proto == ETH_P_8021AD) {
+    struct vlan_hdr_local *vh = data + nhoff;
+    if ((void *)(vh + 1) > data_end) {
+      return TC_ACT_OK;
+    }
+    proto = bpf_ntohs(vh->h_vlan_encapsulated_proto);
+    nhoff += sizeof(*vh);
+  }
+
+  if (proto == ETH_P_LLDP) {
+    count_bucket(skb, direction, BUCKET_LLDP, 0);
+    return TC_ACT_OK;
+  }
+
+  if (proto == ETH_P_ARP) {
+    count_bucket(skb, direction, BUCKET_ARP, 0);
+    return TC_ACT_OK;
+  }
+
+  if (proto == ETH_P_IP) {
+    struct iphdr *iph = data + nhoff;
+    count_bucket(skb, direction, BUCKET_IPV4, 0);
+    if ((void *)(iph + 1) > data_end) {
+      return TC_ACT_OK;
+    }
+    nhoff += (__u64)iph->ihl * 4;
+    if (nhoff > (__u64)(data_end - data)) {
+      return TC_ACT_OK;
+    }
+
+    if (iph->protocol == IPPROTO_ICMP) {
+      count_bucket(skb, direction, BUCKET_ICMP, 0);
+      return TC_ACT_OK;
+    }
+    if (iph->protocol == IPPROTO_TCP) {
+      struct tcphdr *tcph = data + nhoff;
+      __u16 sport, dport, p;
+      if ((void *)(tcph + 1) > data_end) {
+        return TC_ACT_OK;
+      }
+      sport = bpf_ntohs(tcph->source);
+      dport = bpf_ntohs(tcph->dest);
+      p = pick_service_port(sport, dport, 1);
+      if (p > 0) {
+        count_bucket(skb, direction, BUCKET_TCP, p);
+      }
+      return TC_ACT_OK;
+    }
+    if (iph->protocol == IPPROTO_UDP) {
+      struct udphdr *udph = data + nhoff;
+      __u16 sport, dport, p;
+      if ((void *)(udph + 1) > data_end) {
+        return TC_ACT_OK;
+      }
+      sport = bpf_ntohs(udph->source);
+      dport = bpf_ntohs(udph->dest);
+      p = pick_service_port(sport, dport, 0);
+      if (p > 0) {
+        count_bucket(skb, direction, BUCKET_UDP, p);
+      }
+      return TC_ACT_OK;
+    }
+    return TC_ACT_OK;
+  }
+
+  if (proto == ETH_P_IPV6) {
+    struct ipv6hdr *ip6h = data + nhoff;
+    count_bucket(skb, direction, BUCKET_IPV6, 0);
+    if ((void *)(ip6h + 1) > data_end) {
+      return TC_ACT_OK;
+    }
+    if (ip6h->nexthdr == IPPROTO_ICMPV6) {
+      count_bucket(skb, direction, BUCKET_ICMPV6, 0);
+      return TC_ACT_OK;
+    }
+    if (ip6h->nexthdr == IPPROTO_TCP) {
+      struct tcphdr *tcph = (void *)(ip6h + 1);
+      __u16 sport, dport, p;
+      if ((void *)(tcph + 1) > data_end) {
+        return TC_ACT_OK;
+      }
+      sport = bpf_ntohs(tcph->source);
+      dport = bpf_ntohs(tcph->dest);
+      p = pick_service_port(sport, dport, 1);
+      if (p > 0) {
+        count_bucket(skb, direction, BUCKET_TCP, p);
+      }
+      return TC_ACT_OK;
+    }
+    if (ip6h->nexthdr == IPPROTO_UDP) {
+      struct udphdr *udph = (void *)(ip6h + 1);
+      __u16 sport, dport, p;
+      if ((void *)(udph + 1) > data_end) {
+        return TC_ACT_OK;
+      }
+      sport = bpf_ntohs(udph->source);
+      dport = bpf_ntohs(udph->dest);
+      p = pick_service_port(sport, dport, 0);
+      if (p > 0) {
+        count_bucket(skb, direction, BUCKET_UDP, p);
+      }
+      return TC_ACT_OK;
+    }
+    return TC_ACT_OK;
+  }
+
+  count_bucket(skb, direction, BUCKET_OTHER_L2, 0);
+  return TC_ACT_OK;
+}
+
+SEC("tc")
+int ingress_prog(struct __sk_buff *skb) {
+  return parse_and_count(skb, 0);
+}
+
+SEC("tc")
+int egress_prog(struct __sk_buff *skb) {
+  return parse_and_count(skb, 1);
+}
+
+char _license[] SEC("license") = "GPL";
