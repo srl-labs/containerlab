@@ -167,6 +167,10 @@ var topologyTestSet = map[string]struct {
 					"x:z",
 					"m:n", // overridden by node
 				},
+				Volumes: []string{
+					"default-vol:/app/default",
+					"shared-vol:/app/shared", // overriden by node
+				},
 			},
 			Kinds: map[string]*NodeDefinition{
 				"nokia_srlinux": {
@@ -184,6 +188,10 @@ var topologyTestSet = map[string]struct {
 					Binds: []string{
 						"a:b",
 						"c:d",
+					},
+					Volumes: []string{
+						"kind-vol:/app/kind",
+						"db-vol:/app/data",
 					},
 					Ports: []string{
 						"80:8080",
@@ -211,6 +219,10 @@ var topologyTestSet = map[string]struct {
 						"e:f",
 						"newm:n",
 					},
+					Volumes: []string{
+						"node-vol:/app/node",
+						"override-vol:/app/shared", // overrides defaults
+					},
 				},
 			},
 		},
@@ -235,6 +247,13 @@ var topologyTestSet = map[string]struct {
 					"c:d",
 					"x:z",
 					"newm:n",
+				},
+				Volumes: []string{
+					"node-vol:/app/node",
+					"kind-vol:/app/kind",
+					"db-vol:/app/data",
+					"default-vol:/app/default",
+					"override-vol:/app/shared",
 				},
 				Ports: []string{
 					"80:8080",
@@ -892,6 +911,20 @@ func TestGetNodeBinds(t *testing.T) {
 				item.want["node1"].Binds,
 				diff,
 			)
+		}
+	}
+}
+
+func TestGetNodeVolumes(t *testing.T) {
+	for _, item := range topologyTestSet {
+		volumes, _ := item.input.GetNodeVolumes("node1")
+
+		// sort the slices so we can compare them
+		slices.Sort(volumes)
+		slices.Sort(item.want["node1"].Volumes)
+
+		if d := cmp.Diff(volumes, item.want["node1"].Volumes); d != "" {
+			t.Fatalf("Volumes resolve failed.\nGot: %q\nWant: %q\nDiff\n%s", volumes, item.want["node1"].Volumes, d)
 		}
 	}
 }

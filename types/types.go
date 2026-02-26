@@ -151,6 +151,8 @@ type NodeConfig struct {
 	Env  map[string]string `json:"env,omitempty"`
 	// Bind mounts strings (src:dest:options).
 	Binds []string `json:"binds,omitempty"`
+	// Volume mounts strings (name:dest:options).
+	Volumes []string `json:"volumes,omitempty"`
 	// Devices to map in the container
 	Devices []string `json:"devices,omitempty"`
 	// Capabilities required by the container (if not run in privileged mode)
