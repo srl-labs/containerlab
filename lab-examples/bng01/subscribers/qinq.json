@@ -1,0 +1,30 @@
+{
+    "interfaces": {
+        "access": [
+            {
+                "interface": "eth1",
+                "type": "ipoe",
+                "vlan-mode": "1:1",
+                "outer-vlan-min": 100,
+                "outer-vlan-max": 100,
+                "inner-vlan-min": 10,
+                "inner-vlan-max": 19
+            }
+        ]
+    },
+    "dhcp": {
+        "enable": true
+    },
+    "ipoe": {
+        "ipv4": true,
+        "ipv6": false
+    },
+    "sessions": {
+        "count": 10,
+        "start-rate": 2
+    },
+    "access-line": {
+        "agent-circuit-id": "eth 0/1/{session-global}:100.{session-global}",
+        "agent-remote-id": "BNG-Blaster-{session-global}"
+    }
+}
