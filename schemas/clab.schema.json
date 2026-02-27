@@ -590,7 +590,7 @@
                                         ]
                                     },
                                     {
-                                        "pattern": "^((lc|cp):\\s)?((cpu|ram|max_nics)=\\d+|slot=[A-Z]|chassis=[^\\s]+|card=.*|\\s)+$"
+                                        "pattern": "^\\s*(?:(?:cp|lc):\\s+)?(?:(?:(?:min_)?(?:cpu|ram|max_nics)=\\d+|slot=[A-Za-z0-9]+|chassis=[^\\s_][^\\s]*|card=[^\\s_][^\\s]*|mda/\\d+=[^\\s]+)(?:\\s+|$))+(?:\\s*___\\s*(?:(?:cp|lc):\\s+)?(?:(?:(?:min_)?(?:cpu|ram|max_nics)=\\d+|slot=[A-Za-z0-9]+|chassis=[^\\s_][^\\s]*|card=[^\\s_][^\\s]*|mda/\\d+=[^\\s]+)(?:\\s+|$))+)*\\s*$"
                                     }
                                 ]
                             }
