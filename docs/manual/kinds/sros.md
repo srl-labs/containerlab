@@ -748,7 +748,7 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license-sros25.txt
-      image: nokia_srsim:25.7.R1
+      image: nokia_srsim:25.10.R2
   nodes:
     sr-sim10:
       kind: nokia_srsim
@@ -802,6 +802,60 @@ listening on mirror0, link-type EN10MB (Ethernet), snapshot length 262144 bytes
 ```
 
 ///
+
+## Network Impairments
+
+Currently the [network impairments](../impairments.md) feature does not work when directly applied to the SR-SIM veth pairs[^11]. If you want to test network impairments in your topology, you can use kinds [bridge](./bridge.md) or [ovs-bridge](./ovs-bridge.md) as intermediate nodes for the links where the impairment needs to be seen. 
+
+/// tab | Topology with bridges
+
+```yaml
+name: "sros"
+topology:
+  kinds:
+    ...
+  nodes:
+    sr-sim10:
+      kind: nokia_srsim
+      type: sr-1 # Implicit default
+    sr-sim11:
+      kind: nokia_srsim
+    # bridges for Impairments:
+    br-link1:
+      kind: bridge
+    br-link2:
+      kind: bridge
+  links:
+    # Data Interfaces
+    - endpoints: ["sr-sim10:1/1/c1/1", "br-link1:br1eth1"]
+    - endpoints: ["br-link1:br1eth2", "sr-sim11:1/1/c1/1"]
+    - endpoints: ["sr-sim10:1/1/c1/2", "br-link2:br2eth1"]
+    - endpoints: ["br-link2:br2eth2", "sr-sim11:1/1/c1/2"] 
+
+```
+
+///
+/// tab | Impairment emulation
+
+```bash
+sudo brctl addbr br-link1
+sudo brctl addbr br-link2
+sudo ip link set br-link1 up
+sudo ip link set br-link2 up
+clab dep -t lab-impairments.clab.yaml
+clab dep -t lab-impairments.clab.yaml 
+## Set 100% loss and delay
+sudo tc qdisc add dev br1eth1  root netem delay 50ms loss 100%
+## Set 50% loss and delay
+sudo tc qdisc replace dev br1eth1  root netem delay 50ms loss 50%
+sudo tc qdisc show dev br1eth1  # Verify
+# Test traffic, e.g., ping across veth
+sudo tc qdisc del dev br1eth1 root  # Cleanup
+```
+
+///
+
+
 
 ## License
 
@@ -898,3 +952,4 @@ The following labs feature Nokia SR OS (SR-SIM) node:
 [^8]: `~` is the home directory of the user that runs containerlab.
 [^9]: If a user wishes to provide a custom startup-config with public keys defined, then they should use key IDs from 1 onwards. This will minimize chances of key ID collision causing containerlab to overwrite user-defined keys.
 [^10]: See Github issue [#2741](https://github.com/srl-labs/containerlab/issues/2741)
+[^11]: See Github issue [#3022](https://github.com/srl-labs/containerlab/issues/3022)

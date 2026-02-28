@@ -441,6 +441,7 @@ type ToolsGoTTYOptions struct {
 
 type ToolsNetemOptions struct {
 	ContainerName string
+	NodeName      string
 	Interface     string
 	Delay         time.Duration
 	Jitter        time.Duration
