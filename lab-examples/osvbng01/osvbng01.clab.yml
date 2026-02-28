@@ -1,0 +1,23 @@
+name: osvbng01
+
+topology:
+  nodes:
+    bng1:
+      kind: veesix_osvbng
+      image: veesixnetworks/osvbng:v0.3.1
+      startup-config: bng1/osvbng.yaml
+    corerouter1:
+      kind: linux
+      image: frrouting/frr:v8.4.1
+      binds:
+        - corerouter1/daemons:/etc/frr/daemons
+        - corerouter1/frr.conf:/etc/frr/frr.conf
+    subscribers:
+      kind: linux
+      image: veesixnetworks/bngblaster:0.9.30
+      binds:
+        - subscribers/config.json:/config/qinq.json
+
+  links:
+    - endpoints: ["subscribers:eth1", "bng1:eth1"]
+    - endpoints: ["bng1:eth2", "corerouter1:eth1"]

@@ -57,6 +57,7 @@ import (
 	clabnodesvr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	clabnodesvr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	clabnodesvr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
+	clabnodesveesix_osvbng "github.com/srl-labs/containerlab/nodes/veesix_osvbng"
 	clabnodesvyosnetworks_vyos "github.com/srl-labs/containerlab/nodes/vyosnetworks_vyos"
 	clabnodesxrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
@@ -117,4 +118,5 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesvyosnetworks_vyos.Register(c.Reg)
 	clabnodescjunosevolved.Register(c.Reg)
 	clabnodesarrcus_arcos.Register(c.Reg)
+	clabnodesveesix_osvbng.Register(c.Reg)
 }

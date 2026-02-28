@@ -63,6 +63,7 @@ nav:
           - 6WIND VSR: manual/kinds/6wind_vsr.md
           - Arrcus ArcOS: manual/kinds/arrcus_arcos.md
           - FD.io VPP: manual/kinds/fdio_vpp.md
+          - v::n osvbng: manual/kinds/veesix_osvbng.md
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
@@ -177,6 +178,7 @@ nav:
       - Cisco ASAv: lab-examples/asav01.md
       - Cisco FTDv: lab-examples/ftdv01.md
       - F5 BIG-IP VE: lab-examples/f5bigipve01.md
+      - v::n osvbng: lab-examples/osvbng01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
