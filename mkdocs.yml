@@ -99,6 +99,9 @@ nav:
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
+      - start: cmd/start.md
+      - stop: cmd/stop.md
+      - restart: cmd/restart.md
       - redeploy: cmd/redeploy.md
       - inspect:
           - cmd/inspect/index.md

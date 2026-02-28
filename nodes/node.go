@@ -112,7 +112,11 @@ type Node interface {
 	SaveConfig(
 		context.Context,
 	) (*SaveConfigResult, error) // SaveConfig saves the nodes configuration to an external file
-	Delete(context.Context) error                // Delete triggers the deletion of this node
+	Delete(context.Context) error // Delete triggers the deletion of this node
+	// Stop parks dataplane interfaces and stops the container.
+	Stop(context.Context) error
+	// Start restarts a stopped container and restores its parked interfaces.
+	Start(context.Context) error
 	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
 	GetRuntime() clabruntime.ContainerRuntime    // GetRuntime returns the nodes assigned runtime
 	GenerateConfig(dst, templ string) error      // Generate the nodes configuration

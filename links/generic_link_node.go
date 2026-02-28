@@ -9,9 +9,27 @@ import (
 )
 
 type GenericLinkNode struct {
-	shortname string
-	endpoints []Endpoint
-	nspath    string
+	shortname    string
+	endpoints    []Endpoint
+	nspath       string
+	endpointType LinkEndpointType
+}
+
+func NewGenericLinkNode(shortname, nspath string) *GenericLinkNode {
+	return NewGenericLinkNodeWithType(shortname, nspath, LinkEndpointTypeVeth)
+}
+
+func NewGenericLinkNodeWithType(
+	shortname string,
+	nspath string,
+	endpointType LinkEndpointType,
+) *GenericLinkNode {
+	return &GenericLinkNode{
+		shortname:    shortname,
+		endpoints:    []Endpoint{},
+		nspath:       nspath,
+		endpointType: endpointType,
+	}
 }
 
 func (g *GenericLinkNode) AddLinkToContainer(
@@ -54,6 +72,10 @@ func (g *GenericLinkNode) GetShortName() string {
 
 func (g *GenericLinkNode) GetEndpoints() []Endpoint {
 	return g.endpoints
+}
+
+func (g *GenericLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return g.endpointType
 }
 
 func (*GenericLinkNode) GetState() clabnodesstate.NodeState {

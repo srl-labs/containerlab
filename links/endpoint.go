@@ -41,11 +41,22 @@ type Endpoint interface {
 	// along
 	// with the A side of the veth link.
 	IsNodeless() bool
-	// Setters for ifaceName and Alias
+	// Setters for ifaceName, Alias and Node
 	SetIfaceName(string)
 	SetIfaceAlias(string)
+	SetNode(Node)
 	// GetVars returns the endpoint-level vars.
 	GetVars() map[string]any
+	// MoveTo moves the endpoint interface from its current node to dst,
+	// updating the endpoint's node reference on success.
+	MoveTo(ctx context.Context, dst Node, opts *MoveOptions) error
+	// SetUp sets the endpoint interface up in its current node namespace.
+	SetUp(context.Context) error
+}
+
+type MoveOptions struct {
+	PreMove  func(netlink.Link) error
+	PostMove func(netlink.Link) error
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -102,6 +113,10 @@ func (e *EndpointGeneric) SetIfaceAlias(ifaceAlias string) {
 	e.IfaceAlias = ifaceAlias
 }
 
+func (e *EndpointGeneric) SetNode(n Node) {
+	e.Node = n
+}
+
 func (e *EndpointGeneric) GetMac() net.HardwareAddr {
 	return e.MAC
 }
@@ -144,6 +159,59 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 			e.GetNode().GetShortName(),
 		)
 		return netlink.LinkDel(brSideEp)
+	})
+}
+
+func (e *EndpointGeneric) MoveTo(
+	ctx context.Context,
+	dst Node,
+	opts *MoveOptions,
+) error {
+	src := e.GetNode()
+
+	err := src.ExecFunction(ctx, func(_ ns.NetNS) error {
+		link, err := e.resolveLink()
+		if err != nil {
+			return err
+		}
+
+		if opts != nil && opts.PreMove != nil {
+			if err := opts.PreMove(link); err != nil {
+				return fmt.Errorf("pre-move hook failed for %s: %w", e.String(), err)
+			}
+		}
+
+		return dst.AddLinkToContainer(ctx, link, func(_ ns.NetNS) error {
+			if opts != nil && opts.PostMove != nil {
+				if err := opts.PostMove(link); err != nil {
+					return fmt.Errorf("post-move hook failed for %s: %w", e.String(), err)
+				}
+			}
+
+			return nil
+		})
+	})
+	if err != nil {
+		return err
+	}
+
+	e.Node = dst
+
+	return nil
+}
+
+func (e *EndpointGeneric) SetUp(ctx context.Context) error {
+	return e.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
+		link, err := e.resolveLink()
+		if err != nil {
+			return err
+		}
+
+		if err := netlink.LinkSetUp(link); err != nil {
+			return fmt.Errorf("failed setting %s up: %w", e.String(), err)
+		}
+
+		return nil
 	})
 }
 
@@ -208,4 +276,39 @@ func CheckEndpointDoesNotExistYet(ctx context.Context, e Endpoint) error {
 			err,
 		)
 	})
+}
+
+// resolveLink locates the netlink.Link for this endpoint by name, alias, or alt-name.
+func (e *EndpointGeneric) resolveLink() (netlink.Link, error) {
+	ifaceName := e.GetIfaceName()
+	if ifaceName != "" {
+		if l, err := netlink.LinkByName(ifaceName); err == nil {
+			return l, nil
+		}
+	}
+
+	links, err := netlink.LinkList()
+	if err != nil {
+		return nil, err
+	}
+
+	wantAlt := SanitizeInterfaceName(e.GetIfaceName())
+	wantAlias := e.GetIfaceAlias()
+	wantAltAlias := ""
+	if wantAlias != "" {
+		wantAltAlias = SanitizeInterfaceName(wantAlias)
+	}
+
+	for _, l := range links {
+		if wantAlias != "" && l.Attrs().Alias == wantAlias {
+			return l, nil
+		}
+		for _, an := range l.Attrs().AltNames {
+			if an == wantAlt || (wantAltAlias != "" && an == wantAltAlias) {
+				return l, nil
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("interface for endpoint %s not found", e.String())
 }

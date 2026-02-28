@@ -14,6 +14,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Signal string
+
+const (
+	SIGTERM   Signal = "SIGTERM"
+	SIGINT    Signal = "SIGINT"
+	SIGKILL   Signal = "SIGKILL"
+	SIGRTMIN3 Signal = "SIGRTMIN+3"
+)
+
 // Link is a struct that contains the information of a link between 2 containers.
 type Link struct {
 	A      *Endpoint

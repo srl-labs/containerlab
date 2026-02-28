@@ -98,6 +98,9 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
+
+	n.StopSignal = clabtypes.SIGRTMIN3
+
 	for _, o := range opts {
 		o(n)
 	}

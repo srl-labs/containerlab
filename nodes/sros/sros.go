@@ -2015,3 +2015,52 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 	)
 	return nil
 }
+
+func (n *sros) GetContainerStatus(ctx context.Context) clabruntime.ContainerStatus {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		return n.DefaultNode.GetContainerStatus(ctx)
+	}
+
+	return n.Runtime.GetContainerStatus(ctx, n.componentNodes[0].Config().LongName)
+}
+
+func (n *sros) Start(ctx context.Context) error {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		return n.DefaultNode.Start(ctx)
+	}
+
+	for _, c := range n.componentNodes {
+		if _, err := n.Runtime.StartContainer(ctx, c.Config().LongName, c); err != nil {
+			return fmt.Errorf("node %q component %q start error: %w",
+				n.Cfg.ShortName, c.Config().ShortName, err)
+		}
+	}
+
+	if err := n.RestoreEndpoints(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (n *sros) Stop(ctx context.Context) error {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		return n.DefaultNode.Stop(ctx)
+	}
+
+	if err := n.ParkEndpoints(ctx); err != nil {
+		return err
+	}
+
+	// stop components in reverse order as 0th ctr is netns owner.
+	// and we don't want to orphan anything.
+	for i := len(n.componentNodes) - 1; i >= 0; i-- {
+		c := n.componentNodes[i]
+		if err := n.Runtime.StopContainer(ctx, c.Config().LongName, n.StopSignal); err != nil {
+			log.Warnf("node %q component %q stop error: %v",
+				n.Cfg.ShortName, c.Config().ShortName, err)
+		}
+	}
+
+	return nil
+}

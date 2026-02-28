@@ -381,17 +381,17 @@ func (mr *MockContainerRuntimeMockRecorder) StartContainer(arg0, arg1, arg2 any)
 }
 
 // StopContainer mocks base method.
-func (m *MockContainerRuntime) StopContainer(arg0 context.Context, arg1 string) error {
+func (m *MockContainerRuntime) StopContainer(ctx context.Context, name string, stopSignal types.Signal) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StopContainer", arg0, arg1)
+	ret := m.ctrl.Call(m, "StopContainer", ctx, name, stopSignal)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StopContainer indicates an expected call of StopContainer.
-func (mr *MockContainerRuntimeMockRecorder) StopContainer(arg0, arg1 any) *gomock.Call {
+func (mr *MockContainerRuntimeMockRecorder) StopContainer(ctx, name, stopSignal any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockContainerRuntime)(nil).StopContainer), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockContainerRuntime)(nil).StopContainer), ctx, name, stopSignal)
 }
 
 // StreamEvents mocks base method.
