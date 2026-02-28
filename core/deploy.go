@@ -145,8 +145,14 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
+	if nodesWg != nil {
+		nodesWg.Wait()
+	}
+
 	// also call deploy on the special nodes endpoints (only host is required for the
-	// vxlan stitched endpoints)
+	// vxlan stitched endpoints).
+	// this must happen after all node workers have finished so that veth pairs created
+	// as part of vxlan-stitch links are already deployed before the stitch TC rules are applied.
 	eps := c.getSpecialLinkNodes()["host"].GetEndpoints()
 	for _, ep := range eps {
 		err = ep.Deploy(ctx)
@@ -155,8 +161,15 @@ func (c *CLab) Deploy( //nolint: funlen
 		}
 	}
 
-	if nodesWg != nil {
-		nodesWg.Wait()
+	// Deploy VxlanStitched links after node workers and host endpoints have finished.
+	// The veth pair is already created by node workers; DeployWithExistingVeth creates
+	// the VxLAN interface and applies the TC stitch rules to bridge them.
+	for _, link := range c.Links {
+		if stitchedLink, ok := link.(*clablinks.VxlanStitched); ok {
+			if err = stitchedLink.DeployWithExistingVeth(ctx); err != nil {
+				log.Warnf("failed deploying vxlan stitched link: %v", err)
+			}
+		}
 	}
 
 	execCollection.Log()

@@ -33,16 +33,27 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 	return vxlanStitched
 }
 
-// DeployWithExistingVeth provisions the stitched vxlan link whilst the
-// veth interface does already exist, hence it is not created as part of this
-// deployment.
+// DeployWithExistingVeth applies the TC stitch rules to bridge the already-existing
+// VxLAN interface and veth interface on the host.
+// Both interfaces are expected to already exist: the vxlan interface is created by
+// the host node endpoint deploy (LinkVxlan.Deploy via EndpointHost.Deploy), and the
+// veth interface is created by the node workers.
 func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
-	return l.internalDeploy(ctx, nil, true)
+	// unidirectionally stitch the vxlan endpoint to the veth endpoint
+	err := stitch(l.vxlanLink.localEndpoint, l.vethStitchEp)
+	if err != nil {
+		return err
+	}
+
+	// unidirectionally stitch the veth endpoint to the vxlan endpoint
+	return stitch(l.vethStitchEp, l.vxlanLink.localEndpoint)
 }
 
 // Deploy provisions the stitched vxlan link with all its underlying sub-links.
+// The veth pair is deployed separately by the node's DeployEndpoints, so we only
+// need to create the VxLAN interface and apply the TC stitch rules here.
 func (l *VxlanStitched) Deploy(ctx context.Context, ep Endpoint) error {
-	return l.internalDeploy(ctx, ep, false)
+	return l.internalDeploy(ctx, ep, true)
 }
 
 func (l *VxlanStitched) internalDeploy(
@@ -140,7 +151,7 @@ func stitch(ep1, ep2 Endpoint) error {
 	// tc filter add dev $SRC_IFACE parent fffff:
 	// protocol all
 	// u32 match u32 0 0
-	// action mirred egress mirror dev $DST_IFACE
+	// action mirred egress redirect dev $DST_IFACE
 	filter := &netlink.U32{
 		FilterAttrs: netlink.FilterAttrs{
 			LinkIndex: netlinkLinks[0].Attrs().Index,
@@ -159,9 +170,9 @@ func stitch(ep1, ep2 Endpoint) error {
 		Actions: []netlink.Action{
 			&netlink.MirredAction{
 				ActionAttrs: netlink.ActionAttrs{
-					Action: netlink.TC_ACT_PIPE,
+					Action: netlink.TC_ACT_STOLEN,
 				},
-				MirredAction: netlink.TCA_EGRESS_MIRROR,
+				MirredAction: netlink.TCA_EGRESS_REDIR,
 				Ifindex:      netlinkLinks[1].Attrs().Index,
 			},
 		},
