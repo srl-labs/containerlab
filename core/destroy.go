@@ -70,6 +70,17 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		}
 	}()
 
+	// If no containers found but we have a topology file provided via CLI,
+	// use that topology file directly. This handles cases where:
+	// - Containers were already removed
+	// - Containers don't have containerlab labels (e.g. node, kind)
+	// - Using --node-filter for nodes that never got deployed
+	if len(topos) == 0 && c.TopoPaths.TopologyFilenameAbsPath() != "" {
+		log.Debug("No containers with topology labels found, using topology file from CLI",
+			"path", c.TopoPaths.TopologyFilenameAbsPath())
+		topos[c.TopoPaths.TopologyFilenameAbsPath()] = c.TopoPaths.TopologyLabDir()
+	}
+
 	if len(topos) == 0 {
 		return nil
 	}
@@ -173,6 +184,11 @@ func (c *CLab) makeCopyForDestroy(
 }
 
 func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
+	// When node-filter is active, never remove the entire lab directory
+	if len(c.nodeFilter) > 0 {
+		return nil
+	}
+
 	if len(topos) == 0 {
 		log.Info("no containerlab containers found")
 
@@ -234,6 +250,20 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	c.deleteNodes(ctx, maxWorkers)
 
+	for _, node := range c.Nodes {
+		err = node.DeleteNetnsSymlink()
+		if err != nil {
+			return fmt.Errorf("error while deleting netns symlinks: %w", err)
+		}
+	}
+
+	// When node-filter is used, skip lab-wide cleanup operations
+	// because other nodes from the same lab are still running and
+	// depend on these shared resources.
+	if len(c.nodeFilter) > 0 {
+		return nil
+	}
+
 	c.deleteToolContainers(ctx)
 
 	log.Info("Removing host entries", "path", "/etc/hosts")
@@ -248,14 +278,6 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	err = c.RemoveSSHConfig(c.TopoPaths)
 	if err != nil {
 		log.Errorf("failed to remove ssh config file: %v", err)
-	}
-
-	// delete container network namespaces symlinks
-	for _, node := range c.Nodes {
-		err = node.DeleteNetnsSymlink()
-		if err != nil {
-			return fmt.Errorf("error while deleting netns symlinks: %w", err)
-		}
 	}
 
 	// delete lab management network
@@ -388,7 +410,7 @@ func cliPromptToDestroyAll(topos map[string]string) error {
 	idx := 1
 
 	for topo, labDir := range topos {
-		sb.WriteString(fmt.Sprintf("  %d. Topology: %s\n     Lab Dir: %s\n", idx, topo, labDir))
+		fmt.Fprintf(&sb, "	%d. Topology: %s\n		 Lab Dir: %s\n", idx, topo, labDir)
 		idx++
 	}
 

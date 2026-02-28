@@ -182,8 +182,6 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 		return nil
 	}
 
-	c.nodeFilter = nodeFilter
-
 	// ensure that the node filter is a subset of the nodes in the topology
 	for _, n := range nodeFilter {
 		if _, ok := c.Config.Topology.Nodes[n]; !ok {
@@ -191,6 +189,13 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 				claberrors.ErrIncorrectInput, n)
 		}
 	}
+
+	// Auto-expand the filter to include nodes that share the network namespace
+	// of a filtered node. Without this, destroying a namespace-owning node (e.g. a CPM)
+	// would orphan its dependents (e.g. line cards) that use network-mode: container:<node>.
+	nodeFilter = c.expandFilterWithNSDependents(nodeFilter)
+
+	c.nodeFilter = nodeFilter
 
 	log.Infof("Applying node filter: %q", nodeFilter)
 
@@ -203,6 +208,48 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 	}
 
 	return nil
+}
+
+// expandFilterWithNSDependents expands the node filter to include nodes that
+// depend on a filtered node's network namespace via network-mode: container:<node>.
+// This prevents orphaning containers when their namespace provider is destroyed.
+func (c *CLab) expandFilterWithNSDependents(nodeFilter []string) []string {
+	// Build a map of namespace provider -> dependent nodes from the full topology.
+	nsDependents := map[string][]string{}
+
+	for name := range c.Config.Topology.Nodes {
+		netMode := c.Config.Topology.GetNodeNetworkMode(name)
+
+		parts := strings.SplitN(netMode, ":", 2) //nolint: mnd
+		if parts[0] != "container" || len(parts) < 2 {
+			continue
+		}
+
+		provider := parts[1]
+		nsDependents[provider] = append(nsDependents[provider], name)
+	}
+
+	// For each filtered node, pull in its namespace dependents (transitively).
+	expanded := make([]string, len(nodeFilter))
+	copy(expanded, nodeFilter)
+
+	queue := make([]string, len(nodeFilter))
+	copy(queue, nodeFilter)
+
+	for len(queue) > 0 {
+		node := queue[0]
+		queue = queue[1:]
+
+		for _, dep := range nsDependents[node] {
+			if !slices.Contains(expanded, dep) {
+				log.Infof("Auto-including node %q in filter (shares network namespace of %q)", dep, node)
+				expanded = append(expanded, dep)
+				queue = append(queue, dep)
+			}
+		}
+	}
+
+	return expanded
 }
 
 // initMgmtNetwork sets management network config.
