@@ -234,18 +234,34 @@ func WithTopologyFromLab(labName string) ClabOption {
 			return fmt.Errorf("could not determine topology file from container labels")
 		}
 
-		// Verify topology file exists and is accessible
+		// If topology file doesn't exist, fall back to using just the lab name.
+		// This allows operations like destroy to work even when the topo file is missing.
 		if !clabutils.FileOrDirExists(topoFile) {
-			return fmt.Errorf(
-				"topology file '%s' referenced by lab '%s' does not exist or is not accessible",
-				topoFile,
-				labName,
-			)
+			log.Debugf("topology file %s not found for lab %s, using lab name only", topoFile, labName)
+			return WithLabNameOnly(labName)(c)
 		}
 
 		log.Debugf("found topology file for lab %s: %s", labName, topoFile)
 
 		return WithTopoPath(topoFile, "")(c)
+	}
+}
+
+// WithLabNameOnly sets the lab name without requiring or loading a topology file.
+// This is useful for destroy operations where we only need the lab name to find
+// and remove containers, without needing the original topology file.
+func WithLabNameOnly(labName string) ClabOption {
+	return func(c *CLab) error {
+		if labName == "" {
+			return fmt.Errorf("lab name is required")
+		}
+
+		c.Config.Name = labName
+
+		log.Debugf("set lab name to %s (without topology file)", labName)
+
+		// Initialize management network with defaults so destroy can work
+		return c.initMgmtNetwork()
 	}
 }
 
