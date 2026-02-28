@@ -39,6 +39,8 @@ The SR OS node kind supports deploying Nokia's SR OS network operating system in
   - Edge case validation
   - Version parsing tests
 
+- During PreDeploy, `chassis_info.json` is read from the node image (`/opt/nokia/chassis_info.json`) and written under the node's lab directory (`n.Cfg.LabDir`) with the same filename.
+
 ## Architecture
 
 ### Node Type Detection
