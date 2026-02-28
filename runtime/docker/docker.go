@@ -149,6 +149,14 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 				log.Errorf("Error parsing MTU value of %q as int", mtu)
 			}
 		}
+
+		// If MTU is still 0 after inspection (e.g. the default bridge network has no
+		// explicit MTU option set), fall back to 1500 to avoid recording MTU=0 in the
+		// Docker network options which results in a non-functional network.
+		if d.mgmt.MTU == 0 {
+			log.Debugf("docker default network MTU not detected, falling back to 1500")
+			d.mgmt.MTU = 1500
+		}
 	}
 
 	// if bridge was not set in the topo file, find out the bridge name
@@ -457,15 +465,28 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 		log.Warnf("failed to enable LLDP on docker bridge: %v", err)
 	}
 
-	log.Debugf("Disabling TX checksum offloading for the %s bridge interface...", d.mgmt.Bridge)
-	err = clabutils.EthtoolTXOff(d.mgmt.Bridge)
-	if err != nil {
-		log.Warnf(
-			"failed to disable TX checksum offloading for the %s bridge interface: %v",
-			d.mgmt.Bridge,
-			err,
-		)
-	}
+	// TODO: consider if that is useful or not later.
+	// Enable nf_call_iptables and nf_call_ip6tables on the management bridge so that
+	// bridged traffic passes through netfilter/conntrack. Without this, per-bridge sysfs
+	// settings (which default to 0 on custom bridges) override the global
+	// net.bridge.bridge-nf-call-iptables sysctl on newer kernels, breaking Docker's
+	// embedded DNS proxy: the masquerade conntrack mapping is not maintained for return
+	// packets, so DNS responses arriving at the container's eth0 are never delivered to
+	// the waiting socket even though they are visible to tcpdump.
+	// for _, knob := range []string{"nf_call_iptables", "nf_call_ip6tables"} {
+	// 	p := "/sys/class/net/" + d.mgmt.Bridge + "/bridge/" + knob
+	// 	if werr := os.WriteFile(p, []byte("1"), 0o640); werr != nil { // skipcq: GO-S2306
+	// 		log.Warnf("failed to set %s on bridge %s: %v", knob, d.mgmt.Bridge, werr)
+	// 	}
+	// }
+
+	// Note: we intentionally do NOT disable TX checksum offloading on the bridge interface
+	// itself. Doing so corrupts UDP/TCP checksums on NAT-forwarded packets (e.g. DNS replies
+	// from external resolvers) because after SNAT de-translation the kernel performs an
+	// incremental checksum update on top of a CHECKSUM_PARTIAL skb, but the bridge can no
+	// longer finalize it. TX checksum offload is disabled on the host-side of each veth
+	// pair instead (see links/link_veth.go), which is sufficient to ensure software
+	// checksum computation for traffic entering containers.
 	err = d.installMgmtNetworkFwdRule()
 	if err != nil {
 		log.Warnf("errors during iptables rules install: %v", err)
