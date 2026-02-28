@@ -33,27 +33,29 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 	return vxlanStitched
 }
 
-// DeployWithExistingVeth applies the TC stitch rules to bridge the already-existing
-// VxLAN interface and veth interface on the host.
-// Both interfaces are expected to already exist: the vxlan interface is created by
-// the host node endpoint deploy (LinkVxlan.Deploy via EndpointHost.Deploy), and the
-// veth interface is created by the node workers.
+// DeployWithExistingVeth provisions the stitched vxlan link whilst the
+// veth interface does already exist, hence it is not created as part of this
+// deployment. The VxLAN interface is created and TC stitch rules are applied.
 func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
-	// unidirectionally stitch the vxlan endpoint to the veth endpoint
+	return l.internalDeploy(ctx, nil, true)
+}
+
+// Stitch applies only the TC redirect rules to bridge the already-existing
+// VxLAN and veth interfaces on the host. Both interfaces must already exist.
+// Used during lab deploy where VxLAN is created by host endpoint deploy and
+// veth is created by node workers.
+func (l *VxlanStitched) Stitch() error {
 	err := stitch(l.vxlanLink.localEndpoint, l.vethStitchEp)
 	if err != nil {
 		return err
 	}
 
-	// unidirectionally stitch the veth endpoint to the vxlan endpoint
 	return stitch(l.vethStitchEp, l.vxlanLink.localEndpoint)
 }
 
 // Deploy provisions the stitched vxlan link with all its underlying sub-links.
-// The veth pair is deployed separately by the node's DeployEndpoints, so we only
-// need to create the VxLAN interface and apply the TC stitch rules here.
 func (l *VxlanStitched) Deploy(ctx context.Context, ep Endpoint) error {
-	return l.internalDeploy(ctx, ep, true)
+	return l.internalDeploy(ctx, ep, false)
 }
 
 func (l *VxlanStitched) internalDeploy(

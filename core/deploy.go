@@ -161,13 +161,13 @@ func (c *CLab) Deploy( //nolint: funlen
 		}
 	}
 
-	// Deploy VxlanStitched links after node workers and host endpoints have finished.
-	// The veth pair is already created by node workers; DeployWithExistingVeth creates
-	// the VxLAN interface and applies the TC stitch rules to bridge them.
+	// Stitch VxlanStitched links after node workers and host endpoints have finished.
+	// The veth pair is already created by node workers and the VxLAN interface is created
+	// by host endpoint deploy; Stitch applies the TC redirect rules to bridge them.
 	for _, link := range c.Links {
 		if stitchedLink, ok := link.(*clablinks.VxlanStitched); ok {
-			if err = stitchedLink.DeployWithExistingVeth(ctx); err != nil {
-				log.Warnf("failed deploying vxlan stitched link: %v", err)
+			if err = stitchedLink.Stitch(); err != nil {
+				log.Warnf("failed stitching vxlan link: %v", err)
 			}
 		}
 	}
