@@ -1,0 +1,85 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Minimal linux-only topology for quick vxlan-stitch datapath testing.
+#
+# Intended use-case for vxlan-stitch: two containerlab instances on separate hosts,
+# each stitching a container's veth to a VxLAN tunnel that crosses the underlay.
+# Both containers see a plain Ethernet interface; no VxLAN awareness in the containers.
+#
+# This single-host test simulates the remote VTEP with l2's in-container vxlan0.
+# The host-side VTEP (vx-l1_eth1) lives in the HOST network namespace, so the VxLAN
+# socket is bound to 0.0.0.0 in the host netns. The bridge gateway IP (172.20.30.1)
+# is the only address in the subnet that the host kernel receives locally — packets
+# to container IPs (172.20.30.11, 172.20.30.12) are forwarded into their namespaces.
+# Therefore l2's vxlan0 remote MUST be the host bridge IP (172.20.30.1), not l1's
+# container IP, for the return VxLAN packets to reach the host's vx-l1_eth1.
+#
+# Both pings (l1->l2 and l2->l1) traverse stitch1 only:
+#
+# Packet flow (l1 -> l2):
+#   l1:eth1(10.0.0.1) → veth → host:ve-l1_eth1 → TC redirect → host:vx-l1_eth1
+#   → VxLAN encap (vni=200, dst=172.20.30.12:14792) → l2:vxlan0 → decap → 10.0.0.2
+#
+# Packet flow (l2 -> l1, reply or initiated):
+#   l2:vxlan0 → VxLAN encap (vni=200, dst=172.20.30.1:14792) → host:vx-l1_eth1
+#   → decap → TC redirect → host:ve-l1_eth1 → veth → l1:eth1 → 10.0.0.1
+#
+# Pre-requisite: the mgmt docker network must exist before deploying so that
+# containerlab's ResolveLinks can find the correct route to 172.20.30.12:
+#   docker network create --driver bridge --subnet 172.20.30.0/24 --gateway 172.20.30.1 clab-vxlan-linux
+#
+# Quick test after deploy:
+#   docker exec clab-vxlan-stitch-linux-l1 ping 10.0.0.2 -c 3
+#   docker exec clab-vxlan-stitch-linux-l2 ping 10.0.0.1 -c 3
+name: vxlan-stitch-linux
+
+mgmt:
+  network: clab-vxlan-linux
+  ipv4-subnet: 172.20.30.0/24
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      mgmt-ipv4: 172.20.30.11
+      exec:
+        # eth1 is the stitched interface — assign the data-plane IP here.
+        # The stitch TC-redirects frames between eth1 (inside l1) and vx-l1_eth1 (host).
+        - ip addr add 10.0.0.1/24 dev eth1
+
+    l2:
+      kind: linux
+      image: alpine:3
+      mgmt-ipv4: 172.20.30.12
+      exec:
+        # l2 acts as the remote VTEP for stitch1: create a vxlan0 that decapsulates
+        # frames sent by vx-l1_eth1 (vni=200, port=14792).
+        # remote=172.20.30.1 (host bridge gateway) so that reply frames are sent back
+        # to the host netns where vx-l1_eth1 lives — NOT to the l1 container IP.
+        # Full iproute2 is required: busybox ip does not bind vxlan to the correct listen port.
+        - >
+          ash -c '
+          apk add iproute2 -q &&
+          ip link add name vxlan0 type vxlan id 200 remote 172.20.30.1 dstport 14792 &&
+          ip link set dev vxlan0 up &&
+          ip addr add 10.0.0.2/24 dev vxlan0'
+
+  links:
+    # stitch1: l1:eth1 ↔ host VTEP vx-l1_eth1 (sends VxLAN vni=200 to l2 172.20.30.12:14792)
+    - type: vxlan-stitch
+      endpoint:
+        node: l1
+        interface: eth1
+      remote: 172.20.30.12
+      vni: 200
+      dst-port: 14792
+
+    # stitch2: l2:eth1 ↔ host VTEP vx-l2_eth1 (present to demonstrate two-stitch topology;
+    # the 10.0.0.x ping traffic is carried by stitch1 above)
+    - type: vxlan-stitch
+      endpoint:
+        node: l2
+        interface: eth1
+      remote: 172.20.30.11
+      vni: 199
+      dst-port: 14791
