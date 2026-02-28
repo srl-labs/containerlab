@@ -4,31 +4,31 @@ topology:
   nodes:
     router1:
       kind: linux
-      image: frrouting/frr:v7.5.1
+      image: quay.io/frrouting/frr:master
       binds:
         - router1/daemons:/etc/frr/daemons
         - router1/frr.conf:/etc/frr/frr.conf
     router2:
       kind: linux
-      image: frrouting/frr:v7.5.1
+      image: quay.io/frrouting/frr:master
       binds:
         - router2/daemons:/etc/frr/daemons
         - router2/frr.conf:/etc/frr/frr.conf
     router3:
       kind: linux
-      image: frrouting/frr:v7.5.1
+      image: quay.io/frrouting/frr:master
       binds:
         - router3/daemons:/etc/frr/daemons
         - router3/frr.conf:/etc/frr/frr.conf
     PC1:
       kind: linux
-      image: praqma/network-multitool:latest
+      image: wbitt/network-multitool:latest
     PC2:
       kind: linux
-      image: praqma/network-multitool:latest
+      image: wbitt/network-multitool:latest
     PC3:
       kind: linux
-      image: praqma/network-multitool:latest
+      image: wbitt/network-multitool:latest
 
   links:
     - endpoints: ["router1:eth1", "router2:eth1"]
