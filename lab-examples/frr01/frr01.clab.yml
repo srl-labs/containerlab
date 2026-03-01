@@ -1,35 +1,51 @@
 name: frr01
 
 topology:
-  nodes:
-    router1:
+  groups:
+    routers:
       kind: linux
       image: quay.io/frrouting/frr:10.5.1
+    hosts:
+      kind: linux
+      image: wbitt/network-multitool:3.22.2
+      
+  nodes:
+    router1:
+      group: routers
       binds:
         - router1/daemons:/etc/frr/daemons
         - router1/frr.conf:/etc/frr/frr.conf
     router2:
-      kind: linux
-      image: quay.io/frrouting/frr:10.5.1
+      group: routers
       binds:
         - router2/daemons:/etc/frr/daemons
         - router2/frr.conf:/etc/frr/frr.conf
     router3:
-      kind: linux
-      image: quay.io/frrouting/frr:10.5.1
+      group: routers
       binds:
         - router3/daemons:/etc/frr/daemons
         - router3/frr.conf:/etc/frr/frr.conf
     PC1:
-      kind: linux
-      image: wbitt/network-multitool:3.22.2
+      group: hosts
+      exec:
+        - ip link set eth1 up
+        - ip addr add 192.168.11.2/24 dev eth1
+        - ip route add 192.168.0.0/16 via 192.168.11.1 dev eth1
+        - ip route add 10.10.10.0/24 via 192.168.11.1 dev eth1
     PC2:
-      kind: linux
-      image: wbitt/network-multitool:3.22.2
+      group: hosts
+      exec:
+        - ip link set eth1 up
+        - ip addr add 192.168.12.2/24 dev eth1
+        - ip route add 192.168.0.0/16 via 192.168.12.1 dev eth1
+        - ip route add 10.10.10.0/24 via 192.168.12.1 dev eth1
     PC3:
-      kind: linux
-      image: wbitt/network-multitool:3.22.2
-
+      group: hosts
+      exec:
+        - ip link set eth1 up
+        - ip addr add 192.168.13.2/24 dev eth1
+        - ip route add 192.168.0.0/16 via 192.168.13.1 dev eth1
+        - ip route add 10.10.10.0/24 via 192.168.13.1 dev eth1
   links:
     - endpoints: ["router1:eth1", "router2:eth1"]
     - endpoints: ["router1:eth2", "router3:eth1"]
