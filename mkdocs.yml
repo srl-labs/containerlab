@@ -62,6 +62,7 @@ nav:
           - Palo Alto PAN: manual/kinds/vr-pan.md
           - 6WIND VSR: manual/kinds/6wind_vsr.md
           - Arrcus ArcOS: manual/kinds/arrcus_arcos.md
+          - Code Laboratory BNG: manual/kinds/codelaboratory_bng.md
           - FD.io VPP: manual/kinds/fdio_vpp.md
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
@@ -177,6 +178,7 @@ nav:
       - Cisco ASAv: lab-examples/asav01.md
       - Cisco FTDv: lab-examples/ftdv01.md
       - F5 BIG-IP VE: lab-examples/f5bigipve01.md
+      - Code Laboratory BNG: lab-examples/bng01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md

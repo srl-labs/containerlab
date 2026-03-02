@@ -1,0 +1,12 @@
+# BNG startup configuration for containerlab
+#
+# Flat key=value format where each key matches a CLI flag name (without --).
+# CLI flags take precedence over values in this file.
+
+interface: eth1
+pool-network: 10.0.1.0/24
+pool-gateway: 10.0.1.1
+pool-dns: "8.8.8.8,8.8.4.4"
+lease-time: 3600s
+metrics-addr: ":9090"
+log-level: info

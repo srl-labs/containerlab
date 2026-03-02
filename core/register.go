@@ -15,6 +15,7 @@ import (
 	clabnodescisco_sdwan "github.com/srl-labs/containerlab/nodes/cisco_sdwan"
 	clabnodescisco_vios "github.com/srl-labs/containerlab/nodes/cisco_vios"
 	clabnodescjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
+	clabnodescodelaboratory_bng "github.com/srl-labs/containerlab/nodes/codelaboratory_bng"
 	clabnodescrpd "github.com/srl-labs/containerlab/nodes/crpd"
 	clabnodescvx "github.com/srl-labs/containerlab/nodes/cvx"
 	clabnodesdell_sonic "github.com/srl-labs/containerlab/nodes/dell_sonic"
@@ -117,4 +118,5 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesvyosnetworks_vyos.Register(c.Reg)
 	clabnodescjunosevolved.Register(c.Reg)
 	clabnodesarrcus_arcos.Register(c.Reg)
+	clabnodescodelaboratory_bng.Register(c.Reg)
 }
