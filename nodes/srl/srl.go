@@ -365,11 +365,14 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 	return n.generateCheckpoint(ctx)
 }
 
-// Stop performs SR Linux specific named-netns cleanup and then delegates
-// to the shared node stop flow (park endpoints + stop container).
-func (n *srl) Stop(ctx context.Context) error {
+func (n *srl) ParkEndpoints(ctx context.Context) error {
+	if err := n.DefaultNode.ParkEndpoints(ctx); err != nil {
+		return err
+	}
+
 	n.cleanupNamedNetns(ctx)
-	return n.DefaultNode.Stop(ctx)
+
+	return nil
 }
 
 func (n *srl) cleanupNamedNetns(ctx context.Context) {
