@@ -35,10 +35,23 @@ func (c *CLab) Deploy( //nolint: funlen
 
 	if options.reconfigure {
 		_ = c.destroy(ctx, uint(len(c.Nodes)), true)
-		log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
 
-		if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
-			return nil, err
+		if len(c.nodeFilter) > 0 {
+			// When node-filter is used, only remove the filtered nodes' directories
+			for _, node := range c.Nodes {
+				nodeDir := node.Config().LabDir
+				log.Info("Removing node directory", "path", nodeDir)
+
+				if err := os.RemoveAll(nodeDir); err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			log.Info("Removing directory", "path", c.TopoPaths.TopologyLabDir())
+
+			if err := os.RemoveAll(c.TopoPaths.TopologyLabDir()); err != nil {
+				return nil, err
+			}
 		}
 	}
 
