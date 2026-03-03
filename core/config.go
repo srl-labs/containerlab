@@ -297,6 +297,17 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 
 	nodeCfg.Binds = binds
 
+	// initialize volumes
+	volumes, err := c.Config.Topology.GetNodeVolumes(nodeName)
+	if err != nil {
+		return nil, err
+	}
+	err = c.resolveVolumePaths(volumes, nodeName)
+	if err != nil {
+		return nil, err
+	}
+	nodeCfg.Volumes = volumes
+
 	nodeCfg.PortSet, nodeCfg.PortBindings, err = c.Config.Topology.GetNodePorts(nodeName)
 	if err != nil {
 		return nil, err
@@ -614,12 +625,6 @@ func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 		// host path is a first element in a /hostpath:/remotepath(:options) string
 		elems := strings.Split(binds[i], ":")
 
-		if len(elems) == 1 {
-			// if there is only one element, it means that we have an anonymous
-			// volume, in this case we don't need to resolve the path
-			continue
-		}
-
 		// replace special variables
 		r := c.magicVarReplacer(nodeName)
 		hp := r.Replace(elems[0])
@@ -638,6 +643,32 @@ func (c *CLab) resolveBindPaths(binds []string, nodeName string) error {
 
 		elems[0] = hp
 		binds[i] = strings.Join(elems, ":")
+	}
+
+	return nil
+}
+
+func (c *CLab) resolveVolumePaths(volumes []string, nodeName string) error {
+	// checks are skipped when, for example, the destroy operation is run
+	if !c.checkBindsPaths {
+		return nil
+	}
+
+	for i := range volumes {
+		elems := strings.Split(volumes[i], ":")
+
+		if len(elems) == 1 {
+			// anonymous volume target only
+			continue
+		}
+
+		if len(elems) > 1 {
+			// replace special variables in the volume source
+			r := c.magicVarReplacer(nodeName)
+			new_vol := r.Replace(elems[0])
+			elems[0] = new_vol
+			volumes[i] = strings.Join(elems, ":")
+		}
 	}
 
 	return nil
