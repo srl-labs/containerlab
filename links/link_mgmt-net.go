@@ -107,7 +107,25 @@ var _mgmtBrLinkMgmtBrInstance *mgmtBridgeLinkNode
 // mgmtBridgeLinkNode is a special node that represents the mgmt bridge node
 // that is used when mgmt-net link is defined in the topology.
 type mgmtBridgeLinkNode struct {
-	GenericLinkNode
+	genericLinkNode
+}
+
+func (*mgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeBridge
+}
+
+func (b *mgmtBridgeLinkNode) AddEndpoint(e Endpoint) error {
+	if err := b.validateEndpointOwner(e); err != nil {
+		return err
+	}
+
+	if _, ok := e.(*EndpointBridge); !ok {
+		return fmt.Errorf("endpoint %T is not valid for bridge node %q", e, b.shortname)
+	}
+
+	b.endpoints = append(b.endpoints, e)
+
+	return nil
 }
 
 func (b *mgmtBridgeLinkNode) AddLinkToContainer(
@@ -145,11 +163,10 @@ func getMgmtBrLinkNode() *mgmtBridgeLinkNode {
 		}
 		nspath := currns.Path()
 		_mgmtBrLinkMgmtBrInstance = &mgmtBridgeLinkNode{
-			GenericLinkNode: GenericLinkNode{
-				shortname:    "mgmt-net",
-				endpoints:    []Endpoint{},
-				nspath:       nspath,
-				endpointType: LinkEndpointTypeBridge,
+			genericLinkNode: genericLinkNode{
+				shortname: "mgmt-net",
+				endpoints: []Endpoint{},
+				nspath:    nspath,
 			},
 		}
 	}
@@ -161,6 +178,6 @@ func GetMgmtBrLinkNode() Node { // skipcq: RVV-B0001
 }
 
 func SetMgmtNetUnderlyingBridge(bridge string) error {
-	getMgmtBrLinkNode().GenericLinkNode.shortname = bridge
+	getMgmtBrLinkNode().genericLinkNode.shortname = bridge
 	return nil
 }

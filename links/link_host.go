@@ -99,7 +99,27 @@ var _hostLinkNodeInstance *hostLinkNode
 // hostLinkNode represents a host node which is implicitly used when
 // a host link is defined in the topology file.
 type hostLinkNode struct {
-	GenericLinkNode
+	genericLinkNode
+}
+
+func (*hostLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeHost
+}
+
+func (h *hostLinkNode) AddEndpoint(e Endpoint) error {
+	if err := h.validateEndpointOwner(e); err != nil {
+		return err
+	}
+
+	switch e.(type) {
+	case *EndpointHost, *EndpointMacVlan:
+	default:
+		return fmt.Errorf("endpoint %T is not valid for host node %q", e, h.shortname)
+	}
+
+	h.endpoints = append(h.endpoints, e)
+
+	return nil
 }
 
 // GetHostLinkNode returns the host link node singleton.
@@ -112,11 +132,10 @@ func GetHostLinkNode() Node {
 		nspath := currns.Path()
 
 		_hostLinkNodeInstance = &hostLinkNode{
-			GenericLinkNode: GenericLinkNode{
-				shortname:    "host",
-				endpoints:    []Endpoint{},
-				nspath:       nspath,
-				endpointType: LinkEndpointTypeHost,
+			genericLinkNode: genericLinkNode{
+				shortname: "host",
+				endpoints: []Endpoint{},
+				nspath:    nspath,
 			},
 		}
 	}

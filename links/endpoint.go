@@ -49,14 +49,11 @@ type Endpoint interface {
 	GetVars() map[string]any
 	// MoveTo moves the endpoint interface from its current node to dst,
 	// updating the endpoint's node reference on success.
-	MoveTo(ctx context.Context, dst Node, opts *MoveOptions) error
+	MoveTo(ctx context.Context, dst Node) error
 	// SetUp sets the endpoint interface up in its current node namespace.
 	SetUp(context.Context) error
-}
-
-type MoveOptions struct {
-	PreMove  func(netlink.Link) error
-	PostMove func(netlink.Link) error
+	// SetDown sets the endpoint interface down in its current node namespace.
+	SetDown(context.Context) error
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -165,7 +162,6 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 func (e *EndpointGeneric) MoveTo(
 	ctx context.Context,
 	dst Node,
-	opts *MoveOptions,
 ) error {
 	src := e.GetNode()
 
@@ -175,19 +171,7 @@ func (e *EndpointGeneric) MoveTo(
 			return err
 		}
 
-		if opts != nil && opts.PreMove != nil {
-			if err := opts.PreMove(link); err != nil {
-				return fmt.Errorf("pre-move hook failed for %s: %w", e.String(), err)
-			}
-		}
-
 		return dst.AddLinkToContainer(ctx, link, func(_ ns.NetNS) error {
-			if opts != nil && opts.PostMove != nil {
-				if err := opts.PostMove(link); err != nil {
-					return fmt.Errorf("post-move hook failed for %s: %w", e.String(), err)
-				}
-			}
-
 			return nil
 		})
 	})
@@ -209,6 +193,21 @@ func (e *EndpointGeneric) SetUp(ctx context.Context) error {
 
 		if err := netlink.LinkSetUp(link); err != nil {
 			return fmt.Errorf("failed setting %s up: %w", e.String(), err)
+		}
+
+		return nil
+	})
+}
+
+func (e *EndpointGeneric) SetDown(ctx context.Context) error {
+	return e.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
+		link, err := e.resolveLink()
+		if err != nil {
+			return err
+		}
+
+		if err := netlink.LinkSetDown(link); err != nil {
+			return fmt.Errorf("failed setting %s down: %w", e.String(), err)
 		}
 
 		return nil
