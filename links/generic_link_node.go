@@ -2,37 +2,28 @@ package links
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	"github.com/vishvananda/netlink"
 )
 
-type GenericLinkNode struct {
-	shortname    string
-	endpoints    []Endpoint
-	nspath       string
-	endpointType LinkEndpointType
+type genericLinkNode struct {
+	shortname string
+	endpoints []Endpoint
+	nspath    string
 }
 
-func NewGenericLinkNode(shortname, nspath string) *GenericLinkNode {
-	return NewGenericLinkNodeWithType(shortname, nspath, LinkEndpointTypeVeth)
-}
-
-func NewGenericLinkNodeWithType(
-	shortname string,
-	nspath string,
-	endpointType LinkEndpointType,
-) *GenericLinkNode {
-	return &GenericLinkNode{
-		shortname:    shortname,
-		endpoints:    []Endpoint{},
-		nspath:       nspath,
-		endpointType: endpointType,
+func newGenericLinkNode(shortname, nspath string) *genericLinkNode {
+	return &genericLinkNode{
+		shortname: shortname,
+		endpoints: []Endpoint{},
+		nspath:    nspath,
 	}
 }
 
-func (g *GenericLinkNode) AddLinkToContainer(
+func (g *genericLinkNode) AddLinkToContainer(
 	_ context.Context,
 	link netlink.Link,
 	f func(ns.NetNS) error,
@@ -50,7 +41,7 @@ func (g *GenericLinkNode) AddLinkToContainer(
 	return netns.Do(f)
 }
 
-func (g *GenericLinkNode) ExecFunction(_ context.Context, f func(ns.NetNS) error) error {
+func (g *genericLinkNode) ExecFunction(_ context.Context, f func(ns.NetNS) error) error {
 	// retrieve the namespace handle
 	netns, err := ns.GetNS(g.nspath)
 	if err != nil {
@@ -60,31 +51,42 @@ func (g *GenericLinkNode) ExecFunction(_ context.Context, f func(ns.NetNS) error
 	return netns.Do(f)
 }
 
-func (g *GenericLinkNode) AddEndpoint(e Endpoint) error {
-	g.endpoints = append(g.endpoints, e)
-
-	return nil
+func (g *genericLinkNode) AddEndpoint(e Endpoint) error {
+	return fmt.Errorf("node %q does not support endpoint registration for %T", g.shortname, e)
 }
 
-func (g *GenericLinkNode) GetShortName() string {
+func (g *genericLinkNode) GetShortName() string {
 	return g.shortname
 }
 
-func (g *GenericLinkNode) GetEndpoints() []Endpoint {
+func (g *genericLinkNode) GetEndpoints() []Endpoint {
 	return g.endpoints
 }
 
-func (g *GenericLinkNode) GetLinkEndpointType() LinkEndpointType {
-	return g.endpointType
+func (g *genericLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeVeth
 }
 
-func (*GenericLinkNode) GetState() clabnodesstate.NodeState {
-	// The GenericLinkNode is the basis for Mgmt-Bridge and Host fake node.
+func (g *genericLinkNode) validateEndpointOwner(e Endpoint) error {
+	if e.GetNode().GetShortName() == g.shortname {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"endpoint %q is attached to node %q and cannot be added to %q",
+		e,
+		e.GetNode().GetShortName(),
+		g.shortname,
+	)
+}
+
+func (*genericLinkNode) GetState() clabnodesstate.NodeState {
+	// The genericLinkNode is the basis for Mgmt-Bridge and Host fake node.
 	// Both of these do generally exist. Hence the Deployed state in generally returned
 	return clabnodesstate.Deployed
 }
 
-func (g *GenericLinkNode) Delete(ctx context.Context) error {
+func (g *genericLinkNode) Delete(ctx context.Context) error {
 	for _, e := range g.endpoints {
 		err := e.GetLink().Remove(ctx)
 		if err != nil {

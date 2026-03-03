@@ -217,6 +217,20 @@ func (mr *MockNodeMockRecorder) GenerateConfig(dst, templ any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GenerateConfig", reflect.TypeOf((*MockNode)(nil).GenerateConfig), dst, templ)
 }
 
+// GetContainerName mocks base method.
+func (m *MockNode) GetContainerName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetContainerName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetContainerName indicates an expected call of GetContainerName.
+func (mr *MockNodeMockRecorder) GetContainerName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetContainerName", reflect.TypeOf((*MockNode)(nil).GetContainerName))
+}
+
 // GetContainerStatus mocks base method.
 func (m *MockNode) GetContainerStatus(ctx context.Context) runtime.ContainerStatus {
 	m.ctrl.T.Helper()

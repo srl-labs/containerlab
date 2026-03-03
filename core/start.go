@@ -38,7 +38,7 @@ func (c *CLab) StartNodes(ctx context.Context, nodeNames []string) error {
 			case clabruntime.Stopped:
 				// continue below
 			default:
-				return fmt.Errorf("node %q container %q not found", nodeName, n.Config().LongName)
+				return fmt.Errorf("node %q container %q not found", nodeName, n.GetContainerName())
 			}
 
 			if err := n.Start(ctx); err != nil {

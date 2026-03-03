@@ -28,15 +28,16 @@ func (c *CLab) RestartNodes(ctx context.Context, nodeNames []string) error {
 				return err
 			}
 
-			status := n.GetRuntime().GetContainerStatus(ctx, n.Config().LongName)
-			if status == clabruntime.NotFound {
-				return fmt.Errorf("node %q container %q not found", nodeName, n.Config().LongName)
-			}
-
-			if status == clabruntime.Running {
+			status := n.GetContainerStatus(ctx)
+			switch status {
+			case clabruntime.Running:
 				if err := n.Stop(ctx); err != nil {
 					return err
 				}
+			case clabruntime.Stopped:
+				// already stopped; continue with start below
+			default:
+				return fmt.Errorf("node %q container %q not found", nodeName, n.GetContainerName())
 			}
 
 			// Start/restore is only meaningful when a node is stopped and its interfaces are parked.
