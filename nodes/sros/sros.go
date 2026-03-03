@@ -35,7 +35,6 @@ import (
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
@@ -196,9 +195,16 @@ type sros struct {
 	swVersion      *SrosVersion
 	componentNodes []clabnodes.Node
 
+	// in distributed mode we rename the Cfg.LongName and Cfg.ShortName and Cfg.Fqdn attributes when
+	// deploying. e.g. inspect is either called after deploy or independently. Hence we need to
+	// differentiate if we need to perform the
+	// component cpm based rename or not. This field indicates just that
+	renameDone bool
 	// rootComponents stores the OG components from root node for dist setups
 	// ..allows children of the distributed root node to access root components (ie. for cfg gen)
 	rootComponents []*clabtypes.Component
+	// store the longname with cpm suffix
+	cpmContainerName string
 	// for component nodes, store base nodes
 	baseShortName string
 	baseLongName  string
@@ -695,6 +701,14 @@ func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployP
 		}
 	}
 
+	cpmSlot, err := n.cpmSlot()
+	if err != nil {
+		return err
+	}
+	// store the CPM container name
+	n.cpmContainerName = n.calcComponentName(n.Cfg.LongName, cpmSlot)
+	n.renameDone = true
+
 	// adjust also the mgmt IP addresses of the general node
 	ips, err := n.distNodeMgmtIPs()
 	if err != nil {
@@ -733,9 +747,13 @@ func (n *sros) GetNSPath(ctx context.Context) (string, error) {
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetNSPath(ctx)
 	}
-
-	containerName := n.GetContainerName()
-	nsp, err := n.Runtime.GetNSPath(ctx, containerName)
+	// calculate cpm container name
+	cpmSlot, err := n.cpmSlot()
+	if err != nil {
+		return "", err
+	}
+	cpmContainerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
+	nsp, err := n.Runtime.GetNSPath(ctx, cpmContainerName)
 	if err != nil {
 		log.Errorf("Unable to determine NetNS Path for node %s: %v", n.Cfg.ShortName, err)
 		return "", err
@@ -745,20 +763,17 @@ func (n *sros) GetNSPath(ctx context.Context) (string, error) {
 
 // calcComponentName appends the line card suffix to the given node name.
 func (n *sros) calcComponentName(name, slot string) string {
-	slot = strings.TrimSpace(slot)
-	if slot == "" {
+	if n.renameDone {
 		return name
 	}
-
-	suffix := "-" + strings.ToLower(slot)
-	if strings.HasSuffix(name, suffix) {
-		return name
-	}
-	return name + suffix
+	return fmt.Sprintf("%s-%s", name, strings.ToLower(slot))
 }
 
 // calcComponentFqdn computes the FQDN for a given slot.
 func (n *sros) calcComponentFqdn(slot string) string {
+	if n.renameDone {
+		return n.Cfg.Fqdn
+	}
 	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
 	if fqdnDotIndex < 0 {
 		return fmt.Sprintf("%s-%s", n.Cfg.Fqdn, strings.ToLower(slot))
@@ -1340,7 +1355,12 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetContainers(ctx)
 	}
-	containerName := n.GetContainerName()
+
+	cpmSlot, err := n.cpmSlot()
+	if err != nil {
+		return nil, err
+	}
+	containerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
 
 	cnts, err := n.Runtime.ListContainers(ctx, []*clabtypes.GenericFilter{
 		{
@@ -1381,7 +1401,10 @@ func (n *sros) GetContainers(ctx context.Context) ([]clabruntime.GenericContaine
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
 func (n *sros) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node) error {
-	containerName := n.GetContainerName()
+	containerName := n.Cfg.LongName
+	if n.isDistributedBaseNode() && n.cpmContainerName != "" {
+		containerName = n.cpmContainerName
+	}
 
 	hosts, err := n.Runtime.GetHostsPath(ctx, containerName)
 	if err != nil {
@@ -1940,17 +1963,10 @@ func (n *sros) generateComponentConfig() string {
 
 // override to fetch CPM to avoid renaming the base node to CPM A.
 func (n *sros) GetContainerName() string {
-	if !n.isDistributedBaseNode() {
-		return n.DefaultNode.GetContainerName()
+	if n.isDistributedBaseNode() && n.cpmContainerName != "" {
+		return n.cpmContainerName
 	}
-
-	cpmSlot, err := n.cpmSlot()
-	if err != nil {
-		log.Errorf("node %q invalid distributed CPM config: %v", n.Cfg.ShortName, err)
-		return ""
-	}
-
-	return n.calcComponentName(n.Cfg.LongName, cpmSlot)
+	return n.DefaultNode.GetContainerName()
 }
 
 // MonitorLogs monitors log output from the provided reader during the PostDeploy phase of SRSIM.
@@ -2035,10 +2051,6 @@ func (n *sros) GetContainerStatus(ctx context.Context) clabruntime.ContainerStat
 		return n.DefaultNode.GetContainerStatus(ctx)
 	}
 
-	if len(n.componentNodes) == 0 {
-		return clabruntime.NotFound
-	}
-
 	return n.Runtime.GetContainerStatus(ctx, n.componentNodes[0].Config().LongName)
 }
 
@@ -2047,56 +2059,15 @@ func (n *sros) Start(ctx context.Context) error {
 		return n.DefaultNode.Start(ctx)
 	}
 
-	containerName := n.GetContainerName()
-	if _, err := clablinks.GetParkingNode(containerName); err != nil {
-		return fmt.Errorf("no parking netns found for node %q: %w", n.Cfg.ShortName, err)
-	}
-
-	started := make([]clabnodes.Node, 0, len(n.componentNodes))
-	rollbackStopStarted := func() error {
-		var rollbackErr error
-
-		for i := len(started) - 1; i >= 0; i-- {
-			componentName := started[i].Config().LongName
-			if stopErr := n.Runtime.StopContainer(ctx, componentName, n.StopSignal); stopErr != nil {
-				if n.Runtime.GetContainerStatus(ctx, componentName) != clabruntime.Stopped && rollbackErr == nil {
-					rollbackErr = fmt.Errorf("failed stopping started component %q: %w", started[i].Config().ShortName, stopErr)
-				}
-			}
-		}
-
-		return rollbackErr
-	}
-
 	for _, c := range n.componentNodes {
 		if _, err := n.Runtime.StartContainer(ctx, c.Config().LongName, c); err != nil {
-			if rollbackErr := rollbackStopStarted(); rollbackErr != nil {
-				return fmt.Errorf(
-					"node %q component %q start error: %w (rollback failed: %v)",
-					n.Cfg.ShortName,
-					c.Config().ShortName,
-					err,
-					rollbackErr,
-				)
-			}
-
 			return fmt.Errorf("node %q component %q start error: %w",
 				n.Cfg.ShortName, c.Config().ShortName, err)
 		}
-		started = append(started, c)
 	}
 
 	if err := n.RestoreEndpoints(ctx); err != nil {
-		if rollbackErr := rollbackStopStarted(); rollbackErr != nil {
-			return fmt.Errorf("%w (rollback failed: %v)", err, rollbackErr)
-		}
-
 		return err
-	}
-
-	// Parking namespace is a lifecycle artifact; delete it once the endpoints are restored.
-	if err := clablinks.DeleteParkingNetns(containerName); err != nil {
-		log.Debugf("failed deleting parking netns for container %q: %v", containerName, err)
 	}
 
 	return nil
@@ -2107,82 +2078,18 @@ func (n *sros) Stop(ctx context.Context) error {
 		return n.DefaultNode.Stop(ctx)
 	}
 
-	containerName := n.GetContainerName()
-
 	if err := n.ParkEndpoints(ctx); err != nil {
 		return err
 	}
 
 	// stop components in reverse order as 0th ctr is netns owner.
 	// and we don't want to orphan anything.
-	stopped := make([]clabnodes.Node, 0, len(n.componentNodes))
-	restartStoppedComponents := func() error {
-		var restartErr error
-
-		for j := len(stopped) - 1; j >= 0; j-- {
-			if _, startErr := n.Runtime.StartContainer(ctx, stopped[j].Config().LongName, stopped[j]); startErr != nil {
-				if restartErr == nil {
-					restartErr = fmt.Errorf(
-						"failed starting component %q: %w",
-						stopped[j].Config().ShortName,
-						startErr,
-					)
-				}
-			}
-		}
-
-		return restartErr
-	}
-
 	for i := len(n.componentNodes) - 1; i >= 0; i-- {
 		c := n.componentNodes[i]
 		if err := n.Runtime.StopContainer(ctx, c.Config().LongName, n.StopSignal); err != nil {
-			if n.Runtime.GetContainerStatus(ctx, c.Config().LongName) == clabruntime.Stopped {
-				log.Warnf(
-					"node %q component %q stop returned error but container is stopped: %v",
-					n.Cfg.ShortName, c.Config().ShortName, err,
-				)
-				stopped = append(stopped, c)
-				continue
-			}
-
-			// Roll back to a running node so we don't leave a running SR-SIM without interfaces.
-			var rollbackErrs []string
-
-			if restoreErr := n.RestoreEndpoints(ctx); restoreErr != nil {
-				rollbackErrs = append(rollbackErrs, fmt.Sprintf("failed restoring interfaces: %v", restoreErr))
-			} else {
-				nspath, nsErr := n.GetNSPath(ctx)
-				if nsErr != nil {
-					rollbackErrs = append(rollbackErrs, fmt.Sprintf("failed retrieving netns path: %v", nsErr))
-				} else if linkErr := clabutils.LinkContainerNS(nspath, containerName); linkErr != nil {
-					rollbackErrs = append(rollbackErrs, fmt.Sprintf("failed repointing netns symlink: %v", linkErr))
-				}
-			}
-
-			if restartErr := restartStoppedComponents(); restartErr != nil {
-				rollbackErrs = append(rollbackErrs, restartErr.Error())
-			}
-
-			if len(rollbackErrs) > 0 {
-				return fmt.Errorf(
-					"node %q component %q stop error: %w (rollback failed: %v)",
-					n.Cfg.ShortName,
-					c.Config().ShortName,
-					err,
-					strings.Join(rollbackErrs, "; "),
-				)
-			}
-
-			// Stop failed and rollback succeeded; parking namespace is no longer needed.
-			if delErr := clablinks.DeleteParkingNetns(containerName); delErr != nil {
-				log.Debugf("failed deleting parking netns for container %q: %v", containerName, delErr)
-			}
-
-			return fmt.Errorf("node %q component %q stop error: %w", n.Cfg.ShortName, c.Config().ShortName, err)
+			log.Warnf("node %q component %q stop error: %v",
+				n.Cfg.ShortName, c.Config().ShortName, err)
 		}
-
-		stopped = append(stopped, c)
 	}
 
 	return nil

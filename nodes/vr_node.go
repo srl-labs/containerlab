@@ -149,17 +149,17 @@ func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 // Stop prepares vrnetlab-specific state (qcow alias) and then delegates to
 // DefaultNode.Stop which parks interfaces and stops the container.
 func (vr *VRNode) Stop(ctx context.Context) error {
-	vr.preStopPrepareVrnetlabQcowAlias(ctx)
+	preStopPrepareVrnetlabQcowAlias(ctx, &vr.DefaultNode)
 	return vr.DefaultNode.Stop(ctx)
 }
 
-func (vr *VRNode) preStopPrepareVrnetlabQcowAlias(ctx context.Context) {
-	aliasName, ok := vrnetlabQcowAliasName(vr.Config().Image)
+func preStopPrepareVrnetlabQcowAlias(ctx context.Context, d *DefaultNode) {
+	aliasName, ok := vrnetlabQcowAliasName(d.Config().Image)
 	if !ok {
 		log.Debugf(
 			"node %q pre-stop vrnetlab qcow alias skipped: unable to infer tag from image %q",
-			vr.Config().ShortName,
-			vr.Config().Image,
+			d.Config().ShortName,
+			d.Config().Image,
 		)
 		return
 	}
@@ -195,11 +195,11 @@ func (vr *VRNode) preStopPrepareVrnetlabQcowAlias(ctx context.Context) {
 	)
 
 	execCmd := clabexec.NewExecCmdFromSlice([]string{"sh", "-lc", cmd})
-	res, err := vr.RunExec(ctx, execCmd)
+	res, err := d.RunExec(ctx, execCmd)
 	if err != nil {
 		log.Warnf(
 			"node %q pre-stop vrnetlab qcow alias preparation failed: %v",
-			vr.Config().ShortName,
+			d.Config().ShortName,
 			err,
 		)
 		return
@@ -208,7 +208,7 @@ func (vr *VRNode) preStopPrepareVrnetlabQcowAlias(ctx context.Context) {
 	if res != nil && res.ReturnCode != 0 {
 		log.Warnf(
 			"node %q pre-stop vrnetlab qcow alias prep returned code %d (stderr: %s)",
-			vr.Config().ShortName,
+			d.Config().ShortName,
 			res.ReturnCode,
 			res.Stderr,
 		)

@@ -1,129 +1,109 @@
 package links
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
+	"context"
 	"fmt"
-	"os"
 	"path/filepath"
-	goruntime "runtime"
 
-	"github.com/vishvananda/netns"
+	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
-
-const (
-	parkingNetnsPrefix = "clab-park-"
-	// Be conservative and keep the name comfortably within Linux NAME_MAX (255 bytes).
-	maxParkingNetnsNameLen = 200
-)
-
-func parkingNetnsName(containerName string) string {
-	name := parkingNetnsPrefix + containerName
-	if len(name) <= maxParkingNetnsNameLen {
-		return name
-	}
-
-	sum := sha1.Sum([]byte(containerName))
-	suffix := hex.EncodeToString(sum[:])[:10]
-
-	// leave room for "-" + suffix
-	maxBaseLen := maxParkingNetnsNameLen - 1 - len(suffix)
-	return name[:maxBaseLen] + "-" + suffix
-}
-
-func getOrCreateNamedNetNS(name string) (nsPath string, err error) {
-	nsPath = filepath.Join("/run/netns", name)
-
-	if err := os.MkdirAll(filepath.Dir(nsPath), 0o755); err != nil {
-		return "", err
-	}
-
-	if _, statErr := os.Stat(nsPath); statErr == nil {
-		return nsPath, nil
-	} else if !os.IsNotExist(statErr) {
-		return "", statErr
-	}
-
-	goruntime.LockOSThread()
-	defer goruntime.UnlockOSThread()
-
-	currentNS, err := netns.Get()
-	if err != nil {
-		return "", err
-	}
-	defer currentNS.Close()
-
-	defer func() {
-		if restoreErr := netns.Set(currentNS); restoreErr != nil {
-			if err == nil {
-				err = restoreErr
-				return
-			}
-			err = fmt.Errorf("%w (failed restoring netns: %v)", err, restoreErr)
-		}
-	}()
-
-	newNS, err := netns.NewNamed(name)
-	if err != nil {
-		if os.IsExist(err) {
-			if _, statErr := os.Stat(nsPath); statErr == nil {
-				return nsPath, nil
-			} else if !os.IsNotExist(statErr) {
-				return "", statErr
-			}
-		}
-		return "", err
-	}
-	newNS.Close()
-
-	return nsPath, nil
-}
 
 type ParkingNode struct {
-	*genericLinkNode
+	node          *GenericLinkNode
+	containerName string
 }
 
 func NewParkingNode(containerName string) (*ParkingNode, error) {
-	parkName := parkingNetnsName(containerName)
+	parkName := clabutils.ParkingNetnsName(containerName)
 
-	parkPath, err := getOrCreateNamedNetNS(parkName)
+	parkPath, err := clabutils.CreateOrGetNamedNetNS(parkName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get or create parking netns %q: %w", parkName, err)
+		return nil, fmt.Errorf("failed to get an existing or create a new parking netns %q: %w", parkName, err)
 	}
 
 	return &ParkingNode{
-		genericLinkNode: newGenericLinkNode(parkName, parkPath),
+		node:          NewGenericLinkNode(parkName, parkPath),
+		containerName: containerName,
 	}, nil
 }
 
 func GetParkingNode(containerName string) (*ParkingNode, error) {
-	nsName := parkingNetnsName(containerName)
+	nsName := clabutils.ParkingNetnsName(containerName)
 	nsPath := filepath.Join("/run/netns", nsName)
 
-	if _, err := os.Stat(nsPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("parking netns %q does not exist", nsName)
-		}
-		return nil, err
+	if !clabutils.FileOrDirExists(nsPath) {
+		return nil, fmt.Errorf("parking netns %q does not exist. failed to get parking node.", nsName)
 	}
 
 	return &ParkingNode{
-		genericLinkNode: newGenericLinkNode(nsName, nsPath),
+		node:          NewGenericLinkNode(nsName, nsPath),
+		containerName: containerName,
 	}, nil
 }
 
 func (p *ParkingNode) NSPath() string {
-	return p.nspath
+	return p.node.nspath
 }
 
-// DeleteParkingNetns removes the parking netns created for a container.
-func DeleteParkingNetns(containerName string) error {
-	nsName := parkingNetnsName(containerName)
-	if err := netns.DeleteNamed(nsName); err != nil {
-		if os.IsNotExist(err) {
-			return nil
+func (p *ParkingNode) RepointSymlink() error {
+	return clabutils.LinkContainerNS(p.node.nspath, p.containerName)
+}
+
+// moveBackEndpoints is intended to restore interface if a restoration has errored.
+// ie, move back to parking if restoring parked interfaces back to the ctr failed.
+func (p *ParkingNode) moveBackEndpoints(ctx context.Context, endpoints []Endpoint) {
+	for _, ep := range endpoints {
+		_ = ep.MoveTo(ctx, p.node, nil)
+	}
+	_ = p.RepointSymlink()
+}
+
+func (p *ParkingNode) ParkInterfaces(ctx context.Context, src Node) error {
+	endpoints := src.GetEndpoints()
+	moved := make([]Endpoint, 0, len(endpoints))
+
+	for _, ep := range endpoints {
+		if err := ep.MoveTo(ctx, p.node, &MoveOptions{PreMove: netlink.LinkSetDown}); err != nil {
+			for _, m := range moved {
+				_ = m.MoveTo(ctx, src, nil)
+				_ = m.SetUp(ctx)
+			}
+			return err
 		}
-		return err
+		moved = append(moved, ep)
+	}
+
+	if err := p.RepointSymlink(); err != nil {
+		return fmt.Errorf("failed to repoint symlink for %q: %w", p.containerName, err)
+	}
+
+	return nil
+}
+
+func (p *ParkingNode) RestoreInterfaces(ctx context.Context, dst Node) error {
+	endpoints := dst.GetEndpoints()
+
+	// make sure the ifaces belong to parkingnode
+	for _, ep := range endpoints {
+		ep.SetNode(p.node)
+	}
+
+	moved := make([]Endpoint, 0, len(endpoints))
+
+	for _, ep := range endpoints {
+		// if any failure, move back the moved endpoints.
+		if err := ep.MoveTo(ctx, dst, nil); err != nil {
+			p.moveBackEndpoints(ctx, moved)
+			return err
+		}
+
+		if err := ep.SetUp(ctx); err != nil {
+			p.moveBackEndpoints(ctx, moved)
+			return err
+		}
+
+		moved = append(moved, ep)
 	}
 
 	return nil

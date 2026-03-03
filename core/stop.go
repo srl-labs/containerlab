@@ -49,7 +49,7 @@ func (c *CLab) StopNodes(ctx context.Context, nodeNames []string) error {
 			case clabruntime.Stopped:
 				log.Debugf("node %q already stopped, skipping", nodeName)
 			default:
-				return fmt.Errorf("node %q container %q not found", nodeName, n.GetContainerName())
+				return fmt.Errorf("node %q container %q not found", nodeName, n.Config().LongName)
 			}
 		}
 

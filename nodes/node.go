@@ -90,9 +90,6 @@ type Node interface {
 	GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error)
 	DeleteNetnsSymlink() (err error)
 	Config() *clabtypes.NodeConfig // Config returns the nodes configuration
-	// GetContainerName returns the container identifier used by the runtime.
-	// This may differ from Config().LongName for certain node kinds (for example ext-container).
-	GetContainerName() string
 	// CheckDeploymentConditions checks if node-scoped deployment conditions are met.
 	CheckDeploymentConditions(ctx context.Context) error
 	PreDeploy(ctx context.Context, params *PreDeployParams) error
