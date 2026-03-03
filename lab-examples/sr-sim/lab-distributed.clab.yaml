@@ -7,7 +7,7 @@ topology:
   kinds:
     nokia_srsim:
       license: /opt/nokia/sros/license-sros25.txt
-      image: nokia_srsim:25.7.R1
+      image: nokia_srsim:25.10.R2
   nodes:
     srsim10-a:
       kind: nokia_srsim
