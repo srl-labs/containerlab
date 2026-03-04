@@ -3,14 +3,14 @@ package links
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
+	"github.com/containernetworking/plugins/pkg/ns"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
 type ParkingNode struct {
 	GenericLinkNode
-	containerName string
 }
 
 func NewParkingNode(containerName string) (*ParkingNode, error) {
@@ -27,16 +27,15 @@ func NewParkingNode(containerName string) (*ParkingNode, error) {
 			endpoints: []Endpoint{},
 			nspath:    parkPath,
 		},
-		containerName: containerName,
 	}, nil
 }
 
 func GetParkingNode(containerName string) (*ParkingNode, error) {
 	nsName := clabutils.ParkingNetnsName(containerName)
-	nsPath := filepath.Join("/run/netns", nsName)
 
-	if !clabutils.FileOrDirExists(nsPath) {
-		return nil, fmt.Errorf("parking netns %q does not exist. failed to get parking node.", nsName)
+	nsPath, err := clabutils.GetNamedNetNS(nsName)
+	if err != nil {
+		return nil, err
 	}
 
 	return &ParkingNode{
@@ -45,53 +44,47 @@ func GetParkingNode(containerName string) (*ParkingNode, error) {
 			endpoints: []Endpoint{},
 			nspath:    nsPath,
 		},
-		containerName: containerName,
 	}, nil
 }
-
-func (p *ParkingNode) NSPath() string {
-	return p.nspath
+func (p *ParkingNode) RepointSymlink(containerName string) error {
+	return clabutils.LinkContainerNS(p.nspath, containerName)
 }
 
-func (p *ParkingNode) RepointSymlink() error {
-	return clabutils.LinkContainerNS(p.nspath, p.containerName)
-}
-
-// moveBackEndpoints is intended to restore interface if a restoration has errored.
-// ie, move back to parking if restoring parked interfaces back to the ctr failed.
-func (p *ParkingNode) moveBackEndpoints(ctx context.Context, endpoints []Endpoint) {
-	for _, ep := range endpoints {
-		_ = ep.MoveTo(ctx, p, nil)
-	}
-	_ = p.RepointSymlink()
-}
-
-func (p *ParkingNode) RestoreInterfaces(ctx context.Context, dst Node) error {
-	endpoints := dst.GetEndpoints()
-
-	// make sure the ifaces belong to parkingnode
-	for _, ep := range endpoints {
-		ep.SetNode(p)
-	}
-
-	moved := make([]Endpoint, 0, len(endpoints))
-
-	for _, ep := range endpoints {
-		// if any failure, move back the moved endpoints.
-		if err := ep.MoveTo(ctx, dst, nil); err != nil {
-			p.moveBackEndpoints(ctx, moved)
+// ParkInterface moves an endpoint from the source node into the parking namespace.
+func (p *ParkingNode) ParkInterface(ctx context.Context, src Node, ep Endpoint) error {
+	return src.ExecFunction(ctx, func(_ ns.NetNS) error {
+		link, err := netlink.LinkByName(ep.GetIfaceName())
+		if err != nil {
 			return err
 		}
 
-		if err := ep.SetUp(ctx); err != nil {
-			p.moveBackEndpoints(ctx, moved)
+		if err := netlink.LinkSetDown(link); err != nil {
 			return err
 		}
 
-		moved = append(moved, ep)
-	}
+		return p.AddLinkToContainer(ctx, link, func(_ ns.NetNS) error {
+			return nil
+		})
+	})
+}
 
-	return nil
+// UnparkInterface moves an endpoint from the parking namespace back to the destination node.
+func (p *ParkingNode) UnparkInterface(ctx context.Context, dst Node, ep Endpoint) error {
+	return p.ExecFunction(ctx, func(_ ns.NetNS) error {
+		link, err := netlink.LinkByName(ep.GetIfaceName())
+		if err != nil {
+			return err
+		}
+
+		return dst.AddLinkToContainer(ctx, link, func(_ ns.NetNS) error {
+			l, err := netlink.LinkByName(ep.GetIfaceName())
+			if err != nil {
+				return err
+			}
+
+			return netlink.LinkSetUp(l)
+		})
+	})
 }
 
 func (*ParkingNode) GetLinkEndpointType() LinkEndpointType {
