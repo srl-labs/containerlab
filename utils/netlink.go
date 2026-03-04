@@ -202,10 +202,18 @@ func CreateNamedNetNS(name string) (string, error) {
 
 // create a new netns or return the nspath if it exists
 func CreateOrGetNamedNetNS(name string) (string, error) {
-	nsPath := filepath.Join("/run/netns", name)
-	if FileOrDirExists(nsPath) {
+	if nsPath, err := GetNamedNetNS(name); err == nil {
 		return nsPath, nil
 	}
 
 	return CreateNamedNetNS(name)
+}
+
+func GetNamedNetNS(name string) (string, error) {
+	nsPath := filepath.Join("/run/netns", name)
+	if !FileOrDirExists(nsPath) {
+		return "", fmt.Errorf("named netns %q does not exist", name)
+	}
+
+	return nsPath, nil
 }
