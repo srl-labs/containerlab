@@ -830,8 +830,23 @@ func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
 		return fmt.Errorf("failed for create parking netns for node %q: %w", d.Cfg.ShortName, err)
 	}
 
-	if err := parkingNode.ParkInterfaces(ctx, d); err != nil {
-		return fmt.Errorf("failed to park interfaces for node %q: %w", d.Cfg.ShortName, err)
+	endpoints := d.GetEndpoints()
+	moved := make([]clablinks.Endpoint, 0, len(endpoints))
+
+	for _, ep := range endpoints {
+		if err := ep.MoveTo(ctx, parkingNode, &clablinks.MoveOptions{PreMove: netlink.LinkSetDown}); err != nil {
+			// if failing, move back the eps
+			for _, m := range moved {
+				_ = m.MoveTo(ctx, d, nil)
+				_ = m.SetUp(ctx)
+			}
+			return fmt.Errorf("failed to park interfaces for node %q: %w", d.Cfg.ShortName, err)
+		}
+		moved = append(moved, ep)
+	}
+
+	if err := parkingNode.RepointSymlink(); err != nil {
+		return fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err)
 	}
 
 	return nil

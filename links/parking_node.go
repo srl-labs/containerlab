@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	clabutils "github.com/srl-labs/containerlab/utils"
-	"github.com/vishvananda/netlink"
 )
 
 type ParkingNode struct {
@@ -65,28 +64,6 @@ func (p *ParkingNode) moveBackEndpoints(ctx context.Context, endpoints []Endpoin
 		_ = ep.MoveTo(ctx, p, nil)
 	}
 	_ = p.RepointSymlink()
-}
-
-func (p *ParkingNode) ParkInterfaces(ctx context.Context, src Node) error {
-	endpoints := src.GetEndpoints()
-	moved := make([]Endpoint, 0, len(endpoints))
-
-	for _, ep := range endpoints {
-		if err := ep.MoveTo(ctx, p, &MoveOptions{PreMove: netlink.LinkSetDown}); err != nil {
-			for _, m := range moved {
-				_ = m.MoveTo(ctx, src, nil)
-				_ = m.SetUp(ctx)
-			}
-			return err
-		}
-		moved = append(moved, ep)
-	}
-
-	if err := p.RepointSymlink(); err != nil {
-		return fmt.Errorf("failed to repoint symlink for %q: %w", p.containerName, err)
-	}
-
-	return nil
 }
 
 func (p *ParkingNode) RestoreInterfaces(ctx context.Context, dst Node) error {
