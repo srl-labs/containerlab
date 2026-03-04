@@ -102,6 +102,10 @@ type hostLinkNode struct {
 	GenericLinkNode
 }
 
+func (*hostLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeHost
+}
+
 // GetHostLinkNode returns the host link node singleton.
 func GetHostLinkNode() Node {
 	if _hostLinkNodeInstance == nil {
@@ -113,10 +117,9 @@ func GetHostLinkNode() Node {
 
 		_hostLinkNodeInstance = &hostLinkNode{
 			GenericLinkNode: GenericLinkNode{
-				shortname:    "host",
-				endpoints:    []Endpoint{},
-				nspath:       nspath,
-				endpointType: LinkEndpointTypeHost,
+				shortname: "host",
+				endpoints: []Endpoint{},
+				nspath:    nspath,
 			},
 		}
 	}

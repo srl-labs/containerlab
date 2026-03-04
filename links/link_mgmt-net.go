@@ -110,6 +110,10 @@ type mgmtBridgeLinkNode struct {
 	GenericLinkNode
 }
 
+func (*mgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeBridge
+}
+
 func (b *mgmtBridgeLinkNode) AddLinkToContainer(
 	_ context.Context,
 	link netlink.Link,
@@ -146,10 +150,9 @@ func getMgmtBrLinkNode() *mgmtBridgeLinkNode {
 		nspath := currns.Path()
 		_mgmtBrLinkMgmtBrInstance = &mgmtBridgeLinkNode{
 			GenericLinkNode: GenericLinkNode{
-				shortname:    "mgmt-net",
-				endpoints:    []Endpoint{},
-				nspath:       nspath,
-				endpointType: LinkEndpointTypeBridge,
+				shortname: "mgmt-net",
+				endpoints: []Endpoint{},
+				nspath:    nspath,
 			},
 		}
 	}

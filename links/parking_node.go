@@ -10,7 +10,7 @@ import (
 )
 
 type ParkingNode struct {
-	node          *GenericLinkNode
+	GenericLinkNode
 	containerName string
 }
 
@@ -23,7 +23,11 @@ func NewParkingNode(containerName string) (*ParkingNode, error) {
 	}
 
 	return &ParkingNode{
-		node:          NewGenericLinkNode(parkName, parkPath),
+		GenericLinkNode: GenericLinkNode{
+			shortname: parkName,
+			endpoints: []Endpoint{},
+			nspath:    parkPath,
+		},
 		containerName: containerName,
 	}, nil
 }
@@ -37,24 +41,28 @@ func GetParkingNode(containerName string) (*ParkingNode, error) {
 	}
 
 	return &ParkingNode{
-		node:          NewGenericLinkNode(nsName, nsPath),
+		GenericLinkNode: GenericLinkNode{
+			shortname: nsName,
+			endpoints: []Endpoint{},
+			nspath:    nsPath,
+		},
 		containerName: containerName,
 	}, nil
 }
 
 func (p *ParkingNode) NSPath() string {
-	return p.node.nspath
+	return p.nspath
 }
 
 func (p *ParkingNode) RepointSymlink() error {
-	return clabutils.LinkContainerNS(p.node.nspath, p.containerName)
+	return clabutils.LinkContainerNS(p.nspath, p.containerName)
 }
 
 // moveBackEndpoints is intended to restore interface if a restoration has errored.
 // ie, move back to parking if restoring parked interfaces back to the ctr failed.
 func (p *ParkingNode) moveBackEndpoints(ctx context.Context, endpoints []Endpoint) {
 	for _, ep := range endpoints {
-		_ = ep.MoveTo(ctx, p.node, nil)
+		_ = ep.MoveTo(ctx, p, nil)
 	}
 	_ = p.RepointSymlink()
 }
@@ -64,7 +72,7 @@ func (p *ParkingNode) ParkInterfaces(ctx context.Context, src Node) error {
 	moved := make([]Endpoint, 0, len(endpoints))
 
 	for _, ep := range endpoints {
-		if err := ep.MoveTo(ctx, p.node, &MoveOptions{PreMove: netlink.LinkSetDown}); err != nil {
+		if err := ep.MoveTo(ctx, p, &MoveOptions{PreMove: netlink.LinkSetDown}); err != nil {
 			for _, m := range moved {
 				_ = m.MoveTo(ctx, src, nil)
 				_ = m.SetUp(ctx)
@@ -86,7 +94,7 @@ func (p *ParkingNode) RestoreInterfaces(ctx context.Context, dst Node) error {
 
 	// make sure the ifaces belong to parkingnode
 	for _, ep := range endpoints {
-		ep.SetNode(p.node)
+		ep.SetNode(p)
 	}
 
 	moved := make([]Endpoint, 0, len(endpoints))
@@ -107,4 +115,8 @@ func (p *ParkingNode) RestoreInterfaces(ctx context.Context, dst Node) error {
 	}
 
 	return nil
+}
+
+func (*ParkingNode) GetLinkEndpointType() LinkEndpointType {
+	return LinkEndpointTypeVeth
 }
