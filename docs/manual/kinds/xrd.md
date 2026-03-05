@@ -85,7 +85,7 @@ Default credentials: `clab:clab@123`
 
 ## Interfaces mapping
 
-XRd container uses the following mapping for its Linux interfaces[^2]:
+XRd container uses the following mapping for its Linux interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
 * `Gi0-0-0-0` - first data interface mapped to `Gi0/0/0/0` internal interface.
@@ -100,6 +100,52 @@ Wed Dec 21 12:04:13.049 UTC
 Interface                      IP-Address      Status          Protocol Vrf-Name
 MgmtEth0/RP0/CPU0/0            172.20.20.5     Up              Up       default
 ```
+
+### User-defined interface mapping
+
+By default, XRd data interfaces use `GigabitEthernet` names derived from the `Gi0-0-0-X` link endpoints. To use different interface types (e.g. `HundredGigE`, `TenGigE`), you can provide an interface mapping file.
+
+Create a JSON file with the following format:
+
+```json
+{
+  "ManagementIntf": {
+    "eth0": "MgmtEth0/RP0/CPU0/0"
+  },
+  "DataIntf": {
+    "Gi0-0-0-0": "HundredGigE0/0/0/0",
+    "Gi0-0-0-1": "HundredGigE0/0/0/1"
+  }
+}
+```
+
+* `ManagementIntf` (optional) - maps the Linux management interface (`eth0`) to a custom XR management interface name.
+* `DataIntf` (optional) - maps Linux data interface names (as used in topology `endpoints`) to custom XR interface names.
+
+Any interfaces not listed in the mapping file will use the default `Gi0-0-0-X` → `Gi0/0/0/X` conversion.
+
+Mount the mapping file into the container using `binds` and name the target file `XrdIntfMapping.json`:
+
+```yaml
+name: xrd-custom-intf
+topology:
+  kinds:
+    cisco_xrd:
+      binds:
+        - xrd-intf-map.json:/etc/xrd/XrdIntfMapping.json:ro
+  nodes:
+    r1:
+      kind: cisco_xrd
+    r2:
+      kind: cisco_xrd
+  links:
+    - endpoints: ["r1:Gi0-0-0-0", "r2:Gi0-0-0-0"]
+```
+
+/// admonition
+    type: note
+Topology link endpoints still use `Gi0-0-0-X` names. The mapping only affects the XR interface names that appear inside the router.
+///
 
 ## Features and options
 
@@ -170,5 +216,4 @@ The following labs feature XRd nodes:
 * [SR Linux and XRd](../../lab-examples/srl-xrd.md)
 
 [^1]: https://xrdocs.io/virtual-routing/tutorials/2022-08-22-xrd-images-where-can-one-get-them/
-[^2]: It is not yet possible to manually assign interface mapping rules in containerlab for XRd nodes. PRs are welcome.
 [^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.

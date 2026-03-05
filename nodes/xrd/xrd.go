@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,7 +49,14 @@ const (
 
 	scrapliPlatformName = "cisco_iosxr"
 	NapalmPlatformName  = "iosxr"
+
+	xrdIntfMappingFile = "XrdIntfMapping.json"
 )
+
+type xrdIntfMap struct {
+	ManagementIntf map[string]string `json:"ManagementIntf"`
+	DataIntf       map[string]string `json:"DataIntf"`
+}
 
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
@@ -99,7 +107,9 @@ func (n *xrd) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 }
 
 func (n *xrd) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
-	n.genInterfacesEnv()
+	if err := n.genInterfacesEnv(); err != nil {
+		return err
+	}
 
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
@@ -186,22 +196,77 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	return err
 }
 
+// loadIntfMapping searches the node's binds for an XrdIntfMapping.json file,
+// reads and parses it. Returns nil, nil if no mapping file is found.
+func (n *xrd) loadIntfMapping() (*xrdIntfMap, error) {
+	for _, bind := range n.Cfg.Binds {
+		if !strings.Contains(bind, xrdIntfMappingFile) {
+			continue
+		}
+
+		parts := strings.Split(bind, ":")
+		if len(parts) < 2 {
+			return nil, fmt.Errorf("malformed bind instruction: %s", bind)
+		}
+
+		data, err := os.ReadFile(parts[0])
+		if err != nil {
+			return nil, err
+		}
+
+		var mapping xrdIntfMap
+		if err := json.Unmarshal(data, &mapping); err != nil {
+			return nil, fmt.Errorf("failed to parse %s for node %s: %w",
+				xrdIntfMappingFile, n.Cfg.ShortName, err)
+		}
+
+		return &mapping, nil
+	}
+
+	return nil, nil
+}
+
 // genInterfacesEnv populates the content of a required env var that sets the interface mapping
-// rules.
-func (n *xrd) genInterfacesEnv() {
-	// xrd-control-plane variant needs XR_INTERFACE ENV var to be populated for all active interface
-	// here we take the number of links users set in the topology to get the right # of links
+// rules. If an XrdIntfMapping.json file is bound to the node, custom xr_name values from
+// the mapping are used instead of the default dash-to-slash conversion.
+func (n *xrd) genInterfacesEnv() error {
+	mapping, err := n.loadIntfMapping()
+	if err != nil {
+		return err
+	}
+
 	var interfaceEnvVar string
 
 	for _, ep := range n.Endpoints {
-		// ifName is a linux interface name with dashes swapped for slashes to be used in the config
-		ifName := strings.ReplaceAll(ep.GetIfaceName(), "-", "/")
-		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", ep.GetIfaceName(), ifName)
+		linuxIfName := ep.GetIfaceName()
+
+		// Use custom mapping if available, otherwise default dash→slash conversion
+		var xrName string
+		if mapping != nil && mapping.DataIntf != nil {
+			if mapped, ok := mapping.DataIntf[linuxIfName]; ok {
+				xrName = mapped
+			}
+		}
+		if xrName == "" {
+			xrName = strings.ReplaceAll(linuxIfName, "-", "/")
+		}
+
+		interfaceEnvVar += fmt.Sprintf("linux:%s,xr_name=%s;", linuxIfName, xrName)
 	}
 
 	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvVar}
 
+	// If a custom management interface name is provided, override the default
+	if mapping != nil && mapping.ManagementIntf != nil {
+		if mgmtName, ok := mapping.ManagementIntf["eth0"]; ok {
+			interfaceEnv["XR_MGMT_INTERFACES"] = fmt.Sprintf(
+				"linux:eth0,xr_name=%s,chksum,snoop_v4,snoop_v6", mgmtName)
+		}
+	}
+
 	n.Cfg.Env = clabutils.MergeStringMaps(xrdEnv, interfaceEnv, n.Cfg.Env)
+
+	return nil
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
