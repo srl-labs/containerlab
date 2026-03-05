@@ -1131,6 +1131,16 @@
                 "mysocket-proxy": {
                     "type": "string",
                     "description": "http/s proxy to be used by mysocketctl"
+                },
+                "ceos-copy-to-flash": {
+                    "type": "array",
+                    "description": "list of ceos-specific configuration or override files to be copied to the flash directory and evaluated on startup",
+                    "markdownDescription": "list of [ceos-specific configuration or override files](https://containerlab.dev/manual/kinds/ceos/#copy-to-flash) to be copied to the flash directory and evaluated on startup",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
                 }
             },
             "additionalProperties": false
