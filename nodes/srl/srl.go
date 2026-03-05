@@ -267,6 +267,7 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 	if n.Cfg.Tmpfs == nil {
 		n.Cfg.Tmpfs = map[string]string{}
 	}
+
 	n.Cfg.Tmpfs["/run/netns"] = "rw,nosuid,nodev,noexec"
 
 	n.InterfaceRegexp = InterfaceRegexp
