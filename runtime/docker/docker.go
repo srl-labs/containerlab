@@ -617,6 +617,7 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
 		Privileged:   true,
+		Tmpfs:        node.Tmpfs,
 		PidMode:      "",
 		// Network mode will be defined below via switch
 		NetworkMode: "",

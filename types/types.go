@@ -222,6 +222,7 @@ type NodeConfig struct {
 	// they should be present by definition.
 	SkipUniquenessCheck bool
 	Components          []*Component
+	Tmpfs               map[string]string `json:"tmpfs,omitempty"`
 }
 
 type GenericFilter struct {
