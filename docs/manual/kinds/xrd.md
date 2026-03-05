@@ -188,7 +188,7 @@ topology:
       startup-config: xrd.cfg
 ```
 
-When a config file is passed via `startup-config` parameter it will be used during an initial lab deployment. However, a config file that might be in the lab directory of a node takes precedence over the startup-config[^3].
+When a config file is passed via `startup-config` parameter it will be used during an initial lab deployment. However, a config file that might be in the lab directory of a node takes precedence over the startup-config[^2].
 
 With such topology file containerlab is instructed to take a file `xrd.cfg` from the current working directory and copy it to the lab directory for that specific node under the `/first-boot.cfg` name. This will result in this config acting as a startup-config for the node.
 
@@ -216,4 +216,4 @@ The following labs feature XRd nodes:
 * [SR Linux and XRd](../../lab-examples/srl-xrd.md)
 
 [^1]: https://xrdocs.io/virtual-routing/tutorials/2022-08-22-xrd-images-where-can-one-get-them/
-[^3]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
+[^2]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.
