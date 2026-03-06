@@ -1118,19 +1118,15 @@
             "type": "object",
             "description": "node's extra configurations",
             "properties": {
-                "srl-agents": {
+                "ceos-copy-to-flash": {
                     "type": "array",
-                    "description": "list of SR Linux agent's config files to be copied to the NOS filesystem",
-                    "markdownDescription": "list of [SR Linux agent's config files](https://containerlab.dev/manual/kinds/srl/#user-defined-custom-agents-for-sr-linux-nodes) to be copied to the NOS filesystem",
+                    "description": "list of cEOS-specific configuration or override files to be copied to the flash directory and evaluated on startup",
+                    "markdownDescription": "list of [cEOS-specific configuration or override files](https://containerlab.dev/manual/kinds/ceos/#copy-to-flash) to be copied to the flash directory and evaluated on startup",
                     "minItems": 1,
                     "items": {
                         "type": "string"
                     },
                     "uniqueItems": true
-                },
-                "mysocket-proxy": {
-                    "type": "string",
-                    "description": "http/s proxy to be used by mysocketctl"
                 }
             },
             "additionalProperties": false
