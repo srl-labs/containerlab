@@ -252,6 +252,8 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	switch l.DeploymentState {
 	case LinkDeploymentStateHalfDeployed:
 		return l.deployBEnd(ctx, idx)
+	case LinkDeploymentStateFullDeployed:
+		return nil // Already fully deployed (e.g. by node workers before host endpoints)
 	default:
 		return l.deployAEnd(ctx, idx)
 	}

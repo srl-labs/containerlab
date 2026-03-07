@@ -308,6 +308,8 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 
 	c.processNodeExecs(nodeCfg)
 
+	c.processNodeExtras(nodeCfg)
+
 	return nodeCfg, nil
 }
 
@@ -788,6 +790,23 @@ func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
 	for i, e := range nodeCfg.Exec {
 		r := c.magicVarReplacer(nodeCfg.ShortName)
 		nodeCfg.Exec[i] = r.Replace(e)
+	}
+}
+
+// processNodeExtras replaces (in place) magic variables in node extras.
+func (c *CLab) processNodeExtras(nodeCfg *clabtypes.NodeConfig) {
+	if nodeCfg.Extras == nil {
+		return
+	}
+
+	r := c.magicVarReplacer(nodeCfg.ShortName)
+
+	for i, e := range nodeCfg.Extras.CeosCopyToFlash {
+		nodeCfg.Extras.CeosCopyToFlash[i] = r.Replace(e)
+	}
+
+	for i, e := range nodeCfg.Extras.SRLAgents {
+		nodeCfg.Extras.SRLAgents[i] = r.Replace(e)
 	}
 }
 

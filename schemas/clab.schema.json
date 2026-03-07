@@ -590,7 +590,7 @@
                                         ]
                                     },
                                     {
-                                        "pattern": "^((lc|cp):\\s)?((cpu|ram|max_nics)=\\d+|slot=[A-Z]|chassis=[^\\s]+|card=.*|\\s)+$"
+                                        "pattern": "^\\s*(?:(?:cp|lc):\\s+)?(?:(?:(?:min_)?(?:cpu|ram|max_nics)=\\d+|slot=[A-Za-z0-9]+|chassis=[^\\s_][^\\s]*|card=[^\\s_][^\\s]*|mda/\\d+=[^\\s]+)(?:\\s+|$))+(?:\\s*___\\s*(?:(?:cp|lc):\\s+)?(?:(?:(?:min_)?(?:cpu|ram|max_nics)=\\d+|slot=[A-Za-z0-9]+|chassis=[^\\s_][^\\s]*|card=[^\\s_][^\\s]*|mda/\\d+=[^\\s]+)(?:\\s+|$))+)*\\s*$"
                                     }
                                 ]
                             }
@@ -620,6 +620,7 @@
                                             "ixr-6",
                                             "ixr-e2c",
                                             "ixr-e2",
+                                            "ixr-e2n",
                                             "ixr-ec",
                                             "ixr-e",
                                             "ixr-r4",
@@ -1117,19 +1118,15 @@
             "type": "object",
             "description": "node's extra configurations",
             "properties": {
-                "srl-agents": {
+                "ceos-copy-to-flash": {
                     "type": "array",
-                    "description": "list of SR Linux agent's config files to be copied to the NOS filesystem",
-                    "markdownDescription": "list of [SR Linux agent's config files](https://containerlab.dev/manual/kinds/srl/#user-defined-custom-agents-for-sr-linux-nodes) to be copied to the NOS filesystem",
+                    "description": "list of cEOS-specific configuration or override files to be copied to the flash directory and evaluated on startup",
+                    "markdownDescription": "list of [cEOS-specific configuration or override files](https://containerlab.dev/manual/kinds/ceos/#copy-to-flash) to be copied to the flash directory and evaluated on startup",
                     "minItems": 1,
                     "items": {
                         "type": "string"
                     },
                     "uniqueItems": true
-                },
-                "mysocket-proxy": {
-                    "type": "string",
-                    "description": "http/s proxy to be used by mysocketctl"
                 }
             },
             "additionalProperties": false
