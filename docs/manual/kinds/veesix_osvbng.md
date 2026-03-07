@@ -2,7 +2,7 @@
 search:
   boost: 4
 kind_code_name: veesix_osvbng
-kind_display_name: v::n osvbng
+kind_display_name: veesix osvbng
 ---
 # -{{ kind_display_name }}-
 
@@ -36,7 +36,7 @@ curl http://<node-name>:8080/api/show/protocols/ospf/neighbors
 ///
 
 /// tab | Linux shell
-SSH server is running on the management interface
+SSH server is running on the management interface.
 
 ```bash
 ssh admin@<container-name>
@@ -57,7 +57,7 @@ osvbng> show subscriber sessions
 
 ///
 
-## Interfaces naming
+## Interface naming
 
 -{{ kind_display_name }}- container uses the following mapping for its interfaces:
 

@@ -37,6 +37,7 @@ import (
 	clabnodesspirent_stc "github.com/srl-labs/containerlab/nodes/spirent_stc"
 	clabnodessrl "github.com/srl-labs/containerlab/nodes/srl"
 	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
+	clabnodesveesix_osvbng "github.com/srl-labs/containerlab/nodes/veesix_osvbng"
 	clabnodesvr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	clabnodesvr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
 	clabnodesvr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
@@ -58,7 +59,6 @@ import (
 	clabnodesvr_vsrx "github.com/srl-labs/containerlab/nodes/vr_vsrx"
 	clabnodesvr_xrv "github.com/srl-labs/containerlab/nodes/vr_xrv"
 	clabnodesvr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
-	clabnodesveesix_osvbng "github.com/srl-labs/containerlab/nodes/veesix_osvbng"
 	clabnodesvyosnetworks_vyos "github.com/srl-labs/containerlab/nodes/vyosnetworks_vyos"
 	clabnodesxrd "github.com/srl-labs/containerlab/nodes/xrd"
 )
