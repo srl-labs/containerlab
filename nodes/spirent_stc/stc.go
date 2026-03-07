@@ -76,9 +76,13 @@ func (n *spirentStc) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOptio
 
 	// STC uses cgroupv1, mount the fake dirs
 	cgroupDir := path.Join(n.Cfg.LabDir, cgroupV1Dir)
-	n.Cfg.Binds = append(n.Cfg.Binds,
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
 		fmt.Sprint(cgroupDir, ":/sys/fs/cgroup"),
-		fmt.Sprint(path.Join(cgroupDir, "memory.limit_in_bytes"), ":/cgroup/memory/memory.limit_in_bytes"),
+		fmt.Sprint(
+			path.Join(cgroupDir, "memory.limit_in_bytes"),
+			":/cgroup/memory/memory.limit_in_bytes",
+		),
 	)
 
 	return nil
@@ -96,7 +100,7 @@ func (n *spirentStc) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams
 	return nil
 }
 
-// create the fake cgroupv1 files so STC can boot
+// create the fake cgroupv1 files so STC can boot.
 func createCgroupV1Files(labDir string) error {
 	base := path.Join(labDir, cgroupV1Dir)
 
@@ -130,7 +134,11 @@ func createCgroupV1Files(labDir string) error {
 
 		for name, content := range files {
 			if err := os.WriteFile(path.Join(dir, name), []byte(content+"\n"), 0644); err != nil {
-				return fmt.Errorf("error creating cgroup %q: %w", fmt.Sprintf("%s/%s", controller, name), err)
+				return fmt.Errorf(
+					"error creating cgroup %q: %w",
+					fmt.Sprintf("%s/%s", controller, name),
+					err,
+				)
 			}
 		}
 	}
@@ -141,7 +149,8 @@ func createCgroupV1Files(labDir string) error {
 	os.Symlink("cpu,cpuacct", path.Join(base, "cpuacct"))
 
 	// Standalone memory limit file also needed at /cgroup/memory/.
-	if err := os.WriteFile(path.Join(base, "memory.limit_in_bytes"), []byte(cgroupMemLimit+"\n"), 0644); err != nil {
+	if err := os.WriteFile(path.Join(base, "memory.limit_in_bytes"),
+		[]byte(cgroupMemLimit+"\n"), 0644); err != nil {
 		return fmt.Errorf("error creating cgroup mem file %q: %w", "memory.limit_in_bytes", err)
 	}
 
