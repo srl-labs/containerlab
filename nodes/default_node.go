@@ -63,6 +63,7 @@ type DefaultNode struct {
 	// State of the node
 	state      clabnodesstate.NodeState
 	statemutex sync.RWMutex
+	StopSignal clabtypes.Signal
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -793,4 +794,119 @@ func (d *DefaultNode) GetContainerStatus(ctx context.Context) clabruntime.Contai
 
 func (d *DefaultNode) IsHealthy(ctx context.Context) (bool, error) {
 	return d.Runtime.IsHealthy(ctx, d.GetContainerName())
+}
+
+// ParkEndpoints uses a parking node to park any endpoints belonging to a node.
+func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
+
+	parkingNode, err := clablinks.NewParkingNode(d.Cfg.LongName)
+	if err != nil {
+		return fmt.Errorf("failed for create parking netns for node %q: %w", d.Cfg.ShortName, err)
+	}
+
+	endpoints := d.GetEndpoints()
+	moved := make([]clablinks.Endpoint, 0, len(endpoints))
+
+	for _, ep := range endpoints {
+		if err := parkingNode.ParkInterface(ctx, d, ep); err != nil {
+			for _, m := range moved {
+				_ = parkingNode.UnparkInterface(ctx, d, m)
+			}
+			return fmt.Errorf("failed to park interfaces for node %q: %w", d.Cfg.ShortName, err)
+		}
+		moved = append(moved, ep)
+	}
+
+	if err := parkingNode.RepointSymlink(d.Cfg.LongName); err != nil {
+		return fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err)
+	}
+
+	return nil
+}
+
+// RestoreEndpoints tries to get the parking node to unpark it's interfaces.
+func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
+	parkingNode, err := clablinks.GetParkingNode(d.Cfg.LongName)
+	if err != nil {
+		return fmt.Errorf("no parking netns found for node %q: %w", d.Cfg.ShortName, err)
+	}
+
+	endpoints := d.GetEndpoints()
+	moved := make([]clablinks.Endpoint, 0, len(endpoints))
+
+	for _, ep := range endpoints {
+		if err := parkingNode.UnparkInterface(ctx, d, ep); err != nil {
+			for _, m := range moved {
+				_ = parkingNode.ParkInterface(ctx, d, m)
+			}
+			return fmt.Errorf("failed to unpark interfaces for node %q: %w", d.Cfg.ShortName, err)
+		}
+
+		moved = append(moved, ep)
+	}
+
+	return nil
+}
+
+func (d *DefaultNode) Stop(ctx context.Context) error {
+	cfg := d.Config()
+
+	status := d.GetContainerStatus(ctx)
+	switch status {
+	case clabruntime.Stopped:
+		log.Debugf("node %q already stopped, skipping", cfg.ShortName)
+		return nil
+	case clabruntime.NotFound:
+		return fmt.Errorf("node %q container %q not found", cfg.ShortName, cfg.LongName)
+	}
+
+	if err := d.ParkEndpoints(ctx); err != nil {
+		return err
+	}
+
+	if err := d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal); err != nil {
+		// Docker/podman may return an error while the container is already stopped (timeout, API hiccup).
+		// Treat this as success if the desired state is reached.
+		if d.GetContainerStatus(ctx) == clabruntime.Stopped {
+			log.Warnf("node %q stop returned error but container is stopped: %v", cfg.ShortName, err)
+			return nil
+		}
+
+		return fmt.Errorf("node %q failed stopping container: %w", cfg.ShortName, err)
+	}
+
+	return nil
+}
+
+// Start restarts a stopped container and restores its parked dataplane interfaces.
+func (d *DefaultNode) Start(ctx context.Context) error {
+	cfg := d.Config()
+
+	status := d.GetContainerStatus(ctx)
+	switch status {
+	case clabruntime.Running:
+		log.Debugf("node %q already running, skipping", cfg.ShortName)
+		return nil
+	case clabruntime.NotFound:
+		return fmt.Errorf("node %q container %q not found", cfg.ShortName, cfg.LongName)
+	}
+
+	if _, err := d.Runtime.StartContainer(ctx, cfg.LongName, d); err != nil {
+		return fmt.Errorf("node %q failed starting container: %w", cfg.ShortName, err)
+	}
+
+	if err := d.RestoreEndpoints(ctx); err != nil {
+		_ = d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal)
+		return err
+	}
+
+	// Re-run topology exec commands on lifecycle start to restore node-local interface config
+	// (for example IP addresses added during deploy exec phase).
+	execCollection := clabexec.NewExecCollection()
+	if err := d.RunExecFromConfig(ctx, execCollection); err != nil {
+		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
+	}
+	execCollection.Log()
+
+	return nil
 }

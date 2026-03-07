@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: node-lifecycle
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      exec:
+        - >
+          ash -c '
+          ip link set dev eth1 up &&
+          ip addr add dev eth1 10.10.10.1/30'
+    l2:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+      startup-config: 27-node-lifecycle-l2-startup.cli
+
+  links:
+    - endpoints: ["l1:eth1", "l2:e1-1"]
