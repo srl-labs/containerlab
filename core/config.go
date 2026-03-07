@@ -814,18 +814,21 @@ func (c *CLab) processNodeExtras(nodeCfg *clabtypes.NodeConfig) {
 
 // magicVarReplacer returns a string replacer that replaces all supported magic variables.
 func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
-	if nodeName == "" {
-		return &strings.Replacer{}
-	}
-
 	labLongName := filepath.Base(c.TopoPaths.TopologyLabDir())
 
-	return strings.NewReplacer(
+	replacerPairs := []string{
 		clabDirVar, c.TopoPaths.TopologyLabDir(),
 		clabLabNameVar, labLongName,
+	}
+
+	if nodeName != "" {
+		replacerPairs = append(replacerPairs,
 		nodeDirVar, c.TopoPaths.NodeDir(nodeName),
 		nodeNameVar, nodeName,
-	)
+		)
+	}
+
+	return strings.NewReplacer(replacerPairs...)
 }
 
 // magicTopoNameReplacer returns a string replacer that replaces all git branch variables in the

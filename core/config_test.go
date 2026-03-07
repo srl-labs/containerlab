@@ -848,3 +848,23 @@ func TestExtrasInit(t *testing.T) {
 		})
 	}
 }
+
+func TestMagicVarReplacerWithoutNodeName(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath("test_data/topo14.yml", ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := c.magicVarReplacer("").Replace(
+		"lab=__clabLabName__,dir=__clabDir__,node=__clabNodeName__,nodedir=__clabNodeDir__",
+	)
+
+	want := fmt.Sprintf(
+		"lab=clab-topo14,dir=%s,node=__clabNodeName__,nodedir=__clabNodeDir__",
+		c.TopoPaths.TopologyLabDir(),
+	)
+
+	if got != want {
+		t.Fatalf("unexpected magic var replacement, want %q got %q", want, got)
+	}
+}
