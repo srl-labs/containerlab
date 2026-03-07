@@ -133,7 +133,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-unit-test
@@ -201,7 +201,7 @@ jobs:
           bash ./tests/rf-run.sh docker ./tests/06-ext-container
       # upload test reports as a zip file
       - name: Upload test reports
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: 06-ext-container-log-docker
@@ -210,7 +210,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: upload coverage reports
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-ext-container-test-docker
@@ -268,7 +268,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh docker ./tests/03-basic-ceos
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: 03-basic-ceos-log-docker
@@ -277,7 +277,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-ceos-tests-docker
@@ -336,7 +336,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh docker ./tests/04-basic-ixiacone
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: 04-basic-ixiacone-log-docker
@@ -345,7 +345,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-ixiac-one-tests-docker
