@@ -137,7 +137,11 @@ func RetrieveSSHAgentKeys(ctx context.Context) ([]ssh.PublicKey, error) {
 		// the invoking user. Retry the dial as the real user.
 		conn, err = dialSSHAgentAsRealUser(ctx, socket)
 		if err != nil {
-			log.Debugf("unable to connect to SSH_AUTH_SOCK %q, skipping agent pubkey fetching: %v", socket, err)
+			log.Debugf(
+				"unable to connect to SSH_AUTH_SOCK %q, skipping agent pubkey fetching: %v",
+				socket,
+				err,
+			)
 			return nil, nil
 		}
 	}
