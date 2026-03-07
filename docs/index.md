@@ -32,6 +32,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Keysight IXIA-C](manual/kinds/keysight_ixia-c-one.md)
 * [RARE/freeRtr](manual/kinds/rare-freertr.md)
 * [Ostinato](manual/kinds/ostinato.md)
+* [Spirent TestCenter](manual/kinds/spirent_stc.md)
 * [6WIND VSR](manual/kinds/6wind_vsr.md)
 * [FD.io VPP](manual/kinds/fdio_vpp.md)
 * [VyOS Networks VyOS](manual/kinds/vyosnetworks_vyos.md)

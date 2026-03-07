@@ -11,7 +11,7 @@ kind_display_name: Spirent TestCenter
 ## Managing -{{ kind_display_name }}- nodes
 
 /// tab | Using STC Client
-Once the STC is node is up in `healthy` state. You can connect using the STC client.
+Once the STC node is up in `healthy` state, you can connect using the STC client.
 
 See the [Client access](#client-access) section for more info.
 ///
@@ -42,7 +42,7 @@ Interfaces are defined in the topology file as `port1-9` (inclusive), this match
 
 ## Client access
 
-As the test center client runs on Windows, it is required to establish connectivity between the client and `-{{ kind_code_name }}-` node.
+As the TestCenter client runs on Windows, you need to establish connectivity between the client and the `-{{ kind_code_name }}-` node.
 
 ### Port forwarding
 
