@@ -29,6 +29,8 @@ IgnoreURLs:
   - https://nleiva.medium.com # started to give 403
   - https://xrdocs.io # started to give 403
   - https://dn42.eu # started to give timeouts
+  - https://www.brianlinkletter.com/2021/05/use-containerlab-to-emulate-open-source-routers/
+  - https://www.juniper.net/us/en/products/security/srx-series/vsrx-virtual-firewall-datasheet.html
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true
