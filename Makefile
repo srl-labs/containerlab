@@ -40,7 +40,7 @@ build-with-cover:
 
 build-debug:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
+	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
 	sudo chown root:root $(BINARY)
 	sudo chmod 4755 $(BINARY)
 
