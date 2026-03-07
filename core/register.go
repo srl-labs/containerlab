@@ -34,6 +34,7 @@ import (
 	clabnodesrare "github.com/srl-labs/containerlab/nodes/rare"
 	clabnodessonic "github.com/srl-labs/containerlab/nodes/sonic"
 	clabnodessonic_vm "github.com/srl-labs/containerlab/nodes/sonic_vm"
+	clabnodesspirent_stc "github.com/srl-labs/containerlab/nodes/spirent_stc"
 	clabnodessrl "github.com/srl-labs/containerlab/nodes/srl"
 	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
 	clabnodesvr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
@@ -117,4 +118,5 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesvyosnetworks_vyos.Register(c.Reg)
 	clabnodescjunosevolved.Register(c.Reg)
 	clabnodesarrcus_arcos.Register(c.Reg)
+	clabnodesspirent_stc.Register(c.Reg)
 }
