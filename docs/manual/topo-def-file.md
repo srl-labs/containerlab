@@ -758,6 +758,7 @@ Most variables can be used in startup-config paths, bind paths, and exec command
 
 | Variable | Description | Example Usage | Expands To |
 |----------|-------------|---------------|------------|
+| `__clabLabName__` {: style='white-space: nowrap;'} | Lab longname (same as lab directory basename) | `exec: echo "__clabLabName__"` | `clab-mylab` |
 | `__clabNodeName__` {: style='white-space: nowrap;'} | Current node's short name | `startup-config: cfg/__clabNodeName__.cfg` | `cfg/node1.cfg` (for node named "node1") |
 | `__clabNodeDir__` {: style='white-space: nowrap;'} | Path to the node's lab directory | `binds: __clabNodeDir__/conf:/conf` | `clab-mylab/node1/conf:/conf` |
 | `__clabDir__` {: style='white-space: nowrap;'} | Path to the lab's main directory | `binds: __clabDir__/data.json:/data.json:ro` | `clab-mylab/data.json:/data.json:ro` |
@@ -808,7 +809,7 @@ topology:
 
 /// tab | Customized exec commands
 
-Another popular use case for the `__clabNodeName__` magic variable is to customize the `exec` commands on a per-node basis.
+Another popular use case for magic variables is to customize the `exec` commands on a per-node basis with both node and lab context.
 
 ```yaml
 name: mylab
@@ -816,7 +817,7 @@ topology:
   nodes:
     node1:
       exec:
-        - echo "Node __clabNodeName__ started"  # Will output "Node node1 started"
+        - echo "Node __clabNodeName__ started in __clabLabName__"  # Will output "Node node1 started in clab-mylab"
 ```
 
 ///

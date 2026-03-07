@@ -780,7 +780,7 @@ func TestExecInit(t *testing.T) {
 			node: "node1",
 			want: []string{
 				"echo \"Hello world\"",
-				"echo \"Hello node node1\"",
+				"echo \"Hello node node1 in clab-topo14\"",
 			},
 		},
 	}
@@ -805,10 +805,10 @@ func TestExecInit(t *testing.T) {
 
 func TestExtrasInit(t *testing.T) {
 	tests := map[string]struct {
-		got              string
-		node             string
-		wantCeosCopy     []string
-		wantSRLAgents    []string
+		got           string
+		node          string
+		wantCeosCopy  []string
+		wantSRLAgents []string
 	}{
 		"extras_with_magic_vars": {
 			got:  "test_data/topo14.yml",

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -37,9 +38,10 @@ const (
 	DefaultVethLinkMTU = 9500
 
 	// clab specific topology variables.
-	clabDirVar  = "__clabDir__"
-	nodeDirVar  = "__clabNodeDir__"
-	nodeNameVar = "__clabNodeName__"
+	clabDirVar     = "__clabDir__"
+	clabLabNameVar = "__clabLabName__"
+	nodeDirVar     = "__clabNodeDir__"
+	nodeNameVar    = "__clabNodeName__"
 
 	// clab name specific variables.
 	gitBranchVar = "__gitBranch__"
@@ -816,8 +818,11 @@ func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
 		return &strings.Replacer{}
 	}
 
+	labLongName := filepath.Base(c.TopoPaths.TopologyLabDir())
+
 	return strings.NewReplacer(
 		clabDirVar, c.TopoPaths.TopologyLabDir(),
+		clabLabNameVar, labLongName,
 		nodeDirVar, c.TopoPaths.NodeDir(nodeName),
 		nodeNameVar, nodeName,
 	)
