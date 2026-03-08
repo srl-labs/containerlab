@@ -62,6 +62,36 @@ The exact file that is copied depends on the node kind and corresponds to the co
 
 Node kinds that do not report a saved config path are silently skipped.
 
+The `copy` flag opens up the path for saving the running configuration that is used for the startup config. By using the [magic variables](../manual/topo-def-file.md#magic-variables) in the topology file, you can point the startup config to the saved configuration without statically hardcoding the path.  
+Consider the following lab:
+
+```yaml
+name: mylab
+topology:
+  nodes:
+    node1:
+    node2:
+```
+
+After running the lab, save the configuration to a directory:
+
+```bash
+containerlab save --copy startup-configs -t mylab.clab.yml
+```
+
+The saved configuration will be in the `startup-configs` directory which you can now specify as the startup config for the nodes of the same topology using `__clabLabName__` and `__clabNodeName__` magic variables:
+
+```yaml
+name: mylab
+topology:
+  nodes:
+    node1:
+      startup-config: startup-configs/__clabLabName__/__clabNodeName__/config.json
+    node2:
+      startup-config: startup-configs/__clabLabName__/__clabNodeName__/config.json
+```
+
+
 ### Examples
 
 #### Save the configuration of the containers in a specific lab

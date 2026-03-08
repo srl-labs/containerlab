@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -37,9 +38,10 @@ const (
 	DefaultVethLinkMTU = 9500
 
 	// clab specific topology variables.
-	clabDirVar  = "__clabDir__"
-	nodeDirVar  = "__clabNodeDir__"
-	nodeNameVar = "__clabNodeName__"
+	clabDirVar     = "__clabDir__"
+	clabLabNameVar = "__clabLabName__"
+	nodeDirVar     = "__clabNodeDir__"
+	nodeNameVar    = "__clabNodeName__"
 
 	// clab name specific variables.
 	gitBranchVar = "__gitBranch__"
@@ -812,15 +814,21 @@ func (c *CLab) processNodeExtras(nodeCfg *clabtypes.NodeConfig) {
 
 // magicVarReplacer returns a string replacer that replaces all supported magic variables.
 func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
-	if nodeName == "" {
-		return &strings.Replacer{}
+	labLongName := filepath.Base(c.TopoPaths.TopologyLabDir())
+
+	replacerPairs := []string{
+		clabDirVar, c.TopoPaths.TopologyLabDir(),
+		clabLabNameVar, labLongName,
 	}
 
-	return strings.NewReplacer(
-		clabDirVar, c.TopoPaths.TopologyLabDir(),
+	if nodeName != "" {
+		replacerPairs = append(replacerPairs,
 		nodeDirVar, c.TopoPaths.NodeDir(nodeName),
 		nodeNameVar, nodeName,
-	)
+		)
+	}
+
+	return strings.NewReplacer(replacerPairs...)
 }
 
 // magicTopoNameReplacer returns a string replacer that replaces all git branch variables in the
