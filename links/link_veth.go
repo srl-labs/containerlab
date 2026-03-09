@@ -284,6 +284,8 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	var lastErr error
 
 	for attempt := range linkDeployRetries {
+		// The first node to trigger the link creation will call deployAEnd,
+		// subsequent (the second) call will end up in deployBEnd.
 		switch l.DeploymentState {
 		case LinkDeploymentStateHalfDeployed:
 			lastErr = l.deployBEnd(ctx, idx)
