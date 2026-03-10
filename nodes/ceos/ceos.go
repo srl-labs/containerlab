@@ -5,6 +5,7 @@
 package ceos
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -61,8 +63,7 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *clabnodes.NodeRegistry) {
-	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+func Register(r *clabnodes.NodeRegistry) {	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
@@ -81,6 +82,21 @@ func Register(r *clabnodes.NodeRegistry) {
 
 type ceos struct {
 	clabnodes.DefaultNode
+	bootCfg           string
+	partialStartupCfg string
+}
+
+type CeosTemplateData struct {
+	ShortName            string
+	Env                  map[string]string
+	MgmtIntf             string
+	MgmtIPv4Address      string
+	MgmtIPv4PrefixLength int
+	MgmtIPv4Gateway      string
+	MgmtIPv6Address      string
+	MgmtIPv6PrefixLength int
+	MgmtIPv6Gateway      string
+	PartialCfg           string
 }
 
 // intfMap represents interface mapping config file.
@@ -209,16 +225,24 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 		return err
 	}
 
+	// default to embedded boilerplate config
+	n.bootCfg = cfgTemplate
+
 	// use startup config file provided by a user
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
+
+		if clabutils.IsPartialConfigFile(nodeCfg.StartupConfig) {
+			n.partialStartupCfg = string(c)
+		} else {
+			n.bootCfg = string(c)
+		}
 	}
 
-	err = n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err = n.genBootConfig()
 	if err != nil {
 		return err
 	}
@@ -270,6 +294,35 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	}
 
 	return err
+}
+
+func (n *ceos) genBootConfig() error {
+	nodeCfg := n.Config()
+
+	tplData := CeosTemplateData{
+		ShortName:            n.Cfg.ShortName,
+		Env:                  nodeCfg.Env,
+		MgmtIntf:             nodeCfg.MgmtIntf,
+		MgmtIPv4Address:      nodeCfg.MgmtIPv4Address,
+		MgmtIPv4PrefixLength: nodeCfg.MgmtIPv4PrefixLength,
+		MgmtIPv4Gateway:      nodeCfg.MgmtIPv4Gateway,
+		MgmtIPv6Address:      nodeCfg.MgmtIPv6Address,
+		MgmtIPv6PrefixLength: nodeCfg.MgmtIPv6PrefixLength,
+		MgmtIPv6Gateway:      nodeCfg.MgmtIPv6Gateway,
+		PartialCfg:           n.partialStartupCfg,
+	}
+
+	t, err := template.New("ceos-config").Funcs(clabutils.CreateFuncs()).Parse(n.bootCfg)
+	if err != nil {
+		return fmt.Errorf("failed to parse cfg template for node %q: %w", n.Cfg.ShortName, err)
+	}
+
+	buf := new(bytes.Buffer)
+	if err := t.Execute(buf, tplData); err != nil {
+		return fmt.Errorf("failed to execute cfg template for node %q: %w", n.Cfg.ShortName, err)
+	}
+
+	return clabutils.CreateFile(nodeCfg.ResStartupConfig, buf.String())
 }
 
 // Func that Places the Certificates in the right place and format.
