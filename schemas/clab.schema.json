@@ -85,6 +85,7 @@
                         "cisco_csr1000v",
                         "paloalto_panos",
                         "mikrotik_ros",
+                        "6wind_vsr",
                         "cisco_n9kv",
                         "cisco_ftdv",
                         "dell_ftosv",
@@ -118,7 +119,12 @@
                         "vyosnetworks_vyos",
                         "juniper_cjunosevolved",
                         "arrcus_arcos",
-                        "f5_bigip-ve"
+                        "f5_bigip-ve",
+                        "cisco_sdwan",
+                        "openwrt",
+                        "spirent_stc",
+                        "veesix_osvbng",
+                        "ostinato"
                     ]
                 },
                 "license": {
@@ -1990,10 +1996,10 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cjunosevolved": {
-                            "ref": "#/definitions/node-config"
+                            "$ref": "#/definitions/node-config"
                         },
                         "juniper_cjunosevolved": {
-                            "ref": "#/definitions/node-config"
+                            "$ref": "#/definitions/node-config"
                         },
                         "aruba_aoscx": {
                             "$ref": "#/definitions/node-config"
@@ -2089,6 +2095,18 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "mikrotik_ros": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "6wind_vsr": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "spirent_stc": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "veesix_osvbng": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "ostinato": {
                             "$ref": "#/definitions/node-config"
                         }
                     },
