@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -119,6 +120,22 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 		}
 	}
 
+	log.Debugf("Waiting for CRPD CLI to be ready")
+	timeout := 30 * time.Second
+	start := time.Now()
+	for {
+		cmd, _ := clabexec.NewExecCmdFromString("cli -c 'show version'")
+		execResult, err := s.RunExec(ctx, cmd)
+		if err == nil && execResult.GetStdErrString() == "" {
+			log.Debugf("CRPD CLI is ready")
+			break
+		}
+		if time.Since(start) > timeout {
+			return fmt.Errorf("timeout waiting for CRPD CLI to be ready")
+		}
+		time.Sleep(1 * time.Second)
+	}
+
 	if s.Config().License != "" {
 		cmd, _ = clabexec.NewExecCmdFromString(
 			fmt.Sprintf("cli request system license add %s", filepath.Join(licDir, licFile)))
@@ -136,7 +153,7 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 		log.Debugf("crpd post-deploy license add result: %s", execResult.GetStdOutString())
 	}
 
-	return err
+	return nil
 }
 
 func (s *crpd) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
