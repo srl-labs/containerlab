@@ -120,20 +120,23 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	}
 
 	if s.Config().License != "" {
-		cmd, _ = clabexec.NewExecCmdFromString(
-			fmt.Sprintf("cli request system license add %s", filepath.Join(licDir, licFile)))
-		execResult, err = s.RunExec(ctx, cmd)
+		d, err := clabutils.SpawnCLIviaExec("juniper_junos", s.Cfg.LongName, s.Runtime.GetName())
 		if err != nil {
 			return err
 		}
 
-		if execResult.GetStdErrString() != "" {
+		defer d.Close()
+
+		resp, err := d.SendCommand(fmt.Sprintf("request system license add %s", filepath.Join(licDir, licFile)))
+		if err != nil {
+			return err
+		} else if resp.Failed != nil {
 			return fmt.Errorf(
-				"crpd post-deploy license add failed: %s",
-				execResult.GetStdErrString(),
+				"crpd post-deploy license add failed: %w",
+				resp.Failed,
 			)
 		}
-		log.Debugf("crpd post-deploy license add result: %s", execResult.GetStdOutString())
+		log.Debugf("crpd post-deploy license add completed")
 	}
 
 	return err
