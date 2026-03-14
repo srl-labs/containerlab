@@ -151,10 +151,11 @@ func (r *PodmanRuntime) createContainerSpec(
 	}
 	// Defaults for health checks
 	specHCheckConfig := specgen.ContainerHealthCheckConfig{
-		HealthConfig: &manifest.Schema2HealthConfig{},
+		HealthLogDestination: "local",
 	}
 
 	if cfg.Healthcheck != nil {
+		specHCheckConfig.HealthConfig = &manifest.Schema2HealthConfig{}
 		specHCheckConfig.HealthConfig.Test = cfg.Healthcheck.Test
 		specHCheckConfig.HealthConfig.Retries = cfg.Healthcheck.Retries
 		specHCheckConfig.HealthConfig.Interval = cfg.Healthcheck.GetIntervalDuration()
