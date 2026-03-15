@@ -179,6 +179,8 @@ type srl struct {
 	sshPubKeys []ssh.PublicKey
 	// software version SR Linux node runs
 	swVersion *SrlVersion
+	// indicates if the node supports OpenConfig server
+	supportsOpenconfig bool
 }
 
 func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -336,6 +338,11 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 	}
 
 	n.swVersion, err = n.RunningVersion(ctx)
+	if err != nil {
+		return err
+	}
+
+	n.supportsOpenconfig, err = n.OpenConfigFeatureEnabled(ctx)
 	if err != nil {
 		return err
 	}

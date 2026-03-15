@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"regexp"
+	"strings"
 
 	_ "embed"
 
@@ -37,7 +38,7 @@ var ocServerConfig string
 //go:embed version_configs/ndk.cfg
 var ndkServerConfig string
 
-// SrlVersion represents an sr linux version as a set of fields.
+// SrlVersion represents an SR Linux version as a set of fields.
 type SrlVersion struct {
 	Major  string
 	Minor  string
@@ -46,7 +47,7 @@ type SrlVersion struct {
 	Commit string
 }
 
-// RunningVersion gets the software version of the running node
+// RunningVersion gets the software version of the running SR Linux node
 // by executing the "info from state /system information version | grep version" command
 // and parsing the output.
 func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
@@ -63,6 +64,23 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return n.parseVersionString(execResult.GetStdOutString()), nil
+}
+
+// supportsOpenconfig checks if the node supports OpenConfig server
+func (n *srl) OpenConfigFeatureEnabled(ctx context.Context) (bool, error) {
+	cmd, _ := clabexec.NewExecCmdFromString(
+		`sr_cli -d "info from state system features | grep openconfig"`,
+	)
+
+	execResult, err := n.RunExec(ctx, cmd)
+	if err != nil {
+		return false, err
+	}
+
+	log.Debugf("SR Linux node %s OpenConfig feature output. stdout: %s, stderr: %s",
+		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+
+	return strings.TrimSpace(execResult.GetStdOutString()) != "", nil
 }
 
 func (*srl) parseVersionString(s string) *SrlVersion {
@@ -129,7 +147,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 		tplData.GRPCConfig = grpcConfigPre24_3
 	}
 
-	// in srlinux >= v24.10+ we add
+	// in SR Linux >= v24.10+ we add
 	// - EDA configuration
 	// - openconfig server enable
 	if semver.Compare(v, "v24.10") >= 0 || n.swVersion.Major == "0" {
@@ -143,10 +161,12 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 
 		tplData.EDAConfig = cfg
 
-		tplData.OCServerConfig = ocServerConfig
+		if n.supportsOpenconfig {
+			tplData.OCServerConfig = ocServerConfig
+		}
 	}
 
-	// in srlinux >= v25.3 we enable ndk server.
+	// in SR Linux >= v25.3 we enable ndk server.
 	if semver.Compare(v, "v25.3") >= 0 || n.swVersion.Major == "0" {
 		tplData.NDKServerConfig = ndkServerConfig
 	}
