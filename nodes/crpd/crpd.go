@@ -127,7 +127,9 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 
 		defer d.Close()
 
-		resp, err := d.SendCommand(fmt.Sprintf("request system license add %s", filepath.Join(licDir, licFile)))
+		resp, err := d.SendCommand(
+			fmt.Sprintf("request system license add %s", filepath.Join(licDir, licFile)),
+		)
 		if err != nil {
 			return err
 		} else if resp.Failed != nil {

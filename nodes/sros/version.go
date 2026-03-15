@@ -116,7 +116,10 @@ func (n *sros) srosVersionFromImage(ctx context.Context) (*SrosVersion, error) {
 // UpperDir or MergedDir (same approach as srosVersionFromImage), without spawning a container.
 // containerPath is the path inside the image (e.g. "/opt/nokia/chassis_info.json").
 // Returns the file contents or an error if the path is not available in the graph driver.
-func ReadFileFromImageInspect(imageInspect *clabruntime.ImageInspect, containerPath string) ([]byte, error) {
+func ReadFileFromImageInspect(
+	imageInspect *clabruntime.ImageInspect,
+	containerPath string,
+) ([]byte, error) {
 	// Path in graph driver is relative to root (no leading slash).
 	relPath := strings.TrimPrefix(filepath.Clean(containerPath), string(filepath.Separator))
 	if relPath == "" {
