@@ -66,7 +66,7 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 	return n.parseVersionString(execResult.GetStdOutString()), nil
 }
 
-// supportsOpenconfig checks if the node supports OpenConfig server
+// supportsOpenconfig checks if the node supports OpenConfig server.
 func (n *srl) OpenConfigFeatureEnabled(ctx context.Context) (bool, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(
 		`sr_cli -d "info from state system features | grep openconfig"`,
