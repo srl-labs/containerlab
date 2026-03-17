@@ -27,6 +27,7 @@ import (
 	clabnodeshuawei_vrp "github.com/srl-labs/containerlab/nodes/huawei_vrp"
 	clabnodesiol "github.com/srl-labs/containerlab/nodes/iol"
 	clabnodesipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
+	clabnodesjuniper_apstra "github.com/srl-labs/containerlab/nodes/juniper_apstra"
 	clabnodesk8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
 	clabnodeskeysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
 	clabnodeslinux "github.com/srl-labs/containerlab/nodes/linux"
@@ -75,6 +76,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesfortinet_fortigate.Register(c.Reg)
 	clabnodeshost.Register(c.Reg)
 	clabnodesipinfusion_ocnos.Register(c.Reg)
+	clabnodesjuniper_apstra.Register(c.Reg)
 	clabnodeskeysight_ixiacone.Register(c.Reg)
 	clabnodeslinux.Register(c.Reg)
 	clabnodesovs.Register(c.Reg)
