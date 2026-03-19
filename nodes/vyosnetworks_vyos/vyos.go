@@ -201,9 +201,9 @@ func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *vyos) CheckInterfaceName() error {
-	// allow eth and et interfaces
-	// https://regex101.com/r/umQW5Z/2
-	ifRe := regexp.MustCompile(`eth[1-9]$`)
+	// allow eth interfaces - ethX, apart from eth0
+	// https://regex101.com/r/kqOPTc/1
+	ifRe := regexp.MustCompile(`eth[1-9][0-9]*$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf(
