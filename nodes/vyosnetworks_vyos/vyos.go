@@ -89,6 +89,9 @@ func (n *vyos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	n.configDir = filepath.Join(n.Cfg.LabDir, "config")
 	n.Cfg.ResStartupConfig = filepath.Join(n.configDir, "config.boot")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprintf("%s:/opt/vyatta/etc/config", n.configDir))
+
+	// mount /lib/modules, required to allow VyOS to load required kernel modules (i.e., nft_nat)
+	n.Cfg.Binds = append(n.Cfg.Binds, "/lib/modules:/lib/modules:ro")
 	return nil
 }
 
