@@ -640,6 +640,7 @@ type srlTemplateData struct {
 	TLSKey     string
 	TLSCert    string
 	TLSAnchor  string
+	TLSConfig  string
 	Banner     string
 	IFaces     map[string]tplIFace
 	SSHPubKeys string
@@ -667,6 +668,8 @@ type srlTemplateData struct {
 	OCServerConfig string
 	// NDKServerConfig is a string containing NDK server configuration
 	NDKServerConfig string
+	// DNSServersConfig is a string containing DNS servers configuration
+	DNSServersConfig string
 }
 
 // tplIFace template interface struct.
@@ -686,23 +689,31 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	// tplData holds data used in templating of the default config snippet
-	tplData := srlTemplateData{
-		TLSKey:          n.Cfg.TLSKey,
-		TLSCert:         n.Cfg.TLSCert,
-		TLSAnchor:       n.Cfg.TLSAnchor,
-		Banner:          b,
-		IFaces:          map[string]tplIFace{},
-		MgmtMTU:         0,
-		MgmtIPMTU:       0,
-		DNSServers:      n.Config().DNS.Servers,
-		SNMPConfig:      snmpv2Config,
-		GRPCConfig:      grpcConfig,
-		OCServerConfig:  "",
-		NDKServerConfig: "",
+	var dnsServers []string
+	if n.Config().DNS != nil {
+		dnsServers = n.Config().DNS.Servers
 	}
 
-	n.setVersionSpecificParams(&tplData)
+	// tplData holds data used in templating of the default config snippet
+	tplData := srlTemplateData{
+		TLSKey:           n.Cfg.TLSKey,
+		TLSCert:          n.Cfg.TLSCert,
+		TLSAnchor:        n.Cfg.TLSAnchor,
+		Banner:           b,
+		IFaces:           map[string]tplIFace{},
+		MgmtMTU:          0,
+		MgmtIPMTU:        0,
+		DNSServers:       dnsServers,
+		SNMPConfig:       snmpv2Config,
+		GRPCConfig:       grpcConfig,
+		OCServerConfig:   "",
+		NDKServerConfig:  "",
+		DNSServersConfig: "",
+	}
+
+	if err := n.setVersionSpecificParams(&tplData); err != nil {
+		return err
+	}
 
 	n.setCustomPrompt(&tplData)
 
