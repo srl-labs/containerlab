@@ -34,7 +34,8 @@ func GetOptions() *Options {
 				LogLevel: "info",
 				Runtime:  clabruntimedocker.RuntimeName,
 			},
-			Filter: &FilterOptions{},
+			Filter:        &FilterOptions{},
+			NodeLifecycle: &NodeLifecycleOptions{},
 			Deploy: &DeployOptions{
 				LabOwner: os.Getenv("CLAB_OWNER"),
 			},
@@ -126,6 +127,7 @@ func GetOptions() *Options {
 type Options struct {
 	Global         *GlobalOptions
 	Filter         *FilterOptions
+	NodeLifecycle  *NodeLifecycleOptions
 	Deploy         *DeployOptions
 	Destroy        *DestroyOptions
 	Save           *SaveOptions
@@ -286,6 +288,10 @@ func (o *FilterOptions) toClabOptions() []clabcore.ClabOption {
 	return []clabcore.ClabOption{
 		clabcore.WithNodeFilter(o.NodeFilter),
 	}
+}
+
+type NodeLifecycleOptions struct {
+	Nodes []string
 }
 
 type DeployOptions struct {

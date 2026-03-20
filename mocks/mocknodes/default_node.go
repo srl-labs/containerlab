@@ -173,6 +173,20 @@ func (mr *MockNodeOverwritesMockRecorder) RunExec(arg0, arg1 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunExec", reflect.TypeOf((*MockNodeOverwrites)(nil).RunExec), arg0, arg1)
 }
 
+// VerifyContainerName mocks base method.
+func (m *MockNodeOverwrites) VerifyContainerName() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyContainerName")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// VerifyContainerName indicates an expected call of VerifyContainerName.
+func (mr *MockNodeOverwritesMockRecorder) VerifyContainerName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyContainerName", reflect.TypeOf((*MockNodeOverwrites)(nil).VerifyContainerName))
+}
+
 // VerifyHostRequirements mocks base method.
 func (m *MockNodeOverwrites) VerifyHostRequirements() error {
 	m.ctrl.T.Helper()
