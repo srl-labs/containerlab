@@ -215,7 +215,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) error {
 
 	tplData.TLSConfig = tlsRendered
 
-	// DNS servers config: pre-26.3 vs dns-instance format (>= v26.3), rendered from embedded templates.
+	// DNS servers config: dns vs dns-instance <name>.
 	if len(tplData.DNSServers) > 0 {
 		dnsSrc := dnsServersConfigPre26_3
 		if semver.Compare(v, "v26.3") >= 0 || n.swVersion.Major == "0" {
