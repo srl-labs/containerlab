@@ -2031,7 +2031,7 @@
                         "cisco_iol": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "cisco_8000": {
+                        "cisco_c8000": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_c8000v": {
