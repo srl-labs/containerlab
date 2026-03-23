@@ -823,8 +823,8 @@ func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
 
 	if nodeName != "" {
 		replacerPairs = append(replacerPairs,
-		nodeDirVar, c.TopoPaths.NodeDir(nodeName),
-		nodeNameVar, nodeName,
+			nodeDirVar, c.TopoPaths.NodeDir(nodeName),
+			nodeNameVar, nodeName,
 		)
 	}
 
