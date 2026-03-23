@@ -237,7 +237,11 @@ func WithTopologyFromLab(labName string) ClabOption {
 		// If topology file doesn't exist, fall back to using just the lab name.
 		// This allows operations like destroy to work even when the topo file is missing.
 		if !clabutils.FileOrDirExists(topoFile) {
-			log.Debugf("topology file %s not found for lab %s, using lab name only", topoFile, labName)
+			log.Debugf(
+				"topology file %s not found for lab %s, using lab name only",
+				topoFile,
+				labName,
+			)
 			return WithLabNameOnly(labName)(c)
 		}
 
