@@ -5,7 +5,7 @@ go 1.24.5
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/beevik/etree v1.6.0
-	github.com/brunoga/deep v1.2.5
+	github.com/brunoga/deep v1.3.1
 	github.com/charmbracelet/fang v0.4.4
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
@@ -34,7 +34,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/pmorjan/kmod v1.1.1
-	github.com/scrapli/scrapligo v1.3.3
+	github.com/scrapli/scrapligo v1.3.2
 	github.com/scrapli/scrapligocfg v1.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
@@ -46,7 +46,7 @@ require (
 	go.podman.io/image/v5 v5.38.0
 	go.uber.org/mock v0.6.0
 	golang.org/x/crypto v0.47.0
-	golang.org/x/sys v0.40.0
+	golang.org/x/sys v0.41.0
 	golang.org/x/term v0.39.0
 	gopkg.in/yaml.v2 v2.4.0
 	sigs.k8s.io/kind v0.31.0

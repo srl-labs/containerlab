@@ -110,14 +110,14 @@ func (vr *VRNode) CheckInterfaceName() error {
 	return nil
 }
 
-func (n *VRNode) SaveConfig(_ context.Context) error {
+func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	config, err := clabnetconf.GetConfig(n.Cfg.LongName,
 		n.Credentials.GetUsername(),
 		n.Credentials.GetPassword(),
 		n.ScrapliPlatformName,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Save config to mounted labdir startup config path
@@ -128,7 +128,7 @@ func (n *VRNode) SaveConfig(_ context.Context) error {
 		clabconstants.PermissionsOpen,
 	) // skipcq: GO-S2306
 	if err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"failed to write config by %s path from %s container: %v",
 			configPath,
 			n.Cfg.ShortName,
@@ -137,5 +137,7 @@ func (n *VRNode) SaveConfig(_ context.Context) error {
 	}
 	log.Info("Saved configuration to path", "nodeName", n.Cfg.ShortName, "path", configPath)
 
-	return nil
+	return &SaveConfigResult{
+		ConfigPath: configPath,
+	}, nil
 }

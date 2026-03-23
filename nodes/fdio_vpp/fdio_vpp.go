@@ -156,20 +156,20 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *clabnodes.PreDeployParam
 	return nil
 }
 
-func (n *fdio_vpp) SaveConfig(ctx context.Context) error {
+func (n *fdio_vpp) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
+		return nil, fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
 	}
 
 	log.Infof("Saved VPP configuration from %s node\n", n.Cfg.ShortName)
 
-	return nil
+	return nil, nil
 }
 
 // CheckInterfaceName allows any interface name for vpp nodes, but checks

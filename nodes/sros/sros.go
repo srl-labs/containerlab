@@ -377,8 +377,32 @@ func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 		}
 
-		return n.createSROSFiles()
+		return n.createSROSFiles(ctx)
 	}
+	return nil
+}
+
+func (n *sros) DeployEndpoints(ctx context.Context) error {
+	if err := n.DefaultNode.DeployEndpoints(ctx); err != nil {
+		return err
+	}
+
+	// Disable TX checksum offload on the host NS veth for the mgmt interface.
+	var peerIfIndex int
+	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
+	if err != nil {
+		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
+			"node", n.Cfg.ShortName,
+			"error", err)
+		return nil
+	}
+
+	if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
+		log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
+			"node", n.Cfg.ShortName,
+			"error", err)
+	}
+
 	return nil
 }
 
@@ -391,21 +415,6 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 	// start waiting for container ready (PID based check)
 	if err := n.Ready(ctx); err != nil {
 		return err
-	}
-
-	// Disable TX checksum offload on the host NS veth for the mgmt interface.
-	var peerIfIndex int
-	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
-	if err != nil {
-		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
-			"node", n.Cfg.ShortName,
-			"error", err)
-	} else {
-		if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
-			log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
-				"node", n.Cfg.ShortName,
-				"error", err)
-		}
 	}
 
 	errChan := make(chan error, 1)
@@ -436,7 +445,8 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 	}
 
 	// Execute SaveConfig after boot. This code should only run on active CPM
-	for time.Now().Before(time.Now().Add(readyTimeout)) {
+	deadline := time.Now().Add(readyTimeout)
+	for time.Now().Before(deadline) {
 		// Check if context is canceled
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("context canceled: %w", err)
@@ -897,7 +907,7 @@ func (*sros) checkKernelVersion() error {
 	return nil
 }
 
-// checkComponentSlotsConfig check the sros component slot config for validaity.
+// checkComponentSlotsConfig check the sros component slot config for validity.
 func (n *sros) checkComponentSlotsConfig() error {
 	// check Slots are unique
 	componentNames := map[string]struct{}{}
@@ -913,7 +923,7 @@ func (n *sros) checkComponentSlotsConfig() error {
 				component.Slot,
 			)
 		}
-		// addd to component names map
+		// add to component names map
 		componentNames[component.Slot] = struct{}{}
 
 	}
@@ -937,7 +947,7 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 }
 
 // Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars.
-func (n *sros) createSROSFiles() error {
+func (n *sros) createSROSFiles(ctx context.Context) error {
 	log.Debug("Creating directory structure for SR OS container", "node", n.Cfg.ShortName)
 
 	var err error
@@ -966,6 +976,10 @@ func (n *sros) createSROSFiles() error {
 		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
+	if err := n.writeChassisInfoToLabDir(ctx); err != nil {
+		log.Warn("Failed to write chassis_info.json to lab dir",
+			"node", n.Cfg.ShortName, "path", n.Cfg.LabDir, "error", err)
+	}
 	if n.isCPM(slotAName) || n.isStandaloneNode() {
 		err = n.createSROSCertificates()
 	}
@@ -979,6 +993,27 @@ func (n *sros) createSROSFiles() error {
 			return err
 		}
 	}
+	return nil
+}
+
+// writeChassisInfoToLabDir fetches /opt/nokia/chassis_info.json from the node image
+// (via graph driver, same as srosVersionFromImage) and writes it under n.Cfg.LabDir
+// with the same filename (chassis_info.json).
+func (n *sros) writeChassisInfoToLabDir(ctx context.Context) error {
+	imageInspect, err := n.Runtime.InspectImage(ctx, n.Cfg.Image)
+	if err != nil {
+		return fmt.Errorf("inspect image: %w", err)
+	}
+	content, err := ReadFileFromImageInspect(imageInspect, DefaultChassisInfoPath)
+	if err != nil {
+		return err
+	}
+	dstPath := filepath.Join(n.Cfg.LabDir, filepath.Base(DefaultChassisInfoPath))
+	licensed := append([]byte(chassisInfoFileLicense), content...)
+	if err := os.WriteFile(dstPath, licensed, clabconstants.PermissionsFileDefault); err != nil {
+		return fmt.Errorf("write %s: %w", dstPath, err)
+	}
+	log.Debug("Wrote chassis_info.json to lab dir", "node", n.Cfg.ShortName, "path", dstPath)
 	return nil
 }
 
@@ -1130,8 +1165,10 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	if v.ForceClassic {
 		log.Warn(
 			"SAR-Hm nodes only support classic configuration mode. Overriding configuration mode to 'classic'",
-			"node", n.Cfg.LongName,
-			"node-type", strings.ToLower(n.Cfg.NodeType),
+			"node",
+			n.Cfg.LongName,
+			"node-type",
+			strings.ToLower(n.Cfg.NodeType),
 		)
 		configMode = string(ConfigModeClassic)
 		n.Cfg.Env[envSrosConfigMode] = string(ConfigModeClassic)
@@ -1192,7 +1229,8 @@ func (n *sros) isSARHmNode() bool {
 func getTemplateForVariant(v ConfigVariant, swVersion *SrosVersion) (tmpl string, tplName string) {
 	// Model-driven (or mixed treated as classic below when family is classic)
 	if v.Mode == ConfigModeModelDriven {
-		// Placeholder for version-specific template: if swVersion != nil && swVersion.Major >= "26" { return cfgTplSROS26, "clab-sros-config-sros26" }
+		// Placeholder for version-specific template: if swVersion != nil && swVersion.Major >= "26"
+		// { return cfgTplSROS26, "clab-sros-config-sros26" }
 		return cfgTplSROS25, "clab-sros-config-sros25"
 	}
 	// Classic (or mixed)
@@ -1504,13 +1542,13 @@ func (n *sros) CheckInterfaceName() error {
 	return nil
 }
 
-func (n *sros) SaveConfig(ctx context.Context) error {
+func (n *sros) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	fqdn := ""
 	switch {
 	case n.isStandaloneNode():
 		// check if it is a cpm node. return without error if not
 		if !n.isCPM("") {
-			return nil
+			return nil, nil
 		}
 		// if it is a standalone node use the fqdn
 		fqdn = n.Cfg.Fqdn
@@ -1518,18 +1556,32 @@ func (n *sros) SaveConfig(ctx context.Context) error {
 		// if it is the
 		cmpNode, err := n.cpmNode()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		// delegate to cpm node
 		return cmpNode.SaveConfig(ctx)
 	case n.isDistributedCardNode():
 		// check if it is a cpm node. return without error if not
 		if !n.isCPM("") {
-			return nil
+			return nil, nil
 		}
 		fqdn = n.Cfg.LongName
 	}
-	return n.saveConfigWithAddr(ctx, fqdn)
+
+	if err := n.saveConfigWithAddr(ctx, fqdn); err != nil {
+		return nil, err
+	}
+
+	cfgPath := filepath.Join(
+		n.Cfg.LabDir,
+		n.Cfg.Env[envNokiaSrosSlot],
+		configCf3,
+		startupCfgName,
+	)
+
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
 // saveConfigWithAddr will use the addr string to try to save the config of the node.
@@ -1885,8 +1937,13 @@ func (n *sros) generateComponentConfig() string {
 			continue
 		}
 		if c.Type == "" {
-			log.Warn("SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
-				"node", n.Cfg.ShortName, "slot", slot)
+			log.Warn(
+				"SR-SIM node has no type set for component in slot, skipping component SR OS config generation.",
+				"node",
+				n.Cfg.ShortName,
+				"slot",
+				slot,
+			)
 		}
 	}
 
@@ -1959,7 +2016,9 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 	if err != nil {
 		// Skip check when runtime does not support image inspection (e.g. Podman).
 		if strings.Contains(err.Error(), "not implemented") {
-			log.Debug("Skipping nokia_srsim image kind check: runtime does not support image inspection")
+			log.Debug(
+				"Skipping nokia_srsim image kind check: runtime does not support image inspection",
+			)
 			return nil
 		}
 		return err
@@ -1975,6 +2034,9 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 			return nil
 		}
 	}
-	log.Warnf("node %q: kind is nokia_srsim but the provided image does not have the correct labels; please use a valid SR-SIM container image or run a more recent version of the SR-SIM container image to suppress this warning", n.Cfg.ShortName)
+	log.Warnf(
+		"node %q: kind is nokia_srsim but the provided image does not have the correct labels; please use a valid SR-SIM container image or run a more recent version of the SR-SIM container image to suppress this warning",
+		n.Cfg.ShortName,
+	)
 	return nil
 }

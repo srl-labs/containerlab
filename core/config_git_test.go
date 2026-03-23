@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// setupTestGitRepo creates a temporary Git repository for testing
+// setupTestGitRepo creates a temporary Git repository for testing.
 func setupTestGitRepo(t *testing.T, branchName string) (string, string, func()) {
 	t.Helper()
 
@@ -294,7 +294,8 @@ func TestParseTopology_GitVariableSubstitution(t *testing.T) {
 	require.NoError(t, err)
 
 	// Simulate the check in parseTopology() that triggers substitution
-	if strings.Contains(c.Config.Name, gitBranchVar) || strings.Contains(c.Config.Name, gitHashVar) {
+	if strings.Contains(c.Config.Name, gitBranchVar) ||
+		strings.Contains(c.Config.Name, gitHashVar) {
 		r := c.magicTopoNameReplacer()
 		oldName := c.Config.Name
 		c.Config.Name = r.Replace(c.Config.Name)
@@ -500,7 +501,8 @@ func TestParseTopology_GitVariableInName(t *testing.T) {
 	require.NoError(t, err)
 
 	// Simulate the check in parseTopology
-	if strings.Contains(c.Config.Name, gitBranchVar) || strings.Contains(c.Config.Name, gitHashVar) {
+	if strings.Contains(c.Config.Name, gitBranchVar) ||
+		strings.Contains(c.Config.Name, gitHashVar) {
 		r := c.magicTopoNameReplacer()
 		oldName := c.Config.Name
 		c.Config.Name = r.Replace(c.Config.Name)

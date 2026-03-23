@@ -75,6 +75,29 @@ Verify saving config
     Should Be Equal As Integers    ${rc}    0
     Should Not Contain    ${output}    ERRO
 
+Verify saving config with copy flag
+    [Documentation]
+    ...    Save config with --copy flag and verify that the config files
+    ...    are copied to the specified destination directory.
+    ${copy_dst} =    Set Variable    ${CURDIR}/save-copy-test
+    # clean up any leftover from previous runs
+    Run    rm -rf ${copy_dst}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --copy ${copy_dst}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    ERRO
+    # verify that config files have been copied for both srl nodes
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/srl1/config.json
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/srl2/config.json
+    # verify the copied files are not empty
+    ${size1} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/srl1/config.json
+    Should Be True    ${size1} > 0
+    ${size2} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/srl2/config.json
+    Should Be True    ${size2} > 0
+    # clean up
+    [Teardown]    Run    rm -rf ${copy_dst}
+
 Ensure srl1 is reachable over ssh
     Login via SSH with username and password
     ...    address=clab-${lab-name}-srl1

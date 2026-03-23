@@ -25,7 +25,7 @@ const (
 )
 
 // ConfigVariant encodes mode, node family, and security for template and snippet selection.
-// Single source of truth for "what config do we use for this node."
+// Single source of truth for "what config do we use for this node.".
 type ConfigVariant struct {
 	Mode         ConfigMode   // model-driven, classic, or mixed
 	Family       ConfigFamily // sr, ixr, sar
@@ -40,8 +40,9 @@ type snippetSet struct {
 	GRPCConfig   string
 }
 
-// FullSnippetSet holds all config snippet strings for a variant (system, grpc, snmp, netconf, logging, ssh).
-// Single table-driven result for "which snippets apply to this variant."
+// FullSnippetSet holds all config snippet strings for a variant (system, grpc, snmp, netconf,
+// logging, ssh).
+// Single table-driven result for "which snippets apply to this variant.".
 type FullSnippetSet struct {
 	SystemConfig  string
 	GRPCConfig    string

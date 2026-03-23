@@ -58,6 +58,14 @@ func SetNonDefaultRuntimePerKind(kindnames []string, runtime string) error {
 	return nil
 }
 
+// SaveConfigResult contains the result of a node's config save operation.
+type SaveConfigResult struct {
+	// ConfigPath is the absolute path to the saved configuration file on the host.
+	// Empty when the node kind does not support config save or
+	// the config is saved internally without host-visible file.
+	ConfigPath string
+}
+
 type PreDeployParams struct {
 	Cert         *clabcert.Cert
 	TopologyName string
@@ -103,7 +111,7 @@ type Node interface {
 	VerifyStartupConfig(topoDir string) error
 	SaveConfig(
 		context.Context,
-	) error // SaveConfig saves the nodes configuration to an external file
+	) (*SaveConfigResult, error) // SaveConfig saves the nodes configuration to an external file
 	Delete(context.Context) error                // Delete triggers the deletion of this node
 	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
 	GetRuntime() clabruntime.ContainerRuntime    // GetRuntime returns the nodes assigned runtime

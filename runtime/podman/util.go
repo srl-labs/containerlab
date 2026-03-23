@@ -12,13 +12,13 @@ import (
 	"strconv"
 	"strings"
 
-	netTypes "go.podman.io/common/libnetwork/types"
-	"go.podman.io/image/v5/manifest"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	netTypes "go.podman.io/common/libnetwork/types"
+	"go.podman.io/image/v5/manifest"
 
 	"github.com/charmbracelet/log"
 	"github.com/containers/podman/v5/pkg/bindings"
@@ -151,10 +151,11 @@ func (r *PodmanRuntime) createContainerSpec(
 	}
 	// Defaults for health checks
 	specHCheckConfig := specgen.ContainerHealthCheckConfig{
-		HealthConfig: &manifest.Schema2HealthConfig{},
+		HealthLogDestination: "local",
 	}
 
 	if cfg.Healthcheck != nil {
+		specHCheckConfig.HealthConfig = &manifest.Schema2HealthConfig{}
 		specHCheckConfig.HealthConfig.Test = cfg.Healthcheck.Test
 		specHCheckConfig.HealthConfig.Retries = cfg.Healthcheck.Retries
 		specHCheckConfig.HealthConfig.Interval = cfg.Healthcheck.GetIntervalDuration()

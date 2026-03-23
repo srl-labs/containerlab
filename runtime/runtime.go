@@ -85,7 +85,8 @@ type ContainerRuntime interface {
 	) (<-chan ContainerEvent, <-chan error, error)
 	// InspectImage returns detailed information about a container image
 	InspectImage(ctx context.Context, imageName string) (*ImageInspect, error)
-	// CopyToContainer copies the contents of the given host path into the named container's destination path.
+	// CopyToContainer copies the contents of the given host path into the named container's
+	// destination path.
 	// The path must be a file, and the the destination directory must exist inside the container
 	CopyToContainer(ctx context.Context, cID string, dstPath string, srcPath string) error
 }

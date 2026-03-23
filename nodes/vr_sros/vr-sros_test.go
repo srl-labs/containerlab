@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"

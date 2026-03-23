@@ -101,7 +101,7 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 // SaveConfig overrides the default VRNode SaveConfig to handle MikroTik RouterOS
 // Uses direct SSH connection since scrapligo doesn't support MikroTik RouterOS platform.
 // To be refactored to use scrapli's GenericDriver or an enhanced scraplicfg.
-func (n *vrRos) SaveConfig(_ context.Context) error {
+func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	// Create SSH client configuration
 	config := &ssh.ClientConfig{
 		User: n.Credentials.GetUsername(),
@@ -115,26 +115,26 @@ func (n *vrRos) SaveConfig(_ context.Context) error {
 	// Connect to the MikroTik RouterOS device
 	conn, err := ssh.Dial("tcp", fmt.Sprintf("%s:22", n.Cfg.LongName), config)
 	if err != nil {
-		return fmt.Errorf("failed to connect to %s via SSH: %+v", n.Cfg.LongName, err)
+		return nil, fmt.Errorf("failed to connect to %s via SSH: %+v", n.Cfg.LongName, err)
 	}
 	defer conn.Close()
 
 	// Create a session
 	session, err := conn.NewSession()
 	if err != nil {
-		return fmt.Errorf("failed to create SSH session for %s: %+v", n.Cfg.LongName, err)
+		return nil, fmt.Errorf("failed to create SSH session for %s: %+v", n.Cfg.LongName, err)
 	}
 	defer session.Close()
 
 	// Execute the export command to get the configuration
 	output, err := session.CombinedOutput("export")
 	if err != nil {
-		return fmt.Errorf("failed to execute export command on %s: %+v", n.Cfg.LongName, err)
+		return nil, fmt.Errorf("failed to execute export command on %s: %+v", n.Cfg.LongName, err)
 	}
 
 	config_content := strings.TrimSpace(string(output))
 	if config_content == "" {
-		return fmt.Errorf("received empty configuration from %s", n.Cfg.LongName)
+		return nil, fmt.Errorf("received empty configuration from %s", n.Cfg.LongName)
 	}
 
 	// Filter out ether1 management interface IP address configuration
@@ -145,7 +145,7 @@ func (n *vrRos) SaveConfig(_ context.Context) error {
 	err = os.WriteFile(configPath, []byte(filtered_config),
 		clabconstants.PermissionsOpen) // skipcq: GO-S2306
 	if err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"failed to write config by %s path from %s container: %v",
 			configPath,
 			n.Cfg.ShortName,
@@ -154,7 +154,9 @@ func (n *vrRos) SaveConfig(_ context.Context) error {
 	}
 	log.Info("Saved configuration to path", "nodeName", n.Cfg.ShortName, "path", configPath)
 
-	return nil
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: configPath,
+	}, nil
 }
 
 // filterManagementInterfaceConfig removes ether1 (management interface) IP address configuration

@@ -120,34 +120,39 @@ func (s *crpd) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	}
 
 	if s.Config().License != "" {
-		cmd, _ = clabexec.NewExecCmdFromString(
-			fmt.Sprintf("cli request system license add %s", filepath.Join(licDir, licFile)))
-		execResult, err = s.RunExec(ctx, cmd)
+		d, err := clabutils.SpawnCLIviaExec("juniper_junos", s.Cfg.LongName, s.Runtime.GetName())
 		if err != nil {
 			return err
 		}
 
-		if execResult.GetStdErrString() != "" {
+		defer d.Close()
+
+		resp, err := d.SendCommand(
+			fmt.Sprintf("request system license add %s", filepath.Join(licDir, licFile)),
+		)
+		if err != nil {
+			return err
+		} else if resp.Failed != nil {
 			return fmt.Errorf(
-				"crpd post-deploy license add failed: %s",
-				execResult.GetStdErrString(),
+				"crpd post-deploy license add failed: %w",
+				resp.Failed,
 			)
 		}
-		log.Debugf("crpd post-deploy license add result: %s", execResult.GetStdOutString())
+		log.Debugf("crpd post-deploy license add completed")
 	}
 
 	return err
 }
 
-func (s *crpd) SaveConfig(ctx context.Context) error {
+func (s *crpd) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := s.RunExec(ctx, cmd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
+		return nil, fmt.Errorf("crpd post-deploy failed: %s", execResult.GetStdErrString())
 	}
 
 	// path by which to save a config
@@ -155,7 +160,7 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(),
 		clabconstants.PermissionsOpen) // skipcq: GO-S2306
 	if err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"failed to write config by %s path from %s container: %v",
 			confPath,
 			s.Cfg.ShortName,
@@ -164,7 +169,7 @@ func (s *crpd) SaveConfig(ctx context.Context) error {
 	}
 	log.Infof("saved cRPD configuration from %s node to %s\n", s.Cfg.ShortName, confPath)
 
-	return nil
+	return nil, nil
 }
 
 func createCRPDFiles(node clabnodes.Node) error {

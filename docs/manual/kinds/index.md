@@ -75,6 +75,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Check Point Cloudguard** | [`checkpoint_cloudguard`](checkpoint_cloudguard.md) | supported |    VM     |
 | **6WIND VSR**              | [`6wind_vsr`](6wind_vsr.md)                         | supported | container |
 | **Keysight ixia-c-one**    | [`keysight_ixia-c-one`](keysight_ixia-c-one.md)     | supported | container |
+| **Spirent TestCenter**     | [`spirent_stc`](spirent_stc.md)                     | supported | container |
 | **Arrcus ArcOS**           | [`arrcus_arcos`](arrcus_arcos.md)                   | supported | container |
 | **FD.io VPP**              | [`fdio_vpp`](fdio_vpp.md)                           | supported | container |
 | **RARE/freeRtr**           | [`rare`](rare-freertr.md)                           | supported | container |
@@ -87,6 +88,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **OpenBSD**                | [`openbsd`](openbsd.md)                             | supported |    VM     |
 | **Kubernetes in Docker**   | [`k8s-kind`](k8s-kind.md)                           | supported | service   |
 | **Linux bridge**           | [`bridge`](bridge.md)                               | supported |    N/A    |
+| **v::n osvbng**            | [`veesix_osvbng`](veesix_osvbng.md)                 | supported | container |
 | **Openvswitch bridge**     | [`ovs-bridge`](ovs-bridge.md)                       | supported |    N/A    |
 | **External container**     | [`ext-container`](ext-container.md)                 | supported | container |
 | **Host**                   | [`host`](host.md)                                   | supported |    N/A    |

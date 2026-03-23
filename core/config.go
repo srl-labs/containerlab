@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -37,11 +38,12 @@ const (
 	DefaultVethLinkMTU = 9500
 
 	// clab specific topology variables.
-	clabDirVar  = "__clabDir__"
-	nodeDirVar  = "__clabNodeDir__"
-	nodeNameVar = "__clabNodeName__"
+	clabDirVar     = "__clabDir__"
+	clabLabNameVar = "__clabLabName__"
+	nodeDirVar     = "__clabNodeDir__"
+	nodeNameVar    = "__clabNodeName__"
 
-	// clab name specific variables
+	// clab name specific variables.
 	gitBranchVar = "__gitBranch__"
 	gitHashVar   = "__gitHash__"
 )
@@ -62,11 +64,16 @@ type Config struct {
 func (c *CLab) parseTopology() error {
 	log.Info("Parsing & checking topology", "file", c.TopoPaths.TopologyFilenameBase())
 
-	if strings.Contains(c.Config.Name, gitBranchVar) || strings.Contains(c.Config.Name, gitHashVar) {
+	if strings.Contains(c.Config.Name, gitBranchVar) ||
+		strings.Contains(c.Config.Name, gitHashVar) {
 		r := c.magicTopoNameReplacer()
 		oldName := c.Config.Name
 		c.Config.Name = r.Replace(c.Config.Name)
-		log.Debugf("Topology name contains Git variables, substituted topology name: %q -> %q", oldName, c.Config.Name)
+		log.Debugf(
+			"Topology name contains Git variables, substituted topology name: %q -> %q",
+			oldName,
+			c.Config.Name,
+		)
 	}
 
 	err := c.TopoPaths.SetLabDirByPrefix(c.Config.Name)
@@ -302,6 +309,8 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeCfg.Config = c.Config.Topology.GetNodeConfigDispatcher(nodeCfg.ShortName)
 
 	c.processNodeExecs(nodeCfg)
+
+	c.processNodeExtras(nodeCfg)
 
 	return nodeCfg, nil
 }
@@ -686,7 +695,6 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 			cfg.Labels[clabconstants.GitHash] = gitHash
 		}
 	}
-
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
@@ -787,26 +795,52 @@ func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
 	}
 }
 
-// magicVarReplacer returns a string replacer that replaces all supported magic variables.
-func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
-	if nodeName == "" {
-		return &strings.Replacer{}
+// processNodeExtras replaces (in place) magic variables in node extras.
+func (c *CLab) processNodeExtras(nodeCfg *clabtypes.NodeConfig) {
+	if nodeCfg.Extras == nil {
+		return
 	}
 
-	return strings.NewReplacer(
-		clabDirVar, c.TopoPaths.TopologyLabDir(),
-		nodeDirVar, c.TopoPaths.NodeDir(nodeName),
-		nodeNameVar, nodeName,
-	)
+	r := c.magicVarReplacer(nodeCfg.ShortName)
+
+	for i, e := range nodeCfg.Extras.CeosCopyToFlash {
+		nodeCfg.Extras.CeosCopyToFlash[i] = r.Replace(e)
+	}
+
+	for i, e := range nodeCfg.Extras.SRLAgents {
+		nodeCfg.Extras.SRLAgents[i] = r.Replace(e)
+	}
 }
 
-// magicTopoNameReplacer returns a string replacer that replaces all git branch variables in the topology name.
-func (c *CLab) magicTopoNameReplacer() *strings.Replacer {
+// magicVarReplacer returns a string replacer that replaces all supported magic variables.
+func (c *CLab) magicVarReplacer(nodeName string) *strings.Replacer {
+	labLongName := filepath.Base(c.TopoPaths.TopologyLabDir())
 
+	replacerPairs := []string{
+		clabDirVar, c.TopoPaths.TopologyLabDir(),
+		clabLabNameVar, labLongName,
+	}
+
+	if nodeName != "" {
+		replacerPairs = append(replacerPairs,
+			nodeDirVar, c.TopoPaths.NodeDir(nodeName),
+			nodeNameVar, nodeName,
+		)
+	}
+
+	return strings.NewReplacer(replacerPairs...)
+}
+
+// magicTopoNameReplacer returns a string replacer that replaces all git branch variables in the
+// topology name.
+func (c *CLab) magicTopoNameReplacer() *strings.Replacer {
 	gitBranch, gitHash := c.getGitInfo()
 
 	if gitHash == "none" && gitBranch == "none" {
-		log.Warnf("topology name uses git variables, but no Git repository found at %q - variables will be replaced with 'none'", c.TopoPaths.TopologyFileDir())
+		log.Warnf(
+			"topology name uses git variables, but no Git repository found at %q - variables will be replaced with 'none'",
+			c.TopoPaths.TopologyFileDir(),
+		)
 	}
 
 	// Replace illegal characters in branch name

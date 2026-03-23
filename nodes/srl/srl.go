@@ -179,6 +179,8 @@ type srl struct {
 	sshPubKeys []ssh.PublicKey
 	// software version SR Linux node runs
 	swVersion *SrlVersion
+	// indicates if the node supports OpenConfig server
+	supportsOpenconfig bool
 }
 
 func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -340,6 +342,11 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 		return err
 	}
 
+	n.supportsOpenconfig, err = n.OpenConfigFeatureEnabled(ctx)
+	if err != nil {
+		return err
+	}
+
 	// return if config file is found in the lab directory.
 	// This can be either if the startup-config has been mounted by that path
 	// or the config has been previously generated and saved
@@ -363,17 +370,19 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 	return n.generateCheckpoint(ctx)
 }
 
-func (n *srl) SaveConfig(ctx context.Context) error {
+func (n *srl) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+		return nil, fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
+
+	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.json")
 
 	log.Infof(
 		"saved SR Linux configuration from %s node. Output:\n%s",
@@ -381,7 +390,9 @@ func (n *srl) SaveConfig(ctx context.Context) error {
 		execResult.GetStdOutString(),
 	)
 
-	return nil
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
 // Ready returns when the node boot sequence reached the stage when it is ready to accept config
@@ -629,6 +640,7 @@ type srlTemplateData struct {
 	TLSKey     string
 	TLSCert    string
 	TLSAnchor  string
+	TLSConfig  string
 	Banner     string
 	IFaces     map[string]tplIFace
 	SSHPubKeys string
@@ -656,6 +668,8 @@ type srlTemplateData struct {
 	OCServerConfig string
 	// NDKServerConfig is a string containing NDK server configuration
 	NDKServerConfig string
+	// DNSServersConfig is a string containing DNS servers configuration
+	DNSServersConfig string
 }
 
 // tplIFace template interface struct.
@@ -675,23 +689,31 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	// tplData holds data used in templating of the default config snippet
-	tplData := srlTemplateData{
-		TLSKey:          n.Cfg.TLSKey,
-		TLSCert:         n.Cfg.TLSCert,
-		TLSAnchor:       n.Cfg.TLSAnchor,
-		Banner:          b,
-		IFaces:          map[string]tplIFace{},
-		MgmtMTU:         0,
-		MgmtIPMTU:       0,
-		DNSServers:      n.Config().DNS.Servers,
-		SNMPConfig:      snmpv2Config,
-		GRPCConfig:      grpcConfig,
-		OCServerConfig:  "",
-		NDKServerConfig: "",
+	var dnsServers []string
+	if n.Config().DNS != nil {
+		dnsServers = n.Config().DNS.Servers
 	}
 
-	n.setVersionSpecificParams(&tplData)
+	// tplData holds data used in templating of the default config snippet
+	tplData := srlTemplateData{
+		TLSKey:           n.Cfg.TLSKey,
+		TLSCert:          n.Cfg.TLSCert,
+		TLSAnchor:        n.Cfg.TLSAnchor,
+		Banner:           b,
+		IFaces:           map[string]tplIFace{},
+		MgmtMTU:          0,
+		MgmtIPMTU:        0,
+		DNSServers:       dnsServers,
+		SNMPConfig:       snmpv2Config,
+		GRPCConfig:       grpcConfig,
+		OCServerConfig:   "",
+		NDKServerConfig:  "",
+		DNSServersConfig: "",
+	}
+
+	if err := n.setVersionSpecificParams(&tplData); err != nil {
+		return err
+	}
 
 	n.setCustomPrompt(&tplData)
 

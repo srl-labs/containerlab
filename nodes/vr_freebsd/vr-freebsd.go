@@ -108,19 +108,19 @@ func (n *vrFreeBSD) PreDeploy(_ context.Context, params *clabnodes.PreDeployPara
 	return err
 }
 
-func (n *vrFreeBSD) SaveConfig(ctx context.Context) error {
+func (n *vrFreeBSD) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+		return nil, fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
 	confPath := n.Cfg.LabDir + "/" + configDirName
 	log.Infof("saved /etc backup from %s node to %s\n", n.Cfg.ShortName, confPath)
 
-	return nil
+	return nil, nil
 }
