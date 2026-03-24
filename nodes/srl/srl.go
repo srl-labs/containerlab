@@ -114,10 +114,12 @@ var (
 		"sxr-1x-44s": "7730SXR-1x-44s.yml",
 		"sxr1d32d":   "7730SXR-1d-32d.yml",
 		"sxr-1d-32d": "7730SXR-1d-32d.yml",
+		"sxr-1-32d":  "7730SXR-1-32d.yml",
 		"ixrx1b":     "7250IXRX1b.yml",
 		"ixr-x1b":    "7250IXRX1b.yml",
 		"ixrx3b":     "7250IXRX3b.yml",
 		"ixr-x3b":    "7250IXRX3b.yml",
+		"ixr-x4":     "X4-QSFP-DD.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
