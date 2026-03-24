@@ -549,10 +549,12 @@
                                     "sxr-1x-44s",
                                     "sxr1d32d",
                                     "sxr-1d-32d",
+                                    "sxr-1-32d",
                                     "ixrx1b",
                                     "ixr-x1b",
                                     "ixrx3b",
-                                    "ixr-x3b"
+                                    "ixr-x3b",
+                                    "ixr-x4"
                                 ]
                             }
                         }

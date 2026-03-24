@@ -114,10 +114,12 @@ var (
 		"sxr-1x-44s": "7730SXR-1x-44s.yml",
 		"sxr1d32d":   "7730SXR-1d-32d.yml",
 		"sxr-1d-32d": "7730SXR-1d-32d.yml",
+		"sxr-1-32d":  "7730SXR-1-32d.yml",
 		"ixrx1b":     "7250IXRX1b.yml",
 		"ixr-x1b":    "7250IXRX1b.yml",
 		"ixrx3b":     "7250IXRX3b.yml",
 		"ixr-x3b":    "7250IXRX3b.yml",
+		"ixr-x4-d":   "7250IXRX4-QSFP-DD.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -273,34 +275,6 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
-	// Create appmgr subdir for agent specs and copy files, if needed
-	if n.Cfg.Extras != nil && len(n.Cfg.Extras.SRLAgents) != 0 {
-		agents := n.Cfg.Extras.SRLAgents
-
-		appmgr := filepath.Join(n.Cfg.LabDir, "config", "appmgr")
-		clabutils.CreateDirectory(appmgr, clabconstants.PermissionsOpen)
-
-		// process extras -> agents configurations
-		for _, fullpath := range agents {
-			basename := filepath.Base(fullpath)
-			// if it is a url extract filename from url or content-disposition header
-			if clabutils.IsHttpURL(fullpath, false) {
-				basename = clabutils.FilenameForURL(ctx, fullpath)
-			}
-			// enforce yml extension
-			ext := filepath.Ext(basename)
-			if ext != ".yml" && ext != ".yaml" {
-				basename += ".yml"
-			}
-
-			dst := filepath.Join(appmgr, basename)
-			if err := clabutils.CopyFile(ctx, fullpath, dst,
-				clabconstants.PermissionsFileDefault); err != nil {
-				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
-			}
-		}
-	}
-
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
 
@@ -308,6 +282,14 @@ func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
 	n.cert = params.Cert
 	n.topologyName = params.TopologyName
+
+	// platform specific pre-deploy actions
+	if n.Config().Env["SRL_CHASSIS_MODE"] == "" {
+		// boot 6e/10e in GEN2CP_ONLY mode by default
+		if n.Config().NodeType == "ixr-6e" || n.Config().NodeType == "ixr-10e" {
+			n.Config().Env["SRL_CHASSIS_MODE"] = "GEN2CP_ONLY"
+		}
+	}
 
 	return n.createSRLFiles()
 }
