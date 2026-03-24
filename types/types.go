@@ -198,6 +198,12 @@ type NodeConfig struct {
 	CPUSet string  `json:"cpuset,omitempty"`
 	Memory string  `json:"memory,omitempty"`
 
+	// Username for NOS SSH/NETCONF access.
+	// Populated from the topology file (defaults/kinds/nodes), falling back to the kind's
+	// hardcoded default when not set in the topology.
+	Username string `json:"username,omitempty"`
+	// Password for NOS SSH/NETCONF access. Sensitive — not logged.
+	Password string `json:"-"`
 	// Extra node parameters
 	Extras *Extras    `json:"extras,omitempty"`
 	Stages *Stages    `json:"stages,omitempty"`

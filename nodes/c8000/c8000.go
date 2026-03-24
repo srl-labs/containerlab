@@ -81,8 +81,8 @@ func (n *c8000) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams
 
 func (n *c8000) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	err := clabnetconf.SaveRunningConfig(n.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Username,
+		n.Cfg.Password,
 		scrapliPlatformName,
 	)
 	if err != nil {

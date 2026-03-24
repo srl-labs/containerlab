@@ -137,13 +137,11 @@ func (c *CLab) ansibleKindAndProps(cfg *clabtypes.NodeConfig) (string, *AnsibleK
 	ansibleGroup := cfg.Kind
 	ansibleProps := &AnsibleKindProps{}
 
-	// Set `ansible_user` and `ansible_password`
-	// Assumption: All nodes of the same kind share same credentials
-	nodeRegEntry := c.Reg.Kind(ansibleGroup)
-	if nodeRegEntry != nil {
-		ansibleProps.Username = nodeRegEntry.GetCredentials().GetUsername()
-		ansibleProps.Password = nodeRegEntry.GetCredentials().GetPassword()
-	}
+	// Set `ansible_user` and `ansible_password`.
+	// Use the resolved per-node credentials from NodeConfig (which already incorporates
+	// topology defaults/kinds/nodes settings with fallback to kind's hardcoded defaults).
+	ansibleProps.Username = cfg.Username
+	ansibleProps.Password = cfg.Password
 
 	// Generally we use the containerlab kind for grouping in Ansible Inventory.
 	// Special case: For SROS we differentiate between classic and model-driven.
@@ -227,24 +225,20 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 		// defaults to Nornir-Napalm/Netmiko compatible platform name
 		nornirSimpleInventoryKindProps.Platform = n.Config().Kind
 
-		// add username and password to kind properties
-		// assumption is that all nodes of the same kind have the same credentials
-		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
-		if nodeRegEntry != nil {
-			nornirSimpleInventoryKindProps.Username =
-				nodeRegEntry.GetCredentials().GetUsername()
-			nornirSimpleInventoryKindProps.Password =
-				nodeRegEntry.GetCredentials().GetPassword()
+		// Use the resolved per-node credentials from NodeConfig (which already incorporates
+		// topology defaults/kinds/nodes settings with fallback to kind's hardcoded defaults).
+		nornirSimpleInventoryKindProps.Username = n.Config().Username
+		nornirSimpleInventoryKindProps.Password = n.Config().Password
 
-			if nodeRegEntry.PlatformAttrs() != nil {
-				switch platformNameSchema {
-				case "napalm":
-					nornirSimpleInventoryKindProps.Platform =
-						nodeRegEntry.PlatformAttrs().NapalmPlatformName
-				case "scrapi":
-					nornirSimpleInventoryKindProps.Platform =
-						nodeRegEntry.PlatformAttrs().ScrapliPlatformName
-				}
+		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
+		if nodeRegEntry != nil && nodeRegEntry.PlatformAttrs() != nil {
+			switch platformNameSchema {
+			case "napalm":
+				nornirSimpleInventoryKindProps.Platform =
+					nodeRegEntry.PlatformAttrs().NapalmPlatformName
+			case "scrapi":
+				nornirSimpleInventoryKindProps.Platform =
+					nodeRegEntry.PlatformAttrs().ScrapliPlatformName
 			}
 		}
 

@@ -977,3 +977,105 @@ func TestGetNodeCertificateConfig(t *testing.T) {
 		}
 	}
 }
+
+// TestGetNodeCredentials tests the credential resolution hierarchy.
+func TestGetNodeCredentials(t *testing.T) {
+	tests := map[string]struct {
+		topo         *Topology
+		nodeName     string
+		wantUsername string
+		wantPassword string
+	}{
+		"node_overrides_kind": {
+			topo: &Topology{
+				Kinds: map[string]*NodeDefinition{
+					"srl": {Username: "kind-user", Password: "kind-pass"},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl", Username: "node-user", Password: "node-pass"},
+				},
+			},
+			nodeName:     "node1",
+			wantUsername: "node-user",
+			wantPassword: "node-pass",
+		},
+		"kind_overrides_defaults": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Kinds: map[string]*NodeDefinition{
+					"srl": {Username: "kind-user", Password: "kind-pass"},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName:     "node1",
+			wantUsername: "kind-user",
+			wantPassword: "kind-pass",
+		},
+		"defaults_used_when_no_kind_or_node": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName:     "node1",
+			wantUsername: "default-user",
+			wantPassword: "default-pass",
+		},
+		"empty_when_nothing_set": {
+			topo: &Topology{
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName:     "node1",
+			wantUsername: "",
+			wantPassword: "",
+		},
+		"group_overrides_defaults": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Groups: map[string]*NodeDefinition{
+					"grp1": {Username: "group-user", Password: "group-pass"},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl", Group: "grp1"},
+				},
+			},
+			nodeName:     "node1",
+			wantUsername: "group-user",
+			wantPassword: "group-pass",
+		},
+		"node_overrides_group_and_defaults": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Groups: map[string]*NodeDefinition{
+					"grp1": {Username: "group-user", Password: "group-pass"},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl", Group: "grp1", Username: "node-user", Password: "node-pass"},
+				},
+			},
+			nodeName:     "node1",
+			wantUsername: "node-user",
+			wantPassword: "node-pass",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			gotUsername := tc.topo.GetNodeUsername(tc.nodeName)
+			gotPassword := tc.topo.GetNodePassword(tc.nodeName)
+
+			if gotUsername != tc.wantUsername {
+				t.Errorf("username: got %q, want %q", gotUsername, tc.wantUsername)
+			}
+
+			if gotPassword != tc.wantPassword {
+				t.Errorf("password: got %q, want %q", gotPassword, tc.wantPassword)
+			}
+		})
+	}
+}

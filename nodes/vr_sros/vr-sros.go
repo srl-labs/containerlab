@@ -237,7 +237,7 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 	// apply the aggregated config snippets
 	if b.Len() > 0 {
 		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, s.scrapliPlatform(),
-			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
+			s.Cfg.Username, s.Cfg.Password,
 			b,
 		)
 		if err != nil {
@@ -261,8 +261,8 @@ func (s *vrSROS) scrapliPlatform() string {
 
 func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	err := clabnetconf.SaveRunningConfig(s.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		s.Cfg.Username,
+		s.Cfg.Password,
 		s.scrapliPlatform(),
 	)
 	if err != nil {

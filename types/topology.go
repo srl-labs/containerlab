@@ -879,3 +879,31 @@ func (t *Topology) GetNodeAliases(nodeName string) []string {
 
 	return nodeDefinition.Aliases
 }
+
+// GetNodeUsername returns the username configured for the node, resolving it through the
+// defaults → kind → group → node hierarchy. Returns an empty string if not set.
+func (t *Topology) GetNodeUsername(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.Username },
+		func(group *NodeDefinition) string { return group.Username },
+		func(kind *NodeDefinition) string { return kind.Username },
+		func(defaults *NodeDefinition) string { return defaults.Username },
+		func(v string) bool { return v != "" },
+	)
+}
+
+// GetNodePassword returns the password configured for the node, resolving it through the
+// defaults → kind → group → node hierarchy. Returns an empty string if not set.
+func (t *Topology) GetNodePassword(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.Password },
+		func(group *NodeDefinition) string { return group.Password },
+		func(kind *NodeDefinition) string { return kind.Password },
+		func(defaults *NodeDefinition) string { return defaults.Password },
+		func(v string) bool { return v != "" },
+	)
+}

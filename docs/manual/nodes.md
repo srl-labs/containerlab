@@ -358,6 +358,38 @@ topology:
         - /home/user/somefile
 ```
 
+### username
+
+To override the default NOS SSH/NETCONF username for a node, use the `username` configuration option. When not set, the kind's default username is used. Can be defined at `node`, `kind`, `group`, and `defaults` levels, with more specific levels taking precedence.
+
+```yaml
+topology:
+  defaults:
+    username: admin # used for all nodes unless overridden at kind/group/node level
+  kinds:
+    nokia_srlinux:
+      username: srl-admin # used for all SRL nodes unless overridden at node level
+  nodes:
+    node1:
+      username: node1-user # used only for node1
+```
+
+### password
+
+To override the default NOS SSH/NETCONF password for a node, use the `password` configuration option. When not set, the kind's default password is used. Can be defined at `node`, `kind`, `group`, and `defaults` levels, with more specific levels taking precedence.
+
+```yaml
+topology:
+  defaults:
+    password: mypassword
+  kinds:
+    nokia_srlinux:
+      password: srl-password
+  nodes:
+    node1:
+      password: node1-password
+```
+
 ### user
 
 To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.

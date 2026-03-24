@@ -459,8 +459,8 @@ func (n *iol) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error)
 		"cisco_iosxe",
 		n.Cfg.LongName,
 		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(defaultCredentials.GetUsername()),
-		options.WithAuthPassword(defaultCredentials.GetPassword()),
+		options.WithAuthUsername(n.Cfg.Username),
+		options.WithAuthPassword(n.Cfg.Password),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create platform; error: %+v", err)

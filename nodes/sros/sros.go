@@ -1596,8 +1596,8 @@ func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
 		return n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
 	}
 	err := clabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Username,
+		n.Cfg.Password,
 		scrapliPlatformName,
 	)
 	if err != nil {
@@ -1710,8 +1710,8 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 
 	err := clabnetconf.MultiExec(
 		fmt.Sprintf("[%s]", addr),
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Username,
+		n.Cfg.Password,
 		operations,
 	)
 	if len(cmd) > 0 && n.isConfigClassic() {
