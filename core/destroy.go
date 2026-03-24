@@ -367,6 +367,10 @@ func (c *CLab) deleteContainersDirect(
 	containers []clabruntime.GenericContainer,
 ) {
 	for _, cont := range containers {
+		if len(cont.Names) == 0 {
+			log.Warnf("skipping container %s with no names", cont.ID)
+			continue
+		}
 		name := cont.Names[0]
 		log.Infof("Removing container: %s", name)
 
