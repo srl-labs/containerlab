@@ -283,6 +283,14 @@ func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 	n.cert = params.Cert
 	n.topologyName = params.TopologyName
 
+	// platform specific pre-deploy actions
+	if n.Config().Env["SRL_CHASSIS_MODE"] == "" {
+		// boot 6e/10e in GEN2CP_ONLY mode by default
+		if n.Config().NodeType == "ixr-6e" || n.Config().NodeType == "ixr-10e" {
+			n.Config().Env["SRL_CHASSIS_MODE"] = "GEN2CP_ONLY"
+		}
+	}
+
 	return n.createSRLFiles()
 }
 
