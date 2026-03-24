@@ -409,6 +409,21 @@ sudo CLAB_SKIP_SROS_SSH_KEY_CONFIG=true -E clab deploy -t <topo-file>
 
 ///
 
+### CLI mode
+
+Nokia SR OS supports both MD-CLI (model-driven) and classic CLI modes. By default, containerlab uses the MD-CLI scrapligo platform (`nokia_sros`) to interact with vr-sros nodes for operations such as partial config apply and `save-config`.
+
+If your node is running in classic or mixed CLI mode, set the `CLAB_SROS_CONFIG_MODE` environment variable so that containerlab uses the matching scrapligo platform (`nokia_sros_classic`) with the correct prompt regex:
+
+```yaml
+topology:
+  nodes:
+    sros1:
+      kind: nokia_sros
+      env:
+        CLAB_SROS_CONFIG_MODE: classic  # or "mixed"
+```
+
 ### License
 
 Path to a valid license must be provided for all Nokia SR OS nodes with a [`license`](../nodes.md#license) directive.
