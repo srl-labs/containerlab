@@ -691,7 +691,9 @@ func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *cla
 func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
 	// loop through the components, creating them
 	for _, c := range n.componentNodes {
-		c.PreDeploy(ctx, n.preDeployParams)
+		if err := c.PreDeploy(ctx, n.preDeployParams); err != nil {
+			return fmt.Errorf("pre-deploy for component node %q: %w", c.GetShortName(), err)
+		}
 		// deploy the component
 		err := c.Deploy(ctx, deployParams)
 		if err != nil {
