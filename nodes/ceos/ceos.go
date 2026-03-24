@@ -210,15 +210,17 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	}
 
 	// use startup config file provided by a user
+	// make copy of template to prevent provided startup config from mutating shared package template value
+	currentCfgTemplate := cfgTemplate
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
+		currentCfgTemplate = string(c)
 	}
 
-	err = n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err = n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}
