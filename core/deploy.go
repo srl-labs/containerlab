@@ -76,19 +76,21 @@ func (c *CLab) Deploy( //nolint: funlen
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 
-	_, err = os.Create(ansibleInvFPath)
+	ansibleF, err := os.Create(ansibleInvFPath)
 	if err != nil {
 		return nil, err
 	}
+	ansibleF.Close()
 
 	// create an empty nornir simple inventory file that will get populated later
 	// we create it here first, so that bind mounts of nornir-simple-inventory.yml file could work
 	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
 
-	_, err = os.Create(nornirSimpleInvFPath)
+	nornirF, err := os.Create(nornirSimpleInvFPath)
 	if err != nil {
 		return nil, err
 	}
+	nornirF.Close()
 
 	// in an similar fashion, create an empty topology data file
 	topoDataFPath := c.TopoPaths.TopoExportFile()
@@ -97,6 +99,7 @@ func (c *CLab) Deploy( //nolint: funlen
 	if err != nil {
 		return nil, err
 	}
+	defer topoDataF.Close()
 
 	if err := c.certificateAuthoritySetup(); err != nil {
 		return nil, err
