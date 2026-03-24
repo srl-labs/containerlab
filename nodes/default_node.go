@@ -94,7 +94,7 @@ func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { r
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
 	_, err := d.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return fmt.Errorf("loading or generating certificate for node %q: %w", d.Cfg.ShortName, err)
 	}
 	return nil
 }
