@@ -198,7 +198,7 @@ func createCRPDFiles(node clabnodes.Node) error {
 
 	err := node.GenerateConfig(cfg, cfgTemplate)
 	if err != nil {
-		log.Errorf("node=%s, failed to generate config: %v", nodeCfg.ShortName, err)
+		return fmt.Errorf("node=%s, failed to generate config: %w", nodeCfg.ShortName, err)
 	}
 
 	// write crpd sshd conf file to crpd node dir

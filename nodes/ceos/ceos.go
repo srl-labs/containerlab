@@ -264,7 +264,9 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 
 	// adding if-wait.sh script to flash dir
 	ifScriptP := path.Join(nodeCfg.LabDir, "flash", "if-wait.sh")
-	clabutils.CreateFile(ifScriptP, clabutils.IfWaitScript)
+	if err := clabutils.CreateFile(ifScriptP, clabutils.IfWaitScript); err != nil {
+		return fmt.Errorf("failed to write if-wait.sh: %w", err)
+	}
 	os.Chmod(ifScriptP, clabconstants.PermissionsOpen) // skipcq: GSC-G302
 
 	if *n.Cfg.Certificate.Issue {
