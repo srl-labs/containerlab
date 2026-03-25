@@ -102,10 +102,10 @@ func (n *vrFreeBSD) PreDeploy(_ context.Context, params *clabnodes.PreDeployPara
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (n *vrFreeBSD) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {

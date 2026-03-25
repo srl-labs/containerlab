@@ -53,7 +53,7 @@ func (n *VRNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 	return LoadStartupConfigFileVr(n, n.ConfigDirName, n.StartupCfgFName)
 }

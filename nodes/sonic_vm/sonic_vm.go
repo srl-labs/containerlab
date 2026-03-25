@@ -99,9 +99,7 @@ func (n *sonic_vm) PreDeploy(_ context.Context, params *clabnodes.PreDeployParam
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		log.Errorf("Error handling certificate for %s: %v", n.Cfg.ShortName, err)
-
-		return nil
+		return err
 	}
 
 	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)

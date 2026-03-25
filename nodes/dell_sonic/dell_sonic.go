@@ -95,7 +95,7 @@ func (n *dell_sonic) PreDeploy(_ context.Context, params *clabnodes.PreDeployPar
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }

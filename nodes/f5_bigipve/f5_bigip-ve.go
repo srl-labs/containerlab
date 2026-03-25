@@ -108,10 +108,10 @@ func (n *F5BigIPVE) PreDeploy(_ context.Context, params *clabnodes.PreDeployPara
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, configDirName), clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (n *F5BigIPVE) CheckInterfaceName() error {
