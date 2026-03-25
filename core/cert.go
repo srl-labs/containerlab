@@ -20,14 +20,14 @@ func (c *CLab) LoadOrGenerateCA(caCertInput *clabcert.CACSRInput) error {
 		// store the root CA
 		err = c.Cert.StoreCaCert(caCertificate)
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 
 	// set CA cert that was either loaded or generated
 	err = c.Cert.SetCACert(caCertificate)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return nil
