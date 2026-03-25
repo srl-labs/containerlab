@@ -609,6 +609,7 @@ func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	if err := tpl.Execute(f, mac); err != nil {
 		return err

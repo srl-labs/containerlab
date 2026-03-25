@@ -323,6 +323,7 @@ func CreateFile(file, content string) (err error) {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	// add newline if missing
 	if !strings.HasSuffix(content, "\n") {
@@ -682,12 +683,16 @@ func FileToTarStream(dstFile string, filePath string) (*bytes.Buffer, error) {
 	}
 	header.Mode = 0o666
 	header.Name = filepath.Base(dstFile)
-	tarWriter.WriteHeader(header)
+	if err := tarWriter.WriteHeader(header); err != nil {
+		return nil, fmt.Errorf("cannot write tar header for %s: %w", filePath, err)
+	}
 
 	fileReader, err := os.Open(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open %s: %w", filePath, err)
 	}
+	defer fileReader.Close()
+
 	_, err = io.Copy(tarWriter, fileReader)
 	if err != nil {
 		return nil, fmt.Errorf("error reading %s: %w", filePath, err)

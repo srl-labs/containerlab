@@ -62,6 +62,7 @@ func downloadTopoFile(url, tempDir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer tmpFile.Close()
 
 	err = clabutils.CopyFile(context.Background(), url, tmpFile.Name(),
 		clabconstants.PermissionsFileDefault)
@@ -77,6 +78,7 @@ func readFromStdin(tempDir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer tmpFile.Close()
 
 	_, err = tmpFile.ReadFrom(os.Stdin)
 	if err != nil {
