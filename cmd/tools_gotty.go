@@ -328,7 +328,7 @@ func gottyAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	rt, ok := c.Runtimes[o.Global.Runtime]
 	if !ok {
-		return fmt.Errorf("failed getting runtime: %w", err)
+		return fmt.Errorf("runtime %q not found", o.Global.Runtime)
 	}
 
 	if o.ToolsGoTTY.ContainerName == "" {
@@ -446,7 +446,7 @@ func gottyDetach(cobraCmd *cobra.Command, o *Options) error {
 
 	rt, ok := c.Runtimes[o.Global.Runtime]
 	if !ok {
-		return fmt.Errorf("failed getting runtime: %w", err)
+		return fmt.Errorf("runtime %q not found", o.Global.Runtime)
 	}
 
 	containerName := fmt.Sprintf("clab-%s-gotty", c.Config.Name)
@@ -473,7 +473,7 @@ func gottyList(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	rt, ok := c.Runtimes[o.Global.Runtime]
 	if !ok {
-		return fmt.Errorf("failed getting runtime: %w", err)
+		return fmt.Errorf("runtime %q not found", o.Global.Runtime)
 	}
 
 	containers, err := c.ListContainers(
@@ -603,7 +603,7 @@ func gottyReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	rt, ok := c.Runtimes[o.Global.Runtime]
 	if !ok {
-		return fmt.Errorf("failed getting runtime: %w", err)
+		return fmt.Errorf("runtime %q not found", o.Global.Runtime)
 	}
 
 	if o.ToolsGoTTY.ContainerName == "" {
