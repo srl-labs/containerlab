@@ -132,7 +132,10 @@ func (n *NodeDefinition) ImportEnvs() {
 	}
 
 	for _, e := range os.Environ() {
-		kv := strings.Split(e, "=")
+		kv := strings.SplitN(e, "=", 2)
+		if len(kv) < 2 {
+			continue
+		}
 		if _, exists := n.Env[kv[0]]; exists {
 			continue
 		}

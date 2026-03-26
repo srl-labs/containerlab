@@ -137,7 +137,9 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 
 	// create graph filename
 	dotfile := c.TopoPaths.GraphFilename(".dot")
-	clabutils.CreateFile(dotfile, g.String())
+	if err := clabutils.CreateFile(dotfile, g.String()); err != nil {
+		return fmt.Errorf("failed to write dot graph file: %w", err)
+	}
 	log.Infof("Created %s", dotfile)
 
 	pngfile := c.TopoPaths.GraphFilename(".png")
@@ -281,7 +283,9 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	// Generate graph
 	var w strings.Builder
 	fc.Generate(&w)
-	clabutils.CreateFile(fname, w.String())
+	if err := clabutils.CreateFile(fname, w.String()); err != nil {
+		return fmt.Errorf("failed to write mermaid graph file: %w", err)
+	}
 
 	log.Infof("Created mermaid diagram file: %s", fname)
 
