@@ -149,7 +149,7 @@ func (s *vrSROS) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParam
 	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// store public keys extracted from clab host
