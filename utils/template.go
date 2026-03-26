@@ -654,7 +654,9 @@ func SubstituteEnvsAndTemplate(r io.Reader, data any) (*bytes.Buffer, error) {
 
 	buf := new(bytes.Buffer)
 
-	t.Execute(buf, data)
+	if err = t.Execute(buf, data); err != nil {
+		return nil, fmt.Errorf("template execution failed: %w", err)
+	}
 
 	return buf, nil
 }
