@@ -138,6 +138,14 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	// Allow flag without value to default to ./snapshots
 	c.Flags().Lookup("restore-all").NoOptDefVal = "./snapshots"
 
+	c.Flags().StringVarP(
+		&o.Deploy.ExportRenderedTopology,
+		"export-rendered",
+		"",
+		"",
+		"save the rendered topology YAML (after template+env expansion) to the specified file path",
+	)
+
 	c.Flags().StringArrayVar(
 		&o.Deploy.RestoreNodeSnapshots,
 		"restore",
@@ -159,6 +167,8 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	var err error
 
 	log.Info("Containerlab started", "version", Version)
+
+	clabcore.ExportRenderedTopology = o.Deploy.ExportRenderedTopology
 
 	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
