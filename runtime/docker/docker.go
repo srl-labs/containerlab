@@ -140,9 +140,7 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 		if err != nil {
 			d.mgmt.MTU = 1500
 			log.Debugf("an error occurred when trying to detect docker default network mtu")
-		}
-
-		if mtu, ok := netRes.Options["com.docker.network.driver.mtu"]; ok {
+		} else if mtu, ok := netRes.Options["com.docker.network.driver.mtu"]; ok {
 			log.Debugf("detected docker network mtu value - %s", mtu)
 			d.mgmt.MTU, err = strconv.Atoi(mtu)
 			if err != nil {
@@ -1114,10 +1112,11 @@ func (d *DockerRuntime) ExecNotWait(
 	}
 
 	execStartCheck := container.ExecStartOptions{}
-	_, err = d.Client.ContainerExecAttach(context.Background(), respID.ID, execStartCheck)
+	rsp, err := d.Client.ContainerExecAttach(context.Background(), respID.ID, execStartCheck)
 	if err != nil {
 		return err
 	}
+	rsp.Close()
 	return nil
 }
 

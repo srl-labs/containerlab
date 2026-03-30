@@ -206,13 +206,15 @@ func (r *PodmanRuntime) CreateContainer(
 		)
 	}
 	res, err := containers.CreateWithSpec(ctx, &sg, &containers.CreateOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to create container %q: %w", cfg.LongName, err)
+	}
 	log.Debugf(
-		"Created a container with ID %v, warnings %v and error %v",
+		"Created a container with ID %v, warnings %v",
 		res.ID,
 		res.Warnings,
-		err,
 	)
-	return res.ID, err
+	return res.ID, nil
 }
 
 // StartContainer starts a previously created container by ID or its name and executes post-start
