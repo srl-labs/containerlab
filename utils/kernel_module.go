@@ -23,14 +23,19 @@ func IsKernelModuleLoaded(name string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		if strings.HasPrefix(strings.Fields(scanner.Text())[0], name) {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) == 0 {
+			continue
+		}
+		if strings.HasPrefix(fields[0], name) {
 			return true, nil
 		}
 	}
-	return false, f.Close()
+	return false, scanner.Err()
 }
 
 const kernelOSReleasePath = "/proc/sys/kernel/osrelease"
