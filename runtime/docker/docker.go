@@ -716,6 +716,11 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 		return "", err
 	}
 
+	if cJSON.State.Pid == 0 {
+		return "", fmt.Errorf("container %q is not running (PID is 0); check container logs with: docker logs %s",
+			cJSON.Name, cID)
+	}
+
 	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
 }
 
