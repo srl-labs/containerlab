@@ -161,7 +161,7 @@ Download `.apk` package from [Github releases](https://github.com/srl-labs/conta
 ///
 
 /// tab | AUR
-Arch Linux users can download a package from this [AUR repository](https://aur.archlinux.org/packages/containerlab-bin).
+Arch Linux users can download a package from this [AUR repository](https://aur.archlinux.org/packages/containerlab).
 ///
 
 /// details | Manual package installation
