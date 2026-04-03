@@ -716,12 +716,58 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 		return "", err
 	}
 
+	displayName := strings.TrimPrefix(cJSON.Name, "/")
+	if displayName == "" {
+		displayName = cID
+	}
+
 	if cJSON.State.Pid == 0 {
-		return "", fmt.Errorf("container %q is not running (PID is 0); check container logs with: docker logs %s",
-			cJSON.Name, cID)
+		d.logExitedContainerOutput(nctx, cID, displayName, cJSON.Config.Tty)
+		return "", fmt.Errorf("container %q is not running", displayName)
 	}
 
 	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
+}
+
+// logExitedContainerOutput fetches recent stdout/stderr from a non-running container and prints it
+// so deploy failures (e.g. bad cmd) surface in the CLI without a separate docker logs step.
+// When the container was created with a TTY, Docker returns a raw stream; otherwise logs are
+// stdout/stderr multiplexed (see stdcopy).
+func (d *DockerRuntime) logExitedContainerOutput(ctx context.Context, cID, displayName string, tty bool) {
+	logReader, err := d.Client.ContainerLogs(ctx, cID, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Tail:       "100",
+	})
+	if err != nil {
+		log.Warnf("could not read logs for exited container %q: %v", displayName, err)
+		return
+	}
+	defer logReader.Close()
+
+	var combined string
+	if tty {
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, logReader); err != nil {
+			log.Warnf("could not read logs for exited container %q: %v", displayName, err)
+			return
+		}
+		combined = strings.TrimSpace(buf.String())
+	} else {
+		var outBuf, errBuf bytes.Buffer
+		if _, err := stdcopy.StdCopy(&outBuf, &errBuf, logReader); err != nil {
+			log.Warnf("could not decode logs for exited container %q: %v", displayName, err)
+			return
+		}
+		combined = strings.TrimSpace(outBuf.String() + errBuf.String())
+	}
+
+	if combined == "" {
+		log.Errorf("container %q exited immediately with no log output", displayName)
+		return
+	}
+
+	log.Errorf("container %q exited; container output:\n%s", displayName, combined)
 }
 
 // PullImage pulls the container image using the provided image pull policy value.

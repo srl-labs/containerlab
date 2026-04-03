@@ -1,0 +1,19 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: exited-container-cli
+mgmt:
+  bridge: 01-27-net
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      restart-policy: "no"
+      cmd: sh -c "ip route replace default via 10.2.77.1"
+
+  links:
+    # Host link to the linux node that exits immediately (issue #2284 link / netns path)
+    - endpoints: ["l1:eth1", "host:l1-01-27-eth1"]
