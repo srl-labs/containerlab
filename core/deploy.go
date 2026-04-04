@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -143,13 +144,22 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	nodesWg, execCollection, err := c.createNodes(ctx, options.maxWorkers, options.skipPostDeploy)
+	nodesWg, execCollection, nodeFailCh, err := c.createNodes(ctx, options.maxWorkers, options.skipPostDeploy)
 	if err != nil {
 		return nil, err
 	}
 
 	if nodesWg != nil {
 		nodesWg.Wait()
+	}
+
+	close(nodeFailCh)
+	var nodeFailErrs []error
+	for nodeErr := range nodeFailCh {
+		nodeFailErrs = append(nodeFailErrs, nodeErr)
+	}
+	if len(nodeFailErrs) > 0 {
+		return nil, fmt.Errorf("deployment failed for one or more nodes: %w", errors.Join(nodeFailErrs...))
 	}
 
 	// also call deploy on the special nodes endpoints (only host is required for the
@@ -280,7 +290,7 @@ func (c *CLab) createNodes(
 	ctx context.Context,
 	maxWorkers uint,
 	skipPostDeploy bool,
-) (*sync.WaitGroup, *clabexec.ExecCollection, error) {
+) (*sync.WaitGroup, *clabexec.ExecCollection, chan error, error) {
 	for _, node := range c.Nodes {
 		c.dependencyManager.AddNode(node)
 	}
@@ -288,13 +298,13 @@ func (c *CLab) createNodes(
 	// nodes with static mgmt IP should be scheduled before the dynamic ones
 	err := c.createStaticDynamicDependency()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// create user-defined node dependencies done with `wait-for` property of the deployment stage
 	err = c.createWaitForDependency()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// make network namespace shared containers start in the right order
@@ -305,13 +315,17 @@ func (c *CLab) createNodes(
 	// make sure that there are no unresolvable dependencies, which would deadlock.
 	err = c.dependencyManager.CheckAcyclicity()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	// start scheduling
-	NodesWg, execCollection := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy)
+	// Buffered so workers never block reporting a failure (at most one failure path per node).
+	// With zero nodes, nothing sends on this channel; an empty buffer is fine.
+	nodeFailCh := make(chan error, len(c.Nodes))
 
-	return NodesWg, execCollection, nil
+	// start scheduling
+	NodesWg, execCollection := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy, nodeFailCh)
+
+	return NodesWg, execCollection, nodeFailCh, nil
 }
 
 // configureSnapshotRestore configures nodes for snapshot restoration.
