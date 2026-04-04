@@ -1329,10 +1329,19 @@ func (d *DockerRuntime) GetContainerStatus(
 	switch inspect.State.Status {
 	case "running":
 		return clabruntime.Running
-	case "created", "paused", "restarting", "removing", "exited", "dead":
+	case "paused":
+		return clabruntime.Paused
+	case "created":
+		return clabruntime.Created
+	case "restarting":
+		return clabruntime.Restarting
+	case "removing":
+		return clabruntime.Removing
+	case "exited", "dead":
 		return clabruntime.Stopped
+	default:
+		return clabruntime.NotFound
 	}
-	return clabruntime.NotFound
 }
 
 // containerPid returns the pid of a container by its ID using inspect.

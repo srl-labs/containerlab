@@ -91,13 +91,27 @@ type ContainerRuntime interface {
 	CopyToContainer(ctx context.Context, cID string, dstPath string, srcPath string) error
 }
 
+// ContainerStatus summarizes container lifecycle as seen by the runtime.
+// Running and Paused imply a joinable network namespace for typical Linux containers;
+// use ContainerHasJoinableNetns for that check. Stopped means exited or dead
+// (no running task / no usable netns). Created is not yet started (e.g. Docker "created").
 type ContainerStatus string
 
 const (
-	NotFound = "NotFound"
-	Running  = "Running"
-	Stopped  = "Stopped"
+	NotFound   ContainerStatus = "NotFound"
+	Running    ContainerStatus = "Running"
+	Stopped    ContainerStatus = "Stopped" // exited or dead (terminal)
+	Paused     ContainerStatus = "Paused"
+	Created    ContainerStatus = "Created" // exists but not started
+	Restarting ContainerStatus = "Restarting"
+	Removing   ContainerStatus = "Removing"
 )
+
+// ContainerHasJoinableNetns reports whether the container likely has a network
+// namespace that GetNSPath can reference (PID-based path under /proc) based on the container status.
+func ContainerHasJoinableNetns(s ContainerStatus) bool {
+	return s == Running || s == Paused
+}
 
 const (
 	EventTypeContainer = "container"
