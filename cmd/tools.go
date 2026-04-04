@@ -17,6 +17,7 @@ func toolsSubcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		apiServerCmd,
 		certCmd,
 		disableTxOffloadCmd,
+		dockerConnectCmd,
 		gottyCmd,
 		netemCmd,
 		snapshotCmd,
