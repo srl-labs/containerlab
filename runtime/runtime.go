@@ -108,7 +108,8 @@ const (
 )
 
 // ContainerHasJoinableNetns reports whether the container likely has a network
-// namespace that GetNSPath can reference (PID-based path under /proc) based on the container status.
+// namespace that GetNSPath can reference (PID-based path under /proc) based on the container
+// status.
 func ContainerHasJoinableNetns(s ContainerStatus) bool {
 	return s == Running || s == Paused
 }

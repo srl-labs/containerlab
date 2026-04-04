@@ -733,7 +733,11 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 // so deploy failures (e.g. bad cmd) surface in the CLI without a separate docker logs step.
 // When the container was created with a TTY, Docker returns a raw stream; otherwise logs are
 // stdout/stderr multiplexed (see stdcopy).
-func (d *DockerRuntime) logExitedContainerOutput(ctx context.Context, cID, displayName string, tty bool) {
+func (d *DockerRuntime) logExitedContainerOutput(
+	ctx context.Context,
+	cID, displayName string,
+	tty bool,
+) {
 	logReader, err := d.Client.ContainerLogs(ctx, cID, container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,

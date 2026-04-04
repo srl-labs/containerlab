@@ -497,7 +497,15 @@ func (c *CLab) scheduleNodes(
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := range maxWorkers {
-		go c.scheduleNodeWorkerF(ctx, i, concurrentChan, wg, skipPostDeploy, execCollection, nodeFailCh)
+		go c.scheduleNodeWorkerF(
+			ctx,
+			i,
+			concurrentChan,
+			wg,
+			skipPostDeploy,
+			execCollection,
+			nodeFailCh,
+		)
 	}
 
 	// Waitgroup protects the channel towards the workers of being closed too early

@@ -144,7 +144,11 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	nodesWg, execCollection, nodeFailCh, err := c.createNodes(ctx, options.maxWorkers, options.skipPostDeploy)
+	nodesWg, execCollection, nodeFailCh, err := c.createNodes(
+		ctx,
+		options.maxWorkers,
+		options.skipPostDeploy,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +163,10 @@ func (c *CLab) Deploy( //nolint: funlen
 		nodeFailErrs = append(nodeFailErrs, nodeErr)
 	}
 	if len(nodeFailErrs) > 0 {
-		return nil, fmt.Errorf("deployment failed for one or more nodes: %w", errors.Join(nodeFailErrs...))
+		return nil, fmt.Errorf(
+			"deployment failed for one or more nodes: %w",
+			errors.Join(nodeFailErrs...),
+		)
 	}
 
 	// also call deploy on the special nodes endpoints (only host is required for the
