@@ -729,6 +729,24 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
 }
 
+// LogNonRunningContainerOutput implements runtime.ContainerRuntime.
+func (d *DockerRuntime) LogNonRunningContainerOutput(ctx context.Context, containerName string) {
+	nctx, cancelFn := context.WithTimeout(ctx, d.config.Timeout)
+	defer cancelFn()
+	cJSON, err := d.Client.ContainerInspect(nctx, containerName)
+	if err != nil {
+		return
+	}
+	if cJSON.State.Running {
+		return
+	}
+	displayName := strings.TrimPrefix(cJSON.Name, "/")
+	if displayName == "" {
+		displayName = containerName
+	}
+	d.logExitedContainerOutput(nctx, cJSON.ID, displayName, cJSON.Config.Tty)
+}
+
 // logExitedContainerOutput fetches recent stdout/stderr from a non-running container and prints it
 // so deploy failures (e.g. bad cmd) surface in the CLI without a separate docker logs step.
 // When the container was created with a TTY, Docker returns a raw stream; otherwise logs are

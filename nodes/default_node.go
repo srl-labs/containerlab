@@ -669,6 +669,9 @@ func (d *DefaultNode) AddLinkToContainer(
 	if !d.Cfg.IsRootNamespaceBased {
 		st := d.GetRuntime().GetContainerStatus(ctx, d.GetContainerName())
 		if !clabruntime.ContainerHasJoinableNetns(st) {
+			if st == clabruntime.Stopped {
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, d.GetContainerName())
+			}
 			return fmt.Errorf(
 				"node %q: cannot attach link, container network namespace is not available (status=%s)",
 				d.Cfg.ShortName,

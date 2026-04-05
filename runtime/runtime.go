@@ -49,6 +49,10 @@ type ContainerRuntime interface {
 	ListContainers(context.Context, []*clabtypes.GenericFilter) ([]GenericContainer, error)
 	// Get a netns path using the name of a container
 	GetNSPath(context.Context, string) (string, error)
+	// LogNonRunningContainerOutput fetches recent stdout/stderr from a container that is not
+	// running and logs it (best-effort; no-op on inspect failure). Used so deploy failures
+	// surface root cause when link attach runs after a fast exit.
+	LogNonRunningContainerOutput(ctx context.Context, containerName string)
 	// Executes cmd on container identified with id and returns stdout, stderr bytes and an error
 	Exec(ctx context.Context, cID string, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error)
 	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor

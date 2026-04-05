@@ -300,6 +300,9 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	return nspath, nil
 }
 
+// LogNonRunningContainerOutput implements runtime.ContainerRuntime (no-op for Podman).
+func (*PodmanRuntime) LogNonRunningContainerOutput(context.Context, string) {}
+
 func (r *PodmanRuntime) Exec(
 	ctx context.Context,
 	cID string,
