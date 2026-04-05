@@ -12,7 +12,7 @@ topology:
       kind: linux
       image: alpine:3
       restart-policy: "no"
-      cmd: sh -c "ip route replace default via 10.2.77.1"
+      cmd: nosuchcommand
 
   links:
     # Host link to the linux node that exits immediately (issue #2284 link / netns path)

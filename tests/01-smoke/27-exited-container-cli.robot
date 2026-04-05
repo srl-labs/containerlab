@@ -26,7 +26,7 @@ Deploy ${lab-name} fails with clear CLI output
     ...    stderr=STDOUT
     Log    ${res.stdout}
     Should Not Be Equal As Integers    ${res.rc}    0
-    Should Contain    ${res.stdout}    RTNETLINK answers: Network unreachable
+    Should Contain    ${res.stdout}    "nosuchcommand": executable file not found
     Should Not Contain    ${res.stdout}    /proc/0/ns/net
 
 
