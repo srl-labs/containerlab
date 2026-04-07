@@ -94,7 +94,6 @@ func GetOptions() *Options {
 			ToolsNetem: &ToolsNetemOptions{
 				Format: "table",
 			},
-			ToolsDC: &ToolsDCOptions{},
 			ToolsSSHX: &ToolsSSHXOptions{
 				Image:  multiToolImage,
 				Format: "table",
@@ -139,7 +138,6 @@ type Options struct {
 	ToolsTxOffload *ToolsDisableTxOffloadOptions
 	ToolsGoTTY     *ToolsGoTTYOptions
 	ToolsNetem     *ToolsNetemOptions
-	ToolsDC        *ToolsDCOptions
 	ToolsSSHX      *ToolsSSHXOptions
 	ToolsVeth      *ToolsVethOptions
 	ToolsVxlan     *ToolsVxlanOptions
@@ -356,8 +354,10 @@ type SaveOptions struct {
 }
 
 type ExecOptions struct {
-	Format   string
-	Commands []string
+	Format      string
+	Commands    []string
+	Interactive bool
+	Shell       string
 }
 
 type InspectOptions struct {
@@ -450,10 +450,6 @@ type ToolsNetemOptions struct {
 	Rate          uint64
 	Corruption    float64
 	Format        string
-}
-
-type ToolsDCOptions struct {
-	Shell string
 }
 
 type ToolsSSHXOptions struct {
