@@ -156,11 +156,11 @@ func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 	var cfgs []string
 
-	addressCmd := func(a string, p int) string {
-		log.Debug("Setting mgmt address", "address", a, "subnet", p)
+	addressCmd := func(iface, a string, p int) string {
+		log.Debug("Setting address", "interface", iface, "address", a, "subnet", p)
 		return fmt.Sprintf(
 			"set interfaces ethernet %s address %s/%d",
-			nodeCfg.MgmtIntf,
+			iface,
 			a,
 			p,
 		)
@@ -171,7 +171,7 @@ func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		prefix := nodeCfg.MgmtIPv4PrefixLength
 		cfgs = append(
 			cfgs,
-			addressCmd(ip, prefix),
+			addressCmd(nodeCfg.MgmtIntf, ip, prefix),
 		)
 	}
 
@@ -180,13 +180,38 @@ func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 		prefix := nodeCfg.MgmtIPv6PrefixLength
 		cfgs = append(
 			cfgs,
-			addressCmd(ip, prefix),
+			addressCmd(nodeCfg.MgmtIntf, ip, prefix),
 		)
+	}
+
+	// configure data interfaces
+	for _, e := range n.Endpoints {
+		ifName := e.GetIfaceName()
+		// skip management interface
+		if ifName == nodeCfg.MgmtIntf {
+			continue
+		}
+
+		v4 := e.GetIPv4Addr()
+		v6 := e.GetIPv6Addr()
+
+		if !v4.IsValid() && !v6.IsValid() {
+			continue
+		}
+
+		if v4.IsValid() {
+			cfgs = append(cfgs, addressCmd(ifName, v4.Addr().String(), v4.Bits()))
+		}
+		if v6.IsValid() {
+			cfgs = append(cfgs, addressCmd(ifName, v6.Addr().String(), v6.Bits()))
+		}
 	}
 
 	if n.SSHPubKeys != nil {
 		cfgs = slices.Concat(cfgs, n.authorizedKeyCmds())
 	}
+
+	log.Debugf("VyOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
 
 	resp, err := cli.SendConfigs(cfgs)
 	log.Debug("CLI", "response", resp.JoinedResult())
