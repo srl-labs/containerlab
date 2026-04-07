@@ -4,9 +4,9 @@
 
 The `exec` command allows a user to execute a command inside the nodes (containers).
 
-This command is similar to `docker exec`, but it allows a user to run the same command across multiple lab nodes matching the filter. Users can provide a path to the topology file and use the `--label` argument to narrow down the list of nodes to execute the command on.
+This command allows a user to run the same command across multiple lab nodes matching the filter. Users can provide a path to the topology file and use the `--label` argument to narrow down the list of nodes to execute the command on.
 
-With `--interactive` / `-i` the command drops you into an interactive shell inside a **single** matched container, replacing the current process (identical to `docker exec -it`). The shell is auto-detected from the container image using the same defaults as `tools dc`, or overridden with `--shell` / `-s`. Because an interactive session targets one container, `--interactive` and `--cmd` are mutually exclusive.
+With `--interactive` / `-i` the command drops you into an interactive shell inside a **single** matched container, replacing the current process. The shell is auto-detected from the container image, or overridden with `--shell` / `-s`. Because an interactive session targets one container, `--interactive` and `--cmd` are mutually exclusive.
 
 --8<-- "docs/cmd/deploy.md:env-vars-flags"
 
@@ -44,7 +44,7 @@ Recall that you can check the labels attached to the nodes with `docker inspect 
 
 ### interactive
 
-`--interactive | -i` opens an interactive shell inside the single container matched by the topology/label filters and the optional `containername` positional argument. The current process is replaced by the shell (via `docker exec -it`), so stdin/stdout/stderr are connected directly.
+`--interactive | -i` opens an interactive shell inside the single container matched by the topology/label filters and the optional `containername` positional argument. The current process is replaced by the shell, so stdin/stdout/stderr are connected directly.
 
 When `--topo` / `--name` are not given, the topology file is auto-detected from the current directory. The optional `containername` argument is a substring matched against container names after all other filters have been applied.
 
@@ -54,9 +54,9 @@ Mutually exclusive with `--cmd`.
 
 ### shell
 
-`--shell | -s` overrides the shell used when `--interactive` is given. The value is split on whitespace and passed as the command to `docker exec`, e.g. `--shell '/bin/bash'` or `--shell '/usr/bin/Cli -p 15'`.
+`--shell | -s` overrides the shell used when `--interactive` is given. The value is split on whitespace and passed as the command to the container runtime's exec, e.g. `--shell '/bin/sh'` or `--shell '/bin/bash -l'`.
 
-When omitted the shell is auto-detected from the container image using the built-in defaults (same as `tools dc`), falling back to `/bin/sh`.
+When omitted the shell is auto-detected from the container image using built-in defaults, falling back to `/bin/sh`.
 
 ## Examples
 
