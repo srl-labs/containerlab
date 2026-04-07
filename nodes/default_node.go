@@ -706,7 +706,14 @@ func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) 
 	if !d.Cfg.IsRootNamespaceBased {
 		st := d.GetRuntime().GetContainerStatus(ctx, d.GetContainerName())
 		if !clabruntime.ContainerHasJoinableNetns(st) {
-			return nil
+			if st == clabruntime.Stopped {
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, d.GetContainerName())
+			}
+			return fmt.Errorf(
+				"node %q: cannot exec a command, container network namespace is not available (status=%s)",
+				d.Cfg.ShortName,
+				st,
+			)
 		}
 	}
 	// retrieve nodes nspath
