@@ -716,7 +716,80 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 		return "", err
 	}
 
+	displayName := strings.TrimPrefix(cJSON.Name, "/")
+	if displayName == "" {
+		displayName = cID
+	}
+
+	if cJSON.State.Pid == 0 {
+		d.logExitedContainerOutput(nctx, cID, displayName, cJSON.Config.Tty)
+		return "", fmt.Errorf("container %q is not running", displayName)
+	}
+
 	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
+}
+
+// LogNonRunningContainerOutput implements runtime.ContainerRuntime.
+func (d *DockerRuntime) LogNonRunningContainerOutput(ctx context.Context, containerName string) {
+	nctx, cancelFn := context.WithTimeout(ctx, d.config.Timeout)
+	defer cancelFn()
+	cJSON, err := d.Client.ContainerInspect(nctx, containerName)
+	if err != nil {
+		return
+	}
+	if cJSON.State.Running {
+		return
+	}
+	displayName := strings.TrimPrefix(cJSON.Name, "/")
+	if displayName == "" {
+		displayName = containerName
+	}
+	d.logExitedContainerOutput(nctx, cJSON.ID, displayName, cJSON.Config.Tty)
+}
+
+// logExitedContainerOutput fetches recent stdout/stderr from a non-running container and prints it
+// so deploy failures (e.g. bad cmd) surface in the CLI without a separate docker logs step.
+// When the container was created with a TTY, Docker returns a raw stream; otherwise logs are
+// stdout/stderr multiplexed (see stdcopy).
+func (d *DockerRuntime) logExitedContainerOutput(
+	ctx context.Context,
+	cID, displayName string,
+	tty bool,
+) {
+	logReader, err := d.Client.ContainerLogs(ctx, cID, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Tail:       "100",
+	})
+	if err != nil {
+		log.Warnf("could not read logs for exited container %q: %v", displayName, err)
+		return
+	}
+	defer logReader.Close()
+
+	var combined string
+	if tty {
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, logReader); err != nil {
+			log.Warnf("could not read logs for exited container %q: %v", displayName, err)
+			return
+		}
+		combined = strings.TrimSpace(buf.String())
+	} else {
+		var outBuf, errBuf bytes.Buffer
+		if _, err := stdcopy.StdCopy(&outBuf, &errBuf, logReader); err != nil {
+			log.Warnf("could not decode logs for exited container %q: %v", displayName, err)
+			return
+		}
+		combined = strings.TrimSpace(outBuf.String() + errBuf.String())
+	}
+
+	if combined == "" {
+		log.Errorf("container %q exited immediately with no log output", displayName)
+		return
+	}
+
+	log.Errorf("container %q exited; container output:\n%s", displayName, combined)
 }
 
 // PullImage pulls the container image using the provided image pull policy value.
@@ -1278,10 +1351,19 @@ func (d *DockerRuntime) GetContainerStatus(
 	switch inspect.State.Status {
 	case "running":
 		return clabruntime.Running
-	case "created", "paused", "restarting", "removing", "exited", "dead":
+	case "paused":
+		return clabruntime.Paused
+	case "created":
+		return clabruntime.Created
+	case "restarting":
+		return clabruntime.Restarting
+	case "removing":
+		return clabruntime.Removing
+	case "exited", "dead":
 		return clabruntime.Stopped
+	default:
+		return clabruntime.NotFound
 	}
-	return clabruntime.NotFound
 }
 
 // containerPid returns the pid of a container by its ID using inspect.

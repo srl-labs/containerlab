@@ -317,7 +317,7 @@ func sshxAttach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	rt, ok := c.Runtimes[o.Global.Runtime]
 	if !ok {
-		return fmt.Errorf("failed getting runtime: %w", err)
+		return fmt.Errorf("runtime %q not found", o.Global.Runtime)
 	}
 
 	// Set container name if not provided
@@ -437,7 +437,7 @@ func sshxDetach(cobraCmd *cobra.Command, o *Options) error {
 
 	rt, ok := c.Runtimes[o.Global.Runtime]
 	if !ok {
-		return fmt.Errorf("failed getting runtime: %w", err)
+		return fmt.Errorf("runtime %q not found", o.Global.Runtime)
 	}
 
 	containerName := fmt.Sprintf("clab-%s-sshx", c.Config.Name)
@@ -464,7 +464,7 @@ func sshxList(cobraCmd *cobra.Command, o *Options) error {
 
 	rt, ok := c.Runtimes[o.Global.Runtime]
 	if !ok {
-		return fmt.Errorf("failed getting runtime: %w", err)
+		return fmt.Errorf("runtime %q not found", o.Global.Runtime)
 	}
 
 	containers, err := c.ListContainers(
@@ -577,7 +577,7 @@ func sshxReattach(cobraCmd *cobra.Command, o *Options) error { //nolint: funlen
 
 	rt, ok := c.Runtimes[o.Global.Runtime]
 	if !ok {
-		return fmt.Errorf("failed getting runtime: %w", err)
+		return fmt.Errorf("runtime %q not found", o.Global.Runtime)
 	}
 
 	// Set container name if not provided

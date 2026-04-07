@@ -118,7 +118,23 @@ func (c *CLab) makeCopyForDestroy(
 ) (*CLab, error) {
 	newOpts := []ClabOption{
 		WithTimeout(c.timeout),
-		WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()),
+	}
+
+	// Try to load topology file if it exists, otherwise use lab name only.
+	// This allows destroying labs even when the topology file has been deleted.
+	// WithTopoPath / WithLabNameOnly must run before WithNodeFilter so filterClabNodes
+	// sees topology nodes (see filterClabNodes in clab.go).
+	if clabutils.FileOrDirExists(topo) {
+		newOpts = append(newOpts, WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()))
+	} else {
+		// Derive lab name from lab directory (format: clab-<labname>)
+		labName := filepath.Base(labDir)
+		labName = strings.TrimPrefix(labName, "clab-")
+		log.Debugf("topology file %q not found, using lab name %q for destroy", topo, labName)
+		newOpts = append(newOpts, WithLabNameOnly(labName))
+	}
+
+	newOpts = append(newOpts,
 		WithNodeFilter(opts.nodeFilter),
 		// during destroy we don't want to check bind paths
 		// as it is irrelevant for this command.
@@ -131,7 +147,7 @@ func (c *CLab) makeCopyForDestroy(
 				GracefulShutdown: opts.graceful,
 			},
 		),
-	}
+	)
 
 	if opts.keepMgmtNet {
 		newOpts = append(newOpts, WithKeepMgmtNet())
@@ -217,7 +233,17 @@ func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
 }
 
 func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) error {
-	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
+	var containers []clabruntime.GenericContainer
+	var err error
+
+	// If we have nodes defined (from topology file), list containers by node.
+	// Otherwise, list containers by lab name label (for destroy-by-name-only case).
+	if len(c.Nodes) > 0 {
+		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
+	} else if c.Config.Name != "" {
+		containers, err = c.ListContainers(ctx, WithListLabName(c.Config.Name))
+	}
+
 	if err != nil {
 		return err
 	}
@@ -227,12 +253,18 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	}
 
 	if maxWorkers == 0 {
-		maxWorkers = uint(len(c.Nodes))
+		maxWorkers = uint(len(containers))
 	}
 
 	log.Info("Destroying lab", "name", c.Config.Name)
 
-	c.deleteNodes(ctx, maxWorkers)
+	// If we have nodes defined, use the normal node-based deletion.
+	// Otherwise, delete containers directly via the runtime (for destroy-by-name-only case).
+	if len(c.Nodes) > 0 {
+		c.deleteNodes(ctx, maxWorkers)
+	} else {
+		c.deleteContainersDirect(ctx, containers)
+	}
 
 	c.deleteToolContainers(ctx)
 
@@ -326,6 +358,27 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 	}
 
 	wg.Wait()
+}
+
+// deleteContainersDirect deletes containers directly via the runtime API.
+// This is used when we don't have node objects (e.g., destroy-by-name-only case).
+func (c *CLab) deleteContainersDirect(
+	ctx context.Context,
+	containers []clabruntime.GenericContainer,
+) {
+	for _, cont := range containers {
+		if len(cont.Names) == 0 {
+			log.Warnf("skipping container %s with no names", cont.ID)
+			continue
+		}
+		name := cont.Names[0]
+		log.Infof("Removing container: %s", name)
+
+		err := c.globalRuntime().DeleteContainer(ctx, name)
+		if err != nil {
+			log.Errorf("could not remove container %q: %v", name, err)
+		}
+	}
 }
 
 func (c *CLab) deleteToolContainers(ctx context.Context) {

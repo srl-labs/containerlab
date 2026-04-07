@@ -229,6 +229,8 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	n.bootCfg = cfgTemplate
 
 	// use startup config file provided by a user
+	// make copy of template to prevent provided startup config from mutating shared package template value
+	currentCfgTemplate := cfgTemplate
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
@@ -238,11 +240,15 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 		if clabutils.IsPartialConfigFile(nodeCfg.StartupConfig) {
 			n.partialStartupCfg = string(c)
 		} else {
-			n.bootCfg = string(c)
+			currentCfgTemplate = string(c)
 		}
 	}
 
-	err = n.genBootConfig()
+	if n.partialStartupCfg != "" {
+		err = n.genBootConfig()
+	} else {
+		err = n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
+	}
 	if err != nil {
 		return err
 	}
@@ -286,7 +292,9 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 
 	// adding if-wait.sh script to flash dir
 	ifScriptP := path.Join(nodeCfg.LabDir, "flash", "if-wait.sh")
-	clabutils.CreateFile(ifScriptP, clabutils.IfWaitScript)
+	if err := clabutils.CreateFile(ifScriptP, clabutils.IfWaitScript); err != nil {
+		return fmt.Errorf("failed to write if-wait.sh: %w", err)
+	}
 	os.Chmod(ifScriptP, clabconstants.PermissionsOpen) // skipcq: GSC-G302
 
 	if *n.Cfg.Certificate.Issue {

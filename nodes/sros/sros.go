@@ -377,7 +377,7 @@ func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 		}
 
-		return n.createSROSFiles()
+		return n.createSROSFiles(ctx)
 	}
 	return nil
 }
@@ -691,7 +691,9 @@ func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *cla
 func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
 	// loop through the components, creating them
 	for _, c := range n.componentNodes {
-		c.PreDeploy(ctx, n.preDeployParams)
+		if err := c.PreDeploy(ctx, n.preDeployParams); err != nil {
+			return fmt.Errorf("pre-deploy for component node %q: %w", c.GetShortName(), err)
+		}
 		// deploy the component
 		err := c.Deploy(ctx, deployParams)
 		if err != nil {
@@ -773,6 +775,9 @@ func (n *sros) calcComponentFqdn(slot string) string {
 		return n.Cfg.Fqdn
 	}
 	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
+	if fqdnDotIndex < 0 {
+		return fmt.Sprintf("%s-%s", n.Cfg.Fqdn, strings.ToLower(slot))
+	}
 	result := fmt.Sprintf(
 		"%s-%s%s",
 		n.Cfg.Fqdn[:fqdnDotIndex],
@@ -947,7 +952,7 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 }
 
 // Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars.
-func (n *sros) createSROSFiles() error {
+func (n *sros) createSROSFiles(ctx context.Context) error {
 	log.Debug("Creating directory structure for SR OS container", "node", n.Cfg.ShortName)
 
 	var err error
@@ -976,6 +981,10 @@ func (n *sros) createSROSFiles() error {
 		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
+	if err := n.writeChassisInfoToLabDir(ctx); err != nil {
+		log.Warn("Failed to write chassis_info.json to lab dir",
+			"node", n.Cfg.ShortName, "path", n.Cfg.LabDir, "error", err)
+	}
 	if n.isCPM(slotAName) || n.isStandaloneNode() {
 		err = n.createSROSCertificates()
 	}
@@ -989,6 +998,27 @@ func (n *sros) createSROSFiles() error {
 			return err
 		}
 	}
+	return nil
+}
+
+// writeChassisInfoToLabDir fetches /opt/nokia/chassis_info.json from the node image
+// (via graph driver, same as srosVersionFromImage) and writes it under n.Cfg.LabDir
+// with the same filename (chassis_info.json).
+func (n *sros) writeChassisInfoToLabDir(ctx context.Context) error {
+	imageInspect, err := n.Runtime.InspectImage(ctx, n.Cfg.Image)
+	if err != nil {
+		return fmt.Errorf("inspect image: %w", err)
+	}
+	content, err := ReadFileFromImageInspect(imageInspect, DefaultChassisInfoPath)
+	if err != nil {
+		return err
+	}
+	dstPath := filepath.Join(n.Cfg.LabDir, filepath.Base(DefaultChassisInfoPath))
+	licensed := append([]byte(chassisInfoFileLicense), content...)
+	if err := os.WriteFile(dstPath, licensed, clabconstants.PermissionsFileDefault); err != nil {
+		return fmt.Errorf("write %s: %w", dstPath, err)
+	}
+	log.Debug("Wrote chassis_info.json to lab dir", "node", n.Cfg.ShortName, "path", dstPath)
 	return nil
 }
 

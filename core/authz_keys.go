@@ -89,12 +89,12 @@ func (c *CLab) RetrieveSSHPubKeys(ctx context.Context) ([]ssh.PublicKey, error) 
 	// we accumulate them and log.
 	fkeys, err := RetrieveSSHPubKeysFromFiles()
 	if err != nil {
-		errs = errors.Join(err)
+		errs = errors.Join(errs, err)
 	}
 
 	agentKeys, err := RetrieveSSHAgentKeys(ctx)
 	if err != nil {
-		errs = errors.Join(err)
+		errs = errors.Join(errs, err)
 	}
 
 	keysM := map[string]ssh.PublicKey{}

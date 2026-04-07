@@ -156,7 +156,11 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 	// after LinkAdd succeeded, preventing orphaned interfaces from blocking retries.
 	cleanup := func(err error) error {
 		if delErr := netlink.LinkDel(linkA); delErr != nil {
-			log.Debugf("failed to cleanup veth pair %s after error: %v", ep.GetRandIfaceName(), delErr)
+			log.Debugf(
+				"failed to cleanup veth pair %s after error: %v",
+				ep.GetRandIfaceName(),
+				delErr,
+			)
 		}
 		return err
 	}

@@ -503,7 +503,13 @@ func formatExposedPort(port *clabtypes.GenericPortBinding) string {
 		}
 
 		if port.ContainerPort > 0 {
-			return fmt.Sprintf("%s:%d%s->%d", hostIP, port.HostPort, protoSuffix, port.ContainerPort)
+			return fmt.Sprintf(
+				"%s:%d%s->%d",
+				hostIP,
+				port.HostPort,
+				protoSuffix,
+				port.ContainerPort,
+			)
 		}
 
 		return fmt.Sprintf("%s:%d%s", hostIP, port.HostPort, protoSuffix)

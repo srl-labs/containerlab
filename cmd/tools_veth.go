@@ -131,7 +131,9 @@ func vethCreate(o *Options) error {
 
 	// deploy the endpoints of the Link
 	for _, ep := range link.GetEndpoints() {
-		ep.Deploy(ctx)
+		if err := ep.Deploy(ctx); err != nil {
+			return fmt.Errorf("failed to deploy veth endpoint: %w", err)
+		}
 	}
 
 	log.Info("veth interface successfully created!")

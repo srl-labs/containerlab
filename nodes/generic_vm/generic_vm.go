@@ -92,10 +92,10 @@ func (n *genericVM) PreDeploy(_ context.Context, params *clabnodes.PreDeployPara
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, configDirName), clabconstants.PermissionsOpen)
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	return err
+	return nil
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.

@@ -301,7 +301,7 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 			LinkVxlanRaw `yaml:",inline"`
 		}{
 			LinkVxlanRaw: *r.Link.(*LinkVxlanRaw),
-			Type:         string(LinkTypeMacVLan),
+			Type:         string(LinkTypeVxlan),
 		}
 		return x, nil
 	case LinkTypeDummy:

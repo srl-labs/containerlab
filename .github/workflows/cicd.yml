@@ -509,7 +509,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - golangci-lint
-      - docs-test
+      # docs tests are often flaky with 429 errors,
+      # so don't require them to pass for the release to happen
+      # - docs-test
       - unit-test
       - smoke-tests
       - ceos-basic-tests
@@ -611,7 +613,9 @@ jobs:
   update-docs:
     runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/docs-publish'
-    needs: docs-test
+    # docs tests are often flaky with 429 errors,
+    # so don't require them to pass for the docs update to happen
+    # needs: docs-test
     permissions:
       contents: write
     steps:
