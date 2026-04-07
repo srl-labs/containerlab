@@ -1,0 +1,19 @@
+name: ceos-partial-test
+
+topology:
+  kinds:
+    arista_ceos:
+      image: ceos:4.32.0F
+  nodes:
+    ceos1:
+      kind: arista_ceos
+    ceos2:
+      kind: arista_ceos
+      startup-config: ./interface.partial.cfg
+    ceos3:
+      kind: arista_ceos
+      startup-config: ./full_config.cfg
+
+  links:
+    - endpoints: ["ceos1:eth1", "ceos2:eth1"]
+    - endpoints: ["ceos2:eth1", "ceos3:eth1"]
