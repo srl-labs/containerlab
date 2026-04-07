@@ -280,7 +280,12 @@ topology:
 
 #### User defined config
 
+When -{{ kind_display_name }}- is booted, it will start with a basic configuration which includes the following:
+
+- 
+
 It is possible to make ceos nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property a user sets the path to the config file that will be mounted to a container and used as a startup config:
+
 
 ```yaml
 name: ceos_lab
@@ -321,6 +326,30 @@ It is possible to change the default config which every ceos node will start wit
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
 
+##### Partial Configuration
+The partial startup configuration is appended to the default startup configuration. This is useful to preconfigure certain things like
+loopback interfaces or IGP, while also taking advantage of the startup configuration that containerlab applies by default for management
+interface IP addressing and SSH access.
+
+The partial startup configuration must contain `.partial` in the filename. For example: `config.partial.txt` or `config.partial`
+
+    ```yaml
+    name: ceos
+
+    topology:
+      nodes:
+        # ceos1 will boot with configuration based on the standard template
+        ceos1:
+          kind: -{{ kind_code_name }}-
+          image: ceos:4.32.0F
+        # ceos2 will boot with the standard template configuration plus additional configuration defined in the file
+        ceos2:
+          kind: -{{ kind_code_name }}-
+          image: ceos:4.32.0F
+          startup-config: ceos2.partial.cfg
+      links:
+        - endpoints: ["ceos1:eth1", "ceos2:eth1"]
+    ```
 #### Saving configuration
 
 In addition to cli commands such as `write memory` user can take advantage of the [`containerlab save`](../../cmd/save.md) command. It saves running cEOS configuration into a startup config file effectively calling the `write` CLI command.
