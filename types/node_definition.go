@@ -33,6 +33,8 @@ type NodeDefinition struct {
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
 	Binds []string `yaml:"binds,omitempty"`
+	// list of volume mount compatible strings
+	Volumes []string `yaml:"volumes,omitempty"`
 	// list of devices to map in the container
 	Devices []string `yaml:"devices,omitempty"`
 	// List of capabilities to add for the container
