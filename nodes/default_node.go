@@ -666,6 +666,19 @@ func (d *DefaultNode) AddLinkToContainer(
 	link netlink.Link,
 	f func(ns.NetNS) error,
 ) error {
+	if !d.Cfg.IsRootNamespaceBased {
+		st := d.GetRuntime().GetContainerStatus(ctx, d.GetContainerName())
+		if !clabruntime.ContainerHasJoinableNetns(st) {
+			if st == clabruntime.Stopped {
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, d.GetContainerName())
+			}
+			return fmt.Errorf(
+				"node %q: cannot attach link, container network namespace is not available (status=%s)",
+				d.Cfg.ShortName,
+				st,
+			)
+		}
+	}
 	// retrieve nodes nspath
 	nsp, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {
@@ -690,6 +703,19 @@ func (d *DefaultNode) AddLinkToContainer(
 
 // ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
+	if !d.Cfg.IsRootNamespaceBased {
+		st := d.GetRuntime().GetContainerStatus(ctx, d.GetContainerName())
+		if !clabruntime.ContainerHasJoinableNetns(st) {
+			if st == clabruntime.Stopped {
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, d.GetContainerName())
+			}
+			return fmt.Errorf(
+				"node %q: cannot exec a command, container network namespace is not available (status=%s)",
+				d.Cfg.ShortName,
+				st,
+			)
+		}
+	}
 	// retrieve nodes nspath
 	nspath, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {

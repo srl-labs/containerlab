@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -299,6 +300,9 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	return nspath, nil
 }
 
+// LogNonRunningContainerOutput implements runtime.ContainerRuntime (no-op for Podman).
+func (*PodmanRuntime) LogNonRunningContainerOutput(context.Context, string) {}
+
 func (r *PodmanRuntime) Exec(
 	ctx context.Context,
 	cID string,
@@ -442,10 +446,33 @@ func (r *PodmanRuntime) GetContainerStatus(
 	if err != nil {
 		return runtime.NotFound
 	}
-	if icd.State.Running {
+	if icd.State == nil {
+		return runtime.NotFound
+	}
+	st := icd.State
+	if st.Paused {
+		return runtime.Paused
+	}
+	if st.Running {
 		return runtime.Running
 	}
-	return runtime.Stopped
+	if st.Restarting {
+		return runtime.Restarting
+	}
+	if st.Dead {
+		return runtime.Stopped
+	}
+	switch strings.ToLower(st.Status) {
+	case "configured":
+		return runtime.Created
+	case "removing":
+		return runtime.Removing
+	case "exited", "stopped", "stopping":
+		return runtime.Stopped
+	default:
+		// Unknown non-running state: treat as no joinable netns (align with historical Stopped).
+		return runtime.Stopped
+	}
 }
 
 // IsHealthy returns true is the container is reported as being healthy, false otherwise.

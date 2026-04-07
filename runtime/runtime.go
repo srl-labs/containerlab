@@ -49,6 +49,10 @@ type ContainerRuntime interface {
 	ListContainers(context.Context, []*clabtypes.GenericFilter) ([]GenericContainer, error)
 	// Get a netns path using the name of a container
 	GetNSPath(context.Context, string) (string, error)
+	// LogNonRunningContainerOutput fetches recent stdout/stderr from a container that is not
+	// running and logs it (best-effort; no-op on inspect failure). Used so deploy failures
+	// surface root cause when link attach runs after a fast exit.
+	LogNonRunningContainerOutput(ctx context.Context, containerName string)
 	// Executes cmd on container identified with id and returns stdout, stderr bytes and an error
 	Exec(ctx context.Context, cID string, execCmd *clabexec.ExecCmd) (*clabexec.ExecResult, error)
 	// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor
@@ -91,13 +95,28 @@ type ContainerRuntime interface {
 	CopyToContainer(ctx context.Context, cID string, dstPath string, srcPath string) error
 }
 
+// ContainerStatus summarizes container lifecycle as seen by the runtime.
+// Running and Paused imply a joinable network namespace for typical Linux containers;
+// use ContainerHasJoinableNetns for that check. Stopped means exited or dead
+// (no running task / no usable netns). Created is not yet started (e.g. Docker "created").
 type ContainerStatus string
 
 const (
-	NotFound = "NotFound"
-	Running  = "Running"
-	Stopped  = "Stopped"
+	NotFound   ContainerStatus = "NotFound"
+	Running    ContainerStatus = "Running"
+	Stopped    ContainerStatus = "Stopped" // exited or dead (terminal)
+	Paused     ContainerStatus = "Paused"
+	Created    ContainerStatus = "Created" // exists but not started
+	Restarting ContainerStatus = "Restarting"
+	Removing   ContainerStatus = "Removing"
 )
+
+// ContainerHasJoinableNetns reports whether the container likely has a network
+// namespace that GetNSPath can reference (PID-based path under /proc) based on the container
+// status.
+func ContainerHasJoinableNetns(s ContainerStatus) bool {
+	return s == Running || s == Paused
+}
 
 const (
 	EventTypeContainer = "container"
