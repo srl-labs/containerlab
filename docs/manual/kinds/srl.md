@@ -522,4 +522,4 @@ Or it's also possible via the proxmox configuration file `/etc/pve/qemu-server/v
 [^2]: The `authorized_keys` file will be created with the content of all found public keys. This file will be bind-mounted using the respecting paths inside SR Linux to enable password-less access. Experimental feature.
 [^3]: CLI configs can be saved also in the "flat" format using `info flat` command.
 [^4]: If running with `sudo`, add `-E` flag to sudo to preserve user' home directory for this feature to work as expected.
-[^5]: Can also use `ixr-x4-d` which denotes the use of QSFP-DD ports.
+[^5]: Alias of `ixr-x4-d` which denotes the use of QSFP-DD ports.
