@@ -411,8 +411,16 @@ func (n *ceos) CheckInterfaceName() error {
 	return nil
 }
 
+type ceosTemplateData struct {
+	*clabtypes.NodeConfig
+	PartialCfg string
+}
+
 func (n *ceos) GenerateConfig(dst, t string) error {
-	n.Cfg.PartialCfg = n.partialStartupCfg
+	data := ceosTemplateData{
+		NodeConfig: n.Cfg,
+		PartialCfg: n.partialStartupCfg,
+	}
 
 	ceosCfgTpl, err := template.New("ceos-config").Funcs(clabutils.CreateFuncs()).Parse(t)
 	if err != nil {
@@ -420,7 +428,7 @@ func (n *ceos) GenerateConfig(dst, t string) error {
 	}
 
 	buf := new(bytes.Buffer)
-	err = ceosCfgTpl.Execute(buf, n.Cfg)
+	err = ceosCfgTpl.Execute(buf, data)
 	if err != nil {
 		return fmt.Errorf("failed to execute ceos cfg template for node %q: %w", n.Cfg.ShortName, err)
 	}
