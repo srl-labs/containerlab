@@ -588,6 +588,18 @@ func (t *Topology) GetNodeCmd(nodeName string) string {
 	)
 }
 
+func (t *Topology) GetNodeShell(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.Shell },
+		func(group *NodeDefinition) string { return group.Shell },
+		func(kind *NodeDefinition) string { return kind.Shell },
+		func(defaults *NodeDefinition) string { return defaults.Shell },
+		func(v string) bool { return v != "" },
+	)
+}
+
 func (t *Topology) GetNodeExec(nodeName string) []string {
 	return mergeStringSliceFields(
 		t,

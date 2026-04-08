@@ -205,15 +205,18 @@ func execInteractive(ctx context.Context, o *Options, nameFilter string) error {
 
 	var shell []string
 
-	if o.Exec.Shell != "" {
+	shortName := ct.Labels[clabconstants.NodeName]
+	node, nodeKnown := c.Nodes[shortName]
+
+	switch {
+	case o.Exec.Shell != "":
 		shell = strings.Fields(o.Exec.Shell)
-	} else {
-		shortName := ct.Labels[clabconstants.NodeName]
-		if node, ok := c.Nodes[shortName]; ok {
-			shell = node.ExecInteractiveShell()
-		} else {
-			shell = []string{"/bin/sh"}
-		}
+	case nodeKnown && node.Config().Shell != "":
+		shell = strings.Fields(node.Config().Shell)
+	case nodeKnown:
+		shell = node.ExecInteractiveShell()
+	default:
+		shell = []string{"/bin/sh"}
 	}
 
 	dockerPath, err := exec.LookPath("docker")

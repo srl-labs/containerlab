@@ -56,7 +56,19 @@ Mutually exclusive with `--cmd`.
 
 `--shell | -s` overrides the shell used when `--interactive` is given. The value is split on whitespace and passed as the command to the container runtime's exec, e.g. `--shell '/bin/sh'` or `--shell '/bin/bash -l'`.
 
-When omitted the shell is auto-detected from the container image using built-in defaults, falling back to `/bin/sh`.
+When omitted the shell is resolved in the following priority order:
+
+1. **`--shell` flag** — explicit CLI override, highest priority.
+2. **`shell:` topology attribute** — set per-node, per-group, per-kind, or under `defaults:` in the topology file. Useful when a specific node needs a different shell from the kind default, for example:
+   ```yaml
+   nodes:
+     web:
+       kind: linux
+       image: example.com/myimage:latest
+       shell: /bin/bash -l
+   ```
+3. **Kind default** — each node kind ships a built-in default shell (e.g. `ceos` uses `/usr/bin/Cli -p 15`, `srl` uses `/opt/srlinux/bin/sr_cli`, `fdio_vpp` uses `/usr/bin/nsenter --net=/run/netns/dataplane /bin/bash`).
+4. **`/bin/sh`** — final fallback when no topology is loaded or the node kind has no specific default.
 
 ## Examples
 
