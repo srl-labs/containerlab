@@ -20,27 +20,6 @@ import (
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 )
 
-// shellDefaults maps image substrings (checked in order) to the shell argv to use.
-var shellDefaults = []struct {
-	imageKey string
-	argv     []string
-}{
-	{"ceos", []string{"/usr/bin/Cli", "-p", "15"}},
-	{"ghcr.io/nokia/srlinux", []string{"/opt/srlinux/bin/sr_cli"}},
-	{"git.ipng.ch/ipng/vpp-containerlab", []string{"/usr/bin/nsenter", "--net=/run/netns/dataplane", "/bin/bash"}},
-	{"ghcr.io/srl-labs/network-multitool", []string{"/bin/bash"}},
-}
-
-func shellForImage(image string) []string {
-	for _, s := range shellDefaults {
-		if strings.Contains(image, s.imageKey) {
-			return s.argv
-		}
-	}
-
-	return []string{"/bin/sh"}
-}
-
 func execCmd(o *Options) (*cobra.Command, error) {
 	c := &cobra.Command{
 		Use:   "exec [containername]",
@@ -229,7 +208,12 @@ func execInteractive(ctx context.Context, o *Options, nameFilter string) error {
 	if o.Exec.Shell != "" {
 		shell = strings.Fields(o.Exec.Shell)
 	} else {
-		shell = shellForImage(ct.Image)
+		shortName := ct.Labels[clabconstants.NodeName]
+		if node, ok := c.Nodes[shortName]; ok {
+			shell = node.ExecInteractiveShell()
+		} else {
+			shell = []string{"/bin/sh"}
+		}
 	}
 
 	dockerPath, err := exec.LookPath("docker")

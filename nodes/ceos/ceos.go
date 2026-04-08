@@ -385,6 +385,8 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 	return err
 }
 
+func (*ceos) ExecInteractiveShell() []string { return []string{"/usr/bin/Cli", "-p", "15"} }
+
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *ceos) CheckInterfaceName() error {
 	// allow eth and et interfaces

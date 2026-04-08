@@ -352,6 +352,8 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 	return n.generateCheckpoint(ctx)
 }
 
+func (*srl) ExecInteractiveShell() []string { return []string{"/opt/srlinux/bin/sr_cli"} }
+
 func (n *srl) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 
