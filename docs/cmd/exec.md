@@ -59,13 +59,14 @@ Mutually exclusive with `--cmd`.
 When omitted the shell is resolved in the following priority order:
 
 1. **`--shell` flag** — explicit CLI override, highest priority.
-2. **`shell:` topology attribute** — set per-node, per-group, per-kind, or under `defaults:` in the topology file. Useful when a specific node needs a different shell from the kind default, for example:
+2. **`CLAB_EXEC_INTERACTIVE_SHELL` env var** — set on the node via the topology `env:` block (per-node, per-group, per-kind, or under `defaults:`). Useful when a specific node needs a different shell from the kind default, for example:
    ```yaml
    nodes:
      web:
        kind: linux
        image: example.com/myimage:latest
-       shell: /bin/bash -l
+       env:
+         CLAB_EXEC_INTERACTIVE_SHELL: /bin/bash -l
    ```
 3. **Kind default** — each node kind ships a built-in default shell (e.g. `ceos` uses `/usr/bin/Cli -p 15`, `srl` uses `/opt/srlinux/bin/sr_cli`, `fdio_vpp` uses `/usr/bin/nsenter --net=/run/netns/dataplane /bin/bash`).
 4. **`/bin/sh`** — final fallback when no topology is loaded or the node kind has no specific default.

@@ -226,7 +226,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		User:            c.Config.Topology.GetNodeUser(nodeName),
 		Entrypoint:      c.Config.Topology.GetNodeEntrypoint(nodeName),
 		Cmd:             c.Config.Topology.GetNodeCmd(nodeName),
-		Shell:           c.Config.Topology.GetNodeShell(nodeName),
 		Exec:            c.Config.Topology.GetNodeExec(nodeName),
 		Env:             c.Config.Topology.GetNodeEnv(nodeName),
 		NetworkMode:     c.Config.Topology.GetNodeNetworkMode(nodeName),

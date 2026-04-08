@@ -29,7 +29,6 @@ type NodeDefinition struct {
 	Position              string            `yaml:"position,omitempty"`
 	Entrypoint            string            `yaml:"entrypoint,omitempty"`
 	Cmd                   string            `yaml:"cmd,omitempty"`
-	Shell                 string            `yaml:"shell,omitempty"`
 	// list of commands to run in container
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings

@@ -211,8 +211,8 @@ func execInteractive(ctx context.Context, o *Options, nameFilter string) error {
 	switch {
 	case o.Exec.Shell != "":
 		shell = strings.Fields(o.Exec.Shell)
-	case nodeKnown && node.Config().Shell != "":
-		shell = strings.Fields(node.Config().Shell)
+	case nodeKnown && node.Config().Env["CLAB_EXEC_INTERACTIVE_SHELL"] != "":
+		shell = strings.Fields(node.Config().Env["CLAB_EXEC_INTERACTIVE_SHELL"])
 	case nodeKnown:
 		shell = node.ExecInteractiveShell()
 	default:
