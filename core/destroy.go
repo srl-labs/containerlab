@@ -403,12 +403,12 @@ func (c *CLab) deleteToolContainers(ctx context.Context) {
 		containers, err := c.globalRuntime().ListContainers(ctx, toolFilter)
 		if err != nil {
 			log.Error("Failed to list tool containers", "tool", toolType, "error", err)
-			return
+			continue
 		}
 
 		if len(containers) == 0 {
 			log.Debug("No tool containers found for lab", "tool", toolType, "lab", c.Config.Name)
-			return
+			continue
 		}
 
 		log.Info("Found tool containers associated with a lab", "tool", toolType, "lab",
