@@ -61,7 +61,7 @@ func graphCmd(o *Options) (*cobra.Command, error) {
 		&o.Graph.MermaidDirection,
 		"mermaid-direction", "",
 		o.Graph.MermaidDirection,
-		"specify direction of mermaid dirgram",
+		"specify direction of mermaid diagram",
 	)
 	c.Flags().StringSliceVar(
 		&o.Graph.DrawIOArgs,
