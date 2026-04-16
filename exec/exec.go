@@ -245,6 +245,9 @@ func (ec *ExecCollection) Log() {
 	defer ec.m.RUnlock()
 	for k, execResults := range ec.execEntries {
 		for _, er := range execResults {
+			if er == nil {
+				continue
+			}
 			switch {
 			case er.GetReturnCode() != 0:
 				log.Error(
