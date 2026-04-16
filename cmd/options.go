@@ -301,6 +301,7 @@ type DeployOptions struct {
 	LabOwner                 string
 	RestoreAll               string
 	RestoreNodeSnapshots     []string
+	ExportRenderedTopology   string
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {
