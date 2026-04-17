@@ -7,6 +7,7 @@ package core
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -15,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -335,6 +337,45 @@ func (c *CLab) ServeTopoGraph(tmpl, staticDir, srv string, topoD TopoData) error
 
 	http.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		_ = t.Execute(w, topoD)
+	})
+
+	// Annotations API for persisting node positions.
+	annotationsFile := filepath.Join(c.TopoPaths.TopologyFileDir(), ".clab-topo-editor.json")
+
+	http.HandleFunc("/api/v1/annotations", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			data, err := os.ReadFile(annotationsFile)
+			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.Write([]byte(`{"nodeAnnotations":[]}`))
+
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(data)
+
+		case http.MethodPost:
+			var body json.RawMessage
+
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				http.Error(w, "invalid JSON", http.StatusBadRequest)
+
+				return
+			}
+
+			if err := os.WriteFile(annotationsFile, body, 0o644); err != nil {
+				http.Error(w, "failed to write annotations file", http.StatusInternalServerError)
+
+				return
+			}
+
+			w.WriteHeader(http.StatusOK)
+
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
 	})
 
 	// If the server binds to 0.0.0.0, show all routable addresses for better usability
