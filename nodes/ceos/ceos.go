@@ -5,6 +5,7 @@
 package ceos
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -81,6 +83,7 @@ func Register(r *clabnodes.NodeRegistry) {
 
 type ceos struct {
 	clabnodes.DefaultNode
+	partialStartupCfg string
 }
 
 // intfMap represents interface mapping config file.
@@ -217,7 +220,12 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		currentCfgTemplate = string(c)
+
+		if clabutils.IsPartialConfigFile(nodeCfg.StartupConfig) {
+			n.partialStartupCfg = string(c)
+		} else {
+			currentCfgTemplate = string(c)
+		}
 	}
 
 	err = n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
@@ -401,4 +409,29 @@ func (n *ceos) CheckInterfaceName() error {
 	}
 
 	return nil
+}
+
+type ceosTemplateData struct {
+	*clabtypes.NodeConfig
+	PartialCfg string
+}
+
+func (n *ceos) GenerateConfig(dst, t string) error {
+	data := ceosTemplateData{
+		NodeConfig: n.Cfg,
+		PartialCfg: n.partialStartupCfg,
+	}
+
+	ceosCfgTpl, err := template.New("ceos-config").Funcs(clabutils.CreateFuncs()).Parse(t)
+	if err != nil {
+		return fmt.Errorf("failed to parse ceos cfg template for node %q: %w", n.Cfg.ShortName, err)
+	}
+
+	buf := new(bytes.Buffer)
+	err = ceosCfgTpl.Execute(buf, data)
+	if err != nil {
+		return fmt.Errorf("failed to execute ceos cfg template for node %q: %w", n.Cfg.ShortName, err)
+	}
+
+	return clabutils.CreateFile(dst, buf.String())
 }

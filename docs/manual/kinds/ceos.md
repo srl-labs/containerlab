@@ -280,7 +280,18 @@ topology:
 
 #### User defined config
 
-It is possible to make ceos nodes to boot up with a user-defined config instead of a built-in one. With a [`startup-config`](../nodes.md#startup-config) property a user sets the path to the config file that will be mounted to a container and used as a startup config:
+cEOS supports user defined startup configurations in two forms:
+
+- Full startup configuration.
+- Partial startup configuration.
+
+Both types of startup configurations are only applied during initial lab deployment. When you save configuration in cEOS to the startup-config using `wr` or `copy running-config startup-config`, the saved configuration will override the startup configuration on subsequent reboots.
+
+##### Full startup configuration
+
+The full startup configuration is used to fully replace the default startup configuration that is applied. This means you must define the necessary configuration for management interface IP addressing and services in your configuration to access cEOS.
+
+You can use the template variables that are defined in the [default startup configuration](https://github.com/srl-labs/containerlab/blob/main/nodes/ceos/ceos.cfg). On lab deployment the template variables will be replaced/substituted.
 
 ```yaml
 name: ceos_lab
@@ -320,6 +331,21 @@ It is possible to change the default config which every ceos node will start wit
       links:
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
+
+##### Partial startup configuration
+
+The partial startup configuration is appended to the default startup configuration. This is useful to preconfigure certain things like additional interfaces, while also taking advantage of the startup configuration that containerlab applies by default for management interface IP addressing and services.
+
+The partial startup configuration must contain `.partial` in the filename. For example: `config.partial.txt` or `config.partial`
+
+```yaml
+name: ceos_partial_startup_cfg
+topology:
+  nodes:
+    ceos:
+      kind: -{{ kind_code_name }}-
+      startup-config: configuration.txt.partial
+```
 
 #### Saving configuration
 
