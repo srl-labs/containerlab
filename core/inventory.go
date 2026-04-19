@@ -236,7 +236,7 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 			case "napalm":
 				nornirSimpleInventoryKindProps.Platform =
 					nodeRegEntry.PlatformAttrs().NapalmPlatformName
-			case "scrapi":
+			case "scrapli":
 				nornirSimpleInventoryKindProps.Platform =
 					nodeRegEntry.PlatformAttrs().ScrapliPlatformName
 			}

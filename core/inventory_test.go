@@ -126,9 +126,9 @@ node2:
     platform: nokia_srlinux
     hostname: 172.100.100.12`,
 		},
-		"case2-scrapi-platform": {
+		"case2-scrapli-platform": {
 			got:                              "test_data/topo12.yml",
-			clab_nornir_platform_name_schema: "scrapi",
+			clab_nornir_platform_name_schema: "scrapli",
 			want: `---
 node1:
     username: admin
