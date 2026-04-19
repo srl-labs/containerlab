@@ -141,7 +141,7 @@ func (n *vyos) authorizedKeyCmds() []string {
 	var b strings.Builder
 	baseCmd := fmt.Sprintf(
 		"set system login user %s authentication public-keys clab ",
-		n.creds.GetUsername(),
+		n.Cfg.Credentials.Username,
 	)
 
 	for _, k := range n.SSHPubKeys {
