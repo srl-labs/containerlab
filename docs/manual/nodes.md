@@ -358,36 +358,28 @@ topology:
         - /home/user/somefile
 ```
 
-### username
+### credentials
 
-To override the default username for a node, use the `username` configuration option. When not set, the kind's default username defined in kind's Go code is used. Can be defined at `node`, `kind`, `group`, and `defaults` levels, with more specific levels taking precedence. Most often used in conjunction with the `password` configuration option.
+To override the default username or password used when accessing a node over SSH, NETCONF, gNMI, and similar interfaces, use the `credentials` mapping with `username` and `password` keys. When not set, the kind's defaults defined in the node implementation are used. You can define `credentials` at `defaults`, `kinds`, `groups`, and per-node levels; more specific levels take precedence.
 
-```yaml
-topology:
-  defaults:
-    username: admin # used for all nodes unless overridden at kind/group/node level
-  kinds:
-    nokia_srlinux:
-      username: srl-admin # used for all SRL nodes unless overridden at node level
-  nodes:
-    node1:
-      username: node1-user # used only for node1
-```
-
-### password
-
-To override the default password for a node, use the `password` configuration option. When not set, the kind's default password defined in kind's Go code is used. Can be defined at `node`, `kind`, `group`, and `defaults` levels, with more specific levels taking precedence. Most often used in conjunction with the `username` configuration option.
+Containerlab picks **one** `credentials` object from the most specific level where **either** `username` or `password` is set. Both values on that level are used as-is (the other key may be empty); values are **not** merged from less specific levels. After the topology is applied, the node implementation may still fill missing username or password from its built-in defaults.
 
 ```yaml
 topology:
   defaults:
-    password: mypassword
+    credentials:
+      username: admin
+      password: adminpw
   kinds:
     nokia_srlinux:
-      password: srl-password
+      credentials:
+        username: srl-admin
+        password: srl-password
   nodes:
     node1:
-      password: node1-password
+      credentials:
+        username: node1-user
+        password: node1-password
 ```
 
 ### user

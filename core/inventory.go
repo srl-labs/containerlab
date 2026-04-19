@@ -95,23 +95,22 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 		Kinds:            make(map[string]*AnsibleKindProps),
 		Nodes:            make(map[string][]*AnsibleInventoryNode),
 		Groups:           make(map[string][]*AnsibleInventoryNode),
-		DefaultsUsername: defs.Username,
-		DefaultsPassword: defs.Password,
+		DefaultsUsername: defs.Credentials.Username,
+		DefaultsPassword: defs.Credentials.Password,
 	}
 
 	for _, n := range c.Nodes {
 		cfg := n.Config()
 		ansibleGroup := ansibleInventoryGroup(cfg)
 
-		userSrc := topo.GetNodeUsernameTopologySource(cfg.ShortName)
-		passSrc := topo.GetNodePasswordTopologySource(cfg.ShortName)
+		credSrc := topo.GetNodeCredentialsTopologySource(cfg.ShortName)
+		emitCredsOnHost := credSrc == clabtypes.CredentialTopologyNode ||
+			credSrc == clabtypes.CredentialTopologyGroup
 
 		ansibleNode := &AnsibleInventoryNode{
-			NodeConfig: cfg,
-			EmitAnsibleUserOnHost: userSrc == clabtypes.CredentialTopologyNode ||
-				userSrc == clabtypes.CredentialTopologyGroup,
-			EmitAnsiblePasswordOnHost: passSrc == clabtypes.CredentialTopologyNode ||
-				passSrc == clabtypes.CredentialTopologyGroup,
+			NodeConfig:                cfg,
+			EmitAnsibleUserOnHost:     emitCredsOnHost,
+			EmitAnsiblePasswordOnHost: emitCredsOnHost,
 		}
 
 		inv.Nodes[ansibleGroup] = append(inv.Nodes[ansibleGroup], ansibleNode)
@@ -184,15 +183,15 @@ func (c *CLab) applyAnsibleHostEmitFlagsForHeterogeneousCredentials(
 		return
 	}
 
-	u0 := nodes[0].Username
-	p0 := nodes[0].Password
+	u0 := nodes[0].Credentials.Username
+	p0 := nodes[0].Credentials.Password
 	uniformUser := true
 	uniformPass := true
 	for _, n := range nodes[1:] {
-		if n.Username != u0 {
+		if n.Credentials.Username != u0 {
 			uniformUser = false
 		}
-		if n.Password != p0 {
+		if n.Credentials.Password != p0 {
 			uniformPass = false
 		}
 	}
@@ -208,44 +207,23 @@ func (c *CLab) applyAnsibleHostEmitFlagsForHeterogeneousCredentials(
 		}
 	}
 
-	// Mixed topology sources for the same field can yield different resolved values while
-	// staying "uniform" on the resolved string; still require per-host when defaults and
-	// kind both contribute across hosts in this group.
-	if uniformUser {
-		anyDef := false
-		anyNonDef := false
-		for _, n := range nodes {
-			s := topo.GetNodeUsernameTopologySource(n.ShortName)
-			if s == clabtypes.CredentialTopologyDefaults {
-				anyDef = true
-			}
-			if s != clabtypes.CredentialTopologyUnset && s != clabtypes.CredentialTopologyDefaults {
-				anyNonDef = true
-			}
+	// Mixed topology credential sources across hosts (e.g. some from defaults, some from kind)
+	// require per-host ansible_user and ansible_password even when resolved strings match.
+	anyDef := false
+	anyNonDef := false
+	for _, n := range nodes {
+		s := topo.GetNodeCredentialsTopologySource(n.ShortName)
+		if s == clabtypes.CredentialTopologyDefaults {
+			anyDef = true
 		}
-		if anyDef && anyNonDef {
-			for _, n := range nodes {
-				n.EmitAnsibleUserOnHost = true
-			}
+		if s != clabtypes.CredentialTopologyUnset && s != clabtypes.CredentialTopologyDefaults {
+			anyNonDef = true
 		}
 	}
-
-	if uniformPass {
-		anyDef := false
-		anyNonDef := false
+	if anyDef && anyNonDef {
 		for _, n := range nodes {
-			s := topo.GetNodePasswordTopologySource(n.ShortName)
-			if s == clabtypes.CredentialTopologyDefaults {
-				anyDef = true
-			}
-			if s != clabtypes.CredentialTopologyUnset && s != clabtypes.CredentialTopologyDefaults {
-				anyNonDef = true
-			}
-		}
-		if anyDef && anyNonDef {
-			for _, n := range nodes {
-				n.EmitAnsiblePasswordOnHost = true
-			}
+			n.EmitAnsibleUserOnHost = true
+			n.EmitAnsiblePasswordOnHost = true
 		}
 	}
 }
@@ -264,42 +242,39 @@ func (c *CLab) buildAnsibleKindProps(
 
 	first := nodes[0].NodeConfig
 	kindDef := topo.GetKind(strings.ToLower(first.Kind))
-	kindTopoUser := kindDef.Username
-	kindTopoPass := kindDef.Password
+	kindTopoUser := kindDef.Credentials.Username
+	kindTopoPass := kindDef.Credentials.Password
 
-	u0 := nodes[0].Username
-	p0 := nodes[0].Password
+	u0 := nodes[0].Credentials.Username
+	p0 := nodes[0].Credentials.Password
 	uniformUser := true
 	uniformPass := true
 	for _, n := range nodes[1:] {
-		if n.Username != u0 {
+		if n.Credentials.Username != u0 {
 			uniformUser = false
 		}
-		if n.Password != p0 {
+		if n.Credentials.Password != p0 {
 			uniformPass = false
 		}
 	}
 
-	anyUserFromDefaults := false
-	anyPassFromDefaults := false
+	anyFromDefaults := false
 	for _, n := range nodes {
-		if topo.GetNodeUsernameTopologySource(n.ShortName) == clabtypes.CredentialTopologyDefaults {
-			anyUserFromDefaults = true
-		}
-		if topo.GetNodePasswordTopologySource(n.ShortName) == clabtypes.CredentialTopologyDefaults {
-			anyPassFromDefaults = true
+		if topo.GetNodeCredentialsTopologySource(n.ShortName) == clabtypes.CredentialTopologyDefaults {
+			anyFromDefaults = true
+			break
 		}
 	}
 
 	if kindTopoUser != "" {
 		props.Username = kindTopoUser
-	} else if uniformUser && u0 != "" && !anyUserFromDefaults {
+	} else if uniformUser && u0 != "" && !anyFromDefaults {
 		props.Username = u0
 	}
 
 	if kindTopoPass != "" {
 		props.Password = kindTopoPass
-	} else if uniformPass && p0 != "" && !anyPassFromDefaults {
+	} else if uniformPass && p0 != "" && !anyFromDefaults {
 		props.Password = p0
 	}
 
@@ -350,15 +325,14 @@ func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
 
 	for _, n := range c.Nodes {
 		cfg := n.Config()
-		userSrc := topo.GetNodeUsernameTopologySource(cfg.ShortName)
-		passSrc := topo.GetNodePasswordTopologySource(cfg.ShortName)
+		credSrc := topo.GetNodeCredentialsTopologySource(cfg.ShortName)
+		emitCredsOnHost := credSrc == clabtypes.CredentialTopologyNode ||
+			credSrc == clabtypes.CredentialTopologyGroup
 
 		nornirNode := &NornirSimpleInventoryNode{
-			NodeConfig: cfg,
-			EmitUsernameOnHost: userSrc == clabtypes.CredentialTopologyNode ||
-				userSrc == clabtypes.CredentialTopologyGroup,
-			EmitPasswordOnHost: passSrc == clabtypes.CredentialTopologyNode ||
-				passSrc == clabtypes.CredentialTopologyGroup,
+			NodeConfig:         cfg,
+			EmitUsernameOnHost: emitCredsOnHost,
+			EmitPasswordOnHost: emitCredsOnHost,
 		}
 
 		for key, value := range cfg.Labels {
@@ -404,15 +378,15 @@ func (c *CLab) applyNornirHostEmitFlagsForHeterogeneousCredentials(
 		return
 	}
 
-	u0 := nodes[0].Username
-	p0 := nodes[0].Password
+	u0 := nodes[0].Credentials.Username
+	p0 := nodes[0].Credentials.Password
 	uniformUser := true
 	uniformPass := true
 	for _, n := range nodes[1:] {
-		if n.Username != u0 {
+		if n.Credentials.Username != u0 {
 			uniformUser = false
 		}
-		if n.Password != p0 {
+		if n.Credentials.Password != p0 {
 			uniformPass = false
 		}
 	}
@@ -428,41 +402,21 @@ func (c *CLab) applyNornirHostEmitFlagsForHeterogeneousCredentials(
 		}
 	}
 
-	if uniformUser {
-		anyDef := false
-		anyNonDef := false
-		for _, n := range nodes {
-			s := topo.GetNodeUsernameTopologySource(n.ShortName)
-			if s == clabtypes.CredentialTopologyDefaults {
-				anyDef = true
-			}
-			if s != clabtypes.CredentialTopologyUnset && s != clabtypes.CredentialTopologyDefaults {
-				anyNonDef = true
-			}
+	anyDef := false
+	anyNonDef := false
+	for _, n := range nodes {
+		s := topo.GetNodeCredentialsTopologySource(n.ShortName)
+		if s == clabtypes.CredentialTopologyDefaults {
+			anyDef = true
 		}
-		if anyDef && anyNonDef {
-			for _, n := range nodes {
-				n.EmitUsernameOnHost = true
-			}
+		if s != clabtypes.CredentialTopologyUnset && s != clabtypes.CredentialTopologyDefaults {
+			anyNonDef = true
 		}
 	}
-
-	if uniformPass {
-		anyDef := false
-		anyNonDef := false
+	if anyDef && anyNonDef {
 		for _, n := range nodes {
-			s := topo.GetNodePasswordTopologySource(n.ShortName)
-			if s == clabtypes.CredentialTopologyDefaults {
-				anyDef = true
-			}
-			if s != clabtypes.CredentialTopologyUnset && s != clabtypes.CredentialTopologyDefaults {
-				anyNonDef = true
-			}
-		}
-		if anyDef && anyNonDef {
-			for _, n := range nodes {
-				n.EmitPasswordOnHost = true
-			}
+			n.EmitUsernameOnHost = true
+			n.EmitPasswordOnHost = true
 		}
 	}
 }
@@ -489,42 +443,39 @@ func (c *CLab) buildNornirKindProps(
 	}
 
 	kindDef := topo.GetKind(strings.ToLower(kind))
-	kindTopoUser := kindDef.Username
-	kindTopoPass := kindDef.Password
+	kindTopoUser := kindDef.Credentials.Username
+	kindTopoPass := kindDef.Credentials.Password
 
-	u0 := nodes[0].Username
-	p0 := nodes[0].Password
+	u0 := nodes[0].Credentials.Username
+	p0 := nodes[0].Credentials.Password
 	uniformUser := true
 	uniformPass := true
 	for _, n := range nodes[1:] {
-		if n.Username != u0 {
+		if n.Credentials.Username != u0 {
 			uniformUser = false
 		}
-		if n.Password != p0 {
+		if n.Credentials.Password != p0 {
 			uniformPass = false
 		}
 	}
 
-	anyUserFromDefaults := false
-	anyPassFromDefaults := false
+	anyFromDefaults := false
 	for _, n := range nodes {
-		if topo.GetNodeUsernameTopologySource(n.ShortName) == clabtypes.CredentialTopologyDefaults {
-			anyUserFromDefaults = true
-		}
-		if topo.GetNodePasswordTopologySource(n.ShortName) == clabtypes.CredentialTopologyDefaults {
-			anyPassFromDefaults = true
+		if topo.GetNodeCredentialsTopologySource(n.ShortName) == clabtypes.CredentialTopologyDefaults {
+			anyFromDefaults = true
+			break
 		}
 	}
 
 	if kindTopoUser != "" {
 		props.Username = kindTopoUser
-	} else if uniformUser && u0 != "" && !anyUserFromDefaults {
+	} else if uniformUser && u0 != "" && !anyFromDefaults {
 		props.Username = u0
 	}
 
 	if kindTopoPass != "" {
 		props.Password = kindTopoPass
-	} else if uniformPass && p0 != "" && !anyPassFromDefaults {
+	} else if uniformPass && p0 != "" && !anyFromDefaults {
 		props.Password = p0
 	}
 

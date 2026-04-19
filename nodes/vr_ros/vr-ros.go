@@ -69,8 +69,8 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 	}
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
-		"USERNAME":           n.Cfg.Username,
-		"PASSWORD":           n.Cfg.Password,
+		"USERNAME":           n.Cfg.Credentials.Username,
+		"PASSWORD":           n.Cfg.Credentials.Password,
 		"DOCKER_NET_V4_ADDR": n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": n.Mgmt.IPv6Subnet,
 	}
@@ -104,9 +104,9 @@ func (n *vrRos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) er
 func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	// Create SSH client configuration
 	config := &ssh.ClientConfig{
-		User: n.Cfg.Username,
+		User: n.Cfg.Credentials.Username,
 		Auth: []ssh.AuthMethod{
-			ssh.Password(n.Cfg.Password),
+			ssh.Password(n.Cfg.Credentials.Password),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Accept any host key
 		Timeout:         10 * time.Second,

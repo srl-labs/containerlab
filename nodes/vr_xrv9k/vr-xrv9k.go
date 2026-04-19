@@ -68,8 +68,8 @@ func (n *vrXRV9K) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) 
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           n.Cfg.Username,
-		"PASSWORD":           n.Cfg.Password,
+		"USERNAME":           n.Cfg.Credentials.Username,
+		"PASSWORD":           n.Cfg.Credentials.Password,
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"VCPU":               "2",
 		"RAM":                "16384",

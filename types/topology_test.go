@@ -989,10 +989,10 @@ func TestGetNodeCredentials(t *testing.T) {
 		"node_overrides_kind": {
 			topo: &Topology{
 				Kinds: map[string]*NodeDefinition{
-					"srl": {Username: "kind-user", Password: "kind-pass"},
+					"srl": {Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"}},
 				},
 				Nodes: map[string]*NodeDefinition{
-					"node1": {Kind: "srl", Username: "node-user", Password: "node-pass"},
+					"node1": {Kind: "srl", Credentials: NodeCredentials{Username: "node-user", Password: "node-pass"}},
 				},
 			},
 			nodeName:     "node1",
@@ -1001,9 +1001,9 @@ func TestGetNodeCredentials(t *testing.T) {
 		},
 		"kind_overrides_defaults": {
 			topo: &Topology{
-				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Defaults: &NodeDefinition{Credentials: NodeCredentials{Username: "default-user", Password: "default-pass"}},
 				Kinds: map[string]*NodeDefinition{
-					"srl": {Username: "kind-user", Password: "kind-pass"},
+					"srl": {Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"}},
 				},
 				Nodes: map[string]*NodeDefinition{
 					"node1": {Kind: "srl"},
@@ -1015,7 +1015,7 @@ func TestGetNodeCredentials(t *testing.T) {
 		},
 		"defaults_used_when_no_kind_or_node": {
 			topo: &Topology{
-				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Defaults: &NodeDefinition{Credentials: NodeCredentials{Username: "default-user", Password: "default-pass"}},
 				Nodes: map[string]*NodeDefinition{
 					"node1": {Kind: "srl"},
 				},
@@ -1036,9 +1036,9 @@ func TestGetNodeCredentials(t *testing.T) {
 		},
 		"group_overrides_defaults": {
 			topo: &Topology{
-				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Defaults: &NodeDefinition{Credentials: NodeCredentials{Username: "default-user", Password: "default-pass"}},
 				Groups: map[string]*NodeDefinition{
-					"grp1": {Username: "group-user", Password: "group-pass"},
+					"grp1": {Credentials: NodeCredentials{Username: "group-user", Password: "group-pass"}},
 				},
 				Nodes: map[string]*NodeDefinition{
 					"node1": {Kind: "srl", Group: "grp1"},
@@ -1050,17 +1050,43 @@ func TestGetNodeCredentials(t *testing.T) {
 		},
 		"node_overrides_group_and_defaults": {
 			topo: &Topology{
-				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Defaults: &NodeDefinition{Credentials: NodeCredentials{Username: "default-user", Password: "default-pass"}},
 				Groups: map[string]*NodeDefinition{
-					"grp1": {Username: "group-user", Password: "group-pass"},
+					"grp1": {Credentials: NodeCredentials{Username: "group-user", Password: "group-pass"}},
 				},
 				Nodes: map[string]*NodeDefinition{
-					"node1": {Kind: "srl", Group: "grp1", Username: "node-user", Password: "node-pass"},
+					"node1": {Kind: "srl", Group: "grp1", Credentials: NodeCredentials{Username: "node-user", Password: "node-pass"}},
 				},
 			},
 			nodeName:     "node1",
 			wantUsername: "node-user",
 			wantPassword: "node-pass",
+		},
+		"node_password_only_does_not_merge_kind_username": {
+			topo: &Topology{
+				Kinds: map[string]*NodeDefinition{
+					"srl": {Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"}},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl", Credentials: NodeCredentials{Password: "node-pass-only"}},
+				},
+			},
+			nodeName:     "node1",
+			wantUsername: "",
+			wantPassword: "node-pass-only",
+		},
+		"node_username_only_does_not_merge_kind_password": {
+			topo: &Topology{
+				Kinds: map[string]*NodeDefinition{
+					"srl": {Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"}},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl", Credentials: NodeCredentials{Username: "node-user-only"}},
+				},
+			},
+			nodeName:     "node1",
+			wantUsername: "node-user-only",
+			wantPassword: "",
 		},
 	}
 
@@ -1084,60 +1110,55 @@ func TestGetNodeCredentialTopologySource(t *testing.T) {
 	tests := map[string]struct {
 		topo     *Topology
 		nodeName string
-		wantUser CredentialTopologySource
-		wantPass CredentialTopologySource
+		want     CredentialTopologySource
 	}{
 		"node": {
 			topo: &Topology{
 				Kinds: map[string]*NodeDefinition{
-					"srl": {Username: "kind-user", Password: "kind-pass"},
+					"srl": {Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"}},
 				},
 				Nodes: map[string]*NodeDefinition{
-					"node1": {Kind: "srl", Username: "node-user", Password: "node-pass"},
+					"node1": {Kind: "srl", Credentials: NodeCredentials{Username: "node-user", Password: "node-pass"}},
 				},
 			},
 			nodeName: "node1",
-			wantUser: CredentialTopologyNode,
-			wantPass: CredentialTopologyNode,
+			want:     CredentialTopologyNode,
 		},
 		"group": {
 			topo: &Topology{
-				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Defaults: &NodeDefinition{Credentials: NodeCredentials{Username: "default-user", Password: "default-pass"}},
 				Groups: map[string]*NodeDefinition{
-					"grp1": {Username: "group-user", Password: "group-pass"},
+					"grp1": {Credentials: NodeCredentials{Username: "group-user", Password: "group-pass"}},
 				},
 				Nodes: map[string]*NodeDefinition{
 					"node1": {Kind: "srl", Group: "grp1"},
 				},
 			},
 			nodeName: "node1",
-			wantUser: CredentialTopologyGroup,
-			wantPass: CredentialTopologyGroup,
+			want:     CredentialTopologyGroup,
 		},
 		"kind": {
 			topo: &Topology{
-				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Defaults: &NodeDefinition{Credentials: NodeCredentials{Username: "default-user", Password: "default-pass"}},
 				Kinds: map[string]*NodeDefinition{
-					"srl": {Username: "kind-user", Password: "kind-pass"},
+					"srl": {Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"}},
 				},
 				Nodes: map[string]*NodeDefinition{
 					"node1": {Kind: "srl"},
 				},
 			},
 			nodeName: "node1",
-			wantUser: CredentialTopologyKind,
-			wantPass: CredentialTopologyKind,
+			want:     CredentialTopologyKind,
 		},
 		"defaults": {
 			topo: &Topology{
-				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Defaults: &NodeDefinition{Credentials: NodeCredentials{Username: "default-user", Password: "default-pass"}},
 				Nodes: map[string]*NodeDefinition{
 					"node1": {Kind: "srl"},
 				},
 			},
 			nodeName: "node1",
-			wantUser: CredentialTopologyDefaults,
-			wantPass: CredentialTopologyDefaults,
+			want:     CredentialTopologyDefaults,
 		},
 		"unset": {
 			topo: &Topology{
@@ -1146,22 +1167,27 @@ func TestGetNodeCredentialTopologySource(t *testing.T) {
 				},
 			},
 			nodeName: "node1",
-			wantUser: CredentialTopologyUnset,
-			wantPass: CredentialTopologyUnset,
+			want:     CredentialTopologyUnset,
+		},
+		"node_partial_credentials_still_node_source": {
+			topo: &Topology{
+				Kinds: map[string]*NodeDefinition{
+					"srl": {Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"}},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl", Credentials: NodeCredentials{Password: "only-pass"}},
+				},
+			},
+			nodeName: "node1",
+			want:     CredentialTopologyNode,
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			gotUser := tc.topo.GetNodeUsernameTopologySource(tc.nodeName)
-			gotPass := tc.topo.GetNodePasswordTopologySource(tc.nodeName)
-
-			if gotUser != tc.wantUser {
-				t.Errorf("username source: got %v, want %v", gotUser, tc.wantUser)
-			}
-
-			if gotPass != tc.wantPass {
-				t.Errorf("password source: got %v, want %v", gotPass, tc.wantPass)
+			got := tc.topo.GetNodeCredentialsTopologySource(tc.nodeName)
+			if got != tc.want {
+				t.Errorf("credentials source: got %v, want %v", got, tc.want)
 			}
 		})
 	}

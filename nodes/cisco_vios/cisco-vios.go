@@ -93,8 +93,8 @@ func (n *vios) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":       clabnodes.VrDefConnMode,
-		"USERNAME":              n.Cfg.Username,
-		"PASSWORD":              n.Cfg.Password,
+		"USERNAME":              n.Cfg.Credentials.Username,
+		"PASSWORD":              n.Cfg.Credentials.Password,
 		"DOCKER_NET_V4_ADDR":    n.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR":    n.Mgmt.IPv6Subnet,
 		"CLAB_MGMT_PASSTHROUGH": "true", // force enable mgmt passthru
@@ -163,8 +163,8 @@ func (n *vios) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 func (n *vios) genBootConfig() error {
 	tplData := ViosTemplateData{
 		Hostname:           n.Cfg.ShortName,
-		Username:           n.Cfg.Username,
-		Password:           n.Cfg.Password,
+		Username:           n.Cfg.Credentials.Username,
+		Password:           n.Cfg.Credentials.Password,
 		IsL2Node:           n.isL2Node,
 		MgmtIPv4Addr:       n.Cfg.MgmtIPv4Address,
 		MgmtIPv4SubnetMask: clabutils.CIDRToDDN(n.Cfg.MgmtIPv4PrefixLength),

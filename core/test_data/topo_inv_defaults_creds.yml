@@ -1,8 +1,9 @@
 name: topo-inv-defaults-creds
 topology:
   defaults:
-    username: labuser
-    password: labpass
+    credentials:
+      username: labuser
+      password: labpass
   nodes:
     n1:
       kind: nokia_srlinux

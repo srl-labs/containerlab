@@ -44,10 +44,10 @@ all:
           ansible_host: {{.MgmtIPv4Address}}
         {{- end }}
         {{- if .EmitAnsibleUserOnHost }}
-          ansible_user: {{.Username}}
+          ansible_user: {{.Credentials.Username}}
         {{- end }}
         {{- if .EmitAnsiblePasswordOnHost }}
-          ansible_password: {{.Password}}
+          ansible_password: {{.Credentials.Password}}
         {{- end }}
       {{- end}}
 {{- end}}
@@ -60,10 +60,10 @@ all:
           ansible_host: {{.MgmtIPv4Address}}
         {{- end }}
         {{- if .EmitAnsibleUserOnHost }}
-          ansible_user: {{.Username}}
+          ansible_user: {{.Credentials.Username}}
         {{- end }}
         {{- if .EmitAnsiblePasswordOnHost }}
-          ansible_password: {{.Password}}
+          ansible_password: {{.Credentials.Password}}
         {{- end }}
       {{- end}}
 {{- end}}

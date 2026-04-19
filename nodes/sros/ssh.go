@@ -87,8 +87,8 @@ func (n *sros) srosSendCommandsSSH(_ context.Context, scrapli_platform string, c
 
 	opts := []util.Option{
 		options.WithAuthNoStrictKey(),
-		options.WithAuthUsername(n.Cfg.Username),
-		options.WithAuthPassword(n.Cfg.Password),
+		options.WithAuthUsername(n.Cfg.Credentials.Username),
+		options.WithAuthPassword(n.Cfg.Credentials.Password),
 		options.WithTransportType(transport.StandardTransport),
 		options.WithTimeoutOps(5 * time.Second),
 		options.WithLogger(li),

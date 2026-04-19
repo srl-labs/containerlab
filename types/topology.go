@@ -880,40 +880,65 @@ func (t *Topology) GetNodeAliases(nodeName string) []string {
 	return nodeDefinition.Aliases
 }
 
-// GetNodeUsername returns the username configured for the node, resolving it through the
-// node → group → kind → defaults hierarchy (most specific wins). Returns an empty string if not set.
+func credentialsPresent(c NodeCredentials) bool {
+	return c.Username != "" || c.Password != ""
+}
+
+// resolveTopologyCredentials returns username and password from the most specific topology level
+// where either field is set (node, then group, then kind, then defaults). Values are not merged
+// across levels.
+func (t *Topology) resolveTopologyCredentials(nodeName string) (username, password string, src CredentialTopologySource) {
+	nodeDefinition, ok := t.Nodes[nodeName]
+	if !ok {
+		return "", "", CredentialTopologyUnset
+	}
+
+	if nodeDefinition != nil && credentialsPresent(nodeDefinition.Credentials) {
+		c := nodeDefinition.Credentials
+		return c.Username, c.Password, CredentialTopologyNode
+	}
+
+	group := t.GetGroup(t.GetNodeGroup(nodeName))
+	if group != nil && credentialsPresent(group.Credentials) {
+		c := group.Credentials
+		return c.Username, c.Password, CredentialTopologyGroup
+	}
+
+	kind := t.GetKind(t.GetNodeKind(nodeName))
+	if kind != nil && credentialsPresent(kind.Credentials) {
+		c := kind.Credentials
+		return c.Username, c.Password, CredentialTopologyKind
+	}
+
+	defaults := t.GetDefaults()
+	if defaults != nil && credentialsPresent(defaults.Credentials) {
+		c := defaults.Credentials
+		return c.Username, c.Password, CredentialTopologyDefaults
+	}
+
+	return "", "", CredentialTopologyUnset
+}
+
+// GetNodeUsername returns the username from the topology credentials block at the winning
+// precedence level (see resolveTopologyCredentials). Empty if unset at every level.
 func (t *Topology) GetNodeUsername(nodeName string) string {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) string { return node.Username },
-		func(group *NodeDefinition) string { return group.Username },
-		func(kind *NodeDefinition) string { return kind.Username },
-		func(defaults *NodeDefinition) string { return defaults.Username },
-		func(v string) bool { return v != "" },
-	)
+	u, _, _ := t.resolveTopologyCredentials(nodeName)
+	return u
 }
 
-// GetNodePassword returns the password configured for the node, resolving it through the
-// node → group → kind → defaults hierarchy (most specific wins). Returns an empty string if not set.
+// GetNodePassword returns the password from the topology credentials block at the winning
+// precedence level (see resolveTopologyCredentials). Empty if unset at every level.
 func (t *Topology) GetNodePassword(nodeName string) string {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) string { return node.Password },
-		func(group *NodeDefinition) string { return group.Password },
-		func(kind *NodeDefinition) string { return kind.Password },
-		func(defaults *NodeDefinition) string { return defaults.Password },
-		func(v string) bool { return v != "" },
-	)
+	_, p, _ := t.resolveTopologyCredentials(nodeName)
+	return p
 }
 
-// CredentialTopologySource identifies where a username or password was set in the topology
-// before registry fallback. Precedence matches getField: node, then group, then kind, then defaults.
+// CredentialTopologySource identifies which topology level supplied the credentials block
+// before registry fallback. Precedence: node, then group, then kind, then defaults.
 type CredentialTopologySource int
 
 const (
-	// CredentialTopologyUnset means the topology chain did not set the field (registry may still fill NodeConfig).
+	// CredentialTopologyUnset means no topology level set credentials (registry may still fill NodeConfig).
 	CredentialTopologyUnset CredentialTopologySource = iota
 	CredentialTopologyDefaults
 	CredentialTopologyKind
@@ -921,62 +946,9 @@ const (
 	CredentialTopologyNode
 )
 
-func credentialStringTopologySource(
-	t *Topology,
-	nodeName string,
-	getNode, getGroup, getKind, getDefaults func(*NodeDefinition) string,
-) CredentialTopologySource {
-	nodeDefinition, ok := t.Nodes[nodeName]
-	if !ok {
-		return CredentialTopologyUnset
-	}
-
-	if nodeDefinition != nil {
-		if v := getNode(nodeDefinition); v != "" {
-			return CredentialTopologyNode
-		}
-	}
-
-	group := t.GetGroup(t.GetNodeGroup(nodeName))
-	if group != nil {
-		if v := getGroup(group); v != "" {
-			return CredentialTopologyGroup
-		}
-	}
-
-	kind := t.GetKind(t.GetNodeKind(nodeName))
-	if kind != nil {
-		if v := getKind(kind); v != "" {
-			return CredentialTopologyKind
-		}
-	}
-
-	defaults := t.GetDefaults()
-	if defaults != nil {
-		if v := getDefaults(defaults); v != "" {
-			return CredentialTopologyDefaults
-		}
-	}
-
-	return CredentialTopologyUnset
-}
-
-// GetNodeUsernameTopologySource reports which topology level set the username before registry fallback.
-func (t *Topology) GetNodeUsernameTopologySource(nodeName string) CredentialTopologySource {
-	return credentialStringTopologySource(t, nodeName,
-		func(node *NodeDefinition) string { return node.Username },
-		func(group *NodeDefinition) string { return group.Username },
-		func(kind *NodeDefinition) string { return kind.Username },
-		func(defaults *NodeDefinition) string { return defaults.Username },
-	)
-}
-
-// GetNodePasswordTopologySource reports which topology level set the password before registry fallback.
-func (t *Topology) GetNodePasswordTopologySource(nodeName string) CredentialTopologySource {
-	return credentialStringTopologySource(t, nodeName,
-		func(node *NodeDefinition) string { return node.Password },
-		func(group *NodeDefinition) string { return group.Password },
-		func(kind *NodeDefinition) string { return kind.Password },
-		func(defaults *NodeDefinition) string { return defaults.Password },
-	)
+// GetNodeCredentialsTopologySource reports which topology level supplied the credentials pair
+// (username and/or password) before registry fallback.
+func (t *Topology) GetNodeCredentialsTopologySource(nodeName string) CredentialTopologySource {
+	_, _, src := t.resolveTopologyCredentials(nodeName)
+	return src
 }

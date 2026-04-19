@@ -11,6 +11,12 @@ const (
 	importEnvsKey = "__IMPORT_ENVS"
 )
 
+// NodeCredentials holds login material for SSH/NETCONF/GNMI/etc. (topology defaults/kinds/groups/nodes).
+type NodeCredentials struct {
+	Username string `json:"username,omitempty" yaml:"username,omitempty"`
+	Password string `json:"-" yaml:"password,omitempty"`
+}
+
 // NodeDefinition represents a configuration a given node can have in the lab definition file.
 type NodeDefinition struct {
 	Kind                  string            `yaml:"kind,omitempty"`
@@ -76,10 +82,8 @@ type NodeDefinition struct {
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 	// Healthcheck configuration
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
-	// Username to use when accessing the node over SSH/NETCONF/GNMI/etc. (overrides kind default)
-	Username string `yaml:"username,omitempty"`
-	// Password to use when accessing the node over SSH/NETCONF/GNMI/etc. (overrides kind default)
-	Password string `yaml:"password,omitempty"`
+	// Credentials for SSH/NETCONF/GNMI/etc. (overrides kind default when set).
+	Credentials NodeCredentials `yaml:"credentials,omitempty"`
 	// Network aliases
 	Aliases    []string     `yaml:"aliases,omitempty"`
 	Components []*Component `yaml:"components,omitempty"`
@@ -96,11 +100,10 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 
 	// NodeDefinitionWithDeprecatedFields can contain fields that are deprecated
 	// but still supported for backward compatibility.
-	// see https://github.com/srl-labs/containerlab/blob/6eb44ca5a64cb427a5c43e31c35ac50145a8397f \
-	// /types/node_definition.go#L96
-	// for how it was used.
 	type NodeDefinitionWithDeprecatedFields struct {
 		NodeDefinitionAlias `yaml:",inline"`
+		LegacyUsername      string `yaml:"username,omitempty"`
+		LegacyPassword      string `yaml:"password,omitempty"`
 	}
 
 	nd := &NodeDefinitionWithDeprecatedFields{}
@@ -111,6 +114,13 @@ func (n *NodeDefinition) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 
 	*n = NodeDefinition(nd.NodeDefinitionAlias)
+
+	if nd.LegacyUsername != "" && n.Credentials.Username == "" {
+		n.Credentials.Username = nd.LegacyUsername
+	}
+	if nd.LegacyPassword != "" && n.Credentials.Password == "" {
+		n.Credentials.Password = nd.LegacyPassword
+	}
 
 	return nil
 }

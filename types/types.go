@@ -198,12 +198,9 @@ type NodeConfig struct {
 	CPUSet string  `json:"cpuset,omitempty"`
 	Memory string  `json:"memory,omitempty"`
 
-	// Username to use when accessing the node over SSH/NETCONF/GNMI/etc.
-	// Populated from the topology file (defaults/kinds/nodes), falling back to the kind's
-	// hardcoded default when not set in the topology.
-	Username string `json:"username,omitempty"`
-	// Password to use when accessing the node over SSH/NETCONF/GNMI/etc. Sensitive — not logged.
-	Password string `json:"-"`
+	// Credentials for SSH/NETCONF/GNMI/etc. Populated from the topology file
+	// (defaults/kinds/nodes), falling back to the kind's hardcoded default when not set.
+	Credentials NodeCredentials `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 	// Extra node parameters
 	Extras *Extras    `json:"extras,omitempty"`
 	Stages *Stages    `json:"stages,omitempty"`

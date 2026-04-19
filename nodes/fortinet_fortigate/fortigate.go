@@ -65,8 +65,8 @@ func (n *fortigate) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"USERNAME":           n.Cfg.Username,
-		"PASSWORD":           n.Cfg.Password,
+		"USERNAME":           n.Cfg.Credentials.Username,
+		"PASSWORD":           n.Cfg.Credentials.Password,
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"VCPU":               "2",
 		"RAM":                "2048",
@@ -89,8 +89,8 @@ func (n *fortigate) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 
 	n.Cfg.Cmd = fmt.Sprintf(
 		"--username %s --password %s --hostname %s --connection-mode %s --trace",
-		n.Cfg.Username,
-		n.Cfg.Password,
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		n.Cfg.ShortName,
 		n.Cfg.Env["CONNECTION_MODE"],
 	)
