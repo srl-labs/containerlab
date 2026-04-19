@@ -18,7 +18,7 @@ topology:
     l2:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
-      startup-config: 27-node-lifecycle-l2-startup.cli
+      startup-config: 28-node-lifecycle-l2-startup.cli
 
   links:
     - endpoints: ["l1:eth1", "l2:e1-1"]

@@ -7,7 +7,7 @@ Suite Teardown      Teardown
 
 
 *** Variables ***
-${lab-file}         27-node-lifecycle.clab.yml
+${lab-file}         28-node-lifecycle.clab.yml
 ${lab-name}         node-lifecycle
 ${runtime}          docker
 ${l1-label}         clab-node-name\=l1
