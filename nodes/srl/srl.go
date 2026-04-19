@@ -119,6 +119,7 @@ var (
 		"ixr-x1b":    "7250IXRX1b.yml",
 		"ixrx3b":     "7250IXRX3b.yml",
 		"ixr-x3b":    "7250IXRX3b.yml",
+		"ixr-x4":     "7250IXRX4-QSFP-DD.yml",
 		"ixr-x4-d":   "7250IXRX4-QSFP-DD.yml",
 	}
 
