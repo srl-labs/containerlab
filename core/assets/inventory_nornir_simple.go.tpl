@@ -3,8 +3,8 @@
   {{- $kindProps := index $.Kinds $kind -}}
   {{- range $node := $nodes }}
 {{ $node.ShortName }}:
-    username: {{ $kindProps.Username }}
-    password: {{ $kindProps.Password }}
+    username: {{if $node.EmitUsernameOnHost}}{{ $node.Username }}{{else}}{{ $kindProps.Username }}{{end}}
+    password: {{if $node.EmitPasswordOnHost}}{{ $node.Password }}{{else}}{{ $kindProps.Password }}{{end}}
     platform: {{ $kindProps.Platform }}
     hostname: {{ $node.MgmtIPv4Address }}
     {{- if $node.NornirGroups }}

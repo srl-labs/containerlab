@@ -1079,3 +1079,90 @@ func TestGetNodeCredentials(t *testing.T) {
 		})
 	}
 }
+
+func TestGetNodeCredentialTopologySource(t *testing.T) {
+	tests := map[string]struct {
+		topo     *Topology
+		nodeName string
+		wantUser CredentialTopologySource
+		wantPass CredentialTopologySource
+	}{
+		"node": {
+			topo: &Topology{
+				Kinds: map[string]*NodeDefinition{
+					"srl": {Username: "kind-user", Password: "kind-pass"},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl", Username: "node-user", Password: "node-pass"},
+				},
+			},
+			nodeName: "node1",
+			wantUser: CredentialTopologyNode,
+			wantPass: CredentialTopologyNode,
+		},
+		"group": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Groups: map[string]*NodeDefinition{
+					"grp1": {Username: "group-user", Password: "group-pass"},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl", Group: "grp1"},
+				},
+			},
+			nodeName: "node1",
+			wantUser: CredentialTopologyGroup,
+			wantPass: CredentialTopologyGroup,
+		},
+		"kind": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Kinds: map[string]*NodeDefinition{
+					"srl": {Username: "kind-user", Password: "kind-pass"},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName: "node1",
+			wantUser: CredentialTopologyKind,
+			wantPass: CredentialTopologyKind,
+		},
+		"defaults": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{Username: "default-user", Password: "default-pass"},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName: "node1",
+			wantUser: CredentialTopologyDefaults,
+			wantPass: CredentialTopologyDefaults,
+		},
+		"unset": {
+			topo: &Topology{
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName: "node1",
+			wantUser: CredentialTopologyUnset,
+			wantPass: CredentialTopologyUnset,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			gotUser := tc.topo.GetNodeUsernameTopologySource(tc.nodeName)
+			gotPass := tc.topo.GetNodePasswordTopologySource(tc.nodeName)
+
+			if gotUser != tc.wantUser {
+				t.Errorf("username source: got %v, want %v", gotUser, tc.wantUser)
+			}
+
+			if gotPass != tc.wantPass {
+				t.Errorf("password source: got %v, want %v", gotPass, tc.wantPass)
+			}
+		})
+	}
+}

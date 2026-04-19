@@ -4,6 +4,14 @@ all:
     # Hence no http proxy should be used. Therefore we make sure the http
     # module does not attempt using any global http proxy.
     ansible_httpapi_use_proxy: false
+{{- if or $.DefaultsUsername $.DefaultsPassword }}
+{{- if $.DefaultsUsername }}
+    ansible_user: {{$.DefaultsUsername}}
+{{- end }}
+{{- if $.DefaultsPassword }}
+    ansible_password: {{$.DefaultsPassword}}
+{{- end }}
+{{- end }}
   children:
 {{- $root := . }}
 {{- range $kind, $nodes := .Nodes}}
@@ -34,7 +42,13 @@ all:
         {{.LongName}}:
         {{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
           ansible_host: {{.MgmtIPv4Address}}
-        {{- end -}}
+        {{- end }}
+        {{- if .EmitAnsibleUserOnHost }}
+          ansible_user: {{.Username}}
+        {{- end }}
+        {{- if .EmitAnsiblePasswordOnHost }}
+          ansible_password: {{.Password}}
+        {{- end }}
       {{- end}}
 {{- end}}
 {{- range $name, $nodes := .Groups}}
@@ -44,6 +58,12 @@ all:
         {{.LongName}}:
         {{- if not (eq (index .Labels "ansible-no-host-var") "true") }}
           ansible_host: {{.MgmtIPv4Address}}
-        {{- end -}}
+        {{- end }}
+        {{- if .EmitAnsibleUserOnHost }}
+          ansible_user: {{.Username}}
+        {{- end }}
+        {{- if .EmitAnsiblePasswordOnHost }}
+          ansible_password: {{.Password}}
+        {{- end }}
       {{- end}}
 {{- end}}
