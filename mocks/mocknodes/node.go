@@ -62,6 +62,34 @@ func (mr *MockNodeMockRecorder) AddEndpoint(e any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEndpoint", reflect.TypeOf((*MockNode)(nil).AddEndpoint), e)
 }
 
+// AdoptEndpoint mocks base method.
+func (m *MockNode) AdoptEndpoint(e links.Endpoint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdoptEndpoint", e)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AdoptEndpoint indicates an expected call of AdoptEndpoint.
+func (mr *MockNodeMockRecorder) AdoptEndpoint(e any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdoptEndpoint", reflect.TypeOf((*MockNode)(nil).AdoptEndpoint), e)
+}
+
+// ReleaseEndpoint mocks base method.
+func (m *MockNode) ReleaseEndpoint(e links.Endpoint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReleaseEndpoint", e)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReleaseEndpoint indicates an expected call of ReleaseEndpoint.
+func (mr *MockNodeMockRecorder) ReleaseEndpoint(e any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseEndpoint", reflect.TypeOf((*MockNode)(nil).ReleaseEndpoint), e)
+}
+
 // AddLinkToContainer mocks base method.
 func (m *MockNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	m.ctrl.T.Helper()

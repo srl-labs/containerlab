@@ -86,8 +86,12 @@ func (vr *VRNode) AddEndpoint(e clablinks.Endpoint) error {
 		e.SetIfaceName(mappedName)
 		e.SetIfaceAlias(endpointName)
 	}
-	vr.Endpoints = append(vr.Endpoints, e)
 
+	if e.GetNode() == nil {
+		e.SetNode(vr)
+	}
+
+	vr.Endpoints = append(vr.Endpoints, e)
 	return nil
 }
 
@@ -146,11 +150,11 @@ func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	}, nil
 }
 
-// Stop prepares vrnetlab-specific state (qcow alias) and then delegates to
-// DefaultNode.Stop which parks interfaces and stops the container.
-func (vr *VRNode) Stop(ctx context.Context) error {
+// PreStop prepares vrnetlab-specific state before DefaultNode.Stop parks interfaces and stops the
+// container.
+func (vr *VRNode) PreStop(ctx context.Context) error {
 	preStopPrepareVrnetlabQcowAlias(ctx, &vr.DefaultNode)
-	return vr.DefaultNode.Stop(ctx)
+	return nil
 }
 
 func preStopPrepareVrnetlabQcowAlias(ctx context.Context, d *DefaultNode) {

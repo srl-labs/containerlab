@@ -128,6 +128,8 @@ type Node interface {
 	// Adds the given link to the Node (container). After adding the Link to the node,
 	// the given function f is called within the Nodes namespace to setup the link.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+	// AddEndpoint attaches an endpoint discovered from topology resolution and may normalize
+	// endpoint identity first, such as interface-name remapping.
 	AddEndpoint(e clablinks.Endpoint) error
 	GetEndpoints() []clablinks.Endpoint
 	GetLinkEndpointType() clablinks.LinkEndpointType

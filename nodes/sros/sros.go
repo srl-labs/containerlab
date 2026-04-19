@@ -516,7 +516,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 func (n *sros) Delete(ctx context.Context) error {
 	// if not distributed, follow default node implementation
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
-		return n.Runtime.DeleteContainer(ctx, n.GetContainerName())
+		return n.DefaultNode.Delete(ctx)
 	}
 
 	// Delete all the component containers
@@ -526,7 +526,8 @@ func (n *sros) Delete(ctx context.Context) error {
 			log.Warn(err)
 		}
 	}
-	return nil
+
+	return n.DefaultNode.CleanupParkingNetNS()
 }
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
@@ -2051,46 +2052,136 @@ func (n *sros) GetContainerStatus(ctx context.Context) clabruntime.ContainerStat
 		return n.DefaultNode.GetContainerStatus(ctx)
 	}
 
-	return n.Runtime.GetContainerStatus(ctx, n.componentNodes[0].Config().LongName)
+	var (
+		hasRunning    bool
+		hasPaused     bool
+		hasRestarting bool
+		hasCreated    bool
+		hasStopped    bool
+		hasRemoving   bool
+	)
+
+	for _, componentNode := range n.componentNodes {
+		switch componentNode.GetContainerStatus(ctx) {
+		case clabruntime.Running:
+			hasRunning = true
+		case clabruntime.Paused:
+			hasPaused = true
+		case clabruntime.Restarting:
+			hasRestarting = true
+		case clabruntime.Created:
+			hasCreated = true
+		case clabruntime.Stopped:
+			hasStopped = true
+		case clabruntime.Removing:
+			hasRemoving = true
+		}
+	}
+
+	switch {
+	case hasRunning:
+		return clabruntime.Running
+	case hasPaused:
+		return clabruntime.Paused
+	case hasRestarting:
+		return clabruntime.Restarting
+	case hasCreated:
+		return clabruntime.Created
+	case hasStopped:
+		return clabruntime.Stopped
+	case hasRemoving:
+		return clabruntime.Removing
+	default:
+		return clabruntime.NotFound
+	}
 }
 
-func (n *sros) Start(ctx context.Context) error {
+func (n *sros) LifecycleStartContainers(ctx context.Context) (bool, error) {
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
-		return n.DefaultNode.Start(ctx)
+		return n.DefaultNode.LifecycleStartContainers(ctx)
+	}
+
+	startedComponents := make([]clabnodes.Node, 0, len(n.componentNodes))
+
+	for _, c := range n.componentNodes {
+		status := c.GetContainerStatus(ctx)
+		if clabruntime.ContainerHasJoinableNetns(status) {
+			continue
+		}
+
+		if status == clabruntime.NotFound {
+			return false, fmt.Errorf(
+				"node %q component %q container %q not found",
+				n.Cfg.ShortName,
+				c.Config().ShortName,
+				c.Config().LongName,
+			)
+		}
+
+		if _, err := n.Runtime.StartContainer(ctx, c.Config().LongName, c); err != nil {
+			for i := len(startedComponents) - 1; i >= 0; i-- {
+				_ = n.Runtime.StopContainer(ctx, startedComponents[i].Config().LongName, n.StopSignal)
+			}
+
+			return false, fmt.Errorf(
+				"node %q component %q start error: %w",
+				n.Cfg.ShortName,
+				c.Config().ShortName,
+				err,
+			)
+		}
+
+		startedComponents = append(startedComponents, c)
+	}
+
+	return len(startedComponents) > 0, nil
+}
+
+func (n *sros) LifecycleStopContainers(ctx context.Context) error {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		return n.DefaultNode.LifecycleStopContainers(ctx)
+	}
+
+	var errs []error
+
+	for i := len(n.componentNodes) - 1; i >= 0; i-- {
+		c := n.componentNodes[i]
+		status := c.GetContainerStatus(ctx)
+		if !clabruntime.ContainerHasJoinableNetns(status) {
+			continue
+		}
+
+		if err := n.Runtime.StopContainer(ctx, c.Config().LongName, n.StopSignal); err != nil {
+			if !clabruntime.ContainerHasJoinableNetns(c.GetContainerStatus(ctx)) {
+				log.Warnf(
+					"node %q component %q stop returned error but container is stopped: %v",
+					n.Cfg.ShortName,
+					c.Config().ShortName,
+					err,
+				)
+				continue
+			}
+
+			errs = append(errs, fmt.Errorf(
+				"node %q component %q stop error: %w",
+				n.Cfg.ShortName,
+				c.Config().ShortName,
+				err,
+			))
+		}
+	}
+
+	if len(errs) == 0 {
+		return nil
 	}
 
 	for _, c := range n.componentNodes {
-		if _, err := n.Runtime.StartContainer(ctx, c.Config().LongName, c); err != nil {
-			return fmt.Errorf("node %q component %q start error: %w",
-				n.Cfg.ShortName, c.Config().ShortName, err)
+		if clabruntime.ContainerHasJoinableNetns(c.GetContainerStatus(ctx)) {
+			return errors.Join(errs...)
 		}
 	}
 
-	if err := n.RestoreEndpoints(ctx); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (n *sros) Stop(ctx context.Context) error {
-	if n.isStandaloneNode() || n.isDistributedCardNode() {
-		return n.DefaultNode.Stop(ctx)
-	}
-
-	if err := n.ParkEndpoints(ctx); err != nil {
-		return err
-	}
-
-	// stop components in reverse order as 0th ctr is netns owner.
-	// and we don't want to orphan anything.
-	for i := len(n.componentNodes) - 1; i >= 0; i-- {
-		c := n.componentNodes[i]
-		if err := n.Runtime.StopContainer(ctx, c.Config().LongName, n.StopSignal); err != nil {
-			log.Warnf("node %q component %q stop error: %v",
-				n.Cfg.ShortName, c.Config().ShortName, err)
-		}
-	}
+	log.Warnf("node %q component stop returned errors but all components are stopped", n.Cfg.ShortName)
 
 	return nil
 }

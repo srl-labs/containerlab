@@ -7,7 +7,7 @@ import (
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 )
 
-// get the eligble nodes for lifecycle ops (start/restart/stop)
+// lifecycleNodes resolves the requested node names without applying lifecycle policy.
 func (c *CLab) lifecycleNodes(nodeNames []string) ([]clabnodes.Node, error) {
 	var nodes []clabnodes.Node
 
@@ -19,27 +19,13 @@ func (c *CLab) lifecycleNodes(nodeNames []string) ([]clabnodes.Node, error) {
 				return nil, fmt.Errorf("%w: node %q is not present in the topology", claberrors.ErrIncorrectInput, name)
 			}
 
-			if skipLifecycle(n) {
-				continue
-			}
-
 			nodes = append(nodes, n)
 		}
 	} else {
 		for _, n := range c.Nodes {
-			if skipLifecycle(n) {
-				continue
-			}
-
 			nodes = append(nodes, n)
 		}
 	}
 
 	return nodes, nil
-}
-
-func skipLifecycle(n clabnodes.Node) bool {
-	cfg := n.Config()
-
-	return cfg.IsRootNamespaceBased || cfg.AutoRemove
 }

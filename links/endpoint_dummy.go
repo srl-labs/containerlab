@@ -21,6 +21,10 @@ func (e *EndpointDummy) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
 
+func (e *EndpointDummy) MoveTo(ctx context.Context, dst Node, bringUp bool) error {
+	return moveEndpoint(ctx, e, dst, bringUp)
+}
+
 func (*EndpointDummy) IsNodeless() bool {
 	return false
 }

@@ -280,7 +280,23 @@ func (f *fakeNode) AddLink(l Link) {
 
 // AddEndpoint adds the Endpoint to the node.
 func (f *fakeNode) AddEndpoint(e Endpoint) error {
+	return f.AdoptEndpoint(e)
+}
+
+func (f *fakeNode) AdoptEndpoint(e Endpoint) error {
 	f.Endpoints = append(f.Endpoints, e)
+	return nil
+}
+
+func (f *fakeNode) ReleaseEndpoint(e Endpoint) error {
+	for i, ep := range f.Endpoints {
+		if ep != e {
+			continue
+		}
+
+		f.Endpoints = append(f.Endpoints[:i], f.Endpoints[i+1:]...)
+		return nil
+	}
 
 	return nil
 }

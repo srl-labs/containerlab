@@ -52,6 +52,10 @@ func (e *EndpointBridge) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
 
+func (e *EndpointBridge) MoveTo(ctx context.Context, dst Node, bringUp bool) error {
+	return moveEndpoint(ctx, e, dst, bringUp)
+}
+
 func (e *EndpointBridge) IsNodeless() bool {
 	// the mgmt bridge is nodeless.
 	// If this is a regular bridge, then it should trigger BEnd deployment.
