@@ -112,8 +112,8 @@ func (vr *VRNode) CheckInterfaceName() error {
 
 func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	config, err := clabnetconf.GetConfig(n.Cfg.LongName,
-		n.Credentials.GetUsername(),
-		n.Credentials.GetPassword(),
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		n.ScrapliPlatformName,
 	)
 	if err != nil {

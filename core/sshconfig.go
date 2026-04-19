@@ -67,18 +67,17 @@ func (c *CLab) addSSHConfig() error {
 	// if we fail to parse the version the return value is going to be empty
 	sshVersion := clabutils.GetSSHVersion()
 
-	// add the data for all nodes to the template input
+	// add the data for all nodes to the template input.
+	// Usernames come from NodeConfig.Credentials (topology + kind registry merge in createNodeCfg).
 	for _, n := range c.Nodes {
-		// get the Kind from the KindRegistry and extract
-		// the kind registered Username
-		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
+		cfg := n.Config()
 		nodeData := SSHConfigNodeTmpl{
-			Names:     []string{n.Config().LongName},
-			Username:  NodeRegistryEntry.GetCredentials().GetUsername(),
+			Names:     []string{cfg.LongName},
+			Username:  cfg.Credentials.Username,
 			SSHConfig: n.GetSSHConfig(),
 		}
-		if len(n.Config().ContainerID) >= 12 {
-			nodeData.Names = append(nodeData.Names, n.Config().ContainerID[:12])
+		if len(cfg.ContainerID) >= 12 {
+			nodeData.Names = append(nodeData.Names, cfg.ContainerID[:12])
 		}
 
 		// if we couldn't parse the ssh version we assume we can't use unbound option

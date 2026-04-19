@@ -70,7 +70,6 @@ type vyos struct {
 	clabnodes.DefaultNode
 	configDir  string
 	SSHPubKeys []ssh.PublicKey
-	creds      *clabnodes.Credentials
 }
 
 func (n *vyos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -82,8 +81,6 @@ func (n *vyos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	for _, o := range opts {
 		o(n)
 	}
-
-	n.creds = defaultCredentials
 
 	// mount config dir
 	n.configDir = filepath.Join(n.Cfg.LabDir, "config")
