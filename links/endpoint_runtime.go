@@ -22,10 +22,6 @@ func (*EndpointRuntime) Verify(context.Context, *VerifyLinkParams) error {
 	return nil
 }
 
-func (e *EndpointRuntime) MoveTo(ctx context.Context, dst Node, bringUp bool) error {
-	return moveEndpoint(ctx, e, dst, bringUp)
-}
-
 func (*EndpointRuntime) IsRuntimeDiscovered() bool {
 	return true
 }

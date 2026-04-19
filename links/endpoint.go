@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"slices"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -42,7 +43,6 @@ type Endpoint interface {
 	SetIfaceName(string)
 	SetIfaceAlias(string)
 	IsRuntimeDiscovered() bool
-	MoveTo(context.Context, Node, bool) error
 	// GetVars returns the endpoint-level vars.
 	GetVars() map[string]any
 }
@@ -163,7 +163,10 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 	})
 }
 
-func moveEndpoint(ctx context.Context, e Endpoint, dst Node, bringUp bool) error {
+// moveEndpoint moves the endpoint's interface into dst's namespace and transfers ownership.
+// The interface is left in the DOWN state; callers that need it active should follow up with
+// activateEndpoint once all endpoints are in place.
+func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 	src := e.GetNode()
 	if src == nil {
 		return fmt.Errorf("endpoint %q has no source node", e.GetIfaceName())
@@ -174,18 +177,7 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node, bringUp bool) error
 	}
 
 	if src == dst {
-		if !bringUp {
-			return nil
-		}
-
-		return src.ExecFunction(ctx, func(_ ns.NetNS) error {
-			link, err := netlink.LinkByName(e.GetIfaceName())
-			if err != nil {
-				return err
-			}
-
-			return netlink.LinkSetUp(link)
-		})
+		return nil
 	}
 
 	srcOwner, ok := src.(EndpointOwner)
@@ -198,14 +190,7 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node, bringUp bool) error
 		return fmt.Errorf("node %q does not support endpoint ownership moves", dst.GetShortName())
 	}
 
-	srcOwnsEndpoint := false
-	for _, owned := range src.GetEndpoints() {
-		if owned == e {
-			srcOwnsEndpoint = true
-			break
-		}
-	}
-	if !srcOwnsEndpoint {
+	if !slices.Contains(src.GetEndpoints(), e) {
 		return fmt.Errorf("node %q does not own endpoint %q", src.GetShortName(), e.GetIfaceName())
 	}
 
@@ -226,7 +211,7 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node, bringUp bool) error
 		return err
 	}
 
-	if err := moveLink(ctx, src, e.GetIfaceName(), dst, bringUp); err != nil {
+	if err := moveLink(ctx, src, e.GetIfaceName(), dst); err != nil {
 		return err
 	}
 
@@ -245,6 +230,17 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node, bringUp bool) error
 	}
 
 	return nil
+}
+
+// activateEndpoint brings the endpoint's interface up in its current namespace.
+func activateEndpoint(ctx context.Context, e Endpoint) error {
+	return e.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
+		link, err := netlink.LinkByName(e.GetIfaceName())
+		if err != nil {
+			return err
+		}
+		return netlink.LinkSetUp(link)
+	})
 }
 
 func ensureOwnershipAltName(ctx context.Context, e Endpoint) error {
@@ -321,7 +317,7 @@ func CheckEndpointDoesNotExistYet(ctx context.Context, e Endpoint) error {
 	})
 }
 
-func moveLink(ctx context.Context, src Node, ifaceName string, dst Node, bringUp bool) error {
+func moveLink(ctx context.Context, src Node, ifaceName string, dst Node) error {
 	return src.ExecFunction(ctx, func(_ ns.NetNS) error {
 		link, err := netlink.LinkByName(ifaceName)
 		if err != nil {
@@ -333,16 +329,7 @@ func moveLink(ctx context.Context, src Node, ifaceName string, dst Node, bringUp
 		}
 
 		return dst.AddLinkToContainer(ctx, link, func(_ ns.NetNS) error {
-			if !bringUp {
-				return nil
-			}
-
-			movedLink, err := netlink.LinkByName(ifaceName)
-			if err != nil {
-				return err
-			}
-
-			return netlink.LinkSetUp(movedLink)
+			return nil
 		})
 	})
 }

@@ -18,8 +18,6 @@ func (*deleteTestEndpoint) Deploy(context.Context) error { return nil }
 
 func (*deleteTestEndpoint) IsNodeless() bool { return false }
 
-func (*deleteTestEndpoint) MoveTo(context.Context, Node, bool) error { return nil }
-
 func (e *deleteTestEndpoint) Remove(context.Context) error {
 	e.removed = true
 	return nil

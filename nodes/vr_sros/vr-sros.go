@@ -53,8 +53,8 @@ const (
 	// Default (unset or "model-driven") uses the MD-CLI platform.
 	envSrosConfigMode = "CLAB_SROS_CONFIG_MODE"
 	configDirName     = "tftpboot"
-	startupCfgFName     = "config.txt"
-	licenseFName        = "license.txt"
+	startupCfgFName   = "config.txt"
+	licenseFName      = "license.txt"
 
 	// OCI image title label used to detect SR-SIM container image (must use kind nokia_srsim).
 	ociImageTitleLabel = "org.opencontainers.image.title"

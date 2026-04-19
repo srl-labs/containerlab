@@ -21,10 +21,6 @@ func (e *EndpointVeth) Deploy(ctx context.Context) error {
 	return e.GetLink().Deploy(ctx, e)
 }
 
-func (e *EndpointVeth) MoveTo(ctx context.Context, dst Node, bringUp bool) error {
-	return moveEndpoint(ctx, e, dst, bringUp)
-}
-
 func (e *EndpointVeth) IsNodeless() bool {
 	return false
 }

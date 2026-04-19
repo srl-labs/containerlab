@@ -527,7 +527,7 @@ func (n *sros) Delete(ctx context.Context) error {
 		}
 	}
 
-	return n.DefaultNode.CleanupParkingNetNS()
+	return n.DefaultNode.Delete(ctx)
 }
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.

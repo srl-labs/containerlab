@@ -63,10 +63,9 @@ type DefaultNode struct {
 	InterfaceHelp         string
 	FirstDataIfIndex      int
 	// State of the node
-	state       clabnodesstate.NodeState
-	statemutex  sync.RWMutex
-	StopSignal  clabtypes.Signal
-	parkingNode *clablinks.ParkingNode
+	state      clabnodesstate.NodeState
+	statemutex sync.RWMutex
+	StopSignal clabtypes.Signal
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -225,53 +224,13 @@ func (d *DefaultNode) parkingNetNSPath() (string, error) {
 	return clabutils.GetNamedNetNS(d.parkingNetNSName())
 }
 
-func (d *DefaultNode) parkingNodeForPath(nsPath string) *clablinks.ParkingNode {
-	if d.parkingNode == nil {
-		d.parkingNode = clablinks.NewParkingNode(d.Cfg.LongName, nsPath)
-	}
-
-	return d.parkingNode
-}
-
-// repointParkingNetNSSymlink points the container netns symlink back to the parking namespace.
-func (d *DefaultNode) repointParkingNetNSSymlink() error {
-	parkPath, err := d.parkingNetNSPath()
-	if err != nil {
-		return err
-	}
-
-	return d.parkingNodeForPath(parkPath).RepointSymlink()
-}
-
-func (d *DefaultNode) repointContainerNetNSSymlink(ctx context.Context) error {
-	nspath, err := d.Runtime.GetNSPath(ctx, d.OverwriteNode.GetContainerName())
-	if err != nil {
-		return err
-	}
-
-	return clabutils.LinkContainerNS(nspath, d.Cfg.LongName)
-}
-
 // cleanupParkingNetNS removes the node-owned parking namespace if it exists.
 func (d *DefaultNode) cleanupParkingNetNS() error {
 	if _, err := d.parkingNetNSPath(); err != nil {
-		d.parkingNode = nil
 		return nil
 	}
 
-	if err := netns.DeleteNamed(d.parkingNetNSName()); err != nil {
-		return err
-	}
-
-	d.parkingNode = nil
-
-	return nil
-}
-
-// CleanupParkingNetNS is kept for cross-package node overrides that delegate cleanup back to
-// DefaultNode while the lifecycle still owns the parking namespace teardown here.
-func (d *DefaultNode) CleanupParkingNetNS() error {
-	return d.cleanupParkingNetNS()
+	return netns.DeleteNamed(d.parkingNetNSName())
 }
 
 func (d *DefaultNode) trackedEndpoints(extraNodes ...*clablinks.ParkingNode) []clablinks.Endpoint {
@@ -313,7 +272,7 @@ func (d *DefaultNode) Delete(ctx context.Context) (err error) {
 
 	var parkingNode *clablinks.ParkingNode
 	if parkPath, parkErr := d.parkingNetNSPath(); parkErr == nil {
-		parkingNode = d.parkingNodeForPath(parkPath)
+		parkingNode = clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
 		if err := parkingNode.DiscoverOwnedEndpoints(ctx, d); err != nil {
 			return fmt.Errorf("failed to discover parked interfaces for node %q: %w", d.Cfg.ShortName, err)
 		}
@@ -329,6 +288,10 @@ func (d *DefaultNode) Delete(ctx context.Context) (err error) {
 		if err != nil {
 			return err
 		}
+	}
+
+	if d.OverwriteNode.GetContainerStatus(ctx) == clabruntime.NotFound {
+		return nil
 	}
 
 	if err := d.Runtime.DeleteContainer(ctx, d.OverwriteNode.GetContainerName()); err != nil {
@@ -1049,7 +1012,7 @@ func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create parking netns for node %q: %w", d.Cfg.ShortName, err)
 	}
-	parkingNode := d.parkingNodeForPath(parkPath)
+	parkingNode := clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
 
 	if err := parkingNode.CaptureFrom(ctx, d); err != nil {
 		_ = d.cleanupParkingNetNS()
@@ -1078,7 +1041,7 @@ func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("no parking netns found for node %q: %w", d.Cfg.ShortName, err)
 	}
-	parkingNode := d.parkingNodeForPath(parkPath)
+	parkingNode := clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
 
 	if err := parkingNode.RestoreTo(ctx, d); err != nil {
 		return err
@@ -1125,7 +1088,7 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 
 	if err := d.OverwriteNode.LifecycleStopContainers(ctx); err != nil {
 		restoreErr := d.RestoreEndpoints(ctx)
-		repointErr := d.repointContainerNetNSSymlink(ctx)
+		repointErr := d.linkContainerNetNSSymlink(ctx)
 		if restoreErr != nil || repointErr != nil {
 			return errors.Join(
 				fmt.Errorf("node %q failed stopping container: %w", cfg.ShortName, err),
@@ -1172,17 +1135,20 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 	}
 
 	if hasParkingState {
-		d.parkingNodeForPath(parkPath)
 		if err := d.RestoreEndpoints(ctx); err != nil {
 			var stopErr error
 			if startedContainers {
 				stopErr = d.OverwriteNode.LifecycleStopContainers(ctx)
 			}
-			repointErr := d.repointParkingNetNSSymlink()
+			repointErr := clabutils.LinkContainerNS(parkPath, d.Cfg.LongName)
 			if stopErr != nil || repointErr != nil {
 				return errors.Join(err, stopErr, repointErr)
 			}
 			return err
+		}
+
+		if err := d.linkContainerNetNSSymlink(ctx); err != nil {
+			return fmt.Errorf("failed to repoint symlink for node %q: %w", cfg.ShortName, err)
 		}
 	}
 
@@ -1197,4 +1163,15 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// linkContainerNetNSSymlink points /run/netns/<longName> at the container's current runtime
+// netns path.
+func (d *DefaultNode) linkContainerNetNSSymlink(ctx context.Context) error {
+	nspath, err := d.Runtime.GetNSPath(ctx, d.OverwriteNode.GetContainerName())
+	if err != nil {
+		return err
+	}
+
+	return clabutils.LinkContainerNS(nspath, d.Cfg.LongName)
 }

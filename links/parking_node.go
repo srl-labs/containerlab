@@ -39,9 +39,11 @@ func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error 
 
 	moved := make([]Endpoint, 0, len(endpoints))
 	for _, ep := range endpoints {
-		if err := ep.MoveTo(ctx, p, false); err != nil {
+		if err := moveEndpoint(ctx, ep, p); err != nil {
 			for i := len(moved) - 1; i >= 0; i-- {
-				_ = moved[i].MoveTo(ctx, src, true)
+				if err := moveEndpoint(ctx, moved[i], src); err == nil {
+					_ = activateEndpoint(ctx, moved[i])
+				}
 			}
 			return fmt.Errorf(
 				"failed to park interface %q for node %q: %w",
@@ -65,12 +67,24 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) error {
 	moved := make([]Endpoint, 0, len(endpoints))
 
 	for _, ep := range endpoints {
-		if err := ep.MoveTo(ctx, dst, true); err != nil {
+		if err := moveEndpoint(ctx, ep, dst); err != nil {
 			for i := len(moved) - 1; i >= 0; i-- {
-				_ = moved[i].MoveTo(ctx, p, false)
+				_ = moveEndpoint(ctx, moved[i], p)
 			}
 			return fmt.Errorf(
 				"failed to restore interface %q for node %q: %w",
+				ep.GetIfaceName(),
+				dst.GetShortName(),
+				err,
+			)
+		}
+		if err := activateEndpoint(ctx, ep); err != nil {
+			_ = moveEndpoint(ctx, ep, p)
+			for i := len(moved) - 1; i >= 0; i-- {
+				_ = moveEndpoint(ctx, moved[i], p)
+			}
+			return fmt.Errorf(
+				"failed to activate interface %q for node %q: %w",
 				ep.GetIfaceName(),
 				dst.GetShortName(),
 				err,
