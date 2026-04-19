@@ -360,7 +360,7 @@ topology:
 
 ### username
 
-To override the default NOS SSH/NETCONF username for a node, use the `username` configuration option. When not set, the kind's default username is used. Can be defined at `node`, `kind`, `group`, and `defaults` levels, with more specific levels taking precedence.
+To override the default username for a node, use the `username` configuration option. When not set, the kind's default username defined in kind's Go code is used. Can be defined at `node`, `kind`, `group`, and `defaults` levels, with more specific levels taking precedence. Most often used in conjunction with the `password` configuration option.
 
 ```yaml
 topology:
@@ -376,7 +376,7 @@ topology:
 
 ### password
 
-To override the default NOS SSH/NETCONF password for a node, use the `password` configuration option. When not set, the kind's default password is used. Can be defined at `node`, `kind`, `group`, and `defaults` levels, with more specific levels taking precedence.
+To override the default password for a node, use the `password` configuration option. When not set, the kind's default password defined in kind's Go code is used. Can be defined at `node`, `kind`, `group`, and `defaults` levels, with more specific levels taking precedence. Most often used in conjunction with the `username` configuration option.
 
 ```yaml
 topology:
