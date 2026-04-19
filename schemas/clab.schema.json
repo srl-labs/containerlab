@@ -213,13 +213,13 @@
                 },
                 "username": {
                     "type": "string",
-                    "description": "username for NOS SSH/NETCONF access (overrides kind default)",
-                    "markdownDescription": "[username](https://containerlab.dev/manual/nodes/#username) for NOS SSH/NETCONF access (overrides kind default)"
+                    "description": "username to use when accessing the node over SSH/NETCONF/GNMI/etc. (overrides kind default)",
+                    "markdownDescription": "[username](https://containerlab.dev/manual/nodes/#username) to use when accessing the node over SSH/NETCONF/GNMI/etc. (overrides kind default)"
                 },
                 "password": {
                     "type": "string",
-                    "description": "password for NOS SSH/NETCONF access (overrides kind default)",
-                    "markdownDescription": "[password](https://containerlab.dev/manual/nodes/#password) for NOS SSH/NETCONF access (overrides kind default)"
+                    "description": "password to use when accessing the node over SSH/NETCONF/GNMI/etc. (overrides kind default)",
+                    "markdownDescription": "[password](https://containerlab.dev/manual/nodes/#password) to use when accessing the node over SSH/NETCONF/GNMI/etc. (overrides kind default)"
                 },
                 "user": {
                     "description": "user to use within the container",
