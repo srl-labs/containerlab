@@ -261,10 +261,26 @@ func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string, stopSigna
 	if err != nil {
 		return err
 	}
-	err = containers.Stop(ctx, cID, &containers.StopOptions{})
+
+	stopTimeout := uint(r.config.Timeout.Seconds())
+	if stopSignal == "" {
+		return containers.Stop(ctx, cID, &containers.StopOptions{Timeout: &stopTimeout})
+	}
+
+	signal := string(stopSignal)
+	log.Debugf("using custom stop signal %q for container %q", signal, cID)
+	if err := containers.Kill(ctx, cID, &containers.KillOptions{Signal: &signal}); err != nil {
+		return err
+	}
+
+	waitCtx, cancel := context.WithTimeout(ctx, r.config.Timeout)
+	defer cancel()
+
+	_, err = containers.Wait(waitCtx, cID, &containers.WaitOptions{})
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
