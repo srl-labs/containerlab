@@ -69,16 +69,20 @@ func (c *CLab) addSSHConfig() error {
 
 	// add the data for all nodes to the template input
 	for _, n := range c.Nodes {
-		// get the Kind from the KindRegistry and extract
-		// the kind registered Username
-		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
+		cfg := n.Config()
+		username := cfg.Credentials.Username
+		if username == "" {
+			if reg := c.Reg.Kind(cfg.Kind); reg != nil {
+				username = reg.GetCredentials().GetUsername()
+			}
+		}
 		nodeData := SSHConfigNodeTmpl{
-			Names:     []string{n.Config().LongName},
-			Username:  NodeRegistryEntry.GetCredentials().GetUsername(),
+			Names:     []string{cfg.LongName},
+			Username:  username,
 			SSHConfig: n.GetSSHConfig(),
 		}
-		if len(n.Config().ContainerID) >= 12 {
-			nodeData.Names = append(nodeData.Names, n.Config().ContainerID[:12])
+		if len(cfg.ContainerID) >= 12 {
+			nodeData.Names = append(nodeData.Names, cfg.ContainerID[:12])
 		}
 
 		// if we couldn't parse the ssh version we assume we can't use unbound option
