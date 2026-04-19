@@ -72,9 +72,7 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	if err != nil {
 		return nil, err
 	}
-	hostEp := &EndpointHost{
-		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
-	}
+	hostEp := NewEndpointHost(NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link))
 
 	hostEp.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 	if err != nil {

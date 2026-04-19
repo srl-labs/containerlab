@@ -2,6 +2,7 @@ package links
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
@@ -44,8 +45,52 @@ func (g *GenericLinkNode) ExecFunction(_ context.Context, f func(ns.NetNS) error
 
 func (g *GenericLinkNode) AddEndpoint(e Endpoint) error {
 	g.endpoints = append(g.endpoints, e)
-
 	return nil
+}
+
+func (g *GenericLinkNode) AdoptEndpoint(e Endpoint) error {
+	if e == nil {
+		return fmt.Errorf("node %q cannot adopt a nil endpoint", g.shortname)
+	}
+
+	owner := e.GetNode()
+	if owner == nil {
+		return fmt.Errorf("node %q cannot adopt endpoint %q without an owner", g.shortname, e.GetIfaceName())
+	}
+
+	if owner.GetShortName() != g.shortname {
+		return fmt.Errorf(
+			"node %q cannot adopt endpoint %q owned by %q",
+			g.shortname,
+			e.GetIfaceName(),
+			owner.GetShortName(),
+		)
+	}
+
+	for _, owned := range g.endpoints {
+		if owned == e {
+			return nil
+		}
+		if owned.GetIfaceName() == e.GetIfaceName() {
+			return fmt.Errorf("node %q already tracks interface %q", g.shortname, e.GetIfaceName())
+		}
+	}
+
+	g.endpoints = append(g.endpoints, e)
+	return nil
+}
+
+func (g *GenericLinkNode) ReleaseEndpoint(e Endpoint) error {
+	for i, ep := range g.endpoints {
+		if ep != e {
+			continue
+		}
+
+		g.endpoints = append(g.endpoints[:i], g.endpoints[i+1:]...)
+		return nil
+	}
+
+	return fmt.Errorf("node %q does not own endpoint %q", g.shortname, e.GetIfaceName())
 }
 
 func (g *GenericLinkNode) GetShortName() string {
@@ -64,7 +109,12 @@ func (*GenericLinkNode) GetState() clabnodesstate.NodeState {
 
 func (g *GenericLinkNode) Delete(ctx context.Context) error {
 	for _, e := range g.endpoints {
-		err := e.GetLink().Remove(ctx)
+		var err error
+		if l := e.GetLink(); l != nil {
+			err = l.Remove(ctx)
+		} else {
+			err = e.Remove(ctx)
+		}
 		if err != nil {
 			return err
 		}

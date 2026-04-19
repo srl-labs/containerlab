@@ -256,15 +256,31 @@ func (r *PodmanRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 	return containers.Unpause(ctx, cID, &containers.UnpauseOptions{})
 }
 
-func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
+func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string, stopSignal types.Signal) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
 	}
-	err = containers.Stop(ctx, cID, &containers.StopOptions{})
+
+	stopTimeout := uint(r.config.Timeout.Seconds())
+	if stopSignal == "" {
+		return containers.Stop(ctx, cID, &containers.StopOptions{Timeout: &stopTimeout})
+	}
+
+	signal := string(stopSignal)
+	log.Debugf("using custom stop signal %q for container %q", signal, cID)
+	if err := containers.Kill(ctx, cID, &containers.KillOptions{Signal: &signal}); err != nil {
+		return err
+	}
+
+	waitCtx, cancel := context.WithTimeout(ctx, r.config.Timeout)
+	defer cancel()
+
+	_, err = containers.Wait(waitCtx, cID, &containers.WaitOptions{})
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -295,9 +311,27 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	if err != nil {
 		return "", err
 	}
+	// Prefer podman's reported sandbox key when it exists, but fall back to /run/netns/<name>
+	// to support stopped containers and containerlab-managed netns links.
 	nspath := inspect.NetworkSettings.SandboxKey
-	log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
-	return nspath, nil
+	if nspath != "" && utils.FileOrDirExists(nspath) {
+		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		return nspath, nil
+	}
+
+	runNetns := filepath.Join("/run/netns", cID)
+	if utils.FileOrDirExists(runNetns) {
+		log.Debugf("Method GetNSPath falling back to %q", runNetns)
+		return runNetns, nil
+	}
+
+	// For host network containers sandbox key is typically empty.
+	if nspath == "" {
+		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		return "", nil
+	}
+
+	return "", fmt.Errorf("namespace path not available for container %s", cID)
 }
 
 // LogNonRunningContainerOutput implements runtime.ContainerRuntime (no-op for Podman).
