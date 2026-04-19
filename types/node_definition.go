@@ -76,9 +76,9 @@ type NodeDefinition struct {
 	Certificate *CertificateConfig `yaml:"certificate,omitempty"`
 	// Healthcheck configuration
 	HealthCheck *HealthcheckConfig `yaml:"healthcheck,omitempty"`
-	// Username for NOS SSH/NETCONF access (overrides kind default)
+	// Username to use when accessing the node over SSH/NETCONF/GNMI/etc. (overrides kind default)
 	Username string `yaml:"username,omitempty"`
-	// Password for NOS SSH/NETCONF access (overrides kind default)
+	// Password to use when accessing the node over SSH/NETCONF/GNMI/etc. (overrides kind default)
 	Password string `yaml:"password,omitempty"`
 	// Network aliases
 	Aliases    []string     `yaml:"aliases,omitempty"`
