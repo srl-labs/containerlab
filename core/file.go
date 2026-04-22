@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"io/fs"
 	"text/template"
+	"slices"
 
 	"github.com/hellt/envsubst"
 
@@ -26,10 +28,10 @@ const (
 // LoadTopologyFromFile loads a topology by the topo file path
 // parses the topology file into c.Conf structure
 // as well as populates the TopoFile structure with the topology file related information.
-func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
+func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 	var err error
 
-	c.TopoPaths, err = clabtypes.NewTopoPaths(topo, varsFile)
+	c.TopoPaths, err = clabtypes.NewTopoPaths(topo, varsFiles)
 	if err != nil {
 		return err
 	}
@@ -43,7 +45,7 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	}
 
 	// read template variables
-	templateVars, err := readTemplateVariables(c.TopoPaths.TopologyFilenameAbsPath(), varsFile)
+	templateVars, err := readTemplateVariables(c.TopoPaths.TopologyFilenameAbsPath(), varsFiles)
 	if err != nil {
 		return err
 	}
@@ -79,43 +81,91 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	return nil
 }
 
-func readTemplateVariables(topo, varsFile string) (any, error) {
-	var templateVars any
+func mergeTemplateVariables(dst, src any) any {
+    dstMap, dstOK := dst.(map[string]any)
+    srcMap, srcOK := src.(map[string]any)
 
-	if varsFile == "" {
-		ext := filepath.Ext(topo)
+    if !dstOK || !srcOK {
+        // For non-maps, src overrides dst
+        return src
+    }
 
-		for _, vext := range []string{".yaml", ".yml", ".json"} {
-			maybeVarsFile := fmt.Sprintf("%s%s%s", topo[0:len(topo)-len(ext)], varFileSuffix, vext)
+    for key, srcVal := range srcMap {
+        if dstVal, exists := dstMap[key]; exists {
+            dstMap[key] = mergeTemplateVariables(dstVal, srcVal)
+        } else {
+            dstMap[key] = srcVal
+        }
+    }
 
-			_, err := os.Stat(maybeVarsFile)
-			switch {
-			case os.IsNotExist(err):
-				continue
-			case err != nil:
-				return nil, err
-			}
+    return dstMap
+}
 
-			varsFile = maybeVarsFile
-
-			break
+func findVarsFiles(topo string) ([]string, error) {	
+	topo_dir := filepath.Dir(topo) 
+	topo_base := filepath.Base(topo) // e.g. lab_a.clab.yml
+	topo_ext := filepath.Ext(topo_base) // e.g. .yml
+	
+	// extract the topology file name without its file extension:
+	topo_stem := topo_base[0:len(topo_base)-len(topo_ext)] // e.g. lab_a.clab
+	
+	vars_search_glob := fmt.Sprintf("%s%s.*", topo_stem, varFileSuffix)
+	// e.g. lab_a.clab_vars.*
+	
+	// this will find both lab_a.clab_vars.yml, as well as lab_a.clab_vars.additions.yml;
+	// their values will be merged in alphabetical order
+	fsys := os.DirFS(topo_dir)
+	
+	valid_exts := []string{".yaml", ".yml", ".json"}
+	
+	result := []string{}
+	candidates, err := fs.Glob(fsys, vars_search_glob)
+	if err != nil {
+		return nil, err
+	}
+	for _, candidate := range candidates {
+		candidate_ext := filepath.Ext(candidate)
+		if slices.Contains(valid_exts, candidate_ext) {
+			result = append(result, filepath.Join(topo_dir, candidate))
 		}
+	}
+	
+	return result, nil
+}
 
-		if varsFile == "" {
+func readTemplateVariables(topo string, varsFiles []string) (any, error) {
+	if len(varsFiles) == 0 {
+		log.Debug("searching for template vars files")
+		foundFiles, err := findVarsFiles(topo)
+		
+		if err != nil {
+			return nil, err
+		}
+		
+		if len(foundFiles) == 0 {
 			// no var file found, assume the topology is not a template
 			// or a template that doesn't require external variables
 			return nil, nil
 		}
+		varsFiles = foundFiles
 	}
-
-	data, err := os.ReadFile(varsFile)
-	if err != nil {
-		return nil, err
-	}
-
-	err = yaml.Unmarshal(data, &templateVars)
-	if err != nil {
-		return nil, err
+	
+	log.Debug("template vars", "files", varsFiles)
+	
+	templateVars := make(map[string]any)
+	// read all requested var files, and merge their contents into one:
+	for _, varsFile := range varsFiles {
+		data, err := os.ReadFile(varsFile)
+		if err != nil {
+			return nil, err
+		}
+	
+		var parsedVars map[string]any
+		err = yaml.Unmarshal(data, &parsedVars)
+		if err != nil {
+			return nil, err
+		}
+		mergeTemplateVariables(templateVars, parsedVars)
 	}
 
 	return templateVars, nil

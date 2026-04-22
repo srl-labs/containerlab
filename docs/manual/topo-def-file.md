@@ -846,6 +846,10 @@ To further simplify parametrization of the topology files, containerlab allows u
 
 Using templating approach it is possible to create a lab template and instantiate different labs from it, by simply changing the variables in the variables file.
 
+Variable files can be specified manually, by providing the `--vars` flag, or will be searched for automatically at `<topology-name>_vars.[yaml|yml|json]`, where toplogy-name is the filename of the topology without its extension.
+
+Additional files can be loaded by specifying the `--vars` flag multiple times, or by naming them `<topology-name>_vars.<anything>.[yaml|yml|json]` when using the automatic search.
+
 To help you get started, we created the following lab examples which demonstrate how topology templating can be used:
 
 - [Leaf-Spine topology with parametrized number of leaves/spines](lab-examples/../../lab-examples/templated01.md)

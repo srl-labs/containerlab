@@ -227,7 +227,7 @@ func (o *Options) ToClabSaveOptions() []clabcore.SaveOption {
 
 type GlobalOptions struct {
 	TopologyFile     string
-	VarsFile         string
+	VarsFiles        []string
 	TopologyName     string
 	Timeout          time.Duration
 	Runtime          string
@@ -259,7 +259,7 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 	}
 
 	if o.TopologyFile != "" {
-		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFile))
+		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFiles))
 	}
 
 	if o.TopologyName != "" {

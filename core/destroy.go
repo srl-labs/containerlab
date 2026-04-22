@@ -125,7 +125,7 @@ func (c *CLab) makeCopyForDestroy(
 	// WithTopoPath / WithLabNameOnly must run before WithNodeFilter so filterClabNodes
 	// sees topology nodes (see filterClabNodes in clab.go).
 	if clabutils.FileOrDirExists(topo) {
-		newOpts = append(newOpts, WithTopoPath(topo, c.TopoPaths.VarsFilenameAbsPath()))
+		newOpts = append(newOpts, WithTopoPath(topo, c.TopoPaths.VarsFilenamesAbsPath()))
 	} else {
 		// Derive lab name from lab directory (format: clab-<labname>)
 		labName := filepath.Base(labDir)
