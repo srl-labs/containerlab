@@ -99,6 +99,9 @@ topology:
       startup-config: myconfig.txt
 ```
 
+Note that startup-config file myconfig.txt must be in the flat "set" config format because the "launch.py" script within the Docker container use this format to apply the startup-config file. So the seed startup-config must be converted to the flat format. 
+Running "containerlab save" saves the config files in the standard hierachial format in the container lab artifact dir, these files must be converted to the flat format.    
+
 With this knob containerlab is instructed to take a file `myconfig.txt` from the directory that hosts the topology file, and copy it to the lab directory for that specific node under the `/config/startup-config.cfg` name. Then the directory that hosts the startup-config dir is mounted to the container. This will result in this config being applied at startup by the node.
 
 Configuration is applied after the node is started, thus it can contain partial configuration snippets that you desire to add on top of the default config that a node boots up with.

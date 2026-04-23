@@ -339,6 +339,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 	wg *sync.WaitGroup,
 	skipPostDeploy bool,
 	execCollection *clabexec.ExecCollection,
+	nodeFailCh chan<- error,
 ) {
 	defer wg.Done()
 
@@ -369,12 +370,14 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			)
 			if err != nil {
 				log.Errorf("failed pre-deploy stage for node %q: %v", node.Config().ShortName, err)
+				nodeFailCh <- fmt.Errorf("node %q pre-deploy: %w", node.Config().ShortName, err)
 				continue
 			}
 
 			err = node.Deploy(ctx, &clabnodes.DeployParams{Nodes: c.Nodes})
 			if err != nil {
 				log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
+				nodeFailCh <- fmt.Errorf("node %q deploy: %w", node.Config().ShortName, err)
 				continue
 			}
 
@@ -397,6 +400,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			err = node.DeployEndpoints(ctx)
 			if err != nil {
 				log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
+				nodeFailCh <- fmt.Errorf("node %q deploy links: %w", node.Config().ShortName, err)
 				continue
 			}
 
@@ -475,6 +479,7 @@ func (c *CLab) scheduleNodes(
 	ctx context.Context,
 	maxWorkers int,
 	skipPostDeploy bool,
+	nodeFailCh chan<- error,
 ) (*sync.WaitGroup, *clabexec.ExecCollection) {
 	concurrentChan := make(chan *clabcoredependency_manager.DependencyNode)
 
@@ -492,7 +497,15 @@ func (c *CLab) scheduleNodes(
 	// it's safe to not check if all nodes are serial because in that case
 	// maxWorkers will be 0
 	for i := range maxWorkers {
-		go c.scheduleNodeWorkerF(ctx, i, concurrentChan, wg, skipPostDeploy, execCollection)
+		go c.scheduleNodeWorkerF(
+			ctx,
+			i,
+			concurrentChan,
+			wg,
+			skipPostDeploy,
+			execCollection,
+			nodeFailCh,
+		)
 	}
 
 	// Waitgroup protects the channel towards the workers of being closed too early

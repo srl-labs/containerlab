@@ -537,7 +537,7 @@ In the extended format, the vars can be defined for the entire link or for each 
 The `ipv4` and `ipv6` fields allow for you to set the IPv4 and/or IPv6 address on an interface respectively; directly from the topology file.
 
 /// note
-Currently only the [Nokia SR Linux](../manual/kinds/srl.md) and [Cisco IOL](../manual/kinds/cisco_iol.md) kind(s) support this feature. Contributions to add support for other kinds are welcomed.
+The [Nokia SR Linux](../manual/kinds/srl.md), [Arista cEOS](../manual/kinds/ceos.md), [VyOS Networks VyOS](../manual/kinds/vyosnetworks_vyos.md), and [Cisco IOL](../manual/kinds/cisco_iol.md) kinds support this feature. Contributions to add support for other kinds are welcomed.
 ///
 
 Refer to the below example, where we configure some addressing on the node interfaces using the [brief](#brief-format) format where addresses are passed as an ordered list matching the order of which the endpoint interfaces are defined.

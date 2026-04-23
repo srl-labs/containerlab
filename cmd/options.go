@@ -475,6 +475,7 @@ type ToolsVxlanOptions struct {
 	Remote         string
 	ParentDevice   string
 	DeletionPrefix string
+	DeletionName   string
 }
 
 type ToolsSnapshotOptions struct {

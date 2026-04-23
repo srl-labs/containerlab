@@ -373,8 +373,39 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 		)
 	}
 
+	// configure data interfaces
+	for _, e := range n.Endpoints {
+		ifName := e.GetIfaceName()
+		// skip management interface
+		if ifName == nodeCfg.MgmtIntf {
+			continue
+		}
+
+		v4 := e.GetIPv4Addr()
+		v6 := e.GetIPv6Addr()
+
+		if !v4.IsValid() && !v6.IsValid() {
+			continue
+		}
+
+		cfgs = append(cfgs, "interface "+ifName)
+		cfgs = append(cfgs, "no switchport")
+		cfgs = append(cfgs, "no ip address")
+		cfgs = append(cfgs, "no ipv6 address")
+
+		if v4.IsValid() {
+			cfgs = append(cfgs, fmt.Sprintf("ip address %s", v4.String()))
+		}
+		if v6.IsValid() {
+			cfgs = append(cfgs, fmt.Sprintf("ipv6 address %s", v6.String()))
+		}
+	}
+
 	// add save to startup cmd
 	cfgs = append(cfgs, "wr")
+
+	log.Debugf("cEOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
+
 	resp, err := d.SendConfigs(cfgs)
 	if err != nil {
 		return err

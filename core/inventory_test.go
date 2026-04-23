@@ -12,6 +12,104 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+func TestGenerateAnsibleInventoryCredentialPlacement(t *testing.T) {
+	t.Run("defaults_in_all_vars", func(t *testing.T) {
+		c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_defaults_creds.yml", ""))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var b strings.Builder
+		if err := c.generateAnsibleInventory(&b); err != nil {
+			t.Fatal(err)
+		}
+		got := b.String()
+		wantFrag := "ansible_httpapi_use_proxy: false\n    ansible_user: labuser\n    ansible_password: labpass"
+		if !strings.Contains(got, wantFrag) {
+			t.Fatalf("expected defaults credentials in all.vars, missing fragment; got:\n%s", got)
+		}
+		if n := strings.Count(got, "ansible_user: labuser"); n != 1 {
+			t.Fatalf("expected exactly one ansible_user: labuser (all.vars), got count=%d:\n%s", n, got)
+		}
+	})
+
+	t.Run("kind_in_group_vars", func(t *testing.T) {
+		c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_kind_creds.yml", ""))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var b strings.Builder
+		if err := c.generateAnsibleInventory(&b); err != nil {
+			t.Fatal(err)
+		}
+		got := b.String()
+		head, _, ok := strings.Cut(got, "  children:")
+		if !ok {
+			t.Fatal("missing children in inventory")
+		}
+		if strings.Contains(head, "ansible_user:") || strings.Contains(head, "ansible_password:") {
+			t.Fatalf("did not expect credentials in all.vars head, got head:\n%s", head)
+		}
+		if !strings.Contains(got, "ansible_user: kinduser") || !strings.Contains(got, "ansible_password: kindpass") {
+			t.Fatalf("expected kind credentials in inventory, got:\n%s", got)
+		}
+		if n := strings.Count(got, "ansible_user: kinduser"); n != 1 {
+			t.Fatalf("expected kind-level ansible_user only once in vars, got count=%d", n)
+		}
+	})
+
+	t.Run("heterogeneous_node_passwords_per_host", func(t *testing.T) {
+		c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_two_node_passwords.yml", ""))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var b strings.Builder
+		if err := c.generateAnsibleInventory(&b); err != nil {
+			t.Fatal(err)
+		}
+		got := b.String()
+		if !strings.Contains(got, "ansible_password: secret-one") || !strings.Contains(got, "ansible_password: secret-two") {
+			t.Fatalf("expected per-host passwords, got:\n%s", got)
+		}
+		if strings.Contains(got, "      vars:\n        ansible_network_os:") &&
+			strings.Contains(got[strings.Index(got, "      vars:"):], "ansible_password: secret") {
+			// vars block after first "      vars:" might still include connection-only; ensure no kind-level password line
+			idx := strings.Index(got, "ansible_network_os:")
+			if idx < 0 {
+				t.Fatal("missing network_os")
+			}
+			rest := got[idx:]
+			endHosts := strings.Index(rest, "      hosts:")
+			if endHosts < 0 {
+				t.Fatal("missing hosts")
+			}
+			kindVars := rest[:endHosts]
+			if strings.Contains(kindVars, "ansible_password:") {
+				t.Fatalf("did not expect ansible_password in kind vars, got kind vars section:\n%s", kindVars)
+			}
+		}
+	})
+}
+
+func TestGenerateNornirInventoryCredentialPlacement(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_two_node_passwords.yml", ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var b strings.Builder
+	if err := c.generateNornirSimpleInventory(&b); err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := yaml.Unmarshal([]byte(b.String()), &got); err != nil {
+		t.Fatalf("yaml: %v", err)
+	}
+	n1 := got["n1"].(map[interface{}]interface{})
+	n2 := got["n2"].(map[interface{}]interface{})
+	if n1["password"] != "secret-one" || n2["password"] != "secret-two" {
+		t.Fatalf("expected per-host passwords, n1=%v n2=%v", n1["password"], n2["password"])
+	}
+}
+
 func TestGenerateAnsibleInventory(t *testing.T) {
 	tests := map[string]struct {
 		got  string
@@ -38,7 +136,8 @@ func TestGenerateAnsibleInventory(t *testing.T) {
         clab-topo1-node1:
           ansible_host: 172.100.100.11
         clab-topo1-node2:
-          ansible_host: 172.100.100.12`,
+          ansible_host: 172.100.100.12
+`,
 		},
 		"case2": {
 			got: "test_data/topo8_ansible_groups.yml",
@@ -76,7 +175,8 @@ func TestGenerateAnsibleInventory(t *testing.T) {
     spine:
       hosts:
         clab-topo8_ansible_groups-node1:
-          ansible_host: 172.100.100.11`,
+          ansible_host: 172.100.100.11
+`,
 		},
 	}
 
@@ -126,9 +226,9 @@ node2:
     platform: nokia_srlinux
     hostname: 172.100.100.12`,
 		},
-		"case2-scrapi-platform": {
+		"case2-scrapli-platform": {
 			got:                              "test_data/topo12.yml",
-			clab_nornir_platform_name_schema: "scrapi",
+			clab_nornir_platform_name_schema: "scrapli",
 			want: `---
 node1:
     username: admin

@@ -30,5 +30,5 @@ In the beta release we focus on the core topology constructs working our way tow
 ## Quick Links
 
 * [Helm chart on ArtifactHub](https://artifacthub.io/packages/helm/clabernetes/clabernetes)
-* [CRD reference](https://doc.crds.dev/github.com/srl-labs/clabernetes)
+* [CRD reference](https://crds.r8y.page/repo/github.com/srl-labs/clabernetes)
 * Source code on [GitHub](https://github.com/srl-labs/clabernetes)
