@@ -64,8 +64,8 @@ func (n *F5BigIPVE) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"F5_HOSTNAME":     n.Cfg.ShortName,
-		"USERNAME":        defaultCredentials.GetUsername(),
-		"PASSWORD":        defaultCredentials.GetPassword(),
+		"USERNAME":        n.Cfg.Credentials.Username,
+		"PASSWORD":        n.Cfg.Credentials.Password,
 		"CONNECTION_MODE": clabnodes.VrDefConnMode,
 		"QEMU_MEMORY":     defaultQemuMemory,
 		"QEMU_SMP":        defaultQemuSMP,
