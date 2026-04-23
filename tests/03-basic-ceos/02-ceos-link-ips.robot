@@ -36,7 +36,7 @@ Ensure n1 can ping n2 over eth1 link
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=n1 --cmd "Cli -p 15 -c 'ping ${n2-link-ip} repeat 3'"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    Success rate is 100 percent
+    Should Contain    ${output}    0% packet loss
 
 
 *** Keywords ***
