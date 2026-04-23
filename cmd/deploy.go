@@ -143,7 +143,7 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		"export-rendered",
 		"",
 		"",
-		"save the rendered topology YAML (after template+env expansion) to the specified file path",
+		"write the rendered topology YAML (after template and env expansion) to the given file path (required)",
 	)
 
 	c.Flags().StringArrayVar(

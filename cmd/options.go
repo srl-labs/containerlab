@@ -212,6 +212,13 @@ func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 		}
 	}
 
+	if o.Global.VarsFile != "" {
+		destroyOptions = append(
+			destroyOptions,
+			clabcore.WithDestroyVarsFile(o.Global.VarsFile),
+		)
+	}
+
 	return destroyOptions
 }
 
