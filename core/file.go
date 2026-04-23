@@ -35,6 +35,7 @@ func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 	if err != nil {
 		return err
 	}
+	
 
 	// load the topology file/template
 	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameBase()).
@@ -43,9 +44,25 @@ func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 	if err != nil {
 		return err
 	}
+	
+	// if existing, load subtemplates that can be included in the topology file
+	fsys := os.DirFS(c.TopoPaths.TopologyFileDir())
+	subtemplates, err := fs.Glob(fsys, "clab_templates/*.gotmpl")
+	if err != nil {
+		return err
+	}
+	if len(subtemplates) != 0 {
+		log.Debugf("found %i subtemplates, parsing...", len(subtemplates))
+		upd, err := topologyTemplate.ParseFS(fsys, subtemplates...)
+		if err != nil {
+			return err
+		}
+		topologyTemplate = upd
+	}
+	log.Debugf("loading template variables...")
 
 	// read template variables
-	templateVars, err := readTemplateVariables(c.TopoPaths.TopologyFilenameAbsPath(), varsFiles)
+	templateVars, err := readTemplateVariables(c.TopoPaths, varsFiles)
 	if err != nil {
 		return err
 	}
@@ -101,15 +118,9 @@ func mergeTemplateVariables(dst, src any) any {
     return dstMap
 }
 
-func findVarsFiles(topo string) ([]string, error) {	
-	topo_dir := filepath.Dir(topo) 
-	topo_base := filepath.Base(topo) // e.g. lab_a.clab.yml
-	topo_ext := filepath.Ext(topo_base) // e.g. .yml
-	
-	// extract the topology file name without its file extension:
-	topo_stem := topo_base[0:len(topo_base)-len(topo_ext)] // e.g. lab_a.clab
-	
-	vars_search_glob := fmt.Sprintf("%s%s.*", topo_stem, varFileSuffix)
+func findVarsFiles(paths *clabtypes.TopoPaths) ([]string, error) {
+	topo_dir := paths.TopologyFileDir()
+	vars_search_glob := fmt.Sprintf("%s%s.*", paths.TopologyFilenameWithoutExt(), varFileSuffix)
 	// e.g. lab_a.clab_vars.*
 	
 	// this will find both lab_a.clab_vars.yml, as well as lab_a.clab_vars.additions.yml;
@@ -133,10 +144,10 @@ func findVarsFiles(topo string) ([]string, error) {
 	return result, nil
 }
 
-func readTemplateVariables(topo string, varsFiles []string) (any, error) {
+func readTemplateVariables(paths *clabtypes.TopoPaths, varsFiles []string) (any, error) {
 	if len(varsFiles) == 0 {
 		log.Debug("searching for template vars files")
-		foundFiles, err := findVarsFiles(topo)
+		foundFiles, err := findVarsFiles(paths)
 		
 		if err != nil {
 			return nil, err
@@ -155,6 +166,11 @@ func readTemplateVariables(topo string, varsFiles []string) (any, error) {
 	templateVars := make(map[string]any)
 	// read all requested var files, and merge their contents into one:
 	for _, varsFile := range varsFiles {
+		// skip empty vars file names
+		if len(varsFile) == 0 {
+			continue
+		}
+		
 		data, err := os.ReadFile(varsFile)
 		if err != nil {
 			return nil, err
