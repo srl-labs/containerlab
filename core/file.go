@@ -25,6 +25,9 @@ const (
 	varFileSuffix = "_vars"
 )
 
+// ExportRenderedTopology controls whether the rendered topology YAML is saved to disk.
+var ExportRenderedTopology string
+
 // LoadTopologyFromFile loads a topology by the topo file path
 // parses the topology file into c.Conf structure
 // as well as populates the TopoFile structure with the topology file related information.
@@ -84,6 +87,14 @@ func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 	yamlFile, err := envsubst.BytesRestrictedNoReplace(buf.Bytes(), false, false, true, true)
 	if err != nil {
 		return err
+	}
+
+	// save the rendered topology to disk if requested
+	if ExportRenderedTopology != "" {
+		if err := os.WriteFile(ExportRenderedTopology, yamlFile, 0644); err != nil {
+			return fmt.Errorf("failed to save rendered topology to %s: %w", ExportRenderedTopology, err)
+		}
+		log.Infof("Rendered topology saved to %s", ExportRenderedTopology)
 	}
 
 	err = yaml.UnmarshalStrict(yamlFile, c.Config)

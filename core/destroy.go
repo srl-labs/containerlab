@@ -124,8 +124,13 @@ func (c *CLab) makeCopyForDestroy(
 	// This allows destroying labs even when the topology file has been deleted.
 	// WithTopoPath / WithLabNameOnly must run before WithNodeFilter so filterClabNodes
 	// sees topology nodes (see filterClabNodes in clab.go).
+	varsFiles := opts.varsFiles
+	if len(varsFiles) == 0 {
+		varsFiles = c.TopoPaths.VarsFilenamesAbsPath()
+	}
+
 	if clabutils.FileOrDirExists(topo) {
-		newOpts = append(newOpts, WithTopoPath(topo, c.TopoPaths.VarsFilenamesAbsPath()))
+		newOpts = append(newOpts, WithTopoPath(topo, varsFiles))
 	} else {
 		// Derive lab name from lab directory (format: clab-<labname>)
 		labName := filepath.Base(labDir)

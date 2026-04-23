@@ -1,0 +1,14 @@
+name: topo-inv-kind-creds
+topology:
+  kinds:
+    nokia_srlinux:
+      credentials:
+        username: kinduser
+        password: kindpass
+  nodes:
+    n1:
+      kind: nokia_srlinux
+      mgmt-ipv4: 192.168.78.1
+    n2:
+      kind: nokia_srlinux
+      mgmt-ipv4: 192.168.78.2

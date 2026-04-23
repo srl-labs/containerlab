@@ -77,6 +77,8 @@ When `--deploy` flag is present, the lab deployment process starts using the gen
 
 The generated definition file is first saved by the path set with `--file` or, if file path is not set, by the default path of `<lab-name>.clab.yml`. Then the equivalent of the `deploy -t <file> --reconfigure` command is executed.
 
+When deploying, you can pass `--export-rendered <path>` to write the rendered topology YAML to a file (same behavior as [`deploy --export-rendered`](deploy.md#export-rendered)).
+
 #### max-workers
 
 With `--max-workers` flag it is possible to limit the amout of concurrent workers that create containers or wire virtual links. By default the number of workers equals the number of nodes/links to create.
