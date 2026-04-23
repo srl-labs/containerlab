@@ -55,7 +55,7 @@ func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 		return err
 	}
 	if len(subtemplates) != 0 {
-		log.Debugf("found %i subtemplates, parsing...", len(subtemplates))
+		log.Debugf("found %d subtemplates, parsing...", len(subtemplates))
 		upd, err := topologyTemplate.ParseFS(fsys, subtemplates...)
 		if err != nil {
 			return err
@@ -190,7 +190,7 @@ func readTemplateVariables(paths *clabtypes.TopoPaths, varsFiles []string) (any,
 		var parsedVars map[string]any
 		err = yaml.Unmarshal(data, &parsedVars)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("variables file '%s': %w", filepath.Base(varsFile), err)
 		}
 		mergeTemplateVariables(templateVars, parsedVars)
 	}

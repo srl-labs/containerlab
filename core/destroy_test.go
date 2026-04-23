@@ -20,7 +20,7 @@ func TestDestroyMakeCopyOptionOrder_nodeFilterAfterTopo(t *testing.T) {
 	topo := filepath.Join("test_data", "topo1.yml")
 
 	c, err := NewContainerLab(
-		WithTopoPath(topo, ""),
+		WithTopoPath(topo, nil),
 		WithNodeFilter([]string{"node1"}),
 		WithSkippedBindsPathsCheck(),
 	)
@@ -44,7 +44,7 @@ func TestDestroyMakeCopyOptionOrder_nodeFilterBeforeTopoFails(t *testing.T) {
 
 	_, err := NewContainerLab(
 		WithNodeFilter([]string{"node1"}),
-		WithTopoPath(topo, ""),
+		WithTopoPath(topo, nil),
 		WithSkippedBindsPathsCheck(),
 	)
 	if err == nil {
