@@ -212,6 +212,13 @@ func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 		}
 	}
 
+	if o.Global.VarsFile != "" {
+		destroyOptions = append(
+			destroyOptions,
+			clabcore.WithDestroyVarsFile(o.Global.VarsFile),
+		)
+	}
+
 	return destroyOptions
 }
 
@@ -301,6 +308,7 @@ type DeployOptions struct {
 	LabOwner                 string
 	RestoreAll               string
 	RestoreNodeSnapshots     []string
+	ExportRenderedTopology   string
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {
