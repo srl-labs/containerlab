@@ -218,7 +218,7 @@ func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 	if err != nil {
 		return err
 	} else if resp.Failed != nil {
-		return errors.New("failed to configure management interface")
+		return errors.New("failed to apply configuration")
 	}
 	if err := n.save(ctx, cli); err != nil {
 		return err
