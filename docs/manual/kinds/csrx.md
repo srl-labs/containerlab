@@ -14,7 +14,7 @@ cSRX is distributed as a Docker image that must be loaded manually from a Junipe
 
 ```bash
 # load the cSRX container image
-sudo docker load -i junos-csrx-docker-24.4R1.9.tgz
+sudo docker load -i junos-csrx-docker-<version>.tgz
 ```
 
 ## Managing cSRX nodes

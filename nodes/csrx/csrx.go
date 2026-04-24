@@ -33,7 +33,7 @@ const (
 )
 
 var (
-	kindnames = []string{"csrx", "juniper_csrx"}
+	kindNames = []string{"csrx", "juniper_csrx"}
 	//go:embed csrx.cfg
 	defaultCfgTemplate string
 
@@ -60,7 +60,7 @@ func Register(r *clabnodes.NodeRegistry) {
 		platformOpts,
 	)
 
-	r.Register(kindnames, func() clabnodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(csrx)
 	}, nrea)
 }
@@ -132,21 +132,28 @@ func (s *csrx) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	}
 
 	if s.Config().License != "" {
-		cmd, _ = clabexec.NewExecCmdFromString(
-			fmt.Sprintf("cli request system license add %s", filepath.Join(licDir, licFile)),
-		)
-		execResult, err = s.RunExec(ctx, cmd)
+		d, err := clabutils.SpawnCLIviaExec("juniper_junos", s.Cfg.LongName, s.Runtime.GetName())
 		if err != nil {
 			return err
 		}
 
-		if execResult.GetStdErrString() != "" {
-			return fmt.Errorf("csrx post-deploy license add failed: %s", execResult.GetStdErrString())
+		defer d.Close()
+
+		resp, err := d.SendCommand(
+			fmt.Sprintf("request system license add %s", filepath.Join(licDir, licFile)),
+		)
+		if err != nil {
+			return err
+		} else if resp.Failed != nil {
+			return fmt.Errorf(
+				"csrx post-deploy license add failed: %w",
+				resp.Failed,
+			)
 		}
-		log.Debugf("csrx post-deploy license add result: %s", execResult.GetStdOutString())
+		log.Debugf("csrx post-deploy license add completed")
 	}
 
-	return err
+	return nil
 }
 
 func (s *csrx) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
@@ -157,7 +164,7 @@ func (s *csrx) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, err
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return nil, fmt.Errorf("csrx post-deploy failed: %s", execResult.GetStdErrString())
+		return nil, fmt.Errorf("csrx save-config failed: %s", execResult.GetStdErrString())
 	}
 
 	// path by which to save a config
