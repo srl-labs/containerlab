@@ -69,6 +69,8 @@
                         "nokia_srlinux",
                         "arista_ceos",
                         "juniper_crpd",
+                        "csrx",
+                        "juniper_csrx",
                         "sonic-vs",
                         "sonic-vm",
                         "nokia_sros",
