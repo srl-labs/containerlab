@@ -267,6 +267,14 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(srcTopoPath, ":", dstTopoPath, ":ro"))
 	}
 
+	// mounting /run/netnns as tmpfs ensures the network-instances
+	// namespaces don't persist through stop/start/restarts.
+	if n.Cfg.Tmpfs == nil {
+		n.Cfg.Tmpfs = map[string]string{}
+	}
+
+	n.Cfg.Tmpfs["/run/netns"] = "rw,nosuid,nodev,noexec"
+
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceHelp = InterfaceHelp
 

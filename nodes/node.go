@@ -112,7 +112,11 @@ type Node interface {
 	SaveConfig(
 		context.Context,
 	) (*SaveConfigResult, error) // SaveConfig saves the nodes configuration to an external file
-	Delete(context.Context) error                // Delete triggers the deletion of this node
+	Delete(context.Context) error // Delete triggers the deletion of this node
+	// Stop parks dataplane interfaces and stops the container.
+	Stop(context.Context) error
+	// Start restarts a stopped container and restores its parked interfaces.
+	Start(context.Context) error
 	GetImages(context.Context) map[string]string // GetImages returns the images used for this kind
 	GetRuntime() clabruntime.ContainerRuntime    // GetRuntime returns the nodes assigned runtime
 	GenerateConfig(dst, templ string) error      // Generate the nodes configuration
@@ -124,6 +128,8 @@ type Node interface {
 	// Adds the given link to the Node (container). After adding the Link to the node,
 	// the given function f is called within the Nodes namespace to setup the link.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
+	// AddEndpoint attaches an endpoint discovered from topology resolution and may normalize
+	// endpoint identity first, such as interface-name remapping.
 	AddEndpoint(e clablinks.Endpoint) error
 	GetEndpoints() []clablinks.Endpoint
 	GetLinkEndpointType() clablinks.LinkEndpointType
