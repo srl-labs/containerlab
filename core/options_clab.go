@@ -162,14 +162,14 @@ func WithKeepMgmtNet() ClabOption {
 	}
 }
 
-func WithTopoPath(path, varsFile string) ClabOption {
+func WithTopoPath(path string, varsFiles []string) ClabOption {
 	return func(c *CLab) error {
 		file, err := c.ProcessTopoPath(path)
 		if err != nil {
 			return err
 		}
 
-		if err := c.LoadTopologyFromFile(file, varsFile); err != nil {
+		if err := c.LoadTopologyFromFile(file, varsFiles); err != nil {
 			return fmt.Errorf("failed to read topology file: %v", err)
 		}
 
@@ -247,7 +247,7 @@ func WithTopologyFromLab(labName string) ClabOption {
 
 		log.Debugf("found topology file for lab %s: %s", labName, topoFile)
 
-		return WithTopoPath(topoFile, "")(c)
+		return WithTopoPath(topoFile, nil)(c)
 	}
 }
 

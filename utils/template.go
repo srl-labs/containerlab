@@ -28,6 +28,7 @@ func CreateFuncs() template.FuncMap {
 		"idiv":         idiv,
 		"rem":          rem,
 		"seq":          seq,
+		"slice":        slice,
 	}
 	maps.Copy(f, CreateStringFuncs())
 	maps.Copy(f, CreateConvFuncs())
@@ -659,4 +660,8 @@ func SubstituteEnvsAndTemplate(r io.Reader, data any) (*bytes.Buffer, error) {
 	}
 
 	return buf, nil
+}
+
+func slice(args ...any) []any {
+	return args
 }

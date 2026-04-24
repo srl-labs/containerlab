@@ -382,7 +382,7 @@ func TestWithTopo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wt := WithTopoPath(tt.args.topoRef, "")
+			wt := WithTopoPath(tt.args.topoRef, nil)
 
 			c, err := NewContainerLab()
 			if err != nil {

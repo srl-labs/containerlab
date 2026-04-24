@@ -12,9 +12,9 @@ type DestroyOptions struct {
 	terminalPrompt bool
 	cleanup        bool
 	nodeFilter     []string
-	// varsFile is topology template vars from CLI (--vars), used when destroying all labs
+	// varsFiles is topology template vars from CLI (--vars), used when destroying all labs
 	// so each topology can be loaded with the same vars (e.g. templated topologies).
-	varsFile string
+	varsFiles      []string
 }
 
 // NewDestroyOptions returns a new destroy options object.
@@ -74,10 +74,10 @@ func WithDestroyNodeFilter(ss []string) DestroyOption {
 	}
 }
 
-// WithDestroyVarsFile sets the topology vars file path for loading templated topologies during
+// WithDestroyVarsFiles sets the topology vars file path for loading templated topologies during
 // destroy (notably destroy --all when no single -t was used on the parent CLab instance).
-func WithDestroyVarsFile(path string) DestroyOption {
+func WithDestroyVarsFiles(paths []string) DestroyOption {
 	return func(o *DestroyOptions) {
-		o.varsFile = path
+		o.varsFiles = paths
 	}
 }

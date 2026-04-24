@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"io/fs"
 	"text/template"
+	"slices"
 
 	"github.com/hellt/envsubst"
 
@@ -23,19 +25,20 @@ const (
 	varFileSuffix = "_vars"
 )
 
-// LoadTopologyFromFile loads a topology by the topo file path
-// parses the topology file into c.Conf structure
-// as well as populates the TopoFile structure with the topology file related information.
 // ExportRenderedTopology controls whether the rendered topology YAML is saved to disk.
 var ExportRenderedTopology string
 
-func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
+// LoadTopologyFromFile loads a topology by the topo file path
+// parses the topology file into c.Conf structure
+// as well as populates the TopoFile structure with the topology file related information.
+func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 	var err error
 
-	c.TopoPaths, err = clabtypes.NewTopoPaths(topo, varsFile)
+	c.TopoPaths, err = clabtypes.NewTopoPaths(topo, varsFiles)
 	if err != nil {
 		return err
 	}
+	
 
 	// load the topology file/template
 	topologyTemplate, err := template.New(c.TopoPaths.TopologyFilenameBase()).
@@ -44,9 +47,25 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	if err != nil {
 		return err
 	}
+	
+	// if existing, load subtemplates that can be included in the topology file
+	fsys := os.DirFS(c.TopoPaths.TopologyFileDir())
+	subtemplates, err := fs.Glob(fsys, "clab_templates/*.gotmpl")
+	if err != nil {
+		return err
+	}
+	if len(subtemplates) != 0 {
+		log.Debugf("found %d subtemplates, parsing...", len(subtemplates))
+		upd, err := topologyTemplate.ParseFS(fsys, subtemplates...)
+		if err != nil {
+			return err
+		}
+		topologyTemplate = upd
+	}
+	log.Debugf("loading template variables...")
 
 	// read template variables
-	templateVars, err := readTemplateVariables(c.TopoPaths.TopologyFilenameAbsPath(), varsFile)
+	templateVars, err := readTemplateVariables(c.TopoPaths, varsFiles)
 	if err != nil {
 		return err
 	}
@@ -90,43 +109,90 @@ func (c *CLab) LoadTopologyFromFile(topo, varsFile string) error {
 	return nil
 }
 
-func readTemplateVariables(topo, varsFile string) (any, error) {
-	var templateVars any
+func mergeTemplateVariables(dst, src any) any {
+    dstMap, dstOK := dst.(map[string]any)
+    srcMap, srcOK := src.(map[string]any)
 
-	if varsFile == "" {
-		ext := filepath.Ext(topo)
+    if !dstOK || !srcOK {
+        // For non-maps, src overrides dst
+        return src
+    }
 
-		for _, vext := range []string{".yaml", ".yml", ".json"} {
-			maybeVarsFile := fmt.Sprintf("%s%s%s", topo[0:len(topo)-len(ext)], varFileSuffix, vext)
+    for key, srcVal := range srcMap {
+        if dstVal, exists := dstMap[key]; exists {
+            dstMap[key] = mergeTemplateVariables(dstVal, srcVal)
+        } else {
+            dstMap[key] = srcVal
+        }
+    }
 
-			_, err := os.Stat(maybeVarsFile)
-			switch {
-			case os.IsNotExist(err):
-				continue
-			case err != nil:
-				return nil, err
-			}
+    return dstMap
+}
 
-			varsFile = maybeVarsFile
-
-			break
+func findVarsFiles(paths *clabtypes.TopoPaths) ([]string, error) {
+	topo_dir := paths.TopologyFileDir()
+	vars_search_glob := fmt.Sprintf("%s%s.*", paths.TopologyFilenameWithoutExt(), varFileSuffix)
+	// e.g. lab_a.clab_vars.*
+	
+	// this will find both lab_a.clab_vars.yml, as well as lab_a.clab_vars.additions.yml;
+	// their values will be merged in alphabetical order
+	fsys := os.DirFS(topo_dir)
+	
+	valid_exts := []string{".yaml", ".yml", ".json"}
+	
+	result := []string{}
+	candidates, err := fs.Glob(fsys, vars_search_glob)
+	if err != nil {
+		return nil, err
+	}
+	for _, candidate := range candidates {
+		candidate_ext := filepath.Ext(candidate)
+		if slices.Contains(valid_exts, candidate_ext) {
+			result = append(result, filepath.Join(topo_dir, candidate))
 		}
+	}
+	
+	return result, nil
+}
 
-		if varsFile == "" {
+func readTemplateVariables(paths *clabtypes.TopoPaths, varsFiles []string) (any, error) {
+	if len(varsFiles) == 0 {
+		log.Debug("searching for template vars files")
+		foundFiles, err := findVarsFiles(paths)
+		
+		if err != nil {
+			return nil, err
+		}
+		
+		if len(foundFiles) == 0 {
 			// no var file found, assume the topology is not a template
 			// or a template that doesn't require external variables
 			return nil, nil
 		}
+		varsFiles = foundFiles
 	}
-
-	data, err := os.ReadFile(varsFile)
-	if err != nil {
-		return nil, err
-	}
-
-	err = yaml.Unmarshal(data, &templateVars)
-	if err != nil {
-		return nil, err
+	
+	log.Debug("template vars", "files", varsFiles)
+	
+	templateVars := make(map[string]any)
+	// read all requested var files, and merge their contents into one:
+	for _, varsFile := range varsFiles {
+		// skip empty vars file names
+		if len(varsFile) == 0 {
+			continue
+		}
+		
+		data, err := os.ReadFile(varsFile)
+		if err != nil {
+			return nil, err
+		}
+	
+		var parsedVars map[string]any
+		err = yaml.Unmarshal(data, &parsedVars)
+		if err != nil {
+			return nil, fmt.Errorf("variables file '%s': %w", filepath.Base(varsFile), err)
+		}
+		mergeTemplateVariables(templateVars, parsedVars)
 	}
 
 	return templateVars, nil

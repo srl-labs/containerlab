@@ -14,7 +14,7 @@ import (
 
 func TestGenerateAnsibleInventoryCredentialPlacement(t *testing.T) {
 	t.Run("defaults_in_all_vars", func(t *testing.T) {
-		c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_defaults_creds.yml", ""))
+		c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_defaults_creds.yml", nil))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -33,7 +33,7 @@ func TestGenerateAnsibleInventoryCredentialPlacement(t *testing.T) {
 	})
 
 	t.Run("kind_in_group_vars", func(t *testing.T) {
-		c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_kind_creds.yml", ""))
+		c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_kind_creds.yml", nil))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,7 +58,7 @@ func TestGenerateAnsibleInventoryCredentialPlacement(t *testing.T) {
 	})
 
 	t.Run("heterogeneous_node_passwords_per_host", func(t *testing.T) {
-		c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_two_node_passwords.yml", ""))
+		c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_two_node_passwords.yml", nil))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -91,7 +91,7 @@ func TestGenerateAnsibleInventoryCredentialPlacement(t *testing.T) {
 }
 
 func TestGenerateNornirInventoryCredentialPlacement(t *testing.T) {
-	c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_two_node_passwords.yml", ""))
+	c, err := NewContainerLab(WithTopoPath("test_data/topo_inv_two_node_passwords.yml", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestGenerateAnsibleInventory(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -316,7 +316,7 @@ node3:
 			t.Setenv("CLAB_NORNIR_PLATFORM_NAME_SCHEMA", tc.clab_nornir_platform_name_schema)
 
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)

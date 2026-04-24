@@ -846,6 +846,13 @@ To further simplify parametrization of the topology files, containerlab allows u
 
 Using templating approach it is possible to create a lab template and instantiate different labs from it, by simply changing the variables in the variables file.
 
+You can add `.gotmpl` files into a `clab_templates` folder next to the main topology template to load additional template blocks that can be inserted into a topology using `{{ template "subtemplate.gotmpl" . }}` - this allows extraction of reusable blocks and structuring of more complicated topologies into multiple files.
+You can also use the `slice` function to pass multiple parameters to such a subtemplate: `{{ template "sub.gotmpl" (slice "Param A" "Param B") }}` and reference them using the `index` built-in inside the subtemplate: `{{ index . 0 }}` will resolve to "Param A". 
+
+Variable files can be specified manually, by providing the `--vars` flag, or will be searched for automatically at `<topology-name>_vars.[yaml|yml|json]`, where toplogy-name is the filename of the topology without its extension.
+
+Additional files can be loaded by specifying the `--vars` flag multiple times, or by naming them `<topology-name>_vars.<anything>.[yaml|yml|json]` when using the automatic search.
+
 To help you get started, we created the following lab examples which demonstrate how topology templating can be used:
 
 - [Leaf-Spine topology with parametrized number of leaves/spines](lab-examples/../../lab-examples/templated01.md)

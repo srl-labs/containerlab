@@ -63,12 +63,12 @@ func Entrypoint() (*cobra.Command, error) {
 		o.Global.TopologyFile,
 		"path to the topology definition file, a directory containing one, 'stdin', or a URL",
 	)
-	c.PersistentFlags().StringVarP(
-		&o.Global.VarsFile,
+	c.PersistentFlags().StringArrayVarP(
+		&o.Global.VarsFiles,
 		"vars",
 		"",
-		o.Global.VarsFile,
-		"path to the topology template variables file",
+		o.Global.VarsFiles,
+		"path to a topology template variables file (can be specified multiple times)",
 	)
 	c.PersistentFlags().StringVarP(
 		&o.Global.TopologyName,

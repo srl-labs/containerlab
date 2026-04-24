@@ -212,10 +212,10 @@ func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 		}
 	}
 
-	if o.Global.VarsFile != "" {
+	if len(o.Global.VarsFiles) != 0 {
 		destroyOptions = append(
 			destroyOptions,
-			clabcore.WithDestroyVarsFile(o.Global.VarsFile),
+			clabcore.WithDestroyVarsFiles(o.Global.VarsFiles),
 		)
 	}
 
@@ -234,7 +234,7 @@ func (o *Options) ToClabSaveOptions() []clabcore.SaveOption {
 
 type GlobalOptions struct {
 	TopologyFile     string
-	VarsFile         string
+	VarsFiles        []string
 	TopologyName     string
 	Timeout          time.Duration
 	Runtime          string
@@ -266,7 +266,7 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 	}
 
 	if o.TopologyFile != "" {
-		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFile))
+		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFiles))
 	}
 
 	if o.TopologyName != "" {
