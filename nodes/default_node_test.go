@@ -1,6 +1,7 @@
 package nodes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -10,7 +11,10 @@ import (
 	"testing"
 
 	clablinks "github.com/srl-labs/containerlab/links"
+	mockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	"go.uber.org/mock/gomock"
 )
 
 func TestGenerateConfigs(t *testing.T) {
@@ -376,5 +380,85 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 				}
 			}
 		})
+	}
+}
+
+type defaultNodeContainerNameOverride struct {
+	DefaultNode
+	containerName string
+}
+
+func (n *defaultNodeContainerNameOverride) GetContainerName() string {
+	return n.containerName
+}
+
+func TestDefaultNodeNetnsStatusUsesOverwriteContainerName(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		run func(context.Context, *defaultNodeContainerNameOverride) error
+	}{
+		"add-link": {
+			run: func(ctx context.Context, node *defaultNodeContainerNameOverride) error {
+				return node.AddLinkToContainer(ctx, nil, nil)
+			},
+		},
+		"exec-function": {
+			run: func(ctx context.Context, node *defaultNodeContainerNameOverride) error {
+				return node.ExecFunction(ctx, nil)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			ctrl := gomock.NewController(t)
+			rt := mockruntime.NewMockContainerRuntime(ctrl)
+			node := &defaultNodeContainerNameOverride{
+				containerName: "clab-srsim-sros-a",
+			}
+			node.DefaultNode = *NewDefaultNode(node)
+			node.Cfg = &clabtypes.NodeConfig{
+				ShortName: "sros",
+				LongName:  "clab-srsim-sros",
+			}
+			node.Runtime = rt
+
+			rt.EXPECT().
+				GetContainerStatus(ctx, "clab-srsim-sros-a").
+				Return(clabruntime.NotFound)
+
+			err := tc.run(ctx, node)
+			if err == nil {
+				t.Fatal("got nil error, want namespace availability error")
+			}
+			if !strings.Contains(err.Error(), "status=NotFound") {
+				t.Fatalf("got error %q, want status=NotFound", err)
+			}
+		})
+	}
+}
+
+func TestDefaultNodeGetContainerStatusUsesOverwriteContainerName(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	rt := mockruntime.NewMockContainerRuntime(ctrl)
+	node := &defaultNodeContainerNameOverride{
+		containerName: "clab-srsim-sros-a",
+	}
+	node.DefaultNode = *NewDefaultNode(node)
+	node.Runtime = rt
+
+	rt.EXPECT().
+		GetContainerStatus(ctx, "clab-srsim-sros-a").
+		Return(clabruntime.Running)
+
+	if got := node.GetContainerStatus(ctx); got != clabruntime.Running {
+		t.Fatalf("got %q, want %q", got, clabruntime.Running)
 	}
 }
