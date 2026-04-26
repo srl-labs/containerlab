@@ -162,6 +162,18 @@ func WithKeepMgmtNet() ClabOption {
 	}
 }
 
+// WithTopologyVarsFile records the topology template vars file on TopoPaths without loading a
+// topology. Used when the CLI passes --vars without -t (e.g. destroy --all).
+func WithTopologyVarsFile(varsFile string) ClabOption {
+	return func(c *CLab) error {
+		if varsFile == "" {
+			return nil
+		}
+
+		return c.TopoPaths.SetTopologyVarsFilePath(varsFile)
+	}
+}
+
 func WithTopoPath(path, varsFile string) ClabOption {
 	return func(c *CLab) error {
 		file, err := c.ProcessTopoPath(path)
@@ -201,8 +213,9 @@ func WithTopoBackup(path string) ClabOption {
 // WithTopologyFromLab loads the topology file path based on a running lab name.
 // The lab name is used to look up the container labels of a running lab and
 // derive the topology file location. It falls back to WithTopoPath once the
-// topology path is discovered.
-func WithTopologyFromLab(labName string) ClabOption {
+// topology path is discovered. varsFile is passed through to WithTopoPath when the
+// topology file exists (same as global --vars).
+func WithTopologyFromLab(labName, varsFile string) ClabOption {
 	return func(c *CLab) error {
 		if labName == "" {
 			return fmt.Errorf("lab name is required to derive topology path")
@@ -247,7 +260,7 @@ func WithTopologyFromLab(labName string) ClabOption {
 
 		log.Debugf("found topology file for lab %s: %s", labName, topoFile)
 
-		return WithTopoPath(topoFile, "")(c)
+		return WithTopoPath(topoFile, varsFile)(c)
 	}
 }
 
