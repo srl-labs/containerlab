@@ -69,6 +69,7 @@
                         "nokia_srlinux",
                         "arista_ceos",
                         "juniper_crpd",
+                        "juniper_csrx",
                         "sonic-vs",
                         "sonic-vm",
                         "nokia_sros",
@@ -1986,6 +1987,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_crpd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "juniper_csrx": {
                             "$ref": "#/definitions/node-config"
                         },
                         "sonic-vs": {
