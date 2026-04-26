@@ -21,9 +21,13 @@ import (
 )
 
 const (
-	// licDir is the directory where Junos 22+ expects to find the license file.
-	licDir  = "/config/license"
-	licFile = "license.lic"
+	configDir        = "config"
+	junosConfig      = "juniper.conf"
+	sshdConfig       = "sshd_config"
+	licenseDir       = "license"
+	licenseFile      = "license.lic"
+	containerConfig  = "/config/juniper.conf"
+	containerLicense = "/config/license/license.lic"
 
 	generateable     = true
 	generateIfFormat = "eth%d"
@@ -33,7 +37,7 @@ const (
 )
 
 var (
-	kindNames = []string{"csrx", "juniper_csrx"}
+	kindNames = []string{"juniper_csrx"}
 	//go:embed csrx.cfg
 	defaultCfgTemplate string
 
@@ -80,10 +84,10 @@ func (s *csrx) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 
 	// mount config and log dirs
 	s.Cfg.Binds = append(s.Cfg.Binds,
-		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "config"), ":/config"),
+		fmt.Sprint(filepath.Join(s.Cfg.LabDir, configDir), ":/config"),
 		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "log"), ":/var/log"),
 		// mount sshd_config
-		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "config", "sshd_config"), ":/etc/ssh/sshd_config"),
+		fmt.Sprint(filepath.Join(s.Cfg.LabDir, configDir, sshdConfig), ":/etc/ssh/sshd_config"),
 		// Pre-create the cSRX password sentinel so rc.local skips the initial
 		// "encrypted-password *disabled*" commit and honors our juniper.conf hash instead.
 		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "csrx_password_config_file"), ":/var/local/csrx_password_config_file"),
@@ -96,7 +100,7 @@ func (s *csrx) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		s.Cfg.Env = map[string]string{}
 	}
 	if _, ok := s.Cfg.Env["CSRX_JUNOS_CONFIG"]; !ok {
-		s.Cfg.Env["CSRX_JUNOS_CONFIG"] = "/config/juniper.conf"
+		s.Cfg.Env["CSRX_JUNOS_CONFIG"] = containerConfig
 	}
 
 	return nil
@@ -140,7 +144,7 @@ func (s *csrx) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 		defer d.Close()
 
 		resp, err := d.SendCommand(
-			fmt.Sprintf("request system license add %s", filepath.Join(licDir, licFile)),
+			fmt.Sprintf("request system license add %s", containerLicense),
 		)
 		if err != nil {
 			return err
@@ -168,7 +172,7 @@ func (s *csrx) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, err
 	}
 
 	// path by which to save a config
-	confPath := s.Cfg.LabDir + "/config/juniper.conf"
+	confPath := csrxConfigPath(s.Cfg.LabDir)
 	err = os.WriteFile(confPath, execResult.GetStdOutByteSlice(),
 		clabconstants.PermissionsOpen) // skipcq: GO-S2306
 	if err != nil {
@@ -181,19 +185,22 @@ func (s *csrx) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, err
 	}
 	log.Infof("saved csrx configuration from %s node to %s\n", s.Cfg.ShortName, confPath)
 
-	return nil, nil
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: confPath,
+	}, nil
 }
 
 func createCSRXFiles(node clabnodes.Node) error {
 	nodeCfg := node.Config()
 	// create config and logs directory that will be bind mounted to csrx
-	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "config"),
+	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, configDir),
 		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(filepath.Join(nodeCfg.LabDir, "log"),
 		clabconstants.PermissionsOpen)
 
 	// copy csrx config from default template or user-provided conf file
-	cfg := filepath.Join(nodeCfg.LabDir, "config", "juniper.conf")
+	cfg := csrxConfigPath(nodeCfg.LabDir)
+	nodeCfg.ResStartupConfig = cfg
 	var cfgTemplate string
 
 	if nodeCfg.StartupConfig != "" {
@@ -217,7 +224,7 @@ func createCSRXFiles(node clabnodes.Node) error {
 	// Note: this only applies to older versions of Junos (before 23). In later
 	// versions the config file is placed in /var/etc/sshd_config and is owned
 	// by MGD.
-	dst := filepath.Join(nodeCfg.LabDir, "config", "sshd_config")
+	dst := filepath.Join(nodeCfg.LabDir, configDir, sshdConfig)
 	err = clabutils.CreateFile(dst, sshdCfg)
 	if err != nil {
 		return fmt.Errorf("failed to write sshd_config file %v", err)
@@ -235,9 +242,9 @@ func createCSRXFiles(node clabnodes.Node) error {
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
-		dst = filepath.Join(nodeCfg.LabDir, licDir, licFile)
+		dst = csrxLicensePath(nodeCfg.LabDir)
 
-		if err := os.MkdirAll(filepath.Join(nodeCfg.LabDir, licDir),
+		if err := os.MkdirAll(filepath.Dir(dst),
 			clabconstants.PermissionsOpen); err != nil { // skipcq: GSC-G301
 			return err
 		}
@@ -249,4 +256,12 @@ func createCSRXFiles(node clabnodes.Node) error {
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
 	}
 	return nil
+}
+
+func csrxConfigPath(labDir string) string {
+	return filepath.Join(labDir, configDir, junosConfig)
+}
+
+func csrxLicensePath(labDir string) string {
+	return filepath.Join(labDir, configDir, licenseDir, licenseFile)
 }

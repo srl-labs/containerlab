@@ -5,6 +5,7 @@ kind_code_name: juniper_csrx
 kind_display_name: Juniper cSRX
 ---
 # -{{ kind_display_name }}-
+
 [-{{ kind_display_name }}-](https://www.juniper.net/documentation/us/en/software/csrx/csrx-getting-started/index.html) is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 A kind defines a supported feature set and a startup procedure of a `csrx` node.
 
@@ -21,35 +22,48 @@ sudo docker load -i junos-csrx-docker-<version>.tgz
 
 Juniper cSRX nodes launched with containerlab can be managed via the following interfaces:
 
-=== "bash"
-    to connect to a `bash` shell of a running cSRX container:
-    ```bash
-    docker exec -it <container-name/id> bash
-    ```
-=== "CLI"
-    to connect to the cSRX CLI
-    ```bash
-    docker exec -it <container-name/id> cli
-    ```
-=== "SSH"
-    direct SSH to the management interface:
-    ```bash
-    ssh root@<container-name>
-    ```
-=== "NETCONF"
-    NETCONF server is running over port 830
-    ```bash
-    ssh root@<container-name> -p 830 -s netconf
-    ```
+/// tab | bash
+to connect to a `bash` shell of a running cSRX container:
 
-!!!info
-    Default user credentials: `root:clab123`
+```bash
+docker exec -it <container-name/id> bash
+```
+
+///
+/// tab | CLI
+to connect to the cSRX CLI
+
+```bash
+docker exec -it <container-name/id> cli
+```
+
+///
+/// tab | SSH
+direct SSH to the management interface:
+
+```bash
+ssh root@<container-name>
+```
+
+///
+/// tab | NETCONF
+NETCONF server is running over port 830
+
+```bash
+ssh root@<container-name> -p 830 -s netconf
+```
+
+///
+
+/// note
+Default user credentials: `root:clab123`
+///
 
 ## Interfaces mapping
 
 cSRX container uses the following mapping between Linux interfaces and Junos interfaces:
 
-* `eth0` - management interface, corresponds to `fxp0` from the CLI perspective and receives the container management address from the `docker0`/management network.
+* `eth0` - management interface, corresponds to `fxp0` from the CLI perspective and receives the container management address from the containerlab management network.
 * `eth1` - first data interface, mapped to Junos `ge-0/0/0`.
 * `eth2` - mapped to Junos `ge-0/0/1`.
 * `eth3` - mapped to Junos `ge-0/0/2`.
@@ -74,8 +88,9 @@ Physical interface: ge-0/0/0, Enabled, Physical link is Up
         Destination: 10.0.0.0/30, Local: 10.0.0.1
 ```
 
-!!!note
-    cSRX is a firewall: by default, traffic between zones requires an explicit security policy, and traffic destined to the device (ping, SSH, NETCONF on data interfaces) requires `host-inbound-traffic` to be enabled on the zone.
+/// note
+cSRX is a firewall: by default, traffic between zones requires an explicit security policy, and traffic destined to the device (ping, SSH, NETCONF on data interfaces) requires `host-inbound-traffic` to be enabled on the zone.
+///
 
 ## Features and options
 
@@ -117,16 +132,17 @@ topology:
 
 containerlab copies `myconfig.conf` into the node's lab directory under `config/juniper.conf` and mounts it into the container at `/config/juniper.conf`, so it is applied on boot.
 
-!!!warning
-    cSRX is a firewall and does not support Junos routing stanzas such as `policy-options` or `routing-options { protocols ... }`. If the startup config contains unsupported stanzas, `mgd` rejects the whole file and falls back to the factory configuration. Inspect `/var/log/csrx_start.log` inside the container to see syntax errors.
+/// warning
+The startup config is loaded by the cSRX boot scripts as Junos configuration. If `mgd` rejects invalid syntax or unsupported statements, cSRX may fall back to the factory configuration. Inspect `/var/log/csrx_start.log` inside the container to see config load errors.
+///
 
 #### Saving configuration
 
-With the [`containerlab save`](../../cmd/save.md) command it is possible to save the running cSRX configuration. The output of `cli show configuration` is written to `config/juniper.conf` in the node directory, overwriting the previous content.
+With the [`containerlab save`](../../cmd/save.md) command it is possible to save the running cSRX configuration. containerlab runs `cli show conf` and writes the output to `config/juniper.conf` in the node directory, overwriting the previous content. When `containerlab save --copy` is used, the same file is copied to the requested destination.
 
 ### License
 
-cSRX requires a license for full functionality. With the [`license`](../nodes.md#license) directive you can provide a path to a license file; containerlab copies it into the node directory at `config/license/license.lic` and mounts it into the container. On boot, containerlab runs `cli request system license add /config/license/license.lic` in the `PostDeploy` phase.
+cSRX requires a license for full functionality. With the [`license`](../nodes.md#license) directive you can provide a path to a license file; containerlab copies it into the node directory at `config/license/license.lic` and mounts it into the container. In the `PostDeploy` phase, containerlab applies it with `request system license add /config/license/license.lic` via the cSRX CLI.
 
 ## Container configuration
 

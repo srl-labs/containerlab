@@ -11,6 +11,7 @@ The exact command that performs configuration save depends on a given kind. The 
 | **Nokia SR Linux** | `sr_cli -d tools system configuration save` |                                                         |
 | **Nokia SR OS**    |                                             | delivered via netconf RPC `copy-config running startup` |
 | **Arista cEOS**    | `Cli -p 15 -c wr`                           |                                                         |
+| **Juniper cSRX**   | `cli show conf`                             |                                                         |
 | **Cisco IOL**      | `write memory`                              |                                                         |
 
 --8<-- "docs/cmd/deploy.md:env-vars-flags"
@@ -59,6 +60,7 @@ The exact file that is copied depends on the node kind and corresponds to the co
 | **Nokia SR Linux** | `config/config.json`                         |
 | **Nokia SR OS**    | `<slot>/config/cf3/config.cfg`               |
 | **Arista cEOS**    | `flash/startup-config`                       |
+| **Juniper cSRX**   | `config/juniper.conf`                        |
 
 Node kinds that do not report a saved config path are silently skipped.
 
@@ -90,7 +92,6 @@ topology:
     node2:
       startup-config: startup-configs/__clabLabName__/__clabNodeName__/config.json
 ```
-
 
 ### Examples
 

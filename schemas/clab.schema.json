@@ -1989,6 +1989,9 @@
                         "juniper_crpd": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "juniper_csrx": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "sonic-vs": {
                             "$ref": "#/definitions/node-config"
                         },
