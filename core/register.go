@@ -16,7 +16,6 @@ import (
 	clabnodescisco_vios "github.com/srl-labs/containerlab/nodes/cisco_vios"
 	clabnodescjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
 	clabnodescrpd "github.com/srl-labs/containerlab/nodes/crpd"
-	clabnodescsrx "github.com/srl-labs/containerlab/nodes/csrx"
 	clabnodescvx "github.com/srl-labs/containerlab/nodes/cvx"
 	clabnodesdell_sonic "github.com/srl-labs/containerlab/nodes/dell_sonic"
 	clabnodesext_container "github.com/srl-labs/containerlab/nodes/ext_container"
@@ -28,6 +27,7 @@ import (
 	clabnodeshuawei_vrp "github.com/srl-labs/containerlab/nodes/huawei_vrp"
 	clabnodesiol "github.com/srl-labs/containerlab/nodes/iol"
 	clabnodesipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
+	clabnodesjuniper_csrx "github.com/srl-labs/containerlab/nodes/juniper_csrx"
 	clabnodesk8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
 	clabnodeskeysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
 	clabnodeslinux "github.com/srl-labs/containerlab/nodes/linux"
@@ -71,7 +71,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodescheckpoint_cloudguard.Register(c.Reg)
 	clabnodescisco_sdwan.Register(c.Reg)
 	clabnodescrpd.Register(c.Reg)
-	clabnodescsrx.Register(c.Reg)
+	clabnodesjuniper_csrx.Register(c.Reg)
 	clabnodescvx.Register(c.Reg)
 	clabnodesext_container.Register(c.Reg)
 	clabnodesfortinet_fortigate.Register(c.Reg)
