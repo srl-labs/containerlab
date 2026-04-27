@@ -1,5 +1,7 @@
 # stop command
 
+--8<-- "docs/cmd/start.md:lifecycle-commands"
+
 ### Description
 
 The `stop` command stops one or more nodes in a deployed lab while keeping dataplane links intact.
@@ -36,13 +38,7 @@ If `--node` is omitted, all nodes in the selected lab are stopped.
 
 ### Limitations
 
-Node lifecycle operations (`stop`, `start`, `restart`) currently support only a subset of nodes:
-
-- only veth dataplane links are supported
-- root-namespace-based nodes are not supported
-- nodes with `auto-remove` enabled are not supported
-- only single-container nodes are supported
-- `network-mode: container:<...>` users/providers are not supported
+--8<-- "docs/cmd/start.md:limitations"
 
 ### Examples
 

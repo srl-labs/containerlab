@@ -2,7 +2,9 @@
 
 ### Description
 
-The `redeploy` command redeploys a lab referenced by a provided topology definition file. It effectively combines the `destroy` and `deploy` commands into a single operation.
+The `redeploy` command redeploys a whole lab referenced by a provided topology definition file. It effectively combines the `destroy` and `deploy` commands into a single operation.
+
+> If you want to redeploy a node in a lab, see [start](start.md), [stop](stop.md), and [restart](restart.md) commands.
 
 The two most common applications of this command are:
 

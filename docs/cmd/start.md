@@ -1,4 +1,10 @@
 # start command
+<!-- --8<-- [start:lifecycle-commands] -->
+The node's lifecycle command set consists of [start](start.md), [stop](stop.md), and [restart](restart.md) commands that allow users to individually control the lifecycle of the nodes in a deployed lab. The most common use case is to restart or stop+start the nodes that are stuck in some bad shape or require a reboot while keeping their dataplane interfaces intact.
+
+With these commands you don't need to respin the whole topology when all you need is to restart a few nodes.
+
+<!-- --8<-- [end:lifecycle-commands] -->
 
 ### Description
 
@@ -38,6 +44,7 @@ If `--node` is omitted, all nodes in the selected lab are started.
 
 ### Limitations
 
+<!-- --8<-- [start:limitations] -->
 Node lifecycle operations (`stop`, `start`, `restart`) currently support only a subset of nodes:
 
 - only veth dataplane links are supported
@@ -45,6 +52,7 @@ Node lifecycle operations (`stop`, `start`, `restart`) currently support only a 
 - nodes with `auto-remove` enabled are not supported
 - only single-container nodes are supported
 - `network-mode: container:<...>` users/providers are not supported
+<!-- --8<-- [end:limitations] -->
 
 ### Examples
 

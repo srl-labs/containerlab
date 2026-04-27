@@ -1,5 +1,7 @@
 # restart command
 
+--8<-- "docs/cmd/start.md:lifecycle-commands"
+
 ### Description
 
 The `restart` command restarts one or more nodes in a deployed lab by performing a lifecycle-aware
@@ -38,13 +40,7 @@ If `--node` is omitted, all nodes in the selected lab are restarted.
 
 ### Limitations
 
-Node lifecycle operations (`stop`, `start`, `restart`) currently support only a subset of nodes:
-
-- only veth dataplane links are supported
-- root-namespace-based nodes are not supported
-- nodes with `auto-remove` enabled are not supported
-- only single-container nodes are supported
-- `network-mode: container:<...>` users/providers are not supported
+--8<-- "docs/cmd/start.md:limitations"
 
 ### Examples
 
