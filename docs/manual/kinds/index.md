@@ -44,6 +44,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Arista cEOS**            | [`arista_ceos`](ceos.md)                            | supported | container |
 | **Arista vEOS**            | [`arista_veos`](vr-veos.md)                         | supported |    VM     |
 | **Juniper cRPD**           | [`juniper_crpd`](crpd.md)                           | supported | container |
+| **Juniper cSRX**           | [`juniper_csrx`](csrx.md)                           | supported | container |
 | **Juniper vMX**            | [`juniper_vmx`](vr-vmx.md)                          | supported |    VM     |
 | **Juniper vQFX**           | [`juniper_vqfx`](vr-vqfx.md)                        | supported |    VM     |
 | **Juniper vSRX**           | [`juniper_vsrx`](vr-vsrx.md)                        | supported |    VM     |

@@ -32,6 +32,7 @@ nav:
               - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Juniper:
               - Juniper cRPD: manual/kinds/crpd.md
+              - Juniper cSRX: manual/kinds/csrx.md
               - Juniper vMX: manual/kinds/vr-vmx.md
               - Juniper vQFX: manual/kinds/vr-vqfx.md
               - Juniper vSRX: manual/kinds/vr-vsrx.md
