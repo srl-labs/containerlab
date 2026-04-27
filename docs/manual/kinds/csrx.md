@@ -73,8 +73,12 @@ When defining topology links, use the Linux names (`ethN`) on the `endpoints`. T
 ```yaml
 topology:
   nodes:
-    csrx1: { kind: -{{ kind_code_name }}-, image: csrx:24.4R1.9 }
-    csrx2: { kind: -{{ kind_code_name }}-, image: csrx:24.4R1.9 }
+    csrx1:
+      kind: -{{ kind_code_name }}-
+      image: csrx:24.4R1.9
+    csrx2:
+      kind: -{{ kind_code_name }}-
+      image: csrx:24.4R1.9
   links:
     - endpoints: ["csrx1:eth1", "csrx2:eth1"]
 ```
