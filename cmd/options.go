@@ -267,6 +267,8 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 
 	if o.TopologyFile != "" {
 		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFiles))
+	} else if len(o.VarsFiles) != 0 {
+		options = append(options, clabcore.WithTopologyVarsFiles(o.VarsFiles))
 	}
 
 	if o.TopologyName != "" {
@@ -274,7 +276,7 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 	}
 
 	if o.TopologyFile == "" && o.TopologyName != "" {
-		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName))
+		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName, o.VarsFiles))
 	}
 
 	if o.BackupTopologyFile && o.TopologyFile != "" {

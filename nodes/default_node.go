@@ -667,10 +667,11 @@ func (d *DefaultNode) AddLinkToContainer(
 	f func(ns.NetNS) error,
 ) error {
 	if !d.Cfg.IsRootNamespaceBased {
-		st := d.GetRuntime().GetContainerStatus(ctx, d.GetContainerName())
+		containerName := d.OverwriteNode.GetContainerName()
+		st := d.GetRuntime().GetContainerStatus(ctx, containerName)
 		if !clabruntime.ContainerHasJoinableNetns(st) {
 			if st == clabruntime.Stopped {
-				d.GetRuntime().LogNonRunningContainerOutput(ctx, d.GetContainerName())
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, containerName)
 			}
 			return fmt.Errorf(
 				"node %q: cannot attach link, container network namespace is not available (status=%s)",
@@ -704,10 +705,11 @@ func (d *DefaultNode) AddLinkToContainer(
 // ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
 	if !d.Cfg.IsRootNamespaceBased {
-		st := d.GetRuntime().GetContainerStatus(ctx, d.GetContainerName())
+		containerName := d.OverwriteNode.GetContainerName()
+		st := d.GetRuntime().GetContainerStatus(ctx, containerName)
 		if !clabruntime.ContainerHasJoinableNetns(st) {
 			if st == clabruntime.Stopped {
-				d.GetRuntime().LogNonRunningContainerOutput(ctx, d.GetContainerName())
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, containerName)
 			}
 			return fmt.Errorf(
 				"node %q: cannot exec a command, container network namespace is not available (status=%s)",
@@ -814,7 +816,7 @@ func (d *DefaultNode) GetSSHConfig() *clabtypes.SSHConfig {
 }
 
 func (d *DefaultNode) GetContainerStatus(ctx context.Context) clabruntime.ContainerStatus {
-	return d.Runtime.GetContainerStatus(ctx, d.GetContainerName())
+	return d.Runtime.GetContainerStatus(ctx, d.OverwriteNode.GetContainerName())
 }
 
 func (d *DefaultNode) IsHealthy(ctx context.Context) (bool, error) {
