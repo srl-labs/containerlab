@@ -142,6 +142,10 @@ type Node interface {
 	GetNSPath(ctx context.Context) (string, error)
 	// Generate the host entries for this node
 	GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error)
+	// ExecInteractiveShell returns the argv for the interactive shell to use
+	// when the user runs 'exec --interactive'. Nodes override this to provide
+	// their NOS CLI or a specific shell invocation.
+	ExecInteractiveShell() []string
 }
 
 type NodeOption func(Node)

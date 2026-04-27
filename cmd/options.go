@@ -364,8 +364,10 @@ type SaveOptions struct {
 }
 
 type ExecOptions struct {
-	Format   string
-	Commands []string
+	Format      string
+	Commands    []string
+	Interactive bool
+	Shell       string
 }
 
 type InspectOptions struct {

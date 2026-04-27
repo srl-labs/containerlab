@@ -89,6 +89,7 @@ func (d *DefaultNode) WithRuntime(r clabruntime.ContainerRuntime)            { d
 func (d *DefaultNode) GetRuntime() clabruntime.ContainerRuntime              { return d.Runtime }
 func (d *DefaultNode) Config() *clabtypes.NodeConfig                         { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
+func (*DefaultNode) ExecInteractiveShell() []string                          { return []string{"/bin/sh"} }
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
