@@ -7,7 +7,7 @@ kind_display_name: Juniper cSRX
 # -{{ kind_display_name }}-
 
 [-{{ kind_display_name }}-](https://www.juniper.net/documentation/us/en/software/csrx/csrx-getting-started/index.html) is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
-A kind defines a supported feature set and a startup procedure of a `csrx` node.
+A kind defines a supported feature set and a startup procedure of a `-{{ kind_code_name }}-` node.
 
 cSRX nodes launched with containerlab come up with SSH enabled, `root` login allowed, NETCONF enabled, and the `root` password pre-provisioned.
 
