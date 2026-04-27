@@ -50,7 +50,7 @@ func TestLicenseInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -99,7 +99,7 @@ func TestBindsInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -158,7 +158,7 @@ func TestTypeInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -237,7 +237,7 @@ func TestEnvInit(t *testing.T) {
 			}
 
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -284,7 +284,7 @@ func TestUserInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -320,7 +320,7 @@ func TestVerifyLinks(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 				WithRuntime(clabruntimedocker.RuntimeName,
 					&clabruntime.RuntimeConfig{
 						VerifyLinkParams: clablinks.NewVerifyLinkParams(),
@@ -431,7 +431,7 @@ func TestLabelsInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -498,7 +498,7 @@ func TestVerifyRootNetNSLinks(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.topo, ""),
+				WithTopoPath(tc.topo, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -599,7 +599,7 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			rtName := "mock"
 
 			opts := []ClabOption{
-				WithTopoPath(tc.topo, ""),
+				WithTopoPath(tc.topo, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -659,7 +659,7 @@ func TestEnvFileInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -710,7 +710,7 @@ func TestSuppressConfigInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -752,7 +752,7 @@ func TestStartupConfigInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -788,7 +788,7 @@ func TestExecInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -825,7 +825,7 @@ func TestExtrasInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -850,7 +850,7 @@ func TestExtrasInit(t *testing.T) {
 }
 
 func TestMagicVarReplacerWithoutNodeName(t *testing.T) {
-	c, err := NewContainerLab(WithTopoPath("test_data/topo14.yml", ""))
+	c, err := NewContainerLab(WithTopoPath("test_data/topo14.yml", nil))
 	if err != nil {
 		t.Fatal(err)
 	}

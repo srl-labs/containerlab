@@ -2,6 +2,7 @@ package links
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -92,7 +93,10 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	return link, nil
 }
 
-var _hostLinkNodeInstance *hostLinkNode
+var (
+	_hostLinkNodeInstance *hostLinkNode
+	_hostLinkNodeOnce     sync.Once
+)
 
 // hostLinkNode represents a host node which is implicitly used when
 // a host link is defined in the topology file.
@@ -106,20 +110,20 @@ func (*hostLinkNode) GetLinkEndpointType() LinkEndpointType {
 
 // GetHostLinkNode returns the host link node singleton.
 func GetHostLinkNode() Node {
-	if _hostLinkNodeInstance == nil {
+	_hostLinkNodeOnce.Do(func() {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
-			log.Error(err)
+			log.Errorf("failed to get current network namespace: %v", err)
+			return
 		}
-		nspath := currns.Path()
 
 		_hostLinkNodeInstance = &hostLinkNode{
 			GenericLinkNode: GenericLinkNode{
 				shortname: "host",
 				endpoints: []Endpoint{},
-				nspath:    nspath,
+				nspath:    currns.Path(),
 			},
 		}
-	}
+	})
 	return _hostLinkNodeInstance
 }

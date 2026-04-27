@@ -118,6 +118,15 @@ func vxlanCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		o.ToolsVxlan.DeletionPrefix,
 		"delete all containerlab created VxLAN interfaces which start with this prefix",
 	)
+	vxlanDeleteCmd.Flags().StringVarP(
+		&o.ToolsVxlan.DeletionName,
+		"name",
+		"n",
+		o.ToolsVxlan.DeletionName,
+		"delete a single VxLAN interface whose name exactly matches this value",
+	)
+	vxlanDeleteCmd.MarkFlagsMutuallyExclusive("prefix", "name")
+	vxlanDeleteCmd.MarkFlagsOneRequired("prefix", "name")
 
 	return c, nil
 }
@@ -185,6 +194,10 @@ func vxlanCreate(cobraCmd *cobra.Command, o *Options) error {
 }
 
 func vxlanDelete(o *Options) error {
+	if o.ToolsVxlan.DeletionName != "" {
+		return vxlanDeleteByName(o.ToolsVxlan.DeletionName)
+	}
+
 	ls, err := clabutils.GetLinksByNamePrefix(o.ToolsVxlan.DeletionPrefix)
 	if err != nil {
 		return err
@@ -201,6 +214,25 @@ func vxlanDelete(o *Options) error {
 		if err != nil {
 			log.Warnf("error when deleting link %s: %v", l.Attrs().Name, err)
 		}
+	}
+
+	return nil
+}
+
+func vxlanDeleteByName(name string) error {
+	l, err := netlink.LinkByName(name)
+	if err != nil {
+		return fmt.Errorf("vxlan interface %q not found: %v", name, err)
+	}
+
+	if l.Type() != "vxlan" {
+		return fmt.Errorf("interface %q is not a vxlan interface (type: %s)", name, l.Type())
+	}
+
+	log.Infof("Deleting VxLAN link %s", l.Attrs().Name)
+
+	if err := netlink.LinkDel(l); err != nil {
+		return fmt.Errorf("error when deleting link %s: %v", name, err)
 	}
 
 	return nil

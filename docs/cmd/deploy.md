@@ -124,6 +124,16 @@ The local `--export-template` flag allows a user to specify a custom Go template
 
 To export the full topology data instead of a subset of fields exported by default, use `--export-template __full` which is a special value that instructs containerlab to use the [full.tmpl](https://github.com/srl-labs/containerlab/blob/main/clab/export_templates/full.tmpl) template file. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
 
+#### export-rendered
+
+The local `--export-rendered <path>` flag writes the **fully rendered** topology definition to the given file: after Go template execution and environment-variable substitution, but before containerlab proceeds with the rest of deployment. This is useful for debugging templated labs or capturing the exact YAML that was parsed.
+
+The path argument is **required**. Relative paths are interpreted from the process working directory.
+
+```bash
+containerlab deploy -t lab0.clab.gotmpl --vars lab0.clab_vars.yml --export-rendered lab0.rendered.clab.yml
+```
+
 #### log-level
 
 Global `--log-level` parameter can be used to configure logging verbosity of all containerlab operations.
@@ -147,12 +157,12 @@ The `--skip-post-deploy` flag skips the post-deploy phase of the lab deployment,
 
 The post-deploy phase runs after containers and network endpoints are created. Depending on the node kind, it may include:
 
-- Readiness and health checks
-- TLS certificate provisioning
-- Saving startup configuration
-- Applying overlay CLI configuration
-- Populating `/etc/hosts` with peer node entries
-- Disabling TX checksum offload
+* Readiness and health checks
+* TLS certificate provisioning
+* Saving startup configuration
+* Applying overlay CLI configuration
+* Populating `/etc/hosts` with peer node entries
+* Disabling TX checksum offload
 
 Node kinds with notable post-deploy actions include Nokia SR Linux, Nokia SR OS, Arista cEOS, Juniper cRPD, Linux, and vrnetlab-based nodes. Kinds without a post-deploy phase are unaffected by this flag.
 

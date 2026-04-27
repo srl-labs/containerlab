@@ -214,6 +214,13 @@ func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 		}
 	}
 
+	if len(o.Global.VarsFiles) != 0 {
+		destroyOptions = append(
+			destroyOptions,
+			clabcore.WithDestroyVarsFiles(o.Global.VarsFiles),
+		)
+	}
+
 	return destroyOptions
 }
 
@@ -229,7 +236,7 @@ func (o *Options) ToClabSaveOptions() []clabcore.SaveOption {
 
 type GlobalOptions struct {
 	TopologyFile     string
-	VarsFile         string
+	VarsFiles        []string
 	TopologyName     string
 	Timeout          time.Duration
 	Runtime          string
@@ -261,7 +268,9 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 	}
 
 	if o.TopologyFile != "" {
-		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFile))
+		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFiles))
+	} else if len(o.VarsFiles) != 0 {
+		options = append(options, clabcore.WithTopologyVarsFiles(o.VarsFiles))
 	}
 
 	if o.TopologyName != "" {
@@ -269,7 +278,7 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 	}
 
 	if o.TopologyFile == "" && o.TopologyName != "" {
-		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName))
+		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName, o.VarsFiles))
 	}
 
 	if o.BackupTopologyFile && o.TopologyFile != "" {
@@ -307,6 +316,7 @@ type DeployOptions struct {
 	LabOwner                 string
 	RestoreAll               string
 	RestoreNodeSnapshots     []string
+	ExportRenderedTopology   string
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {
@@ -480,6 +490,7 @@ type ToolsVxlanOptions struct {
 	Remote         string
 	ParentDevice   string
 	DeletionPrefix string
+	DeletionName   string
 }
 
 type ToolsSnapshotOptions struct {

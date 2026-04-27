@@ -358,6 +358,30 @@ topology:
         - /home/user/somefile
 ```
 
+### credentials
+
+To override the default username or password used when accessing a node over SSH, NETCONF, gNMI, and similar interfaces, use the `credentials` mapping with `username` and `password` keys. When not set, the kind's defaults defined in the node implementation are used. You can define `credentials` at `defaults`, `kinds`, `groups`, and per-node levels; more specific levels take precedence.
+
+Containerlab picks **one** `credentials` object from the most specific level where **either** `username` or `password` is set. Both values on that level are used as-is (the other key may be empty); values are **not** merged from less specific levels. After the topology is applied, the node implementation may still fill missing username or password from its built-in defaults.
+
+```yaml
+topology:
+  defaults:
+    credentials:
+      username: admin
+      password: adminpw
+  kinds:
+    nokia_srlinux:
+      credentials:
+        username: srl-admin
+        password: srl-password
+  nodes:
+    node1:
+      credentials:
+        username: node1-user
+        password: node1-password
+```
+
 ### user
 
 To set a user which will be used to run a containerized process use the `user` configuration option. Can be defined at `node`, `kind` and `global` levels.

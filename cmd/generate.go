@@ -162,6 +162,13 @@ func generateCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		o.Deploy.MaxWorkers,
 		"limit the maximum number of workers creating nodes and virtual wires",
 	)
+	c.Flags().StringVarP(
+		&o.Deploy.ExportRenderedTopology,
+		"export-rendered",
+		"",
+		"",
+		"write the rendered topology YAML (after template and env expansion) to the given file path (required)",
+	)
 	// Add the owner flag to generate command
 	c.Flags().StringVarP(
 		&o.Deploy.LabOwner,

@@ -248,6 +248,24 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Components:      c.Config.Topology.GetComponents(nodeName),
 	}
 
+	// Resolve credentials: topology settings take priority, falling back to kind's hardcoded
+	// defaults from the node registry.
+	nodeCfg.Credentials.Username = c.Config.Topology.GetNodeUsername(nodeName)
+	nodeCfg.Credentials.Password = c.Config.Topology.GetNodePassword(nodeName)
+
+	if nodeCfg.Credentials.Username == "" || nodeCfg.Credentials.Password == "" {
+		kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
+		if regEntry := c.Reg.Kind(kind); regEntry != nil {
+			creds := regEntry.GetCredentials()
+			if nodeCfg.Credentials.Username == "" {
+				nodeCfg.Credentials.Username = creds.GetUsername()
+			}
+			if nodeCfg.Credentials.Password == "" {
+				nodeCfg.Credentials.Password = creds.GetPassword()
+			}
+		}
+	}
+
 	if nodeDef != nil {
 		nodeCfg.MgmtIPv4Address = nodeDef.MgmtIPv4
 		nodeCfg.MgmtIPv6Address = nodeDef.MgmtIPv6

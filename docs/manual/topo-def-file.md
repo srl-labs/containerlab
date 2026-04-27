@@ -537,7 +537,7 @@ In the extended format, the vars can be defined for the entire link or for each 
 The `ipv4` and `ipv6` fields allow for you to set the IPv4 and/or IPv6 address on an interface respectively; directly from the topology file.
 
 /// note
-Currently only the [Nokia SR Linux](../manual/kinds/srl.md) and [Cisco IOL](../manual/kinds/cisco_iol.md) kind(s) support this feature. Contributions to add support for other kinds are welcomed.
+The [Nokia SR Linux](../manual/kinds/srl.md), [Arista cEOS](../manual/kinds/ceos.md), [VyOS Networks VyOS](../manual/kinds/vyosnetworks_vyos.md), and [Cisco IOL](../manual/kinds/cisco_iol.md) kinds support this feature. Contributions to add support for other kinds are welcomed.
 ///
 
 Refer to the below example, where we configure some addressing on the node interfaces using the [brief](#brief-format) format where addresses are passed as an ordered list matching the order of which the endpoint interfaces are defined.
@@ -845,6 +845,13 @@ If the topology file is not in a Git repository, both variables will be replaced
 To further simplify parametrization of the topology files, containerlab allows users to template the topology files using Go Template engine.
 
 Using templating approach it is possible to create a lab template and instantiate different labs from it, by simply changing the variables in the variables file.
+
+You can add `.gotmpl` files into a `clab_templates` folder next to the main topology template to load additional template blocks that can be inserted into a topology using `{{ template "subtemplate.gotmpl" . }}` - this allows extraction of reusable blocks and structuring of more complicated topologies into multiple files.
+You can also use the `slice` function to pass multiple parameters to such a subtemplate: `{{ template "sub.gotmpl" (slice "Param A" "Param B") }}` and reference them using the `index` built-in inside the subtemplate: `{{ index . 0 }}` will resolve to "Param A". 
+
+Variable files can be specified manually, by providing the `--vars` flag, or will be searched for automatically at `<topology-name>_vars.[yaml|yml|json]`, where toplogy-name is the filename of the topology without its extension.
+
+Additional files can be loaded by specifying the `--vars` flag multiple times, or by naming them `<topology-name>_vars.<anything>.[yaml|yml|json]` when using the automatic search.
 
 To help you get started, we created the following lab examples which demonstrate how topology templating can be used:
 

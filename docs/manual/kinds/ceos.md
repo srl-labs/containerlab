@@ -78,7 +78,7 @@ ceos container uses the following mapping for its linux interfaces:
 * `eth0`[^5] - management interface connected to the containerlab management network
 * `eth1` - first data interface
 
-When containerlab launches ceos node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and ceos node will boot with that addresses configured. Data interfaces `eth1+` need to be configured with IP addressing manually.
+When containerlab launches ceos node, it will set IPv4/6 addresses as assigned by docker to the `eth0` interface and ceos node will boot with that addresses configured. Data interfaces `eth1+` need IP addressing either from the topology ([link addressing](#link-addressing) below) or configured manually.
 
 ???note "ceos interfaces output"
     This output demonstrates the IP addressing of the linux interfaces of ceos node.
@@ -320,6 +320,28 @@ It is possible to change the default config which every ceos node will start wit
       links:
         - endpoints: ["ceos1:eth1", "ceos2:eth1"]
     ```
+
+#### Link addressing
+
+Arista cEOS kind supports [IPv4/IPv6 link addresses](../topo-def-file.md#ip-addresses) on point-to-point links using the `ipv4` and/or `ipv6` fields in the link definition.
+
+After deployment, containerlab applies EOS configuration for each data endpoint that has a topology address (the management interface is skipped): it enters `interface <name>`, sets L3 mode with `no switchport`, clears prior `ip`/`ipv6` address statements, applies the provided addresses, then saves the configuration with `write`.
+
+```yaml
+name: ceos_link_ips
+topology:
+  nodes:
+    ceos1:
+      kind: -{{ kind_code_name }}-
+      image: ceos:4.32.0F
+    ceos2:
+      kind: -{{ kind_code_name }}-
+      image: ceos:4.32.0F
+  links:
+    - endpoints: ["ceos1:eth1", "ceos2:eth1"]
+      ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
+      ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
+```
 
 #### Saving configuration
 
