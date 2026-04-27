@@ -25,6 +25,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [Cisco XRd](https://containerlab.dev/manual/kinds/xrd/)
 * [SONiC](https://containerlab.dev/manual/kinds/sonic-vs/)
 * [Juniper cRPD](https://containerlab.dev/manual/kinds/crpd/)
+* [Juniper cSRX](https://containerlab.dev/manual/kinds/csrx/)
 * [Cumulus VX](https://containerlab.dev/manual/kinds/cvx/)
 * [Keysight IXIA-C](https://containerlab.dev/manual/kinds/keysight_ixia-c-one/)
 * [RARE/FreeRtr](https://containerlab.dev/manual/kinds/rare-freertr/)
