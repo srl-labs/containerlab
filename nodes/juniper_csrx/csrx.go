@@ -83,14 +83,18 @@ func (s *csrx) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	}
 
 	// mount config and log dirs
-	s.Cfg.Binds = append(s.Cfg.Binds,
+	s.Cfg.Binds = append(
+		s.Cfg.Binds,
 		fmt.Sprint(filepath.Join(s.Cfg.LabDir, configDir), ":/config"),
 		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "log"), ":/var/log"),
 		// mount sshd_config
 		fmt.Sprint(filepath.Join(s.Cfg.LabDir, configDir, sshdConfig), ":/etc/ssh/sshd_config"),
 		// Pre-create the cSRX password sentinel so rc.local skips the initial
 		// "encrypted-password *disabled*" commit and honors our juniper.conf hash instead.
-		fmt.Sprint(filepath.Join(s.Cfg.LabDir, "csrx_password_config_file"), ":/var/local/csrx_password_config_file"),
+		fmt.Sprint(
+			filepath.Join(s.Cfg.LabDir, "csrx_password_config_file"),
+			":/var/local/csrx_password_config_file",
+		),
 	)
 
 	// On cSRX 22.x, rc.local only loads /config/juniper.conf when the

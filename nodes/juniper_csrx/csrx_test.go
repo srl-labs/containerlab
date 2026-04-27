@@ -37,7 +37,10 @@ func TestInitSetsCSRXBindsAndDefaultEnv(t *testing.T) {
 		filepath.Join(labDir, configDir) + ":/config",
 		filepath.Join(labDir, "log") + ":/var/log",
 		filepath.Join(labDir, configDir, sshdConfig) + ":/etc/ssh/sshd_config",
-		filepath.Join(labDir, "csrx_password_config_file") + ":/var/local/csrx_password_config_file",
+		filepath.Join(
+			labDir,
+			"csrx_password_config_file",
+		) + ":/var/local/csrx_password_config_file",
 	}
 	for _, want := range wantBinds {
 		if !containsString(cfg.Binds, want) {
