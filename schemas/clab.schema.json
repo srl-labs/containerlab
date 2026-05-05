@@ -660,6 +660,8 @@
                                             "sar-1",
                                             "sar-hm",
                                             "sar-hmc",
+					    "sar-hx",
+					    "sar-mx",
                                             "sr-1-24d",
                                             "sr-12e",
                                             "sr-12",
