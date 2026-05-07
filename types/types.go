@@ -164,6 +164,16 @@ type NodeConfig struct {
 	Devices []string `json:"devices,omitempty"`
 	// Capabilities required by the container (if not run in privileged mode)
 	CapAdd []string `json:"cap-add,omitempty"`
+	// Run the container in privileged mode.
+	Privileged bool `json:"privileged,omitempty"`
+	// Cgroup namespace mode for the container.
+	CgroupnsMode string `json:"cgroupns-mode,omitempty"`
+	// PID namespace mode for the container.
+	PidMode string `json:"pidmode,omitempty"`
+	// Tmpfs mounts to add to the container, keyed by destination path.
+	Tmpfs map[string]string `json:"tmpfs,omitempty"`
+	// Security options to apply to the container runtime.
+	SecurityOpts []string `json:"security-opts,omitempty"`
 	// Size of the shared memory allocated to the container
 	ShmSize string `json:"shm-size,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
@@ -175,7 +185,6 @@ type NodeConfig struct {
 	// NetworkMode defines container networking mode.
 	// If set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `json:"networkmode,omitempty"`
-	PidMode     string `json:"pidmode,omitempty"`
 	// MgmtNet is the name of the docker network this node is connected to with its first interface
 	MgmtNet string `json:"mgmt-net,omitempty"`
 	// MgmtIntf can be used to be rendered by the default node template
@@ -225,7 +234,6 @@ type NodeConfig struct {
 	// they should be present by definition.
 	SkipUniquenessCheck bool
 	Components          []*Component
-	Tmpfs               map[string]string `json:"tmpfs,omitempty"`
 }
 
 type GenericFilter struct {

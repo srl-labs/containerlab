@@ -61,3 +61,8 @@ venv/
 # rf test report files
 tests/*.xml
 tests/*.html
+
+# Local implementation notes
+plan.md
+commit.md
+bitbucket.log
