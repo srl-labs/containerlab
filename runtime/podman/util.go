@@ -100,6 +100,14 @@ func (r *PodmanRuntime) createContainerSpec(
 		// Secrets:           nil,
 		// Volatile:          false,
 	}
+	if cfg.ShmSize != "" {
+		shmSize, err := humanize.ParseBytes(cfg.ShmSize)
+		if err != nil {
+			return sg, fmt.Errorf("failed to parse shm-size %q for container %q: %w", cfg.ShmSize, cfg.LongName, err)
+		}
+		shmSizeInt := int64(shmSize)
+		specStorageConfig.ShmSize = &shmSizeInt
+	}
 	// Security
 	specSecurityConfig := specgen.ContainerSecurityConfig{
 		Privileged: utils.Pointer(cfg.Privileged),
