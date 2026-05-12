@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/vishvananda/netlink"
 )
@@ -60,12 +61,20 @@ func (e *EndpointBridge) IsNodeless() bool {
 
 // CheckBridgeExists verifies that the given bridge is present in the
 // network namespace referenced via the provided nspath handle.
+// For bridge nodes in the host namespace (LinkEndpointTypeBridge), this function 
+// allows non-existent bridges since they will be auto-created during PreDeploy.
 func CheckBridgeExists(ctx context.Context, n Node) error {
 	return n.ExecFunction(ctx, func(_ ns.NetNS) error {
 		br, err := netlink.LinkByName(n.GetShortName())
 		_, notfound := err.(netlink.LinkNotFoundError)
 		switch {
 		case notfound:
+			// For bridge nodes in host namespace, allow non-existent bridges
+			// as they will be auto-created during PreDeploy
+			if n.GetLinkEndpointType() == LinkEndpointTypeBridge {
+				log.Debugf("Bridge %q does not exist but will be auto-created", n.GetShortName())
+				return nil
+			}
 			return fmt.Errorf(
 				"bridge %q referenced in topology but does not exist",
 				n.GetShortName(),
