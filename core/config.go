@@ -239,6 +239,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
 		SecurityOpts:    c.Config.Topology.GetNodeSecurityOpts(nodeName),
 		ShmSize:         c.Config.Topology.GetNodeShmSize(nodeName),
+		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
 		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
 		CPUSet:          c.Config.Topology.GetNodeCPUSet(nodeName),
 		Memory:          c.Config.Topology.GetNodeMemory(nodeName),

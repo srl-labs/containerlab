@@ -56,6 +56,8 @@ type NodeDefinition struct {
 	SecurityOpts []string `yaml:"security-opts,omitempty"`
 	// Set the shared memory size allocated to the container
 	ShmSize string `yaml:"shm-size,omitempty"`
+	// Tmpfs mounts to add to the container
+	Tmpfs map[string]string `yaml:"tmpfs,omitempty"`
 	// list of port bindings
 	Ports []string `yaml:"ports,omitempty"`
 	// user-defined IPv4 address in the management network

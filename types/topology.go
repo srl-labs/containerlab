@@ -486,6 +486,18 @@ func (t *Topology) GetNodeShmSize(nodeName string) string {
 	)
 }
 
+func (t *Topology) GetNodeTmpfs(nodeName string) map[string]string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) map[string]string { return node.Tmpfs },
+		func(group *NodeDefinition) map[string]string { return group.Tmpfs },
+		func(kind *NodeDefinition) map[string]string { return kind.Tmpfs },
+		func(defaults *NodeDefinition) map[string]string { return defaults.Tmpfs },
+		func(v map[string]string) bool { return v != nil },
+	)
+}
+
 func (t *Topology) GetComponents(nodeName string) []*Component {
 	return getField(
 		t,
