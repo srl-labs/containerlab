@@ -877,19 +877,41 @@ func (d *DockerRuntime) StartContainer(
 	nodecfg := node.Config()
 
 	log.Debugf("Start container: %q", nodecfg.LongName)
-	err := d.Client.ContainerStart(nctx,
-		cID,
-		container.StartOptions{
-			CheckpointID:  "",
-			CheckpointDir: "",
-		},
+
+	// ContainerStart occasionally returns 'file exists' error on the IPv6 gateway
+	// route in large topologies with an IPv6 management network configured.
+	// A short retry seems to mitigate the error.
+	const (
+		ipv6GwRetries      = 3
+		ipv6GwRetryBackoff = 100 * time.Millisecond
 	)
+
+	var err error
+	for attempt := range ipv6GwRetries {
+		err = d.Client.ContainerStart(nctx, cID, container.StartOptions{})
+		if err == nil || !isIPv6GatewayExistsErr(err) {
+			break
+		}
+		log.Debugf("transient IPv6 gateway error starting %q (attempt %d/%d): %v",
+			nodecfg.ShortName, attempt+1, ipv6GwRetries, err)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(ipv6GwRetryBackoff << attempt):
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
 	log.Debugf("Container started: %q", nodecfg.LongName)
 	err = d.postStartActions(ctx, cID, nodecfg)
 	return nil, err
+}
+
+// isIPv6GatewayExistsErr reports whether err is the transient "file exists" error.
+func isIPv6GatewayExistsErr(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "failed to set IPv6 gateway") && strings.Contains(s, "file exists")
 }
 
 // postStartActions performs misc. tasks that are needed after the container starts.
