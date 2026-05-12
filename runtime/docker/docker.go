@@ -908,7 +908,7 @@ func (d *DockerRuntime) StartContainer(
 	return nil, err
 }
 
-// isIPv6GatewayExistsErr reports whether err is the transient "file exists" error
+// isIPv6GatewayExistsErr reports whether err is the transient "file exists" error.
 func isIPv6GatewayExistsErr(err error) bool {
 	s := err.Error()
 	return strings.Contains(s, "failed to set IPv6 gateway") && strings.Contains(s, "file exists")
