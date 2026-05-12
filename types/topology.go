@@ -768,6 +768,49 @@ func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
 	return result, nil
 }
 
+// GetNodeVolumes merges volume entries from defaults, kind, and node levels.
+// Lower-level entries override higher-level ones for the same destination path.
+func (t *Topology) GetNodeVolumes(name string) ([]string, error) {
+	if _, ok := t.Nodes[name]; !ok {
+		return nil, nil
+	}
+
+	volumes := map[string]string{}
+
+	// group the default, kind and node volumes
+	volumeSources := [][]string{
+		t.GetDefaults().Volumes,
+		t.GetKind(t.GetNodeKind(name)).Volumes,
+		t.Nodes[name].Volumes,
+	}
+
+	// add the volumes from less to more specific levels, indexed by the destination path.
+	// thereby more specific volumes will overwrite less specific ones
+	for _, vs := range volumeSources {
+		for _, volume := range vs {
+			v, err := NewVolumeFromString(volume)
+			if err != nil {
+				return nil, err
+			}
+			volumes[v.Dst()] = volume
+		}
+	}
+
+	// in order to return nil instead of empty array when no volumes are defined
+	if len(volumes) == 0 {
+		return nil, nil
+	}
+
+	// build the result array with all the entries from volumes map
+	result := make([]string, 0, len(volumes))
+
+	for _, v := range volumes {
+		result = append(result, v)
+	}
+
+	return result, nil
+}
+
 func (t *Topology) GetNodeConfigDispatcher(nodeName string) *ConfigDispatcher {
 	nodeDefintion, ok := t.Nodes[nodeName]
 	if nodeDefintion == nil || !ok {
