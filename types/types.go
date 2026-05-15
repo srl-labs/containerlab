@@ -68,6 +68,8 @@ type MgmtNet struct {
 
 	ExternalAccess *bool `json:"external-access,omitempty" yaml:"external-access,omitempty"`
 
+	SkipWhenUnused bool `json:"skip-when-unused,omitempty" yaml:"skip-when-unused,omitempty"`
+
 	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
 }
 
