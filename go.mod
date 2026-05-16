@@ -1,6 +1,6 @@
 module github.com/srl-labs/containerlab
 
-go 1.24.5
+go 1.25
 
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
@@ -31,7 +31,6 @@ require (
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/mackerelio/go-osstat v0.2.6
 	github.com/minio/minio-go/v7 v7.0.98
-	github.com/mitchellh/go-homedir v1.1.0
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/pmorjan/kmod v1.1.1
 	github.com/scrapli/scrapligo v1.3.2
