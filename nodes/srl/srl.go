@@ -48,6 +48,12 @@ const (
 	// default config.
 	// Partial config provided via startup-config parameter is an overlay config.
 	overlayCfgPath = "/tmp/clab-overlay-config"
+
+	srlShortPlatformName = "srl"
+	srlLongPlatformName  = "nokia_srlinux"
+	scrapliPlatformName  = srlLongPlatformName
+
+	mgmt0InterfaceName = "mgmt0"
 )
 
 var (
@@ -56,9 +62,7 @@ var (
 	//go:embed srl_default_config.go.tpl
 	srlConfigCmdsTpl string
 
-	scrapliPlatformName = "nokia_srlinux"
-
-	kindNames = []string{"srl", "nokia_srlinux"}
+	kindNames = []string{srlShortPlatformName, srlLongPlatformName}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
 		"net.ipv6.conf.all.disable_ipv6":   "0",
@@ -720,7 +724,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
-		if ifName == "mgmt0" {
+		if ifName == mgmt0InterfaceName {
 			if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 				tplData.MgmtMTU = m
 				tplData.MgmtIPMTU = m - ethernetMTUOverhead
@@ -1022,7 +1026,7 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *srl) CheckInterfaceName() error {
 	// allow ethernetX-X-X, eX-X-X and mgmt0 interface names
-	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|mgmt0`)
+	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|` + mgmt0InterfaceName)
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 
 	err := n.CheckInterfaceOverlap()
@@ -1039,7 +1043,7 @@ func (n *srl) CheckInterfaceName() error {
 			)
 		}
 
-		if e.GetIfaceName() == "mgmt0" && nm != "none" {
+		if e.GetIfaceName() == mgmt0InterfaceName && nm != "none" {
 			return fmt.Errorf(
 				"mgmt0 interface name is not allowed for %s node when network mode is not set to none",
 				n.Cfg.ShortName,
