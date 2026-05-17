@@ -43,9 +43,12 @@ func (c *CLab) Deploy( //nolint: funlen
 		}
 	}
 
-	// create management network or use existing one
-	if err := c.CreateNetwork(ctx); err != nil {
-		return nil, err
+	// create or reuse the management network, unless every node opts out
+	skipMgmt := c.skipMgmtNetwork()
+	if !skipMgmt {
+		if err := c.CreateNetwork(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	err = clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
@@ -220,11 +223,13 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	log.Info("Adding host entries", "path", "/etc/hosts")
+	if !skipMgmt {
+		log.Info("Adding host entries", "path", "/etc/hosts")
 
-	err = c.appendHostsFileEntries(ctx)
-	if err != nil {
-		log.Errorf("failed to create hosts file: %v", err)
+		err = c.appendHostsFileEntries(ctx)
+		if err != nil {
+			log.Errorf("failed to create hosts file: %v", err)
+		}
 	}
 
 	log.Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
