@@ -33,6 +33,10 @@ type Endpoint interface {
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool
 	Remove(context.Context) error
+	// MoveTo moves this endpoint's interface to the destination node's namespace and transfers ownership.
+	MoveTo(context.Context, Node) error
+	// Activate brings this endpoint's interface up in its current namespace.
+	Activate(context.Context) error
 	// IsNodeless returns true for the endpoints that has no explicit node defined in the topology.
 	// E.g. host endpoints, mgmt bridge endpoints.
 	// Because there is no node that would deploy this side of the link they should be deployed

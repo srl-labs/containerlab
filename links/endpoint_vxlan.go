@@ -42,3 +42,11 @@ func (e *EndpointVxlan) Deploy(ctx context.Context) error {
 func (e *EndpointVxlan) IsNodeless() bool {
 	return false
 }
+
+func (e *EndpointVxlan) MoveTo(ctx context.Context, dst Node) error {
+	return moveEndpoint(ctx, e, dst)
+}
+
+func (e *EndpointVxlan) Activate(ctx context.Context) error {
+	return activateEndpoint(ctx, e)
+}
