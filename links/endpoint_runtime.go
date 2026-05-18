@@ -29,3 +29,11 @@ func (*EndpointRuntime) IsRuntimeDiscovered() bool {
 func (*EndpointRuntime) IsNodeless() bool {
 	return false
 }
+
+func (e *EndpointRuntime) MoveTo(ctx context.Context, dst Node) error {
+	return moveEndpoint(ctx, e, dst)
+}
+
+func (e *EndpointRuntime) Activate(ctx context.Context) error {
+	return activateEndpoint(ctx, e)
+}
