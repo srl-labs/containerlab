@@ -363,7 +363,7 @@ topology:
     n2:
 ```
 
-Inheritance from `defaults`, `kinds`, and `groups` is honored — the network is only skipped when every node resolves to `network-mode: none`. If any node still attaches to the mgmt network (the default), the flag has no effect.
+Inheritance from `defaults`, `kinds`, and `groups` is honored - the network is only skipped when every node resolves to `network-mode: none`. If any node still attaches to the mgmt network (the default), the flag has no effect.
 
 ### connection details
 
