@@ -748,18 +748,8 @@ func (n *sros) GetNSPath(ctx context.Context) (string, error) {
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
 		return n.DefaultNode.GetNSPath(ctx)
 	}
-	// calculate cpm container name
-	cpmSlot, err := n.cpmSlot()
-	if err != nil {
-		return "", err
-	}
-	cpmContainerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
-	nsp, err := n.Runtime.GetNSPath(ctx, cpmContainerName)
-	if err != nil {
-		log.Errorf("Unable to determine NetNS Path for node %s: %v", n.Cfg.ShortName, err)
-		return "", err
-	}
-	return nsp, err
+	// delegate to the 0th component node which owns the netns
+	return n.componentNodes[0].GetNSPath(ctx)
 }
 
 // calcComponentName appends the line card suffix to the given node name.
