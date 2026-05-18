@@ -1914,6 +1914,11 @@
                     "description": "controls whether the management network has external access or not",
                     "markdownDescription": "controls whether the [management network has external access](https://containerlab.dev/manual/network/#external-access) or not"
                 },
+                "skip-when-unused": {
+                    "type": "boolean",
+                    "description": "skip management network creation when every node has network-mode: none",
+                    "markdownDescription": "skip creating the [management network](https://containerlab.dev/manual/network/#skipping-the-management-network) when every node resolves to `network-mode: none` (per-node, group, kind, or defaults)"
+                },
                 "driver-opts": {
                     "type": "object",
                     "description": "overrides for container runtime network driver options",
