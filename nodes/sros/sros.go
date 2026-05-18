@@ -2086,99 +2086,43 @@ func (n *sros) GetContainerStatus(ctx context.Context) clabruntime.ContainerStat
 	}
 }
 
-func (n *sros) LifecycleStartContainers(ctx context.Context) (bool, error) {
+func (n *sros) Start(ctx context.Context) error {
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
-		return n.DefaultNode.LifecycleStartContainers(ctx)
+		return n.DefaultNode.Start(ctx)
 	}
-
-	startedComponents := make([]clabnodes.Node, 0, len(n.componentNodes))
 
 	for _, c := range n.componentNodes {
-		status := c.GetContainerStatus(ctx)
-		if clabruntime.ContainerHasJoinableNetns(status) {
-			continue
-		}
-
-		if status == clabruntime.NotFound {
-			return false, fmt.Errorf(
-				"node %q component %q container %q not found",
-				n.Cfg.ShortName,
-				c.Config().ShortName,
-				c.Config().LongName,
-			)
-		}
-
 		if _, err := n.Runtime.StartContainer(ctx, c.Config().LongName, c); err != nil {
-			for i := len(startedComponents) - 1; i >= 0; i-- {
-				_ = n.Runtime.StopContainer(
-					ctx,
-					startedComponents[i].Config().LongName,
-					n.StopSignal,
-				)
-			}
-
-			return false, fmt.Errorf(
-				"node %q component %q start error: %w",
-				n.Cfg.ShortName,
-				c.Config().ShortName,
-				err,
-			)
+			return fmt.Errorf("node %q component %q start error: %w",
+				n.Cfg.ShortName, c.Config().ShortName, err)
 		}
-
-		startedComponents = append(startedComponents, c)
 	}
 
-	return len(startedComponents) > 0, nil
+	if err := n.RestoreEndpoints(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (n *sros) LifecycleStopContainers(ctx context.Context) error {
+func (n *sros) Stop(ctx context.Context) error {
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
-		return n.DefaultNode.LifecycleStopContainers(ctx)
+		return n.DefaultNode.Stop(ctx)
 	}
 
-	var errs []error
+	if err := n.ParkEndpoints(ctx); err != nil {
+		return err
+	}
 
+	// stop components in reverse order as 0th ctr is netns owner.
+	// and we don't want to orphan anything.
 	for i := len(n.componentNodes) - 1; i >= 0; i-- {
 		c := n.componentNodes[i]
-		status := c.GetContainerStatus(ctx)
-		if !clabruntime.ContainerHasJoinableNetns(status) {
-			continue
-		}
-
 		if err := n.Runtime.StopContainer(ctx, c.Config().LongName, n.StopSignal); err != nil {
-			if !clabruntime.ContainerHasJoinableNetns(c.GetContainerStatus(ctx)) {
-				log.Warnf(
-					"node %q component %q stop returned error but container is stopped: %v",
-					n.Cfg.ShortName,
-					c.Config().ShortName,
-					err,
-				)
-				continue
-			}
-
-			errs = append(errs, fmt.Errorf(
-				"node %q component %q stop error: %w",
-				n.Cfg.ShortName,
-				c.Config().ShortName,
-				err,
-			))
+			log.Warnf("node %q component %q stop error: %v",
+				n.Cfg.ShortName, c.Config().ShortName, err)
 		}
 	}
-
-	if len(errs) == 0 {
-		return nil
-	}
-
-	for _, c := range n.componentNodes {
-		if clabruntime.ContainerHasJoinableNetns(c.GetContainerStatus(ctx)) {
-			return errors.Join(errs...)
-		}
-	}
-
-	log.Warnf(
-		"node %q component stop returned errors but all components are stopped",
-		n.Cfg.ShortName,
-	)
 
 	return nil
 }
