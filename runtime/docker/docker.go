@@ -27,6 +27,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	networkapi "github.com/docker/docker/api/types/network"
 	dockerC "github.com/docker/docker/client"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
@@ -51,6 +52,7 @@ const (
 	defaultDockerNetwork = "bridge"
 
 	natUnprotectedValue         = "nat-unprotected"
+	bridgeNameOption            = "com.docker.network.bridge.name"
 	bridgeGatewayModeIPv4Option = "com.docker.network.bridge.gateway_mode_ipv4"
 	bridgeGatewayModeIPv6Option = "com.docker.network.bridge.gateway_mode_ipv6"
 )
@@ -169,7 +171,7 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 		)
 		// if the network is successfully found, set the bridge used by it
 		if err == nil {
-			if name, exists := netRes.Options["com.docker.network.bridge.name"]; exists {
+			if name, exists := netRes.Options[bridgeNameOption]; exists {
 				d.mgmt.Bridge = name
 			} else {
 				d.mgmt.Bridge = "br-" + netRes.ID[:12]
@@ -201,18 +203,9 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 		}
 	case err == nil:
 		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
-		if len(netResource.ID) < 12 {
-			return fmt.Errorf("could not get bridge ID")
-		}
-		switch d.mgmt.Network {
-		case "bridge":
-			bridgeName = "docker0"
-		default:
-			if netResource.Options["com.docker.network.bridge.name"] != "" {
-				bridgeName = netResource.Options["com.docker.network.bridge.name"]
-			} else {
-				bridgeName = "br-" + netResource.ID[:12]
-			}
+		bridgeName, err = bridgeNameFromInspect(&netResource, d.mgmt.Network)
+		if err != nil {
+			return err
 		}
 
 	default:
@@ -316,7 +309,7 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 	}
 
 	if bridgeName != "" {
-		netwOpts["com.docker.network.bridge.name"] = bridgeName
+		netwOpts[bridgeNameOption] = bridgeName
 	}
 
 	// nat-unprotected mode is needed starting in Docker release 28 to access all ports without
@@ -348,6 +341,24 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 
 	netCreateResponse, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
 	if err != nil {
+		// Another clab process created the same management network between
+		// our Inspect and our Create. Re-inspect and reuse it.
+		if errdefs.IsConflict(err) {
+			log.Debug("docker network was created concurrently by another clab deploy; reusing it",
+				"name", d.mgmt.Network)
+
+			netResource, ierr := d.Client.NetworkInspect(
+				nctx, d.mgmt.Network, networkapi.InspectOptions{},
+			)
+			if ierr != nil {
+				return "", fmt.Errorf(
+					"re-inspect %q after concurrent create: %w", d.mgmt.Network, ierr,
+				)
+			}
+
+			return bridgeNameFromInspect(&netResource, d.mgmt.Network)
+		}
+
 		// Handle subnet overlap error
 		if strings.Contains(strings.ToLower(err.Error()), strings.ToLower("Pool overlaps")) ||
 			strings.Contains(strings.ToLower(err.Error()), strings.ToLower("subnet")) {
@@ -402,6 +413,23 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 		bridgeName = "br-" + netCreateResponse.ID[:12]
 	}
 	return bridgeName, nil
+}
+
+// bridgeNameFromInspect resolves the underlying linux bridge name from a docker network inspect response.
+func bridgeNameFromInspect(netResource *networkapi.Inspect, mgmtNetwork string) (string, error) {
+	if len(netResource.ID) < 12 {
+		return "", fmt.Errorf("could not get bridge ID")
+	}
+
+	if mgmtNetwork == "bridge" {
+		return "docker0", nil
+	}
+
+	if name := netResource.Options[bridgeNameOption]; name != "" {
+		return name, nil
+	}
+
+	return "br-" + netResource.ID[:12], nil
 }
 
 // getMgmtBridgeIPs gets the management bridge v4/6 addresses.
@@ -1065,6 +1093,10 @@ func (d *DockerRuntime) produceGenericContainerList(
 
 		var err error
 		ctr.Pid, err = d.containerPid(ctx, i.ID)
+		if errdefs.IsNotFound(err) {
+			// Concurrent destroy removed it between List and Inspect.
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -1415,7 +1447,7 @@ func (d *DockerRuntime) GetContainerStatus(
 func (d *DockerRuntime) containerPid(ctx context.Context, cID string) (int, error) {
 	inspect, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
-		return 0, fmt.Errorf("container %q cannot be found", cID)
+		return 0, fmt.Errorf("container %q cannot be found: %w", cID, err)
 	}
 	return inspect.State.Pid, nil
 }
