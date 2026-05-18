@@ -208,6 +208,10 @@ type sros struct {
 	// for component nodes, store base nodes
 	baseShortName string
 	baseLongName  string
+	// rootCtrName is the container that owns the netns.
+	//  - for components based: the 0th sorted component.
+	//  - for network mode based: parsed from network-mode.
+	rootCtrName string
 
 	preDeployParams *clabnodes.PreDeployParams
 }
@@ -580,6 +584,8 @@ func (n *sros) setupComponentNodes() error {
 
 	n.sortComponents()
 
+	rootCtrName := n.calcComponentName(n.Cfg.LongName, n.Cfg.Components[0].Slot)
+
 	// Registry, because it is not a package Var
 	nr := clabnodes.NewNodeRegistry()
 	Register(nr)
@@ -654,6 +660,7 @@ func (n *sros) setupComponentNodes() error {
 			// store base node name
 			srosNode.baseShortName = n.Cfg.ShortName
 			srosNode.baseLongName = n.Cfg.LongName
+			srosNode.rootCtrName = rootCtrName
 		}
 
 		// store the node in the componentNodes
@@ -745,8 +752,10 @@ func (n *sros) isStandaloneNode() bool {
 
 // GetNSPath retrieves the Namespace Path.
 func (n *sros) GetNSPath(ctx context.Context) (string, error) {
-	if n.isStandaloneNode() || n.isDistributedCardNode() {
+	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.rootCtrName == "") {
 		return n.DefaultNode.GetNSPath(ctx)
+	} else if n.isDistributedCardNode() {
+		return n.Runtime.GetNSPath(ctx, n.rootCtrName)
 	}
 	// delegate to the 0th component node which owns the netns
 	return n.componentNodes[0].GetNSPath(ctx)
