@@ -37,7 +37,7 @@ Test API Server Health Endpoint
     Sleep    15s
 
     ${rc}    ${output}=    Run And Return Rc And Output
-    ...    curl -s http://localhost:8080/health -H 'accept: application/json'
+    ...    curl -sk https://localhost:8080/health -H 'accept: application/json'
     Log    Health check output:
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
@@ -105,7 +105,7 @@ Test API Server Health Endpoint Custom Port
     Sleep    15s
 
     ${rc}    ${output}=    Run And Return Rc And Output
-    ...    curl -s http://localhost:8081/health -H 'accept: application/json'
+    ...    curl -sk https://localhost:8081/health -H 'accept: application/json'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    "status":"healthy"
