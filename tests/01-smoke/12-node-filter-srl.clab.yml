@@ -1,0 +1,12 @@
+name: nf-srl
+topology:
+  nodes:
+    srl1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+    srl2:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+
+  links:
+    - endpoints: ["srl1:e1-1", "srl2:e1-1"]
