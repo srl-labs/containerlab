@@ -241,6 +241,10 @@ func (d *DefaultNode) Delete(ctx context.Context) error {
 		}
 	}
 
+	if d.OverwriteNode.GetContainerStatus(ctx) == clabruntime.NotFound {
+		return nil
+	}
+
 	return d.Runtime.DeleteContainer(ctx, d.OverwriteNode.GetContainerName())
 }
 
