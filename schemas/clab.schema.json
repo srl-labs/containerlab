@@ -323,122 +323,12 @@
                 "components": {
                     "type": "array",
                     "items": {
-                        "type": "object",
-                        "properties": {
-                            "slot": {
-                                "description": "Set component physical position on a distributed chassis",
-                                "anyOf": [
-                                    {
-                                        "type": "string",
-                                        "pattern": "^[ABab]$"
-                                    },
-                                    {
-                                        "type": "integer",
-                                        "minimum": 1
-                                    }
-                                ]
-                            },
-                            "type": {
-                                "description": "Set component type"
-                            },
-                            "sfm": {
-                                "description": "Set SFM type (SR OS specific).",
-                                "$ref": "#/definitions/sros-sfm-types"
-                            },
-                            "xiom": {
-                                "type": "array",
-                                "description": "Define list of XIOMs (SR OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "slot": {
-                                            "type": "integer",
-                                            "minimum": 1
-                                        },
-                                        "type": {
-                                            "$ref": "#/definitions/sros-xiom-types"
-                                        },
-                                        "mda": {
-                                            "type": "array",
-                                            "description": "Define list of MDAs under this XIOM. Each defined MDA must have values of 'slot' and 'type'",
-                                            "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "slot": {
-                                                        "type": "integer",
-                                                        "minimum": 1
-                                                    },
-                                                    "type": {
-                                                        "$ref": "#/definitions/sros-xiom-mda-types"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "slot",
-                                                    "type"
-                                                ],
-                                                "additionalProperties": false
-                                            }
-                                        }
-                                    },
-                                    "required": [
-                                        "slot",
-                                        "type"
-                                    ],
-                                    "additionalProperties": false
-                                },
-                                "uniqueItems": true
-                            },
-                            "mda": {
-                                "type": "array",
-                                "description": "Define list of MDAs (SR OS Specific). Each defined MDA must have values of 'slot' and 'type'",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "slot": {
-                                            "type": "integer",
-                                            "minimum": 1
-                                        },
-                                        "type": {
-                                            "description": "Set MDA type (SR OS specific)",
-                                            "$ref": "#/definitions/sros-mda-types"
-                                        }
-                                    },
-                                    "required": [
-                                        "slot",
-                                        "type"
-                                    ],
-                                    "additionalProperties": false
-                                }
-                            },
-                            "env": {
-                                "type": "object",
-                                "$ref": "#/definitions/env"
-                            }
-                        },
-                        "additionalProperties": false,
-                        "allOf": [
+                        "anyOf": [
                             {
-                                "if": {
-                                    "properties": {
-                                        "slot": {
-                                            "type": "string"
-                                        }
-                                    }
-                                },
-                                "then": {
-                                    "properties": {
-                                        "type": {
-                                            "$ref": "#/definitions/sros-cpm-types"
-                                        }
-                                    }
-                                },
-                                "else": {
-                                    "properties": {
-                                        "type": {
-                                            "$ref": "#/definitions/sros-card-types"
-                                        }
-                                    }
-                                }
+                                "$ref": "#/definitions/sros-component"
+                            },
+                            {
+                                "$ref": "https://raw.githubusercontent.com/srl-labs/containerlab/main/schemas/srsim-hw.schema.json#/definitions/srsim-component"
                             }
                         ]
                     },
@@ -636,66 +526,11 @@
                         ]
                     },
                     "then": {
-                        "properties": {
-                            "type": {
-                                "type": "string",
-                                "anyOf": [
-                                    {
-                                        "enum": [
-                                            "dms-1-24d",
-                                            "ixr-10",
-                                            "ixr-6",
-                                            "ixr-e2c",
-                                            "ixr-e2",
-                                            "ixr-e2n",
-                                            "ixr-e2n-s",
-                                            "ixr-e3c",
-                                            "ixr-e3x",
-                                            "ixr-ec",
-                                            "ixr-e",
-                                            "ixr-r4",
-                                            "ixr-r6dl",
-                                            "ixr-r6d",
-                                            "ixr-r6",
-                                            "ixr-s",
-                                            "ixr-x3",
-                                            "ixr-x",
-                                            "sar-1",
-                                            "sar-hm",
-                                            "sar-hmc",
-                                            "sar-hx",
-                                            "sar-mx",
-                                            "sr-1-24d",
-                                            "sr-12e",
-                                            "sr-12",
-                                            "sr-1-46s",
-                                            "sr-14s",
-                                            "sr-1-92s",
-                                            "sr-1e",
-                                            "sr-1se",
-                                            "sr-1s",
-                                            "sr-1-48d",
-                                            "sr-1x-48d",
-                                            "sr-1x-92s",
-                                            "sr-1",
-                                            "sr-2e",
-                                            "sr-2se",
-                                            "sr-2s",
-                                            "sr-3e",
-                                            "sr-7s",
-                                            "sr-7",
-                                            "sr-a4",
-                                            "sr-a8",
-                                            "vsr-i",
-                                            "xrs-20e",
-                                            "xrs-20",
-                                            "ess-7",
-                                            "ess-12"
-                                        ]
-                                    }
-                                ]
+                        "allOf": [
+                            {
+                                "$ref": "https://raw.githubusercontent.com/srl-labs/containerlab/main/schemas/srsim-hw.schema.json#/definitions/srsim-node"
                             }
-                        }
+                        ]
                     }
                 },
                 {
@@ -1839,6 +1674,126 @@
                 "sfm2-s",
                 "sfm2-x20s"
             ]
+        },
+        "sros-component": {
+            "type": "object",
+            "properties": {
+                "slot": {
+                    "description": "Set component physical position on a distributed chassis",
+                    "anyOf": [
+                        {
+                            "type": "string",
+                            "pattern": "^[ABab]$"
+                        },
+                        {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    ]
+                },
+                "type": {
+                    "description": "Set component type"
+                },
+                "sfm": {
+                    "description": "Set SFM type (SR OS specific).",
+                    "$ref": "#/definitions/sros-sfm-types"
+                },
+                "xiom": {
+                    "type": "array",
+                    "description": "Define list of XIOMs (SR OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "slot": {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "type": {
+                                "$ref": "#/definitions/sros-xiom-types"
+                            },
+                            "mda": {
+                                "type": "array",
+                                "description": "Define list of MDAs under this XIOM. Each defined MDA must have values of 'slot' and 'type'",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "slot": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "type": {
+                                            "$ref": "#/definitions/sros-xiom-mda-types"
+                                        }
+                                    },
+                                    "required": [
+                                        "slot",
+                                        "type"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            }
+                        },
+                        "required": [
+                            "slot",
+                            "type"
+                        ],
+                        "additionalProperties": false
+                    },
+                    "uniqueItems": true
+                },
+                "mda": {
+                    "type": "array",
+                    "description": "Define list of MDAs (SR OS Specific). Each defined MDA must have values of 'slot' and 'type'",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "slot": {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "type": {
+                                "description": "Set MDA type (SR OS specific)",
+                                "$ref": "#/definitions/sros-mda-types"
+                            }
+                        },
+                        "required": [
+                            "slot",
+                            "type"
+                        ],
+                        "additionalProperties": false
+                    }
+                },
+                "env": {
+                    "type": "object",
+                    "$ref": "#/definitions/env"
+                }
+            },
+            "additionalProperties": false,
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "slot": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "type": {
+                                "$ref": "#/definitions/sros-cpm-types"
+                            }
+                        }
+                    },
+                    "else": {
+                        "properties": {
+                            "type": {
+                                "$ref": "#/definitions/sros-card-types"
+                            }
+                        }
+                    }
+                }
+            ]
         }
     },
     "type": "object",
@@ -2205,5 +2160,16 @@
     "required": [
         "name",
         "topology"
-    ]
+    ],
+    "x-srsim-metadata": {
+        "source": "https://documentation.nokia.com/sr/26-3/7x50-shared/srsim-installation-setup/appendices.html",
+        "generated_at": "2026-05-20T16:51:10.911408+00:00",
+        "models": 52,
+        "chassis": 49,
+        "default_rows": 83,
+        "supported_rows": 411,
+        "allow_unknown_values": false,
+        "component_definitions": 43
+    },
+    "x-srsim-schema-ref": "https://raw.githubusercontent.com/srl-labs/containerlab/main/schemas/srsim-hw.schema.json"
 }
