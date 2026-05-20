@@ -566,6 +566,11 @@ func hasOwnershipAltName(link netlink.Link) bool {
 	return false
 }
 
+// HasOwnershipAltName reports whether link carries a containerlab ownership marker.
+func HasOwnershipAltName(link netlink.Link) bool {
+	return hasOwnershipAltName(link)
+}
+
 func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
 	if hasOwnershipAltName(link) {
 		return nil

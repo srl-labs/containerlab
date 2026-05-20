@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: apply
+
+topology:
+  nodes:
+    l1:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      exec:
+        - ip address add 172.17.0.1/24 dev eth1
+        - ip -6 address add 2002::172:17:0:1/96 dev eth1
+        - ip address add 172.17.1.1/24 dev eth3
+        - ip -6 address add 2002::172:17:1:1/96 dev eth3
+    l2:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      exec:
+        - ip address add 172.17.0.2/24 dev eth1
+        - ip -6 address add 2002::172:17:0:2/96 dev eth1
+    l3:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      exec:
+        - ip address add 172.17.1.2/24 dev eth1
+        - ip -6 address add 2002::172:17:1:2/96 dev eth1
+
+  links:
+    - endpoints: ["l1:eth1", "l2:eth1"]
+    - endpoints: ["l1:eth3", "l3:eth1"]

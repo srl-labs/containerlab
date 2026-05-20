@@ -25,6 +25,7 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		completionCmd,
 		deployCmd,
 		destroyCmd,
+		applyCmd,
 		startCmd,
 		stopCmd,
 		restartCmd,
@@ -174,6 +175,7 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 	// set commands which may use topo file find functionality, the rest don't need it
 	if cobraCmd.Name() != "deploy" &&
 		cobraCmd.Name() != "destroy" &&
+		cobraCmd.Name() != "apply" &&
 		cobraCmd.Name() != "start" &&
 		cobraCmd.Name() != "stop" &&
 		cobraCmd.Name() != "restart" &&

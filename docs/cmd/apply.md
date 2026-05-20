@@ -1,0 +1,103 @@
+# apply command
+
+### Description
+
+The `apply` command makes the runtime match a topology definition file. If the lab is not
+deployed yet, `apply` deploys it. If the lab is already deployed, `apply` discovers the current
+state from the container runtime and applies supported topology deltas without destroying and
+redeploying the whole lab.
+
+The first implementation focuses on topology shape changes:
+
+- add nodes
+- delete nodes
+- add veth links
+- delete veth links
+
+Existing node definition changes are not updated in place. Use `redeploy` when container settings,
+startup configuration, image, kind, type, or other node properties need to change.
+
+When existing nodes need their dataplane adjusted, apply uses the same endpoint parking
+mechanism as `stop`, `start`, and `restart`: affected nodes are stopped, their dataplane
+interfaces are parked in a temporary network namespace, and the interfaces are restored after the
+node starts again.
+
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
+
+### Usage
+
+`containerlab [global-flags] apply [local-flags]`
+
+### Flags
+
+#### topology | name
+
+Use the global `--topo | -t` flag to reference the desired topology file, or use the global
+`--name` flag to reference an already deployed lab by name.
+
+When the lab does not exist yet, `--topo` is required because there is no runtime state from which
+containerlab can derive the original topology path.
+
+When `--name` is used, containerlab tries to derive the topology file from the labels on the
+deployed containers. If the original topology file is no longer available, provide `--topo`
+explicitly.
+
+#### dry-run
+
+The local `--dry-run` flag prints the planned apply actions without applying them.
+
+#### max-workers
+
+With `--max-workers` flag, it is possible to limit the number of concurrent workers that create
+new nodes.
+
+#### skip-post-deploy
+
+The `--skip-post-deploy` flag skips the post-deploy phase for nodes added by apply.
+
+#### export-template
+
+The local `--export-template` flag allows a user to specify a custom Go template that will be used
+for exporting topology data into `topology-data.json` file under the lab directory after apply
+finishes.
+
+### Limitations
+
+Apply currently supports only a subset of topology changes:
+
+- only veth dataplane links are supported
+- only single-container nodes are supported
+- root-namespace-based nodes are not supported
+- nodes with `auto-remove` enabled are not supported
+- `ext-container` and other pre-existing container nodes are not supported
+- `network-mode: container:<...>` users/providers are not supported
+- existing node definition changes are not applied in place
+
+Apply discovers existing links from live veth interfaces that carry containerlab's ownership
+marker. Older or manually created interfaces without this marker are left untouched. If such an
+interface blocks a requested link change, apply fails instead of deleting it.
+
+Deleted nodes are removed directly from the runtime. Node lab directories are kept.
+
+### Examples
+
+#### Preview topology changes
+
+```bash
+containerlab apply -t mylab.clab.yml --dry-run
+```
+
+#### Deploy or apply topology changes
+
+```bash
+containerlab apply -t mylab.clab.yml
+```
+
+If `mylab` is not running, the command deploys it. If it is running, the command applies supported
+topology changes in place.
+
+#### Apply by lab name
+
+```bash
+containerlab apply --name mylab
+```

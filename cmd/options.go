@@ -39,6 +39,7 @@ func GetOptions() *Options {
 			Deploy: &DeployOptions{
 				LabOwner: os.Getenv("CLAB_OWNER"),
 			},
+			Apply:   &ApplyOptions{},
 			Destroy: &DestroyOptions{},
 			Save:    &SaveOptions{},
 			Exec: &ExecOptions{
@@ -129,6 +130,7 @@ type Options struct {
 	Filter         *FilterOptions
 	NodeLifecycle  *NodeLifecycleOptions
 	Deploy         *DeployOptions
+	Apply          *ApplyOptions
 	Destroy        *DestroyOptions
 	Save           *SaveOptions
 	Exec           *ExecOptions
@@ -224,6 +226,19 @@ func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 	return destroyOptions
 }
 
+func (o *Options) ToClabApplyOptions() (*clabcore.ApplyOptions, error) {
+	applyOptions, err := clabcore.NewApplyOptions(o.Apply.MaxWorkers)
+	if err != nil {
+		return nil, err
+	}
+
+	applyOptions.SetDryRun(o.Apply.DryRun).
+		SetSkipPostDeploy(o.Apply.SkipPostDeploy).
+		SetExportTemplate(o.Apply.ExportTemplate)
+
+	return applyOptions, nil
+}
+
 func (o *Options) ToClabSaveOptions() []clabcore.SaveOption {
 	if o.Save == nil || o.Save.Copy == "" {
 		return nil
@@ -317,6 +332,13 @@ type DeployOptions struct {
 	RestoreAll               string
 	RestoreNodeSnapshots     []string
 	ExportRenderedTopology   string
+}
+
+type ApplyOptions struct {
+	DryRun         bool
+	MaxWorkers     uint
+	SkipPostDeploy bool
+	ExportTemplate string
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {
