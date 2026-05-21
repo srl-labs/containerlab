@@ -769,6 +769,9 @@
                     "$ref": "#/definitions/link-vars"
                 }
             },
+            "required": [
+                "endpoints"
+            ],
             "additionalProperties": false
         },
         "link-type-veth": {
@@ -2199,6 +2202,17 @@
                 }
             },
             "additionalProperties": false
+        },
+        "debug": {
+            "description": "Boolean flag to enable debug mode for the topology",
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "boolean"
+                }
+            ]
         }
     },
     "additionalProperties": false,
