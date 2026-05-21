@@ -734,6 +734,7 @@
                     "description": "endpoints list",
                     "markdownDescription": "[endpoints](http://localhost:8000/manual/topo-def-file/#links) list",
                     "minItems": 2,
+                    "maxItems": 2,
                     "items": {
                         "type": "string",
                         "pattern": "^\\S+:\\S+$"
