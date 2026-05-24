@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -74,7 +75,8 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 	log.Info("Generating lab graph...")
 
 	g = gographviz.NewGraph()
-	if err := g.SetName(c.TopoPaths.TopologyFilenameWithoutExt()); err != nil {
+	graphName := dotIdentifier(c.TopoPaths.TopologyFilenameWithoutExt())
+	if err := g.SetName(graphName); err != nil {
 		return err
 	}
 
@@ -106,7 +108,7 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 			}
 		}
 
-		if err := g.AddNode(c.TopoPaths.TopologyFilenameWithoutExt(),
+		if err := g.AddNode(graphName,
 			node.Config().ShortName, attr); err != nil {
 			return err
 		}
@@ -155,6 +157,10 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func dotIdentifier(id string) string {
+	return strconv.Quote(id)
 }
 
 // generatePngFromDot generated PNG from the provided dot file.
