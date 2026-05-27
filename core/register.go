@@ -17,6 +17,7 @@ import (
 	clabnodescjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
 	clabnodescrpd "github.com/srl-labs/containerlab/nodes/crpd"
 	clabnodescvx "github.com/srl-labs/containerlab/nodes/cvx"
+  	clabnodescumulus_vm "github.com/srl-labs/containerlab/nodes/cumulus_vm"
 	clabnodesdell_sonic "github.com/srl-labs/containerlab/nodes/dell_sonic"
 	clabnodesext_container "github.com/srl-labs/containerlab/nodes/ext_container"
 	clabnodesf5_bigipve "github.com/srl-labs/containerlab/nodes/f5_bigipve"
@@ -73,6 +74,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodescrpd.Register(c.Reg)
 	clabnodesjuniper_csrx.Register(c.Reg)
 	clabnodescvx.Register(c.Reg)
+  	clabnodescumulus_vm.Register(c.Reg)
 	clabnodesext_container.Register(c.Reg)
 	clabnodesfortinet_fortigate.Register(c.Reg)
 	clabnodeshost.Register(c.Reg)
