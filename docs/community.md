@@ -26,6 +26,22 @@ For those who cherish IRC in their hearts, a community-led IRC channel `#contain
 
 We are always happy to showcase containerlab and demonstrate its powers. Luckily, the network engineering community has lots of events worldwide, and we participated in some. Below you will find recordings of containerlab talks in different formats and on various venues listed in reverse chronological order[^1].
 
+### CHNOG 3
+
+<small>:material-youtube: [Change with Confidence: Containerlab at Proton](https://www.youtube.com/watch?v=RtJqWRYKf88) · :material-calendar: 2026-05-29</small>
+
+Seeing how Containerlab is being used in production, within the right context, and with the right scope is like seeing your kid grow up and become a successful adult. John Howard, Proton's Head of Network Engineering, shares his experience with Containerlab and how it has helped them to validate their network changes in a safe and controlled manner.
+
+"Stay in bed" - he said - because the changes can now be triaged and beaten to death before they are deployed.
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/RtJqWRYKf88" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+Participants:
+
+* [:material-linkedin:](https://www.linkedin.com/in/jonnyhoward/) John Howard
+
 ### Autocon 1
 
 <small>:material-youtube: [When to use and not to use Containerlab?](https://youtu.be/zKHqiWdN91s) · :material-calendar: 2024-05-29</small>
