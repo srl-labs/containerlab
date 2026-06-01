@@ -600,6 +600,12 @@ In both examples, we configure the `192.168.0.0/24`, and `2001:db8::/64` subnets
 
 We can also set the IP for only one side, which is shown using IPv4 as an example on the link between srl1 and srl2 on the `e1-2` interfaces. Where the IPv4 address `192.168.2.1` is only set for `srl1`.
 
+##### Kernel support for interface altnames
+
+Containerlab uses interface altnames to mark the ownership of the interfaces and support interfaces with long names. This is a feature that is supported by all modern kernels.
+
+If the kernel does not support interface altnames, containerlab will emit a warning and continue without the ownership marker. It is strongly recommended to upgrade the kernel to ensure full containerlab compatibility.
+
 #### Groups
 
 `groups` sets the values for the properties of all nodes belonging to the group that you define, it's more flexible than `kinds` which only sets the properties for nodes of that specific kind.
@@ -847,7 +853,7 @@ To further simplify parametrization of the topology files, containerlab allows u
 Using templating approach it is possible to create a lab template and instantiate different labs from it, by simply changing the variables in the variables file.
 
 You can add `.gotmpl` files into a `clab_templates` folder next to the main topology template to load additional template blocks that can be inserted into a topology using `{{ template "subtemplate.gotmpl" . }}` - this allows extraction of reusable blocks and structuring of more complicated topologies into multiple files.
-You can also use the `slice` function to pass multiple parameters to such a subtemplate: `{{ template "sub.gotmpl" (slice "Param A" "Param B") }}` and reference them using the `index` built-in inside the subtemplate: `{{ index . 0 }}` will resolve to "Param A". 
+You can also use the `slice` function to pass multiple parameters to such a subtemplate: `{{ template "sub.gotmpl" (slice "Param A" "Param B") }}` and reference them using the `index` built-in inside the subtemplate: `{{ index . 0 }}` will resolve to "Param A".
 
 Variable files can be specified manually, by providing the `--vars` flag, or will be searched for automatically at `<topology-name>_vars.[yaml|yml|json]`, where toplogy-name is the filename of the topology without its extension.
 
