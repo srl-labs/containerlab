@@ -2,14 +2,18 @@ package core
 
 import (
 	"context"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	"github.com/vishvananda/netlink"
 	"go.uber.org/mock/gomock"
 )
@@ -191,7 +195,7 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 	}
 }
 
-func TestCheckApplySupportedRejectsNonVethLinks(t *testing.T) {
+func TestCheckApplySupportedAllowsAllLinkTypes(t *testing.T) {
 	t.Parallel()
 
 	c := &CLab{
@@ -200,11 +204,157 @@ func TestCheckApplySupportedRejectsNonVethLinks(t *testing.T) {
 		},
 	}
 
-	err := c.checkApplySupported(nil)
-	if err == nil {
-		t.Fatal("expected unsupported link type error")
+	if err := c.checkApplySupported(nil); err != nil {
+		t.Fatalf("expected non-veth link type to be supported, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "unsupported type") {
-		t.Fatalf("unexpected error: %v", err)
+}
+
+func TestApplyReportsReconfigureRequiredWhenUnsupported(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+
+	c, err := NewContainerLab(WithTopoPath("test_data/topo1.yml", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	c.Runtimes[clabruntimedocker.RuntimeName] = mockRuntime
+	c.globalRuntimeName = clabruntimedocker.RuntimeName
+
+	nodeCfg := c.Nodes["node1"].Config()
+	nodeCfg.IsRootNamespaceBased = true
+
+	mockRuntime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return([]clabruntime.GenericContainer{
+			{
+				Names: []string{nodeCfg.LongName},
+				Labels: map[string]string{
+					clabconstants.NodeName:      nodeCfg.ShortName,
+					clabconstants.LongName:      nodeCfg.LongName,
+					clabconstants.NodeKind:      nodeCfg.Kind,
+					clabconstants.NodeType:      nodeCfg.NodeType,
+					clabconstants.NodeGroup:     nodeCfg.Group,
+					clabconstants.NodeMgmtNetBr: "br-test",
+				},
+			},
+		}, nil)
+
+	_, err = c.Apply(context.Background(), &ApplyOptions{dryRun: true})
+	if err == nil {
+		t.Fatal("expected unsupported apply error")
+	}
+
+	for _, want := range []string{
+		"apply unsupported for",
+		"node1: root namespace node",
+		"deploy --reconfigure",
+	} {
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("expected error to contain %q, got: %v", want, err)
+		}
+	}
+}
+
+func TestRuntimeNodeContainersGroupsDistributedComponents(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: clabmocksmockruntime.NewMockContainerRuntime(ctrl),
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	mockRuntime := c.Runtimes[clabruntimedocker.RuntimeName].(*clabmocksmockruntime.MockContainerRuntime)
+	mockRuntime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return([]clabruntime.GenericContainer{
+			{
+				Names: []string{"clab-lab-sros-a"},
+				Labels: map[string]string{
+					clabconstants.NodeName:     "sros-a",
+					clabconstants.RootNodeName: "sros",
+				},
+			},
+			{
+				Names: []string{"clab-lab-sros-1"},
+				Labels: map[string]string{
+					clabconstants.NodeName:     "sros-1",
+					clabconstants.RootNodeName: "sros",
+				},
+			},
+		}, nil)
+
+	currentNodes, err := c.runtimeNodeContainers(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	group := currentNodes["sros"]
+	if group == nil {
+		t.Fatal("expected distributed components to be grouped under root node name")
+	}
+	if !group.distributed {
+		t.Fatal("expected distributed group marker")
+	}
+	if got := len(group.containers); got != 2 {
+		t.Fatalf("expected 2 component containers, got %d", got)
+	}
+}
+
+func TestSetApplyMgmtBridgeFromRuntime(t *testing.T) {
+	t.Parallel()
+
+	c := &CLab{
+		Config: &Config{Mgmt: &clabtypes.MgmtNet{}},
+	}
+
+	err := c.setApplyMgmtBridgeFromRuntime(map[string]*applyRuntimeNode{
+		"l1": {
+			containers: []clabruntime.GenericContainer{
+				{
+					Labels: map[string]string{
+						clabconstants.NodeMgmtNetBr: "br-test",
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c.Config.Mgmt.Bridge != "br-test" {
+		t.Fatalf("expected bridge from runtime labels, got %q", c.Config.Mgmt.Bridge)
+	}
+}
+
+func TestApplyContainerSortsSrosComponentsInDeploymentOrder(t *testing.T) {
+	t.Parallel()
+
+	containers := []clabruntime.GenericContainer{
+		{Labels: map[string]string{clabconstants.NodeName: "sros-a"}},
+		{Labels: map[string]string{clabconstants.NodeName: "sros-b"}},
+		{Labels: map[string]string{clabconstants.NodeName: "sros-1"}},
+	}
+
+	sort.Slice(containers, func(i, j int) bool {
+		return applyContainerLess(containers[i], containers[j])
+	})
+
+	got := []string{
+		applyContainerNodeName(containers[0]),
+		applyContainerNodeName(containers[1]),
+		applyContainerNodeName(containers[2]),
+	}
+	want := []string{"sros-1", "sros-b", "sros-a"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("unexpected component order %v, want %v", got, want)
 	}
 }

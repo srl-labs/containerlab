@@ -3,9 +3,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/charmbracelet/log"
+	tableWriter "github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -90,34 +91,57 @@ func printApplyResult(result *clabcore.ApplyResult) {
 		title = "Apply plan"
 	}
 
-	fmt.Fprintln(os.Stdout, title)
+	log.Info(title)
+
+	table := tableWriter.NewWriter()
+	table.SetOutputMirror(os.Stdout)
+	table.SetStyle(tableWriter.StyleRounded)
+	table.Style().Format.Header = text.FormatTitle
+	table.Style().Format.HeaderAlign = text.AlignCenter
+	table.AppendHeader(tableWriter.Row{"Action", "Details"})
+
+	hasRows := false
 	if result.DeployedLab {
 		label := "deployed lab"
 		if result.DryRun {
 			label = "deploy lab"
 		}
-		fmt.Fprintf(os.Stdout, "  %s: %s\n", label, result.LabName)
+		table.AppendRow(tableWriter.Row{label, result.LabName})
+		hasRows = true
 	}
-	printApplyResultLine("added nodes", result.AddedNodes)
-	printApplyResultLine("deleted nodes", result.DeletedNodes)
-	printApplyResultLine("added links", result.AddedLinks)
-	printApplyResultLine("deleted endpoints", result.DeletedEndpoints)
-	printApplyResultLine("restarted nodes", result.RestartedNodes)
 
-	if !result.DeployedLab &&
-		len(result.AddedNodes) == 0 &&
-		len(result.DeletedNodes) == 0 &&
-		len(result.AddedLinks) == 0 &&
-		len(result.DeletedEndpoints) == 0 &&
-		len(result.RestartedNodes) == 0 {
-		fmt.Fprintln(os.Stdout, "  no changes")
+	rows := []struct {
+		label  string
+		values []string
+	}{
+		{label: "added nodes", values: result.AddedNodes},
+		{label: "deleted nodes", values: result.DeletedNodes},
+		{label: "added links", values: result.AddedLinks},
+		{label: "deleted endpoints", values: result.DeletedEndpoints},
+		{label: "restarted nodes", values: result.RestartedNodes},
 	}
+
+	for _, row := range rows {
+		if appendApplyResultRows(table, row.label, row.values) {
+			hasRows = true
+		}
+	}
+
+	if !hasRows {
+		table.AppendRow(tableWriter.Row{"no changes", "-"})
+	}
+
+	table.Render()
 }
 
-func printApplyResultLine(label string, values []string) {
+func appendApplyResultRows(table tableWriter.Writer, label string, values []string) bool {
 	if len(values) == 0 {
-		return
+		return false
 	}
 
-	fmt.Fprintf(os.Stdout, "  %s: %s\n", label, strings.Join(values, ", "))
+	for _, value := range values {
+		table.AppendRow(tableWriter.Row{label, value})
+	}
+
+	return true
 }

@@ -38,12 +38,7 @@ func (b *Bridge) Deploy(ctx context.Context, endpoint Endpoint) error {
 		if err != nil {
 			return err
 		}
-		// bring the link up
-		err = netlink.LinkSetUp(netlinkLink)
-		if err != nil {
-			return err
-		}
-		return nil
+		return SetNameMACAndUpInterface(netlinkLink, b.endpoint)(nn)
 	})
 
 	return err

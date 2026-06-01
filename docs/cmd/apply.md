@@ -11,11 +11,12 @@ The first implementation focuses on topology shape changes:
 
 - add nodes
 - delete nodes
-- add veth links
-- delete veth links
+- add links
+- delete links
 
-Existing node definition changes are not updated in place. Use `redeploy` when container settings,
-startup configuration, image, kind, type, or other node properties need to change.
+Existing node definition changes are not updated in place. Use `redeploy` or
+`deploy --reconfigure` when container settings, startup configuration, image, kind, type, or other
+node properties need to change.
 
 When existing nodes need their dataplane adjusted, apply uses the same endpoint parking
 mechanism as `stop`, `start`, and `restart`: affected nodes are stopped, their dataplane
@@ -65,17 +66,22 @@ finishes.
 
 Apply currently supports only a subset of topology changes:
 
-- only veth dataplane links are supported
-- only single-container nodes are supported
+- supported link types are `veth`, brief links, `host`, `mgmt-net`, `macvlan`, `vxlan`,
+  `vxlan-stitch`, `dummy`, and `bridge`
+- distributed nodes, such as SR-SIM with components, are supported for node and link add/delete
 - root-namespace-based nodes are not supported
 - nodes with `auto-remove` enabled are not supported
 - `ext-container` and other pre-existing container nodes are not supported
 - `network-mode: container:<...>` users/providers are not supported
 - existing node definition changes are not applied in place
+- existing link parameter/type changes with the same runtime interface names are not applied in
+  place; use `redeploy` for those changes
 
-Apply discovers existing links from live veth interfaces that carry containerlab's ownership
-marker. Older or manually created interfaces without this marker are left untouched. If such an
-interface blocks a requested link change, apply fails instead of deleting it.
+Apply discovers existing links from live interfaces that carry containerlab's ownership marker and
+does not persist an apply state file. Older or manually created interfaces without this marker are
+left untouched. If such an interface blocks a requested link change, apply fails instead of deleting
+it. Removed `vxlan-stitch` host-side interfaces are cleaned up on a best-effort basis when their
+default runtime names can be derived from the stale node endpoint.
 
 Deleted nodes are removed directly from the runtime. Node lab directories are kept.
 

@@ -2,7 +2,6 @@ package links
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 
@@ -185,21 +184,6 @@ func (p *ParkingNode) captureCandidates(
 			continue
 		}
 
-		link := ep.GetLink()
-		if link == nil || link.GetType() != LinkTypeVEth {
-			linkType := "runtime-unknown"
-			if link != nil {
-				linkType = string(link.GetType())
-			}
-
-			return nil, fmt.Errorf(
-				"node %q endpoint %q is linked via %q, but lifecycle stop/start supports only veth dataplane links",
-				src.GetShortName(),
-				ep.GetIfaceName(),
-				linkType,
-			)
-		}
-
 		endpoints = append(endpoints, ep)
 		knownIfaceNames[ep.GetIfaceName()] = struct{}{}
 	}
@@ -281,31 +265,11 @@ func isOwnedInterface(link netlink.Link, knownIfaceNames map[string]struct{}) bo
 		return false
 	}
 
-	if link.Type() != "veth" {
-		return false
-	}
-
 	if _, known := knownIfaceNames[name]; !known && !hasOwnershipAltName(link) {
 		return false
 	}
 
-	veth, ok := link.(*netlink.Veth)
-	if !ok {
-		return false
-	}
-
-	peerIndex, err := netlink.VethPeerIndex(veth)
-	if err != nil {
-		return false
-	}
-
-	_, err = netlink.LinkByIndex(peerIndex)
-	if err == nil {
-		return false
-	}
-
-	var notFoundErr netlink.LinkNotFoundError
-	return errors.As(err, &notFoundErr)
+	return true
 }
 
 func (*ParkingNode) GetLinkEndpointType() LinkEndpointType {

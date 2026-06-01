@@ -42,13 +42,20 @@ func (k applyEndpointKey) String() string {
 }
 
 type applyEndpointRef struct {
-	key  applyEndpointKey
-	node clabnodes.Node
+	key        applyEndpointKey
+	node       clablinks.Node
+	bestEffort bool
+}
+
+type applyRuntimeNode struct {
+	name        string
+	containers  []clabruntime.GenericContainer
+	distributed bool
 }
 
 type applyPlan struct {
 	result             *ApplyResult
-	currentNodes       map[string]clabruntime.GenericContainer
+	currentNodes       map[string]*applyRuntimeNode
 	addedNodeSet       map[string]struct{}
 	addedLinks         []clablinks.Link
 	staleEndpoints     []applyEndpointRef
@@ -56,6 +63,8 @@ type applyPlan struct {
 	desiredEndpointSet map[applyEndpointKey]struct{}
 	liveEndpointSet    map[applyEndpointKey]struct{}
 }
+
+var errApplyInterfaceUnowned = errors.New("interface is not marked as containerlab-owned")
 
 func (p *applyPlan) empty() bool {
 	return !p.result.DeployedLab &&
@@ -115,6 +124,14 @@ func (c *CLab) Apply(
 		}
 
 		return result, nil
+	}
+
+	if err := c.setApplyMgmtBridgeFromRuntime(currentNodes); err != nil {
+		return nil, err
+	}
+
+	if err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge); err != nil {
+		return nil, err
 	}
 
 	if err := c.ResolveLinks(); err != nil {
@@ -180,15 +197,50 @@ func (c *CLab) Apply(
 	return plan.result, nil
 }
 
+func (c *CLab) setApplyMgmtBridgeFromRuntime(
+	currentNodes map[string]*applyRuntimeNode,
+) error {
+	if c.Config.Mgmt.Bridge != "" {
+		return nil
+	}
+
+	var bridge string
+	for _, runtimeNode := range currentNodes {
+		for _, ctr := range runtimeNode.containers {
+			ctrBridge := ctr.Labels[clabconstants.NodeMgmtNetBr]
+			if ctrBridge == "" {
+				continue
+			}
+			if bridge == "" {
+				bridge = ctrBridge
+				continue
+			}
+			if bridge != ctrBridge {
+				return fmt.Errorf(
+					"runtime lab has conflicting management bridge labels: %q and %q",
+					bridge,
+					ctrBridge,
+				)
+			}
+		}
+	}
+
+	if bridge != "" {
+		c.Config.Mgmt.Bridge = bridge
+	}
+
+	return nil
+}
+
 func (c *CLab) runtimeNodeContainers(
 	ctx context.Context,
-) (map[string]clabruntime.GenericContainer, error) {
+) (map[string]*applyRuntimeNode, error) {
 	containers, err := c.ListContainers(ctx, WithListLabName(c.Config.Name))
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string]clabruntime.GenericContainer)
+	result := make(map[string]*applyRuntimeNode)
 	var duplicates []string
 
 	for _, ctr := range containers {
@@ -201,12 +253,27 @@ func (c *CLab) runtimeNodeContainers(
 			continue
 		}
 
-		if _, exists := result[nodeName]; exists {
+		groupName := ctr.Labels[clabconstants.RootNodeName]
+		distributed := groupName != ""
+		if groupName == "" {
+			groupName = nodeName
+		}
+
+		group, exists := result[groupName]
+		if !exists {
+			group = &applyRuntimeNode{
+				name:        groupName,
+				distributed: distributed,
+			}
+			result[groupName] = group
+		}
+		group.containers = append(group.containers, ctr)
+		group.distributed = group.distributed || distributed
+
+		if !group.distributed && len(group.containers) > 1 {
 			duplicates = append(duplicates, nodeName)
 			continue
 		}
-
-		result[nodeName] = ctr
 	}
 
 	if len(duplicates) > 0 {
@@ -217,11 +284,17 @@ func (c *CLab) runtimeNodeContainers(
 		)
 	}
 
+	for _, group := range result {
+		sort.Slice(group.containers, func(i, j int) bool {
+			return applyContainerLess(group.containers[i], group.containers[j])
+		})
+	}
+
 	return result, nil
 }
 
 func (c *CLab) checkApplySupported(
-	currentNodes map[string]clabruntime.GenericContainer,
+	currentNodes map[string]*applyRuntimeNode,
 ) error {
 	var unsupported []string
 
@@ -238,37 +311,57 @@ func (c *CLab) checkApplySupported(
 			unsupported = append(unsupported, fmt.Sprintf("%s: external/pre-existing node", cfg.ShortName))
 		case strings.HasPrefix(cfg.NetworkMode, "container:"):
 			unsupported = append(unsupported, fmt.Sprintf("%s: shared container namespace", cfg.ShortName))
-		case len(cfg.Components) > 0:
-			unsupported = append(unsupported, fmt.Sprintf("%s: multi-component node", cfg.ShortName))
 		}
 	}
 
-	for _, linkIdx := range sortedLinkIndexes(c.Links) {
-		link := c.Links[linkIdx]
-		if link.GetType() != clablinks.LinkTypeVEth {
-			unsupported = append(
-				unsupported,
-				fmt.Sprintf("link %s: unsupported type %q", applyLinkName(link), link.GetType()),
-			)
-		}
-	}
-
-	for nodeName, ctr := range currentNodes {
+	for nodeName, runtimeNode := range currentNodes {
 		n, exists := c.Nodes[nodeName]
 		if !exists {
 			continue
 		}
 
 		cfg := n.Config()
-		checkRuntimeLabel(&unsupported, ctr, clabconstants.LongName, cfg.LongName, cfg.ShortName)
-		checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeKind, cfg.Kind, cfg.ShortName)
-		checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeType, cfg.NodeType, cfg.ShortName)
-		checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeGroup, cfg.Group, cfg.ShortName)
+		desiredDistributed := len(cfg.Components) > 1
+		if runtimeNode.distributed != desiredDistributed {
+			unsupported = append(
+				unsupported,
+				fmt.Sprintf("%s: distributed component layout changed", cfg.ShortName),
+			)
+		} else if desiredDistributed {
+			desiredComponents := desiredApplyComponentNames(n)
+			runtimeComponents := runtimeApplyComponentNames(runtimeNode)
+			if strings.Join(desiredComponents, "\x00") != strings.Join(runtimeComponents, "\x00") {
+				unsupported = append(
+					unsupported,
+					fmt.Sprintf("%s: distributed component layout changed", cfg.ShortName),
+				)
+			}
+		}
+
+		for _, ctr := range runtimeNode.containers {
+			if runtimeNode.distributed {
+				checkRuntimeLabel(
+					&unsupported,
+					ctr,
+					clabconstants.RootNodeLongName,
+					cfg.LongName,
+					cfg.ShortName,
+				)
+			} else {
+				checkRuntimeLabel(&unsupported, ctr, clabconstants.LongName, cfg.LongName, cfg.ShortName)
+			}
+			checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeKind, cfg.Kind, cfg.ShortName)
+			checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeType, cfg.NodeType, cfg.ShortName)
+			checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeGroup, cfg.Group, cfg.ShortName)
+		}
 	}
 
 	if len(unsupported) > 0 {
 		sort.Strings(unsupported)
-		return fmt.Errorf("apply unsupported for: %s", strings.Join(unsupported, "; "))
+		return fmt.Errorf(
+			"apply unsupported for: %s; use redeploy or deploy --reconfigure",
+			strings.Join(unsupported, "; "),
+		)
 	}
 
 	return nil
@@ -312,7 +405,7 @@ func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 
 func (c *CLab) planApply(
 	ctx context.Context,
-	currentNodes map[string]clabruntime.GenericContainer,
+	currentNodes map[string]*applyRuntimeNode,
 ) (*applyPlan, error) {
 	plan := &applyPlan{
 		result: &ApplyResult{
@@ -352,7 +445,7 @@ func (c *CLab) planApply(
 	}
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
-		for _, ep := range c.Links[linkIdx].GetEndpoints() {
+		for _, ep := range clablinks.ApplyRuntimeEndpoints(c.Links[linkIdx]) {
 			plan.desiredEndpointSet[endpointKeyFromEndpoint(ep)] = struct{}{}
 		}
 	}
@@ -361,17 +454,7 @@ func (c *CLab) planApply(
 		return nil, err
 	}
 
-	for _, key := range sortedEndpointKeys(plan.liveEndpointSet) {
-		if _, exists := plan.desiredEndpointSet[key]; exists {
-			continue
-		}
-
-		n := c.Nodes[key.node]
-		ref := applyEndpointRef{key: key, node: n}
-		plan.staleEndpoints = append(plan.staleEndpoints, ref)
-		plan.result.DeletedEndpoints = append(plan.result.DeletedEndpoints, key.String())
-		plan.affectedNodeSet[key.node] = struct{}{}
-	}
+	c.planDeletedEndpoints(plan)
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
 		link := c.Links[linkIdx]
@@ -382,7 +465,7 @@ func (c *CLab) planApply(
 		plan.addedLinks = append(plan.addedLinks, link)
 		plan.result.AddedLinks = append(plan.result.AddedLinks, applyLinkName(link))
 
-		for _, ep := range link.GetEndpoints() {
+		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
 			nodeName := ep.GetNode().GetShortName()
 			if _, exists := currentNodes[nodeName]; !exists {
 				continue
@@ -398,26 +481,110 @@ func (c *CLab) planApply(
 	return plan, nil
 }
 
+func (c *CLab) planDeletedEndpoints(plan *applyPlan) {
+	plannedEndpointSet := map[applyEndpointKey]struct{}{}
+
+	for _, key := range sortedEndpointKeys(plan.liveEndpointSet) {
+		if _, exists := plan.desiredEndpointSet[key]; exists {
+			continue
+		}
+		c.addStaleApplyEndpoint(plan, plannedEndpointSet, key)
+	}
+}
+
+func (c *CLab) addStaleApplyEndpoint(
+	plan *applyPlan,
+	plannedEndpointSet map[applyEndpointKey]struct{},
+	key applyEndpointKey,
+) {
+	if key.node == "" || key.iface == "" {
+		return
+	}
+	if _, exists := plannedEndpointSet[key]; exists {
+		return
+	}
+	if _, desired := plan.desiredEndpointSet[key]; desired {
+		return
+	}
+
+	node, exists := c.applyLinkNode(key.node)
+	if !exists {
+		return
+	}
+
+	plannedEndpointSet[key] = struct{}{}
+	plan.staleEndpoints = append(plan.staleEndpoints, applyEndpointRef{key: key, node: node})
+	plan.result.DeletedEndpoints = append(plan.result.DeletedEndpoints, key.String())
+
+	if _, exists := c.Nodes[key.node]; exists {
+		if _, added := plan.addedNodeSet[key.node]; !added {
+			plan.affectedNodeSet[key.node] = struct{}{}
+		}
+	}
+
+	c.addDerivedHostStaleEndpoints(plan, plannedEndpointSet, key)
+}
+
+func (c *CLab) addDerivedHostStaleEndpoints(
+	plan *applyPlan,
+	plannedEndpointSet map[applyEndpointKey]struct{},
+	key applyEndpointKey,
+) {
+	if key.node == "host" {
+		return
+	}
+	if _, exists := c.Nodes[key.node]; !exists {
+		return
+	}
+
+	hostNode, exists := c.applyLinkNode("host")
+	if !exists {
+		return
+	}
+
+	for _, iface := range []string{
+		fmt.Sprintf("ve-%s_%s", key.node, key.iface),
+		fmt.Sprintf("vx-%s_%s", key.node, key.iface),
+	} {
+		hostKey := applyEndpointKey{node: "host", iface: iface}
+		if _, planned := plannedEndpointSet[hostKey]; planned {
+			continue
+		}
+		if _, desired := plan.desiredEndpointSet[hostKey]; desired {
+			continue
+		}
+
+		plannedEndpointSet[hostKey] = struct{}{}
+		plan.staleEndpoints = append(
+			plan.staleEndpoints,
+			applyEndpointRef{key: hostKey, node: hostNode, bestEffort: true},
+		)
+	}
+}
+
 func (c *CLab) discoverLiveApplyEndpoints(
 	ctx context.Context,
 	plan *applyPlan,
 ) error {
-	for _, nodeName := range sortedNodeNames(c.Nodes) {
-		if _, exists := plan.currentNodes[nodeName]; !exists {
+	desiredNodes := c.applyEndpointDiscoveryNodes(plan)
+	for _, nodeName := range sortedLinkNodeNames(desiredNodes) {
+		n := desiredNodes[nodeName]
+		if _, exists := plan.currentNodes[nodeName]; !exists && !isApplySpecialNode(nodeName) {
 			continue
 		}
 
-		n := c.Nodes[nodeName]
-		status := n.GetContainerStatus(ctx)
-		if !clabruntime.ContainerHasJoinableNetns(status) {
-			return fmt.Errorf(
-				"node %q is %s; apply requires existing nodes to have a joinable network namespace",
-				nodeName,
-				status,
-			)
+		if !isApplySpecialNode(nodeName) {
+			status := c.Nodes[nodeName].GetContainerStatus(ctx)
+			if !clabruntime.ContainerHasJoinableNetns(status) {
+				return fmt.Errorf(
+					"node %q is %s; apply requires existing nodes to have a joinable network namespace",
+					nodeName,
+					status,
+				)
+			}
 		}
 
-		ifaceNames, err := discoverOwnedVethInterfaceNames(ctx, n)
+		ifaceNames, err := discoverOwnedInterfaceNames(ctx, n, c.applyKnownEndpointNames(plan, nodeName))
 		if err != nil {
 			return fmt.Errorf("failed to discover runtime interfaces for node %q: %w", nodeName, err)
 		}
@@ -430,7 +597,11 @@ func (c *CLab) discoverLiveApplyEndpoints(
 	return nil
 }
 
-func discoverOwnedVethInterfaceNames(ctx context.Context, node clabnodes.Node) ([]string, error) {
+func discoverOwnedInterfaceNames(
+	ctx context.Context,
+	node clablinks.Node,
+	knownIfaceNames map[string]struct{},
+) ([]string, error) {
 	var ifaceNames []string
 
 	err := node.ExecFunction(ctx, func(_ ns.NetNS) error {
@@ -444,8 +615,10 @@ func discoverOwnedVethInterfaceNames(ctx context.Context, node clabnodes.Node) (
 			if name == "lo" || name == "eth0" {
 				continue
 			}
-			if link.Type() != "veth" {
-				continue
+			if knownIfaceNames != nil {
+				if _, known := knownIfaceNames[name]; !known {
+					continue
+				}
 			}
 			if !clablinks.HasOwnershipAltName(link) {
 				continue
@@ -465,8 +638,56 @@ func discoverOwnedVethInterfaceNames(ctx context.Context, node clabnodes.Node) (
 	return ifaceNames, nil
 }
 
+func (c *CLab) applyKnownEndpointNames(
+	plan *applyPlan,
+	nodeName string,
+) map[string]struct{} {
+	if !isApplySpecialNode(nodeName) {
+		return nil
+	}
+
+	names := map[string]struct{}{}
+	for key := range plan.desiredEndpointSet {
+		if key.node == nodeName {
+			names[key.iface] = struct{}{}
+		}
+	}
+
+	return names
+}
+
+func (c *CLab) applyEndpointDiscoveryNodes(plan *applyPlan) map[string]clablinks.Node {
+	nodes := make(map[string]clablinks.Node, len(c.Nodes)+2)
+	for nodeName, node := range c.Nodes {
+		nodes[nodeName] = node
+	}
+
+	for _, key := range sortedEndpointKeys(plan.desiredEndpointSet) {
+		if _, exists := nodes[key.node]; exists {
+			continue
+		}
+		if node, exists := c.applyLinkNode(key.node); exists {
+			nodes[key.node] = node
+		}
+	}
+
+	return nodes
+}
+
+func (c *CLab) applyLinkNode(nodeName string) (clablinks.Node, bool) {
+	if node, exists := c.Nodes[nodeName]; exists {
+		return node, true
+	}
+	node, exists := c.getSpecialLinkNodes()[nodeName]
+	return node, exists
+}
+
+func isApplySpecialNode(nodeName string) bool {
+	return nodeName == "host" || nodeName == "mgmt-net"
+}
+
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
-	for _, ep := range link.GetEndpoints() {
+	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
 		if _, added := p.addedNodeSet[key.node]; added {
 			return true
@@ -576,6 +797,10 @@ func (c *CLab) deleteApplyEndpoints(
 	for _, ref := range refs {
 		log.Info("Deleting link endpoint", "endpoint", ref.key.String())
 		if err := removeInterfaceFromNode(ctx, ref.node, ref.key.iface); err != nil {
+			if ref.bestEffort && errors.Is(err, errApplyInterfaceUnowned) {
+				log.Debugf("skipping best-effort endpoint delete: %v", err)
+				continue
+			}
 			return err
 		}
 	}
@@ -585,22 +810,29 @@ func (c *CLab) deleteApplyEndpoints(
 
 func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 	for _, nodeName := range plan.result.DeletedNodes {
-		ctr := plan.currentNodes[nodeName]
-		if len(ctr.Names) == 0 {
-			return fmt.Errorf("runtime container for node %q has no name", nodeName)
+		runtimeNode := plan.currentNodes[nodeName]
+		if runtimeNode == nil {
+			return fmt.Errorf("runtime node %q not found", nodeName)
 		}
 
-		runtime := ctr.Runtime
-		if runtime == nil {
-			runtime = c.globalRuntime()
-		}
+		for i := len(runtimeNode.containers) - 1; i >= 0; i-- {
+			ctr := runtimeNode.containers[i]
+			if len(ctr.Names) == 0 {
+				return fmt.Errorf("runtime container for node %q has no name", nodeName)
+			}
 
-		log.Info("Deleting node", "node", nodeName, "container", ctr.Names[0])
-		if err := runtime.DeleteContainer(ctx, ctr.Names[0]); err != nil {
-			return fmt.Errorf("failed deleting node %q: %w", nodeName, err)
-		}
+			runtime := ctr.Runtime
+			if runtime == nil {
+				runtime = c.globalRuntime()
+			}
 
-		_ = clabutils.DeleteNetnsSymlink(ctr.Names[0])
+			log.Info("Deleting node", "node", nodeName, "container", ctr.Names[0])
+			if err := runtime.DeleteContainer(ctx, ctr.Names[0]); err != nil {
+				return fmt.Errorf("failed deleting node %q: %w", nodeName, err)
+			}
+
+			_ = clabutils.DeleteNetnsSymlink(ctr.Names[0])
+		}
 	}
 
 	return nil
@@ -677,13 +909,13 @@ func (c *CLab) deployApplyLinks(ctx context.Context, links []clablinks.Link) err
 	for _, link := range links {
 		log.Info("Creating link", "link", applyLinkName(link))
 
-		for _, ep := range link.GetEndpoints() {
+		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
 			if err := removeInterfaceFromNode(ctx, ep.GetNode(), ep.GetIfaceName()); err != nil {
 				return err
 			}
 		}
 
-		for _, ep := range link.GetEndpoints() {
+		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
 			deployable, ok := ep.(clablinks.DeployableEndpoint)
 			if !ok {
 				return fmt.Errorf("endpoint %q is not deployable", ep.GetIfaceName())
@@ -691,6 +923,12 @@ func (c *CLab) deployApplyLinks(ctx context.Context, links []clablinks.Link) err
 
 			if err := deployable.Deploy(ctx); err != nil {
 				return fmt.Errorf("failed deploying link %s: %w", applyLinkName(link), err)
+			}
+		}
+
+		if stitchedLink, ok := link.(*clablinks.VxlanStitched); ok {
+			if err := stitchedLink.Stitch(); err != nil {
+				return fmt.Errorf("failed stitching link %s: %w", applyLinkName(link), err)
 			}
 		}
 	}
@@ -855,6 +1093,10 @@ func (c *CLab) regenerateApplyArtifacts(ctx context.Context, exportTemplate stri
 }
 
 func removeInterfaceFromNode(ctx context.Context, node clablinks.Node, ifaceName string) error {
+	if node == nil || ifaceName == "" {
+		return nil
+	}
+
 	return node.ExecFunction(ctx, func(_ ns.NetNS) error {
 		link, err := netlink.LinkByName(ifaceName)
 		if _, notfound := err.(netlink.LinkNotFoundError); notfound {
@@ -863,9 +1105,10 @@ func removeInterfaceFromNode(ctx context.Context, node clablinks.Node, ifaceName
 		if err != nil {
 			return err
 		}
-		if link.Type() != "veth" || !clablinks.HasOwnershipAltName(link) {
+		if !clablinks.HasOwnershipAltName(link) {
 			return fmt.Errorf(
-				"interface %q on node %q exists but is not marked as containerlab-owned",
+				"%w: interface %q on node %q",
+				errApplyInterfaceUnowned,
 				ifaceName,
 				node.GetShortName(),
 			)
@@ -876,21 +1119,83 @@ func removeInterfaceFromNode(ctx context.Context, node clablinks.Node, ifaceName
 }
 
 func endpointKeyFromEndpoint(ep clablinks.Endpoint) applyEndpointKey {
+	if ep == nil || ep.GetNode() == nil {
+		return applyEndpointKey{}
+	}
+	nodeName := ep.GetNode().GetShortName()
+	if ep.IsNodeless() && ep.GetNode().GetLinkEndpointType() == clablinks.LinkEndpointTypeBridge {
+		nodeName = "mgmt-net"
+	}
 	return applyEndpointKey{
-		node:  ep.GetNode().GetShortName(),
+		node:  nodeName,
 		iface: ep.GetIfaceName(),
 	}
 }
 
 func applyLinkName(link clablinks.Link) string {
-	endpoints := link.GetEndpoints()
+	endpoints := clablinks.ApplyRuntimeEndpoints(link)
 	names := make([]string, 0, len(endpoints))
 	for _, ep := range endpoints {
-		names = append(names, endpointKeyFromEndpoint(ep).String())
+		key := endpointKeyFromEndpoint(ep)
+		if key.node == "" || key.iface == "" {
+			continue
+		}
+		names = append(names, key.String())
 	}
 	sort.Strings(names)
 
 	return strings.Join(names, " -- ")
+}
+
+func desiredApplyComponentNames(n clabnodes.Node) []string {
+	cfg := n.Config()
+	names := make([]string, 0, len(cfg.Components))
+	for _, component := range cfg.Components {
+		if component == nil {
+			continue
+		}
+
+		slot := strings.ToLower(strings.TrimSpace(component.Slot))
+		if slot == "" {
+			continue
+		}
+		names = append(names, cfg.ShortName+"-"+slot)
+	}
+
+	sortApplyComponentNames(names)
+
+	return names
+}
+
+func runtimeApplyComponentNames(runtimeNode *applyRuntimeNode) []string {
+	if runtimeNode == nil {
+		return nil
+	}
+
+	names := make([]string, 0, len(runtimeNode.containers))
+	for _, ctr := range runtimeNode.containers {
+		name := applyContainerNodeName(ctr)
+		if name == "" {
+			continue
+		}
+		names = append(names, name)
+	}
+
+	sortApplyComponentNames(names)
+
+	return names
+}
+
+func sortApplyComponentNames(names []string) {
+	sort.Slice(names, func(i, j int) bool {
+		iOrder := applyComponentSortOrder(names[i])
+		jOrder := applyComponentSortOrder(names[j])
+		if iOrder != jOrder {
+			return iOrder < jOrder
+		}
+
+		return names[i] < names[j]
+	})
 }
 
 func sortedNodeNames(nodes map[string]clabnodes.Node) []string {
@@ -902,13 +1207,67 @@ func sortedNodeNames(nodes map[string]clabnodes.Node) []string {
 	return names
 }
 
-func sortedRuntimeNodeNames(nodes map[string]clabruntime.GenericContainer) []string {
+func sortedRuntimeNodeNames(nodes map[string]*applyRuntimeNode) []string {
 	names := make([]string, 0, len(nodes))
 	for name := range nodes {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 	return names
+}
+
+func sortedLinkNodeNames(nodes map[string]clablinks.Node) []string {
+	names := make([]string, 0, len(nodes))
+	for name := range nodes {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func applyContainerNodeName(ctr clabruntime.GenericContainer) string {
+	if name := ctr.Labels[clabconstants.NodeName]; name != "" {
+		return name
+	}
+	if len(ctr.Names) > 0 {
+		return ctr.Names[0]
+	}
+	return ctr.ID
+}
+
+func applyContainerLess(a, b clabruntime.GenericContainer) bool {
+	aName := applyContainerNodeName(a)
+	bName := applyContainerNodeName(b)
+
+	aOrder := applyComponentSortOrder(aName)
+	bOrder := applyComponentSortOrder(bName)
+	if aOrder != bOrder {
+		return aOrder < bOrder
+	}
+
+	return aName < bName
+}
+
+func applyComponentSortOrder(name string) int {
+	idx := strings.LastIndex(name, "-")
+	if idx < 0 || idx == len(name)-1 {
+		return 0
+	}
+
+	slot := strings.ToUpper(name[idx+1:])
+	if len(slot) == 1 && slot[0] >= 'A' && slot[0] <= 'Z' {
+		return 100 - int(slot[0])
+	}
+
+	var n int
+	for _, r := range slot {
+		if r < '0' || r > '9' {
+			return 0
+		}
+		n = n*10 + int(r-'0')
+	}
+
+	return n
 }
 
 func sortedLinkIndexes(links map[int]clablinks.Link) []int {
