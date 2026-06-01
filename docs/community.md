@@ -42,6 +42,22 @@ Participants:
 
 * [:material-linkedin:](https://www.linkedin.com/in/jonnyhoward/) John Howard
 
+### RIPE 92
+
+<small>:material-youtube: [Developing Containerlab - an open-source success story](https://ripe92.ripe.net/programme/meeting-plan/sessions/85/JDMLST/) · :material-calendar: 2026-05-20</small>
+
+Containerlab turns 6 this year - with over half a million installs, a rich ecosystem, plenty of write-ups, blog posts and repositories using it, it has become a popular project for creating virtual network topologies.
+
+This talks is not aimed at presenting the tool itself, but rather the development process, and what worked for the project, what did not, and what challenges we faced while developing and maintaining a tool that has to support traditionally closed-source software and engage with a non-software developer userbase.
+
+<video width="100%" controls>
+  <source src="https://ripe92.ripe.net/media/videos/gordon-gidofalvy_developing-containerlab-an-open-source-success-story_side_20260520-094658.mp4" type="video/mp4">
+</video>
+
+Participants:
+
+* [:material-linkedin:](https://www.linkedin.com/in/gidofalvy/) Gordon Gidofalvy
+
 ### Autocon 1
 
 <small>:material-youtube: [When to use and not to use Containerlab?](https://youtu.be/zKHqiWdN91s) · :material-calendar: 2024-05-29</small>
