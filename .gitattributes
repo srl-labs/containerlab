@@ -10,3 +10,4 @@ docs/images/**/*.png filter=lfs diff=lfs merge=lfs -text
 docs/images/**/*.gif filter=lfs diff=lfs merge=lfs -text
 docs/images/**/*.jpg filter=lfs diff=lfs merge=lfs -text
 docs/images/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
+docs/images/**/*.webp filter=lfs diff=lfs merge=lfs -text
