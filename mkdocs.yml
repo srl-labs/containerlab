@@ -90,7 +90,12 @@ nav:
       - Inventory: manual/inventory.md
       - Image management: manual/images.md
       - Labs and Codespaces: manual/codespaces.md
-      - VS Code Extension: manual/vsc-extension.md
+      - Containerlab GUI:
+          - manual/containerlab-gui/index.md
+          - VS Code Extension: manual/containerlab-gui/vsc-extension.md
+          - Desktop: manual/containerlab-gui/desktop.md
+          - Web: manual/containerlab-gui/web.md
+      - API Server: manual/api-server.md
       - Link Impairments: manual/impairments.md
       - Share lab access: manual/share-access.md
       - Configuration management: manual/config-mgmt.md
@@ -330,6 +335,9 @@ plugins:
       redirect_maps:
         lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
         lab-examples/ixp-lab.md: lab-examples/peering-lab.md
+        manual/vsc-extension.md: manual/containerlab-gui/vsc-extension.md
+        manual/containerlab-desktop.md: manual/containerlab-gui/desktop.md
+        manual/containerlab-web.md: manual/containerlab-gui/web.md
   #- typeset
   - glightbox
   - macros:

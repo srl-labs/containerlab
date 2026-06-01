@@ -15,6 +15,7 @@ const (
 	multiToolImage             = "ghcr.io/srl-labs/network-multitool"
 	defaultTimeout             = 120 * time.Second
 	defaultToolsServerPort     = 8080
+	defaultToolsAPIServerPort  = 8090
 	defaultToolsApiSSHBasePort = 2223
 	defaultToolsApiSSHMaxPort  = 2322
 	defaultToolsCertKeySize    = 2048
@@ -61,13 +62,14 @@ func GetOptions() *Options {
 			ToolsAPI: &ToolsApiOptions{
 				Image:          "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
 				Name:           "clab-api-server",
-				Port:           defaultToolsServerPort,
+				Port:           defaultToolsAPIServerPort,
 				Host:           "localhost",
 				JWTExpiration:  "60m",
 				UserGroup:      "clab_api",
 				SuperUserGroup: "clab_admins",
 				LogLevel:       "debug",
 				GinMode:        "release",
+				TLSEnable:      true,
 				SSHBasePort:    defaultToolsApiSSHBasePort,
 				SSHMaxPort:     defaultToolsApiSSHMaxPort,
 				OutputFormat:   "table",
