@@ -12,7 +12,7 @@ If you prefer to sit back and watch a video about this extension, say no more!
 
 Install the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=srl-labs.vscode-containerlab), or open the Extensions tab in VS Code and search for `Containerlab`.
 
-![Containerlab extension installation](../../images/containerlab-gui/install-ext-steps.png)
+![Containerlab extension installation](../../images/gui/install-ext-steps.png)
 
 After installation, VS Code shows the Containerlab activity bar icon and opens the welcome page unless `containerlab.showWelcomePage` is disabled.
 
@@ -32,7 +32,7 @@ The extension runs commands where VS Code runs:
 The extension is supported on Linux and WSL. To manage a remote lab host, connect to that host with the [Remote SSH extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) and open the Containerlab view there.
 
 ??? tip "How to use Remote SSH"
-    ![Using VS Code Remote SSH](../../images/containerlab-gui/install-ssh.gif)
+    ![Using VS Code Remote SSH](../../images/gui/install-ssh.gif)
 
 Typical requirements are:
 
@@ -46,7 +46,7 @@ Docker is the primary runtime for extension runtime features.
 
 Click the Containerlab icon in the VS Code activity bar to open the embedded GUI.
 
-![Containerlab VS Code activity bar](../../images/containerlab-gui/screenshot.png)
+![Containerlab VS Code activity bar](../../images/gui/screenshot.png)
 
 The extension discovers `*.clab.yml` and `*.clab.yaml` files from the current workspace. It also shows running labs from the Containerlab host, including labs whose topology files are outside the current workspace.
 
@@ -56,7 +56,7 @@ Running labs update from the Containerlab event stream by default. If event stre
 
 When a `.clab.yml` or `.clab.yaml` file is open, VS Code adds Containerlab actions to the editor title and editor context menu.
 
-![Deploy via YAML editor](../../images/containerlab-gui/quick_deploy.png)
+![Deploy via YAML editor](../../images/gui/quick_deploy.png)
 
 You can also run topology commands from the command palette with `Ctrl+Shift+P` or `Cmd+Shift+P`.
 

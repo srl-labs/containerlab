@@ -9,7 +9,7 @@ Containerlab GUI is the graphical way to create, edit, deploy, and operate Conta
 | [Web](web.md) | You want a browser UI for a shared lab host, VM, or server. | The web app connects to a reachable [`clab-api-server`](../api-server.md). |
 | [Browser sandbox](https://srl-labs.github.io/containerlab-app/) | You want to try the editor without installing anything. | Browser storage only; no real lab deployment. |
 
-![Containerlab GUI screenshot](../../images/containerlab-gui/screenshot.png)
+![Containerlab GUI screenshot](../../images/gui/screenshot.png)
 
 /// admonition | Support
 If you have any questions about this extension, please join us in the [Containerlab Discord](https://discord.gg/vAyddtaEV9).
@@ -50,7 +50,7 @@ Most workflows start in the Explorer or directly in TopoViewer.
 
 The Explorer shows running labs, known topology files, endpoints, and common actions.
 
-![Containerlab GUI Explorer](../../images/containerlab-gui/explorer.png)
+![Containerlab GUI Explorer](../../images/gui/explorer.png)
 
 The Explorer can:
 
@@ -68,7 +68,7 @@ VS Code discovers topology files from the open workspace and running labs from t
 
 TopoViewer is the shared canvas and source editor.
 
-![TopoViewer graphical topology editor](../../images/containerlab-gui/topology-editor.png)
+![TopoViewer graphical topology editor](../../images/gui/topology-editor.png)
 
 Use it to:
 
@@ -91,7 +91,7 @@ The toolbar also includes **Bulk Link Devices**, **Find Node**, **Fit to Viewpor
 
 The layout menu changes how TopoViewer places nodes on the canvas.
 
-![Topology layout menu](../../images/containerlab-gui/layout-menu.png)
+![Topology layout menu](../../images/gui/layout-menu.png)
 
 | Layout | Use it for |
 | ------ | ---------- |
@@ -103,7 +103,7 @@ The layout menu changes how TopoViewer places nodes on the canvas.
 
 Generated layouts update the node positions saved in the annotations file. They arrange topology nodes and network nodes; text, shapes, groups, and traffic-rate annotations remain visual annotations that you position yourself.
 
-![Appearance and telemetry style settings](../../images/containerlab-gui/lab-appearance.png)
+![Appearance and telemetry style settings](../../images/gui/lab-appearance.png)
 
 The Appearance tab in the lab settings controls how the canvas is presented. The default style keeps the normal editor view. **Telemetry Style** changes the topology into a dashboard-oriented view with configurable node size, interface bubble size, and compact interface labels.
 
@@ -126,7 +126,7 @@ Appearance preferences are saved with the topology annotations so the view can b
 
 Node templates are reusable node presets shown in the **Node Templates** palette.
 
-![Dragging a node template to the canvas](../../images/containerlab-gui/drag-drop.png)
+![Dragging a node template to the canvas](../../images/gui/drag-drop.png)
 
 Drag a template from the palette onto the canvas to create a node at that position. You can also mark one template as the default template; quick-add actions such as adding a node from the canvas use that default when no explicit template is selected.
 
@@ -141,7 +141,7 @@ A node template can define common node fields such as:
 
 Use the template editor to create or edit node templates.
 
-![Create node template dialog](../../images/containerlab-gui/create_template.png)
+![Create node template dialog](../../images/gui/create_template.png)
 
 /// admonition | Interface pattern
     type: info
@@ -164,7 +164,7 @@ The palette also contains networks and annotations. Drag networks onto the canva
 
 From the GUI you can deploy, redeploy, destroy, start, stop, restart, save, graph, and inspect labs where the host supports those actions.
 
-![Running lab in Containerlab GUI](../../images/containerlab-gui/running-lab.png)
+![Running lab in Containerlab GUI](../../images/gui/running-lab.png)
 
 Running nodes expose actions such as:
 
@@ -182,7 +182,7 @@ In VS Code, shell and SSH actions open VS Code terminals. In Desktop and Web, te
 
 The GUI can manage local container images when the host exposes image operations.
 
-![Image manager](../../images/containerlab-gui/image-manager.png)
+![Image manager](../../images/gui/image-manager.png)
 
 Use the image manager to see images referenced by labs and custom node templates, pull missing images, and remove images that are no longer needed.
 
@@ -190,7 +190,7 @@ Use the image manager to see images referenced by labs and custom node templates
 
 Packet capture is available from interface actions when the host supports capture operations. The GUI uses Edgeshark/Packetflix capture URIs and Wireshark VNC sessions.
 
-![Packet capture in Containerlab GUI](../../images/containerlab-gui/packet-capture.png)
+![Packet capture in Containerlab GUI](../../images/gui/packet-capture.png)
 
 The launch path depends on the host:
 
@@ -205,7 +205,7 @@ For packet capture to work, the Containerlab host must be able to run the requir
 
 Graph actions can generate Draw.io diagrams for a topology or running lab.
 
-![Draw.io graph action](../../images/containerlab-gui/drawio.png)
+![Draw.io graph action](../../images/gui/drawio.png)
 
 Horizontal and vertical Draw.io layouts are available across the GUI hosts. Interactive Draw.io mode is VS Code-specific; standalone apps generate the diagram file and report the result.
 
@@ -215,7 +215,7 @@ Draw.io export is useful for quick documentation diagrams. Use the SVG export wh
 
 Use **Capture Viewport as SVG** to export the visible TopoViewer canvas.
 
-![SVG export dialog](../../images/containerlab-gui/export-svg.png)
+![SVG export dialog](../../images/gui/export-svg.png)
 
 The SVG export dialog lets you choose the filename, zoom, padding, background, annotations, and edge labels. A plain SVG export creates one `.svg` file that can be used in documentation, diagrams, or external tools.
 
@@ -227,7 +227,7 @@ Enable **Grafana bundle** when you want to use the topology as a Grafana Flow Pa
 | `<name>.grafana.json` | A Grafana dashboard JSON containing the Flow Panel. |
 | `<name>.flow_panel.yaml` | Flow Panel mapping and threshold configuration. |
 
-![Grafana bundle settings](../../images/containerlab-gui/grafana-bundle.png)
+![Grafana bundle settings](../../images/gui/grafana-bundle.png)
 
 The Grafana bundle maps link traffic, interface endpoint state, and optional traffic-rate labels to Grafana cells. Advanced settings let you tune node and interface size, traffic thresholds, interface label shortening, whether unlinked nodes are excluded, whether a traffic legend is added, and whether rate labels are only shown on hover.
 
@@ -242,11 +242,11 @@ In VS Code, the extension asks where to save the exported files. In Desktop and 
 
 The inspect view shows running lab details in a table similar to `containerlab inspect`.
 
-![Inspect lab view](../../images/containerlab-gui/inspect.png)
+![Inspect lab view](../../images/gui/inspect.png)
 
 The GUI can also manage link impairments where supported by the host platform. Link impairments include delay, jitter, packet loss, rate limiting, and corruption.
 
-![Link impairment editor](../../images/containerlab-gui/link-impairments.png)
+![Link impairment editor](../../images/gui/link-impairments.png)
 
 /// admonition | Platform support
     type: tip

@@ -4,7 +4,7 @@ The Containerlab Web GUI is the standalone browser application for Containerlab.
 
 The web GUI does not run labs by itself and does not start `clab-api-server` for you. The API server performs the lab operations on the Linux host that owns the container runtime and lab files.
 
-![Containerlab Web GUI screenshot](../../images/containerlab-gui/screenshot-web.png)
+![Containerlab Web GUI screenshot](../../images/gui/screenshot-web.png)
 
 ## Before you start
 
@@ -88,7 +88,7 @@ docker run -d --name containerlab-app \
 
 On first launch, add an API server endpoint and log in with a Linux user accepted by that API server.
 
-![Containerlab Web GUI initial endpoint screen](../../images/containerlab-gui/initial_start.png)
+![Containerlab Web GUI initial endpoint screen](../../images/gui/initial_start.png)
 
 The web app asks for:
 
@@ -100,7 +100,7 @@ The web app asks for:
 
 After login, the web app stores an endpoint session and uses the API server token for lab operations. Endpoint settings let you add, edit, reconnect, remove, import, and export API server connections.
 
-![Containerlab Web GUI endpoint settings](../../images/containerlab-gui/endpoint-settings.png)
+![Containerlab Web GUI endpoint settings](../../images/gui/endpoint-settings.png)
 
 ## Multiple endpoints
 

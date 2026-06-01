@@ -4,7 +4,7 @@ The `clab-api-server` exposes Containerlab operations over an HTTP API. It is me
 
 Typical uses are:
 
-* running the [Containerlab Desktop GUI](containerlab-gui/desktop.md) or [Containerlab Web GUI](containerlab-gui/web.md)
+* running the [Containerlab Desktop GUI](gui/desktop.md) or [Containerlab Web GUI](gui/web.md)
 * integrating Containerlab with automation systems
 * giving a UI or service account a controlled way to deploy, inspect, destroy, and operate labs
 * managing lab files on a shared lab server
@@ -212,6 +212,6 @@ curl -k -H "Authorization: Bearer $TOKEN" https://localhost:8090/api/v1/labs
 
 ## Using it with Containerlab GUI
 
-The [Containerlab Desktop GUI](containerlab-gui/desktop.md) and [Containerlab Web GUI](containerlab-gui/web.md) connect to a reachable API server URL and log in with a Linux user accepted by the API server. For regular use, run `clab-api-server` as a service on the lab host, then point the GUI at that URL.
+The [Containerlab Desktop GUI](gui/desktop.md) and [Containerlab Web GUI](gui/web.md) connect to a reachable API server URL and log in with a Linux user accepted by the API server. For regular use, run `clab-api-server` as a service on the lab host, then point the GUI at that URL.
 
 On macOS and Windows, the API server still needs to run in the Linux environment that owns Docker and the lab files, such as a remote lab host, a Linux VM, a devcontainer, Docker Desktop VM, or OrbStack VM. The GUI can run on the workstation and connect to that API endpoint.

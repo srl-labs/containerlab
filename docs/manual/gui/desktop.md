@@ -4,7 +4,7 @@ The Containerlab Desktop GUI is a standalone application for Linux, macOS, and W
 
 The desktop app does not run labs by itself and does not start `clab-api-server` for you. It connects to a reachable [`clab-api-server`](../api-server.md), and the API server performs the lab operations on the Linux host that owns the container runtime and lab files.
 
-![Containerlab Desktop GUI screenshot](../../images/containerlab-gui/screenshot-web.png)
+![Containerlab Desktop GUI screenshot](../../images/gui/screenshot-web.png)
 
 ## Before you start
 
@@ -44,7 +44,7 @@ The macOS and Windows packages may show OS trust warnings until signing and nota
 
 On first launch, add an API server endpoint and log in with a Linux user accepted by that API server.
 
-![Containerlab Desktop GUI initial endpoint screen](../../images/containerlab-gui/initial_start.png)
+![Containerlab Desktop GUI initial endpoint screen](../../images/gui/initial_start.png)
 
 The desktop app asks for:
 
@@ -56,7 +56,7 @@ The desktop app asks for:
 
 After login, the app stores an endpoint session and uses the API server token for lab operations. Endpoint settings let you add, edit, reconnect, remove, import, and export API server connections.
 
-![Containerlab Desktop GUI endpoint settings](../../images/containerlab-gui/endpoint-settings.png)
+![Containerlab Desktop GUI endpoint settings](../../images/gui/endpoint-settings.png)
 
 ## Multiple endpoints
 

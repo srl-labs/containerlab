@@ -238,7 +238,7 @@ With these steps done[^5], you should be able to click on the "fin" icon next to
 
 ## Containerlab GUI
 
-The [Containerlab GUI](containerlab-gui/index.md#packet-capture) exposes packet capture from interface actions. In VS Code, the capture action can open a Wireshark VNC session in a VS Code webview, avoiding local extcap plugin and `packetflix://` handler setup for that workflow.
+The [Containerlab GUI](gui/index.md#packet-capture) exposes packet capture from interface actions. In VS Code, the capture action can open a Wireshark VNC session in a VS Code webview, avoiding local extcap plugin and `packetflix://` handler setup for that workflow.
 
 ## Examples
 
