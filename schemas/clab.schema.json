@@ -733,11 +733,16 @@
                     "type": "array",
                     "description": "endpoints list",
                     "markdownDescription": "[endpoints](http://localhost:8000/manual/topo-def-file/#links) list",
-                    "minItems": 2,
-                    "items": {
-                        "type": "string",
-                        "pattern": "^\\S+:\\S+$"
-                    },
+                    "prefixItems": [
+                        {
+                            "type": "string",
+                            "pattern": "^\\S+:\\S+$"
+                        },
+                        {
+                            "type": "string",
+                            "pattern": "^\\S+:\\S+$"
+                        }
+                    ],
                     "uniqueItems": true
                 },
                 "mtu": {
@@ -769,6 +774,9 @@
                     "$ref": "#/definitions/link-vars"
                 }
             },
+            "required": [
+                "endpoints"
+            ],
             "additionalProperties": false
         },
         "link-type-veth": {
@@ -2199,6 +2207,17 @@
                 }
             },
             "additionalProperties": false
+        },
+        "debug": {
+            "description": "Boolean flag to enable debug mode for the topology",
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "boolean"
+                }
+            ]
         }
     },
     "additionalProperties": false,

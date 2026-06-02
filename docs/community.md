@@ -26,6 +26,38 @@ For those who cherish IRC in their hearts, a community-led IRC channel `#contain
 
 We are always happy to showcase containerlab and demonstrate its powers. Luckily, the network engineering community has lots of events worldwide, and we participated in some. Below you will find recordings of containerlab talks in different formats and on various venues listed in reverse chronological order[^1].
 
+### CHNOG 3
+
+<small>:material-youtube: [Change with Confidence: Containerlab at Proton](https://www.youtube.com/watch?v=RtJqWRYKf88) · :material-calendar: 2026-05-29</small>
+
+Seeing how Containerlab is being used in production, within the right context, and with the right scope is like seeing your kid grow up and become a successful adult. John Howard, Proton's Head of Network Engineering, shares his experience with Containerlab and how it has helped them to validate their network changes in a safe and controlled manner.
+
+"Stay in bed" - he said - because the changes can now be triaged and beaten to death before they are deployed.
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/RtJqWRYKf88" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+Participants:
+
+* [:material-linkedin:](https://www.linkedin.com/in/jonnyhoward/) John Howard
+
+### RIPE 92
+
+<small>:material-youtube: [Developing Containerlab - an open-source success story](https://ripe92.ripe.net/programme/meeting-plan/sessions/85/JDMLST/) · :material-calendar: 2026-05-20</small>
+
+Containerlab turns 6 this year - with over half a million installs, a rich ecosystem, plenty of write-ups, blog posts and repositories using it, it has become a popular project for creating virtual network topologies.
+
+This talks is not aimed at presenting the tool itself, but rather the development process, and what worked for the project, what did not, and what challenges we faced while developing and maintaining a tool that has to support traditionally closed-source software and engage with a non-software developer userbase.
+
+<video width="100%" controls>
+  <source src="https://ripe92.ripe.net/media/videos/gordon-gidofalvy_developing-containerlab-an-open-source-success-story_side_20260520-094658.mp4" type="video/mp4">
+</video>
+
+Participants:
+
+* [:material-linkedin:](https://www.linkedin.com/in/gidofalvy/) Gordon Gidofalvy
+
 ### Autocon 1
 
 <small>:material-youtube: [When to use and not to use Containerlab?](https://youtu.be/zKHqiWdN91s) · :material-calendar: 2024-05-29</small>
