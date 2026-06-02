@@ -1,7 +1,9 @@
 package links
 
 import (
+	"fmt"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -754,5 +756,64 @@ func TestHasOwnershipAltName(t *testing.T) {
 
 	if hasOwnershipAltName(link) {
 		t.Fatalf("did not expect ownership marker to be detected")
+	}
+}
+
+func TestIsAltNameNotSupportedErr(t *testing.T) {
+	tests := map[string]struct {
+		err  error
+		want bool
+	}{
+		"nil": {
+			err:  nil,
+			want: false,
+		},
+		"unsupported": {
+			err:  syscall.EOPNOTSUPP,
+			want: true,
+		},
+		"wrapped unsupported": {
+			err:  fmt.Errorf("netlink: %w", syscall.EOPNOTSUPP),
+			want: true,
+		},
+		"other error": {
+			err:  syscall.EEXIST,
+			want: false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := isAltNameNotSupportedErr(tt.err)
+			if got != tt.want {
+				t.Fatalf("got %t, want %t", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAddOwnershipAltNameAllowsUnsupportedAltName(t *testing.T) {
+	ep := NewEndpointVeth(NewEndpointGeneric(newFakeNode("node1"), "eth1", nil))
+	link := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{Name: "eth1"},
+	}
+
+	origLinkAddAltName := linkAddAltName
+	defer func() {
+		linkAddAltName = origLinkAddAltName
+	}()
+
+	var gotAltName string
+	linkAddAltName = func(_ netlink.Link, name string) error {
+		gotAltName = name
+		return syscall.EOPNOTSUPP
+	}
+
+	if err := addOwnershipAltName(link, ep); err != nil {
+		t.Fatalf("expected unsupported altname error to be ignored, got %v", err)
+	}
+
+	if gotAltName != ownershipAltName(ep) {
+		t.Fatalf("got altname %q, want %q", gotAltName, ownershipAltName(ep))
 	}
 }
