@@ -1,19 +1,42 @@
 name: 01-downloads
 
 topology:
+  kinds:
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux:25.10
   nodes:
     l1:
-      kind: linux
-      image: alpine:edge
-      license: scp://user@${SCP_SERVER_IP}:2222/config/lic.txt
+      kind: nokia_srlinux
+      license: scp://user@${SCP_SERVER_IP}:2222/config/scp-license.key
+      startup-config: scp://user@${SCP_SERVER_IP}:2222/config/scp-startup.json
       cmd: sleep infinity
     l2:
-      kind: linux
-      image: alpine:edge
-      license: ftp://user:pass@${FTP_SERVER_IP}/lic.txt
+      kind: nokia_srlinux
+      license: ftp://user:pass@${FTP_SERVER_IP}/license.key
+      startup-config: ftp://user:pass@${FTP_SERVER_IP}/startup.json
       cmd: sleep infinity
     l3:
-      kind: linux
-      image: alpine:edge
-      license: http://${HTTP_SERVER_IP}/lic.txt
+      kind: nokia_srlinux
+      license: http://${HTTP_SERVER_IP}/license.key
+      startup-config: http://${HTTP_SERVER_IP}/startup.json
+      cmd: sleep infinity
+    l4:
+      kind: nokia_srlinux
+      license: sftp://user@${SCP_SERVER_IP}:2222/config/sftp-license.key
+      startup-config: sftp://user@${SCP_SERVER_IP}:2222/config/sftp-startup.json
+      cmd: sleep infinity
+    l5:
+      kind: nokia_srlinux
+      license: https://${HTTPS_SERVER_IP}/license.key
+      startup-config: https://${HTTPS_SERVER_IP}/startup.json
+      cmd: sleep infinity
+    l6:
+      kind: nokia_srlinux
+      license: scp://user:${SSH_PASSWORD}@${SSH_PW_SERVER_IP}:2222/config/scp-password-license.key
+      startup-config: scp://user:${SSH_PASSWORD}@${SSH_PW_SERVER_IP}:2222/config/scp-password-startup.json
+      cmd: sleep infinity
+    l7:
+      kind: nokia_srlinux
+      license: sftp://user:${SSH_PASSWORD}@${SSH_PW_SERVER_IP}:2222/config/sftp-password-license.key
+      startup-config: sftp://user:${SSH_PASSWORD}@${SSH_PW_SERVER_IP}:2222/config/sftp-password-startup.json
       cmd: sleep infinity

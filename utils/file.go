@@ -32,6 +32,7 @@ import (
 	"github.com/jlaffaye/ftp"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/pkg/sftp"
 	"github.com/steiler/acls"
 
 	"github.com/charmbracelet/log"
@@ -47,6 +48,7 @@ var (
 	errS3Fetch        = errors.New("failed to fetch s3 resource")
 	errFTPFetch       = errors.New("failed to fetch ftp resource")
 	errSCPFetch       = errors.New("failed to fetch scp resource")
+	errSFTPFetch      = errors.New("failed to fetch sftp resource")
 )
 
 // FileExists returns true if a file referenced by filename exists & accessible.
@@ -166,6 +168,11 @@ func IsFTPURL(s string) bool {
 	return strings.HasPrefix(s, "ftp://")
 }
 
+// IsSFTPURL checks if the URL is an SFTP URL (sftp://user@host/path format).
+func IsSFTPURL(s string) bool {
+	return strings.HasPrefix(s, "sftp://")
+}
+
 // IsSCPURL checks if the URL is an SCP URL (scp://user@host/path format).
 func IsSCPURL(s string) bool {
 	return strings.HasPrefix(s, "scp://")
@@ -173,7 +180,7 @@ func IsSCPURL(s string) bool {
 
 // IsDownloadableURL checks if the path is a URL supported by file download helpers.
 func IsDownloadableURL(s string) bool {
-	return IsHttpURL(s, false) || IsS3URL(s) || IsFTPURL(s) || IsSCPURL(s)
+	return IsHttpURL(s, false) || IsS3URL(s) || IsFTPURL(s) || IsSFTPURL(s) || IsSCPURL(s)
 }
 
 // ParseS3URL parses an S3 URL and returns the bucket and key.
@@ -259,14 +266,14 @@ func (f removeOnCloseFile) Close() error {
 	return err
 }
 
-func copyFileContentsSCP(ctx context.Context, src string) (io.ReadCloser, error) {
+func sshDownloadConfig(src string, fetchErr error) (*url.URL, *ssh.ClientConfig, error) {
 	u, err := url.Parse(src)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	if u.User == nil {
-		return nil, fmt.Errorf("%w: %s: missing username", errSCPFetch, src)
+	if u.User == nil || u.User.Username() == "" {
+		return nil, nil, fmt.Errorf("%w: %s: missing username", fetchErr, src)
 	}
 
 	clientConfig := ssh.ClientConfig{
@@ -289,12 +296,12 @@ func copyFileContentsSCP(ctx context.Context, src string) (io.ReadCloser, error)
 	keyPassphrase := os.Getenv("CLAB_SSH_KEY_PASSPHRASE")
 	if keyPath != "" {
 		if !FileExists(keyPath) {
-			return nil, fmt.Errorf("%w: %s: keyfile %q does not exist", errSCPFetch, src, keyPath)
+			return nil, nil, fmt.Errorf("%w: %s: keyfile %q does not exist", fetchErr, src, keyPath)
 		}
 
 		privateKey, err := os.ReadFile(keyPath)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		var signer ssh.Signer
@@ -304,7 +311,7 @@ func copyFileContentsSCP(ctx context.Context, src string) (io.ReadCloser, error)
 			signer, err = ssh.ParsePrivateKey(privateKey)
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		clientConfig.Auth = append([]ssh.AuthMethod{ssh.PublicKeys(signer)}, clientConfig.Auth...)
@@ -314,13 +321,57 @@ func copyFileContentsSCP(ctx context.Context, src string) (io.ReadCloser, error)
 		clientConfig.Auth = append([]ssh.AuthMethod{ssh.Password(pw)}, clientConfig.Auth...)
 	}
 
-	hostname := u.Hostname()
+	return u, &clientConfig, nil
+}
+
+func sshDownloadAddr(u *url.URL) string {
 	port := "22"
 	if u.Port() != "" {
 		port = u.Port()
 	}
 
-	client := scp.NewClient(net.JoinHostPort(hostname, port), &clientConfig)
+	return net.JoinHostPort(u.Hostname(), port)
+}
+
+func copyFileContentsSFTP(src string) (io.ReadCloser, error) {
+	u, clientConfig, err := sshDownloadConfig(src, errSFTPFetch)
+	if err != nil {
+		return nil, err
+	}
+
+	sshClient, err := ssh.Dial("tcp", sshDownloadAddr(u), clientConfig)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errSFTPFetch, src, err)
+	}
+	defer sshClient.Close()
+
+	client, err := sftp.NewClient(sshClient)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errSFTPFetch, src, err)
+	}
+	defer client.Close()
+
+	r, err := client.Open(u.Path)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errSFTPFetch, src, err)
+	}
+	defer r.Close()
+
+	buf, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return io.NopCloser(bytes.NewBuffer(buf)), nil
+}
+
+func copyFileContentsSCP(ctx context.Context, src string) (io.ReadCloser, error) {
+	u, clientConfig, err := sshDownloadConfig(src, errSCPFetch)
+	if err != nil {
+		return nil, err
+	}
+
+	client := scp.NewClient(sshDownloadAddr(u), clientConfig)
 	if err := client.Connect(); err != nil {
 		return nil, fmt.Errorf("%w: %s: %v", errSCPFetch, src, err)
 	}
@@ -389,17 +440,13 @@ func copyFileContentsFTP(src string) (io.ReadCloser, error) {
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
-// src can be a local path or an http(s), S3, FTP, or SCP URL.
+// src can be a local path or an http(s), S3, FTP, SFTP, or SCP URL.
 func CopyFileContents(ctx context.Context, src string, dst *os.File) (err error) {
 	var in io.ReadCloser
 
 	switch {
 	case IsHttpURL(src, false):
-		client := &http.Client{
-			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-			},
-		}
+		client := NewHTTPClient()
 
 		// download using client
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, http.NoBody)
@@ -423,6 +470,11 @@ func CopyFileContents(ctx context.Context, src string, dst *os.File) (err error)
 		}
 	case IsFTPURL(src):
 		in, err = copyFileContentsFTP(src)
+		if err != nil {
+			return err
+		}
+	case IsSFTPURL(src):
+		in, err = copyFileContentsSFTP(src)
 		if err != nil {
 			return err
 		}
@@ -680,6 +732,7 @@ func NewHTTPClient() *http.Client {
 	// set InsecureSkipVerify to true to allow fetching
 	// files form servers with self-signed certificates
 	tr := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true, // skipcq: GSC-G402
 			MinVersion:         tls.VersionTLS12,
@@ -856,7 +909,7 @@ func ProcessDownloadableAndEmbeddedFile(
 }
 
 // customHostKeyCallback returns a host-key callback that warns on missing or mismatching
-// known_hosts entries but does not block the SCP download.
+// known_hosts entries but does not block the SSH-based download.
 func customHostKeyCallback(knownHostsFiles ...string) ssh.HostKeyCallback {
 	var useFiles []string
 	for _, file := range knownHostsFiles {

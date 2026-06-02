@@ -333,8 +333,8 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	return nodeCfg, nil
 }
 
-// processStartupConfig processes the raw path of the startup-config as it is defined in the .
-// topology file It handles remote files (HTTP/HTTPS/S3), local files and embedded configs.
+// processStartupConfig processes the raw path of the startup-config as it is defined in the
+// topology file. It handles remote files, local files and embedded configs.
 // As a result the `nodeCfg.StartupConfig` will be set to an absPath of the startup config file.
 func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name

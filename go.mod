@@ -35,6 +35,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/pmorjan/kmod v1.1.1
+	github.com/pkg/sftp v1.13.9
 	github.com/scrapli/scrapligo v1.3.2
 	github.com/scrapli/scrapligocfg v1.0.0
 	github.com/spf13/cobra v1.10.2
@@ -111,7 +112,6 @@ require (
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pkg/sftp v1.13.9 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
