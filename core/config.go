@@ -299,10 +299,10 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		nodeCfg.ShortName,
 	)
 
-	// initialize license field
-	p := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
-	// resolve the lic path to an abs path
-	nodeCfg.License = clabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
+	err = c.processNodeLicense(nodeCfg)
+	if err != nil {
+		return nil, err
+	}
 
 	// initialize bind mounts
 	binds, err := c.Config.Topology.GetNodeBinds(nodeName)
@@ -333,72 +333,52 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	return nodeCfg, nil
 }
 
-// processStartupConfig processes the raw path of the startup-config as it is defined in the .
-// topology file It handles remote files (HTTP/HTTPS/S3), local files and embedded configs.
+// processStartupConfig processes the raw path of the startup-config as it is defined in the
+// topology file. It handles remote files, local files and embedded configs.
 // As a result the `nodeCfg.StartupConfig` will be set to an absPath of the startup config file.
 func (c *CLab) processStartupConfig(nodeCfg *clabtypes.NodeConfig) error {
 	// replace __clabNodeName__ magic var in startup-config path with node short name
 	r := c.magicVarReplacer(nodeCfg.ShortName)
 	p := r.Replace(c.Config.Topology.GetNodeStartupConfig(nodeCfg.ShortName))
 
-	// embedded config is a config that is defined as a multi-line string in the topology file
-	// it contains at least one newline
-	isEmbeddedConfig := strings.Count(p, "\n") >= 1
-	// downloadable config starts with http(s):// or s3://
-	isDownloadableConfig := clabutils.IsHttpURL(p, false) || clabutils.IsS3URL(p)
-
-	if isEmbeddedConfig || isDownloadableConfig {
-		switch {
-		case isEmbeddedConfig:
-			log.Debugf("Node %q startup-config is an embedded config: %q", nodeCfg.ShortName, p)
-			// for embedded config we create a file with the name embedded.partial.cfg
-			// as embedded configs are meant to be partial configs
-			absDestFile := c.TopoPaths.StartupConfigDownloadFileAbsPath(
-				nodeCfg.ShortName, "embedded.partial.cfg")
-
-			err := clabutils.CreateFile(absDestFile, p)
-			if err != nil {
-				return err
-			}
-
-			p = absDestFile
-
-		case isDownloadableConfig:
-			log.Debugf("Node %q startup-config is a downloadable config %q", nodeCfg.ShortName, p)
-			// get file name from an URL
-			fname := clabutils.FilenameForURL(context.Background(), p)
-
-			// Deduce the absolute destination filename for the downloaded content
-			dstFileAbsPath := c.TopoPaths.StartupConfigDownloadFileAbsPath(nodeCfg.ShortName, fname)
-
-			log.Debugf(
-				"Fetching startup-config %q for node %q storing at %q",
-				p,
-				nodeCfg.ShortName,
-				dstFileAbsPath,
-			)
-
-			// download the file to tmp location
-			out, cleanup, err := clabutils.CreateFileWithPermissions(
-				dstFileAbsPath,
-				clabconstants.PermissionsDirDefault,
-			)
-			if err != nil {
-				return err
-			}
-			defer cleanup()
-
-			err = clabutils.CopyFileContents(context.Background(), p, out)
-			if err != nil {
-				return err
-			}
-
-			// adjust the NodeConfig by pointing startup-config to the local downloaded file
-			p = dstFileAbsPath
-		}
+	var err error
+	p, err = clabutils.ProcessDownloadableAndEmbeddedFile(
+		context.Background(),
+		nodeCfg.ShortName,
+		p,
+		"embedded.partial.cfg",
+		c.TopoPaths,
+	)
+	if err != nil {
+		return err
 	}
+
 	// resolve the startup config path to an abs path
 	nodeCfg.StartupConfig = clabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
+
+	return nil
+}
+
+// processNodeLicense materializes the license file reference from the topology file.
+func (c *CLab) processNodeLicense(nodeCfg *clabtypes.NodeConfig) error {
+	p := c.Config.Topology.GetNodeLicense(nodeCfg.ShortName)
+	if p == "" {
+		return nil
+	}
+
+	var err error
+	p, err = clabutils.ProcessDownloadableAndEmbeddedFile(
+		context.Background(),
+		nodeCfg.ShortName,
+		p,
+		"embedded.lic",
+		c.TopoPaths,
+	)
+	if err != nil {
+		return err
+	}
+
+	nodeCfg.License = clabutils.ResolvePath(p, c.TopoPaths.TopologyFileDir())
 
 	return nil
 }

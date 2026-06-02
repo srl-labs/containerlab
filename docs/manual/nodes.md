@@ -138,13 +138,35 @@ topology:
 
 Some containerized NOSes require a license to operate or can leverage a license to lift-off limitations of an unlicensed version. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
 
+The license can be provided as:
+
+1. A path to a file that is available on the host machine.
+2. An embedded license blob that is provided as a multiline string.
+3. A remote URL using `https`, `http`, [S3](s3-usage-example.md), `ftp`, `sftp` or `scp`.
+
+```yaml
+topology:
+  nodes:
+    srl1:
+      license: license.key
+    srl2:
+      license: https://licenses.example.com/srl2/license.key
+    srl3:
+      license: sftp://user@sftp.example.com/licenses/srl3/license.key
+    srl4:
+      license: |
+        embedded license content
+```
+
+HTTPS is preferred over HTTP when the remote server supports it. Remote and embedded license files are materialized under containerlab's temp directory using the same download behavior and SSH authentication environment variables described in [remote startup-config](config-mgmt.md#remote).
+
 ### startup-config
 
 It is possible to provide the startup configuration that the node applies on boot for most Containerlab kinds. The startup config can be provided as:
 
 1. A path to a file that is available on the host machine and contains the config blob that the node understands.
 2. An embedded config blob that is provided as a multiline string.
-3. An URL (http(s) or [S3](s3-usage-example.md)) to a file that contains the config blob that the node can apply.
+3. An URL (`https`, `http`, [S3](s3-usage-example.md), `ftp`, `sftp` or `scp`) to a file that contains the config blob that the node can apply.
 
 Read more about the usage of the startup configuration (and other ways to perform configuration management with Containerlab) in the [Configuration Management](config-mgmt.md) section.
 
