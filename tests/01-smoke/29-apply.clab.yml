@@ -25,6 +25,27 @@ topology:
       exec:
         - ip address add 172.17.0.2/24 dev eth1
         - ip -6 address add 2002::172:17:0:2/96 dev eth1
+    n1:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+    n2:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+    srlc:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+    srl1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux
+      startup-config: |
+        set / interface ethernet-1/1 admin-state enable
+        set / interface ethernet-1/1 subinterface 0 admin-state enable
+        set / interface ethernet-1/1 subinterface 0 ipv4 admin-state enable
+        set / interface ethernet-1/1 subinterface 0 ipv4 address 172.31.0.2/24
+        set / network-instance default interface ethernet-1/1.0
 {{- if .addNode }}
     l3:
       kind: linux
@@ -37,8 +58,12 @@ topology:
 
   links:
     - endpoints: ["l1:eth1", "l2:eth1"]
+    - endpoints: ["n1:eth1", "n2:eth1"]
+    - endpoints: ["srlc:eth1", "srl1:e1-1"]
 {{- if .addLink }}
     - endpoints: ["l1:eth2", "l2:eth2"]
+    - endpoints: ["n1:eth2", "n2:eth2"]
+    - endpoints: ["srlc:eth2", "srl1:e1-2"]
 {{- end }}
 {{- if .addSpecialLinks }}
     - type: host

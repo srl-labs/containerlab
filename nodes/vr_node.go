@@ -48,6 +48,11 @@ func NewVRNode(n NodeOverwrites, creds *Credentials, scrapliPlatformName string)
 	return vr
 }
 
+// SupportsLiveLinkApply keeps vrnetlab-backed VM nodes on the restart path for apply changes.
+func (*VRNode) SupportsLiveLinkApply() bool {
+	return false
+}
+
 // Init stub function.
 func (n *VRNode) Init(cfg *clabtypes.NodeConfig, opts ...NodeOption) error {
 	return nil

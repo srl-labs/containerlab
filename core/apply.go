@@ -66,6 +66,10 @@ type applyPlan struct {
 
 var errApplyInterfaceUnowned = errors.New("interface is not marked as containerlab-owned")
 
+type liveLinkApplyNode interface {
+	SupportsLiveLinkApply() bool
+}
+
 func (p *applyPlan) empty() bool {
 	return !p.result.DeployedLab &&
 		len(p.result.AddedNodes) == 0 &&
@@ -478,7 +482,7 @@ func (c *CLab) planApply(
 				continue
 			}
 
-			plan.affectedNodeSet[nodeName] = struct{}{}
+			c.planAffectedApplyNode(plan, nodeName, "added link")
 		}
 	}
 
@@ -522,7 +526,7 @@ func (c *CLab) addStaleApplyEndpoint(
 
 	if _, exists := c.Nodes[key.node]; exists {
 		if _, added := plan.addedNodeSet[key.node]; !added {
-			plan.affectedNodeSet[key.node] = struct{}{}
+			c.planAffectedApplyNode(plan, key.node, "deleted endpoint")
 		}
 	}
 
@@ -688,6 +692,52 @@ func (c *CLab) applyLinkNode(nodeName string) (clablinks.Node, bool) {
 
 func isApplySpecialNode(nodeName string) bool {
 	return nodeName == "host" || nodeName == "mgmt-net"
+}
+
+func (c *CLab) planAffectedApplyNode(
+	plan *applyPlan,
+	nodeName string,
+	change string,
+) {
+	if plan == nil || nodeName == "" {
+		return
+	}
+	if plan.affectedNodeSet == nil {
+		plan.affectedNodeSet = map[string]struct{}{}
+	}
+	if _, planned := plan.affectedNodeSet[nodeName]; planned {
+		return
+	}
+
+	node, exists := c.Nodes[nodeName]
+	if !exists {
+		return
+	}
+
+	if applyNodeRequiresRestart(node) {
+		plan.affectedNodeSet[nodeName] = struct{}{}
+		return
+	}
+
+	log.Info("Applying link change without node restart", "node", nodeName, "change", change)
+}
+
+func applyNodeRequiresRestart(node clabnodes.Node) bool {
+	if node == nil {
+		return false
+	}
+
+	cfg := node.Config()
+	if cfg != nil && len(cfg.Exec) > 0 {
+		return true
+	}
+
+	liveNode, ok := node.(liveLinkApplyNode)
+	if !ok {
+		return true
+	}
+
+	return !liveNode.SupportsLiveLinkApply()
 }
 
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {

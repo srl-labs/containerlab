@@ -52,12 +52,23 @@ Dry-run reports SR-SIM link addition
     Interface Should Not Exist    sros-1    e1-1-c23-3
 
 Apply adds link to existing component-based SR-SIM node
+    ${sros_1_before} =    Node Runtime Identity    sros-1
+    ${sros_a_before} =    Node Runtime Identity    sros-a
     ${rc}    ${output} =    Apply Topology    ${add-link-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Apply summary
     Should Contain    ${output}    added links
     Interface Should Exist    client    eth2
     Interface Should Exist    sros-1    e1-1-c23-3
+    ${sros_1_after} =    Node Runtime Identity    sros-1
+    ${sros_a_after} =    Node Runtime Identity    sros-a
+    Should Be Equal As Strings    ${sros_1_after}    ${sros_1_before}
+    Should Be Equal As Strings    ${sros_a_after}    ${sros_a_before}
+    Wait Until Keyword Succeeds
+    ...    ${recovery-timeout}
+    ...    ${retry-interval}
+    ...    Ping From Client Succeeds
+    ...    10.0.1.2
     Wait Until Keyword Succeeds
     ...    ${recovery-timeout}
     ...    ${retry-interval}
@@ -65,6 +76,8 @@ Apply adds link to existing component-based SR-SIM node
     ...    10.0.2.2
 
 Apply deletes link from existing component-based SR-SIM node
+    ${sros_1_before} =    Node Runtime Identity    sros-1
+    ${sros_a_before} =    Node Runtime Identity    sros-a
     ${rc}    ${output} =    Apply Topology    ${initial-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    deleted endpoints
@@ -72,6 +85,15 @@ Apply deletes link from existing component-based SR-SIM node
     Interface Should Exist    sros-1    e1-1-c23-4
     Interface Should Not Exist    client    eth2
     Interface Should Not Exist    sros-1    e1-1-c23-3
+    ${sros_1_after} =    Node Runtime Identity    sros-1
+    ${sros_a_after} =    Node Runtime Identity    sros-a
+    Should Be Equal As Strings    ${sros_1_after}    ${sros_1_before}
+    Should Be Equal As Strings    ${sros_a_after}    ${sros_a_before}
+    Wait Until Keyword Succeeds
+    ...    ${recovery-timeout}
+    ...    ${retry-interval}
+    ...    Ping From Client Succeeds
+    ...    10.0.1.2
 
 Apply adds SR-SIM node and link
     ${rc}    ${output} =    Apply Topology    ${add-node-vars}
@@ -137,6 +159,14 @@ Node Should Not Exist
     ...    ${runtime} inspect -f '{{.State.Status}}' clab-${lab-name}-${node}
     Log    ${output}
     Should Not Be Equal As Integers    ${rc}    0
+
+Node Runtime Identity
+    [Arguments]    ${node}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} inspect -f '{{.State.Pid}} {{.State.StartedAt}}' clab-${lab-name}-${node}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    RETURN    ${output}
 
 Component Label Should Equal
     [Arguments]    ${node}    ${label}    ${want}

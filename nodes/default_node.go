@@ -216,6 +216,16 @@ func (d *DefaultNode) ShouldSkipLifecycle() bool {
 	return d.Cfg.IsRootNamespaceBased || d.Cfg.AutoRemove
 }
 
+// SupportsLiveLinkApply reports whether apply may add/delete dataplane links without restarting
+// the backing container.
+func (d *DefaultNode) SupportsLiveLinkApply() bool {
+	if d.HostRequirements == nil {
+		return true
+	}
+
+	return !d.HostRequirements.VirtRequired
+}
+
 func (d *DefaultNode) parkingNetNSName() string {
 	return clabutils.ParkingNetnsName(d.Cfg.LongName)
 }

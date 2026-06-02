@@ -9,7 +9,9 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
@@ -21,6 +23,15 @@ import (
 type applyFakeLinkNode struct {
 	name      string
 	endpoints []clablinks.Endpoint
+}
+
+type applyLiveMockNode struct {
+	*clabmocksmocknodes.MockNode
+	supportsLiveApply bool
+}
+
+func (n *applyLiveMockNode) SupportsLiveLinkApply() bool {
+	return n.supportsLiveApply
 }
 
 func (n *applyFakeLinkNode) AddLinkToContainer(
@@ -190,6 +201,131 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 
 			if got := plan.linkNeedsDeploy(link); got != tt.want {
 				t.Fatalf("linkNeedsDeploy() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestApplyNodeRequiresRestart(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		exec         []string
+		hasLiveApply bool
+		supportsLive bool
+		want         bool
+	}{
+		{
+			name:         "live capable node without exec",
+			hasLiveApply: true,
+			supportsLive: true,
+			want:         false,
+		},
+		{
+			name:         "live capable node with exec",
+			exec:         []string{"ip addr add 192.0.2.1/30 dev eth1"},
+			hasLiveApply: true,
+			supportsLive: true,
+			want:         true,
+		},
+		{
+			name:         "live incapable node",
+			hasLiveApply: true,
+			supportsLive: false,
+			want:         true,
+		},
+		{
+			name: "node without live capability",
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+			mockNode.EXPECT().
+				Config().
+				Return(&clabtypes.NodeConfig{ShortName: "n1", Exec: tt.exec}).
+				AnyTimes()
+
+			var node clabnodes.Node = mockNode
+			if tt.hasLiveApply {
+				node = &applyLiveMockNode{
+					MockNode:          mockNode,
+					supportsLiveApply: tt.supportsLive,
+				}
+			}
+
+			if got := applyNodeRequiresRestart(node); got != tt.want {
+				t.Fatalf("applyNodeRequiresRestart() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPlanAffectedApplyNode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		change       string
+		exec         []string
+		supportsLive bool
+		wantAffected bool
+	}{
+		{
+			name:         "added link on live capable node skips restart",
+			change:       "added link",
+			supportsLive: true,
+			wantAffected: false,
+		},
+		{
+			name:         "deleted endpoint on live capable node skips restart",
+			change:       "deleted endpoint",
+			supportsLive: true,
+			wantAffected: false,
+		},
+		{
+			name:         "added link on vm node restarts",
+			change:       "added link",
+			supportsLive: false,
+			wantAffected: true,
+		},
+		{
+			name:         "deleted endpoint on exec node restarts",
+			change:       "deleted endpoint",
+			exec:         []string{"ip addr add 192.0.2.1/30 dev eth1"},
+			supportsLive: true,
+			wantAffected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+			mockNode.EXPECT().
+				Config().
+				Return(&clabtypes.NodeConfig{ShortName: "n1", Exec: tt.exec}).
+				AnyTimes()
+
+			c := &CLab{
+				Nodes: map[string]clabnodes.Node{
+					"n1": &applyLiveMockNode{
+						MockNode:          mockNode,
+						supportsLiveApply: tt.supportsLive,
+					},
+				},
+			}
+			plan := &applyPlan{affectedNodeSet: map[string]struct{}{}}
+
+			c.planAffectedApplyNode(plan, "n1", tt.change)
+
+			_, affected := plan.affectedNodeSet["n1"]
+			if affected != tt.wantAffected {
+				t.Fatalf("affected = %v, want %v", affected, tt.wantAffected)
 			}
 		})
 	}

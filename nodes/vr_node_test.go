@@ -10,6 +10,12 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
+func TestVRNodeDoesNotSupportLiveLinkApply(t *testing.T) {
+	if (&VRNode{}).SupportsLiveLinkApply() {
+		t.Fatal("expected VRNode to require restart on apply link changes")
+	}
+}
+
 func TestVMInterfaceAliases(t *testing.T) { // skipcq: GO-R1005
 	tests := map[string]struct {
 		endpoints           []*clablinks.EndpointVeth
