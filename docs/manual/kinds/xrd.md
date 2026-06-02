@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: cisco_xrd
+kind_display_name: Cisco XRd
 ---
-# Cisco XRd
+# -{{ kind_display_name }}-
 
-[Cisco XRd](https://www.cisco.com/c/en/us/support/routers/ios-xrd/series.html) Network OS is identified with `xrd` or `cisco_xrd` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a node.
+[-{{ kind_display_name }}-](https://www.cisco.com/c/en/us/support/routers/ios-xrd/series.html) Network OS is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+A kind defines a supported feature set and a startup procedure of a node.
 
 XRd comes in two [variants](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-xrd-images-where-can-one-get-them/#xrd-form-factors):
 
@@ -13,12 +16,36 @@ XRd comes in two [variants](https://xrdocs.io/virtual-routing/tutorials/2022-08-
 
 Containerlab supports only the control-plane flavor of XRd, as it allows to build topologies using virtual interfaces, whereas vrouter requires PCI interfaces to be attached to it.
 
-!!!tip
-    Consult with [XRd Tutorials](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-xrd-images-where-can-one-get-them/) series to get an in-depth understanding of XRd requirements and capabilities.
+/// admonition
+    type: tip
+Consult with [XRd Tutorials](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-xrd-images-where-can-one-get-them/) series to get an in-depth understanding of XRd requirements and capabilities.
+///
 
 ## Getting XRd
 
 XRd image is available for download only for users who have an active service account[^1].
+
+## Host server requirements
+
+Cisco [xrdocs](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-setting-up-host-environment-to-run-xrd/#making-suggested-corrections-to-the-host-machine) recommends to increase `inotify.max_user_instances` and `inotify.max_user_watches`.
+
+You can do this by executing the following:
+
+```bash
+sysctl -w fs.inotify.max_user_instances=64000
+sysctl -w fs.inotify.max_user_watches=64000
+```
+
+To make the settings persist reboots append `fs.inotify.max_user_instances=64000` and `fs.inotify.max_user_watches=64000` to `/etc/sysctl.conf`. You can use the following one-liner:
+
+```
+echo -e "fs.inotify.max_user_instances=64000\nfs.inotify.max_user_watches=64000" | sudo tee -a /etc/sysctl.conf
+```
+
+/// admonition
+    type: tip
+If using 10+ XRd nodes, you may need to increase the `fs.inotify.max_user_instances` and/or `fs.inotify.max_user_watches` even higher.
+///
 
 ## Managing XRd nodes
 
@@ -38,10 +65,10 @@ There are several management interfaces supported by XRd nodes:
     `ssh clab@<container-name>`  
     Password: `clab@123`
 === "gNMI"
-    gNMI server runs on `57400` port in the insecure mode (no TLS).  
+    gNMI server runs on `9339` port in the insecure mode (no TLS).  
     Using [gnmic](https://gnmic.openconfig.net) gNMI client as an example:
     ```bash
-    gnmic -a <container-name/node-mgmt-address>:57400 --insecure \
+    gnmic -a <container-name/node-mgmt-address>:9339 --insecure \
       -u clab -p clab@123 \
       capabilities
     ```
@@ -51,8 +78,10 @@ There are several management interfaces supported by XRd nodes:
     ssh clab@<container-name> -p 830 -s netconf
     ```
 
-!!!info
-    Default credentials: `clab:clab@123`
+/// admonition
+    type: info
+Default credentials: `clab:clab@123`
+///
 
 ## Interfaces mapping
 
@@ -85,7 +114,7 @@ For XRd nodes, containerlab exposes the following file layout of the node's lab 
 
 #### Default node configuration
 
-It is possible to launch nodes of `cisco_xrd` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+It is possible to launch nodes of `-{{ kind_code_name }}-` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/xrd/xrd.cfg) and copy it to the config directory of the node.
 
@@ -97,7 +126,7 @@ name: xrd
 topology:
   nodes:
     xrd:
-      kind: cisco_xrd
+      kind: -{{ kind_code_name }}-
 ```
 
 #### User defined config
@@ -109,7 +138,7 @@ name: xrd
 topology:
   nodes:
     xrd:
-      kind: cisco_xrd
+      kind: -{{ kind_code_name }}-
       startup-config: xrd.cfg
 ```
 
@@ -119,14 +148,20 @@ With such topology file containerlab is instructed to take a file `xrd.cfg` from
 
 To provide a user-defined config, take the [default configuration template](https://github.com/srl-labs/containerlab/blob/main/nodes/xrd/xrd.cfg) and add the necessary configuration commands without changing the rest of the file. This will result in proper automatic assignment of IP addresses to the management interface, as well as applying user-defined commands.
 
-!!!tip
-    Check [SR Linux and XRd](../../lab-examples/srl-xrd.md) lab example where startup configuration files are provided to both nodes to see it in action.
+/// admonition
+    type: tip
+Check [SR Linux and XRd](../../lab-examples/srl-xrd.md) lab example where startup configuration files are provided to both nodes to see it in action.
+///
 
 #### Configuration persistency
 
 XRd nodes persist their configuration in `<lab-directory>/<node-name>/xr-storage` directory. When a user commits changes to XRd nodes using one of the management interfaces, they are kept in the configuration DB (but not exposed as a configuration file).
 
 This capability allows users to configure the XRd node, commit the changes, then destroy the lab (without using `--cleanup` flag to keep the lab dir intact) and on a subsequent deploy action, the node will boot with the previously saved configuration.
+
+## Known issues and limitations
+
+Note, that XRd requires elevated number of inotify resources. If you happen to see errors in the xrd bootlog about inotify resources, consult with [this article](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-setting-up-host-environment-to-run-xrd/#inotify-max-user-watches-and-inotify-max-user-instances-settings) on how to increase them.
 
 ## Lab examples
 

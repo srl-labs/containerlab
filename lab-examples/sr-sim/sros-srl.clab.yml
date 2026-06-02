@@ -1,0 +1,38 @@
+name: sr01
+
+topology:
+  nodes:
+    srl:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:25.7
+      startup-config: |
+        set / interface ethernet-1/1 admin-state enable
+        set / interface ethernet-1/1 vlan-tagging false
+        set / interface ethernet-1/1 subinterface 0 type routed
+        set / interface ethernet-1/1 subinterface 0 description "to-sros"
+        set / interface ethernet-1/1 subinterface 0 ipv4 address 10.0.0.1/24
+        set / interface ethernet-1/1 subinterface 0 ipv4 admin-state enable
+        set / interface ethernet-1/1 subinterface 0 ipv6 address 2001:10::1/96
+        set / interface ethernet-1/1 subinterface 0 ipv6 admin-state enable
+        set / network-instance default type default
+        set / network-instance default interface ethernet-1/1.0
+    sros:
+      kind: nokia_srsim
+      image: nokia_srsim:25.7.R1
+      type: sr-1
+      # License is not provided with the lab, ask your Nokia representative
+      license: /opt/nokia/sros/license-sros25.txt
+      startup-config: |
+        /configure card 1 card-type iom-1
+        /configure card 1 mda 1 mda-type me6-100gb-qsfp28
+        /configure card 1 mda 2 mda-type me12-100gb-qsfp28
+        /configure port 1/1/c1 connector breakout c1-100g
+        /configure port 1/1/c1 admin-state enable
+        /configure port 1/1/c1/1 ethernet mode hybrid
+        /configure port 1/1/c1/1 admin-state enable
+        /configure router "Base" interface "to-srl" port 1/1/c1/1:0
+        /configure router "Base" interface "to-srl" ipv4 primary address 10.0.0.2
+        /configure router "Base" interface "to-srl" ipv4 primary prefix-length 24
+        /configure router "Base" interface "to-srl" ipv6 address 2001:10::2 prefix-length 96
+  links:
+    - endpoints: ["srl:ethernet-1/1", "sros:1/1/c1/1"]

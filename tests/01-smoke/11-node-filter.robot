@@ -17,7 +17,7 @@ ${runtime-cli-exec-cmd}     sudo docker exec
 *** Test Cases ***
 Test filter 1
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file} --node-filter node1,node2,node4
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file} --node-filter node1,node2,node4
     ...    shell=True
 
     Log    ${output.stdout}
@@ -30,7 +30,7 @@ Test filter 1
 
     # check that node1 contains only two interfaces eth1 and eth3 and doesn't contain eth2
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=node1 --cmd 'ip link'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=node1 --cmd 'ip link'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -42,7 +42,7 @@ Test filter 1
 
 Test filter 2
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file} --node-filter node1
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file} --node-filter node1
     ...    shell=True
 
     Log    ${output.stdout}
@@ -58,7 +58,7 @@ Test filter 2
 
     # check that node1 contains no interfaces besides management
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=node1 --cmd 'ip link'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=node1 --cmd 'ip link'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -70,5 +70,5 @@ Test filter 2
 
 *** Keywords ***
 Cleanup
-    Process.Run Process    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    Process.Run Process    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
 ...    shell=True

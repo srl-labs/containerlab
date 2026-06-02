@@ -1,0 +1,99 @@
+name: "sros"
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-14s-a:
+      kind: nokia_srsim
+      type: SR-14s
+      startup-config: |
+        /configure    sfm 1 sfm-type sfm2-s
+        /configure    sfm 2 sfm-type sfm2-s
+        /configure    sfm 3 sfm-type sfm2-s
+        /configure    sfm 4 sfm-type sfm2-s
+        /configure    sfm 5 sfm-type sfm2-s
+        /configure    sfm 6 sfm-type sfm2-s
+
+        /configure    card 1 card-type xcm2-14s
+        /configure    card 2 card-type xcm2-14s
+        /configure    card 3 card-type xcm2-14s
+        /configure    card 4 card-type xcm2-14s
+        /configure    card 5 card-type xcm2-14s
+        /configure    card 6 card-type xcm2-14s
+
+        /configure    card 1 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 2 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 3 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 4 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 5 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+        /configure    card 6 mda 1 mda-type x2-s36-800g-qsfpdd-18.0t
+
+        /configure    chassis router chassis-number 1 power-shelf 1 power-shelf-type ps-b10-shelf-ac/hv
+        /configure    chassis router chassis-number 1 power-shelf 1 power-module 1 power-module-type ps-b-ac/hv-6000
+        /configure    chassis router chassis-number 1 power-shelf 1 power-module 3 power-module-type ps-b-ac/hv-6000
+        /configure    chassis router chassis-number 1 power-shelf 1 power-module 4 power-module-type ps-b-ac/hv-6000
+
+
+        /configure    system name "sr-14s-a"
+        /configure    system grpc admin-state enable
+        /configure    system grpc allow-unsecure-connection
+        /configure    system grpc gnmi auto-config-save true
+        /configure    system grpc rib-api admin-state enable
+        /configure    system management-interface netconf auto-config-save true
+        /configure    system management-interface snmp packet-size 9216
+        /configure    system management-interface snmp streaming admin-state enable
+        /configure    system power-management power-zone 1 mode none
+        /configure    system power-management power-zone 1 power-safety-level 0
+      env:
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01
+        NOKIA_SROS_SLOT: A
+    sr-14s-b:
+      kind: nokia_srsim
+      type: SR-14s
+      network-mode: container:sr-14s-a
+      env:
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01
+        NOKIA_SROS_SLOT: B
+    sr-14s-1:
+      kind: nokia_srsim
+      type: SR-14s
+      network-mode: container:sr-14s-a
+      env:
+        NOKIA_SROS_SLOT: 1
+    sr-14s-2:
+      kind: nokia_srsim
+      type: SR-14s
+      network-mode: container:sr-14s-a
+      env:
+        NOKIA_SROS_SLOT: 2
+    sr-14s-3:
+      kind: nokia_srsim
+      type: SR-14s
+      network-mode: container:sr-14s-a
+      env:
+        NOKIA_SROS_SLOT: 3
+    sr-14s-4:
+      kind: nokia_srsim
+      type: SR-14s
+      network-mode: container:sr-14s-a
+      env:
+        NOKIA_SROS_SLOT: 4
+    sr-14s-5:
+      kind: nokia_srsim
+      type: SR-14s
+      network-mode: container:sr-14s-a
+      env:
+        NOKIA_SROS_SLOT: 5
+    sr-14s-6:
+      kind: nokia_srsim
+      type: SR-14s
+      network-mode: container:sr-14s-a
+      env:
+        NOKIA_SROS_SLOT: 6
+
+  links:
+    ## DATA LINKS
+    - endpoints: ["sr-14s-1:1/1/c1/1", "sr-14s-2:2/1/c1/1"]
+    - endpoints: ["sr-14s-1:1/2/c1/1", "sr-14s-2:3/1/c1/1"]

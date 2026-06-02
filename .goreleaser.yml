@@ -1,7 +1,7 @@
 # Copyright 2020 Nokia
 # Licensed under the BSD 3-Clause License.
 # SPDX-License-Identifier: BSD-3-Clause
-
+version: 2
 project_name: containerlab
 builds:
   - id: clab-bin
@@ -11,50 +11,78 @@ builds:
       - -trimpath
       - -tags=podman exclude_graphdriver_btrfs btrfs_noversion exclude_graphdriver_devicemapper exclude_graphdriver_overlay containers_image_openpgp
     ldflags:
-      - -s -w -X github.com/srl-labs/containerlab/cmd.version={{.Version}} -X github.com/srl-labs/containerlab/cmd.commit={{.ShortCommit}} -X github.com/srl-labs/containerlab/cmd.date={{.Date}}
+      - -s -w -X github.com/srl-labs/containerlab/cmd.Version={{.Version}} -X github.com/srl-labs/containerlab/cmd.commit={{.ShortCommit}} -X github.com/srl-labs/containerlab/cmd.date={{.Date}}
     goos:
       - linux
     goarch:
       - amd64
       - arm64
-    # removing upx compression due to https://github.com/srl-labs/containerlab/issues/1264
-    # hooks:
-    #   post:
-    #     - upx "{{ .Path }}"
+    hooks:
+      post:
+        - chmod 4755 "{{ .Path }}" # set SUID bit
+
 dockers:
   - goos: linux
     goarch: amd64
     image_templates:
-      # if version starts with v0.0.0 this is a beta build, for which we don't apply the `latest` tag and apply `beta` tag instead
-      - '{{ $pfx := slice .Version 0 6}}{{- if eq $pfx "v0.0.0"}}ghcr.io/srl-labs/clab:beta{{else}}ghcr.io/srl-labs/clab:latest{{- end }}'
-      - 'ghcr.io/srl-labs/clab:{{ replace .Version "v" ""}}'
+      # if version contains 0.0.0 this is a beta build, for which we don't apply the `latest` tag and apply `beta` tag instead
+      - &amd_latest_image '{{- if contains .Version "0.0.0"}}ghcr.io/srl-labs/clab:beta-amd64{{- else}}{{- if not .IsSnapshot}}ghcr.io/srl-labs/clab:latest-amd64{{- end}}{{- end }}'
+      - &amd_versioned_image 'ghcr.io/srl-labs/clab:{{ replace .Version "v" "" }}-amd64'
+    build_flag_templates:
+      - "--platform=linux/amd64"
+    use: buildx
     dockerfile: goreleaser.dockerfile
+  - goos: linux
+    goarch: arm64
+    image_templates:
+      # if version contains 0.0.0 this is a beta build, for which we don't apply the `latest` tag and apply `beta` tag instead
+      - &arm_latest_image '{{- if contains .Version "0.0.0"}}ghcr.io/srl-labs/clab:beta-arm64{{- else}}{{- if not .IsSnapshot}}ghcr.io/srl-labs/clab:latest-arm64{{- end}}{{- end }}'
+      - &arm_versioned_image 'ghcr.io/srl-labs/clab:{{ replace .Version "v" ""}}-arm64'
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    dockerfile: goreleaser.dockerfile
+    use: buildx
+
+docker_manifests:
+  - name_template: 'ghcr.io/srl-labs/clab:{{ replace .Version "v" "" }}'
+    image_templates:
+      - *amd_versioned_image
+      - *arm_versioned_image
+  # this manifest creates a `latest` or `beta` tag based on the version of the release
+  - name_template: '{{- if contains .Version "0.0.0"}}ghcr.io/srl-labs/clab:beta{{- else}}{{- if not .IsSnapshot}}ghcr.io/srl-labs/clab:latest{{- end}}{{- end }}'
+    image_templates:
+      - *amd_latest_image
+      - *arm_latest_image
+
 archives:
-  - replacements:
-      linux: Linux
+  - name_template: '{{ .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Os }}_{{ .Arch }}'
     files:
       - lab-examples/**/*
-      - templates/**/*
+
 checksum:
   name_template: checksums.txt
+
 snapshot:
   name_template: "{{ .Tag }}-next"
+
 publishers:
   - name: fury.io deb/rpm packages
     ids:
       - containerlab-nfpms # this id belongs to nfpm section and is used to only upload artifacts from nfpm
     dir: "{{ dir .ArtifactPath }}"
     cmd: curl -F package=@{{ .ArtifactName }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/netdevops/
+
 release:
   prerelease: auto
+
 changelog:
   use: github-native
 
 nfpms:
   - id: containerlab-nfpms
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    file_name_template: '{{ .ProjectName }}_{{ replace .Version "v" "" }}_{{ .Os }}_{{ .Arch }}'
     package_name: containerlab
-    maintainer: Roman Dodin <dodin.roman@gmail.com>, Karim Radhouani <medkarimrdi@gmail.com>
+    maintainer: Roman Dodin <dodin.roman@gmail.com>, Markus Vahlenkamp <markus.vahlenkamp@nokia.com>, Karim Radhouani <medkarimrdi@gmail.com>
     homepage: https://containerlab.dev
     description: |
       containerlab deploys containerized networking topologies
@@ -64,12 +92,13 @@ nfpms:
       - rpm
       - deb
       - apk
+      - archlinux
+    scripts:
+      postinstall: ./utils/postinstall.sh
     bindir: /usr/bin
     contents:
       - src: ./lab-examples
         dst: /etc/containerlab/lab-examples
-      - src: ./templates
-        dst: /etc/containerlab/templates
       - src: /usr/bin/containerlab
         dst: /usr/bin/clab
         type: symlink

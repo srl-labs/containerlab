@@ -1,0 +1,16 @@
+name: srlarcos01
+
+topology:
+  nodes:
+    srl:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:25.3.2
+      startup-config: srl.cfg
+
+    arcos:
+      kind: arrcus_arcos
+      image: arcos:4.3.1B
+      startup-config: arcos.cfg
+
+  links:
+    - endpoints: ["srl:e1-1", "arcos:swp1"]

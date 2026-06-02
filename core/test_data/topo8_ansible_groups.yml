@@ -1,0 +1,42 @@
+name: topo8_ansible_groups
+topology:
+  nodes:
+    node1:
+      kind: nokia_srlinux
+      type: ixrd3
+      license: node1.lic
+      binds:
+        - node1.lic:/dst
+      env:
+        env1: val1
+        env2: val2
+      mgmt-ipv4: 172.100.100.11
+      labels:
+        ansible-group: spine
+        nornir-group: spine
+    node2:
+      kind: nokia_srlinux
+      license: node1.lic
+      user: custom
+      mgmt-ipv4: 172.100.100.12
+      labels:
+        node-label: value
+        ansible-group: extra_group
+        nornir-group: extra_group
+
+    node3:
+      kind: nokia_srlinux
+      license: node1.lic
+      user: custom
+      mgmt-ipv4: 172.100.100.13
+      labels:
+        node-label: value
+        ansible-group: extra_group
+        nornir-group: extra_group
+
+    node4:
+      kind: linux
+      image: alpine:3
+      mgmt-ipv4: 172.100.100.14
+      labels:
+        ansible-no-host-var: true

@@ -5,302 +5,103 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/runtime/ignite"
-	"github.com/srl-labs/containerlab/types"
-	"gopkg.in/yaml.v2"
+	clabcore "github.com/srl-labs/containerlab/core"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	cleanup     bool
-	graceful    bool
-	keepMgmtNet bool
-)
+func destroyCmd(o *Options) (*cobra.Command, error) {
+	c := &cobra.Command{
+		Use:   "destroy",
+		Short: "destroy a lab",
+		Long: "destroy a lab based defined by means of the topology definition file\n" +
+			"reference: https://containerlab.dev/cmd/destroy/",
+		Aliases: []string{"des"},
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return destroyFn(cobraCmd, o)
+		},
+	}
 
-// destroyCmd represents the destroy command.
-var destroyCmd = &cobra.Command{
-	Use:     "destroy",
-	Short:   "destroy a lab",
-	Long:    "destroy a lab based defined by means of the topology definition file\nreference: https://containerlab.dev/cmd/destroy/",
-	Aliases: []string{"des"},
-	PreRunE: sudoCheck,
-	RunE:    destroyFn,
+	c.Flags().BoolVarP(
+		&o.Destroy.Cleanup,
+		"cleanup",
+		"c",
+		o.Destroy.Cleanup,
+		"delete lab directory. Cannot be used with node-filter",
+	)
+	c.Flags().BoolVarP(
+		&o.Global.GracefulShutdown,
+		"graceful",
+		"",
+		o.Global.GracefulShutdown,
+		"attempt to stop containers before removing",
+	)
+	c.Flags().BoolVarP(
+		&o.Destroy.All,
+		"all",
+		"a",
+		o.Destroy.All,
+		"destroy all containerlab labs",
+	)
+	c.Flags().BoolVarP(
+		&o.Destroy.AutoApprove,
+		"yes",
+		"y",
+		o.Destroy.AutoApprove,
+		"auto-approve deletion when used with --all (skips confirmation prompt)",
+	)
+	c.Flags().UintVarP(
+		&o.Deploy.MaxWorkers,
+		"max-workers",
+		"",
+		o.Deploy.MaxWorkers,
+		"limit the maximum number of workers deleting nodes",
+	)
+	c.Flags().BoolVarP(
+		&o.Destroy.KeepManagementNetwork,
+		"keep-mgmt-net",
+		"",
+		o.Destroy.KeepManagementNetwork,
+		"do not remove the management network",
+	)
+	c.Flags().StringSliceVarP(
+		&o.Filter.NodeFilter,
+		"node-filter",
+		"",
+		o.Filter.NodeFilter,
+		"comma separated list of nodes to include",
+	)
+
+	return c, nil
 }
 
-func init() {
-	rootCmd.AddCommand(destroyCmd)
-	destroyCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
-	destroyCmd.Flags().BoolVarP(&graceful, "graceful", "", false,
-		"attempt to stop containers before removing")
-	destroyCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	destroyCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
-		"limit the maximum number of workers deleting nodes")
-	destroyCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
-	destroyCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include")
-}
-
-func destroyFn(_ *cobra.Command, _ []string) error {
-	var err error
-	var labs []*clab.CLab
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// topo will hold the reference to the topology file
-	// as the key and the respective lab directory as the referenced value
-	topos := map[string]string{}
-
-	switch {
-	case !all:
-		cnts, err := listContainers(ctx, topo)
-		if err != nil {
-			return err
-		}
-
-		if len(cnts) == 0 {
-			log.Info("no containerlab containers found")
-			return nil
-		}
-
-		topos[topo] = filepath.Dir(cnts[0].Labels[labels.NodeLabDir])
-
-	case all:
-		containers, err := listContainers(ctx, topo)
-		if err != nil {
-			return err
-		}
-
-		if len(containers) == 0 {
-			return fmt.Errorf("no containerlab labs found")
-		}
-		// get unique topo files from all labs
-		for i := range containers {
-			topos[containers[i].Labels[labels.TopoFile]] = filepath.Dir(containers[i].Labels[labels.NodeLabDir])
-		}
+func destroyFn(cobraCmd *cobra.Command, o *Options) error {
+	if o.Destroy.Cleanup && len(o.Filter.NodeFilter) != 0 {
+		return fmt.Errorf("cleanup cannot be used with node-filter")
 	}
 
-	log.Debugf("We got the following topos struct for destroy: %+v", topos)
-	for topo, labdir := range topos {
-		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithTopoPath(topo, varsFile),
-			clab.WithNodeFilter(nodeFilter),
-			clab.WithRuntime(rt,
-				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
-				},
-			),
-			clab.WithDebug(debug),
-		}
-
-		if keepMgmtNet {
-			opts = append(opts, clab.WithKeepMgmtNet())
-		}
-
-		log.Debugf("going through extracted topos for destroy, got a topo file %v and generated opts list %+v", topo, opts)
-		nc, err := clab.NewContainerLab(opts...)
-		if err != nil {
-			return err
-		}
-
-		if labdir != "" {
-			// adjust the labdir. Usually we take the PWD. but now on destroy time,
-			// we might be in a different Dir.
-			err = nc.TopoPaths.SetLabDir(labdir)
-			if err != nil {
-				return err
-			}
-		}
-
-		err = links.SetMgmtNetUnderlayingBridge(nc.Config.Mgmt.Bridge)
-		if err != nil {
-			return err
-		}
-
-		// create management network or use existing one
-		// we call this to populate the nc.cfg.mgmt.bridge variable
-		// which is needed for the removal of the iptables rules
-		if err = nc.CreateNetwork(ctx); err != nil {
-			return err
-		}
-
-		err = nc.ResolveLinks()
-		if err != nil {
-			return err
-		}
-
-		labs = append(labs, nc)
+	if o.Destroy.All && o.Global.TopologyName != "" {
+		return fmt.Errorf("--all and --name should not be used together")
 	}
 
-	var errs []error
-	for _, clab := range labs {
-		err = destroyLab(ctx, clab)
-		if err != nil {
-			log.Errorf("Error occurred during the %s lab deletion: %v", clab.Config.Name, err)
-			errs = append(errs, err)
-		}
+	clabOptions := o.ToClabOptions()
 
-		if cleanup {
-			err = os.RemoveAll(clab.TopoPaths.TopologyLabDir())
-			if err != nil {
-				log.Errorf("error deleting lab directory: %v", err)
-			}
-		}
-	}
+	clabOptions = append(
+		clabOptions,
+		// during destroy we don't want to check bind paths
+		// as it is irrelevant for this command.
+		clabcore.WithSkippedBindsPathsCheck(),
+	)
 
-	if len(errs) != 0 {
-		return fmt.Errorf("error(s) occurred during the deletion. Check log messages")
-	}
-
-	return nil
-}
-
-func destroyLab(ctx context.Context, c *clab.CLab) (err error) {
-	containers, err := c.ListNodesContainersIgnoreNotFound(ctx)
+	clab, err := clabcore.NewContainerLab(clabOptions...)
 	if err != nil {
 		return err
 	}
 
-	if len(containers) == 0 {
-		return nil
-	}
-
-	if maxWorkers == 0 {
-		maxWorkers = uint(len(c.Nodes))
-	}
-
-	// a set of workers that do not support concurrency
-	serialNodes := make(map[string]struct{})
-	for _, n := range c.Nodes {
-		if n.GetRuntime().GetName() == ignite.RuntimeName {
-			serialNodes[n.Config().LongName] = struct{}{}
-			// decreasing the num of maxWorkers as they are used for concurrent nodes
-			maxWorkers = maxWorkers - 1
-		}
-	}
-
-	// Serializing ignite workers due to busy device error
-	if _, ok := c.Runtimes[ignite.RuntimeName]; ok {
-		maxWorkers = 1
-	}
-
-	// populating the nspath for the nodes
-	for _, n := range c.Nodes {
-		nsp, err := n.GetRuntime().GetNSPath(ctx, n.Config().LongName)
-		if err != nil {
-			continue
-		}
-		n.Config().NSPath = nsp
-	}
-
-	log.Infof("Destroying lab: %s", c.Config.Name)
-	c.DeleteNodes(ctx, maxWorkers, serialNodes)
-
-	log.Info("Removing containerlab host entries from /etc/hosts file")
-	err = clab.DeleteEntriesFromHostsFile(c.Config.Name)
-	if err != nil {
-		return fmt.Errorf("error while trying to clean up the hosts file: %w", err)
-	}
-
-	log.Info("Removing ssh config for containerlab nodes")
-	err = c.RemoveSSHConfig(c.TopoPaths)
-	if err != nil {
-		log.Errorf("failed to remove ssh config file: %v", err)
-	}
-
-	// delete lab management network
-	if c.Config.Mgmt.Network != "bridge" && !keepMgmtNet {
-		log.Debugf("Calling DeleteNet method. *CLab.Config.Mgmt value is: %+v", c.Config.Mgmt)
-		if err = c.GlobalRuntime().DeleteNet(ctx); err != nil {
-			// do not log error message if deletion error simply says that such network doesn't exist
-			if err.Error() != fmt.Sprintf("Error: No such network: %s", c.Config.Mgmt.Network) {
-				log.Error(err)
-			}
-		}
-	}
-
-	// delete container network namespaces symlinks
-	for _, node := range c.Nodes {
-		err = node.DeleteNetnsSymlink()
-		if err != nil {
-			return fmt.Errorf("error while deleting netns symlinks: %w", err)
-		}
-	}
-
-	return err
-}
-
-// listContainers lists containers belonging to a certain topo if topo file path is specified
-// otherwise lists all containerlab containers.
-func listContainers(ctx context.Context, topo string) ([]runtime.GenericContainer, error) {
-	runtimeConfig := &runtime.RuntimeConfig{
-		Debug:            debug,
-		Timeout:          timeout,
-		GracefulShutdown: graceful,
-	}
-
-	opts := []clab.ClabOption{
-		clab.WithRuntime(rt, runtimeConfig),
-		clab.WithTimeout(timeout),
-	}
-
-	c, err := clab.NewContainerLab(opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	// filter to list all containerlab containers
-	// it is overwritten if topo file is provided
-	filter := []*types.GenericFilter{{
-		FilterType: "label",
-		Field:      labels.Containerlab,
-		Operator:   "exists",
-	}}
-
-	// when topo file is provided, filter containers by lab name
-	if topo != "" {
-		topo, err = c.ProcessTopoPath(topo)
-		if err != nil {
-			return nil, err
-		}
-
-		// read topo yaml file to get the lab name
-		topo, err := os.ReadFile(topo)
-		if err != nil {
-			return nil, err
-		}
-
-		config := &clab.Config{}
-
-		err = yaml.Unmarshal(topo, config)
-		if err != nil {
-			return nil, fmt.Errorf("%w, failed to parse topology file", err)
-		}
-
-		filter = []*types.GenericFilter{{
-			FilterType: "label",
-			Field:      labels.Containerlab,
-			Operator:   "=",
-			Match:      config.Name,
-		}}
-	}
-
-	containers, err := c.ListContainers(ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-
-	return containers, nil
+	return clab.Destroy(cobraCmd.Context(), o.ToClabDestroyOptions()...)
 }

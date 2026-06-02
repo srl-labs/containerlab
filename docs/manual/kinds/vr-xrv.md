@@ -1,17 +1,20 @@
 ---
 search:
   boost: 4
+kind_code_name: cisco_xrv
+kind_display_name: Cisco XRv
 ---
-# Cisco XRv
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- virtualized router is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-Cisco XRv virtualized router is identified with `cisco_xrv` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
-Cisco XRv nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI (if available) services enabled.
+-{{ kind_display_name }}- nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI (if available) services enabled.
 
 !!!warning
     XRv image is discontinued by Cisco and superseded by XRv 9000 image. It was added to containerlab because the image is lightweight, compared to XRv9k. If recent features are needed, use [Cisco XRv9k](vr-xrv9k.md) kind.
 
-## Managing Cisco XRv nodes
+## Managing -{{ kind_display_name }}- nodes
 
 !!!note
     Containers with XRv inside will take ~5min to fully boot.  
@@ -35,7 +38,7 @@ Cisco XRv node launched with containerlab can be managed via the following inter
     ssh clab@<container-name> -p 830 -s netconf
     ```
 === "gNMI"
-    using the best in class [gnmic](https://gnmic.kmrd.dev) gNMI client as an example:
+    using the best in class [gnmic](https://gnmic.openconfig.net/) gNMI client as an example:
     ```bash
     gnmic -a <container-name/node-mgmt-address> --insecure \
     -u clab -p clab@123 \
@@ -44,6 +47,13 @@ Cisco XRv node launched with containerlab can be managed via the following inter
 
 !!!info
     Default user credentials: `clab:clab@123`
+
+## Interface naming
+
+Cisco XRv nodes use the interface naming convention `GigabitEthernet0/0/0/X` (or `Gi0/0/0/X`, both are accepted), where X denotes the port number.
+
+!!!info
+    Data port numbering starts at `0`, like one would normally expect in the NOS.
 
 ## Interfaces mapping
 
@@ -71,7 +81,7 @@ It is possible to make XRv nodes boot up with a user-defined startup-config inst
 topology:
   nodes:
     node:
-      kind: cisco_xrv
+      kind: -{{ kind_code_name }}-
       startup-config: myconfig.txt
 ```
 

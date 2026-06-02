@@ -8,29 +8,44 @@ import (
 	"context"
 	"fmt"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var kindnames = []string{"sonic-vs"}
+const (
+	generateable     = true
+	generateIfFormat = "eth%d"
+
+	scrapliPlatformName = "sonic"
+)
+
+var kindNames = []string{"sonic-vs"}
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(nil, generateNodeAttributes, platformAttrs)
+
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(sonic)
-	}, nil)
+	}, nrea)
 }
 
 type sonic struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (s *sonic) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	s.DefaultNode = *clabnodes.NewDefaultNode(s)
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -42,25 +57,25 @@ func (s *sonic) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (s *sonic) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+func (s *sonic) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 	return nil
 }
 
-func (s *sonic) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+func (s *sonic) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Debugf("Running postdeploy actions for sonic-vs '%s' node", s.Cfg.ShortName)
 
-	cmd, _ := exec.NewExecCmdFromString("supervisord")
+	cmd, _ := clabexec.NewExecCmdFromString("supervisord")
 	err := s.RunExecNotWait(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)
 	}
 
-	cmd, _ = exec.NewExecCmdFromString("supervisorctl start bgpd")
+	cmd, _ = clabexec.NewExecCmdFromString("supervisorctl start bgpd")
 	err = s.RunExecNotWait(ctx, cmd)
 	if err != nil {
 		return fmt.Errorf("failed post-deploy node %q: %w", s.Cfg.ShortName, err)

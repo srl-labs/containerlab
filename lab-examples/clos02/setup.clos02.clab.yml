@@ -3,7 +3,7 @@ name: clos02
 mgmt:
   network: br-clos02
   ipv4-subnet: 172.100.100.0/24
-  ipv6-subnet: 2001:172:100:100::0/64
+  ipv6-subnet: 3fff:172:100:100::0/64
 
 topology:
   kinds:
@@ -15,68 +15,68 @@ topology:
     leaf1:
       kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.2
-      mgmt-ipv6: 2001:172:100:100::2
+      mgmt-ipv6: 3fff:172:100:100::2
     leaf2:
       kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.3
-      mgmt-ipv6: 2001:172:100:100::3
+      mgmt-ipv6: 3fff:172:100:100::3
     leaf3:
       kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.4
-      mgmt-ipv6: 2001:172:100:100::4
+      mgmt-ipv6: 3fff:172:100:100::4
     leaf4:
       kind: nokia_srlinux
       mgmt-ipv4: 172.100.100.5
-      mgmt-ipv6: 2001:172:100:100::5
+      mgmt-ipv6: 3fff:172:100:100::5
 
     spine1:
       kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.6
-      mgmt-ipv6: 2001:172:100:100::6
+      mgmt-ipv6: 3fff:172:100:100::6
     spine2:
       kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.7
-      mgmt-ipv6: 2001:172:100:100::7
+      mgmt-ipv6: 3fff:172:100:100::7
     spine3:
       kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.8
-      mgmt-ipv6: 2001:172:100:100::8
+      mgmt-ipv6: 3fff:172:100:100::8
     spine4:
       kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.9
-      mgmt-ipv6: 2001:172:100:100::9
+      mgmt-ipv6: 3fff:172:100:100::9
 
     superspine1:
       kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.10
-      mgmt-ipv6: 2001:172:100:100::10
+      mgmt-ipv6: 3fff:172:100:100::10
     superspine2:
       kind: nokia_srlinux
       type: ixrd3
       mgmt-ipv4: 172.100.100.11
-      mgmt-ipv6: 2001:172:100:100::11
+      mgmt-ipv6: 3fff:172:100:100::11
 
     client1:
       kind: linux
       mgmt-ipv4: 172.100.100.12
-      mgmt-ipv6: 2001:172:100:100::12
+      mgmt-ipv6: 3fff:172:100:100::12
     client2:
       kind: linux
       mgmt-ipv4: 172.100.100.13
-      mgmt-ipv6: 2001:172:100:100::13
+      mgmt-ipv6: 3fff:172:100:100::13
     client3:
       kind: linux
       mgmt-ipv4: 172.100.100.14
-      mgmt-ipv6: 2001:172:100:100::14
+      mgmt-ipv6: 3fff:172:100:100::14
     client4:
       kind: linux
       mgmt-ipv4: 172.100.100.15
-      mgmt-ipv6: 2001:172:100:100::15
+      mgmt-ipv6: 3fff:172:100:100::15
 
   links:
     - endpoints: ["leaf1:e1-1", "spine1:e1-1"]

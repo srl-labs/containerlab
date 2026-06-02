@@ -3,15 +3,17 @@ package links
 import (
 	"context"
 	"fmt"
+	"sync"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
 type LinkMgmtNetRaw struct {
-	LinkCommonParams `yaml:",inline"`
+	LinkCommonParams `             yaml:",inline"`
 	HostInterface    string       `yaml:"host-interface"`
 	Endpoint         *EndpointRaw `yaml:"endpoint"`
 }
@@ -45,14 +47,15 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 		LinkCommonParams: r.LinkCommonParams,
 	}
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	mgmtBridgeNode := GetMgmtBrLinkNode()
 
-	bridgeEp := &EndpointBridge{
-		EndpointGeneric: *NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link),
-	}
+	bridgeEp := NewEndpointBridge(NewEndpointGeneric(mgmtBridgeNode, r.HostInterface, link), true)
 
 	var err error
-	bridgeEp.MAC, err = utils.GenMac(ClabOUI)
+	bridgeEp.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 	if err != nil {
 		return nil, err
 	}
@@ -66,13 +69,11 @@ func (r *LinkMgmtNetRaw) Resolve(params *ResolveParams) (Link, error) {
 	link.Endpoints = []Endpoint{bridgeEp, contEp}
 
 	// add link to respective endpoint nodes
-	bridgeEp.GetNode().AddLink(link)
-	bridgeEp.GetNode().AddEndpoint(bridgeEp)
-	contEp.GetNode().AddLink(link)
+	_ = bridgeEp.GetNode().AddEndpoint(bridgeEp)
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -96,13 +97,16 @@ func mgmtNetLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkMgmtNetRaw
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
 }
 
-var _mgmtBrLinkMgmtBrInstance *mgmtBridgeLinkNode
+var (
+	_mgmtBrLinkMgmtBrInstance *mgmtBridgeLinkNode
+	_mgmtBrLinkOnce           sync.Once
+)
 
 // mgmtBridgeLinkNode is a special node that represents the mgmt bridge node
 // that is used when mgmt-net link is defined in the topology.
@@ -114,15 +118,19 @@ func (*mgmtBridgeLinkNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeBridge
 }
 
-func (b *mgmtBridgeLinkNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (b *mgmtBridgeLinkNode) AddLinkToContainer(
+	_ context.Context,
+	link netlink.Link,
+	f func(ns.NetNS) error,
+) error {
 	// retrieve the namespace handle
-	ns, err := ns.GetCurrentNS()
+	curNamespace, err := ns.GetCurrentNS()
 	if err != nil {
 		return err
 	}
 
 	// get the bridge as netlink.Link
-	br, err := utils.LinkByNameOrAlias(b.shortname)
+	br, err := netlink.LinkByName(b.shortname)
 	if err != nil {
 		return err
 	}
@@ -134,24 +142,24 @@ func (b *mgmtBridgeLinkNode) AddLinkToContainer(ctx context.Context, link netlin
 	}
 
 	// execute the given function
-	return ns.Do(f)
+	return curNamespace.Do(f)
 }
 
 func getMgmtBrLinkNode() *mgmtBridgeLinkNode {
-	if _mgmtBrLinkMgmtBrInstance == nil {
+	_mgmtBrLinkOnce.Do(func() {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
-			log.Error(err)
+			log.Errorf("failed to get current network namespace: %v", err)
+			return
 		}
-		nspath := currns.Path()
 		_mgmtBrLinkMgmtBrInstance = &mgmtBridgeLinkNode{
 			GenericLinkNode: GenericLinkNode{
 				shortname: "mgmt-net",
 				endpoints: []Endpoint{},
-				nspath:    nspath,
+				nspath:    currns.Path(),
 			},
 		}
-	}
+	})
 	return _mgmtBrLinkMgmtBrInstance
 }
 
@@ -159,7 +167,7 @@ func GetMgmtBrLinkNode() Node { // skipcq: RVV-B0001
 	return getMgmtBrLinkNode()
 }
 
-func SetMgmtNetUnderlayingBridge(bridge string) error {
+func SetMgmtNetUnderlyingBridge(bridge string) error {
 	getMgmtBrLinkNode().GenericLinkNode.shortname = bridge
 	return nil
 }

@@ -10,28 +10,28 @@ Suite Teardown      Run Keyword    Teardown
 *** Variables ***
 ${lab-name}                 internal-ca
 ${topo}                     ${CURDIR}/10-${lab-name}.clab.yml
-${ca-keysize}               512
-${l1-keysize}               512
+${ca-keysize}               1024
+${l1-keysize}               1024
 ${l1-validity-duration}     25 hours
-${l2-keysize}               1024
+${l2-keysize}               2048
 ${ca-validity-duration}     5 hours
 
 # cert files
-${ca-cert-key}              ./clab-${lab-name}/.tls/ca/ca.key
-${ca-cert-file}             ./clab-${lab-name}/.tls/ca/ca.pem
-${l1-key}                   ./clab-${lab-name}/.tls/l1/l1.key
-${l1-cert}                  ./clab-${lab-name}/.tls/l1/l1.pem
-${l2-key}                   ./clab-${lab-name}/.tls/l2/l2.key
-${l2-cert}                  ./clab-${lab-name}/.tls/l2/l2.pem
-${l3-key}                   ./clab-${lab-name}/.tls/l3/l3.key
-${l3-cert}                  ./clab-${lab-name}/.tls/l3/l3.pem
+${ca-cert-key}              ${CURDIR}/clab-${lab-name}/.tls/ca/ca.key
+${ca-cert-file}             ${CURDIR}/clab-${lab-name}/.tls/ca/ca.pem
+${l1-key}                   ${CURDIR}/clab-${lab-name}/.tls/l1/l1.key
+${l1-cert}                  ${CURDIR}/clab-${lab-name}/.tls/l1/l1.pem
+${l2-key}                   ${CURDIR}/clab-${lab-name}/.tls/l2/l2.key
+${l2-cert}                  ${CURDIR}/clab-${lab-name}/.tls/l2/l2.pem
+${l3-key}                   ${CURDIR}/clab-${lab-name}/.tls/l3/l3.key
+${l3-cert}                  ${CURDIR}/clab-${lab-name}/.tls/l3/l3.pem
 
 
 *** Test Cases ***
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
@@ -104,9 +104,10 @@ Verify l2 extra SANs
     Should Contain    ${certificate_output}    DNS:my.text.fqdn
     Should Contain    ${certificate_output}    IP Address:192.168.33.44
 
+
 *** Keywords ***
 Teardown
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${topo} --cleanup
 
 Get Certificate Date
     [Arguments]    ${certificate_output}    ${type}

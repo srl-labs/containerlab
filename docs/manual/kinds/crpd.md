@@ -1,12 +1,21 @@
 ---
 search:
   boost: 4
+kind_code_name: juniper_crpd
+kind_display_name: Juniper cRPD
 ---
-# Juniper cRPD
-
-[Juniper cRPD](https://www.juniper.net/documentation/us/en/software/crpd/crpd-deployment/topics/concept/understanding-crpd.html) is identified with `crpd` or `juniper_crpd` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `crpd` node.
+# -{{ kind_display_name }}-
+[-{{ kind_display_name }}-](https://www.juniper.net/documentation/us/en/software/crpd/crpd-deployment/topics/concept/understanding-crpd.html) is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+A kind defines a supported feature set and a startup procedure of a `crpd` node.
 
 cRPD nodes launched with containerlab comes up pre-provisioned with SSH service enabled, `root` user created and NETCONF enabled.
+
+Once downloaded, load the Docker image:
+
+```bash
+# load cRPD container image, shows up as crpd:24.2R1.14 in docker images
+sudo docker load -i junos-routing-crpd-docker-24.2R1.14.tgz
+```
 
 ## Managing cRPD nodes
 
@@ -64,7 +73,7 @@ When containerlab launches cRPD node, it will assign IPv4/6 address to the `eth0
         link/ether 02:42:ac:14:14:03 brd ff:ff:ff:ff:ff:ff link-netnsid 0
         inet 172.20.20.3/24 brd 172.20.20.255 scope global eth0
         valid_lft forever preferred_lft forever
-        inet6 2001:172:20:20::3/80 scope global nodad
+        inet6 3fff:172:20:20::3/80 scope global nodad
         valid_lft forever preferred_lft forever
         inet6 fe80::42:acff:fe14:1403/64 scope link
         valid_lft forever preferred_lft forever
@@ -92,7 +101,7 @@ When containerlab launches cRPD node, it will assign IPv4/6 address to the `eth0
                         INET6 fe80::b4d3:63ff:fef1:cb7b
     eth0             Up    ISO   enabled
                         INET  172.20.20.3
-                        INET6 2001:172:20:20::3
+                        INET6 3fff:172:20:20::3
                         INET6 fe80::42:acff:fe14:1403
     ```
     As you see, the management interface `eth0` inherits the IP address that docker assigned to cRPD container.
@@ -101,7 +110,7 @@ When containerlab launches cRPD node, it will assign IPv4/6 address to the `eth0
 
 ### Node configuration
 
-cRPD nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `crpd` kind with a basic "empty" config or to provide a custom config file that will be used as a startup config instead.
+cRPD nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `-{{ kind_code_name }}-` kind with a basic "empty" config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
 
@@ -115,7 +124,7 @@ name: crpd
 topology:
   nodes:
     crpd:
-      kind: crpd
+      kind: -{{ kind_code_name }}-
 ```
 
 The generated config will be saved by the path `clab-<lab_name>/<node-name>/config/juniper.conf`. Using the example topology presented above, the exact path to the config will be `clab-crpd/crpd/config/juniper.conf`.
@@ -129,7 +138,7 @@ name: crpd_lab
 topology:
   nodes:
     crpd:
-      kind: crpd
+      kind: -{{ kind_code_name }}-
       startup-config: myconfig.conf
 ```
 
@@ -153,7 +162,7 @@ The `root` user is created already with the `clab123` password.
 
 ### File mounts
 
-When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `crpd` kind containerlab creates `config` and `log` directories for each crpd node and mounts these folders by `/config` and `/var/log` paths accordingly.
+When a user starts a lab, containerlab creates a node directory for storing [configuration artifacts](../conf-artifacts.md). For `-{{ kind_code_name }}-` kind containerlab creates `config` and `log` directories for each cRPD node and mounts these folders by `/config` and `/var/log` paths accordingly.
 
 ```
 ❯ tree clab-crpd/crpd

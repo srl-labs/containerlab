@@ -5,6 +5,7 @@
 package utils
 
 import (
+	"archive/tar"
 	"bufio"
 	"bytes"
 	"context"
@@ -22,15 +23,19 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/steiler/acls"
-
 	"github.com/bramvdbogaerde/go-scp"
 	"github.com/jlaffaye/ftp"
-	log "github.com/sirupsen/logrus"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/steiler/acls"
+
+	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/knownhosts"
@@ -39,6 +44,9 @@ import (
 var (
 	errNonRegularFile = errors.New("non-regular file")
 	errHTTPFetch      = errors.New("failed to fetch http(s) resource")
+	errS3Fetch        = errors.New("failed to fetch s3 resource")
+	errFTPFetch       = errors.New("failed to fetch ftp resource")
+	errSCPFetch       = errors.New("failed to fetch scp resource")
 )
 
 // FileExists returns true if a file referenced by filename exists & accessible.
@@ -67,9 +75,9 @@ func DirExists(filename string) bool {
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherwise, copy the file contents from src to dst.
 // mode is the desired target file permissions, e.g. "0644".
-func CopyFile(src, dst string, mode os.FileMode) (err error) {
+func CopyFile(ctx context.Context, src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if !IsDownloadableUri(src) {
+	if !IsDownloadableURL(src) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -78,7 +86,12 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		if !sfi.Mode().IsRegular() {
 			// cannot copy non-regular files (e.g., directories,
 			// symlinks, devices, etc.)
-			return fmt.Errorf("file copy failed: source file %s (%q): %w", sfi.Name(), sfi.Mode().String(), errNonRegularFile)
+			return fmt.Errorf(
+				"file copy failed: source file %s (%q): %w",
+				sfi.Name(),
+				sfi.Mode().String(),
+				errNonRegularFile,
+			)
 		}
 	}
 
@@ -98,7 +111,13 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		}
 	}
 
-	return CopyFileContents(src, dst, mode)
+	out, cleanup, err := CreateFileWithPermissions(dst, mode)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	return CopyFileContents(ctx, src, out)
 }
 
 // IsHttpURL checks if the url is a downloadable HTTP URL.
@@ -112,9 +131,20 @@ func IsHttpURL(s string, allowSchemaless bool) bool {
 		return false
 	}
 
-	//
+	// if schemaless is not allowed and the string does not contain a schema, it is not an URL
 	if !allowSchemaless && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
 		return false
+	}
+
+	// if schemaless is allowed and the string does not contain a schema, but contains a dot
+	// in any a non-domain portion then it is not a valid URL
+	if allowSchemaless && !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
+		split := strings.SplitN(s, "/", 2)
+		if len(split) > 1 {
+			if strings.Contains(split[1], ".") {
+				return false
+			}
+		}
 	}
 
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
@@ -126,109 +156,125 @@ func IsHttpURL(s string, allowSchemaless bool) bool {
 	return err == nil && u.Host != ""
 }
 
-func IsFtpUri(s string) bool {
+// IsS3URL checks if the URL is an S3 URL (s3://bucket/key format).
+func IsS3URL(s string) bool {
+	return strings.HasPrefix(s, "s3://")
+}
+
+// IsFTPURL checks if the URL is an FTP URL (ftp://host/path format).
+func IsFTPURL(s string) bool {
 	return strings.HasPrefix(s, "ftp://")
 }
 
-func IsScpUri(s string) bool {
+// IsSCPURL checks if the URL is an SCP URL (scp://user@host/path format).
+func IsSCPURL(s string) bool {
 	return strings.HasPrefix(s, "scp://")
 }
 
-func IsDownloadableUri(s string) bool {
-	return IsHttpURL(s, false) || IsFtpUri(s) || IsScpUri(s)
+// IsDownloadableURL checks if the path is a URL supported by file download helpers.
+func IsDownloadableURL(s string) bool {
+	return IsHttpURL(s, false) || IsS3URL(s) || IsFTPURL(s) || IsSCPURL(s)
 }
 
-// CopyFileContents copies the contents of the file named src to the file named
-// by dst. The file will be created if it does not already exist. If the
-// destination file exists, all it's contents will be replaced by the contents
-// of the source file.
-// src can be an http(s) URL as well.
-func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
-	var in io.ReadCloser
-
-	switch {
-	case IsHttpURL(src, false):
-		client := NewHTTPClient()
-
-		// download using client
-		resp, err := client.Get(src)
-		if err != nil || resp.StatusCode != 200 {
-			return fmt.Errorf("%w: %s", errHTTPFetch, src)
-		}
-
-		in = resp.Body
-	case IsFtpUri(src):
-		in, err = processFtpUri(src)
-		if err != nil {
-			return fmt.Errorf("failure retrieving file %s: %v", src, err)
-		}
-	case IsScpUri(src):
-		in, err = processScpUri(src)
-		if err != nil {
-			return fmt.Errorf("failure retrieving file %s: %v", src, err)
-		}
-	default:
-		in, err = os.Open(src)
-		if err != nil {
-			return fmt.Errorf("failure retrieving file %s: %v", src, err)
-		}
+// ParseS3URL parses an S3 URL and returns the bucket and key.
+func ParseS3URL(s3URL string) (bucket, key string, err error) {
+	if !IsS3URL(s3URL) {
+		return "", "", fmt.Errorf("not an S3 URL: %s", s3URL)
 	}
-	defer in.Close() // skipcq: GO-S2307
 
-	// create directories if needed, since we promise to create the file
-	// if it doesn't exist
-	err = os.MkdirAll(filepath.Dir(dst), 0750)
+	u, err := url.Parse(s3URL)
 	if err != nil {
-		return err
+		return "", "", err
 	}
 
-	out, err := os.Create(dst)
+	bucket = u.Host
+	key = strings.TrimPrefix(u.Path, "/")
+
+	if bucket == "" || key == "" {
+		return "", "", fmt.Errorf("invalid S3 URL format: %s", s3URL)
+	}
+
+	return bucket, key, nil
+}
+
+func copyFileContentsS3(src string) (io.ReadCloser, error) {
+	bucket, key, err := ParseS3URL(src)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = out.Chmod(mode)
+	// Get region from environment, default to us-east-1
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	// Create credential chain that mimics AWS SDK behavior
+	credProviders := []credentials.Provider{
+		&credentials.EnvAWS{},             // 1. Environment variables
+		&credentials.FileAWSCredentials{}, // 2. ~/.aws/credentials (default profile)
+		&credentials.IAM{
+			Client: &http.Client{Timeout: 10 * time.Second},
+		}, // 3. IAM role (EC2/ECS/Lambda)
+	}
+
+	// Create MinIO client with chained credentials
+	client, err := minio.New("s3.amazonaws.com", &minio.Options{
+		Creds:  credentials.NewChainCredentials(credProviders),
+		Secure: true,
+		Region: region,
+	})
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to create S3 client: %w", err)
 	}
 
-	defer func() {
-		cerr := out.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-
-	if _, err = io.Copy(out, in); err != nil {
-		return err
+	// Get object from S3
+	object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
 	}
 
-	err = out.Sync()
+	// Verify object exists by reading its stats
+	_, err = object.Stat()
+	if err != nil {
+		object.Close()
+		return nil, fmt.Errorf(
+			"%w: %s: object not found or access denied: %v",
+			errS3Fetch,
+			src,
+			err,
+		)
+	}
 
+	return object, nil
+}
+
+type removeOnCloseFile struct {
+	*os.File
+}
+
+func (f removeOnCloseFile) Close() error {
+	err := f.File.Close()
+	_ = os.Remove(f.Name())
 	return err
 }
 
-func processScpUri(src string) (io.ReadCloser, error) {
-	// parse the scp url
+func copyFileContentsSCP(ctx context.Context, src string) (io.ReadCloser, error) {
 	u, err := url.Parse(src)
 	if err != nil {
 		return nil, err
 	}
 
-	// check username provided
 	if u.User == nil {
-		return nil, fmt.Errorf("no username provided for scp connection")
+		return nil, fmt.Errorf("%w: %s: missing username", errSCPFetch, src)
 	}
-
-	knownHostsPath := ResolvePath("~/.ssh/known_hosts", "")
 
 	clientConfig := ssh.ClientConfig{
 		User:            u.User.Username(),
 		Auth:            []ssh.AuthMethod{},
-		HostKeyCallback: getCustomHostKeyCallback(knownHostsPath),
+		HostKeyCallback: customHostKeyCallback(ResolvePath("~/.ssh/known_hosts", "")),
 	}
 
-	// if we have an ssh agent running use it.
 	if socket := os.Getenv("SSH_AUTH_SOCK"); socket != "" {
 		conn, err := net.Dial("unix", socket)
 		if err != nil {
@@ -239,126 +285,203 @@ func processScpUri(src string) (io.ReadCloser, error) {
 		}
 	}
 
-	// if CLAB_SSH_KEY is set we use the key referenced here
 	keyPath := os.Getenv("CLAB_SSH_KEY")
 	keyPassphrase := os.Getenv("CLAB_SSH_KEY_PASSPHRASE")
 	if keyPath != "" {
 		if !FileExists(keyPath) {
-			return nil, fmt.Errorf("keyfile %q does not exist", keyPath)
+			return nil, fmt.Errorf("%w: %s: keyfile %q does not exist", errSCPFetch, src, keyPath)
 		}
+
 		privateKey, err := os.ReadFile(keyPath)
 		if err != nil {
 			return nil, err
 		}
+
 		var signer ssh.Signer
 		if keyPassphrase != "" {
-			// if keyPassphrase is set, use the withPassphrase method
 			signer, err = ssh.ParsePrivateKeyWithPassphrase(privateKey, []byte(keyPassphrase))
 		} else {
-			// otherwise use the basic ParsePrivateKey
 			signer, err = ssh.ParsePrivateKey(privateKey)
 		}
 		if err != nil {
 			return nil, err
 		}
+
 		clientConfig.Auth = append([]ssh.AuthMethod{ssh.PublicKeys(signer)}, clientConfig.Auth...)
 	}
 
-	// if a password is set, use the password
-	// and make it the first item in the AuthMethods
-	pw, hasPW := u.User.Password()
-	if hasPW {
+	if pw, ok := u.User.Password(); ok {
 		clientConfig.Auth = append([]ssh.AuthMethod{ssh.Password(pw)}, clientConfig.Auth...)
 	}
 
-	// set username in scp client config
-	clientConfig.User = u.User.Username()
-
-	// normalize host[host and port] portion
-	u.Host, _ = strings.CutSuffix(u.Host, ":")
-
-	// set port if not set
 	hostname := u.Hostname()
 	port := "22"
 	if u.Port() != "" {
 		port = u.Port()
 	}
 
-	// Create a new SCP client
 	client := scp.NewClient(net.JoinHostPort(hostname, port), &clientConfig)
+	if err := client.Connect(); err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errSCPFetch, src, err)
+	}
+	defer client.Close()
 
-	// Connect to the remote server
-	err = client.Connect()
-	if err != nil {
-		return nil, fmt.Errorf("couldn't establish a connection to the remote server %w", err)
-	}
-	// create a temp file to store the downloaded content in
-	f, err := os.CreateTemp(os.TempDir(), "scp-")
-	if err != nil {
-		return nil, err
-	}
-	// copy the file content from remote to local
-	err = client.CopyFromRemote(context.Background(), f, u.Path)
-	if err != nil {
-		return nil, err
-	}
-	// reset the read/write pointer to the beginning of the file
-	_, err = f.Seek(0, 0)
+	f, err := os.CreateTemp("", "clab-scp-*")
 	if err != nil {
 		return nil, err
 	}
 
-	return f, nil
+	if err := client.CopyFromRemote(ctx, f, u.Path); err != nil {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+		return nil, fmt.Errorf("%w: %s: %v", errSCPFetch, src, err)
+	}
+
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+		return nil, err
+	}
+
+	return removeOnCloseFile{File: f}, nil
 }
 
-func processFtpUri(src string) (io.ReadCloser, error) {
-	// parse the ftp url
+func copyFileContentsFTP(src string) (io.ReadCloser, error) {
 	u, err := url.Parse(src)
 	if err != nil {
 		return nil, err
 	}
 
-	// set port if not set
 	hostname := u.Hostname()
 	port := "21"
 	if u.Port() != "" {
 		port = u.Port()
 	}
 
-	// establish connection
-	c, err := ftp.Dial(net.JoinHostPort(hostname, port), ftp.DialWithTimeout(5*time.Second))
+	client, err := ftp.Dial(net.JoinHostPort(hostname, port), ftp.DialWithTimeout(5*time.Second))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s: %v", errFTPFetch, src, err)
 	}
+	defer client.Quit()
 
-	// is user is provided perform a login
 	if u.User != nil {
 		pw, _ := u.User.Password()
-		err = c.Login(u.User.Username(), pw)
-		if err != nil {
-			return nil, err
+		if err := client.Login(u.User.Username(), pw); err != nil {
+			return nil, fmt.Errorf("%w: %s: %v", errFTPFetch, src, err)
 		}
 	}
 
-	// retrieve the file
-	r, err := c.Retr(u.Path)
+	r, err := client.Retr(u.Path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s: %v", errFTPFetch, src, err)
 	}
 	defer r.Close()
 
-	// read the data
 	buf, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.Quit(); err != nil {
-		return nil, err
+	return io.NopCloser(bytes.NewBuffer(buf)), nil
+}
+
+// CopyFileContents copies the contents of the file named src to the file named
+// by dst. The file will be created if it does not already exist. If the
+// destination file exists, all it's contents will be replaced by the contents
+// of the source file.
+// src can be a local path or an http(s), S3, FTP, or SCP URL.
+func CopyFileContents(ctx context.Context, src string, dst *os.File) (err error) {
+	var in io.ReadCloser
+
+	switch {
+	case IsHttpURL(src, false):
+		client := &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+		}
+
+		// download using client
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, http.NoBody)
+		if err != nil {
+			return err
+		}
+
+		resp, err := client.Do(req)
+		if err != nil || resp.StatusCode != 200 {
+			return fmt.Errorf("%w: %s", errHTTPFetch, src)
+		}
+
+		defer resp.Body.Close()
+
+		in = resp.Body
+
+	case IsS3URL(src):
+		in, err = copyFileContentsS3(src)
+		if err != nil {
+			return err
+		}
+	case IsFTPURL(src):
+		in, err = copyFileContentsFTP(src)
+		if err != nil {
+			return err
+		}
+	case IsSCPURL(src):
+		in, err = copyFileContentsSCP(ctx, src)
+		if err != nil {
+			return err
+		}
+	default:
+		in, err = os.Open(src)
+		if err != nil {
+			return err
+		}
+	}
+	defer in.Close() // skipcq: GO-S2307
+
+	_, err = io.Copy(dst, in)
+	if err != nil {
+		return err
 	}
 
-	// return the data
-	return io.NopCloser(bytes.NewBuffer(buf)), nil
+	return dst.Sync()
+}
+
+// CreateFileWithPermissions creates a file with proper directory structure,
+// ownership, and permissions. It returns the file handle and a cleanup function.
+// The caller is responsible for calling the cleanup function to close the file.
+func CreateFileWithPermissions(filePath string, mode os.FileMode) (*os.File, func(), error) {
+	// Create parent directories
+	err := os.MkdirAll(filepath.Dir(filePath), 0o750)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Create the file
+	file, err := os.Create(filePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Change file ownership to user running Containerlab instead of effective UID
+	err = SetUIDAndGID(filePath)
+	if err != nil {
+		_ = file.Close()
+		return nil, nil, err
+	}
+
+	// Set file permissions
+	err = file.Chmod(mode)
+	if err != nil {
+		_ = file.Close()
+		return nil, nil, err
+	}
+
+	cleanup := func() {
+		// should only err on repeated calls to close anyway
+		_ = file.Close()
+	}
+	return file, cleanup, nil
 }
 
 // CreateFile writes content to a file by path `file`.
@@ -369,6 +492,7 @@ func CreateFile(file, content string) (err error) {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	// add newline if missing
 	if !strings.HasSuffix(content, "\n") {
@@ -376,6 +500,12 @@ func CreateFile(file, content string) (err error) {
 	}
 
 	_, err = f.WriteString(content)
+	if err != nil {
+		return err
+	}
+
+	// Change file ownership to user running Containerlab instead of effective UID
+	err = SetUIDAndGID(file)
 	if err != nil {
 		return err
 	}
@@ -450,25 +580,30 @@ func lookupUserHomeDirViaGetent(userId string) string {
 	// we need to extract home dir
 	parts := strings.Split(string(out), ":")
 	if len(parts) < 6 {
-		log.Debugf("error while looking up user by id using getent command %v: unexpected output format", userId)
+		log.Debugf(
+			"error while looking up user by id using getent command %v: unexpected output format",
+			userId,
+		)
 		return ""
 	}
 
 	return parts[5]
 }
 
-// ResolvePath resolves a string path by expanding `~` to home dir
+// ResolvePath resolves path p by expanding ~ to home dir
 // or resolving a relative path by joining it with the base path.
+// When resolving `~` the function uses the home dir of a sudo user, so that -E sudo
+// flag can be omitted.
 func ResolvePath(p, base string) string {
 	if p == "" {
 		return p
 	}
 
-	switch {
+	switch p[0] {
 	// resolve ~/ path
-	case p[0] == '~':
+	case '~':
 		p = ExpandHome(p)
-	case p[0] == '/':
+	case '/':
 		return p
 	default:
 		// join relative path with the base path
@@ -483,7 +618,7 @@ const (
 
 // FilenameForURL extracts a filename from a given url
 // returns "undefined" when unsuccessful.
-func FilenameForURL(rawUrl string) string {
+func FilenameForURL(ctx context.Context, rawUrl string) string {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
 		return UndefinedFileName
@@ -491,10 +626,20 @@ func FilenameForURL(rawUrl string) string {
 
 	// try extracting the filename from "content-disposition" header
 	if IsHttpURL(rawUrl, false) {
-		resp, err := http.Head(rawUrl)
+		client := NewHTTPClient()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, rawUrl, http.NoBody)
 		if err != nil {
 			return filepath.Base(u.Path)
 		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return filepath.Base(u.Path)
+		}
+
+		defer resp.Body.Close()
+
 		if cd := resp.Header.Get("Content-Disposition"); cd != "" {
 			if _, params, err := mime.ParseMediaType(cd); err == nil {
 				return params["filename"]
@@ -544,32 +689,42 @@ func NewHTTPClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-// AdjustFileACLs takes the given fs path, tries to load
-// the access file acl of that path and adds ACL rules
-// rwx for the SUDO_UID and r-x for the SUDO_GID group.
+func GetRealUserIDs() (userUID, userGID int, err error) {
+	// Here we check whether SUDO set the SUDO_UID and SUDO_GID variables
+	sudoUID, isSudoUIDSet := os.LookupEnv("SUDO_UID")
+	if isSudoUIDSet {
+		userUID, err = strconv.Atoi(sudoUID)
+		if err != nil {
+			return -1, -1, fmt.Errorf("unable to convert SUDO_UID %q to int", sudoUID)
+		}
+		sudoGID, isSudoGIDSet := os.LookupEnv("SUDO_GID")
+		if isSudoGIDSet {
+			userGID, err = strconv.Atoi(sudoGID)
+			if err != nil {
+				return -1, -1, fmt.Errorf("unable to convert SUDO_GID %q to int", sudoGID)
+			}
+		}
+		// Otherwise just check for the real UID/GID (instead of the effective UID)
+	} else {
+		userUID = os.Getuid()
+		userGID = os.Getgid()
+	}
+
+	return userUID, userGID, nil
+}
+
+// AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds
+// ACL rules:
+// rwx for the real UID user and r-x for the real GID group.
 func AdjustFileACLs(fsPath string) error {
-	/// here we trust sudo to set up env variables
-	// a missing SUDO_UID env var indicates the root user
-	// runs clab without sudo
-	uid, isSet := os.LookupEnv("SUDO_UID")
-	if !isSet {
-		// nothing to do, already running as root
+	userUID, userGID, err := GetRealUserIDs()
+	if err != nil {
+		return fmt.Errorf("unable to retrieve real user UID and GID: %v", err)
+	}
+
+	if userUID == 0 && userGID == 0 {
+		// We are running as root without sudo, return early
 		return nil
-	}
-
-	gid, isSet := os.LookupEnv("SUDO_GID")
-	if !isSet {
-		return fmt.Errorf("unable to retrieve GID. will only adjust UID for %q", fsPath)
-	}
-
-	iUID, err := strconv.Atoi(uid)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_UID %q to int", uid)
-	}
-
-	iGID, err := strconv.Atoi(gid)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_GID %q to int", gid)
 	}
 
 	// create a new ACL instance
@@ -581,13 +736,13 @@ func AdjustFileACLs(fsPath string) error {
 	}
 
 	// add an entry for the group
-	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_GROUP, uint32(iGID), 5))
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_GROUP, uint32(userGID), 5))
 	if err != nil {
 		return err
 	}
 
 	// add an entry for the User
-	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_USER, uint32(iUID), 7))
+	err = a.AddEntry(acls.NewEntry(acls.TAG_ACL_USER, uint32(userUID), 7))
 	if err != nil {
 		return err
 	}
@@ -607,36 +762,21 @@ func AdjustFileACLs(fsPath string) error {
 	return a.Apply(fsPath, acls.PosixACLDefault)
 }
 
-// SetUIDAndGID changes the UID and GID
-// of the given path recursively to the values taken from
-// SUDO_UID and SUDO_GID. Which should reflect be the non-root
-// user that called clab via sudo.
+// SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from
+// getRealUserIDs,
+// which should reflect the non-root user's UID and GID.
 func SetUIDAndGID(fsPath string) error {
-	// here we trust sudo to set up env variables
-	// a missing SUDO_UID env var indicates the root user
-	// runs clab without sudo
-	uid, isSet := os.LookupEnv("SUDO_UID")
-	if !isSet {
-		// nothing to do, already running as root
+	userUID, userGID, err := GetRealUserIDs()
+	if err != nil {
+		return fmt.Errorf("unable to retrieve real user UID and GID: %v", err)
+	}
+
+	if userUID == 0 && userGID == 0 {
+		// We are running as root without sudo, return early
 		return nil
 	}
 
-	gid, isSet := os.LookupEnv("SUDO_GID")
-	if !isSet {
-		return errors.New("failed to lookup SUDO_GID env var")
-	}
-
-	iUID, err := strconv.Atoi(uid)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_UID %q to int", uid)
-	}
-
-	iGID, err := strconv.Atoi(gid)
-	if err != nil {
-		return fmt.Errorf("unable to convert SUDO_GID %q to int", gid)
-	}
-
-	err = recursiveChown(fsPath, iUID, iGID)
+	err = recursiveChown(fsPath, userUID, userGID)
 	if err != nil {
 		return err
 	}
@@ -655,97 +795,188 @@ func recursiveChown(path string, uid, gid int) error {
 	})
 }
 
+// DownloadFilesInterface describes topology paths needed to materialize embedded/downloaded files.
 type DownloadFilesInterface interface {
 	ClabTmpDir() string
 	DownloadFileTmpAbsPath(nodeName string, filenamePostfix string) string
 }
 
-func ProcessDownloadableAndEmbeddedFile(nodename string, fileRef string, filenamePostfix string, paths DownloadFilesInterface) (string, error) {
-	var result string
-	// embedded config is a config that is defined as a multi-line string in the topology file
-	// it contains at least one newline
-	isEmbeddedConfig := strings.Count(fileRef, "\n") >= 1
-	// downloadable config starts with http(s)://
-	isDownloadableConfig := IsDownloadableUri(fileRef)
+// ProcessDownloadableAndEmbeddedFile materializes embedded content or supported download URLs and
+// returns a local path. Local file references are returned unchanged.
+func ProcessDownloadableAndEmbeddedFile(
+	ctx context.Context,
+	nodeName,
+	fileRef,
+	filenamePostfix string,
+	paths DownloadFilesInterface,
+) (string, error) {
+	isEmbeddedFile := strings.Count(fileRef, "\n") >= 1
+	isDownloadableFile := IsDownloadableURL(fileRef)
 
-	if isEmbeddedConfig || isDownloadableConfig {
-		// both embedded and downloadable configs are require clab tmp dir to be created
-		tmpLoc := paths.ClabTmpDir()
-		CreateDirectory(tmpLoc, 0755)
-
-		switch {
-		case isEmbeddedConfig:
-			log.Debugf("%q of node %q is an embedded blob", fileRef, nodename)
-			// for embedded config we create a file with the name embedded.partial.cfg
-			// as embedded configs are meant to be partial configs
-			absDestFile := paths.DownloadFileTmpAbsPath(
-				nodename, filenamePostfix)
-
-			err := CreateFile(absDestFile, fileRef)
-			if err != nil {
-				return "", err
-			}
-
-			result = absDestFile
-
-		case isDownloadableConfig:
-			log.Debugf("Node %q startup-config is a downloadable config %q", nodename, fileRef)
-			// get file name from an URL
-			fname := FilenameForURL(fileRef)
-
-			// Deduce the absolute destination filename for the downloaded content
-			absDestFile := paths.DownloadFileTmpAbsPath(nodename, fname)
-
-			log.Debugf("Fetching %q for node %q storing at %q", fileRef, nodename, absDestFile)
-			// download the file to tmp location
-			err := CopyFileContents(fileRef, absDestFile, 0755)
-			if err != nil {
-				return "", err
-			}
-
-			// adjust the nodeconfig by pointing startup-config to the local downloaded file
-			result = absDestFile
-		}
-		return result, nil
+	if !isEmbeddedFile && !isDownloadableFile {
+		return fileRef, nil
 	}
+
+	CreateDirectory(paths.ClabTmpDir(), clabconstants.PermissionsDirDefault)
+
+	switch {
+	case isEmbeddedFile:
+		log.Debugf("%q of node %q is an embedded blob", fileRef, nodeName)
+
+		dstFileAbsPath := paths.DownloadFileTmpAbsPath(nodeName, filenamePostfix)
+		if err := CreateFile(dstFileAbsPath, fileRef); err != nil {
+			return "", err
+		}
+
+		return dstFileAbsPath, nil
+
+	case isDownloadableFile:
+		fname := FilenameForURL(ctx, fileRef)
+		dstFileAbsPath := paths.DownloadFileTmpAbsPath(nodeName, fname)
+
+		log.Debugf("Fetching %q for node %q storing at %q", fileRef, nodeName, dstFileAbsPath)
+
+		out, cleanup, err := CreateFileWithPermissions(
+			dstFileAbsPath,
+			clabconstants.PermissionsDirDefault,
+		)
+		if err != nil {
+			return "", err
+		}
+		defer cleanup()
+
+		if err := CopyFileContents(ctx, fileRef, out); err != nil {
+			return "", err
+		}
+
+		return dstFileAbsPath, nil
+	}
+
 	return fileRef, nil
 }
 
-// getCustomHostKeyCallback returns a custom ssh.HostKeyCallback.
-// it will never block the connection, but issue a log.Warn if the
-// host_key cannot be found (due to absense of the entry or
-// the file being missing)
-func getCustomHostKeyCallback(knownHostsFiles ...string) ssh.HostKeyCallback {
-	var usefiles []string
-	// check
+// customHostKeyCallback returns a host-key callback that warns on missing or mismatching
+// known_hosts entries but does not block the SCP download.
+func customHostKeyCallback(knownHostsFiles ...string) ssh.HostKeyCallback {
+	var useFiles []string
 	for _, file := range knownHostsFiles {
 		if !FileExists(file) {
 			log.Debugf("known_hosts file %s does not exist.", file)
 			continue
 		}
-		usefiles = append(usefiles, file)
+		useFiles = append(useFiles, file)
 	}
 
-	// load the known_hosts file retrieving an ssh.HostKeyCallback
-	knownHostsFileCallback, err := knownhosts.New(usefiles...)
+	knownHostsFileCallback, err := knownhosts.New(useFiles...)
 	if err != nil {
 		log.Debugf("error loading known_hosts files %q", strings.Join(knownHostsFiles, ", "))
-		// this is an always failing knownHosts checker.
-		// it will make sure that the log message of the custom function further down
-		// is consistently logged. Meaning if file can't be loaded or entry does not exist.
 		knownHostsFileCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
 			return fmt.Errorf("error loading known_hosts files %v", err)
 		}
 	}
 
-	// defien the custom ssh.HostKeyCallback function.
 	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-		// delegate the call
 		err = knownHostsFileCallback(hostname, remote, key)
 		if err != nil {
-			// But if an error crops up, make it a warning and continue
-			log.Warnf("error performing host key validation based on %q for hostname %q (%v). continuing anyways", strings.Join(knownHostsFiles, ", "), hostname, err)
+			log.Warnf(
+				"error performing host key validation based on %q for hostname %q (%v). continuing anyways",
+				strings.Join(knownHostsFiles, ", "),
+				hostname,
+				err,
+			)
 		}
 		return nil
 	}
+}
+
+var osRelease string
+
+// GetOSRelease returns the OS release of the host by inspecting /etc/*-release files.
+func GetOSRelease() string {
+	// return cached result
+	if osRelease != "" {
+		return osRelease
+	}
+	osRelease = clabconstants.NotApplicable
+
+	matches, err := filepath.Glob("/etc/*-release")
+	if err != nil {
+		return osRelease
+	}
+
+	re := regexp.MustCompile(`(DISTRIB_DESCRIPTION|PRETTY_NAME)="(.*)"`)
+
+	for _, match := range matches {
+		data, err := os.ReadFile(match)
+		if err != nil {
+			log.Error(err)
+		}
+
+		match := re.FindSubmatch(data)
+		// [0] = whole line match, [1] = left side of "=", [2] = right side of "="
+		if len(match) >= 3 {
+			osRelease = string(match[2])
+			break
+		}
+	}
+
+	return osRelease
+}
+
+// IsPartialConfigFile returns true if the config file name contains .partial substring (case
+// insensitive).
+func IsPartialConfigFile(configPath string) bool {
+	return strings.Contains(strings.ToUpper(configPath), ".PARTIAL")
+}
+
+func FileToTarStream(dstFile string, filePath string) (*bytes.Buffer, error) {
+	// Check if file exists and get length
+	fileStat, err := os.Stat(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get file info for %s: %w", filePath, err)
+	}
+
+	// Create tar stream to copy (because Docker can only copy from a tar)
+	tarBuf := new(bytes.Buffer)
+	tarWriter := tar.NewWriter(tarBuf)
+
+	header, err := tar.FileInfoHeader(fileStat, filepath.Base(dstFile))
+	if err != nil {
+		return nil, fmt.Errorf("cannot create tar file header for %s: %w", fileStat.Name(), err)
+	}
+	header.Mode = 0o666
+	header.Name = filepath.Base(dstFile)
+	if err := tarWriter.WriteHeader(header); err != nil {
+		return nil, fmt.Errorf("cannot write tar header for %s: %w", filePath, err)
+	}
+
+	fileReader, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open %s: %w", filePath, err)
+	}
+	defer fileReader.Close()
+
+	_, err = io.Copy(tarWriter, fileReader)
+	if err != nil {
+		return nil, fmt.Errorf("error reading %s: %w", filePath, err)
+	}
+
+	tarWriter.Close()
+
+	return tarBuf, nil
+}
+
+func WriteToTempFile(contents string) (string, error) {
+	tmpFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("unable to create temporary file: %w", err)
+	}
+	defer tmpFile.Close()
+
+	_, err = tmpFile.WriteString(contents)
+	if err != nil {
+		return "", fmt.Errorf("unable to write to temporary file: %w", err)
+	}
+
+	return tmpFile.Name(), nil
 }

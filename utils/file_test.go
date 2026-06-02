@@ -5,10 +5,25 @@
 package utils
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+type testDownloadPaths struct {
+	dir string
+}
+
+func (t testDownloadPaths) ClabTmpDir() string {
+	return t.dir
+}
+
+func (t testDownloadPaths) DownloadFileTmpAbsPath(nodeName string, filenamePostfix string) string {
+	return filepath.Join(t.dir, nodeName+"-"+filenamePostfix)
+}
 
 func TestFilenameForURL(t *testing.T) {
 	type args struct {
@@ -43,7 +58,7 @@ func TestFilenameForURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FilenameForURL(tt.args.rawUrl); got != tt.want {
+			if got := FilenameForURL(context.Background(), tt.args.rawUrl); got != tt.want {
 				t.Errorf("got: %v, want: %v", got, tt.want)
 			}
 		})
@@ -105,13 +120,13 @@ func TestIsHttpURL(t *testing.T) {
 			want:            true,
 		},
 		{
-			name:            "Valid URL without scheme",
+			name:            "Valid URL without schema",
 			url:             "srlinux.dev/clab-srl",
 			allowSchemaless: true,
 			want:            true,
 		},
 		{
-			name:            "Valid URL without scheme and schemaless not allowed",
+			name:            "Valid URL without schema and schemaless not allowed",
 			url:             "srlinux.dev/clab-srl",
 			allowSchemaless: false,
 			want:            false,
@@ -134,6 +149,229 @@ func TestIsHttpURL(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := IsHttpURL(tt.url, tt.allowSchemaless); got != tt.want {
 				t.Errorf("IsHttpUri() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsS3URL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "Valid S3 URL",
+			url:  "s3://bucket/key/to/file.yaml",
+			want: true,
+		},
+		{
+			name: "Valid S3 URL with subdirectories",
+			url:  "s3://my-bucket/path/to/deep/file.cfg",
+			want: true,
+		},
+		{
+			name: "HTTP URL should not match",
+			url:  "https://example.com/file.yaml",
+			want: false,
+		},
+		{
+			name: "Local file path should not match",
+			url:  "/path/to/file.yaml",
+			want: false,
+		},
+		{
+			name: "Empty string should not match",
+			url:  "",
+			want: false,
+		},
+		{
+			name: "S3 without bucket/key should match",
+			url:  "s3://",
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsS3URL(tt.url); got != tt.want {
+				t.Errorf("IsS3URL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsDownloadableURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "HTTP URL",
+			url:  "http://example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "HTTPS URL",
+			url:  "https://example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "S3 URL",
+			url:  "s3://bucket/file.cfg",
+			want: true,
+		},
+		{
+			name: "FTP URL",
+			url:  "ftp://user:pass@example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "SCP URL",
+			url:  "scp://user@example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "Local path",
+			url:  "/path/to/file.cfg",
+			want: false,
+		},
+		{
+			name: "Schemaless URL",
+			url:  "example.com/file.cfg",
+			want: false,
+		},
+		{
+			name: "Stdin marker",
+			url:  "-",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsDownloadableURL(tt.url); got != tt.want {
+				t.Errorf("IsDownloadableURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProcessDownloadableAndEmbeddedFile(t *testing.T) {
+	t.Run("embedded file", func(t *testing.T) {
+		paths := testDownloadPaths{dir: t.TempDir()}
+		content := "license\nblob\n"
+
+		got, err := ProcessDownloadableAndEmbeddedFile(
+			context.Background(),
+			"node1",
+			content,
+			"embedded.lic",
+			paths,
+		)
+		if err != nil {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() error = %v", err)
+		}
+
+		wantPath := filepath.Join(paths.dir, "node1-embedded.lic")
+		if got != wantPath {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() = %q, want %q", got, wantPath)
+		}
+
+		gotContent, err := os.ReadFile(got)
+		if err != nil {
+			t.Fatalf("failed to read embedded file: %v", err)
+		}
+		if diff := cmp.Diff(content, string(gotContent)); diff != "" {
+			t.Fatalf("embedded file content diff: %s", diff)
+		}
+	})
+
+	t.Run("local file reference", func(t *testing.T) {
+		paths := testDownloadPaths{dir: t.TempDir()}
+		fileRef := "license.txt"
+
+		got, err := ProcessDownloadableAndEmbeddedFile(
+			context.Background(),
+			"node1",
+			fileRef,
+			"embedded.lic",
+			paths,
+		)
+		if err != nil {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() error = %v", err)
+		}
+		if got != fileRef {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() = %q, want %q", got, fileRef)
+		}
+	})
+}
+
+func TestParseS3URL(t *testing.T) {
+	tests := []struct {
+		name       string
+		s3URL      string
+		wantBucket string
+		wantKey    string
+		wantErr    bool
+	}{
+		{
+			name:       "Valid S3 URL",
+			s3URL:      "s3://my-bucket/path/to/file.yaml",
+			wantBucket: "my-bucket",
+			wantKey:    "path/to/file.yaml",
+			wantErr:    false,
+		},
+		{
+			name:       "Valid S3 URL with single file",
+			s3URL:      "s3://bucket/file.cfg",
+			wantBucket: "bucket",
+			wantKey:    "file.cfg",
+			wantErr:    false,
+		},
+		{
+			name:       "Invalid - not an S3 URL",
+			s3URL:      "https://example.com/file",
+			wantBucket: "",
+			wantKey:    "",
+			wantErr:    true,
+		},
+		{
+			name:       "Invalid - missing bucket",
+			s3URL:      "s3:///file.yaml",
+			wantBucket: "",
+			wantKey:    "",
+			wantErr:    true,
+		},
+		{
+			name:       "Invalid - missing key",
+			s3URL:      "s3://bucket/",
+			wantBucket: "",
+			wantKey:    "",
+			wantErr:    true,
+		},
+		{
+			name:       "Invalid - missing both bucket and key",
+			s3URL:      "s3://",
+			wantBucket: "",
+			wantKey:    "",
+			wantErr:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotBucket, gotKey, err := ParseS3URL(tt.s3URL)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseS3URL() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotBucket != tt.wantBucket {
+				t.Errorf("ParseS3URL() gotBucket = %v, want %v", gotBucket, tt.wantBucket)
+			}
+			if gotKey != tt.wantKey {
+				t.Errorf("ParseS3URL() gotKey = %v, want %v", gotKey, tt.wantKey)
 			}
 		})
 	}

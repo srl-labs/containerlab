@@ -12,17 +12,17 @@ import (
 	"strconv"
 	"strings"
 
-	netTypes "github.com/containers/common/libnetwork/types"
-	"github.com/containers/image/v5/manifest"
-	"github.com/containers/podman/v4/pkg/bindings/containers"
-	"github.com/containers/podman/v4/pkg/domain/entities"
-	"github.com/containers/podman/v4/pkg/specgen"
+	"github.com/containers/podman/v5/pkg/bindings/containers"
+	"github.com/containers/podman/v5/pkg/domain/entities"
+	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	netTypes "go.podman.io/common/libnetwork/types"
+	"go.podman.io/image/v5/manifest"
 
-	"github.com/containers/podman/v4/pkg/bindings"
+	"github.com/charmbracelet/log"
+	"github.com/containers/podman/v5/pkg/bindings"
 	"github.com/google/shlex"
-	log "github.com/sirupsen/logrus"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
 	"github.com/srl-labs/containerlab/utils"
@@ -42,7 +42,10 @@ func (*PodmanRuntime) connect(ctx context.Context) (context.Context, error) {
 	return bindings.NewConnection(ctx, "unix://run/podman/podman.sock")
 }
 
-func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.NodeConfig) (specgen.SpecGenerator, error) {
+func (r *PodmanRuntime) createContainerSpec(
+	ctx context.Context,
+	cfg *types.NodeConfig,
+) (specgen.SpecGenerator, error) {
 	sg := specgen.SpecGenerator{}
 	cmd, err := shlex.Split(cfg.Cmd)
 	if err != nil {
@@ -60,15 +63,15 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		Name:       cfg.LongName,
 		Entrypoint: entrypoint,
 		Command:    cmd,
-		EnvHost:    false,
-		HTTPProxy:  false,
+		EnvHost:    utils.Pointer(false),
+		HTTPProxy:  utils.Pointer(false),
 		Env:        cfg.Env,
-		Terminal:   true,
-		Stdin:      true,
+		Terminal:   utils.Pointer(true),
+		Stdin:      utils.Pointer(true),
 		Labels:     cfg.Labels,
 		Hostname:   cfg.ShortName,
 		Sysctl:     cfg.Sysctls,
-		Remove:     false,
+		Remove:     utils.Pointer(false),
 	}
 	// Storage, image and mounts
 	mounts, err := r.convertMounts(ctx, cfg.Binds)
@@ -98,7 +101,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	}
 	// Security
 	specSecurityConfig := specgen.ContainerSecurityConfig{
-		Privileged: true,
+		Privileged: utils.Pointer(true),
 		User:       cfg.User,
 	}
 	// Going with the defaults for cgroups
@@ -148,14 +151,16 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	}
 	// Defaults for health checks
 	specHCheckConfig := specgen.ContainerHealthCheckConfig{
-		HealthConfig: &manifest.Schema2HealthConfig{},
+		HealthLogDestination: "local",
 	}
 
 	if cfg.Healthcheck != nil {
+		specHCheckConfig.HealthConfig = &manifest.Schema2HealthConfig{}
 		specHCheckConfig.HealthConfig.Test = cfg.Healthcheck.Test
 		specHCheckConfig.HealthConfig.Retries = cfg.Healthcheck.Retries
 		specHCheckConfig.HealthConfig.Interval = cfg.Healthcheck.GetIntervalDuration()
-		specHCheckConfig.HealthConfig.StartPeriod = cfg.Healthcheck.GetStartPeriodDuration()
+		specHCheckConfig.HealthConfig.StartPeriod =
+			cfg.Healthcheck.GetStartPeriodDuration()
 		specHCheckConfig.HealthConfig.Timeout = cfg.Healthcheck.GetTimeoutDuration()
 	}
 
@@ -167,11 +172,19 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	case "container":
 		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
 		if len(netMode) != 2 {
-			return sg, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", cfg.ShortName, netMode)
+			return sg, fmt.Errorf(
+				"container network mode was specified for container %q, but no container name was found: %q",
+				cfg.ShortName,
+				netMode,
+			)
 		}
 		// also cont. ID shouldn't be empty
 		if netMode[1] == "" {
-			return sg, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", cfg.ShortName, netMode)
+			return sg, fmt.Errorf(
+				"container network mode was specified for container %q, but no container name was found: %q",
+				cfg.ShortName,
+				netMode,
+			)
 		}
 		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
 		prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
@@ -184,9 +197,9 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		}
 	case "host":
 		specNetConfig = specgen.ContainerNetworkConfig{
-			NetNS: specgen.Namespace{NSMode: "host"},
+			NetNS: specgen.Namespace{NSMode: specgen.Host},
 			// UseImageResolvConf:  false,
-			UseImageHosts: false,
+			UseImageHosts: utils.Pointer(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
@@ -213,7 +226,7 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		// Static IPs & Macs are properties of a network attachment
 		nets := map[string]netTypes.PerNetworkOptions{netName: {
 			StaticIPs:     staticIPs,
-			Aliases:       nil,
+			Aliases:       cfg.Aliases,
 			StaticMAC:     hwAddr,
 			InterfaceName: "",
 		}}
@@ -228,11 +241,11 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS:               specgen.Namespace{NSMode: "bridge"},
 			PortMappings:        portmap,
-			PublishExposedPorts: false,
+			PublishExposedPorts: utils.Pointer(false),
 			Expose:              expose,
 			Networks:            nets,
 			// UseImageResolvConf:  false,
-			UseImageHosts: false,
+			UseImageHosts: utils.Pointer(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
@@ -255,6 +268,13 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	default:
 		return sg, fmt.Errorf("network Mode %q is not currently supported with Podman", netMode)
 	}
+
+	// process pid namespace mode
+	specBasicConfig.PidNS, err = specgen.ParseNamespace(cfg.PidMode)
+	if err != nil {
+		return sg, err
+	}
+
 	// Compile the final spec
 	sg = specgen.SpecGenerator{
 		ContainerBasicConfig:       specBasicConfig,
@@ -294,7 +314,11 @@ func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs
 			mntSpec[i].Options = strings.Split(mntSplit[2], ",")
 		}
 	}
-	log.Debugf("convertMounts method received mounts %v and produced %+v as a result", mounts, mntSpec)
+	log.Debugf(
+		"convertMounts method received mounts %v and produced %+v as a result",
+		mounts,
+		mntSpec,
+	)
 	return mntSpec, nil
 }
 
@@ -320,6 +344,13 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 			Pid:             v.Pid,
 			NetworkSettings: netSettings,
 			Ports:           []*types.GenericPortBinding{},
+		}
+
+		// Extract network name from labels
+		if netName, ok := v.Labels["clab-net-mgmt"]; ok && netName != "" {
+			genericList[i].NetworkName = netName
+		} else {
+			genericList[i].NetworkName = "unknown"
 		}
 
 		// convert the exposed ports the GenericPorts and add them to the GenericContainer
@@ -350,7 +381,10 @@ func netTypesPortMappingToGenericPortBinding(pm netTypes.PortMapping) []*types.G
 	return result
 }
 
-func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (runtime.GenericMgmtIPs, error) {
+func (*PodmanRuntime) extractMgmtIP(
+	ctx context.Context,
+	cID string,
+) (runtime.GenericMgmtIPs, error) {
 	// First get all the data from the inspect
 	toReturn := runtime.GenericMgmtIPs{}
 	inspectRes, err := containers.Inspect(ctx, cID, &containers.InspectOptions{})
@@ -420,7 +454,7 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 	)
 	// parse mgmt subnets
 	// check if v4 is defined
-	if r.mgmt.IPv4Subnet != "" {
+	if r.mgmt.IPv4Subnet != "" && r.mgmt.IPv4Subnet != "auto" {
 		v4subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv4Subnet)
 		if err != nil {
 			return netTypes.Network{}, err
@@ -433,7 +467,7 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 		log.Debugf("Added v4 subnet info to the net definion: \n%v, \n%v\n", subnets, v4subnet)
 	}
 	// check if v6 is defined
-	if r.mgmt.IPv6Subnet != "" {
+	if r.mgmt.IPv6Subnet != "" && r.mgmt.IPv6Subnet != "auto" {
 		v6subnet.Subnet, err = netTypes.ParseCIDR(r.mgmt.IPv6Subnet)
 		if err != nil {
 			return netTypes.Network{}, err
@@ -451,6 +485,13 @@ func (r *PodmanRuntime) netOpts(_ context.Context) (netTypes.Network, error) {
 	if r.mgmt.MTU != 0 {
 		options["mtu"] = strconv.Itoa(r.mgmt.MTU)
 	}
+
+	// Merge in bridge network driver options from topology file
+	for k, v := range r.mgmt.DriverOpts {
+		log.Debugf("Adding bridge network driver option %s=%s", k, v)
+		options[k] = v
+	}
+
 	// compile the resulting struct
 	toReturn := netTypes.Network{
 		DNSEnabled:       dnsEnabled,
@@ -489,25 +530,33 @@ func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[str
 		}
 		filters[filterType] = append(filters[filterType], filterStr)
 	}
-	log.Debugf("Method buildFilterString was called with inputs %+v\n and results %+v", gFilters, filters)
+	log.Debugf(
+		"Method buildFilterString was called with inputs %+v\n and results %+v",
+		gFilters,
+		filters,
+	)
 	return filters
 }
 
 // postStartActions performs misc. tasks that are needed after the container starts.
-func (r *PodmanRuntime) postStartActions(ctx context.Context, cID string, cfg *types.NodeConfig) error {
+func (r *PodmanRuntime) postStartActions(
+	ctx context.Context,
+	cID string,
+	cfg *types.NodeConfig,
+) error {
 	// skip if hostnetwork or none
 	if cfg.NetworkMode == "host" || cfg.NetworkMode == "none" {
 		return nil
 	}
 	var err error
-	// Add NSpath to the node config struct
-	cfg.NSPath, err = r.GetNSPath(ctx, cID)
+
+	// And setup netns alias. Not really needed with podman
+	// But currently (Oct 2021) clab depends on the specific naming scheme of veth aliases.
+	nspath, err := r.GetNSPath(ctx, cID)
 	if err != nil {
 		return err
 	}
-	// And setup netns alias. Not really needed with podman
-	// But currently (Oct 2021) clab depends on the specific naming scheme of veth aliases.
-	err = utils.LinkContainerNS(cfg.NSPath, cfg.LongName)
+	err = utils.LinkContainerNS(nspath, cfg.LongName)
 	if err != nil {
 		return err
 	}
@@ -515,4 +564,12 @@ func (r *PodmanRuntime) postStartActions(ctx context.Context, cID string, cfg *t
 	// may not exist in netlink before a container is attached to it
 	err = r.disableTXOffload(ctx)
 	return err
+}
+
+func (r *PodmanRuntime) GetCooCBindMounts() types.Binds {
+	return types.Binds{
+		types.NewBind("/var/lib/containers", "/var/lib/containers", "Z,rshared"),
+		types.NewBind("/run/containers/storage", "/run/containers/storage", "Z,rshared"),
+		types.NewBind("/run/netns", "/run/netns", "Z,rshared"),
+	}
 }

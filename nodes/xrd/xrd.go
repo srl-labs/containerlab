@@ -5,6 +5,7 @@
 package xrd
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"fmt"
@@ -12,94 +13,155 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/netconf"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabnetconf "github.com/srl-labs/containerlab/netconf"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
-	kindnames          = []string{"xrd", "cisco_xrd"}
-	defaultCredentials = nodes.NewCredentials("clab", "clab@123")
+	kindNames          = []string{"xrd", "cisco_xrd"}
+	defaultCredentials = clabnodes.NewCredentials("clab", "clab@123")
 	xrdEnv             = map[string]string{
 		"XR_FIRST_BOOT_CONFIG": "/etc/xrd/first-boot.cfg",
 		"XR_MGMT_INTERFACES":   "linux:eth0,xr_name=Mg0/RP0/CPU0/0,chksum,snoop_v4,snoop_v6",
+		"XR_EVERY_BOOT_SCRIPT": "/etc/xrd/mgmt_intf_v6_addr.sh",
 	}
+
+	//go:embed mgmt_intf_v6_addr.sh.tmpl
+	scriptTemplate string
+
+	xrdMgmtScriptTpl, _ = template.New("clab-xrd-mgmt-ipv6-script").Funcs(
+		clabutils.CreateFuncs()).Parse(scriptTemplate)
 
 	//go:embed xrd.cfg
 	cfgTemplate string
 )
 
 const (
+	generateable     = true
+	generateIfFormat = "eth%d"
+
 	scrapliPlatformName = "cisco_iosxr"
+	NapalmPlatformName  = "iosxr"
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+		NapalmPlatformName:  NapalmPlatformName,
+	}
+
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
+
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(xrd)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type xrd struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *xrd) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *xrd) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
 		o(n)
 	}
 
-	n.Cfg.Binds = append(n.Cfg.Binds,
+	n.Cfg.Binds = append(
+		n.Cfg.Binds,
 		// mount first-boot config file
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "first-boot.cfg"), ":/etc/xrd/first-boot.cfg"),
 		// persist data by mounting /xr-storage
 		fmt.Sprint(filepath.Join(n.Cfg.LabDir, "xr-storage"), ":/xr-storage"),
+		// management IPv6 address script
+		fmt.Sprint(
+			filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh"),
+			":/etc/xrd/mgmt_intf_v6_addr.sh",
+		),
 	)
 
 	return nil
 }
 
-func (n *xrd) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
+func (n *xrd) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	n.genInterfacesEnv()
 
-	utils.CreateDirectory(n.Cfg.LabDir, 0777)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return n.createXRDFiles(ctx)
 }
 
-func (n *xrd) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(n.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
-		scrapliPlatformName,
-	)
+func (n *xrd) PostDeploy(_ context.Context, _ *clabnodes.PostDeployParams) error {
+	log.Infof("Running postdeploy actions for Cisco XRd '%s' node", n.Cfg.ShortName)
+
+	// create interface script template
+	tpl := xrdScriptTmpl{
+		MgmtIPv6Addr:      n.Cfg.MgmtIPv6Address,
+		MgmtIPv6PrefixLen: n.Cfg.MgmtIPv6PrefixLength,
+	}
+
+	// create script from template
+	buf := new(bytes.Buffer)
+	err := xrdMgmtScriptTpl.Execute(buf, tpl)
 	if err != nil {
 		return err
 	}
+	// write it to disk
+	clabutils.CreateFile(filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh"), buf.String())
+
+	return err
+}
+
+func (n *xrd) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
+	err := clabnetconf.SaveRunningConfig(n.Cfg.LongName,
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
+		scrapliPlatformName,
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
-	return nil
+	return nil, nil
 }
 
 func (n *xrd) createXRDFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 	// generate xr-storage directory
-	utils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"), 0777)
+	clabutils.CreateDirectory(filepath.Join(n.Cfg.LabDir, "xr-storage"),
+		clabconstants.PermissionsOpen)
 	// generate first-boot config
 	cfg := filepath.Join(n.Cfg.LabDir, "first-boot.cfg")
 	nodeCfg.ResStartupConfig = cfg
+
+	mgmt_script_path := filepath.Join(n.Cfg.LabDir, "mgmt_intf_v6_addr.sh")
+
+	// generate script file
+	if !clabutils.FileExists(mgmt_script_path) {
+		clabutils.CreateFile(mgmt_script_path, "")
+		os.Chmod(mgmt_script_path, 0o775) // skipcq: GSC-G302
+	}
 
 	// set mgmt IPv4/IPv6 gateway as it is already known by now
 	// since the container network has been created before we launch nodes
@@ -108,15 +170,18 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
 
 	// use startup config file provided by a user
+	// make copy of template to prevent provided startup config from mutating shared package
+	// template value
+	currentCfgTemplate := cfgTemplate
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
+		currentCfgTemplate = string(c)
 	}
 
-	err := n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err := n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -124,7 +189,8 @@ func (n *xrd) createXRDFiles(_ context.Context) error {
 	return err
 }
 
-// genInterfacesEnv populates the content of a required env var that sets the interface mapping rules.
+// genInterfacesEnv populates the content of a required env var that sets the interface mapping
+// rules.
 func (n *xrd) genInterfacesEnv() {
 	// xrd-control-plane variant needs XR_INTERFACE ENV var to be populated for all active interface
 	// here we take the number of links users set in the topology to get the right # of links
@@ -138,7 +204,7 @@ func (n *xrd) genInterfacesEnv() {
 
 	interfaceEnv := map[string]string{"XR_INTERFACES": interfaceEnvVar}
 
-	n.Cfg.Env = utils.MergeStringMaps(xrdEnv, interfaceEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(xrdEnv, interfaceEnv, n.Cfg.Env)
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
@@ -146,9 +212,17 @@ func (n *xrd) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`^Gi0-0-0-\d+$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("cisco XRd interface name %q doesn't match the required pattern. XRd interfaces should be named as Gi0-0-0-X where X is the interface number", e.GetIfaceName())
+			return fmt.Errorf(
+				"cisco XRd interface name %q doesn't match the required pattern. XRd interfaces should be named as Gi0-0-0-X where X is the interface number",
+				e.GetIfaceName(),
+			)
 		}
 	}
 
 	return nil
+}
+
+type xrdScriptTmpl struct {
+	MgmtIPv6Addr      string
+	MgmtIPv6PrefixLen int
 }

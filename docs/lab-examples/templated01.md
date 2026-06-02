@@ -45,14 +45,13 @@ Run `configure.sh` script to configure the lab
 bash configure.sh
 ```
 
-The `configure.sh` script relies on [gomplate](https://docs.gomplate.ca) and [gnmic](https://gnmic.kmrd.dev).
+The `configure.sh` script relies on [gomplate](https://docs.gomplate.ca) and [gnmic](https://gnmic.openconfig.net/).
 
 - [gomplate](https://docs.gomplate.ca) is used to generate the necessary configuration variables based on the number of spines and leaves, their type and prefix.
-- [gnmic](https://gnmic.kmrd.dev) is used to generate configuration payloads per node and push it using a gNMI Set RPC.
+- [gnmic](https://gnmic.openconfig.net/) is used to generate configuration payloads per node and push it using a gNMI Set RPC.
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/
 [topofile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab.gotmpl
 [topovarfile]: https://github.com/srl-labs/containerlab/tree/main/lab-examples/templated01/templated01.clab_vars.yaml
-
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

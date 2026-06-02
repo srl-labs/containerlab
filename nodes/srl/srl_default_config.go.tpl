@@ -1,33 +1,28 @@
-set / system tls server-profile clab-profile
-set / system tls server-profile clab-profile key "{{ .TLSKey }}"
-set / system tls server-profile clab-profile certificate "{{ .TLSCert }}"
+{{ .ACLConfig }}
 
-{{- if .TLSAnchor }}
-set / system tls server-profile clab-profile authenticate-client true
-set / system tls server-profile clab-profile trust-anchor "{{ .TLSAnchor }}"
-{{- else }}
-set / system tls server-profile clab-profile authenticate-client false
-{{- end }}
+{{ .TLSConfig }}
 
-set / system gnmi-server admin-state enable network-instance mgmt admin-state enable tls-profile clab-profile
-set / system gnmi-server rate-limit 65000
-set / system gnmi-server trace-options [ request response common ]
-set / system gnmi-server unix-socket admin-state enable
+{{ .GRPCConfig }}
+
+{{ .EDAConfig }}
 
 {{- if .EnableGNMIUnixSockServices }}
 system gnmi-server unix-socket services [ gnmi gnoi ] admin-state enable
 {{- end }}
 
-{{- if .DNSServers }}
-set / system dns network-instance mgmt
-set / system dns server-list [ {{ range $dnsserver := .DNSServers}}{{$dnsserver}} {{ end }}]
-{{- end }}
+{{ .DNSServersConfig }}
 
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile
-set / system snmp community public
-set / system snmp network-instance mgmt
-set / system snmp network-instance mgmt admin-state enable
+
+{{ .SNMPConfig }}
+
+{{ .NetconfConfig }}
+
+{{ .OCServerConfig }}
+
+{{ .NDKServerConfig }}
+
 set / system lldp admin-state enable
 set / system aaa authentication idle-timeout 7200
 
@@ -42,16 +37,28 @@ set / interface mgmt0 subinterface 0 ip-mtu {{ .MgmtIPMTU }}
 
 {{- /* enabling interfaces referenced as endpoints for a node (both e1-2 and e1-3-1 notations) */}}
 {{- range $epName, $ep := .IFaces }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} admin-state enable
+set / interface {{ $ep.BaseName }} admin-state enable
   {{- if ne $ep.Mtu 0 }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} mtu {{ $ep.Mtu }}
+set / interface {{ $ep.BaseName }} mtu {{ $ep.Mtu }}
   {{- end }}
 
-  {{- if ne $ep.BreakoutNo  "" }}
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }} breakout-mode num-channels 4 channel-speed 25G
-set / interface ethernet-{{ $ep.Slot }}/{{ $ep.Port }}/{{ $ep.BreakoutNo }} admin-state enable
+  {{- if $ep.HasBreakout }}
+set / interface {{ $ep.BaseName }} breakout-mode num-breakout-ports 4 breakout-port-speed 25G
+set / interface {{ $ep.FullName }} admin-state enable
   {{- end }}
 
+  {{- /* If per-endpoint IPv4/IPv6 are provided, configure them on subinterface 0 */}}
+  {{- if or $ep.IPv4 $ep.IPv6 }}
+set / interface {{ $ep.FullName }} subinterface 0 admin-state enable
+    {{- if $ep.IPv4 }}
+set / interface {{ $ep.FullName }} subinterface 0 ipv4 address {{ $ep.IPv4 }}
+set / interface {{ $ep.FullName }} subinterface 0 ipv4 admin-state enable
+    {{- end }}
+    {{- if $ep.IPv6 }}
+set / interface {{ $ep.FullName }} subinterface 0 ipv6 address {{ $ep.IPv6 }}
+set / interface {{ $ep.FullName }} subinterface 0 ipv6 admin-state enable
+    {{- end }}
+  {{- end }}
 {{ end -}}
 {{- if .SSHPubKeys }}
 set / system aaa authentication linuxadmin-user ssh-key [ {{ .SSHPubKeys }} ]

@@ -1,8 +1,11 @@
 ---
 search:
   boost: 4
+kind_code_name: keysight_ixia-c-one
+kind_display_name: Keysight Ixia-c-one
 ---
-# Keysight Ixia-c-one
+# -{{ kind_display_name }}-
+The corresponding node in containerlab is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
 Keysight [Ixia-c-one][ixia-c-one] is a single-container distribution of [Ixia-c][ixia-c], a software traffic generator and protocol emulator with [Open Traffic Generator (OTG) API][otg].
 
@@ -14,7 +17,7 @@ Ixia-c Community Edition is available **for free** with limitations. [Commercial
 
 Users can pull Ixia-c-one container image from [Github Container Registry][ixia-c-one-image].
 
-The corresponding node in containerlab is identified with `keysight_ixia-c-one` kind in the [topology file](../topo-def-file.md). Upon boot up, it comes up with:
+Upon boot up, it comes up with:
 
 - management interface `eth0` configured with IPv4/6 addresses as assigned by the container runtime
 - hostname assigned to the node name

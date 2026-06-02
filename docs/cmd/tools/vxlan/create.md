@@ -18,9 +18,13 @@ VxLAN interface name will be a catenation of a prefix `vx-` and the interface na
 
 VxLAN tunnels set up with this command are unidirectional in nature. To set the remote endpoint address the `--remote` flag should be used.
 
-### port
+### dst-port
 
-Port number that the VxLAN tunnel will use is set with `--port | -p` flag. Defaults to `14789`[^1].
+Destination port number that the VxLAN tunnel will use is set with `--dst-port | -p` flag. Defaults to `14789`[^1].
+
+### src-port
+
+Source port number that the VxLAN tunnel will use is set with `--src-port | -d` flag. Defaults to no source port set (ephemeral source ports). Recommended to be set when NAT is expected to be applied on the tunnel.
 
 ### id
 

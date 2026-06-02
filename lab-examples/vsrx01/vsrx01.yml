@@ -4,7 +4,7 @@ topology:
     srx1:
       kind: juniper_vsrx
       image: vrnetlab/vr-vsrx:23.2R1.13
-      startup-config: srx1.txt
+      startup-config: srx1.cfg
     client1:
       kind: "linux"
       image: wbitt/network-multitool:alpine-extra

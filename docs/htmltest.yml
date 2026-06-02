@@ -18,6 +18,20 @@ IgnoreURLs:
   - https://supportcenter.checkpoint.com/ # started to fail, meh.
   - https://marketplace.visualstudio.com/*
   - https://gist.githubusercontent.com/hellt/abc/raw/def/linux.clab.yml # test link used in docs
+  - serverfault.com # returns 403
+  - askubuntu.com # returns 403
+  - sonic.software # often down
+  - sonic-build.azurewebsites.net/ui/sonic/pipelines # sometimes down =)
+  - localhost
+  - x.com # started to give 400
+  - virtualizestuff.com
+  - hashnode.com
+  - https://nleiva.medium.com # started to give 403
+  - https://xrdocs.io # started to give 403
+  - https://dn42.eu # started to give timeouts
+  - https://www.brianlinkletter.com/2021/05/use-containerlab-to-emulate-open-source-routers/
+  - https://www.juniper.net/us/en/products/security/srx-series/vsrx-virtual-firewall-datasheet.html
+  - https://gitalab.com # started to give 403
 IgnoreDirectoryMissingTrailingSlash: true
 IgnoreAltMissing: true
 IgnoreSSLVerify: true

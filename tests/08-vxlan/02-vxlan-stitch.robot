@@ -19,7 +19,7 @@ ${vxlan-br-ip}      172.20.25.1/24
 *** Test Cases ***
 Deploy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file} -d
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file} -d
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -27,10 +27,10 @@ Check VxLAN interface parameters on the host for srl1 node
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ip -d l show vx-srl1_e1-1
 
-    Should Contain        ${output}    mtu 9050
+    Should Contain    ${output}    mtu 9050
 
-    Should Contain        ${output}    vxlan id 100 remote 172.20.25.22 dev clab-vxlan-br srcport 0 0 dstport 14788
-    
+    Should Contain    ${output}    vxlan id 100 remote 172.20.25.22 dev ${vxlan-br} srcport 0 0 dstport 14788
+
     Should Not Contain    ${output}    nolearning
 
 Check veth interface parameters on the host for srl1 node
@@ -43,7 +43,7 @@ Check veth interface parameters on the host for srl1 node
 
 Check VxLAN interface parameters on the host for very long name node
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ip -j link | jq -r '.[] | select(.ifalias == "vx-some_very_long_node_name_l1_e1-1") | .ifname' | xargs ip -d l show
+    ...    sudo ip -d l show dev vx-some_very_long_node_name_l1_e1-1
 
     Should Contain    ${output}    mtu 9050
 
@@ -51,32 +51,26 @@ Check VxLAN interface parameters on the host for very long name node
 
 Check veth interface parameters on the host for very long name node
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo ip -j link | jq -r '.[] | select(.ifalias == "ve-some_very_long_node_name_l1_e1-1") | .ifname' | xargs ip -d l show
+    ...    sudo ip -d l show dev ve-some_very_long_node_name_l1_e1-1
 
     Should Contain    ${output}    mtu 9500 qdisc noqueue state UP
 
     # in github actions the output for this link weirdly state the netnsid instead of nsname, thus we check for any of those
     Should Contain Any    ${output}    link-netns clab-vxlan-stitch-some_very_long_node_name_l1    link-netnsid 2
 
-    Should Contain    ${output}    alias ve-some_very_long_node_name_l1_e1-1
+    Should Contain    ${output}    altname ve-some_very_long_node_name_l1_e1-1
 
 Check VxLAN connectivity srl-linux
-    # CI env var is set to true in Github Actions
-    # and this test won't run there, since it fails for unknown reason
-    IF    '%{CI=false}'=='false'
-        Wait Until Keyword Succeeds    60    2s    Check VxLAN connectivity srl->linux
-    END
+    Wait Until Keyword Succeeds    60    2s    Check VxLAN connectivity srl->linux
 
 Check VxLAN connectivity linux-srl
-    IF    '%{CI=false}'=='false'
-        Wait Until Keyword Succeeds    60    2s    Check VxLAN connectivity linux->srl
-    END
+    Wait Until Keyword Succeeds    60    2s    Check VxLAN connectivity linux->srl
 
 
 *** Keywords ***
 Check VxLAN connectivity srl->linux
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E docker exec -it clab-vxlan-stitch-srl1 ip netns exec srbase-default ping 192.168.67.2 -c 1
+    ...    sudo -E docker exec clab-vxlan-stitch-srl1 ip netns exec srbase-default ping 192.168.67.2 -c 1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
@@ -103,7 +97,7 @@ Setup
 
 Cleanup
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
 
     ${rc}    ${output} =    Run And Return Rc And Output

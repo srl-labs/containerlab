@@ -5,10 +5,10 @@
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB                       |
 | **Topology file**             | [sonic01.clab.yml][topofile]                                                               |
 | **Name**                      | sonic01                                                                                    |
-| **Version information**[^2]   | `containerlab:0.9.0`, `srlinux:20.6.3-145`, `docker-sonic-vs:202012`, `docker-ce:19.03.13` |
+| **Version information**[^2]   | `containerlab:0.75.0`, `srlinux:25.10.2`, `docker-sonic-vs:202511`, `docker-ce:29.4` |
 
 ## Description
-A lab consists of an SR Linux node connected with Azure SONiC via a point-to-point ethernet link. Both nodes are also connected with their management interfaces to the `containerlab` docker network.
+A lab consists of an SR Linux node connected with Opensource SONiC via a point-to-point ethernet link. Both nodes are also connected with their management interfaces to the `containerlab` docker network.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:0,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/srlsonic01.drawio&quot;}"></div>
 
@@ -24,7 +24,9 @@ This lab demonstrates a simple iBGP peering scenario between Nokia SR Linux and 
 Once the lab is deployed with containerlab, use the following configuration instructions to make interfaces configuration and enable BGP on both nodes.
 
 === "srl"
+
     Get into SR Linux CLI with `docker exec -it clab-sonic01-srl sr_cli` and start configuration
+    
     ```bash
     # enter candidate datastore
     enter candidate
@@ -32,33 +34,42 @@ Once the lab is deployed with containerlab, use the following configuration inst
     # configure loopback and data interfaces
     set / interface ethernet-1/1 admin-state enable
     set / interface ethernet-1/1 subinterface 0 admin-state enable
+    set / interface ethernet-1/1 subinterface 0 ipv4 admin-state enable
     set / interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24
 
+    set / interface lo0 admin-state enable
     set / interface lo0 subinterface 0 admin-state enable
+    set / interface lo0 subinterface 0 ipv4 admin-state enable
     set / interface lo0 subinterface 0 ipv4 address 10.10.10.1/32
+
     set / network-instance default interface ethernet-1/1.0
     set / network-instance default interface lo0.0
 
     # configure BGP
     set / network-instance default protocols bgp admin-state enable
-    set / network-instance default protocols bgp router-id 10.10.10.1
     set / network-instance default protocols bgp autonomous-system 65001
-    set / network-instance default protocols bgp group ibgp ipv4-unicast admin-state enable
-    set / network-instance default protocols bgp group ibgp export-policy export-lo
+    set / network-instance default protocols bgp router-id 10.10.10.1
+    set / network-instance default protocols bgp afi-safi ipv4-unicast admin-state enable
+    set / network-instance default protocols bgp group ibgp afi-safi ipv4-unicast admin-state enable
+    set / network-instance default protocols bgp group ibgp afi-safi ipv4-unicast export-policy [ export-lo ]
     set / network-instance default protocols bgp neighbor 192.168.1.2 admin-state enable
-    set / network-instance default protocols bgp neighbor 192.168.1.2 peer-group ibgp
     set / network-instance default protocols bgp neighbor 192.168.1.2 peer-as 65001
+    set / network-instance default protocols bgp neighbor 192.168.1.2 peer-group ibgp
 
     # create export policy
-    set / routing-policy policy export-lo statement 10 match protocol local
-    set / routing-policy policy export-lo statement 10 action accept
+    set / routing-policy prefix-set internal-loopbacks prefix 10.10.10.1/32 mask-length-range exact
+    set / routing-policy policy export-lo statement 10 match prefix prefix-set internal-loopbacks
+    set / routing-policy policy export-lo statement 10 action policy-result accept
 
     # commit config
     commit now
     ```
+    
 === "sonic"
+
     Get into sonic container shell with `docker exec -it clab-sonic01-sonic bash` and configure the so-called _front-panel_ ports.  
-    Since we defined only one data interface for our sonic/srl nodes, we need to confgure a single port and a loopback interface:
+    Since we defined only one data interface for our sonic/srl nodes, we need to configure a single port and a loopback interface:
+    
     ```bash
     config interface ip add Ethernet0 192.168.1.2/24
     config interface startup Ethernet0
@@ -66,7 +77,9 @@ Once the lab is deployed with containerlab, use the following configuration inst
     config interface ip add Loopback0 10.10.10.2/32
     config interface startup Loopback0
     ```
-    Now when data interface has been configured, check to make sure in /etc/frr/daemons that "bgpd=yes".  Restart the frr service if required and verify that bgpd is running.
+    
+    Now when data interface has been configured, check to make sure in `/etc/frr/daemons` that `bgpd=yes`.  Restart the frr service if required and verify that bgpd is running.
+    
     ```bash
     root@sonic:/# service frr restart
     [ ok ] Stopped watchfrr.
@@ -80,7 +93,9 @@ Once the lab is deployed with containerlab, use the following configuration inst
     [ ok ] Status of bgpd: running.
     [ ok ] Status of staticd: running.
     ```
+    
     Then enter in the FRR shell to configure BGP by typing `vtysh` command inside the sonic container.
+    
     ```bash
     # enter configuration mode
     configure
@@ -100,12 +115,28 @@ Once the lab is deployed with containerlab, use the following configuration inst
 Once BGP peering is established, the routes can be seen in GRT of both nodes:
 
 === "srl"
+
     ```bash
-    A:srl# / show network-instance default route-table ipv4-unicast summary | grep bgp
-    | 10.10.10.2/32                 | 0     | true       | bgp             | 0       | 170   | 192.168.1.2 (indirect)                   | None              |
+    A:admin@srl# / show network-instance default route-table ipv4-unicast summary | grep bgp
+    | 10.10.10.2/32             | 0     | bgp        | bgp_mgr              | True     | default  | 0       | 170        | 192.168.1.0/24  | ethernet-1/1.0  |  
+    A:admin@srl# show network-instance default protocols bgp routes ipv4 prefix 10.10.10.2/32
+    --------------------------------------------------------------------------------------------------------------------------------------
+    Show report for the BGP routes to network "10.10.10.2/32" network-instance  "default"
+    --------------------------------------------------------------------------------------------------------------------------------------
+    Network: 10.10.10.2/32
+    Received Paths: 1
+      Path 1: <Best,Valid,Used,>
+        Route source    : neighbor 192.168.1.2
+        Route Preference: MED is -, LocalPref is 100
+        BGP next-hop    : 192.168.1.2
+        Path            :  i
+        Communities     : None
+    Path 1 was advertised to:
+    [  ]
     ```
 
 === "sonic"
+
     ```bash
     sonic# sh ip route
     Codes: K - kernel route, C - connected, S - static, R - RIP,
@@ -120,9 +151,18 @@ Once BGP peering is established, the routes can be seen in GRT of both nodes:
     C>* 172.20.20.0/24 is directly connected, eth0, 00:20:55
     B   192.168.1.0/24 [200/0] via 192.168.1.0 inactive, 00:01:51
     C>* 192.168.1.0/24 is directly connected, Ethernet0, 00:03:50
+    sonic# show ip bgp 10.10.10.1/32
+    BGP routing table entry for 10.10.10.1/32, version 2
+    Paths: (1 available, best #1, table default)
+      Not advertised to any peer
+      Local
+        192.168.1.1 from 192.168.1.1 (10.10.10.1)
+          Origin IGP, localpref 100, valid, internal, best (First path received)
+          Last update: Sun May  3 08:01:36 2026
     ```
 
 Data plane confirms that routes have been programmed to FIB:
+
 ```
 sonic# ping 10.10.10.1
 PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
@@ -130,6 +170,18 @@ PING 10.10.10.1 (10.10.10.1) 56(84) bytes of data.
 64 bytes from 10.10.10.1: icmp_seq=2 ttl=64 time=2.84 ms
 ```
 
+```
+A:admin@srl# ping 10.10.10.2 network-instance default -c 3
+Using network instance default
+PING 10.10.10.2 (10.10.10.2) 56(84) bytes of data.
+64 bytes from 10.10.10.2: icmp_seq=1 ttl=64 time=3.19 ms
+64 bytes from 10.10.10.2: icmp_seq=2 ttl=64 time=2.96 ms
+64 bytes from 10.10.10.2: icmp_seq=3 ttl=64 time=2.81 ms
+
+--- 10.10.10.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2002ms
+rtt min/avg/max/mdev = 2.806/2.985/3.186/0.155 ms
+```
 
 
 [srl]: https://www.nokia.com/networks/products/service-router-linux-NOS/

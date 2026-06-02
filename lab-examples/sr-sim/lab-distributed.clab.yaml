@@ -1,0 +1,81 @@
+name: "sros"
+mgmt:
+  network: srsim_mgmt
+  ipv4-subnet: 10.78.140.0/24
+  ipv6-subnet: fd00:10:78:140::/64
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    srsim10-a:
+      kind: nokia_srsim
+      type: SR-7
+      mgmt-ipv4: 10.78.140.2
+      mgmt-ipv6: fd00:10:78:140::2
+      startup-config: configs/srsim10.distributed.partial.cfg
+      env:
+        NOKIA_SROS_SLOT: A
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01
+    srsim10-b:
+      kind: nokia_srsim
+      type: SR-7
+      network-mode: container:srsim10-a
+      env:
+        NOKIA_SROS_SLOT: B
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01
+    srsim10-1:
+      kind: nokia_srsim
+      type: SR-7
+      network-mode: container:srsim10-a
+      env:
+        NOKIA_SROS_SLOT: 1
+        NOKIA_SROS_CARD: iom5-e
+        NOKIA_SROS_SFM: m-sfm6-7/12
+        NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+        NOKIA_SROS_MDA_2: me3-400gb-qsfpdd
+    srsim10-2:
+      kind: nokia_srsim
+      type: SR-7
+      network-mode: container:srsim10-a
+      env:
+        NOKIA_SROS_SLOT: 2
+    ## SRSIM 11
+    srsim11-a:
+      kind: nokia_srsim
+      type: SR-7
+      mgmt-ipv4: 10.78.140.3
+      mgmt-ipv6: fd00:10:78:140::3
+      startup-config: configs/srsim11.distributed.partial.cfg
+      env:
+        NOKIA_SROS_SLOT: A
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01
+    srsim11-b:
+      kind: nokia_srsim
+      type: SR-7
+      network-mode: container:srsim11-a
+      env:
+        NOKIA_SROS_SLOT: B
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01
+    srsim11-1:
+      kind: nokia_srsim
+      type: SR-7
+      network-mode: container:srsim11-a
+      env:
+        NOKIA_SROS_SLOT: 1
+    srsim11-2:
+      kind: nokia_srsim
+      type: SR-7
+      network-mode: container:srsim11-a
+      env:
+        NOKIA_SROS_SLOT: 2
+        NOKIA_SROS_CARD: iom5-e
+        NOKIA_SROS_SFM: m-sfm6-7/12
+        NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+        NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
+
+  links:
+    # # DATA LINKS
+    - endpoints: ["srsim10-1:1/1/c1/1", "srsim11-1:1/1/c1/1"]
+    - endpoints: ["srsim10-2:2/1/c1/1", "srsim11-2:2/1/c1/1"]

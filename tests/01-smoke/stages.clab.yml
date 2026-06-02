@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: stages
+topology:
+  defaults:
+    kind: linux
+    image: debian:bookworm-slim
+  nodes:
+    node1:
+      cmd: sh -c "date +%s%N > /tmp/time & sh"
+      stages:
+        create:
+          wait-for:
+            - node: node2
+              stage: create
+        create-links:
+          exec:
+            - command: bash -c 'echo foo > /tmp/host-exec-test'
+              phase: on-enter
+              target: host
+            - command: ls /sys/class/net/
+              phase: on-enter
+
+    node2:
+      cmd: sh -c "date +%s%N > /tmp/time & sh"
+      stages:
+        create:
+          wait-for:
+            - node: node3
+              stage: create-links
+
+    node3:
+      cmd: sh -c "date +%s%N > /tmp/time & sh"
+      stages:
+        create:
+          wait-for:
+            - node: node4
+              stage: healthy
+          exec:
+            - command: ls /sys/class/net/
+              phase: on-exit
+
+    node4:
+      cmd: sh -c "date +%s%N > /tmp/time & sh"
+      healthcheck:
+        start-period: 5
+        interval: 1
+        test:
+          - CMD-SHELL
+          - cat /etc/os-release
+      stages:
+        create-links:
+          exec:
+            - command: uname -n
+              phase: on-exit
+        healthy:
+          exec:
+            - command: echo 'hey I am exiting healthy stage'
+              phase: on-exit
+
+  links:
+    - endpoints: ["node1:eth1", "node2:eth1"]
+    - endpoints: ["node1:eth3", "node4:eth3"]
+    - endpoints: ["node2:eth2", "node4:eth2"]
+    - endpoints: ["node3:eth1", "host:n3eth1"]

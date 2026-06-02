@@ -9,11 +9,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/charmbracelet/log"
 	"github.com/docker/go-connections/nat"
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
 	"gopkg.in/yaml.v2"
+)
+
+type Signal string
+
+const (
+	SIGTERM   Signal = "SIGTERM"
+	SIGINT    Signal = "SIGINT"
+	SIGKILL   Signal = "SIGKILL"
+	SIGRTMIN3 Signal = "SIGRTMIN+3"
 )
 
 // Link is a struct that contains the information of a link between 2 containers.
@@ -22,7 +29,7 @@ type Link struct {
 	B      *Endpoint
 	MTU    int
 	Labels map[string]string
-	Vars   map[string]interface{}
+	Vars   map[string]any
 }
 
 func (link *Link) String() string {
@@ -46,51 +53,67 @@ func (e *Endpoint) String() string {
 
 // MgmtNet struct defines the management network options.
 type MgmtNet struct {
-	Network string `yaml:"network,omitempty" json:"network,omitempty"` // container runtime network name
-	Bridge  string `yaml:"bridge,omitempty" json:"bridge,omitempty"`
+	// container runtime network name
+	Network string `json:"network,omitempty" yaml:"network,omitempty"`
+	Bridge  string `json:"bridge,omitempty"  yaml:"bridge,omitempty"`
+
 	// linux bridge backing the runtime network
-	IPv4Subnet     string `yaml:"ipv4-subnet,omitempty" json:"ipv4-subnet,omitempty"`
-	IPv4Gw         string `yaml:"ipv4-gw,omitempty" json:"ipv4-gw,omitempty"`
-	IPv4Range      string `yaml:"ipv4-range,omitempty" json:"ipv4-range,omitempty"`
-	IPv6Subnet     string `yaml:"ipv6-subnet,omitempty" json:"ipv6-subnet,omitempty"`
-	IPv6Gw         string `yaml:"ipv6-gw,omitempty" json:"ipv6-gw,omitempty"`
-	IPv6Range      string `yaml:"ipv6-range,omitempty" json:"ipv6-range,omitempty"`
-	MTU            int    `yaml:"mtu,omitempty" json:"mtu,omitempty"`
-	ExternalAccess *bool  `yaml:"external-access,omitempty" json:"external-access,omitempty"`
+	IPv4Subnet string `json:"ipv4-subnet,omitempty" yaml:"ipv4-subnet,omitempty"`
+	IPv4Gw     string `json:"ipv4-gw,omitempty"     yaml:"ipv4-gw,omitempty"`
+	IPv4Range  string `json:"ipv4-range,omitempty"  yaml:"ipv4-range,omitempty"`
+	IPv6Subnet string `json:"ipv6-subnet,omitempty" yaml:"ipv6-subnet,omitempty"`
+	IPv6Gw     string `json:"ipv6-gw,omitempty"     yaml:"ipv6-gw,omitempty"`
+	IPv6Range  string `json:"ipv6-range,omitempty"  yaml:"ipv6-range,omitempty"`
+	MTU        int    `json:"mtu,omitempty"         yaml:"mtu,omitempty"`
+
+	ExternalAccess *bool `json:"external-access,omitempty" yaml:"external-access,omitempty"`
+	SkipWhenUnused bool  `json:"skip-when-unused,omitempty" yaml:"skip-when-unused,omitempty"`
+
+	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
 }
 
 // Interface compliance.
 var _ yaml.Unmarshaler = &MgmtNet{}
 
 // UnmarshalYAML is a custom unmarshaller for MgmtNet that allows to map old attributes to new ones.
-func (m *MgmtNet) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// define an alias type to avoid recursion during unmarshalling
+func (m *MgmtNet) UnmarshalYAML(unmarshal func(any) error) error {
+	// define an alias type to avoid recursion during unmarshaling
 	type MgmtNetAlias MgmtNet
 
 	type MgmtNetWithDeprecatedFields struct {
 		MgmtNetAlias         `yaml:",inline"`
-		DeprecatedIPv4Subnet string `yaml:"ipv4_subnet,omitempty" json:"ipv4_subnet,omitempty"`
-		DeprecatedIPv6Subnet string `yaml:"ipv6_subnet,omitempty" json:"ipv6_subnet,omitempty"`
+		DeprecatedIPv4Subnet string `json:"ipv4_subnet,omitempty" yaml:"ipv4_subnet,omitempty"`
+		DeprecatedIPv6Subnet string `json:"ipv6_subnet,omitempty" yaml:"ipv6_subnet,omitempty"`
 	}
+
 	mn := &MgmtNetWithDeprecatedFields{}
 
-	mn.MgmtNetAlias = (MgmtNetAlias)(*m)
+	mn.MgmtNetAlias = MgmtNetAlias(*m)
 	if err := unmarshal(mn); err != nil {
 		return err
 	}
 
 	// process deprecated fields and use their values for new fields if new fields are not set
-	if len(mn.DeprecatedIPv4Subnet) > 0 && len(mn.IPv4Subnet) == 0 {
-		log.Warnf("Attribute \"ipv4_subnet\" is deprecated and will be removed in the future. Change it to \"ipv4-subnet\"")
+	if mn.DeprecatedIPv4Subnet != "" && mn.IPv4Subnet == "" {
+		log.Warnf(
+			"Attribute \"ipv4_subnet\" is deprecated and will be removed " +
+				"in the future. Change it to \"ipv4-subnet\"",
+		)
+
 		mn.IPv4Subnet = mn.DeprecatedIPv4Subnet
 	}
+
 	// map old to new if old defined but new not
-	if len(mn.DeprecatedIPv6Subnet) > 0 && len(mn.IPv6Subnet) == 0 {
-		log.Warnf("Attribute \"ipv6_subnet\" is deprecated and will be removed in the future. Change it to \"ipv6-subnet\"")
+	if mn.DeprecatedIPv6Subnet != "" && mn.IPv6Subnet == "" {
+		log.Warnf(
+			"Attribute \"ipv6_subnet\" is deprecated and will be removed " +
+				"in the future. Change it to \"ipv6-subnet\"",
+		)
+
 		mn.IPv6Subnet = mn.DeprecatedIPv6Subnet
 	}
 
-	*m = (MgmtNet)(mn.MgmtNetAlias)
+	*m = MgmtNet(mn.MgmtNetAlias)
 
 	return nil
 }
@@ -102,7 +125,8 @@ type NodeConfig struct {
 	// containerlab-prefixed unique container name
 	LongName string `json:"longname,omitempty"`
 	Fqdn     string `json:"fqdn,omitempty"`
-	// LabDir is a directory related to the node, it contains config items and/or other persistent state
+	// LabDir is a directory related to the node, it contains config items and/or other persistent
+	// state
 	LabDir string `json:"labdir,omitempty"`
 	Index  int    `json:"index,omitempty"`
 	Group  string `json:"group,omitempty"`
@@ -111,31 +135,38 @@ type NodeConfig struct {
 	StartupConfig string `json:"startup-config,omitempty"`
 	// optional delay (in seconds) to wait before creating this node
 	StartupDelay uint `json:"startup-delay,omitempty"`
-	// when set to true will enforce the use of startup-config, even when config is present in the lab directory
+	// when set to true will enforce the use of startup-config, even when config is present in the
+	// lab directory
 	EnforceStartupConfig bool `json:"enforce-startup-config,omitempty"`
-	// when set to true will prevent creation of a startup-config, for auto-provisioning testing (ZTP)
+	// when set to true will prevent creation of a startup-config, for auto-provisioning testing
+	// (ZTP)
 	SuppressStartupConfig bool `json:"suppress-startup-config,omitempty"`
 	// when set to true will auto-remove a stopped/failed container
-	AutoRemove bool `json:"auto-remove,omitempty"`
+	AutoRemove    bool   `json:"auto-remove,omitempty"`
+	RestartPolicy string `json:"restart-policy,omitempty"`
 	// path to config file that is actually mounted to the container and is a result of templation
 	ResStartupConfig string            `json:"startup-config-abs-path,omitempty"`
 	Config           *ConfigDispatcher `json:"config,omitempty"`
-	// path to config file that is actually mounted to the container and is a result of templation
-	ResConfig       string            `json:"config-abs-path,omitempty"`
-	NodeType        string            `json:"type,omitempty"`
-	Position        string            `json:"position,omitempty"`
-	License         string            `json:"license,omitempty"`
-	Image           string            `json:"image,omitempty"`
-	ImagePullPolicy PullPolicyValue   `json:"image-pull-policy,omitempty"`
-	Sysctls         map[string]string `json:"sysctls,omitempty"`
-	User            string            `json:"user,omitempty"`
-	Entrypoint      string            `json:"entrypoint,omitempty"`
-	Cmd             string            `json:"cmd,omitempty"`
+	NodeType         string            `json:"type,omitempty"`
+	Position         string            `json:"position,omitempty"`
+	License          string            `json:"license,omitempty"`
+	Image            string            `json:"image,omitempty"`
+	ImagePullPolicy  PullPolicyValue   `json:"image-pull-policy,omitempty"`
+	Sysctls          map[string]string `json:"sysctls,omitempty"`
+	User             string            `json:"user,omitempty"`
+	Entrypoint       string            `json:"entrypoint,omitempty"`
+	Cmd              string            `json:"cmd,omitempty"`
 	// Exec is a list of commands to execute inside the container backing the node.
 	Exec []string          `json:"exec,omitempty"`
 	Env  map[string]string `json:"env,omitempty"`
 	// Bind mounts strings (src:dest:options).
 	Binds []string `json:"binds,omitempty"`
+	// Devices to map in the container
+	Devices []string `json:"devices,omitempty"`
+	// Capabilities required by the container (if not run in privileged mode)
+	CapAdd []string `json:"cap-add,omitempty"`
+	// Size of the shared memory allocated to the container
+	ShmSize string `json:"shm-size,omitempty"`
 	// PortBindings define the bindings between the container ports and host ports
 	PortBindings nat.PortMap `json:"portbindings,omitempty"`
 	// ResultingPortBindings is a list of port bindings that are actually applied to the container
@@ -145,6 +176,7 @@ type NodeConfig struct {
 	// NetworkMode defines container networking mode.
 	// If set to `host` the host networking will be used for this node, else bridged network
 	NetworkMode string `json:"networkmode,omitempty"`
+	PidMode     string `json:"pidmode,omitempty"`
 	// MgmtNet is the name of the docker network this node is connected to with its first interface
 	MgmtNet string `json:"mgmt-net,omitempty"`
 	// MgmtIntf can be used to be rendered by the default node template
@@ -164,15 +196,11 @@ type NodeConfig struct {
 	Certificate *CertificateConfig
 	// Healthcheck configuration parameters
 	Healthcheck *HealthcheckConfig
-	NSPath      string `json:"nspath,omitempty"` // network namespace path for this node
-	// list of ports to publish with mysocketctl
-	Publish []string `json:"publish,omitempty"`
+	// Network aliases
+	Aliases []string `json:"aliases,omitempty"`
 	// Extra /etc/hosts entries for all nodes.
 	ExtraHosts []string          `json:"extra-hosts,omitempty"`
 	Labels     map[string]string `json:"labels,omitempty"` // container labels
-	// Ignite sandbox and kernel imageNames
-	Sandbox string `json:"sandbox,omitempty"`
-	Kernel  string `json:"kernel,omitempty"`
 	// Configured container runtime
 	Runtime string `json:"runtime,omitempty"`
 	// Resource limits
@@ -180,11 +208,13 @@ type NodeConfig struct {
 	CPUSet string  `json:"cpuset,omitempty"`
 	Memory string  `json:"memory,omitempty"`
 
+	// Credentials for SSH/NETCONF/GNMI/etc. Populated from the topology file
+	// (defaults/kinds/nodes), falling back to the kind's hardcoded default when not set.
+	Credentials NodeCredentials `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 	// Extra node parameters
-	Extras  *Extras    `json:"extras,omitempty"`
-	WaitFor []string   `json:"wait-for,omitempty"`
-	DNS     *DNSConfig `json:"dns,omitempty"`
-
+	Extras *Extras    `json:"extras,omitempty"`
+	Stages *Stages    `json:"stages,omitempty"`
+	DNS    *DNSConfig `json:"dns,omitempty"`
 	// Kind parameters
 	//
 	// IsRootNamespaceBased flag indicates that a certain nodes network
@@ -195,27 +225,8 @@ type NodeConfig struct {
 	// Introduced to prevent the check from running with ext-containers, since
 	// they should be present by definition.
 	SkipUniquenessCheck bool
-}
-
-func DisableTxOffload(n *NodeConfig) error {
-	// skip this if node runs in host mode
-	if strings.ToLower(n.NetworkMode) == "host" || strings.ToLower(n.NetworkMode) == "none" {
-		return nil
-	}
-	// disable tx checksum offload for linux containers on eth0 interfaces
-	nodeNS, err := ns.GetNS(n.NSPath)
-	if err != nil {
-		return err
-	}
-	err = nodeNS.Do(func(_ ns.NetNS) error {
-		// disabling offload on eth0 interface
-		err := utils.EthtoolTXOff("eth0")
-		if err != nil {
-			log.Infof("Failed to disable TX checksum offload for 'eth0' interface for Linux '%s' node: %v", n.ShortName, err)
-		}
-		return err
-	})
-	return err
+	Components          []*Component
+	Tmpfs               map[string]string `json:"tmpfs,omitempty"`
 }
 
 type GenericFilter struct {
@@ -229,69 +240,81 @@ type GenericFilter struct {
 	Match string
 }
 
-// FilterFromLabelStrings creates a GenericFilter based on the list of label=value pairs or just label entries.
-// A filter of type `label` is created.
-// For each label=value input label, a filter with the Field matching the label and Match matching the value is created.
-// For each standalone label, a filter with Operator=exists and Field matching the label is created.
-func FilterFromLabelStrings(labels []string) []*GenericFilter {
-	var gfl []*GenericFilter
-	var gf *GenericFilter
-	for _, s := range labels {
-		gf = &GenericFilter{
-			FilterType: "label",
-		}
-		if strings.Contains(s, "=") {
-			gf.Operator = "="
-			subs := strings.Split(s, "=")
-			gf.Field = strings.TrimSpace(subs[0])
-			gf.Match = strings.TrimSpace(subs[1])
-		} else {
-			gf.Operator = "exists"
-			gf.Field = strings.TrimSpace(s)
-		}
-
-		gfl = append(gfl, gf)
-	}
-	return gfl
-}
-
 // ConfigDispatcher represents the config of a configuration machine
 // that is responsible to execute configuration commands on the nodes
 // after they started.
 type ConfigDispatcher struct {
-	Vars map[string]interface{} `yaml:"vars,omitempty"`
+	Vars map[string]any `yaml:"vars,omitempty"`
 }
 
-func (cd *ConfigDispatcher) GetVars() map[string]interface{} {
+func (cd *ConfigDispatcher) GetVars() map[string]any {
 	if cd == nil {
 		return nil
 	}
+
 	return cd.Vars
 }
 
 // Extras contains extra node parameters which are not entitled to be part of a generic node config.
 type Extras struct {
-	SRLAgents []string `yaml:"srl-agents,omitempty"`
 	// Nokia SR Linux agents. As of now just the agents spec files can be provided here
-	MysocketProxy string `yaml:"mysocket-proxy,omitempty"`
+	SRLAgents []string `yaml:"srl-agents,omitempty"`
 	// Proxy address that mysocketctl will use
-	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
+	MysocketProxy string `yaml:"mysocket-proxy,omitempty"`
 	// paths to files which are to be copied to ceos flash dir
+	CeosCopyToFlash []string `yaml:"ceos-copy-to-flash,omitempty"`
+	// k8s-kind node specific options
+	K8sKind *K8sKindExtras `yaml:"k8s_kind,omitempty"`
+}
+
+// K8sKindExtras represents the k8s-kind-specific extra options.
+type K8sKindExtras struct {
+	Deploy *K8sKindDeployExtras `yaml:"deploy,omitempty"`
+}
+
+// K8sKindDeployExtras represents the options used for the kind cluster creation.
+// It is aligned with the `kind create cluster` command options, but exposes
+// only the ones that are relevant for containerlab.
+type K8sKindDeployExtras struct {
+	KubeconfigPath *string `yaml:"kubeconfig,omitempty"`
+	Wait           *string `yaml:"wait,omitempty"`
 }
 
 // ContainerDetails contains information that is commonly outputted to tables or graphs.
 type ContainerDetails struct {
-	LabName     string                `json:"lab_name,omitempty"`
-	LabPath     string                `json:"labPath,omitempty"`
-	Name        string                `json:"name,omitempty"`
-	ContainerID string                `json:"container_id,omitempty"`
-	Image       string                `json:"image,omitempty"`
-	Kind        string                `json:"kind,omitempty"`
-	Group       string                `json:"group,omitempty"`
-	State       string                `json:"state,omitempty"`
+	LabName     string `json:"lab_name,omitempty"`
+	LabPath     string `json:"labPath,omitempty"`
+	AbsLabPath  string `json:"absLabPath,omitempty"`
+	Name        string `json:"name,omitempty"`
+	ContainerID string `json:"container_id,omitempty"`
+	Image       string `json:"image,omitempty"`
+	Kind        string `json:"kind,omitempty"`
+	Group       string `json:"group,omitempty"`
+	State       string `json:"state,omitempty"`
+	// Status is the container's status, such as "Up"/"Exited"
+	// and if health is available it shows "(healthy)" or "(unhealthy)" instead.
+	Status      string                `json:"status,omitempty"`
 	IPv4Address string                `json:"ipv4_address,omitempty"`
 	IPv6Address string                `json:"ipv6_address,omitempty"`
 	Ports       []*GenericPortBinding `json:"ports,omitempty"`
+	Owner       string                `json:"owner,omitempty"`
+}
+
+// ContainerInterfaceDetails contains information about a specific container's network interfaces.
+type ContainerInterfaceDetails struct {
+	InterfaceName  string `json:"name"`
+	InterfaceAlias string `json:"alias"`
+	InterfaceMAC   string `json:"mac"`
+	InterfaceIndex int    `json:"ifindex"`
+	InterfaceMTU   int    `json:"mtu"`
+	InterfaceType  string `json:"type"`
+	InterfaceState string `json:"state"`
+}
+
+// ContainerInterfaces contains information about a container's network interfaces.
+type ContainerInterfaces struct {
+	ContainerName string                       `json:"name"`
+	Interfaces    []*ContainerInterfaceDetails `json:"interfaces"`
 }
 
 // GenericPortBinding represents a port binding.
@@ -304,12 +327,15 @@ type GenericPortBinding struct {
 
 func (p *GenericPortBinding) String() string {
 	var result string
+
 	if strings.Contains(p.HostIP, ":") {
 		result = fmt.Sprintf("[%s]", p.HostIP)
 	} else {
 		result = p.HostIP
 	}
+
 	result += fmt.Sprintf(":%d/%s -> %d", p.HostPort, p.Protocol, p.ContainerPort)
+
 	return result
 }
 
@@ -377,8 +403,7 @@ const (
 // a valid PullPolicyValue. Defaults to PullPolicyIfNotPresent.
 func ParsePullPolicyValue(s string) PullPolicyValue {
 	// remove whitespace and convert to lower
-	s = strings.TrimSpace(strings.ToLower(s))
-	switch s {
+	switch strings.TrimSpace(strings.ToLower(s)) {
 	case "always":
 		return PullPolicyAlways
 	case "never":
@@ -419,4 +444,13 @@ func (h *HealthcheckConfig) GetTimeoutDuration() time.Duration {
 // GetStartPeriodDuration returns the start period as time.Duration.
 func (h *HealthcheckConfig) GetStartPeriodDuration() time.Duration {
 	return time.Duration(h.StartPeriod) * time.Second
+}
+
+type ImpairmentData struct {
+	Interface  string  `json:"interface"`
+	Delay      string  `json:"delay"`
+	Jitter     string  `json:"jitter"`
+	PacketLoss float64 `json:"packet_loss"`
+	Rate       int     `json:"rate"`
+	Corruption float64 `json:"corruption"`
 }

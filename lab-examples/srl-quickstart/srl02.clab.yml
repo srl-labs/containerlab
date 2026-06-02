@@ -7,12 +7,12 @@ topology:
     srl1:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:${SRL_VERSION:=latest}
-      type: ${SRL_TYPE:=ixrd3l}
+      type: ${SRL_TYPE:=ixr-d3l}
 
     srl2:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux:${SRL_VERSION:=latest}
-      type: ${SRL_TYPE:=ixrd3l}
+      type: ${SRL_TYPE:=ixr-d3l}
 
   links:
     - endpoints: [srl1:e1-1, srl2:e1-1]

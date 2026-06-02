@@ -1,7 +1,7 @@
 package utils
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -28,7 +28,6 @@ func LoadSSHPubKeysFromFiles(paths []string) ([]ssh.PublicKey, error) {
 
 			keys = append(keys, pubKey)
 		}
-
 	}
 
 	return keys, nil

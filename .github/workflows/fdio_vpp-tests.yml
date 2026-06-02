@@ -1,0 +1,82 @@
+name: fdio_vpp-tests
+
+"on":
+  workflow_call:
+    inputs:
+      py_ver:
+        required: true
+        type: string
+      runtime:
+        type: string
+        default: "docker"
+
+jobs:
+  fdio_vpp-tests:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        test-suite:
+          - "01*.robot"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: containerlab
+
+      - name: Move containerlab to usr/bin
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          # Install a specific version of uv.
+          version: "0.5.28"
+          enable-cache: true
+
+      - uses: actions/setup-python@v6
+        with:
+          # cache: pip
+          # cache-dependency-path: "tests/requirements.txt"
+          python-version-file: "pyproject.toml"
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
+
+      # - name: setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+
+      - name: Activate virtualenv
+        run: |
+          . .venv/bin/activate
+          echo PATH=$PATH >> $GITHUB_ENV
+
+      - name: Sanitize test-suite name
+        run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
+
+      # - name: setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+
+      - name: Run tests
+        run: |
+          bash ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/11-fdio-vpp/${{ matrix.test-suite }}
+
+      # upload test reports as a zip file
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: 11-fdio_vpp-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
+          path: ./tests/out/*.html
+
+      # upload coverage report from unit tests, as they are then
+      # merged with e2e tests coverage
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: coverage-fdio_vpp-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
+          path: /tmp/clab-tests/coverage/*
+          retention-days: 7

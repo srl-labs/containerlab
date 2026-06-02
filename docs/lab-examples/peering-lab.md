@@ -51,9 +51,6 @@ The Route Servers receive NLRIs from peers and pass them over to the other IXP m
 
 Every component of this lab is openly available and can be downloaded from public repositories, but Nokia SR OS, which has to be obtained from Nokia representatives. In this lab SR OS container image name is `sros:23.3.R1`.
 
-!!!tip "Request Nokia SR OS containerlab image"
-    We are working on making the Nokia SR OS simulator image accessible to users. In the meantime, users might request a containerlab image from Nokia representatives by filling in the [request form](https://sros.dev/get-image).
-
 ## Topology definition
 
 The topology definition file for this lab is available in the [lab repository][lab]. The topology file - [`ixp.clab.yml`][lab-file] - declaratively describes the lab topology and is used by containerlab to create the lab environment.
@@ -66,7 +63,7 @@ The two IXP members are defined as follows:
 topology:
   nodes:
     peer1:
-      kind: vr-nokia_sros
+      kind: nokia_sros
       image: sros:23.3.R1 #(1)!
       license: license.key
       startup-config: configs/sros.partial.cfg
@@ -79,9 +76,9 @@ topology:
         - configs/frr-daemons.cfg:/etc/frr/daemons
 ```
 
-1. SR OS container has to be requested from Nokia or built manually from qcow2 disk image using `hellt/vrnetlab` project as explained [here](../manual/vrnetlab.md).
+1. SR OS container has to be requested from Nokia or built manually from qcow2 disk image using `srl-labs/vrnetlab` project as explained [here](../manual/vrnetlab.md).
 
-Apart from typical containerlab node definitions statements like `kind` and `image`, for SR OS we leverage the [`vr-nokia_sros`](../manual/kinds/vr-sros.md) kind, `license` and `startup-config` keys to provide the SR OS container with the license key and the startup configuration file respectively. Check out [Basic configuration](#basic-configuration) section for more details on the contents of startup-configuration files for each topology member.
+Apart from typical containerlab node definitions statements like `kind` and `image`, for SR OS we leverage the [`nokia_sros`](../manual/kinds/vr-sros.md) kind, `license` and `startup-config` keys to provide the SR OS container with the license key and the startup configuration file respectively. Check out [Basic configuration](#basic-configuration) section for more details on the contents of startup-configuration files for each topology member.
 
 For the FRR, which uses the public official container image, node we leverage the `binds` key to mount the FRR configuration file and the FRR daemon configuration file into the container. Again, the contents of these files are explained in the [Basic configuration](#basic-configuration) section.
 
@@ -188,10 +185,10 @@ Upon successful deployment, containerlab presents the lab summary table that con
 +---+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 | # |      Name      | Container ID |             Image             |     Kind      |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
-| 1 | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
-| 2 | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
-| 3 | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
-| 4 | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 1 | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | nokia_sros | running | 172.20.20.5/24 | 3fff:172:20:20::5/64 |
+| 2 | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 3fff:172:20:20::3/64 |
+| 3 | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 3fff:172:20:20::4/64 |
+| 4 | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 3fff:172:20:20::2/64 |
 +---+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 ```
 
@@ -199,17 +196,17 @@ This table contains vital information about the deployed nodes, such as the name
 
 ### Inspecting the lab
 
-At any point in time, containerlab users can refresh themselves on what is currently deployed in the lab environment by using the [`containerlab inspect`](../cmd/inspect.md) command:
+At any point in time, containerlab users can refresh themselves on what is currently deployed in the lab environment by using the [`containerlab inspect`](../cmd/inspect/index.md) command:
 
 ```
 $ containerlab inspect --all
 +---+--------------+----------+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 | # |  Topo Path   | Lab Name |      Name      | Container ID |             Image             |     Kind      |  State  |  IPv4 Address  |     IPv6 Address     |
 +---+--------------+----------+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
-| 1 | ixp.clab.yml | ixp      | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | vr-nokia_sros | running | 172.20.20.5/24 | 2001:172:20:20::5/64 |
-| 2 |              |          | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 2001:172:20:20::3/64 |
-| 3 |              |          | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 2001:172:20:20::4/64 |
-| 4 |              |          | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 2001:172:20:20::2/64 |
+| 1 | ixp.clab.yml | ixp      | clab-ixp-peer1 | c9f5301899fb | sros:23.3.R1                  | nokia_sros    | running | 172.20.20.5/24 | 3fff:172:20:20::5/64 |
+| 2 |              |          | clab-ixp-peer2 | 83da54ce9f7b | quay.io/frrouting/frr:8.4.1   | linux         | running | 172.20.20.3/24 | 3fff:172:20:20::3/64 |
+| 3 |              |          | clab-ixp-rs1   | 701ee906f03f | quay.io/openbgpd/openbgpd:7.9 | linux         | running | 172.20.20.4/24 | 3fff:172:20:20::4/64 |
+| 4 |              |          | clab-ixp-rs2   | 7de1a2f30d52 | ghcr.io/srl-labs/bird:2.13    | linux         | running | 172.20.20.2/24 | 3fff:172:20:20::2/64 |
 +---+--------------+----------+----------------+--------------+-------------------------------+---------------+---------+----------------+----------------------+
 ```
 
@@ -383,7 +380,7 @@ The following resources were used to create this lab:
 [obgpd-container]: https://quay.io/openbgpd/openbgpd:7.9
 [rd-twitter]: https://twitter.com/ntdvps
 [rd-linkedin]: https://www.linkedin.com/in/romandodin/
-[frr-container]: https://quay.io/openbgpd/openbgpd:7.9
+[frr-container]: https://quay.io/repository/frrouting/frr:8.4.1
 [lab-file]: https://github.com/hellt/sros-frr-ixp-lab/blob/euro-ix/ixp.clab.yml
 [sros-partial-cfg]: https://github.com/hellt/sros-frr-ixp-lab/blob/euro-ix/configs/sros.partial.cfg
 [frr-conf-basic]: https://github.com/hellt/sros-frr-ixp-lab/blob/euro-ix/configs/frr.conf

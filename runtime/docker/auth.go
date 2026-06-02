@@ -8,9 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/distribution/reference"
 	"github.com/docker/docker/api/types/registry"
-	log "github.com/sirupsen/logrus"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -25,7 +26,8 @@ type DockerConfigAuth struct {
 	Auth string
 }
 
-// DockerConfig represents the docker config that is typically contained within ~/.docker/config.json.
+// DockerConfig represents the docker config that is typically contained within
+// ~/.docker/config.json.
 type DockerConfig struct {
 	Auths map[string]DockerConfigAuth `json:"auths,omitempty"`
 }
@@ -44,31 +46,30 @@ func getImageDomainName(imageName string) string {
 	return imageDomainName
 }
 
-func getDockerConfigPath(configPath string) (string, error) {
-	var err error
+func getDockerConfigPath(configPath string) string {
 	if configPath == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-
-		configPath = filepath.Join(homeDir, dockerDefaultConfigDir, dockerDefaultConfigFile)
+		configPath = clabutils.ResolvePath(
+			filepath.Join("~", dockerDefaultConfigDir, dockerDefaultConfigFile), "")
 	}
 
-	return configPath, err
+	return configPath
 }
 
+// GetDockerConfig reads the docker config file by the configPath and returns the DockerConfig
+// struct
+// with parts of the docker config.
 func GetDockerConfig(configPath string) (*DockerConfig, error) {
 	var dockerConfig DockerConfig
 
-	dockerConfigPath, err := getDockerConfigPath(configPath)
-	if err != nil {
-		return nil, err
-	}
+	dockerConfigPath := getDockerConfigPath(configPath)
 
 	file, err := os.ReadFile(dockerConfigPath)
 	if err != nil {
-		log.Infof("Could not read docker config: %v", err)
+		if errors.Is(err, os.ErrNotExist) {
+			log.Debugf("Could not read docker config: %v", err)
+		} else {
+			log.Infof("Could not read docker config: %v", err)
+		}
 		return nil, err
 	}
 
@@ -95,12 +96,12 @@ func GetDockerAuth(dockerConfig *DockerConfig, imageName string) (string, error)
 		return "", nil
 	}
 
-	decodedAuth, err := base64.URLEncoding.DecodeString(auth)
+	decodedAuth, err := base64.StdEncoding.DecodeString(auth)
 	if err != nil {
 		return "", err
 	}
 
-	decodedAuthSplit := strings.Split(string(decodedAuth), authStringSep)
+	decodedAuthSplit := strings.SplitN(string(decodedAuth), authStringSep, authStringLength)
 
 	if len(decodedAuthSplit) != authStringLength {
 		return "", errors.New("unexpected auth string")

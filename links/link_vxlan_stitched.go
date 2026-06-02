@@ -6,8 +6,7 @@ import (
 	"os"
 	"syscall"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
+	"github.com/charmbracelet/log"
 	"github.com/vishvananda/netlink"
 )
 
@@ -15,9 +14,9 @@ type VxlanStitched struct {
 	LinkCommonParams
 	vxlanLink *LinkVxlan
 	vethLink  *LinkVEth
-	// the veth does not distinguist between endpoints. but we
-	// need to  know which endpoint is the one used for
-	// stitching therefore we get that endpoint seperately
+	// the veth does not distinguish between endpoints. but we
+	// need to know which endpoint is the one used for
+	// stitching therefore we get that endpoint separately
 	vethStitchEp Endpoint
 }
 
@@ -34,28 +33,45 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 	return vxlanStitched
 }
 
-// DeployWithExistingVeth provisons the stitched vxlan link whilst the
+// DeployWithExistingVeth provisions the stitched vxlan link whilst the
 // veth interface does already exist, hence it is not created as part of this
-// deployment.
+// deployment. The VxLAN interface is created and TC stitch rules are applied.
 func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
-	return l.internalDeploy(ctx, true)
+	return l.internalDeploy(ctx, nil, true)
 }
 
-// Deploy provisions the stitched vxlan link with all its underlaying sub-links.
-func (l *VxlanStitched) Deploy(ctx context.Context) error {
-	return l.internalDeploy(ctx, false)
+// Stitch applies only the TC redirect rules to bridge the already-existing
+// VxLAN and veth interfaces on the host. Both interfaces must already exist.
+// Used during lab deploy where VxLAN is created by host endpoint deploy and
+// veth is created by node workers.
+func (l *VxlanStitched) Stitch() error {
+	err := stitch(l.vxlanLink.localEndpoint, l.vethStitchEp)
+	if err != nil {
+		return err
+	}
+
+	return stitch(l.vethStitchEp, l.vxlanLink.localEndpoint)
 }
 
-func (l *VxlanStitched) internalDeploy(ctx context.Context, skipVethCreation bool) error {
+// Deploy provisions the stitched vxlan link with all its underlying sub-links.
+func (l *VxlanStitched) Deploy(ctx context.Context, ep Endpoint) error {
+	return l.internalDeploy(ctx, ep, false)
+}
+
+func (l *VxlanStitched) internalDeploy(
+	ctx context.Context,
+	ep Endpoint,
+	skipVethCreation bool,
+) error {
 	// deploy the vxlan link
-	err := l.vxlanLink.Deploy(ctx)
+	err := l.vxlanLink.Deploy(ctx, ep)
 	if err != nil {
 		return err
 	}
 
 	// the veth creation might be skipped if it already exists
 	if !skipVethCreation {
-		err = l.vethLink.Deploy(ctx)
+		err = l.vethLink.Deploy(ctx, ep)
 		if err != nil {
 			return err
 		}
@@ -114,7 +130,7 @@ func stitch(ep1, ep2 Endpoint) error {
 	// retrieve the respective netlink Links
 	for _, endpointName := range []string{ep1.GetIfaceName(), ep2.GetIfaceName()} {
 		var l netlink.Link
-		if l, err = utils.LinkByNameOrAlias(endpointName); err != nil {
+		if l, err = netlink.LinkByName(endpointName); err != nil {
 			return fmt.Errorf("failed to lookup %q: %v", endpointName, err)
 		}
 		netlinkLinks = append(netlinkLinks, l)
@@ -137,7 +153,7 @@ func stitch(ep1, ep2 Endpoint) error {
 	// tc filter add dev $SRC_IFACE parent fffff:
 	// protocol all
 	// u32 match u32 0 0
-	// action mirred egress mirror dev $DST_IFACE
+	// action mirred egress redirect dev $DST_IFACE
 	filter := &netlink.U32{
 		FilterAttrs: netlink.FilterAttrs{
 			LinkIndex: netlinkLinks[0].Attrs().Index,
@@ -156,9 +172,9 @@ func stitch(ep1, ep2 Endpoint) error {
 		Actions: []netlink.Action{
 			&netlink.MirredAction{
 				ActionAttrs: netlink.ActionAttrs{
-					Action: netlink.TC_ACT_PIPE,
+					Action: netlink.TC_ACT_STOLEN,
 				},
-				MirredAction: netlink.TCA_EGRESS_MIRROR,
+				MirredAction: netlink.TCA_EGRESS_REDIR,
 				Ifindex:      netlinkLinks[1].Attrs().Index,
 			},
 		},

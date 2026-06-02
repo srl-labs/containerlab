@@ -21,7 +21,7 @@ ${runtime}          docker
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} deploy -t ${CURDIR}/${lab-file-name}
+    ...    ${CLAB_BIN} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -36,24 +36,24 @@ Get nodes mgmt IPs
     Should Be Equal As Strings    ${inspected-n2-mgmt-ip}    ${n2-mgmt-ip}
 
 Ensure n1 mgmt IPv4 is in the config file
-    ${f} =    OperatingSystem.Get File    ${EXECDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
+    ${f} =    OperatingSystem.Get File    ${CURDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
     Log    ${f}
     Log    ${n1-mgmt-ip}
     Should Contain    ${f}    ${n1-mgmt-ip}
 
 Ensure n2 mgmt IPv4 is in the config file
-    ${f} =    OperatingSystem.Get File    ${EXECDIR}/clab-${lab-name}/${node2-name}/flash/startup-config
+    ${f} =    OperatingSystem.Get File    ${CURDIR}/clab-${lab-name}/${node2-name}/flash/startup-config
     Log    ${f}
     Should Contain    ${f}    ${n2-mgmt-ip}
 
 Ensure IPv6 default route is in the config file
-    ${f} =    OperatingSystem.Get File    ${EXECDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
+    ${f} =    OperatingSystem.Get File    ${CURDIR}/clab-${lab-name}/${node1-name}/flash/startup-config
     Log    ${f}
     Should Contain    ${f}    ipv6 route
 
 Ensure MGMT VRF is present
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${node1-name} --cmd "Cli -p 15 -c 'show vrf MGMT'"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    MGMT
@@ -72,8 +72,38 @@ Ensure n2 is reachable over ssh
     ...    password=admin
     ...    try_for=120
 
+Verify saving config
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    ERRO
+
+Verify saving config with copy flag
+    [Documentation]
+    ...    Save config with --copy flag and verify that the startup-config
+    ...    files are copied to the specified destination directory.
+    ${copy_dst} =    Set Variable    ${CURDIR}/save-copy-test
+    # clean up any leftover from previous runs
+    Run    rm -rf ${copy_dst}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --copy ${copy_dst}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    ERRO
+    # verify that startup-config files have been copied for both ceos nodes
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/${node1-name}/startup-config
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/${node2-name}/startup-config
+    # verify the copied files are not empty
+    ${size1} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/${node1-name}/startup-config
+    Should Be True    ${size1} > 0
+    ${size2} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/${node2-name}/startup-config
+    Should Be True    ${size2} > 0
+    # clean up
+    [Teardown]    Run    rm -rf ${copy_dst}
+
 
 *** Keywords ***
 Cleanup
-    Run    sudo -E ${CLAB_BIN} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    ${CLAB_BIN} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    rm -rf ${CURDIR}/${lab-name}

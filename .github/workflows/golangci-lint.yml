@@ -1,13 +1,27 @@
 name: golangci-lint
 on:
+  workflow_call:
+    inputs:
+      go_ver:
+        required: true
+        type: string
   workflow_dispatch:
+    inputs:
+      go_ver:
+        description: "Go version"
+        required: false
+        default: "1.25.10"
 jobs:
   golangci:
     name: lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
-          version: v1.38
+          go-version: ${{ inputs.go_ver }}
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12

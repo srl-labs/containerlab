@@ -1,0 +1,37 @@
+name: "sros"
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-2s-a:
+      kind: nokia_srsim
+      type: SR-2s
+      startup-config: configs/config-2s.partial.cfg
+      env:
+        NOKIA_SROS_SLOT: A
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01
+    sr-2s-b:
+      kind: nokia_srsim
+      type: SR-2s
+      network-mode: container:sr-2s-a
+      env:
+        NOKIA_SROS_SLOT: B
+        NOKIA_SROS_SYSTEM_BASE_MAC: 1c:58:07:00:03:01
+    sr-2s-1:
+      kind: nokia_srsim
+      type: SR-2s
+      network-mode: container:sr-2s-a
+      env:
+        NOKIA_SROS_SLOT: 1
+    sr-2s-2:
+      kind: nokia_srsim
+      type: SR-2s
+      network-mode: container:sr-2s-a
+      env:
+        NOKIA_SROS_SLOT: 2
+  links:
+    # DATA LINKS
+    - endpoints: ["sr-2s-1:1/1/c1/1", "sr-2s-2:2/1/c1/1"]
+    - endpoints: ["sr-2s-1:1/1/c2/1", "sr-2s-2:2/1/c2/1"]

@@ -1,16 +1,18 @@
 ---
 search:
   boost: 4
+kind_code_name: juniper_vjunosswitch
+kind_display_name: Juniper vJunos-switch
 ---
 # Juniper vJunos-switch
 
-[Juniper vJunos-switch](https://support.juniper.net/support/downloads/?p=vjunos) is a virtualized EX9214 switch identified with `juniper_vjunosswitch` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
+[Juniper vJunos-switch](https://www.juniper.net/documentation/product/us/en/vjunos-switch/) is a virtualized EX9214 switch identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md). It is built using [vrnetlab](../vrnetlab.md) project and essentially is a Qemu VM packaged in a docker container format.
 
 Juniper vJunos-switch nodes launched with containerlab come up pre-provisioned with SSH, SNMP, NETCONF and gNMI services enabled.
 
 ## How to obtain the image
 
-The qcow2 image can be downloaded from [Juniper website](https://support.juniper.net/support/downloads/?p=vjunos) and built with [vrnetlab](../vrnetlab.md).
+The qcow2 image can be freely downloaded from the [Juniper support portal](https://support.juniper.net/support/downloads/?p=vjunos-switch) without a Juniper account and built with [vrnetlab](../vrnetlab.md).
 
 ## Managing Juniper vJunos-switch nodes
 
@@ -39,17 +41,38 @@ Juniper vJunos-switch node launched with containerlab can be managed via the fol
 !!!info
     Default user credentials: `admin:admin@123`
 
-## Interfaces mapping
+## Interface naming
 
-Juniper vJunos-switch container can have up to 11 interfaces and uses the following mapping rules:
+You can use [interfaces names](../topo-def-file.md#interface-naming) in the topology file like they appear in -{{ kind_display_name }}-.
+
+The interface naming convention is: `ge-0/0/X`, where X denotes the port number.
+
+With that naming convention in mind:
+
+* `ge-0/0/0` - first data port available
+* `ge-0/0/1` - second data port, and so on...
+
+/// admonition
+    type: note
+Data port numbering starts at `0`.
+///
+
+The example ports above would be mapped to the following Linux interfaces inside the container running the -{{ kind_display_name }}- VM:
+
+Juniper vJunos-switch container by default has 1 management and 10 data interfaces, but can support up to 96 data interfaces if the following CLI is used:
+set chassis fpc 0 pic 0 number-of-ports 96
+
+The following mapping rules apply to the interfaces:
 
 * `eth0` - management interface connected to the containerlab management network
-* `eth1` - first data interface, mapped to a first data port of vJunos-Switch VM
+* `eth1` - first data interface, mapped to a first data port of vJunos-switch VM, which is `ge-0/0/0` **and not `ge-0/0/1`**.
 * `eth2+` - second and subsequent data interface
 
-When containerlab launches Juniper vJunos-switch node, it will assign IPv4/6 address to the `eth0` interface. These addresses can be used to reach the management plane of the router.
 
-Data interfaces `eth1+` need to be configured with IP addressing manually using CLI/management protocols or via a startup-config text file.
+
+When containerlab launches -{{ kind_display_name }}- node the management interface of the VM gets assigned `10.0.0.15/24` address from the QEMU DHCP server. This interface is transparently stitched with container's `eth0` interface such that users can reach the management plane of the -{{ kind_display_name }}- using containerlab's assigned IP.
+
+Data interfaces `ge-0/0/0+` need to be configured with IP addressing manually using CLI or other available management interfaces.
 
 ## Features and options
 
@@ -81,5 +104,5 @@ The following labs feature the Juniper vJunos-switch node:
 
 ## Known issues and limitations
 
-* vJunos-switch requires Linux kernel 4.17+
-* To check the boot log, use `docker logs -f <node-name>`.
+* Due to its nested architecture, vJunos-switch cannot be used in any deployments that launch it from within a VM.
+* The [vJunos-switch Deployment Guide for KVM](https://www.juniper.net/documentation/us/en/software/vjunos/vjunos-switch-kvm/topics/vjunos-switch-overview-understanding.html#concept_jhq_5yc_xwb) lists additional limitations.

@@ -4,6 +4,8 @@
 
 The `destroy` command destroys a lab referenced by its [topology definition file](../manual/topo-def-file.md).
 
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
+
 ### Usage
 
 `containerlab [global-flags] destroy [local-flags]`
@@ -14,7 +16,7 @@ The `destroy` command destroys a lab referenced by its [topology definition file
 
 #### topology
 
-With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used to spin up a lab.
+With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used to identify the lab to destroy.
 
 When the topology path refers to a directory, containerlab will look for a file with `.clab.yml` extension in that directory and use it as a topology definition file.
 
@@ -36,11 +38,15 @@ To make containerlab attempt a graceful shutdown of the running containers, add 
 
 #### keep-mgmt-net
 
-Do not try to remove the management network. Usually the management docker network (in case of docker) and the underlaying bridge are being removed. If you have attached additional resources outside of containerlab and you want the bridge to remain intact just add the `--keep-mgmt-net` flag.
+Do not try to remove the management network. Usually the management docker network (in case of docker) and the underlying bridge are being removed. If you have attached additional resources outside of containerlab and you want the bridge to remain intact just add the `--keep-mgmt-net` flag.
 
 #### all
 
 Destroy command provided with `--all | -a` flag will perform the deletion of all the labs running on the container host. It will not touch containers launched manually.
+
+#### yes
+
+The `--yes | -y` flag can be used together with `--all` to auto-approve deletion of all labs, skipping the interactive confirmation prompt. This is useful for automation or scripting scenarios where manual confirmation is not desired.
 
 #### node-filter
 
@@ -77,6 +83,12 @@ containerlab destroy
 
 ```bash
 containerlab destroy -a
+```
+
+#### Destroy all labs on the container host without confirmation prompt
+
+```bash
+containerlab destroy -a -y
 ```
 
 #### Destroy a lab using short flag names

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	"github.com/charmbracelet/log"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 var kindnames = []string{"keysight_ixia-c-one"}
@@ -22,24 +22,24 @@ var ixiacStatusConfig = struct {
 	statusSleepDuration time.Duration
 	readyFileName       string
 }{
-	statusSleepDuration: time.Duration(time.Second * 5),
+	statusSleepDuration: time.Second * 5,
 	readyFileName:       "/home/keysight/ixia-c-one/init-done",
 }
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(ixiacOne)
 	}, nil)
 }
 
 type ixiacOne struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (l *ixiacOne) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (l *ixiacOne) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	l.DefaultNode = *nodes.NewDefaultNode(l)
+	l.DefaultNode = *clabnodes.NewDefaultNode(l)
 
 	l.Cfg = cfg
 	for _, o := range opts {
@@ -49,7 +49,7 @@ func (l *ixiacOne) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (l *ixiacOne) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+func (l *ixiacOne) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for keysight_ixia-c-one '%s' node", l.Cfg.ShortName)
 	return l.ixiacPostDeploy(ctx)
 }
@@ -57,14 +57,17 @@ func (l *ixiacOne) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) er
 // ixiacPostDeploy runs postdeploy actions which are required for keysight_ixia-c-one node.
 func (l *ixiacOne) ixiacPostDeploy(ctx context.Context) error {
 	ixiacOneCmd := fmt.Sprintf("bash -c 'ls %s'", ixiacStatusConfig.readyFileName)
-	statusInProgressMsg := fmt.Sprintf("ls: %s: No such file or directory", ixiacStatusConfig.readyFileName)
+	statusInProgressMsg := fmt.Sprintf(
+		"ls: %s: No such file or directory",
+		ixiacStatusConfig.readyFileName,
+	)
 	for {
-		cmd, _ := exec.NewExecCmdFromString(ixiacOneCmd)
+		cmd, _ := clabexec.NewExecCmdFromString(ixiacOneCmd)
 		execResult, err := l.RunExec(ctx, cmd)
 		if err != nil {
 			return err
 		}
-		if len(execResult.GetStdErrString()) > 0 {
+		if execResult.GetStdErrString() != "" {
 			msg := strings.TrimSuffix(execResult.GetStdErrString(), "\n")
 			if msg != statusInProgressMsg {
 				return err

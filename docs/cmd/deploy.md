@@ -3,6 +3,13 @@
 ### Description
 
 The `deploy` command spins up a lab using the topology expressed via [topology definition file](../manual/topo-def-file.md).
+<!-- --8<-- [start:env-vars-flags] -->
+> All command line arguments can be also provided via environment variables (CLI flags take precedence). The environment variable names are constructed by prepending `CLAB_` to the flag name, then adding the command path and ending with the flag name in its full form, all in uppercase and with hyphens replaced by underscores.
+>
+> For example, the `--max-workers` flag for the `deploy` command can be set via `CLAB_DEPLOY_MAX_WORKERS` environment variable.
+> Or `CLAB_INSPECT_ALL=1` to set `--all` flag for the `inspect` command.
+> Or `CLAB_TOPO=srlinux.dev/clab-srl clab dep -c` to deploy a lab with the topology passed via environment variable.
+<!-- --8<-- [end:env-vars-flags] -->
 
 ### Usage
 
@@ -16,7 +23,7 @@ The `deploy` command spins up a lab using the topology expressed via [topology d
 
 With the global `--topo | -t` flag a user sets the path to the topology definition file that will be used to spin up a lab.
 
-When the topology path refers to a directory, containerlab will look for a file with `.clab.yml` extension in that directory and use it as a topology definition file.
+When the topology path refers to a directory, containerlab will look for a file with `.clab.yml` or `.clab.yaml` extension in that directory and use it as a topology definition file.
 
 When the topology file flag is omitted, containerlab will try to find the matching file name by looking at the current working directory.
 
@@ -65,6 +72,10 @@ The following URL formats are supported:
 
 Containerlab distinct HTTP URLs from GitHub/GitLab by checking if github.com or gitlab.com is present in the URL. If not, it will treat the URL as a plain HTTP(S) URL.
 
+###### S3
+
+Containerlab supports using S3 URLs to retrieve topology files and startup configurations for network devices. Check out the documentation on [S3 usage](../manual/s3-usage-example.md) for more details.
+
 #### name
 
 With the global `--name | -n` flag a user sets a lab name. This value will override the lab name value passed in the topology definition file.
@@ -92,13 +103,12 @@ With `--max-workers` flag, it is possible to limit the number of concurrent work
 
 #### runtime
 
-Containerlab nodes can be started by different runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman`, and `ignite` runtimes.
+Containerlab nodes can be started by different runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman` runtime.
 
 A global runtime can be selected with a global `--runtime | -r` flag that will select a runtime to use. The possible value are:
 
 * `docker` - default
 * `podman` - experimental support
-* `ignite`
 
 #### timeout
 
@@ -110,9 +120,19 @@ The default timeout is set to 2 minutes and can be changed to values like `30s, 
 
 #### export-template
 
-The local `--export-template` flag allows a user to specify a custom Go template that will be used for exporting topology data into `topology-data.json` file under the lab directory. If not set, the default template path is `/etc/containerlab/templates/export/auto.tmpl`.
+The local `--export-template` flag allows a user to specify a custom Go template that will be used for exporting topology data into `topology-data.json` file under the lab directory. If not set, the [default template](https://github.com/srl-labs/containerlab/blob/main/clab/export_templates/auto.tmpl) is used.
 
-To export full topology data instead of a subset of fields exported by default, use `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
+To export the full topology data instead of a subset of fields exported by default, use `--export-template __full` which is a special value that instructs containerlab to use the [full.tmpl](https://github.com/srl-labs/containerlab/blob/main/clab/export_templates/full.tmpl) template file. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
+
+#### export-rendered
+
+The local `--export-rendered <path>` flag writes the **fully rendered** topology definition to the given file: after Go template execution and environment-variable substitution, but before containerlab proceeds with the rest of deployment. This is useful for debugging templated labs or capturing the exact YAML that was parsed.
+
+The path argument is **required**. Relative paths are interpreted from the process working directory.
+
+```bash
+containerlab deploy -t lab0.clab.gotmpl --vars lab0.clab_vars.yml --export-rendered lab0.rendered.clab.yml
+```
 
 #### log-level
 
@@ -130,6 +150,96 @@ The local `--node-filter` flag allows users to specify a subset of topology node
 When a subset of nodes is specified, containerlab will only deploy those nodes and links belonging to all selected nodes and ignore the rest. This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full topology.
 
 Read more about [node filtering](../manual/node-filtering.md) in the documentation.
+
+#### skip-post-deploy
+
+The `--skip-post-deploy` flag skips the post-deploy phase of the lab deployment, affecting all nodes.
+
+The post-deploy phase runs after containers and network endpoints are created. Depending on the node kind, it may include:
+
+* Readiness and health checks
+* TLS certificate provisioning
+* Saving startup configuration
+* Applying overlay CLI configuration
+* Populating `/etc/hosts` with peer node entries
+* Disabling TX checksum offload
+
+Node kinds with notable post-deploy actions include Nokia SR Linux, Nokia SR OS, Arista cEOS, Juniper cRPD, Linux, and vrnetlab-based nodes. Kinds without a post-deploy phase are unaffected by this flag.
+
+This flag is useful to bypass post-deploy validation failures or to speed up deployment when only the running containers are needed.
+
+#### skip-labdir-acl
+
+The `--skip-labdir-acl` flag can be used to skip the lab directory access control list (ACL) provisioning.
+
+The extended File ACLs are provisioned for the lab directory by default, unless this flag is set. Extended File ACLs allow a sudo user to access the files in the lab directory that might be created by the `root` user from within the container node.
+
+While this is useful in most cases, sometimes extended File ACLs might prevent your lab from working, especially when your lab directory end up being mounted from the network filesystem (NFS, CIFS, etc.). In such cases, you can use this flag to skip the ACL provisioning.
+
+#### owner
+
+The local `--owner` flag allows you to specify a custom owner for the lab. This value will be applied as the owner label for all nodes in the lab.
+
+This flag is designed for multi-user environments where you need to track ownership of lab resources. Only users who are members of the `clab_admins` group can set a custom owner. If a non-admin user attempts to set an owner, the flag will be ignored with a warning, and the current user will be used as the owner instead.
+
+Example:
+
+```bash
+containerlab deploy -t mylab.clab.yml --owner alice
+```
+
+#### restore-all
+
+The local `--restore-all` flag enables restoring vrnetlab-based nodes from previously saved snapshots. When specified, containerlab will look for snapshot files named `{nodename}.tar` in the provided directory and automatically restore nodes that have matching snapshots.
+
+Nodes without snapshots in the directory will deploy normally (fresh deployment).
+
+**Default directory**: `./snapshots` (if flag is used without a value)
+
+```bash
+# Restore all nodes that have snapshots in ./snapshots directory
+containerlab deploy -t mylab.clab.yml --restore-all
+
+# Restore from custom directory
+containerlab deploy -t mylab.clab.yml --restore-all /backups/lab1
+```
+
+**Note**: Only vrnetlab-based nodes support snapshot restore. The snapshot feature requires vrnetlab images with snapshot support.
+
+#### restore
+
+The local `--restore` flag allows per-node snapshot restoration by explicitly specifying the snapshot file path for individual nodes. This flag can be specified multiple times to restore different nodes from different snapshot files.
+
+**Format**: `--restore node=path/to/snapshot.tar`
+
+```bash
+# Restore only r1 from a specific snapshot
+containerlab deploy -t mylab.clab.yml --restore r1=./snapshots/r1.tar
+
+# Restore multiple nodes with specific snapshots
+containerlab deploy -t mylab.clab.yml \
+  --restore r1=./snapshots/r1.tar \
+  --restore r2=./snapshots/r2.tar
+```
+
+**Priority**: Per-node `--restore` specifications override `--restore-all` for the specified nodes.
+
+**Combined usage**:
+
+```bash
+# Restore all from ./snapshots, but override r3 with a different snapshot
+containerlab deploy -t mylab.clab.yml \
+  --restore-all ./snapshots \
+  --restore r3=./backups/r3-old.tar
+```
+
+In this example:
+
+* Nodes with snapshots in `./snapshots/` will restore from there
+* Node `r3` will restore from `./backups/r3-old.tar` (override)
+* Nodes without snapshots will deploy fresh
+
+> See [tools snapshot save](tools/snapshot/save.md) for information on creating snapshots.
 
 ### Environment variables
 
@@ -154,7 +264,7 @@ Example command-line usage: `CLAB_VERSION_CHECK=disable containerlab deploy`
 
 To change the [lab directory](../manual/conf-artifacts.md#identifying-a-lab-directory) location, set `CLAB_LABDIR_BASE` environment variable accordingly. It denotes the base directory in which the lab directory will be created.
 
-The default behavior is to create the lab directory in the current working dir.
+The default behavior is to create the lab directory in the same directory as the topology file (`clab.yml` file).
 
 ### Examples
 

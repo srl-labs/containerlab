@@ -6,19 +6,31 @@ package utils
 
 import (
 	"crypto/rand"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+	goruntime "runtime"
 	"strings"
 
+	"github.com/charmbracelet/log"
 	"github.com/jsimonetti/rtnetlink/rtnl"
-	log "github.com/sirupsen/logrus"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
+)
+
+const (
+	parkingNetnsPrefix = "clab-park-"
+	// Be conservative and keep the name comfortably within Linux NAME_MAX (255 bytes).
+	maxParkingNetnsNameLen = 200
 )
 
 // BridgeByName returns a *netlink.Bridge referenced by its name.
 func BridgeByName(name string) (*netlink.Bridge, error) {
-	l, err := LinkByNameOrAlias(name)
+	l, err := netlink.LinkByName(name)
 	if err != nil {
 		return nil, fmt.Errorf("could not lookup %q: %v", name, err)
 	}
@@ -32,7 +44,7 @@ func BridgeByName(name string) (*netlink.Bridge, error) {
 // LinkContainerNS creates a symlink for containers network namespace
 // so that it can be managed by iproute2 utility.
 func LinkContainerNS(nspath, containerName string) error {
-	CreateDirectory("/run/netns/", 0755)
+	CreateDirectory("/run/netns/", clabconstants.PermissionsDirDefault)
 	dst := "/run/netns/" + containerName
 	if _, err := os.Lstat(dst); err == nil {
 		os.Remove(dst)
@@ -53,7 +65,8 @@ func GenMac(oui string) (net.HardwareAddr, error) {
 	return hwa, err
 }
 
-// DeleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS func.
+// DeleteNetnsSymlink deletes a network namespace and removes the symlink created by LinkContainerNS
+// func.
 func DeleteNetnsSymlink(n string) error {
 	log.Debug("Deleting netns symlink: ", n)
 	sl := fmt.Sprintf("/run/netns/%s", n)
@@ -64,9 +77,29 @@ func DeleteNetnsSymlink(n string) error {
 	return nil
 }
 
+// ParkingNetnsName returns the deterministic named-netns identifier used to park
+// a container's dataplane interfaces while the container is stopped.
+func ParkingNetnsName(containerName string) string {
+	name := parkingNetnsPrefix + containerName
+	if len(name) <= maxParkingNetnsNameLen {
+		return name
+	}
+
+	sum := sha1.Sum([]byte(containerName))
+	suffix := hex.EncodeToString(sum[:])[:10]
+
+	// leave room for "-" + suffix
+	maxBaseLen := maxParkingNetnsNameLen - 1 - len(suffix)
+	if maxBaseLen < 1 {
+		return suffix
+	}
+
+	return name[:maxBaseLen] + "-" + suffix
+}
+
 // LinkIPs returns IPv4/IPv6 addresses assigned to a link referred by its name.
 func LinkIPs(ln string) (v4addrs, v6addrs []netlink.Addr, err error) {
-	l, err := LinkByNameOrAlias(ln)
+	l, err := netlink.LinkByName(ln)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to lookup link %q: %w", ln, err)
 	}
@@ -126,20 +159,6 @@ func GetLinksByNamePrefix(prefix string) ([]netlink.Link, error) {
 	return fls, nil
 }
 
-func LinkByNameOrAlias(name string) (netlink.Link, error) {
-	var l netlink.Link
-	var err error
-
-	// long interface names (16+ chars) are aliased by clab
-	if len(name) > 15 {
-		l, err = netlink.LinkByAlias(name)
-	} else {
-		l, err = netlink.LinkByName(name)
-	}
-
-	return l, err
-}
-
 func GetRouteForIP(ip net.IP) (*rtnl.Route, error) {
 	conn, err := rtnl.Dial(nil)
 	if err != nil {
@@ -150,4 +169,51 @@ func GetRouteForIP(ip net.IP) (*rtnl.Route, error) {
 	r, err := conn.RouteGet(ip)
 
 	return r, err
+}
+
+func CreateNamedNetNS(name string) (string, error) {
+	nsPath := filepath.Join("/run/netns", name)
+
+	goruntime.LockOSThread()
+	defer goruntime.UnlockOSThread()
+
+	currentNS, err := netns.Get()
+	if err != nil {
+		return "", err
+	}
+	defer currentNS.Close()
+
+	defer func() {
+		_ = netns.Set(currentNS)
+	}()
+
+	newNS, err := netns.NewNamed(name)
+	if err != nil {
+		if os.IsExist(err) && FileOrDirExists(nsPath) {
+			return nsPath, nil
+		}
+		return "", err
+	}
+
+	newNS.Close()
+
+	return nsPath, nil
+}
+
+// create a new netns or return the nspath if it exists.
+func CreateOrGetNamedNetNS(name string) (string, error) {
+	if nsPath, err := GetNamedNetNS(name); err == nil {
+		return nsPath, nil
+	}
+
+	return CreateNamedNetNS(name)
+}
+
+func GetNamedNetNS(name string) (string, error) {
+	nsPath := filepath.Join("/run/netns", name)
+	if !FileOrDirExists(nsPath) {
+		return "", fmt.Errorf("named netns %q does not exist", name)
+	}
+
+	return nsPath, nil
 }

@@ -1,0 +1,16 @@
+interfaces:
+  eth1:
+    description: "To client1"
+    mtu: 1500
+    lcp: eth1
+    addresses: [10.82.98.65/28, 2001:db8:8298:101::1/64]
+  eth2:
+    description: "To vpp2"
+    mtu: 9216
+    lcp: eth2
+    addresses: [10.82.98.16/31, 2001:db8:8298:1::1/64]
+loopbacks:
+  loop0:
+    description: "vpp1"
+    lcp: loop0
+    addresses: [10.82.98.0/32, 2001:db8:8298::/128]

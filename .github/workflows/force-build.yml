@@ -7,19 +7,20 @@ on:
 
 # make sure those env vars are aligned with the ones in ci-cd.yml workflow
 env:
-  GOVER: 1.20.2
+  GO_VER: "1.25.10"
   CGO_ENABLED: 0
-  MKDOCS_INS_VER: 9.1.4-insiders-4.32.4-hellt
-  GORELEASER_VER: v1.11.4
+  MKDOCS_INS_VER: 9.6.1-insiders-4.53.15-hellt
+  GORELEASER_VER: v2.0.1
+  PY_VER: "3.10"
 
 jobs:
   get-tag:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     outputs:
       git_tag: ${{ steps.git_tag.outputs.git_tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Get git tag
@@ -31,45 +32,46 @@ jobs:
   build-and-release:
     needs: get-tag
     if: ${{ needs.get-tag.outputs.git_tag != '' }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GOVER }}
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v7
         with:
           version: ${{ env.GORELEASER_VER }}
-          args: release --rm-dist
+          args: release --clean --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FURY_TOKEN: ${{ secrets.FURYPUSHTOKEN }}
 
   publish-docs:
     needs: build-and-release
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     if: contains(github.ref, '-') != true # do not publish docs for beta releases which will have something like v0.0.0-0.33.0-beta
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          lfs: true
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

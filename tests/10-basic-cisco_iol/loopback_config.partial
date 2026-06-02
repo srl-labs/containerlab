@@ -1,0 +1,3 @@
+interface Loopback0
+ description PARTIAL_CFG
+!

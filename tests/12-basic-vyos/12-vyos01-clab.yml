@@ -1,0 +1,20 @@
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+
+name: 12-01-two-vyos
+
+topology:
+  kinds:
+    vyosnetworks_vyos:
+      image: ghcr.io/evilhamsterman/vyos:stream
+  nodes:
+    n1:
+      kind: vyosnetworks_vyos
+    n2:
+      kind: vyosnetworks_vyos
+      mgmt-ipv4: 172.20.20.22
+
+  links:
+    - endpoints: ["n1:eth1", "n2:eth1"]

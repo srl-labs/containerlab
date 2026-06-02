@@ -12,14 +12,17 @@ ${runtime}      docker
 Deploy ${lab-name} lab with generate command
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} generate --name ${lab-name} --kind linux --image ghcr.io/hellt/network-multitool --nodes 2,1,1 --deploy
+    ...    ${CLAB_BIN} --runtime ${runtime} generate --name ${lab-name} --kind linux --image ghcr.io/srl-labs/network-multitool --nodes 2,1,1 --deploy --export-rendered ${lab-name}.rendered.clab.yml
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+    OperatingSystem.File Should Exist    ${lab-name}.rendered.clab.yml
+    ${rendered} =    OperatingSystem.Get File    ${lab-name}.rendered.clab.yml
+    Should Contain    ${rendered}    ${lab-name}
 
 Verify nodes
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    clab-${lab-name}-node1-1
@@ -34,7 +37,7 @@ Deploy ${lab-name}-scale lab with generate command
     ...    This test verifies that scaled topology can be deployed without concurrent errors.
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} generate --name ${lab-name}-scale --kind linux --image alpine:3 --nodes 5,5,5 --deploy
+    ...    ${CLAB_BIN} --runtime ${runtime} generate --name ${lab-name}-scale --kind linux --image alpine:3 --nodes 5,5,5 --deploy
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Not Contain    ${output}    failed
@@ -49,7 +52,8 @@ Cleanup
 
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${lab-name}.clab.yml --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${lab-name}.clab.yml --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     OperatingSystem.Remove File    ${lab-name}.clab.yml
+    Run Keyword And Ignore Error    OperatingSystem.Remove File    ${lab-name}.rendered.clab.yml

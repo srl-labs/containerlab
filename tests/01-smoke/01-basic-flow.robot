@@ -4,7 +4,7 @@ Library             String
 Library             Process
 Resource            ../common.robot
 
-Suite Teardown      Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
+Suite Teardown      Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/01-linux-nodes.clab.yml --cleanup
 
 
 *** Variables ***
@@ -12,10 +12,23 @@ ${lab-file}                 01-linux-nodes.clab.yml
 ${lab-name}                 2-linux-nodes
 ${runtime}                  docker
 # runtime command to execute tasks in a container
-# defaults to docker exec. Will be rewritten to containerd `ctr` if needed in "Define runtime exec" test
+# defaults to docker exec.
 ${runtime-cli-exec-cmd}     sudo docker exec
 ${n2-ipv4}                  172.20.20.100/24
-${n2-ipv6}                  2001:172:20:20::100/64
+${n2-ipv6}                  3fff:172:20:20::100/64
+${table-delimit}            │
+${l1-uname-exec-output}     SEPARATOR=\n
+...                         Executed command node=clab-2-linux-nodes-l1 command="uname -n"
+...                         ${SPACE}${SPACE}stdout=
+...                         ${SPACE}${SPACE}│ l1
+${l2-uname-exec-output}     SEPARATOR=\n
+...                         Executed command node=clab-2-linux-nodes-l2 command="uname -n"
+...                         ${SPACE}${SPACE}stdout=
+...                         ${SPACE}${SPACE}│ l2
+${l3-uname-exec-output}     SEPARATOR=\n
+...                         Executed command node=clab-2-linux-nodes-l3 command="uname -n"
+...                         ${SPACE}${SPACE}stdout=
+...                         ${SPACE}${SPACE}│ l3
 
 
 *** Test Cases ***
@@ -28,11 +41,30 @@ Verify number of Hosts entries before deploy
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
     Set Suite Variable    ${deploy-output}    ${output}
+
+Verify topology backup file is created
+    [Documentation]    This test ensures that when a lab is deployed,
+    ...    exactly one backup of the topology file
+    ...    is created at /tmp/.clab/bak, and its name contains the topology file name.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ls /tmp/.clab/bak | grep ${lab-file}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    ${files} =    List Files In Directory    /tmp/.clab/bak    pattern=*${lab-file}*
+    Log    ${files}
+    Length Should Be    ${files}    1
+    Should Contain    ${files}[0]    ${lab-file}
+
+    # Compare the contents of the original and backup file line by line
+    ${orig} =    Get File    ${CURDIR}/${lab-file}
+    ${backup} =    Get File    /tmp/.clab/bak/${files}[0]
+    Should Be Equal    ${orig}    ${backup}
 
 Ensure exec node option works
     [Documentation]    This tests ensures that the node's exec property that sets commands to be executed upon node deployment works.
@@ -43,37 +75,36 @@ Ensure exec node option works
 Exec command with no filtering
     [Documentation]    This tests ensures that when `exec` command is called without user provided filters, the command is executed on all nodes of the lab.
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd 'uname -n'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd 'uname -n'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
+    # check if output contains the expected log string
     Should Contain
-    ...    ${output}
-    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
+    ...    ${output}    ${l1-uname-exec-output}
     Should Contain
-    ...    ${output}
-    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l2\\". stdout:\\nl2
+    ...    ${output}    ${l2-uname-exec-output}
     Should Contain
-    ...    ${output}
-    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l3\\". stdout:\\nl3
+    ...    ${output}    ${l3-uname-exec-output}
 
 Exec command with filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters, the command is executed ONLY on selected nodes of the lab.
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'uname -n'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'uname -n'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # check if output contains the escaped string, as this is how logrus prints to non tty outputs.
+
     Should Contain
-    ...    ${output}
-    ...    Executed command \\"uname -n\\" on the node \\"clab-2-linux-nodes-l1\\". stdout:\\nl1
-    Should Not Contain    ${output}    stdout:\\nl2
-    Should Not Contain    ${output}    stdout:\\nl3
+    ...    ${output}    ${l1-uname-exec-output}
+
+    Should Not Contain    ${output}
+    ...    stdout=${\n}${SPACE}${SPACE}│ l2"""
+    Should Not Contain    ${output}
+    ...    stdout=${\n}${SPACE}${SPACE}│ l3"""
 
 Exec command with json output and filtering
     [Documentation]    This tests ensures that when `exec` command is called with user provided filters and json output, the command is executed ONLY on selected nodes of the lab and the actual JSON is populated to stdout.
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --format json --cmd 'cat /test.json' | jq '.[][0].stdout.containerlab'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -86,7 +117,7 @@ Ensure CLAB_INTFS env var is set
     ...    This test ensures that the CLAB_INTFS environment variable is set in the container
     ...    and that it contains the correct number of interfaces.
     ${output} =    Process.Run Process
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $CLAB_INTFS"'
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $CLAB_INTFS"'
     ...    shell=True
     Log    ${output.stdout}
     Log    ${output.stderr}
@@ -96,13 +127,178 @@ Ensure CLAB_INTFS env var is set
     # may be worth to change this to stdout in the future
     # we literally check if the string stdout:\n3 is present in the output, as this is how
     # the result is printed today.
-    Should Contain    ${output.stderr}    stdout:\\n3
+    Should Contain    ${output.stderr}
+    ...    stdout=
+    ...    │ l3
 
-Inspect ${lab-name} lab
+Ensure default no_proxy env var is set
+    [Documentation]
+    ...    This test ensures that the NO_PROXY env var is populated by clab automatically
+    ...    with the relevant addresses and names
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name\=l1 --cmd 'ash -c "echo $NO_PROXY"'
+    ...    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+
+    Should Contain
+    ...    ${output.stderr}
+    ...    localhost,127.0.0.1,::1,*.local,172.20.20.0/24,172.20.20.100,172.20.20.99,3fff:172:20:20::/64,3fff:172:20:20::100,3fff:172:20:20::99,l1,l2,l3
+
+Inspect ${lab-name} lab using its name and via viper env vars
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
+    ...    CLAB_NAME=${lab-name} ${CLAB_BIN} --runtime ${runtime} inspect
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
+
+Inspect Lab Using JSON Format
+    [Documentation]    Verify inspect command with JSON format output using topology file.
+    # Run inspect command with JSON format
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --format json
+    ...    shell=True
+    ...    env:CLAB_INSPECT_FORMAT=table
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Not Be Empty    ${output.stdout}
+
+    # Save JSON to a temp file for jq processing
+    Create File    /tmp/clab_output.json    ${output.stdout}
+
+    # Check the number of nodes
+    ${count_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}" | length'
+    Log    ${count_check}
+    Should Be Equal As Integers    ${count_check[0]}    0
+    Should Contain    ${count_check[1]}    3
+
+    # Check node name
+    ${name_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}"[0].name'
+    Log    ${name_check}
+    Should Be Equal As Integers    ${name_check[0]}    0
+    Should Contain    ${name_check[1]}    clab-${lab-name}-l1
+
+    # Check node kind
+    ${kind_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}"[1].kind'
+    Log    ${kind_check}
+    Should Be Equal As Integers    ${kind_check[0]}    0
+    Should Contain    ${kind_check[1]}    linux
+
+    # Skip IPv4 check for Podman
+    Skip If    '${runtime}' == 'podman'    Skipping IPv4 check for Podman
+
+    # Check IPv4 address
+    ${ip_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.json | jq -e '."${lab-name}"[1].ipv4_address'
+    Log    ${ip_check}
+    Should Be Equal As Integers    ${ip_check[0]}    0
+    Should Contain    ${ip_check[1]}    ${n2-ipv4}
+
+Inspect Lab Using Details Flag
+    [Documentation]    Verify inspect command with --details flag outputs detailed grouped JSON per lab.
+    # Run inspect command with --details flag
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --details
+    ...    shell=True
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Not Be Empty    ${output.stdout}
+
+    # Save JSON to a temp file for jq processing
+    Create File    /tmp/clab_details_output.json    ${output.stdout}
+
+    # Check the key for our lab name is present and is a non-empty array
+    ${count_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}" | length'
+    Log    ${count_check}
+    Should Be Equal As Integers    ${count_check[0]}    0
+    Should Contain    ${count_check[1]}    3
+
+    # Check that containers have the expected fields in details view
+    ${field_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0] | has("Names") and has("Image") and has("State") and has("Labels")'
+    Log    ${field_check}
+    Should Be Equal As Integers    ${field_check[0]}    0
+    Should Contain    ${field_check[1]}    true
+
+    # Check that the container name matches expected pattern
+    ${name_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0].Names[0]'
+    Log    ${name_check}
+    Should Be Equal As Integers    ${name_check[0]}    0
+    Should Contain    ${name_check[1]}    clab-${lab-name}-l1
+
+    # Check that the State is "running"
+    ${state_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0].State'
+    Log    ${state_check}
+    Should Be Equal As Integers    ${state_check[0]}    0
+    Should Contain    ${state_check[1]}    running
+
+    # Check that the Labels map includes clab-node-name
+    ${label_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[0].Labels["clab-node-name"]'
+    Log    ${label_check}
+    Should Be Equal As Integers    ${label_check[0]}    0
+    Should Contain    ${label_check[1]}    l1
+
+    # Check that IP addresses are present
+    ${ipv4_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_details_output.json | jq -e '."${lab-name}"[1].NetworkSettings.IPv4addr'
+    Log    ${ipv4_check}
+    Should Be Equal As Integers    ${ipv4_check[0]}    0
+    Should Contain    ${ipv4_check[1]}    172.20.20.100
+
+Inspect Lab Using CSV Format
+    [Documentation]    Verify inspect command with CSV format output using topology file.
+    # Run inspect command with CSV format
+    ${output} =    Process.Run Process
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --format csv
+    ...    shell=True
+    Log    ${output}
+    Log    ${output.stdout}
+    Log    ${output.stderr}
+    Should Be Equal As Integers    ${output.rc}    0
+    Should Not Be Empty    ${output.stdout}
+
+    # Save CSV to aa temp file for processing
+    Create File    /tmp/clab_output.csv    ${output.stdout}
+
+    # Check the number of nodes
+    ${count_check} =    Run And Return Rc And Output
+    ...    cat /tmp/clab_output.csv | wc -l
+    Log    ${count_check}
+    Should Be Equal As Integers    ${count_check[0]}    0
+    Should Contain    ${count_check[1]}    3
+
+    # Check node name
+    ${name_check} =    Run And Return Rc And Output
+    ...    awk -F',' 'NR==2 { print $4 }' /tmp/clab_output.csv
+    Log    ${name_check}
+    Should Be Equal As Integers    ${name_check[0]}    0
+    Should Contain    ${name_check[1]}    clab-${lab-name}-l1
+
+    # Check node kind
+    ${kind_check} =    Run And Return Rc And Output
+    ...    awk -F',' 'NR==2 { print $7 }' /tmp/clab_output.csv
+    Log    ${kind_check}
+    Should Be Equal As Integers    ${kind_check[0]}    0
+    Should Contain    ${kind_check[1]}    linux
+
+    # Skip IPv4 check for Podman
+    Skip If    '${runtime}' == 'podman'    Skipping IPv4 check for Podman
+
+    # Check IPv4 address
+    ${ip_check} =    Run And Return Rc And Output
+    ...    awk -F',' 'NR==3 { print $10 }' /tmp/clab_output.csv
+    Log    ${ip_check}
+    Should Be Equal As Integers    ${ip_check[0]}    0
+    Should Contain    ${ip_check[1]}    ${n2-ipv4}
 
 Define runtime exec command
     IF    "${runtime}" == "podman"
@@ -139,29 +335,39 @@ Verify links in node l2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth2
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth3
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
     Should Contain    ${output}    02:00:00:00:00:01
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth4
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
     Should Contain    ${output}    02:00:00:00:00:04
+
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show eth5
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
     Should Contain    ${output}    02:00:00:00:00:05
+
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l2 ip link show somedummy
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    LOWER_UP
 
 Verify links on host
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -177,20 +383,45 @@ Verify links on host
 
 Ensure "inspect all" outputs IP addresses
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} inspect --all
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect --all
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    # get a 3rd line from the bottom of the inspect cmd.
-    # this relates to the l2 node
-    ${line} =    String.Get Line    ${output}    -3
+
+    # get a 4th line from the bottom of the inspect cmd.
+    # this relates to the l2 node ipv4
+    ${line} =    String.Get Line    ${output}    -6
     Log    ${line}
-    @{data} =    Split String    ${line}    |
+
+    @{data} =    Split String    ${line}    ${table-delimit}
     Log    ${data}
+
     # verify ipv4 address
-    ${ipv4} =    String.Strip String    ${data}[9]
-    Should Match Regexp    ${ipv4}    ^[\\d\\.]+/\\d{1,2}$
+    ${ipv4} =    String.Strip String    ${data}[6]
+    Should Match Regexp    ${ipv4}    ^[\\d\\.]+$
+
+    # get a 3rd line from the bottom of the inspect cmd.
+    # this relates to the l2 node ipv6
+    ${line} =    String.Get Line    ${output}    -5
+    Log    ${line}
+
+    @{data} =    Split String    ${line}    ${table-delimit}
+    Log    ${data}
+
     # verify ipv6 address
-    Run Keyword    Match IPv6 Address    ${data}[10]
+    ${ipv6} =    String.Strip String    ${data}[6]
+    Run Keyword    Match IPv6 Address    ${ipv6}
+
+Verify "inspect interfaces" contains the expected output
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} inspect interfaces -t ${CURDIR}/${lab-file}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    # Check for presence of node name, interface, interface type and operational state
+    Should Contain    ${output}    clab-${lab-name}-l2
+    Should Contain    ${output}    eth2
+    Should Contain    ${output}    veth
+    Should Contain    ${output}    up
 
 Verify bind mount in l1 node
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -251,6 +482,27 @@ Verify Hosts entries exist
     IF    '${runtime}' == 'podman'    Should Contain    ${output}    6
     IF    '${runtime}' == 'docker'    Should Contain    ${output}    6
 
+Verify Hosts entries contain container ID
+    [Documentation]    Verify that /etc/hosts entries contain the truncated container ID (first 12 chars) as added by PR #2991.
+    # Get the container ID for l1 node
+    ${rc}    ${container_id} =    Run And Return Rc And Output
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 --format '{{.Id}}'
+    Log    ${container_id}
+    Should Be Equal As Integers    ${rc}    0
+
+    # Container IDs are 64 characters long, truncate to 12 as containerlab does
+    ${truncated_id} =    Get Substring    ${container_id}    0    12
+    Log    Truncated container ID: ${truncated_id}
+
+    # Get the hosts entry for l1 node
+    ${rc}    ${hosts_entry} =    Run And Return Rc And Output
+    ...    cat /etc/hosts | grep "clab-${lab-name}-l1" | head -1
+    Log    ${hosts_entry}
+    Should Be Equal As Integers    ${rc}    0
+
+    # Verify the hosts entry contains the truncated container ID
+    Should Contain    ${hosts_entry}    ${truncated_id}
+
 Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -271,9 +523,37 @@ Verify iptables allow rule is set
     ${ipt} =    Run
     ...    sudo iptables -vnL DOCKER-USER
     Log    ${ipt}
-    Should Contain    ${ipt}    ACCEPT all -- * ${MgmtBr}
+    # debian 12 uses `0` for protocol, while previous versions use `all`
+    # this matches the rule in the in direction
+    Should Contain Any    ${ipt}
+    ...    ACCEPT all -- * ${MgmtBr}
+    ...    ACCEPT 0 -- * ${MgmtBr}
     ...    ignore_case=True
     ...    collapse_spaces=True
+
+    # this matches the rule in the out direction
+    Should Contain Any    ${ipt}
+    ...    ACCEPT all -- ${MgmtBr} *
+    ...    ACCEPT 0 -- ${MgmtBr} *
+    ...    ignore_case=True
+    ...    collapse_spaces=True
+
+Verify ip6tables allow rule is set
+    [Documentation]    Checking if ip6tables allow rule is set so that external traffic can reach containerlab management network
+    Skip If    '${runtime}' != 'docker'
+
+    # Add check for ip6tables availability
+    ${rc}    ${output} =    Run And Return Rc And Output    which nft
+    Skip If    ${rc} != 0    nft command not found
+
+    ${rc}    ${output} =    Run And Return Rc And Output    sudo nft list tables
+    Skip If    'ip6 filter' not in '''${output}'''    ip6 filter chain not found
+
+    ${ipt} =    Run
+    ...    sudo nft list chain ip6 filter DOCKER-USER
+    Log    ${ipt}
+    Should Match Regexp    ${ipt}    oifname.*${MgmtBr}.*accept
+    Should Match Regexp    ${ipt}    iifname.*${MgmtBr}.*accept
 
 Verify DNS-Server Config
     [Documentation]    Check if the DNS config did take effect
@@ -303,25 +583,25 @@ Verify DNS-Options Config
 Verify Exec rc == 0 on containers match
     [Documentation]    Checking that the return code is != 0 if on the exce call not containers match
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd "echo test"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --cmd "echo test"
     Log    ${output}
     Should Contain    ${output}    test
-    Should Not Contain    ${output}    Error: filter did not match any containers
+    Should Not Contain    ${output}    Filter did not match any containers
     Should Be Equal As Integers    ${rc}    0
 
 Verify Exec rc != 0 on no containers match
     [Documentation]    Checking that the return code is != 0 if on the exce call not containers match
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
     Log    ${output}
     Should Not Contain    ${output}    test
-    Should Contain    ${output}    Error: filter did not match any containers
+    Should Match Regexp    ${output}    (?i)filter did not match any containers
     Should Not Be Equal As Integers    ${rc}    0
 
 Verify l1 node is healthy
     [Documentation]    Checking if l1 node is healthy after the lab is deployed
 
-    Sleep    3s
+    Sleep    10s
 
     ${output} =    Process.Run Process
     ...    sudo ${runtime} inspect clab-${lab-name}-l1 -f ''{{.State.Health.Status}}''
@@ -335,7 +615,7 @@ Verify l1 node is healthy
 
 Destroy ${lab-name} lab
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
+    ...    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -361,10 +641,57 @@ Verify iptables allow rule are gone
     Log    ${ipt}
     Should Not Contain    ${ipt}    ${MgmtBr}
 
+Verify ip6tables allow rule are gone
+    [Documentation]    Checking if ip6tables allow rule is removed once the lab is destroyed
+    Skip If    '${runtime}' != 'docker'
+
+    # Add check for ip6tables availability
+    ${rc}    ${output} =    Run And Return Rc And Output    which nft
+    Skip If    ${rc} != 0    nft command not found
+
+    ${rc}    ${output} =    Run And Return Rc And Output    sudo nft list tables
+    Skip If    'ip6 filter' not in '''${output}'''    ip6 filter chain not found
+
+    ${ipt} =    Run
+    ...    sudo nft list chain ip6 filter DOCKER-USER
+    Log    ${ipt}
+    Should Not Contain    ${ipt}    ${MgmtBr}
+
+Verify containerlab version
+    [Documentation]    Ensures that 'containerlab version' subcommand runs successfully
+    ...    and prints basic version fields.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} version
+    Log    ${output}
+    # The command should exit with 0
+    Should Be Equal As Integers    ${rc}    0
+
+    # Check for presence of version/commit/date lines (case-sensitive or partial match)
+    Should Contain    ${output}    version:
+    Should Contain    ${output}    commit:
+    Should Contain    ${output}    date:
+
+Verify containerlab version check
+    [Documentation]    Ensures that 'containerlab version check' either says you're on latest version
+    ...    or that a new version is available. Also verifies the command succeeds.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} version check
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    # On success, containerlab either prints:
+    #    "You are on the latest version" OR
+    #    "A newer containerlab version (...) is available!"
+    # So we allow for either outcome
+    Should Contain Any
+    ...    ${output}
+    ...    You are on the latest version
+    ...    A newer containerlab version
+
 
 *** Keywords ***
 Match IPv6 Address
     [Arguments]
     ...    ${address}=${None}
     ${ipv6} =    String.Strip String    ${address}
-    Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+/\\d{1,2}$
+    Should Match Regexp    ${ipv6}    ^[\\d:abcdef]+$

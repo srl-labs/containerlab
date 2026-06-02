@@ -1,0 +1,21 @@
+name: iol
+topology:
+  nodes:
+    router1:
+      kind: cisco_iol
+      image: ghcr.io/srl-labs/containerlab/cisco_iol:17.12.01
+    router2:
+      kind: cisco_iol
+      image: ghcr.io/srl-labs/containerlab/cisco_iol:17.12.01
+      startup-config: ./loopback_config.partial
+    router3:
+      kind: cisco_iol
+      image: ghcr.io/srl-labs/containerlab/cisco_iol:17.12.01
+      startup-config: ./router3-full.cfg
+    switch:
+      kind: cisco_iol
+      image: ghcr.io/srl-labs/containerlab/cisco_iol:L2-17.12.01
+      type: l2
+  links:
+    - endpoints: ["router1:Ethernet0/1", "switch:Ethernet0/1"]
+    - endpoints: ["router2:Ethernet0/1", "switch:e0/2"]

@@ -1,0 +1,20 @@
+name: srlcjunosevo
+
+topology:
+  nodes:
+    srl:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:23.7.1
+      startup-config: srl.cli
+
+    cevo:
+      kind: juniper_cjunosevolved
+      image: cjunosevolved:25.2R1.8-EVO
+      startup-config: cjunosevo.cfg
+      env:
+        # To start the BT flavor, change "BX" to "BT" below
+        CPTX_COSIM: "BX"
+  links:
+    - endpoints: ["srl:e1-1", "cevo:eth4"]
+    - endpoints: ["srl:e1-2", "cevo:eth5"]
+    - endpoints: ["srl:e1-3", "cevo:eth6"]

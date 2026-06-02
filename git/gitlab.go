@@ -38,7 +38,7 @@ func NewGitLabRepoFromURL(url *neturl.URL) (*GitLabRepo, error) {
 	}
 
 	// set CloneURL to the copy of the original URL
-	// this is overriden later for repo urls with
+	// this is overridden later for repo urls with
 	// paths containing blob or tree elements
 	r.CloneURL = &neturl.URL{}
 	*r.CloneURL = *r.URL
@@ -60,17 +60,23 @@ func NewGitLabRepoFromURL(url *neturl.URL) (*GitLabRepo, error) {
 	case len(splitPath) == 2:
 		return r, nil
 	case len(splitPath) < 5:
-		return nil, fmt.Errorf("%w invalid github path. should have either 2 or >= 5 path elements", errInvalidURL)
+		return nil, fmt.Errorf(
+			"%w invalid github path. should have either 2 or >= 5 path elements",
+			errInvalidURL,
+		)
 	}
 
 	r.GitBranch = splitPath[4]
 
-	switch {
+	switch splitPath[3] {
 	// path points to a file at a specific git ref
-	case splitPath[3] == "blob":
-		if !(strings.HasSuffix(r.URL.Path, ".yml") ||
-			strings.HasSuffix(r.URL.Path, ".yaml")) {
-			return nil, fmt.Errorf("%w: topology file must have yml or yaml extension", errInvalidURL)
+	case "blob":
+		if !strings.HasSuffix(r.URL.Path, ".yml") &&
+			!strings.HasSuffix(r.URL.Path, ".yaml") {
+			return nil, fmt.Errorf(
+				"%w: topology file must have yml or yaml extension",
+				errInvalidURL,
+			)
 		}
 
 		if len(splitPath)-1 > 5 {
@@ -83,7 +89,7 @@ func NewGitLabRepoFromURL(url *neturl.URL) (*GitLabRepo, error) {
 		r.FileName = splitPath[len(splitPath)-1]
 
 	// path points to a git ref (branch or tag)
-	case splitPath[3] == "tree":
+	case "tree":
 		if len(splitPath) > 5 {
 			r.Path = splitPath[5:]
 		}

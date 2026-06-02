@@ -2,9 +2,11 @@
 
 ## Description
 
-The `exec` command allows to execute a command inside the nodes (containers).
+The `exec` command allows a user to execute a command inside the nodes (containers).
 
-This command is similar to `docker exec`, but it allows to run the same command across multiple lab nodes using filters. Users can provide a path to the topology file and `--label` filter to narrow down the list of nodes to execute the command on.
+This command is similar to `docker exec`, but it allows a user to run the same command across multiple lab nodes matching the filter. Users can provide a path to the topology file and use the `--label` argument to narrow down the list of nodes to execute the command on.
+
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
 
 ## Usage
 

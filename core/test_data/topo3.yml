@@ -1,0 +1,18 @@
+name: topo3
+topology:
+  defaults:
+    license: default.lic
+    binds:
+      - default.lic:/dst
+    type: ixrd2l
+    env:
+      env1: val1
+    user: customglobal
+    labels:
+      default-label: value
+  nodes:
+    node1:
+      kind: nokia_srlinux
+      type: ixrd3l
+    node2:
+      kind: nokia_srlinux

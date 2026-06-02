@@ -1,0 +1,59 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+    "build": {
+        "dockerfile": "../slim.Dockerfile",
+        "context": "../..",
+        "args": {
+            "CLAB_VERSION": "${localEnv:CLAB_VERSION}"
+        }
+    },
+    "runArgs": [
+        "--network=host",
+        "--pid=host",
+        "--privileged"
+    ],
+    "mounts": [
+        "type=bind,src=/var/lib/docker,dst=/var/lib/docker",
+        "type=bind,src=/lib/modules,dst=/lib/modules"
+    ],
+    "features": {
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+            "version": "26.1.5",
+            "dockerDashComposeVersion": "none",
+            "installDockerComposeSwitch": "false"
+        },
+        // Add sshd to support gh cli codespaces cp.
+        "ghcr.io/devcontainers/features/sshd:1": {
+            "version": "latest"
+        }
+    },
+    "remoteUser": "vscode",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "zsh",
+                "terminal.integrated.profiles.linux": {
+                    "zsh": {
+                        "path": "/bin/zsh"
+                    }
+                },
+                "terminal.integrated.fontFamily": "FiraCode Nerd Font, Menlo, Monaco, Cascadia Code, Consolas, Courier New, monospace"
+            },
+            "extensions": [
+                "ms-azuretools.vscode-docker",
+                // Python.
+                "ms-python.python",
+                // Errors and highlighters.
+                "mechatroner.rainbow-csv",
+                "redhat.vscode-yaml",
+                // markdown
+                "yzhang.markdown-all-in-one",
+                "davidanson.vscode-markdownlint",
+                // containerlab
+                "srl-labs.vscode-containerlab"
+            ]
+        }
+    },
+    "workspaceFolder": "${localWorkspaceFolder}",
+    "workspaceMount": "source=${localWorkspaceFolder},target=${localWorkspaceFolder},type=bind,consistency=cached"
+}

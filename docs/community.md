@@ -1,4 +1,5 @@
 ---
+comments: true
 hide:
   - navigation
 ---
@@ -25,6 +26,69 @@ For those who cherish IRC in their hearts, a community-led IRC channel `#contain
 
 We are always happy to showcase containerlab and demonstrate its powers. Luckily, the network engineering community has lots of events worldwide, and we participated in some. Below you will find recordings of containerlab talks in different formats and on various venues listed in reverse chronological order[^1].
 
+### CHNOG 3
+
+<small>:material-youtube: [Change with Confidence: Containerlab at Proton](https://www.youtube.com/watch?v=RtJqWRYKf88) · :material-calendar: 2026-05-29</small>
+
+Seeing how Containerlab is being used in production, within the right context, and with the right scope is like seeing your kid grow up and become a successful adult. John Howard, Proton's Head of Network Engineering, shares his experience with Containerlab and how it has helped them to validate their network changes in a safe and controlled manner.
+
+"Stay in bed" - he said - because the changes can now be triaged and beaten to death before they are deployed.
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/RtJqWRYKf88" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+Participants:
+
+* [:material-linkedin:](https://www.linkedin.com/in/jonnyhoward/) John Howard
+
+### RIPE 92
+
+<small>:material-youtube: [Developing Containerlab - an open-source success story](https://ripe92.ripe.net/programme/meeting-plan/sessions/85/JDMLST/) · :material-calendar: 2026-05-20</small>
+
+Containerlab turns 6 this year - with over half a million installs, a rich ecosystem, plenty of write-ups, blog posts and repositories using it, it has become a popular project for creating virtual network topologies.
+
+This talks is not aimed at presenting the tool itself, but rather the development process, and what worked for the project, what did not, and what challenges we faced while developing and maintaining a tool that has to support traditionally closed-source software and engage with a non-software developer userbase.
+
+<video width="100%" controls>
+  <source src="https://ripe92.ripe.net/media/videos/gordon-gidofalvy_developing-containerlab-an-open-source-success-story_side_20260520-094658.mp4" type="video/mp4">
+</video>
+
+Participants:
+
+* [:material-linkedin:](https://www.linkedin.com/in/gidofalvy/) Gordon Gidofalvy
+
+### Autocon 1
+
+<small>:material-youtube: [When to use and not to use Containerlab?](https://youtu.be/zKHqiWdN91s) · :material-calendar: 2024-05-29</small>
+
+As with every tool, it is important to use it in the right context. It is possible to drive a nail with a screwdriver, but a hammer would be more appropriate. In this talk, Roman Dodin explains the use cases where containerlab shines and where it might not be the best fit.
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/zKHqiWdN91s" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+Participants:
+
+* [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
+
+### RIPE 88
+
+<small>:material-youtube: [Simulating Networks at Scale with Clabernetes](https://ripe88.ripe.net/archives/video/1290/) · :material-calendar: 2024-05-20</small>
+
+Carl Montanari and Simon Peccaud introduced [Clabernetes](https://c9s.run) to RIPE 88 attendees.
+
+OVHCloud was an early adopter of Clabernetes, which helped them to simulate the WAN network in a way horizontally scalable way that naturally plugged into the rest of their network automation and CI workflow.
+
+<video width="100%" controls>
+  <source src="https://ripe88.ripe.net/archive/video/carl-montanari-simon-peccaud_simulating-networks-at-scale-with-clabernetes-and-ovhcloud_main_20240521-090009.mp4" type="video/mp4">
+</video>
+
+Participants:
+
+* [:material-twitter:](https://x.com/carlrmontanari) [:material-linkedin:](https://www.linkedin.com/in/carl-montanari-47888931/) Carl Montanari
+* [:material-twitter:](https://x.com/SimPeccaud) [:material-linkedin:](https://www.linkedin.com/in/simonpeccaud/) Simon Peccaud
+
 ### NFD 33
 
 <small>:material-youtube: [Lab as Code with Containerlab](https://www.youtube.com/watch?v=rjZjerjTrSY) · :material-calendar: 2023-10-30</small>
@@ -37,7 +101,7 @@ Three years in the making with monthly releases, containerlab has become a de-fa
 
 Participants:
 
-* [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+* [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
 
 ### Telco podcast
 
@@ -75,7 +139,7 @@ Our very first NANOG appearance and we went full-steam there. This talk is the m
 
 Participants:
 
-* [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+* [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
 * [:material-linkedin:][karim-linkedin] Karim Radhouani
 
 ### Open Networking & Edge Summit 2021
@@ -90,7 +154,7 @@ The talk starts with the reasoning as to why containerlab development was warran
 <iframe width="100%" src="https://www.youtube.com/embed/snQTlFahY1c" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
-Participants: [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+Participants: [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
 
 ### NLNOG 2021
 
@@ -114,13 +178,84 @@ Building large-scale network labs can be tedious and error-prone — More import
 <iframe src="https://anchor.fm/modulate-demodulate/embed/episodes/Containerlab-Declarative-Network-Labbing-with-Roman-Dodin-e129cuc/a-a5q33b1" height="102px" width="400px" frameborder="0" scrolling="no"></iframe>
 </div>
 
-Participants: [:material-twitter:][rdodin-twitter][:material-linkedin:][rdodin-linkedin] Roman Dodin
+Participants: [:material-twitter:][rdodin-twitter] [:material-linkedin:][rdodin-linkedin] Roman Dodin
 
 ## Blogs
 
 The power of the community is in its members. We are delighted to have containerlab users who share their experience working with the tool, unveiling new use cases, and providing a personal touch to the workflows.
 
 This section logs the most notable blogs, streams, and and demos delivered by containerlab users worldwide.
+
+/// admonition | Want to share your experience?
+    type: question
+Do you have a blog around containerlab that you want to share with the community? Please let us know by mentioning it in the [Comments](#__comments) section at the bottom of this page.
+///
+
+### Creating custom Containerlab node kinds
+
+<small>:material-text: [Blog](https://torbjorn.dev/blog/creating-clab-node-kinds/) by [Torbjørn Bang](https://www.linkedin.com/in/torbjornbang/) · :material-calendar: 2025-10-26</small>
+
+In this post Torbjørn guides us through adding new vrnetlab based node kinds to Containerlab.
+He covers both building container images for your VM based NOS using vrnetlab, and subsequently adding support for them in containerlab.
+This is a great read if you are looking to get started modifying/adding containerlab node kinds!
+
+### Extending the Kubernetes (host) network with EVPN tunnels
+
+<small>:material-text: [Blog](https://fedepaol.github.io/blog/2024/06/14/extending-the-kubernetes-host-network-with-evpn-tunnels-and-frr/) by [Federico Paolinelli](https://fedepaol.github.io/about/) · :material-calendar: 2024-06-14</small>
+
+It is refreshing to see how people find new ways to use containerlab. In this blog post, Federico Paolinelli explains how he used containerlab to create a lab environment to test a solution to extend the Kubernetes host network with EVPN tunnels and FRR.
+
+Containerlab helped to build the lab environment where a KinD-based k8s cluster is connected to an EVPN emulated fabric. Thanks to the native KinD support in containerlab it was all a single lab package to deploy and test the solution.
+
+### Using Containerlab and Google Cloud Platform to lab Aruba CX
+
+<small>:material-text: [Blog](https://blog.crispyfi.com/2024/06/02/aruba-cx-infrastructure-as-code-lab-with-containerlab-in-google-cloud-platform/) by [Crispy](https://blog.crispyfi.com/about/) · :material-calendar: 2024-06-02</small>
+
+Crispy [shares his experience](https://blog.crispyfi.com/2024/06/02/aruba-cx-infrastructure-as-code-lab-with-containerlab-in-google-cloud-platform/) with switching from EVE-NG to Containerlab to lab Aruba CX switches. The blog post is a step-by-step guide on how to create a lab environment in GCP with containerlab and run Aruba CX switches in it.
+
+/// admonition | From Containerlab team
+    type: tip
+Note, that while GCP is a nice way to run containerlab labs, it is not the only one. You may also try [Codespaces](manual/codespaces.md) as a "free" alternative.
+///
+
+### Building a home lab with containerlab
+
+<small>:material-text: [Blog](https://write.as/rarovar/my-experience-as-a-network-engineer-and-my-introduction-to-containerlab#this-is-cool-and-all-but-how-do-i-use-it) by [rarovar](https://write.as/rarovar/my-experience-as-a-network-engineer-and-my-introduction-to-containerlab) · :material-calendar: 2024-04-18</small>
+
+It is rare to see a blog post series that starts from, literally, bare metal and builds up to an in-depth explanation of how to use containerlab to build a network lab. In this blog post series, rarovar shares his Containerlab journey in 4 acts:
+
+* Part 1: Preparing your Server
+* Part 2: Creating your Containerlab VM
+* Part 3: Installing Containerlab on your VM
+* Part 4: Creating your first lab
+
+You will find links to all parts [here](https://write.as/rarovar/my-experience-as-a-network-engineer-and-my-introduction-to-containerlab#this-is-cool-and-all-but-how-do-i-use-it).
+
+It was especially interesting to read how rarovar built the lab environment based on NUC hardware in Part1. But do check other parts as well!
+
+### Containerlab for Kubernetes Networking Experimentation
+
+<small>:material-text: [Blog](https://virtualizestuff.com/exploring-containerlab) by [Dave Davis](https://hashnode.com/@Virtualizestuff) · :material-calendar: 2024-03-25</small>
+
+Dave' opening paragraph sets the stage for the blog post:
+
+> Recently, my focus has shifted towards Kubernetes, where I've been assisting customers in designing resilient and scalable clusters. I'm on the lookout for a tool that can quickly set up test Kubernetes clusters with diverse network topologies. Ideally the solution would offer version control, rapid deployments, Kubernetes support, and ease of sharing.
+
+As you can see, containerlab fits this bill quite nicely. Dave goes on to [explain](https://virtualizestuff.com/exploring-containerlab) how he used containerlab to create a lab environment to test Kubernetes networking solutions.
+
+### Powering up your Netbox labs with Containerlab
+
+<small>:material-text: [Blog](https://netboxlabs.com/blog/network-configuration-assurance-with-netbox-and-ansible/) by Rich Bibby · :material-calendar: 2024-03-20</small>
+
+Our friends at NetboxLabs have authored a nice blog post - Network Configuration Assurance With NetBox and Ansible - and they have used containerlab to create a lab environment to present their solution.
+
+It is always great to see containerlab being used to augment other tools and solutions, providing the glue between the applications and the network devices all within a tiny declarative packaging and a lightweight CLI to make it all work.
+
+### Containerlab - Creating Network Labs Can't Be Any Easier
+
+<small>:material-text: [Blog](https://www.packetswitch.co.uk/containerlabs-intro/) by [Suresh Vina](https://www.linkedin.com/in/suresh-vina-282545a9) · :material-calendar: 2024-03-15</small>
+
+Suresh, a Networking enthusiast based in the lovely city of London, shares his experience with Containerlab after being married to traditional lab emulation tools for a long time. He explains Containerlab's core concepts using a lab with cEOS and Palo Alto nodes, showcasing the ease of use and flexibility of the tool in a multivendor setting.
 
 ### Rapid deployment of Cilium BGP environments using Containerlab + Kind
 
@@ -150,21 +285,21 @@ Inmanta is a network orchestration and automation platform. In these [YouTube se
 
 Real-time telemetry from a 5 stage Clos fabric describes lightweight emulation of realistic data center switch topologies using Containerlab. This article extends the testbed to experiment with distributed denial of service (DDoS) detection and mitigation techniques described in Real-time DDoS mitigation using BGP RTBH and FlowSpec.
 
-### Multi-vendor EVPN VXLAN setup with Containerlab
+<!-- ### Multi-vendor EVPN VXLAN setup with Containerlab
 
-<small>:material-text: [Blog](https://www.theasciiconstruct.com/post/multivendor-evpn-vxlan-l2-overlay/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-03-12</small>
+<small>:material-text: [Blog](https://www.theasciiconstruct.com/blog/2022/03/12/multi-vendor-evpn-vxlan-setup-with-containerlab/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-03-12</small>
 
-In this post, we deploy a multivendor EVPN L2 overlay fabric, with BGP in the underlay as well. The entire fabric deployment is automated with Ansible, and Containerlab is used to define and deploy the actual topology.
+In this post, we deploy a multivendor EVPN L2 overlay fabric, with BGP in the underlay as well. The entire fabric deployment is automated with Ansible, and Containerlab is used to define and deploy the actual topology. -->
 
 ### Network Simulation Tools and Containerlab
 
 <small>:material-text: [Blog](https://juliopdx.com/2022/02/13/network-simulation-tools-and-containerlab/) by [@JulioPDX](https://twitter.com/Julio_PDX) · :material-calendar: 2022-02-13</small>
 
-I’ve been progressing through a series of technical books, some of which I’ve shared on other blogs. A few of them focus on BGP. BGP being so broad, I decided to create a challenge lab. Creating the challenge/troubleshooting labs has really made more concepts stick. I’m trying to use the principle of teaching someone to make the learning last. These have been incredibly fun to create and the community interaction has been amazing. One brave soul(Jeroen van Bemmel) shared his solution. I was fascinated on his solution and how he created his topology with Containerlab and net-sim tools.
+I’ve been progressing through a series of technical books, some of which I’ve shared on other blogs. A few of them focus on BGP. BGP being so broad, I decided to create a challenge lab. Creating the challenge/troubleshooting labs has really made more concepts stick. I’m trying to use the principle of teaching someone to make the learning last. These have been incredibly fun to create and the community interaction has been amazing. One brave soul (Jeroen van Bemmel) shared his solution. I was fascinated on his solution and how he created his topology with Containerlab and net-sim tools.
 
-### Juniper vQFX and containerlab
+<!-- ### Juniper vQFX and containerlab
 
-<small>:material-text: [Blog](https://www.theasciiconstruct.com/post/junos-vqfx-containerlab/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-02-06</small>
+<small>:material-text: [Blog](https://www.theasciiconstruct.com/blog/2022/01/24/juniper-vqfx-and-containerlab) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-02-06</small>
 
 In this post, we look at how Containerlab can be used to quickly spin up vQFX topologies for network validation and testing. We’ll walk through the entire process - how to build docker images from vQFX images, what happens behind the scenes when bringing these containers up and how to build/verify your topology.
 
@@ -174,7 +309,7 @@ In this post, we look at how Containerlab can be used to quickly spin up vQFX to
 
 I’ve been working my way through Optimal Routing Design by Russ White, Don Slice, and Alvaro Retana. It has been a great read so far and I highly recommend it. When I work through a book I usually try and lab up any concept I can, this helps me make it stick as much as possible. Early on in the book the authors mention redistribution and possible issues that can come with doing it at more than one point in the network. So here we are reading this post. I hope you enjoy and possibly learn something along the way.
 
-Discussions: [:material-twitter:](https://twitter.com/Julio_PDX/status/1485040052811960321)
+Discussions: [:material-twitter:](https://twitter.com/Julio_PDX/status/1485040052811960321) -->
 
 ### Real-time telemetry from a 5 stage Clos fabric
 

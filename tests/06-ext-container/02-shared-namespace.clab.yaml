@@ -1,0 +1,20 @@
+name: shared-namespace
+
+topology:
+  kinds:
+    linux:
+      cmd: sh
+  nodes:
+    node0:
+      kind: linux
+      image: alpine
+      exec:
+        - ip a
+    node1:
+      kind: linux
+      image: alpine
+      network-mode: container:ext-node
+      exec:
+        - ip a
+  links:
+    - endpoints: ["node0:net0", "node1:net0"]

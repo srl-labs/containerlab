@@ -1,0 +1,16 @@
+name: stages-race
+
+topology:
+  kinds:
+    linux:
+      image: alpine
+  nodes:
+    l1:
+      kind: linux
+      exec:
+        - ip l show dev eth1
+    l2:
+      kind: linux
+      startup-delay: 3
+  links:
+    - endpoints: ["l1:eth1", "l2:eth1"]

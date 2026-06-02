@@ -2,10 +2,12 @@ package links
 
 import (
 	"fmt"
+	"sync"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 // LinkHostRaw is the raw (string) representation of a host link as defined in the topology file.
@@ -41,7 +43,7 @@ func hostLinkFromBrief(lb *LinkBriefRaw, specialEPIndex int) (*LinkHostRaw, erro
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -62,16 +64,18 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	link := &LinkVEth{
 		LinkCommonParams: r.LinkCommonParams,
 	}
+
+	// Normalize link vars to ensure JSON serialization compatibility
+	link.Vars = normalizeVars(link.Vars)
+
 	// resolve and populate the endpoint
 	ep, err := r.Endpoint.Resolve(params, link)
 	if err != nil {
 		return nil, err
 	}
-	hostEp := &EndpointHost{
-		EndpointGeneric: *NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link),
-	}
+	hostEp := NewEndpointHost(NewEndpointGeneric(GetHostLinkNode(), r.HostInterface, link))
 
-	hostEp.MAC, err = utils.GenMac(ClabOUI)
+	hostEp.MAC, err = clabutils.GenMac(clabconstants.ClabOUI)
 	if err != nil {
 		return nil, err
 	}
@@ -79,19 +83,20 @@ func (r *LinkHostRaw) Resolve(params *ResolveParams) (Link, error) {
 	link.Endpoints = []Endpoint{ep, hostEp}
 
 	// add the link to the endpoints node
-	hostEp.GetNode().AddLink(link)
-	hostEp.GetNode().AddEndpoint(hostEp)
-	ep.GetNode().AddLink(link)
+	_ = hostEp.GetNode().AddEndpoint(hostEp)
 
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
 }
 
-var _hostLinkNodeInstance *hostLinkNode
+var (
+	_hostLinkNodeInstance *hostLinkNode
+	_hostLinkNodeOnce     sync.Once
+)
 
 // hostLinkNode represents a host node which is implicitly used when
 // a host link is defined in the topology file.
@@ -105,20 +110,20 @@ func (*hostLinkNode) GetLinkEndpointType() LinkEndpointType {
 
 // GetHostLinkNode returns the host link node singleton.
 func GetHostLinkNode() Node {
-	if _hostLinkNodeInstance == nil {
+	_hostLinkNodeOnce.Do(func() {
 		currns, err := ns.GetCurrentNS()
 		if err != nil {
-			log.Error(err)
+			log.Errorf("failed to get current network namespace: %v", err)
+			return
 		}
-		nspath := currns.Path()
 
 		_hostLinkNodeInstance = &hostLinkNode{
 			GenericLinkNode: GenericLinkNode{
 				shortname: "host",
 				endpoints: []Endpoint{},
-				nspath:    nspath,
+				nspath:    currns.Path(),
 			},
 		}
-	}
+	})
 	return _hostLinkNodeInstance
 }

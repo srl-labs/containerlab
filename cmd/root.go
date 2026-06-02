@@ -6,81 +6,135 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/git"
-	"github.com/srl-labs/containerlab/utils"
+	clabgit "github.com/srl-labs/containerlab/git"
+	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-var (
-	debugCount int
-	debug      bool
-	timeout    time.Duration
-	logLevel   string
-)
-
-// path to the topology file.
-var topo string
-
-var (
-	varsFile string
-	graph    bool
-	rt       string
-)
-
-// lab name.
-var name string
-
-// rootCmd represents the base command when called without any subcommands.
-var rootCmd = &cobra.Command{
-	Use:               "containerlab",
-	Short:             "deploy container based lab environments with a user-defined interconnections",
-	PersistentPreRunE: preRunFn,
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1) // skipcq: RVV-A0003
+func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
+	return []func(*Options) (*cobra.Command, error){
+		versionCmd,
+		completionCmd,
+		deployCmd,
+		destroyCmd,
+		startCmd,
+		stopCmd,
+		restartCmd,
+		execCmd,
+		generateCmd,
+		graphCmd,
+		eventsCmd,
+		inspectCmd,
+		redeployCmd,
+		saveCmd,
+		toolsCmd,
 	}
 }
 
-func init() {
-	rootCmd.SilenceUsage = true
-	rootCmd.PersistentFlags().CountVarP(&debugCount, "debug", "d", "enable debug mode")
-	rootCmd.PersistentFlags().StringVarP(&topo, "topo", "t", "", "path to the topology file")
-	rootCmd.PersistentFlags().StringVarP(&varsFile, "vars", "", "",
-		"path to the topology template variables file")
-	_ = rootCmd.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
-	rootCmd.PersistentFlags().StringVarP(&name, "name", "", "", "lab name")
-	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 120*time.Second,
-		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s")
-	rootCmd.PersistentFlags().StringVarP(&rt, "runtime", "r", "", "container runtime")
-	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "", "info",
-		"logging level; one of [trace, debug, info, warning, error, fatal]")
-}
+// Entrypoint returns the root cobra command to be executed or errors if it cannot do so.
+func Entrypoint() (*cobra.Command, error) {
+	o := GetOptions()
 
-func sudoCheck(_ *cobra.Command, _ []string) error {
-	id := os.Geteuid()
-	if id != 0 {
-		return errors.New("containerlab requires sudo privileges to run")
+	c := &cobra.Command{
+		Use:   "containerlab",
+		Short: "deploy container based lab environments with a user-defined interconnections",
+		PersistentPreRunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return preRunFn(cobraCmd, o)
+		},
+		Aliases:      []string{"clab"},
+		SilenceUsage: true,
 	}
-	return nil
+
+	c.PersistentFlags().CountVarP(
+		&o.Global.DebugCount,
+		"debug",
+		"d",
+		"enable debug mode",
+	)
+	c.PersistentFlags().StringVarP(
+		&o.Global.TopologyFile,
+		"topo",
+		"t",
+		o.Global.TopologyFile,
+		"path to the topology definition file, a directory containing one, 'stdin', or a URL",
+	)
+	c.PersistentFlags().StringArrayVarP(
+		&o.Global.VarsFiles,
+		"vars",
+		"",
+		o.Global.VarsFiles,
+		"path to a topology template variables file (can be specified multiple times)",
+	)
+	c.PersistentFlags().StringVarP(
+		&o.Global.TopologyName,
+		"name",
+		"",
+		o.Global.TopologyName,
+		"lab/topology name")
+	c.PersistentFlags().DurationVarP(
+		&o.Global.Timeout,
+		"timeout",
+		"",
+		o.Global.Timeout,
+		"timeout for external API requests (e.g. container runtimes), e.g: 30s, 1m, 2m30s",
+	)
+	c.PersistentFlags().StringVarP(
+		&o.Global.Runtime,
+		"runtime",
+		"r",
+		o.Global.Runtime,
+		"container runtime",
+	)
+	c.PersistentFlags().StringVarP(
+		&o.Global.LogLevel,
+		"log-level",
+		"",
+		o.Global.LogLevel,
+		"logging level; one of [trace, debug, info, warning, error, fatal]",
+	)
+
+	err := c.MarkPersistentFlagFilename("topo", "*.yaml", "*.yml")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, f := range subcommandRegisterFuncs() {
+		cmd, err := f(o)
+		if err != nil {
+			return nil, err
+		}
+
+		c.AddCommand(cmd)
+	}
+
+	// Initialize viper for environment variable support
+	if err := initViper(c); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
 
-func preRunFn(cmd *cobra.Command, _ []string) error {
+func preRunFn(cobraCmd *cobra.Command, o *Options) error {
+	// Update options from viper (environment variables take precedence over defaults)
+	if v != nil {
+		updateOptionsFromViper(cobraCmd, o)
+	}
+
 	// setting log level
 	switch {
-	case debugCount > 0:
+	case o.Global.DebugCount > 0:
 		log.SetLevel(log.DebugLevel)
 	default:
-		l, err := log.ParseLevel(logLevel)
+		l, err := log.ParseLevel(o.Global.LogLevel)
 		if err != nil {
 			return err
 		}
@@ -88,48 +142,84 @@ func preRunFn(cmd *cobra.Command, _ []string) error {
 		log.SetLevel(l)
 	}
 
+	// initializes the version manager that goes off and fetches current version in
+	// the background for us
+	initVersionManager(cobraCmd.Context())
+
 	// setting output to stderr, so that json outputs can be parsed
 	log.SetOutput(os.Stderr)
 
-	return getTopoFilePath(cmd)
+	log.SetTimeFormat(time.TimeOnly)
+
+	err := clabutils.DropRootPrivs()
+	if err != nil {
+		return err
+	}
+	// Rootless operations only supported for Docker runtime
+	if o.Global.Runtime != "" && o.Global.Runtime != clabruntimedocker.RuntimeName {
+		err := clabutils.CheckAndGetRootPrivs()
+		if err != nil {
+			return err
+		}
+	}
+
+	return getTopoFilePath(cobraCmd, o)
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory
 // if the file was not specified.
 // If the topology file refers to a git repository, it will be cloned to the current directory.
 // Errors if more than one file is found by the glob path.
-func getTopoFilePath(cmd *cobra.Command) error {
+func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-R1005
 	// set commands which may use topo file find functionality, the rest don't need it
-	if !(cmd.Name() == "deploy" || cmd.Name() == "destroy" || cmd.Name() == "inspect" ||
-		cmd.Name() == "save" || cmd.Name() == "graph") {
+	if cobraCmd.Name() != "deploy" &&
+		cobraCmd.Name() != "destroy" &&
+		cobraCmd.Name() != "start" &&
+		cobraCmd.Name() != "stop" &&
+		cobraCmd.Name() != "restart" &&
+		cobraCmd.Name() != "redeploy" &&
+		cobraCmd.Name() != "inspect" &&
+		cobraCmd.Name() != "save" &&
+		cobraCmd.Name() != "graph" &&
+		cobraCmd.Name() != "interfaces" {
+		return nil
+	}
+
+	// start/stop/restart topology lookup applies only to top-level lifecycle commands.
+	// nested commands like tools api-server start|stop are excluded.
+	if (cobraCmd.Name() == "start" || cobraCmd.Name() == "stop" || cobraCmd.Name() == "restart") &&
+		(cobraCmd.Parent() == nil || cobraCmd.Parent().Name() != "containerlab") {
 		return nil
 	}
 
 	// inspect and destroy commands with --all flag don't use file find functionality
-	if (cmd.Name() == "inspect" || cmd.Name() == "destroy") &&
-		cmd.Flag("all").Value.String() == "true" {
+	if (cobraCmd.Name() == "inspect" || cobraCmd.Name() == "destroy") &&
+		cobraCmd.Flag("all") != nil &&
+		cobraCmd.Flag("all").Value.String() == "true" {
 		return nil
 	}
 
 	var err error
 	// perform topology clone/fetch if the topo file is not available locally
-	if !utils.FileOrDirExists(topo) {
+	if !clabutils.FileOrDirExists(o.Global.TopologyFile) {
 		switch {
-		case git.IsGitHubOrGitLabURL(topo) || git.IsGitHubShortURL(topo):
-			topo, err = processGitTopoFile(topo)
+		case clabgit.IsGitHubOrGitLabURL(o.Global.TopologyFile) ||
+			clabgit.IsGitHubShortURL(o.Global.TopologyFile):
+			o.Global.TopologyFile, err = processGitTopoFile(o.Global.TopologyFile)
 			if err != nil {
 				return err
 			}
-		case utils.IsHttpURL(topo, true):
+		case clabutils.IsHttpURL(o.Global.TopologyFile, true):
 			// canonize the passed topo as URL by adding https schema if it was missing
-			if !strings.HasPrefix(topo, "http://") && !strings.HasPrefix(topo, "https://") {
-				topo = "https://" + topo
+			if !strings.HasPrefix(o.Global.TopologyFile, "http://") &&
+				!strings.HasPrefix(o.Global.TopologyFile, "https://") {
+				o.Global.TopologyFile = "https://" + o.Global.TopologyFile
 			}
 		}
 	}
 
 	// if topo or name flags have been provided, don't try to derive the topo file
-	if topo != "" || name != "" {
+	if o.Global.TopologyFile != "" || o.Global.TopologyName != "" {
 		return nil
 	}
 
@@ -137,11 +227,19 @@ func getTopoFilePath(cmd *cobra.Command) error {
 
 	files, err := filepath.Glob("*.clab.y*ml")
 
-	if len(files) != 1 {
-		return errors.New("none or more than one topology files found, can't auto select one")
+	if len(files) == 0 {
+		return errors.New("no topology files matching the pattern *.clab.yml or *.clab.yaml found")
 	}
 
-	topo = files[0]
+	if len(files) > 1 {
+		return fmt.Errorf(
+			"more than one topology file matching the pattern *.clab.yml or *.clab.yaml found, "+
+				"can't pick one: %q",
+			files,
+		)
+	}
+
+	o.Global.TopologyFile = files[0]
 
 	log.Debugf("topology file found: %s", files[0])
 
@@ -151,17 +249,17 @@ func getTopoFilePath(cmd *cobra.Command) error {
 func processGitTopoFile(topo string) (string, error) {
 	// for short github urls, prepend https://github.com
 	// note that short notation only works for github links
-	if git.IsGitHubShortURL(topo) {
+	if clabgit.IsGitHubShortURL(topo) {
 		topo = "https://github.com/" + topo
 	}
 
-	repo, err := git.NewRepo(topo)
+	repo, err := clabgit.NewRepo(topo)
 	if err != nil {
 		return "", err
 	}
 
 	// Instantiate the git implementation to use.
-	gitImpl := git.NewGoGit(repo)
+	gitImpl := clabgit.NewGoGit(repo)
 
 	// clone the repo via the Git Implementation
 	err = gitImpl.Clone()
@@ -171,7 +269,7 @@ func processGitTopoFile(topo string) (string, error) {
 
 	// adjust permissions for the checked out repo
 	// it would belong to root/root otherwise
-	err = utils.SetUIDAndGID(repo.GetName())
+	err = clabutils.SetUIDAndGID(repo.GetName())
 	if err != nil {
 		log.Errorf("error adjusting repository permissions %v. Continuing anyways", err)
 	}

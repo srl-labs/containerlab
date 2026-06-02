@@ -32,4 +32,4 @@ topology:
         mac: 02:00:00:00:00:04
       remote: 172.20.25.22
       vni: 100
-      udp-port: 14788
+      dst-port: 14788

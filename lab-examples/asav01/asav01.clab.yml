@@ -1,0 +1,20 @@
+name: asav01
+
+topology:
+  nodes:
+    # ASAv runs as a VM and is slower to boot. Use 'docker logs -f clab-asav01-asav1' to view progress
+    asav1:
+      kind: cisco_asav
+      image: vrnetlab/cisco_asav:9-23-1
+
+    client1:
+      kind: linux
+      image: wbitt/network-multitool:alpine-extra
+
+    client2:
+      kind: linux
+      image: wbitt/network-multitool:alpine-extra
+
+  links:
+    - endpoints: ["client1:eth1", "asav1:eth1"]
+    - endpoints: ["client2:eth1", "asav1:eth2"]

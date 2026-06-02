@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+
+name: 2-linux-nodes
+
+topology:
+  defaults:
+    group: g3
+  groups:
+    g1:
+      kind: linux
+      image: alpine:3
+      cmd: ash -c "echo $MYVAR > /tmp/var && sleep 9999"
+      binds:
+        - 01-test.txt:/01-test.txt
+        - 01-test.json:/test.json
+      env:
+        MYVAR: MYVAR is SET
+      exec:
+        - echo this_is_an_exec_test
+        - cat /etc/os-release
+      cpu: 1.5
+      memory: 1G
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - cat /etc/os-release
+        start-period: 3
+        retries: 1
+        interval: 5
+        timeout: 2
+    g2:
+      kind: linux
+      image: nginx:stable-alpine
+      ports:
+        - 56180:80
+      dns:
+        servers:
+          - 8.8.8.8
+          - 1.2.3.4
+        search:
+          - my.domain
+        options:
+          - rotate
+    g3:
+      kind: linux
+      image: nginx:stable-alpine
+      network-mode: host
+  nodes:
+    l1:
+      group: g1
+      mgmt-ipv4: 172.20.20.99
+      mgmt-ipv6: 3fff:172:20:20::99
+    l2:
+      group: g2
+      mgmt-ipv4: 172.20.20.100
+      mgmt-ipv6: 3fff:172:20:20::100
+    l3:

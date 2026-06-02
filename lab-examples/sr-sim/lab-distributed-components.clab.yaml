@@ -1,0 +1,48 @@
+name: "sros"
+mgmt:
+  network: srsim_mgmt
+  ipv4-subnet: 10.78.140.0/24
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    srsim10:
+      kind: nokia_srsim
+      type: SR-7
+      startup-config: configs/srsim10.distributed.partial.cfg
+      mgmt-ipv4: 10.78.140.2
+      env:
+        NOKIA_SROS_SYSTEM_BASE_MAC: 02:f3:00:00:00:00
+      components:
+        - slot: A
+        - slot: B
+        - slot: 1
+          env:
+            NOKIA_SROS_CARD: iom5-e
+            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+            NOKIA_SROS_MDA_2: me3-400gb-qsfpdd
+            NOKIA_SROS_SFM: m-sfm6-7/12
+
+        - slot: 2
+    srsim11:
+      kind: nokia_srsim
+      type: SR-7
+      startup-config: configs/srsim11.distributed.partial.cfg
+      mgmt-ipv4: 10.78.140.3
+      components:
+        - slot: A
+        - slot: B
+        - slot: 1
+        - slot: 2
+          type: iom5-e
+          env:
+            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+            NOKIA_SROS_MDA_2: me16-25gb-sfp28+2-100gb-qsfp28
+            NOKIA_SROS_SFM: m-sfm6-7/12
+
+  links:
+    # # DATA LINKS
+    - endpoints: ["srsim10:1/1/c1/1", "srsim11:1/1/c1/1"]
+    - endpoints: ["srsim10:2/1/c1/1", "srsim11:2/1/c1/1"]

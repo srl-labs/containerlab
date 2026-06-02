@@ -1,6 +1,0 @@
-set interfaces ge-0/0/0 unit 0 family inet address 192.168.1.1/30
-set interfaces ge-0/0/1 unit 0 family inet address 192.168.2.1/30
-set security zones security-zone trust interfaces ge-0/0/0 host-inbound-traffic system-services all
-set security zones security-zone trust interfaces ge-0/0/1 host-inbound-traffic system-services all
-set system services web-management https system-generated-certificate
-set security forwarding-options family mpls mode packet-based

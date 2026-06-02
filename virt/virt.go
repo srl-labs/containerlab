@@ -5,26 +5,30 @@ import (
 	"os"
 	"strings"
 
-	"github.com/klauspost/cpuid"
-	log "github.com/sirupsen/logrus"
+	"github.com/charmbracelet/log"
+	"github.com/klauspost/cpuid/v2"
 )
 
 // VerifySSSE3Support check if SSSE3 is supported on the host.
 func VerifySSSE3Support() bool {
-	return cpuid.CPU.SSSE3()
+	return cpuid.CPU.Has(cpuid.SSSE3)
 }
 
-// VerifyVirtSupport checks if virtualization is supported by a cpu in case topology contains VM-based nodes
+// VerifyVirtSupport checks if virtualization is supported by a cpu in case topology contains
+// VM-based nodes
 // when clab itself is being invoked as a container, this check is bypassed.
 func VerifyVirtSupport() bool {
 	// check if we are being executed in a container environment
-	// in that case we skip this check as there are no convenient ways to interrogate hosts capabilities
+	// in that case we skip this check as there are no convenient ways to interrogate hosts
+	// capabilities
 	// check if /proc/2 exists, and if it does, check if the name of the proc is kthreadd
 	// otherwise it is a container env
 
 	f, err := os.Open("/proc/2/status")
 	if err != nil {
-		log.Debug("/proc/2/status file was not found. This means we run in a container and no virt checks are possible")
+		log.Debug(
+			"/proc/2/status file was not found. This means we run in a container and no virt checks are possible",
+		)
 		return true
 	}
 	defer f.Close() // skipcq: GO-S2307
@@ -35,7 +39,9 @@ func VerifyVirtSupport() bool {
 
 	scanner.Scan()
 	if !strings.Contains(scanner.Text(), "kthreadd") {
-		log.Debug("/proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible")
+		log.Debug(
+			"/proc/2/status first line doesn't contain kthreadd. This means we run in a container and no virt checks are possible",
+		)
 		return true
 	}
 
@@ -51,7 +57,6 @@ func VerifyVirtSupport() bool {
 	for scanner.Scan() {
 		if strings.Contains(scanner.Text(), "vmx") ||
 			strings.Contains(scanner.Text(), "svm") {
-
 			log.Debug("virtualization support found")
 
 			return true

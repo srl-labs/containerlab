@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
 # Copyright 2020 Nokia
 # Licensed under the BSD 3-Clause License.
 # SPDX-License-Identifier: BSD-3-Clause
@@ -20,8 +21,8 @@ topology:
         - cat /etc/os-release
       cpu: 1.5
       memory: 1G
-      mgmt_ipv4: 172.20.20.99 # test deprecated mgmt_ipv4 still works
-      mgmt_ipv6: 2001:172:20:20::99 # test deprecated mgmt_ipv6 still works
+      mgmt-ipv4: 172.20.20.99
+      mgmt-ipv6: 3fff:172:20:20::99
       healthcheck:
         test:
           - CMD-SHELL
@@ -30,13 +31,16 @@ topology:
         retries: 1
         interval: 5
         timeout: 2
+
     l2:
       kind: linux
       image: nginx:stable-alpine
       ports:
         - 56180:80
       mgmt-ipv4: 172.20.20.100
-      mgmt-ipv6: 2001:172:20:20::100
+      mgmt-ipv6: 3fff:172:20:20::100
+      aliases:
+        - l2.mydomain.com
       dns:
         servers:
           - 8.8.8.8
@@ -53,9 +57,6 @@ topology:
   links:
     - endpoints: ["l1:eth1", "l2:some1"]
       mtu: 2000
-      vars:
-        foo: bar
-        some: ["thing", "else"]
     - endpoints: ["l1:eth2", "l2:eth2"]
     - type: veth
       endpoints:
@@ -65,15 +66,22 @@ topology:
         - node: l2
           interface: eth3
           mac: 02:00:00:00:00:01
+
     - type: host
       host-interface: l2eth4
       endpoint:
         node: l2
         interface: eth4
         mac: 02:00:00:00:00:04
+
     - type: mgmt-net
       host-interface: l2eth5mgmt
       endpoint:
         node: l2
         interface: eth5
         mac: 02:00:00:00:00:05
+
+    - type: dummy
+      endpoint:
+        node: l2
+        interface: somedummy

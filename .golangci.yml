@@ -1,116 +1,140 @@
-linters-settings:
-  depguard:
-    list-type: blacklist
-  dupl:
-    threshold: 100
-  funlen:
-    lines: 100
-    statements: 50
-  gci:
-    local-prefixes: github.com/golangci/golangci-lint
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
-  gocyclo:
-    min-complexity: 15
-  goimports:
-    local-prefixes: github.com/golangci/golangci-lint
-  gomnd:
-    settings:
-      mnd:
-        # don't include the "operation" and "assign"
-        checks: [argument, case, condition, return]
-  govet:
-    check-shadowing: true
-    settings:
-      printf:
-        funcs:
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
-          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
-  lll:
-    line-length: 150
-  misspell:
-    locale: US
-  nolintlint:
-    allow-leading-space: true # don't require machine-readable nolint directives (i.e. with no leading space)
-    allow-unused: false # report any unused nolint directives
-    require-explanation: false # don't require an explanation for nolint directives
-    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+version: "2"
 linters:
-  # please, do not use `enable-all`: it's deprecated and will be removed soon.
-  # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
-  disable-all: true
-  enable:
-    - bodyclose
-    - deadcode
+  default: all
+  disable:
+    # disabling for *now* so ci can pass nicely, but (some?) of these likely should be addressed
+    - contextcheck
+    - cyclop
     - depguard
-    - dogsled
     - dupl
+    - embeddedstructfieldcheck
+    - err113
     - errcheck
+    - errorlint
     - exhaustive
-    - funlen
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
-    - gofmt
-    - goimports
-    - gomnd
-    - goprintffuncname
-    - gosec
-    - gosimple
-    - govet
-    - ineffassign
-    - lll
-    - misspell
-    - nakedret
-    - noctx
-    - nolintlint
-    - revive
-    - rowserrcheck
-    - exportloopref
-    - staticcheck
-    - structcheck
-    - stylecheck
-    - typecheck
-    - unconvert
-    - unparam
-    - unused
-    - varcheck
-    - whitespace
-    - asciicheck
+    - exhaustruct
+    - exptostd
+    - forbidigo
+    - forcetypeassert
+    - funcorder
     - gochecknoglobals
     - gocognit
-    - godot
-    - godox
-    - goerr113
+    - gocyclo
+    - gomoddirectives
+    - gosec
+    - ireturn
+    - musttag
     - nestif
-    - prealloc
+    - nilnil
+    - nlreturn
+    - noinlineerr
+    - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
+    - perfsprint
+    - revive
+    - tagliatelle
     - testpackage
-    - wsl
-
+    - usetesting
+    - varnamelen
+    - wrapcheck
+    - wsl # deprecated, wsl_v5 included in all ofc
+  settings:
+    dupl:
+      threshold: 100
+    funlen:
+      lines: 100
+      statements: 50
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+    gocritic:
+      disabled-checks:
+        - whyNoLint
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 15
+    govet:
+      settings:
+        printf:
+          funcs:
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+            - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+    importas:
+      alias:
+        - pkg: github.com/srl-labs/containerlab/(\w+)
+          alias: clab$1
+        - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)
+          alias: clab$1$2
+        - pkg: github.com/srl-labs/containerlab/(\w+)/(\w+)/(\w+)
+          alias: clab$1$2$3
+      no-unaliased: true
+    lll:
+      line-length: 100
+    misspell:
+      locale: US
+    nolintlint:
+      require-explanation: false
+      require-specific: false
+      allow-unused: false
+  exclusions:
+    rules:
+      # we *care* about tests, but... like less :P
+      - linters:
+          - mnd
+          - dupl
+          - lll
+          - goconst
+          - funlen
+        path: _test\.go
+      # its nice to be explicit, this feels less explicit
+      - linters:
+          - staticcheck
+        text: could remove embedded field
+      # ssh bits have a lot of mnd that is pretty clear what it is for/doing, so just ignore
+      - linters:
+          - mnd
+        path: core/config/transport/
+    # slowly enforcing things, excluding these packages (for now!)
+    paths:
+      - cert
+      - exec
+      - git
+      - internal
+      - links
+      - mocks
+      - netconf
+      # - nodes
+      - runtime
+      - utils
+      - virt
+    # slowly adding linters to the nodes
+    paths-except:
+      - "nodes/cisco_sdwan"
+      - "nodes/srl"
+    warn-unused: true
+formatters:
+  enable:
+    - gofmt
+    - goimports
+    - golines
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/golangci/golangci-lint
+    golines:
+      # default line length is 100
+      # Shorten single-line comments.
+      shorten-comments: true
+      reformat-tags: false
 issues:
-  # Excluding configuration per-path, per-linter, per-text and per-source
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - gomnd
-
-run:
-  skip-dirs:
-    - private
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: false

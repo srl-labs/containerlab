@@ -1,8 +1,10 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
 name: vxlan-stitch
 
 mgmt:
   network: clab-vxlan
   bridge: clab-vxlan-br
+  mtu: 9100
   ipv4-subnet: 172.20.25.0/24
 
 topology:
@@ -29,7 +31,7 @@ topology:
         - >
           ash -c '
           apk add iproute2 &&
-          ip link add name vxlan0 type vxlan id 100 remote 172.20.25.21 dstport 14788 &&
+          ip link add name vxlan0 type vxlan id 100 remote 172.20.25.1 dstport 14788 &&
           ip l set dev vxlan0 up &&
           ip addr add dev vxlan0 192.168.67.2/30'
       mgmt-ipv4: 172.20.25.22
@@ -42,7 +44,7 @@ topology:
         mac: 02:00:00:00:00:04
       remote: 172.20.25.22
       vni: 100
-      udp-port: 14788
+      dst-port: 14788
 
     - type: vxlan-stitch
       endpoint:
@@ -50,3 +52,4 @@ topology:
         interface: e1-1
       remote: 172.20.25.23
       vni: 101
+      dst-port: 14789

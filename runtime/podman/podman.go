@@ -6,15 +6,20 @@ package podman
 import (
 	"context"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
-	"github.com/containers/podman/v4/pkg/api/handlers"
-	"github.com/containers/podman/v4/pkg/bindings/containers"
-	"github.com/containers/podman/v4/pkg/bindings/images"
-	"github.com/containers/podman/v4/pkg/bindings/network"
-	dockerTypes "github.com/docker/docker/api/types"
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
+	"github.com/charmbracelet/log"
+	"github.com/containers/podman/v5/pkg/api/handlers"
+	"github.com/containers/podman/v5/pkg/bindings/containers"
+	"github.com/containers/podman/v5/pkg/bindings/images"
+	"github.com/containers/podman/v5/pkg/bindings/network"
+	dockerContainer "github.com/docker/docker/api/types/container"
+	"github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/links"
 	"github.com/srl-labs/containerlab/runtime"
 	"github.com/srl-labs/containerlab/types"
@@ -122,7 +127,11 @@ func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
 // DeleteNet deletes a clab mgmt bridge.
 func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 	// Skip if "keep mgmt" is set
-	log.Debugf("Method DeleteNet was called with runtime inputs %+v and net settings %+v", r, r.mgmt)
+	log.Debugf(
+		"Method DeleteNet was called with runtime inputs %+v and net settings %+v",
+		r,
+		r.mgmt,
+	)
 	if r.config.KeepMgmtNet {
 		return nil
 	}
@@ -138,7 +147,11 @@ func (r *PodmanRuntime) DeleteNet(ctx context.Context) error {
 	return nil
 }
 
-func (r *PodmanRuntime) PullImage(ctx context.Context, image string, pullPolicy types.PullPolicyValue) error {
+func (r *PodmanRuntime) PullImage(
+	ctx context.Context,
+	image string,
+	pullPolicy types.PullPolicyValue,
+) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
@@ -170,29 +183,48 @@ func (r *PodmanRuntime) PullImage(ctx context.Context, image string, pullPolicy 
 	}
 
 	// Pull the image if it doesn't exist
-	if !ex {
+	if !ex || pullPolicy == types.PullPolicyAlways {
 		_, err = images.Pull(ctx, canonicalImage, &images.PullOptions{})
 	}
 	return err
 }
 
 // CreateContainer creates a container, but does not start it.
-func (r *PodmanRuntime) CreateContainer(ctx context.Context, cfg *types.NodeConfig) (string, error) {
+func (r *PodmanRuntime) CreateContainer(
+	ctx context.Context,
+	cfg *types.NodeConfig,
+) (string, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return "", err
 	}
 	sg, err := r.createContainerSpec(ctx, cfg)
 	if err != nil {
-		return "", fmt.Errorf("error while trying to create a container spec for node %q: %w", cfg.LongName, err)
+		return "", fmt.Errorf(
+			"error while trying to create a container spec for node %q: %w",
+			cfg.LongName,
+			err,
+		)
 	}
 	res, err := containers.CreateWithSpec(ctx, &sg, &containers.CreateOptions{})
-	log.Debugf("Created a container with ID %v, warnings %v and error %v", res.ID, res.Warnings, err)
-	return res.ID, err
+	if err != nil {
+		return "", fmt.Errorf("failed to create container %q: %w", cfg.LongName, err)
+	}
+	log.Debugf(
+		"Created a container with ID %v, warnings %v",
+		res.ID,
+		res.Warnings,
+	)
+	return res.ID, nil
 }
 
-// StartContainer starts a previously created container by ID or its name and executes post-start actions method.
-func (r *PodmanRuntime) StartContainer(ctx context.Context, cID string, node runtime.Node) (interface{}, error) {
+// StartContainer starts a previously created container by ID or its name and executes post-start
+// actions method.
+func (r *PodmanRuntime) StartContainer(
+	ctx context.Context,
+	cID string,
+	node runtime.Node,
+) (any, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err
@@ -226,20 +258,44 @@ func (r *PodmanRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 	return containers.Unpause(ctx, cID, &containers.UnpauseOptions{})
 }
 
-func (r *PodmanRuntime) StopContainer(ctx context.Context, cID string) error {
+func (r *PodmanRuntime) StopContainer(
+	ctx context.Context,
+	cID string,
+	stopSignal types.Signal,
+) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
 	}
-	err = containers.Stop(ctx, cID, &containers.StopOptions{})
+
+	stopTimeout := uint(r.config.Timeout.Seconds())
+	if stopSignal == "" {
+		return containers.Stop(ctx, cID, &containers.StopOptions{Timeout: &stopTimeout})
+	}
+
+	signal := string(stopSignal)
+	log.Debugf("using custom stop signal %q for container %q", signal, cID)
+	if err := containers.Kill(ctx, cID, &containers.KillOptions{Signal: &signal}); err != nil {
+		return err
+	}
+
+	waitCtx, cancel := context.WithTimeout(ctx, r.config.Timeout)
+	defer cancel()
+
+	_, err = containers.Wait(waitCtx, cID, &containers.WaitOptions{})
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
-// ListContainers returns a list of all available containers in the system in a containerlab-specific struct.
-func (r *PodmanRuntime) ListContainers(ctx context.Context, filters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
+// ListContainers returns a list of all available containers in the system in a
+// containerlab-specific struct.
+func (r *PodmanRuntime) ListContainers(
+	ctx context.Context,
+	filters []*types.GenericFilter,
+) ([]runtime.GenericContainer, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err
@@ -261,18 +317,43 @@ func (r *PodmanRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 	if err != nil {
 		return "", err
 	}
+	// Prefer podman's reported sandbox key when it exists, but fall back to /run/netns/<name>
+	// to support stopped containers and containerlab-managed netns links.
 	nspath := inspect.NetworkSettings.SandboxKey
-	log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
-	return nspath, nil
+	if nspath != "" && utils.FileOrDirExists(nspath) {
+		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		return nspath, nil
+	}
+
+	runNetns := filepath.Join("/run/netns", cID)
+	if utils.FileOrDirExists(runNetns) {
+		log.Debugf("Method GetNSPath falling back to %q", runNetns)
+		return runNetns, nil
+	}
+
+	// For host network containers sandbox key is typically empty.
+	if nspath == "" {
+		log.Debugf("Method GetNSPath was called with a resulting nspath %q", nspath)
+		return "", nil
+	}
+
+	return "", fmt.Errorf("namespace path not available for container %s", cID)
 }
 
-func (r *PodmanRuntime) Exec(ctx context.Context, cID string, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
+// LogNonRunningContainerOutput implements runtime.ContainerRuntime (no-op for Podman).
+func (*PodmanRuntime) LogNonRunningContainerOutput(context.Context, string) {}
+
+func (r *PodmanRuntime) Exec(
+	ctx context.Context,
+	cID string,
+	execCmd *exec.ExecCmd,
+) (*exec.ExecResult, error) {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return nil, err
 	}
 	execCreateConf := handlers.ExecCreateConfig{
-		ExecConfig: dockerTypes.ExecConfig{
+		ExecOptions: dockerContainer.ExecOptions{
 			User:         "root",
 			AttachStderr: true,
 			AttachStdout: true,
@@ -285,8 +366,13 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, execCmd *exec.Exec
 		return nil, err
 	}
 	var sOut, sErr podmanWriterCloser
-	execSAAOpts := new(containers.ExecStartAndAttachOptions).WithOutputStream(&sOut).WithErrorStream(
-		&sErr).WithAttachOutput(true).WithAttachError(true)
+	execSAAOpts := new(
+		containers.ExecStartAndAttachOptions,
+	).WithOutputStream(&sOut).
+		WithErrorStream(
+			&sErr).
+		WithAttachOutput(true).
+		WithAttachError(true)
 
 	err = containers.ExecStartAndAttach(ctx, execID, execSAAOpts)
 	if err != nil {
@@ -298,7 +384,12 @@ func (r *PodmanRuntime) Exec(ctx context.Context, cID string, execCmd *exec.Exec
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("Exec attached to the container %q and got stdout %q and stderr %q", cID, sOut.Bytes(), sErr.Bytes())
+	log.Debugf(
+		"Exec attached to the container %q and got stdout %q and stderr %q",
+		cID,
+		sOut.Bytes(),
+		sErr.Bytes(),
+	)
 
 	// fill the execution result
 	execResult := exec.NewExecResult(execCmd)
@@ -315,7 +406,7 @@ func (r *PodmanRuntime) ExecNotWait(ctx context.Context, cID string, exec *exec.
 		return err
 	}
 	execCreateConf := handlers.ExecCreateConfig{
-		ExecConfig: dockerTypes.ExecConfig{
+		ExecOptions: dockerContainer.ExecOptions{
 			Tty:          false,
 			AttachStderr: false,
 			AttachStdout: false,
@@ -349,7 +440,11 @@ func (r *PodmanRuntime) DeleteContainer(ctx context.Context, contName string) er
 	// and do a force removal in the end
 	force = true
 	depend := true
-	_, err = containers.Remove(ctx, contName, &containers.RemoveOptions{Force: &force, Depend: &depend})
+	_, err = containers.Remove(
+		ctx,
+		contName,
+		&containers.RemoveOptions{Force: &force, Depend: &depend},
+	)
 	return err
 }
 
@@ -379,7 +474,10 @@ func (r *PodmanRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 }
 
 // GetContainerStatus retrieves the ContainerStatus of the named container.
-func (r *PodmanRuntime) GetContainerStatus(ctx context.Context, cID string) runtime.ContainerStatus {
+func (r *PodmanRuntime) GetContainerStatus(
+	ctx context.Context,
+	cID string,
+) runtime.ContainerStatus {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return runtime.NotFound
@@ -388,8 +486,123 @@ func (r *PodmanRuntime) GetContainerStatus(ctx context.Context, cID string) runt
 	if err != nil {
 		return runtime.NotFound
 	}
-	if icd.State.Running {
+	if icd.State == nil {
+		return runtime.NotFound
+	}
+	st := icd.State
+	if st.Paused {
+		return runtime.Paused
+	}
+	if st.Running {
 		return runtime.Running
 	}
-	return runtime.Stopped
+	if st.Restarting {
+		return runtime.Restarting
+	}
+	if st.Dead {
+		return runtime.Stopped
+	}
+	switch strings.ToLower(st.Status) {
+	case "configured":
+		return runtime.Created
+	case "removing":
+		return runtime.Removing
+	case "exited", "stopped", "stopping":
+		return runtime.Stopped
+	default:
+		// Unknown non-running state: treat as no joinable netns (align with historical Stopped).
+		return runtime.Stopped
+	}
+}
+
+// IsHealthy returns true is the container is reported as being healthy, false otherwise.
+func (r *PodmanRuntime) IsHealthy(ctx context.Context, cID string) (bool, error) {
+	ctx, err := r.connect(ctx)
+	if err != nil {
+		return false, err
+	}
+	icd, err := containers.Inspect(ctx, cID, nil)
+	if err != nil {
+		return false, err
+	}
+	return icd.State.Health.Status == "healthy", nil
+}
+
+func (*PodmanRuntime) WriteToStdinNoWait(ctx context.Context, cID string, data []byte) error {
+	log.Infof("WriteToStdinNoWait is not yet implemented for Podman runtime")
+	return nil
+}
+
+func (r *PodmanRuntime) CheckConnection(ctx context.Context) error {
+	_, err := r.connect(ctx)
+	if err != nil {
+		return fmt.Errorf("could not connect to Podman runtime: %w", err)
+	}
+
+	return nil
+}
+
+func (r *PodmanRuntime) GetRuntimeSocket() (string, error) {
+	socket := "/run/podman/podman.sock"
+
+	// For rootless podman, check if XDG_RUNTIME_DIR is set
+	if os.Getenv("XDG_RUNTIME_DIR") != "" {
+		userID := os.Getenv("UID")
+		if userID == "" {
+			userID = strconv.Itoa(os.Getuid())
+		}
+		nonRootSocket := fmt.Sprintf("/run/user/%s/podman/podman.sock", userID)
+		if _, err := os.Stat(nonRootSocket); err == nil {
+			socket = nonRootSocket
+		}
+	}
+	return socket, nil
+}
+
+func (*PodmanRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
+	return nil, fmt.Errorf("StreamLogs not implemented for Podman runtime")
+}
+
+func (*PodmanRuntime) StreamEvents(
+	context.Context,
+	runtime.EventStreamOptions,
+) (<-chan runtime.ContainerEvent, <-chan error, error) {
+	return nil, nil, fmt.Errorf("StreamEvents is not implemented for Podman runtime")
+}
+
+func (p *PodmanRuntime) InspectImage(
+	ctx context.Context,
+	imageName string,
+) (*runtime.ImageInspect, error) {
+	return nil, fmt.Errorf("InspectImage not implemented for Podman runtime")
+}
+
+func (p *PodmanRuntime) CopyToContainer(
+	ctx context.Context,
+	cID string,
+	dstPath string,
+	srcPath string,
+) error {
+	tarBuf, err := utils.FileToTarStream(dstPath, srcPath)
+	if err != nil {
+		return fmt.Errorf("error creating tar stream from source file %s: %w", srcPath, err)
+	}
+
+	opts := &containers.CopyOptions{
+		NoOverwriteDirNonDir: utils.Pointer(true),
+	}
+
+	log.Debugf("copying path %v -> %v to container %v", srcPath, dstPath, cID)
+	_, err = containers.CopyFromArchiveWithOptions(ctx, cID, filepath.Dir(dstPath), tarBuf, opts)
+	if err != nil {
+		return fmt.Errorf(
+			"error copying path %v -> %v to container (%v): %w",
+			srcPath,
+			dstPath,
+			cID,
+			err,
+		)
+	}
+
+	return nil
 }

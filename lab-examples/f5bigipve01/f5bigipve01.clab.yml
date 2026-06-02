@@ -1,0 +1,18 @@
+name: f5bigipve01
+
+topology:
+  nodes:
+    bigip1:
+      kind: f5_bigip-ve
+      # BIG-IP VE is proprietary. Build this image locally via vrnetlab before deploy.
+      image: vrnetlab/f5_bigip-ve:17.5.1.3-0.0.19
+      ports:
+        - 8443:443
+
+    peer1:
+      kind: linux
+      image: wbitt/network-multitool:alpine-extra
+
+  links:
+    # BIG-IP dataplane interface 1.1 maps to eth1 inside the vrnetlab container.
+    - endpoints: ["bigip1:1.1", "peer1:eth1"]

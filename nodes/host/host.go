@@ -7,36 +7,35 @@ package host
 import (
 	"bytes"
 	"context"
-	"os"
-	"path/filepath"
-	"regexp"
+	"errors"
 
 	osexec "os/exec"
 
-	cExec "github.com/srl-labs/containerlab/clab/exec"
-	"github.com/srl-labs/containerlab/labels"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var kindnames = []string{"host"}
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(host)
 	}, nil)
 }
 
 type host struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *host) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -46,56 +45,35 @@ func (n *host) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *host) Deploy(_ context.Context, _ *nodes.DeployParams) error {
-	n.SetState(state.Deployed)
+func (n *host) Deploy(_ context.Context, _ *clabnodes.DeployParams) error {
+	n.SetState(clabnodesstate.Deployed)
 	return nil
 }
 
 func (*host) GetImages(_ context.Context) map[string]string { return map[string]string{} }
 func (*host) PullImage(_ context.Context) error             { return nil }
 func (*host) Delete(_ context.Context) error                { return nil }
-func (*host) WithMgmtNet(*types.MgmtNet)                    {}
+func (*host) WithMgmtNet(*clabtypes.MgmtNet)                {}
 
 // UpdateConfigWithRuntimeInfo is a noop for hosts.
 func (*host) UpdateConfigWithRuntimeInfo(_ context.Context) error { return nil }
 
-// getOSRelease returns the OS release of the host by inspecting /etc/*-release.
-func getOSRelease() string {
-	image := "N/A"
-
-	matches, err := filepath.Glob("/etc/*-release")
-	if err != nil {
-		return image
-	}
-	dat, err := os.ReadFile(matches[0])
-	if err != nil {
-		return image
-	}
-	// DISTRIB_DESCRIPTION exists in lsb-release, but not os-release.
-	// the lsb-release is coming first in the glob, so it works.
-	re := regexp.MustCompile(`DISTRIB_DESCRIPTION="(.*)"`)
-
-	regexres := re.FindSubmatch(dat)
-
-	return string(regexres[1])
-}
-
 // GetContainers returns a basic skeleton of a container to enable graphing of hosts kinds.
-func (*host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error) {
-	image := getOSRelease()
+func (h *host) GetContainers(_ context.Context) ([]clabruntime.GenericContainer, error) {
+	image := clabutils.GetOSRelease()
 
-	return []runtime.GenericContainer{
+	return []clabruntime.GenericContainer{
 		{
 			Names:   []string{"Host"},
 			State:   "running",
-			ID:      "N/A",
-			ShortID: "N/A",
+			ID:      clabconstants.NotApplicable,
+			ShortID: clabconstants.NotApplicable,
 			Image:   image,
 			Labels: map[string]string{
-				labels.NodeKind: kindnames[0],
+				clabconstants.NodeKind: kindnames[0],
 			},
 			Status: "running",
-			NetworkSettings: runtime.GenericMgmtIPs{
+			NetworkSettings: clabruntime.GenericMgmtIPs{
 				IPv4addr: "",
 				// IPv4pLen: 0,
 				IPv4Gw:   "",
@@ -108,8 +86,12 @@ func (*host) GetContainers(_ context.Context) ([]runtime.GenericContainer, error
 }
 
 // RunExec runs commands on the container host.
-func (*host) RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult, error) {
-	// retireve the command with its arguments
+func (*host) RunExec(ctx context.Context, e *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	return RunExec(ctx, e)
+}
+
+func RunExec(ctx context.Context, e *clabexec.ExecCmd) (*clabexec.ExecResult, error) {
+	// retrieve the command with its arguments
 	command := e.GetCmd()
 
 	// execute the command along with the context
@@ -124,12 +106,13 @@ func (*host) RunExec(ctx context.Context, e *cExec.ExecCmd) (*cExec.ExecResult, 
 
 	// execute the command synchronously
 	err := cmd.Run()
-	if err != nil {
+	exerr := &osexec.ExitError{}
+	if err != nil && !errors.As(err, &exerr) {
 		return nil, err
 	}
 
 	// create result struct
-	execResult := cExec.NewExecResult(e)
+	execResult := clabexec.NewExecResult(e)
 	// set the result fields in the exec struct
 	execResult.SetReturnCode(cmd.ProcessState.ExitCode())
 	execResult.SetStdOut(outBuf.Bytes())

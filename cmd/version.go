@@ -5,141 +5,183 @@
 package cmd
 
 import (
+	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
-	"net/http"
 	"os"
-	"strings"
+	"os/exec"
+	"time"
 
+	"github.com/charmbracelet/log"
 	gover "github.com/hashicorp/go-version"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"golang.org/x/net/context"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
+// Version variables set at build time (e.g., with -ldflags).
 var (
-	version = "0.0.0"
+	Version = "0.0.0"
 	commit  = "none"
 	date    = "unknown"
 )
 
 const (
-	repoUrl = "https://github.com/srl-labs/containerlab"
+	repoUrl             = "https://github.com/srl-labs/containerlab"
+	downloadURL         = "https://github.com/srl-labs/containerlab/raw/main/get.sh"
+	versionCheckTimeout = 5 * time.Second
 )
 
-func init() {
-	rootCmd.AddCommand(versionCmd)
+func versionCmd(o *Options) (*cobra.Command, error) {
+	c := &cobra.Command{
+		Use:   "version",
+		Short: "Show containerlab version or upgrade",
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return printVersionInfoFn(cobraCmd, o)
+		},
+	}
+
+	c.Flags().BoolVarP(&o.Version.Short, "short", "s", false, "Print just the version number")
+	c.Flags().BoolVarP(&o.Version.JSON, "json", "j", false, "Print version info as json")
+
+	c.AddCommand(
+		&cobra.Command{
+			Use:   "check",
+			Short: "Check if a new version of containerlab is available",
+			RunE: func(cobraCmd *cobra.Command, _ []string) error {
+				// We'll use a short 5-second timeout for the remote request
+				ctx, cancel := context.WithTimeout(cobraCmd.Context(), versionCheckTimeout)
+				defer cancel()
+
+				m := getVersionManager()
+				m.DisplayNewVersionAvailable(ctx, true)
+
+				return nil
+			},
+		},
+		&cobra.Command{
+			Use:     "upgrade",
+			Short:   "upgrade containerlab to latest available version",
+			Aliases: []string{"update"},
+			PreRunE: func(_ *cobra.Command, _ []string) error {
+				return clabutils.CheckAndGetRootPrivs()
+			},
+			RunE: upgrade,
+		},
+	)
+
+	return c, nil
 }
 
 // this a note to self how color codes work
 // https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences
 // https://patorjk.com/software/taag/#p=display&f=Ivrit&t=CONTAINERlab
 //
-//go:embed logo.txt
+//go:embed assets/logo.txt
 var projASCIILogo string
 
-// versionCmd represents the version command.
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "show containerlab version or upgrade",
-
-	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println(projASCIILogo)
-
-		verSlug := docsLinkFromVer(version)
-		fmt.Printf("    version: %s\n", version)
-		fmt.Printf("     commit: %s\n", commit)
-		fmt.Printf("       date: %s\n", date)
-		fmt.Printf("     source: %s\n", repoUrl)
-		fmt.Printf(" rel. notes: https://containerlab.dev/rn/%s\n", verSlug)
-
-		return nil
-	},
-}
-
-// get LatestVersion fetches latest containerlab release version from Github releases.
-func getLatestVersion(ctx context.Context, vc chan string) { // skipcq: RVV-A0006
-	// client that doesn't follow redirects
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "HEAD",
-		fmt.Sprintf("%s/releases/latest", repoUrl), nil)
-	if err != nil {
-		log.Debugf("error occurred during latest version fetch: %v", err)
-		return
-	}
-
-	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != 302 {
-		log.Debugf("error occurred during latest version fetch: %v", err)
-		return
-	}
-
-	loc := resp.Header.Get("Location")
-	split := strings.Split(loc, "releases/tag/")
-
-	// latest version
-	vL, _ := gover.NewVersion(split[1])
-	// current version
-	vC, _ := gover.NewVersion(version)
-
-	if vL.GreaterThan(vC) {
-		log.Debugf("latest version %s is newer than the current one %s\n", vL.String(), vC.String())
-		vc <- vL.String()
-	}
-
-	resp.Body.Close()
-}
-
-// newVerNotification prints logs information about a new version if one was found.
-func newVerNotification(vc chan string) {
-	select {
-	case ver, ok := <-vc:
-		if ok {
-			relSlug := docsLinkFromVer(ver)
-			log.Infof("🎉 New containerlab version %s is available! Release notes: https://containerlab.dev/rn/%s\nRun 'containerlab version upgrade' to upgrade or go check other installation options at https://containerlab.dev/install/\n", ver, relSlug)
-		}
-	default:
-		return
-	}
-}
-
-// docsLinkFromVer creates a documentation path attribute for a given version
-// for 0.15.0 version, the it returns 0.15/
-// for 0.15.1 - 0.15/#0151.
+// docsLinkFromVer: creates a documentation path for a given version
+// e.g., for 0.15.0 => 0.15/
+//
+// for 0.15.1 => 0.15/#0151.
 func docsLinkFromVer(ver string) string {
-	v, _ := gover.NewVersion(ver)
+	v, err := gover.NewVersion(ver)
+	if err != nil {
+		return "" // fallback
+	}
+
 	segments := v.Segments()
-	maj := segments[0]
-	min := segments[1]
+	major := segments[0]
+	minor := segments[1]
 	patch := segments[2]
 
-	relSlug := fmt.Sprintf("%d.%d/", maj, min)
+	relSlug := fmt.Sprintf("%d.%d/", major, minor)
 	if patch != 0 {
-		relSlug = relSlug + fmt.Sprintf("#%d%d%d", maj, min, patch)
+		relSlug += fmt.Sprintf("#%d%d%d", major, minor, patch)
 	}
+
 	return relSlug
 }
 
-// getLatestClabVersion returns a chan that returns the version check result
-// uses the CLAB_VERSION_CHECK env variable (default true, if == "disable" will not perform the check).
-func getLatestClabVersion(ctx context.Context) chan string {
-	// latest version channel
-	vCh := make(chan string)
-
-	// check if new_version_notification is meant to be disabled
-	versionCheckStatus := os.Getenv("CLAB_VERSION_CHECK")
-	log.Debugf("Env: CLAB_VERSION_CHECK=%s", versionCheckStatus)
-
-	if strings.Contains(strings.ToLower(versionCheckStatus), "disable") {
-		close(vCh)
-	} else {
-		go getLatestVersion(ctx, vCh)
+func printVersionInfoFn(_ *cobra.Command, o *Options) error {
+	versionData := struct {
+		Version      string `json:"version"`
+		Commit       string `json:"commit"`
+		Date         string `json:"date"`
+		RepoUrl      string `json:"repository"`
+		ReleaseNotes string `json:"releaseNotes"`
+	}{
+		Version:      Version,
+		Commit:       commit,
+		Date:         date,
+		RepoUrl:      repoUrl,
+		ReleaseNotes: fmt.Sprintf("https://containerlab.dev/rn/%s", docsLinkFromVer(Version)),
 	}
 
-	return vCh
+	if o.Version.Short {
+		fmt.Println(Version)
+		return nil
+	}
+
+	if o.Version.JSON {
+		j, err := json.Marshal(versionData)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(j))
+
+		return nil
+	}
+
+	fmt.Println(projASCIILogo)
+	fmt.Printf("    version: %s\n", Version)
+	fmt.Printf("     commit: %s\n", commit)
+	fmt.Printf("       date: %s\n", date)
+	fmt.Printf("     source: %s\n", repoUrl)
+	fmt.Printf(" rel. notes: %s\n", versionData.ReleaseNotes)
+
+	return nil
+}
+
+// printNewVersionInfo prints instructions about a
+// newer version, so we don't duplicate that string in multiple places.
+func printNewVersionInfo(ver string) {
+	relSlug := docsLinkFromVer(ver)
+	log.Info(
+		"containerlab version", "🎉", fmt.Sprintf(
+			"A newer containerlab version (%s) is available!\nRelease notes: https://containerlab.dev/rn/%s\nRun 'clab version upgrade' or see https://containerlab.dev/install/ for other installation options.",
+			ver,
+			relSlug,
+		),
+	)
+}
+
+func upgrade(cobraCmd *cobra.Command, _ []string) error {
+	f, err := os.CreateTemp("", "containerlab")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	defer os.Remove(f.Name())
+
+	err = clabutils.CopyFileContents(cobraCmd.Context(), downloadURL, f)
+	if err != nil {
+		return fmt.Errorf("failed to download upgrade script: %w", err)
+	}
+
+	c := exec.CommandContext(cobraCmd.Context(), "sudo", "-E", "bash", f.Name())
+	// pass the environment variables to the upgrade script
+	// so that GITHUB_TOKEN is available
+	c.Env = os.Environ()
+
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+
+	err = c.Run()
+	if err != nil {
+		return fmt.Errorf("upgrade failed: %w", err)
+	}
+
+	return nil
 }

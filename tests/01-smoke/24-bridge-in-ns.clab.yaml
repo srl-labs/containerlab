@@ -1,0 +1,18 @@
+name: "bridges-in-ns"
+topology:
+  nodes: 
+    br01|bp1:
+      kind: bridge
+      network-mode: container:bp1
+    bp1:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - "ip address add dev br01 192.168.0.1/24"
+    c1:
+      kind: linux
+      image: alpine:latest
+      exec:
+        - "ip address add dev eth1 192.168.0.2/24"
+  links:
+     - endpoints: ["c1:eth1", "br01|bp1:c1eth1"]

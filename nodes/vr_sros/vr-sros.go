@@ -5,6 +5,7 @@
 package vr_sros
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -15,32 +16,49 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/network"
 	"github.com/scrapli/scrapligo/driver/options"
 	scraplilogging "github.com/scrapli/scrapligo/logging"
 	"github.com/scrapli/scrapligo/platform"
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
-	"github.com/srl-labs/containerlab/netconf"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnetconf "github.com/srl-labs/containerlab/netconf"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 )
 
 var (
-	kindnames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	kindNames          = []string{"nokia_sros", "vr-sros", "vr-nokia_sros"}
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
+
+	InterfaceRegexp = regexp.MustCompile(`1/1/(?P<port>\d+)`)
+	InterfaceOffset = 1
+	InterfaceHelp   = "1/1/X (where X >= 1) or ethX (where X >= 1)"
 )
 
 const (
-	vrsrosDefaultType   = "sr-1"
-	scrapliPlatformName = "nokia_sros"
-	configDirName       = "tftpboot"
-	startupCfgFName     = "config.txt"
-	licenseFName        = "license.txt"
+	generateable     = true
+	generateIfFormat = "1/1/%d"
+
+	vrsrosDefaultType          = "sr-1"
+	scrapliPlatformName        = "nokia_sros"
+	scrapliPlatformNameClassic = "nokia_sros_classic"
+	// envSrosConfigMode is the env var that controls the CLI mode used by SR OS.
+	// When set to "classic" or "mixed", the classic CLI scrapligo platform is used.
+	// Default (unset or "model-driven") uses the MD-CLI platform.
+	envSrosConfigMode = "CLAB_SROS_CONFIG_MODE"
+	configDirName     = "tftpboot"
+	startupCfgFName   = "config.txt"
+	licenseFName      = "license.txt"
+
+	// OCI image title label used to detect SR-SIM container image (must use kind nokia_srsim).
+	ociImageTitleLabel = "org.opencontainers.image.title"
+	srsimImageTitle    = "srsim"
 )
 
 // SROSTemplateData holds ssh keys for template generation.
@@ -50,27 +68,38 @@ type SROSTemplateData struct {
 }
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	r.Register(kindnames, func() nodes.Node {
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
+		ScrapliPlatformName: scrapliPlatformName,
+	}
+
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
+
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(vrSROS)
-	}, defaultCredentials)
+	}, nrea)
 }
 
 type vrSROS struct {
-	nodes.DefaultNode
+	clabnodes.VRNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 }
 
-func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	s.DefaultNode = *nodes.NewDefaultNode(s)
+	s.VRNode = *clabnodes.NewVRNode(s, defaultCredentials, scrapliPlatformName)
 	// set virtualization requirement
 	s.HostRequirements.VirtRequired = true
-	s.LicensePolicy = types.LicensePolicyWarn
+	s.LicensePolicy = clabtypes.LicensePolicyWarn
 	// SR OS requires unbound pubkey authentication mode until this is
-	// gets fixed in later SR OS relase.
-	s.SSHConfig.PubkeyAuthentication = types.PubkeyAuthValueUnbound
+	// gets fixed in later SR OS release.
+	s.SSHConfig.PubkeyAuthentication = clabtypes.PubkeyAuthValueUnbound
 
 	s.Cfg = cfg
 	for _, o := range opts {
@@ -82,11 +111,11 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	}
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
-		"CONNECTION_MODE":    nodes.VrDefConnMode,
+		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
 		"DOCKER_NET_V4_ADDR": s.Mgmt.IPv4Subnet,
 		"DOCKER_NET_V6_ADDR": s.Mgmt.IPv6Subnet,
 	}
-	s.Cfg.Env = utils.MergeStringMaps(defEnv, s.Cfg.Env)
+	s.Cfg.Env = clabutils.MergeStringMaps(defEnv, s.Cfg.Env)
 
 	// mount tftpboot dir
 	s.Cfg.Binds = append(s.Cfg.Binds, fmt.Sprint(path.Join(s.Cfg.LabDir, "tftpboot"), ":/tftpboot"))
@@ -95,48 +124,95 @@ func (s *vrSROS) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		s.Cfg.Binds = append(s.Cfg.Binds, "/dev:/dev")
 	}
 
-	s.Cfg.Cmd = fmt.Sprintf("--trace --connection-mode %s --hostname %s --variant \"%s\"", s.Cfg.Env["CONNECTION_MODE"],
+	s.Cfg.Cmd = fmt.Sprintf(
+		"--trace --connection-mode %s --hostname %s --variant %q",
+		s.Cfg.Env["CONNECTION_MODE"],
 		s.Cfg.ShortName,
 		s.Cfg.NodeType,
 	)
 
+	s.InterfaceRegexp = InterfaceRegexp
+	s.InterfaceOffset = InterfaceOffset
+	s.InterfaceHelp = InterfaceHelp
+
+	if len(s.Cfg.Components) > 0 {
+		log.Warnf(
+			"node %q: kind nokia_sros (vrnetlab) does not support components; components are ignored. Use kind nokia_srsim for distributed/chassis topologies with components",
+			s.Cfg.ShortName,
+		)
+	}
+
 	return nil
 }
 
-func (s *vrSROS) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(s.Cfg.LabDir, 0777)
+func (s *vrSROS) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// store public keys extracted from clab host
 	s.sshPubKeys = params.SSHPubKeys
 
+	if err := s.verifyNokiaSrosImage(ctx); err != nil {
+		return err
+	}
+
 	return createVrSROSFiles(s)
 }
 
-func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
-	if isPartialConfigFile(s.Cfg.StartupConfig) {
-		log.Infof("%s: applying config from %s", s.Cfg.LongName, s.Cfg.StartupConfig)
+// verifyNokiaSrosImage ensures the image used with kind nokia_sros is not the SRsim
+// container image (use kind nokia_srsim for that). It inspects the image label
+// org.opencontainers.image.title and returns an error if it is "srsim".
+func (s *vrSROS) verifyNokiaSrosImage(ctx context.Context) error {
+	if s.GetRuntime() == nil {
+		return nil
+	}
+	insp, err := s.GetRuntime().InspectImage(ctx, s.Cfg.Image)
+	if err != nil {
+		// Skip check when runtime does not support image inspection (e.g. Podman).
+		if strings.Contains(err.Error(), "not implemented") {
+			log.Debug(
+				"Skipping nokia_sros image kind check: runtime does not support image inspection",
+			)
+			return nil
+		}
+		return err
+	}
+	if insp != nil && insp.Config.Labels != nil {
+		if title, ok := insp.Config.Labels[ociImageTitleLabel]; ok && title == srsimImageTitle {
+			return fmt.Errorf(
+				"node %q: kind is nokia_sros (vrnetlab) but the provided image is for the nokia_srsim container image; use kind: nokia_srsim with this image, or use a vrnetlab nokia_sros image for kind: nokia_sros",
+				s.Cfg.ShortName,
+			)
+		}
+	}
+	return nil
+}
 
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-		defer cancel()
+func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
+	// b holds the configuration to be applied to the node
+	b := &bytes.Buffer{}
+
+	// apply partial configs if partial config is used and existing node config does not exist
+	if clabutils.IsPartialConfigFile(s.Cfg.StartupConfig) && !nodeConfigExists(s.Cfg.LabDir) {
+		log.Info("Adding configuration",
+			"node", s.Cfg.LongName,
+			"type", "partial",
+			"source", s.Cfg.StartupConfig)
 
 		r, err := os.Open(s.Cfg.StartupConfig)
 		if err != nil {
 			return err
 		}
 
-		err = s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
-			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
-			r,
-		)
+		defer r.Close() // skipcq: GO-S2307
+
+		_, err = io.Copy(b, r)
 		if err != nil {
 			return err
 		}
-
-		log.Infof("%s: configuration applied", s.Cfg.LongName)
 	}
 
 	// skip ssh key configuration if CLAB_SKIP_SROS_SSH_KEY_CONFIG env var is set
@@ -145,7 +221,25 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	_, skipSSHKeyCfg := os.LookupEnv("CLAB_SKIP_SROS_SSH_KEY_CONFIG")
 
 	if len(s.sshPubKeys) > 0 && !skipSSHKeyCfg {
-		err := s.configureSSHPublicKeys(ctx)
+		log.Info("Adding public keys configuration", "node", s.Cfg.LongName)
+
+		sshConf, err := s.generateSSHPublicKeysConfig()
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(b, sshConf)
+		if err != nil {
+			return err
+		}
+	}
+
+	// apply the aggregated config snippets
+	if b.Len() > 0 {
+		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, s.scrapliPlatform(),
+			s.Cfg.Credentials.Username, s.Cfg.Credentials.Password,
+			b,
+		)
 		if err != nil {
 			return err
 		}
@@ -154,47 +248,51 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) erro
 	return nil
 }
 
-func (s *vrSROS) SaveConfig(_ context.Context) error {
-	err := netconf.SaveConfig(s.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
-		scrapliPlatformName,
+// scrapliPlatform returns the scrapligo platform name based on the configured CLI mode.
+// When CLAB_SROS_CONFIG_MODE is "classic" or "mixed", the classic CLI platform is used.
+// The default (unset or "model-driven") uses the MD-CLI platform.
+func (s *vrSROS) scrapliPlatform() string {
+	cfgMode := strings.ToLower(s.Cfg.Env[envSrosConfigMode])
+	if cfgMode == "classic" || cfgMode == "mixed" {
+		return scrapliPlatformNameClassic
+	}
+	return scrapliPlatformName
+}
+
+func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
+	err := clabnetconf.SaveRunningConfig(s.Cfg.LongName,
+		s.Cfg.Credentials.Username,
+		s.Cfg.Credentials.Password,
+		s.scrapliPlatform(),
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", s.Cfg.ShortName)
-	return nil
+	return nil, nil
 }
 
-// CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (s *vrSROS) CheckInterfaceName() error {
-	// vsim doesn't seem to support >20 interfaces, yet we allow to set max if number 32 just in case.
-	// https://regex101.com/r/bx6kzM/1
-	ifRe := regexp.MustCompile(`eth([1-9]|[12][0-9]|3[0-2])$`)
-	for _, e := range s.Endpoints {
-		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia SR OS interface name %q doesn't match the required pattern. SR OS interfaces should be named as ethX, where X is from 1 to 32", e.GetIfaceName())
-		}
-	}
-
-	return nil
-}
-
-func createVrSROSFiles(node nodes.Node) error {
+func createVrSROSFiles(node clabnodes.Node) error {
 	nodeCfg := node.Config()
 
 	// use default startup config load function if config in full form is provided
-	if !isPartialConfigFile(nodeCfg.StartupConfig) {
-		nodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
+	if !clabutils.IsPartialConfigFile(nodeCfg.StartupConfig) {
+		// do not create new config file if there's existing config file
+		if nodeConfigExists(nodeCfg.LabDir) {
+			log.Infof("Using existing config file (%s) instead of applying a new one",
+				filepath.Join(nodeCfg.LabDir, configDirName, startupCfgFName))
+		} else {
+			clabnodes.LoadStartupConfigFileVr(node, configDirName, startupCfgFName)
+		}
 	}
 
 	if nodeCfg.License != "" {
 		// copy license file to node specific lab directory
 		src := nodeCfg.License
 		dst := filepath.Join(nodeCfg.LabDir, configDirName, licenseFName)
-		if err := utils.CopyFile(src, dst, 0644); err != nil {
+		if err := clabutils.CopyFile(context.Background(), src, dst,
+			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("file copy [src %s -> dst %s] failed %v", src, dst, err)
 		}
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, dst)
@@ -203,14 +301,15 @@ func createVrSROSFiles(node nodes.Node) error {
 	return nil
 }
 
-// isPartialConfigFile returns true if the config file name contains .partial substring.
-func isPartialConfigFile(c string) bool {
-	return strings.Contains(strings.ToUpper(c), ".PARTIAL")
+// nodeConfigExists returns true if a file at <labdir>/<node>/tftpboot/config.txt exists.
+func nodeConfigExists(labDir string) bool {
+	_, err := os.Stat(filepath.Join(labDir, configDirName, startupCfgFName))
+	return err == nil
 }
 
 // isHealthy checks if the "/health" file created by vrnetlab exists and contains "0 running".
 func (s *vrSROS) isHealthy(ctx context.Context) bool {
-	ex := exec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
+	ex := clabexec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
 
 	res, err := s.RunExec(ctx, ex)
 	if err != nil {
@@ -229,17 +328,23 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	var err error
 	var d *network.Driver
 
-	configContent, err := io.ReadAll(config)
+	configContent, err := clabutils.SubstituteEnvsAndTemplate(config, s.Cfg)
 	if err != nil {
 		return err
 	}
 
+	configContentStr := configContent.String()
+
 	// check file contains content, otherwise exit early
-	if len(strings.TrimSpace(string(configContent))) == 0 {
+	if strings.TrimSpace(configContentStr) == "" {
 		return nil
 	}
 
-	log.Infof("Waiting for %[1]s to be ready. This may take a while. Monitor boot log with `sudo docker logs -f %[1]s`", s.Cfg.LongName)
+	log.Info("Waiting for node to be ready. This may take a while",
+		"node", s.Cfg.LongName,
+		"log", fmt.Sprintf("docker logs -f %[1]s", s.Cfg.LongName),
+	)
+
 	for loop := true; loop; {
 		if !s.isHealthy(ctx) {
 			time.Sleep(5 * time.Second) // cool-off period
@@ -251,9 +356,12 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		case <-ctx.Done():
 			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
 		default:
+			sl := log.StandardLog(log.StandardLogOptions{
+				ForceLevel: log.DebugLevel,
+			})
 			li, err := scraplilogging.NewInstance(
 				scraplilogging.WithLevel("debug"),
-				scraplilogging.WithLogger(log.Debugln))
+				scraplilogging.WithLogger(sl.Print))
 			if err != nil {
 				return err
 			}
@@ -287,8 +395,16 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 			}
 		}
 	}
-	// converting byte slice to newline delimited string slice
-	cfgs := strings.Split(string(configContent), "\n")
+
+	// Normalize character sequences to avoid interaction issues with CLI
+	replacer := strings.NewReplacer(
+		"\r\n", "\n", // replace EOL CRLF with LF
+		"\t", "    ", // replace tabs with 4 spaces
+	)
+	configContentStr = replacer.Replace(configContentStr)
+
+	// converting string to newline delimited string slice
+	cfgs := strings.Split(configContentStr, "\n")
 
 	// config snippets should not have commit command, so we need to commit manually
 	// and quit from the config mode

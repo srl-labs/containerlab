@@ -1,44 +1,127 @@
 package srl
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"os"
 	"regexp"
+	"strings"
+	"text/template"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/srl-labs/containerlab/clab/exec"
+	_ "embed"
+
+	"github.com/charmbracelet/log"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabutils "github.com/srl-labs/containerlab/utils"
+	"golang.org/x/mod/semver"
 )
 
-// SrlVersion represents an sr linux version as a set of fields.
-type SrlVersion struct {
-	major  string
-	minor  string
-	patch  string
-	build  string
-	commit string
+//go:embed version_configs/snmpv2.cfg
+var snmpv2Config string
+
+//go:embed version_configs/snmpv2_pre24_3.cfg
+var snmpv2ConfigPre24_3 string
+
+//go:embed version_configs/grpc_pre24_3.cfg
+var grpcConfigPre24_3 string
+
+//go:embed version_configs/acl.cfg
+var aclConfig string
+
+//go:embed version_configs/grpc.cfg
+var grpcConfig string
+
+//go:embed version_configs/netconf.cfg
+var netconfConfig string
+
+//go:embed version_configs/oc.cfg
+var ocServerConfig string
+
+//go:embed version_configs/ndk.cfg
+var ndkServerConfig string
+
+//go:embed version_configs/dns_servers_pre26_3.cfg
+var dnsServersConfigPre26_3 string
+
+//go:embed version_configs/dns_servers.cfg
+var dnsServersConfig string
+
+//go:embed version_configs/tls_pre26_3.cfg
+var tlsConfigPre26_3 string
+
+//go:embed version_configs/tls.cfg
+var tlsConfig string
+
+// renderSRLEmbeddedTemplate parses and executes an embedded default-config snippet with the same
+// func map as the main SRL default config template.
+func renderSRLEmbeddedTemplate(name, src string, data any) (string, error) {
+	tpl, err := template.New(name).Funcs(clabutils.CreateFuncs()).Parse(src)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
-// RunningVersion gets the software version of the running node
+// SrlVersion represents an SR Linux version as a set of fields.
+type SrlVersion struct {
+	Major  string
+	Minor  string
+	Patch  string
+	Build  string
+	Commit string
+}
+
+// RunningVersion gets the software version of the running SR Linux node
 // by executing the "info from state /system information version | grep version" command
 // and parsing the output.
 func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
-	cmd, _ := exec.NewExecCmdFromString(`sr_cli -d "info from state /system information version | grep version"`)
+	cmd, _ := clabexec.NewExecCmdFromString(
+		`sr_cli -d "info from state /system information version | grep version"`,
+	)
 
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf("SR Linux node %s extracted raw version. stdout: %s, stderr: %s",
+		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return n.parseVersionString(execResult.GetStdOutString()), nil
 }
 
-func (n *srl) parseVersionString(s string) *SrlVersion {
-	re, _ := regexp.Compile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
+// supportsOpenconfig checks if the node supports OpenConfig server.
+func (n *srl) OpenConfigFeatureEnabled(ctx context.Context) (bool, error) {
+	cmd, _ := clabexec.NewExecCmdFromString(
+		`sr_cli -d "info from state system features | grep openconfig"`,
+	)
+
+	execResult, err := n.RunExec(ctx, cmd)
+	if err != nil {
+		return false, err
+	}
+
+	log.Debugf("SR Linux node %s OpenConfig feature output. stdout: %s, stderr: %s",
+		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+
+	return strings.TrimSpace(execResult.GetStdOutString()) != "", nil
+}
+
+func (*srl) parseVersionString(s string) *SrlVersion {
+	re := regexp.MustCompile(`v(\d{1,3})\.(\d{1,2})\.(\d{1,3})\-(\d{1,4})\-(\S+)`)
 
 	v := re.FindStringSubmatch(s)
+
+	const versionMatchGroups = 6
 	// 6 matches must be returned if all goes well
-	if len(v) != 6 {
+	if len(v) != versionMatchGroups {
 		// return all zeroes if failed to parse
 		return &SrlVersion{"0", "0", "0", "0", "0"}
 	}
@@ -48,5 +131,104 @@ func (n *srl) parseVersionString(s string) *SrlVersion {
 
 // String returns a string representation of the version in a semver fashion (with leading v).
 func (v *SrlVersion) String() string {
-	return "v" + v.major + "." + v.minor + "." + v.patch + "-" + v.build + "-" + v.commit
+	return "v" + v.Major + "." + v.Minor + "." + v.Patch + "-" + v.Build + "-" + v.Commit
+}
+
+// MajorMinorSemverString returns a string representation of the major.minor version with a leading
+// v.
+func (v *SrlVersion) MajorMinorSemverString() string {
+	return "v" + v.Major + "." + v.Minor
+}
+
+// setVersionSpecificParams sets version specific parameters in the template data struct
+// to enable/disable version-specific configuration blocks in the config template
+// or prepares data to conform to the expected format per specific version.
+func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) error {
+	// v is in the vMajor.Minor format
+	v := n.swVersion.MajorMinorSemverString()
+
+	// in srlinux >= v23.10+ linuxadmin and admin user ssh keys can only be configured via the cli
+	// so we add the keys to the template data for rendering.
+	if len(n.sshPubKeys) > 0 && (semver.Compare(v, "v23.10") >= 0 || n.swVersion.Major == "0") {
+		tplData.SSHPubKeys = clabutils.MarshalAndCatenateSSHPubKeys(n.sshPubKeys)
+	}
+
+	// in srlinux >= v24.3+ we add ACL rules to enable http and telnet access
+	// that are useful for labs and were removed as a security hardening measure.
+	if semver.Compare(v, "v24.3") >= 0 || n.swVersion.Major == "0" {
+		tplData.ACLConfig = aclConfig
+	}
+
+	// in srlinux >= v24.7+ we add Netconf server config to enable Netconf.
+	if semver.Compare(v, "v24.7") >= 0 || n.swVersion.Major == "0" {
+		tplData.NetconfConfig = netconfConfig
+	}
+
+	// in srlinux v23.10.x we need to enable GNMI unix socket services to enable
+	// communications over unix socket (e.g. NDK agents)
+	if semver.Compare(v, "v23.10") == 0 {
+		tplData.EnableGNMIUnixSockServices = true
+	}
+
+	// in versions < v24.3 (or non 0.0 versions) we have to use the version specific
+	// config for grpc and snmpv2
+	if semver.Compare(v, "v24.3") == -1 && n.swVersion.Major != "0" {
+		tplData.SNMPConfig = snmpv2ConfigPre24_3
+
+		tplData.GRPCConfig = grpcConfigPre24_3
+	}
+
+	// in SR Linux >= v24.10+ we add
+	// - EDA configuration
+	// - openconfig server enable
+	if semver.Compare(v, "v24.10") >= 0 || n.swVersion.Major == "0" {
+		cfg := edaDiscoveryServerConfig
+
+		if os.Getenv("CLAB_EDA_USE_DEFAULT_GRPC_SERVER") != "" {
+			cfg = cfg + "\n" + edaDefaultMgmtServerConfig
+		} else {
+			cfg = cfg + "\n" + edaCustomMgmtServerConfig
+		}
+
+		tplData.EDAConfig = cfg
+
+		if n.supportsOpenconfig {
+			tplData.OCServerConfig = ocServerConfig
+		}
+	}
+
+	// in SR Linux >= v25.3 we enable ndk server.
+	if semver.Compare(v, "v25.3") >= 0 || n.swVersion.Major == "0" {
+		tplData.NDKServerConfig = ndkServerConfig
+	}
+
+	// in SR Linux >= v26.3 TLS uses profile instead of server-profile.
+	tlsSrc := tlsConfigPre26_3
+	if semver.Compare(v, "v26.3") >= 0 || n.swVersion.Major == "0" {
+		tlsSrc = tlsConfig
+	}
+
+	tlsRendered, err := renderSRLEmbeddedTemplate("tls", tlsSrc, tplData)
+	if err != nil {
+		return fmt.Errorf("srl tls default config template: %w", err)
+	}
+
+	tplData.TLSConfig = tlsRendered
+
+	// DNS servers config: dns vs dns-instance <name>.
+	if len(tplData.DNSServers) > 0 {
+		dnsSrc := dnsServersConfigPre26_3
+		if semver.Compare(v, "v26.3") >= 0 || n.swVersion.Major == "0" {
+			dnsSrc = dnsServersConfig
+		}
+
+		dnsRendered, err := renderSRLEmbeddedTemplate("dns-servers", dnsSrc, tplData)
+		if err != nil {
+			return fmt.Errorf("srl dns default config template: %w", err)
+		}
+
+		tplData.DNSServersConfig = dnsRendered
+	}
+
+	return nil
 }

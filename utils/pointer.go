@@ -1,6 +1,6 @@
 package utils
 
-// BoolPointer returns a pointer to a bool.
-func BoolPointer(b bool) *bool {
-	return &b
+// Pointer returns a pointer to a value of any type.
+func Pointer[T any](v T) *T {
+	return &v
 }

@@ -5,75 +5,46 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"sync"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/clab"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/runtime"
+	clabcore "github.com/srl-labs/containerlab/core"
 )
 
-// saveCmd represents the save command.
-var saveCmd = &cobra.Command{
-	Use:   "save",
-	Short: "save containers configuration",
-	Long: `save performs a configuration save. The exact command that is used to save the config depends on the node kind.
-Refer to the https://containerlab.dev/cmd/save/ documentation to see the exact command used per node's kind`,
-	PreRunE: sudoCheck,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		if name == "" && topo == "" {
-			return fmt.Errorf("provide topology file path  with --topo flag")
-		}
-		opts := []clab.ClabOption{
-			clab.WithTimeout(timeout),
-			clab.WithTopoPath(topo, varsFile),
-			clab.WithNodeFilter(nodeFilter),
-			clab.WithRuntime(rt,
-				&runtime.RuntimeConfig{
-					Debug:            debug,
-					Timeout:          timeout,
-					GracefulShutdown: graceful,
-				},
-			),
-			clab.WithDebug(debug),
-		}
-		c, err := clab.NewContainerLab(opts...)
-		if err != nil {
-			return err
-		}
+func saveCmd(o *Options) (*cobra.Command, error) {
+	c := &cobra.Command{
+		Use:   "save",
+		Short: "Save running configuration as startup config for all nodes in a lab. It saves the config locally for each OS with an option to copy it to a user-specified directory",
+		Long: `Save saves a running configuration as startup config for all nodes in a lab. It saves the config locally for each OS with an option to copy it to a user-specified directory. The exact command that is used to save the config
+depends on the node kind. Refer to the https://containerlab.dev/cmd/save/ documentation to see
+the exact command used per node's kind`,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			if o.Global.TopologyName == "" && o.Global.TopologyFile == "" {
+				return fmt.Errorf("provide topology file path  with --topo flag")
+			}
 
-		err = links.SetMgmtNetUnderlayingBridge(c.Config.Mgmt.Bridge)
-		if err != nil {
-			return err
-		}
+			c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
+			if err != nil {
+				return err
+			}
 
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
+			return c.Save(cobraCmd.Context(), o.ToClabSaveOptions()...)
+		},
+	}
 
-		var wg sync.WaitGroup
-		wg.Add(len(c.Nodes))
-		for _, node := range c.Nodes {
-			go func(node nodes.Node) {
-				defer wg.Done()
+	c.Flags().StringSliceVarP(
+		&o.Filter.NodeFilter,
+		"node-filter",
+		"",
+		o.Filter.NodeFilter,
+		"comma separated list of nodes to include",
+	)
+	c.Flags().StringVar(
+		&o.Save.Copy,
+		"copy",
+		"",
+		"copy the saved running configs this directory. Directory created if does not exist. Supports absolute and relative paths. The lab directory is used as a subdirectory to avoid conflicts when saving configs from multiple labs to the same destination",
+	)
 
-				err := node.SaveConfig(ctx)
-				if err != nil {
-					log.Errorf("err: %v", err)
-				}
-			}(node)
-		}
-		wg.Wait()
-
-		return nil
-	},
-}
-
-func init() {
-	saveCmd.Flags().StringSliceVarP(&nodeFilter, "node-filter", "", []string{},
-		"comma separated list of nodes to include")
-	rootCmd.AddCommand(saveCmd)
+	return c, nil
 }

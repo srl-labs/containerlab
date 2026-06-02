@@ -33,20 +33,20 @@ Create SSH keypair - ecdsa512
 Deploy ${lab-name} lab
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
 Verify links in node srl1
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "ip link show e1-1"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "ip link show e1-1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
 Verify links in node srl2
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl2 --cmd "ip link show e1-1"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl2 --cmd "ip link show e1-1"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
@@ -56,24 +56,47 @@ Verify e1-1 interface have been admin enabled on srl1
     ...    This test cases ensures that e1-1 interface referenced in links section
     ...    has been automatically admin enabled
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "sr_cli 'show interface ethernet-1/1'"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "sr_cli 'show interface ethernet-1/1'"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    ethernet-1/1 is up
 
 Verify srl2 accepted user-provided CLI config
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl2 --cmd "sr_cli 'info /system information location'"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl2 --cmd "sr_cli 'info /system information location'"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    test123
 
 Verify saving config
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name}
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Not Contain    ${output}    ERRO
+
+Verify saving config with copy flag
+    [Documentation]
+    ...    Save config with --copy flag and verify that the config files
+    ...    are copied to the specified destination directory.
+    ${copy_dst} =    Set Variable    ${CURDIR}/save-copy-test
+    # clean up any leftover from previous runs
+    Run    rm -rf ${copy_dst}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --copy ${copy_dst}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    ERRO
+    # verify that config files have been copied for both srl nodes
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/srl1/config.json
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/srl2/config.json
+    # verify the copied files are not empty
+    ${size1} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/srl1/config.json
+    Should Be True    ${size1} > 0
+    ${size2} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/srl2/config.json
+    Should Be True    ${size2} > 0
+    # clean up
+    [Teardown]    Run    rm -rf ${copy_dst}
 
 Ensure srl1 is reachable over ssh
     Login via SSH with username and password
@@ -112,10 +135,17 @@ Ensure srl1 is reachable over ssh with public key ECDSA512 auth
 Ensure srl1 can ping srl2 over ethernet-1/1 interface
     Sleep    5s    give some time for networking stack to settle
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "ip netns exec srbase-default ping 192.168.0.1 -c2 -w 3"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=srl1 --cmd "ip netns exec srbase-default ping 192.168.0.1 -c2 -w 3"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
+
+Verify JSON-RPC works over HTTP
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    curl 'http://admin:NokiaSrl1!@clab-${lab-name}-srl1/jsonrpc' -d '{"jsonrpc":"2.0","id":0,"method":"get","params":{"commands":[{"path":"/system/information/version","datastore":"state"}]}}'
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    error
 
 Verify TLS works with JSON-RPC with skipping certificate check
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -126,20 +156,29 @@ Verify TLS works with JSON-RPC with skipping certificate check
 
 Verify TLS works with JSON-RPC and certificate check
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    curl --cacert ./clab-${lab-name}/.tls/ca/ca.pem 'https://admin:NokiaSrl1!@clab-${lab-name}-srl1/jsonrpc' -d '{"jsonrpc":"2.0","id":0,"method":"get","params":{"commands":[{"path":"/system/information/version","datastore":"state"}]}}'
+    ...    curl --cacert ${CURDIR}/clab-${lab-name}/.tls/ca/ca.pem 'https://admin:NokiaSrl1!@clab-${lab-name}-srl1/jsonrpc' -d '{"jsonrpc":"2.0","id":0,"method":"get","params":{"commands":[{"path":"/system/information/version","datastore":"state"}]}}'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Not Contain    ${output}    error
 
 Verify TLS works with JSON-RPC, certificate check and IP address as SAN
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    curl --cacert ./clab-${lab-name}/.tls/ca/ca.pem 'https://admin:NokiaSrl1!@172.20.20.2/jsonrpc' -d '{"jsonrpc":"2.0","id":0,"method":"get","params":{"commands":[{"path":"/system/information/version","datastore":"state"}]}}'
+    ...    curl --cacert ${CURDIR}/clab-${lab-name}/.tls/ca/ca.pem 'https://admin:NokiaSrl1!@172.20.20.200/jsonrpc' -d '{"jsonrpc":"2.0","id":0,"method":"get","params":{"commands":[{"path":"/system/information/version","datastore":"state"}]}}'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Not Contain    ${output}    error
 
+Verify NETCONF works
+    Skip If    '${runtime}' != 'docker'
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo docker run --name net-cons2-clab --rm --network clab ghcr.io/hellt/netconf-console2:3.0.1 --host clab-${lab-name}-srl1 --port 830 -u admin -p 'NokiaSrl1!' --hello
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    base:1.1
+
 
 *** Keywords ***
 Cleanup
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
+    Run    sudo docker rm -f net-cons2-clab
     Run    rm -f ${key-path}*

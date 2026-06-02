@@ -1,13 +1,14 @@
 |                               |                                                                      |
 | ----------------------------- | -------------------------------------------------------------------- |
 | **Description**               | A 3-node ring of FRR routers with OSPF IGP                           |
-| **Components**                | [FRR](http://docs.frrouting.org/en/latest/overview.html)             |
+| **Components**                | [FRR](https://docs.frrouting.org/en/stable-7.5/overview.html)        |
 | **Resource requirements**[^1] | :fontawesome-solid-microchip: 2 <br/>:fontawesome-solid-memory: 2 GB |
 | **Topology file**             | [frr01.clab.yml][topofile]                                           |
 | **Name**                      | frr01                                                                |
 | **Version information**[^2]   | `containerlab:0.13.0`, `frrouting/frr:v7.5.1`, `docker-ce:19.03.13`  |
 
 ## Description
+
 This lab example consists of three FRR routers connected in a ring topology. Each router has one PC connected to it.
 
 This is also an example of how to pre-configure lab nodes of `linux` kind in containerlab.

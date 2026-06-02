@@ -17,7 +17,7 @@ ${runtime}          docker
 *** Test Cases ***
 Deploy ${lab-name} lab
     ${result} =    Run Process   
-    ...    sudo -E ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
+    ...    ${CLAB_BIN} --runtime ${runtime} deploy -t ${topo}
     ...    shell=True
     Log    ${result.stdout}
     Should Be Equal As Integers    ${result.rc}    0
@@ -38,7 +38,7 @@ Check host side interface is attached to mgmt bridge and up
 *** Keywords ***
 Teardown
     # destroy all labs
-    Run    sudo -E ${CLAB_BIN} --runtime ${runtime} destroy -c -a
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -c -a
 
 Setup
     # skipping this test suite for podman for now

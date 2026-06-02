@@ -1,0 +1,39 @@
+interface ethernet-1/1 {
+    admin-state enable
+    subinterface 0 {
+        ipv4 {
+            admin-state enable
+            address 192.168.0.2/24 {
+            }
+        }
+    }
+}
+interface ethernet-1/2 {
+    admin-state enable
+    subinterface 0 {
+        ipv4 {
+            admin-state enable
+            address 192.168.1.2/24 {
+            }
+        }
+    }
+}
+interface ethernet-1/3 {
+    admin-state enable
+    subinterface 0 {
+        ipv4 {
+            admin-state enable
+            address 192.168.2.2/24 {
+            }
+        }
+    }
+}
+
+network-instance default {
+    interface ethernet-1/1.0 {
+    }
+    interface ethernet-1/2.0 {
+    }
+    interface ethernet-1/3.0 {
+    }
+}

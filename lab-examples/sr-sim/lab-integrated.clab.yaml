@@ -1,0 +1,21 @@
+name: "sros"
+mgmt:
+  network: srsim_mgmt
+  ipv4-subnet: 10.78.140.0/24
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: nokia_srsim:25.7.R1
+  nodes:
+    sr-sim10:
+      kind: nokia_srsim
+      type: SR-1 # Implicit default
+      startup-config: configs/srsim10.partial.cfg
+    sr-sim11:
+      kind: nokia_srsim
+      startup-config: configs/srsim11.partial.cfg
+  links:
+    # Data Interfaces
+    - endpoints: ["sr-sim10:1/1/c1/1", "sr-sim11:1/1/c1/1"]
+    - endpoints: ["sr-sim10:1/1/c1/2", "sr-sim11:1/1/c1/2"]

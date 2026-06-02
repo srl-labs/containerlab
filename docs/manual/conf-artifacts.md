@@ -1,4 +1,6 @@
-When containerlab deploys a lab it creates a Lab Directory in the **current working directory**. This directory is used to keep all the necessary files that are needed to run/configure the nodes. We call these files _configuration artifacts_.
+# Lab Directory and Configuration Artifacts
+
+When containerlab deploys a lab it creates a Lab Directory in the same directory where your topology (`clab.yml`) file is. This directory is used to keep all the necessary files that are needed to run/configure the nodes. We call these files _configuration artifacts_ and/or lab state files.
 
 Things like:
 
@@ -7,15 +9,11 @@ Things like:
 * node-specific files and directories that are required to launch the container
 * license files if needed
 
-all these artifacts will be available under a Lab Directory.
+All these artifacts will be available under a Lab Directory.
 
-!!!note
-    If you configure a node with [`binds`](nodes.md#binds) mounts and the source of the bind is not within the lab directory already, containerlab will copy over the source files/dirs into the lab directory on users behalf.
+## Identifying a Lab Directory
 
-### Identifying a lab directory
-
-The lab directory name follows the `clab-<lab_name>` template. Thus, if the name of your lab is `srl02` you will find the `clab-srl02` directory created by default in the current working directory. The location can be altered via the [CLAB_LABDIR_BASE](../cmd/deploy.md#clab_labdir_base) envorinment variable.
-
+The lab directory name follows the `clab-<lab_name>` template. Thus, if the name of your lab is `srl02` you will find the `clab-srl02` directory created by default in the directory where topology file is located. The location can be changed by setting the [`CLAB_LABDIR_BASE`](../cmd/deploy.md#clab_labdir_base) environment variable.
 
 ```
 ❯ ls -lah clab-srl02
@@ -29,7 +27,7 @@ drwxr-xr-x  3 root root   79 Dec  1 22:11 srl2
 
 The contents of this directory will contain kind-specific files and directories. Containerlab will name directories after the node names and will only created those if they are needed. For instance, by default any node of kind `linux` will not have it's own directory under the Lab Directory.
 
-### Persistence of a lab directory
+### Persistence of a Lab Directory
 
 When a user first deploy a lab, the Lab Directory gets created if it was not present. Depending on a node's kind, this directory might act as a persistent storage area for a node. A common case is having the configuration file saved when the changes are made to the node via management interfaces.
 
@@ -48,4 +46,4 @@ When a user destroys a lab without providing the [`--cleanup`](../cmd/destroy.md
 
 Moreover, when the user will deploy the same lab, containerlab will reuse the configuration artifacts if possible, which will, for example, start the nodes with the config files saved from the previous lab run.
 
-To be able to deploy a lab without reusing existing configuration artifact use the [`--reconfigure`](../cmd/deploy.md#reconfigure) flag with `deploy` command. With that setting, containerlab will first delete the Lab Directory and then will start the deployment process.
+To be able to deploy a lab without reusing existing configuration artifact use the [`redeploy`](../cmd/redeploy.md) command with `--cleanup` or add [`--reconfigure`](../cmd/deploy.md#reconfigure) flag to the `deploy` command. With that setting, containerlab will first delete the Lab Directory and then will start the deployment process.

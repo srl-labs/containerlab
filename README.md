@@ -3,9 +3,9 @@
 [![github release](https://img.shields.io/github/release/srl-labs/containerlab.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 [![Github all releases](https://img.shields.io/github/downloads/srl-labs/containerlab/total.svg?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://github.com/srl-labs/containerlab/releases/)
 [![Doc](https://img.shields.io/badge/Docs-containerlab.dev-blue?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://containerlab.dev)
-[![Twitter](https://img.shields.io/badge/follow-%40go_containerlab-1DA1F2?logo=twitter&style=flat-square&color=00c9ff&labelColor=bec8d2)](https://twitter.com/go_containerlab)
+[![DeepWiki](https://img.shields.io/badge/deepwiki-1DA1F2?logo=wikipedia&style=flat-square&color=00c9ff&labelColor=bec8d2&logoColor=black)](https://deepwiki.com/srl-labs/containerlab)
+[![Bluesky](https://img.shields.io/badge/follow-containerlab-1DA1F2?logo=bluesky&style=flat-square&color=00c9ff&labelColor=bec8d2)](https://bsky.app/profile/containerlab.dev)
 [![Discord](https://img.shields.io/discord/860500297297821756?style=flat-square&label=discord&logo=discord&color=00c9ff&labelColor=bec8d2)](https://discord.gg/vAyddtaEV9)
-[![Go Report](https://img.shields.io/badge/go%20report-A%2B-blue?style=flat-square&color=00c9ff&labelColor=bec8d2)](https://goreportcard.com/report/github.com/srl-labs/containerlab)
 
 ---
 
@@ -19,33 +19,53 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 
 Containerlab focuses on the containerized Network Operating Systems which are typically used to test network features and designs, such as:
 
-* [Nokia SR-Linux](https://containerlab.dev/manual/kinds/srl/)
+* [Nokia SR Linux](https://containerlab.dev/manual/kinds/srl/)
+* [Nokia virtual SR OS (SR-SIM)](https://containerlab.dev/manual/kinds/sros/)
 * [Arista cEOS](https://containerlab.dev/manual/kinds/ceos/)
 * [Cisco XRd](https://containerlab.dev/manual/kinds/xrd/)
-* [Azure SONiC](https://containerlab.dev/manual/kinds/sonic-vs/)
+* [SONiC](https://containerlab.dev/manual/kinds/sonic-vs/)
 * [Juniper cRPD](https://containerlab.dev/manual/kinds/crpd/)
+* [Juniper cSRX](https://containerlab.dev/manual/kinds/csrx/)
 * [Cumulus VX](https://containerlab.dev/manual/kinds/cvx/)
 * [Keysight IXIA-C](https://containerlab.dev/manual/kinds/keysight_ixia-c-one/)
 * [RARE/FreeRtr](https://containerlab.dev/manual/kinds/rare-freertr/)
+* [Ostinato](https://containerlab.dev/manual/kinds/ostinato/)
+* [Spirent TestCenter](https://containerlab.dev/manual/kinds/spirent_stc/)
+* [veesix osvbng](https://containerlab.dev/manual/kinds/veesix_osvbng/)
+* [6WIND VSR](https://containerlab.dev/manual/kinds/6wind_vsr/)
+* [FD.io VPP](https://containerlab.dev/manual/kinds/fdio_vpp/)
+* [VyOS Networks VyOS](https://containerlab.dev/manual/kinds/vyosnetworks_vyos/)
+* [Arrcus ArcOS](https://containerlab.dev/manual/kinds/arrcus_arcos/)
 
 In addition to native containerized NOSes, containerlab can launch traditional virtual machine based routers using [vrnetlab or boxen integration](https://containerlab.dev/manual/vrnetlab/):
 
-* [Nokia virtual SR OS (vSim/VSR)](https://containerlab.dev/manual/kinds/vr-sros/)
+* [Nokia virtual SR OS (vSim)](https://containerlab.dev/manual/kinds/vr-sros/)
 * [Juniper vMX](https://containerlab.dev/manual/kinds/vr-vmx/)
 * [Juniper vQFX](https://containerlab.dev/manual/kinds/vr-vqfx/)
 * [Juniper vSRX](https://containerlab.dev/manual/kinds/vr-vsrx/)
+* [Juniper vJunos-router](https://containerlab.dev/manual/kinds/vr-vjunosrouter/)
 * [Juniper vJunos-switch](https://containerlab.dev/manual/kinds/vr-vjunosswitch/)
 * [Juniper vJunosEvolved](https://containerlab.dev/manual/kinds/vr-vjunosevolved/)
 * [Cisco IOS XRv9k](https://containerlab.dev/manual/kinds/vr-xrv9k/)
 * [Cisco Nexus 9000v](https://containerlab.dev/manual/kinds/vr-n9kv)
+* [Cisco c8000v](https://containerlab.dev/manual/kinds/vr-c8000v/)
+* [Cisco SD-WAN](https://containerlab.dev/manual/kinds/cisco_sdwan/)
 * [Cisco CSR 1000v](https://containerlab.dev/manual/kinds/vr-csr)
+* [Cisco vIOS](https://containerlab.dev/manual/kinds/cisco_vios/)
+* [Cisco ASAv](https://containerlab.dev/manual/kinds/cisco_asav/)
+* [Cisco FTDv](https://containerlab.dev/manual/kinds/vr-ftdv/)
 * [Dell FTOS10v](https://containerlab.dev/manual/kinds/vr-ftosv)
 * [Arista vEOS](https://containerlab.dev/manual/kinds/vr-veos)
 * [Palo Alto PAN](https://containerlab.dev/manual/kinds/vr-pan)
 * [IPInfusion OcNOS](https://containerlab.dev/manual/kinds/ipinfusion-ocnos)
 * [Check Point Cloudguard](https://containerlab.dev/manual/kinds/checkpoint_cloudguard/)
+* [Fortinet Fortigate](https://containerlab.dev/manual/kinds/fortinet_fortigate/)
 * [Aruba AOS-CX](https://containerlab.dev/manual/kinds/vr-aoscx)
+* [Huawei VRP](https://containerlab.dev/manual/kinds/huawei_vrp)
+* [F5 BIG-IP VE](https://containerlab.dev/manual/kinds/f5_bigipve/)
 * [OpenBSD](https://containerlab.dev/manual/kinds/openbsd)
+* [FreeBSD](https://containerlab.dev/manual/kinds/freebsd)
+* [OpenWRT](https://containerlab.dev/manual/kinds/openwrt/)
 
 And, of course, containerlab is perfectly capable of wiring up arbitrary linux containers which can host your network applications, virtual functions or simply be a test client. With all that, containerlab provides a single IaaC interface to manage labs which can span contain all the needed variants of nodes:
 
@@ -62,7 +82,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **IaaC approach**  
     Declarative way of defining the labs by means of the topology definition [`clab` files](https://containerlab.dev/manual/topo-def-file/).
 * **Network Operating Systems centric**  
-    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](https://containerlab.dev/manual/kinds/kinds/) which allows the user to focus on the use cases, rather than infrastructure hurdles.
+    Focus on containerized Network Operating Systems. The sophisticated startup requirements of various NOS containers are abstracted with [kinds](https://containerlab.dev/manual/kinds/) which allows the user to focus on the use cases, rather than infrastructure hurdles.
 * **VM based nodes friendly**  
     With the [vrnetlab integration](https://containerlab.dev/manual/vrnetlab) it is possible to get the best of two worlds - running virtualized and containerized nodes alike with the same IaaC approach and workflows.
 * **Multi-vendor and open**  
@@ -87,7 +107,7 @@ This short clip briefly demonstrates containerlab features and explains its purp
 * **Labs and demos**  
     Containerlab was meant to be a tool for provisioning networking labs built with containers. It is free, open and ubiquitous. No software apart from Docker is required!  
     As with any lab environment it allows the users to validate features, topologies, perform interop testing, datapath testing, etc.  
-    It is also a perfect companion for your next demo. Deploy the lab fast, with all its configuration stored as a code -> destroy when done. Easily and [securely share lab access](https://containerlab.dev/manual/published-ports) if needed.
+    It is also a perfect companion for your next demo. Deploy the lab fast, with all its configuration stored as a code -> destroy when done.
 * **Testing and CI**  
     Because of the containerlab's single-binary packaging and code-based lab definition files, it was never that easy to spin up a test bed for CI. Gitlab CI, Github Actions and virtually any CI system will be able to spin up containerlab topologies in a single simple command.
 * **Telemetry validation**  

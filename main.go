@@ -4,8 +4,29 @@
 
 package main
 
-import "github.com/srl-labs/containerlab/cmd"
+import (
+	"os"
+
+	"github.com/charmbracelet/fang"
+	clabcmd "github.com/srl-labs/containerlab/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	ctx, cancel := clabcmd.SignalHandledContext()
+
+	root, err := clabcmd.Entrypoint()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	root.SetContext(ctx)
+
+	err = fang.Execute(ctx, root, fang.WithoutVersion())
+
+	// ensure cancel is *always* called (os.Exit bypasses)
+	cancel()
+
+	if err != nil {
+		os.Exit(1)
+	}
 }
