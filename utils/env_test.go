@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func assert(t *testing.T, val, exp interface{}) {
+func assert(t *testing.T, val, exp any) {
 	if !cmp.Equal(val, exp) {
 		_, fn, line, _ := runtime.Caller(1)
 		t.Errorf("assert failed on line %v in %s\n%s", line, fn, cmp.Diff(exp, val))
@@ -17,10 +17,10 @@ func assert(t *testing.T, val, exp interface{}) {
 
 func TestMergeMaps(t *testing.T) {
 	MergeMaps(nil, nil)
-	d1 := map[string]interface{}{
+	d1 := map[string]any{
 		"t": "1",
 	}
-	d2 := map[string]interface{}{
+	d2 := map[string]any{
 		"t":  "2",
 		"t2": "1",
 	}
@@ -28,34 +28,34 @@ func TestMergeMaps(t *testing.T) {
 	assert(t, MergeMaps(d1, d1), d1)
 	assert(t, MergeMaps(d1, nil), d1)
 	assert(t, MergeMaps(d1, d2), d2)
-	assert(t, MergeMaps(d2, d1), map[string]interface{}{
+	assert(t, MergeMaps(d2, d1), map[string]any{
 		"t":  "1",
 		"t2": "1",
 	})
 }
 
 func TestMergeMapsRecursive(t *testing.T) {
-	d0 := map[string]interface{}{
+	d0 := map[string]any{
 		"a": "1",
 	}
-	d1 := map[string]interface{}{
+	d1 := map[string]any{
 		"a": "11",
 		"b": "2",
 	}
-	r0 := map[string]interface{}{
+	r0 := map[string]any{
 		"r":  d0,
 		"r1": "1",
 	}
-	r1 := map[string]interface{}{
+	r1 := map[string]any{
 		"r":  d1,
 		"r2": "2",
 	}
-	r3 := map[string]interface{}{
+	r3 := map[string]any{
 		"r":  "00",
 		"r2": "0",
 	}
 
-	exp0 := map[string]interface{}{
+	exp0 := map[string]any{
 		"a": "1",
 		"b": "2",
 	}
@@ -66,12 +66,12 @@ func TestMergeMapsRecursive(t *testing.T) {
 	assert(t, MergeMaps(d0, d1), exp1)
 
 	// r are both dicts... recursive on r... same inner result as the previous
-	assert(t, MergeMaps(r1, r0), map[string]interface{}{"r": exp0, "r1": "1", "r2": "2"})
-	assert(t, MergeMaps(r0, r1), map[string]interface{}{"r": exp1, "r1": "1", "r2": "2"})
+	assert(t, MergeMaps(r1, r0), map[string]any{"r": exp0, "r1": "1", "r2": "2"})
+	assert(t, MergeMaps(r0, r1), map[string]any{"r": exp1, "r1": "1", "r2": "2"})
 
 	// one is NOT a dict... second overwrites
-	assert(t, MergeMaps(r1, r3), map[string]interface{}{"r": "00", "r2": "0"})
-	assert(t, MergeMaps(r3, r1), map[string]interface{}{"r": exp1, "r2": "2"})
+	assert(t, MergeMaps(r1, r3), map[string]any{"r": "00", "r2": "0"})
+	assert(t, MergeMaps(r3, r1), map[string]any{"r": exp1, "r2": "2"})
 }
 
 func TestMergeStringMaps(t *testing.T) {
@@ -89,18 +89,18 @@ func TestMergeStringMaps(t *testing.T) {
 }
 
 func TestMapify(t *testing.T) {
-	a := map[interface{}]interface{}{
+	a := map[any]any{
 		"key": "val",
 	}
 	b, ismap := mapify(a)
 	assert(t, ismap, true)
 	t.Logf("%v", b)
-	assert(t, b, map[string]interface{}{"key": "val"})
+	assert(t, b, map[string]any{"key": "val"})
 }
 
 func TestMergeMapsFromYaml(t *testing.T) {
-	a := make(map[string]interface{})
-	b := make(map[string]interface{})
+	a := make(map[string]any)
+	b := make(map[string]any)
 
 	a_in := `
 globvar: globval
@@ -129,19 +129,19 @@ interfaces:
 	//   2. the expected result loaded from yaml
 
 	// 1. expected value in Go
-	expG := map[string]interface{}{
+	expG := map[string]any{
 		"globvar": "globval",
-		"globmap": map[string]interface{}{
+		"globmap": map[string]any{
 			"var1":   "val1",
 			"var2":   "rewritten",
 			"newvar": "newval",
 		},
-		"interfaces": []interface{}{
-			map[interface{}]interface{}{
+		"interfaces": []any{
+			map[any]any{
 				"name":        "ethernet-1/1",
 				"description": "set in node",
 			},
-			map[interface{}]interface{}{
+			map[any]any{
 				"name": "ethernet-1/2",
 			},
 		},
@@ -161,11 +161,11 @@ interfaces:
   - name: ethernet-1/2
 `
 
-	expT := make(map[string]interface{})
+	expT := make(map[string]any)
 	err = yaml.Unmarshal([]byte(expT_in), expT)
 	assert(t, err, nil)
 
-	// Run expT through MergeMaps to convert "map[interface{}]" --> "map[string]"
+	// Run expT through MergeMaps to convert "map[any]" --> "map[string]"
 	// This is only done for maps & maps in maps, NOT for maps in arrays (refer to 1 above)
 	expT = MergeMaps(expT)
 
@@ -173,10 +173,10 @@ interfaces:
 }
 
 func TestMergeMapsLists(t *testing.T) {
-	d1 := map[string]interface{}{
+	d1 := map[string]any{
 		"t": []string{"1"},
 	}
-	d2 := map[string]interface{}{
+	d2 := map[string]any{
 		"t": []string{"2"},
 	}
 	assert(t, MergeMaps(nil, d1), d1)

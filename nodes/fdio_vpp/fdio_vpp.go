@@ -15,10 +15,11 @@ import (
 	"github.com/charmbracelet/log"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -28,14 +29,14 @@ const (
 	targetAuthzKeysPath = "/root/.ssh/authorized_keys"
 
 	ifWaitScriptDstPath  = "/usr/sbin/if-wait.sh"
-	vppStartupCfgDstPath = "/etc/vpp/startup.conf"
-
-	vppCfgDstPath = "/etc/vpp/vppcfg.yaml"
+	vppCfgDirDstPath     = "/config"
+	vppStartupCfgDstPath = "/config/vpp/startup.conf"
+	vppCfgDstPath        = "/config/vpp/vppcfg.yaml"
 )
 
 var (
 	kindNames          = []string{"fdio_vpp"}
-	defaultCredentials = nodes.NewCredentials("root", "vpp")
+	defaultCredentials = clabnodes.NewCredentials("root", "vpp")
 	saveCmd            = `bash -c "echo TODO(pim): Not implemented yet - needs vppcfg in the Docker container"`
 
 	// vppStartupConfigTpl is the template for the vpp startup config itself
@@ -45,30 +46,36 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		nil,
+	)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(fdio_vpp)
 	}, nrea)
 }
 
 type fdio_vpp struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// Path of the script to wait for all interfaces to be added in the container
 	ifWaitSrcPath string
+	// Path to the config directory bind-mounted to /config
+	vppCfgDirSrcPath string
 	// Path to the vpp startup config file
 	vppStartupCfgSrcPath string
 	// Path to vpp config file
 	vppCfgSrcPath string
 }
 
-func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *fdio_vpp) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	n.Cfg = cfg
 
 	// Containers are run in privileged mode so it should not matter now
@@ -92,14 +99,14 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	n.ifWaitSrcPath = path.Join(n.Cfg.LabDir, "if-wait.sh")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.ifWaitSrcPath, ":", ifWaitScriptDstPath))
 
-	// Path to the VPP startup config file, used to start the dataplane
-	n.vppStartupCfgSrcPath = path.Join(n.Cfg.LabDir, "vpp-startup.conf")
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.vppStartupCfgSrcPath, ":", vppStartupCfgDstPath))
+	// Bind-mount the config directory to /config to persist all VPP state
+	n.vppCfgDirSrcPath = path.Join(n.Cfg.LabDir, "config")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.vppCfgDirSrcPath, ":", vppCfgDirDstPath))
 
-	// Path to the VPP config file that configures the vpp interfaces/etc
-	n.vppCfgSrcPath = path.Join(n.Cfg.LabDir, "vppcfg.yaml")
+	// Paths to config files inside the bind-mounted config directory
+	n.vppStartupCfgSrcPath = path.Join(n.vppCfgDirSrcPath, "vpp", "startup.conf")
+	n.vppCfgSrcPath = path.Join(n.vppCfgDirSrcPath, "vpp", "vppcfg.yaml")
 	n.Cfg.ResStartupConfig = n.vppCfgSrcPath
-	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.Cfg.ResStartupConfig, ":", vppCfgDstPath))
 
 	// We need the interfaces with their correct name before launching the init process
 	// prepending original CMD with if-wait.sh script to make sure that interfaces are available
@@ -113,12 +120,13 @@ func (n *fdio_vpp) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
+func (n *fdio_vpp) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	nodeCfg := n.Config()
 
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
-	utils.CreateFile(n.ifWaitSrcPath, utils.IfWaitScript)
-	os.Chmod(n.ifWaitSrcPath, 0o777)
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+	clabutils.CreateDirectory(path.Join(n.vppCfgDirSrcPath, "vpp"), clabconstants.PermissionsOpen)
+	clabutils.CreateFile(n.ifWaitSrcPath, clabutils.IfWaitScript)
+	os.Chmod(n.ifWaitSrcPath, clabconstants.PermissionsOpen)
 
 	// record pubkeys extracted by clab
 	// with the vpp struct
@@ -151,20 +159,20 @@ func (n *fdio_vpp) PreDeploy(_ context.Context, params *nodes.PreDeployParams) e
 	return nil
 }
 
-func (n *fdio_vpp) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+func (n *fdio_vpp) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
+	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
-		return fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
+	if execResult.GetStdErrString() != "" {
+		return nil, fmt.Errorf("show config command failed: %s", execResult.GetStdErrString())
 	}
 
 	log.Infof("Saved VPP configuration from %s node\n", n.Cfg.ShortName)
 
-	return nil
+	return nil, nil
 }
 
 // CheckInterfaceName allows any interface name for vpp nodes, but checks
@@ -173,18 +181,21 @@ func (n *fdio_vpp) CheckInterfaceName() error {
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 	for _, e := range n.Endpoints {
 		if e.GetIfaceName() == "eth0" && nm != "none" {
-			return fmt.Errorf("eth0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+			return fmt.Errorf(
+				"eth0 interface name is not allowed for %s node when network mode is not set to none",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 	return nil
 }
 
-func (n *fdio_vpp) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *fdio_vpp) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	// add public keys extracted by containerlab from the host
 	// to the vpp's root linux user authorized keys
 	// to enable passwordless ssh
-	keys := strings.Join(utils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
-	execCmd := exec.NewExecCmdFromSlice([]string{
+	keys := strings.Join(clabutils.MarshalSSHPubKeys(n.sshPubKeys), "\n")
+	execCmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("echo '%s' > %s", keys, targetAuthzKeysPath),
 	})

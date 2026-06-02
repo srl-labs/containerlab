@@ -85,7 +85,7 @@ Data interfaces `et-0/0/0+` need to be configured with IP addressing manually us
 
 Juniper vMX nodes come up with a basic configuration where only the control plane and line cards are provisioned, as well as the `admin` users and management interfaces such as NETCONF, SNMP, gNMI.
 
-Starting with [hellt/vrnetlab](https://github.com/hellt/vrnetlab) v0.8.2 VMX will make use of the management VRF[^1].
+Starting with [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab) v0.8.2 VMX will make use of the management VRF[^1].
 
 #### Startup configuration
 
@@ -98,6 +98,9 @@ topology:
       kind: juniper_vmx
       startup-config: myconfig.txt
 ```
+
+Note that startup-config file myconfig.txt must be in the flat "set" config format because the "launch.py" script within the Docker container use this format to apply the startup-config file. So the seed startup-config must be converted to the flat format. 
+Running "containerlab save" saves the config files in the standard hierachial format in the container lab artifact dir, these files must be converted to the flat format.    
 
 With this knob containerlab is instructed to take a file `myconfig.txt` from the directory that hosts the topology file, and copy it to the lab directory for that specific node under the `/config/startup-config.cfg` name. Then the directory that hosts the startup-config dir is mounted to the container. This will result in this config being applied at startup by the node.
 
@@ -115,4 +118,4 @@ The following labs feature Juniper vMX node:
 * vMX requires Linux kernel 4.17+
 * To check the boot log, use `docker logs -f <node-name>`.
 
-[^1]: https://github.com/hellt/vrnetlab/pull/98
+[^1]: https://github.com/srl-labs/vrnetlab/pull/98

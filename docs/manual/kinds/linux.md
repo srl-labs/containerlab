@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: linux
+kind_display_name: Linux container
 ---
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
-# Linux container
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
 Labs deployed with containerlab are endlessly flexible, mostly because containerlab can spin up and wire regular containers as part of the lab topology.
 
@@ -16,7 +19,7 @@ But, of course, you are free to choose which container to add into your lab, the
 
 ## Using linux containers
 
-As with any other node, the linux container is a node of a specific kind, `linux` in this case.
+As with any other node, the linux container is a node of a specific kind, `-{{ kind_code_name }}-` in this case.
 
 ```yaml
 # a simple topo of two alpine containers connected with each other
@@ -25,10 +28,10 @@ name: demo
 topology:
   nodes:
     n1:
-      kind: linux
+      kind: -{{ kind_code_name }}-
       image: alpine:latest
     n2:
-      kind: linux
+      kind: -{{ kind_code_name }}-
       image: alpine:latest
   links:
     - endpoints: ["n1:eth1","n2:eth1"]
@@ -46,5 +49,5 @@ Containerlab tries to deliver the same level of flexibility in container configu
 * [cmd](../nodes.md#cmd) - to provide a command that will be executed when the container is started
 
 !!!note
-    Nodes of `linux` kind will have a `on-failure` restart policy when run with docker runtime. This means that if container fails/exits with a non zero return code, docker will restart this container automatically.  
+    Nodes of `-{{ kind_code_name }}-` kind will have a `on-failure` restart policy when run with docker runtime. This means that if container fails/exits with a non zero return code, docker will restart this container automatically.  
     When restarted, the container will loose all non-`eth0` interfaces. These can be re-added manually with [tools veth](../../cmd/tools/veth/create.md) command.

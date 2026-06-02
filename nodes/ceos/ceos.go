@@ -18,10 +18,11 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -31,6 +32,10 @@ const (
 
 	scrapliPlatformName = "arista_eos"
 	NapalmPlatformName  = "eos"
+
+	tlsKeyFile  = "node.key"
+	tlsCertFile = "node.crt"
+	tlsCAFile   = "ca.crt"
 )
 
 var (
@@ -52,26 +57,30 @@ var (
 
 	saveCmd = "Cli -p 15 -c wr"
 
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
-	r.Register(KindNames, func() nodes.Node {
+	r.Register(KindNames, func() clabnodes.Node {
 		return new(ceos)
 	}, nrea)
 }
 
 type ceos struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
 // intfMap represents interface mapping config file.
@@ -84,16 +93,19 @@ type intfMap struct {
 	} `json:"EthernetIntf"`
 }
 
-func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
+
+	n.StopSignal = clabtypes.SIGRTMIN3
+
 	for _, o := range opts {
 		o(n)
 	}
 
-	n.Cfg.Env = utils.MergeStringMaps(ceosEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(ceosEnv, n.Cfg.Env)
 
 	// the node.Cmd should be aligned with the environment.
 	// prepending original Cmd with if-wait.sh script to make sure that interfaces are available
@@ -101,58 +113,90 @@ func (n *ceos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	var envSb strings.Builder
 	envSb.WriteString("bash -c '" + ifWaitScriptContainerPath + " ; exec /sbin/init ")
 	for k, v := range n.Cfg.Env {
-		envSb.WriteString("systemd.setenv=" + k + "=" + v + " ")
+		envSb.WriteString("systemd.setenv=\"" + k + "=" + v + "\" ")
 	}
 	envSb.WriteString("'")
 
 	n.Cfg.Cmd = envSb.String()
-	hwa, err := utils.GenMac("00:1c:73")
+	hwa, err := clabutils.GenMac("00:1c:73")
 	if err != nil {
 		return err
 	}
 	n.Cfg.MacAddress = hwa.String()
 
+	// create TLS certificates for the node by default.
+	// The cert, key and CA files are mounted into the container
+	// and can be validated with `show management security ssl certificate`.
+	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
+
 	// mount config dir
 	cfgPath := filepath.Join(n.Cfg.LabDir, "flash")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprintf("%s:/mnt/flash/", cfgPath))
+
+	if *n.Cfg.Certificate.Issue {
+		keyPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsKeyFile)
+		certPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCertFile)
+		caPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCAFile)
+
+		n.Cfg.Binds = append(n.Cfg.Binds,
+			fmt.Sprintf("%s:/persist/secure/ssl/keys/%s", keyPath, tlsKeyFile),
+			fmt.Sprintf("%s:/persist/secure/ssl/certs/%s", certPath, tlsCertFile),
+			fmt.Sprintf("%s:/persist/secure/ssl/certs/%s", caPath, tlsCAFile),
+		)
+	}
+
 	return nil
 }
 
-func (n *ceos) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
-	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
-	if err != nil {
-		return nil
+func (n *ceos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+	if *n.Cfg.Certificate.Issue {
+		certificate, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
+		if err != nil {
+			return err
+		}
+
+		caCertificate, err := params.Cert.LoadCaCert()
+		if err != nil {
+			return err
+		}
+
+		n.Config().TLSCert = string(certificate.Cert)
+		n.Config().TLSKey = string(certificate.Key)
+		n.Config().TLSAnchor = string(caCertificate.Cert)
 	}
 	return n.createCEOSFiles(ctx)
 }
 
-func (n *ceos) PostDeploy(ctx context.Context, _ *nodes.PostDeployParams) error {
+func (n *ceos) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
 	log.Infof("Running postdeploy actions for Arista cEOS '%s' node", n.Cfg.ShortName)
 	return n.ceosPostDeploy(ctx)
 }
 
-func (n *ceos) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+func (n *ceos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
+	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+	if execResult.GetStdErrString() != "" {
+		return nil, fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
-	confPath := n.Cfg.LabDir + "/flash/startup-config"
-	log.Infof("saved cEOS configuration from %s node to %s\n", n.Cfg.ShortName, confPath)
+	cfgPath := filepath.Join(n.Cfg.LabDir, "flash", "startup-config")
+	log.Infof("saved cEOS configuration from %s node to %s\n", n.Cfg.ShortName, cfgPath)
 
-	return nil
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
-func (n *ceos) createCEOSFiles(_ context.Context) error {
+func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	nodeCfg := n.Config()
 	// generate config directory
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"), 0o777)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "flash"),
+		clabconstants.PermissionsOpen)
 	cfg := filepath.Join(n.Cfg.LabDir, "flash", "startup-config")
 	nodeCfg.ResStartupConfig = cfg
 
@@ -169,15 +213,18 @@ func (n *ceos) createCEOSFiles(_ context.Context) error {
 	}
 
 	// use startup config file provided by a user
+	// make copy of template to prevent provided startup config from mutating shared package
+	// template value
+	currentCfgTemplate := cfgTemplate
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
+		currentCfgTemplate = string(c)
 	}
 
-	err = n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err = n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -191,8 +238,12 @@ func (n *ceos) createCEOSFiles(_ context.Context) error {
 			basename := filepath.Base(extrapath)
 			dest := filepath.Join(flash, basename)
 
-			topoDir := filepath.Dir(filepath.Dir(nodeCfg.LabDir)) // topo dir is needed to resolve extrapaths
-			if err := utils.CopyFile(utils.ResolvePath(extrapath, topoDir), dest, 0o644); err != nil {
+			topoDir := filepath.Dir(
+				filepath.Dir(nodeCfg.LabDir),
+			) // topo dir is needed to resolve extrapaths
+			if err := clabutils.CopyFile(ctx,
+				clabutils.ResolvePath(extrapath, topoDir), dest,
+				clabconstants.PermissionsFileDefault); err != nil {
 				return fmt.Errorf("extras: copy-to-flash %s -> %s failed %v", extrapath, dest, err)
 			}
 		}
@@ -203,24 +254,58 @@ func (n *ceos) createCEOSFiles(_ context.Context) error {
 	if err != nil {
 		return err
 	}
-	m[5] = m[5] + 1
+	m[5]++
 
 	sysMacPath := path.Join(nodeCfg.LabDir, "flash", "system_mac_address")
 
-	if !utils.FileExists(sysMacPath) {
-		err = utils.CreateFile(sysMacPath, m.String())
+	if !clabutils.FileExists(sysMacPath) {
+		err = clabutils.CreateFile(sysMacPath, m.String())
+	}
+
+	if err != nil {
+		return err
 	}
 
 	// adding if-wait.sh script to flash dir
 	ifScriptP := path.Join(nodeCfg.LabDir, "flash", "if-wait.sh")
-	utils.CreateFile(ifScriptP, utils.IfWaitScript)
-	os.Chmod(ifScriptP, 0o777) // skipcq: GSC-G302
+	if err := clabutils.CreateFile(ifScriptP, clabutils.IfWaitScript); err != nil {
+		return fmt.Errorf("failed to write if-wait.sh: %w", err)
+	}
+	os.Chmod(ifScriptP, clabconstants.PermissionsOpen) // skipcq: GSC-G302
+
+	if *n.Cfg.Certificate.Issue {
+		err = n.createCEOSCertificates()
+	}
 
 	return err
 }
 
-func setMgmtInterface(node *types.NodeConfig) error {
-	// use interface mapping file to set the Management interface if it is provided in the binds section
+// Func that Places the Certificates in the right place and format.
+func (n *ceos) createCEOSCertificates() error {
+	if *n.Cfg.Certificate.Issue {
+		clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "ssl"), clabconstants.PermissionsOpen)
+
+		keyPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsKeyFile)
+		if err := clabutils.CreateFile(keyPath, n.Config().TLSKey); err != nil {
+			return err
+		}
+
+		certPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCertFile)
+		if err := clabutils.CreateFile(certPath, n.Config().TLSCert); err != nil {
+			return err
+		}
+
+		caPath := filepath.Join(n.Cfg.LabDir, "ssl", tlsCAFile)
+		if err := clabutils.CreateFile(caPath, n.Config().TLSAnchor); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func setMgmtInterface(node *clabtypes.NodeConfig) error {
+	// use interface mapping file to set the Management interface if it is provided in the binds
+	// section
 	// default is Management0
 	mgmtInterface := "Management0"
 	for _, bindelement := range node.Binds {
@@ -243,7 +328,10 @@ func setMgmtInterface(node *types.NodeConfig) error {
 		var intfMappingJson intfMap
 		err = json.Unmarshal(m, &intfMappingJson)
 		if err != nil {
-			log.Debugf("Management interface could not be read from intfMapping file for '%s' node.", node.ShortName)
+			log.Debugf(
+				"Management interface could not be read from intfMapping file for '%s' node.",
+				node.ShortName,
+			)
 			return err
 		}
 		mgmtInterface = intfMappingJson.ManagementIntf.Eth0
@@ -257,7 +345,7 @@ func setMgmtInterface(node *types.NodeConfig) error {
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
 func (n *ceos) ceosPostDeploy(_ context.Context) error {
 	nodeCfg := n.Config()
-	d, err := utils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
+	d, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
 	if err != nil {
 		return err
 	}
@@ -279,13 +367,49 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 
 	// adding ipv6 address to configs
 	if nodeCfg.MgmtIPv6Address != "" {
-		cfgs = append(cfgs,
-			fmt.Sprintf("ipv6 address %s/%d", nodeCfg.MgmtIPv6Address, nodeCfg.MgmtIPv6PrefixLength),
+		cfgs = append(
+			cfgs,
+			fmt.Sprintf(
+				"ipv6 address %s/%d",
+				nodeCfg.MgmtIPv6Address,
+				nodeCfg.MgmtIPv6PrefixLength,
+			),
 		)
+	}
+
+	// configure data interfaces
+	for _, e := range n.Endpoints {
+		ifName := e.GetIfaceName()
+		// skip management interface
+		if ifName == nodeCfg.MgmtIntf {
+			continue
+		}
+
+		v4 := e.GetIPv4Addr()
+		v6 := e.GetIPv6Addr()
+
+		if !v4.IsValid() && !v6.IsValid() {
+			continue
+		}
+
+		cfgs = append(cfgs, "interface "+ifName)
+		cfgs = append(cfgs, "no switchport")
+		cfgs = append(cfgs, "no ip address")
+		cfgs = append(cfgs, "no ipv6 address")
+
+		if v4.IsValid() {
+			cfgs = append(cfgs, fmt.Sprintf("ip address %s", v4.String()))
+		}
+		if v6.IsValid() {
+			cfgs = append(cfgs, fmt.Sprintf("ipv6 address %s", v6.String()))
+		}
 	}
 
 	// add save to startup cmd
 	cfgs = append(cfgs, "wr")
+
+	log.Debugf("cEOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
+
 	resp, err := d.SendConfigs(cfgs)
 	if err != nil {
 		return err
@@ -303,7 +427,11 @@ func (n *ceos) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`eth[1-9][\w.]*$|et[1-9][\w.]*$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters", n.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf(
+				"arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters",
+				n.Cfg.ShortName,
+				e.GetIfaceName(),
+			)
 		}
 	}
 

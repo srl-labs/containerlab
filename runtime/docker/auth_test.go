@@ -1,10 +1,12 @@
 package docker
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
-	"github.com/mitchellh/go-homedir"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 type imageDomainNameTest struct {
@@ -61,16 +63,23 @@ func TestGetDockerConfigPath(t *testing.T) {
 
 	for _, in := range td {
 		got := getDockerConfigPath(in["path"])
-		want, _ := homedir.Expand(in["want"])
+		want := in["want"]
+		if strings.HasPrefix(want, "~/") {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				t.Fatal(err)
+			}
+			want = filepath.Join(home, want[2:])
+		}
 		if got != want {
-			t.Errorf("Invalid docker config path, got %v, want %v", got, in["want"])
+			t.Errorf("Invalid docker config path, got %v, want %v", got, want)
 		}
 	}
 }
 
 func TestGetDockerAuth(t *testing.T) {
 	for _, data := range authTests {
-		img := utils.GetCanonicalImageName(data.Image)
+		img := clabutils.GetCanonicalImageName(data.Image)
 		cfg, _ := GetDockerConfig(data.ConfigPath)
 
 		auth, err := GetDockerAuth(cfg, img)
@@ -81,7 +90,11 @@ func TestGetDockerAuth(t *testing.T) {
 		t.Logf("auth string: %v", auth)
 
 		if auth != data.ExpectedAuthString {
-			t.Errorf("expected auth string '%s' does not match computed '%s'", data.ExpectedAuthString, auth)
+			t.Errorf(
+				"expected auth string '%s' does not match computed '%s'",
+				data.ExpectedAuthString,
+				auth,
+			)
 		}
 	}
 }

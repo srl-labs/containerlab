@@ -2,6 +2,7 @@ name: "sros"
 mgmt:
   network: srsim_mgmt
   ipv4-subnet: 10.78.140.0/24
+  ipv6-subnet: fd00:10:78:140::/64
 topology:
   kinds:
     nokia_srsim:
@@ -11,6 +12,8 @@ topology:
     srsim10-a:
       kind: nokia_srsim
       type: SR-7
+      mgmt-ipv4: 10.78.140.2
+      mgmt-ipv6: fd00:10:78:140::2
       startup-config: configs/srsim10.distributed.partial.cfg
       env:
         NOKIA_SROS_SLOT: A
@@ -42,6 +45,8 @@ topology:
     srsim11-a:
       kind: nokia_srsim
       type: SR-7
+      mgmt-ipv4: 10.78.140.3
+      mgmt-ipv6: fd00:10:78:140::3
       startup-config: configs/srsim11.distributed.partial.cfg
       env:
         NOKIA_SROS_SLOT: A

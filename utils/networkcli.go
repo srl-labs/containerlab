@@ -17,6 +17,7 @@ var (
 	// map of commands per platform which start a CLI app.
 	NetworkOSCLICmd = map[string][]string{
 		"arista_eos":    {"Cli"},
+		"juniper_junos": {"cli"},
 		"nokia_srlinux": {"sr_cli"},
 		"vyatta_vyos":   {"su", "-", "admin"},
 	}
@@ -70,7 +71,11 @@ func SpawnCLIviaExec(platformName, contName, runtime string) (*network.Driver, e
 			opts...,
 		)
 		if err != nil {
-			log.Errorf("failed to fetch platform instance for device %s; error: %+v\n", err, contName)
+			log.Errorf(
+				"failed to fetch platform instance for device %s; error: %+v\n",
+				err,
+				contName,
+			)
 			return nil, err
 		}
 

@@ -4,17 +4,17 @@ topology:
   defaults:
     suppress-startup-config: true
   kinds:
-    ceos:
+    arista_ceos:
       suppress-startup-config: false
   nodes:
     node1:
-      kind: ceos
+      kind: arista_ceos
       suppress-startup-config: true
     node2:
-      kind: ceos
+      kind: arista_ceos
       suppress-startup-config: false
     node3:
-      kind: ceos
+      kind: arista_ceos
     node4:
       kind: linux
 

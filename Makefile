@@ -8,7 +8,7 @@ MKDOCS_INS_VER = 9.6.1-insiders-4.53.15-hellt
 DATE := $(shell date)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
-LDFLAGS := -s -w -X 'github.com/srl-labs/containerlab/cmd/version.Version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd/version.commit=$(COMMIT_HASH)' -X 'github.com/srl-labs/containerlab/cmd/version.date=$(DATE)'
+LDFLAGS := -s -w -X 'github.com/srl-labs/containerlab/cmd.Version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$(COMMIT_HASH)' -X 'github.com/srl-labs/containerlab/cmd.date=$(DATE)'
 
 include .mk/lint.mk
 
@@ -40,7 +40,7 @@ build-with-cover:
 
 build-debug:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
+	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
 	sudo chown root:root $(BINARY)
 	sudo chmod 4755 $(BINARY)
 
@@ -100,8 +100,7 @@ mocks-rm: ## remove generated mocks
 lint:
 	golangci-lint run
 
-clint:
-	docker run -it --rm -v $(CURDIR):/app -w /app golangci/golangci-lint:v2.2.1 golangci-lint run --timeout 5m -v
+
 
 .PHONY: docs
 docs:

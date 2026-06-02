@@ -23,22 +23,22 @@ func ConvertEnvs(m map[string]string) []string {
 	return s
 }
 
-func mapify(i interface{}) (map[string]interface{}, bool) {
+func mapify(i any) (map[string]any, bool) {
 	value := reflect.ValueOf(i)
 	if value.Kind() == reflect.Map {
-		m := map[string]interface{}{}
+		m := map[string]any{}
 		for _, k := range value.MapKeys() {
 			m[fmt.Sprintf("%v", k)] = value.MapIndex(k).Interface()
 		}
 		return m, true
 	}
-	return map[string]interface{}{}, false
+	return map[string]any{}, false
 }
 
 // MergeMaps merges all dictionaries and return a new dictionary
 // recursively if matching keys are both dictionaries.
-func MergeMaps(dicts ...map[string]interface{}) map[string]interface{} {
-	res := make(map[string]interface{})
+func MergeMaps(dicts ...map[string]any) map[string]any {
+	res := make(map[string]any)
 	for _, m := range dicts {
 		if m == nil {
 			continue
@@ -83,7 +83,7 @@ func MergeStringMaps(maps ...map[string]string) map[string]string {
 		}
 	}
 
-	// return nil nil instead of an empty map if all maps were nil
+	// return nil instead of an empty map if all maps were nil
 	if !nonNilMapSeen {
 		return nil
 	}
@@ -159,14 +159,55 @@ func ExpandEnvVarsInStrSlice(s []string) {
 	}
 }
 
-// ToEnvKey capitalizes and removes special chars from a string to is used as an environment variable key.
+// ToEnvKey capitalizes and removes special chars from a string to is used as an environment
+// variable key.
 func ToEnvKey(s string) string {
 	// match special chars to later replace with "_"
-	regreplace, _ := regexp.Compile("[+-./]")
+	regreplace := regexp.MustCompile("[-+./]")
 	result := regreplace.ReplaceAllString(s, "_")
 	// match only valid env var chars
-	regAllowed, _ := regexp.Compile("[^a-zA-Z0-9_]+")
+	regAllowed := regexp.MustCompile("[^a-zA-Z0-9_]+")
 	result = regAllowed.ReplaceAllString(result, "")
 
 	return strings.ToUpper(result)
+}
+
+// NormalizeMapForJSON recursively converts map[any]any to map[string]any
+// and []any elements to ensure JSON serialization compatibility.
+// This is needed because yaml.v2 unmarshals nested maps as map[any]any
+// which cannot be serialized to JSON.
+func NormalizeMapForJSON(i any) any {
+	switch v := i.(type) {
+	case map[any]any:
+		// Convert map[any]any to map[string]any
+		result := make(map[string]any)
+		for key, val := range v {
+			var strKey string
+			if k, ok := key.(string); ok {
+				strKey = k
+			} else {
+				strKey = fmt.Sprint(key)
+			}
+
+			result[strKey] = NormalizeMapForJSON(val)
+		}
+		return result
+	case map[string]any:
+		// Recursively process existing map[string]any
+		result := make(map[string]any)
+		for key, val := range v {
+			result[key] = NormalizeMapForJSON(val)
+		}
+		return result
+	case []any:
+		// Recursively process slices
+		result := make([]any, len(v))
+		for i, val := range v {
+			result[i] = NormalizeMapForJSON(val)
+		}
+		return result
+	default:
+		// Return as-is for primitive types
+		return v
+	}
 }

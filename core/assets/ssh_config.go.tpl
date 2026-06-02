@@ -1,13 +1,14 @@
 # Containerlab SSH Config for the {{ .TopologyName }} lab
 
-{{- range  .Nodes }}
-Host {{ .Name }}
-	{{-  if ne .Username ""}}
-	User {{ .Username }}
+{{- range .Nodes }}
+{{- $node := . }}
+Host{{- range .Names }} {{ . }}{{- end }}
+	{{-  if ne $node.Username ""}}
+	User {{ $node.Username }}
 	{{- end }}
 	StrictHostKeyChecking=no
 	UserKnownHostsFile=/dev/null
-	{{- if ne .SSHConfig.PubkeyAuthentication "" }}
-	PubkeyAuthentication={{ .SSHConfig.PubkeyAuthentication.String }}
+	{{- if ne $node.SSHConfig.PubkeyAuthentication "" }}
+	PubkeyAuthentication={{ $node.SSHConfig.PubkeyAuthentication.String }}
 	{{- end }}
 {{ end }}

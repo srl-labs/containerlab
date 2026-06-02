@@ -83,7 +83,7 @@ Default user credentials: `admin:admin@123`
 
 You can refer to the following document for details of the interface mapping (https://www.juniper.net/documentation/product/us/en/cjunosevolved/)
 
-The default unchannelized interface mode is described here. This provides 36 interfaces for BX and 12 for BT flavors of cJunosEvolved. The channelized mode provides 144 interfaces for BX and 72 for BT. The mapping for all of these is described in the Juniper deployment document referenced above.
+The default unchannelized interface mode is described here. This provides 36 interfaces for BX and 12 for BT flavors of cJunosEvolved. The interface mapping is described in the Juniper deployment document referenced above.
 
 The Linux host side interfaces are mapped to the JunosEvolved CLI notation as described in the document. To summarize:
 
@@ -146,4 +146,5 @@ The following labs feature the Juniper cJunosEvolved node:
 
 ## Known issues and limitations
 
-* To check the boot log, use `docker logs -f <node-name>`
+* The [cJunosEvolved Deployment Guide](https://www.juniper.net/documentation/us/en/software/cjunos-evolved/cjunos-evolved-docker/topics/cjunos-evolved-understand.html#concept_lyl_nml_cxb) lists the product limitations.
+* Channelized interfaces are not supported for cJunosEvolved Containerlab deployments.

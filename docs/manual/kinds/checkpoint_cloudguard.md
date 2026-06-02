@@ -1,15 +1,18 @@
 ---
 search:
   boost: 4
+kind_code_name: checkpoint_cloudguard
+kind_display_name: Check Point Cloudguard
 ---
-# Check Point Cloudguard
+# -{{ kind_display_name }}-
+-{{ kind_display_name }}- virtualized security appliance is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+It is built using [boxen](https://github.com/carlmontanari/boxen) project and essentially is a Qemu VM packaged in a docker container format.
 
-Check Point Cloudguard virtualized security appliance is identified with `checkpoint_cloudguard` kind in the [topology file](../topo-def-file.md). It is built using [boxen](https://github.com/carlmontanari/boxen) project and essentially is a Qemu VM packaged in a docker container format.
 
 ## Getting Cloudguard image
-Users can obtain the qcow2 disk image for Check Point Cloudguard VM from the [official download site](https://supportcenter.checkpoint.com/supportcenter/portal?eventSubmit_doGoviewsolutiondetails=&solutionid=sk158292). To build a containerlab-compatible container use [boxen](https://github.com/carlmontanari/boxen) project.
+Users can obtain the qcow2 disk image for -{{ kind_display_name }}- VM from the [official download site](https://supportcenter.checkpoint.com/supportcenter/portal?eventSubmit_doGoviewsolutiondetails=&solutionid=sk158292). To build a containerlab-compatible container use [boxen](https://github.com/carlmontanari/boxen) project.
 
-## Managing Check Point Cloudguard nodes
+## Managing -{{ kind_display_name }}- nodes
 
 !!!note
     Containers with Check Point Cloudguard VM inside will take ~5min to fully boot.  

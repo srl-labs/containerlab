@@ -3,39 +3,39 @@ package vr_aoscx
 import (
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestAosCXInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*links.EndpointVeth
+		endpoints []*clablinks.EndpointVeth
 		node      *vrAosCX
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "1/1/1",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "1/1/3",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "1/1/5",
 					},
 				},
 			},
 			node: &vrAosCX{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "aoscx",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -48,27 +48,27 @@ func TestAosCXInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},
 			},
 			node: &vrAosCX{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "aoscx",
 						},
 						InterfaceRegexp: InterfaceRegexp,

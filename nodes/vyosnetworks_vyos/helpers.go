@@ -13,7 +13,8 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/scrapli/scrapligo/driver/network"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/steiler/acls"
 )
 
@@ -23,14 +24,14 @@ func (n *vyos) save(_ context.Context, cli *network.Driver) error {
 	if err != nil {
 		return err
 	} else if resp.Failed != nil {
-		return fmt.Errorf("save failed. Response: %w", err)
+		return fmt.Errorf("save failed: %w", resp.Failed)
 	}
 	log.Info("Save successful", "node", n.Cfg.ShortName)
 	return nil
 }
 
 func (n *vyos) newCli() (*network.Driver, error) {
-	cli, err := utils.SpawnCLIviaExec(
+	cli, err := clabutils.SpawnCLIviaExec(
 		scrapliPlatformName,
 		n.Cfg.LongName,
 		n.Runtime.GetName())
@@ -44,7 +45,7 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	nodeCfg := n.Config()
 
 	// generate config dir
-	utils.CreateDirectory(n.configDir, 0o777)
+	clabutils.CreateDirectory(n.configDir, clabconstants.PermissionsOpen)
 	log.Debugf("Chowning dir %s", n.configDir)
 	if err := os.Chown(n.Cfg.LabDir, 0, vyattacfg_gid); err != nil {
 		return err
@@ -53,15 +54,18 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	nodeCfg.MgmtIntf = "eth0"
 
 	// use startup config file provided by a user
+	// make copy of template to prevent provided startup config from mutating shared package
+	// template value
+	currentCfgTemplate := cfgTemplate
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
+		currentCfgTemplate = string(c)
 	}
 
-	err := n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err := n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -70,11 +74,11 @@ func (n *vyos) createVyosFiles(_ context.Context) error {
 	scriptDir := filepath.Join(n.configDir, "scripts")
 	preScript := filepath.Join(scriptDir, "vyos-preconfig-bootup.script")
 	postScript := filepath.Join(scriptDir, "vyos-postconfig-bootup.script")
-	utils.CreateDirectory(scriptDir, 0o777)
+	clabutils.CreateDirectory(scriptDir, clabconstants.PermissionsOpen)
 
 	for _, s := range []string{preScript, postScript} {
-		utils.CreateFile(s, "#!/bin/sh")
-		os.Chmod(s, 0o755)
+		clabutils.CreateFile(s, "#!/bin/sh")
+		os.Chmod(s, clabconstants.PermissionsDirDefault)
 		os.Chown(s, 0, vyattacfg_gid)
 	}
 
@@ -136,7 +140,10 @@ func pkcs1To8(der []byte) ([]byte, error) {
 func (n *vyos) authorizedKeyCmds() []string {
 	var cmds []string
 	var b strings.Builder
-	baseCmd := fmt.Sprintf("set system login user %s authentication public-keys clab ", n.creds.GetUsername())
+	baseCmd := fmt.Sprintf(
+		"set system login user %s authentication public-keys clab ",
+		n.Cfg.Credentials.Username,
+	)
 
 	for _, k := range n.SSHPubKeys {
 		// Set ssh key type

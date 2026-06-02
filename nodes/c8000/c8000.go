@@ -13,15 +13,16 @@ import (
 	"regexp"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/netconf"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabnetconf "github.com/srl-labs/containerlab/netconf"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 var (
 	kindnames          = []string{"c8000", "cisco_c8000"}
-	defaultCredentials = nodes.NewCredentials("cisco", "cisco123")
+	defaultCredentials = clabnodes.NewCredentials("cisco", "cisco123")
 
 	//go:embed c8000.cfg
 	cfgTemplate string
@@ -33,26 +34,26 @@ const (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	platformOpts := &nodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformOpts)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, nil, platformOpts)
 
-	r.Register(kindnames, func() nodes.Node {
+	r.Register(kindnames, func() clabnodes.Node {
 		return new(c8000)
 	}, nrea)
 }
 
 type c8000 struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 }
 
-func (n *c8000) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *c8000) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
@@ -67,29 +68,29 @@ func (n *c8000) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *c8000) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *c8000) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return n.create8000Files(ctx)
 }
 
-func (n *c8000) SaveConfig(_ context.Context) error {
-	err := netconf.SaveRunningConfig(n.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+func (n *c8000) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
+	err := clabnetconf.SaveRunningConfig(n.Cfg.LongName,
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		scrapliPlatformName,
 	)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Infof("saved %s running configuration to startup configuration file\n", n.Cfg.ShortName)
-	return nil
+	return nil, nil
 }
 
 func (n *c8000) create8000Files(_ context.Context) error {
@@ -106,15 +107,18 @@ func (n *c8000) create8000Files(_ context.Context) error {
 	nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
 
 	// use startup config file provided by a user
+	// make copy of template to prevent provided startup config from mutating shared package
+	// template value
+	currentCfgTemplate := cfgTemplate
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
+		currentCfgTemplate = string(c)
 	}
 
-	err := n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err := n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -124,11 +128,14 @@ func (n *c8000) create8000Files(_ context.Context) error {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *c8000) CheckInterfaceName() error {
-	ifRe := regexp.MustCompile(`^(Hu|FH)0_0_0_\d+$`)
+	ifRe := regexp.MustCompile(`^(Fi|Hu|FH)0_0_0_\d+$`)
 
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("cisco 8000 interface name %q doesn't match the required pattern. Cisco 8000 interfaces should be named as Hu0_0_0_X (100G interfaces) or FH0_0_0_X (400G interfaces) where X is the interface number", e.GetIfaceName())
+			return fmt.Errorf(
+				"cisco 8000 interface name %q doesn't match the required pattern. Cisco 8000 interfaces should be named as Fi0_0_0_X (50G interfaces), Hu0_0_0_X (100G interfaces) or FH0_0_0_X (400G interfaces) where X is the interface number",
+				e.GetIfaceName(),
+			)
 		}
 	}
 

@@ -12,6 +12,8 @@ The API server is particularly useful for:
 - Managing multiple labs programmatically
 - Implementing custom lab automation solutions
 
+For a higher-level operational guide, see the [Containerlab API Server manual](../../../manual/api-server.md).
+
 ## Usage
 
 ```
@@ -22,7 +24,7 @@ containerlab tools api-server start [flags]
 
 ### --port | -p
 
-Port to expose the API server on. Defaults to `8080`.
+Port to expose the API server on. Defaults to `8090`.
 
 ### --host
 
@@ -42,15 +44,15 @@ Name of the API server container. Defaults to `clab-api-server`.
 
 ### --tls-enable
 
-Enable TLS for the API server. Defaults to `false`.
+Enable TLS for the API server. Defaults to `true`; use `--tls-enable=false` to serve plain HTTP.
 
 ### --tls-cert
 
-Path to TLS certificate file (required if TLS is enabled).
+Path to TLS certificate file. If TLS is enabled and cert/key files are not set, the API server can generate a local self-signed certificate.
 
 ### --tls-key
 
-Path to TLS key file (required if TLS is enabled).
+Path to TLS key file. If TLS is enabled and cert/key files are not set, the API server can generate a local self-signed certificate.
 
 ### --ssh-base-port
 
@@ -108,7 +110,7 @@ Start an API server with default settings:
 10:28:35 INFO Creating API server container clab-api-server
 10:28:35 INFO Creating container name=clab-api-server
 10:28:36 INFO API server container clab-api-server started successfully.
-10:28:36 INFO API Server available at: http://localhost:8080
+10:28:36 INFO API Server TLS enabled at: https://localhost:8090
 ```
 
 Start with custom port and labs directory:
@@ -119,10 +121,10 @@ Start with custom port and labs directory:
 11:40:03 INFO Generated random JWT secret for API server
 11:40:03 INFO Creating API server container clab-api-server
 11:40:03 INFO API server container clab-api-server started successfully.
-11:40:03 INFO API Server available at: http://localhost:9090
+11:40:03 INFO API Server TLS enabled at: https://localhost:9090
 ```
 
-Start with TLS enabled:
+Start with explicit TLS files:
 
 ```bash
 ❯ containerlab tools api-server start --tls-enable --tls-cert /path/to/cert.pem --tls-key /path/to/key.pem
@@ -130,8 +132,7 @@ Start with TLS enabled:
 11:40:03 INFO Generated random JWT secret for API server
 11:40:03 INFO Creating API server container clab-api-server
 11:40:03 INFO API server container clab-api-server started successfully.
-11:40:03 INFO API Server available at: http://localhost:8080
-11:40:03 INFO API Server TLS enabled at: https://localhost:8080
+11:40:03 INFO API Server TLS enabled at: https://localhost:8090
 ```
 
 Start with custom name and owner:
@@ -142,7 +143,7 @@ Start with custom name and owner:
 11:40:03 INFO Generated random JWT secret for API server
 11:40:03 INFO Creating API server container prod-api-server
 11:40:03 INFO API server container prod-api-server started successfully.
-11:40:03 INFO API Server available at: http://localhost:8080
+11:40:03 INFO API Server TLS enabled at: https://localhost:8090
 ```
 
 Start with custom JWT settings and user groups:
@@ -152,7 +153,7 @@ Start with custom JWT settings and user groups:
 11:40:03 INFO Pulling image ghcr.io/srl-labs/clab-api-server/clab-api-server:latest...
 11:40:03 INFO Creating API server container clab-api-server
 11:40:03 INFO API server container clab-api-server started successfully.
-11:40:03 INFO API Server available at: http://localhost:8080
+11:40:03 INFO API Server TLS enabled at: https://localhost:8090
 ```
 
 The API server container is started with host network mode and various bind mounts that provide access to:

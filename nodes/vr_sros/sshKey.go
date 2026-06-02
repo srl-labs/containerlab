@@ -8,7 +8,7 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -24,7 +24,7 @@ func (s *vrSROS) generateSSHPublicKeysConfig() (io.Reader, error) {
 
 	s.prepareSSHPubKeys(&tplData)
 
-	t, err := template.New("SSHKeys").Funcs(utils.CreateFuncs()).Parse(SROSSSHKeysTemplate)
+	t, err := template.New("SSHKeys").Funcs(clabutils.CreateFuncs()).Parse(SROSSSHKeysTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -55,12 +55,16 @@ func (s *vrSROS) prepareSSHPubKeys(tplData *SROSTemplateData) {
 	s.mapSSHPubKeys(supportedSSHKeyAlgos)
 
 	if len(tplData.SSHPubKeysRSA) > 32 {
-		log.Warnf("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
+		log.Warnf(
+			"more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type",
+		)
 		tplData.SSHPubKeysRSA = tplData.SSHPubKeysRSA[:32]
 	}
 
 	if len(tplData.SSHPubKeysECDSA) > 32 {
-		log.Warnf("more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type")
+		log.Warnf(
+			"more then 32 public RSA ssh keys found on the system. Selecting first 32 keys since SROS supports max. 32 per key type",
+		)
 		tplData.SSHPubKeysECDSA = tplData.SSHPubKeysECDSA[:32]
 	}
 }

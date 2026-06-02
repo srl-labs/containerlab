@@ -61,13 +61,14 @@ func main() {
 			checkResponse(res, err)
 
 			fm := res.FlowMetrics().Items()[0]
-			return fm.Transmit() == gosnappi.FlowMetricTransmit.STOPPED && fm.FramesRx() == uint64(pktCount)
+			return fm.Transmit() == gosnappi.FlowMetricTransmit.STOPPED &&
+				fm.FramesRx() == uint64(pktCount)
 		},
 		10*time.Second,
 	)
 }
 
-func checkResponse(res interface{}, err error) {
+func checkResponse(res any, err error) {
 	if err != nil {
 		log.Fatal(err) // skipcq: RVV-A0003
 	}

@@ -4,6 +4,8 @@
 
 The `completion` command generates shell completions for bash/zsh/fish shells.
 
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
+
 ## Usage
 
 `containerlab completion [arg]`

@@ -12,7 +12,7 @@ ${lab-file}                 01-linux-nodes.clab.yml
 ${lab-name}                 2-linux-nodes
 ${runtime}                  docker
 # runtime command to execute tasks in a container
-# defaults to docker exec. Will be rewritten to containerd `ctr` if needed in "Define runtime exec" test
+# defaults to docker exec.
 ${runtime-cli-exec-cmd}     sudo docker exec
 ${n2-ipv4}                  172.20.20.100/24
 ${n2-ipv6}                  3fff:172:20:20::100/64
@@ -46,6 +46,25 @@ Deploy ${lab-name} lab
     Should Be Equal As Integers    ${rc}    0
     # save output to be used in next steps
     Set Suite Variable    ${deploy-output}    ${output}
+
+Verify topology backup file is created
+    [Documentation]    This test ensures that when a lab is deployed,
+    ...    exactly one backup of the topology file
+    ...    is created at /tmp/.clab/bak, and its name contains the topology file name.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ls /tmp/.clab/bak | grep ${lab-file}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    ${files} =    List Files In Directory    /tmp/.clab/bak    pattern=*${lab-file}*
+    Log    ${files}
+    Length Should Be    ${files}    1
+    Should Contain    ${files}[0]    ${lab-file}
+
+    # Compare the contents of the original and backup file line by line
+    ${orig} =    Get File    ${CURDIR}/${lab-file}
+    ${backup} =    Get File    /tmp/.clab/bak/${files}[0]
+    Should Be Equal    ${orig}    ${backup}
 
 Ensure exec node option works
     [Documentation]    This tests ensures that the node's exec property that sets commands to be executed upon node deployment works.
@@ -127,9 +146,9 @@ Ensure default no_proxy env var is set
     ...    ${output.stderr}
     ...    localhost,127.0.0.1,::1,*.local,172.20.20.0/24,172.20.20.100,172.20.20.99,3fff:172:20:20::/64,3fff:172:20:20::100,3fff:172:20:20::99,l1,l2,l3
 
-Inspect ${lab-name} lab using its name
+Inspect ${lab-name} lab using its name and via viper env vars
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} inspect --name ${lab-name}
+    ...    CLAB_NAME=${lab-name} ${CLAB_BIN} --runtime ${runtime} inspect
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -139,6 +158,7 @@ Inspect Lab Using JSON Format
     ${output} =    Process.Run Process
     ...    ${CLAB_BIN} --runtime ${runtime} inspect -t ${CURDIR}/${lab-file} --format json
     ...    shell=True
+    ...    env:CLAB_INSPECT_FORMAT=table
     Log    ${output.stdout}
     Log    ${output.stderr}
     Should Be Equal As Integers    ${output.rc}    0
@@ -462,6 +482,27 @@ Verify Hosts entries exist
     IF    '${runtime}' == 'podman'    Should Contain    ${output}    6
     IF    '${runtime}' == 'docker'    Should Contain    ${output}    6
 
+Verify Hosts entries contain container ID
+    [Documentation]    Verify that /etc/hosts entries contain the truncated container ID (first 12 chars) as added by PR #2991.
+    # Get the container ID for l1 node
+    ${rc}    ${container_id} =    Run And Return Rc And Output
+    ...    sudo ${runtime} inspect clab-${lab-name}-l1 --format '{{.Id}}'
+    Log    ${container_id}
+    Should Be Equal As Integers    ${rc}    0
+
+    # Container IDs are 64 characters long, truncate to 12 as containerlab does
+    ${truncated_id} =    Get Substring    ${container_id}    0    12
+    Log    Truncated container ID: ${truncated_id}
+
+    # Get the hosts entry for l1 node
+    ${rc}    ${hosts_entry} =    Run And Return Rc And Output
+    ...    cat /etc/hosts | grep "clab-${lab-name}-l1" | head -1
+    Log    ${hosts_entry}
+    Should Be Equal As Integers    ${rc}    0
+
+    # Verify the hosts entry contains the truncated container ID
+    Should Contain    ${hosts_entry}    ${truncated_id}
+
 Verify Mem and CPU limits are set
     [Documentation]    Checking if cpu and memory limits set for a node has been reflected in the host config
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -554,7 +595,7 @@ Verify Exec rc != 0 on no containers match
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file} --label clab-node-name=nonexist --cmd "echo test"
     Log    ${output}
     Should Not Contain    ${output}    test
-    Should Contain    ${output}    filter did not match any containers
+    Should Match Regexp    ${output}    (?i)filter did not match any containers
     Should Not Be Equal As Integers    ${rc}    0
 
 Verify l1 node is healthy

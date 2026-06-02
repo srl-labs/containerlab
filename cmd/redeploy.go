@@ -1,55 +1,130 @@
 package cmd
 
 import (
-	"net"
-
 	"github.com/spf13/cobra"
-	"github.com/srl-labs/containerlab/cmd/common"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-// redeployCmd represents the redeploy command.
-var redeployCmd = &cobra.Command{
-	Use:          "redeploy",
-	Short:        "destroy and redeploy a lab",
-	Long:         "destroy a lab and deploy it again based on the topology definition file\nreference: https://containerlab.dev/cmd/redeploy/",
-	Aliases:      []string{"rdep"},
-	PreRunE:      common.CheckAndGetRootPrivs,
-	SilenceUsage: true,
-	RunE:         redeployFn,
-}
-
-func init() {
-	RootCmd.AddCommand(redeployCmd) // Add to rootCmd
+func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
+	c := &cobra.Command{
+		Use:   "redeploy",
+		Short: "destroy and redeploy a lab",
+		Long: "destroy a lab and deploy it again based on the topology definition file\n" +
+			"reference: https://containerlab.dev/cmd/redeploy/",
+		Aliases: []string{"rdep"},
+		PreRunE: func(_ *cobra.Command, _ []string) error {
+			return clabutils.CheckAndGetRootPrivs()
+		},
+		SilenceUsage: true,
+		RunE: func(cobraCmd *cobra.Command, _ []string) error {
+			return redeployFn(cobraCmd, o)
+		},
+	}
 
 	// Add destroy flags
-	redeployCmd.Flags().BoolVarP(&cleanup, "cleanup", "c", false, "delete lab directory")
-	redeployCmd.Flags().BoolVarP(&common.Graceful, "graceful", "", false,
-		"attempt to stop containers before removing")
-	redeployCmd.Flags().BoolVarP(&all, "all", "a", false, "destroy all containerlab labs")
-	redeployCmd.Flags().UintVarP(&maxWorkers, "max-workers", "", 0,
-		"limit the maximum number of workers creating/deleting nodes")
-	redeployCmd.Flags().BoolVarP(&keepMgmtNet, "keep-mgmt-net", "", false, "do not remove the management network")
+	c.Flags().BoolVarP(
+		&o.Destroy.Cleanup,
+		"cleanup",
+		"c",
+		o.Destroy.Cleanup,
+		"delete lab directory",
+	)
+	c.Flags().BoolVarP(
+		&o.Global.GracefulShutdown,
+		"graceful",
+		"",
+		o.Global.GracefulShutdown,
+		"attempt to stop containers before removing",
+	)
+	c.Flags().BoolVarP(
+		&o.Destroy.All,
+		"all",
+		"a",
+		o.Destroy.All,
+		"destroy all containerlab labs",
+	)
+	c.Flags().UintVarP(
+		&o.Deploy.MaxWorkers,
+		"max-workers",
+		"",
+		o.Deploy.MaxWorkers,
+		"limit the maximum number of workers creating/deleting nodes",
+	)
+	c.Flags().BoolVarP(
+		&o.Destroy.KeepManagementNetwork,
+		"keep-mgmt-net",
+		"",
+		o.Destroy.KeepManagementNetwork,
+		"do not remove the management network",
+	)
 
 	// Add deploy flags
-	redeployCmd.Flags().BoolVarP(&common.Graph, "graph", "g", false, "generate topology graph")
-	redeployCmd.Flags().StringVarP(&mgmtNetName, "network", "", "", "management network name")
-	redeployCmd.Flags().IPNetVarP(&mgmtIPv4Subnet, "ipv4-subnet", "4", net.IPNet{}, "management network IPv4 subnet range")
-	redeployCmd.Flags().IPNetVarP(&mgmtIPv6Subnet, "ipv6-subnet", "6", net.IPNet{}, "management network IPv6 subnet range")
-	redeployCmd.Flags().StringVarP(&deployFormat, "format", "f", "table", "output format. One of [table, json]")
-	redeployCmd.Flags().BoolVarP(&skipPostDeploy, "skip-post-deploy", "", false, "skip post deploy action")
-	redeployCmd.Flags().StringVarP(&exportTemplate, "export-template", "", "",
-		"template file for topology data export")
-	redeployCmd.Flags().BoolVarP(&skipLabDirFileACLs, "skip-labdir-acl", "", false,
-		"skip the lab directory extended ACLs provisioning")
+	c.Flags().BoolVarP(
+		&o.Deploy.GenerateGraph,
+		"graph",
+		"g",
+		o.Deploy.GenerateGraph,
+		"generate topology graph",
+	)
+	c.Flags().StringVarP(
+		&o.Deploy.ManagementNetworkName,
+		"network",
+		"",
+		o.Deploy.ManagementNetworkName,
+		"management network name",
+	)
+	c.Flags().IPNetVarP(
+		&o.Deploy.ManagementIPv4Subnet,
+		"ipv4-subnet",
+		"4",
+		o.Deploy.ManagementIPv4Subnet,
+		"management network IPv4 subnet range",
+	)
+	c.Flags().IPNetVarP(
+		&o.Deploy.ManagementIPv6Subnet,
+		"ipv6-subnet",
+		"6",
+		o.Deploy.ManagementIPv6Subnet,
+		"management network IPv6 subnet range",
+	)
+	c.Flags().StringVarP(
+		&o.Inspect.Format,
+		"format",
+		"f",
+		o.Inspect.Format, "output format. One of [table, json]",
+	)
+	c.Flags().BoolVarP(
+		&o.Deploy.SkipPostDeploy,
+		"skip-post-deploy",
+		"",
+		o.Deploy.SkipPostDeploy,
+		"skip post deploy action",
+	)
+	c.Flags().StringVarP(
+		&o.Deploy.ExportTemplate,
+		"export-template",
+		"",
+		o.Deploy.ExportTemplate,
+		"template file for topology data export",
+	)
+	c.Flags().BoolVarP(
+		&o.Deploy.SkipLabDirectoryFileACLs,
+		"skip-labdir-acl",
+		"",
+		o.Deploy.SkipLabDirectoryFileACLs,
+		"skip the lab directory extended ACLs provisioning",
+	)
+
+	return c, nil
 }
 
-func redeployFn(cobraCmd *cobra.Command, args []string) error {
+func redeployFn(cobraCmd *cobra.Command, o *Options) error {
 	// First destroy the lab
-	err := destroyFn(cobraCmd, args)
+	err := destroyFn(cobraCmd, o)
 	if err != nil {
 		return err
 	}
 
 	// Then deploy it again
-	return deployFn(cobraCmd, args)
+	return deployFn(cobraCmd, o)
 }

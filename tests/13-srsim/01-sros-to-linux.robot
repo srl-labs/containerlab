@@ -7,8 +7,8 @@ Suite Teardown      Run Keyword    Cleanup
 
 
 *** Variables ***
-${lab-name}         sr02
-${lab-file-name}    02-srsim.clab.yml
+${lab-name}         sr01
+${lab-file-name}    01-srsim.clab.yml
 ${runtime}          docker
 ${key-name}         clab-test-key
 
@@ -51,9 +51,9 @@ Verify links in node l1
     Should Contain    ${output}    state UP
 
 Ensure l1 can ping sros over 1/1/c1/1 interface
-    Sleep    5s    give some time for networking stack to settle
+    Sleep    15s    give some time for networking stack to settle
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "ping 10.0.0.2 -c2 -w 3"
+    ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=l1 --cmd "/bin/ping -c2 -w3 10.0.0.2"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    0% packet loss
@@ -61,7 +61,7 @@ Ensure l1 can ping sros over 1/1/c1/1 interface
 Do gNMI SET to change system name
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker run --network host --rm ghcr.io/openconfig/gnmic:0.41.0 set --username admin --password NokiaSros1! --insecure --address clab-${lab-name}-sros --update-path /configure/system/name --update-value thisismynewname
+    ...    sudo docker run --network host --rm ghcr.io/openconfig/gnmic:0.42.1 set --username admin --password NokiaSros1! --insecure --address clab-${lab-name}-sros --update-path /configure/system/name --update-value thisismynewname
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
@@ -75,10 +75,31 @@ Redeploy ${lab-name} lab to check startup config persistency
 Do a gNMI GET and see if config changes after redeploy are persistent
     Skip If    '${runtime}' != 'docker'
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    sudo docker run --network host --rm ghcr.io/openconfig/gnmic:0.41.0 get --username admin --password NokiaSros1! --insecure --address clab-${lab-name}-sros --path /state/system/oper-name --values-only
+    ...    sudo docker run --network host --rm ghcr.io/openconfig/gnmic:0.42.1 get --username admin --password NokiaSros1! --insecure --address clab-${lab-name}-sros --path /state/system/oper-name --values-only
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    thisismynewname
+
+Verify saving config with copy flag
+    [Documentation]
+    ...    Save config with --copy flag and verify that the config.cfg
+    ...    file is copied to the specified destination directory.
+    ${copy_dst} =    Set Variable    ${CURDIR}/save-copy-test
+    # clean up any leftover from previous runs
+    Run    rm -rf ${copy_dst}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} save -t ${CURDIR}/${lab-file-name} --copy ${copy_dst}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Not Contain    ${output}    ERRO
+    # verify that config.cfg has been copied for the sros node
+    # standalone srsim uses slot A, so the saved config is at A/config/cf3/config.cfg
+    OperatingSystem.File Should Exist    ${copy_dst}/clab-${lab-name}/sros/config.cfg
+    # verify the copied file is not empty
+    ${size} =    OperatingSystem.Get File Size    ${copy_dst}/clab-${lab-name}/sros/config.cfg
+    Should Be True    ${size} > 0
+    # clean up
+    [Teardown]    Run    rm -rf ${copy_dst}
 
 
 *** Keywords ***

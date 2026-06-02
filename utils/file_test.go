@@ -5,10 +5,29 @@
 package utils
 
 import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+type testDownloadPaths struct {
+	dir string
+}
+
+func (t testDownloadPaths) ClabTmpDir() string {
+	return t.dir
+}
+
+func (t testDownloadPaths) DownloadFileTmpAbsPath(nodeName string, filenamePostfix string) string {
+	return filepath.Join(t.dir, nodeName+"-"+filenamePostfix)
+}
 
 func TestFilenameForURL(t *testing.T) {
 	type args struct {
@@ -43,7 +62,7 @@ func TestFilenameForURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FilenameForURL(tt.args.rawUrl); got != tt.want {
+			if got := FilenameForURL(context.Background(), tt.args.rawUrl); got != tt.want {
 				t.Errorf("got: %v, want: %v", got, tt.want)
 			}
 		})
@@ -184,6 +203,234 @@ func TestIsS3URL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIsSFTPURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "Valid SFTP URL",
+			url:  "sftp://user@example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "SCP URL should not match",
+			url:  "scp://user@example.com/file.cfg",
+			want: false,
+		},
+		{
+			name: "FTP URL should not match",
+			url:  "ftp://user:pass@example.com/file.cfg",
+			want: false,
+		},
+		{
+			name: "Local file path should not match",
+			url:  "/path/to/file.cfg",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsSFTPURL(tt.url); got != tt.want {
+				t.Errorf("IsSFTPURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsDownloadableURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "HTTP URL",
+			url:  "http://example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "HTTPS URL",
+			url:  "https://example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "S3 URL",
+			url:  "s3://bucket/file.cfg",
+			want: true,
+		},
+		{
+			name: "FTP URL",
+			url:  "ftp://user:pass@example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "SFTP URL",
+			url:  "sftp://user@example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "SCP URL",
+			url:  "scp://user@example.com/file.cfg",
+			want: true,
+		},
+		{
+			name: "Local path",
+			url:  "/path/to/file.cfg",
+			want: false,
+		},
+		{
+			name: "Schemaless URL",
+			url:  "example.com/file.cfg",
+			want: false,
+		},
+		{
+			name: "Stdin marker",
+			url:  "-",
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsDownloadableURL(tt.url); got != tt.want {
+				t.Errorf("IsDownloadableURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestProcessDownloadableAndEmbeddedFile(t *testing.T) {
+	t.Run("embedded file", func(t *testing.T) {
+		paths := testDownloadPaths{dir: t.TempDir()}
+		content := "license\nblob\n"
+
+		got, err := ProcessDownloadableAndEmbeddedFile(
+			context.Background(),
+			"node1",
+			content,
+			"embedded.lic",
+			paths,
+		)
+		if err != nil {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() error = %v", err)
+		}
+
+		wantPath := filepath.Join(paths.dir, "node1-embedded.lic")
+		if got != wantPath {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() = %q, want %q", got, wantPath)
+		}
+
+		gotContent, err := os.ReadFile(got)
+		if err != nil {
+			t.Fatalf("failed to read embedded file: %v", err)
+		}
+		if diff := cmp.Diff(content, string(gotContent)); diff != "" {
+			t.Fatalf("embedded file content diff: %s", diff)
+		}
+	})
+
+	t.Run("local file reference", func(t *testing.T) {
+		paths := testDownloadPaths{dir: t.TempDir()}
+		fileRef := "license.txt"
+
+		got, err := ProcessDownloadableAndEmbeddedFile(
+			context.Background(),
+			"node1",
+			fileRef,
+			"embedded.lic",
+			paths,
+		)
+		if err != nil {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() error = %v", err)
+		}
+		if got != fileRef {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() = %q, want %q", got, fileRef)
+		}
+	})
+
+	t.Run("https file", func(t *testing.T) {
+		paths := testDownloadPaths{dir: t.TempDir()}
+		content := "downloaded license\n"
+
+		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(content))
+		}))
+		t.Cleanup(srv.Close)
+
+		fileRef := srv.URL + "/license.lic"
+		got, err := ProcessDownloadableAndEmbeddedFile(
+			context.Background(),
+			"node1",
+			fileRef,
+			"embedded.lic",
+			paths,
+		)
+		if err != nil {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() error = %v", err)
+		}
+
+		wantPath := filepath.Join(paths.dir, "node1-license.lic")
+		if got != wantPath {
+			t.Fatalf("ProcessDownloadableAndEmbeddedFile() = %q, want %q", got, wantPath)
+		}
+
+		gotContent, err := os.ReadFile(got)
+		if err != nil {
+			t.Fatalf("failed to read downloaded file: %v", err)
+		}
+		if diff := cmp.Diff(content, string(gotContent)); diff != "" {
+			t.Fatalf("downloaded file content diff: %s", diff)
+		}
+	})
+}
+
+func TestSSHDownloadConfig(t *testing.T) {
+	t.Run("missing username", func(t *testing.T) {
+		_, _, err := sshDownloadConfig("sftp://example.com/license.lic", errSFTPFetch)
+		if !errors.Is(err, errSFTPFetch) {
+			t.Fatalf("sshDownloadConfig() error = %v, want wrapped errSFTPFetch", err)
+		}
+		if err == nil || !strings.Contains(err.Error(), "missing username") {
+			t.Fatalf("sshDownloadConfig() error = %v, want missing username", err)
+		}
+	})
+
+	t.Run("missing key file", func(t *testing.T) {
+		t.Setenv("SSH_AUTH_SOCK", "")
+		t.Setenv("CLAB_SSH_KEY", filepath.Join(t.TempDir(), "missing-key"))
+
+		_, _, err := sshDownloadConfig("scp://user@example.com/license.lic", errSCPFetch)
+		if !errors.Is(err, errSCPFetch) {
+			t.Fatalf("sshDownloadConfig() error = %v, want wrapped errSCPFetch", err)
+		}
+		if err == nil || !strings.Contains(err.Error(), "does not exist") {
+			t.Fatalf("sshDownloadConfig() error = %v, want missing key file", err)
+		}
+	})
+
+	t.Run("password auth", func(t *testing.T) {
+		t.Setenv("SSH_AUTH_SOCK", "")
+		t.Setenv("CLAB_SSH_KEY", "")
+
+		u, cfg, err := sshDownloadConfig("sftp://user:pass@example.com/license.lic", errSFTPFetch)
+		if err != nil {
+			t.Fatalf("sshDownloadConfig() error = %v", err)
+		}
+		if u.Hostname() != "example.com" {
+			t.Fatalf("sshDownloadConfig() hostname = %q, want example.com", u.Hostname())
+		}
+		if cfg.User != "user" {
+			t.Fatalf("sshDownloadConfig() user = %q, want user", cfg.User)
+		}
+		if len(cfg.Auth) != 1 {
+			t.Fatalf("sshDownloadConfig() auth count = %d, want 1", len(cfg.Auth))
+		}
+	})
 }
 
 func TestParseS3URL(t *testing.T) {

@@ -13,6 +13,9 @@ name: srsim-tests
 jobs:
   srsim-tests:
     runs-on: ubuntu-24.04
+    # Skip this job if running from a fork PR (secrets are not available)
+    # github.event.pull_request.head.repo.full_name will be different from github.repository for fork PRs
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     env:
       SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
     strategy:
@@ -20,14 +23,20 @@ jobs:
         test-suite:
           - "01*.robot"
           - "03*.robot"
+          - "04*.robot"
           - "05*.robot"
+          - "06*.robot"
+          - "07*.robot"
+          - "08*.robot"
+          - "09*.robot"
+          - "10*.robot"
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: containerlab
 
@@ -38,13 +47,13 @@ jobs:
         run: sudo mkdir -p /opt/nokia/sros/ && echo $SRSIM_LICENSE > /opt/nokia/sros/license-sros25.txt
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
           version: "0.5.28"
           enable-cache: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           # cache: pip
           # cache-dependency-path: "tests/requirements.txt"
@@ -62,14 +71,14 @@ jobs:
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull and re-tag srsim image
-        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.7.R1 registry.srlinux.dev/pub/nokia_srsim:25.7.R1
+        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R2 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R2 registry.srlinux.dev/pub/nokia_srsim:25.10.R2
 
       # - name: setup tmate session
       #   uses: mxschmitt/action-tmate@v3
@@ -79,7 +88,7 @@ jobs:
           ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/13-srsim/${{ matrix.test-suite }}
       # upload test reports as a zip file
       - name: Upload test logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: 13-srsim-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
@@ -88,7 +97,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-srsim-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}

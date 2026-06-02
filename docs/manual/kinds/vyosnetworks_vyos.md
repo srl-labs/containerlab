@@ -1,11 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: vyosnetworks_vyos
+kind_display_name: VyOS Networks VyOS
 ---
 
-# VyOS Networks VyOS
+# -{{ kind_display_name }}-
+Containerized VyOS network operating system is identified with the `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
-Containerized VyOS network operating system is identified with the `vyosnetworks_vyos` kind in the [topology file](../topo-def-file.md).
 
 VyOS nodes will launch with the following features
 
@@ -103,11 +105,11 @@ VyOS only allows interfaces in the format `ethN`. The `eth0` interface is reserv
 
 ### Node configuration
 
-VyOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `vyosnetworks_vyos` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+VyOS nodes have a dedicated [`config`](../conf-artifacts.md#identifying-a-lab-directory) directory that is used to persist the configuration of the node. It is possible to launch nodes of `-{{ kind_code_name }}-` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 #### Default node configuration
 
-When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/vyos/vyos.config.boot) and copy it to the config directory of the node.
+When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/vyosnetworks_vyos/vyos.config.boot) and copy it to the config directory of the node.
 
 ```yaml
 # example of a topo file that does not define a custom config
@@ -117,7 +119,7 @@ name: vyos_lab
 topology:
   nodes:
     vyos:
-      kind: vyosnetworks_vyos
+      kind: -{{ kind_code_name }}-
 ```
 
 The generated config will be saved to the path `clab-<lab_name>/<node-name>/config/config.boot`. Using the example topology presented above, the exact path to the config will be `clab-vyos/vyos/config/config.boot`.
@@ -130,14 +132,14 @@ You may specify a customer startup configuration using the `startup-config` prop
 name: vyos_lab
 topology:
   nodes:
-    ceos:
-      kind: vyosnetworks_vyos
+    vyos:
+      kind: -{{ kind_code_name }}-
       startup-config: myconfig.conf
 ```
 
 When a config file is passed via `startup-config` parameter it will be used during an initial lab deployment. However, a config file that might be in the lab directory of a node takes precedence over the startup-config[^1].
 
-It is possible to change the default config which every VyOS node will start with by specifying it in the `topology.kinds.vyos.startup-config`
+It is possible to change the default config which every VyOS node will start with by specifying it in the `topology.kinds.vyosnetworks_vyos.startup-config`
 
 ```yaml
 name: vyos_lab
@@ -145,19 +147,41 @@ name: vyos_lab
 topology:
   kinds:
     vyosnetworks_vyos:
-    startup-config: vyos-custom-startup.cfg
+      startup-config: vyos-custom-startup.cfg
   nodes:
     # vyos1 will boot with vyos-custom-startup.cfg as set in the kind parameters
     vyos1:
-      kind: vyosnetworks_vyos
+      kind: -{{ kind_code_name }}-
       image: vyos:latest
     # vyos2 will boot with its own specific startup config, as it overrides the kind variables
     vyos2:
-      kind: vyosnetworks_vyos
+      kind: -{{ kind_code_name }}-
       image: vyos:latest
       startup-config: node-specific-startup.cfg
   links:
     - endpoints: ["vyos1:eth1", "vyos2:eth1"]
+```
+
+#### Link addressing
+
+VyOS Networks VyOS kind supports [IPv4/IPv6 link addresses](../topo-def-file.md#ip-addresses) on point-to-point links using the `ipv4` and/or `ipv6` fields in the link definition. Use `ethN` interface names in the topology (`eth0` is management).
+
+After deployment, containerlab applies VyOS configuration statements of the form `set interfaces ethernet <interface> address <addr>/<prefix>` for each data endpoint that has a topology address (the management interface is skipped), then saves the configuration.
+
+```yaml
+name: vyos_link_ips
+topology:
+  nodes:
+    vyos1:
+      kind: -{{ kind_code_name }}-
+      image: vyos:latest
+    vyos2:
+      kind: -{{ kind_code_name }}-
+      image: vyos:latest
+  links:
+    - endpoints: ["vyos1:eth1", "vyos2:eth1"]
+      ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
+      ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
 ```
 
 [^1]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.

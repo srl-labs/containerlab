@@ -11,6 +11,7 @@ package mockruntime
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 
 	exec "github.com/srl-labs/containerlab/exec"
@@ -72,6 +73,20 @@ func (mr *MockContainerRuntimeMockRecorder) Config() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Config", reflect.TypeOf((*MockContainerRuntime)(nil).Config))
 }
 
+// CopyToContainer mocks base method.
+func (m *MockContainerRuntime) CopyToContainer(ctx context.Context, cID, dstPath, srcPath string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CopyToContainer", ctx, cID, dstPath, srcPath)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CopyToContainer indicates an expected call of CopyToContainer.
+func (mr *MockContainerRuntimeMockRecorder) CopyToContainer(ctx, cID, dstPath, srcPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CopyToContainer", reflect.TypeOf((*MockContainerRuntime)(nil).CopyToContainer), ctx, cID, dstPath, srcPath)
+}
+
 // CreateContainer mocks base method.
 func (m *MockContainerRuntime) CreateContainer(arg0 context.Context, arg1 *types.NodeConfig) (string, error) {
 	m.ctrl.T.Helper()
@@ -88,17 +103,27 @@ func (mr *MockContainerRuntimeMockRecorder) CreateContainer(arg0, arg1 any) *gom
 }
 
 // CreateNet mocks base method.
-func (m *MockContainerRuntime) CreateNet(arg0 context.Context) error {
+func (m *MockContainerRuntime) CreateNet(arg0 context.Context, arg1 ...string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateNet", arg0)
+	varargs := []any{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateNet", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateNet indicates an expected call of CreateNet.
-func (mr *MockContainerRuntimeMockRecorder) CreateNet(arg0 any) *gomock.Call {
+func (mr *MockContainerRuntimeMockRecorder) CreateNet(arg0 any, arg1 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNet", reflect.TypeOf((*MockContainerRuntime)(nil).CreateNet), arg0)
+	varargs := append([]any{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(
+		mr.mock,
+		"CreateNet",
+		reflect.TypeOf((*MockContainerRuntime)(nil).CreateNet),
+		varargs...,
+	)
 }
 
 // DeleteContainer mocks base method.
@@ -263,6 +288,21 @@ func (mr *MockContainerRuntimeMockRecorder) Init(arg0 ...any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Init", reflect.TypeOf((*MockContainerRuntime)(nil).Init), arg0...)
 }
 
+// InspectImage mocks base method.
+func (m *MockContainerRuntime) InspectImage(ctx context.Context, imageName string) (*runtime.ImageInspect, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InspectImage", ctx, imageName)
+	ret0, _ := ret[0].(*runtime.ImageInspect)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InspectImage indicates an expected call of InspectImage.
+func (mr *MockContainerRuntimeMockRecorder) InspectImage(ctx, imageName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InspectImage", reflect.TypeOf((*MockContainerRuntime)(nil).InspectImage), ctx, imageName)
+}
+
 // IsHealthy mocks base method.
 func (m *MockContainerRuntime) IsHealthy(ctx context.Context, cID string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -291,6 +331,18 @@ func (m *MockContainerRuntime) ListContainers(arg0 context.Context, arg1 []*type
 func (mr *MockContainerRuntimeMockRecorder) ListContainers(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListContainers", reflect.TypeOf((*MockContainerRuntime)(nil).ListContainers), arg0, arg1)
+}
+
+// LogNonRunningContainerOutput mocks base method.
+func (m *MockContainerRuntime) LogNonRunningContainerOutput(ctx context.Context, containerName string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "LogNonRunningContainerOutput", ctx, containerName)
+}
+
+// LogNonRunningContainerOutput indicates an expected call of LogNonRunningContainerOutput.
+func (mr *MockContainerRuntimeMockRecorder) LogNonRunningContainerOutput(ctx, containerName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogNonRunningContainerOutput", reflect.TypeOf((*MockContainerRuntime)(nil).LogNonRunningContainerOutput), ctx, containerName)
 }
 
 // Mgmt mocks base method.
@@ -351,17 +403,48 @@ func (mr *MockContainerRuntimeMockRecorder) StartContainer(arg0, arg1, arg2 any)
 }
 
 // StopContainer mocks base method.
-func (m *MockContainerRuntime) StopContainer(arg0 context.Context, arg1 string) error {
+func (m *MockContainerRuntime) StopContainer(ctx context.Context, name string, stopSignal types.Signal) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StopContainer", arg0, arg1)
+	ret := m.ctrl.Call(m, "StopContainer", ctx, name, stopSignal)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // StopContainer indicates an expected call of StopContainer.
-func (mr *MockContainerRuntimeMockRecorder) StopContainer(arg0, arg1 any) *gomock.Call {
+func (mr *MockContainerRuntimeMockRecorder) StopContainer(ctx, name, stopSignal any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockContainerRuntime)(nil).StopContainer), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopContainer", reflect.TypeOf((*MockContainerRuntime)(nil).StopContainer), ctx, name, stopSignal)
+}
+
+// StreamEvents mocks base method.
+func (m *MockContainerRuntime) StreamEvents(ctx context.Context, opts runtime.EventStreamOptions) (<-chan runtime.ContainerEvent, <-chan error, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamEvents", ctx, opts)
+	ret0, _ := ret[0].(<-chan runtime.ContainerEvent)
+	ret1, _ := ret[1].(<-chan error)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// StreamEvents indicates an expected call of StreamEvents.
+func (mr *MockContainerRuntimeMockRecorder) StreamEvents(ctx, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamEvents", reflect.TypeOf((*MockContainerRuntime)(nil).StreamEvents), ctx, opts)
+}
+
+// StreamLogs mocks base method.
+func (m *MockContainerRuntime) StreamLogs(ctx context.Context, containerName string) (io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StreamLogs", ctx, containerName)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StreamLogs indicates an expected call of StreamLogs.
+func (mr *MockContainerRuntimeMockRecorder) StreamLogs(ctx, containerName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamLogs", reflect.TypeOf((*MockContainerRuntime)(nil).StreamLogs), ctx, containerName)
 }
 
 // UnpauseContainer mocks base method.

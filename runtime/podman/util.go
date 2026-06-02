@@ -12,13 +12,13 @@ import (
 	"strconv"
 	"strings"
 
-	netTypes "github.com/containers/common/libnetwork/types"
-	"github.com/containers/image/v5/manifest"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	"github.com/containers/podman/v5/pkg/specgen"
 	"github.com/dustin/go-humanize"
 	"github.com/opencontainers/runtime-spec/specs-go"
+	netTypes "go.podman.io/common/libnetwork/types"
+	"go.podman.io/image/v5/manifest"
 
 	"github.com/charmbracelet/log"
 	"github.com/containers/podman/v5/pkg/bindings"
@@ -42,7 +42,10 @@ func (*PodmanRuntime) connect(ctx context.Context) (context.Context, error) {
 	return bindings.NewConnection(ctx, "unix://run/podman/podman.sock")
 }
 
-func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.NodeConfig) (specgen.SpecGenerator, error) {
+func (r *PodmanRuntime) createContainerSpec(
+	ctx context.Context,
+	cfg *types.NodeConfig,
+) (specgen.SpecGenerator, error) {
 	sg := specgen.SpecGenerator{}
 	cmd, err := shlex.Split(cfg.Cmd)
 	if err != nil {
@@ -148,10 +151,11 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	}
 	// Defaults for health checks
 	specHCheckConfig := specgen.ContainerHealthCheckConfig{
-		HealthConfig: &manifest.Schema2HealthConfig{},
+		HealthLogDestination: "local",
 	}
 
 	if cfg.Healthcheck != nil {
+		specHCheckConfig.HealthConfig = &manifest.Schema2HealthConfig{}
 		specHCheckConfig.HealthConfig.Test = cfg.Healthcheck.Test
 		specHCheckConfig.HealthConfig.Retries = cfg.Healthcheck.Retries
 		specHCheckConfig.HealthConfig.Interval = cfg.Healthcheck.GetIntervalDuration()
@@ -168,11 +172,19 @@ func (r *PodmanRuntime) createContainerSpec(ctx context.Context, cfg *types.Node
 	case "container":
 		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
 		if len(netMode) != 2 {
-			return sg, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", cfg.ShortName, netMode)
+			return sg, fmt.Errorf(
+				"container network mode was specified for container %q, but no container name was found: %q",
+				cfg.ShortName,
+				netMode,
+			)
 		}
 		// also cont. ID shouldn't be empty
 		if netMode[1] == "" {
-			return sg, fmt.Errorf("container network mode was specified for container %q, but no container name was found: %q", cfg.ShortName, netMode)
+			return sg, fmt.Errorf(
+				"container network mode was specified for container %q, but no container name was found: %q",
+				cfg.ShortName,
+				netMode,
+			)
 		}
 		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
 		prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
@@ -302,7 +314,11 @@ func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs
 			mntSpec[i].Options = strings.Split(mntSplit[2], ",")
 		}
 	}
-	log.Debugf("convertMounts method received mounts %v and produced %+v as a result", mounts, mntSpec)
+	log.Debugf(
+		"convertMounts method received mounts %v and produced %+v as a result",
+		mounts,
+		mntSpec,
+	)
 	return mntSpec, nil
 }
 
@@ -365,7 +381,10 @@ func netTypesPortMappingToGenericPortBinding(pm netTypes.PortMapping) []*types.G
 	return result
 }
 
-func (*PodmanRuntime) extractMgmtIP(ctx context.Context, cID string) (runtime.GenericMgmtIPs, error) {
+func (*PodmanRuntime) extractMgmtIP(
+	ctx context.Context,
+	cID string,
+) (runtime.GenericMgmtIPs, error) {
 	// First get all the data from the inspect
 	toReturn := runtime.GenericMgmtIPs{}
 	inspectRes, err := containers.Inspect(ctx, cID, &containers.InspectOptions{})
@@ -511,12 +530,20 @@ func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[str
 		}
 		filters[filterType] = append(filters[filterType], filterStr)
 	}
-	log.Debugf("Method buildFilterString was called with inputs %+v\n and results %+v", gFilters, filters)
+	log.Debugf(
+		"Method buildFilterString was called with inputs %+v\n and results %+v",
+		gFilters,
+		filters,
+	)
 	return filters
 }
 
 // postStartActions performs misc. tasks that are needed after the container starts.
-func (r *PodmanRuntime) postStartActions(ctx context.Context, cID string, cfg *types.NodeConfig) error {
+func (r *PodmanRuntime) postStartActions(
+	ctx context.Context,
+	cID string,
+	cfg *types.NodeConfig,
+) error {
 	// skip if hostnetwork or none
 	if cfg.NetworkMode == "host" || cfg.NetworkMode == "none" {
 		return nil

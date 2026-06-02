@@ -6,6 +6,7 @@ package nodes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -17,33 +18,44 @@ import (
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
-	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes/state"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
+
+const (
+	// container validation variables.
+	containerNamePattern = "^[a-zA-Z0-9][a-zA-Z0-9-._]+$"
+	dnsIncompatibleChars = "._"
+	maxNameLength        = 60
+)
+
+var containerNamePatternRe = regexp.MustCompile(containerNamePattern)
 
 // DefaultNode implements the Node interface and is embedded to the structs of all other nodes.
 // It has common fields and methods that every node should typically have. Nodes can override
 // methods if needed.
 type DefaultNode struct {
-	Cfg              *types.NodeConfig
-	Mgmt             *types.MgmtNet
-	Runtime          runtime.ContainerRuntime
-	HostRequirements *types.HostRequirements
+	Cfg              *clabtypes.NodeConfig
+	Mgmt             *clabtypes.MgmtNet
+	Runtime          clabruntime.ContainerRuntime
+	HostRequirements *clabtypes.HostRequirements
 	// SSHConfig is the SSH client configuration that a clab node requires.
-	SSHConfig *types.SSHConfig
+	SSHConfig *clabtypes.SSHConfig
 	// Indicates that the node should not start without no license file defined
-	LicensePolicy types.LicensePolicy
+	LicensePolicy clabtypes.LicensePolicy
 	// OverwriteNode stores the interface used to overwrite methods defined
 	// for DefaultNode, so that particular nodes can provide custom implementations.
 	OverwriteNode NodeOverwrites
 	// List of link endpoints that are connected to the node.
-	Endpoints []links.Endpoint
+	Endpoints []clablinks.Endpoint
 	// Interface aliasing-related variables
 	InterfaceRegexp       *regexp.Regexp
 	InterfaceMappedPrefix string
@@ -51,19 +63,21 @@ type DefaultNode struct {
 	InterfaceHelp         string
 	FirstDataIfIndex      int
 	// State of the node
-	state      state.NodeState
+	state      clabnodesstate.NodeState
 	statemutex sync.RWMutex
+	StopSignal clabtypes.Signal
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
 // which is implemented by the node struct of a particular kind.
-// This allows DefaultNode to access fields of the specific node struct in the methods defined for DefaultNode.
+// This allows DefaultNode to access fields of the specific node struct in the methods defined for
+// DefaultNode.
 func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	dn := &DefaultNode{
-		HostRequirements: types.NewHostRequirements(),
+		HostRequirements: clabtypes.NewHostRequirements(),
 		OverwriteNode:    n,
-		LicensePolicy:    types.LicensePolicyNone,
-		SSHConfig:        types.NewSSHConfig(),
+		LicensePolicy:    clabtypes.LicensePolicyNone,
+		SSHConfig:        clabtypes.NewSSHConfig(),
 	}
 
 	dn.InterfaceMappedPrefix = "eth"
@@ -73,26 +87,27 @@ func NewDefaultNode(n NodeOverwrites) *DefaultNode {
 	return dn
 }
 
-func (d *DefaultNode) WithMgmtNet(mgmt *types.MgmtNet)                       { d.Mgmt = mgmt }
-func (d *DefaultNode) WithRuntime(r runtime.ContainerRuntime)                { d.Runtime = r }
-func (d *DefaultNode) GetRuntime() runtime.ContainerRuntime                  { return d.Runtime }
-func (d *DefaultNode) Config() *types.NodeConfig                             { return d.Cfg }
+func (d *DefaultNode) WithMgmtNet(mgmt *clabtypes.MgmtNet)                   { d.Mgmt = mgmt }
+func (d *DefaultNode) WithRuntime(r clabruntime.ContainerRuntime)            { d.Runtime = r }
+func (d *DefaultNode) GetRuntime() clabruntime.ContainerRuntime              { return d.Runtime }
+func (d *DefaultNode) Config() *clabtypes.NodeConfig                         { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
+func (*DefaultNode) PreStop(context.Context) error                           { return nil }
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
 	_, err := d.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return fmt.Errorf("loading or generating certificate for node %q: %w", d.Cfg.ShortName, err)
 	}
 	return nil
 }
 
-func (d *DefaultNode) SaveConfig(_ context.Context) error {
+func (d *DefaultNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	// nodes should have the save method defined on their respective structs.
 	// By default SaveConfig is a noop.
 	log.Debugf("Save operation is currently not supported for %q node kind", d.Cfg.Kind)
-	return nil
+	return nil, nil
 }
 
 // CheckDeploymentConditions wraps individual functions that check if a node
@@ -118,13 +133,22 @@ func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
 		return err
 	}
 
+	err = d.OverwriteNode.VerifyContainerName()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (d *DefaultNode) PullImage(ctx context.Context) error {
 	for imageKey, imageName := range d.OverwriteNode.GetImages(ctx) {
 		if imageName == "" {
-			return fmt.Errorf("missing required %q attribute for node %q", imageKey, d.Cfg.ShortName)
+			return fmt.Errorf(
+				"missing required %q attribute for node %q",
+				imageKey,
+				d.Cfg.ShortName,
+			)
 		}
 		err := d.Runtime.PullImage(ctx, imageName, d.Config().ImagePullPolicy)
 		if err != nil {
@@ -140,10 +164,11 @@ func (d *DefaultNode) VerifyHostRequirements() error {
 
 func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	// Set the "CLAB_INTFS" variable to the number of interfaces (endpoints) a node has.
-	// This env var does not count in the eth0 interface that is automatically created by the container runtime.
-	// This env var is used by some containers (e.g. vrnetlab systems) to postpone the startup until all interfaces
+	// This env var does not count in the eth0 interface that is automatically created by the
+	// container runtime. This env var is used by some containers (e.g. vrnetlab systems) to
+	// postpone the startup until all interfaces
 	// have been added to the container namespace.
-	d.Config().Env[types.CLAB_ENV_INTFS] = strconv.Itoa(len(d.GetEndpoints()))
+	d.Config().Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(len(d.GetEndpoints()))
 
 	// create the container
 	cID, err := d.Runtime.CreateContainer(ctx, d.Cfg)
@@ -158,7 +183,7 @@ func (d *DefaultNode) Deploy(ctx context.Context, _ *DeployParams) error {
 	}
 
 	// Update the nodes state
-	d.SetState(state.Deployed)
+	d.SetState(clabnodesstate.Deployed)
 
 	return nil
 }
@@ -176,7 +201,7 @@ func (d *DefaultNode) GetNSPath(ctx context.Context) (string, error) {
 		nsp = netns.Path()
 	}
 	if nsp == "" {
-		nsp, err = d.Runtime.GetNSPath(ctx, d.Cfg.LongName)
+		nsp, err = d.Runtime.GetNSPath(ctx, d.OverwriteNode.GetContainerName())
 		if err != nil {
 			log.Errorf("Unable to determine NetNS Path for node %s: %v", d.Cfg.ShortName, err)
 			return "", err
@@ -186,6 +211,28 @@ func (d *DefaultNode) GetNSPath(ctx context.Context) (string, error) {
 	return nsp, err
 }
 
+// ShouldSkipLifecycle reports whether lifecycle operations should no-op for this node.
+func (d *DefaultNode) ShouldSkipLifecycle() bool {
+	return d.Cfg.IsRootNamespaceBased || d.Cfg.AutoRemove
+}
+
+func (d *DefaultNode) parkingNetNSName() string {
+	return clabutils.ParkingNetnsName(d.Cfg.LongName)
+}
+
+func (d *DefaultNode) parkingNetNSPath() (string, error) {
+	return clabutils.GetNamedNetNS(d.parkingNetNSName())
+}
+
+// cleanupParkingNetNS removes the node-owned parking namespace if it exists.
+func (d *DefaultNode) cleanupParkingNetNS() error {
+	if _, err := d.parkingNetNSPath(); err != nil {
+		return nil
+	}
+
+	return netns.DeleteNamed(d.parkingNetNSName())
+}
+
 func (d *DefaultNode) Delete(ctx context.Context) error {
 	for _, e := range d.Endpoints {
 		err := e.GetLink().Remove(ctx)
@@ -193,6 +240,11 @@ func (d *DefaultNode) Delete(ctx context.Context) error {
 			return err
 		}
 	}
+
+	if d.OverwriteNode.GetContainerStatus(ctx) == clabruntime.NotFound {
+		return nil
+	}
+
 	return d.Runtime.DeleteContainer(ctx, d.OverwriteNode.GetContainerName())
 }
 
@@ -202,8 +254,8 @@ func (d *DefaultNode) GetImages(_ context.Context) map[string]string {
 	}
 }
 
-func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericContainer, error) {
-	cnts, err := d.Runtime.ListContainers(ctx, []*types.GenericFilter{
+func (d *DefaultNode) GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error) {
+	cnts, err := d.Runtime.ListContainers(ctx, []*clabtypes.GenericFilter{
 		{
 			FilterType: "name",
 			Match:      d.OverwriteNode.GetContainerName(),
@@ -215,15 +267,19 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]runtime.GenericConta
 	// check that we retrieved some container information
 	// otherwise throw ErrContainersNotFound error
 	if len(cnts) == 0 {
-		return nil, fmt.Errorf("Node: %s. %w", d.GetContainerName(), ErrContainersNotFound)
+		return nil, fmt.Errorf(
+			"Node: %s. %w",
+			d.OverwriteNode.GetContainerName(),
+			ErrContainersNotFound,
+		)
 	}
 
 	return cnts, err
 }
 
-func (d *DefaultNode) RunExecFromConfig(ctx context.Context, ec *exec.ExecCollection) error {
+func (d *DefaultNode) RunExecFromConfig(ctx context.Context, ec *clabexec.ExecCollection) error {
 	for _, e := range d.Config().Exec {
-		exec, err := exec.NewExecCmdFromString(e)
+		exec, err := clabexec.NewExecCmdFromString(e)
 		if err != nil {
 			log.Warnf("Failed to parse the command string: %s, %v", e, err)
 		}
@@ -269,11 +325,11 @@ func (d *DefaultNode) UpdateConfigWithRuntimeInfo(ctx context.Context) error {
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
 func (d *DefaultNode) DeleteNetnsSymlink() error {
 	log.Debugf("Deleting %s network namespace", d.OverwriteNode.GetContainerName())
-	return utils.DeleteNetnsSymlink(d.OverwriteNode.GetContainerName())
+	return clabutils.DeleteNetnsSymlink(d.OverwriteNode.GetContainerName())
 }
 
 func (d *DefaultNode) CheckInterfaceOverlap() error {
-	var seenEps []links.Endpoint
+	var seenEps []clablinks.Endpoint
 
 	for _, ep := range d.Endpoints {
 		ifName := ep.GetIfaceName()
@@ -288,16 +344,18 @@ func (d *DefaultNode) CheckInterfaceOverlap() error {
 	return nil
 }
 
-// CheckInterfaceName checks if a name of the interface referenced in the topology file is in the expected range of name values.
+// CheckInterfaceName checks if a name of the interface referenced in the topology file is in the
+// expected range of name values.
 // A no-op for the default node, specific nodes should implement this method.
 func (d *DefaultNode) CheckInterfaceName() error {
 	return d.CheckInterfaceOverlap()
 }
 
 // CalculateInterfaceIndex parses the supplied interface name with the InterfaceRegexp.
-// Using the the port offset, it calculates the mapped interface index based on the InterfaceOffset and the first data interface index.
+// Using the the port offset, it calculates the mapped interface index based on the InterfaceOffset
+// and the first data interface index.
 func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
-	captureGroups, err := utils.GetRegexpCaptureGroups(d.InterfaceRegexp, ifName)
+	captureGroups, err := clabutils.GetRegexpCaptureGroups(d.InterfaceRegexp, ifName)
 	if err != nil {
 		return 0, err
 	}
@@ -305,7 +363,11 @@ func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
 	if parsedIndex, found := captureGroups["port"]; found {
 		parsedIndexInt, err := strconv.Atoi(parsedIndex)
 		if err != nil {
-			return 0, fmt.Errorf("%q parsed index %q could not be cast to an integer", ifName, parsedIndex)
+			return 0, fmt.Errorf(
+				"%q parsed index %q could not be cast to an integer",
+				ifName,
+				parsedIndex,
+			)
 		}
 		calculatedIndex := parsedIndexInt - d.InterfaceOffset + d.FirstDataIfIndex
 		return calculatedIndex, nil
@@ -314,14 +376,20 @@ func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
 	}
 }
 
-// GetMappedInterfaceName returns with a mapped interface name based on the mapped interface prefix and calculated mapped interface index.
+// GetMappedInterfaceName returns with a mapped interface name based on the mapped interface prefix
+// and calculated mapped interface index.
 func (d *DefaultNode) GetMappedInterfaceName(ifName string) (string, error) {
 	ifIndex, err := d.OverwriteNode.CalculateInterfaceIndex(ifName)
 	if err != nil {
 		return "", err
 	}
 	if ifIndex < d.FirstDataIfIndex {
-		return "", fmt.Errorf("extracted interface index for %q is out of bounds: %d ! >= %d", ifName, ifIndex, d.FirstDataIfIndex)
+		return "", fmt.Errorf(
+			"extracted interface index for %q is out of bounds: %d ! >= %d",
+			ifName,
+			ifIndex,
+			d.FirstDataIfIndex,
+		)
 	}
 	mappedIfName := fmt.Sprintf("%s%d", d.InterfaceMappedPrefix, ifIndex)
 
@@ -335,8 +403,8 @@ func (d *DefaultNode) VerifyStartupConfig(topoDir string) error {
 		return nil
 	}
 
-	rcfg := utils.ResolvePath(cfg, topoDir)
-	if !utils.FileExists(rcfg) {
+	rcfg := clabutils.ResolvePath(cfg, topoDir)
+	if !clabutils.FileExists(rcfg) {
 		return fmt.Errorf("node %q startup-config file not found by the path %s",
 			d.OverwriteNode.GetContainerName(), rcfg)
 	}
@@ -363,13 +431,13 @@ func (d *DefaultNode) GenerateConfig(dst, t string) error {
 		return nil
 	}
 
-	if !d.Cfg.EnforceStartupConfig && utils.FileExists(dst) {
+	if !d.Cfg.EnforceStartupConfig && clabutils.FileExists(dst) {
 		log.Debug("Existing config found", "node", d.Cfg.ShortName, "path", dst)
 		return nil
 	} else {
 		log.Debug("Generating config", "node", d.Cfg.ShortName, "file", d.Cfg.StartupConfig)
 
-		cfgBuf, err := utils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
+		cfgBuf, err := clabutils.SubstituteEnvsAndTemplate(strings.NewReader(t), d.Cfg)
 		if err != nil {
 			return err
 		}
@@ -403,19 +471,24 @@ type NodeOverwrites interface {
 	VerifyHostRequirements() error
 	PullImage(ctx context.Context) error
 	GetImages(ctx context.Context) map[string]string
-	GetContainers(ctx context.Context) ([]runtime.GenericContainer, error)
+	GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error)
 	GetContainerName() string
+	GetContainerStatus(ctx context.Context) clabruntime.ContainerStatus
+	VerifyContainerName() error
 	VerifyLicenseFileExists(context.Context) error
-	RunExec(context.Context, *exec.ExecCmd) (*exec.ExecResult, error)
+	PreStop(context.Context) error
+	RunExec(context.Context, *clabexec.ExecCmd) (*clabexec.ExecResult, error)
 	GetNSPath(ctx context.Context) (string, error)
 }
 
-// LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in the topo
+// LoadStartupConfigFileVr templates a startup-config using the file specified for VM-based nodes in
+// the topo
 // and puts the resulting config file by the LabDir/configDirName/startupCfgFName path.
 func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) error {
 	nodeCfg := node.Config()
 	// create config directory that will be bind mounted to vrnetlab container at / path
-	utils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName), 0o777)
+	clabutils.CreateDirectory(path.Join(nodeCfg.LabDir, configDirName),
+		clabconstants.PermissionsOpen)
 
 	if nodeCfg.StartupConfig != "" {
 		// dstCfg is a path to a file on the clab host that will have rendered configuration
@@ -437,13 +510,46 @@ func LoadStartupConfigFileVr(node Node, configDirName, startupCfgFName string) e
 }
 
 // GetContainerName returns the name used by the runtime to identify the container
-// e.g. ext-container nodes use the name as defined in the topo file, while most other containers use long (prefixed) name.
+// e.g. ext-container nodes use the name as defined in the topo file, while most other containers
+// use long (prefixed) name.
 func (d *DefaultNode) GetContainerName() string {
 	return d.Cfg.LongName
 }
 
+func (d *DefaultNode) VerifyContainerName() error {
+	containerName := d.OverwriteNode.GetContainerName()
+	if !containerNamePatternRe.MatchString(containerName) {
+		return fmt.Errorf("Node name contains invalid characters: %s", containerName)
+	}
+
+	if len(containerName) > maxNameLength {
+		log.Warn(
+			"Node name will not resolve via DNS",
+			"name",
+			containerName,
+			"reason",
+			fmt.Sprintf("name exceeds %d characters", maxNameLength),
+		)
+	}
+
+	if strings.ContainsAny(containerName, dnsIncompatibleChars) {
+		log.Warn(
+			"Node name will not resolve via DNS",
+			"name",
+			containerName,
+			"reason",
+			"name contains invalid characters such as '.' and/or '_'",
+		)
+	}
+
+	return nil
+}
+
 // RunExec executes a single command for a node.
-func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
+func (d *DefaultNode) RunExec(
+	ctx context.Context,
+	execCmd *clabexec.ExecCmd,
+) (*clabexec.ExecResult, error) {
 	execResult, err := d.GetRuntime().Exec(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v",
@@ -454,8 +560,8 @@ func (d *DefaultNode) RunExec(ctx context.Context, execCmd *exec.ExecCmd) (*exec
 }
 
 // RunExecNotWait executes a command for a node, and doesn't block waiting for the output.
-// Should be overriden if the nodes implementation differs.
-func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *exec.ExecCmd) error {
+// Should be overridden if the nodes implementation differs.
+func (d *DefaultNode) RunExecNotWait(ctx context.Context, execCmd *clabexec.ExecCmd) error {
 	err := d.GetRuntime().ExecNotWait(ctx, d.OverwriteNode.GetContainerName(), execCmd)
 	if err != nil {
 		log.Errorf("%s: failed to execute cmd: %q with error %v",
@@ -470,13 +576,21 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 	if d.Config().License == "" {
 		switch d.LicensePolicy {
 		// if a license is required by the kind but not provided
-		case types.LicensePolicyRequired:
-			return fmt.Errorf("node %s of kind %s requires a license. Provide one via 'license' knob in the topology file", d.Config().ShortName, d.Cfg.Kind)
-		case types.LicensePolicyWarn:
+		case clabtypes.LicensePolicyRequired:
+			return fmt.Errorf(
+				"node %s of kind %s requires a license. Provide one via 'license' knob in the topology file",
+				d.Config().ShortName,
+				d.Cfg.Kind,
+			)
+		case clabtypes.LicensePolicyWarn:
 			// just warn when no license is provided
-			log.Warnf("node %s of kind %s requires a license. Make sure to provide it in some way (e.g. license knob or baked into image)", d.Config().ShortName, d.Cfg.Kind)
+			log.Warnf(
+				"node %s of kind %s requires a license. Make sure to provide it in some way (e.g. license knob or baked into image)",
+				d.Config().ShortName,
+				d.Cfg.Kind,
+			)
 			return nil
-		case types.LicensePolicyNone:
+		case clabtypes.LicensePolicyNone:
 			// license is not required
 			return nil
 		default:
@@ -485,9 +599,13 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 		}
 	}
 	// if license is provided check path exists
-	rlic := utils.ResolvePath(d.Config().License, d.Cfg.LabDir)
-	if !utils.FileExists(rlic) {
-		return fmt.Errorf("license file for node %q is not found by the path %s", d.Config().ShortName, rlic)
+	rlic := clabutils.ResolvePath(d.Config().License, d.Cfg.LabDir)
+	if !clabutils.FileExists(rlic) {
+		return fmt.Errorf(
+			"license file for node %q is not found by the path %s",
+			d.Config().ShortName,
+			rlic,
+		)
 	}
 
 	return nil
@@ -495,7 +613,10 @@ func (d *DefaultNode) VerifyLicenseFileExists(_ context.Context) error {
 
 // LoadOrGenerateCertificate loads a certificate using a certificate storage provider
 // provided in certInfra or generates a new one if it does not exist.
-func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName string) (nodeCert *cert.Certificate, err error) {
+func (d *DefaultNode) LoadOrGenerateCertificate(
+	certInfra *clabcert.Cert,
+	topoName string,
+) (nodeCert *clabcert.Certificate, err error) {
 	// early return if certificate generation is not required
 	if d.Cfg.Certificate == nil || !*d.Cfg.Certificate.Issue {
 		return nil, nil
@@ -523,7 +644,7 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 			}
 		}
 
-		certInput := &cert.NodeCSRInput{
+		certInput := &clabcert.NodeCSRInput{
 			CommonName:   nodeConfig.ShortName + "." + topoName + ".io",
 			Hosts:        hosts,
 			Organization: "containerlab",
@@ -547,29 +668,55 @@ func (d *DefaultNode) LoadOrGenerateCertificate(certInfra *cert.Cert, topoName s
 	return nodeCert, nil
 }
 
-func (d *DefaultNode) GetHostsEntries(ctx context.Context) (types.HostEntries, error) {
+func (d *DefaultNode) GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error) {
 	containers, err := d.OverwriteNode.GetContainers(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result := types.HostEntries{}
+	result := clabtypes.HostEntries{}
 
-	for _, cont := range containers {
-		if len(cont.Names) == 0 {
+	for idx := range containers {
+		if len(containers[idx].Names) == 0 {
 			continue
 		}
-		if cont.NetworkSettings.IPv4addr != "" {
-			result = append(result, types.NewHostEntry(cont.NetworkSettings.IPv4addr, cont.Names[0], types.IpVersionV4).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+		if containers[idx].NetworkSettings.IPv4addr != "" {
+			result = append(result, clabtypes.NewHostEntry(
+				containers[idx].NetworkSettings.IPv4addr,
+				containers[idx].Names[0],
+				clabtypes.IpVersionV4,
+			).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)).SetContainerID(containers[idx].ID))
 		}
-		if cont.NetworkSettings.IPv6addr != "" {
-			result = append(result, types.NewHostEntry(cont.NetworkSettings.IPv6addr, cont.Names[0], types.IpVersionV6).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)))
+		if containers[idx].NetworkSettings.IPv6addr != "" {
+			result = append(result, clabtypes.NewHostEntry(
+				containers[idx].NetworkSettings.IPv6addr,
+				containers[idx].Names[0],
+				clabtypes.IpVersionV6,
+			).SetDescription(fmt.Sprintf("Kind: %s", d.Cfg.Kind)).SetContainerID(containers[idx].ID))
 		}
 	}
 	return result, nil
 }
 
-func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+func (d *DefaultNode) AddLinkToContainer(
+	ctx context.Context,
+	link netlink.Link,
+	f func(ns.NetNS) error,
+) error {
+	if !d.Cfg.IsRootNamespaceBased {
+		st := d.OverwriteNode.GetContainerStatus(ctx)
+		if !clabruntime.ContainerHasJoinableNetns(st) {
+			if st == clabruntime.Stopped {
+				containerName := d.OverwriteNode.GetContainerName()
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, containerName)
+			}
+			return fmt.Errorf(
+				"node %q: cannot attach link, container network namespace is not available (status=%s)",
+				d.Cfg.ShortName,
+				st,
+			)
+		}
+	}
 	// retrieve nodes nspath
 	nsp, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {
@@ -581,7 +728,7 @@ func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link,
 		return err
 	}
 	// move veth endpoint to namespace
-	if err = netlink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
+	if err := netlink.LinkSetNsFd(link, int(netns.Fd())); err != nil {
 		return err
 	}
 	// execute the given function
@@ -594,6 +741,20 @@ func (d *DefaultNode) AddLinkToContainer(ctx context.Context, link netlink.Link,
 
 // ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
+	if !d.Cfg.IsRootNamespaceBased {
+		st := d.OverwriteNode.GetContainerStatus(ctx)
+		if !clabruntime.ContainerHasJoinableNetns(st) {
+			if st == clabruntime.Stopped {
+				containerName := d.OverwriteNode.GetContainerName()
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, containerName)
+			}
+			return fmt.Errorf(
+				"node %q: cannot exec a command, container network namespace is not available (status=%s)",
+				d.Cfg.ShortName,
+				st,
+			)
+		}
+	}
 	// retrieve nodes nspath
 	nspath, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {
@@ -621,31 +782,99 @@ func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) 
 	return netns.Do(f)
 }
 
-// AddEndpoint maps the endpoint name to before adding it to the node endpoints if it matches the interface alias regexp. Returns an error if the mapping goes wrong.
-func (d *DefaultNode) AddEndpoint(e links.Endpoint) error {
+// AddEndpoint maps the endpoint name to before adding it to the node endpoints if it matches the
+// interface alias regexp. Returns an error if the mapping goes wrong.
+func (d *DefaultNode) AddEndpoint(e clablinks.Endpoint) error {
 	endpointName := e.GetIfaceName()
 	if d.InterfaceRegexp != nil && d.InterfaceRegexp.MatchString(endpointName) {
 		mappedName, err := d.OverwriteNode.GetMappedInterfaceName(endpointName)
 		if err != nil {
-			return fmt.Errorf("%q interface name %q could not be mapped: %w", d.Cfg.ShortName, e.GetIfaceName(), err)
+			return fmt.Errorf(
+				"%q interface name %q could not be mapped: %w",
+				d.Cfg.ShortName,
+				e.GetIfaceName(),
+				err,
+			)
 		}
-		log.Debugf("Interface Mapping: Mapping interface %q (ifAlias) to %q (ifName)", endpointName, mappedName)
+		log.Debugf(
+			"Interface Mapping: Mapping interface %q (ifAlias) to %q (ifName)",
+			endpointName,
+			mappedName,
+		)
 		e.SetIfaceName(mappedName)
 		e.SetIfaceAlias(endpointName)
 	}
+
+	if e.GetNode() == nil {
+		e.SetNode(d)
+	}
+
+	d.Endpoints = append(d.Endpoints, e)
+	return nil
+}
+
+func (d *DefaultNode) AdoptEndpoint(e clablinks.Endpoint) error {
+	if e == nil {
+		return fmt.Errorf("node %q cannot adopt a nil endpoint", d.Cfg.ShortName)
+	}
+
+	owner := e.GetNode()
+	if owner == nil {
+		return fmt.Errorf(
+			"node %q cannot adopt endpoint %q without an owner",
+			d.Cfg.ShortName,
+			e.GetIfaceName(),
+		)
+	}
+
+	if owner.GetShortName() != d.Cfg.ShortName {
+		return fmt.Errorf(
+			"node %q cannot adopt endpoint %q owned by %q",
+			d.Cfg.ShortName,
+			e.GetIfaceName(),
+			owner.GetShortName(),
+		)
+	}
+
+	for _, owned := range d.Endpoints {
+		if owned == e {
+			return nil
+		}
+		if owned.GetIfaceName() == e.GetIfaceName() {
+			return fmt.Errorf(
+				"node %q already tracks interface %q",
+				d.Cfg.ShortName,
+				e.GetIfaceName(),
+			)
+		}
+	}
+
 	d.Endpoints = append(d.Endpoints, e)
 
 	return nil
 }
 
-func (d *DefaultNode) GetEndpoints() []links.Endpoint {
+func (d *DefaultNode) ReleaseEndpoint(e clablinks.Endpoint) error {
+	for i, ep := range d.Endpoints {
+		if ep != e {
+			continue
+		}
+
+		d.Endpoints = append(d.Endpoints[:i], d.Endpoints[i+1:]...)
+		return nil
+	}
+
+	return fmt.Errorf("node %q does not own endpoint %q", d.Cfg.ShortName, e.GetIfaceName())
+}
+
+func (d *DefaultNode) GetEndpoints() []clablinks.Endpoint {
 	return d.Endpoints
 }
 
 // GetLinkEndpointType returns a veth link endpoint type for default nodes.
 // The LinkEndpointTypeVeth indicates a veth endpoint which doesn't require special handling.
-func (*DefaultNode) GetLinkEndpointType() links.LinkEndpointType {
-	return links.LinkEndpointTypeVeth
+func (*DefaultNode) GetLinkEndpointType() clablinks.LinkEndpointType {
+	return clablinks.LinkEndpointTypeVeth
 }
 
 func (d *DefaultNode) GetShortName() string {
@@ -656,7 +885,16 @@ func (d *DefaultNode) GetShortName() string {
 // The deployment of endpoints is done by deploying a link with the endpoint triggering it.
 func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 	for _, ep := range d.Endpoints {
-		err := ep.Deploy(ctx)
+		if ep.IsRuntimeDiscovered() {
+			continue
+		}
+
+		deployable, ok := ep.(clablinks.DeployableEndpoint)
+		if !ok {
+			return fmt.Errorf("endpoint %q is not deployable", ep.GetIfaceName())
+		}
+
+		err := deployable.Deploy(ctx)
 		if err != nil {
 			return err
 		}
@@ -665,26 +903,159 @@ func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 	return nil
 }
 
-func (d *DefaultNode) GetState() state.NodeState {
+func (d *DefaultNode) GetState() clabnodesstate.NodeState {
 	d.statemutex.RLock()
 	defer d.statemutex.RUnlock()
 	return d.state
 }
 
-func (d *DefaultNode) SetState(s state.NodeState) {
+func (d *DefaultNode) SetState(s clabnodesstate.NodeState) {
 	d.statemutex.Lock()
 	defer d.statemutex.Unlock()
 	d.state = s
 }
 
-func (d *DefaultNode) GetSSHConfig() *types.SSHConfig {
+func (d *DefaultNode) GetSSHConfig() *clabtypes.SSHConfig {
 	return d.SSHConfig
 }
 
-func (d *DefaultNode) GetContainerStatus(ctx context.Context) runtime.ContainerStatus {
-	return d.Runtime.GetContainerStatus(ctx, d.GetContainerName())
+func (d *DefaultNode) GetContainerStatus(ctx context.Context) clabruntime.ContainerStatus {
+	return d.Runtime.GetContainerStatus(ctx, d.OverwriteNode.GetContainerName())
 }
 
 func (d *DefaultNode) IsHealthy(ctx context.Context) (bool, error) {
-	return d.Runtime.IsHealthy(ctx, d.GetContainerName())
+	return d.Runtime.IsHealthy(ctx, d.OverwriteNode.GetContainerName())
+}
+
+// ParkEndpoints moves all tracked endpoints into the node-owned parking namespace.
+func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
+	parkPath, err := clabutils.CreateOrGetNamedNetNS(d.parkingNetNSName())
+	if err != nil {
+		return fmt.Errorf("failed to create parking netns for node %q: %w", d.Cfg.ShortName, err)
+	}
+	parkingNode := clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
+
+	if err := parkingNode.CaptureFrom(ctx, d); err != nil {
+		_ = d.cleanupParkingNetNS()
+		return err
+	}
+
+	if err := parkingNode.RepointSymlink(); err != nil {
+		restoreErr := parkingNode.RestoreTo(ctx, d)
+		cleanupErr := d.cleanupParkingNetNS()
+		if restoreErr != nil || cleanupErr != nil {
+			return errors.Join(
+				fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err),
+				restoreErr,
+				cleanupErr,
+			)
+		}
+		return fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err)
+	}
+
+	return nil
+}
+
+// RestoreEndpoints tries to get the parking node to unpark its interfaces.
+func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
+	parkPath, err := d.parkingNetNSPath()
+	if err != nil {
+		return fmt.Errorf("no parking netns found for node %q: %w", d.Cfg.ShortName, err)
+	}
+	parkingNode := clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
+
+	if err := parkingNode.RestoreTo(ctx, d); err != nil {
+		return err
+	}
+
+	if err := d.cleanupParkingNetNS(); err != nil {
+		return fmt.Errorf("failed to cleanup parking netns for node %q: %w", d.Cfg.ShortName, err)
+	}
+
+	return nil
+}
+
+func (d *DefaultNode) Stop(ctx context.Context) error {
+	cfg := d.Config()
+
+	if d.ShouldSkipLifecycle() {
+		log.Debugf("node %q skips lifecycle stop", cfg.ShortName)
+		return nil
+	}
+
+	status := d.OverwriteNode.GetContainerStatus(ctx)
+	switch status {
+	case clabruntime.Stopped:
+		log.Debugf("node %q already stopped, skipping", cfg.ShortName)
+		return nil
+	case clabruntime.NotFound:
+		return fmt.Errorf("node %q container %q not found", cfg.ShortName, cfg.LongName)
+	}
+
+	if err := d.OverwriteNode.PreStop(ctx); err != nil {
+		return fmt.Errorf("node %q pre-stop hook failed: %w", cfg.ShortName, err)
+	}
+
+	if err := d.ParkEndpoints(ctx); err != nil {
+		return err
+	}
+
+	if err := d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal); err != nil {
+		// Docker/podman may return an error while the container is already stopped.
+		// if ctr is already stopped, this is OK
+		if d.OverwriteNode.GetContainerStatus(ctx) == clabruntime.Stopped {
+			log.Warnf("node %q stop returned error but container is stopped: %v", cfg.ShortName, err)
+			return nil
+		}
+
+		if restoreErr := d.RestoreEndpoints(ctx); restoreErr != nil {
+			return errors.Join(
+				fmt.Errorf("node %q failed stopping container: %w", cfg.ShortName, err),
+				fmt.Errorf("failed to restore endpoints: %w", restoreErr),
+			)
+		}
+
+		return fmt.Errorf("node %q failed stopping container: %w", cfg.ShortName, err)
+	}
+
+	return nil
+}
+
+// Start restarts a stopped container and restores its parked dataplane interfaces.
+func (d *DefaultNode) Start(ctx context.Context) error {
+	cfg := d.Config()
+
+	if d.ShouldSkipLifecycle() {
+		log.Debugf("node %q skips lifecycle start", cfg.ShortName)
+		return nil
+	}
+
+	status := d.OverwriteNode.GetContainerStatus(ctx)
+
+	switch status {
+	case clabruntime.Running:
+		log.Debugf("node %q already running, skipping", cfg.ShortName)
+		return nil
+	case clabruntime.NotFound:
+		return fmt.Errorf("node %q container %q not found", cfg.ShortName, cfg.LongName)
+	}
+
+	if _, err := d.Runtime.StartContainer(ctx, cfg.LongName, d); err != nil {
+		return fmt.Errorf("node %q failed starting container: %w", cfg.ShortName, err)
+	}
+
+	if err := d.RestoreEndpoints(ctx); err != nil {
+		_ = d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal)
+		return err
+	}
+
+	// Re-run topology exec commands on lifecycle start to restore node-local interface config
+	// (for example IP addresses added during deploy exec phase).
+	execCollection := clabexec.NewExecCollection()
+	if err := d.RunExecFromConfig(ctx, execCollection); err != nil {
+		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
+	}
+	execCollection.Log()
+
+	return nil
 }

@@ -15,7 +15,8 @@ func GetCanonicalImageName(imageName string) string {
 	//    foo/bar == docker.io/foo/bar:latest
 	//    foo.bar/baz == foo.bar/bar:latest
 	//    localhost/foo:bar == localhost/foo:bar
-	//    docker.elastic.co/elasticsearch/elasticsearch == docker.elastic.co/elasticsearch/elasticsearch:latest
+	// docker.elastic.co/elasticsearch/elasticsearch ==
+	// docker.elastic.co/elasticsearch/elasticsearch:latest
 	canonicalImageName := imageName
 	slashCount := strings.Count(imageName, "/")
 
@@ -26,18 +27,20 @@ func GetCanonicalImageName(imageName string) string {
 		// split on slash to get first element of the name
 		nameSplit := strings.Split(imageName, "/")
 		// case of foo.bar/baz
-		if strings.Contains(nameSplit[0], ".") {
+
+		switch {
+		case strings.Contains(nameSplit[0], "."):
 			canonicalImageName = imageName
-		} else if strings.Contains(nameSplit[0], "localhost") {
+		case strings.Contains(nameSplit[0], "localhost"):
 			// case of localhost/foo:bar - podman prefixes local images with "localhost"
 			canonicalImageName = imageName
-		} else {
+		default:
 			canonicalImageName = "docker.io/" + imageName
 		}
 	}
 	// append latest tag if no tag was provided
 	if !strings.Contains(canonicalImageName, ":") {
-		canonicalImageName = canonicalImageName + ":latest"
+		canonicalImageName += ":latest"
 	}
 
 	return canonicalImageName

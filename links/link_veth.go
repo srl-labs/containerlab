@@ -2,18 +2,27 @@ package links
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
+)
+
+const (
+	linkDeployRetries      = 3
+	linkDeployRetryBackoff = 100 * time.Millisecond
 )
 
 // LinkVEthRaw is the raw (string) representation of a veth link as defined in the topology file.
 type LinkVEthRaw struct {
-	LinkCommonParams `yaml:",inline"`
+	LinkCommonParams `               yaml:",inline"`
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
@@ -49,6 +58,9 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	l := NewLinkVEth()
 	l.LinkCommonParams = r.LinkCommonParams
 
+	// Normalize link vars to ensure JSON serialization compatibility
+	l.Vars = normalizeVars(l.Vars)
+
 	// resolve raw endpoints (epr) to endpoints (ep)
 	for _, epr := range r.Endpoints {
 		ep, err := epr.Resolve(params, l)
@@ -62,7 +74,7 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 
 	// set default link mtu if MTU is unset
 	if l.MTU == 0 {
-		l.MTU = DefaultLinkMTU
+		l.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return l, nil
@@ -83,9 +95,14 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 		},
 	}
 
+	// populate vars
+	if err := mapBriefVarsToEndpoints(lb, link.Endpoints); err != nil {
+		return nil, err
+	}
+
 	// set default link mtu if MTU is unset
 	if link.MTU == 0 {
-		link.MTU = DefaultLinkMTU
+		link.MTU = clabconstants.DefaultLinkMTU
 	}
 
 	return link, nil
@@ -135,9 +152,22 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 		return err
 	}
 
-	// disable TXOffloading
-	if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+	// cleanup is a helper that removes the veth pair if a subsequent step fails
+	// after LinkAdd succeeded, preventing orphaned interfaces from blocking retries.
+	cleanup := func(err error) error {
+		if delErr := netlink.LinkDel(linkA); delErr != nil {
+			log.Debugf(
+				"failed to cleanup veth pair %s after error: %v",
+				ep.GetRandIfaceName(),
+				delErr,
+			)
+		}
 		return err
+	}
+
+	// disable TXOffloading
+	if err := clabutils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+		return cleanup(err)
 	}
 
 	// the link needs to be moved to the relevant network namespace
@@ -149,7 +179,7 @@ func (l *LinkVEth) deployAEnd(ctx context.Context, idx int) error {
 	err = ep.GetNode().AddLinkToContainer(ctx, linkA,
 		SetNameMACAndUpInterface(linkA, ep))
 	if err != nil {
-		return err
+		return cleanup(err)
 	}
 
 	l.DeploymentState = LinkDeploymentStateHalfDeployed
@@ -176,7 +206,7 @@ func (l *LinkVEth) deployBEnd(ctx context.Context, idx int) error {
 	}
 
 	// disable TXOffloading
-	if err := utils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
+	if err := clabutils.EthtoolTXOff(ep.GetRandIfaceName()); err != nil {
 		return err
 	}
 
@@ -217,7 +247,26 @@ func (l *LinkVEth) getEndpointIndex(ep Endpoint) (int, error) {
 		epStrings = append(epStrings, e.String())
 	}
 
-	return -1, fmt.Errorf("endpoint %s does not belong to link [ %s ]", ep.String(), strings.Join(epStrings, ", "))
+	return -1, fmt.Errorf(
+		"endpoint %s does not belong to link [ %s ]",
+		ep.String(),
+		strings.Join(epStrings, ", "),
+	)
+}
+
+// isTransientNetlinkErr returns true for errors caused by transient kernel-level
+// race conditions during concurrent netlink operations (e.g. EFAULT, ENODEV).
+func isTransientNetlinkErr(err error) bool {
+	for _, errno := range []syscall.Errno{
+		syscall.EFAULT, // "bad address" - concurrent namespace operations
+		syscall.ENODEV, // "no such device" - interface not yet visible
+		syscall.ENOENT, // "no such file or directory" - namespace path race
+	} {
+		if errors.Is(err, errno) {
+			return true
+		}
+	}
+	return false
 }
 
 // Deploy deploys the veth link by creating the A and B sides of the veth pair independently
@@ -234,14 +283,41 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 		return err
 	}
 
-	// The first node to trigger the link creation will call deployAEnd,
-	// subsequent (the second) call will end up in deployBEnd.
-	switch l.DeploymentState {
-	case LinkDeploymentStateHalfDeployed:
-		return l.deployBEnd(ctx, idx)
-	default:
-		return l.deployAEnd(ctx, idx)
+	// Retry transient netlink errors that can occur during concurrent link operations.
+	// deployAEnd cleans up partial state on failure, making each retry idempotent.
+	var lastErr error
+
+	for attempt := range linkDeployRetries {
+		// The first node to trigger the link creation will call deployAEnd,
+		// subsequent (the second) call will end up in deployBEnd.
+		switch l.DeploymentState {
+		case LinkDeploymentStateHalfDeployed:
+			lastErr = l.deployBEnd(ctx, idx)
+		case LinkDeploymentStateFullDeployed:
+			return nil
+		default:
+			lastErr = l.deployAEnd(ctx, idx)
+		}
+
+		if lastErr == nil {
+			return nil
+		}
+
+		if !isTransientNetlinkErr(lastErr) {
+			return lastErr
+		}
+
+		log.Debugf("transient netlink error deploying link %s (attempt %d/%d): %v",
+			ep, attempt+1, linkDeployRetries, lastErr)
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(linkDeployRetryBackoff << attempt):
+		}
 	}
+
+	return lastErr
 }
 
 func (l *LinkVEth) Remove(ctx context.Context) error {

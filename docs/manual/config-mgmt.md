@@ -124,7 +124,7 @@ If a config file exists in the lab directory for a given node, then it will take
 
 ### Remote
 
-It is possible to specify a remote (`http(s)` or [S3](s3-usage-example.md)) location for a startup-config file. Simply provide a URL that can be accessed from the containerlab host.
+It is possible to specify a remote (`https`, `http`, [S3](s3-usage-example.md), `ftp`, `sftp` or `scp`) location for a startup-config file. Simply provide a URL that can be accessed from the containerlab host. HTTPS is preferred over HTTP when the remote server supports it.
 
 ```yaml
 topology:
@@ -133,6 +133,19 @@ topology:
       type: ixrd3
       image: ghcr.io/nokia/srlinux
       startup-config: https://raw.githubusercontent.com/srl-labs/containerlab/main/tests/02-basic-srl/srl2-startup.cli
+```
+
+FTP and SSH-based URLs can be used when startup configs are hosted on file servers:
+
+```yaml
+topology:
+  nodes:
+    srl1:
+      startup-config: ftp://user:pass@ftp.example.com/srl1.partial.cfg
+    srl2:
+      startup-config: sftp://user@sftp.example.com/configs/srl2.partial.cfg
+    srl3:
+      startup-config: scp://user@scp.example.com/configs/srl3.partial.cfg
 ```
 
 The remote file will be downloaded to the containerlab's temp directory at `$TMP/.clab/<filename>` path and provided to the node as a locally available startup-config file. The filename will have a generated name that follows the pattern `<lab-name>-<node-name>-<filename-from-url>`, where `<filename-from-url>` is the last element of the URL path.
@@ -145,7 +158,11 @@ The remote file will be downloaded to the containerlab's temp directory at `$TMP
 - For https locations the certificates won't be verified to allow fetching artifacts from servers with self-signed certificates.
 ///
 
-### Customisation options
+For `sftp` and `scp` locations, the username must be present in the URL. Password authentication can be provided as part of the URL, for example `sftp://user:pass@example.com/path/file.cfg`. Key-based authentication uses `CLAB_SSH_KEY` for the private key path and `CLAB_SSH_KEY_PASSPHRASE` for an optional passphrase. When `SSH_AUTH_SOCK` is set, the SSH agent is used as an additional authentication method.
+
+Containerlab checks `~/.ssh/known_hosts` for SSH-based downloads. If the host key is unknown or mismatched, containerlab logs a warning and continues with the download.
+
+### Customization options
 
 While many labs would be just fine with providing the partial or full configs to the lab nodes, some advanced labs might want to customize the startup config file before providing it to the node.
 

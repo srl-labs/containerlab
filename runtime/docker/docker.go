@@ -9,12 +9,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-	"net"
 
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/go-units"
@@ -26,17 +28,18 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	networkapi "github.com/docker/docker/api/types/network"
 	dockerC "github.com/docker/docker/client"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
 	"github.com/moby/term"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/runtime"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
-	"github.com/srl-labs/containerlab/hostnet"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabhostnet "github.com/srl-labs/containerlab/hostnet"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/mod/semver"
 )
@@ -46,10 +49,12 @@ const (
 	sysctlBase     = "/proc/sys"
 	defaultTimeout = 30 * time.Second
 	rLimitMaxValue = 1048576
-	// defaultDockerNetwork is a name of a docker network that docker uses by default when creating containers.
+	// defaultDockerNetwork is a name of a docker network that docker uses by default when creating
+	// containers.
 	defaultDockerNetwork = "bridge"
 
 	natUnprotectedValue         = "nat-unprotected"
+	bridgeNameOption            = "com.docker.network.bridge.name"
 	bridgeGatewayModeIPv4Option = "com.docker.network.bridge.gateway_mode_ipv4"
 	bridgeGatewayModeIPv6Option = "com.docker.network.bridge.gateway_mode_ipv6"
 )
@@ -62,21 +67,21 @@ type DeviceMapping struct {
 }
 
 func init() {
-	runtime.Register(RuntimeName, func() runtime.ContainerRuntime {
+	clabruntime.Register(RuntimeName, func() clabruntime.ContainerRuntime {
 		return &DockerRuntime{
-			mgmt: new(types.MgmtNet),
+			mgmt: new(clabtypes.MgmtNet),
 		}
 	})
 }
 
 type DockerRuntime struct {
-	config  runtime.RuntimeConfig
+	config  clabruntime.RuntimeConfig
 	Client  *dockerC.Client
-	mgmt    *types.MgmtNet
+	mgmt    *clabtypes.MgmtNet
 	version string
 }
 
-func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
+func (d *DockerRuntime) Init(opts ...clabruntime.RuntimeOption) error {
 	var err error
 	log.Debug("Runtime: Docker")
 	d.Client, err = dockerC.NewClientWithOpts(dockerC.FromEnv, dockerC.WithAPIVersionNegotiation())
@@ -86,7 +91,7 @@ func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 	for _, o := range opts {
 		o(d)
 	}
-	d.config.VerifyLinkParams = links.NewVerifyLinkParams()
+	d.config.VerifyLinkParams = clablinks.NewVerifyLinkParams()
 
 	// Retrieve Docker version to determine whether to apply certain overrides
 	dockerVersion, err := d.Client.ServerVersion(context.Background())
@@ -103,13 +108,13 @@ func (d *DockerRuntime) Init(opts ...runtime.RuntimeOption) error {
 func (d *DockerRuntime) WithKeepMgmtNet() {
 	d.config.KeepMgmtNet = true
 }
-func (*DockerRuntime) GetName() string                 { return RuntimeName }
-func (d *DockerRuntime) Config() runtime.RuntimeConfig { return d.config }
+func (*DockerRuntime) GetName() string                     { return RuntimeName }
+func (d *DockerRuntime) Config() clabruntime.RuntimeConfig { return d.config }
 
 // Mgmt return management network struct of a runtime.
-func (d *DockerRuntime) Mgmt() *types.MgmtNet { return d.mgmt }
+func (d *DockerRuntime) Mgmt() *clabtypes.MgmtNet { return d.mgmt }
 
-func (d *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
+func (d *DockerRuntime) WithConfig(cfg *clabruntime.RuntimeConfig) {
 	d.config.Timeout = cfg.Timeout
 	d.config.Debug = cfg.Debug
 	d.config.GracefulShutdown = cfg.GracefulShutdown
@@ -118,7 +123,7 @@ func (d *DockerRuntime) WithConfig(cfg *runtime.RuntimeConfig) {
 	}
 }
 
-func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
+func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	d.mgmt = n
 	// return if MTU value was set by a user via config file
 	if n.MTU != 0 {
@@ -131,34 +136,53 @@ func (d *DockerRuntime) WithMgmtNet(n *types.MgmtNet) {
 	// we should detect the mtu value of the default docker network and set it for the clab network
 	// as most often this is desired.
 	if n.Network == "clab" {
-		netRes, err := d.Client.NetworkInspect(context.TODO(), defaultDockerNetwork, networkapi.InspectOptions{})
+		netRes, err := d.Client.NetworkInspect(
+			context.TODO(),
+			defaultDockerNetwork,
+			networkapi.InspectOptions{},
+		)
 		if err != nil {
 			d.mgmt.MTU = 1500
 			log.Debugf("an error occurred when trying to detect docker default network mtu")
-		}
-
-		if mtu, ok := netRes.Options["com.docker.network.driver.mtu"]; ok {
+		} else if mtu, ok := netRes.Options["com.docker.network.driver.mtu"]; ok {
 			log.Debugf("detected docker network mtu value - %s", mtu)
 			d.mgmt.MTU, err = strconv.Atoi(mtu)
 			if err != nil {
 				log.Errorf("Error parsing MTU value of %q as int", mtu)
 			}
 		}
+
+		// If MTU is still 0 after inspection (e.g. the default bridge network has no
+		// explicit MTU option set), fall back to 1500 to avoid recording MTU=0 in the
+		// Docker network options which results in a non-functional network.
+		if d.mgmt.MTU == 0 {
+			log.Debugf("docker default network MTU not detected, falling back to 1500")
+			d.mgmt.MTU = 1500
+		}
 	}
 
 	// if bridge was not set in the topo file, find out the bridge name
 	// used by the network used in the topology
 	if d.mgmt.Bridge == "" && d.mgmt.Network != "" {
-		// fetch the network by the name set in the topo and populate the bridge name used by this network
-		netRes, err := d.Client.NetworkInspect(context.TODO(), d.mgmt.Network, networkapi.InspectOptions{})
+		// fetch the network by the name set in the topo and populate the bridge name used by this
+		// network
+		netRes, err := d.Client.NetworkInspect(
+			context.TODO(),
+			d.mgmt.Network,
+			networkapi.InspectOptions{},
+		)
 		// if the network is successfully found, set the bridge used by it
 		if err == nil {
-			if name, exists := netRes.Options["com.docker.network.bridge.name"]; exists {
+			if name, exists := netRes.Options[bridgeNameOption]; exists {
 				d.mgmt.Bridge = name
 			} else {
 				d.mgmt.Bridge = "br-" + netRes.ID[:12]
 			}
-			log.Debugf("detected network name in use: %s, backed by a bridge %s", d.mgmt.Network, d.mgmt.Bridge)
+			log.Debugf(
+				"detected network name in use: %s, backed by a bridge %s",
+				d.mgmt.Network,
+				d.mgmt.Bridge,
+			)
 		}
 	}
 }
@@ -168,83 +192,65 @@ func (d *DockerRuntime) CreateNet(ctx context.Context, caller ...string) (err er
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
-	// Determine the caller context (default to "create" if not specified)
-    var callerContext string
-    if len(caller) > 0 {
-        callerContext = caller[0]
-    } else {
-        callerContext = "create"
-    }
+	callerContext := "create"
+	if len(caller) > 0 {
+		callerContext = caller[0]
+	}
 
-	// Determine the driver to use (default to bridge if not specified)
 	driver := d.mgmt.Driver
 	if driver == "" {
 		driver = "bridge"
 	}
 
-	// linux bridge name that is used by docker network (only relevant for bridge driver)
+	// linux bridge name that is used by docker network
 	bridgeName := d.mgmt.Bridge
+	networkCreated := false
 
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
 	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
-	
 	switch {
 	case dockerC.IsErrNotFound(err):
-		// Network doesn't exist, create it based on driver type
 		switch driver {
 		case "bridge":
 			bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
 			if err != nil {
 				return err
 			}
-			
 		case "macvlan":
 			if callerContext == "destroy" {
-            	log.Debugf("Network %q not found, but skipping creation since called from destroy operation", d.mgmt.Network)
-            return nil
-        	}
-			err = d.createMgmtMacvlan(nctx)
-			if err != nil {
+				log.Debugf(
+					"network %q not found, skipping creation since called from destroy",
+					d.mgmt.Network,
+				)
+				return nil
+			}
+			if err = d.createMgmtMacvlan(nctx); err != nil {
 				return err
 			}
-			// For macvlan, we don't need to track a bridge name
-			bridgeName = ""
-			
+			networkCreated = true
 		default:
 			return fmt.Errorf("unsupported network driver: %s", driver)
 		}
-		
 	case err == nil:
-		// Network exists, validate it matches expected driver
 		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
 		if netResource.Driver != driver {
-			return fmt.Errorf("existing network %q has driver %q but configuration specifies %q", 
-				d.mgmt.Network, netResource.Driver, driver)
+			return fmt.Errorf(
+				"existing network %q has driver %q but configuration specifies %q",
+				d.mgmt.Network,
+				netResource.Driver,
+				driver,
+			)
 		}
-		
-		// Handle existing network based on driver type
 		if driver == "bridge" {
-			if len(netResource.ID) < 12 {
-				return fmt.Errorf("could not get bridge ID")
-			}
-			switch d.mgmt.Network {
-			case "bridge":
-				bridgeName = "docker0"
-			default:
-				if netResource.Options["com.docker.network.bridge.name"] != "" {
-					bridgeName = netResource.Options["com.docker.network.bridge.name"]
-				} else {
-					bridgeName = "br-" + netResource.ID[:12]
-				}
+			bridgeName, err = bridgeNameFromInspect(&netResource, d.mgmt.Network)
+			if err != nil {
+				return err
 			}
 		}
-		// For macvlan, we just reuse the existing network without any special handling
-		
 	default:
 		return err
 	}
 
-	// Only set bridge name for bridge driver
 	if driver == "bridge" {
 		if d.mgmt.Bridge == "" {
 			d.mgmt.Bridge = bridgeName
@@ -252,66 +258,73 @@ func (d *DockerRuntime) CreateNet(ctx context.Context, caller ...string) (err er
 
 		// get management bridge v4/6 addresses and save it under mgmt struct
 		// so that nodes can use this information prior to being deployed
-		// this was added to allow mgmt network gw ip to be available in a startup config template step (ceos)
-		d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, netResource)
+		// this was added to allow mgmt network gw ip to be available in a startup config templation
+		// step (ceos)
+		d.mgmt.IPv4Gw, d.mgmt.IPv6Gw, err = getMgmtBridgeIPs(bridgeName, &netResource)
 		if err != nil {
 			return err
 		}
 
 		log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
+
 		return d.postCreateNetActions()
 	}
 
-	// For macvlan networks
 	if driver == "macvlan" {
-		// Re-inspect to get gateway information if network was just created
-		netResource, err = d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to inspect newly created macvlan network: %w", err)
-		}
-		
-		// Extract gateway IPs from IPAM config for macvlan
-		for _, ipamConfig := range netResource.IPAM.Config {
-			if ipamConfig.Gateway != "" {
-				// Determine if it's IPv4 or IPv6 based on the address format
-				if strings.Count(ipamConfig.Gateway, ".") == 3 {
-					d.mgmt.IPv4Gw = ipamConfig.Gateway
-				} else if strings.Contains(ipamConfig.Gateway, ":") {
-					d.mgmt.IPv6Gw = ipamConfig.Gateway
-				}
+		if networkCreated {
+			netResource, err = d.Client.NetworkInspect(
+				nctx, d.mgmt.Network, networkapi.InspectOptions{},
+			)
+			if err != nil {
+				return fmt.Errorf("failed to inspect newly created macvlan network: %w", err)
 			}
 		}
-		
-		log.Debugf("Docker macvlan network %q created/reused with parent interface %q", d.mgmt.Network, d.mgmt.MacvlanParent)
-        return d.postCreateMacvlanActions()
+
+		for _, ipamConfig := range netResource.IPAM.Config {
+			if ipamConfig.Gateway == "" {
+				continue
+			}
+			if strings.Count(ipamConfig.Gateway, ".") == 3 {
+				d.mgmt.IPv4Gw = ipamConfig.Gateway
+			} else if strings.Contains(ipamConfig.Gateway, ":") {
+				d.mgmt.IPv6Gw = ipamConfig.Gateway
+			}
+		}
+
+		log.Debugf(
+			"Docker macvlan network %q created/reused with parent interface %q",
+			d.mgmt.Network,
+			d.mgmt.MacvlanParent,
+		)
+
+		return d.postCreateMacvlanActions()
 	}
 
 	return nil
 }
 
 func (d *DockerRuntime) postCreateMacvlanActions() error {
-    cfg := &hostnet.MacvlanConfig{
-        NetworkName:  d.mgmt.Network,
-        ParentIface:  d.mgmt.MacvlanParent,
-        MacvlanMode:  d.mgmt.MacvlanMode,
-        AuxAddress:   d.mgmt.MacvlanAux,
-        IPv4Subnet:   d.mgmt.IPv4Subnet,
-    }
-    return hostnet.PostCreateMacvlanActions(cfg)
+	cfg := &clabhostnet.MacvlanConfig{
+		NetworkName: d.mgmt.Network,
+		ParentIface: d.mgmt.MacvlanParent,
+		MacvlanMode: d.mgmt.MacvlanMode,
+		AuxAddress:  d.mgmt.MacvlanAux,
+		IPv4Subnet:  d.mgmt.IPv4Subnet,
+	}
+
+	return clabhostnet.PostCreateMacvlanActions(cfg)
 }
 
-// createMgmtMacvlan creates a macvlan network for management
+// createMgmtMacvlan creates a macvlan network for management.
 func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
-	// Validate parent interface is specified
 	if d.mgmt.MacvlanParent == "" {
 		return fmt.Errorf("macvlan-parent interface must be specified for macvlan driver")
 	}
-	
-	// Check if parent interface exists
+
 	if _, err := netlink.LinkByName(d.mgmt.MacvlanParent); err != nil {
-		return fmt.Errorf("parent interface %q not found: %v", d.mgmt.MacvlanParent, err)
+		return fmt.Errorf("parent interface %q not found: %w", d.mgmt.MacvlanParent, err)
 	}
-	
+
 	log.Info("Creating macvlan network",
 		"name", d.mgmt.Network,
 		"parent", d.mgmt.MacvlanParent,
@@ -320,10 +333,8 @@ func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
 		"mode", d.mgmt.MacvlanMode,
 		"aux-address", d.mgmt.MacvlanAux)
 
-	// Prepare IPAM configuration
 	var ipamConfig []networkapi.IPAMConfig
-	
-	// Handle IPv4 configuration
+
 	if d.mgmt.IPv4Subnet != "" && d.mgmt.IPv4Subnet != "auto" {
 		ipamCfg := networkapi.IPAMConfig{
 			Subnet: d.mgmt.IPv4Subnet,
@@ -334,46 +345,40 @@ func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
 		if d.mgmt.IPv4Range != "" {
 			ipamCfg.IPRange = d.mgmt.IPv4Range
 		}
-		// Add aux address if specified
 		if d.mgmt.MacvlanAux != "" {
-			// Extract IP address from either IP or CIDR format
 			auxIP := d.mgmt.MacvlanAux
 			if strings.Contains(auxIP, "/") {
-				// It's a CIDR, extract just the IP part
 				ip, _, err := net.ParseCIDR(auxIP)
 				if err != nil {
-					return fmt.Errorf("invalid CIDR format for MacvlanAux: %v", err)
+					return fmt.Errorf("invalid CIDR format for macvlan-aux: %w", err)
 				}
 				auxIP = ip.String()
 			} else if net.ParseIP(auxIP) == nil {
-				// It's just an IP, validate it
-				return fmt.Errorf("invalid IP address format for MacvlanAux: %s", auxIP)
+				return fmt.Errorf("invalid IP address format for macvlan-aux: %s", auxIP)
 			}
-			
+
 			ipamCfg.AuxAddress = map[string]string{
 				"host": auxIP,
 			}
 		}
 		ipamConfig = append(ipamConfig, ipamCfg)
 	}
-	
-	// Handle IPv6 configuration
-	var enableIPv6 bool
-	var ipv6_subnet string
-	
+
+	enableIPv6 := false
+	var ipv6Subnet string
 	if d.mgmt.IPv6Subnet == "auto" {
 		var err error
-		ipv6_subnet, err = utils.GenerateIPv6ULASubnet()
+		ipv6Subnet, err = clabutils.GenerateIPv6ULASubnet()
 		if err != nil {
 			return err
 		}
 	} else {
-		ipv6_subnet = d.mgmt.IPv6Subnet
+		ipv6Subnet = d.mgmt.IPv6Subnet
 	}
-	
-	if ipv6_subnet != "" {
+
+	if ipv6Subnet != "" {
 		ipamCfg := networkapi.IPAMConfig{
-			Subnet: ipv6_subnet,
+			Subnet: ipv6Subnet,
 		}
 		if d.mgmt.IPv6Gw != "" {
 			ipamCfg.Gateway = d.mgmt.IPv6Gw
@@ -384,29 +389,25 @@ func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
 		ipamConfig = append(ipamConfig, ipamCfg)
 		enableIPv6 = true
 	}
-	
-	// Prepare network options
+
 	netwOpts := map[string]string{
 		"parent": d.mgmt.MacvlanParent,
 	}
-	
-	// Set macvlan mode (default to bridge if not specified)
+
 	macvlanMode := d.mgmt.MacvlanMode
 	if macvlanMode == "" {
 		macvlanMode = "bridge"
 	}
 	netwOpts["macvlan_mode"] = macvlanMode
-	
-	// Add any additional driver options from config
+
 	for k, v := range d.mgmt.DriverOpts {
 		log.Debug("Adding macvlan network driver option", "option", k, "value", v)
 		netwOpts[k] = v
 	}
-	
-	// Create the network
+
 	opts := networkapi.CreateOptions{
 		Driver:     "macvlan",
-		EnableIPv6: utils.Pointer(enableIPv6),
+		EnableIPv6: clabutils.Pointer(enableIPv6),
 		IPAM: &networkapi.IPAM{
 			Driver: "default",
 			Config: ipamConfig,
@@ -418,19 +419,29 @@ func (d *DockerRuntime) createMgmtMacvlan(nctx context.Context) error {
 		},
 		Options: netwOpts,
 	}
-	
+
 	_, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
 	if err != nil {
+		if errdefs.IsConflict(err) {
+			log.Debug("docker network was created concurrently by another clab deploy; reusing it",
+				"name", d.mgmt.Network)
+
+			return nil
+		}
+
 		return fmt.Errorf("failed to create macvlan network: %w", err)
 	}
-	
+
 	log.Info("Macvlan network created successfully", "name", d.mgmt.Network)
-	
+
 	return nil
 }
 
 // skipcq: GO-R1005
-func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string) (string, error) {
+func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
+	nctx context.Context,
+	bridgeName string,
+) (string, error) {
 	var err error
 	log.Debug("Network does not exist", "name", d.mgmt.Network)
 	log.Info("Creating docker network",
@@ -445,7 +456,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 	var v4gw, v6gw string
 	// check if IPv4/6 addr are assigned to a mgmt bridge
 	if d.mgmt.Bridge != "" {
-		v4gw, v6gw, err = utils.FirstLinkIPs(d.mgmt.Bridge)
+		v4gw, v6gw, err = clabutils.FirstLinkIPs(d.mgmt.Bridge)
 		if err != nil {
 			// only return error if the error is not about link not found
 			// we will create the bridge if it doesn't exist
@@ -472,7 +483,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 
 	var ipv6_subnet string
 	if d.mgmt.IPv6Subnet == "auto" {
-		ipv6_subnet, err = utils.GenerateIPv6ULASubnet()
+		ipv6_subnet, err = clabutils.GenerateIPv6ULASubnet()
 		if err != nil {
 			return "", err
 		}
@@ -505,10 +516,11 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 	}
 
 	if bridgeName != "" {
-		netwOpts["com.docker.network.bridge.name"] = bridgeName
+		netwOpts[bridgeNameOption] = bridgeName
 	}
 
-	// nat-unprotected mode is needed starting in Docker release 28 to access all ports without exposing them explicitly
+	// nat-unprotected mode is needed starting in Docker release 28 to access all ports without
+	// exposing them explicitly
 	// see https://github.com/srl-labs/containerlab/issues/2638
 	if semver.Compare(d.version, "v28.0.0") > 0 {
 		log.Debug("Using Docker version 28 or later, enabling NAT unprotected mode on bridge")
@@ -524,7 +536,7 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 
 	opts := networkapi.CreateOptions{
 		Driver:     "bridge",
-		EnableIPv6: utils.Pointer(enableIPv6),
+		EnableIPv6: clabutils.Pointer(enableIPv6),
 		IPAM:       ipam,
 		Internal:   false,
 		Attachable: false,
@@ -536,6 +548,66 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 
 	netCreateResponse, err := d.Client.NetworkCreate(nctx, d.mgmt.Network, opts)
 	if err != nil {
+		// Another clab process created the same management network between
+		// our Inspect and our Create. Re-inspect and reuse it.
+		if errdefs.IsConflict(err) {
+			log.Debug("docker network was created concurrently by another clab deploy; reusing it",
+				"name", d.mgmt.Network)
+
+			netResource, ierr := d.Client.NetworkInspect(
+				nctx, d.mgmt.Network, networkapi.InspectOptions{},
+			)
+			if ierr != nil {
+				return "", fmt.Errorf(
+					"re-inspect %q after concurrent create: %w", d.mgmt.Network, ierr,
+				)
+			}
+
+			return bridgeNameFromInspect(&netResource, d.mgmt.Network)
+		}
+
+		// Handle subnet overlap error
+		if strings.Contains(strings.ToLower(err.Error()), strings.ToLower("Pool overlaps")) ||
+			strings.Contains(strings.ToLower(err.Error()), strings.ToLower("subnet")) {
+			networksAndAddresses := map[string][]string{}
+			nets, listErr := d.Client.NetworkList(nctx, networkapi.ListOptions{})
+			if listErr != nil {
+				return "", fmt.Errorf(
+					"failed to list Docker networks while handling subnet overlap error: %w (original error: %v)",
+					listErr,
+					err,
+				)
+			}
+			for _, n := range nets {
+				for _, cfg := range n.IPAM.Config {
+					// store existing networks and their subnets
+					networksAndAddresses[n.Name] = append(networksAndAddresses[n.Name], cfg.Subnet)
+					if cfg.Subnet == d.mgmt.IPv4Subnet || cfg.Subnet == d.mgmt.IPv6Subnet {
+						return "", fmt.Errorf(
+							"subnet %s already in use by Docker network %q. See https://containerlab.dev/manual/network/",
+							cfg.Subnet,
+							n.Name,
+						)
+					}
+				}
+			}
+			// fallback: no exact match, but clarify
+			// Show both IPv4 and IPv6 subnets in the error message if present
+			requestedSubnets := d.mgmt.IPv4Subnet
+			if d.mgmt.IPv6Subnet != "" {
+				if requestedSubnets != "" {
+					requestedSubnets += ", "
+				}
+				requestedSubnets += d.mgmt.IPv6Subnet
+			}
+			return "", fmt.Errorf(
+				"requested subnet(s) %s overlap an existing Docker network. Existing networks: %v. Original error: %w. See https://containerlab.dev/manual/network/",
+				requestedSubnets,
+				networksAndAddresses,
+				err,
+			)
+		}
+
 		return "", err
 	}
 
@@ -550,11 +622,29 @@ func (d *DockerRuntime) createMgmtBridge(nctx context.Context, bridgeName string
 	return bridgeName, nil
 }
 
+// bridgeNameFromInspect resolves the underlying linux bridge name from a docker network inspect response.
+func bridgeNameFromInspect(netResource *networkapi.Inspect, mgmtNetwork string) (string, error) {
+	if len(netResource.ID) < 12 {
+		return "", fmt.Errorf("could not get bridge ID")
+	}
+
+	if mgmtNetwork == "bridge" {
+		return "docker0", nil
+	}
+
+	if name := netResource.Options[bridgeNameOption]; name != "" {
+		return name, nil
+	}
+
+	return "br-" + netResource.ID[:12], nil
+}
+
 // getMgmtBridgeIPs gets the management bridge v4/6 addresses.
-func getMgmtBridgeIPs(bridgeName string, netResource networkapi.Inspect) (string, string, error) {
-	var err error
-	var v4, v6 string
-	if v4, v6, err = utils.FirstLinkIPs(bridgeName); err != nil {
+func getMgmtBridgeIPs(
+	bridgeName string,
+	netResource *networkapi.Inspect,
+) (v4, v6 string, err error) {
+	if v4, v6, err = clabutils.FirstLinkIPs(bridgeName); err != nil {
 		log.Warn(
 			"failed gleaning v4 and/or v6 addresses from bridge via netlink," +
 				" falling back to docker network inspect data",
@@ -592,7 +682,7 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 		log.Debug("Skipping post-creation actions for macvlan network")
 		return nil
 	}
-	
+
 	// Original bridge-specific actions below...
 	log.Debug("Disable RPF check on the docker host")
 	err = setSysctl("net/ipv4/conf/all/rp_filter", 0)
@@ -601,7 +691,10 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 	}
 	err = setSysctl("net/ipv4/conf/default/rp_filter", 0)
 	if err != nil {
-		return fmt.Errorf("failed to disable RP filter on docker host for the 'default' scope: %v", err)
+		return fmt.Errorf(
+			"failed to disable RP filter on docker host for the 'default' scope: %v",
+			err,
+		)
 	}
 
 	log.Debugf("Enable LLDP on the linux bridge %s", d.mgmt.Bridge)
@@ -612,11 +705,28 @@ func (d *DockerRuntime) postCreateNetActions() (err error) {
 		log.Warnf("failed to enable LLDP on docker bridge: %v", err)
 	}
 
-	log.Debugf("Disabling TX checksum offloading for the %s bridge interface...", d.mgmt.Bridge)
-	err = utils.EthtoolTXOff(d.mgmt.Bridge)
-	if err != nil {
-		log.Warnf("failed to disable TX checksum offloading for the %s bridge interface: %v", d.mgmt.Bridge, err)
-	}
+	// TODO: consider if that is useful or not later.
+	// Enable nf_call_iptables and nf_call_ip6tables on the management bridge so that
+	// bridged traffic passes through netfilter/conntrack. Without this, per-bridge sysfs
+	// settings (which default to 0 on custom bridges) override the global
+	// net.bridge.bridge-nf-call-iptables sysctl on newer kernels, breaking Docker's
+	// embedded DNS proxy: the masquerade conntrack mapping is not maintained for return
+	// packets, so DNS responses arriving at the container's eth0 are never delivered to
+	// the waiting socket even though they are visible to tcpdump.
+	// for _, knob := range []string{"nf_call_iptables", "nf_call_ip6tables"} {
+	// 	p := "/sys/class/net/" + d.mgmt.Bridge + "/bridge/" + knob
+	// 	if werr := os.WriteFile(p, []byte("1"), 0o640); werr != nil { // skipcq: GO-S2306
+	// 		log.Warnf("failed to set %s on bridge %s: %v", knob, d.mgmt.Bridge, werr)
+	// 	}
+	// }
+
+	// Note: we intentionally do NOT disable TX checksum offloading on the bridge interface
+	// itself. Doing so corrupts UDP/TCP checksums on NAT-forwarded packets (e.g. DNS replies
+	// from external resolvers) because after SNAT de-translation the kernel performs an
+	// incremental checksum update on top of a CHECKSUM_PARTIAL skb, but the bridge can no
+	// longer finalize it. TX checksum offload is disabled on the host-side of each veth
+	// pair instead (see links/link_veth.go), which is sufficient to ensure software
+	// checksum computation for traffic entering containers.
 	err = d.installMgmtNetworkFwdRule()
 	if err != nil {
 		log.Warnf("errors during iptables rules install: %v", err)
@@ -642,21 +752,25 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 	numEndpoints := len(nres.Containers)
 	if numEndpoints > 0 {
 		if d.config.Debug {
-			log.Debugf("network %q has %d active endpoints, deletion skipped", d.mgmt.Network, numEndpoints)
+			log.Debugf(
+				"network %q has %d active endpoints, deletion skipped",
+				d.mgmt.Network,
+				numEndpoints,
+			)
 			for _, endp := range nres.Containers {
 				log.Debugf("%q is connected to %s", endp.Name, network)
 			}
 		}
 		return nil
 	}
-	
+
 	// For macvlan networks, cleanup host interface first
 	if d.mgmt.Driver == "macvlan" {
 		if err := d.cleanupMacvlanPostActions(); err != nil {
 			log.Warnf("Failed to cleanup macvlan post-actions: %v", err)
 		}
 	}
-	
+
 	err = d.Client.NetworkRemove(nctx, network)
 	if err != nil {
 		return err
@@ -674,14 +788,15 @@ func (d *DockerRuntime) DeleteNet(ctx context.Context) (err error) {
 }
 
 func (d *DockerRuntime) cleanupMacvlanPostActions() error {
-    cfg := &hostnet.MacvlanConfig{
-        NetworkName:  d.mgmt.Network,
-        ParentIface:  d.mgmt.MacvlanParent,
-        MacvlanMode:  d.mgmt.MacvlanMode,
-        AuxAddress:   d.mgmt.MacvlanAux,
-        IPv4Subnet:   d.mgmt.IPv4Subnet,
-    }
-    return hostnet.CleanupMacvlanPostActions(cfg)
+	cfg := &clabhostnet.MacvlanConfig{
+		NetworkName: d.mgmt.Network,
+		ParentIface: d.mgmt.MacvlanParent,
+		MacvlanMode: d.mgmt.MacvlanMode,
+		AuxAddress:  d.mgmt.MacvlanAux,
+		IPv4Subnet:  d.mgmt.IPv4Subnet,
+	}
+
+	return clabhostnet.CleanupMacvlanPostActions(cfg)
 }
 
 // PauseContainer Pauses a container identified by its name.
@@ -695,7 +810,10 @@ func (d *DockerRuntime) UnpauseContainer(ctx context.Context, cID string) error 
 }
 
 // CreateContainer creates a docker container (but does not start it).
-func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeConfig) (string, error) { // skipcq: GO-R1005
+func (d *DockerRuntime) CreateContainer( //nolint: funlen
+	ctx context.Context,
+	node *clabtypes.NodeConfig,
+) (string, error) { // skipcq: GO-R1005
 	log.Info("Creating container", "name", node.ShortName)
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
@@ -717,7 +835,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		Image:        node.Image,
 		Entrypoint:   entrypoint,
 		Cmd:          cmd,
-		Env:          utils.ConvertEnvs(node.Env),
+		Env:          clabutils.ConvertEnvs(node.Env),
 		AttachStdout: true,
 		AttachStderr: true,
 		Hostname:     node.ShortName,
@@ -783,6 +901,7 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
 		Privileged:   true,
+		Tmpfs:        node.Tmpfs,
 		PidMode:      "",
 		// Network mode will be defined below via switch
 		NetworkMode: "",
@@ -851,7 +970,8 @@ func (d *DockerRuntime) CreateContainer(ctx context.Context, node *types.NodeCon
 	return cont.ID, nil
 }
 
-// GetNSPath inspects a container by its name/id and returns a netns path using the pid of a container.
+// GetNSPath inspects a container by its name/id and returns a netns path using the pid of a
+// container.
 func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, error) {
 	nctx, cancelFn := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancelFn()
@@ -860,26 +980,118 @@ func (d *DockerRuntime) GetNSPath(ctx context.Context, cID string) (string, erro
 		return "", err
 	}
 
-	return "/proc/" + strconv.Itoa(cJSON.State.Pid) + "/ns/net", nil
+	displayName := strings.TrimPrefix(cJSON.Name, "/")
+	if displayName == "" {
+		displayName = cID
+	}
+
+	// If the container is running we use /proc/$pid/ns/net.
+	// For stopped containers the PID is 0 and we fall back to a /run/netns/<name> link
+	// (containerlab creates and manages it, and node lifecycle may repoint it to a parking netns).
+	if cJSON.State != nil && cJSON.State.Pid > 0 {
+		nspath := filepath.Join("/proc", strconv.Itoa(cJSON.State.Pid), "ns/net")
+		if clabutils.FileOrDirExists(nspath) {
+			return nspath, nil
+		}
+	}
+
+	runNetns := filepath.Join("/run/netns", cID)
+	if clabutils.FileOrDirExists(runNetns) {
+		return runNetns, nil
+	}
+
+	d.logExitedContainerOutput(nctx, cID, displayName, cJSON.Config.Tty)
+	return "", fmt.Errorf("namespace path not available for container %q", displayName)
+}
+
+// LogNonRunningContainerOutput implements runtime.ContainerRuntime.
+func (d *DockerRuntime) LogNonRunningContainerOutput(ctx context.Context, containerName string) {
+	nctx, cancelFn := context.WithTimeout(ctx, d.config.Timeout)
+	defer cancelFn()
+	cJSON, err := d.Client.ContainerInspect(nctx, containerName)
+	if err != nil {
+		return
+	}
+	if cJSON.State.Running {
+		return
+	}
+	displayName := strings.TrimPrefix(cJSON.Name, "/")
+	if displayName == "" {
+		displayName = containerName
+	}
+	d.logExitedContainerOutput(nctx, cJSON.ID, displayName, cJSON.Config.Tty)
+}
+
+// logExitedContainerOutput fetches recent stdout/stderr from a non-running container and prints it
+// so deploy failures (e.g. bad cmd) surface in the CLI without a separate docker logs step.
+// When the container was created with a TTY, Docker returns a raw stream; otherwise logs are
+// stdout/stderr multiplexed (see stdcopy).
+func (d *DockerRuntime) logExitedContainerOutput(
+	ctx context.Context,
+	cID, displayName string,
+	tty bool,
+) {
+	logReader, err := d.Client.ContainerLogs(ctx, cID, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Tail:       "100",
+	})
+	if err != nil {
+		log.Warnf("could not read logs for exited container %q: %v", displayName, err)
+		return
+	}
+	defer logReader.Close()
+
+	var combined string
+	if tty {
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, logReader); err != nil {
+			log.Warnf("could not read logs for exited container %q: %v", displayName, err)
+			return
+		}
+		combined = strings.TrimSpace(buf.String())
+	} else {
+		var outBuf, errBuf bytes.Buffer
+		if _, err := stdcopy.StdCopy(&outBuf, &errBuf, logReader); err != nil {
+			log.Warnf("could not decode logs for exited container %q: %v", displayName, err)
+			return
+		}
+		combined = strings.TrimSpace(outBuf.String() + errBuf.String())
+	}
+
+	if combined == "" {
+		log.Errorf("container %q exited immediately with no log output", displayName)
+		return
+	}
+
+	log.Errorf("container %q exited; container output:\n%s", displayName, combined)
 }
 
 // PullImage pulls the container image using the provided image pull policy value.
-func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullPolicy types.PullPolicyValue) error {
+func (d *DockerRuntime) PullImage(
+	ctx context.Context,
+	imageName string,
+	pullPolicy clabtypes.PullPolicyValue,
+) error {
 	log.Debugf("Looking up %s Docker image", imageName)
 
-	canonicalImageName := utils.GetCanonicalImageName(imageName)
+	canonicalImageName := clabutils.GetCanonicalImageName(imageName)
 
 	_, b, _ := d.Client.ImageInspectWithRaw(ctx, canonicalImageName)
 	switch pullPolicy {
-	case types.PullPolicyNever:
+	case clabtypes.PullPolicyNever:
 		if b == nil {
 			// image not found but pull policy = never
-			return fmt.Errorf("image %s not found locally, and image-pull-policy=%s prevents containerlab from pulling it", imageName, pullPolicy)
+			return fmt.Errorf(
+				"image %s not found locally, and image-pull-policy=%s prevents containerlab from pulling it",
+				imageName,
+				pullPolicy,
+			)
 		}
 		// image present, all good
 		log.Debugf("Image %s present, skip pulling", imageName)
 		return nil
-	case types.PullPolicyIfNotPresent:
+	case clabtypes.PullPolicyIfNotPresent:
 		if b != nil {
 			// pull policy == IfNotPresent and image is present
 			log.Debugf("Image %s present, skip pulling", imageName)
@@ -919,20 +1131,40 @@ func (d *DockerRuntime) PullImage(ctx context.Context, imageName string, pullPol
 }
 
 // StartContainer starts a docker container.
-func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node runtime.Node) (interface{}, error) {
+func (d *DockerRuntime) StartContainer(
+	ctx context.Context,
+	cID string,
+	node clabruntime.Node,
+) (any, error) {
 	nctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
 	nodecfg := node.Config()
 
 	log.Debugf("Start container: %q", nodecfg.LongName)
-	err := d.Client.ContainerStart(nctx,
-		cID,
-		container.StartOptions{
-			CheckpointID:  "",
-			CheckpointDir: "",
-		},
+
+	// ContainerStart occasionally returns 'file exists' error on the IPv6 gateway
+	// route in large topologies with an IPv6 management network configured.
+	// A short retry seems to mitigate the error.
+	const (
+		ipv6GwRetries      = 3
+		ipv6GwRetryBackoff = 100 * time.Millisecond
 	)
+
+	var err error
+	for attempt := range ipv6GwRetries {
+		err = d.Client.ContainerStart(nctx, cID, container.StartOptions{})
+		if err == nil || !isIPv6GatewayExistsErr(err) {
+			break
+		}
+		log.Debugf("transient IPv6 gateway error starting %q (attempt %d/%d): %v",
+			nodecfg.ShortName, attempt+1, ipv6GwRetries, err)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(ipv6GwRetryBackoff << attempt):
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -941,18 +1173,30 @@ func (d *DockerRuntime) StartContainer(ctx context.Context, cID string, node run
 	return nil, err
 }
 
+// isIPv6GatewayExistsErr reports whether err is the transient "file exists" error.
+func isIPv6GatewayExistsErr(err error) bool {
+	s := err.Error()
+	return strings.Contains(s, "failed to set IPv6 gateway") && strings.Contains(s, "file exists")
+}
+
 // postStartActions performs misc. tasks that are needed after the container starts.
-func (d *DockerRuntime) postStartActions(ctx context.Context, cID string, node *types.NodeConfig) error {
+func (d *DockerRuntime) postStartActions(
+	ctx context.Context,
+	cID string,
+	node *clabtypes.NodeConfig,
+) error {
 	nspath, err := d.GetNSPath(ctx, cID)
 	if err != nil {
 		return err
 	}
-	err = utils.LinkContainerNS(nspath, node.LongName)
+	err = clabutils.LinkContainerNS(nspath, node.LongName)
 	return err
 }
 
 // ListContainers lists all containers using the provided filters.
-func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.GenericFilter) ([]runtime.GenericContainer, error) {
+func (d *DockerRuntime) ListContainers(ctx context.Context,
+	gfilters []*clabtypes.GenericFilter,
+) ([]clabruntime.GenericContainer, error) {
 	ctx, cancel := context.WithTimeout(ctx, d.config.Timeout)
 	defer cancel()
 
@@ -1001,8 +1245,11 @@ func (d *DockerRuntime) ListContainers(ctx context.Context, gfilters []*types.Ge
 	return d.produceGenericContainerList(ctx, ctrs, nr)
 }
 
-func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*runtime.GenericContainer, error) {
-	ctrs, err := d.ListContainers(ctx, []*types.GenericFilter{
+func (d *DockerRuntime) GetContainer(
+	ctx context.Context,
+	cID string,
+) (*clabruntime.GenericContainer, error) {
+	ctrs, err := d.ListContainers(ctx, []*clabtypes.GenericFilter{
 		{
 			FilterType: "name",
 			Match:      cID,
@@ -1019,15 +1266,20 @@ func (d *DockerRuntime) GetContainer(ctx context.Context, cID string) (*runtime.
 	return &ctrs[0], nil
 }
 
-func (*DockerRuntime) buildFilterString(gFilters []*types.GenericFilter) filters.Args {
+func (*DockerRuntime) buildFilterString(gFilters []*clabtypes.GenericFilter) filters.Args {
 	filter := filters.NewArgs()
 	for _, gF := range gFilters {
 		filterStr := ""
-		if gF.Operator == "exists" {
+
+		switch {
+		case gF.Operator == "exists":
 			filterStr = gF.Field
-		} else if gF.FilterType == "name" {
-			filterStr = fmt.Sprintf("^%s$", gF.Match) // this regexp ensure we have an exact match for name
-		} else {
+		case gF.FilterType == "name":
+			filterStr = fmt.Sprintf(
+				"^%s$",
+				gF.Match,
+			) // this regexp ensure we have an exact match for name
+		default:
 			filterStr = gF.Field + gF.Operator + gF.Match
 		}
 
@@ -1039,10 +1291,12 @@ func (*DockerRuntime) buildFilterString(gFilters []*types.GenericFilter) filters
 }
 
 // Transform docker-specific to generic container format.
-func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputContainers []dockerTypes.Container,
+func (d *DockerRuntime) produceGenericContainerList(
+	ctx context.Context,
+	inputContainers []dockerTypes.Container,
 	inputNetworkResources []networkapi.Inspect,
-) ([]runtime.GenericContainer, error) {
-	var result []runtime.GenericContainer
+) ([]clabruntime.GenericContainer, error) {
+	var result []clabruntime.GenericContainer
 
 	for idx := range inputContainers {
 		i := inputContainers[idx]
@@ -1054,7 +1308,7 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 			names = append(names, strings.TrimLeft(n, "/"))
 		}
 
-		ctr := runtime.GenericContainer{
+		ctr := clabruntime.GenericContainer{
 			Names:           names,
 			ID:              i.ID,
 			ShortID:         i.ID[:12],
@@ -1062,10 +1316,10 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 			State:           i.State,
 			Status:          i.Status,
 			Labels:          i.Labels,
-			NetworkSettings: runtime.GenericMgmtIPs{},
+			NetworkSettings: clabruntime.GenericMgmtIPs{},
 		}
 
-		ctr.Ports = make([]*types.GenericPortBinding, len(i.Ports))
+		ctr.Ports = make([]*clabtypes.GenericPortBinding, len(i.Ports))
 		for x, p := range i.Ports {
 			ctr.Ports[x] = genericPortFromDockerPort(p)
 		}
@@ -1076,11 +1330,16 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 
 		var err error
 		ctr.Pid, err = d.containerPid(ctx, i.ID)
+		if errdefs.IsNotFound(err) {
+			// Concurrent destroy removed it between List and Inspect.
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
 
-		// if bridgeName is empty, try to find a network created by clab that the container is connected to
+		// if bridgeName is empty, try to find a network created by clab that the container is
+		// connected to
 		if bridgeName == "" && inputNetworkResources != nil {
 			for idx := range inputNetworkResources {
 				nr := inputNetworkResources[idx]
@@ -1096,8 +1355,9 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 		// applicable for ext-containers
 		_, ok := i.NetworkSettings.Networks[bridgeName]
 
-		// if by now we failed to find a docker network name using the network resources created by docker
-		// or (in case of external containers) the clab's bridge name doesn't belong to the container
+		// if by now we failed to find a docker network name using the network resources created by
+		// docker or (in case of external containers) the clab's bridge name doesn't belong to the
+		// container
 		// we take whatever the first network is listed in the original container network settings
 		// this is to derive the network name if the network is not created by clab
 		if bridgeName == "" || !ok {
@@ -1125,7 +1385,7 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 		}
 
 		// populating mounts information
-		var mount runtime.ContainerMount
+		var mount clabruntime.ContainerMount
 		for _, m := range i.Mounts {
 			mount.Source = m.Source
 			mount.Destination = m.Destination
@@ -1138,8 +1398,8 @@ func (d *DockerRuntime) produceGenericContainerList(ctx context.Context, inputCo
 	return result, nil
 }
 
-func genericPortFromDockerPort(p dockerTypes.Port) *types.GenericPortBinding {
-	return &types.GenericPortBinding{
+func genericPortFromDockerPort(p dockerTypes.Port) *clabtypes.GenericPortBinding {
+	return &clabtypes.GenericPortBinding{
 		HostIP:        p.IP,
 		HostPort:      int(p.PublicPort),
 		ContainerPort: int(p.PrivatePort),
@@ -1148,7 +1408,11 @@ func genericPortFromDockerPort(p dockerTypes.Port) *types.GenericPortBinding {
 }
 
 // Exec executes cmd on container identified with id and returns stdout, stderr bytes and an error.
-func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.ExecCmd) (*exec.ExecResult, error) {
+func (d *DockerRuntime) Exec(
+	ctx context.Context,
+	cID string,
+	execCmd *clabexec.ExecCmd,
+) (*clabexec.ExecResult, error) {
 	cont, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
 		return nil, err
@@ -1196,7 +1460,7 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.Exec
 		return nil, err
 	}
 
-	execResult := exec.NewExecResult(execCmd)
+	execResult := clabexec.NewExecResult(execCmd)
 
 	// set the result fields in the exec struct
 	execResult.SetReturnCode(execInspect.ExitCode)
@@ -1205,19 +1469,30 @@ func (d *DockerRuntime) Exec(ctx context.Context, cID string, execCmd *exec.Exec
 	return execResult, nil
 }
 
-// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches stdout/err.
-func (d *DockerRuntime) ExecNotWait(_ context.Context, cID string, execCmd *exec.ExecCmd) error {
-	execConfig := container.ExecOptions{Tty: false, AttachStdout: false, AttachStderr: false, Cmd: execCmd.GetCmd()}
+// ExecNotWait executes cmd on container identified with id but doesn't wait for output nor attaches
+// stdout/err.
+func (d *DockerRuntime) ExecNotWait(
+	_ context.Context,
+	cID string,
+	execCmd *clabexec.ExecCmd,
+) error {
+	execConfig := container.ExecOptions{
+		Tty:          false,
+		AttachStdout: false,
+		AttachStderr: false,
+		Cmd:          execCmd.GetCmd(),
+	}
 	respID, err := d.Client.ContainerExecCreate(context.Background(), cID, execConfig)
 	if err != nil {
 		return err
 	}
 
 	execStartCheck := container.ExecStartOptions{}
-	_, err = d.Client.ContainerExecAttach(context.Background(), respID.ID, execStartCheck)
+	rsp, err := d.Client.ContainerExecAttach(context.Background(), respID.ID, execStartCheck)
 	if err != nil {
 		return err
 	}
+	rsp.Close()
 	return nil
 }
 
@@ -1235,7 +1510,11 @@ func (d *DockerRuntime) DeleteContainer(ctx context.Context, cID string) error {
 		}
 	}
 	log.Debugf("Removing container: %s", cID)
-	err = d.Client.ContainerRemove(ctx, cID, container.RemoveOptions{Force: force, RemoveVolumes: true})
+	err = d.Client.ContainerRemove(
+		ctx,
+		cID,
+		container.RemoveOptions{Force: force, RemoveVolumes: true},
+	)
 	if err != nil {
 		return err
 	}
@@ -1249,8 +1528,20 @@ func setSysctl(sysctl string, newVal int) error {
 	return os.WriteFile(path.Join(sysctlBase, sysctl), []byte(strconv.Itoa(newVal)), 0o600)
 }
 
-func (d *DockerRuntime) StopContainer(ctx context.Context, name string) error {
-	return d.Client.ContainerKill(ctx, name, "kill")
+func (d *DockerRuntime) StopContainer(
+	ctx context.Context,
+	name string,
+	stopSignal clabtypes.Signal,
+) error {
+	timeout := int(d.config.Timeout.Seconds())
+	stopOpts := container.StopOptions{Timeout: &timeout}
+
+	if stopSignal != "" {
+		stopOpts.Signal = string(stopSignal)
+		log.Debugf("using custom stop signal %q for container %q", stopSignal, name)
+	}
+
+	return d.Client.ContainerStop(ctx, name, stopOpts)
 }
 
 // GetHostsPath returns fs path to a file which is mounted as /etc/hosts into a given container.
@@ -1264,7 +1555,10 @@ func (d *DockerRuntime) GetHostsPath(ctx context.Context, cID string) (string, e
 	return hostsPath, nil
 }
 
-func (*DockerRuntime) processPidMode(node *types.NodeConfig, containerHostConfig *container.HostConfig) error {
+func (*DockerRuntime) processPidMode(
+	node *clabtypes.NodeConfig,
+	containerHostConfig *container.HostConfig,
+) error {
 	pidMode := container.PidMode(node.PidMode)
 	if !pidMode.Valid() {
 		return fmt.Errorf("pid mode %q invalid", node.PidMode)
@@ -1280,7 +1574,7 @@ func (d *DockerRuntime) processNetworkMode(
 	containerNetworkingConfig *networkapi.NetworkingConfig,
 	containerHostConfig *container.HostConfig,
 	containerConfig *container.Config,
-	node *types.NodeConfig,
+	node *clabtypes.NodeConfig,
 ) error {
 	netMode := strings.SplitN(node.NetworkMode, ":", 2)
 
@@ -1292,33 +1586,46 @@ func (d *DockerRuntime) processNetworkMode(
 	case "container":
 		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
 		if len(netMode) != 2 {
-			return fmt.Errorf("container network mode was specified for container %q, but we failed to parse the network-mode instruction: %q",
-				node.ShortName, netMode)
+			return fmt.Errorf(
+				"container network mode was specified for container %q, but we failed to parse the network-mode instruction: %q",
+				node.ShortName,
+				netMode,
+			)
 		}
 
 		// also cont. ID shouldn't be empty
 		if netMode[1] == "" {
-			return fmt.Errorf("container network mode was specified for container %q, referenced container name appears to be empty: %q",
-				node.ShortName, netMode)
+			return fmt.Errorf(
+				"container network mode was specified for container %q, referenced container name appears to be empty: %q",
+				node.ShortName,
+				netMode,
+			)
 		}
 
 		// to support using network stack of containers that are scheduled by clab
 		// or containers deployed externally (i.e. by k8s kind)
-		// we first check if container name referenced in network-mode node property exists internally,
-		// aka within clab topology. If it doesn't, we assume that users referred to an external container.
-		// extract lab/topo prefix to craft a full container name if an internal container is referenced.
+		// we first check if container name referenced in network-mode node property exists
+		// internally, aka within clab topology. If it doesn't, we assume that users referred to an
+		// external container. extract lab/topo prefix to craft a full container name if an internal
+		// container is referenced.
 		contName := strings.SplitN(node.LongName, node.ShortName, 2)[0] + netMode[1]
 
 		_, err := d.GetContainer(ctx, contName)
 		if err != nil {
-			log.Debugf("container %q was not found by its name, assuming it is exists externally with unprefixed", contName)
+			log.Debugf(
+				"container %q was not found by its name, assuming it is exists externally with unprefixed",
+				contName,
+			)
 
 			// container doesn't exist internally, so we assume it exists externally
 			// with a non-prefixed name.
 			contName = netMode[1]
 
 			if _, err := d.GetContainer(ctx, contName); err != nil {
-				return fmt.Errorf("container %q is referenced in network-mode, but was not found", netMode[1])
+				return fmt.Errorf(
+					"container %q is referenced in network-mode, but was not found",
+					netMode[1],
+				)
 			}
 		}
 
@@ -1347,25 +1654,37 @@ func (d *DockerRuntime) processNetworkMode(
 }
 
 // GetContainerStatus retrieves the ContainerStatus of the named container.
-func (d *DockerRuntime) GetContainerStatus(ctx context.Context, cID string) runtime.ContainerStatus {
+func (d *DockerRuntime) GetContainerStatus(
+	ctx context.Context,
+	cID string,
+) clabruntime.ContainerStatus {
 	inspect, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
-		return runtime.NotFound
+		return clabruntime.NotFound
 	}
 	switch inspect.State.Status {
 	case "running":
-		return runtime.Running
-	case "created", "paused", "restarting", "removing", "exited", "dead":
-		return runtime.Stopped
+		return clabruntime.Running
+	case "paused":
+		return clabruntime.Paused
+	case "created":
+		return clabruntime.Created
+	case "restarting":
+		return clabruntime.Restarting
+	case "removing":
+		return clabruntime.Removing
+	case "exited", "dead":
+		return clabruntime.Stopped
+	default:
+		return clabruntime.NotFound
 	}
-	return runtime.NotFound
 }
 
 // containerPid returns the pid of a container by its ID using inspect.
 func (d *DockerRuntime) containerPid(ctx context.Context, cID string) (int, error) {
 	inspect, err := d.Client.ContainerInspect(ctx, cID)
 	if err != nil {
-		return 0, fmt.Errorf("container %q cannot be found", cID)
+		return 0, fmt.Errorf("container %q cannot be found: %w", cID, err)
 	}
 	return inspect.State.Pid, nil
 }
@@ -1408,7 +1727,10 @@ func (d *DockerRuntime) CheckConnection(ctx context.Context) error {
 	_, err := d.Client.Ping(ctx)
 	if err != nil {
 		if errors.Is(err, os.ErrPermission) {
-			return fmt.Errorf("could not connect to the Docker runtime, make sure your user is part of the `docker` group: %w", err)
+			return fmt.Errorf(
+				"could not connect to the Docker runtime, make sure your user is part of the `docker` group: %w",
+				err,
+			)
 		} else {
 			return fmt.Errorf("could not connect to the Docker runtime: %w", err)
 		}
@@ -1421,9 +1743,105 @@ func (*DockerRuntime) GetRuntimeSocket() (string, error) {
 	return "/var/run/docker.sock", nil
 }
 
-func (*DockerRuntime) GetCooCBindMounts() types.Binds {
-	return types.Binds{
-		types.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
-		types.NewBind("/run/netns", "/run/netns", ""),
+func (*DockerRuntime) GetCooCBindMounts() clabtypes.Binds {
+	return clabtypes.Binds{
+		clabtypes.NewBind("/var/lib/docker/containers", "/var/lib/docker/containers", ""),
+		clabtypes.NewBind("/run/netns", "/run/netns", ""),
 	}
+}
+
+func (d *DockerRuntime) StreamLogs(
+	ctx context.Context,
+	containerName string,
+) (io.ReadCloser, error) {
+	logOptions := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+		Timestamps: false,
+		Since:      time.Now().Format(time.RFC3339),
+	}
+
+	logStream, err := d.Client.ContainerLogs(ctx, containerName, logOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get container logs: %v", err)
+	}
+
+	return logStream, nil
+}
+
+// InspectImage returns detailed information about a container image.
+func (d *DockerRuntime) InspectImage(
+	ctx context.Context,
+	imageName string,
+) (*clabruntime.ImageInspect, error) {
+	imageData, _, err := d.Client.ImageInspectWithRaw(ctx, imageName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect image %s: %w", imageName, err)
+	}
+
+	// Convert Docker image inspect to our runtime ImageInspect
+	labels := imageData.Config.Labels
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	// Extract GraphDriver data
+	graphDriver := clabruntime.GraphDriver{
+		Name: imageData.GraphDriver.Name,
+		Data: clabruntime.GraphDriverData{},
+	}
+
+	// GraphDriver.Data is a map[string]string in Docker
+	if upperDir, ok := imageData.GraphDriver.Data["UpperDir"]; ok {
+		graphDriver.Data.UpperDir = upperDir
+	}
+	if workDir, ok := imageData.GraphDriver.Data["WorkDir"]; ok {
+		graphDriver.Data.WorkDir = workDir
+	}
+	if mergedDir, ok := imageData.GraphDriver.Data["MergedDir"]; ok {
+		graphDriver.Data.MergedDir = mergedDir
+	}
+
+	return &clabruntime.ImageInspect{
+		ID: imageData.ID,
+		Config: clabruntime.ImageConfig{
+			Labels: labels,
+		},
+		RootFS: clabruntime.RootFS{
+			Type:   imageData.RootFS.Type,
+			Layers: imageData.RootFS.Layers,
+		},
+		GraphDriver: graphDriver,
+	}, err
+}
+
+func (d *DockerRuntime) CopyToContainer(
+	ctx context.Context,
+	cID string,
+	dstPath string,
+	srcPath string,
+) error {
+	tarBuf, err := clabutils.FileToTarStream(dstPath, srcPath)
+	if err != nil {
+		return fmt.Errorf("error creating tar stream from source file %s: %w", srcPath, err)
+	}
+
+	opts := container.CopyToContainerOptions{
+		AllowOverwriteDirWithFile: false,
+	}
+
+	log.Debugf("copying path %v -> %v to container %v", srcPath, dstPath, cID)
+	err = d.Client.CopyToContainer(ctx, cID, filepath.Dir(dstPath), tarBuf, opts)
+	if err != nil {
+		return fmt.Errorf(
+			"error copying path %v -> %v to container (%v): %w",
+			srcPath,
+			dstPath,
+			cID,
+			err,
+		)
+	}
+
+	return nil
 }

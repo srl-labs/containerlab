@@ -5,7 +5,9 @@
 package utils
 
 import (
+	"archive/tar"
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -14,6 +16,7 @@ import (
 	"io/fs"
 	"math"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -25,17 +28,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bramvdbogaerde/go-scp"
+	"github.com/jlaffaye/ftp"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/pkg/sftp"
 	"github.com/steiler/acls"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 var (
 	errNonRegularFile = errors.New("non-regular file")
 	errHTTPFetch      = errors.New("failed to fetch http(s) resource")
 	errS3Fetch        = errors.New("failed to fetch s3 resource")
+	errFTPFetch       = errors.New("failed to fetch ftp resource")
+	errSCPFetch       = errors.New("failed to fetch scp resource")
+	errSFTPFetch      = errors.New("failed to fetch sftp resource")
 )
 
 // FileExists returns true if a file referenced by filename exists & accessible.
@@ -64,9 +77,9 @@ func DirExists(filename string) bool {
 // CopyFile copies a file from src to dst. If src and dst files exist, and are
 // the same, then return success. Otherwise, copy the file contents from src to dst.
 // mode is the desired target file permissions, e.g. "0644".
-func CopyFile(src, dst string, mode os.FileMode) (err error) {
+func CopyFile(ctx context.Context, src, dst string, mode os.FileMode) (err error) {
 	var sfi os.FileInfo
-	if !IsHttpURL(src, false) && !IsS3URL(src) {
+	if !IsDownloadableURL(src) {
 		sfi, err = os.Stat(src)
 		if err != nil {
 			return err
@@ -75,7 +88,12 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		if !sfi.Mode().IsRegular() {
 			// cannot copy non-regular files (e.g., directories,
 			// symlinks, devices, etc.)
-			return fmt.Errorf("file copy failed: source file %s (%q): %w", sfi.Name(), sfi.Mode().String(), errNonRegularFile)
+			return fmt.Errorf(
+				"file copy failed: source file %s (%q): %w",
+				sfi.Name(),
+				sfi.Mode().String(),
+				errNonRegularFile,
+			)
 		}
 	}
 
@@ -95,7 +113,13 @@ func CopyFile(src, dst string, mode os.FileMode) (err error) {
 		}
 	}
 
-	return CopyFileContents(src, dst, mode)
+	out, cleanup, err := CreateFileWithPermissions(dst, mode)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+
+	return CopyFileContents(ctx, src, out)
 }
 
 // IsHttpURL checks if the url is a downloadable HTTP URL.
@@ -139,6 +163,26 @@ func IsS3URL(s string) bool {
 	return strings.HasPrefix(s, "s3://")
 }
 
+// IsFTPURL checks if the URL is an FTP URL (ftp://host/path format).
+func IsFTPURL(s string) bool {
+	return strings.HasPrefix(s, "ftp://")
+}
+
+// IsSFTPURL checks if the URL is an SFTP URL (sftp://user@host/path format).
+func IsSFTPURL(s string) bool {
+	return strings.HasPrefix(s, "sftp://")
+}
+
+// IsSCPURL checks if the URL is an SCP URL (scp://user@host/path format).
+func IsSCPURL(s string) bool {
+	return strings.HasPrefix(s, "scp://")
+}
+
+// IsDownloadableURL checks if the path is a URL supported by file download helpers.
+func IsDownloadableURL(s string) bool {
+	return IsHttpURL(s, false) || IsS3URL(s) || IsFTPURL(s) || IsSFTPURL(s) || IsSCPURL(s)
+}
+
 // ParseS3URL parses an S3 URL and returns the bucket and key.
 func ParseS3URL(s3URL string) (bucket, key string, err error) {
 	if !IsS3URL(s3URL) {
@@ -160,12 +204,244 @@ func ParseS3URL(s3URL string) (bucket, key string, err error) {
 	return bucket, key, nil
 }
 
+func copyFileContentsS3(src string) (io.ReadCloser, error) {
+	bucket, key, err := ParseS3URL(src)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get region from environment, default to us-east-1
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	// Create credential chain that mimics AWS SDK behavior
+	credProviders := []credentials.Provider{
+		&credentials.EnvAWS{},             // 1. Environment variables
+		&credentials.FileAWSCredentials{}, // 2. ~/.aws/credentials (default profile)
+		&credentials.IAM{
+			Client: &http.Client{Timeout: 10 * time.Second},
+		}, // 3. IAM role (EC2/ECS/Lambda)
+	}
+
+	// Create MinIO client with chained credentials
+	client, err := minio.New("s3.amazonaws.com", &minio.Options{
+		Creds:  credentials.NewChainCredentials(credProviders),
+		Secure: true,
+		Region: region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create S3 client: %w", err)
+	}
+
+	// Get object from S3
+	object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
+	}
+
+	// Verify object exists by reading its stats
+	_, err = object.Stat()
+	if err != nil {
+		object.Close()
+		return nil, fmt.Errorf(
+			"%w: %s: object not found or access denied: %v",
+			errS3Fetch,
+			src,
+			err,
+		)
+	}
+
+	return object, nil
+}
+
+type removeOnCloseFile struct {
+	*os.File
+}
+
+func (f removeOnCloseFile) Close() error {
+	err := f.File.Close()
+	_ = os.Remove(f.Name())
+	return err
+}
+
+func sshDownloadConfig(src string, fetchErr error) (*url.URL, *ssh.ClientConfig, error) {
+	u, err := url.Parse(src)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if u.User == nil || u.User.Username() == "" {
+		return nil, nil, fmt.Errorf("%w: %s: missing username", fetchErr, src)
+	}
+
+	clientConfig := ssh.ClientConfig{
+		User:            u.User.Username(),
+		Auth:            []ssh.AuthMethod{},
+		HostKeyCallback: customHostKeyCallback(ResolvePath("~/.ssh/known_hosts", "")),
+	}
+
+	if socket := os.Getenv("SSH_AUTH_SOCK"); socket != "" {
+		conn, err := net.Dial("unix", socket)
+		if err != nil {
+			log.Error(err)
+		} else {
+			agentClient := agent.NewClient(conn)
+			clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeysCallback(agentClient.Signers))
+		}
+	}
+
+	keyPath := os.Getenv("CLAB_SSH_KEY")
+	keyPassphrase := os.Getenv("CLAB_SSH_KEY_PASSPHRASE")
+	if keyPath != "" {
+		if !FileExists(keyPath) {
+			return nil, nil, fmt.Errorf("%w: %s: keyfile %q does not exist", fetchErr, src, keyPath)
+		}
+
+		privateKey, err := os.ReadFile(keyPath)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var signer ssh.Signer
+		if keyPassphrase != "" {
+			signer, err = ssh.ParsePrivateKeyWithPassphrase(privateKey, []byte(keyPassphrase))
+		} else {
+			signer, err = ssh.ParsePrivateKey(privateKey)
+		}
+		if err != nil {
+			return nil, nil, err
+		}
+
+		clientConfig.Auth = append([]ssh.AuthMethod{ssh.PublicKeys(signer)}, clientConfig.Auth...)
+	}
+
+	if pw, ok := u.User.Password(); ok {
+		clientConfig.Auth = append([]ssh.AuthMethod{ssh.Password(pw)}, clientConfig.Auth...)
+	}
+
+	return u, &clientConfig, nil
+}
+
+func sshDownloadAddr(u *url.URL) string {
+	port := "22"
+	if u.Port() != "" {
+		port = u.Port()
+	}
+
+	return net.JoinHostPort(u.Hostname(), port)
+}
+
+func copyFileContentsSFTP(src string) (io.ReadCloser, error) {
+	u, clientConfig, err := sshDownloadConfig(src, errSFTPFetch)
+	if err != nil {
+		return nil, err
+	}
+
+	sshClient, err := ssh.Dial("tcp", sshDownloadAddr(u), clientConfig)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errSFTPFetch, src, err)
+	}
+	defer sshClient.Close()
+
+	client, err := sftp.NewClient(sshClient)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errSFTPFetch, src, err)
+	}
+	defer client.Close()
+
+	r, err := client.Open(u.Path)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errSFTPFetch, src, err)
+	}
+	defer r.Close()
+
+	buf, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return io.NopCloser(bytes.NewBuffer(buf)), nil
+}
+
+func copyFileContentsSCP(ctx context.Context, src string) (io.ReadCloser, error) {
+	u, clientConfig, err := sshDownloadConfig(src, errSCPFetch)
+	if err != nil {
+		return nil, err
+	}
+
+	client := scp.NewClient(sshDownloadAddr(u), clientConfig)
+	if err := client.Connect(); err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errSCPFetch, src, err)
+	}
+	defer client.Close()
+
+	f, err := os.CreateTemp("", "clab-scp-*")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := client.CopyFromRemote(ctx, f, u.Path); err != nil {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+		return nil, fmt.Errorf("%w: %s: %v", errSCPFetch, src, err)
+	}
+
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+		return nil, err
+	}
+
+	return removeOnCloseFile{File: f}, nil
+}
+
+func copyFileContentsFTP(src string) (io.ReadCloser, error) {
+	u, err := url.Parse(src)
+	if err != nil {
+		return nil, err
+	}
+
+	hostname := u.Hostname()
+	port := "21"
+	if u.Port() != "" {
+		port = u.Port()
+	}
+
+	client, err := ftp.Dial(net.JoinHostPort(hostname, port), ftp.DialWithTimeout(5*time.Second))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errFTPFetch, src, err)
+	}
+	defer client.Quit()
+
+	if u.User != nil {
+		pw, _ := u.User.Password()
+		if err := client.Login(u.User.Username(), pw); err != nil {
+			return nil, fmt.Errorf("%w: %s: %v", errFTPFetch, src, err)
+		}
+	}
+
+	r, err := client.Retr(u.Path)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s: %v", errFTPFetch, src, err)
+	}
+	defer r.Close()
+
+	buf, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	return io.NopCloser(bytes.NewBuffer(buf)), nil
+}
+
 // CopyFileContents copies the contents of the file named src to the file named
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file.
-// src can be an http(s) URL or an S3 URL.
-func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
+// src can be a local path or an http(s), S3, FTP, SFTP, or SCP URL.
+func CopyFileContents(ctx context.Context, src string, dst *os.File) (err error) {
 	var in io.ReadCloser
 
 	switch {
@@ -173,7 +449,12 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		client := NewHTTPClient()
 
 		// download using client
-		resp, err := client.Get(src)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, src, http.NoBody)
+		if err != nil {
+			return err
+		}
+
+		resp, err := client.Do(req)
 		if err != nil || resp.StatusCode != 200 {
 			return fmt.Errorf("%w: %s", errHTTPFetch, src)
 		}
@@ -183,49 +464,25 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 		in = resp.Body
 
 	case IsS3URL(src):
-		bucket, key, err := ParseS3URL(src)
+		in, err = copyFileContentsS3(src)
 		if err != nil {
 			return err
 		}
-
-		// Get region from environment, default to us-east-1
-		region := os.Getenv("AWS_REGION")
-		if region == "" {
-			region = "us-east-1"
-		}
-
-		// Create credential chain that mimics AWS SDK behavior
-		credProviders := []credentials.Provider{
-			&credentials.EnvAWS{},                                             // 1. Environment variables
-			&credentials.FileAWSCredentials{},                                 // 2. ~/.aws/credentials (default profile)
-			&credentials.IAM{Client: &http.Client{Timeout: 10 * time.Second}}, // 3. IAM role (EC2/ECS/Lambda)
-		}
-
-		// Create MinIO client with chained credentials
-		client, err := minio.New("s3.amazonaws.com", &minio.Options{
-			Creds:  credentials.NewChainCredentials(credProviders),
-			Secure: true,
-			Region: region,
-		})
+	case IsFTPURL(src):
+		in, err = copyFileContentsFTP(src)
 		if err != nil {
-			return fmt.Errorf("failed to create S3 client: %w", err)
+			return err
 		}
-
-		// Get object from S3
-		object, err := client.GetObject(context.TODO(), bucket, key, minio.GetObjectOptions{})
+	case IsSFTPURL(src):
+		in, err = copyFileContentsSFTP(src)
 		if err != nil {
-			return fmt.Errorf("%w: %s: %v", errS3Fetch, src, err)
+			return err
 		}
-
-		// Verify object exists by reading its stats
-		_, err = object.Stat()
+	case IsSCPURL(src):
+		in, err = copyFileContentsSCP(ctx, src)
 		if err != nil {
-			object.Close()
-			return fmt.Errorf("%w: %s: object not found or access denied: %v", errS3Fetch, src, err)
+			return err
 		}
-
-		in = object
-
 	default:
 		in, err = os.Open(src)
 		if err != nil {
@@ -234,43 +491,49 @@ func CopyFileContents(src, dst string, mode os.FileMode) (err error) {
 	}
 	defer in.Close() // skipcq: GO-S2307
 
-	// create directories if needed, since we promise to create the file
-	// if it doesn't exist
-	err = os.MkdirAll(filepath.Dir(dst), 0o750)
+	_, err = io.Copy(dst, in)
 	if err != nil {
 		return err
 	}
 
-	out, err := os.Create(dst)
+	return dst.Sync()
+}
+
+// CreateFileWithPermissions creates a file with proper directory structure,
+// ownership, and permissions. It returns the file handle and a cleanup function.
+// The caller is responsible for calling the cleanup function to close the file.
+func CreateFileWithPermissions(filePath string, mode os.FileMode) (*os.File, func(), error) {
+	// Create parent directories
+	err := os.MkdirAll(filepath.Dir(filePath), 0o750)
 	if err != nil {
-		return err
+		return nil, nil, err
+	}
+
+	// Create the file
+	file, err := os.Create(filePath)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	// Change file ownership to user running Containerlab instead of effective UID
-	err = SetUIDAndGID(dst)
+	err = SetUIDAndGID(filePath)
 	if err != nil {
-		return err
+		_ = file.Close()
+		return nil, nil, err
 	}
 
-	err = out.Chmod(mode)
+	// Set file permissions
+	err = file.Chmod(mode)
 	if err != nil {
-		return err
+		_ = file.Close()
+		return nil, nil, err
 	}
 
-	defer func() {
-		cerr := out.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-
-	if _, err = io.Copy(out, in); err != nil {
-		return err
+	cleanup := func() {
+		// should only err on repeated calls to close anyway
+		_ = file.Close()
 	}
-
-	err = out.Sync()
-
-	return err
+	return file, cleanup, nil
 }
 
 // CreateFile writes content to a file by path `file`.
@@ -281,6 +544,7 @@ func CreateFile(file, content string) (err error) {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	// add newline if missing
 	if !strings.HasSuffix(content, "\n") {
@@ -368,14 +632,17 @@ func lookupUserHomeDirViaGetent(userId string) string {
 	// we need to extract home dir
 	parts := strings.Split(string(out), ":")
 	if len(parts) < 6 {
-		log.Debugf("error while looking up user by id using getent command %v: unexpected output format", userId)
+		log.Debugf(
+			"error while looking up user by id using getent command %v: unexpected output format",
+			userId,
+		)
 		return ""
 	}
 
 	return parts[5]
 }
 
-// ResolvePath resolves a string path by expanding `~` to home dir
+// ResolvePath resolves path p by expanding ~ to home dir
 // or resolving a relative path by joining it with the base path.
 // When resolving `~` the function uses the home dir of a sudo user, so that -E sudo
 // flag can be omitted.
@@ -403,7 +670,7 @@ const (
 
 // FilenameForURL extracts a filename from a given url
 // returns "undefined" when unsuccessful.
-func FilenameForURL(rawUrl string) string {
+func FilenameForURL(ctx context.Context, rawUrl string) string {
 	u, err := url.Parse(rawUrl)
 	if err != nil {
 		return UndefinedFileName
@@ -411,7 +678,14 @@ func FilenameForURL(rawUrl string) string {
 
 	// try extracting the filename from "content-disposition" header
 	if IsHttpURL(rawUrl, false) {
-		resp, err := http.Head(rawUrl)
+		client := NewHTTPClient()
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, rawUrl, http.NoBody)
+		if err != nil {
+			return filepath.Base(u.Path)
+		}
+
+		resp, err := client.Do(req)
 		if err != nil {
 			return filepath.Base(u.Path)
 		}
@@ -458,6 +732,7 @@ func NewHTTPClient() *http.Client {
 	// set InsecureSkipVerify to true to allow fetching
 	// files form servers with self-signed certificates
 	tr := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true, // skipcq: GSC-G402
 			MinVersion:         tls.VersionTLS12,
@@ -467,11 +742,8 @@ func NewHTTPClient() *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-func GetRealUserIDs() (int, int, error) {
+func GetRealUserIDs() (userUID, userGID int, err error) {
 	// Here we check whether SUDO set the SUDO_UID and SUDO_GID variables
-	var userUID, userGID int
-	var err error
-
 	sudoUID, isSudoUIDSet := os.LookupEnv("SUDO_UID")
 	if isSudoUIDSet {
 		userUID, err = strconv.Atoi(sudoUID)
@@ -494,7 +766,8 @@ func GetRealUserIDs() (int, int, error) {
 	return userUID, userGID, nil
 }
 
-// AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds ACL rules:
+// AdjustFileACLs takes the given fs path, tries to load the access file acl of that path and adds
+// ACL rules:
 // rwx for the real UID user and r-x for the real GID group.
 func AdjustFileACLs(fsPath string) error {
 	userUID, userGID, err := GetRealUserIDs()
@@ -542,7 +815,8 @@ func AdjustFileACLs(fsPath string) error {
 	return a.Apply(fsPath, acls.PosixACLDefault)
 }
 
-// SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from getRealUserIDs,
+// SetUIDAndGID changes the UID and GID of the given path recursively to the values taken from
+// getRealUserIDs,
 // which should reflect the non-root user's UID and GID.
 func SetUIDAndGID(fsPath string) error {
 	userUID, userGID, err := GetRealUserIDs()
@@ -574,6 +848,100 @@ func recursiveChown(path string, uid, gid int) error {
 	})
 }
 
+// DownloadFilesInterface describes topology paths needed to materialize embedded/downloaded files.
+type DownloadFilesInterface interface {
+	ClabTmpDir() string
+	DownloadFileTmpAbsPath(nodeName string, filenamePostfix string) string
+}
+
+// ProcessDownloadableAndEmbeddedFile materializes embedded content or supported download URLs and
+// returns a local path. Local file references are returned unchanged.
+func ProcessDownloadableAndEmbeddedFile(
+	ctx context.Context,
+	nodeName,
+	fileRef,
+	filenamePostfix string,
+	paths DownloadFilesInterface,
+) (string, error) {
+	isEmbeddedFile := strings.Count(fileRef, "\n") >= 1
+	isDownloadableFile := IsDownloadableURL(fileRef)
+
+	if !isEmbeddedFile && !isDownloadableFile {
+		return fileRef, nil
+	}
+
+	CreateDirectory(paths.ClabTmpDir(), clabconstants.PermissionsDirDefault)
+
+	switch {
+	case isEmbeddedFile:
+		log.Debugf("%q of node %q is an embedded blob", fileRef, nodeName)
+
+		dstFileAbsPath := paths.DownloadFileTmpAbsPath(nodeName, filenamePostfix)
+		if err := CreateFile(dstFileAbsPath, fileRef); err != nil {
+			return "", err
+		}
+
+		return dstFileAbsPath, nil
+
+	case isDownloadableFile:
+		fname := FilenameForURL(ctx, fileRef)
+		dstFileAbsPath := paths.DownloadFileTmpAbsPath(nodeName, fname)
+
+		log.Debugf("Fetching %q for node %q storing at %q", fileRef, nodeName, dstFileAbsPath)
+
+		out, cleanup, err := CreateFileWithPermissions(
+			dstFileAbsPath,
+			clabconstants.PermissionsDirDefault,
+		)
+		if err != nil {
+			return "", err
+		}
+		defer cleanup()
+
+		if err := CopyFileContents(ctx, fileRef, out); err != nil {
+			return "", err
+		}
+
+		return dstFileAbsPath, nil
+	}
+
+	return fileRef, nil
+}
+
+// customHostKeyCallback returns a host-key callback that warns on missing or mismatching
+// known_hosts entries but does not block the SSH-based download.
+func customHostKeyCallback(knownHostsFiles ...string) ssh.HostKeyCallback {
+	var useFiles []string
+	for _, file := range knownHostsFiles {
+		if !FileExists(file) {
+			log.Debugf("known_hosts file %s does not exist.", file)
+			continue
+		}
+		useFiles = append(useFiles, file)
+	}
+
+	knownHostsFileCallback, err := knownhosts.New(useFiles...)
+	if err != nil {
+		log.Debugf("error loading known_hosts files %q", strings.Join(knownHostsFiles, ", "))
+		knownHostsFileCallback = func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+			return fmt.Errorf("error loading known_hosts files %v", err)
+		}
+	}
+
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		err = knownHostsFileCallback(hostname, remote, key)
+		if err != nil {
+			log.Warnf(
+				"error performing host key validation based on %q for hostname %q (%v). continuing anyways",
+				strings.Join(knownHostsFiles, ", "),
+				hostname,
+				err,
+			)
+		}
+		return nil
+	}
+}
+
 var osRelease string
 
 // GetOSRelease returns the OS release of the host by inspecting /etc/*-release files.
@@ -582,7 +950,7 @@ func GetOSRelease() string {
 	if osRelease != "" {
 		return osRelease
 	}
-	osRelease = "N/A"
+	osRelease = clabconstants.NotApplicable
 
 	matches, err := filepath.Glob("/etc/*-release")
 	if err != nil {
@@ -606,4 +974,62 @@ func GetOSRelease() string {
 	}
 
 	return osRelease
+}
+
+// IsPartialConfigFile returns true if the config file name contains .partial substring (case
+// insensitive).
+func IsPartialConfigFile(configPath string) bool {
+	return strings.Contains(strings.ToUpper(configPath), ".PARTIAL")
+}
+
+func FileToTarStream(dstFile string, filePath string) (*bytes.Buffer, error) {
+	// Check if file exists and get length
+	fileStat, err := os.Stat(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get file info for %s: %w", filePath, err)
+	}
+
+	// Create tar stream to copy (because Docker can only copy from a tar)
+	tarBuf := new(bytes.Buffer)
+	tarWriter := tar.NewWriter(tarBuf)
+
+	header, err := tar.FileInfoHeader(fileStat, filepath.Base(dstFile))
+	if err != nil {
+		return nil, fmt.Errorf("cannot create tar file header for %s: %w", fileStat.Name(), err)
+	}
+	header.Mode = 0o666
+	header.Name = filepath.Base(dstFile)
+	if err := tarWriter.WriteHeader(header); err != nil {
+		return nil, fmt.Errorf("cannot write tar header for %s: %w", filePath, err)
+	}
+
+	fileReader, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot open %s: %w", filePath, err)
+	}
+	defer fileReader.Close()
+
+	_, err = io.Copy(tarWriter, fileReader)
+	if err != nil {
+		return nil, fmt.Errorf("error reading %s: %w", filePath, err)
+	}
+
+	tarWriter.Close()
+
+	return tarBuf, nil
+}
+
+func WriteToTempFile(contents string) (string, error) {
+	tmpFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return "", fmt.Errorf("unable to create temporary file: %w", err)
+	}
+	defer tmpFile.Close()
+
+	_, err = tmpFile.WriteString(contents)
+	if err != nil {
+		return "", fmt.Errorf("unable to write to temporary file: %w", err)
+	}
+
+	return tmpFile.Name(), nil
 }

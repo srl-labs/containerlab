@@ -27,7 +27,8 @@ func (e *EndpointBridge) Verify(ctx context.Context, p *VerifyLinkParams) error 
 	if err != nil {
 		errs = append(errs, err)
 	}
-	// if the BridgeExists check is disabled by config and it is not a Bridge in an Namespace, run the check
+	// if the BridgeExists check is disabled by config and it is not a Bridge in an Namespace, run
+	// the check
 	if p.RunBridgeExistsCheck && e.Node.GetLinkEndpointType() != LinkEndpointTypeBridgeNS {
 		err = CheckBridgeExists(ctx, e.GetNode())
 		if err != nil {
@@ -57,6 +58,14 @@ func (e *EndpointBridge) IsNodeless() bool {
 	return e.isMgmtBridgeEndpoint
 }
 
+func (e *EndpointBridge) MoveTo(ctx context.Context, dst Node) error {
+	return moveEndpoint(ctx, e, dst)
+}
+
+func (e *EndpointBridge) Activate(ctx context.Context) error {
+	return activateEndpoint(ctx, e)
+}
+
 // CheckBridgeExists verifies that the given bridge is present in the
 // network namespace referenced via the provided nspath handle.
 func CheckBridgeExists(ctx context.Context, n Node) error {
@@ -65,11 +74,18 @@ func CheckBridgeExists(ctx context.Context, n Node) error {
 		_, notfound := err.(netlink.LinkNotFoundError)
 		switch {
 		case notfound:
-			return fmt.Errorf("bridge %q referenced in topology but does not exist", n.GetShortName())
+			return fmt.Errorf(
+				"bridge %q referenced in topology but does not exist",
+				n.GetShortName(),
+			)
 		case err != nil:
 			return err
 		case br.Type() != "bridge" && br.Type() != "openvswitch":
-			return fmt.Errorf("interface %s found. expected type \"bridge\" or \"openvswitch\", actual is %q", n.GetShortName(), br.Type())
+			return fmt.Errorf(
+				"interface %s found. expected type \"bridge\" or \"openvswitch\", actual is %q",
+				n.GetShortName(),
+				br.Type(),
+			)
 		}
 		return nil
 	})

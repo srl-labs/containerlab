@@ -1,15 +1,18 @@
 ---
 search:
   boost: 4
+kind_code_name: sonic-vs
+kind_display_name: SONiC (container)
 ---
-# SONiC (container)
+# -{{ kind_display_name }}-
+This document covers the containerized SONiC that is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+A kind defines a supported feature set and a startup procedure of a `-{{ kind_code_name }}-` node.
 
 [SONiC](https://sonic-net.github.io/SONiC/) Network OS is distributed in two formats suitable for testing with containerlab
 
 1. Containerized SONiC (topic of this document)
 2. Virtual Machine SONiC
 
-This document covers the containerized SONiC that is identified with `sonic-vs` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `sonic-vs` node.
 
 ## Getting Sonic images
 

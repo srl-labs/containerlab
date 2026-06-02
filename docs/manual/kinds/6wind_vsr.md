@@ -1,19 +1,22 @@
 ---
 search:
   boost: 4
+kind_code_name: 6wind_vsr
+kind_display_name: 6WIND VSR
 ---
-# 6WIND VSR
+# -{{ kind_display_name }}-
+[-{{ kind_display_name }}-](https://www.6wind.com/vrouter-vsr-solutions/) is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+A kind defines a supported feature set and a startup procedure of a `-{{ kind_code_name }}-` node.
 
-[6WIND VSR](https://www.6wind.com/vrouter-vsr-solutions/) is identified with `6wind_vsr` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a `6wind_vsr` node.
 
-6WIND VSR nodes launched with containerlab comes up pre-provisioned with SSH service enabled, `root` and `admin` user created and NETCONF enabled.
+-{{ kind_display_name }}- nodes launched with containerlab comes up pre-provisioned with SSH service enabled, `root` and `admin` user created and NETCONF enabled.
 
 ## Getting 6WIND VSR image
 
 6WIND VSR images can be retrieved from your 6WIND customer portal.
 Free evaluation images with associated licenses are available upon [registration](https://portal.6wind.com/register.php).
 
-## Managing 6WIND VSR nodes
+## Managing -{{ kind_display_name }}- nodes
 
 6WIND VSR node launched with containerlab can be managed via the following interfaces:
 
@@ -157,7 +160,7 @@ name: vsr_lab
 topology:
   nodes:
     vsr:
-      kind: 6wind_vsr
+      kind: -{{ kind_code_name }}-
       startup-config: myconfig.conf
 ```
 
@@ -169,7 +172,7 @@ Also, the content of the default template is always appended to the configuratio
 #### Devices
 
 6WIND VSR requires devices to be usable by the container.
-The following devices are automatically added when using the `6wind_vsr` kind:
+The following devices are automatically added when using the `-{{ kind_code_name }}-` kind:
 
 * /dev/ppp
 * /dev/net/tun
@@ -178,7 +181,7 @@ The following devices are automatically added when using the `6wind_vsr` kind:
 #### Capabilities
 
 6WIND VSR required either to be run in privileged mode, or in non-privileged mode provided some capabilities.
-For now, containerlab executes all the containers in privileged mode. To make sure the `6wind_vsr` kind is not impacted if this default policy changes or becomes configurable, the list of capabilites required by the 6WIND VSR container is automatically added. Additional capabilities are listed below:
+For now, containerlab executes all the containers in privileged mode. To make sure the `-{{ kind_code_name }}-` kind is not impacted if this default policy changes or becomes configurable, the list of capabilites required by the 6WIND VSR container is automatically added. Additional capabilities are listed below:
 
 * NET_ADMIN
 * SYS_ADMIN

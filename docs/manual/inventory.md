@@ -215,16 +215,16 @@ node2:
 
 ///
 
-The `platform` field can be influenced to support Napalm/Netmiko or Scrapli compliant names.  To influence the platform used set the `CLAB_NORNIR_PLATFORM_NAME_SCHEMA` env variable to either `napalm` or `scrapi` as the value. By default the platform will be set to the `kind`.  Further reading is available below:
-[scrapli core](https://carlmontanari.github.io/scrapli/reference/driver/core/)  
-[scrapli community](https://github.com/scrapli/scrapli_community)  
-[napalm drivers](https://napalm.readthedocs.io/en/latest/support/index.html#general-support-matrix)
+The `platform` field can be influenced to support Napalm/Netmiko or Scrapli compliant names.  To influence the platform used set the `CLAB_NORNIR_PLATFORM_NAME_SCHEMA` env variable to either `napalm` or `scrapli` as the value. By default the platform will be set to the `kind`.  Further reading is available below:
+
+* [scrapli community](https://github.com/scrapli/scrapli_community)  
+* [napalm drivers](https://napalm.readthedocs.io/en/latest/support/index.html#general-support-matrix)
 
 If there is no matching scrapli platform name, the node's `kind` is used instead.
 
 ## Topology Data
 
-Every time a user runs a `deploy` command, containerlab automatically exports information about the topology into `topology-data.json` file in the lab directory. Schema of exported data is determined based on a Go template specified in `--export-template` parameter, or a [default template](https://github.com/srl-labs/containerlab/blob/main/clab/export_templates/auto.tmpl) if the parameter is not provided.
+Every time a user runs a `deploy` command, containerlab automatically exports information about the topology into `topology-data.json` file in the lab directory. Schema of exported data is determined based on a Go template specified in `--export-template` parameter, or a [default template (`auto.tmpl`)](https://github.com/srl-labs/containerlab/blob/main/core/export_templates/auto.tmpl) if the parameter is not provided.
 
 Containerlab internal data that is submitted for export via the template, has the following structure:
 
@@ -232,7 +232,7 @@ Containerlab internal data that is submitted for export via the template, has th
 --8<-- "core/export.go:37:44"
 ```
 
-To get the full list of fields available for export, you can export topology data with the following template `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
+To get the full list of fields available for export, you can export topology data with the [full template (`full.tmpl`)](https://github.com/srl-labs/containerlab/blob/main/core/export_templates/full.tmpl) using `--export-template /etc/containerlab/templates/export/full.tmpl`. Note, some fields exported via `full.tmpl` might contain sensitive information like TLS private keys. To customize export data, it is recommended to start with a copy of `auto.tmpl` and change it according to your needs.
 
 Example of exported data when using default `auto.tmpl` template:
 
@@ -243,7 +243,7 @@ Example of exported data when using default `auto.tmpl` template:
 
   topology:
     kinds:
-      srl:
+      nokia_srlinux:
         type: ixrd3
         image: ghcr.io/nokia/srlinux
     nodes:

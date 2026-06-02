@@ -5,10 +5,11 @@ import (
 	"strings"
 )
 
-// LinkBriefRaw is the representation of any supported link in a brief format as defined in the topology file.
+// LinkBriefRaw is the representation of any supported link in a brief format as defined in the
+// topology file.
 type LinkBriefRaw struct {
 	Endpoints        []string `yaml:"endpoints"`
-	LinkCommonParams `yaml:",inline,omitempty"`
+	LinkCommonParams `         yaml:",inline,omitempty"`
 }
 
 // ToTypeSpecificRawLink resolves the brief link into a concrete RawLink implementation.
@@ -17,7 +18,10 @@ type LinkBriefRaw struct {
 func (l *LinkBriefRaw) ToTypeSpecificRawLink() (RawLink, error) {
 	// check two endpoints defined
 	if len(l.Endpoints) != 2 {
-		return nil, fmt.Errorf("endpoint definition should consist of exactly 2 entries. %d provided", len(l.Endpoints))
+		return nil, fmt.Errorf(
+			"endpoint definition should consist of exactly 2 entries. %d provided",
+			len(l.Endpoints),
+		)
 	}
 	for x, v := range l.Endpoints {
 		parts := strings.SplitN(v, ":", 2)
@@ -46,5 +50,7 @@ func (*LinkBriefRaw) GetType() LinkType {
 }
 
 func (*LinkBriefRaw) Resolve(_ *ResolveParams) (Link, error) {
-	return nil, fmt.Errorf("resolve unimplemented on LinkBriefRaw. Use <LinkBriefRaw>.ToTypeSpecificRawLink() and call resolve on the result")
+	return nil, fmt.Errorf(
+		"resolve unimplemented on LinkBriefRaw. Use <LinkBriefRaw>.ToTypeSpecificRawLink() and call resolve on the result",
+	)
 }

@@ -3,59 +3,59 @@ package vr_xrv9k
 import (
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestXRV9KInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*links.EndpointVeth
+		endpoints []*clablinks.EndpointVeth
 		node      *vrXRV9K
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet0/0/0/0",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "Gi0/0/0/1",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet 0/0/0/2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "TenGigabitEthernet0/0/0/3",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "TenGigE0/0/0/4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "Te0/0/0/5",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "TenGigabitEthernet 0/0/0/6",
 					},
 				},
 			},
 			node: &vrXRV9K{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "xrv9k",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -68,27 +68,27 @@ func TestXRV9KInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},
 			},
 			node: &vrXRV9K{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "xrv9k",
 						},
 						InterfaceRegexp: InterfaceRegexp,

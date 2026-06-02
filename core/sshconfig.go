@@ -7,8 +7,9 @@ import (
 	"text/template"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/mod/semver"
 )
 
@@ -22,9 +23,9 @@ type SSHConfigTmpl struct {
 // SSHConfigNodeTmpl represents values for a single node
 // in the sshconfig template.
 type SSHConfigNodeTmpl struct {
-	Name      string
+	Names     []string
 	Username  string
-	SSHConfig *types.SSHConfig
+	SSHConfig *clabtypes.SSHConfig
 }
 
 // sshConfigTemplate is the SSH config template.
@@ -33,20 +34,25 @@ type SSHConfigNodeTmpl struct {
 var sshConfigTemplate string
 
 // RemoveSSHConfig removes the lab specific ssh config file.
-func (c *CLab) RemoveSSHConfig(topoPaths *types.TopoPaths) error {
+func (c *CLab) RemoveSSHConfig(topoPaths *clabtypes.TopoPaths) error {
 	err := os.Remove(topoPaths.SSHConfigPath())
 	// if there is an error, thats not "Not Exists", then return it
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
+
 	return nil
 }
 
 // addSSHConfig adds the lab specific ssh config file.
 func (c *CLab) addSSHConfig() error {
 	sshConfigDir := path.Dir(c.TopoPaths.SSHConfigPath())
-	if !utils.FileOrDirExists(sshConfigDir) {
-		log.Debugf("ssh config directory %s does not exist, skipping ssh config generation", sshConfigDir)
+	if !clabutils.FileOrDirExists(sshConfigDir) {
+		log.Debugf(
+			"ssh config directory %s does not exist, skipping ssh config generation",
+			sshConfigDir,
+		)
+
 		return nil
 	}
 
@@ -59,17 +65,19 @@ func (c *CLab) addSSHConfig() error {
 	// to use the PubkeyAuthentication=unbound
 	// which is only available in OpenSSH 8.9+
 	// if we fail to parse the version the return value is going to be empty
-	sshVersion := utils.GetSSHVersion()
+	sshVersion := clabutils.GetSSHVersion()
 
-	// add the data for all nodes to the template input
+	// add the data for all nodes to the template input.
+	// Usernames come from NodeConfig.Credentials (topology + kind registry merge in createNodeCfg).
 	for _, n := range c.Nodes {
-		// get the Kind from the KindRegistry and and extract
-		// the kind registered Username
-		NodeRegistryEntry := c.Reg.Kind(n.Config().Kind)
+		cfg := n.Config()
 		nodeData := SSHConfigNodeTmpl{
-			Name:      n.Config().LongName,
-			Username:  NodeRegistryEntry.GetCredentials().GetUsername(),
+			Names:     []string{cfg.LongName},
+			Username:  cfg.Credentials.Username,
 			SSHConfig: n.GetSSHConfig(),
+		}
+		if len(cfg.ContainerID) >= 12 {
+			nodeData.Names = append(nodeData.Names, cfg.ContainerID[:12])
 		}
 
 		// if we couldn't parse the ssh version we assume we can't use unbound option
@@ -77,7 +85,8 @@ func (c *CLab) addSSHConfig() error {
 		// and the node has the PubkeyAuthentication set to unbound
 		// we set it to empty string since it is not supported by the SSH client
 		if (sshVersion == "" || semver.Compare("v"+sshVersion, "v8.9") < 0) &&
-			nodeData.SSHConfig.PubkeyAuthentication == types.PubkeyAuthValueUnbound {
+			nodeData.SSHConfig.PubkeyAuthentication ==
+				clabtypes.PubkeyAuthValueUnbound {
 			nodeData.SSHConfig.PubkeyAuthentication = ""
 		}
 
@@ -89,10 +98,15 @@ func (c *CLab) addSSHConfig() error {
 		return err
 	}
 
-	f, err := os.OpenFile(c.TopoPaths.SSHConfigPath(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	f, err := os.OpenFile(
+		c.TopoPaths.SSHConfigPath(),
+		os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+		clabconstants.PermissionsFileDefault,
+	)
 	if err != nil {
 		return err
 	}
+
 	defer f.Close()
 
 	err = t.Execute(f, tmpl)

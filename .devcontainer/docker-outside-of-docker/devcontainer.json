@@ -58,7 +58,7 @@
                 "yzhang.markdown-all-in-one",
                 "davidanson.vscode-markdownlint",
                 // proto
-                "zxh404.vscode-proto3",
+                "drblury.protobuf-vsc",
                 // containerlab
                 "srl-labs.vscode-containerlab"
             ]

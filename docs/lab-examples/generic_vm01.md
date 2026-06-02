@@ -18,7 +18,7 @@ ubuntu:eth1 <----> e1-1:SR Linux
 
 ## Deployment
 
-Before deploying the lab, make sure you have built the container image for the Ubuntu VM using [hellt/vrnetlab](https://github.com/hellt/vrnetlab/tree/master/ubuntu) project. The topology file references the image as `vrnetlab/vr-ubuntu:jammy`, which is the default image name for Ubuntu 22.04 LTS.
+Before deploying the lab, make sure you have built the container image for the Ubuntu VM using [srl-labs/vrnetlab](https://github.com/srl-labs/vrnetlab/tree/master/ubuntu) project. The topology file references the image as `vrnetlab/vr-ubuntu:jammy`, which is the default image name for Ubuntu 22.04 LTS.
 
 After building the image, deploy the lab using the following command:
 

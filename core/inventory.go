@@ -13,19 +13,21 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/srl-labs/containerlab/types"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
-
-const NornirPlatformNameSchemaEnvVar = "CLAB_NORNIR_PLATFORM_NAME_SCHEMA"
 
 //go:embed assets/inventory_ansible.go.tpl
 var ansibleInvT string
 
-// AnsibleInventoryNode represents the data structure used to generate the ansible inventory file.
-// It embeds the NodeConfig struct and adds the Username and Password fields extracted from
-// the node registry.
+// AnsibleInventoryNode is used to generate the ansible inventory file.
 type AnsibleInventoryNode struct {
-	*types.NodeConfig
+	*clabtypes.NodeConfig
+	// EmitAnsibleUserOnHost is true when ansible_user must be set on the host entry
+	// (topology node/group source, or heterogeneous usernames within the Ansible group).
+	EmitAnsibleUserOnHost bool
+	// EmitAnsiblePasswordOnHost is true when ansible_password must be set on the host entry.
+	EmitAnsiblePasswordOnHost bool
 }
 
 // AnsibleKindProps is the kind properties structure used to generate the ansible inventory file.
@@ -38,6 +40,9 @@ type AnsibleKindProps struct {
 
 // AnsibleInventory represents the data structure used to generate the ansible inventory file.
 type AnsibleInventory struct {
+	// DefaultsUsername and DefaultsPassword emit under all.vars when set in topology.defaults.
+	DefaultsUsername string
+	DefaultsPassword string
 	// clab node kinds
 	Kinds map[string]*AnsibleKindProps
 	// clab nodes aggregated by their kind
@@ -51,7 +56,6 @@ func (c *CLab) GenerateInventories() error {
 	// generate Ansible Inventory
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 
-	var err error
 	ansibleFile, err := os.Create(ansibleInvFPath)
 	if err != nil {
 		return err
@@ -69,6 +73,7 @@ func (c *CLab) GenerateInventories() error {
 
 	// generate Nornir Simple Inventory
 	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
+
 	nornirFile, err := os.Create(nornirSimpleInvFPath)
 	if err != nil {
 		return err
@@ -84,41 +89,35 @@ func (c *CLab) GenerateInventories() error {
 
 // generateAnsibleInventory generates and writes ansible inventory file to w.
 func (c *CLab) generateAnsibleInventory(w io.Writer) error {
+	topo := c.Config.Topology
+	defs := topo.GetDefaults()
 	inv := AnsibleInventory{
-		Kinds:  make(map[string]*AnsibleKindProps),
-		Nodes:  make(map[string][]*AnsibleInventoryNode),
-		Groups: make(map[string][]*AnsibleInventoryNode),
+		Kinds:            make(map[string]*AnsibleKindProps),
+		Nodes:            make(map[string][]*AnsibleInventoryNode),
+		Groups:           make(map[string][]*AnsibleInventoryNode),
+		DefaultsUsername: defs.Credentials.Username,
+		DefaultsPassword: defs.Credentials.Password,
 	}
 
 	for _, n := range c.Nodes {
+		cfg := n.Config()
+		ansibleGroup := ansibleInventoryGroup(cfg)
+
+		credSrc := topo.GetNodeCredentialsTopologySource(cfg.ShortName)
+		emitCredsOnHost := credSrc == clabtypes.CredentialTopologyNode ||
+			credSrc == clabtypes.CredentialTopologyGroup
+
 		ansibleNode := &AnsibleInventoryNode{
-			NodeConfig: n.Config(),
+			NodeConfig:                cfg,
+			EmitAnsibleUserOnHost:     emitCredsOnHost,
+			EmitAnsiblePasswordOnHost: emitCredsOnHost,
 		}
 
-		// add AnsibleKindProps to the inventory struct
-		// the ansibleKindProps is passed as a ref and is populated
-		// down below
-		ansibleKindProps := &AnsibleKindProps{}
-		inv.Kinds[n.Config().Kind] = ansibleKindProps
+		inv.Nodes[ansibleGroup] = append(inv.Nodes[ansibleGroup], ansibleNode)
 
-		// add username and password to kind properties
-		// assumption is that all nodes of the same kind have the same credentials
-		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
-		if nodeRegEntry != nil {
-			ansibleKindProps.Username = nodeRegEntry.GetCredentials().GetUsername()
-			ansibleKindProps.Password = nodeRegEntry.GetCredentials().GetPassword()
-		}
-
-		// add network_os to the node
-		ansibleKindProps.setNetworkOS(n.Config().Kind)
-		// add ansible_connection to the node
-		ansibleKindProps.setAnsibleConnection(n.Config().Kind)
-
-		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], ansibleNode)
-
-		if n.Config().Labels["ansible-group"] != "" {
-			inv.Groups[n.Config().Labels["ansible-group"]] =
-				append(inv.Groups[n.Config().Labels["ansible-group"]], ansibleNode)
+		if cfg.Labels["ansible-group"] != "" {
+			inv.Groups[cfg.Labels["ansible-group"]] =
+				append(inv.Groups[cfg.Labels["ansible-group"]], ansibleNode)
 		}
 	}
 
@@ -136,10 +135,16 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 		})
 	}
 
+	for ansibleGroup, nodes := range inv.Nodes {
+		c.applyAnsibleHostEmitFlagsForHeterogeneousCredentials(nodes, topo)
+		inv.Kinds[ansibleGroup] = c.buildAnsibleKindProps(ansibleGroup, nodes, topo)
+	}
+
 	t, err := template.New("ansible").Parse(ansibleInvT)
 	if err != nil {
 		return err
 	}
+
 	err = t.Execute(w, inv)
 	if err != nil {
 		return err
@@ -148,48 +153,159 @@ func (c *CLab) generateAnsibleInventory(w io.Writer) error {
 	return err
 }
 
-// setNetworkOS sets the network_os variable for the kind.
-func (n *AnsibleKindProps) setNetworkOS(kind string) {
-	switch kind {
+func ansibleInventoryGroup(cfg *clabtypes.NodeConfig) string {
+	ansibleGroup := cfg.Kind
+	if strings.EqualFold(cfg.Env["CLAB_SROS_CONFIG_MODE"], "classic") {
+		ansibleGroup = "nokia_srsim_classic"
+	}
+	return ansibleGroup
+}
+
+func fillAnsibleConnectionFields(ansibleGroup string, props *AnsibleKindProps) {
+	switch ansibleGroup {
 	case "nokia_srlinux", "srl":
-		n.NetworkOS = "nokia.srlinux.srlinux"
+		props.NetworkOS = "nokia.srlinux.srlinux"
+		props.AnsibleConn = "ansible.netcommon.httpapi"
 	case "nokia_sros", "vr-sros", "nokia_srsim":
-		n.NetworkOS = "nokia.sros.md"
+		props.NetworkOS = "nokia.sros.md"
+		props.AnsibleConn = "ansible.netcommon.network_cli"
+	case "nokia_srsim_classic":
+		props.NetworkOS = "nokia.sros.classic"
+		props.AnsibleConn = "ansible.netcommon.network_cli"
 	}
 }
 
-// setAnsibleConnection sets the ansible_connection variable for the kind.
-func (n *AnsibleKindProps) setAnsibleConnection(kind string) {
-	switch kind {
-	case "nokia_srlinux", "srl":
-		n.AnsibleConn = "ansible.netcommon.httpapi"
-	case "nokia_sros", "vr-sros", "nokia_srsim":
-		n.AnsibleConn = "ansible.netcommon.network_cli"
+func (c *CLab) applyAnsibleHostEmitFlagsForHeterogeneousCredentials(
+	nodes []*AnsibleInventoryNode,
+	topo *clabtypes.Topology,
+) {
+	if len(nodes) < 2 {
+		return
+	}
+
+	u0 := nodes[0].Credentials.Username
+	p0 := nodes[0].Credentials.Password
+	uniformUser := true
+	uniformPass := true
+	for _, n := range nodes[1:] {
+		if n.Credentials.Username != u0 {
+			uniformUser = false
+		}
+		if n.Credentials.Password != p0 {
+			uniformPass = false
+		}
+	}
+
+	if !uniformUser {
+		for _, n := range nodes {
+			n.EmitAnsibleUserOnHost = true
+		}
+	}
+	if !uniformPass {
+		for _, n := range nodes {
+			n.EmitAnsiblePasswordOnHost = true
+		}
+	}
+
+	// Mixed topology credential sources across hosts (e.g. some from defaults, some from kind)
+	// require per-host ansible_user and ansible_password even when resolved strings match.
+	anyDef := false
+	anyNonDef := false
+	for _, n := range nodes {
+		s := topo.GetNodeCredentialsTopologySource(n.ShortName)
+		if s == clabtypes.CredentialTopologyDefaults {
+			anyDef = true
+		}
+		if s != clabtypes.CredentialTopologyUnset &&
+			s != clabtypes.CredentialTopologyDefaults {
+			anyNonDef = true
+		}
+	}
+	if anyDef && anyNonDef {
+		for _, n := range nodes {
+			n.EmitAnsibleUserOnHost = true
+			n.EmitAnsiblePasswordOnHost = true
+		}
 	}
 }
 
-// Nornir Simple Inventory
-// https://nornir.readthedocs.io/en/latest/tutorial/inventory.html
+func (c *CLab) buildAnsibleKindProps(
+	ansibleGroup string,
+	nodes []*AnsibleInventoryNode,
+	topo *clabtypes.Topology,
+) *AnsibleKindProps {
+	props := &AnsibleKindProps{}
+	if len(nodes) == 0 {
+		return props
+	}
+
+	fillAnsibleConnectionFields(ansibleGroup, props)
+
+	first := nodes[0].NodeConfig
+	kindDef := topo.GetKind(strings.ToLower(first.Kind))
+	kindTopoUser := kindDef.Credentials.Username
+	kindTopoPass := kindDef.Credentials.Password
+
+	u0 := nodes[0].Credentials.Username
+	p0 := nodes[0].Credentials.Password
+	uniformUser := true
+	uniformPass := true
+	for _, n := range nodes[1:] {
+		if n.Credentials.Username != u0 {
+			uniformUser = false
+		}
+		if n.Credentials.Password != p0 {
+			uniformPass = false
+		}
+	}
+
+	anyFromDefaults := false
+	for _, n := range nodes {
+		if topo.GetNodeCredentialsTopologySource(
+			n.ShortName,
+		) == clabtypes.CredentialTopologyDefaults {
+			anyFromDefaults = true
+			break
+		}
+	}
+
+	if kindTopoUser != "" {
+		props.Username = kindTopoUser
+	} else if uniformUser && u0 != "" && !anyFromDefaults {
+		props.Username = u0
+	}
+
+	if kindTopoPass != "" {
+		props.Password = kindTopoPass
+	} else if uniformPass && p0 != "" && !anyFromDefaults {
+		props.Password = p0
+	}
+
+	return props
+}
 
 //go:embed assets/inventory_nornir_simple.go.tpl
 var nornirSimpleInvT string
 
-// NornirSimpleInventoryKindProps is the kind properties structure used to generate the nornir simple inventory file.
+// NornirSimpleInventoryKindProps is the kind properties structure used to generate the nornir
+// simple inventory file.
 type NornirSimpleInventoryKindProps struct {
 	Username string
 	Password string
 	Platform string
 }
 
-// NornirSimpleInventoryNode represents the data structure used to generate the nornir simple inventory file.
-// It embeds the NodeConfig struct and adds the Username and Password fields extracted from
-// the node registry.
+// NornirSimpleInventoryNode is used to generate the nornir simple inventory file.
 type NornirSimpleInventoryNode struct {
-	*types.NodeConfig
+	*clabtypes.NodeConfig
 	NornirGroups []string
+	// EmitUsernameOnHost / EmitPasswordOnHost select per-host credential lines in the template.
+	EmitUsernameOnHost bool
+	EmitPasswordOnHost bool
 }
 
-// NornirSimpleInventory represents the data structure used to generate the nornir simple inventory file.
+// NornirSimpleInventory represents the data structure used to generate the nornir simple inventory
+// file.
 type NornirSimpleInventory struct {
 	// clab node kinds
 	Kinds map[string]*NornirSimpleInventoryKindProps
@@ -201,77 +317,173 @@ type NornirSimpleInventory struct {
 
 // generateNornirSimpleInventory generates and writes a Nornir Simple inventory file to w.
 func (c *CLab) generateNornirSimpleInventory(w io.Writer) error {
+	topo := c.Config.Topology
 	inv := NornirSimpleInventory{
 		Kinds:  make(map[string]*NornirSimpleInventoryKindProps),
 		Nodes:  make(map[string][]*NornirSimpleInventoryNode),
 		Groups: make(map[string][]*NornirSimpleInventoryNode),
 	}
 
-	platformNameSchema := os.Getenv(NornirPlatformNameSchemaEnvVar)
+	platformNameSchema := os.Getenv(clabconstants.ClabEnvNornirPlatformNameSchema)
 
 	for _, n := range c.Nodes {
+		cfg := n.Config()
+		credSrc := topo.GetNodeCredentialsTopologySource(cfg.ShortName)
+		emitCredsOnHost := credSrc == clabtypes.CredentialTopologyNode ||
+			credSrc == clabtypes.CredentialTopologyGroup
+
 		nornirNode := &NornirSimpleInventoryNode{
-			NodeConfig: n.Config(),
+			NodeConfig:         cfg,
+			EmitUsernameOnHost: emitCredsOnHost,
+			EmitPasswordOnHost: emitCredsOnHost,
 		}
 
-		// add nornirSimpleInventoryKindProps to the inventory struct
-		// the nornirSimpleInventoryKindProps is passed as a ref and is populated
-		// down below
-		nornirSimpleInventoryKindProps := &NornirSimpleInventoryKindProps{}
-		inv.Kinds[n.Config().Kind] = nornirSimpleInventoryKindProps
-
-		// the nornir platform is set by default to the node's kind
-		// and is overwritten with the proper Nornir Inventory Platform
-		// based on the the value of CLAB_PLATFORM_NAME_SCHEMA (nornir or scrapi).
-		// defaults to Nornir-Napalm/Netmiko compatible platform name
-		nornirSimpleInventoryKindProps.Platform = n.Config().Kind
-
-		// add username and password to kind properties
-		// assumption is that all nodes of the same kind have the same credentials
-		nodeRegEntry := c.Reg.Kind(n.Config().Kind)
-		if nodeRegEntry != nil {
-			nornirSimpleInventoryKindProps.Username =
-				nodeRegEntry.GetCredentials().GetUsername()
-			nornirSimpleInventoryKindProps.Password =
-				nodeRegEntry.GetCredentials().GetPassword()
-
-			if nodeRegEntry.PlatformAttrs() != nil {
-				switch platformNameSchema {
-				case "napalm":
-					nornirSimpleInventoryKindProps.Platform =
-						nodeRegEntry.PlatformAttrs().NapalmPlatformName
-				case "scrapi":
-					nornirSimpleInventoryKindProps.Platform =
-						nodeRegEntry.PlatformAttrs().ScrapliPlatformName
-				}
-			}
-		}
-		for key, value := range n.Config().Labels {
+		for key, value := range cfg.Labels {
 			if strings.HasPrefix(key, "nornir-group") {
 				nornirNode.NornirGroups = append(nornirNode.NornirGroups, value)
 			}
 		}
-		// sort by group name so it's deterministic
+
 		slices.Sort(nornirNode.NornirGroups)
 
-		inv.Nodes[n.Config().Kind] = append(inv.Nodes[n.Config().Kind], nornirNode)
+		inv.Nodes[cfg.Kind] = append(inv.Nodes[cfg.Kind], nornirNode)
 	}
 
-	// sort nodes by name as they are not sorted originally
 	for _, nodes := range inv.Nodes {
 		sort.Slice(nodes, func(i, j int) bool {
 			return nodes[i].ShortName < nodes[j].ShortName
 		})
 	}
 
+	for kind, nodes := range inv.Nodes {
+		c.applyNornirHostEmitFlagsForHeterogeneousCredentials(nodes, topo)
+		inv.Kinds[kind] = c.buildNornirKindProps(kind, nodes, platformNameSchema, topo)
+	}
+
 	t, err := template.New("nornir_simple").Parse(nornirSimpleInvT)
 	if err != nil {
 		return err
 	}
+
 	err = t.Execute(w, inv)
 	if err != nil {
 		return err
 	}
 
 	return err
+}
+
+func (c *CLab) applyNornirHostEmitFlagsForHeterogeneousCredentials(
+	nodes []*NornirSimpleInventoryNode,
+	topo *clabtypes.Topology,
+) {
+	if len(nodes) < 2 {
+		return
+	}
+
+	u0 := nodes[0].Credentials.Username
+	p0 := nodes[0].Credentials.Password
+	uniformUser := true
+	uniformPass := true
+	for _, n := range nodes[1:] {
+		if n.Credentials.Username != u0 {
+			uniformUser = false
+		}
+		if n.Credentials.Password != p0 {
+			uniformPass = false
+		}
+	}
+
+	if !uniformUser {
+		for _, n := range nodes {
+			n.EmitUsernameOnHost = true
+		}
+	}
+	if !uniformPass {
+		for _, n := range nodes {
+			n.EmitPasswordOnHost = true
+		}
+	}
+
+	anyDef := false
+	anyNonDef := false
+	for _, n := range nodes {
+		s := topo.GetNodeCredentialsTopologySource(n.ShortName)
+		if s == clabtypes.CredentialTopologyDefaults {
+			anyDef = true
+		}
+		if s != clabtypes.CredentialTopologyUnset &&
+			s != clabtypes.CredentialTopologyDefaults {
+			anyNonDef = true
+		}
+	}
+	if anyDef && anyNonDef {
+		for _, n := range nodes {
+			n.EmitUsernameOnHost = true
+			n.EmitPasswordOnHost = true
+		}
+	}
+}
+
+func (c *CLab) buildNornirKindProps(
+	kind string,
+	nodes []*NornirSimpleInventoryNode,
+	platformNameSchema string,
+	topo *clabtypes.Topology,
+) *NornirSimpleInventoryKindProps {
+	props := &NornirSimpleInventoryKindProps{Platform: kind}
+	if len(nodes) == 0 {
+		return props
+	}
+
+	nodeRegEntry := c.Reg.Kind(kind)
+	if nodeRegEntry != nil && nodeRegEntry.PlatformAttrs() != nil {
+		switch platformNameSchema {
+		case "napalm":
+			props.Platform = nodeRegEntry.PlatformAttrs().NapalmPlatformName
+		case "scrapli":
+			props.Platform = nodeRegEntry.PlatformAttrs().ScrapliPlatformName
+		}
+	}
+
+	kindDef := topo.GetKind(strings.ToLower(kind))
+	kindTopoUser := kindDef.Credentials.Username
+	kindTopoPass := kindDef.Credentials.Password
+
+	u0 := nodes[0].Credentials.Username
+	p0 := nodes[0].Credentials.Password
+	uniformUser := true
+	uniformPass := true
+	for _, n := range nodes[1:] {
+		if n.Credentials.Username != u0 {
+			uniformUser = false
+		}
+		if n.Credentials.Password != p0 {
+			uniformPass = false
+		}
+	}
+
+	anyFromDefaults := false
+	for _, n := range nodes {
+		if topo.GetNodeCredentialsTopologySource(
+			n.ShortName,
+		) == clabtypes.CredentialTopologyDefaults {
+			anyFromDefaults = true
+			break
+		}
+	}
+
+	if kindTopoUser != "" {
+		props.Username = kindTopoUser
+	} else if uniformUser && u0 != "" && !anyFromDefaults {
+		props.Username = u0
+	}
+
+	if kindTopoPass != "" {
+		props.Password = kindTopoPass
+	} else if uniformPass && p0 != "" && !anyFromDefaults {
+		props.Password = p0
+	}
+
+	return props
 }

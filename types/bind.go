@@ -14,6 +14,7 @@ func (b Binds) ToStringSlice() []string {
 	for _, bind := range b {
 		result = append(result, bind.String())
 	}
+
 	return result
 }
 
@@ -42,8 +43,10 @@ func NewBindFromString(bind string) (*Bind, error) {
 		// If there is only one part, the container runtime creates an anonymous
 		// volume and mounts it on the given destination.
 		b.dst = split[0]
+
 		return b, nil
 	}
+
 	if len(split) < 2 || len(split) > 3 {
 		return nil, fmt.Errorf("unable to parse bind %q", bind)
 	}
@@ -51,7 +54,7 @@ func NewBindFromString(bind string) (*Bind, error) {
 	b.src = split[0]
 	b.dst = split[1]
 
-	if len(split) == 3 {
+	if len(split) == 3 { //nolint: mnd
 		b.mode = split[2]
 	}
 
@@ -76,9 +79,11 @@ func (b *Bind) Mode() string {
 // String returns the bind mount as a string.
 func (b *Bind) String() string {
 	s := b.dst
+
 	if b.src != "" {
 		s = fmt.Sprintf("%s:%s", b.src, s)
 	}
+
 	if b.mode != "" {
 		s += fmt.Sprintf(":%s", b.mode)
 	}

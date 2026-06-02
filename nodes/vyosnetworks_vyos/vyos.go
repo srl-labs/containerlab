@@ -14,9 +14,10 @@ import (
 	"slices"
 
 	"github.com/charmbracelet/log"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -32,7 +33,7 @@ const (
 
 var (
 	KindNames          = []string{"vyosnetworks_vyos"}
-	defaultCredentials = nodes.NewCredentials("admin", "admin")
+	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 
 	//go:embed vyos.config.boot
 	cfgTemplate string
@@ -47,55 +48,58 @@ var (
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	log.Debug("Registering vyos ")
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformAttrs := &nodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformAttrs := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 		NapalmPlatformName:  NapalmPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformAttrs)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformAttrs,
+	)
 
-	r.Register(KindNames, func() nodes.Node {
+	r.Register(KindNames, func() clabnodes.Node {
 		return new(vyos)
 	}, nrea)
 }
 
 type vyos struct {
-	nodes.DefaultNode
+	clabnodes.DefaultNode
 	configDir  string
 	SSHPubKeys []ssh.PublicKey
-	creds      *nodes.Credentials
 }
 
-func (n *vyos) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *vyos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
 	log.Debug("Initializating Vyos node")
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
 	for _, o := range opts {
 		o(n)
 	}
 
-	n.creds = defaultCredentials
-
 	// mount config dir
 	n.configDir = filepath.Join(n.Cfg.LabDir, "config")
 	n.Cfg.ResStartupConfig = filepath.Join(n.configDir, "config.boot")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprintf("%s:/opt/vyatta/etc/config", n.configDir))
+
+	// mount /lib/modules, required to allow VyOS to load required kernel modules (i.e., nft_nat)
+	n.Cfg.Binds = append(n.Cfg.Binds, "/lib/modules:/lib/modules:ro")
 	return nil
 }
 
-func (n *vyos) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
+func (n *vyos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	if err := n.fixdirACL(); err != nil {
 		return err
 	}
 
 	issueTrue := true
-	n.Cfg.Certificate = &types.CertificateConfig{
+	n.Cfg.Certificate = &clabtypes.CertificateConfig{
 		Issue: &issueTrue,
 	}
 	cert, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
@@ -122,21 +126,21 @@ func (n *vyos) PreDeploy(ctx context.Context, params *nodes.PreDeployParams) err
 	return n.createVyosFiles(ctx)
 }
 
-func (n *vyos) SaveConfig(ctx context.Context) error {
+func (n *vyos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cli, err := n.newCli()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer cli.Close()
 
-	if err = n.save(ctx, cli); err != nil {
-		return err
+	if err := n.save(ctx, cli); err != nil {
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *vyos) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	nodeCfg := n.Config()
 	cli, err := n.newCli()
 	if err != nil {
@@ -149,11 +153,11 @@ func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 
 	var cfgs []string
 
-	addressCmd := func(a string, p int) string {
-		log.Debug("Setting mgmt address", "address", a, "subnet", p)
+	addressCmd := func(iface, a string, p int) string {
+		log.Debug("Setting address", "interface", iface, "address", a, "subnet", p)
 		return fmt.Sprintf(
 			"set interfaces ethernet %s address %s/%d",
-			nodeCfg.MgmtIntf,
+			iface,
 			a,
 			p,
 		)
@@ -164,7 +168,7 @@ func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 		prefix := nodeCfg.MgmtIPv4PrefixLength
 		cfgs = append(
 			cfgs,
-			addressCmd(ip, prefix),
+			addressCmd(nodeCfg.MgmtIntf, ip, prefix),
 		)
 	}
 
@@ -173,22 +177,47 @@ func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 		prefix := nodeCfg.MgmtIPv6PrefixLength
 		cfgs = append(
 			cfgs,
-			addressCmd(ip, prefix),
+			addressCmd(nodeCfg.MgmtIntf, ip, prefix),
 		)
+	}
+
+	// configure data interfaces
+	for _, e := range n.Endpoints {
+		ifName := e.GetIfaceName()
+		// skip management interface
+		if ifName == nodeCfg.MgmtIntf {
+			continue
+		}
+
+		v4 := e.GetIPv4Addr()
+		v6 := e.GetIPv6Addr()
+
+		if !v4.IsValid() && !v6.IsValid() {
+			continue
+		}
+
+		if v4.IsValid() {
+			cfgs = append(cfgs, addressCmd(ifName, v4.Addr().String(), v4.Bits()))
+		}
+		if v6.IsValid() {
+			cfgs = append(cfgs, addressCmd(ifName, v6.Addr().String(), v6.Bits()))
+		}
 	}
 
 	if n.SSHPubKeys != nil {
 		cfgs = slices.Concat(cfgs, n.authorizedKeyCmds())
 	}
 
+	log.Debugf("VyOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
+
 	resp, err := cli.SendConfigs(cfgs)
 	log.Debug("CLI", "response", resp.JoinedResult())
 	if err != nil {
 		return err
 	} else if resp.Failed != nil {
-		return errors.New("failed to configure management interface")
+		return errors.New("failed to apply configuration")
 	}
-	if err = n.save(ctx, cli); err != nil {
+	if err := n.save(ctx, cli); err != nil {
 		return err
 	}
 	log.Info("PostDeploy complete", "node", n.Cfg.ShortName)
@@ -197,12 +226,16 @@ func (n *vyos) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) e
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *vyos) CheckInterfaceName() error {
-	// allow eth and et interfaces
-	// https://regex101.com/r/umQW5Z/2
-	ifRe := regexp.MustCompile(`eth[1-9]$`)
+	// allow eth interfaces - ethX, apart from eth0
+	// https://regex101.com/r/kqOPTc/1
+	ifRe := regexp.MustCompile(`eth[1-9][0-9]*$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("vyos node %q has an interface named %q which doesn't match the required pattern. Interfaces may only be named ethX where X is any number greater than 0", n.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf(
+				"vyos node %q has an interface named %q which doesn't match the required pattern. Interfaces may only be named ethX where X is any number greater than 0",
+				n.Cfg.ShortName,
+				e.GetIfaceName(),
+			)
 		}
 	}
 

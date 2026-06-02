@@ -236,6 +236,10 @@ There was a tiny gap in MacOS support, but we contributed the necessary piece[^3
 
 With these steps done[^5], you should be able to click on the "fin" icon next to the interface name and see the Wireshark UI opening up and starting the capture.
 
+## Containerlab GUI
+
+The [Containerlab GUI](gui/index.md#packet-capture) exposes packet capture from interface actions. In VS Code, the capture action can open a Wireshark VNC session in a VS Code webview, avoiding local extcap plugin and `packetflix://` handler setup for that workflow.
+
 ## Examples
 
 Lets take the first diagram of this article and see which commands are used to sniff from the highlighted interfaces.

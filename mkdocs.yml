@@ -24,11 +24,15 @@ nav:
               - Cisco Nexus 9000v: manual/kinds/vr-n9kv.md
               - Cisco 8000: manual/kinds/c8000.md
               - Cisco c8000v: manual/kinds/vr-c8000v.md
+              - Cisco SD-WAN: manual/kinds/cisco_sdwan.md
               - Cisco Catalyst 9000v: manual/kinds/vr-cat9kv.md
               - Cisco IOL: manual/kinds/cisco_iol.md
+              - Cisco VIOS: manual/kinds/cisco_vios.md
+              - Cisco ASAv: manual/kinds/cisco_asav.md
               - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Juniper:
               - Juniper cRPD: manual/kinds/crpd.md
+              - Juniper cSRX: manual/kinds/csrx.md
               - Juniper vMX: manual/kinds/vr-vmx.md
               - Juniper vQFX: manual/kinds/vr-vqfx.md
               - Juniper vSRX: manual/kinds/vr-vsrx.md
@@ -50,13 +54,18 @@ nav:
           - VyOS Networks VyOS: manual/kinds/vyosnetworks_vyos.md
           - OpenBSD: manual/kinds/openbsd.md
           - FreeBSD: manual/kinds/freebsd.md
+          - OpenWRT: manual/kinds/openwrt.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
           - Ostinato: manual/kinds/ostinato.md
+          - Spirent TestCenter: manual/kinds/spirent_stc.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
+          - F5 BIG-IP VE: manual/kinds/f5_bigipve.md
           - Palo Alto PAN: manual/kinds/vr-pan.md
           - 6WIND VSR: manual/kinds/6wind_vsr.md
+          - Arrcus ArcOS: manual/kinds/arrcus_arcos.md
           - FD.io VPP: manual/kinds/fdio_vpp.md
+          - veesix osvbng: manual/kinds/veesix_osvbng.md
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
@@ -73,6 +82,7 @@ nav:
           - manual/clabernetes/index.md
           - Install: manual/clabernetes/install.md
           - Quickstart: manual/clabernetes/quickstart.md
+          - Configuration: manual/clabernetes/configuration.md
           - Packet capture in c9s: manual/clabernetes/pcap.md
       - Node filtering: manual/node-filtering.md
       - Multi-node labs: manual/multi-node.md
@@ -80,7 +90,12 @@ nav:
       - Inventory: manual/inventory.md
       - Image management: manual/images.md
       - Labs and Codespaces: manual/codespaces.md
-      - VS Code Extension: manual/vsc-extension.md
+      - Containerlab GUI:
+          - manual/gui/index.md
+          - VS Code Extension: manual/gui/vsc-extension.md
+          - Desktop: manual/gui/desktop.md
+          - Web: manual/gui/web.md
+      - API Server: manual/api-server.md
       - Link Impairments: manual/impairments.md
       - Share lab access: manual/share-access.md
       - Configuration management: manual/config-mgmt.md
@@ -92,10 +107,14 @@ nav:
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
+      - start: cmd/start.md
+      - stop: cmd/stop.md
+      - restart: cmd/restart.md
       - redeploy: cmd/redeploy.md
       - inspect:
           - cmd/inspect/index.md
           - interfaces: cmd/inspect/interfaces.md
+      - events: cmd/events.md
       - save: cmd/save.md
       - exec: cmd/exec.md
       - generate: cmd/generate.md
@@ -129,6 +148,7 @@ nav:
               - detach: cmd/tools/gotty/detach.md
               - reattach: cmd/tools/gotty/reattach.md
               - list: cmd/tools/gotty/list.md
+          - snapshot save: cmd/tools/snapshot/save.md
       - version:
           - cmd/version/index.md
           - check: cmd/version/check.md
@@ -154,6 +174,7 @@ nav:
       - Nokia SR Linux and Juniper vJunos-switch: lab-examples/srl-vjunos-switch.md
       - Nokia SR Linux and Juniper vJunosEvolved: lab-examples/srl-vjunosevolved.md
       - Nokia SR Linux and Juniper cJunosEvolved: lab-examples/srl-cjunosevolved.md
+      - Nokia SR Linux and Arrcus ArcOS: lab-examples/srl-arcos.md
       - FRR: lab-examples/frr01.md
       - Cumulus Linux and FRR: lab-examples/cvx01.md
       - Cumulus Linux (docker runtime) and Host: lab-examples/cvx02.md
@@ -164,12 +185,21 @@ nav:
       - RARE/freeRtr: lab-examples/rare-freertr.md
       - Juniper vSRX: lab-examples/vsrx01.md
       - OpenBSD: lab-examples/openbsd01.md
+      - Cisco ASAv: lab-examples/asav01.md
       - Cisco FTDv: lab-examples/ftdv01.md
+      - F5 BIG-IP VE: lab-examples/f5bigipve01.md
+      - v::n osvbng: lab-examples/osvbng01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
       - Generic VM: lab-examples/generic_vm01.md
   - Release notes:
+      - "0.75": rn/0.75.md
+      - "0.74": rn/0.74.md
+      - "0.73": rn/0.73.md
+      - "0.72": rn/0.72.md
+      - "0.71": rn/0.71.md
+      - "0.70": rn/0.70.md
       - "0.69": rn/0.69.md
       - "0.68": rn/0.68.md
       - "0.67": rn/0.67.md
@@ -305,6 +335,9 @@ plugins:
       redirect_maps:
         lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
         lab-examples/ixp-lab.md: lab-examples/peering-lab.md
+        manual/vsc-extension.md: manual/gui/vsc-extension.md
+        manual/containerlab-desktop.md: manual/gui/desktop.md
+        manual/containerlab-web.md: manual/gui/web.md
   #- typeset
   - glightbox
   - macros:

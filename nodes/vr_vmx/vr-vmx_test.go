@@ -3,39 +3,39 @@ package vr_vmx
 import (
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestVMXInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*links.EndpointVeth
+		endpoints []*clablinks.EndpointVeth
 		node      *vrVMX
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/0",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "ge-0/0/4",
 					},
 				},
 			},
 			node: &vrVMX{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "vmx",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -48,27 +48,27 @@ func TestVMXInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},
 			},
 			node: &vrVMX{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "vmx",
 						},
 						InterfaceRegexp: InterfaceRegexp,

@@ -16,7 +16,7 @@ name: telemetry
 topology:
   nodes:
     ceos:
-      kind: ceos
+      kind: arista_ceos
       image: ceos:latest
       ports:
         # host port 57401 is mapped to port 57400 of ceos node

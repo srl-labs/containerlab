@@ -16,7 +16,7 @@ on:
         default: "docker"
 
 env:
-  GO_VER: "1.24.5"
+  GO_VER: "1.25.10"
   CGO_ENABLED: 0
   MKDOCS_INS_VER: 9.6.1-insiders-4.53.15-hellt
   GORELEASER_VER: v2.6.1
@@ -42,6 +42,10 @@ jobs:
           echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> "$GITHUB_OUTPUT"
           echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
           echo "SOURCE_TAG_NO_PREFIX=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          echo "Repository owner: ${{ github.repository_owner }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "PR head repo: ${{ github.event.pull_request.head.repo.full_name }}"
 
   file-changes:
     runs-on: ubuntu-24.04
@@ -50,8 +54,8 @@ jobs:
       code: ${{ steps.filter.outputs.code }}
       docs: ${{ steps.filter.outputs.docs }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -106,13 +110,13 @@ jobs:
     needs: file-changes
     if: needs.file-changes.outputs.code == 'true' || startsWith(github.ref, 'refs/tags/v')
     steps:
-      - uses: actions/checkout@v4
-      - uses: WillAbides/setup-go-faster@v1.14.0
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VER }}
 
       - name: Cache go modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           # In order:
           # * Module download cache
@@ -129,7 +133,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-unit-test
@@ -153,23 +157,23 @@ jobs:
       - build-containerlab
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
           version: "0.5.28"
           enable-cache: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           # cache: pip
           # cache-dependency-path: "tests/requirements.txt"
@@ -187,7 +191,7 @@ jobs:
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -197,7 +201,7 @@ jobs:
           bash ./tests/rf-run.sh docker ./tests/06-ext-container
       # upload test reports as a zip file
       - name: Upload test reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: 06-ext-container-log-docker
@@ -206,7 +210,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: upload coverage reports
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-ext-container-test-docker
@@ -219,23 +223,23 @@ jobs:
       - build-containerlab
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
           version: "0.5.28"
           enable-cache: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           # cache: pip
           # cache-dependency-path: "tests/requirements.txt"
@@ -253,7 +257,7 @@ jobs:
           echo PATH=$PATH >> $GITHUB_ENV
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -264,7 +268,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh docker ./tests/03-basic-ceos
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: 03-basic-ceos-log-docker
@@ -273,7 +277,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-ceos-tests-docker
@@ -296,22 +300,22 @@ jobs:
       - build-containerlab
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: containerlab
       - name: Move containerlab to usr/bin
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
           version: "0.5.28"
           enable-cache: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           # cache: pip
           # cache-dependency-path: "tests/requirements.txt"
@@ -332,7 +336,7 @@ jobs:
         run: |
           bash ./tests/rf-run.sh docker ./tests/04-basic-ixiacone
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: 04-basic-ixiacone-log-docker
@@ -341,7 +345,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-ixiac-one-tests-docker
@@ -382,6 +386,7 @@ jobs:
     needs:
       - file-changes
       - build-containerlab
+      - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
@@ -425,6 +430,16 @@ jobs:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
+  download-tests:
+    uses: ./.github/workflows/download-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+      - process-gitref
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
+
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
     runs-on: ubuntu-24.04
@@ -441,18 +456,19 @@ jobs:
       - fortigate-tests
       - cisco_iol-tests
       - fdio_vpp-tests
+      - download-tests
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - uses: WillAbides/setup-go-faster@v1.14.0
+      - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VER }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: coverage*
           path: /tmp/clab-tests/coverage
@@ -463,7 +479,7 @@ jobs:
         run: make convert-coverage
 
       - name: Upload coverage to codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -472,10 +488,12 @@ jobs:
     needs: file-changes
     if: needs.file-changes.outputs.docs == 'true' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -484,7 +502,7 @@ jobs:
       - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER build --clean --strict
 
       - name: Cache htmltest external links
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: tmp/.htmltest
           # key will contain hash of all md files to check if files have changed
@@ -505,7 +523,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - golangci-lint
-      - docs-test
+      # docs tests are often flaky with 429 errors,
+      # so don't require them to pass for the release to happen
+      # - docs-test
       - unit-test
       - smoke-tests
       - ceos-basic-tests
@@ -518,19 +538,20 @@ jobs:
       - cisco_iol-tests
       - fortigate-tests
       - fdio_vpp-tests
+      - download-tests
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: WillAbides/setup-go-faster@v1.14.0
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VER }}
 
       - name: Cache go modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           # In order:
           # * Module download cache
@@ -543,7 +564,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -553,7 +574,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v7
         with:
           version: ${{ env.GORELEASER_VER }}
           args: release --clean --verbose
@@ -565,20 +586,33 @@ jobs:
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref, '-') != true
     needs: build-and-release
+    permissions:
+      contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          lfs: true
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER gh-deploy --force --strict
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
+            -e GITHUB_TOKEN \
+            --entrypoint /bin/sh \
+            ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER \
+            -c 'git -C /docs config --local user.name "github-actions[bot]"; \
+                git -C /docs config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"; \
+                git -C /docs config --local url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \
+                mkdocs gh-deploy --force --strict'
 
   build-devcontainer:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -595,18 +629,34 @@ jobs:
   update-docs:
     runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/docs-publish'
-    needs: docs-test
+    # docs tests are often flaky with 429 errors,
+    # so don't require them to pass for the docs update to happen
+    # needs: docs-test
+    permissions:
+      contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          lfs: true
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER gh-deploy --force --strict
+      # checkout@v6 does not set the git user config, which is required for mkdocs gh-deploy to work, thus we need to set it manually in the container
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
+            -e GITHUB_TOKEN \
+            --entrypoint /bin/sh \
+            ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER \
+            -c 'git -C /docs config --local user.name "github-actions[bot]"; \
+                git -C /docs config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"; \
+                git -C /docs config --local url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \
+                mkdocs gh-deploy --force --strict'

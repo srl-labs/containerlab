@@ -1,10 +1,13 @@
 ---
 search:
   boost: 4
+kind_code_name: cisco_xrd
+kind_display_name: Cisco XRd
 ---
-# Cisco XRd
+# -{{ kind_display_name }}-
 
-[Cisco XRd](https://www.cisco.com/c/en/us/support/routers/ios-xrd/series.html) Network OS is identified with `xrd` or `cisco_xrd` kind in the [topology file](../topo-def-file.md). A kind defines a supported feature set and a startup procedure of a node.
+[-{{ kind_display_name }}-](https://www.cisco.com/c/en/us/support/routers/ios-xrd/series.html) Network OS is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+A kind defines a supported feature set and a startup procedure of a node.
 
 XRd comes in two [variants](https://xrdocs.io/virtual-routing/tutorials/2022-08-22-xrd-images-where-can-one-get-them/#xrd-form-factors):
 
@@ -62,10 +65,10 @@ There are several management interfaces supported by XRd nodes:
     `ssh clab@<container-name>`  
     Password: `clab@123`
 === "gNMI"
-    gNMI server runs on `57400` port in the insecure mode (no TLS).  
+    gNMI server runs on `9339` port in the insecure mode (no TLS).  
     Using [gnmic](https://gnmic.openconfig.net) gNMI client as an example:
     ```bash
-    gnmic -a <container-name/node-mgmt-address>:57400 --insecure \
+    gnmic -a <container-name/node-mgmt-address>:9339 --insecure \
       -u clab -p clab@123 \
       capabilities
     ```
@@ -111,7 +114,7 @@ For XRd nodes, containerlab exposes the following file layout of the node's lab 
 
 #### Default node configuration
 
-It is possible to launch nodes of `cisco_xrd` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
+It is possible to launch nodes of `-{{ kind_code_name }}-` kind with a basic config or to provide a custom config file that will be used as a startup config instead.
 
 When a node is defined without `startup-config` statement present, containerlab will generate an empty config from [this template](https://github.com/srl-labs/containerlab/blob/main/nodes/xrd/xrd.cfg) and copy it to the config directory of the node.
 
@@ -123,7 +126,7 @@ name: xrd
 topology:
   nodes:
     xrd:
-      kind: cisco_xrd
+      kind: -{{ kind_code_name }}-
 ```
 
 #### User defined config
@@ -135,7 +138,7 @@ name: xrd
 topology:
   nodes:
     xrd:
-      kind: cisco_xrd
+      kind: -{{ kind_code_name }}-
       startup-config: xrd.cfg
 ```
 

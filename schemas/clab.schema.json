@@ -69,6 +69,7 @@
                         "nokia_srlinux",
                         "arista_ceos",
                         "juniper_crpd",
+                        "juniper_csrx",
                         "sonic-vs",
                         "sonic-vm",
                         "nokia_sros",
@@ -85,6 +86,7 @@
                         "cisco_csr1000v",
                         "paloalto_panos",
                         "mikrotik_ros",
+                        "6wind_vsr",
                         "cisco_n9kv",
                         "cisco_ftdv",
                         "dell_ftosv",
@@ -105,6 +107,8 @@
                         "cisco_c8000v",
                         "cisco_cat9kv",
                         "cisco_iol",
+                        "cisco_asav",
+                        "cisco_vios",
                         "cumulus_cvx",
                         "huawei_vrp",
                         "openbsd",
@@ -114,7 +118,14 @@
                         "k8s-kind",
                         "fdio_vpp",
                         "vyosnetworks_vyos",
-                        "juniper_cjunosevolved"
+                        "juniper_cjunosevolved",
+                        "arrcus_arcos",
+                        "f5_bigip-ve",
+                        "cisco_sdwan",
+                        "openwrt",
+                        "spirent_stc",
+                        "veesix_osvbng",
+                        "ostinato"
                     ]
                 },
                 "license": {
@@ -147,6 +158,11 @@
                     "description": "Set to `true` to make the node to boot with a startup-config even if the config file is present in the lab directory",
                     "markdownDescription": "Set to `true` to [make the node to boot with a startup-config](https://containerlab.dev/manual/nodes/#enforce-startup-config) even if the config file is present in the lab directory"
                 },
+                "suppress-startup-config": {
+                    "type": "boolean",
+                    "description": "Set to `true` to prevent a startup-config file from being created (in a Zero-Touch Provisioning lab, for example)",
+                    "markdownDescription": "Set to `true` to [prevent a startup-config file from being created](https://containerlab.dev/manual/nodes/#suppress-startup-config) By default, containerlab will create a startup-config when initially creating a lab."
+                },
                 "auto-remove": {
                     "type": "boolean",
                     "description": "Set to `true` to remove the node automatically, instead of auto-restarting",
@@ -178,7 +194,7 @@
                     "minItems": 0,
                     "items": {
                         "type": "string",
-                        "pattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?:([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$|^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?:([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])+(\/tcp|\/udp|\/sctp)$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])+(\/tcp|\/udp|\/sctp)$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])-([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])+(\/tcp|\/udp|\/sctp)?$"
+                        "pattern": "^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?:([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$|^(([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])\\.){3}([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])(%[\\p{N}\\p{L}]+)?:([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])+(/tcp|/udp|/sctp)$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])+(/tcp|/udp|/sctp)$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$|^([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])-([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]):([0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])+(/tcp|/udp|/sctp)?$"
                     },
                     "uniqueItems": true
                 },
@@ -186,17 +202,44 @@
                     "type": "object",
                     "$ref": "#/definitions/env"
                 },
+                "credentials": {
+                    "type": "object",
+                    "description": "username and password for SSH/NETCONF/GNMI/etc. (overrides kind default)",
+                    "markdownDescription": "[credentials](https://containerlab.dev/manual/nodes/#credentials) for SSH/NETCONF/GNMI/etc. (overrides kind default)",
+                    "properties": {
+                        "username": {
+                            "type": "string",
+                            "description": "username to use when accessing the node over SSH/NETCONF/GNMI/etc.",
+                            "markdownDescription": "[username](https://containerlab.dev/manual/nodes/#credentials) to use when accessing the node over SSH/NETCONF/GNMI/etc."
+                        },
+                        "password": {
+                            "type": "string",
+                            "description": "password to use when accessing the node over SSH/NETCONF/GNMI/etc.",
+                            "markdownDescription": "[password](https://containerlab.dev/manual/nodes/#credentials) to use when accessing the node over SSH/NETCONF/GNMI/etc."
+                        }
+                    }
+                },
+                "env-files": {
+                    "type": "array",
+                    "description": "list of external files containing environment variables",
+                    "markdownDescription": "list of external files containing [environment variables](https://containerlab.dev/manual/nodes/#env-files)",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
                 "user": {
                     "description": "user to use within the container",
                     "markdownDescription": "[user](https://containerlab.dev/manual/nodes/#user) to use within the container",
                     "anyOf": [
                         {
                             "type": "string",
-                            "minItems": 1
+                            "minLength": 1
                         },
                         {
                             "type": "number",
-                            "minItems": 1
+                            "minimum": 0
                         }
                     ]
                 },
@@ -219,7 +262,7 @@
                     "markdownDescription": "[Runtime](https://containerlab.dev/manual/nodes/#runtime) for the node",
                     "enum": [
                         "docker",
-                        "ignite"
+                        "podman"
                     ]
                 },
                 "mgmt-ipv4": {
@@ -254,14 +297,6 @@
                     "description": "CPU cores to use by this node/container",
                     "markdownDescription": "[CPU cores](https://containerlab.dev/manual/nodes/#cpu-set) to be used by the node/container"
                 },
-                "sandbox": {
-                    "type": "string",
-                    "description": "ignite's sandbox image name"
-                },
-                "kernel": {
-                    "type": "string",
-                    "description": "ignite's kernel image name"
-                },
                 "extras": {
                     "type": "object",
                     "$ref": "#/definitions/extras-config"
@@ -291,19 +326,121 @@
                         "type": "object",
                         "properties": {
                             "slot": {
-                                "type": "string",
-                                "description": "Set component physical position on a distributed chassis"
+                                "description": "Set component physical position on a distributed chassis",
+                                "anyOf": [
+                                    {
+                                        "type": "string",
+                                        "pattern": "^[ABab]$"
+                                    },
+                                    {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    }
+                                ]
                             },
                             "type": {
-                                "type": "string",
                                 "description": "Set component type"
+                            },
+                            "sfm": {
+                                "description": "Set SFM type (SR OS specific).",
+                                "$ref": "#/definitions/sros-sfm-types"
+                            },
+                            "xiom": {
+                                "type": "array",
+                                "description": "Define list of XIOMs (SR OS Specific). Each XIOM must have values of 'slot' and 'type'. MDAs must be defined under the XIOM.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "slot": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "type": {
+                                            "$ref": "#/definitions/sros-xiom-types"
+                                        },
+                                        "mda": {
+                                            "type": "array",
+                                            "description": "Define list of MDAs under this XIOM. Each defined MDA must have values of 'slot' and 'type'",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "slot": {
+                                                        "type": "integer",
+                                                        "minimum": 1
+                                                    },
+                                                    "type": {
+                                                        "$ref": "#/definitions/sros-xiom-mda-types"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "slot",
+                                                    "type"
+                                                ],
+                                                "additionalProperties": false
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "slot",
+                                        "type"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                "uniqueItems": true
+                            },
+                            "mda": {
+                                "type": "array",
+                                "description": "Define list of MDAs (SR OS Specific). Each defined MDA must have values of 'slot' and 'type'",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "slot": {
+                                            "type": "integer",
+                                            "minimum": 1
+                                        },
+                                        "type": {
+                                            "description": "Set MDA type (SR OS specific)",
+                                            "$ref": "#/definitions/sros-mda-types"
+                                        }
+                                    },
+                                    "required": [
+                                        "slot",
+                                        "type"
+                                    ],
+                                    "additionalProperties": false
+                                }
                             },
                             "env": {
                                 "type": "object",
                                 "$ref": "#/definitions/env"
                             }
                         },
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "allOf": [
+                            {
+                                "if": {
+                                    "properties": {
+                                        "slot": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "then": {
+                                    "properties": {
+                                        "type": {
+                                            "$ref": "#/definitions/sros-cpm-types"
+                                        }
+                                    }
+                                },
+                                "else": {
+                                    "properties": {
+                                        "type": {
+                                            "$ref": "#/definitions/sros-card-types"
+                                        }
+                                    }
+                                }
+                            }
+                        ]
                     },
                     "uniqueItems": true,
                     "description": "List of node components, used for multicontainer systems",
@@ -313,6 +450,47 @@
                     "type": "array",
                     "description": "list of additional network aliases for the node",
                     "markdownDescription": "list of [aliases](https://containerlab.dev/manual/nodes/#aliases) for the node",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "shm-size": {
+                    "type": "string",
+                    "description": "shared memory size limit allocated to the container. Supported memory suffixes (case insensitive): b, kib, kb, mib, mb, gib, gb",
+                    "markdownDescription": "[shared memory size limit](https://containerlab.dev/manual/nodes/#shm-size) allocated to the container (e.g. 256MB). Supported memory suffixes (case insensitive): b, kib, kb, mib, mb, gib, gb",
+                    "pattern": "^[0-9]+(\\.?[0-9]*)?\\s*([bB]|[kK][iI]?[bB]|[mM][iI]?[bB]|[gG][iI]?[bB])?$"
+                },
+                "cap-add": {
+                    "type": "array",
+                    "description": "list of capabilities to add to the container",
+                    "markdownDescription": "list of [capabilities](https://containerlab.dev/manual/nodes/#cap-add) to add to the container",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "sysctls": {
+                    "type": "object",
+                    "description": "sysctl kernel parameters to set in the container",
+                    "markdownDescription": "[sysctl kernel parameters](https://containerlab.dev/manual/nodes/#sysctls) to set in the container",
+                    "patternProperties": {
+                        ".+": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "devices": {
+                    "type": "array",
+                    "description": "list of host devices to add to the container",
+                    "markdownDescription": "list of [host devices](https://containerlab.dev/manual/nodes/#devices) to add to the container",
                     "items": {
                         "type": "string"
                     },
@@ -389,10 +567,13 @@
                                     "sxr-1x-44s",
                                     "sxr1d32d",
                                     "sxr-1d-32d",
+                                    "sxr-1-32d",
                                     "ixrx1b",
                                     "ixr-x1b",
                                     "ixrx3b",
-                                    "ixr-x3b"
+                                    "ixr-x3b",
+                                    "ixr-x4",
+                                    "ixr-x4-d"
                                 ]
                             }
                         }
@@ -417,6 +598,7 @@
                                     {
                                         "enum": [
                                             "sr-1",
+                                            "sr-1-24d",
                                             "sr-1e",
                                             "sr-1e-sec",
                                             "sr-1s",
@@ -435,7 +617,7 @@
                                         ]
                                     },
                                     {
-                                        "pattern": "^((lc|cp):\\s)?((cpu|ram|max_nics)=\\d+|slot=[A-Z]|chassis=[^\\s]+|card=.*|\\s)+$"
+                                        "pattern": "^\\s*(?:(?:cp|lc):\\s+)?(?:(?:(?:min_)?(?:cpu|ram|max_nics)=\\d+|slot=[A-Za-z0-9]+|chassis=[^\\s_][^\\s]*|card=[^\\s_][^\\s]*|mda/\\d+=[^\\s]+)(?:\\s+|$))+(?:\\s*___\\s*(?:(?:cp|lc):\\s+)?(?:(?:(?:min_)?(?:cpu|ram|max_nics)=\\d+|slot=[A-Za-z0-9]+|chassis=[^\\s_][^\\s]*|card=[^\\s_][^\\s]*|mda/\\d+=[^\\s]+)(?:\\s+|$))+)*\\s*$"
                                     }
                                 ]
                             }
@@ -460,10 +642,15 @@
                                 "anyOf": [
                                     {
                                         "enum": [
+                                            "dms-1-24d",
                                             "ixr-10",
                                             "ixr-6",
                                             "ixr-e2c",
                                             "ixr-e2",
+                                            "ixr-e2n",
+                                            "ixr-e2n-s",
+                                            "ixr-e3c",
+                                            "ixr-e3x",
                                             "ixr-ec",
                                             "ixr-e",
                                             "ixr-r4",
@@ -473,6 +660,11 @@
                                             "ixr-s",
                                             "ixr-x3",
                                             "ixr-x",
+                                            "sar-1",
+                                            "sar-hm",
+                                            "sar-hmc",
+                                            "sar-hx",
+                                            "sar-mx",
                                             "sr-1-24d",
                                             "sr-12e",
                                             "sr-12",
@@ -494,12 +686,36 @@
                                             "sr-7",
                                             "sr-a4",
                                             "sr-a8",
+                                            "vsr-i",
                                             "xrs-20e",
                                             "xrs-20",
                                             "ess-7",
                                             "ess-12"
                                         ]
                                     }
+                                ]
+                            }
+                        }
+                    }
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "kind": {
+                                "pattern": "(cisco_iol)"
+                            }
+                        },
+                        "required": [
+                            "kind"
+                        ]
+                    },
+                    "then": {
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "iol",
+                                    "l2"
                                 ]
                             }
                         }
@@ -517,20 +733,50 @@
                     "type": "array",
                     "description": "endpoints list",
                     "markdownDescription": "[endpoints](http://localhost:8000/manual/topo-def-file/#links) list",
-                    "minItems": 2,
-                    "items": {
-                        "type": "string",
-                        "pattern": "^\\S+:\\S+$"
-                    },
+                    "prefixItems": [
+                        {
+                            "type": "string",
+                            "pattern": "^\\S+:\\S+$"
+                        },
+                        {
+                            "type": "string",
+                            "pattern": "^\\S+:\\S+$"
+                        }
+                    ],
                     "uniqueItems": true
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
                 },
+                "ipv4": {
+                    "description": "Assign IPv4 per endpoint in brief links. Accepts ordered list of IPv4 prefixes as strings",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?:$|(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[0-2]))$"
+                    },
+                    "uniqueItems": true
+                },
+                "ipv6": {
+                    "description": "Assign IPv6 per endpoint in brief links. Accepts ordered list of IPv6 prefixes as strings",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?:$|(?:(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,7}:|(?:[A-Fa-f0-9]{1,4}:){1,6}:[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,5}(?::[A-Fa-f0-9]{1,4}){1,2}|(?:[A-Fa-f0-9]{1,4}:){1,4}(?::[A-Fa-f0-9]{1,4}){1,3}|(?:[A-Fa-f0-9]{1,4}:){1,3}(?::[A-Fa-f0-9]{1,4}){1,4}|(?:[A-Fa-f0-9]{1,4}:){1,2}(?::[A-Fa-f0-9]{1,4}){1,5}|[A-Fa-f0-9]{1,4}:(?::[A-Fa-f0-9]{1,4}){1,6}|:(?:(?::[A-Fa-f0-9]{1,4}){1,7}|:))/(?:[0-9]|[1-9][0-9]|1[01][0-9]|12[0-8]))$"
+                    },
+                    "uniqueItems": true
+                },
                 "vars": {
                     "$ref": "#/definitions/link-vars"
                 }
             },
+            "required": [
+                "endpoints"
+            ],
             "additionalProperties": false
         },
         "link-type-veth": {
@@ -553,6 +799,28 @@
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
+                },
+                "ipv4": {
+                    "description": "Assign IPv4 per endpoint. Accepts ordered list of IPv4 prefixes as strings",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?:$|(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[0-2]))$"
+                    },
+                    "uniqueItems": true
+                },
+                "ipv6": {
+                    "description": "Assign IPv6 per endpoint. Accepts ordered list of IPv6 prefixes as strings",
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?:$|(?:(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,7}:|(?:[A-Fa-f0-9]{1,4}:){1,6}:[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,5}(?::[A-Fa-f0-9]{1,4}){1,2}|(?:[A-Fa-f0-9]{1,4}:){1,4}(?::[A-Fa-f0-9]{1,4}){1,3}|(?:[A-Fa-f0-9]{1,4}:){1,3}(?::[A-Fa-f0-9]{1,4}){1,4}|(?:[A-Fa-f0-9]{1,4}:){1,2}(?::[A-Fa-f0-9]{1,4}){1,5}|[A-Fa-f0-9]{1,4}:(?::[A-Fa-f0-9]{1,4}){1,6}|:(?:(?::[A-Fa-f0-9]{1,4}){1,7}|:))/(?:[0-9]|[1-9][0-9]|1[01][0-9]|12[0-8]))$"
+                    },
+                    "uniqueItems": true
                 },
                 "vars": {
                     "$ref": "#/definitions/link-vars"
@@ -610,7 +878,10 @@
                     "$ref": "#/definitions/link-endpoint"
                 },
                 "host-interface": {
-                    "$ref": "#/definitions/mtu"
+                    "$ref": "#/definitions/link-host-interface"
+                },
+                "mode": {
+                    "$ref": "#/definitions/link-macvlan-mode"
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
@@ -677,8 +948,11 @@
                 "vni": {
                     "$ref": "#/definitions/link-vxlan-vni"
                 },
-                "udp-port": {
-                    "$ref": "#/definitions/link-vxlan-udpport"
+                "dst-port": {
+                    "$ref": "#/definitions/link-vxlan-dstport"
+                },
+                "src-port": {
+                    "$ref": "#/definitions/link-vxlan-srcport"
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
@@ -695,7 +969,7 @@
                 "endpoint",
                 "remote",
                 "vni",
-                "udp-port"
+                "dst-port"
             ],
             "additionalProperties": false
         },
@@ -716,8 +990,11 @@
                 "vni": {
                     "$ref": "#/definitions/link-vxlan-vni"
                 },
-                "udp-port": {
-                    "$ref": "#/definitions/link-vxlan-udpport"
+                "dst-port": {
+                    "$ref": "#/definitions/link-vxlan-dstport"
+                },
+                "src-port": {
+                    "$ref": "#/definitions/link-vxlan-srcport"
                 },
                 "mtu": {
                     "$ref": "#/definitions/mtu"
@@ -734,7 +1011,7 @@
                 "endpoint",
                 "remote",
                 "vni",
-                "udp-port"
+                "dst-port"
             ],
             "additionalProperties": false
         },
@@ -781,6 +1058,19 @@
                     "type": "string",
                     "description": "",
                     "pattern": "^(?:[0-9A-Fa-f]{2}[:-]){5}(?:[0-9A-Fa-f]{2})"
+                },
+                "ipv4": {
+                    "$ref": "#/definitions/ipv4-prefix",
+                    "description": "IPv4 address (in CIDR notation) to configure on this interface",
+                    "markdownDescription": "Interface IPv4 address in CIDR notation, e.g. 10.0.0.1/24"
+                },
+                "ipv6": {
+                    "$ref": "#/definitions/ipv6-prefix",
+                    "description": "IPv6 address (in CIDR notation) to configure on this interface",
+                    "markdownDescription": "Interface IPv6 address in CIDR notation, e.g. 2001:db8::1/64"
+                },
+                "vars": {
+                    "$ref": "#/definitions/endpoint-vars"
                 }
             },
             "required": [
@@ -788,6 +1078,11 @@
                 "interface"
             ],
             "additionalProperties": false
+        },
+        "endpoint-vars": {
+            "type": "object",
+            "description": "per-endpoint variables",
+            "additionalProperties": true
         },
         "link-vxlan-remote": {
             "anyOf": [
@@ -805,16 +1100,23 @@
             "minimum": 1,
             "maximum": 16777215
         },
-        "link-vxlan-udpport": {
+        "link-vxlan-dstport": {
             "type": "integer",
-            "description": "Remote UDP port",
+            "description": "Destination UDP port",
+            "minimum": 1,
+            "maximum": 65535
+        },
+        "link-vxlan-srcport": {
+            "type": "integer",
+            "description": "Source UDP port",
             "minimum": 1,
             "maximum": 65535
         },
         "link-vars": {
             "type": "object",
             "description": "link-scoped variables used by config engine",
-            "markdownDescription": "link-scoped variables used by config engine"
+            "markdownDescription": "link-scoped variables used by config engine",
+            "additionalProperties": true
         },
         "labels": {
             "type": "object",
@@ -825,11 +1127,11 @@
                     "anyOf": [
                         {
                             "type": "string",
-                            "minItems": 1
+                            "minLength": 1
                         },
                         {
                             "type": "number",
-                            "minItems": 1
+                            "minimum": 0
                         }
                     ]
                 }
@@ -837,26 +1139,34 @@
         },
         "link-host-interface": {
             "type": "string",
-            "description": "link-scoped variables used by config engine",
-            "markdownDescription": "link-scoped variables used by config engine"
+            "description": "Name of the host interface",
+            "markdownDescription": "Name of the host interface"
+        },
+        "link-macvlan-mode": {
+            "type": "string",
+            "description": "MACVLAN operating mode",
+            "markdownDescription": "MACVLAN operating mode",
+            "enum": [
+                "private",
+                "vepa",
+                "bridge",
+                "passthru",
+                "source"
+            ]
         },
         "extras-config": {
             "type": "object",
             "description": "node's extra configurations",
             "properties": {
-                "srl-agents": {
+                "ceos-copy-to-flash": {
                     "type": "array",
-                    "description": "list of SR Linux agent's config files to be copied to the NOS filesystem",
-                    "markdownDescription": "list of [SR Linux agent's config files](https://containerlab.dev/manual/kinds/srl/#user-defined-custom-agents-for-sr-linux-nodes) to be copied to the NOS filesystem",
+                    "description": "list of cEOS-specific configuration or override files to be copied to the flash directory and evaluated on startup",
+                    "markdownDescription": "list of [cEOS-specific configuration or override files](https://containerlab.dev/manual/kinds/ceos/#copy-to-flash) to be copied to the flash directory and evaluated on startup",
                     "minItems": 1,
                     "items": {
                         "type": "string"
                     },
                     "uniqueItems": true
-                },
-                "mysocket-proxy": {
-                    "type": "string",
-                    "description": "http/s proxy to be used by mysocketctl"
                 }
             },
             "additionalProperties": false
@@ -1224,17 +1534,332 @@
             "markdownDescription": "IPv6 address",
             "type": "string",
             "pattern": "^((:|[0-9a-fA-F]{0,4}):)([0-9a-fA-F]{0,4}:){0,5}((([0-9a-fA-F]{0,4}:)?(:|[0-9a-fA-F]{0,4}))|(((25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9]?[0-9])))(%[\\p{N}\\p{L}]+)?$"
+        },
+        "ipv4-prefix": {
+            "description": "IPv4 address in CIDR notation",
+            "markdownDescription": "IPv4 address in CIDR notation, e.g. 10.0.0.1/24",
+            "type": "string",
+            "pattern": "^(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])/(?:[0-9]|[12][0-9]|3[0-2])$"
+        },
+        "ipv6-prefix": {
+            "description": "IPv6 address in CIDR notation",
+            "markdownDescription": "IPv6 address in CIDR notation, e.g. 2001:db8::1/64",
+            "type": "string",
+            "pattern": "^(?:(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,7}:|(?:[A-Fa-f0-9]{1,4}:){1,6}:[A-Fa-f0-9]{1,4}|(?:[A-Fa-f0-9]{1,4}:){1,5}(?::[A-Fa-f0-9]{1,4}){1,2}|(?:[A-Fa-f0-9]{1,4}:){1,4}(?::[A-Fa-f0-9]{1,4}){1,3}|(?:[A-Fa-f0-9]{1,4}:){1,3}(?::[A-Fa-f0-9]{1,4}){1,4}|(?:[A-Fa-f0-9]{1,4}:){1,2}(?::[A-Fa-f0-9]{1,4}){1,5}|[A-Fa-f0-9]{1,4}:(?::[A-Fa-f0-9]{1,4}){1,6}|:(?:(?::[A-Fa-f0-9]{1,4}){1,7}|:))/(?:[0-9]|[1-9][0-9]|1[01][0-9]|12[0-8])$"
+        },
+        "sros-card-types": {
+            "type": "string",
+            "description": "Card types for SR OS",
+            "enum": [
+                "cpm-1se/imm36-800g-qsfpdd",
+                "cpm-1x/dms24-800g-qsfpdd-1",
+                "cpm-1x/i24-800g-qsfpdd-1",
+                "cpm-1x/i40-200g-sfpdd+6-800g-qsfpdd-1",
+                "cpm-1x/i48-400g-qsfpdd-1",
+                "cpm-1x/i48-800g-qsfpdd-1x",
+                "cpm-1x/i80-200g-sfpdd+12-400g-qsfpdd-1",
+                "cpm-1x/i80-200g-sfpdd+12-800g-qsfpdd-1x",
+                "cpm-ixr-e-gnss/imm14-10g-sfp++4-1g-tx",
+                "cpm-ixr-e-gnss/imm24-sfp++8-sfp28+2-qsfp28",
+                "cpm-ixr-e/imm14-10g-sfp++4-1g-tx",
+                "cpm-ixr-e/imm24-sfp++8-sfp28+2-qsfp28",
+                "cpm-ixr-e2",
+                "cpm-ixr-e2c",
+                "cpm-ixr-e2n/imm4-sfp+4-sfp+",
+                "cpm-ixr-e3c/imm4-qsfp28+16-sfp28+8-sfp56",
+                "cpm-ixr-e3x/imm16-sfp112+15-sfp56+6-qsfpdd",
+                "cpm-ixr-ec",
+                "cpm-ixr-s/imm48-sfp++6-qsfp28",
+                "cpm-ixr-x/imm32-qsfp28+4-qsfpdd",
+                "cpm-ixr-x/imm6-qsfpdd+48-sfp56",
+                "cpm-sar-hm",
+                "cpm-sar-hmc",
+                "dms24-800g-qsfpdd-1",
+                "i24-800g-qsfpdd-1",
+                "i40-200g-sfpdd+6-800g-qsfpdd-1",
+                "i48-400g-qsfpdd-1",
+                "i48-800g-qsfpdd-1x",
+                "i80-200g-sfpdd+12-400g-qsfpdd-1",
+                "i80-200g-sfpdd+12-800g-qsfpdd-1x",
+                "imm-2pac-fp3",
+                "imm12-sfp28+2-qsfp28",
+                "imm14-10g-sfp++4-1g-tx",
+                "imm2-qsfpdd+2-qsfp28+24-sfp28",
+                "imm24-sfp++8-sfp28+2-qsfp28",
+                "imm32-qsfp28+4-qsfpdd",
+                "imm36-100g-qsfp28",
+                "imm36-800g-qsfpdd",
+                "imm36-qsfpdd",
+                "imm4-100gb-cfp4",
+                "imm4-100gb-cxp",
+                "imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
+                "imm40-10gb-sfp",
+                "imm40-10gb-sfp-ptp",
+                "imm48-1gb-sfp-c",
+                "imm48-sfp++6-qsfp28",
+                "imm48-sfp+2-qsfp28",
+                "imm6-qsfpdd+48-sfp56",
+                "iom-1",
+                "iom-a",
+                "iom-e",
+                "iom-ixr-r4",
+                "iom-ixr-r6",
+                "iom-ixr-r6d",
+                "iom-sar",
+                "iom-sar-hm",
+                "iom-sar-hmc",
+                "iom-v",
+                "iom4-e",
+                "iom4-e-b",
+                "iom4-e-hs",
+                "iom5-e",
+                "xcm-14s",
+                "xcm-14s-b",
+                "xcm-1s",
+                "xcm-2s",
+                "xcm-2se",
+                "xcm-7s",
+                "xcm-7s-b",
+                "xcm-x20",
+                "xcm2-14s",
+                "xcm2-7s",
+                "xcm2-x20",
+                "xcmc-2se"
+            ]
+        },
+        "sros-cpm-types": {
+            "type": "string",
+            "description": "CPM card types for SR OS",
+            "enum": [
+                "cpiom-ixr-r6",
+                "cpiom-ixr-r6d",
+                "cpm-1",
+                "cpm-1s",
+                "cpm-1se",
+                "cpm-1se/imm36-800g-qsfpdd",
+                "cpm-1x",
+                "cpm-1x/dms24-800g-qsfpdd-1",
+                "cpm-1x/i24-800g-qsfpdd-1",
+                "cpm-1x/i40-200g-sfpdd+6-800g-qsfpdd-1",
+                "cpm-1x/i48-400g-qsfpdd-1",
+                "cpm-1x/i48-800g-qsfpdd-1x",
+                "cpm-1x/i80-200g-sfpdd+12-400g-qsfpdd-1",
+                "cpm-1x/i80-200g-sfpdd+12-800g-qsfpdd-1x",
+                "cpm-2s",
+                "cpm-2se",
+                "cpm-a",
+                "cpm-e",
+                "cpm-ixr",
+                "cpm-ixr-e",
+                "cpm-ixr-e-gnss",
+                "cpm-ixr-e-gnss/imm14-10g-sfp++4-1g-tx",
+                "cpm-ixr-e-gnss/imm24-sfp++8-sfp28+2-qsfp28",
+                "cpm-ixr-e/imm14-10g-sfp++4-1g-tx",
+                "cpm-ixr-e/imm24-sfp++8-sfp28+2-qsfp28",
+                "cpm-ixr-e2",
+                "cpm-ixr-e2c",
+                "cpm-ixr-e2n/imm4-sfp+4-sfp+",
+                "cpm-ixr-e3c/imm4-qsfp28+16-sfp28+8-sfp56",
+                "cpm-ixr-e3x/imm16-sfp112+15-sfp56+6-qsfpdd",
+                "cpm-ixr-ec",
+                "cpm-ixr-r4",
+                "cpm-ixr-s",
+                "cpm-ixr-s/imm48-sfp++6-qsfp28",
+                "cpm-ixr-x",
+                "cpm-ixr-x/imm32-qsfp28+4-qsfpdd",
+                "cpm-ixr-x/imm6-qsfpdd+48-sfp56",
+                "cpm-s",
+                "cpm-sar",
+                "cpm-sar-hm",
+                "cpm-sar-hmc",
+                "cpm-v",
+                "cpm-v/iom-v",
+                "cpm-x20",
+                "cpm2-s",
+                "cpm2-x20",
+                "cpm5",
+                "iom-sar"
+            ]
+        },
+        "sros-mda-types": {
+            "type": "string",
+            "description": "MDA types for SR OS",
+            "enum": [
+                "a32-chds1v2",
+                "d24-800g-qsfpdd-1",
+                "i1-wlan",
+                "i2-cellular",
+                "i2-sdi",
+                "i3-10/100eth-tx",
+                "i6-10/100eth-tx",
+                "isa-aa-v",
+                "isa-bb-v",
+                "isa-ms-v",
+                "isa-tunnel-v",
+                "isa2-aa",
+                "isa2-bb",
+                "isa2-tunnel",
+                "isa2-video",
+                "m1-400g-qsfpdd+1-100g-qsfp28",
+                "m10-10g-sfp+",
+                "m10-1g-sfp+2-10g-sfp+",
+                "m10-50g-sfp56",
+                "m10-sfp++6-sfp",
+                "m12-sfp28+2-qsfp28",
+                "m14-10g-sfp++4-1g-tx",
+                "m18-25g-sfp28",
+                "m2-100g-qsfp28+16-10g-sfp+",
+                "m2-cfp2",
+                "m2-qsfpdd+2-qsfp28+24-sfp28",
+                "m20-10g-sfp+",
+                "m20-1g-csfp",
+                "m20-v",
+                "m24-800g-qsfpdd-1",
+                "m24-sfp++8-sfp28+2-qsfp28",
+                "m32-1g-csfp",
+                "m32-qsfp28+4-qsfpdd",
+                "m36-100g-qsfp28",
+                "m36-qsfpdd",
+                "m4-100g-cfp4",
+                "m4-10g-sfp++1-100g-cfp2",
+                "m4-1g-tx+20-1g-sfp+6-10g-sfp+",
+                "m40-10g-sfp",
+                "m40-10g-sfp-ptp",
+                "m40-200g-sfpdd+6-800g-qsfpdd-1",
+                "m46-10g-sfp+",
+                "m48-400g-qsfpdd-1",
+                "m48-800g-qsfpdd-1x",
+                "m48-sfp++6-qsfp28",
+                "m48-sfp+2-qsfp28",
+                "m5-100g-qsfp28",
+                "m5e2-100g-qsfp28+2-800g-qdd",
+                "m5e8-100g-sfp112+2-800g-qdd",
+                "m6-10g-sfp++1-100g-qsfp28",
+                "m6-10g-sfp++4-25g-sfp28",
+                "m6-qsfpdd+48-sfp56",
+                "m80-1g-csfp",
+                "m80-200g-sfpdd+12-400g-qsfpdd-1",
+                "m80-200g-sfpdd+12-800g-qsfpdd-1x",
+                "ma2-10gb-sfp+12-1gb-sfp",
+                "ma20-1gb-tx",
+                "ma4-10gb-sfp+",
+                "ma44-1gb-csfp",
+                "maxp1-100gb-cfp",
+                "maxp1-100gb-cfp2",
+                "maxp1-100gb-cfp4",
+                "maxp10-10/1gb-msec-sfp+",
+                "maxp10-10gb-sfp+",
+                "me-isa2-ms",
+                "me-isa2-ms-e",
+                "me1-100gb-cfp2",
+                "me10-10gb-sfp+",
+                "me12-10/1gb-sfp+",
+                "me12-100gb-qsfp28",
+                "me16-25gb-sfp28+2-100gb-qsfp-b",
+                "me16-25gb-sfp28+2-100gb-qsfp28",
+                "me2-100gb-ms-qsfp28",
+                "me2-100gb-qsfp28",
+                "me3-200gb-cfp2-dco",
+                "me3-400gb-qsfpdd",
+                "me40-1gb-csfp",
+                "me6-100gb-qsfp28",
+                "me6-10gb-sfp+",
+                "me6-400gb-qsfpdd",
+                "me8-10/25gb-sfp28",
+                "ms36-800g-qsfpdd",
+                "p-isa2-ms",
+                "p-isa2-ms-e",
+                "p1-100g-cfp",
+                "p10-10g-sfp",
+                "p20-1gb-sfp",
+                "p6-10g-sfp",
+                "s18-100gb-qsfp28",
+                "s36-100gb-qsfp28",
+                "s36-100gb-qsfp28-3.6t",
+                "s36-400gb-qsfpdd",
+                "x12-400g-qsfpdd",
+                "x2-s36-800g-qsfpdd-12.0t",
+                "x2-s36-800g-qsfpdd-18.0t",
+                "x24-100g-qsfp28",
+                "x4-100g-cfp2",
+                "x40-10g-sfp",
+                "x40-10g-sfp-ptp",
+                "x6-200g-cfp2-dco",
+                "x6-400g-cfp8"
+            ]
+        },
+        "sros-xiom-types": {
+            "type": "string",
+            "description": "XIOM types for SR OS",
+            "enum": [
+                "iom-s-1.5t",
+                "iom-s-3.0t",
+                "iom2-s-3.0t",
+                "iom2-s-6.0t",
+                "iom2-se-3.0t",
+                "iom2-se-6.0t",
+                "x2-s36-400g-qsfp112-3.0t",
+                "x2-s36-800g-qsfpdd-6.0t"
+            ]
+        },
+        "sros-xiom-mda-types": {
+            "type": "string",
+            "description": "XIOM MDA types for SR OS",
+            "enum": [
+                "ms6-200gb-cfp2-dco",
+                "ms3-200gb-cfp2-dco",
+                "ms16-100gb-sfpdd+4-100gb-qsfp28",
+                "ms18-100gb-qsfp28",
+                "ms4-400gb-qsfpdd+4-100gb-qsfp28",
+                "ms24-10/100gb-sfpdd",
+                "ms2-400gb-qsfpdd+2-100gb-qsfp28",
+                "ms8-100gb-sfpdd+2-100gb-qsfp28",
+                "ms16-sdd+4-qsfp28-b",
+                "ms8-sdd+2-qsfp28-b",
+                "mse24-200g-sfpdd",
+                "mse6-800g-cfp2-dco",
+                "mse14-800g+4-400g",
+                "m36-800g-qsfpdd",
+                "mse6-800g-qsfpdd",
+                "m36-400g-qsfp112",
+                "ms2-100g-qsfp28+2-800g-qsfpdd",
+                "ms8-100g-sfp112+2-800g-qsfpdd",
+                "ms4-400g-qsfpdd+4-100g-qsfp28"
+            ]
+        },
+        "sros-sfm-types": {
+            "type": "string",
+            "description": "SFM types for SR OS",
+            "enum": [
+                "m-sfm5-12",
+                "m-sfm5-12e",
+                "m-sfm5-7",
+                "m-sfm6-12e",
+                "m-sfm6-7/12",
+                "sfm-2s",
+                "sfm-2se",
+                "sfm-ixr-10",
+                "sfm-ixr-6",
+                "sfm-s",
+                "sfm-x20",
+                "sfm-x20-b",
+                "sfm-x20s-b",
+                "sfm2-s",
+                "sfm2-x20s"
+            ]
         }
     },
     "type": "object",
     "properties": {
         "name": {
             "description": "topology name",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9-._]*$"
         },
         "prefix": {
             "description": "lab prefix",
             "type": "string",
+            "pattern": "^$|^__lab-name$|^[a-zA-Z0-9][a-zA-Z0-9-._]*$",
             "markdownDescription": "[lab prefix](https://containerlab.dev/manual/topo-def-file/#prefix)"
         },
         "mgmt": {
@@ -1256,13 +1881,13 @@
                     "description": "IPv4 subnet to use for the custom management network. e.g. 172.100.100.0/24",
                     "markdownDescription": "[IPv4 subnet](https://containerlab.dev/manual/network/#user-defined-addresses) to use for the custom management network. e.g. 172.100.100.0/24",
                     "type": "string",
-                    "pattern": "(^.+\/[0-9]{1,2}$)|(auto)"
+                    "pattern": "(^.+/[0-9]{1,2}$)|(auto)"
                 },
                 "ipv6-subnet": {
                     "description": "IPv6 subnet to use for the custom management network. e.g. 3fff:172:100:100::/64",
                     "markdownDescription": "[IPv6 subnet](https://containerlab.dev/manual/network/#user-defined-addresses) to be used for the custom management network. e.g. 3fff:172:100:100::/64",
                     "type": "string",
-                    "pattern": "(^.+\/[0-9]{1,3}$)|(auto)"
+                    "pattern": "(^.+/[0-9]{1,3}$)|(auto)"
                 },
                 "ipv4-gw": {
                     "description": "IPv4 gateway address that will be set on a bridge used for the management network. Will be set to the first available IP address by default",
@@ -1279,7 +1904,7 @@
                     "description": "IPv4 range out of the ipv4-subnet to use for the custom management network. e.g. 172.100.100.128/25",
                     "markdownDescription": "[IPv4 range](https://containerlab.dev/manual/network/#ip-range) out of the ipv4-subnet to use for the custom management network. e.g. 172.100.100.128/25",
                     "type": "string",
-                    "pattern": "^.+\/[0-9]{1,2}$"
+                    "pattern": "^.+/[0-9]{1,2}$"
                 },
                 "ipv6-range": {
                     "description": "IPv6 range out of the ipv6-subnet to use for the custom management network. e.g. 3fff:172:100:100:8000::/65",
@@ -1293,22 +1918,60 @@
                     "$ref": "#/definitions/mtu"
                 },
                 "driver": {
-                "type": "string",
-                "enum": ["bridge", "macvlan"],
-                "description": "Network driver type (bridge or macvlan)"
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "macvlan"
+                    ],
+                    "description": "Network driver type (bridge or macvlan)"
                 },
                 "macvlan-parent": {
-                "type": "string",
-                "description": "Parent interface for macvlan network"
+                    "type": "string",
+                    "description": "Parent interface for macvlan network"
                 },
                 "macvlan-mode": {
-                "type": "string",
-                "enum": ["bridge", "vepa", "private", "passthru"],
-                "description": "Macvlan mode (bridge, vepa, private, or passthru)"
+                    "type": "string",
+                    "enum": [
+                        "bridge",
+                        "vepa",
+                        "private",
+                        "passthru"
+                    ],
+                    "description": "Macvlan mode (bridge, vepa, private, or passthru)"
                 },
                 "macvlan-aux": {
-                "type": "string",
-                "description": "Auxiliary IP address for host macvlan interface"
+                    "type": "string",
+                    "description": "Auxiliary IP address for host macvlan interface"
+                },
+                "external-access": {
+                    "type": "boolean",
+                    "description": "controls whether the management network has external access or not",
+                    "markdownDescription": "controls whether the [management network has external access](https://containerlab.dev/manual/network/#external-access) or not"
+                },
+                "skip-when-unused": {
+                    "type": "boolean",
+                    "description": "skip management network creation when every node has network-mode: none",
+                    "markdownDescription": "skip creating the [management network](https://containerlab.dev/manual/network/#skipping-the-management-network) when every node resolves to `network-mode: none` (per-node, group, kind, or defaults)"
+                },
+                "driver-opts": {
+                    "type": "object",
+                    "description": "overrides for container runtime network driver options",
+                    "markdownDescription": "[driver-opts](https://containerlab.dev/manual/network/#bridge-network-driver-options) lets you set overrides for the network driver of the container runtime",
+                    "patternProperties": {
+                        ".+": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "number"
+                                },
+                                {
+                                    "type": "boolean"
+                                }
+                            ]
+                        }
+                    }
                 }
             },
             "minProperties": 1,
@@ -1324,7 +1987,7 @@
                     "markdownDescription": "topology [nodes](https://containerlab.dev/manual/nodes/) configuration container",
                     "type": "object",
                     "patternProperties": {
-                        ".*": {
+                        "^[a-zA-Z0-9][a-zA-Z0-9-._|]*$": {
                             "oneOf": [
                                 {
                                     "type": "null"
@@ -1334,7 +1997,8 @@
                                 }
                             ]
                         }
-                    }
+                    },
+                    "additionalProperties": false
                 },
                 "groups": {
                     "description": "topology groups configuration container",
@@ -1357,6 +2021,9 @@
                         "nokia_srsim": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "nokia_sros": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "arista_ceos": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -1364,6 +2031,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_crpd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "juniper_csrx": {
                             "$ref": "#/definitions/node-config"
                         },
                         "sonic-vs": {
@@ -1376,9 +2046,6 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "dell_sonic": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "nokia_sros": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vmx": {
@@ -1396,7 +2063,16 @@
                         "juniper_vjunosevolved": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "cjunosevolved": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "juniper_cjunosevolved": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "aruba_aoscx": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_xrd": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_xrv": {
@@ -1406,6 +2082,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_nxos": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_n9kv": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_csr": {
@@ -1418,6 +2097,18 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_iol": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_c8000": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_c8000v": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_sdwan": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_asav": {
                             "$ref": "#/definitions/node-config"
                         },
                         "linux": {
@@ -1444,16 +2135,7 @@
                         "ext-container": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "cisco_xrd": {
-                            "$ref": "#/definitions/node-config"
-                        },
                         "rare": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "cisco_8000": {
-                            "$ref": "#/definitions/node-config"
-                        },
-                        "cisco_c8000v": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cumulus_cvx": {
@@ -1465,6 +2147,9 @@
                         "freebsd": {
                             "$ref": "#/definitions/node-config"
                         },
+                        "openwrt": {
+                            "$ref": "#/definitions/node-config"
+                        },
                         "huawei_vrp": {
                             "$ref": "#/definitions/node-config"
                         },
@@ -1474,11 +2159,23 @@
                         "fdio_vpp": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "cjunosevolved": {
-                            "ref": "#/definitions/node-config"
+                        "arrcus_arcos": {
+                            "$ref": "#/definitions/node-config"
                         },
-                        "juniper_cjunosevolved": {
-                            "ref": "#/definitions/node-config"
+                        "mikrotik_ros": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "6wind_vsr": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "spirent_stc": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "veesix_osvbng": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "ostinato": {
+                            "$ref": "#/definitions/node-config"
                         }
                     },
                     "additionalProperties": false
@@ -1536,6 +2233,17 @@
                 }
             },
             "additionalProperties": false
+        },
+        "debug": {
+            "description": "Boolean flag to enable debug mode for the topology",
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "type": "boolean"
+                }
+            ]
         }
     },
     "additionalProperties": false,

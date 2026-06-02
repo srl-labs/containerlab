@@ -9,6 +9,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,15 +20,14 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/srl-labs/containerlab/cert"
-	"github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
-	"github.com/srl-labs/containerlab/utils"
+	clabcert "github.com/srl-labs/containerlab/cert"
+	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 const (
@@ -40,12 +40,20 @@ const (
 
 	retryTimer = time.Second
 
-	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory config.
-	// Default config is a config that adds some basic configuration to the node, such as tls certs, gnmi/json-rpc, login-banner.
+	// defaultCfgPath is a path to a file with default config that clab adds on top of the factory
+	// config. Default config is a config that adds some basic configuration to the node, such as
+	// tls certs, gnmi/json-rpc, login-banner.
 	defaultCfgPath = "/tmp/clab-default-config"
-	// overlayCfgPath is a path to a file with additional config that clab adds on top of the default config.
+	// overlayCfgPath is a path to a file with additional config that clab adds on top of the
+	// default config.
 	// Partial config provided via startup-config parameter is an overlay config.
 	overlayCfgPath = "/tmp/clab-overlay-config"
+
+	srlShortPlatformName = "srl"
+	srlLongPlatformName  = "nokia_srlinux"
+	scrapliPlatformName  = srlLongPlatformName
+
+	mgmt0InterfaceName = "mgmt0"
 )
 
 var (
@@ -54,9 +62,7 @@ var (
 	//go:embed srl_default_config.go.tpl
 	srlConfigCmdsTpl string
 
-	scrapliPlatformName = "nokia_srlinux"
-
-	kindNames = []string{"srl", "nokia_srlinux"}
+	kindNames = []string{srlShortPlatformName, srlLongPlatformName}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
 		"net.ipv6.conf.all.disable_ipv6":   "0",
@@ -65,7 +71,7 @@ var (
 		"net.ipv6.conf.all.autoconf":       "0",
 		"net.ipv6.conf.default.autoconf":   "0",
 	}
-	defaultCredentials = nodes.NewCredentials("admin", "NokiaSrl1!")
+	defaultCredentials = clabnodes.NewCredentials("admin", "NokiaSrl1!")
 
 	srlTypes = map[string]string{
 		"ixsa1":      "7215IXSA1.yml",
@@ -112,10 +118,13 @@ var (
 		"sxr-1x-44s": "7730SXR-1x-44s.yml",
 		"sxr1d32d":   "7730SXR-1d-32d.yml",
 		"sxr-1d-32d": "7730SXR-1d-32d.yml",
+		"sxr-1-32d":  "7730SXR-1-32d.yml",
 		"ixrx1b":     "7250IXRX1b.yml",
 		"ixr-x1b":    "7250IXRX1b.yml",
 		"ixrx3b":     "7250IXRX3b.yml",
 		"ixr-x3b":    "7250IXRX3b.yml",
+		"ixr-x4":     "7250IXRX4-QSFP-DD.yml",
+		"ixr-x4-d":   "7250IXRX4-QSFP-DD.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -124,73 +133,93 @@ var (
 	topologies embed.FS
 
 	saveCmd          = `/opt/srlinux/bin/sr_cli -d "tools system configuration save"`
-	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d "info from state system app-management application mgmt_server state | grep running"`
-	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the mgmt server is ready to accept config.
+	mgmtServerRdyCmd = `/opt/srlinux/bin/sr_cli -d ` +
+		`"info from state system app-management application mgmt_server state | grep running"`
+	// readyForConfigCmd checks the output of a file on srlinux which will be populated once the
+	// mgmt server is ready to accept config.
 	readyForConfigCmd = "cat /etc/opt/srlinux/devices/app_ephemeral.mgmt_server.ready_for_config"
 
-	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(utils.CreateFuncs()).
+	srlCfgTpl, _ = template.New("clab-srl-default-config").Funcs(clabutils.CreateFuncs()).
 			Parse(srlConfigCmdsTpl)
 
-	requiredKernelVersion = &utils.KernelVersion{
-		Major:    4,
-		Minor:    10,
+	requiredKernelVersion = &clabutils.KernelVersion{
+		Major:    4,  //nolint:mnd
+		Minor:    10, //nolint:mnd
 		Revision: 0,
 	}
 
-	InterfaceRegexp = regexp.MustCompile(`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`)
-	InterfaceHelp   = "ethernet-L/P, ethernet-L/P/C or eL-P, eL-P-C (where L, P, C >= 1)"
+	InterfaceRegexp = regexp.MustCompile(
+		`ethernet-(?P<linecard>\d+)/(?P<port>\d+)(?:/(?P<channel>\d+))?`,
+	)
+	InterfaceHelp = "ethernet-L/P, ethernet-L/P/C or eL-P, eL-P-C (where L, P, C >= 1)"
 )
 
 // Register registers the node in the NodeRegistry.
-func Register(r *nodes.NodeRegistry) {
-	generateNodeAttributes := nodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
-	platformOpts := &nodes.PlatformAttrs{
+func Register(r *clabnodes.NodeRegistry) {
+	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
+	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
 	}
 
-	nrea := nodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, platformOpts)
+	nrea := clabnodes.NewNodeRegistryEntryAttributes(
+		defaultCredentials,
+		generateNodeAttributes,
+		platformOpts,
+	)
 
-	r.Register(kindNames, func() nodes.Node {
+	r.Register(kindNames, func() clabnodes.Node {
 		return new(srl)
 	}, nrea)
 }
 
 type srl struct {
-	nodes.DefaultNode
-	// startup-config passed as a path to a file with CLI instructions will be read into this byte slice
+	clabnodes.DefaultNode
+	// startup-config passed as a path to a file with CLI instructions will be read into this byte
+	// slice
 	startupCliCfg []byte
 
 	// Params provided in Pre-Deploy, that srl uses in Post-Deploy phase
 	// to generate certificates
-	cert         *cert.Cert
+	cert         *clabcert.Cert
 	topologyName string
 	// SSH public keys extracted from the clab host
 	sshPubKeys []ssh.PublicKey
 	// software version SR Linux node runs
 	swVersion *SrlVersion
+	// indicates if the node supports OpenConfig server
+	supportsOpenconfig bool
 }
 
-func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
+func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
-	n.DefaultNode = *nodes.NewDefaultNode(n)
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 	// set virtualization requirement
 	n.HostRequirements.SSSE3 = true
 	n.HostRequirements.MinVCPU = 2
-	n.HostRequirements.MinVCPUFailAction = types.FailBehaviourError
+	n.HostRequirements.MinVCPUFailAction = clabtypes.FailBehaviourError
 	n.HostRequirements.MinAvailMemoryGb = 2
-	n.HostRequirements.MinAvailMemoryGbFailAction = types.FailBehaviourLog
+	n.HostRequirements.MinAvailMemoryGbFailAction = clabtypes.FailBehaviourLog
 
 	n.Cfg = cfg
 
-	// force cert creation for srlinux nodes as they by make use of tls certificate in the default config
-	n.Cfg.Certificate.Issue = utils.Pointer(true)
+	// force cert creation for srlinux nodes as they by make use of tls certificate in the default
+	// config
+	n.Cfg.Certificate.Issue = clabutils.Pointer(true)
 
 	for _, o := range opts {
 		o(n)
 	}
 
-	if !strings.Contains(n.Cfg.NodeType, "-") {
-		log.Warn("Deprecation notice", "notice", "You use a deprecated node type format. Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\nDeprecated type format will be removed after January 2026", "used type", n.Cfg.NodeType)
+	if n.Cfg.NodeType != "" && !strings.Contains(n.Cfg.NodeType, "-") {
+		log.Warn(
+			"Deprecation notice",
+			"notice",
+			"You are using a deprecated SR Linux node type name. "+
+				"Consider using a new format with dashes. Example: ixr-d2l, ixr-h5-64d, etc.\n"+
+				"Deprecated type format will be removed after January 2026",
+			"deprecated type",
+			n.Cfg.NodeType,
+		)
 	}
 
 	if n.Cfg.NodeType == "" {
@@ -202,6 +231,7 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 		for key := range srlTypes {
 			keys = append(keys, key)
 		}
+
 		return fmt.Errorf("wrong node type. '%s' doesn't exist. should be any of %s",
 			n.Cfg.NodeType, strings.Join(keys, ", "))
 	}
@@ -209,21 +239,21 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	if n.Cfg.Cmd == "" {
 		// set default Cmd if it was not provided by a user
 		// the additional touch is needed to support non docker runtimes
-		n.Cfg.Cmd = "sudo bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
+		n.Cfg.Cmd = "sudo -E bash -c 'touch /.dockerenv && /opt/srlinux/bin/sr_linux'"
 	}
 
-	n.Cfg.Env = utils.MergeStringMaps(srlEnv, n.Cfg.Env)
+	n.Cfg.Env = clabutils.MergeStringMaps(srlEnv, n.Cfg.Env)
 
 	// if user was not initialized to a value, use root
 	if n.Cfg.User == "" {
 		n.Cfg.User = "0:0"
 	}
-	for k, v := range srlSysctl {
-		n.Cfg.Sysctls[k] = v
-	}
+
+	maps.Copy(n.Cfg.Sysctls, srlSysctl)
 
 	if n.Cfg.License != "" {
-		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will be copied to that path
+		// we mount a fixed path node.Labdir/license.key as the license referenced in topo file will
+		// be copied to that path
 		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(
 			filepath.Join(n.Cfg.LabDir, "license.key"), ":/opt/srlinux/etc/license.key:ro"))
 	}
@@ -237,9 +267,17 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	dstTopoPath := "/tmp/topology.yml"
 	// if a user provided a topology file, it means that they want to use a custom srl topology file
 	// in that case we do not need to mount the one for the provided type
-	if !utils.DestinationBindMountExists(n.Cfg.Binds, dstTopoPath) {
+	if !clabutils.DestinationBindMountExists(n.Cfg.Binds, dstTopoPath) {
 		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(srcTopoPath, ":", dstTopoPath, ":ro"))
 	}
+
+	// mounting /run/netnns as tmpfs ensures the network-instances
+	// namespaces don't persist through stop/start/restarts.
+	if n.Cfg.Tmpfs == nil {
+		n.Cfg.Tmpfs = map[string]string{}
+	}
+
+	n.Cfg.Tmpfs["/run/netns"] = "rw,nosuid,nodev,noexec"
 
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceHelp = InterfaceHelp
@@ -247,35 +285,8 @@ func (n *srl) Init(cfg *types.NodeConfig, opts ...nodes.NodeOption) error {
 	return nil
 }
 
-func (n *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error {
-	utils.CreateDirectory(n.Cfg.LabDir, 0o777)
-
-	// Create appmgr subdir for agent specs and copy files, if needed
-	if n.Cfg.Extras != nil && len(n.Cfg.Extras.SRLAgents) != 0 {
-		agents := n.Cfg.Extras.SRLAgents
-
-		appmgr := filepath.Join(n.Cfg.LabDir, "config", "appmgr")
-		utils.CreateDirectory(appmgr, 0o777)
-
-		// process extras -> agents configurations
-		for _, fullpath := range agents {
-			basename := filepath.Base(fullpath)
-			// if it is a url extract filename from url or content-disposition header
-			if utils.IsHttpURL(fullpath, false) {
-				basename = utils.FilenameForURL(fullpath)
-			}
-			// enforce yml extension
-			ext := filepath.Ext(basename)
-			if ext != ".yml" && ext != ".yaml" {
-				basename = basename + ".yml"
-			}
-
-			dst := filepath.Join(appmgr, basename)
-			if err := utils.CopyFile(fullpath, dst, 0o644); err != nil {
-				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
-			}
-		}
-	}
+func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
@@ -285,10 +296,18 @@ func (n *srl) PreDeploy(_ context.Context, params *nodes.PreDeployParams) error 
 	n.cert = params.Cert
 	n.topologyName = params.TopologyName
 
+	// platform specific pre-deploy actions
+	if n.Config().Env["SRL_CHASSIS_MODE"] == "" {
+		// boot 6e/10e in GEN2CP_ONLY mode by default
+		if n.Config().NodeType == "ixr-6e" || n.Config().NodeType == "ixr-10e" {
+			n.Config().Env["SRL_CHASSIS_MODE"] = "GEN2CP_ONLY"
+		}
+	}
+
 	return n.createSRLFiles()
 }
 
-func (n *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
+func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams) error {
 	log.Info("Running postdeploy actions",
 		"kind", n.Cfg.Kind,
 		"node", n.Cfg.ShortName)
@@ -318,10 +337,15 @@ func (n *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 		return err
 	}
 
+	n.supportsOpenconfig, err = n.OpenConfigFeatureEnabled(ctx)
+	if err != nil {
+		return err
+	}
+
 	// return if config file is found in the lab directory.
 	// This can be either if the startup-config has been mounted by that path
 	// or the config has been previously generated and saved
-	if utils.FileExists(filepath.Join(n.Cfg.LabDir, "config", "config.json")) {
+	if clabutils.FileExists(filepath.Join(n.Cfg.LabDir, "config", "config.json")) {
 		return nil
 	}
 
@@ -341,37 +365,54 @@ func (n *srl) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) er
 	return n.generateCheckpoint(ctx)
 }
 
-func (n *srl) SaveConfig(ctx context.Context) error {
-	cmd, _ := exec.NewExecCmdFromString(saveCmd)
+func (n *srl) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
+	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
+
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
-		return fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
+		return nil, fmt.Errorf("%s: failed to execute cmd: %v", n.Cfg.ShortName, err)
 	}
 
-	if len(execResult.GetStdErrString()) > 0 {
-		return fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
+	if execResult.GetStdErrString() != "" {
+		return nil, fmt.Errorf("%s errors: %s", n.Cfg.ShortName, execResult.GetStdErrString())
 	}
 
-	log.Infof("saved SR Linux configuration from %s node. Output:\n%s", n.Cfg.ShortName, execResult.GetStdOutString())
+	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.json")
 
-	return nil
+	log.Infof(
+		"saved SR Linux configuration from %s node. Output:\n%s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+	)
+
+	return &clabnodes.SaveConfigResult{
+		ConfigPath: cfgPath,
+	}, nil
 }
 
-// Ready returns when the node boot sequence reached the stage when it is ready to accept config commands
+// Ready returns when the node boot sequence reached the stage when it is ready to accept config
+// commands
 // returns an error if not ready by the expiry of the timer readyTimeout.
 func (n *srl) Ready(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
+
 	var err error
 
 	log.Debugf("Waiting for SR Linux node %q to boot...", n.Cfg.ShortName)
+
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timed out waiting for SR Linux node %s to boot: %v", n.Cfg.ShortName, err)
+			return fmt.Errorf(
+				"timed out waiting for SR Linux node %s to boot: %v",
+				n.Cfg.ShortName,
+				err,
+			)
 		default:
 			// two commands are checked, first if the mgmt_server is running
-			cmd, _ := exec.NewExecCmdFromString(mgmtServerRdyCmd)
+			cmd, _ := clabexec.NewExecCmdFromString(mgmtServerRdyCmd)
+
 			execResult, err := n.RunExec(ctx, cmd)
 			if err != nil || (execResult != nil && execResult.GetReturnCode() != 0) {
 				logMsg := "mgmt_server status check failed"
@@ -391,35 +432,48 @@ func (n *srl) Ready(ctx context.Context) error {
 			}
 
 			if execResult.GetStdErrString() != "" {
-				log.Debugf("error during checking SR Linux boot status: %s", execResult.GetStdErrString())
+				log.Debugf(
+					"error during checking SR Linux boot status: %s",
+					execResult.GetStdErrString(),
+				)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
 			if !strings.Contains(execResult.GetStdOutString(), "running") {
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
-			// once mgmt server is running, we need to check if it is ready to accept configuration commands
+			// once mgmt server is running, we need to check if it is ready to accept configuration
+			// commands
 			// this is done with checking readyForConfigCmd
-			cmd, _ = exec.NewExecCmdFromString(readyForConfigCmd)
+			cmd, _ = clabexec.NewExecCmdFromString(readyForConfigCmd)
+
 			execResult, err = n.RunExec(ctx, cmd)
 			if err != nil {
 				log.Debugf("error during readyForConfigCmd execution: %s", err)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
 			if execResult.GetStdErrString() != "" {
 				log.Debugf("readyForConfigCmd stderr: %s", execResult.GetStdErrString())
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
 			if !strings.Contains(execResult.GetStdOutString(), "loaded initial configuration") {
-				log.Debugf("Management server readiness files doesn't contain the marker string %s", execResult.GetStdOutString())
+				log.Debugf(
+					"Management server readiness files doesn't contain the marker string %s",
+					execResult.GetStdOutString(),
+				)
 				time.Sleep(retryTimer)
+
 				continue
 			}
 
@@ -433,15 +487,20 @@ func (n *srl) Ready(ctx context.Context) error {
 // checkKernelVersion emits a warning if the present kernel version is lower than the required one.
 func (*srl) checkKernelVersion() error {
 	// retrieve running kernel version
-	kv, err := utils.GetKernelVersion()
+	kv, err := clabutils.GetKernelVersion()
 	if err != nil {
 		return err
 	}
 
 	// do the comparison
 	if !kv.GreaterOrEqual(requiredKernelVersion) {
-		log.Infof("Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s", requiredKernelVersion, kv)
+		log.Infof(
+			"Nokia SR Linux v23.3.1+ requires a kernel version greater than %s. Detected kernel version: %s",
+			requiredKernelVersion,
+			kv,
+		)
 	}
+
 	return nil
 }
 
@@ -457,15 +516,19 @@ func (n *srl) CheckDeploymentConditions(ctx context.Context) error {
 
 func (n *srl) createSRLFiles() error {
 	log.Debugf("Creating directory structure for SRL container: %s", n.Cfg.ShortName)
+
 	var src string
 
 	if n.Cfg.License != "" {
 		// copy license file to node specific directory in lab
 		src = n.Cfg.License
+
 		licPath := filepath.Join(n.Cfg.LabDir, "license.key")
-		if err := utils.CopyFile(src, licPath, 0o644); err != nil {
+		if err := clabutils.CopyFile(context.Background(), src, licPath,
+			clabconstants.PermissionsFileDefault); err != nil {
 			return fmt.Errorf("CopyFile src %s -> dst %s failed %v", src, licPath, err)
 		}
+
 		log.Debugf("CopyFile src %s -> dst %s succeeded", src, licPath)
 	}
 
@@ -475,7 +538,8 @@ func (n *srl) createSRLFiles() error {
 		return err
 	}
 
-	utils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"), 0o777)
+	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, "config"),
+		clabconstants.PermissionsOpen)
 
 	// create repository files (for yum/apt) that
 	// are mounted to srl container during the init phase
@@ -488,6 +552,7 @@ func (n *srl) createSRLFiles() error {
 	// if the node has a `startup-config:` statement, the file specified in that section
 	// will be used as a template in GenerateConfig()
 	var cfgTemplate string
+
 	cfgPath := filepath.Join(n.Cfg.LabDir, "config", "config.json")
 	if n.Cfg.StartupConfig != "" {
 		log.Debug("Reading startup-config", "file", n.Cfg.StartupConfig)
@@ -497,7 +562,7 @@ func (n *srl) createSRLFiles() error {
 			return err
 		}
 
-		cBuf, err := utils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
+		cBuf, err := clabutils.SubstituteEnvsAndTemplate(bytes.NewReader(c), n.Cfg)
 		if err != nil {
 			return err
 		}
@@ -506,10 +571,13 @@ func (n *srl) createSRLFiles() error {
 		// Get slice of data with optional leading whitespace removed.
 		// See RFC 7159, Section 2 for the definition of JSON whitespace.
 		x := bytes.TrimLeft(cBuf.Bytes(), " \t\r\n")
+
 		isJSON := len(x) > 0 && x[0] == '{'
 		if !isJSON {
-			log.Debugf("startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
-				n.Cfg.ShortName)
+			log.Debugf(
+				"startup-config passed to %s is in the CLI format. Will apply it in post-deploy stage",
+				n.Cfg.ShortName,
+			)
 
 			n.startupCliCfg = cBuf.Bytes()
 
@@ -517,11 +585,15 @@ func (n *srl) createSRLFiles() error {
 			// as we will apply it over the top of a default config in the post deploy stage
 			return nil
 		}
+
 		cfgTemplate = cBuf.String()
 	}
 
 	if cfgTemplate == "" {
-		log.Debugf("configuration template for node %s is empty, skipping startup config file generation", n.Cfg.ShortName)
+		log.Debugf(
+			"configuration template for node %s is empty, skipping startup config file generation",
+			n.Cfg.ShortName,
+		)
 
 		return nil
 	}
@@ -534,12 +606,12 @@ func (n *srl) createSRLFiles() error {
 	return err
 }
 
-func generateSRLTopologyFile(cfg *types.NodeConfig) error {
+func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
 	dst := filepath.Join(cfg.LabDir, "topology.yml")
 
 	tpl, err := template.ParseFS(topologies, "topology/"+srlTypes[cfg.NodeType])
 	if err != nil {
-		return errors.Wrap(err, "failed to get srl topology file")
+		return fmt.Errorf("failed to get srl topology file: %w", err)
 	}
 
 	mac := genMac(cfg)
@@ -550,6 +622,7 @@ func generateSRLTopologyFile(cfg *types.NodeConfig) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	if err := tpl.Execute(f, mac); err != nil {
 		return err
@@ -563,6 +636,7 @@ type srlTemplateData struct {
 	TLSKey     string
 	TLSCert    string
 	TLSAnchor  string
+	TLSConfig  string
 	Banner     string
 	IFaces     map[string]tplIFace
 	SSHPubKeys string
@@ -590,40 +664,52 @@ type srlTemplateData struct {
 	OCServerConfig string
 	// NDKServerConfig is a string containing NDK server configuration
 	NDKServerConfig string
+	// DNSServersConfig is a string containing DNS servers configuration
+	DNSServersConfig string
 }
 
 // tplIFace template interface struct.
 type tplIFace struct {
-	Slot       string
-	Port       string
-	BreakoutNo string
-	Mtu        int
+	BaseName    string // base interface excl. breakout
+	FullName    string // full interface name incl. breakout
+	HasBreakout bool
+	Mtu         int
+	IPv4        string
+	IPv6        string
 }
 
 // addDefaultConfig adds srl default configuration such as tls certs, gnmi/json-rpc, login-banner.
-func (n *srl) addDefaultConfig(ctx context.Context) error {
+func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 	b, err := n.banner()
 	if err != nil {
 		return err
 	}
 
-	// tplData holds data used in templating of the default config snippet
-	tplData := srlTemplateData{
-		TLSKey:          n.Cfg.TLSKey,
-		TLSCert:         n.Cfg.TLSCert,
-		TLSAnchor:       n.Cfg.TLSAnchor,
-		Banner:          b,
-		IFaces:          map[string]tplIFace{},
-		MgmtMTU:         0,
-		MgmtIPMTU:       0,
-		DNSServers:      n.Config().DNS.Servers,
-		SNMPConfig:      snmpv2Config,
-		GRPCConfig:      grpcConfig,
-		OCServerConfig:  "",
-		NDKServerConfig: "",
+	var dnsServers []string
+	if n.Config().DNS != nil {
+		dnsServers = n.Config().DNS.Servers
 	}
 
-	n.setVersionSpecificParams(&tplData)
+	// tplData holds data used in templating of the default config snippet
+	tplData := srlTemplateData{
+		TLSKey:           n.Cfg.TLSKey,
+		TLSCert:          n.Cfg.TLSCert,
+		TLSAnchor:        n.Cfg.TLSAnchor,
+		Banner:           b,
+		IFaces:           map[string]tplIFace{},
+		MgmtMTU:          0,
+		MgmtIPMTU:        0,
+		DNSServers:       dnsServers,
+		SNMPConfig:       snmpv2Config,
+		GRPCConfig:       grpcConfig,
+		OCServerConfig:   "",
+		NDKServerConfig:  "",
+		DNSServersConfig: "",
+	}
+
+	if err := n.setVersionSpecificParams(&tplData); err != nil {
+		return err
+	}
 
 	n.setCustomPrompt(&tplData)
 
@@ -632,46 +718,50 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 	tplData.MgmtIPMTU = n.Runtime.Mgmt().MTU
 
 	// prepare the endpoints
+	const ethernetSplitParts = 3
+
+	const ethernetMTUOverhead = 14
+
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
-		if ifName == "mgmt0" {
-			// if the endpoint has a custom MTU set, use it in the template logic
-			// otherwise we don't set the mtu as srlinux will use the default max value 9232
-			if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
+		if ifName == mgmt0InterfaceName {
+			if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 				tplData.MgmtMTU = m
-				// MgmtMTU seems to be only set when we use macvlan interface
-				// with network-mode: none. For this super narrow use case
-				// we setup mgmt port mtu to match the mtu of the macvlan parnet interface
-				// but then we need to make sure that IP MTU is smaller by 14B
-				tplData.MgmtIPMTU = m - 14
+				tplData.MgmtIPMTU = m - ethernetMTUOverhead
 			}
-			// the rest is just for traffic carrying interfaces
+
 			continue
 		}
-		// split the interface identifier into their parts
-		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", 3)
 
-		// create a template interface struct
-		iface := tplIFace{
-			Slot: ifNameParts[0],
-			Port: ifNameParts[1],
-		}
-		// if it is a breakout port add the breakout identifier
-		if len(ifNameParts) == 3 {
-			iface.BreakoutNo = ifNameParts[2]
+		ifNameParts := strings.SplitN(strings.TrimLeft(ifName, "e"), "-", ethernetSplitParts)
+
+		iface := tplIFace{}
+
+		iface.BaseName = fmt.Sprintf("ethernet-%s/%s", ifNameParts[0], ifNameParts[1])
+		if len(ifNameParts) == ethernetSplitParts {
+			iface.FullName = fmt.Sprintf("%s/%s", iface.BaseName, ifNameParts[2])
+			iface.HasBreakout = true
+		} else {
+			iface.FullName = iface.BaseName
 		}
 
-		// if the endpoint has a custom MTU set, use it in the template logic
-		// otherwise we don't set the mtu as srlinux will use the default max value 9232
-		if m := e.GetLink().GetMTU(); m != links.DefaultLinkMTU {
+		if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 			iface.Mtu = m
 		}
 
-		// add the template interface definition to the template data
+		if a := e.GetIPv4Addr(); a.IsValid() {
+			iface.IPv4 = a.String()
+		}
+
+		if a := e.GetIPv6Addr(); a.IsValid() {
+			iface.IPv6 = a.String()
+		}
+
 		tplData.IFaces[ifName] = iface
 	}
 
 	buf := new(bytes.Buffer)
+
 	err = srlCfgTpl.Execute(buf, tplData)
 	if err != nil {
 		return err
@@ -679,19 +769,22 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 
 	log.Debugf("Node %q additional config:\n%s", n.Cfg.ShortName, buf.String())
 
-	execCmd := exec.NewExecCmdFromSlice([]string{
-		"bash", "-c",
-		fmt.Sprintf("echo '%s' > %s", buf.String(), defaultCfgPath),
-	})
-	_, err = n.RunExec(ctx, execCmd)
+	// Copy overlay config to container
+	tmpFilePath, err := clabutils.WriteToTempFile(buf.String())
 	if err != nil {
 		return err
+	}
+	defer os.Remove(tmpFilePath)
+
+	err = n.Runtime.CopyToContainer(ctx, n.Cfg.LongName, defaultCfgPath, tmpFilePath)
+	if err != nil {
+		return fmt.Errorf("error copying configuration to container: %w", err)
 	}
 
 	// su to admin user to apply the default config
 	// to make sure that the 'environment save' command will create
 	// files with correct permissions
-	cmd := exec.NewExecCmdFromSlice([]string{
+	cmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", defaultCfgPath),
 	})
@@ -701,74 +794,107 @@ func (n *srl) addDefaultConfig(ctx context.Context) error {
 		return err
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf(
+		"node %s. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return nil
 }
 
-// addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via startup-config directive.
+// addOverlayCLIConfig adds CLI formatted config that is read out of a file provided via
+// startup-config directive.
 func (n *srl) addOverlayCLIConfig(ctx context.Context) error {
 	if len(n.startupCliCfg) == 0 {
-		log.Debugf("node %q: startup-config empty, committing existing candidate", n.Config().ShortName)
+		log.Debugf(
+			"node %q: startup-config empty, committing existing candidate",
+			n.Config().ShortName,
+		)
 
 		return nil
 	}
 
 	cfgStr := string(n.startupCliCfg)
 
-	log.Debugf("Node %q additional config from startup-config file %s:\n%s", n.Cfg.ShortName, n.Cfg.StartupConfig, cfgStr)
+	log.Debugf(
+		"Node %q additional config from startup-config file %s:\n%s",
+		n.Cfg.ShortName,
+		n.Cfg.StartupConfig,
+		cfgStr,
+	)
 
-	cmd := exec.NewExecCmdFromSlice([]string{
-		"bash", "-c",
-		fmt.Sprintf("echo '%s' > %s", cfgStr, overlayCfgPath),
-	})
-	_, err := n.RunExec(ctx, cmd)
+	// Copy overlay config to container
+	tmpFilePath, err := clabutils.WriteToTempFile(cfgStr)
 	if err != nil {
 		return err
 	}
+	defer os.Remove(tmpFilePath)
 
-	cmd = exec.NewExecCmdFromSlice([]string{
+	err = n.Runtime.CopyToContainer(ctx, n.Cfg.LongName, overlayCfgPath, tmpFilePath)
+	if err != nil {
+		return fmt.Errorf("error copying configuration to container: %w", err)
+	}
+
+	// Load overlay config
+	cmd := clabexec.NewExecCmdFromSlice([]string{
 		"bash", "-c",
 		fmt.Sprintf("su -s /bin/bash admin -c '/opt/srlinux/bin/sr_cli -ed < %s'", overlayCfgPath),
 	})
+
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf(
+		"node %s. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return nil
 }
 
 // commitConfig commits and saves default+overlay config to the startup-config file.
 func (n *srl) commitConfig(ctx context.Context) error {
-	log.Debugf("Node %q: commiting configuration", n.Cfg.ShortName)
+	log.Debugf("Node %q: committing configuration", n.Cfg.ShortName)
 
-	cmd, err := exec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
+	cmd, err := clabexec.NewExecCmdFromString(`bash -c "/opt/srlinux/bin/sr_cli -ed commit save"`)
 	if err != nil {
 		return err
 	}
+
 	execResult, err := n.RunExec(ctx, cmd)
 	if err != nil {
 		return err
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf(
+		"node %s. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return nil
 }
 
 func (n *srl) generateCheckpoint(ctx context.Context) error {
-	cmd, err := exec.NewExecCmdFromString(`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint name clab-initial comment \"set by containerlab\"'`)
+	cmd, err := clabexec.NewExecCmdFromString(
+		`bash -c '/opt/srlinux/bin/sr_cli /tools system configuration generate-checkpoint ` +
+			`name clab-initial comment \"set by containerlab\"'`,
+	)
 	if err != nil {
 		return err
 	}
@@ -779,10 +905,15 @@ func (n *srl) generateCheckpoint(ctx context.Context) error {
 	}
 
 	if execResult.GetStdErrString() != "" {
-		return fmt.Errorf("%w:%s", nodes.ErrCommandExecError, execResult.GetStdErrString())
+		return fmt.Errorf("%w:%s", clabnodes.ErrCommandExecError, execResult.GetStdErrString())
 	}
 
-	log.Debugf("node %s. stdout: %s, stderr: %s", n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+	log.Debugf(
+		"node %s. stdout: %s, stderr: %s",
+		n.Cfg.ShortName,
+		execResult.GetStdOutString(),
+		execResult.GetStdErrString(),
+	)
 
 	return nil
 }
@@ -790,13 +921,15 @@ func (n *srl) generateCheckpoint(ctx context.Context) error {
 // populateHosts adds container hostnames for other nodes of a lab to SR Linux /etc/hosts file
 // to mitigate the fact that srlinux uses non default netns for management and thus
 // can't leverage docker DNS service.
-func (n *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) error {
+func (n *srl) populateHosts(ctx context.Context, nodes map[string]clabnodes.Node) error {
 	hosts, err := n.Runtime.GetHostsPath(ctx, n.Cfg.LongName)
 	if err != nil {
 		log.Warnf("Unable to locate /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
 		return err
 	}
+
 	var entriesv4, entriesv6 bytes.Buffer
+
 	const (
 		v4Prefix = "###### CLAB-v4-START ######"
 		v4Suffix = "###### CLAB-v4-END ######"
@@ -805,18 +938,24 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	)
 	fmt.Fprintf(&entriesv4, "\n%s\n", v4Prefix)
 	fmt.Fprintf(&entriesv6, "\n%s\n", v6Prefix)
+
 	for node, params := range nodes {
 		if v4 := params.Config().MgmtIPv4Address; v4 != "" {
 			fmt.Fprintf(&entriesv4, "%s\t%s\n", v4, node)
 		}
+
 		if v6 := params.Config().MgmtIPv6Address; v6 != "" {
 			fmt.Fprintf(&entriesv6, "%s\t%s\n", v6, node)
 		}
 	}
+
 	fmt.Fprintf(&entriesv4, "%s\n", v4Suffix)
 	fmt.Fprintf(&entriesv6, "%s\n", v6Suffix)
 
-	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, 0o666) // skipcq: GSC-G302
+	// world-writable for container /etc/hosts
+	const hostsFilePerm = 0o666
+
+	file, err := os.OpenFile(hosts, os.O_APPEND|os.O_WRONLY, hostsFilePerm) // skipcq: GSC-G302
 	if err != nil {
 		log.Warnf("Unable to open /etc/hosts file for srl node %v: %v", n.Cfg.ShortName, err)
 		return err
@@ -826,6 +965,7 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 	if err != nil {
 		return err
 	}
+
 	_, err = file.Write(entriesv6.Bytes())
 	if err != nil {
 		return err
@@ -835,7 +975,7 @@ func (n *srl) populateHosts(ctx context.Context, nodes map[string]nodes.Node) er
 }
 
 func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
-	captureGroups, err := utils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
+	captureGroups, err := clabutils.GetRegexpCaptureGroups(n.InterfaceRegexp, ifName)
 	if err != nil {
 		return "", err
 	}
@@ -847,12 +987,24 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 	for _, indexKey := range indexGroups {
 		if index, found := captureGroups[indexKey]; found && index != "" {
 			foundIndices[indexKey] = true
+
 			parsedIndices[indexKey], err = strconv.Atoi(index)
 			if err != nil {
-				return "", fmt.Errorf("%q parsed %s index %q could not be cast to an integer", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %s index %q could not be cast to an integer",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
+
 			if parsedIndices[indexKey] < 1 {
-				return "", fmt.Errorf("%q parsed %q index %q does not match requirement >= 1", ifName, indexKey, index)
+				return "", fmt.Errorf(
+					"%q parsed %q index %q does not match requirement >= 1",
+					ifName,
+					indexKey,
+					index,
+				)
 			}
 		} else {
 			foundIndices[indexKey] = false
@@ -874,7 +1026,7 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *srl) CheckInterfaceName() error {
 	// allow ethernetX-X-X, eX-X-X and mgmt0 interface names
-	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|mgmt0`)
+	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|` + mgmt0InterfaceName)
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 
 	err := n.CheckInterfaceOverlap()
@@ -884,11 +1036,18 @@ func (n *srl) CheckInterfaceName() error {
 
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("nokia sr linux interface name %q doesn't match the required pattern: %s", e.GetIfaceName(), n.InterfaceHelp)
+			return fmt.Errorf(
+				"nokia sr linux interface name %q doesn't match the required pattern: %s",
+				e.GetIfaceName(),
+				n.InterfaceHelp,
+			)
 		}
 
-		if e.GetIfaceName() == "mgmt0" && nm != "none" {
-			return fmt.Errorf("mgmt0 interface name is not allowed for %s node when network mode is not set to none", n.Cfg.ShortName)
+		if e.GetIfaceName() == mgmt0InterfaceName && nm != "none" {
+			return fmt.Errorf(
+				"mgmt0 interface name is not allowed for %s node when network mode is not set to none",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 
@@ -907,13 +1066,15 @@ gpgcheck=0`
 	aptRepo := `deb [trusted=yes] https://srlinux.fury.site/apt/ /`
 
 	yumPath := n.Cfg.LabDir + "/yum.repo"
-	err := utils.CreateFile(yumPath, yumRepo)
+
+	err := clabutils.CreateFile(yumPath, yumRepo)
 	if err != nil {
 		return err
 	}
 
 	aptPath := n.Cfg.LabDir + "/apt.list"
-	err = utils.CreateFile(aptPath, aptRepo)
+
+	err = clabutils.CreateFile(aptPath, aptRepo)
 	if err != nil {
 		return err
 	}

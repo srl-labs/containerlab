@@ -3,39 +3,39 @@ package vr_csr
 import (
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestCSRInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*links.EndpointVeth
+		endpoints []*clablinks.EndpointVeth
 		node      *vrCsr
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "Gi2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet 6",
 					},
 				},
 			},
 			node: &vrCsr{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "csr",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -48,27 +48,27 @@ func TestCSRInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},
 			},
 			node: &vrCsr{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "csr",
 						},
 						InterfaceRegexp: InterfaceRegexp,

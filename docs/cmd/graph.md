@@ -11,6 +11,8 @@ The following graphing options are available:
 3. Mermaid.js graph description file that can be rendered in Markdown
 4. a [graph description file in dot format](https://en.wikipedia.org/wiki/DOT_(graph_description_language)) that can be rendered using [Graphviz](https://graphviz.org/) or viewed [online](https://dreampuf.github.io/GraphvizOnline/).[^1]
 
+--8<-- "docs/cmd/deploy.md:env-vars-flags"
+
 ### HTML
 
 The HTML-based graph representation is the default graphing option. The topology will be graphed and served online using the embedded web server.

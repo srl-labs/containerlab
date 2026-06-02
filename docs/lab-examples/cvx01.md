@@ -36,7 +36,7 @@ rtt min/avg/max/mdev = 0.400/0.400/0.400/0.000 ms
 
 ## Use cases
 
-* Demonstrate how a `cvx` node, running in its default `ignite` runtime, can connect to nodes running in other runtimes, e.g. `docker`
+* Demonstrate how a `cvx` node can connect to nodes running in other runtimes, e.g. `docker`
 * Demonstrate how to inject startup configuration into a `cvx` node.
 * Verify basic control plane and data plane operations
 

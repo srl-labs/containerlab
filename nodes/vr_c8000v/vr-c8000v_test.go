@@ -3,39 +3,39 @@ package vr_c8000v
 import (
 	"testing"
 
-	"github.com/srl-labs/containerlab/links"
-	"github.com/srl-labs/containerlab/nodes"
-	"github.com/srl-labs/containerlab/types"
+	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 func TestC8000vInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
-		endpoints []*links.EndpointVeth
+		endpoints []*clablinks.EndpointVeth
 		node      *vrC8000v
 		resultEps []string
 	}{
 		"alias-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "Gi2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "GigabitEthernet 6",
 					},
 				},
 			},
 			node: &vrC8000v{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "c8000v",
 						},
 						InterfaceRegexp: InterfaceRegexp,
@@ -48,27 +48,27 @@ func TestC8000vInterfaceParsing(t *testing.T) {
 			},
 		},
 		"original-parse": {
-			endpoints: []*links.EndpointVeth{
+			endpoints: []*clablinks.EndpointVeth{
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth2",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth4",
 					},
 				},
 				{
-					EndpointGeneric: links.EndpointGeneric{
+					EndpointGeneric: clablinks.EndpointGeneric{
 						IfaceName: "eth6",
 					},
 				},
 			},
 			node: &vrC8000v{
-				VRNode: nodes.VRNode{
-					DefaultNode: nodes.DefaultNode{
-						Cfg: &types.NodeConfig{
+				VRNode: clabnodes.VRNode{
+					DefaultNode: clabnodes.DefaultNode{
+						Cfg: &clabtypes.NodeConfig{
 							ShortName: "c8000v",
 						},
 						InterfaceRegexp: InterfaceRegexp,

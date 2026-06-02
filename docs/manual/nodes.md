@@ -138,13 +138,35 @@ topology:
 
 Some containerized NOSes require a license to operate or can leverage a license to lift-off limitations of an unlicensed version. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
 
+The license can be provided as:
+
+1. A path to a file that is available on the host machine.
+2. An embedded license blob that is provided as a multiline string.
+3. A remote URL using `https`, `http`, [S3](s3-usage-example.md), `ftp`, `sftp` or `scp`.
+
+```yaml
+topology:
+  nodes:
+    srl1:
+      license: license.key
+    srl2:
+      license: https://licenses.example.com/srl2/license.key
+    srl3:
+      license: sftp://user@sftp.example.com/licenses/srl3/license.key
+    srl4:
+      license: |
+        embedded license content
+```
+
+HTTPS is preferred over HTTP when the remote server supports it. Remote and embedded license files are materialized under containerlab's temp directory using the same download behavior and SSH authentication environment variables described in [remote startup-config](config-mgmt.md#remote).
+
 ### startup-config
 
 It is possible to provide the startup configuration that the node applies on boot for most Containerlab kinds. The startup config can be provided as:
 
 1. A path to a file that is available on the host machine and contains the config blob that the node understands.
 2. An embedded config blob that is provided as a multiline string.
-3. An URL (http(s) or [S3](s3-usage-example.md)) to a file that contains the config blob that the node can apply.
+3. An URL (`https`, `http`, [S3](s3-usage-example.md), `ftp`, `sftp` or `scp`) to a file that contains the config blob that the node can apply.
 
 Read more about the usage of the startup configuration (and other ways to perform configuration management with Containerlab) in the [Configuration Management](config-mgmt.md) section.
 
@@ -308,7 +330,7 @@ topology:
     nokia_srlinux:
       env:
         ENV1: 2 # ENV1=2 will be set to if it's not set on node level
-        ENV3: kind # ENV3=kind will be set for all nodes of srl kind
+        ENV3: kind # ENV3=kind will be set for all nodes of nokia_srlinux kind
   nodes:
     node1:
       env:
@@ -356,6 +378,30 @@ topology:
     node1:
       env-files:
         - /home/user/somefile
+```
+
+### credentials
+
+To override the default username or password used when accessing a node over SSH, NETCONF, gNMI, and similar interfaces, use the `credentials` mapping with `username` and `password` keys. When not set, the kind's defaults defined in the node implementation are used. You can define `credentials` at `defaults`, `kinds`, `groups`, and per-node levels; more specific levels take precedence.
+
+Containerlab picks **one** `credentials` object from the most specific level where **either** `username` or `password` is set. Both values on that level are used as-is (the other key may be empty); values are **not** merged from less specific levels. After the topology is applied, the node implementation may still fill missing username or password from its built-in defaults.
+
+```yaml
+topology:
+  defaults:
+    credentials:
+      username: admin
+      password: adminpw
+  kinds:
+    nokia_srlinux:
+      credentials:
+        username: srl-admin
+        password: srl-password
+  nodes:
+    node1:
+      credentials:
+        username: node1-user
+        password: node1-password
 ```
 
 ### user
@@ -530,7 +576,7 @@ If you want to completely disable the networking stack on a container, you can u
 
 ### runtime
 
-By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman`, and `ignite` runtimes.
+By default containerlab nodes will be started by `docker` container runtime. Besides that, containerlab has experimental support for `podman` runtime.
 
 It is possible to specify a global runtime with a global `--runtime` flag, or set the runtime on a per-node basis:
 
@@ -538,7 +584,6 @@ Options for the runtime parameter are:
 
 - `docker`
 - `podman`
-- `ignite`
 
 The default runtime can also be influenced via the `CLAB_RUNTIME` environment variable, which takes the same values as mentioned above.
 
@@ -565,7 +610,10 @@ my-node:
   exec:
     - echo test123
     - bash /myscript.sh
+    - bash -c 'echo "foobar" > /root/wg-priv.key' #(1)!
 ```
+
+1. If you use shell tokens such as `>`, you need to wrap the command in the shell
 
 The `exec` is particularly helpful to provide some startup configuration for linux nodes such as IP addressing and routing instructions.
 
@@ -872,9 +920,9 @@ topology:
 
 ### healthcheck
 
-Containerlab supports the [docker healthcheck](https://docs.docker.com/engine/reference/builder/#healthcheck) configuration for the nodes. The healthcheck instruction can be set on the `defaults`, `kind` or `node` level, with the node level likely being the most used one.
+Containerlab supports the [docker healthcheck](https://docs.docker.com/reference/dockerfile/#healthcheck) configuration for the nodes. The healthcheck instruction can be set on the `defaults`, `kind` or `node` level, with the node level likely being the most used one.
 
-Healtcheck allows containerlab users to define the healthcheck configuration that will be used by the container runtime to check the health of the container.
+Healthcheck allows containerlab users to define the healthcheck configuration that will be used by the container runtime to check the health of the container.
 
 ```yaml
 topology:
