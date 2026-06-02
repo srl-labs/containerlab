@@ -10,10 +10,11 @@ Suite Teardown      Teardown
 *** Variables ***
 ${lab-name}                 apply
 ${runtime}                  docker
-${initial-topo}             29-apply-initial.clab.yml
-${add-link-topo}            29-apply-add-link.clab.yml
-${add-special-links-topo}   29-apply-add-special-links.clab.yml
-${add-node-topo}            29-apply-add-node.clab.yml
+${topo}                     29-apply.clab.yml
+${initial-vars}             29-apply.vars.initial.yml
+${add-link-vars}            29-apply.vars.add-link.yml
+${add-special-links-vars}   29-apply.vars.add-special-links.yml
+${add-node-vars}            29-apply.vars.add-node.yml
 ${runtime-cli-exec-cmd}     docker exec
 ${recovery-timeout}         30s
 ${retry-interval}           2s
@@ -21,7 +22,7 @@ ${retry-interval}           2s
 
 *** Test Cases ***
 Apply initial lab
-    ${rc}    ${output} =    Run Clab Command    apply -t ${CURDIR}/${initial-topo}
+    ${rc}    ${output} =    Apply Topology    ${initial-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    deployed lab
     Should Contain    ${output}    apply
@@ -35,7 +36,7 @@ Apply initial lab
     ...    172.17.0.2
 
 Dry-run reports link additions
-    ${rc}    ${output} =    Run Clab Command    apply -t ${CURDIR}/${add-link-topo} --dry-run
+    ${rc}    ${output} =    Apply Topology    ${add-link-vars}    --dry-run
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Apply plan
     Should Contain    ${output}    added links
@@ -44,7 +45,7 @@ Dry-run reports link additions
     Interface Should Not Exist    l2    eth2
 
 Apply adds link between existing nodes
-    ${rc}    ${output} =    Run Clab Command    apply -t ${CURDIR}/${add-link-topo}
+    ${rc}    ${output} =    Apply Topology    ${add-link-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Apply summary
     Should Contain    ${output}    added links
@@ -54,7 +55,7 @@ Apply adds link between existing nodes
     Interface Should Exist    l2    eth2
 
 Apply deletes link between existing nodes
-    ${rc}    ${output} =    Run Clab Command    apply -t ${CURDIR}/${initial-topo}
+    ${rc}    ${output} =    Apply Topology    ${initial-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    deleted endpoints
     Interface Should Exist    l1    eth1
@@ -63,7 +64,7 @@ Apply deletes link between existing nodes
     Interface Should Not Exist    l2    eth2
 
 Dry-run reports supported non-veth link additions
-    ${rc}    ${output} =    Run Clab Command    apply -t ${CURDIR}/${add-special-links-topo} --dry-run
+    ${rc}    ${output} =    Apply Topology    ${add-special-links-vars}    --dry-run
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    Apply plan
     Should Contain    ${output}    added links
@@ -77,7 +78,7 @@ Dry-run reports supported non-veth link additions
     Host Interface Should Not Exist    appmgmt1
 
 Apply adds supported non-veth links
-    ${rc}    ${output} =    Run Clab Command    apply -t ${CURDIR}/${add-special-links-topo}
+    ${rc}    ${output} =    Apply Topology    ${add-special-links-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    added links
     Interface Should Exist    l1    host1
@@ -87,7 +88,7 @@ Apply adds supported non-veth links
     Host Interface Should Exist    appmgmt1
 
 Apply deletes supported non-veth links
-    ${rc}    ${output} =    Run Clab Command    apply -t ${CURDIR}/${initial-topo}
+    ${rc}    ${output} =    Apply Topology    ${initial-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    deleted endpoints
     Interface Should Not Exist    l1    host1
@@ -97,7 +98,7 @@ Apply deletes supported non-veth links
     Host Interface Should Not Exist    appmgmt1
 
 Apply adds node and link
-    ${rc}    ${output} =    Run Clab Command    apply -t ${CURDIR}/${add-node-topo}
+    ${rc}    ${output} =    Apply Topology    ${add-node-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    added nodes
     Should Contain    ${output}    l3
@@ -120,7 +121,7 @@ Apply adds node and link
     ...    172.17.1.2
 
 Apply deletes node and link
-    ${rc}    ${output} =    Run Clab Command    apply -t ${CURDIR}/${initial-topo}
+    ${rc}    ${output} =    Apply Topology    ${initial-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    deleted nodes
     Should Contain    ${output}    l3
@@ -140,9 +141,14 @@ Teardown
 Run Clab Command
     [Arguments]    ${args}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} ${args}
-    ...    stderr=STDOUT
+    ...    ${CLAB_BIN} --runtime ${runtime} ${args} 2>&1
     Log    ${output}
+    RETURN    ${rc}    ${output}
+
+Apply Topology
+    [Arguments]    ${vars_file}    ${extra_args}=${EMPTY}
+    ${rc}    ${output} =    Run Clab Command
+    ...    apply -t ${CURDIR}/${topo} --vars ${CURDIR}/${vars_file} ${extra_args}
     RETURN    ${rc}    ${output}
 
 Interface Should Exist

@@ -176,6 +176,10 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
+	if err := c.postDeployApplyLinks(ctx, plan.result.AddedNodes); err != nil {
+		return nil, err
+	}
+
 	if err := c.postDeployApplyNodes(ctx, plan.result.AddedNodes, options.skipPostDeploy); err != nil {
 		return nil, err
 	}
@@ -936,6 +940,25 @@ func (c *CLab) deployApplyLinks(ctx context.Context, links []clablinks.Link) err
 	return nil
 }
 
+type postDeployEndpointsNode interface {
+	PostDeployEndpoints(context.Context) error
+}
+
+func (c *CLab) postDeployApplyLinks(ctx context.Context, nodeNames []string) error {
+	for _, nodeName := range nodeNames {
+		node, ok := c.Nodes[nodeName].(postDeployEndpointsNode)
+		if !ok {
+			continue
+		}
+
+		if err := node.PostDeployEndpoints(ctx); err != nil {
+			return fmt.Errorf("node %q post-deploy links: %w", nodeName, err)
+		}
+	}
+
+	return nil
+}
+
 func (c *CLab) postDeployApplyNodes(
 	ctx context.Context,
 	nodeNames []string,
@@ -948,7 +971,7 @@ func (c *CLab) postDeployApplyNodes(
 
 		if !skipPostDeploy {
 			if err := node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes}); err != nil {
-				log.Errorf("failed to run postdeploy task for node %s: %v", nodeName, err)
+				return fmt.Errorf("node %q post-deploy: %w", nodeName, err)
 			}
 		}
 

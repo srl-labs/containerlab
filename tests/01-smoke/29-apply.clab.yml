@@ -14,6 +14,10 @@ topology:
       exec:
         - ip address add 172.17.0.1/24 dev eth1
         - ip -6 address add 2002::172:17:0:1/96 dev eth1
+{{- if .addNode }}
+        - ip address add 172.17.1.1/24 dev eth3
+        - ip -6 address add 2002::172:17:1:1/96 dev eth3
+{{- end }}
     l2:
       kind: linux
       image: alpine:3
@@ -21,9 +25,22 @@ topology:
       exec:
         - ip address add 172.17.0.2/24 dev eth1
         - ip -6 address add 2002::172:17:0:2/96 dev eth1
+{{- if .addNode }}
+    l3:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      exec:
+        - ip address add 172.17.1.2/24 dev eth1
+        - ip -6 address add 2002::172:17:1:2/96 dev eth1
+{{- end }}
 
   links:
     - endpoints: ["l1:eth1", "l2:eth1"]
+{{- if .addLink }}
+    - endpoints: ["l1:eth2", "l2:eth2"]
+{{- end }}
+{{- if .addSpecialLinks }}
     - type: host
       host-interface: apphost1
       endpoint:
@@ -38,3 +55,7 @@ topology:
       endpoint:
         node: l2
         interface: dummy1
+{{- end }}
+{{- if .addNode }}
+    - endpoints: ["l1:eth3", "l3:eth1"]
+{{- end }}

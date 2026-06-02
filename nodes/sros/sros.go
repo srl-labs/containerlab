@@ -47,7 +47,8 @@ import (
 const (
 	SrosDefaultType = "SR-1" // default sros node type
 
-	readyTimeout = time.Minute * 1 // max wait time for node to boot
+	readyTimeout   = time.Minute * 1 // max wait time for node to boot
+	tcpDialTimeout = time.Second * 1
 
 	generateable     = true
 	generateIfFormat = "%d/%d/%d"
@@ -391,6 +392,11 @@ func (n *sros) DeployEndpoints(ctx context.Context) error {
 		return err
 	}
 
+	return n.PostDeployEndpoints(ctx)
+}
+
+// PostDeployEndpoints runs SR-SIM endpoint fixups after dataplane links exist.
+func (n *sros) PostDeployEndpoints(ctx context.Context) error {
 	// Disable TX checksum offload on the host NS veth for the mgmt interface.
 	var peerIfIndex int
 	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
@@ -450,6 +456,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 	// Execute SaveConfig after boot. This code should only run on active CPM
 	deadline := time.Now().Add(readyTimeout)
+	var lastHealthErr error
 	for time.Now().Before(deadline) {
 		// Check if context is canceled
 		if err := ctx.Err(); err != nil {
@@ -458,6 +465,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 		isHealthy, err := n.IsHealthy(ctx)
 		if err != nil {
+			lastHealthErr = err
 			log.Debug(
 				fmt.Errorf(
 					"health check failed, check 'docker logs -f %s': %w",
@@ -513,7 +521,13 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			// continue to next iteration
 		}
 	}
-	return nil
+
+	if lastHealthErr != nil {
+		return fmt.Errorf("node %q did not become healthy before timeout: %w",
+			n.Cfg.LongName, lastHealthErr)
+	}
+
+	return fmt.Errorf("node %q did not become healthy before timeout", n.Cfg.LongName)
 }
 
 // Delete func for SR-SIM kind.
@@ -1764,7 +1778,7 @@ func (n *sros) IsHealthy(_ context.Context) (bool, error) {
 		"addr",
 		fmt.Sprintf("%q:830", addr),
 	)
-	return CheckPortWithRetry(addr, 830, readyTimeout, 5, retryTimer)
+	return CheckPortWithRetry(addr, 830, readyTimeout, int(readyTimeout/retryTimer), retryTimer)
 }
 
 // CheckPortWithRetry checks if a port is open with retry logic.
@@ -1776,19 +1790,40 @@ func CheckPortWithRetry(
 	retryDelay time.Duration,
 ) (bool, error) {
 	var lastErr error
+	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+	deadline := time.Now().Add(timeout)
 
 	for i := range maxRetries {
 		if i > 0 {
-			time.Sleep(retryDelay)
+			if remaining := time.Until(deadline); remaining <= 0 {
+				break
+			} else if retryDelay < remaining {
+				time.Sleep(retryDelay)
+			} else {
+				time.Sleep(remaining)
+			}
 		}
 
-		address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
-		conn, err := net.DialTimeout("tcp", address, timeout)
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+
+		dialTimeout := tcpDialTimeout
+		if remaining < dialTimeout {
+			dialTimeout = remaining
+		}
+
+		conn, err := net.DialTimeout("tcp", address, dialTimeout)
 		if err == nil {
 			conn.Close()
 			return true, nil
 		}
 		lastErr = err
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("timed out checking tcp port %s", address)
 	}
 
 	return false, lastErr
