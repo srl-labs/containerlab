@@ -386,6 +386,7 @@ jobs:
     needs:
       - file-changes
       - build-containerlab
+      - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
 
@@ -432,9 +433,12 @@ jobs:
   download-tests:
     uses: ./.github/workflows/download-tests.yml
     needs:
-      - unit-test
-      - staticcheck
+      - file-changes
       - build-containerlab
+      - process-gitref
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   # a job that downloads coverage artifact and uses codecov to upload it
   coverage:
@@ -452,6 +456,7 @@ jobs:
       - fortigate-tests
       - cisco_iol-tests
       - fdio_vpp-tests
+      - download-tests
 
     steps:
       - name: Checkout
@@ -533,6 +538,7 @@ jobs:
       - cisco_iol-tests
       - fortigate-tests
       - fdio_vpp-tests
+      - download-tests
     steps:
       - name: Checkout
         uses: actions/checkout@v6
