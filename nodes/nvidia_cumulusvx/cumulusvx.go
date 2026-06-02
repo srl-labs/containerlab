@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package cumulus_vm
+package nvidia_cumulusvx
 
 import (
 	"fmt"
@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	kindNames          = []string{"cumulus_vm"}
-	defaultCredentials = clabnodes.NewCredentials("cumulus", "Nsn1234!")
+	kindNames          = []string{"nvidia_cumulusvx"}
+	defaultCredentials = clabnodes.NewCredentials("cumulus", "Clab123!")
 
 	InterfaceRegexp = regexp.MustCompile(`swp(?P<port>\d+)`)
 	InterfaceOffset = 1
@@ -38,15 +38,15 @@ func Register(r *clabnodes.NodeRegistry) {
 	)
 
 	r.Register(kindNames, func() clabnodes.Node {
-		return new(cumulusVM)
+		return new(nvidiaCumulusVX)
 	}, nrea)
 }
 
-type cumulusVM struct {
+type nvidiaCumulusVX struct {
 	clabnodes.VRNode
 }
 
-func (n *cumulusVM) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
+func (n *nvidiaCumulusVX) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, "")
 	n.HostRequirements.VirtRequired = true
 
@@ -69,10 +69,6 @@ func (n *cumulusVM) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 		fmt.Sprint(path.Join(n.Cfg.LabDir, configDirName), ":/config"),
 	)
 
-	if n.Cfg.Env["CONNECTION_MODE"] == "macvtap" {
-		n.Cfg.Binds = append(n.Cfg.Binds, "/dev:/dev")
-	}
-
 	n.Cfg.Cmd = fmt.Sprintf(
 		"--username %s --password %s --hostname %s --connection-mode %s --trace",
 		n.Cfg.Env["USERNAME"],
@@ -90,6 +86,6 @@ func (n *cumulusVM) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption
 
 // CheckInterfaceName validates via VRNode (accepts ethX names after swp→eth mapping,
 // or swpX names when checked before mapping).
-func (n *cumulusVM) CheckInterfaceName() error {
+func (n *nvidiaCumulusVX) CheckInterfaceName() error {
 	return n.VRNode.CheckInterfaceName()
 }

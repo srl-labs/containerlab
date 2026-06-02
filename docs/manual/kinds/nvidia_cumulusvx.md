@@ -1,22 +1,22 @@
 ---
 search:
   boost: 4
-kind_code_name: cumulus_cvx
-kind_display_name: Cumulus VX
+kind_code_name: nvidia_cumulusvx
+kind_display_name: NVIDIA Cumulus VX
 ---
 # -{{ kind_display_name }}-
-[-{{ kind_display_name }}-](https://docs.nvidia.com/networking-ethernet-software/cumulus-vx/) is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
-The `cvx` kind defines a supported feature set and a startup procedure of a `cvx` node.
 
+[-{{ kind_display_name }}-](https://docs.nvidia.com/networking-ethernet-software/cumulus-vx/) is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
+The `-{{ kind_code_name }}-` kind defines a supported feature set and a startup procedure of a -{{ kind_display_name }}- node.
 
 CVX nodes launched with containerlab come up with:
 
 * the management interface `eth0` is configured with IPv4/6 addresses as assigned by either the container runtime or DHCP
 * `root` user created with password `root`
 
-!!! note
-    Cumulus VX has been **discontinued** and the last version is v5.12.1. This change has been announced in the [Cumulus Linux 5.13 documentation](https://docs.nvidia.com/networking-ethernet-software/cumulus-linux-513/Whats-New/#cumulus-vx):
-    > NVIDIA no longer releases Cumulus VX as a standalone image. To simulate a Cumulus Linux switch, use NVIDIA AIR.
+/// note
+NVIDIA Cumulus VX as a standalone image [has been **discontinued**](https://docs.nvidia.com/networking-ethernet-software/cumulus-vx/). However, if you get your hands on the image, you can use it with Containerlab.
+///
 
 ## Mode of operation
 
