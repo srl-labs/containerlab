@@ -18,7 +18,7 @@ on:
 env:
   GO_VER: "1.25.10"
   CGO_ENABLED: 0
-  MKDOCS_INS_VER: 9.6.1-insiders-4.53.15-hellt
+  MKDOCS_IMAGE: ghcr.io/eda-labs/mkdocs-material:v9.7.5-3
   GORELEASER_VER: v2.6.1
   PY_VER: "3.10"
   RUNTIME: ${{ inputs.runtime || 'docker' }}
@@ -499,7 +499,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER build --clean --strict
+      - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ${{ env.MKDOCS_IMAGE }} build --clean --strict
 
       - name: Cache htmltest external links
         uses: actions/cache@v5
@@ -608,7 +608,7 @@ jobs:
           docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
             -e GITHUB_TOKEN \
             --entrypoint /bin/sh \
-            ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER \
+            ${{ env.MKDOCS_IMAGE }} \
             -c 'git -C /docs config --local user.name "github-actions[bot]"; \
                 git -C /docs config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"; \
                 git -C /docs config --local url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \
@@ -655,7 +655,7 @@ jobs:
           docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
             -e GITHUB_TOKEN \
             --entrypoint /bin/sh \
-            ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER \
+            ${{ env.MKDOCS_IMAGE }} \
             -c 'git -C /docs config --local user.name "github-actions[bot]"; \
                 git -C /docs config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"; \
                 git -C /docs config --local url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \

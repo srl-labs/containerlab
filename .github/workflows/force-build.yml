@@ -9,7 +9,7 @@ on:
 env:
   GO_VER: "1.25.10"
   CGO_ENABLED: 0
-  MKDOCS_INS_VER: 9.6.1-insiders-4.53.15-hellt
+  MKDOCS_IMAGE: ghcr.io/eda-labs/mkdocs-material:v9.7.5-3
   GORELEASER_VER: v2.0.1
   PY_VER: "3.10"
 
@@ -79,4 +79,4 @@ jobs:
 
       - name: build docs
         if: ${{ contains(needs.get-tag.outputs.git_tag, '-') != true }}
-        run: docker run -v $(pwd):/docs --entrypoint mkdocs ghcr.io/srl-labs/mkdocs-material-insiders:$MKDOCS_INS_VER gh-deploy --force --strict
+        run: docker run -v $(pwd):/docs --entrypoint mkdocs ${{ env.MKDOCS_IMAGE }} gh-deploy --force --strict
