@@ -15,6 +15,7 @@ const (
 	multiToolImage             = "ghcr.io/srl-labs/network-multitool"
 	defaultTimeout             = 120 * time.Second
 	defaultToolsServerPort     = 8080
+	defaultToolsAPIServerPort  = 8090
 	defaultToolsApiSSHBasePort = 2223
 	defaultToolsApiSSHMaxPort  = 2322
 	defaultToolsCertKeySize    = 2048
@@ -34,7 +35,8 @@ func GetOptions() *Options {
 				LogLevel: "info",
 				Runtime:  clabruntimedocker.RuntimeName,
 			},
-			Filter: &FilterOptions{},
+			Filter:        &FilterOptions{},
+			NodeLifecycle: &NodeLifecycleOptions{},
 			Deploy: &DeployOptions{
 				LabOwner: os.Getenv("CLAB_OWNER"),
 			},
@@ -60,13 +62,14 @@ func GetOptions() *Options {
 			ToolsAPI: &ToolsApiOptions{
 				Image:          "ghcr.io/srl-labs/clab-api-server/clab-api-server:latest",
 				Name:           "clab-api-server",
-				Port:           defaultToolsServerPort,
+				Port:           defaultToolsAPIServerPort,
 				Host:           "localhost",
 				JWTExpiration:  "60m",
 				UserGroup:      "clab_api",
 				SuperUserGroup: "clab_admins",
 				LogLevel:       "debug",
 				GinMode:        "release",
+				TLSEnable:      true,
 				SSHBasePort:    defaultToolsApiSSHBasePort,
 				SSHMaxPort:     defaultToolsApiSSHMaxPort,
 				OutputFormat:   "table",
@@ -126,6 +129,7 @@ func GetOptions() *Options {
 type Options struct {
 	Global         *GlobalOptions
 	Filter         *FilterOptions
+	NodeLifecycle  *NodeLifecycleOptions
 	Deploy         *DeployOptions
 	Destroy        *DestroyOptions
 	Save           *SaveOptions
@@ -212,6 +216,13 @@ func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 		}
 	}
 
+	if len(o.Global.VarsFiles) != 0 {
+		destroyOptions = append(
+			destroyOptions,
+			clabcore.WithDestroyVarsFiles(o.Global.VarsFiles),
+		)
+	}
+
 	return destroyOptions
 }
 
@@ -227,7 +238,7 @@ func (o *Options) ToClabSaveOptions() []clabcore.SaveOption {
 
 type GlobalOptions struct {
 	TopologyFile     string
-	VarsFile         string
+	VarsFiles        []string
 	TopologyName     string
 	Timeout          time.Duration
 	Runtime          string
@@ -259,7 +270,9 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 	}
 
 	if o.TopologyFile != "" {
-		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFile))
+		options = append(options, clabcore.WithTopoPath(o.TopologyFile, o.VarsFiles))
+	} else if len(o.VarsFiles) != 0 {
+		options = append(options, clabcore.WithTopologyVarsFiles(o.VarsFiles))
 	}
 
 	if o.TopologyName != "" {
@@ -267,7 +280,7 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 	}
 
 	if o.TopologyFile == "" && o.TopologyName != "" {
-		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName))
+		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName, o.VarsFiles))
 	}
 
 	if o.BackupTopologyFile && o.TopologyFile != "" {
@@ -288,6 +301,10 @@ func (o *FilterOptions) toClabOptions() []clabcore.ClabOption {
 	}
 }
 
+type NodeLifecycleOptions struct {
+	Nodes []string
+}
+
 type DeployOptions struct {
 	GenerateGraph            bool
 	ManagementNetworkName    string
@@ -301,6 +318,7 @@ type DeployOptions struct {
 	LabOwner                 string
 	RestoreAll               string
 	RestoreNodeSnapshots     []string
+	ExportRenderedTopology   string
 }
 
 func (o *DeployOptions) toClabOptions() []clabcore.ClabOption {
@@ -474,6 +492,7 @@ type ToolsVxlanOptions struct {
 	Remote         string
 	ParentDevice   string
 	DeletionPrefix string
+	DeletionName   string
 }
 
 type ToolsSnapshotOptions struct {

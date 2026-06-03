@@ -281,8 +281,11 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		states = make(map[int]ifaceSnapshot)
 	}
 
+	netemQuery := newNetemQuerier(nsHandle)
+	defer netemQuery.Close()
+
 	// Query and apply netem info to snapshots
-	netemInfos := queryNetemInfo(nsHandle)
+	netemInfos := netemQuery.Query()
 	applyNetemToSnapshots(states, netemInfos)
 
 	var statsSamples map[int]ifaceStatsSample
@@ -316,7 +319,7 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		return
 	}
 
-	// Set up netem polling interval (reuse stats interval or default to 1s)
+	// Set up netem polling interval (reuse stats interval or default to 1s).
 	netemPollInterval := w.statsInterval
 	if netemPollInterval == 0 {
 		netemPollInterval = time.Second
@@ -339,7 +342,7 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 		case <-tickerC:
 			w.collectAndEmitStats(netHandle, states, statsSamples, registry)
 		case <-netemTicker.C:
-			w.pollNetemChanges(states, registry)
+			w.pollNetemChanges(states, registry, netemQuery)
 		case <-ctx.Done():
 			close(done)
 
@@ -349,7 +352,7 @@ func (w *netlinkWatcher) run(ctx context.Context, registry *netlinkRegistry) {
 				return
 			}
 
-			w.processUpdate(states, statsSamples, update, registry)
+			w.processUpdate(states, statsSamples, update, registry, netemQuery)
 		}
 	}
 }
@@ -359,6 +362,7 @@ func (w *netlinkWatcher) processUpdate(
 	statsSamples map[int]ifaceStatsSample,
 	update netlink.LinkUpdate,
 	registry *netlinkRegistry,
+	netemQuery *netemQuerier,
 ) {
 	if update.Link == nil {
 		return
@@ -383,7 +387,7 @@ func (w *netlinkWatcher) processUpdate(
 		registry.emitInterfaceEvent(w.container, "delete", snapshot)
 	case unix.RTM_NEWLINK:
 		// Query netem info for this interface
-		netemInfos := queryNetemInfo(w.nsHandle)
+		netemInfos := netemQuery.Query()
 		if info, ok := netemInfos[snapshot.Index]; ok {
 			snapshot.HasNetem = true
 			snapshot.Delay = info.Delay
@@ -416,8 +420,9 @@ func (w *netlinkWatcher) processUpdate(
 func (w *netlinkWatcher) pollNetemChanges(
 	states map[int]ifaceSnapshot,
 	registry *netlinkRegistry,
+	netemQuery *netemQuerier,
 ) {
-	netemInfos := queryNetemInfo(w.nsHandle)
+	netemInfos := netemQuery.Query()
 
 	for idx, snapshot := range states {
 		previous := snapshot
@@ -764,14 +769,25 @@ func (w *netlinkWatcher) collectAndEmitStats(
 	}
 
 	now := time.Now()
+	// Fetch all interfaces with one netlink call per tick instead of one call
+	// per interface to reduce syscall overhead in large labs.
+	currentStates, err := snapshotInterfaces(netHandle)
+	if err != nil {
+		log.Debugf(
+			"failed to collect interface stats snapshot for container %s: %v",
+			firstContainerName(w.container),
+			err,
+		)
+
+		return
+	}
 
 	for idx, state := range states {
-		link, err := netHandle.LinkByIndex(idx)
-		if err != nil {
+		current, ok := currentStates[idx]
+		if !ok {
 			continue
 		}
 
-		current := snapshotFromLink(link)
 		state.Name = current.Name
 		state.Alias = current.Alias
 		state.MTU = current.MTU
@@ -868,21 +884,36 @@ func deltaCounter(previous, current uint64) uint64 {
 	return current
 }
 
-const msPerSec = 1000
+const (
+	msPerSec = 1000
+)
 
-// queryNetemInfo queries the TC qdiscs in the namespace and returns a map
-// of interface index to netem data.
-func queryNetemInfo(nsHandle netns.NsHandle) map[int]netemInfo {
+type netemQuerier struct {
+	nsHandle netns.NsHandle
+	tcHandle *gotc.Tc
+}
+
+func newNetemQuerier(nsHandle netns.NsHandle) *netemQuerier {
+	return &netemQuerier{
+		nsHandle: nsHandle,
+	}
+}
+
+func (q *netemQuerier) Close() {
+	if q == nil || q.tcHandle == nil {
+		return
+	}
+
+	q.tcHandle.Close()
+	q.tcHandle = nil
+}
+
+// Query queries the TC qdiscs in the namespace and returns a map of
+// interface index to netem data.
+func (q *netemQuerier) Query() map[int]netemInfo {
 	result := make(map[int]netemInfo)
 
-	tcnl, err := clabnetem.NewTC(int(nsHandle))
-	if err != nil {
-		log.Debugf("failed to open tc socket for netem query: %v", err)
-		return result
-	}
-	defer tcnl.Close()
-
-	qdiscs, err := clabnetem.Impairments(tcnl)
+	qdiscs, err := q.qdiscs()
 	if err != nil {
 		log.Debugf("failed to query tc qdiscs: %v", err)
 		return result
@@ -901,6 +932,52 @@ func queryNetemInfo(nsHandle netns.NsHandle) map[int]netemInfo {
 	}
 
 	return result
+}
+
+func (q *netemQuerier) qdiscs() ([]gotc.Object, error) {
+	if q == nil {
+		return nil, fmt.Errorf("netem querier is nil")
+	}
+
+	if err := q.ensureHandle(); err != nil {
+		return nil, err
+	}
+
+	qdiscs, err := clabnetem.Impairments(q.tcHandle)
+	if err == nil {
+		return qdiscs, nil
+	}
+
+	// Retry once by reopening the tc socket in case it became stale.
+	q.Close()
+	if errOpen := q.ensureHandle(); errOpen != nil {
+		return nil, fmt.Errorf(
+			"failed to query tc qdiscs (%v), and failed to reopen tc socket (%v)",
+			err,
+			errOpen,
+		)
+	}
+
+	return clabnetem.Impairments(q.tcHandle)
+}
+
+func (q *netemQuerier) ensureHandle() error {
+	if q == nil {
+		return fmt.Errorf("netem querier is nil")
+	}
+
+	if q.tcHandle != nil {
+		return nil
+	}
+
+	tcnl, err := clabnetem.NewTC(int(q.nsHandle))
+	if err != nil {
+		return fmt.Errorf("failed to open tc socket for netem query: %w", err)
+	}
+
+	q.tcHandle = tcnl
+
+	return nil
 }
 
 type netemInfo struct {

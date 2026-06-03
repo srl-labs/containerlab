@@ -103,6 +103,7 @@ func (c *CLab) ListContainerInterfaces(
 		if err != nil {
 			return nil, fmt.Errorf("unable to get container network NS handle: %w", err)
 		}
+		defer containerNsHandle.Close()
 	case container.Runtime.GetName() == "podman":
 		// Network NS path is empty and the runtime is Podman -> host network mode
 		// Manually get the handle for the root network namespace
@@ -110,6 +111,7 @@ func (c *CLab) ListContainerInterfaces(
 		if err != nil {
 			return nil, fmt.Errorf("unable to get root network NS handle: %w", err)
 		}
+		defer containerNsHandle.Close()
 	default:
 		log.Warnf("Container %v has no namespace set, skipping!", containerInterfaces.ContainerName)
 		containerInterfaces.Interfaces = make([]*clabtypes.ContainerInterfaceDetails, 0)
@@ -122,6 +124,7 @@ func (c *CLab) ListContainerInterfaces(
 	if err != nil {
 		return nil, fmt.Errorf("unable to enter container network NS: %w", err)
 	}
+	defer netlinkHandle.Close()
 
 	interfaces, err := netlinkHandle.LinkList()
 	if err != nil {

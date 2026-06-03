@@ -134,14 +134,14 @@ func MultiExec(addr, username, password string, operations []Operation) error {
 
 	for _, operation := range operations {
 		r, e := operation(d)
+		if e != nil {
+			return fmt.Errorf("NETCONF operation failed for %q: %w", addr, e)
+		}
 		log.Debugf("NETCONF RPC sent to %q: %s", addr,
 			xmlfmt.FormatXML(string(r.Input), "\t", "    "))
 		if r.Failed != nil {
-			return fmt.Errorf("NETCONF RPC to %q failed received: %s",
+			return fmt.Errorf("NETCONF RPC to %q failed: %s",
 				addr, r.Result)
-		}
-		if e != nil {
-			return e
 		}
 	}
 

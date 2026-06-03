@@ -48,6 +48,12 @@ const (
 	// default config.
 	// Partial config provided via startup-config parameter is an overlay config.
 	overlayCfgPath = "/tmp/clab-overlay-config"
+
+	srlShortPlatformName = "srl"
+	srlLongPlatformName  = "nokia_srlinux"
+	scrapliPlatformName  = srlLongPlatformName
+
+	mgmt0InterfaceName = "mgmt0"
 )
 
 var (
@@ -56,9 +62,7 @@ var (
 	//go:embed srl_default_config.go.tpl
 	srlConfigCmdsTpl string
 
-	scrapliPlatformName = "nokia_srlinux"
-
-	kindNames = []string{"srl", "nokia_srlinux"}
+	kindNames = []string{srlShortPlatformName, srlLongPlatformName}
 	srlSysctl = map[string]string{
 		"net.ipv4.ip_forward":              "0",
 		"net.ipv6.conf.all.disable_ipv6":   "0",
@@ -114,10 +118,13 @@ var (
 		"sxr-1x-44s": "7730SXR-1x-44s.yml",
 		"sxr1d32d":   "7730SXR-1d-32d.yml",
 		"sxr-1d-32d": "7730SXR-1d-32d.yml",
+		"sxr-1-32d":  "7730SXR-1-32d.yml",
 		"ixrx1b":     "7250IXRX1b.yml",
 		"ixr-x1b":    "7250IXRX1b.yml",
 		"ixrx3b":     "7250IXRX3b.yml",
 		"ixr-x3b":    "7250IXRX3b.yml",
+		"ixr-x4":     "7250IXRX4-QSFP-DD.yml",
+		"ixr-x4-d":   "7250IXRX4-QSFP-DD.yml",
 	}
 
 	srlEnv = map[string]string{"SRLINUX": "1"}
@@ -179,6 +186,8 @@ type srl struct {
 	sshPubKeys []ssh.PublicKey
 	// software version SR Linux node runs
 	swVersion *SrlVersion
+	// indicates if the node supports OpenConfig server
+	supportsOpenconfig bool
 }
 
 func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -262,6 +271,14 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 		n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(srcTopoPath, ":", dstTopoPath, ":ro"))
 	}
 
+	// mounting /run/netnns as tmpfs ensures the network-instances
+	// namespaces don't persist through stop/start/restarts.
+	if n.Cfg.Tmpfs == nil {
+		n.Cfg.Tmpfs = map[string]string{}
+	}
+
+	n.Cfg.Tmpfs["/run/netns"] = "rw,nosuid,nodev,noexec"
+
 	n.InterfaceRegexp = InterfaceRegexp
 	n.InterfaceHelp = InterfaceHelp
 
@@ -271,34 +288,6 @@ func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) erro
 func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 
-	// Create appmgr subdir for agent specs and copy files, if needed
-	if n.Cfg.Extras != nil && len(n.Cfg.Extras.SRLAgents) != 0 {
-		agents := n.Cfg.Extras.SRLAgents
-
-		appmgr := filepath.Join(n.Cfg.LabDir, "config", "appmgr")
-		clabutils.CreateDirectory(appmgr, clabconstants.PermissionsOpen)
-
-		// process extras -> agents configurations
-		for _, fullpath := range agents {
-			basename := filepath.Base(fullpath)
-			// if it is a url extract filename from url or content-disposition header
-			if clabutils.IsHttpURL(fullpath, false) {
-				basename = clabutils.FilenameForURL(ctx, fullpath)
-			}
-			// enforce yml extension
-			ext := filepath.Ext(basename)
-			if ext != ".yml" && ext != ".yaml" {
-				basename += ".yml"
-			}
-
-			dst := filepath.Join(appmgr, basename)
-			if err := clabutils.CopyFile(ctx, fullpath, dst,
-				clabconstants.PermissionsFileDefault); err != nil {
-				return fmt.Errorf("agent copy src %s -> dst %s failed %v", fullpath, dst, err)
-			}
-		}
-	}
-
 	// store provided pubkeys
 	n.sshPubKeys = params.SSHPubKeys
 
@@ -306,6 +295,14 @@ func (n *srl) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) 
 	// for cert generation to happen in Post-Deploy phase with mgmt IPs as SANs
 	n.cert = params.Cert
 	n.topologyName = params.TopologyName
+
+	// platform specific pre-deploy actions
+	if n.Config().Env["SRL_CHASSIS_MODE"] == "" {
+		// boot 6e/10e in GEN2CP_ONLY mode by default
+		if n.Config().NodeType == "ixr-6e" || n.Config().NodeType == "ixr-10e" {
+			n.Config().Env["SRL_CHASSIS_MODE"] = "GEN2CP_ONLY"
+		}
+	}
 
 	return n.createSRLFiles()
 }
@@ -336,6 +333,11 @@ func (n *srl) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParams
 	}
 
 	n.swVersion, err = n.RunningVersion(ctx)
+	if err != nil {
+		return err
+	}
+
+	n.supportsOpenconfig, err = n.OpenConfigFeatureEnabled(ctx)
 	if err != nil {
 		return err
 	}
@@ -620,6 +622,7 @@ func generateSRLTopologyFile(cfg *clabtypes.NodeConfig) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	if err := tpl.Execute(f, mac); err != nil {
 		return err
@@ -633,6 +636,7 @@ type srlTemplateData struct {
 	TLSKey     string
 	TLSCert    string
 	TLSAnchor  string
+	TLSConfig  string
 	Banner     string
 	IFaces     map[string]tplIFace
 	SSHPubKeys string
@@ -660,6 +664,8 @@ type srlTemplateData struct {
 	OCServerConfig string
 	// NDKServerConfig is a string containing NDK server configuration
 	NDKServerConfig string
+	// DNSServersConfig is a string containing DNS servers configuration
+	DNSServersConfig string
 }
 
 // tplIFace template interface struct.
@@ -679,23 +685,31 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 		return err
 	}
 
-	// tplData holds data used in templating of the default config snippet
-	tplData := srlTemplateData{
-		TLSKey:          n.Cfg.TLSKey,
-		TLSCert:         n.Cfg.TLSCert,
-		TLSAnchor:       n.Cfg.TLSAnchor,
-		Banner:          b,
-		IFaces:          map[string]tplIFace{},
-		MgmtMTU:         0,
-		MgmtIPMTU:       0,
-		DNSServers:      n.Config().DNS.Servers,
-		SNMPConfig:      snmpv2Config,
-		GRPCConfig:      grpcConfig,
-		OCServerConfig:  "",
-		NDKServerConfig: "",
+	var dnsServers []string
+	if n.Config().DNS != nil {
+		dnsServers = n.Config().DNS.Servers
 	}
 
-	n.setVersionSpecificParams(&tplData)
+	// tplData holds data used in templating of the default config snippet
+	tplData := srlTemplateData{
+		TLSKey:           n.Cfg.TLSKey,
+		TLSCert:          n.Cfg.TLSCert,
+		TLSAnchor:        n.Cfg.TLSAnchor,
+		Banner:           b,
+		IFaces:           map[string]tplIFace{},
+		MgmtMTU:          0,
+		MgmtIPMTU:        0,
+		DNSServers:       dnsServers,
+		SNMPConfig:       snmpv2Config,
+		GRPCConfig:       grpcConfig,
+		OCServerConfig:   "",
+		NDKServerConfig:  "",
+		DNSServersConfig: "",
+	}
+
+	if err := n.setVersionSpecificParams(&tplData); err != nil {
+		return err
+	}
 
 	n.setCustomPrompt(&tplData)
 
@@ -710,7 +724,7 @@ func (n *srl) addDefaultConfig(ctx context.Context) error { //nolint:funlen
 
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
-		if ifName == "mgmt0" {
+		if ifName == mgmt0InterfaceName {
 			if m := e.GetLink().GetMTU(); m != clabconstants.DefaultLinkMTU {
 				tplData.MgmtMTU = m
 				tplData.MgmtIPMTU = m - ethernetMTUOverhead
@@ -1012,7 +1026,7 @@ func (n *srl) GetMappedInterfaceName(ifName string) (string, error) {
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *srl) CheckInterfaceName() error {
 	// allow ethernetX-X-X, eX-X-X and mgmt0 interface names
-	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|mgmt0`)
+	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|` + mgmt0InterfaceName)
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 
 	err := n.CheckInterfaceOverlap()
@@ -1029,7 +1043,7 @@ func (n *srl) CheckInterfaceName() error {
 			)
 		}
 
-		if e.GetIfaceName() == "mgmt0" && nm != "none" {
+		if e.GetIfaceName() == mgmt0InterfaceName && nm != "none" {
 			return fmt.Errorf(
 				"mgmt0 interface name is not allowed for %s node when network mode is not set to none",
 				n.Cfg.ShortName,

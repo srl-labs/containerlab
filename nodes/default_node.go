@@ -6,6 +6,7 @@ package nodes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -26,6 +27,7 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netns"
 )
 
 const (
@@ -63,6 +65,7 @@ type DefaultNode struct {
 	// State of the node
 	state      clabnodesstate.NodeState
 	statemutex sync.RWMutex
+	StopSignal clabtypes.Signal
 }
 
 // NewDefaultNode initializes the DefaultNode structure and receives a NodeOverwrites interface
@@ -89,12 +92,13 @@ func (d *DefaultNode) WithRuntime(r clabruntime.ContainerRuntime)            { d
 func (d *DefaultNode) GetRuntime() clabruntime.ContainerRuntime              { return d.Runtime }
 func (d *DefaultNode) Config() *clabtypes.NodeConfig                         { return d.Cfg }
 func (*DefaultNode) PostDeploy(_ context.Context, _ *PostDeployParams) error { return nil }
+func (*DefaultNode) PreStop(context.Context) error                           { return nil }
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
 	_, err := d.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return fmt.Errorf("loading or generating certificate for node %q: %w", d.Cfg.ShortName, err)
 	}
 	return nil
 }
@@ -197,7 +201,7 @@ func (d *DefaultNode) GetNSPath(ctx context.Context) (string, error) {
 		nsp = netns.Path()
 	}
 	if nsp == "" {
-		nsp, err = d.Runtime.GetNSPath(ctx, d.Cfg.LongName)
+		nsp, err = d.Runtime.GetNSPath(ctx, d.OverwriteNode.GetContainerName())
 		if err != nil {
 			log.Errorf("Unable to determine NetNS Path for node %s: %v", d.Cfg.ShortName, err)
 			return "", err
@@ -207,6 +211,28 @@ func (d *DefaultNode) GetNSPath(ctx context.Context) (string, error) {
 	return nsp, err
 }
 
+// ShouldSkipLifecycle reports whether lifecycle operations should no-op for this node.
+func (d *DefaultNode) ShouldSkipLifecycle() bool {
+	return d.Cfg.IsRootNamespaceBased || d.Cfg.AutoRemove
+}
+
+func (d *DefaultNode) parkingNetNSName() string {
+	return clabutils.ParkingNetnsName(d.Cfg.LongName)
+}
+
+func (d *DefaultNode) parkingNetNSPath() (string, error) {
+	return clabutils.GetNamedNetNS(d.parkingNetNSName())
+}
+
+// cleanupParkingNetNS removes the node-owned parking namespace if it exists.
+func (d *DefaultNode) cleanupParkingNetNS() error {
+	if _, err := d.parkingNetNSPath(); err != nil {
+		return nil
+	}
+
+	return netns.DeleteNamed(d.parkingNetNSName())
+}
+
 func (d *DefaultNode) Delete(ctx context.Context) error {
 	for _, e := range d.Endpoints {
 		err := e.GetLink().Remove(ctx)
@@ -214,6 +240,11 @@ func (d *DefaultNode) Delete(ctx context.Context) error {
 			return err
 		}
 	}
+
+	if d.OverwriteNode.GetContainerStatus(ctx) == clabruntime.NotFound {
+		return nil
+	}
+
 	return d.Runtime.DeleteContainer(ctx, d.OverwriteNode.GetContainerName())
 }
 
@@ -236,7 +267,11 @@ func (d *DefaultNode) GetContainers(ctx context.Context) ([]clabruntime.GenericC
 	// check that we retrieved some container information
 	// otherwise throw ErrContainersNotFound error
 	if len(cnts) == 0 {
-		return nil, fmt.Errorf("Node: %s. %w", d.GetContainerName(), ErrContainersNotFound)
+		return nil, fmt.Errorf(
+			"Node: %s. %w",
+			d.OverwriteNode.GetContainerName(),
+			ErrContainersNotFound,
+		)
 	}
 
 	return cnts, err
@@ -438,8 +473,10 @@ type NodeOverwrites interface {
 	GetImages(ctx context.Context) map[string]string
 	GetContainers(ctx context.Context) ([]clabruntime.GenericContainer, error)
 	GetContainerName() string
+	GetContainerStatus(ctx context.Context) clabruntime.ContainerStatus
 	VerifyContainerName() error
 	VerifyLicenseFileExists(context.Context) error
+	PreStop(context.Context) error
 	RunExec(context.Context, *clabexec.ExecCmd) (*clabexec.ExecResult, error)
 	GetNSPath(ctx context.Context) (string, error)
 }
@@ -480,7 +517,7 @@ func (d *DefaultNode) GetContainerName() string {
 }
 
 func (d *DefaultNode) VerifyContainerName() error {
-	containerName := d.GetContainerName()
+	containerName := d.OverwriteNode.GetContainerName()
 	if !containerNamePatternRe.MatchString(containerName) {
 		return fmt.Errorf("Node name contains invalid characters: %s", containerName)
 	}
@@ -666,6 +703,20 @@ func (d *DefaultNode) AddLinkToContainer(
 	link netlink.Link,
 	f func(ns.NetNS) error,
 ) error {
+	if !d.Cfg.IsRootNamespaceBased {
+		st := d.OverwriteNode.GetContainerStatus(ctx)
+		if !clabruntime.ContainerHasJoinableNetns(st) {
+			if st == clabruntime.Stopped {
+				containerName := d.OverwriteNode.GetContainerName()
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, containerName)
+			}
+			return fmt.Errorf(
+				"node %q: cannot attach link, container network namespace is not available (status=%s)",
+				d.Cfg.ShortName,
+				st,
+			)
+		}
+	}
 	// retrieve nodes nspath
 	nsp, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {
@@ -690,6 +741,20 @@ func (d *DefaultNode) AddLinkToContainer(
 
 // ExecFunction executes the given function in the nodes network namespace.
 func (d *DefaultNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
+	if !d.Cfg.IsRootNamespaceBased {
+		st := d.OverwriteNode.GetContainerStatus(ctx)
+		if !clabruntime.ContainerHasJoinableNetns(st) {
+			if st == clabruntime.Stopped {
+				containerName := d.OverwriteNode.GetContainerName()
+				d.GetRuntime().LogNonRunningContainerOutput(ctx, containerName)
+			}
+			return fmt.Errorf(
+				"node %q: cannot exec a command, container network namespace is not available (status=%s)",
+				d.Cfg.ShortName,
+				st,
+			)
+		}
+	}
 	// retrieve nodes nspath
 	nspath, err := d.OverwriteNode.GetNSPath(ctx)
 	if err != nil {
@@ -739,9 +804,67 @@ func (d *DefaultNode) AddEndpoint(e clablinks.Endpoint) error {
 		e.SetIfaceName(mappedName)
 		e.SetIfaceAlias(endpointName)
 	}
+
+	if e.GetNode() == nil {
+		e.SetNode(d)
+	}
+
+	d.Endpoints = append(d.Endpoints, e)
+	return nil
+}
+
+func (d *DefaultNode) AdoptEndpoint(e clablinks.Endpoint) error {
+	if e == nil {
+		return fmt.Errorf("node %q cannot adopt a nil endpoint", d.Cfg.ShortName)
+	}
+
+	owner := e.GetNode()
+	if owner == nil {
+		return fmt.Errorf(
+			"node %q cannot adopt endpoint %q without an owner",
+			d.Cfg.ShortName,
+			e.GetIfaceName(),
+		)
+	}
+
+	if owner.GetShortName() != d.Cfg.ShortName {
+		return fmt.Errorf(
+			"node %q cannot adopt endpoint %q owned by %q",
+			d.Cfg.ShortName,
+			e.GetIfaceName(),
+			owner.GetShortName(),
+		)
+	}
+
+	for _, owned := range d.Endpoints {
+		if owned == e {
+			return nil
+		}
+		if owned.GetIfaceName() == e.GetIfaceName() {
+			return fmt.Errorf(
+				"node %q already tracks interface %q",
+				d.Cfg.ShortName,
+				e.GetIfaceName(),
+			)
+		}
+	}
+
 	d.Endpoints = append(d.Endpoints, e)
 
 	return nil
+}
+
+func (d *DefaultNode) ReleaseEndpoint(e clablinks.Endpoint) error {
+	for i, ep := range d.Endpoints {
+		if ep != e {
+			continue
+		}
+
+		d.Endpoints = append(d.Endpoints[:i], d.Endpoints[i+1:]...)
+		return nil
+	}
+
+	return fmt.Errorf("node %q does not own endpoint %q", d.Cfg.ShortName, e.GetIfaceName())
 }
 
 func (d *DefaultNode) GetEndpoints() []clablinks.Endpoint {
@@ -762,7 +885,16 @@ func (d *DefaultNode) GetShortName() string {
 // The deployment of endpoints is done by deploying a link with the endpoint triggering it.
 func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 	for _, ep := range d.Endpoints {
-		err := ep.Deploy(ctx)
+		if ep.IsRuntimeDiscovered() {
+			continue
+		}
+
+		deployable, ok := ep.(clablinks.DeployableEndpoint)
+		if !ok {
+			return fmt.Errorf("endpoint %q is not deployable", ep.GetIfaceName())
+		}
+
+		err := deployable.Deploy(ctx)
 		if err != nil {
 			return err
 		}
@@ -788,9 +920,142 @@ func (d *DefaultNode) GetSSHConfig() *clabtypes.SSHConfig {
 }
 
 func (d *DefaultNode) GetContainerStatus(ctx context.Context) clabruntime.ContainerStatus {
-	return d.Runtime.GetContainerStatus(ctx, d.GetContainerName())
+	return d.Runtime.GetContainerStatus(ctx, d.OverwriteNode.GetContainerName())
 }
 
 func (d *DefaultNode) IsHealthy(ctx context.Context) (bool, error) {
-	return d.Runtime.IsHealthy(ctx, d.GetContainerName())
+	return d.Runtime.IsHealthy(ctx, d.OverwriteNode.GetContainerName())
+}
+
+// ParkEndpoints moves all tracked endpoints into the node-owned parking namespace.
+func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
+	parkPath, err := clabutils.CreateOrGetNamedNetNS(d.parkingNetNSName())
+	if err != nil {
+		return fmt.Errorf("failed to create parking netns for node %q: %w", d.Cfg.ShortName, err)
+	}
+	parkingNode := clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
+
+	if err := parkingNode.CaptureFrom(ctx, d); err != nil {
+		_ = d.cleanupParkingNetNS()
+		return err
+	}
+
+	if err := parkingNode.RepointSymlink(); err != nil {
+		restoreErr := parkingNode.RestoreTo(ctx, d)
+		cleanupErr := d.cleanupParkingNetNS()
+		if restoreErr != nil || cleanupErr != nil {
+			return errors.Join(
+				fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err),
+				restoreErr,
+				cleanupErr,
+			)
+		}
+		return fmt.Errorf("failed to repoint symlink for node %q: %w", d.Cfg.ShortName, err)
+	}
+
+	return nil
+}
+
+// RestoreEndpoints tries to get the parking node to unpark its interfaces.
+func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
+	parkPath, err := d.parkingNetNSPath()
+	if err != nil {
+		return fmt.Errorf("no parking netns found for node %q: %w", d.Cfg.ShortName, err)
+	}
+	parkingNode := clablinks.NewParkingNode(d.Cfg.LongName, parkPath)
+
+	if err := parkingNode.RestoreTo(ctx, d); err != nil {
+		return err
+	}
+
+	if err := d.cleanupParkingNetNS(); err != nil {
+		return fmt.Errorf("failed to cleanup parking netns for node %q: %w", d.Cfg.ShortName, err)
+	}
+
+	return nil
+}
+
+func (d *DefaultNode) Stop(ctx context.Context) error {
+	cfg := d.Config()
+
+	if d.ShouldSkipLifecycle() {
+		log.Debugf("node %q skips lifecycle stop", cfg.ShortName)
+		return nil
+	}
+
+	status := d.OverwriteNode.GetContainerStatus(ctx)
+	switch status {
+	case clabruntime.Stopped:
+		log.Debugf("node %q already stopped, skipping", cfg.ShortName)
+		return nil
+	case clabruntime.NotFound:
+		return fmt.Errorf("node %q container %q not found", cfg.ShortName, cfg.LongName)
+	}
+
+	if err := d.OverwriteNode.PreStop(ctx); err != nil {
+		return fmt.Errorf("node %q pre-stop hook failed: %w", cfg.ShortName, err)
+	}
+
+	if err := d.ParkEndpoints(ctx); err != nil {
+		return err
+	}
+
+	if err := d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal); err != nil {
+		// Docker/podman may return an error while the container is already stopped.
+		// if ctr is already stopped, this is OK
+		if d.OverwriteNode.GetContainerStatus(ctx) == clabruntime.Stopped {
+			log.Warnf("node %q stop returned error but container is stopped: %v", cfg.ShortName, err)
+			return nil
+		}
+
+		if restoreErr := d.RestoreEndpoints(ctx); restoreErr != nil {
+			return errors.Join(
+				fmt.Errorf("node %q failed stopping container: %w", cfg.ShortName, err),
+				fmt.Errorf("failed to restore endpoints: %w", restoreErr),
+			)
+		}
+
+		return fmt.Errorf("node %q failed stopping container: %w", cfg.ShortName, err)
+	}
+
+	return nil
+}
+
+// Start restarts a stopped container and restores its parked dataplane interfaces.
+func (d *DefaultNode) Start(ctx context.Context) error {
+	cfg := d.Config()
+
+	if d.ShouldSkipLifecycle() {
+		log.Debugf("node %q skips lifecycle start", cfg.ShortName)
+		return nil
+	}
+
+	status := d.OverwriteNode.GetContainerStatus(ctx)
+
+	switch status {
+	case clabruntime.Running:
+		log.Debugf("node %q already running, skipping", cfg.ShortName)
+		return nil
+	case clabruntime.NotFound:
+		return fmt.Errorf("node %q container %q not found", cfg.ShortName, cfg.LongName)
+	}
+
+	if _, err := d.Runtime.StartContainer(ctx, cfg.LongName, d); err != nil {
+		return fmt.Errorf("node %q failed starting container: %w", cfg.ShortName, err)
+	}
+
+	if err := d.RestoreEndpoints(ctx); err != nil {
+		_ = d.Runtime.StopContainer(ctx, cfg.LongName, d.StopSignal)
+		return err
+	}
+
+	// Re-run topology exec commands on lifecycle start to restore node-local interface config
+	// (for example IP addresses added during deploy exec phase).
+	execCollection := clabexec.NewExecCollection()
+	if err := d.RunExecFromConfig(ctx, execCollection); err != nil {
+		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
+	}
+	execCollection.Log()
+
+	return nil
 }

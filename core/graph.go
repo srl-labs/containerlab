@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -74,7 +75,8 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 	log.Info("Generating lab graph...")
 
 	g = gographviz.NewGraph()
-	if err := g.SetName(c.TopoPaths.TopologyFilenameWithoutExt()); err != nil {
+	graphName := dotIdentifier(c.TopoPaths.TopologyFilenameWithoutExt())
+	if err := g.SetName(graphName); err != nil {
 		return err
 	}
 
@@ -106,7 +108,7 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 			}
 		}
 
-		if err := g.AddNode(c.TopoPaths.TopologyFilenameWithoutExt(),
+		if err := g.AddNode(graphName,
 			node.Config().ShortName, attr); err != nil {
 			return err
 		}
@@ -137,7 +139,9 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 
 	// create graph filename
 	dotfile := c.TopoPaths.GraphFilename(".dot")
-	clabutils.CreateFile(dotfile, g.String())
+	if err := clabutils.CreateFile(dotfile, g.String()); err != nil {
+		return fmt.Errorf("failed to write dot graph file: %w", err)
+	}
 	log.Infof("Created %s", dotfile)
 
 	pngfile := c.TopoPaths.GraphFilename(".png")
@@ -153,6 +157,10 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func dotIdentifier(id string) string {
+	return strconv.Quote(id)
 }
 
 // generatePngFromDot generated PNG from the provided dot file.
@@ -281,7 +289,9 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	// Generate graph
 	var w strings.Builder
 	fc.Generate(&w)
-	clabutils.CreateFile(fname, w.String())
+	if err := clabutils.CreateFile(fname, w.String()); err != nil {
+		return fmt.Errorf("failed to write mermaid graph file: %w", err)
+	}
 
 	log.Infof("Created mermaid diagram file: %s", fname)
 

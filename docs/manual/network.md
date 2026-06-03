@@ -245,7 +245,7 @@ mgmt:
 
 With this approach, users can prevent IP address overlap with nodes deployed on the same management network by other orchestration systems.
 
-#### external access
+#### access from external hosts
 
 Containerlab will attempt to enable external management access to the nodes by default. This means that external systems/hosts will be able to communicate with the nodes of your topology without requiring any manual iptables/nftables rules to be installed.
 
@@ -333,6 +333,37 @@ mgmt:
 ```
 
 All driver options can be overridden, even those set by containerlab.
+
+### local-only networking
+
+The default management bridge driver options are configured to allow external network access from the containers through the management interface, including internet. In order to prevent unintentional internet or external network access, ip masquerading needs to be disabled on the management interface bridge:
+
+```yaml
+mgmt:
+  network: custom-net
+  driver-opts:
+    com.docker.network.bridge.enable_ip_masquerade: false
+```
+
+This allows for bidirectional communication between the host and containers, as well as between containers, while preventing access to the host's external network.
+
+### skipping the management network
+
+When every node in a topology runs with [`network-mode: none`](nodes.md#network-mode) the default `clab` docker network is created but never used, and an empty `CLAB-<lab>` marker block is appended to `/etc/hosts`. Set `skip-when-unused: true` under `mgmt` to suppress both:
+
+```yaml
+name: all-none
+mgmt:
+  skip-when-unused: true
+topology:
+  defaults:
+    network-mode: none
+  nodes:
+    n1:
+    n2:
+```
+
+Inheritance from `defaults`, `kinds`, and `groups` is honored - the network is only skipped when every node resolves to `network-mode: none`. If any node still attaches to the mgmt network (the default), the flag has no effect.
 
 ### connection details
 

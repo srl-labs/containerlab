@@ -50,7 +50,7 @@ func TestLicenseInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -99,7 +99,7 @@ func TestBindsInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -158,7 +158,7 @@ func TestTypeInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -237,7 +237,7 @@ func TestEnvInit(t *testing.T) {
 			}
 
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -284,7 +284,7 @@ func TestUserInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -320,7 +320,7 @@ func TestVerifyLinks(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 				WithRuntime(clabruntimedocker.RuntimeName,
 					&clabruntime.RuntimeConfig{
 						VerifyLinkParams: clablinks.NewVerifyLinkParams(),
@@ -431,7 +431,7 @@ func TestLabelsInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -498,7 +498,7 @@ func TestVerifyRootNetNSLinks(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.topo, ""),
+				WithTopoPath(tc.topo, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -599,7 +599,7 @@ func TestVerifyContainersUniqueness(t *testing.T) {
 			rtName := "mock"
 
 			opts := []ClabOption{
-				WithTopoPath(tc.topo, ""),
+				WithTopoPath(tc.topo, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -659,7 +659,7 @@ func TestEnvFileInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -710,7 +710,7 @@ func TestSuppressConfigInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -752,7 +752,7 @@ func TestStartupConfigInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -780,7 +780,7 @@ func TestExecInit(t *testing.T) {
 			node: "node1",
 			want: []string{
 				"echo \"Hello world\"",
-				"echo \"Hello node node1\"",
+				"echo \"Hello node node1 in clab-topo14\"",
 			},
 		},
 	}
@@ -788,7 +788,7 @@ func TestExecInit(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			opts := []ClabOption{
-				WithTopoPath(tc.got, ""),
+				WithTopoPath(tc.got, nil),
 			}
 
 			c, err := NewContainerLab(opts...)
@@ -800,5 +800,71 @@ func TestExecInit(t *testing.T) {
 				t.Errorf("execs do not match %s", d)
 			}
 		})
+	}
+}
+
+func TestExtrasInit(t *testing.T) {
+	tests := map[string]struct {
+		got           string
+		node          string
+		wantCeosCopy  []string
+		wantSRLAgents []string
+	}{
+		"extras_with_magic_vars": {
+			got:  "test_data/topo14.yml",
+			node: "node1",
+			wantCeosCopy: []string{
+				"ceos-configs/node1/ceos-config",
+			},
+			wantSRLAgents: []string{
+				"agents/node1/agent.yml",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			opts := []ClabOption{
+				WithTopoPath(tc.got, nil),
+			}
+
+			c, err := NewContainerLab(opts...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			extras := c.Nodes[tc.node].Config().Extras
+			if extras == nil {
+				t.Fatal("extras is nil")
+			}
+
+			if d := cmp.Diff(extras.CeosCopyToFlash, tc.wantCeosCopy); d != "" {
+				t.Errorf("ceos-copy-to-flash mismatch (-want +got):\n%s", d)
+			}
+
+			if d := cmp.Diff(extras.SRLAgents, tc.wantSRLAgents); d != "" {
+				t.Errorf("srl-agents mismatch (-want +got):\n%s", d)
+			}
+		})
+	}
+}
+
+func TestMagicVarReplacerWithoutNodeName(t *testing.T) {
+	c, err := NewContainerLab(WithTopoPath("test_data/topo14.yml", nil))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := c.magicVarReplacer("").Replace(
+		"lab=__clabLabName__,dir=__clabDir__,node=__clabNodeName__,nodedir=__clabNodeDir__",
+	)
+
+	want := fmt.Sprintf(
+		"lab=clab-topo14,dir=%s,node=__clabNodeName__,nodedir=__clabNodeDir__",
+		c.TopoPaths.TopologyLabDir(),
+	)
+
+	if got != want {
+		t.Fatalf("unexpected magic var replacement, want %q got %q", want, got)
 	}
 }

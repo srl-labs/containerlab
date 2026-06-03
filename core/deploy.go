@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,9 +43,12 @@ func (c *CLab) Deploy( //nolint: funlen
 		}
 	}
 
-	// create management network or use existing one
-	if err := c.CreateNetwork(ctx); err != nil {
-		return nil, err
+	// create or reuse the management network, unless every node opts out
+	skipMgmt := c.skipMgmtNetwork()
+	if !skipMgmt {
+		if err := c.CreateNetwork(ctx); err != nil {
+			return nil, err
+		}
 	}
 
 	err = clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
@@ -76,19 +80,21 @@ func (c *CLab) Deploy( //nolint: funlen
 	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
 	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
 
-	_, err = os.Create(ansibleInvFPath)
+	ansibleF, err := os.Create(ansibleInvFPath)
 	if err != nil {
 		return nil, err
 	}
+	ansibleF.Close()
 
 	// create an empty nornir simple inventory file that will get populated later
 	// we create it here first, so that bind mounts of nornir-simple-inventory.yml file could work
 	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
 
-	_, err = os.Create(nornirSimpleInvFPath)
+	nornirF, err := os.Create(nornirSimpleInvFPath)
 	if err != nil {
 		return nil, err
 	}
+	nornirF.Close()
 
 	// in an similar fashion, create an empty topology data file
 	topoDataFPath := c.TopoPaths.TopoExportFile()
@@ -97,6 +103,7 @@ func (c *CLab) Deploy( //nolint: funlen
 	if err != nil {
 		return nil, err
 	}
+	defer topoDataF.Close()
 
 	if err := c.certificateAuthoritySetup(); err != nil {
 		return nil, err
@@ -140,23 +147,58 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	nodesWg, execCollection, err := c.createNodes(ctx, options.maxWorkers, options.skipPostDeploy)
+	nodesWg, execCollection, nodeFailCh, err := c.createNodes(
+		ctx,
+		options.maxWorkers,
+		options.skipPostDeploy,
+	)
 	if err != nil {
 		return nil, err
 	}
 
+	if nodesWg != nil {
+		nodesWg.Wait()
+	}
+
+	close(nodeFailCh)
+	var nodeFailErrs []error
+	for nodeErr := range nodeFailCh {
+		nodeFailErrs = append(nodeFailErrs, nodeErr)
+	}
+	if len(nodeFailErrs) > 0 {
+		return nil, fmt.Errorf(
+			"deployment failed for one or more nodes: %w",
+			errors.Join(nodeFailErrs...),
+		)
+	}
+
 	// also call deploy on the special nodes endpoints (only host is required for the
-	// vxlan stitched endpoints)
+	// vxlan stitched endpoints).
+	// this must happen after all node workers have finished so that veth pairs created
+	// as part of vxlan-stitch links are already deployed before the stitch TC rules are applied.
 	eps := c.getSpecialLinkNodes()["host"].GetEndpoints()
 	for _, ep := range eps {
-		err = ep.Deploy(ctx)
+		deployable, ok := ep.(clablinks.DeployableEndpoint)
+		if !ok {
+			log.Warnf("skipping non-deployable endpoint %s", ep)
+			continue
+		}
+
+		err = deployable.Deploy(ctx)
 		if err != nil {
 			log.Warnf("failed deploying endpoint %s", ep)
 		}
 	}
 
-	if nodesWg != nil {
-		nodesWg.Wait()
+	// Stitch VxlanStitched links after node workers and host endpoints have finished.
+	// The veth pair is already created by node workers and the VxLAN interface is created
+	// by host endpoint deploy; Stitch applies the TC redirect rules to bridge them.
+	for _, link := range c.Links {
+		if stitchedLink, ok := link.(*clablinks.VxlanStitched); ok {
+			if err = stitchedLink.Stitch(); err != nil {
+				log.Warnf("failed stitching vxlan link: %v", err)
+			}
+		}
 	}
 
 	execCollection.Log()
@@ -181,11 +223,13 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	log.Info("Adding host entries", "path", "/etc/hosts")
+	if !skipMgmt {
+		log.Info("Adding host entries", "path", "/etc/hosts")
 
-	err = c.appendHostsFileEntries(ctx)
-	if err != nil {
-		log.Errorf("failed to create hosts file: %v", err)
+		err = c.appendHostsFileEntries(ctx)
+		if err != nil {
+			log.Errorf("failed to create hosts file: %v", err)
+		}
 	}
 
 	log.Info("Adding SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
@@ -264,7 +308,7 @@ func (c *CLab) createNodes(
 	ctx context.Context,
 	maxWorkers uint,
 	skipPostDeploy bool,
-) (*sync.WaitGroup, *clabexec.ExecCollection, error) {
+) (*sync.WaitGroup, *clabexec.ExecCollection, chan error, error) {
 	for _, node := range c.Nodes {
 		c.dependencyManager.AddNode(node)
 	}
@@ -272,13 +316,13 @@ func (c *CLab) createNodes(
 	// nodes with static mgmt IP should be scheduled before the dynamic ones
 	err := c.createStaticDynamicDependency()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// create user-defined node dependencies done with `wait-for` property of the deployment stage
 	err = c.createWaitForDependency()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// make network namespace shared containers start in the right order
@@ -289,13 +333,17 @@ func (c *CLab) createNodes(
 	// make sure that there are no unresolvable dependencies, which would deadlock.
 	err = c.dependencyManager.CheckAcyclicity()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	// start scheduling
-	NodesWg, execCollection := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy)
+	// Buffered so workers never block reporting a failure (at most one failure path per node).
+	// With zero nodes, nothing sends on this channel; an empty buffer is fine.
+	nodeFailCh := make(chan error, len(c.Nodes))
 
-	return NodesWg, execCollection, nil
+	// start scheduling
+	NodesWg, execCollection := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy, nodeFailCh)
+
+	return NodesWg, execCollection, nodeFailCh, nil
 }
 
 // configureSnapshotRestore configures nodes for snapshot restoration.

@@ -18,4 +18,5 @@ topology:
       mgmt-ipv4: 172.20.20.22
 
   links:
-    - endpoints: ["n1:eth1", "n2:eth1"]
+    - endpoints: [ "n1:eth1", "n2:eth1" ]
+      ipv4: [ "192.168.55.1/24", "192.168.55.2/24" ]

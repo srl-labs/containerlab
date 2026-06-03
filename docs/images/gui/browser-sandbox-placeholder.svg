@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Browser sandbox screenshot placeholder</title>
+  <desc id="desc">Placeholder for a future Containerlab browser sandbox screenshot.</desc>
+  <rect width="1280" height="720" fill="#1f2429"/>
+  <rect x="60" y="52" width="1160" height="616" rx="8" fill="#252b31" stroke="#3a424b" stroke-width="2"/>
+  <rect x="60" y="52" width="1160" height="72" rx="8" fill="#20262c"/>
+  <circle cx="104" cy="88" r="9" fill="#ff5f57"/>
+  <circle cx="134" cy="88" r="9" fill="#ffbd2e"/>
+  <circle cx="164" cy="88" r="9" fill="#28c840"/>
+  <rect x="210" y="72" width="680" height="32" rx="16" fill="#151a1f" stroke="#39424c"/>
+  <text x="232" y="94" font-family="Inter, Arial, sans-serif" font-size="16" fill="#a8b3bf">https://srl-labs.github.io/containerlab-app/</text>
+  <text x="110" y="190" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700" fill="#f0f4f8">Browser Sandbox</text>
+  <text x="110" y="238" font-family="Inter, Arial, sans-serif" font-size="20" fill="#a8b3bf">Placeholder screenshot</text>
+  <rect x="110" y="292" width="300" height="300" rx="6" fill="#171c21" stroke="#39424c"/>
+  <text x="140" y="340" font-family="Inter, Arial, sans-serif" font-size="18" fill="#d7dde4">Local browser workspace</text>
+  <text x="140" y="382" font-family="Inter, Arial, sans-serif" font-size="16" fill="#a8b3bf">topology.clab.yml</text>
+  <text x="140" y="418" font-family="Inter, Arial, sans-serif" font-size="16" fill="#a8b3bf">topology annotations</text>
+  <text x="140" y="454" font-family="Inter, Arial, sans-serif" font-size="16" fill="#a8b3bf">visual editor state</text>
+  <rect x="470" y="292" width="650" height="300" rx="6" fill="#171c21" stroke="#39424c"/>
+  <circle cx="680" cy="430" r="40" fill="#006dff"/>
+  <circle cx="900" cy="430" r="40" fill="#006dff"/>
+  <line x1="720" y1="430" x2="860" y2="430" stroke="#6fd182" stroke-width="8"/>
+  <text x="642" y="500" font-family="Inter, Arial, sans-serif" font-size="18" fill="#f0f4f8">srl1</text>
+  <text x="862" y="500" font-family="Inter, Arial, sans-serif" font-size="18" fill="#f0f4f8">srl2</text>
+</svg>

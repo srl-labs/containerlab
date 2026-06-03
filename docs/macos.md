@@ -79,7 +79,7 @@ Ever since macOS switched to ARM architecture for their processors, people in a 
 
 But before we start talking about Docker on ARM Macs, let's remind ourselves how Docker works on macOS with Intel processors.
 
--{{ diagram(url='srl-labs/containerlab/diagrams/macos-arm.drawio', title='Docker on Intel Macs', page=3) }}-
+-{{ diagram(url='srl-labs/containerlab/diagrams/macos-arm.drawio', title='Docker on Intel Macs', page=4) }}-
 
 At the heart of any product or project that enables the Docker engine on Mac[^3] is a Linux VM that hosts the Docker daemon, aka "the engine". This VM is created and managed by the application that sets up Docker on your desktop OS.  
 The Linux VM is a mandatory piece because the whole container ecosystem is built around Linux kernel features and APIs. Therefore, running Docker on any host with an operating system other than Linux requires a Linux VM.
@@ -88,7 +88,7 @@ As shown above, on Intel Macs, the macOS runs Darwin kernel on top of an AMD64 (
 
 Now let's see how things change when we switch to ARM Macs:
 
--{{ diagram(url='srl-labs/containerlab/diagrams/macos-arm.drawio', title='Docker on ARM Macs', page=2) }}-
+-{{ diagram(url='srl-labs/containerlab/diagrams/macos-arm.drawio', title='Docker on ARM Macs', page=3) }}-
 
 The diagram looks 99% the same as for the Intel Macs, the only difference being the architecture that macOS runs on and consequently the architecture of the Docker VM.  
 Now we run ARM64 architecture on the host, and the Docker VM is also ARM64.

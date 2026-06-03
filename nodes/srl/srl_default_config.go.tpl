@@ -1,15 +1,6 @@
 {{ .ACLConfig }}
 
-set / system tls server-profile clab-profile
-set / system tls server-profile clab-profile key "{{ .TLSKey }}"
-set / system tls server-profile clab-profile certificate "{{ .TLSCert }}"
-
-{{- if .TLSAnchor }}
-set / system tls server-profile clab-profile authenticate-client true
-set / system tls server-profile clab-profile trust-anchor "{{ .TLSAnchor }}"
-{{- else }}
-set / system tls server-profile clab-profile authenticate-client false
-{{- end }}
+{{ .TLSConfig }}
 
 {{ .GRPCConfig }}
 
@@ -19,10 +10,7 @@ set / system tls server-profile clab-profile authenticate-client false
 system gnmi-server unix-socket services [ gnmi gnoi ] admin-state enable
 {{- end }}
 
-{{- if .DNSServers }}
-set / system dns network-instance mgmt
-set / system dns server-list [ {{ range $dnsserver := .DNSServers}}{{$dnsserver}} {{ end }}]
-{{- end }}
+{{ .DNSServersConfig }}
 
 set / system json-rpc-server admin-state enable network-instance mgmt http admin-state enable
 set / system json-rpc-server admin-state enable network-instance mgmt https admin-state enable tls-profile clab-profile

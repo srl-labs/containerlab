@@ -26,6 +26,38 @@ For those who cherish IRC in their hearts, a community-led IRC channel `#contain
 
 We are always happy to showcase containerlab and demonstrate its powers. Luckily, the network engineering community has lots of events worldwide, and we participated in some. Below you will find recordings of containerlab talks in different formats and on various venues listed in reverse chronological order[^1].
 
+### CHNOG 3
+
+<small>:material-youtube: [Change with Confidence: Containerlab at Proton](https://www.youtube.com/watch?v=RtJqWRYKf88) · :material-calendar: 2026-05-29</small>
+
+Seeing how Containerlab is being used in production, within the right context, and with the right scope is like seeing your kid grow up and become a successful adult. John Howard, Proton's Head of Network Engineering, shares his experience with Containerlab and how it has helped them to validate their network changes in a safe and controlled manner.
+
+"Stay in bed" - he said - because the changes can now be triaged and beaten to death before they are deployed.
+
+<div class="iframe-container">
+<iframe width="100%" src="https://www.youtube.com/embed/RtJqWRYKf88" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>
+
+Participants:
+
+* [:material-linkedin:](https://www.linkedin.com/in/jonnyhoward/) John Howard
+
+### RIPE 92
+
+<small>:material-youtube: [Developing Containerlab - an open-source success story](https://ripe92.ripe.net/programme/meeting-plan/sessions/85/JDMLST/) · :material-calendar: 2026-05-20</small>
+
+Containerlab turns 6 this year - with over half a million installs, a rich ecosystem, plenty of write-ups, blog posts and repositories using it, it has become a popular project for creating virtual network topologies.
+
+This talks is not aimed at presenting the tool itself, but rather the development process, and what worked for the project, what did not, and what challenges we faced while developing and maintaining a tool that has to support traditionally closed-source software and engage with a non-software developer userbase.
+
+<video width="100%" controls>
+  <source src="https://ripe92.ripe.net/media/videos/gordon-gidofalvy_developing-containerlab-an-open-source-success-story_side_20260520-094658.mp4" type="video/mp4">
+</video>
+
+Participants:
+
+* [:material-linkedin:](https://www.linkedin.com/in/gidofalvy/) Gordon Gidofalvy
+
 ### Autocon 1
 
 <small>:material-youtube: [When to use and not to use Containerlab?](https://youtu.be/zKHqiWdN91s) · :material-calendar: 2024-05-29</small>
@@ -253,19 +285,19 @@ Inmanta is a network orchestration and automation platform. In these [YouTube se
 
 Real-time telemetry from a 5 stage Clos fabric describes lightweight emulation of realistic data center switch topologies using Containerlab. This article extends the testbed to experiment with distributed denial of service (DDoS) detection and mitigation techniques described in Real-time DDoS mitigation using BGP RTBH and FlowSpec.
 
-### Multi-vendor EVPN VXLAN setup with Containerlab
+<!-- ### Multi-vendor EVPN VXLAN setup with Containerlab
 
 <small>:material-text: [Blog](https://www.theasciiconstruct.com/blog/2022/03/12/multi-vendor-evpn-vxlan-setup-with-containerlab/) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-03-12</small>
 
-In this post, we deploy a multivendor EVPN L2 overlay fabric, with BGP in the underlay as well. The entire fabric deployment is automated with Ansible, and Containerlab is used to define and deploy the actual topology.
+In this post, we deploy a multivendor EVPN L2 overlay fabric, with BGP in the underlay as well. The entire fabric deployment is automated with Ansible, and Containerlab is used to define and deploy the actual topology. -->
 
 ### Network Simulation Tools and Containerlab
 
 <small>:material-text: [Blog](https://juliopdx.com/2022/02/13/network-simulation-tools-and-containerlab/) by [@JulioPDX](https://twitter.com/Julio_PDX) · :material-calendar: 2022-02-13</small>
 
-I’ve been progressing through a series of technical books, some of which I’ve shared on other blogs. A few of them focus on BGP. BGP being so broad, I decided to create a challenge lab. Creating the challenge/troubleshooting labs has really made more concepts stick. I’m trying to use the principle of teaching someone to make the learning last. These have been incredibly fun to create and the community interaction has been amazing. One brave soul(Jeroen van Bemmel) shared his solution. I was fascinated on his solution and how he created his topology with Containerlab and net-sim tools.
+I’ve been progressing through a series of technical books, some of which I’ve shared on other blogs. A few of them focus on BGP. BGP being so broad, I decided to create a challenge lab. Creating the challenge/troubleshooting labs has really made more concepts stick. I’m trying to use the principle of teaching someone to make the learning last. These have been incredibly fun to create and the community interaction has been amazing. One brave soul (Jeroen van Bemmel) shared his solution. I was fascinated on his solution and how he created his topology with Containerlab and net-sim tools.
 
-### Juniper vQFX and containerlab
+<!-- ### Juniper vQFX and containerlab
 
 <small>:material-text: [Blog](https://www.theasciiconstruct.com/blog/2022/01/24/juniper-vqfx-and-containerlab) by [@aninchat](https://twitter.com/aninchat) · :material-calendar: 2022-02-06</small>
 
@@ -277,7 +309,7 @@ In this post, we look at how Containerlab can be used to quickly spin up vQFX to
 
 I’ve been working my way through Optimal Routing Design by Russ White, Don Slice, and Alvaro Retana. It has been a great read so far and I highly recommend it. When I work through a book I usually try and lab up any concept I can, this helps me make it stick as much as possible. Early on in the book the authors mention redistribution and possible issues that can come with doing it at more than one point in the network. So here we are reading this post. I hope you enjoy and possibly learn something along the way.
 
-Discussions: [:material-twitter:](https://twitter.com/Julio_PDX/status/1485040052811960321)
+Discussions: [:material-twitter:](https://twitter.com/Julio_PDX/status/1485040052811960321) -->
 
 ### Real-time telemetry from a 5 stage Clos fabric
 

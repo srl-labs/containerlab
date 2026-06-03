@@ -17,6 +17,7 @@ var (
 	// map of commands per platform which start a CLI app.
 	NetworkOSCLICmd = map[string][]string{
 		"arista_eos":    {"Cli"},
+		"juniper_junos": {"cli"},
 		"nokia_srlinux": {"sr_cli"},
 		"vyatta_vyos":   {"su", "-", "admin"},
 	}

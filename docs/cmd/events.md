@@ -27,7 +27,7 @@ In the default `plain` format every line mirrors the `docker events` format:
 <timestamp> <type> <action> <actor> (<key>=<value>, ...)
 ```
 
-- **Runtime events** show the short container ID as the actor and include the original attributes supplied by the container runtime (for example `image`, `name`, `containerlab`, `scope`, …). When `--initial-state` is enabled the stream starts with `container <state>` snapshots (for example `container running`) that carry an `origin=snapshot` attribute.
+- **Runtime events** show the short container ID as the actor and include the original attributes supplied by the container runtime (for example `image`, `name`, `containerlab`, `scope`, …). Container events are also enriched with `mgmt_ipv4`, `mgmt_ipv6`, and `ports` (published/exposed ports) when those values are available. When `--initial-state` is enabled the stream starts with `container <state>` snapshots (for example `container running`) that carry an `origin=snapshot` attribute.
 - **Interface events** use type `interface` and `origin=netlink` in the attribute list. They also report interface-specific data such as `ifname`, `state`, `mtu`, `mac`, `type`, `alias`, and the lab label. The actor is still the container short ID, and the container name is supplied in the attributes (`name=...`).
 - Interface notifications are emitted when a link appears, disappears, or when its relevant properties (operational state, MTU, alias, MAC address, type) change. Initial snapshots use the `snapshot` action when `--initial-state` is requested. When interface statistics are enabled the stream also includes `interface stats` updates with byte/packet counters and rate estimates.
 
@@ -39,7 +39,7 @@ When `--format json` is used, each event becomes a single JSON object on its own
 
 ```
 $ containerlab events
-2024-07-01T11:02:56.123456000Z container start 5d0b5a9ad3f1 (containerlab=frr-lab, image=ghcr.io/srl-labs/frr, name=clab-frr-lab-frr01)
+2024-07-01T11:02:56.123456000Z container start 5d0b5a9ad3f1 (containerlab=frr-lab, image=ghcr.io/srl-labs/frr, name=clab-frr-lab-frr01, ports=0.0.0.0:2222/tcp->22;0.0.0.0:830/tcp->830)
 2024-07-01T11:02:57.004321000Z interface create 5d0b5a9ad3f1 (ifname=eth0, index=22, lab=frr-lab, mac=02:42:ac:14:00:02, mtu=1500, name=clab-frr-lab-frr01, origin=netlink, state=up, type=veth)
 2024-07-01T11:02:57.104512000Z interface update 5d0b5a9ad3f1 (ifname=eth0, index=22, lab=frr-lab, mac=02:42:ac:14:00:02, mtu=9000, name=clab-frr-lab-frr01, origin=netlink, state=up, type=veth)
 2024-07-01T11:05:12.918273000Z container die 5d0b5a9ad3f1 (containerlab=frr-lab, exitCode=0, image=ghcr.io/srl-labs/frr, name=clab-frr-lab-frr01)
@@ -52,7 +52,7 @@ The stream contains all currently running labs and stays active to capture subse
 
 ```
 $ containerlab events --initial-state
-2024-07-01T11:02:55.912345000Z container running 5d0b5a9ad3f1 (containerlab=frr-lab, image=ghcr.io/srl-labs/frr, name=clab-frr-lab-frr01, origin=snapshot, state=running)
+2024-07-01T11:02:55.912345000Z container running 5d0b5a9ad3f1 (containerlab=frr-lab, image=ghcr.io/srl-labs/frr, name=clab-frr-lab-frr01, origin=snapshot, ports=0.0.0.0:2222/tcp->22;0.0.0.0:830/tcp->830, state=running)
 2024-07-01T11:02:55.912678000Z interface snapshot 5d0b5a9ad3f1 (ifname=eth0, index=22, lab=frr-lab, mac=02:42:ac:14:00:02, mtu=1500, name=clab-frr-lab-frr01, origin=netlink, state=up, type=veth)
 …
 ```

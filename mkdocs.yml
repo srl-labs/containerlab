@@ -32,6 +32,7 @@ nav:
               - Cisco FTDv: manual/kinds/vr-ftdv.md
           - Juniper:
               - Juniper cRPD: manual/kinds/crpd.md
+              - Juniper cSRX: manual/kinds/csrx.md
               - Juniper vMX: manual/kinds/vr-vmx.md
               - Juniper vQFX: manual/kinds/vr-vqfx.md
               - Juniper vSRX: manual/kinds/vr-vsrx.md
@@ -39,7 +40,7 @@ nav:
               - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
               - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
               - Juniper cJunosEvolved: manual/kinds/cjunosevolved.md
-          - Cumulus VX: manual/kinds/cvx.md
+          - NVIDIA Cumulus VX: manual/kinds/nvidia_cumulusvx.md
           - Aruba AOS-CX: manual/kinds/vr-aoscx.md
           - SONiC:
               - Container: manual/kinds/sonic-vs.md
@@ -56,6 +57,7 @@ nav:
           - OpenWRT: manual/kinds/openwrt.md
           - Keysight IXIA-C One: manual/kinds/keysight_ixia-c-one.md
           - Ostinato: manual/kinds/ostinato.md
+          - Spirent TestCenter: manual/kinds/spirent_stc.md
           - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
           - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
           - F5 BIG-IP VE: manual/kinds/f5_bigipve.md
@@ -63,6 +65,7 @@ nav:
           - 6WIND VSR: manual/kinds/6wind_vsr.md
           - Arrcus ArcOS: manual/kinds/arrcus_arcos.md
           - FD.io VPP: manual/kinds/fdio_vpp.md
+          - veesix osvbng: manual/kinds/veesix_osvbng.md
           - KinD: manual/kinds/k8s-kind.md
           - Linux bridge: manual/kinds/bridge.md
           - Linux container: manual/kinds/linux.md
@@ -87,7 +90,12 @@ nav:
       - Inventory: manual/inventory.md
       - Image management: manual/images.md
       - Labs and Codespaces: manual/codespaces.md
-      - VS Code Extension: manual/vsc-extension.md
+      - Containerlab GUI:
+          - manual/gui/index.md
+          - VS Code Extension: manual/gui/vsc-extension.md
+          - Desktop: manual/gui/desktop.md
+          - Web: manual/gui/web.md
+      - API Server: manual/api-server.md
       - Link Impairments: manual/impairments.md
       - Share lab access: manual/share-access.md
       - Configuration management: manual/config-mgmt.md
@@ -99,6 +107,9 @@ nav:
   - Command reference:
       - deploy: cmd/deploy.md
       - destroy: cmd/destroy.md
+      - start: cmd/start.md
+      - stop: cmd/stop.md
+      - restart: cmd/restart.md
       - redeploy: cmd/redeploy.md
       - inspect:
           - cmd/inspect/index.md
@@ -177,11 +188,15 @@ nav:
       - Cisco ASAv: lab-examples/asav01.md
       - Cisco FTDv: lab-examples/ftdv01.md
       - F5 BIG-IP VE: lab-examples/f5bigipve01.md
+      - v::n osvbng: lab-examples/osvbng01.md
       - Templated labs:
           - Leaf-spine topology: lab-examples/templated01.md
           - 5-stage Clos topology: lab-examples/templated02.md
       - Generic VM: lab-examples/generic_vm01.md
   - Release notes:
+      - "0.76": rn/0.76.md
+      - "0.75": rn/0.75.md
+      - "0.74": rn/0.74.md
       - "0.73": rn/0.73.md
       - "0.72": rn/0.72.md
       - "0.71": rn/0.71.md
@@ -321,6 +336,9 @@ plugins:
       redirect_maps:
         lab-examples/tls-cert.md: https://clabs.netdevops.me/security/gnmitls/
         lab-examples/ixp-lab.md: lab-examples/peering-lab.md
+        manual/vsc-extension.md: manual/gui/vsc-extension.md
+        manual/containerlab-desktop.md: manual/gui/desktop.md
+        manual/containerlab-web.md: manual/gui/web.md
   #- typeset
   - glightbox
   - macros:

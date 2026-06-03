@@ -2,10 +2,13 @@ package links
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/netip"
 	"strings"
+	"syscall"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -26,6 +29,10 @@ const (
 	LinkDeploymentStateFullDeployed
 	LinkDeploymentStateRemoved
 )
+
+const ownershipAltNamePrefix = "clab-o-"
+
+var linkAddAltName = netlink.LinkAddAltName
 
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
@@ -301,7 +308,7 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 			LinkVxlanRaw `yaml:",inline"`
 		}{
 			LinkVxlanRaw: *r.Link.(*LinkVxlanRaw),
-			Type:         string(LinkTypeMacVLan),
+			Type:         string(LinkTypeVxlan),
 		}
 		return x, nil
 	case LinkTypeDummy:
@@ -463,7 +470,8 @@ type Node interface {
 	// the bridge
 	// the master of the interface and bring the interface up.
 	AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error
-	// AddEndpoint adds the Endpoint to the node
+	// AddEndpoint attaches an endpoint discovered from topology resolution and may normalize
+	// endpoint identity first, such as interface-name remapping.
 	AddEndpoint(e Endpoint) error
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
@@ -471,6 +479,14 @@ type Node interface {
 	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() clabnodesstate.NodeState
 	Delete(ctx context.Context) error
+}
+
+// EndpointOwner is implemented by nodes that keep runtime endpoint ownership in sync with the
+// actual namespace that owns an interface.
+type EndpointOwner interface {
+	Node
+	AdoptEndpoint(e Endpoint) error
+	ReleaseEndpoint(e Endpoint) error
 }
 
 type LinkEndpointType string
@@ -524,6 +540,10 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			}
 		}
 
+		if err := addOwnershipAltName(l, endpt); err != nil {
+			return err
+		}
+
 		// bring the given link up
 		if err := netlink.LinkSetUp(l); err != nil {
 			return fmt.Errorf("failed to set %q up: %v",
@@ -532,6 +552,47 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 
 		return nil
 	}
+}
+
+func ownershipAltName(endpt Endpoint) string {
+	sum := sha1.Sum([]byte(endpt.GetNode().GetShortName() + "\x00" + endpt.GetIfaceName()))
+	return ownershipAltNamePrefix + hex.EncodeToString(sum[:8])
+}
+
+func hasOwnershipAltName(link netlink.Link) bool {
+	for _, altName := range link.Attrs().AltNames {
+		if strings.HasPrefix(altName, ownershipAltNamePrefix) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
+	if hasOwnershipAltName(link) {
+		return nil
+	}
+
+	altName := ownershipAltName(endpt)
+	if err := linkAddAltName(link, altName); err != nil {
+		if isAltNameNotSupportedErr(err) {
+			log.Warnf(
+				"kernel does not support interface altname capability; consider upgrading the kernel for full containerlab compatibility. Continuing without containerlab ownership marker %q for %s",
+				altName,
+				endpt,
+			)
+			return nil
+		}
+
+		return fmt.Errorf("failed to add containerlab ownership altname: %w", err)
+	}
+
+	return nil
+}
+
+func isAltNameNotSupportedErr(err error) bool {
+	return errors.Is(err, syscall.EOPNOTSUPP)
 }
 
 // ResolveParams is a struct that is passed to the Resolve() function of a raw link

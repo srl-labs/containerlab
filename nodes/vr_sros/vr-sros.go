@@ -45,11 +45,16 @@ const (
 	generateable     = true
 	generateIfFormat = "1/1/%d"
 
-	vrsrosDefaultType   = "sr-1"
-	scrapliPlatformName = "nokia_sros"
-	configDirName       = "tftpboot"
-	startupCfgFName     = "config.txt"
-	licenseFName        = "license.txt"
+	vrsrosDefaultType          = "sr-1"
+	scrapliPlatformName        = "nokia_sros"
+	scrapliPlatformNameClassic = "nokia_sros_classic"
+	// envSrosConfigMode is the env var that controls the CLI mode used by SR OS.
+	// When set to "classic" or "mixed", the classic CLI scrapligo platform is used.
+	// Default (unset or "model-driven") uses the MD-CLI platform.
+	envSrosConfigMode = "CLAB_SROS_CONFIG_MODE"
+	configDirName     = "tftpboot"
+	startupCfgFName   = "config.txt"
+	licenseFName      = "license.txt"
 
 	// OCI image title label used to detect SR-SIM container image (must use kind nokia_srsim).
 	ociImageTitleLabel = "org.opencontainers.image.title"
@@ -144,7 +149,7 @@ func (s *vrSROS) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParam
 	clabutils.CreateDirectory(s.Cfg.LabDir, clabconstants.PermissionsOpen)
 	_, err := s.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	// store public keys extracted from clab host
@@ -231,8 +236,8 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 
 	// apply the aggregated config snippets
 	if b.Len() > 0 {
-		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, scrapliPlatformName,
-			defaultCredentials.GetUsername(), defaultCredentials.GetPassword(),
+		err := s.applyPartialConfig(ctx, s.Cfg.MgmtIPv4Address, s.scrapliPlatform(),
+			s.Cfg.Credentials.Username, s.Cfg.Credentials.Password,
 			b,
 		)
 		if err != nil {
@@ -243,11 +248,22 @@ func (s *vrSROS) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) 
 	return nil
 }
 
+// scrapliPlatform returns the scrapligo platform name based on the configured CLI mode.
+// When CLAB_SROS_CONFIG_MODE is "classic" or "mixed", the classic CLI platform is used.
+// The default (unset or "model-driven") uses the MD-CLI platform.
+func (s *vrSROS) scrapliPlatform() string {
+	cfgMode := strings.ToLower(s.Cfg.Env[envSrosConfigMode])
+	if cfgMode == "classic" || cfgMode == "mixed" {
+		return scrapliPlatformNameClassic
+	}
+	return scrapliPlatformName
+}
+
 func (s *vrSROS) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	err := clabnetconf.SaveRunningConfig(s.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
-		scrapliPlatformName,
+		s.Cfg.Credentials.Username,
+		s.Cfg.Credentials.Password,
+		s.scrapliPlatform(),
 	)
 	if err != nil {
 		return nil, err

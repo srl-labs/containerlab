@@ -208,6 +208,10 @@ type sros struct {
 	// for component nodes, store base nodes
 	baseShortName string
 	baseLongName  string
+	// rootCtrName is the container that owns the netns.
+	//  - for components based: the 0th sorted component.
+	//  - for network mode based: parsed from network-mode.
+	rootCtrName string
 
 	preDeployParams *clabnodes.PreDeployParams
 }
@@ -377,8 +381,32 @@ func (n *sros) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams)
 				filepath.Join(n.Cfg.LabDir, "license.key"), ":", licDir, "/license.txt:ro"))
 		}
 
-		return n.createSROSFiles()
+		return n.createSROSFiles(ctx)
 	}
+	return nil
+}
+
+func (n *sros) DeployEndpoints(ctx context.Context) error {
+	if err := n.DefaultNode.DeployEndpoints(ctx); err != nil {
+		return err
+	}
+
+	// Disable TX checksum offload on the host NS veth for the mgmt interface.
+	var peerIfIndex int
+	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
+	if err != nil {
+		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
+			"node", n.Cfg.ShortName,
+			"error", err)
+		return nil
+	}
+
+	if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
+		log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
+			"node", n.Cfg.ShortName,
+			"error", err)
+	}
+
 	return nil
 }
 
@@ -391,21 +419,6 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 	// start waiting for container ready (PID based check)
 	if err := n.Ready(ctx); err != nil {
 		return err
-	}
-
-	// Disable TX checksum offload on the host NS veth for the mgmt interface.
-	var peerIfIndex int
-	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
-	if err != nil {
-		log.Warn("Failed to get veth peer index for SR-SIM mgmt interface",
-			"node", n.Cfg.ShortName,
-			"error", err)
-	} else {
-		if err := clabutils.DisableTxOffloadByIndex(peerIfIndex); err != nil {
-			log.Warn("Failed to disable TX checksum offload on SR-SIM mgmt host veth",
-				"node", n.Cfg.ShortName,
-				"error", err)
-		}
 	}
 
 	errChan := make(chan error, 1)
@@ -436,7 +449,8 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 	}
 
 	// Execute SaveConfig after boot. This code should only run on active CPM
-	for time.Now().Before(time.Now().Add(readyTimeout)) {
+	deadline := time.Now().Add(readyTimeout)
+	for time.Now().Before(deadline) {
 		// Check if context is canceled
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("context canceled: %w", err)
@@ -506,7 +520,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 func (n *sros) Delete(ctx context.Context) error {
 	// if not distributed, follow default node implementation
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
-		return n.Runtime.DeleteContainer(ctx, n.GetContainerName())
+		return n.DefaultNode.Delete(ctx)
 	}
 
 	// Delete all the component containers
@@ -516,7 +530,8 @@ func (n *sros) Delete(ctx context.Context) error {
 			log.Warn(err)
 		}
 	}
-	return nil
+
+	return n.DefaultNode.Delete(ctx)
 }
 
 // DeleteNetnsSymlink deletes the symlink file created for the container netns.
@@ -568,6 +583,8 @@ func (n *sros) setupComponentNodes() error {
 	}
 
 	n.sortComponents()
+
+	rootCtrName := n.calcComponentName(n.Cfg.LongName, n.Cfg.Components[0].Slot)
 
 	// Registry, because it is not a package Var
 	nr := clabnodes.NewNodeRegistry()
@@ -643,6 +660,7 @@ func (n *sros) setupComponentNodes() error {
 			// store base node name
 			srosNode.baseShortName = n.Cfg.ShortName
 			srosNode.baseLongName = n.Cfg.LongName
+			srosNode.rootCtrName = rootCtrName
 		}
 
 		// store the node in the componentNodes
@@ -681,7 +699,9 @@ func (n *sros) setComponentEnvVars(componentConfig *clabtypes.NodeConfig, c *cla
 func (n *sros) deployFabric(ctx context.Context, deployParams *clabnodes.DeployParams) error {
 	// loop through the components, creating them
 	for _, c := range n.componentNodes {
-		c.PreDeploy(ctx, n.preDeployParams)
+		if err := c.PreDeploy(ctx, n.preDeployParams); err != nil {
+			return fmt.Errorf("pre-deploy for component node %q: %w", c.GetShortName(), err)
+		}
 		// deploy the component
 		err := c.Deploy(ctx, deployParams)
 		if err != nil {
@@ -732,21 +752,13 @@ func (n *sros) isStandaloneNode() bool {
 
 // GetNSPath retrieves the Namespace Path.
 func (n *sros) GetNSPath(ctx context.Context) (string, error) {
-	if n.isStandaloneNode() || n.isDistributedCardNode() {
+	if n.isStandaloneNode() || (n.isDistributedCardNode() && n.rootCtrName == "") {
 		return n.DefaultNode.GetNSPath(ctx)
+	} else if n.isDistributedCardNode() {
+		return n.Runtime.GetNSPath(ctx, n.rootCtrName)
 	}
-	// calculate cpm container name
-	cpmSlot, err := n.cpmSlot()
-	if err != nil {
-		return "", err
-	}
-	cpmContainerName := n.calcComponentName(n.GetContainerName(), cpmSlot)
-	nsp, err := n.Runtime.GetNSPath(ctx, cpmContainerName)
-	if err != nil {
-		log.Errorf("Unable to determine NetNS Path for node %s: %v", n.Cfg.ShortName, err)
-		return "", err
-	}
-	return nsp, err
+	// delegate to the 0th component node which owns the netns
+	return n.componentNodes[0].GetNSPath(ctx)
 }
 
 // calcComponentName appends the line card suffix to the given node name.
@@ -763,6 +775,9 @@ func (n *sros) calcComponentFqdn(slot string) string {
 		return n.Cfg.Fqdn
 	}
 	fqdnDotIndex := strings.Index(n.Cfg.Fqdn, ".")
+	if fqdnDotIndex < 0 {
+		return fmt.Sprintf("%s-%s", n.Cfg.Fqdn, strings.ToLower(slot))
+	}
 	result := fmt.Sprintf(
 		"%s-%s%s",
 		n.Cfg.Fqdn[:fqdnDotIndex],
@@ -937,7 +952,7 @@ func (n *sros) CheckDeploymentConditions(ctx context.Context) error {
 }
 
 // Func that creates the Dirs used for the kind SR-SIM and sets/merges the default Env vars.
-func (n *sros) createSROSFiles() error {
+func (n *sros) createSROSFiles(ctx context.Context) error {
 	log.Debug("Creating directory structure for SR OS container", "node", n.Cfg.ShortName)
 
 	var err error
@@ -966,6 +981,10 @@ func (n *sros) createSROSFiles() error {
 		clabconstants.PermissionsOpen)
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
+	if err := n.writeChassisInfoToLabDir(ctx); err != nil {
+		log.Warn("Failed to write chassis_info.json to lab dir",
+			"node", n.Cfg.ShortName, "path", n.Cfg.LabDir, "error", err)
+	}
 	if n.isCPM(slotAName) || n.isStandaloneNode() {
 		err = n.createSROSCertificates()
 	}
@@ -979,6 +998,27 @@ func (n *sros) createSROSFiles() error {
 			return err
 		}
 	}
+	return nil
+}
+
+// writeChassisInfoToLabDir fetches /opt/nokia/chassis_info.json from the node image
+// (via graph driver, same as srosVersionFromImage) and writes it under n.Cfg.LabDir
+// with the same filename (chassis_info.json).
+func (n *sros) writeChassisInfoToLabDir(ctx context.Context) error {
+	imageInspect, err := n.Runtime.InspectImage(ctx, n.Cfg.Image)
+	if err != nil {
+		return fmt.Errorf("inspect image: %w", err)
+	}
+	content, err := ReadFileFromImageInspect(imageInspect, DefaultChassisInfoPath)
+	if err != nil {
+		return err
+	}
+	dstPath := filepath.Join(n.Cfg.LabDir, filepath.Base(DefaultChassisInfoPath))
+	licensed := append([]byte(chassisInfoFileLicense), content...)
+	if err := os.WriteFile(dstPath, licensed, clabconstants.PermissionsFileDefault); err != nil {
+		return fmt.Errorf("write %s: %w", dstPath, err)
+	}
+	log.Debug("Wrote chassis_info.json to lab dir", "node", n.Cfg.ShortName, "path", dstPath)
 	return nil
 }
 
@@ -1556,8 +1596,8 @@ func (n *sros) saveConfigWithAddr(ctx context.Context, addr string) error {
 		return n.srosSendCommandsSSH(ctx, scrapliPlatformNameClassic, cmd)
 	}
 	err := clabnetconf.SaveRunningConfig(fmt.Sprintf("[%s]", addr),
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		scrapliPlatformName,
 	)
 	if err != nil {
@@ -1670,8 +1710,8 @@ func (n *sros) tlsCertBootstrap(ctx context.Context, addr string) error {
 
 	err := clabnetconf.MultiExec(
 		fmt.Sprintf("[%s]", addr),
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		operations,
 	)
 	if len(cmd) > 0 && n.isConfigClassic() {
@@ -2003,5 +2043,95 @@ func (n *sros) verifyNokiaSrsimImage(ctx context.Context) error {
 		"node %q: kind is nokia_srsim but the provided image does not have the correct labels; please use a valid SR-SIM container image or run a more recent version of the SR-SIM container image to suppress this warning",
 		n.Cfg.ShortName,
 	)
+	return nil
+}
+
+func (n *sros) GetContainerStatus(ctx context.Context) clabruntime.ContainerStatus {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		return n.DefaultNode.GetContainerStatus(ctx)
+	}
+
+	var (
+		hasRunning    bool
+		hasPaused     bool
+		hasRestarting bool
+		hasCreated    bool
+		hasStopped    bool
+		hasRemoving   bool
+	)
+
+	for _, componentNode := range n.componentNodes {
+		switch componentNode.GetContainerStatus(ctx) {
+		case clabruntime.Running:
+			hasRunning = true
+		case clabruntime.Paused:
+			hasPaused = true
+		case clabruntime.Restarting:
+			hasRestarting = true
+		case clabruntime.Created:
+			hasCreated = true
+		case clabruntime.Stopped:
+			hasStopped = true
+		case clabruntime.Removing:
+			hasRemoving = true
+		}
+	}
+
+	switch {
+	case hasRunning:
+		return clabruntime.Running
+	case hasPaused:
+		return clabruntime.Paused
+	case hasRestarting:
+		return clabruntime.Restarting
+	case hasCreated:
+		return clabruntime.Created
+	case hasStopped:
+		return clabruntime.Stopped
+	case hasRemoving:
+		return clabruntime.Removing
+	default:
+		return clabruntime.NotFound
+	}
+}
+
+func (n *sros) Start(ctx context.Context) error {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		return n.DefaultNode.Start(ctx)
+	}
+
+	for _, c := range n.componentNodes {
+		if _, err := n.Runtime.StartContainer(ctx, c.Config().LongName, c); err != nil {
+			return fmt.Errorf("node %q component %q start error: %w",
+				n.Cfg.ShortName, c.Config().ShortName, err)
+		}
+	}
+
+	if err := n.RestoreEndpoints(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (n *sros) Stop(ctx context.Context) error {
+	if n.isStandaloneNode() || n.isDistributedCardNode() {
+		return n.DefaultNode.Stop(ctx)
+	}
+
+	if err := n.ParkEndpoints(ctx); err != nil {
+		return err
+	}
+
+	// stop components in reverse order as 0th ctr is netns owner.
+	// and we don't want to orphan anything.
+	for i := len(n.componentNodes) - 1; i >= 0; i-- {
+		c := n.componentNodes[i]
+		if err := n.Runtime.StopContainer(ctx, c.Config().LongName, n.StopSignal); err != nil {
+			log.Warnf("node %q component %q stop error: %v",
+				n.Cfg.ShortName, c.Config().ShortName, err)
+		}
+	}
+
 	return nil
 }

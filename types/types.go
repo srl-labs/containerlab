@@ -14,6 +14,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Signal string
+
+const (
+	SIGTERM   Signal = "SIGTERM"
+	SIGINT    Signal = "SIGINT"
+	SIGKILL   Signal = "SIGKILL"
+	SIGRTMIN3 Signal = "SIGRTMIN+3"
+)
+
 // Link is a struct that contains the information of a link between 2 containers.
 type Link struct {
 	A      *Endpoint
@@ -58,6 +67,7 @@ type MgmtNet struct {
 	MTU        int    `json:"mtu,omitempty"         yaml:"mtu,omitempty"`
 
 	ExternalAccess *bool `json:"external-access,omitempty" yaml:"external-access,omitempty"`
+	SkipWhenUnused bool  `json:"skip-when-unused,omitempty" yaml:"skip-when-unused,omitempty"`
 
 	DriverOpts map[string]string `json:"driver-opts,omitempty" yaml:"driver-opts,omitempty"`
 }
@@ -198,6 +208,9 @@ type NodeConfig struct {
 	CPUSet string  `json:"cpuset,omitempty"`
 	Memory string  `json:"memory,omitempty"`
 
+	// Credentials for SSH/NETCONF/GNMI/etc. Populated from the topology file
+	// (defaults/kinds/nodes), falling back to the kind's hardcoded default when not set.
+	Credentials NodeCredentials `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 	// Extra node parameters
 	Extras *Extras    `json:"extras,omitempty"`
 	Stages *Stages    `json:"stages,omitempty"`
@@ -213,6 +226,7 @@ type NodeConfig struct {
 	// they should be present by definition.
 	SkipUniquenessCheck bool
 	Components          []*Component
+	Tmpfs               map[string]string `json:"tmpfs,omitempty"`
 }
 
 type GenericFilter struct {

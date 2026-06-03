@@ -1,9 +1,13 @@
 package srl
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"regexp"
+	"strings"
+	"text/template"
 
 	_ "embed"
 
@@ -37,7 +41,35 @@ var ocServerConfig string
 //go:embed version_configs/ndk.cfg
 var ndkServerConfig string
 
-// SrlVersion represents an sr linux version as a set of fields.
+//go:embed version_configs/dns_servers_pre26_3.cfg
+var dnsServersConfigPre26_3 string
+
+//go:embed version_configs/dns_servers.cfg
+var dnsServersConfig string
+
+//go:embed version_configs/tls_pre26_3.cfg
+var tlsConfigPre26_3 string
+
+//go:embed version_configs/tls.cfg
+var tlsConfig string
+
+// renderSRLEmbeddedTemplate parses and executes an embedded default-config snippet with the same
+// func map as the main SRL default config template.
+func renderSRLEmbeddedTemplate(name, src string, data any) (string, error) {
+	tpl, err := template.New(name).Funcs(clabutils.CreateFuncs()).Parse(src)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, data); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+// SrlVersion represents an SR Linux version as a set of fields.
 type SrlVersion struct {
 	Major  string
 	Minor  string
@@ -46,7 +78,7 @@ type SrlVersion struct {
 	Commit string
 }
 
-// RunningVersion gets the software version of the running node
+// RunningVersion gets the software version of the running SR Linux node
 // by executing the "info from state /system information version | grep version" command
 // and parsing the output.
 func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
@@ -63,6 +95,23 @@ func (n *srl) RunningVersion(ctx context.Context) (*SrlVersion, error) {
 		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
 
 	return n.parseVersionString(execResult.GetStdOutString()), nil
+}
+
+// supportsOpenconfig checks if the node supports OpenConfig server.
+func (n *srl) OpenConfigFeatureEnabled(ctx context.Context) (bool, error) {
+	cmd, _ := clabexec.NewExecCmdFromString(
+		`sr_cli -d "info from state system features | grep openconfig"`,
+	)
+
+	execResult, err := n.RunExec(ctx, cmd)
+	if err != nil {
+		return false, err
+	}
+
+	log.Debugf("SR Linux node %s OpenConfig feature output. stdout: %s, stderr: %s",
+		n.Cfg.ShortName, execResult.GetStdOutString(), execResult.GetStdErrString())
+
+	return strings.TrimSpace(execResult.GetStdOutString()) != "", nil
 }
 
 func (*srl) parseVersionString(s string) *SrlVersion {
@@ -94,7 +143,7 @@ func (v *SrlVersion) MajorMinorSemverString() string {
 // setVersionSpecificParams sets version specific parameters in the template data struct
 // to enable/disable version-specific configuration blocks in the config template
 // or prepares data to conform to the expected format per specific version.
-func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
+func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) error {
 	// v is in the vMajor.Minor format
 	v := n.swVersion.MajorMinorSemverString()
 
@@ -129,7 +178,7 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 		tplData.GRPCConfig = grpcConfigPre24_3
 	}
 
-	// in srlinux >= v24.10+ we add
+	// in SR Linux >= v24.10+ we add
 	// - EDA configuration
 	// - openconfig server enable
 	if semver.Compare(v, "v24.10") >= 0 || n.swVersion.Major == "0" {
@@ -143,11 +192,43 @@ func (n *srl) setVersionSpecificParams(tplData *srlTemplateData) {
 
 		tplData.EDAConfig = cfg
 
-		tplData.OCServerConfig = ocServerConfig
+		if n.supportsOpenconfig {
+			tplData.OCServerConfig = ocServerConfig
+		}
 	}
 
-	// in srlinux >= v25.3 we enable ndk server.
+	// in SR Linux >= v25.3 we enable ndk server.
 	if semver.Compare(v, "v25.3") >= 0 || n.swVersion.Major == "0" {
 		tplData.NDKServerConfig = ndkServerConfig
 	}
+
+	// in SR Linux >= v26.3 TLS uses profile instead of server-profile.
+	tlsSrc := tlsConfigPre26_3
+	if semver.Compare(v, "v26.3") >= 0 || n.swVersion.Major == "0" {
+		tlsSrc = tlsConfig
+	}
+
+	tlsRendered, err := renderSRLEmbeddedTemplate("tls", tlsSrc, tplData)
+	if err != nil {
+		return fmt.Errorf("srl tls default config template: %w", err)
+	}
+
+	tplData.TLSConfig = tlsRendered
+
+	// DNS servers config: dns vs dns-instance <name>.
+	if len(tplData.DNSServers) > 0 {
+		dnsSrc := dnsServersConfigPre26_3
+		if semver.Compare(v, "v26.3") >= 0 || n.swVersion.Major == "0" {
+			dnsSrc = dnsServersConfig
+		}
+
+		dnsRendered, err := renderSRLEmbeddedTemplate("dns-servers", dnsSrc, tplData)
+		if err != nil {
+			return fmt.Errorf("srl dns default config template: %w", err)
+		}
+
+		tplData.DNSServersConfig = dnsRendered
+	}
+
+	return nil
 }

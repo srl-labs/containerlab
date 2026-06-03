@@ -35,9 +35,22 @@ func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *
 
 // DeployWithExistingVeth provisions the stitched vxlan link whilst the
 // veth interface does already exist, hence it is not created as part of this
-// deployment.
+// deployment. The VxLAN interface is created and TC stitch rules are applied.
 func (l *VxlanStitched) DeployWithExistingVeth(ctx context.Context) error {
 	return l.internalDeploy(ctx, nil, true)
+}
+
+// Stitch applies only the TC redirect rules to bridge the already-existing
+// VxLAN and veth interfaces on the host. Both interfaces must already exist.
+// Used during lab deploy where VxLAN is created by host endpoint deploy and
+// veth is created by node workers.
+func (l *VxlanStitched) Stitch() error {
+	err := stitch(l.vxlanLink.localEndpoint, l.vethStitchEp)
+	if err != nil {
+		return err
+	}
+
+	return stitch(l.vethStitchEp, l.vxlanLink.localEndpoint)
 }
 
 // Deploy provisions the stitched vxlan link with all its underlying sub-links.
@@ -140,7 +153,7 @@ func stitch(ep1, ep2 Endpoint) error {
 	// tc filter add dev $SRC_IFACE parent fffff:
 	// protocol all
 	// u32 match u32 0 0
-	// action mirred egress mirror dev $DST_IFACE
+	// action mirred egress redirect dev $DST_IFACE
 	filter := &netlink.U32{
 		FilterAttrs: netlink.FilterAttrs{
 			LinkIndex: netlinkLinks[0].Attrs().Index,
@@ -159,9 +172,9 @@ func stitch(ep1, ep2 Endpoint) error {
 		Actions: []netlink.Action{
 			&netlink.MirredAction{
 				ActionAttrs: netlink.ActionAttrs{
-					Action: netlink.TC_ACT_PIPE,
+					Action: netlink.TC_ACT_STOLEN,
 				},
-				MirredAction: netlink.TCA_EGRESS_MIRROR,
+				MirredAction: netlink.TCA_EGRESS_REDIR,
 				Ifindex:      netlinkLinks[1].Attrs().Index,
 			},
 		},

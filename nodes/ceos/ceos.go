@@ -98,6 +98,9 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.Cfg = cfg
+
+	n.StopSignal = clabtypes.SIGRTMIN3
+
 	for _, o := range opts {
 		o(n)
 	}
@@ -210,15 +213,18 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 	}
 
 	// use startup config file provided by a user
+	// make copy of template to prevent provided startup config from mutating shared package
+	// template value
+	currentCfgTemplate := cfgTemplate
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
+		currentCfgTemplate = string(c)
 	}
 
-	err = n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err = n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -262,7 +268,9 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 
 	// adding if-wait.sh script to flash dir
 	ifScriptP := path.Join(nodeCfg.LabDir, "flash", "if-wait.sh")
-	clabutils.CreateFile(ifScriptP, clabutils.IfWaitScript)
+	if err := clabutils.CreateFile(ifScriptP, clabutils.IfWaitScript); err != nil {
+		return fmt.Errorf("failed to write if-wait.sh: %w", err)
+	}
 	os.Chmod(ifScriptP, clabconstants.PermissionsOpen) // skipcq: GSC-G302
 
 	if *n.Cfg.Certificate.Issue {
@@ -369,8 +377,39 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 		)
 	}
 
+	// configure data interfaces
+	for _, e := range n.Endpoints {
+		ifName := e.GetIfaceName()
+		// skip management interface
+		if ifName == nodeCfg.MgmtIntf {
+			continue
+		}
+
+		v4 := e.GetIPv4Addr()
+		v6 := e.GetIPv6Addr()
+
+		if !v4.IsValid() && !v6.IsValid() {
+			continue
+		}
+
+		cfgs = append(cfgs, "interface "+ifName)
+		cfgs = append(cfgs, "no switchport")
+		cfgs = append(cfgs, "no ip address")
+		cfgs = append(cfgs, "no ipv6 address")
+
+		if v4.IsValid() {
+			cfgs = append(cfgs, fmt.Sprintf("ip address %s", v4.String()))
+		}
+		if v6.IsValid() {
+			cfgs = append(cfgs, fmt.Sprintf("ipv6 address %s", v6.String()))
+		}
+	}
+
 	// add save to startup cmd
 	cfgs = append(cfgs, "wr")
+
+	log.Debugf("cEOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
+
 	resp, err := d.SendConfigs(cfgs)
 	if err != nil {
 		return err

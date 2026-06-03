@@ -256,7 +256,9 @@ func validateInputAndRoot(o *Options) error {
 		return fmt.Errorf("jitter cannot be set without setting delay")
 	}
 
-	clabutils.CheckAndGetRootPrivs()
+	if err := clabutils.CheckAndGetRootPrivs(); err != nil {
+		return err
+	}
 
 	return nil
 }

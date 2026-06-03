@@ -73,7 +73,7 @@ func (n *c8000) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams
 
 	_, err := n.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	return n.create8000Files(ctx)
@@ -81,8 +81,8 @@ func (n *c8000) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams
 
 func (n *c8000) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, error) {
 	err := clabnetconf.SaveRunningConfig(n.Cfg.LongName,
-		defaultCredentials.GetUsername(),
-		defaultCredentials.GetPassword(),
+		n.Cfg.Credentials.Username,
+		n.Cfg.Credentials.Password,
 		scrapliPlatformName,
 	)
 	if err != nil {
@@ -107,15 +107,18 @@ func (n *c8000) create8000Files(_ context.Context) error {
 	nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
 
 	// use startup config file provided by a user
+	// make copy of template to prevent provided startup config from mutating shared package
+	// template value
+	currentCfgTemplate := cfgTemplate
 	if nodeCfg.StartupConfig != "" {
 		c, err := os.ReadFile(nodeCfg.StartupConfig)
 		if err != nil {
 			return err
 		}
-		cfgTemplate = string(c)
+		currentCfgTemplate = string(c)
 	}
 
-	err := n.GenerateConfig(nodeCfg.ResStartupConfig, cfgTemplate)
+	err := n.GenerateConfig(nodeCfg.ResStartupConfig, currentCfgTemplate)
 	if err != nil {
 		return err
 	}
@@ -125,12 +128,12 @@ func (n *c8000) create8000Files(_ context.Context) error {
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
 func (n *c8000) CheckInterfaceName() error {
-	ifRe := regexp.MustCompile(`^(Hu|FH)0_0_0_\d+$`)
+	ifRe := regexp.MustCompile(`^(Fi|Hu|FH)0_0_0_\d+$`)
 
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
 			return fmt.Errorf(
-				"cisco 8000 interface name %q doesn't match the required pattern. Cisco 8000 interfaces should be named as Hu0_0_0_X (100G interfaces) or FH0_0_0_X (400G interfaces) where X is the interface number",
+				"cisco 8000 interface name %q doesn't match the required pattern. Cisco 8000 interfaces should be named as Fi0_0_0_X (50G interfaces), Hu0_0_0_X (100G interfaces) or FH0_0_0_X (400G interfaces) where X is the interface number",
 				e.GetIfaceName(),
 			)
 		}

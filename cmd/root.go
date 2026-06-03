@@ -25,6 +25,9 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		completionCmd,
 		deployCmd,
 		destroyCmd,
+		startCmd,
+		stopCmd,
+		restartCmd,
 		execCmd,
 		generateCmd,
 		graphCmd,
@@ -63,12 +66,12 @@ func Entrypoint() (*cobra.Command, error) {
 		o.Global.TopologyFile,
 		"path to the topology definition file, a directory containing one, 'stdin', or a URL",
 	)
-	c.PersistentFlags().StringVarP(
-		&o.Global.VarsFile,
+	c.PersistentFlags().StringArrayVarP(
+		&o.Global.VarsFiles,
 		"vars",
 		"",
-		o.Global.VarsFile,
-		"path to the topology template variables file",
+		o.Global.VarsFiles,
+		"path to a topology template variables file (can be specified multiple times)",
 	)
 	c.PersistentFlags().StringVarP(
 		&o.Global.TopologyName,
@@ -171,6 +174,9 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 	// set commands which may use topo file find functionality, the rest don't need it
 	if cobraCmd.Name() != "deploy" &&
 		cobraCmd.Name() != "destroy" &&
+		cobraCmd.Name() != "start" &&
+		cobraCmd.Name() != "stop" &&
+		cobraCmd.Name() != "restart" &&
 		cobraCmd.Name() != "redeploy" &&
 		cobraCmd.Name() != "inspect" &&
 		cobraCmd.Name() != "save" &&
@@ -179,8 +185,16 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 		return nil
 	}
 
+	// start/stop/restart topology lookup applies only to top-level lifecycle commands.
+	// nested commands like tools api-server start|stop are excluded.
+	if (cobraCmd.Name() == "start" || cobraCmd.Name() == "stop" || cobraCmd.Name() == "restart") &&
+		(cobraCmd.Parent() == nil || cobraCmd.Parent().Name() != "containerlab") {
+		return nil
+	}
+
 	// inspect and destroy commands with --all flag don't use file find functionality
 	if (cobraCmd.Name() == "inspect" || cobraCmd.Name() == "destroy") &&
+		cobraCmd.Flag("all") != nil &&
 		cobraCmd.Flag("all").Value.String() == "true" {
 		return nil
 	}

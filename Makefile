@@ -1,9 +1,6 @@
 BIN_DIR = $(CURDIR)/bin
 BINARY = $(BIN_DIR)/containerlab
-MKDOCS_VER = 9.6.1
-# insiders version/tag https://github.com/srl-labs/mkdocs-material-insiders/pkgs/container/mkdocs-material-insiders
-# make sure to also change the mkdocs version in actions' cicd.yml and force-build.yml files
-MKDOCS_INS_VER = 9.6.1-insiders-4.53.15-hellt
+MKDOCS_IMAGE = ghcr.io/eda-labs/mkdocs-material:v9.7.5-3
 
 DATE := $(shell date)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
@@ -40,7 +37,7 @@ build-with-cover:
 
 build-debug:
 	mkdir -p $(BIN_DIR)
-	go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
+	CGO_ENABLED=1 go build -o $(BINARY) -gcflags=all="-N -l" -race -cover main.go
 	sudo chown root:root $(BINARY)
 	sudo chmod 4755 $(BINARY)
 
@@ -104,37 +101,28 @@ lint:
 
 .PHONY: docs
 docs:
-	docker run -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER) build --clean --strict
+	docker run -v $(CURDIR):/docs $(MKDOCS_IMAGE) build --clean --strict
 
 .PHONY: site
 site:
-	docker run -it --rm -p 8000:8000 -v $(CURDIR):/docs squidfunk/mkdocs-material:$(MKDOCS_VER)
+	docker run -it --rm -p 8000:8000 -v $(CURDIR):/docs $(MKDOCS_IMAGE)
 
-# serve the site locally using mkdocs-material insiders or public container
-# to serve using a public container image run as `make serve-docs-full PUBLIC=yes`
-# this will remove the typeset and glightbox plugins from the mkdocs.yml file since they are not available in the public image
-# when PUBLIC=yes is not set, the mkdocs-material insiders image is used with all the dependencies included.
+# serve the site locally using mkdocs-material
 .PHONY: serve-docs-full
 serve-docs-full:
-ifdef PUBLIC
-	@{ 	\
-		sed -i 's/^  - typeset/#- typeset/g' mkdocs.yml; \
-	}
-	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs --entrypoint "" squidfunk/mkdocs-material:$(MKDOCS_VER) ash -c "pip install mkdocs-macros-plugin==0.7.0 mkdocs-glightbox==0.4.0 && mkdocs serve -a 0.0.0.0:8000"
-else
-	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER)
-endif
+	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs $(MKDOCS_IMAGE)
 
-# serve the site locally using mkdocs-material insiders container and dirty-reload
+
+# serve the site locally using mkdocs-material container and dirty-reload
 # in this mode navigation might not update properly, but the content will be updated
 # if nav is not updated, re-run the target.
 .PHONY: serve-docs
 serve-docs:
-	docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER) serve -a 0.0.0.0:8000 --dirtyreload
+	docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs $(MKDOCS_IMAGE) serve -a 0.0.0.0:8000 --dirtyreload
 
 .PHONY: htmltest
 htmltest:
-	docker run --rm -v $(CURDIR):/docs ghcr.io/srl-labs/mkdocs-material-insiders:$(MKDOCS_INS_VER) build --clean --strict
+	docker run --rm -v $(CURDIR):/docs $(MKDOCS_IMAGE) build --clean --strict
 	docker run --rm -v $(CURDIR):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
 

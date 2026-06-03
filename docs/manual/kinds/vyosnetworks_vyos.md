@@ -162,4 +162,26 @@ topology:
     - endpoints: ["vyos1:eth1", "vyos2:eth1"]
 ```
 
+#### Link addressing
+
+VyOS Networks VyOS kind supports [IPv4/IPv6 link addresses](../topo-def-file.md#ip-addresses) on point-to-point links using the `ipv4` and/or `ipv6` fields in the link definition. Use `ethN` interface names in the topology (`eth0` is management).
+
+After deployment, containerlab applies VyOS configuration statements of the form `set interfaces ethernet <interface> address <addr>/<prefix>` for each data endpoint that has a topology address (the management interface is skipped), then saves the configuration.
+
+```yaml
+name: vyos_link_ips
+topology:
+  nodes:
+    vyos1:
+      kind: -{{ kind_code_name }}-
+      image: vyos:latest
+    vyos2:
+      kind: -{{ kind_code_name }}-
+      image: vyos:latest
+  links:
+    - endpoints: ["vyos1:eth1", "vyos2:eth1"]
+      ipv4: ["192.168.0.1/24", "192.168.0.2/24"]
+      ipv6: ["2001:db8::1/64", "2001:db8::2/64"]
+```
+
 [^1]: if startup config needs to be enforced, either deploy a lab with `--reconfigure` flag, or use [`enforce-startup-config`](../nodes.md#enforce-startup-config) setting.

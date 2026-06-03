@@ -1,10 +1,14 @@
 package links
 
 import (
+	"fmt"
+	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
 
@@ -710,5 +714,106 @@ func TestSanitizeInterfaceName(t *testing.T) {
 				t.Errorf("got wrong sanitized interface name %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestOwnershipAltName(t *testing.T) {
+	node := newFakeNode("node1")
+	ep1 := NewEndpointVeth(NewEndpointGeneric(node, "eth1", nil))
+	ep2 := NewEndpointVeth(NewEndpointGeneric(node, "eth2", nil))
+
+	got1 := ownershipAltName(ep1)
+	got2 := ownershipAltName(ep2)
+
+	if !strings.HasPrefix(got1, ownershipAltNamePrefix) {
+		t.Fatalf("ownership altname %q missing prefix %q", got1, ownershipAltNamePrefix)
+	}
+
+	if got1 != ownershipAltName(ep1) {
+		t.Fatalf("ownership altname should be deterministic, got %q", got1)
+	}
+
+	if got1 == got2 {
+		t.Fatalf("ownership altname should differ across interfaces, got %q", got1)
+	}
+}
+
+func TestHasOwnershipAltName(t *testing.T) {
+	ep := NewEndpointVeth(NewEndpointGeneric(newFakeNode("node1"), "eth1", nil))
+
+	link := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{
+			Name:     "eth1",
+			AltNames: []string{"user-alt", ownershipAltName(ep)},
+		},
+	}
+
+	if !hasOwnershipAltName(link) {
+		t.Fatalf("expected ownership marker to be detected")
+	}
+
+	link.Attrs().AltNames = []string{"user-alt"}
+
+	if hasOwnershipAltName(link) {
+		t.Fatalf("did not expect ownership marker to be detected")
+	}
+}
+
+func TestIsAltNameNotSupportedErr(t *testing.T) {
+	tests := map[string]struct {
+		err  error
+		want bool
+	}{
+		"nil": {
+			err:  nil,
+			want: false,
+		},
+		"unsupported": {
+			err:  syscall.EOPNOTSUPP,
+			want: true,
+		},
+		"wrapped unsupported": {
+			err:  fmt.Errorf("netlink: %w", syscall.EOPNOTSUPP),
+			want: true,
+		},
+		"other error": {
+			err:  syscall.EEXIST,
+			want: false,
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := isAltNameNotSupportedErr(tt.err)
+			if got != tt.want {
+				t.Fatalf("got %t, want %t", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAddOwnershipAltNameAllowsUnsupportedAltName(t *testing.T) {
+	ep := NewEndpointVeth(NewEndpointGeneric(newFakeNode("node1"), "eth1", nil))
+	link := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{Name: "eth1"},
+	}
+
+	origLinkAddAltName := linkAddAltName
+	defer func() {
+		linkAddAltName = origLinkAddAltName
+	}()
+
+	var gotAltName string
+	linkAddAltName = func(_ netlink.Link, name string) error {
+		gotAltName = name
+		return syscall.EOPNOTSUPP
+	}
+
+	if err := addOwnershipAltName(link, ep); err != nil {
+		t.Fatalf("expected unsupported altname error to be ignored, got %v", err)
+	}
+
+	if gotAltName != ownershipAltName(ep) {
+		t.Fatalf("got altname %q, want %q", gotAltName, ownershipAltName(ep))
 	}
 }

@@ -27,15 +27,19 @@ import (
 	clabnodeshuawei_vrp "github.com/srl-labs/containerlab/nodes/huawei_vrp"
 	clabnodesiol "github.com/srl-labs/containerlab/nodes/iol"
 	clabnodesipinfusion_ocnos "github.com/srl-labs/containerlab/nodes/ipinfusion_ocnos"
+	clabnodesjuniper_csrx "github.com/srl-labs/containerlab/nodes/juniper_csrx"
 	clabnodesk8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
 	clabnodeskeysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
 	clabnodeslinux "github.com/srl-labs/containerlab/nodes/linux"
+	clabnodesnvidia_cumulusvx "github.com/srl-labs/containerlab/nodes/nvidia_cumulusvx"
 	clabnodesovs "github.com/srl-labs/containerlab/nodes/ovs"
 	clabnodesrare "github.com/srl-labs/containerlab/nodes/rare"
 	clabnodessonic "github.com/srl-labs/containerlab/nodes/sonic"
 	clabnodessonic_vm "github.com/srl-labs/containerlab/nodes/sonic_vm"
+	clabnodesspirent_stc "github.com/srl-labs/containerlab/nodes/spirent_stc"
 	clabnodessrl "github.com/srl-labs/containerlab/nodes/srl"
 	clabnodessros "github.com/srl-labs/containerlab/nodes/sros"
+	clabnodesveesix_osvbng "github.com/srl-labs/containerlab/nodes/veesix_osvbng"
 	clabnodesvr_aoscx "github.com/srl-labs/containerlab/nodes/vr_aoscx"
 	clabnodesvr_c8000v "github.com/srl-labs/containerlab/nodes/vr_c8000v"
 	clabnodesvr_cat9kv "github.com/srl-labs/containerlab/nodes/vr_cat9kv"
@@ -68,7 +72,9 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodescheckpoint_cloudguard.Register(c.Reg)
 	clabnodescisco_sdwan.Register(c.Reg)
 	clabnodescrpd.Register(c.Reg)
+	clabnodesjuniper_csrx.Register(c.Reg)
 	clabnodescvx.Register(c.Reg)
+	clabnodesnvidia_cumulusvx.Register(c.Reg)
 	clabnodesext_container.Register(c.Reg)
 	clabnodesfortinet_fortigate.Register(c.Reg)
 	clabnodeshost.Register(c.Reg)
@@ -117,4 +123,6 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesvyosnetworks_vyos.Register(c.Reg)
 	clabnodescjunosevolved.Register(c.Reg)
 	clabnodesarrcus_arcos.Register(c.Reg)
+	clabnodesveesix_osvbng.Register(c.Reg)
+	clabnodesspirent_stc.Register(c.Reg)
 }

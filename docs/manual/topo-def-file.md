@@ -537,7 +537,7 @@ In the extended format, the vars can be defined for the entire link or for each 
 The `ipv4` and `ipv6` fields allow for you to set the IPv4 and/or IPv6 address on an interface respectively; directly from the topology file.
 
 /// note
-Currently only the [Nokia SR Linux](../manual/kinds/srl.md) and [Cisco IOL](../manual/kinds/cisco_iol.md) kind(s) support this feature. Contributions to add support for other kinds are welcomed.
+The [Nokia SR Linux](../manual/kinds/srl.md), [Arista cEOS](../manual/kinds/ceos.md), [VyOS Networks VyOS](../manual/kinds/vyosnetworks_vyos.md), and [Cisco IOL](../manual/kinds/cisco_iol.md) kinds support this feature. Contributions to add support for other kinds are welcomed.
 ///
 
 Refer to the below example, where we configure some addressing on the node interfaces using the [brief](#brief-format) format where addresses are passed as an ordered list matching the order of which the endpoint interfaces are defined.
@@ -599,6 +599,12 @@ topology:
 In both examples, we configure the `192.168.0.0/24`, and `2001:db8::/64` subnets on the link between srl1 and srl2's `e1-1` interfaces, where the least significant value represents the host, `1` for srl1, and `2` for srl2.
 
 We can also set the IP for only one side, which is shown using IPv4 as an example on the link between srl1 and srl2 on the `e1-2` interfaces. Where the IPv4 address `192.168.2.1` is only set for `srl1`.
+
+##### Kernel support for interface altnames
+
+Containerlab uses interface altnames to mark the ownership of the interfaces and support interfaces with long names. This is a feature that is supported by all modern kernels.
+
+If the kernel does not support interface altnames, containerlab will emit a warning and continue without the ownership marker. It is strongly recommended to upgrade the kernel to ensure full containerlab compatibility.
 
 #### Groups
 
@@ -758,6 +764,7 @@ Most variables can be used in startup-config paths, bind paths, and exec command
 
 | Variable | Description | Example Usage | Expands To |
 |----------|-------------|---------------|------------|
+| `__clabLabName__` {: style='white-space: nowrap;'} | Lab longname (same as lab directory basename) | `exec: echo "__clabLabName__"` | `clab-mylab` |
 | `__clabNodeName__` {: style='white-space: nowrap;'} | Current node's short name | `startup-config: cfg/__clabNodeName__.cfg` | `cfg/node1.cfg` (for node named "node1") |
 | `__clabNodeDir__` {: style='white-space: nowrap;'} | Path to the node's lab directory | `binds: __clabNodeDir__/conf:/conf` | `clab-mylab/node1/conf:/conf` |
 | `__clabDir__` {: style='white-space: nowrap;'} | Path to the lab's main directory | `binds: __clabDir__/data.json:/data.json:ro` | `clab-mylab/data.json:/data.json:ro` |
@@ -808,7 +815,7 @@ topology:
 
 /// tab | Customized exec commands
 
-Another popular use case for the `__clabNodeName__` magic variable is to customize the `exec` commands on a per-node basis.
+Another popular use case for magic variables is to customize the `exec` commands on a per-node basis with both node and lab context.
 
 ```yaml
 name: mylab
@@ -816,7 +823,7 @@ topology:
   nodes:
     node1:
       exec:
-        - echo "Node __clabNodeName__ started"  # Will output "Node node1 started"
+        - echo "Node __clabNodeName__ started in __clabLabName__"  # Will output "Node node1 started in clab-mylab"
 ```
 
 ///
@@ -844,6 +851,13 @@ If the topology file is not in a Git repository, both variables will be replaced
 To further simplify parametrization of the topology files, containerlab allows users to template the topology files using Go Template engine.
 
 Using templating approach it is possible to create a lab template and instantiate different labs from it, by simply changing the variables in the variables file.
+
+You can add `.gotmpl` files into a `clab_templates` folder next to the main topology template to load additional template blocks that can be inserted into a topology using `{{ template "subtemplate.gotmpl" . }}` - this allows extraction of reusable blocks and structuring of more complicated topologies into multiple files.
+You can also use the `slice` function to pass multiple parameters to such a subtemplate: `{{ template "sub.gotmpl" (slice "Param A" "Param B") }}` and reference them using the `index` built-in inside the subtemplate: `{{ index . 0 }}` will resolve to "Param A".
+
+Variable files can be specified manually, by providing the `--vars` flag, or will be searched for automatically at `<topology-name>_vars.[yaml|yml|json]`, where toplogy-name is the filename of the topology without its extension.
+
+Additional files can be loaded by specifying the `--vars` flag multiple times, or by naming them `<topology-name>_vars.<anything>.[yaml|yml|json]` when using the automatic search.
 
 To help you get started, we created the following lab examples which demonstrate how topology templating can be used:
 
