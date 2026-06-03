@@ -48,6 +48,10 @@ SONiC node launched with containerlab takes approximately 1 minute to boot up an
 The default login credentials for the SONiC VM are `admin:admin`
 ///
 
+/// note | exec runs in the launcher container, not the SONiC VM
+`sonic-vm` is a VM-based (vrnetlab) kind, so the [`exec` node property](../nodes.md#exec) and the [`exec` command](../../cmd/exec.md) run inside the launcher container that wraps the VM, not inside the SONiC guest. SONiC CLI commands such as `show version` are not available via `exec` and fail with `executable file not found in $PATH`. Use the SSH method below to run commands against SONiC.
+///
+
 /// tab | SSH
 To open a linux shell simply type in
 
