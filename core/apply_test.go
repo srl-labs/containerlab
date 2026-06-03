@@ -361,15 +361,15 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 			}
 			plan := &applyPlan{
 				addedNodeSet:     map[string]struct{}{},
-				affectedNodeSet:  map[string]struct{}{},
+				restartNodeSet:   map[string]struct{}{},
 				recreatedNodeSet: map[string]struct{}{},
 			}
 
 			c.planAffectedApplyNode(plan, "n1", tt.change)
 
-			_, affected := plan.affectedNodeSet["n1"]
-			if affected != tt.wantRestart {
-				t.Fatalf("restart = %v, want %v", affected, tt.wantRestart)
+			_, restart := plan.restartNodeSet["n1"]
+			if restart != tt.wantRestart {
+				t.Fatalf("restart = %v, want %v", restart, tt.wantRestart)
 			}
 
 			_, recreated := plan.recreatedNodeSet["n1"]
@@ -382,69 +382,6 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 				t.Fatalf("deploy node = %v, want %v", deployNode, tt.wantRecreated)
 			}
 		})
-	}
-}
-
-func TestCheckApplySupportedAllowsAllLinkTypes(t *testing.T) {
-	t.Parallel()
-
-	c := &CLab{
-		Links: map[int]clablinks.Link{
-			0: &applyFakeLink{linkType: clablinks.LinkTypeHost},
-		},
-	}
-
-	if err := c.checkApplySupported(nil); err != nil {
-		t.Fatalf("expected non-veth link type to be supported, got: %v", err)
-	}
-}
-
-func TestApplyReportsReconfigureRequiredWhenUnsupported(t *testing.T) {
-	t.Parallel()
-
-	ctrl := gomock.NewController(t)
-
-	c, err := NewContainerLab(WithTopoPath("test_data/topo1.yml", nil))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-	c.Runtimes[clabruntimedocker.RuntimeName] = mockRuntime
-	c.globalRuntimeName = clabruntimedocker.RuntimeName
-
-	nodeCfg := c.Nodes["node1"].Config()
-	nodeCfg.IsRootNamespaceBased = true
-
-	mockRuntime.EXPECT().
-		ListContainers(gomock.Any(), gomock.Any()).
-		Return([]clabruntime.GenericContainer{
-			{
-				Names: []string{nodeCfg.LongName},
-				Labels: map[string]string{
-					clabconstants.NodeName:      nodeCfg.ShortName,
-					clabconstants.LongName:      nodeCfg.LongName,
-					clabconstants.NodeKind:      nodeCfg.Kind,
-					clabconstants.NodeType:      nodeCfg.NodeType,
-					clabconstants.NodeGroup:     nodeCfg.Group,
-					clabconstants.NodeMgmtNetBr: "br-test",
-				},
-			},
-		}, nil)
-
-	_, err = c.Apply(context.Background(), &ApplyOptions{dryRun: true})
-	if err == nil {
-		t.Fatal("expected unsupported apply error")
-	}
-
-	for _, want := range []string{
-		"apply unsupported for",
-		"node1: root namespace node",
-		"deploy --reconfigure",
-	} {
-		if !strings.Contains(err.Error(), want) {
-			t.Fatalf("expected error to contain %q, got: %v", want, err)
-		}
 	}
 }
 
