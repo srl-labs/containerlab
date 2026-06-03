@@ -40,14 +40,6 @@ topology:
     srl1:
       kind: nokia_srlinux
       image: ghcr.io/nokia/srlinux
-{{- if .srlDrift }}
-      type: ixr-d3
-      group: srl-drift
-      env:
-        SRL_LOCATION: apply-drift
-      binds:
-        - 01-test.txt:/tmp/apply-drift.txt:ro
-{{- end }}
       startup-config: |
         set / interface ethernet-1/1 admin-state enable
         set / interface ethernet-1/1 subinterface 0 admin-state enable

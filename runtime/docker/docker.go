@@ -30,7 +30,6 @@ import (
 	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/jsonmessage"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/docker/go-connections/nat"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
 	"github.com/moby/term"
@@ -1092,16 +1091,14 @@ func (d *DockerRuntime) produceGenericContainerList(
 
 		bridgeName := d.mgmt.Network
 
-		inspect, err := d.Client.ContainerInspect(ctx, i.ID)
+		var err error
+		ctr.Pid, err = d.containerPid(ctx, i.ID)
 		if errdefs.IsNotFound(err) {
 			// Concurrent destroy removed it between List and Inspect.
 			continue
 		}
 		if err != nil {
 			return nil, err
-		}
-		if inspect.State != nil {
-			ctr.Pid = inspect.State.Pid
 		}
 
 		// if bridgeName is empty, try to find a network created by clab that the container is
@@ -1141,8 +1138,6 @@ func (d *DockerRuntime) produceGenericContainerList(
 			ctr.NetworkName = "unknown"
 		}
 
-		ctr.Config = genericContainerConfigFromDockerInspect(inspect, bridgeName)
-
 		if ifcfg, ok := i.NetworkSettings.Networks[bridgeName]; ok {
 			ctr.NetworkSettings.IPv4addr = ifcfg.IPAddress
 			ctr.NetworkSettings.IPv4pLen = ifcfg.IPPrefixLen
@@ -1152,180 +1147,18 @@ func (d *DockerRuntime) produceGenericContainerList(
 			ctr.NetworkSettings.IPv6Gw = ifcfg.IPv6Gateway
 		}
 
+		// populating mounts information
+		var mount clabruntime.ContainerMount
 		for _, m := range i.Mounts {
-			ctr.Mounts = append(ctr.Mounts, clabruntime.ContainerMount{
-				Source:      m.Source,
-				Destination: m.Destination,
-			})
+			mount.Source = m.Source
+			mount.Destination = m.Destination
 		}
+		ctr.Mounts = append(ctr.Mounts, mount)
 
 		result = append(result, ctr)
 	}
 
 	return result, nil
-}
-
-func genericContainerConfigFromDockerInspect(
-	inspect container.InspectResponse,
-	bridgeName string,
-) clabruntime.GenericContainerConfig {
-	cfg := clabruntime.GenericContainerConfig{
-		Available: true,
-		Image:     inspect.Image,
-	}
-
-	if inspect.Config != nil {
-		cfg.Image = inspect.Config.Image
-		cfg.User = inspect.Config.User
-		cfg.Entrypoint = append([]string(nil), inspect.Config.Entrypoint...)
-		cfg.Cmd = append([]string(nil), inspect.Config.Cmd...)
-		cfg.Env = envSliceToMap(inspect.Config.Env)
-		cfg.Labels = cloneStringMap(inspect.Config.Labels)
-		cfg.ExposedPorts = genericPortsFromDockerPortSet(inspect.Config.ExposedPorts)
-		cfg.Healthcheck = genericHealthcheckFromDocker(inspect.Config.Healthcheck)
-		cfg.MacAddress = inspect.Config.MacAddress
-	}
-
-	if inspect.HostConfig != nil {
-		cfg.Binds = append([]string(nil), inspect.HostConfig.Binds...)
-		cfg.PortBindings = genericPortsFromDockerPortMap(inspect.HostConfig.PortBindings)
-		cfg.NetworkMode = string(inspect.HostConfig.NetworkMode)
-		cfg.PidMode = string(inspect.HostConfig.PidMode)
-		cfg.ExtraHosts = append([]string(nil), inspect.HostConfig.ExtraHosts...)
-		cfg.Sysctls = cloneStringMap(inspect.HostConfig.Sysctls)
-		cfg.DNS = &clabtypes.DNSConfig{
-			Servers: append([]string(nil), inspect.HostConfig.DNS...),
-			Options: append([]string(nil), inspect.HostConfig.DNSOptions...),
-			Search:  append([]string(nil), inspect.HostConfig.DNSSearch...),
-		}
-		cfg.CapAdd = append([]string(nil), inspect.HostConfig.CapAdd...)
-		cfg.Devices = genericDevicesFromDocker(inspect.HostConfig.Resources.Devices)
-		cfg.Tmpfs = cloneStringMap(inspect.HostConfig.Tmpfs)
-		cfg.ShmSize = inspect.HostConfig.ShmSize
-		cfg.CPUQuota = inspect.HostConfig.CPUQuota
-		cfg.CPUPeriod = inspect.HostConfig.CPUPeriod
-		cfg.CPUSet = inspect.HostConfig.CpusetCpus
-		cfg.Memory = inspect.HostConfig.Memory
-		cfg.RestartPolicy = string(inspect.HostConfig.RestartPolicy.Name)
-	}
-
-	if inspect.NetworkSettings != nil && bridgeName != "" {
-		if networkSettings, ok := inspect.NetworkSettings.Networks[bridgeName]; ok && networkSettings != nil {
-			cfg.Aliases = append([]string(nil), networkSettings.Aliases...)
-			if cfg.MacAddress == "" {
-				cfg.MacAddress = networkSettings.MacAddress
-			}
-		}
-	}
-
-	return cfg
-}
-
-func envSliceToMap(values []string) map[string]string {
-	if len(values) == 0 {
-		return nil
-	}
-
-	result := make(map[string]string, len(values))
-	for _, value := range values {
-		key, val, ok := strings.Cut(value, "=")
-		if !ok {
-			result[value] = ""
-			continue
-		}
-		result[key] = val
-	}
-
-	return result
-}
-
-func cloneStringMap(values map[string]string) map[string]string {
-	if len(values) == 0 {
-		return nil
-	}
-
-	result := make(map[string]string, len(values))
-	for key, value := range values {
-		result[key] = value
-	}
-
-	return result
-}
-
-func genericPortsFromDockerPortSet(portSet nat.PortSet) []*clabtypes.GenericPortBinding {
-	if len(portSet) == 0 {
-		return nil
-	}
-
-	result := make([]*clabtypes.GenericPortBinding, 0, len(portSet))
-	for port := range portSet {
-		containerPort, err := strconv.Atoi(port.Port())
-		if err != nil {
-			continue
-		}
-		result = append(result, &clabtypes.GenericPortBinding{
-			ContainerPort: containerPort,
-			Protocol:      port.Proto(),
-		})
-	}
-
-	return result
-}
-
-func genericPortsFromDockerPortMap(portMap nat.PortMap) []*clabtypes.GenericPortBinding {
-	if len(portMap) == 0 {
-		return nil
-	}
-
-	var result []*clabtypes.GenericPortBinding
-	for port, bindings := range portMap {
-		containerPort, err := strconv.Atoi(port.Port())
-		if err != nil {
-			continue
-		}
-		for _, binding := range bindings {
-			hostPort, _ := strconv.Atoi(binding.HostPort)
-			result = append(result, &clabtypes.GenericPortBinding{
-				HostIP:        binding.HostIP,
-				HostPort:      hostPort,
-				ContainerPort: containerPort,
-				Protocol:      port.Proto(),
-			})
-		}
-	}
-
-	return result
-}
-
-func genericHealthcheckFromDocker(h *container.HealthConfig) *clabtypes.HealthcheckConfig {
-	if h == nil {
-		return nil
-	}
-
-	return &clabtypes.HealthcheckConfig{
-		Test:        append([]string(nil), h.Test...),
-		Interval:    int(h.Interval / time.Second),
-		Timeout:     int(h.Timeout / time.Second),
-		Retries:     h.Retries,
-		StartPeriod: int(h.StartPeriod / time.Second),
-	}
-}
-
-func genericDevicesFromDocker(devices []container.DeviceMapping) []string {
-	if len(devices) == 0 {
-		return nil
-	}
-
-	result := make([]string, 0, len(devices))
-	for _, device := range devices {
-		result = append(result, strings.Join([]string{
-			device.PathOnHost,
-			device.PathInContainer,
-			device.CgroupPermissions,
-		}, ":"))
-	}
-
-	return result
 }
 
 func genericPortFromDockerPort(p dockerTypes.Port) *clabtypes.GenericPortBinding {

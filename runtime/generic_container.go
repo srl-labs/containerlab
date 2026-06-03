@@ -25,47 +25,11 @@ type GenericContainer struct {
 	Mounts          []ContainerMount
 	Runtime         ContainerRuntime
 	Ports           []*clabtypes.GenericPortBinding
-	Config          GenericContainerConfig
 }
 
 type ContainerMount struct {
 	Source      string
 	Destination string
-}
-
-// GenericContainerConfig stores inspectable container-create settings that apply can compare
-// against desired node config without using persistent labels or state files.
-type GenericContainerConfig struct {
-	Available     bool
-	Image         string
-	User          string
-	Entrypoint    []string
-	Cmd           []string
-	Env           map[string]string
-	Labels        map[string]string
-	Binds         []string
-	ExposedPorts  []*clabtypes.GenericPortBinding
-	PortBindings  []*clabtypes.GenericPortBinding
-	NetworkMode   string
-	PidMode       string
-	MacAddress    string
-	Aliases       []string
-	ExtraHosts    []string
-	Sysctls       map[string]string
-	DNS           *clabtypes.DNSConfig
-	CapAdd        []string
-	Devices       []string
-	Tmpfs         map[string]string
-	ShmSize       int64
-	CPUQuota      int64
-	CPUPeriod     int64
-	CPUSet        string
-	Memory        int64
-	RestartPolicy string
-	Healthcheck   *clabtypes.HealthcheckConfig
-
-	// UncomparableFields lists inspect fields the runtime cannot expose reliably.
-	UncomparableFields map[string]struct{}
 }
 
 // SetRuntime sets the runtime for this GenericContainer.

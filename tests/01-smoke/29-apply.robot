@@ -15,7 +15,6 @@ ${initial-vars}             29-apply.vars.initial.yml
 ${add-link-vars}            29-apply.vars.add-link.yml
 ${add-special-links-vars}   29-apply.vars.add-special-links.yml
 ${add-node-vars}            29-apply.vars.add-node.yml
-${srl-drift-vars}           29-apply.vars.srl-drift.yml
 ${runtime-cli-exec-cmd}     docker exec
 ${recovery-timeout}         30s
 ${retry-interval}           2s
@@ -203,36 +202,6 @@ Apply deletes node and link
     Interface Should Exist    l2    eth1
     Interface Should Not Exist    l1    eth3
 
-Apply recreates SR Linux node on config drift
-    ${l1_before} =    Node Runtime Identity    l1
-    ${srlc_before} =    Node Runtime Identity    srlc
-    ${srl1_before} =    Node Runtime Identity    srl1
-    ${rc}    ${output} =    Apply Topology    ${srl-drift-vars}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    Apply summary
-    Should Contain    ${output}    recreated nodes
-    Should Contain    ${output}    srl1
-    Node Should Be Running    srl1
-    Interface Should Exist    srlc    eth1
-    Interface Should Exist    srl1    e1-1
-    Node Label Should Equal    srl1    clab-node-type    ixr-d3
-    Node Label Should Equal    srl1    clab-node-group    srl-drift
-    Node Env Should Contain    srl1    SRL_LOCATION=apply-drift
-    Node File Should Contain    srl1    /tmp/apply-drift.txt    Hello, containerlab
-    ${l1_after} =    Node Runtime Identity    l1
-    ${srlc_after} =    Node Runtime Identity    srlc
-    ${srl1_after} =    Node Runtime Identity    srl1
-    Should Be Equal As Strings    ${l1_after}    ${l1_before}
-    Should Be Equal As Strings    ${srlc_after}    ${srlc_before}
-    Should Not Be Equal As Strings    ${srl1_after}    ${srl1_before}
-    Configure Interface Address    srlc    eth1    172.31.0.1/24
-    Wait Until Keyword Succeeds
-    ...    ${recovery-timeout}
-    ...    ${retry-interval}
-    ...    Ping From Node Succeeds
-    ...    srlc
-    ...    172.31.0.2
-
 
 *** Keywords ***
 Setup
@@ -324,30 +293,6 @@ Node Runtime Identity
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     RETURN    ${output}
-
-Node Label Should Equal
-    [Arguments]    ${node}    ${label}    ${want}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} inspect -f '{{index .Config.Labels "${label}"}}' clab-${lab-name}-${node}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Be Equal As Strings    ${output}    ${want}
-
-Node Env Should Contain
-    [Arguments]    ${node}    ${env}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} inspect -f '{{range .Config.Env}}{{println .}}{{end}}' clab-${lab-name}-${node}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ${env}
-
-Node File Should Contain
-    [Arguments]    ${node}    ${path}    ${want}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-${node} cat ${path}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ${want}
 
 Ping From Node Succeeds
     [Arguments]    ${node}    ${destination}

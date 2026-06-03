@@ -33,7 +33,7 @@ Apply initial component-based SR-SIM lab
     Component Label Should Equal    sros-a    clab-root-node-name    sros
     Component Label Should Equal    sros-a    clab-root-node-longname    clab-${lab-name}-sros
     Interface Should Exist    client    eth1
-    Interface Should Exist    sros-1    e1-1-c1-1
+    Interface Should Exist    sros-1    e1-1-c23-4
     Wait Until Keyword Succeeds
     ...    ${recovery-timeout}
     ...    ${retry-interval}
@@ -47,9 +47,9 @@ Dry-run reports SR-SIM link addition
     Should Contain    ${output}    Apply plan
     Should Contain    ${output}    added links
     Should Contain    ${output}    client:eth2
-    Should Contain    ${output}    sros:e1-1-c1-2
+    Should Contain    ${output}    sros:e1-1-c23-3
     Interface Should Not Exist    client    eth2
-    Interface Should Not Exist    sros-1    e1-1-c1-2
+    Interface Should Not Exist    sros-1    e1-1-c23-3
 
 Apply adds link to existing component-based SR-SIM node
     ${sros_1_before} =    Node Runtime Identity    sros-1
@@ -59,7 +59,7 @@ Apply adds link to existing component-based SR-SIM node
     Should Contain    ${output}    Apply summary
     Should Contain    ${output}    added links
     Interface Should Exist    client    eth2
-    Interface Should Exist    sros-1    e1-1-c1-2
+    Interface Should Exist    sros-1    e1-1-c23-3
     ${sros_1_after} =    Node Runtime Identity    sros-1
     ${sros_a_after} =    Node Runtime Identity    sros-a
     Should Be Equal As Strings    ${sros_1_after}    ${sros_1_before}
@@ -83,9 +83,9 @@ Apply deletes link from existing component-based SR-SIM node
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    deleted endpoints
     Interface Should Exist    client    eth1
-    Interface Should Exist    sros-1    e1-1-c1-1
+    Interface Should Exist    sros-1    e1-1-c23-4
     Interface Should Not Exist    client    eth2
-    Interface Should Not Exist    sros-1    e1-1-c1-2
+    Interface Should Not Exist    sros-1    e1-1-c23-3
     ${sros_1_after} =    Node Runtime Identity    sros-1
     ${sros_a_after} =    Node Runtime Identity    sros-a
     Should Be Equal As Strings    ${sros_1_after}    ${sros_1_before}
@@ -120,50 +120,19 @@ Apply deletes SR-SIM node and link
     Node Should Not Exist    extra
     Interface Should Not Exist    client    eth3
 
-Dry-run reports SR-SIM component layout recreation
+Dry-run rejects SR-SIM component layout change
     ${rc}    ${output} =    Apply Topology    ${component-change-vars}    --dry-run
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    Apply plan
-    Should Contain    ${output}    recreated nodes
-    Should Contain    ${output}    sros
-
-Apply recreates SR-SIM component layout change
-    ${client_before} =    Node Runtime Identity    client
-    ${sros_1_before} =    Node Runtime Identity    sros-1
-    ${sros_a_before} =    Node Runtime Identity    sros-a
-    ${rc}    ${output} =    Apply Topology    ${component-change-vars}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    Apply summary
-    Should Contain    ${output}    recreated nodes
-    Should Contain    ${output}    sros
-    Node Should Be Running    sros-1
-    Node Should Be Running    sros-2
-    Node Should Be Running    sros-a
-    Component Label Should Equal    sros-2    clab-root-node-name    sros
-    Component Label Should Equal    sros-2    clab-root-node-longname    clab-${lab-name}-sros
-    ${client_after} =    Node Runtime Identity    client
-    ${sros_1_after} =    Node Runtime Identity    sros-1
-    ${sros_a_after} =    Node Runtime Identity    sros-a
-    Should Be Equal As Strings    ${client_after}    ${client_before}
-    Should Not Be Equal As Strings    ${sros_1_after}    ${sros_1_before}
-    Should Not Be Equal As Strings    ${sros_a_after}    ${sros_a_before}
-    Configure Client Interface Address    eth1    10.0.1.1/24
-    Wait Until Keyword Succeeds
-    ...    ${recovery-timeout}
-    ...    ${retry-interval}
-    ...    Ping From Client Succeeds
-    ...    10.0.1.2
-    SR-SIM SSH Should Be Reachable    sros
+    Should Not Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    distributed component layout changed
+    Should Contain    ${output}    deploy --reconfigure
 
 
 *** Keywords ***
 Setup
     Run Clab Command    destroy --name ${lab-name} --cleanup
-    Remove Container If Exists    sros-2
 
 Teardown
     Run Clab Command    destroy --name ${lab-name} --cleanup
-    Remove Container If Exists    sros-2
 
 Run Clab Command
     [Arguments]    ${args}
@@ -192,12 +161,6 @@ Node Should Not Exist
     ...    ${runtime} inspect -f '{{.State.Status}}' clab-${lab-name}-${node}
     Log    ${output}
     Should Not Be Equal As Integers    ${rc}    0
-
-Remove Container If Exists
-    [Arguments]    ${node}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} rm -f clab-${lab-name}-${node} 2>&1
-    Log    ${output}
 
 Node Runtime Identity
     [Arguments]    ${node}
