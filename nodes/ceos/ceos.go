@@ -173,6 +173,10 @@ func (n *ceos) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	return n.ceosPostDeploy(ctx)
 }
 
+func (*ceos) SupportsLiveLinkApply() bool {
+	return false
+}
+
 func (n *ceos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
