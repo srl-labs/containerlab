@@ -7,16 +7,25 @@ deployed yet, `apply` deploys it. If the lab is already deployed, `apply` discov
 state from the container runtime and applies supported topology deltas without destroying and
 redeploying the whole lab.
 
-The first implementation focuses on topology shape changes:
+Apply supports topology shape changes:
 
 - add nodes
 - delete nodes
 - add links
 - delete links
 
-Existing node definition changes are not updated in place. Use `redeploy` or
-`deploy --reconfigure` when container settings, startup configuration, image, kind, type, or other
-node properties need to change.
+When apply detects an existing node definition change that requires a new container, it recreates
+only the affected nodes and their links. Apply detects distributed component layout changes,
+identity label drift, and inspectable container-create settings such as image, explicit
+command/entrypoint, user, environment values, labels, binds, ports, network and PID mode, DNS,
+capabilities, tmpfs, shared memory, CPU, cpuset, memory, restart policy, and healthcheck
+configuration.
+
+Apply does not add a persistent topology hash label or state file. For fields where runtime
+inspect includes image defaults mixed with topology values, apply compares the desired topology
+values it can identify deterministically. It cannot detect arbitrary mounted file content changes,
+post-deploy exec/stage changes, or removal of a value when the runtime cannot distinguish that
+removed value from an image default.
 
 When existing nodes need their dataplane adjusted, apply uses the same endpoint parking
 mechanism as `stop`, `start`, and `restart`: affected nodes are stopped, their dataplane
@@ -73,7 +82,10 @@ Apply currently supports only a subset of topology changes:
 - nodes with `auto-remove` enabled are not supported
 - `ext-container` and other pre-existing container nodes are not supported
 - `network-mode: container:<...>` users/providers are not supported
-- existing node definition changes are not applied in place
+- detected existing node identity, distributed component, and inspectable container-create changes
+  recreate affected nodes
+- startup configuration content changes at the same mounted path are not detected without changing
+  the bind or another inspectable container-create setting
 - existing link parameter/type changes with the same runtime interface names are not applied in
   place; use `redeploy` for those changes
 

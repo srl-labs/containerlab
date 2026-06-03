@@ -5,17 +5,23 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/docker/go-connections/nat"
+	"github.com/dustin/go-humanize"
+	"github.com/google/shlex"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -307,7 +313,7 @@ func (c *CLab) runtimeNodeContainers(
 }
 
 func (c *CLab) checkApplySupported(
-	currentNodes map[string]*applyRuntimeNode,
+	_ map[string]*applyRuntimeNode,
 ) error {
 	var unsupported []string
 
@@ -327,52 +333,10 @@ func (c *CLab) checkApplySupported(
 		}
 	}
 
-	for nodeName, runtimeNode := range currentNodes {
-		n, exists := c.Nodes[nodeName]
-		if !exists {
-			continue
-		}
-
-		cfg := n.Config()
-		desiredDistributed := len(cfg.Components) > 1
-		if runtimeNode.distributed != desiredDistributed {
-			unsupported = append(
-				unsupported,
-				fmt.Sprintf("%s: distributed component layout changed", cfg.ShortName),
-			)
-		} else if desiredDistributed {
-			desiredComponents := desiredApplyComponentNames(n)
-			runtimeComponents := runtimeApplyComponentNames(runtimeNode)
-			if strings.Join(desiredComponents, "\x00") != strings.Join(runtimeComponents, "\x00") {
-				unsupported = append(
-					unsupported,
-					fmt.Sprintf("%s: distributed component layout changed", cfg.ShortName),
-				)
-			}
-		}
-
-		for _, ctr := range runtimeNode.containers {
-			if runtimeNode.distributed {
-				checkRuntimeLabel(
-					&unsupported,
-					ctr,
-					clabconstants.RootNodeLongName,
-					cfg.LongName,
-					cfg.ShortName,
-				)
-			} else {
-				checkRuntimeLabel(&unsupported, ctr, clabconstants.LongName, cfg.LongName, cfg.ShortName)
-			}
-			checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeKind, cfg.Kind, cfg.ShortName)
-			checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeType, cfg.NodeType, cfg.ShortName)
-			checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeGroup, cfg.Group, cfg.ShortName)
-		}
-	}
-
 	if len(unsupported) > 0 {
 		sort.Strings(unsupported)
 		return fmt.Errorf(
-			"apply unsupported for: %s; use redeploy or deploy --reconfigure",
+			"apply unsupported for: %s; apply cannot handle these node lifecycle modes",
 			strings.Join(unsupported, "; "),
 		)
 	}
@@ -380,22 +344,688 @@ func (c *CLab) checkApplySupported(
 	return nil
 }
 
-func checkRuntimeLabel(
-	unsupported *[]string,
+func applyRuntimeLabelDrift(
 	ctr clabruntime.GenericContainer,
 	label,
 	want,
 	nodeName string,
-) {
+) string {
 	got, exists := ctr.Labels[label]
 	if !exists || got == want {
-		return
+		return ""
 	}
 
-	*unsupported = append(
-		*unsupported,
-		fmt.Sprintf("%s: runtime label %s=%q, desired %q", nodeName, label, got, want),
+	return fmt.Sprintf("%s: runtime label %s=%q, desired %q", nodeName, label, got, want)
+}
+
+const (
+	applyRuntimeConfigFieldImage         = "image"
+	applyRuntimeConfigFieldUser          = "user"
+	applyRuntimeConfigFieldEntrypoint    = "entrypoint"
+	applyRuntimeConfigFieldCmd           = "cmd"
+	applyRuntimeConfigFieldEnv           = "env"
+	applyRuntimeConfigFieldLabels        = "labels"
+	applyRuntimeConfigFieldBinds         = "binds"
+	applyRuntimeConfigFieldExposedPorts  = "exposed-ports"
+	applyRuntimeConfigFieldPortBindings  = "port-bindings"
+	applyRuntimeConfigFieldNetworkMode   = "network-mode"
+	applyRuntimeConfigFieldPidMode       = "pid-mode"
+	applyRuntimeConfigFieldMacAddress    = "mac-address"
+	applyRuntimeConfigFieldAliases       = "aliases"
+	applyRuntimeConfigFieldExtraHosts    = "extra-hosts"
+	applyRuntimeConfigFieldSysctls       = "sysctls"
+	applyRuntimeConfigFieldDNS           = "dns"
+	applyRuntimeConfigFieldCapAdd        = "cap-add"
+	applyRuntimeConfigFieldDevices       = "devices"
+	applyRuntimeConfigFieldTmpfs         = "tmpfs"
+	applyRuntimeConfigFieldShmSize       = "shm-size"
+	applyRuntimeConfigFieldCPU           = "cpu"
+	applyRuntimeConfigFieldCPUSet        = "cpu-set"
+	applyRuntimeConfigFieldMemory        = "memory"
+	applyRuntimeConfigFieldRestartPolicy = "restart-policy"
+	applyRuntimeConfigFieldHealthcheck   = "healthcheck"
+)
+
+type applyRuntimeConfigSnapshot struct {
+	Image         string
+	User          string
+	Entrypoint    []string
+	Cmd           []string
+	Env           map[string]string
+	Labels        map[string]string
+	Binds         []string
+	ExposedPorts  []applyPortBinding
+	PortBindings  []applyPortBinding
+	NetworkMode   string
+	PidMode       string
+	MacAddress    string
+	Aliases       []string
+	ExtraHosts    []string
+	Sysctls       map[string]string
+	DNS           *clabtypes.DNSConfig
+	CapAdd        []string
+	Devices       []string
+	Tmpfs         map[string]string
+	ShmSize       int64
+	CPUQuota      int64
+	CPUPeriod     int64
+	CPUSet        string
+	Memory        int64
+	RestartPolicy string
+	Healthcheck   *clabtypes.HealthcheckConfig
+}
+
+type applyPortBinding struct {
+	HostIP        string
+	HostPort      int
+	ContainerPort int
+	Protocol      string
+}
+
+func applyRuntimeConfigDrifts(
+	cfg *clabtypes.NodeConfig,
+	ctr clabruntime.GenericContainer,
+) []string {
+	if cfg == nil || !ctr.Config.Available {
+		return nil
+	}
+
+	desired := desiredApplyRuntimeConfigSnapshot(cfg)
+	runtime := runtimeApplyRuntimeConfigSnapshot(cfg, ctr)
+	desired.NetworkMode, runtime.NetworkMode = normalizeApplyNetworkModes(
+		cfg.NetworkMode,
+		ctr.Config.NetworkMode,
 	)
+
+	var reasons []string
+
+	addDrift := func(field string, want, got any) {
+		if !applyRuntimeConfigFieldComparable(ctr.Config, field) {
+			return
+		}
+		if !reflect.DeepEqual(want, got) {
+			reasons = append(
+				reasons,
+				fmt.Sprintf("%s: runtime container %s differs from desired", cfg.ShortName, field),
+			)
+		}
+	}
+	addSubsetDrift := func(field string, want, got map[string]string) {
+		if !applyRuntimeConfigFieldComparable(ctr.Config, field) || len(want) == 0 {
+			return
+		}
+		if !applyStringMapSubsetEqual(want, got) {
+			reasons = append(
+				reasons,
+				fmt.Sprintf("%s: runtime container %s differs from desired", cfg.ShortName, field),
+			)
+		}
+	}
+	addPortSubsetDrift := func(field string, want, got []applyPortBinding) {
+		if !applyRuntimeConfigFieldComparable(ctr.Config, field) || len(want) == 0 {
+			return
+		}
+		if !applyPortBindingsSubsetEqual(want, got) {
+			reasons = append(
+				reasons,
+				fmt.Sprintf("%s: runtime container %s differs from desired", cfg.ShortName, field),
+			)
+		}
+	}
+
+	if desired.Image != "" {
+		addDrift(applyRuntimeConfigFieldImage, desired.Image, runtime.Image)
+	}
+	if desired.User != "" {
+		addDrift(applyRuntimeConfigFieldUser, desired.User, runtime.User)
+	}
+	if len(desired.Entrypoint) > 0 {
+		addDrift(applyRuntimeConfigFieldEntrypoint, desired.Entrypoint, runtime.Entrypoint)
+	}
+	if len(desired.Cmd) > 0 {
+		addDrift(applyRuntimeConfigFieldCmd, desired.Cmd, runtime.Cmd)
+	}
+	addSubsetDrift(applyRuntimeConfigFieldEnv, desired.Env, runtime.Env)
+	addSubsetDrift(applyRuntimeConfigFieldLabels, desired.Labels, runtime.Labels)
+	addDrift(applyRuntimeConfigFieldBinds, desired.Binds, runtime.Binds)
+	addPortSubsetDrift(applyRuntimeConfigFieldExposedPorts, desired.ExposedPorts, runtime.ExposedPorts)
+	addDrift(applyRuntimeConfigFieldPortBindings, desired.PortBindings, runtime.PortBindings)
+	addDrift(applyRuntimeConfigFieldNetworkMode, desired.NetworkMode, runtime.NetworkMode)
+	addDrift(applyRuntimeConfigFieldPidMode, desired.PidMode, runtime.PidMode)
+	if desired.MacAddress != "" {
+		addDrift(applyRuntimeConfigFieldMacAddress, desired.MacAddress, runtime.MacAddress)
+	}
+	addDrift(applyRuntimeConfigFieldAliases, desired.Aliases, runtime.Aliases)
+	addDrift(applyRuntimeConfigFieldExtraHosts, desired.ExtraHosts, runtime.ExtraHosts)
+	addDrift(applyRuntimeConfigFieldSysctls, desired.Sysctls, runtime.Sysctls)
+	addDrift(applyRuntimeConfigFieldDNS, desired.DNS, runtime.DNS)
+	addDrift(applyRuntimeConfigFieldCapAdd, desired.CapAdd, runtime.CapAdd)
+	addDrift(applyRuntimeConfigFieldDevices, desired.Devices, runtime.Devices)
+	addDrift(applyRuntimeConfigFieldTmpfs, desired.Tmpfs, runtime.Tmpfs)
+	if cfg.ShmSize != "" {
+		addDrift(applyRuntimeConfigFieldShmSize, desired.ShmSize, runtime.ShmSize)
+	}
+	addDrift(applyRuntimeConfigFieldCPU, []int64{desired.CPUQuota, desired.CPUPeriod}, []int64{runtime.CPUQuota, runtime.CPUPeriod})
+	addDrift(applyRuntimeConfigFieldCPUSet, desired.CPUSet, runtime.CPUSet)
+	addDrift(applyRuntimeConfigFieldMemory, desired.Memory, runtime.Memory)
+	addDrift(applyRuntimeConfigFieldRestartPolicy, desired.RestartPolicy, runtime.RestartPolicy)
+	if desired.Healthcheck != nil {
+		addDrift(applyRuntimeConfigFieldHealthcheck, desired.Healthcheck, runtime.Healthcheck)
+	}
+
+	return reasons
+}
+
+func desiredApplyRuntimeConfigSnapshot(
+	cfg *clabtypes.NodeConfig,
+) applyRuntimeConfigSnapshot {
+	entrypoint, _ := splitApplyShellArgs(cfg.Entrypoint)
+	cmd, _ := splitApplyShellArgs(cfg.Cmd)
+
+	return applyRuntimeConfigSnapshot{
+		Image:         normalizeApplyImage(cfg.Image),
+		User:          cfg.User,
+		Entrypoint:    normalizeApplyOrderedStringSlice(entrypoint),
+		Cmd:           normalizeApplyOrderedStringSlice(cmd),
+		Env:           normalizeApplyEnvMap(cfg.Env),
+		Labels:        normalizeApplyUserLabels(cfg.Labels),
+		Binds:         normalizeApplyBinds(cfg.Binds),
+		ExposedPorts:  normalizeApplyPortBindings(applyGenericPortsFromPortSet(cfg.PortSet)),
+		PortBindings:  normalizeApplyPortBindings(applyGenericPortsFromPortMap(cfg.PortBindings)),
+		NetworkMode:   normalizeApplyDesiredNetworkMode(cfg.NetworkMode),
+		PidMode:       normalizeApplyNamespaceMode(cfg.PidMode),
+		MacAddress:    normalizeApplyMACAddress(cfg.MacAddress),
+		Aliases:       normalizeApplySortedStringSlice(cfg.Aliases),
+		ExtraHosts:    normalizeApplySortedStringSlice(cfg.ExtraHosts),
+		Sysctls:       normalizeApplyStringMap(cfg.Sysctls),
+		DNS:           normalizeApplyDNS(cfg.DNS),
+		CapAdd:        normalizeApplySortedStringSlice(cfg.CapAdd),
+		Devices:       normalizeApplySortedStringSlice(applyDesiredDevices(cfg.Devices)),
+		Tmpfs:         normalizeApplyStringMap(cfg.Tmpfs),
+		ShmSize:       parseApplyByteSize(cfg.ShmSize),
+		CPUQuota:      applyDesiredCPUQuota(cfg.CPU),
+		CPUPeriod:     applyDesiredCPUPeriod(cfg.CPU),
+		CPUSet:        cfg.CPUSet,
+		Memory:        parseApplyByteSize(cfg.Memory),
+		RestartPolicy: normalizeApplyRestartPolicy(cfg.RestartPolicy),
+		Healthcheck:   normalizeApplyHealthcheck(cfg.Healthcheck),
+	}
+}
+
+func runtimeApplyRuntimeConfigSnapshot(
+	cfg *clabtypes.NodeConfig,
+	ctr clabruntime.GenericContainer,
+) applyRuntimeConfigSnapshot {
+	runtimeCfg := ctr.Config
+
+	return applyRuntimeConfigSnapshot{
+		Image:         normalizeApplyImage(runtimeCfg.Image),
+		User:          runtimeCfg.User,
+		Entrypoint:    normalizeApplyOrderedStringSlice(runtimeCfg.Entrypoint),
+		Cmd:           normalizeApplyOrderedStringSlice(runtimeCfg.Cmd),
+		Env:           normalizeApplyEnvMap(runtimeCfg.Env),
+		Labels:        normalizeApplyUserLabels(runtimeCfg.Labels),
+		Binds:         normalizeApplyBinds(runtimeCfg.Binds),
+		ExposedPorts:  normalizeApplyPortBindings(runtimeCfg.ExposedPorts),
+		PortBindings:  normalizeApplyPortBindings(runtimeCfg.PortBindings),
+		NetworkMode:   normalizeApplyDesiredNetworkMode(runtimeCfg.NetworkMode),
+		PidMode:       normalizeApplyNamespaceMode(runtimeCfg.PidMode),
+		MacAddress:    normalizeApplyMACAddress(runtimeCfg.MacAddress),
+		Aliases:       normalizeApplyRuntimeAliases(cfg, ctr),
+		ExtraHosts:    normalizeApplySortedStringSlice(runtimeCfg.ExtraHosts),
+		Sysctls:       normalizeApplyStringMap(runtimeCfg.Sysctls),
+		DNS:           normalizeApplyDNS(runtimeCfg.DNS),
+		CapAdd:        normalizeApplySortedStringSlice(runtimeCfg.CapAdd),
+		Devices:       normalizeApplySortedStringSlice(runtimeCfg.Devices),
+		Tmpfs:         normalizeApplyStringMap(runtimeCfg.Tmpfs),
+		ShmSize:       runtimeCfg.ShmSize,
+		CPUQuota:      runtimeCfg.CPUQuota,
+		CPUPeriod:     runtimeCfg.CPUPeriod,
+		CPUSet:        runtimeCfg.CPUSet,
+		Memory:        runtimeCfg.Memory,
+		RestartPolicy: normalizeApplyRestartPolicy(runtimeCfg.RestartPolicy),
+		Healthcheck:   normalizeApplyHealthcheck(runtimeCfg.Healthcheck),
+	}
+}
+
+func applyRuntimeConfigFieldComparable(
+	cfg clabruntime.GenericContainerConfig,
+	field string,
+) bool {
+	if len(cfg.UncomparableFields) == 0 {
+		return true
+	}
+	_, exists := cfg.UncomparableFields[field]
+	return !exists
+}
+
+func splitApplyShellArgs(value string) ([]string, error) {
+	if strings.TrimSpace(value) == "" {
+		return nil, nil
+	}
+	return shlex.Split(value)
+}
+
+func normalizeApplyImage(image string) string {
+	if image == "" {
+		return ""
+	}
+	return clabutils.GetCanonicalImageName(image)
+}
+
+func normalizeApplyEnvMap(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		switch {
+		case key == clabconstants.ClabEnvIntfs:
+			continue
+		case key == "no_proxy" || key == "NO_PROXY":
+			continue
+		case key == "RESTORE_SNAPSHOT":
+			continue
+		case strings.HasPrefix(key, "CLAB_LABEL_"):
+			continue
+		default:
+			result[key] = value
+		}
+	}
+
+	return nilIfEmptyStringMap(result)
+}
+
+func normalizeApplyUserLabels(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	generated := map[string]struct{}{
+		clabconstants.Containerlab:     {},
+		clabconstants.NodeName:         {},
+		clabconstants.LongName:         {},
+		clabconstants.NodeKind:         {},
+		clabconstants.NodeType:         {},
+		clabconstants.NodeGroup:        {},
+		clabconstants.NodeLabDir:       {},
+		clabconstants.TopoFile:         {},
+		clabconstants.NodeMgmtNetBr:    {},
+		clabconstants.Owner:            {},
+		clabconstants.RootNodeName:     {},
+		clabconstants.RootNodeLongName: {},
+		clabconstants.GitBranch:        {},
+		clabconstants.GitHash:          {},
+		"clab-net-mgmt":                {},
+	}
+
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		if _, exists := generated[key]; exists {
+			continue
+		}
+		result[key] = value
+	}
+
+	return nilIfEmptyStringMap(result)
+}
+
+func normalizeApplyBinds(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		parts := strings.SplitN(value, ":", 3)
+		if len(parts) >= 2 && applyGeneratedBindDestination(parts[1]) {
+			continue
+		}
+		if len(parts) < 3 {
+			result = append(result, value)
+			continue
+		}
+
+		opts := strings.Split(parts[2], ",")
+		opts = normalizeApplySortedStringSlice(opts)
+		if len(opts) == 0 {
+			result = append(result, parts[0]+":"+parts[1])
+			continue
+		}
+		result = append(result, parts[0]+":"+parts[1]+":"+strings.Join(opts, ","))
+	}
+
+	sort.Strings(result)
+	return result
+}
+
+func applyGeneratedBindDestination(destination string) bool {
+	switch destination {
+	case "/etc/yum.repos.d/srlinux.repo",
+		"/etc/apt/sources.list.d/srlinux.list":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeApplyOrderedStringSlice(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		result = append(result, value)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func normalizeApplySortedStringSlice(values []string) []string {
+	result := normalizeApplyOrderedStringSlice(values)
+	if len(result) == 0 {
+		return nil
+	}
+	sort.Strings(result)
+	return result
+}
+
+func normalizeApplyStringMap(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		result[key] = value
+	}
+
+	return nilIfEmptyStringMap(result)
+}
+
+func nilIfEmptyStringMap(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+	return values
+}
+
+func normalizeApplyPortBindings(
+	values []*clabtypes.GenericPortBinding,
+) []applyPortBinding {
+	if len(values) == 0 {
+		return nil
+	}
+
+	result := make([]applyPortBinding, 0, len(values))
+	for _, value := range values {
+		if value == nil {
+			continue
+		}
+		hostIP := value.HostIP
+		if hostIP == "0.0.0.0" || hostIP == "::" {
+			hostIP = ""
+		}
+		protocol := value.Protocol
+		if protocol == "" {
+			protocol = "tcp"
+		}
+		result = append(result, applyPortBinding{
+			HostIP:        hostIP,
+			HostPort:      value.HostPort,
+			ContainerPort: value.ContainerPort,
+			Protocol:      strings.ToLower(protocol),
+		})
+	}
+	if len(result) == 0 {
+		return nil
+	}
+
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].HostIP != result[j].HostIP {
+			return result[i].HostIP < result[j].HostIP
+		}
+		if result[i].HostPort != result[j].HostPort {
+			return result[i].HostPort < result[j].HostPort
+		}
+		if result[i].ContainerPort != result[j].ContainerPort {
+			return result[i].ContainerPort < result[j].ContainerPort
+		}
+		return result[i].Protocol < result[j].Protocol
+	})
+
+	return result
+}
+
+func applyGenericPortsFromPortSet(
+	portSet nat.PortSet,
+) []*clabtypes.GenericPortBinding {
+	if len(portSet) == 0 {
+		return nil
+	}
+
+	result := make([]*clabtypes.GenericPortBinding, 0, len(portSet))
+	for port := range portSet {
+		containerPort, err := strconv.Atoi(port.Port())
+		if err != nil {
+			continue
+		}
+		result = append(result, &clabtypes.GenericPortBinding{
+			ContainerPort: containerPort,
+			Protocol:      strings.ToLower(port.Proto()),
+		})
+	}
+
+	return result
+}
+
+func applyGenericPortsFromPortMap(
+	portMap nat.PortMap,
+) []*clabtypes.GenericPortBinding {
+	if len(portMap) == 0 {
+		return nil
+	}
+
+	var result []*clabtypes.GenericPortBinding
+	for port, bindings := range portMap {
+		containerPort, err := strconv.Atoi(port.Port())
+		if err != nil {
+			continue
+		}
+		for _, binding := range bindings {
+			hostPort, _ := strconv.Atoi(binding.HostPort)
+			result = append(result, &clabtypes.GenericPortBinding{
+				HostIP:        binding.HostIP,
+				HostPort:      hostPort,
+				ContainerPort: containerPort,
+				Protocol:      strings.ToLower(port.Proto()),
+			})
+		}
+	}
+
+	return result
+}
+
+func normalizeApplyDesiredNetworkMode(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "bridge"
+	}
+	return value
+}
+
+func normalizeApplyNetworkModes(
+	desired,
+	runtime string,
+) (string, string) {
+	desired = normalizeApplyDesiredNetworkMode(desired)
+	runtime = normalizeApplyDesiredNetworkMode(runtime)
+
+	if desired == "bridge" && !applyNetworkModeIsSpecial(runtime) {
+		return "bridge", "bridge"
+	}
+
+	return desired, runtime
+}
+
+func applyNetworkModeIsSpecial(value string) bool {
+	return value == "host" ||
+		value == "none" ||
+		strings.HasPrefix(value, "container:") ||
+		strings.HasPrefix(value, "ns:")
+}
+
+func normalizeApplyNamespaceMode(value string) string {
+	if strings.TrimSpace(value) == "" {
+		return ""
+	}
+	return value
+}
+
+func normalizeApplyMACAddress(value string) string {
+	return strings.ToLower(value)
+}
+
+func normalizeApplyRuntimeAliases(
+	cfg *clabtypes.NodeConfig,
+	ctr clabruntime.GenericContainer,
+) []string {
+	if len(ctr.Config.Aliases) == 0 {
+		return nil
+	}
+
+	generated := map[string]struct{}{
+		cfg.ShortName: {},
+		cfg.LongName:  {},
+		ctr.ID:        {},
+		ctr.ShortID:   {},
+	}
+	for _, name := range ctr.Names {
+		generated[name] = struct{}{}
+	}
+
+	result := make([]string, 0, len(ctr.Config.Aliases))
+	for _, alias := range ctr.Config.Aliases {
+		if _, exists := generated[alias]; exists {
+			continue
+		}
+		result = append(result, alias)
+	}
+
+	return normalizeApplySortedStringSlice(result)
+}
+
+func normalizeApplyDNS(value *clabtypes.DNSConfig) *clabtypes.DNSConfig {
+	if value == nil {
+		return nil
+	}
+
+	result := &clabtypes.DNSConfig{
+		Servers: normalizeApplyOrderedStringSlice(value.Servers),
+		Options: normalizeApplyOrderedStringSlice(value.Options),
+		Search:  normalizeApplyOrderedStringSlice(value.Search),
+	}
+	if len(result.Servers) == 0 && len(result.Options) == 0 && len(result.Search) == 0 {
+		return nil
+	}
+	return result
+}
+
+func applyDesiredDevices(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		result = append(result, strings.Join([]string{value, value, "rwm"}, ":"))
+	}
+
+	return result
+}
+
+func parseApplyByteSize(value string) int64 {
+	if value == "" {
+		return 0
+	}
+	size, err := humanize.ParseBytes(value)
+	if err != nil {
+		return 0
+	}
+	return int64(size)
+}
+
+func applyDesiredCPUQuota(cpu float64) int64 {
+	if cpu == 0 {
+		return 0
+	}
+	return int64(cpu * 100000)
+}
+
+func applyDesiredCPUPeriod(cpu float64) int64 {
+	if cpu == 0 {
+		return 0
+	}
+	return 100000
+}
+
+func normalizeApplyRestartPolicy(value string) string {
+	if value == "no" {
+		return ""
+	}
+	return value
+}
+
+func normalizeApplyHealthcheck(value *clabtypes.HealthcheckConfig) *clabtypes.HealthcheckConfig {
+	if value == nil {
+		return nil
+	}
+
+	result := &clabtypes.HealthcheckConfig{
+		Test:        normalizeApplyOrderedStringSlice(value.Test),
+		Interval:    value.Interval,
+		Timeout:     value.Timeout,
+		Retries:     value.Retries,
+		StartPeriod: value.StartPeriod,
+	}
+	if len(result.Test) == 0 &&
+		result.Interval == 0 &&
+		result.Timeout == 0 &&
+		result.Retries == 0 &&
+		result.StartPeriod == 0 {
+		return nil
+	}
+	return result
+}
+
+func applyStringMapSubsetEqual(want, got map[string]string) bool {
+	for key, value := range want {
+		gotValue, exists := got[key]
+		if !exists || gotValue != value {
+			return false
+		}
+	}
+	return true
+}
+
+func applyPortBindingsSubsetEqual(want, got []applyPortBinding) bool {
+	gotSet := make(map[applyPortBinding]struct{}, len(got))
+	for _, value := range got {
+		gotSet[value] = struct{}{}
+	}
+	for _, value := range want {
+		if _, exists := gotSet[value]; !exists {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
@@ -460,6 +1090,8 @@ func (c *CLab) planApply(
 		}
 	}
 
+	c.planRecreatedApplyNodes(plan)
+
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
 		for _, ep := range clablinks.ApplyRuntimeEndpoints(c.Links[linkIdx]) {
 			plan.desiredEndpointSet[endpointKeyFromEndpoint(ep)] = struct{}{}
@@ -497,6 +1129,109 @@ func (c *CLab) planApply(
 	plan.result.RecreatedNodes = sortedStringSet(plan.recreatedNodeSet)
 
 	return plan, nil
+}
+
+func (c *CLab) planRecreatedApplyNodes(plan *applyPlan) {
+	if plan == nil {
+		return
+	}
+
+	for _, nodeName := range sortedRuntimeNodeNames(plan.currentNodes) {
+		runtimeNode := plan.currentNodes[nodeName]
+		n, exists := c.Nodes[nodeName]
+		if !exists {
+			continue
+		}
+
+		reasons := applyRecreateReasons(n, runtimeNode)
+		if len(reasons) == 0 {
+			continue
+		}
+
+		c.planRecreatedApplyNode(plan, nodeName, strings.Join(reasons, "; "))
+	}
+}
+
+func applyRecreateReasons(
+	n clabnodes.Node,
+	runtimeNode *applyRuntimeNode,
+) []string {
+	if n == nil || runtimeNode == nil {
+		return nil
+	}
+
+	cfg := n.Config()
+	var reasons []string
+
+	desiredDistributed := len(cfg.Components) > 1
+	if runtimeNode.distributed != desiredDistributed {
+		reasons = append(
+			reasons,
+			fmt.Sprintf("%s: distributed component layout changed", cfg.ShortName),
+		)
+	} else if desiredDistributed {
+		desiredComponents := desiredApplyComponentNames(n)
+		runtimeComponents := runtimeApplyComponentNames(runtimeNode)
+		if strings.Join(desiredComponents, "\x00") != strings.Join(runtimeComponents, "\x00") {
+			reasons = append(
+				reasons,
+				fmt.Sprintf("%s: distributed component layout changed", cfg.ShortName),
+			)
+		}
+	}
+
+	for _, ctr := range runtimeNode.containers {
+		longNameLabel := clabconstants.LongName
+		if runtimeNode.distributed {
+			longNameLabel = clabconstants.RootNodeLongName
+		}
+
+		for _, drift := range []string{
+			applyRuntimeLabelDrift(ctr, longNameLabel, cfg.LongName, cfg.ShortName),
+			applyRuntimeLabelDrift(ctr, clabconstants.NodeKind, cfg.Kind, cfg.ShortName),
+			applyRuntimeLabelDrift(ctr, clabconstants.NodeType, cfg.NodeType, cfg.ShortName),
+			applyRuntimeLabelDrift(ctr, clabconstants.NodeGroup, cfg.Group, cfg.ShortName),
+		} {
+			if drift != "" {
+				reasons = append(reasons, drift)
+			}
+		}
+
+		if !runtimeNode.distributed {
+			reasons = append(reasons, applyRuntimeConfigDrifts(cfg, ctr)...)
+		}
+	}
+
+	return reasons
+}
+
+func (c *CLab) planRecreatedApplyNode(
+	plan *applyPlan,
+	nodeName string,
+	reason string,
+) {
+	if plan == nil || nodeName == "" {
+		return
+	}
+	if _, exists := c.Nodes[nodeName]; !exists {
+		return
+	}
+	if plan.recreatedNodeSet == nil {
+		plan.recreatedNodeSet = map[string]struct{}{}
+	}
+	if _, planned := plan.recreatedNodeSet[nodeName]; planned {
+		return
+	}
+	if plan.addedNodeSet == nil {
+		plan.addedNodeSet = map[string]struct{}{}
+	}
+	if plan.affectedNodeSet != nil {
+		delete(plan.affectedNodeSet, nodeName)
+	}
+
+	log.Info("Recreating node for apply", "node", nodeName, "reason", reason)
+	plan.recreatedNodeSet[nodeName] = struct{}{}
+	plan.addedNodeSet[nodeName] = struct{}{}
 }
 
 func (p *applyPlan) addDeployApplyLink(linkIdx int, link clablinks.Link) {
@@ -636,6 +1371,9 @@ func (c *CLab) discoverLiveApplyEndpoints(
 	for _, nodeName := range sortedLinkNodeNames(desiredNodes) {
 		n := desiredNodes[nodeName]
 		if _, exists := plan.currentNodes[nodeName]; !exists && !isApplySpecialNode(nodeName) {
+			continue
+		}
+		if _, recreated := plan.recreatedNodeSet[nodeName]; recreated {
 			continue
 		}
 
@@ -787,8 +1525,7 @@ func (c *CLab) planAffectedApplyNode(
 	case clabnodes.LinkApplyModeRestart:
 		plan.affectedNodeSet[nodeName] = struct{}{}
 	case clabnodes.LinkApplyModeRecreate:
-		plan.recreatedNodeSet[nodeName] = struct{}{}
-		plan.addedNodeSet[nodeName] = struct{}{}
+		c.planRecreatedApplyNode(plan, nodeName, change)
 	}
 }
 

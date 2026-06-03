@@ -11,7 +11,9 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
+	podmandefine "github.com/containers/podman/v5/libpod/define"
 	"github.com/containers/podman/v5/pkg/bindings/containers"
 	"github.com/containers/podman/v5/pkg/domain/entities"
 	"github.com/containers/podman/v5/pkg/specgen"
@@ -329,10 +331,11 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 ) ([]runtime.GenericContainer, error) {
 	genericList := make([]runtime.GenericContainer, len(cList))
 	for i, v := range cList {
-		netSettings, err := r.extractMgmtIP(ctx, v.ID)
+		inspectRes, err := containers.Inspect(ctx, v.ID, &containers.InspectOptions{})
 		if err != nil {
 			return nil, err
 		}
+		netSettings := r.extractMgmtIPFromInspect(v.ID, inspectRes)
 		genericList[i] = runtime.GenericContainer{
 			Names:           v.Names,
 			ID:              v.ID,
@@ -344,6 +347,7 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 			Pid:             v.Pid,
 			NetworkSettings: netSettings,
 			Ports:           []*types.GenericPortBinding{},
+			Config:          genericContainerConfigFromPodmanInspect(inspectRes),
 		}
 
 		// Extract network name from labels
@@ -365,6 +369,204 @@ func (r *PodmanRuntime) produceGenericContainerList(ctx context.Context,
 	return genericList, nil
 }
 
+func genericContainerConfigFromPodmanInspect(
+	inspect *podmandefine.InspectContainerData,
+) runtime.GenericContainerConfig {
+	cfg := runtime.GenericContainerConfig{
+		UncomparableFields: map[string]struct{}{
+			"cap-add":        {},
+			"devices":        {},
+			"restart-policy": {},
+			"shm-size":       {},
+			"sysctls":        {},
+			"tmpfs":          {},
+		},
+	}
+	if inspect == nil {
+		return cfg
+	}
+
+	cfg.Available = true
+	cfg.Image = inspect.ImageName
+	if cfg.Image == "" {
+		cfg.Image = inspect.Image
+	}
+
+	if inspect.Config != nil {
+		cfg.User = inspect.Config.User
+		cfg.Entrypoint = append([]string(nil), inspect.Config.Entrypoint...)
+		cfg.Cmd = append([]string(nil), inspect.Config.Cmd...)
+		cfg.Env = envSliceToMap(inspect.Config.Env)
+		cfg.Labels = cloneStringMap(inspect.Config.Labels)
+		cfg.ExposedPorts = genericPortsFromPodmanExposedPorts(inspect.Config.ExposedPorts)
+		cfg.Healthcheck = genericHealthcheckFromPodman(inspect.Config.Healthcheck)
+	}
+
+	if inspect.HostConfig != nil {
+		cfg.Binds = append([]string(nil), inspect.HostConfig.Binds...)
+		cfg.PortBindings = genericPortsFromPodmanPortBindings(inspect.HostConfig.PortBindings)
+		cfg.NetworkMode = inspect.HostConfig.NetworkMode
+		cfg.PidMode = inspect.HostConfig.PidMode
+		cfg.ExtraHosts = append([]string(nil), inspect.HostConfig.ExtraHosts...)
+		cfg.DNS = &types.DNSConfig{
+			Servers: append([]string(nil), inspect.HostConfig.Dns...),
+			Options: append([]string(nil), inspect.HostConfig.DnsOptions...),
+			Search:  append([]string(nil), inspect.HostConfig.DnsSearch...),
+		}
+		cfg.CapAdd = append([]string(nil), inspect.HostConfig.CapAdd...)
+		cfg.Devices = genericDevicesFromPodman(inspect.HostConfig.Devices)
+		cfg.Tmpfs = cloneStringMap(inspect.HostConfig.Tmpfs)
+		cfg.ShmSize = inspect.HostConfig.ShmSize
+		cfg.CPUQuota = inspect.HostConfig.CpuQuota
+		cfg.CPUPeriod = int64(inspect.HostConfig.CpuPeriod)
+		cfg.CPUSet = inspect.HostConfig.CpusetCpus
+		cfg.Memory = inspect.HostConfig.Memory
+		if inspect.HostConfig.RestartPolicy != nil {
+			cfg.RestartPolicy = inspect.HostConfig.RestartPolicy.Name
+		}
+	}
+
+	if inspect.NetworkSettings != nil {
+		netName := ""
+		if inspect.Config != nil {
+			netName = inspect.Config.Labels["clab-net-mgmt"]
+		}
+		if netName != "" {
+			if networkSettings, ok := inspect.NetworkSettings.Networks[netName]; ok && networkSettings != nil {
+				cfg.Aliases = append([]string(nil), networkSettings.Aliases...)
+				cfg.MacAddress = networkSettings.MacAddress
+			}
+		}
+	}
+
+	return cfg
+}
+
+func envSliceToMap(values []string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	result := make(map[string]string, len(values))
+	for _, value := range values {
+		key, val, ok := strings.Cut(value, "=")
+		if !ok {
+			result[value] = ""
+			continue
+		}
+		result[key] = val
+	}
+
+	return result
+}
+
+func cloneStringMap(values map[string]string) map[string]string {
+	if len(values) == 0 {
+		return nil
+	}
+
+	result := make(map[string]string, len(values))
+	for key, value := range values {
+		result[key] = value
+	}
+
+	return result
+}
+
+func genericPortsFromPodmanExposedPorts(
+	portSet map[string]struct{},
+) []*types.GenericPortBinding {
+	if len(portSet) == 0 {
+		return nil
+	}
+
+	result := make([]*types.GenericPortBinding, 0, len(portSet))
+	for portSpec := range portSet {
+		containerPort, protocol, ok := parsePodmanPortSpec(portSpec)
+		if !ok {
+			continue
+		}
+		result = append(result, &types.GenericPortBinding{
+			ContainerPort: containerPort,
+			Protocol:      protocol,
+		})
+	}
+
+	return result
+}
+
+func genericPortsFromPodmanPortBindings(
+	portMap map[string][]podmandefine.InspectHostPort,
+) []*types.GenericPortBinding {
+	if len(portMap) == 0 {
+		return nil
+	}
+
+	var result []*types.GenericPortBinding
+	for portSpec, bindings := range portMap {
+		containerPort, protocol, ok := parsePodmanPortSpec(portSpec)
+		if !ok {
+			continue
+		}
+		for _, binding := range bindings {
+			hostPort, _ := strconv.Atoi(binding.HostPort)
+			result = append(result, &types.GenericPortBinding{
+				HostIP:        binding.HostIP,
+				HostPort:      hostPort,
+				ContainerPort: containerPort,
+				Protocol:      protocol,
+			})
+		}
+	}
+
+	return result
+}
+
+func parsePodmanPortSpec(portSpec string) (int, string, bool) {
+	parts := strings.SplitN(portSpec, "/", 2)
+	if len(parts) != 2 {
+		return 0, "", false
+	}
+	containerPort, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, "", false
+	}
+	return containerPort, parts[1], true
+}
+
+func genericHealthcheckFromPodman(
+	h *manifest.Schema2HealthConfig,
+) *types.HealthcheckConfig {
+	if h == nil {
+		return nil
+	}
+
+	return &types.HealthcheckConfig{
+		Test:        append([]string(nil), h.Test...),
+		Interval:    int(h.Interval / time.Second),
+		Timeout:     int(h.Timeout / time.Second),
+		Retries:     h.Retries,
+		StartPeriod: int(h.StartPeriod / time.Second),
+	}
+}
+
+func genericDevicesFromPodman(devices []podmandefine.InspectDevice) []string {
+	if len(devices) == 0 {
+		return nil
+	}
+
+	result := make([]string, 0, len(devices))
+	for _, device := range devices {
+		result = append(result, strings.Join([]string{
+			device.PathOnHost,
+			device.PathInContainer,
+			device.CgroupPermissions,
+		}, ":"))
+	}
+
+	return result
+}
+
 func netTypesPortMappingToGenericPortBinding(pm netTypes.PortMapping) []*types.GenericPortBinding {
 	// convert netTypes.PortMapping to types.GenericPort
 	// resolving the ranges into single port entries
@@ -381,26 +583,37 @@ func netTypesPortMappingToGenericPortBinding(pm netTypes.PortMapping) []*types.G
 	return result
 }
 
-func (*PodmanRuntime) extractMgmtIP(
+func (r *PodmanRuntime) extractMgmtIP(
 	ctx context.Context,
 	cID string,
 ) (runtime.GenericMgmtIPs, error) {
 	// First get all the data from the inspect
-	toReturn := runtime.GenericMgmtIPs{}
 	inspectRes, err := containers.Inspect(ctx, cID, &containers.InspectOptions{})
 	if err != nil {
 		log.Debugf("Couldn't extract mgmt IPs for container %q, %v", cID, err)
+	}
+	return r.extractMgmtIPFromInspect(cID, inspectRes), nil
+}
+
+func (*PodmanRuntime) extractMgmtIPFromInspect(
+	cID string,
+	inspectRes *podmandefine.InspectContainerData,
+) runtime.GenericMgmtIPs {
+	toReturn := runtime.GenericMgmtIPs{}
+	if inspectRes == nil || inspectRes.Config == nil || inspectRes.NetworkSettings == nil {
+		log.Debugf("Couldn't extract mgmt IPs for container %q", cID)
+		return toReturn
 	}
 	// Extract the data only for a specific CNI. Network name is taken from a container's label
 	netName, ok := inspectRes.Config.Labels["clab-net-mgmt"]
 	if !ok || netName == "" {
 		log.Debugf("Couldn't extract mgmt net data for container %q", cID)
-		return toReturn, nil
+		return toReturn
 	}
 	mgmtData, ok := inspectRes.NetworkSettings.Networks[netName]
 	if !ok || mgmtData == nil {
 		log.Debugf("Couldn't extract mgmt IPs for container %q and net %q", cID, netName)
-		return toReturn, nil
+		return toReturn
 	}
 	log.Debugf("extractMgmtIPs was called and we got a struct %T %+v", mgmtData, mgmtData)
 	v4addr := mgmtData.IPAddress
@@ -416,7 +629,7 @@ func (*PodmanRuntime) extractMgmtIP(
 		IPv6pLen: v6pLen,
 		IPv4Gw:   v4Gw,
 	}
-	return toReturn, nil
+	return toReturn
 }
 
 func (r *PodmanRuntime) disableTXOffload(_ context.Context) error {
