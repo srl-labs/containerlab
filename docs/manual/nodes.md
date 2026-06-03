@@ -633,6 +633,12 @@ When you want the `exec` command to have access to the env variables defined in 
 
 ///
 
+/// note | exec and VM-based (vrnetlab) kinds
+For VM-based kinds (vrnetlab integration, e.g. `sonic-vm` and other [VM-based routers](vrnetlab.md)), `exec` runs the command inside the launcher container that wraps the VM, not inside the guest VM itself. The container is only the QEMU wrapper, so guest network-OS commands (e.g. SONiC `show version`) are not on the container's `PATH` and fail with `executable file not found in $PATH`.
+
+To run commands against the guest network OS, connect to the node over SSH at its management address (or use the node's native CLI), as described on the node's kind documentation page.
+///
+
 ### memory
 
 By default, container runtimes do not impose any memory resource constraints[^1].
