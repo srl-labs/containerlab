@@ -2,7 +2,6 @@
 Library             OperatingSystem
 Library             SSHLibrary
 Library             Collections
-Library             String
 Resource            ../common.robot
 
 Suite Teardown      Run Keyword    Cleanup
@@ -45,8 +44,7 @@ Verify link eth2 in keysight_ixia-c-one node n1
 *** Keywords ***
 Output Should Contain Link State Up
     [Arguments]    ${output}
-    ${output} =    Replace String Using Regexp    ${output}    \\x1b\\[[0-?]*[ -/]*[@-~]    ${EMPTY}
-    Should Contain    ${output}    state UP
+    Should Match Regexp    ${output}    state\\s+(\\x1b\\[[0-?]*[ -/]*[@-~])?UP
 
 Cleanup
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
