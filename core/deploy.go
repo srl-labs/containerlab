@@ -239,6 +239,11 @@ func (c *CLab) Deploy( //nolint: funlen
 		log.Errorf("failed to create ssh config file: %v", err)
 	}
 
+	// save the state file for future applies
+	if err = c.WriteState(); err != nil {
+		log.Warnf("failed to write state file: %v", err)
+	}
+
 	return containers, nil
 }
 

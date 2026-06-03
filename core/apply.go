@@ -16,6 +16,7 @@ import (
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
@@ -59,12 +60,13 @@ type applyPlan struct {
 	currentNodes       map[string]*applyRuntimeNode
 	addedNodeSet       map[string]struct{}
 	recreatedNodeSet   map[string]struct{}
+	restartNodeSet     map[string]struct{}
 	addedLinks         []clablinks.Link
 	plannedLinkSet     map[int]struct{}
 	staleEndpoints     []applyEndpointRef
-	affectedNodeSet    map[string]struct{}
 	desiredEndpointSet map[applyEndpointKey]struct{}
 	liveEndpointSet    map[applyEndpointKey]struct{}
+	state              *LabState
 }
 
 var errApplyInterfaceUnowned = errors.New("interface is not marked as containerlab-owned")
@@ -78,6 +80,7 @@ func (p *applyPlan) empty() bool {
 		len(p.result.AddedNodes) == 0 &&
 		len(p.result.DeletedNodes) == 0 &&
 		len(p.result.RecreatedNodes) == 0 &&
+		len(p.restartNodeSet) == 0 &&
 		len(p.result.AddedLinks) == 0 &&
 		len(p.result.DeletedEndpoints) == 0
 }
@@ -146,10 +149,6 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
-	if err := c.checkApplySupported(currentNodes); err != nil {
-		return nil, err
-	}
-
 	if err := c.checkApplyTopologyDefinition(ctx); err != nil {
 		return nil, err
 	}
@@ -193,11 +192,9 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
-	restarted, err := c.restartApplyNodes(ctx, plan.affectedNodeSet)
-	if err != nil {
+	if err := c.reconcileNodes(ctx, plan); err != nil {
 		return nil, err
 	}
-	plan.result.RestartedNodes = restarted
 
 	if err := c.updateApplyRuntimeInfo(ctx); err != nil {
 		return nil, err
@@ -205,6 +202,10 @@ func (c *CLab) Apply(
 
 	if err := c.regenerateApplyArtifacts(ctx, options.exportTemplate); err != nil {
 		return nil, err
+	}
+
+	if err := c.WriteState(); err != nil {
+		log.Warnf("failed to write state file: %v", err)
 	}
 
 	return plan.result, nil
@@ -306,98 +307,6 @@ func (c *CLab) runtimeNodeContainers(
 	return result, nil
 }
 
-func (c *CLab) checkApplySupported(
-	currentNodes map[string]*applyRuntimeNode,
-) error {
-	var unsupported []string
-
-	for _, nodeName := range sortedNodeNames(c.Nodes) {
-		n := c.Nodes[nodeName]
-		cfg := n.Config()
-
-		switch {
-		case cfg.IsRootNamespaceBased:
-			unsupported = append(unsupported, fmt.Sprintf("%s: root namespace node", cfg.ShortName))
-		case cfg.AutoRemove:
-			unsupported = append(unsupported, fmt.Sprintf("%s: auto-remove node", cfg.ShortName))
-		case cfg.SkipUniquenessCheck:
-			unsupported = append(unsupported, fmt.Sprintf("%s: external/pre-existing node", cfg.ShortName))
-		case strings.HasPrefix(cfg.NetworkMode, "container:"):
-			unsupported = append(unsupported, fmt.Sprintf("%s: shared container namespace", cfg.ShortName))
-		}
-	}
-
-	for nodeName, runtimeNode := range currentNodes {
-		n, exists := c.Nodes[nodeName]
-		if !exists {
-			continue
-		}
-
-		cfg := n.Config()
-		desiredDistributed := len(cfg.Components) > 1
-		if runtimeNode.distributed != desiredDistributed {
-			unsupported = append(
-				unsupported,
-				fmt.Sprintf("%s: distributed component layout changed", cfg.ShortName),
-			)
-		} else if desiredDistributed {
-			desiredComponents := desiredApplyComponentNames(n)
-			runtimeComponents := runtimeApplyComponentNames(runtimeNode)
-			if strings.Join(desiredComponents, "\x00") != strings.Join(runtimeComponents, "\x00") {
-				unsupported = append(
-					unsupported,
-					fmt.Sprintf("%s: distributed component layout changed", cfg.ShortName),
-				)
-			}
-		}
-
-		for _, ctr := range runtimeNode.containers {
-			if runtimeNode.distributed {
-				checkRuntimeLabel(
-					&unsupported,
-					ctr,
-					clabconstants.RootNodeLongName,
-					cfg.LongName,
-					cfg.ShortName,
-				)
-			} else {
-				checkRuntimeLabel(&unsupported, ctr, clabconstants.LongName, cfg.LongName, cfg.ShortName)
-			}
-			checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeKind, cfg.Kind, cfg.ShortName)
-			checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeType, cfg.NodeType, cfg.ShortName)
-			checkRuntimeLabel(&unsupported, ctr, clabconstants.NodeGroup, cfg.Group, cfg.ShortName)
-		}
-	}
-
-	if len(unsupported) > 0 {
-		sort.Strings(unsupported)
-		return fmt.Errorf(
-			"apply unsupported for: %s; use redeploy or deploy --reconfigure",
-			strings.Join(unsupported, "; "),
-		)
-	}
-
-	return nil
-}
-
-func checkRuntimeLabel(
-	unsupported *[]string,
-	ctr clabruntime.GenericContainer,
-	label,
-	want,
-	nodeName string,
-) {
-	got, exists := ctr.Labels[label]
-	if !exists || got == want {
-		return
-	}
-
-	*unsupported = append(
-		*unsupported,
-		fmt.Sprintf("%s: runtime label %s=%q, desired %q", nodeName, label, got, want),
-	)
-}
-
 func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 	if err := c.verifyLinks(ctx); err != nil {
 		return err
@@ -420,6 +329,12 @@ func (c *CLab) planApply(
 	ctx context.Context,
 	currentNodes map[string]*applyRuntimeNode,
 ) (*applyPlan, error) {
+
+	state, err := c.LoadState()
+	if err != nil {
+		log.Warn("Failed to load state file", "error", err)
+	}
+
 	plan := &applyPlan{
 		result: &ApplyResult{
 			AddedNodes:       []string{},
@@ -432,10 +347,11 @@ func (c *CLab) planApply(
 		currentNodes:       currentNodes,
 		addedNodeSet:       map[string]struct{}{},
 		recreatedNodeSet:   map[string]struct{}{},
+		restartNodeSet:     map[string]struct{}{},
 		plannedLinkSet:     map[int]struct{}{},
-		affectedNodeSet:    map[string]struct{}{},
 		desiredEndpointSet: map[applyEndpointKey]struct{}{},
 		liveEndpointSet:    map[applyEndpointKey]struct{}{},
+		state:              state,
 	}
 
 	for _, nodeName := range sortedNodeNames(c.Nodes) {
@@ -459,6 +375,8 @@ func (c *CLab) planApply(
 			plan.result.DeletedNodes = append(plan.result.DeletedNodes, nodeName)
 		}
 	}
+
+	c.detectNodeChanges(plan)
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
 		for _, ep := range clablinks.ApplyRuntimeEndpoints(c.Links[linkIdx]) {
@@ -760,8 +678,8 @@ func (c *CLab) planAffectedApplyNode(
 	if plan == nil || nodeName == "" {
 		return
 	}
-	if plan.affectedNodeSet == nil {
-		plan.affectedNodeSet = map[string]struct{}{}
+	if plan.restartNodeSet == nil {
+		plan.restartNodeSet = map[string]struct{}{}
 	}
 	if plan.recreatedNodeSet == nil {
 		plan.recreatedNodeSet = map[string]struct{}{}
@@ -769,7 +687,7 @@ func (c *CLab) planAffectedApplyNode(
 	if plan.addedNodeSet == nil {
 		plan.addedNodeSet = map[string]struct{}{}
 	}
-	if _, planned := plan.affectedNodeSet[nodeName]; planned {
+	if _, planned := plan.restartNodeSet[nodeName]; planned {
 		return
 	}
 	if _, planned := plan.recreatedNodeSet[nodeName]; planned {
@@ -785,7 +703,7 @@ func (c *CLab) planAffectedApplyNode(
 	case clabnodes.LinkApplyModeLive:
 		log.Info("Applying link change without node lifecycle action", "node", nodeName, "change", change)
 	case clabnodes.LinkApplyModeRestart:
-		plan.affectedNodeSet[nodeName] = struct{}{}
+		plan.restartNodeSet[nodeName] = struct{}{}
 	case clabnodes.LinkApplyModeRecreate:
 		plan.recreatedNodeSet[nodeName] = struct{}{}
 		plan.addedNodeSet[nodeName] = struct{}{}
@@ -810,6 +728,87 @@ func applyNodeLinkApplyMode(node clabnodes.Node) clabnodes.LinkApplyMode {
 	default:
 		return clabnodes.LinkApplyModeRecreate
 	}
+}
+
+// detectNodeChanges checks which nodes have config changes for dry-run/empty check.
+func (c *CLab) detectNodeChanges(plan *applyPlan) {
+	if plan == nil || plan.currentNodes == nil {
+		return
+	}
+
+	var oldTopo *clabtypes.Topology
+	if plan.state != nil {
+		oldTopo = plan.state.Topology
+	}
+
+	for nodeName := range plan.currentNodes {
+		if _, exists := c.Nodes[nodeName]; !exists {
+			continue
+		}
+		if _, added := plan.addedNodeSet[nodeName]; added {
+			continue
+		}
+
+		diff := clabtypes.ComputeTopologyDiff(oldTopo, c.Config.Topology, nodeName)
+		if !diff.HasDiff() {
+			continue
+		}
+
+		switch diff.DefaultAction() {
+		case clabtypes.TopologyDiffActionRestart:
+			plan.restartNodeSet[nodeName] = struct{}{}
+		case clabtypes.TopologyDiffActionRecreate:
+			plan.recreatedNodeSet[nodeName] = struct{}{}
+			plan.addedNodeSet[nodeName] = struct{}{}
+		}
+	}
+}
+
+// reconcileNodes calls Reconcile on each existing node.
+func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
+	if plan == nil || plan.currentNodes == nil {
+		return nil
+	}
+
+	var oldTopo *clabtypes.Topology
+	if plan.state != nil {
+		oldTopo = plan.state.Topology
+	}
+
+	for nodeName := range plan.currentNodes {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			continue
+		}
+		if _, added := plan.addedNodeSet[nodeName]; added {
+			continue
+		}
+
+		diff := clabtypes.ComputeTopologyDiff(oldTopo, c.Config.Topology, nodeName)
+
+		result, err := node.Reconcile(ctx, diff)
+		if err != nil {
+			return fmt.Errorf("reconcile failed for node %q: %w", nodeName, err)
+		}
+
+		switch result.Action {
+		case clabtypes.TopologyDiffActionRestart:
+			if err := c.waitNodeRunning(ctx, node); err != nil {
+				return err
+			}
+			if err := c.waitNodeHealthyIfAvailable(ctx, node); err != nil {
+				return err
+			}
+			plan.result.RestartedNodes = append(plan.result.RestartedNodes, result.Restarted...)
+
+		case clabtypes.TopologyDiffActionRecreate:
+			plan.recreatedNodeSet[nodeName] = struct{}{}
+			plan.addedNodeSet[nodeName] = struct{}{}
+			plan.result.RecreatedNodes = append(plan.result.RecreatedNodes, result.Recreated...)
+		}
+	}
+
+	return nil
 }
 
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
@@ -1147,36 +1146,6 @@ func (c *CLab) postDeployApplyNodes(
 	execCollection.Log()
 
 	return nil
-}
-
-func (c *CLab) restartApplyNodes(
-	ctx context.Context,
-	affectedNodeSet map[string]struct{},
-) ([]string, error) {
-	nodeNames := sortedStringSet(affectedNodeSet)
-	restarted := make([]string, 0, len(nodeNames))
-
-	for _, nodeName := range nodeNames {
-		node := c.Nodes[nodeName]
-		log.Info("Restarting node after link apply", "node", nodeName)
-
-		if err := node.Stop(ctx); err != nil {
-			return restarted, err
-		}
-		if err := node.Start(ctx); err != nil {
-			return restarted, err
-		}
-		if err := c.waitNodeRunning(ctx, node); err != nil {
-			return restarted, err
-		}
-		if err := c.waitNodeHealthyIfAvailable(ctx, node); err != nil {
-			return restarted, err
-		}
-
-		restarted = append(restarted, nodeName)
-	}
-
-	return restarted, nil
 }
 
 func (c *CLab) waitNodeRunning(ctx context.Context, node clabnodes.Node) error {

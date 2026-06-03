@@ -99,6 +99,14 @@ type PostDeployParams struct {
 	Nodes map[string]Node
 }
 
+type ReconcileResult struct {
+	Action    clabtypes.TopologyDiffAction
+	Restarted []string
+	Recreated []string
+	Created   []string
+	Deleted   []string
+}
+
 // Node is an interface that defines the behavior of a node.
 type Node interface {
 	Init(*clabtypes.NodeConfig, ...NodeOption) error
@@ -164,6 +172,8 @@ type Node interface {
 	GetNSPath(ctx context.Context) (string, error)
 	// Generate the host entries for this node
 	GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error)
+	// Reconcile takes diff, determines what action to take, and executes it.
+	Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error)
 }
 
 type NodeOption func(Node)

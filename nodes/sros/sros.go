@@ -2178,3 +2178,38 @@ func (n *sros) Stop(ctx context.Context) error {
 
 	return nil
 }
+
+func (n *sros) Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*clabnodes.ReconcileResult, error) {
+	result := &clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionNone}
+
+	if diff == nil || !diff.HasDiff() {
+		return result, nil
+	}
+
+	action := diff.DefaultAction()
+	result.Action = action
+
+	log.Info("Reconciling node", "node", n.Cfg.ShortName, "action", action, "fields", diff.Fields)
+
+	switch action {
+	case clabtypes.TopologyDiffActionNone:
+		return result, nil
+
+	case clabtypes.TopologyDiffActionRestart:
+		if err := n.Stop(ctx); err != nil {
+			return result, fmt.Errorf("stop failed: %w", err)
+		}
+		if err := n.Start(ctx); err != nil {
+			return result, fmt.Errorf("start failed: %w", err)
+		}
+		result.Restarted = []string{n.Cfg.LongName}
+
+	case clabtypes.TopologyDiffActionRecreate:
+		if err := n.Delete(ctx); err != nil {
+			return result, fmt.Errorf("delete failed: %w", err)
+		}
+		result.Recreated = []string{n.Cfg.LongName}
+	}
+
+	return result, nil
+}

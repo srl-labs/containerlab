@@ -228,6 +228,42 @@ func (d *DefaultNode) SupportsLiveLinkApply() bool {
 	return d.LinkApplyMode() == LinkApplyModeLive
 }
 
+// Reconcile applies the diff and executes the appropriate action (restart/recreate).
+func (d *DefaultNode) Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error) {
+	result := &ReconcileResult{Action: clabtypes.TopologyDiffActionNone}
+
+	if diff == nil || !diff.HasDiff() {
+		return result, nil
+	}
+
+	action := diff.DefaultAction()
+	result.Action = action
+
+	log.Info("Reconciling node", "node", d.Cfg.ShortName, "action", action, "fields", diff.Fields)
+
+	switch action {
+	case clabtypes.TopologyDiffActionNone:
+		return result, nil
+
+	case clabtypes.TopologyDiffActionRestart:
+		if err := d.Stop(ctx); err != nil {
+			return result, fmt.Errorf("stop failed: %w", err)
+		}
+		if err := d.Start(ctx); err != nil {
+			return result, fmt.Errorf("start failed: %w", err)
+		}
+		result.Restarted = []string{d.Cfg.LongName}
+
+	case clabtypes.TopologyDiffActionRecreate:
+		if err := d.Delete(ctx); err != nil {
+			return result, fmt.Errorf("delete failed: %w", err)
+		}
+		result.Recreated = []string{d.Cfg.LongName}
+	}
+
+	return result, nil
+}
+
 func (d *DefaultNode) parkingNetNSName() string {
 	return clabutils.ParkingNetnsName(d.Cfg.LongName)
 }
