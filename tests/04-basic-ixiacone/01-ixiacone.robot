@@ -2,6 +2,7 @@
 Library             OperatingSystem
 Library             SSHLibrary
 Library             Collections
+Library             String
 Resource            ../common.robot
 
 Suite Teardown      Run Keyword    Cleanup
@@ -31,17 +32,22 @@ Verify link eth1 in keysight_ixia-c-one node n1
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${ixia-node-name} --cmd "docker exec -t ixia-c-port-dp-${ifc1-name} ip link show ${ifc1-name}"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    state UP
+    Output Should Contain Link State Up    ${output}
 
 Verify link eth2 in keysight_ixia-c-one node n1
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    ${CLAB_BIN} --runtime ${runtime} exec -t ${CURDIR}/${lab-file-name} --label clab-node-name\=${ixia-node-name} --cmd "docker exec -t ixia-c-port-dp-${ifc2-name} ip link show ${ifc2-name}"
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    state UP
+    Output Should Contain Link State Up    ${output}
 
 
 *** Keywords ***
+Output Should Contain Link State Up
+    [Arguments]    ${output}
+    ${output} =    Replace String Using Regexp    ${output}    \\x1b\\[[0-?]*[ -/]*[@-~]    ${EMPTY}
+    Should Contain    ${output}    state UP
+
 Cleanup
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file-name} --cleanup
     Run    rm -rf ${CURDIR}/${lab-name}
