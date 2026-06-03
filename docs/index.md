@@ -29,7 +29,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 * [SONiC](manual/kinds/sonic-vs.md)
 * [Juniper cRPD](manual/kinds/crpd.md)
 * [Juniper cSRX](manual/kinds/csrx.md)
-* [Cumulus VX](manual/kinds/cvx.md)
+* [NVIDIA Cumulus VX](manual/kinds/nvidia_cumulusvx.md)
 * [Keysight IXIA-C](manual/kinds/keysight_ixia-c-one.md)
 * [RARE/freeRtr](manual/kinds/rare-freertr.md)
 * [Ostinato](manual/kinds/ostinato.md)

@@ -62,7 +62,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Cisco Catalyst 9000v**   | [`cisco_cat9kv`](vr-cat9kv.md)                      | supported |    VM     |
 | **Cisco IOL**              | [`cisco_iol`](cisco_iol.md)                         | supported | container |
 | **Cisco FTDv**             | [`cisco_ftdv`](vr-ftdv.md)                          | supported |    VM     |
-| **Cumulus VX**             | [`cumulus_cvx`](cvx.md)                             | supported | container |
+| **Nvidia Cumulus VX**      | [`nvidia_cumulusvx`](nvidia_cumulusvx.md)           | supported |    VM     |
 | **Aruba ArubaOS-CX**       | [`aruba_aoscx`](vr-aoscx.md)                        | supported |    VM     |
 | **SONiC (VS)**             | [`sonic-vs`](sonic-vs.md)                           | supported | container |
 | **SONiC VM**               | [`sonic-vm`](sonic-vm.md)                           | supported |    VM     |
@@ -95,4 +95,3 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Host**                   | [`host`](host.md)                                   | supported |    N/A    |
 
 Refer to a specific kind documentation article for kind-specific details.
-
