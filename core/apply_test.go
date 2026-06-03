@@ -27,11 +27,11 @@ type applyFakeLinkNode struct {
 
 type applyLiveMockNode struct {
 	*clabmocksmocknodes.MockNode
-	supportsLiveApply bool
+	linkApplyMode clabnodes.LinkApplyMode
 }
 
-func (n *applyLiveMockNode) SupportsLiveLinkApply() bool {
-	return n.supportsLiveApply
+func (n *applyLiveMockNode) LinkApplyMode() clabnodes.LinkApplyMode {
+	return n.linkApplyMode
 }
 
 func (n *applyFakeLinkNode) AddLinkToContainer(
@@ -206,38 +206,89 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 	}
 }
 
-func TestApplyNodeRequiresRestart(t *testing.T) {
+func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
+	t.Parallel()
+
+	n1 := &applyFakeLinkNode{name: "n1"}
+	n2 := &applyFakeLinkNode{name: "n2"}
+	n3 := &applyFakeLinkNode{name: "n3"}
+
+	link1 := clablinks.NewLinkVEth()
+	link1.Endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n1, "eth1", link1)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n2, "eth1", link1)),
+	}
+	link2 := clablinks.NewLinkVEth()
+	link2.Endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n3, "eth1", link2)),
+		clablinks.NewEndpointVeth(clablinks.NewEndpointGeneric(n1, "eth2", link2)),
+	}
+
+	c := &CLab{
+		Links: map[int]clablinks.Link{
+			0: link1,
+			1: link2,
+		},
+	}
+	plan := &applyPlan{
+		result:           &ApplyResult{AddedLinks: []string{applyLinkName(link2)}},
+		recreatedNodeSet: map[string]struct{}{"n1": {}},
+		plannedLinkSet:   map[int]struct{}{1: {}},
+		addedLinks:       []clablinks.Link{link2},
+	}
+
+	c.planRecreatedNodeLinks(plan)
+
+	if got, want := len(plan.addedLinks), 2; got != want {
+		t.Fatalf("planned links = %d, want %d", got, want)
+	}
+	if plan.addedLinks[0] != link2 {
+		t.Fatalf("expected pre-planned link to stay first")
+	}
+	if plan.addedLinks[1] != link1 {
+		t.Fatalf("expected unchanged recreated-node link to be planned")
+	}
+	if got, want := len(plan.result.AddedLinks), 2; got != want {
+		t.Fatalf("reported added links = %d, want %d", got, want)
+	}
+}
+
+func TestApplyNodeLinkApplyMode(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name         string
-		exec         []string
-		hasLiveApply bool
-		supportsLive bool
-		want         bool
+		name    string
+		hasMode bool
+		mode    clabnodes.LinkApplyMode
+		want    clabnodes.LinkApplyMode
 	}{
 		{
-			name:         "live capable node without exec",
-			hasLiveApply: true,
-			supportsLive: true,
-			want:         false,
+			name:    "live node",
+			hasMode: true,
+			mode:    clabnodes.LinkApplyModeLive,
+			want:    clabnodes.LinkApplyModeLive,
 		},
 		{
-			name:         "live capable node with exec",
-			exec:         []string{"ip addr add 192.0.2.1/30 dev eth1"},
-			hasLiveApply: true,
-			supportsLive: true,
-			want:         true,
+			name:    "restart node",
+			hasMode: true,
+			mode:    clabnodes.LinkApplyModeRestart,
+			want:    clabnodes.LinkApplyModeRestart,
 		},
 		{
-			name:         "live incapable node",
-			hasLiveApply: true,
-			supportsLive: false,
-			want:         true,
+			name:    "recreate node",
+			hasMode: true,
+			mode:    clabnodes.LinkApplyModeRecreate,
+			want:    clabnodes.LinkApplyModeRecreate,
 		},
 		{
-			name: "node without live capability",
-			want: true,
+			name:    "invalid mode defaults to recreate",
+			hasMode: true,
+			mode:    clabnodes.LinkApplyMode("invalid"),
+			want:    clabnodes.LinkApplyModeRecreate,
+		},
+		{
+			name: "node without mode defaults to recreate",
+			want: clabnodes.LinkApplyModeRecreate,
 		},
 	}
 
@@ -245,21 +296,17 @@ func TestApplyNodeRequiresRestart(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mockNode := clabmocksmocknodes.NewMockNode(ctrl)
-			mockNode.EXPECT().
-				Config().
-				Return(&clabtypes.NodeConfig{ShortName: "n1", Exec: tt.exec}).
-				AnyTimes()
 
 			var node clabnodes.Node = mockNode
-			if tt.hasLiveApply {
+			if tt.hasMode {
 				node = &applyLiveMockNode{
-					MockNode:          mockNode,
-					supportsLiveApply: tt.supportsLive,
+					MockNode:      mockNode,
+					linkApplyMode: tt.mode,
 				}
 			}
 
-			if got := applyNodeRequiresRestart(node); got != tt.want {
-				t.Fatalf("applyNodeRequiresRestart() = %v, want %v", got, tt.want)
+			if got := applyNodeLinkApplyMode(node); got != tt.want {
+				t.Fatalf("applyNodeLinkApplyMode() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -269,36 +316,33 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name         string
-		change       string
-		exec         []string
-		supportsLive bool
-		wantAffected bool
+		name          string
+		change        string
+		mode          clabnodes.LinkApplyMode
+		wantRestart   bool
+		wantRecreated bool
 	}{
 		{
-			name:         "added link on live capable node skips restart",
-			change:       "added link",
-			supportsLive: true,
-			wantAffected: false,
+			name:   "added link on live capable node skips lifecycle",
+			change: "added link",
+			mode:   clabnodes.LinkApplyModeLive,
 		},
 		{
-			name:         "deleted endpoint on live capable node skips restart",
-			change:       "deleted endpoint",
-			supportsLive: true,
-			wantAffected: false,
+			name:   "deleted endpoint on live capable node skips lifecycle",
+			change: "deleted endpoint",
+			mode:   clabnodes.LinkApplyModeLive,
 		},
 		{
-			name:         "added link on vm node restarts",
-			change:       "added link",
-			supportsLive: false,
-			wantAffected: true,
+			name:        "added link on restart node restarts",
+			change:      "added link",
+			mode:        clabnodes.LinkApplyModeRestart,
+			wantRestart: true,
 		},
 		{
-			name:         "deleted endpoint on exec node restarts",
-			change:       "deleted endpoint",
-			exec:         []string{"ip addr add 192.0.2.1/30 dev eth1"},
-			supportsLive: true,
-			wantAffected: true,
+			name:          "deleted endpoint on default node recreates",
+			change:        "deleted endpoint",
+			mode:          clabnodes.LinkApplyModeRecreate,
+			wantRecreated: true,
 		},
 	}
 
@@ -306,26 +350,36 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mockNode := clabmocksmocknodes.NewMockNode(ctrl)
-			mockNode.EXPECT().
-				Config().
-				Return(&clabtypes.NodeConfig{ShortName: "n1", Exec: tt.exec}).
-				AnyTimes()
 
 			c := &CLab{
 				Nodes: map[string]clabnodes.Node{
 					"n1": &applyLiveMockNode{
-						MockNode:          mockNode,
-						supportsLiveApply: tt.supportsLive,
+						MockNode:      mockNode,
+						linkApplyMode: tt.mode,
 					},
 				},
 			}
-			plan := &applyPlan{affectedNodeSet: map[string]struct{}{}}
+			plan := &applyPlan{
+				addedNodeSet:     map[string]struct{}{},
+				affectedNodeSet:  map[string]struct{}{},
+				recreatedNodeSet: map[string]struct{}{},
+			}
 
 			c.planAffectedApplyNode(plan, "n1", tt.change)
 
 			_, affected := plan.affectedNodeSet["n1"]
-			if affected != tt.wantAffected {
-				t.Fatalf("affected = %v, want %v", affected, tt.wantAffected)
+			if affected != tt.wantRestart {
+				t.Fatalf("restart = %v, want %v", affected, tt.wantRestart)
+			}
+
+			_, recreated := plan.recreatedNodeSet["n1"]
+			if recreated != tt.wantRecreated {
+				t.Fatalf("recreated = %v, want %v", recreated, tt.wantRecreated)
+			}
+
+			_, deployNode := plan.addedNodeSet["n1"]
+			if deployNode != tt.wantRecreated {
+				t.Fatalf("deploy node = %v, want %v", deployNode, tt.wantRecreated)
 			}
 		})
 	}

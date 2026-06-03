@@ -35,6 +35,7 @@ func TestPrintApplyResultUsesInfoAndItemRows(t *testing.T) {
 	output := captureApplyOutput(t, func() {
 		printApplyResult(&clabcore.ApplyResult{
 			AddedNodes:       []string{"l3"},
+			RecreatedNodes:   []string{"xrd1"},
 			DeletedEndpoints: []string{"l1:eth2", "l2:eth2"},
 		})
 	})
@@ -46,6 +47,8 @@ func TestPrintApplyResultUsesInfoAndItemRows(t *testing.T) {
 		"Details",
 		"added nodes",
 		"l3",
+		"recreated nodes",
+		"xrd1",
 		"deleted endpoints",
 		"l1:eth2",
 		"l2:eth2",

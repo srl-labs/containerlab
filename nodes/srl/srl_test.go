@@ -10,6 +10,15 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
+func TestSRLLinkApplyMode(t *testing.T) {
+	if got := (&srl{}).LinkApplyMode(); got != clabnodes.LinkApplyModeLive {
+		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeLive)
+	}
+	if !(&srl{}).SupportsLiveLinkApply() {
+		t.Fatal("expected SR Linux to support live link apply")
+	}
+}
+
 func TestSRLInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
 		endpoints        []*clablinks.EndpointVeth

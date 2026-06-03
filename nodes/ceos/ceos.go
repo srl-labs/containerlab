@@ -173,6 +173,10 @@ func (n *ceos) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	return n.ceosPostDeploy(ctx)
 }
 
+func (*ceos) LinkApplyMode() clabnodes.LinkApplyMode {
+	return clabnodes.LinkApplyModeRestart
+}
+
 func (*ceos) SupportsLiveLinkApply() bool {
 	return false
 }

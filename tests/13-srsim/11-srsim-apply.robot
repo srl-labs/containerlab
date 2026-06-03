@@ -69,6 +69,7 @@ Apply adds link to existing component-based SR-SIM node
     ...    ${retry-interval}
     ...    Ping From Client Succeeds
     ...    10.0.1.2
+    Configure Client Interface Address    eth2    10.0.2.1/24
     Wait Until Keyword Succeeds
     ...    ${recovery-timeout}
     ...    ${retry-interval}
@@ -103,6 +104,7 @@ Apply adds SR-SIM node and link
     Node Should Be Running    extra
     Interface Should Exist    client    eth3
     Interface Should Exist    extra    e1-1-c1-1
+    Configure Client Interface Address    eth3    10.0.3.1/24
     Wait Until Keyword Succeeds
     ...    ${recovery-timeout}
     ...    ${retry-interval}
@@ -190,6 +192,17 @@ Interface Should Not Exist
     ...    ${runtime-cli-exec-cmd} clab-${lab-name}-${node} ip link show ${interface}
     Log    ${output}
     Should Not Be Equal As Integers    ${rc}    0
+
+Configure Client Interface Address
+    [Arguments]    ${interface}    ${address}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-client ip link set dev ${interface} up
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-client ip addr add ${address} dev ${interface}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
 
 Ping From Client Succeeds
     [Arguments]    ${destination}

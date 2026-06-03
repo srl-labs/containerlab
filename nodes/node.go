@@ -28,6 +28,22 @@ const (
 	ImageKey = "image"
 )
 
+// LinkApplyMode describes how apply should handle dataplane link changes for a
+// node that already exists in the running lab.
+type LinkApplyMode string
+
+const (
+	// LinkApplyModeRecreate deletes and creates the node so generated runtime
+	// metadata, container env, binds, and startup files are rebuilt.
+	LinkApplyModeRecreate LinkApplyMode = "recreate"
+	// LinkApplyModeRestart adds/removes links first and then restarts the same
+	// container object.
+	LinkApplyModeRestart LinkApplyMode = "restart"
+	// LinkApplyModeLive applies link changes directly without node lifecycle
+	// actions.
+	LinkApplyModeLive LinkApplyMode = "live"
+)
+
 var (
 	// a map of node kinds overriding the default global runtime.
 	NonDefaultRuntimes = map[string]string{}

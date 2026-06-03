@@ -27,6 +27,7 @@ type ApplyResult struct {
 	LabName          string
 	AddedNodes       []string
 	DeletedNodes     []string
+	RecreatedNodes   []string
 	AddedLinks       []string
 	DeletedEndpoints []string
 	RestartedNodes   []string
@@ -57,7 +58,9 @@ type applyPlan struct {
 	result             *ApplyResult
 	currentNodes       map[string]*applyRuntimeNode
 	addedNodeSet       map[string]struct{}
+	recreatedNodeSet   map[string]struct{}
 	addedLinks         []clablinks.Link
+	plannedLinkSet     map[int]struct{}
 	staleEndpoints     []applyEndpointRef
 	affectedNodeSet    map[string]struct{}
 	desiredEndpointSet map[applyEndpointKey]struct{}
@@ -66,14 +69,15 @@ type applyPlan struct {
 
 var errApplyInterfaceUnowned = errors.New("interface is not marked as containerlab-owned")
 
-type liveLinkApplyNode interface {
-	SupportsLiveLinkApply() bool
+type linkApplyModeNode interface {
+	LinkApplyMode() clabnodes.LinkApplyMode
 }
 
 func (p *applyPlan) empty() bool {
 	return !p.result.DeployedLab &&
 		len(p.result.AddedNodes) == 0 &&
 		len(p.result.DeletedNodes) == 0 &&
+		len(p.result.RecreatedNodes) == 0 &&
 		len(p.result.AddedLinks) == 0 &&
 		len(p.result.DeletedEndpoints) == 0
 }
@@ -160,7 +164,8 @@ func (c *CLab) Apply(
 		return plan.result, nil
 	}
 
-	if err := c.prepareApply(ctx, plan.result.AddedNodes); err != nil {
+	deployNodeNames := plan.deployNodeNames()
+	if err := c.prepareApply(ctx, deployNodeNames); err != nil {
 		return nil, err
 	}
 
@@ -172,7 +177,7 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
-	if err := c.deployApplyNodes(ctx, plan.result.AddedNodes, options.maxWorkers); err != nil {
+	if err := c.deployApplyNodes(ctx, deployNodeNames, options.maxWorkers); err != nil {
 		return nil, err
 	}
 
@@ -180,11 +185,11 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
-	if err := c.postDeployApplyLinks(ctx, plan.result.AddedNodes); err != nil {
+	if err := c.postDeployApplyLinks(ctx, deployNodeNames); err != nil {
 		return nil, err
 	}
 
-	if err := c.postDeployApplyNodes(ctx, plan.result.AddedNodes, options.skipPostDeploy); err != nil {
+	if err := c.postDeployApplyNodes(ctx, deployNodeNames, options.skipPostDeploy); err != nil {
 		return nil, err
 	}
 
@@ -419,12 +424,15 @@ func (c *CLab) planApply(
 		result: &ApplyResult{
 			AddedNodes:       []string{},
 			DeletedNodes:     []string{},
+			RecreatedNodes:   []string{},
 			AddedLinks:       []string{},
 			DeletedEndpoints: []string{},
 			RestartedNodes:   []string{},
 		},
 		currentNodes:       currentNodes,
 		addedNodeSet:       map[string]struct{}{},
+		recreatedNodeSet:   map[string]struct{}{},
+		plannedLinkSet:     map[int]struct{}{},
 		affectedNodeSet:    map[string]struct{}{},
 		desiredEndpointSet: map[applyEndpointKey]struct{}{},
 		liveEndpointSet:    map[applyEndpointKey]struct{}{},
@@ -470,8 +478,7 @@ func (c *CLab) planApply(
 			continue
 		}
 
-		plan.addedLinks = append(plan.addedLinks, link)
-		plan.result.AddedLinks = append(plan.result.AddedLinks, applyLinkName(link))
+		plan.addDeployApplyLink(linkIdx, link)
 
 		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
 			nodeName := ep.GetNode().GetShortName()
@@ -486,7 +493,58 @@ func (c *CLab) planApply(
 		}
 	}
 
+	c.planRecreatedNodeLinks(plan)
+	plan.result.RecreatedNodes = sortedStringSet(plan.recreatedNodeSet)
+
 	return plan, nil
+}
+
+func (p *applyPlan) addDeployApplyLink(linkIdx int, link clablinks.Link) {
+	if p == nil || link == nil {
+		return
+	}
+	if p.plannedLinkSet == nil {
+		p.plannedLinkSet = map[int]struct{}{}
+	}
+	if _, planned := p.plannedLinkSet[linkIdx]; planned {
+		return
+	}
+
+	p.plannedLinkSet[linkIdx] = struct{}{}
+	p.addedLinks = append(p.addedLinks, link)
+	if p.result != nil {
+		p.result.AddedLinks = append(p.result.AddedLinks, applyLinkName(link))
+	}
+}
+
+func (c *CLab) planRecreatedNodeLinks(plan *applyPlan) {
+	if plan == nil || len(plan.recreatedNodeSet) == 0 {
+		return
+	}
+
+	for _, linkIdx := range sortedLinkIndexes(c.Links) {
+		link := c.Links[linkIdx]
+		if !linkTouchesNodeSet(link, plan.recreatedNodeSet) {
+			continue
+		}
+
+		plan.addDeployApplyLink(linkIdx, link)
+	}
+}
+
+func linkTouchesNodeSet(link clablinks.Link, nodeSet map[string]struct{}) bool {
+	if len(nodeSet) == 0 {
+		return false
+	}
+
+	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+		key := endpointKeyFromEndpoint(ep)
+		if _, exists := nodeSet[key.node]; exists {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *CLab) planDeletedEndpoints(plan *applyPlan) {
@@ -705,7 +763,16 @@ func (c *CLab) planAffectedApplyNode(
 	if plan.affectedNodeSet == nil {
 		plan.affectedNodeSet = map[string]struct{}{}
 	}
+	if plan.recreatedNodeSet == nil {
+		plan.recreatedNodeSet = map[string]struct{}{}
+	}
+	if plan.addedNodeSet == nil {
+		plan.addedNodeSet = map[string]struct{}{}
+	}
 	if _, planned := plan.affectedNodeSet[nodeName]; planned {
+		return
+	}
+	if _, planned := plan.recreatedNodeSet[nodeName]; planned {
 		return
 	}
 
@@ -714,30 +781,35 @@ func (c *CLab) planAffectedApplyNode(
 		return
 	}
 
-	if applyNodeRequiresRestart(node) {
+	switch applyNodeLinkApplyMode(node) {
+	case clabnodes.LinkApplyModeLive:
+		log.Info("Applying link change without node lifecycle action", "node", nodeName, "change", change)
+	case clabnodes.LinkApplyModeRestart:
 		plan.affectedNodeSet[nodeName] = struct{}{}
-		return
+	case clabnodes.LinkApplyModeRecreate:
+		plan.recreatedNodeSet[nodeName] = struct{}{}
+		plan.addedNodeSet[nodeName] = struct{}{}
 	}
-
-	log.Info("Applying link change without node restart", "node", nodeName, "change", change)
 }
 
-func applyNodeRequiresRestart(node clabnodes.Node) bool {
+func applyNodeLinkApplyMode(node clabnodes.Node) clabnodes.LinkApplyMode {
 	if node == nil {
-		return false
+		return clabnodes.LinkApplyModeRecreate
 	}
 
-	cfg := node.Config()
-	if cfg != nil && len(cfg.Exec) > 0 {
-		return true
-	}
-
-	liveNode, ok := node.(liveLinkApplyNode)
+	modeNode, ok := node.(linkApplyModeNode)
 	if !ok {
-		return true
+		return clabnodes.LinkApplyModeRecreate
 	}
 
-	return !liveNode.SupportsLiveLinkApply()
+	switch mode := modeNode.LinkApplyMode(); mode {
+	case clabnodes.LinkApplyModeLive,
+		clabnodes.LinkApplyModeRestart,
+		clabnodes.LinkApplyModeRecreate:
+		return mode
+	default:
+		return clabnodes.LinkApplyModeRecreate
+	}
 }
 
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
@@ -752,6 +824,36 @@ func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 	}
 
 	return false
+}
+
+func (p *applyPlan) deployNodeNames() []string {
+	if p == nil || p.result == nil {
+		return nil
+	}
+
+	nodeSet := map[string]struct{}{}
+	nodeNames := make(
+		[]string,
+		0,
+		len(p.result.AddedNodes)+len(p.result.RecreatedNodes),
+	)
+
+	for _, nodeName := range p.result.AddedNodes {
+		if _, exists := nodeSet[nodeName]; exists {
+			continue
+		}
+		nodeSet[nodeName] = struct{}{}
+		nodeNames = append(nodeNames, nodeName)
+	}
+	for _, nodeName := range p.result.RecreatedNodes {
+		if _, exists := nodeSet[nodeName]; exists {
+			continue
+		}
+		nodeSet[nodeName] = struct{}{}
+		nodeNames = append(nodeNames, nodeName)
+	}
+
+	return nodeNames
 }
 
 func (c *CLab) prepareApply(
@@ -863,7 +965,15 @@ func (c *CLab) deleteApplyEndpoints(
 }
 
 func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
-	for _, nodeName := range plan.result.DeletedNodes {
+	nodeNames := make(
+		[]string,
+		0,
+		len(plan.result.DeletedNodes)+len(plan.result.RecreatedNodes),
+	)
+	nodeNames = append(nodeNames, plan.result.DeletedNodes...)
+	nodeNames = append(nodeNames, plan.result.RecreatedNodes...)
+
+	for _, nodeName := range nodeNames {
 		runtimeNode := plan.currentNodes[nodeName]
 		if runtimeNode == nil {
 			return fmt.Errorf("runtime node %q not found", nodeName)
@@ -880,7 +990,11 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 				runtime = c.globalRuntime()
 			}
 
-			log.Info("Deleting node", "node", nodeName, "container", ctr.Names[0])
+			action := "Deleting node"
+			if _, recreate := plan.recreatedNodeSet[nodeName]; recreate {
+				action = "Deleting node for recreate"
+			}
+			log.Info(action, "node", nodeName, "container", ctr.Names[0])
 			if err := runtime.DeleteContainer(ctx, ctr.Names[0]); err != nil {
 				return fmt.Errorf("failed deleting node %q: %w", nodeName, err)
 			}

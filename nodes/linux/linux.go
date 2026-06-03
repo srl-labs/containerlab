@@ -39,6 +39,14 @@ type linux struct {
 	clabnodes.DefaultNode
 }
 
+func (*linux) LinkApplyMode() clabnodes.LinkApplyMode {
+	return clabnodes.LinkApplyModeLive
+}
+
+func (*linux) SupportsLiveLinkApply() bool {
+	return true
+}
+
 func (n *linux) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)

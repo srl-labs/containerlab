@@ -107,37 +107,13 @@ func TestDefaultNodeShouldSkipLifecycle(t *testing.T) {
 	}
 }
 
-func TestDefaultNodeSupportsLiveLinkApply(t *testing.T) {
-	tests := []struct {
-		name             string
-		hostRequirements *clabtypes.HostRequirements
-		want             bool
-	}{
-		{
-			name:             "non vm node supports live apply",
-			hostRequirements: clabtypes.NewHostRequirements(),
-			want:             true,
-		},
-		{
-			name: "vm node does not support live apply",
-			hostRequirements: &clabtypes.HostRequirements{
-				VirtRequired: true,
-			},
-			want: false,
-		},
-		{
-			name: "missing requirements default to live apply",
-			want: true,
-		},
+func TestDefaultNodeLinkApplyMode(t *testing.T) {
+	d := &DefaultNode{}
+	if got := d.LinkApplyMode(); got != LinkApplyModeRecreate {
+		t.Fatalf("LinkApplyMode() = %q, want %q", got, LinkApplyModeRecreate)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			d := &DefaultNode{HostRequirements: tt.hostRequirements}
-			if got := d.SupportsLiveLinkApply(); got != tt.want {
-				t.Fatalf("SupportsLiveLinkApply() = %v, want %v", got, tt.want)
-			}
-		})
+	if d.SupportsLiveLinkApply() {
+		t.Fatalf("default node should not support live link apply")
 	}
 }
 

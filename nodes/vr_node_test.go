@@ -10,9 +10,12 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
-func TestVRNodeDoesNotSupportLiveLinkApply(t *testing.T) {
+func TestVRNodeLinkApplyMode(t *testing.T) {
+	if got := (&VRNode{}).LinkApplyMode(); got != LinkApplyModeRecreate {
+		t.Fatalf("LinkApplyMode() = %q, want %q", got, LinkApplyModeRecreate)
+	}
 	if (&VRNode{}).SupportsLiveLinkApply() {
-		t.Fatal("expected VRNode to require restart on apply link changes")
+		t.Fatal("expected VRNode to require lifecycle handling on apply link changes")
 	}
 }
 

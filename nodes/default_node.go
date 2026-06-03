@@ -216,14 +216,16 @@ func (d *DefaultNode) ShouldSkipLifecycle() bool {
 	return d.Cfg.IsRootNamespaceBased || d.Cfg.AutoRemove
 }
 
-// SupportsLiveLinkApply reports whether apply may add/delete dataplane links without restarting
-// the backing container.
-func (d *DefaultNode) SupportsLiveLinkApply() bool {
-	if d.HostRequirements == nil {
-		return true
-	}
+// LinkApplyMode returns the conservative default for node kinds that do not
+// explicitly opt into live hotplug or restart handling.
+func (*DefaultNode) LinkApplyMode() LinkApplyMode {
+	return LinkApplyModeRecreate
+}
 
-	return !d.HostRequirements.VirtRequired
+// SupportsLiveLinkApply reports whether apply may add/delete dataplane links
+// without node lifecycle actions.
+func (d *DefaultNode) SupportsLiveLinkApply() bool {
+	return d.LinkApplyMode() == LinkApplyModeLive
 }
 
 func (d *DefaultNode) parkingNetNSName() string {

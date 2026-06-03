@@ -184,6 +184,7 @@ Apply adds node and link
     ...    Ping From Node Succeeds
     ...    l1
     ...    172.17.0.2
+    Configure Interface Address    l1    eth3    172.17.1.1/24
     Wait Until Keyword Succeeds
     ...    ${recovery-timeout}
     ...    ${retry-interval}

@@ -48,7 +48,14 @@ func NewVRNode(n NodeOverwrites, creds *Credentials, scrapliPlatformName string)
 	return vr
 }
 
-// SupportsLiveLinkApply keeps vrnetlab-backed VM nodes on the restart path for apply changes.
+// LinkApplyMode keeps vrnetlab-backed VM nodes on the conservative recreate
+// path for apply link changes.
+func (*VRNode) LinkApplyMode() LinkApplyMode {
+	return LinkApplyModeRecreate
+}
+
+// SupportsLiveLinkApply reports whether apply may add/delete dataplane links
+// without node lifecycle actions.
 func (*VRNode) SupportsLiveLinkApply() bool {
 	return false
 }
