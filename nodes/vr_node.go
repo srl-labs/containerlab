@@ -54,12 +54,6 @@ func (*VRNode) LinkApplyMode() LinkApplyMode {
 	return LinkApplyModeRecreate
 }
 
-// SupportsLiveLinkApply reports whether apply may add/delete dataplane links
-// without node lifecycle actions.
-func (*VRNode) SupportsLiveLinkApply() bool {
-	return false
-}
-
 // Init stub function.
 func (n *VRNode) Init(cfg *clabtypes.NodeConfig, opts ...NodeOption) error {
 	return nil

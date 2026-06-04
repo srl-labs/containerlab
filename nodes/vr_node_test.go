@@ -14,9 +14,6 @@ func TestVRNodeLinkApplyMode(t *testing.T) {
 	if got := (&VRNode{}).LinkApplyMode(); got != LinkApplyModeRecreate {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, LinkApplyModeRecreate)
 	}
-	if (&VRNode{}).SupportsLiveLinkApply() {
-		t.Fatal("expected VRNode to require lifecycle handling on apply link changes")
-	}
 }
 
 func TestVMInterfaceAliases(t *testing.T) { // skipcq: GO-R1005

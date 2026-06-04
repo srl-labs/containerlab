@@ -14,7 +14,4 @@ func TestCeosLinkApplyMode(t *testing.T) {
 	if got := (&ceos{}).LinkApplyMode(); got != clabnodes.LinkApplyModeRestart {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeRestart)
 	}
-	if (&ceos{}).SupportsLiveLinkApply() {
-		t.Fatal("expected cEOS to require restart on apply link changes")
-	}
 }

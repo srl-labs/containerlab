@@ -222,12 +222,6 @@ func (*DefaultNode) LinkApplyMode() LinkApplyMode {
 	return LinkApplyModeRecreate
 }
 
-// SupportsLiveLinkApply reports whether apply may add/delete dataplane links
-// without node lifecycle actions.
-func (d *DefaultNode) SupportsLiveLinkApply() bool {
-	return d.LinkApplyMode() == LinkApplyModeLive
-}
-
 func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff {
 	diff := &clabtypes.TopologyDiff{}
 

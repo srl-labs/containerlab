@@ -112,9 +112,6 @@ func TestDefaultNodeLinkApplyMode(t *testing.T) {
 	if got := d.LinkApplyMode(); got != LinkApplyModeRecreate {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, LinkApplyModeRecreate)
 	}
-	if d.SupportsLiveLinkApply() {
-		t.Fatalf("default node should not support live link apply")
-	}
 }
 
 func TestDefaultNodeRuntimeEndpointInventory(t *testing.T) {

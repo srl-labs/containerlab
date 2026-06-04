@@ -22,9 +22,6 @@ func TestSrosLinkApplyMode(t *testing.T) {
 	if got := (&sros{}).LinkApplyMode(); got != clabnodes.LinkApplyModeLive {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeLive)
 	}
-	if !(&sros{}).SupportsLiveLinkApply() {
-		t.Fatal("expected SR-SIM to support live link apply")
-	}
 }
 
 func TestComponentSorting(t *testing.T) {

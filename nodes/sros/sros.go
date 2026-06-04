@@ -222,10 +222,6 @@ func (*sros) LinkApplyMode() clabnodes.LinkApplyMode {
 	return clabnodes.LinkApplyModeLive
 }
 
-func (*sros) SupportsLiveLinkApply() bool {
-	return true
-}
-
 // Init Function for SR-SIM kind.
 func (n *sros) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
