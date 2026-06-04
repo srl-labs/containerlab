@@ -158,10 +158,11 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 	link.Endpoints = []clablinks.Endpoint{ep1, ep2}
 
 	tests := []struct {
-		name      string
-		live      map[applyEndpointKey]struct{}
-		addedNode map[string]struct{}
-		want      bool
+		name       string
+		live       map[applyEndpointKey]struct{}
+		addedNode  map[string]struct{}
+		parkedNode map[string]struct{}
+		want       bool
 	}{
 		{
 			name: "all endpoints live",
@@ -187,12 +188,34 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 			addedNode: map[string]struct{}{"n2": {}},
 			want:      true,
 		},
+		{
+			name: "parked recreated node preserves live link",
+			live: map[applyEndpointKey]struct{}{
+				{node: "n1", iface: "eth1"}: {},
+				{node: "n2", iface: "eth1"}: {},
+			},
+			// n2 is recreated (hence in addedNodeSet) but parked, so its existing
+			// link is preserved, not redeployed.
+			addedNode:  map[string]struct{}{"n2": {}},
+			parkedNode: map[string]struct{}{"n2": {}},
+			want:       false,
+		},
+		{
+			name: "parked node still deploys a new (non-live) link",
+			live: map[applyEndpointKey]struct{}{
+				{node: "n1", iface: "eth1"}: {},
+			},
+			addedNode:  map[string]struct{}{"n2": {}},
+			parkedNode: map[string]struct{}{"n2": {}},
+			want:       true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plan := &applyPlan{
 				addedNodeSet:    tt.addedNode,
+				parkedNodeSet:   tt.parkedNode,
 				liveEndpointSet: tt.live,
 			}
 			if plan.addedNodeSet == nil {

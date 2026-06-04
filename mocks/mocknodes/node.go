@@ -318,6 +318,21 @@ func (mr *MockNodeMockRecorder) GetNSPath(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNSPath", reflect.TypeOf((*MockNode)(nil).GetNSPath), ctx)
 }
 
+// GetReconcilePlan mocks base method.
+func (m *MockNode) GetReconcilePlan(ctx context.Context, diff *types.TopologyDiff) (*nodes.ReconcileResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReconcilePlan", ctx, diff)
+	ret0, _ := ret[0].(*nodes.ReconcileResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetReconcilePlan indicates an expected call of GetReconcilePlan.
+func (mr *MockNodeMockRecorder) GetReconcilePlan(ctx, diff any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReconcilePlan", reflect.TypeOf((*MockNode)(nil).GetReconcilePlan), ctx, diff)
+}
+
 // GetRuntime mocks base method.
 func (m *MockNode) GetRuntime() runtime.ContainerRuntime {
 	m.ctrl.T.Helper()

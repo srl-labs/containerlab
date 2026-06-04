@@ -59,14 +59,17 @@ type applyPlan struct {
 	result             *ApplyResult
 	currentNodes       map[string]*applyRuntimeNode
 	addedNodeSet       map[string]struct{}
+	deletedNodeSet     map[string]struct{}
 	recreatedNodeSet   map[string]struct{}
 	restartNodeSet     map[string]struct{}
+	nodeDiffs          map[string]*clabtypes.TopologyDiff
 	addedLinks         []clablinks.Link
 	plannedLinkSet     map[int]struct{}
 	staleEndpoints     []applyEndpointRef
 	desiredEndpointSet map[applyEndpointKey]struct{}
 	liveEndpointSet    map[applyEndpointKey]struct{}
 	state              *LabState
+	parkedNodeSet      map[string]struct{}
 }
 
 var errApplyInterfaceUnowned = errors.New("interface is not marked as containerlab-owned")
@@ -159,7 +162,15 @@ func (c *CLab) Apply(
 	}
 	plan.result.DryRun = options.dryRun
 
-	if options.dryRun || plan.empty() {
+	if options.dryRun {
+		return plan.result, nil
+	}
+
+	if err := c.reconcileNodes(ctx, plan); err != nil {
+		return nil, err
+	}
+
+	if plan.empty() {
 		return plan.result, nil
 	}
 
@@ -172,11 +183,19 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
+	if err := c.parkRecreatedNodes(ctx, plan); err != nil {
+		return nil, err
+	}
+
 	if err := c.deleteApplyNodes(ctx, plan); err != nil {
 		return nil, err
 	}
 
 	if err := c.deployApplyNodes(ctx, deployNodeNames, options.maxWorkers); err != nil {
+		return nil, err
+	}
+
+	if err := c.restoreRecreatedNodes(ctx, plan); err != nil {
 		return nil, err
 	}
 
@@ -189,10 +208,6 @@ func (c *CLab) Apply(
 	}
 
 	if err := c.postDeployApplyNodes(ctx, deployNodeNames, options.skipPostDeploy); err != nil {
-		return nil, err
-	}
-
-	if err := c.reconcileNodes(ctx, plan); err != nil {
 		return nil, err
 	}
 
@@ -346,8 +361,11 @@ func (c *CLab) planApply(
 		},
 		currentNodes:       currentNodes,
 		addedNodeSet:       map[string]struct{}{},
+		deletedNodeSet:     map[string]struct{}{},
 		recreatedNodeSet:   map[string]struct{}{},
+		parkedNodeSet:      map[string]struct{}{},
 		restartNodeSet:     map[string]struct{}{},
+		nodeDiffs:          map[string]*clabtypes.TopologyDiff{},
 		plannedLinkSet:     map[int]struct{}{},
 		desiredEndpointSet: map[applyEndpointKey]struct{}{},
 		liveEndpointSet:    map[applyEndpointKey]struct{}{},
@@ -373,10 +391,15 @@ func (c *CLab) planApply(
 	for _, nodeName := range sortedRuntimeNodeNames(currentNodes) {
 		if _, exists := c.Nodes[nodeName]; !exists {
 			plan.result.DeletedNodes = append(plan.result.DeletedNodes, nodeName)
+			plan.deletedNodeSet[nodeName] = struct{}{}
 		}
 	}
 
-	c.detectNodeChanges(plan)
+	if err := c.planNodeReconciliation(ctx, plan); err != nil {
+		return nil, err
+	}
+
+	c.planParkedNodes(ctx, plan)
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
 		for _, ep := range clablinks.ApplyRuntimeEndpoints(c.Links[linkIdx]) {
@@ -435,14 +458,38 @@ func (p *applyPlan) addDeployApplyLink(linkIdx int, link clablinks.Link) {
 	}
 }
 
+func (c *CLab) planParkedNodes(ctx context.Context, plan *applyPlan) {
+	if plan == nil {
+		return
+	}
+
+	for nodeName := range plan.recreatedNodeSet {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			continue
+		}
+		if clabruntime.ContainerHasJoinableNetns(node.GetContainerStatus(ctx)) {
+			plan.parkedNodeSet[nodeName] = struct{}{}
+		}
+	}
+}
+
 func (c *CLab) planRecreatedNodeLinks(plan *applyPlan) {
 	if plan == nil || len(plan.recreatedNodeSet) == 0 {
 		return
 	}
 
+	rebuildSet := make(map[string]struct{}, len(plan.recreatedNodeSet))
+	for nodeName := range plan.recreatedNodeSet {
+		if _, parked := plan.parkedNodeSet[nodeName]; parked {
+			continue
+		}
+		rebuildSet[nodeName] = struct{}{}
+	}
+
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
 		link := c.Links[linkIdx]
-		if !linkTouchesNodeSet(link, plan.recreatedNodeSet) {
+		if !linkTouchesNodeSet(link, rebuildSet) {
 			continue
 		}
 
@@ -555,6 +602,17 @@ func (c *CLab) discoverLiveApplyEndpoints(
 		n := desiredNodes[nodeName]
 		if _, exists := plan.currentNodes[nodeName]; !exists && !isApplySpecialNode(nodeName) {
 			continue
+		}
+
+		if _, recreate := plan.recreatedNodeSet[nodeName]; recreate {
+			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
+				continue
+			}
+		}
+		if _, added := plan.addedNodeSet[nodeName]; added {
+			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
+				continue
+			}
 		}
 
 		if !isApplySpecialNode(nodeName) {
@@ -730,42 +788,39 @@ func applyNodeLinkApplyMode(node clabnodes.Node) clabnodes.LinkApplyMode {
 	}
 }
 
-// detectNodeChanges checks which nodes have config changes for dry-run/empty check.
-func (c *CLab) detectNodeChanges(plan *applyPlan) {
-	if plan == nil || plan.currentNodes == nil {
-		return
+func resolveNodeConfigFromTopology(topo *clabtypes.Topology, nodeName string) *clabtypes.NodeConfig {
+	if topo == nil {
+		return nil
 	}
 
-	var oldTopo *clabtypes.Topology
-	if plan.state != nil {
-		oldTopo = plan.state.Topology
-	}
+	binds, _ := topo.GetNodeBinds(nodeName)
+	portSet, _, _ := topo.GetNodePorts(nodeName)
 
-	for nodeName := range plan.currentNodes {
-		if _, exists := c.Nodes[nodeName]; !exists {
-			continue
-		}
-		if _, added := plan.addedNodeSet[nodeName]; added {
-			continue
-		}
-
-		diff := clabtypes.ComputeTopologyDiff(oldTopo, c.Config.Topology, nodeName)
-		if !diff.HasDiff() {
-			continue
-		}
-
-		switch diff.DefaultAction() {
-		case clabtypes.TopologyDiffActionRestart:
-			plan.restartNodeSet[nodeName] = struct{}{}
-		case clabtypes.TopologyDiffActionRecreate:
-			plan.recreatedNodeSet[nodeName] = struct{}{}
-			plan.addedNodeSet[nodeName] = struct{}{}
-		}
+	return &clabtypes.NodeConfig{
+		ShortName:   nodeName,
+		NodeType:    topo.GetNodeType(nodeName),
+		Image:       topo.GetNodeImage(nodeName),
+		Entrypoint:  topo.GetNodeEntrypoint(nodeName),
+		Cmd:         topo.GetNodeCmd(nodeName),
+		Exec:        topo.GetNodeExec(nodeName),
+		Env:         topo.GetNodeEnv(nodeName),
+		Binds:       binds,
+		Devices:     topo.GetNodeDevices(nodeName),
+		CapAdd:      topo.GetNodeCapAdd(nodeName),
+		ShmSize:     topo.GetNodeShmSize(nodeName),
+		PortSet:     portSet,
+		User:        topo.GetNodeUser(nodeName),
+		NetworkMode: topo.GetNodeNetworkMode(nodeName),
+		Runtime:     topo.GetNodeRuntime(nodeName),
+		CPU:         topo.GetNodeCPU(nodeName),
+		CPUSet:      topo.GetNodeCPUSet(nodeName),
+		Memory:      topo.GetNodeMemory(nodeName),
+		License:     topo.GetNodeLicense(nodeName),
+		Components:  topo.GetComponents(nodeName),
 	}
 }
 
-// reconcileNodes calls Reconcile on each existing node.
-func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
+func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) error {
 	if plan == nil || plan.currentNodes == nil {
 		return nil
 	}
@@ -784,7 +839,45 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 			continue
 		}
 
-		diff := clabtypes.ComputeTopologyDiff(oldTopo, c.Config.Topology, nodeName)
+		oldNodeConfig := resolveNodeConfigFromTopology(oldTopo, nodeName)
+		newNodeConfig := resolveNodeConfigFromTopology(c.Config.Topology, nodeName)
+		diff := node.ComputeDiff(oldNodeConfig, newNodeConfig)
+		plan.nodeDiffs[nodeName] = diff
+
+		result, err := node.GetReconcilePlan(ctx, diff)
+		if err != nil {
+			return fmt.Errorf("reconcile planning failed for node %q: %w", nodeName, err)
+		}
+
+		switch result.Action {
+		case clabtypes.TopologyDiffActionRestart:
+			plan.restartNodeSet[nodeName] = struct{}{}
+			plan.result.RestartedNodes = append(plan.result.RestartedNodes, result.Restarted...)
+		case clabtypes.TopologyDiffActionRecreate:
+			plan.recreatedNodeSet[nodeName] = struct{}{}
+			plan.addedNodeSet[nodeName] = struct{}{}
+		}
+	}
+
+	return nil
+}
+
+// reconcileNodes executes Reconcile on each existing node using cached diffs.
+func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
+	if plan == nil || plan.currentNodes == nil {
+		return nil
+	}
+
+	for nodeName := range plan.currentNodes {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			continue
+		}
+		if _, added := plan.addedNodeSet[nodeName]; added {
+			continue
+		}
+
+		diff := plan.nodeDiffs[nodeName]
 
 		result, err := node.Reconcile(ctx, diff)
 		if err != nil {
@@ -799,12 +892,10 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 			if err := c.waitNodeHealthyIfAvailable(ctx, node); err != nil {
 				return err
 			}
-			plan.result.RestartedNodes = append(plan.result.RestartedNodes, result.Restarted...)
 
 		case clabtypes.TopologyDiffActionRecreate:
 			plan.recreatedNodeSet[nodeName] = struct{}{}
 			plan.addedNodeSet[nodeName] = struct{}{}
-			plan.result.RecreatedNodes = append(plan.result.RecreatedNodes, result.Recreated...)
 		}
 	}
 
@@ -814,8 +905,10 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
-		if _, added := p.addedNodeSet[key.node]; added {
-			return true
+		if _, parked := p.parkedNodeSet[key.node]; !parked {
+			if _, added := p.addedNodeSet[key.node]; added {
+				return true
+			}
 		}
 		if _, live := p.liveEndpointSet[key]; !live {
 			return true
@@ -826,32 +919,22 @@ func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 }
 
 func (p *applyPlan) deployNodeNames() []string {
-	if p == nil || p.result == nil {
+	if p == nil {
 		return nil
 	}
 
-	nodeSet := map[string]struct{}{}
-	nodeNames := make(
-		[]string,
-		0,
-		len(p.result.AddedNodes)+len(p.result.RecreatedNodes),
-	)
+	nodeNames := make([]string, 0, len(p.addedNodeSet)+len(p.recreatedNodeSet))
 
-	for _, nodeName := range p.result.AddedNodes {
-		if _, exists := nodeSet[nodeName]; exists {
-			continue
-		}
-		nodeSet[nodeName] = struct{}{}
+	for nodeName := range p.addedNodeSet {
 		nodeNames = append(nodeNames, nodeName)
 	}
-	for _, nodeName := range p.result.RecreatedNodes {
-		if _, exists := nodeSet[nodeName]; exists {
-			continue
+	for nodeName := range p.recreatedNodeSet {
+		if _, added := p.addedNodeSet[nodeName]; !added {
+			nodeNames = append(nodeNames, nodeName)
 		}
-		nodeSet[nodeName] = struct{}{}
-		nodeNames = append(nodeNames, nodeName)
 	}
 
+	sort.Strings(nodeNames)
 	return nodeNames
 }
 
@@ -963,14 +1046,53 @@ func (c *CLab) deleteApplyEndpoints(
 	return nil
 }
 
+func (c *CLab) parkRecreatedNodes(ctx context.Context, plan *applyPlan) error {
+	for _, nodeName := range sortedStringSet(plan.parkedNodeSet) {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			continue
+		}
+		parker, ok := node.(interface{ ParkEndpoints(context.Context) error })
+		if !ok {
+			return fmt.Errorf("node %q does not support endpoint parking", nodeName)
+		}
+		log.Info("Parking links for recreate", "node", nodeName)
+		if err := parker.ParkEndpoints(ctx); err != nil {
+			return fmt.Errorf("failed parking endpoints for node %q: %w", nodeName, err)
+		}
+	}
+
+	return nil
+}
+
+func (c *CLab) restoreRecreatedNodes(ctx context.Context, plan *applyPlan) error {
+	for _, nodeName := range sortedStringSet(plan.parkedNodeSet) {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			continue
+		}
+		restorer, ok := node.(interface{ RestoreEndpoints(context.Context) error })
+		if !ok {
+			return fmt.Errorf("node %q does not support endpoint restore", nodeName)
+		}
+		log.Info("Restoring links after recreate", "node", nodeName)
+		if err := restorer.RestoreEndpoints(ctx); err != nil {
+			return fmt.Errorf("failed restoring endpoints for node %q: %w", nodeName, err)
+		}
+	}
+
+	return nil
+}
+
 func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
-	nodeNames := make(
-		[]string,
-		0,
-		len(plan.result.DeletedNodes)+len(plan.result.RecreatedNodes),
-	)
-	nodeNames = append(nodeNames, plan.result.DeletedNodes...)
-	nodeNames = append(nodeNames, plan.result.RecreatedNodes...)
+	nodeNames := make([]string, 0, len(plan.deletedNodeSet)+len(plan.recreatedNodeSet))
+	for nodeName := range plan.deletedNodeSet {
+		nodeNames = append(nodeNames, nodeName)
+	}
+	for nodeName := range plan.recreatedNodeSet {
+		nodeNames = append(nodeNames, nodeName)
+	}
+	sort.Strings(nodeNames)
 
 	for _, nodeName := range nodeNames {
 		runtimeNode := plan.currentNodes[nodeName]
@@ -1301,57 +1423,6 @@ func applyLinkName(link clablinks.Link) string {
 	sort.Strings(names)
 
 	return strings.Join(names, " -- ")
-}
-
-func desiredApplyComponentNames(n clabnodes.Node) []string {
-	cfg := n.Config()
-	names := make([]string, 0, len(cfg.Components))
-	for _, component := range cfg.Components {
-		if component == nil {
-			continue
-		}
-
-		slot := strings.ToLower(strings.TrimSpace(component.Slot))
-		if slot == "" {
-			continue
-		}
-		names = append(names, cfg.ShortName+"-"+slot)
-	}
-
-	sortApplyComponentNames(names)
-
-	return names
-}
-
-func runtimeApplyComponentNames(runtimeNode *applyRuntimeNode) []string {
-	if runtimeNode == nil {
-		return nil
-	}
-
-	names := make([]string, 0, len(runtimeNode.containers))
-	for _, ctr := range runtimeNode.containers {
-		name := applyContainerNodeName(ctr)
-		if name == "" {
-			continue
-		}
-		names = append(names, name)
-	}
-
-	sortApplyComponentNames(names)
-
-	return names
-}
-
-func sortApplyComponentNames(names []string) {
-	sort.Slice(names, func(i, j int) bool {
-		iOrder := applyComponentSortOrder(names[i])
-		jOrder := applyComponentSortOrder(names[j])
-		if iOrder != jOrder {
-			return iOrder < jOrder
-		}
-
-		return names[i] < names[j]
-	})
 }
 
 func sortedNodeNames(nodes map[string]clabnodes.Node) []string {

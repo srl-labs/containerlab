@@ -2,7 +2,6 @@ package types
 
 import (
 	"github.com/charmbracelet/log"
-	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
 type TopologyDiffAction string
@@ -42,6 +41,7 @@ var RecreateFields = map[string]bool{
 	"Ports":       true,
 	"Binds":       true,
 	"License":     true,
+	"Components":  true,
 }
 
 // fields which just need a restart to reapply
@@ -72,73 +72,4 @@ func (d *TopologyDiff) DefaultAction() TopologyDiffAction {
 		return TopologyDiffActionRestart
 	}
 	return TopologyDiffActionNone
-}
-
-func ComputeTopologyDiff(oldTopo, newTopo *Topology, nodeName string) *TopologyDiff {
-	var fields []string
-
-	if oldTopo == nil {
-		return &TopologyDiff{}
-	}
-
-	if oldTopo.GetNodeType(nodeName) != newTopo.GetNodeType(nodeName) {
-		fields = append(fields, "Type")
-	}
-	if oldTopo.GetNodeImage(nodeName) != newTopo.GetNodeImage(nodeName) {
-		fields = append(fields, "Image")
-	}
-	if oldTopo.GetNodeEntrypoint(nodeName) != newTopo.GetNodeEntrypoint(nodeName) {
-		fields = append(fields, "Entrypoint")
-	}
-	if oldTopo.GetNodeCmd(nodeName) != newTopo.GetNodeCmd(nodeName) {
-		fields = append(fields, "Cmd")
-	}
-	if !clabutils.SlicesEqualOrBothEmpty(oldTopo.GetNodeExec(nodeName), newTopo.GetNodeExec(nodeName)) {
-		fields = append(fields, "Exec")
-	}
-	if !clabutils.MapsEqualOrBothEmpty(oldTopo.GetNodeEnv(nodeName), newTopo.GetNodeEnv(nodeName)) {
-		fields = append(fields, "Env")
-	}
-	oldBinds, _ := oldTopo.GetNodeBinds(nodeName)
-	newBinds, _ := newTopo.GetNodeBinds(nodeName)
-	if !clabutils.SlicesEqualOrBothEmpty(oldBinds, newBinds) {
-		fields = append(fields, "Binds")
-	}
-	if !clabutils.SlicesEqualOrBothEmpty(oldTopo.GetNodeDevices(nodeName), newTopo.GetNodeDevices(nodeName)) {
-		fields = append(fields, "Devices")
-	}
-	if !clabutils.SlicesEqualOrBothEmpty(oldTopo.GetNodeCapAdd(nodeName), newTopo.GetNodeCapAdd(nodeName)) {
-		fields = append(fields, "CapAdd")
-	}
-	if oldTopo.GetNodeShmSize(nodeName) != newTopo.GetNodeShmSize(nodeName) {
-		fields = append(fields, "ShmSize")
-	}
-	oldPorts, _, _ := oldTopo.GetNodePorts(nodeName)
-	newPorts, _, _ := newTopo.GetNodePorts(nodeName)
-	if !clabutils.PortSetsEqual(oldPorts, newPorts) {
-		fields = append(fields, "Ports")
-	}
-	if oldTopo.GetNodeUser(nodeName) != newTopo.GetNodeUser(nodeName) {
-		fields = append(fields, "User")
-	}
-	if oldTopo.GetNodeNetworkMode(nodeName) != newTopo.GetNodeNetworkMode(nodeName) {
-		fields = append(fields, "NetworkMode")
-	}
-	if oldTopo.GetNodeRuntime(nodeName) != newTopo.GetNodeRuntime(nodeName) {
-		fields = append(fields, "Runtime")
-	}
-	if oldTopo.GetNodeCPU(nodeName) != newTopo.GetNodeCPU(nodeName) {
-		fields = append(fields, "CPU")
-	}
-	if oldTopo.GetNodeCPUSet(nodeName) != newTopo.GetNodeCPUSet(nodeName) {
-		fields = append(fields, "CPUSet")
-	}
-	if oldTopo.GetNodeMemory(nodeName) != newTopo.GetNodeMemory(nodeName) {
-		fields = append(fields, "Memory")
-	}
-	if oldTopo.GetNodeLicense(nodeName) != newTopo.GetNodeLicense(nodeName) {
-		fields = append(fields, "License")
-	}
-
-	return &TopologyDiff{Fields: fields}
 }

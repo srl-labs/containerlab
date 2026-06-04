@@ -228,23 +228,106 @@ func (d *DefaultNode) SupportsLiveLinkApply() bool {
 	return d.LinkApplyMode() == LinkApplyModeLive
 }
 
-// Reconcile applies the diff and executes the appropriate action (restart/recreate).
-func (d *DefaultNode) Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error) {
+func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff {
+	diff := &clabtypes.TopologyDiff{}
+
+	if oldCfg == nil || newCfg == nil {
+		return diff
+	}
+
+	if oldCfg.NodeType != newCfg.NodeType {
+		diff.Fields = append(diff.Fields, "Type")
+	}
+	if oldCfg.Image != newCfg.Image {
+		diff.Fields = append(diff.Fields, "Image")
+	}
+	if oldCfg.Entrypoint != newCfg.Entrypoint {
+		diff.Fields = append(diff.Fields, "Entrypoint")
+	}
+	if oldCfg.Cmd != newCfg.Cmd {
+		diff.Fields = append(diff.Fields, "Cmd")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Exec, newCfg.Exec) {
+		diff.Fields = append(diff.Fields, "Exec")
+	}
+	if !clabutils.MapsEqualOrBothEmpty(oldCfg.Env, newCfg.Env) {
+		diff.Fields = append(diff.Fields, "Env")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Binds, newCfg.Binds) {
+		diff.Fields = append(diff.Fields, "Binds")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Devices, newCfg.Devices) {
+		diff.Fields = append(diff.Fields, "Devices")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.CapAdd, newCfg.CapAdd) {
+		diff.Fields = append(diff.Fields, "CapAdd")
+	}
+	if oldCfg.ShmSize != newCfg.ShmSize {
+		diff.Fields = append(diff.Fields, "ShmSize")
+	}
+	if !clabutils.PortSetsEqual(oldCfg.PortSet, newCfg.PortSet) {
+		diff.Fields = append(diff.Fields, "Ports")
+	}
+	if oldCfg.User != newCfg.User {
+		diff.Fields = append(diff.Fields, "User")
+	}
+	if oldCfg.NetworkMode != newCfg.NetworkMode {
+		diff.Fields = append(diff.Fields, "NetworkMode")
+	}
+	if oldCfg.Runtime != newCfg.Runtime {
+		diff.Fields = append(diff.Fields, "Runtime")
+	}
+	if oldCfg.CPU != newCfg.CPU {
+		diff.Fields = append(diff.Fields, "CPU")
+	}
+	if oldCfg.CPUSet != newCfg.CPUSet {
+		diff.Fields = append(diff.Fields, "CPUSet")
+	}
+	if oldCfg.Memory != newCfg.Memory {
+		diff.Fields = append(diff.Fields, "Memory")
+	}
+	if oldCfg.License != newCfg.License {
+		diff.Fields = append(diff.Fields, "License")
+	}
+
+	return diff
+}
+
+func (d *DefaultNode) ComputeReconcilePlan(diff *clabtypes.TopologyDiff) *ReconcileResult {
 	result := &ReconcileResult{Action: clabtypes.TopologyDiffActionNone}
 
 	if diff == nil || !diff.HasDiff() {
-		return result, nil
+		return result
 	}
 
 	action := diff.DefaultAction()
 	result.Action = action
 
-	log.Info("Reconciling node", "node", d.Cfg.ShortName, "action", action, "fields", diff.Fields)
-
 	switch action {
-	case clabtypes.TopologyDiffActionNone:
-		return result, nil
+	case clabtypes.TopologyDiffActionRestart:
+		result.Restarted = []string{d.Cfg.LongName}
+	case clabtypes.TopologyDiffActionRecreate:
+		result.Recreated = []string{d.Cfg.LongName}
+	}
 
+	return result
+}
+
+func (d *DefaultNode) GetReconcilePlan(_ context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error) {
+	return d.ComputeReconcilePlan(diff), nil
+}
+
+// Reconcile applies the diff and executes the appropriate action (restart/recreate).
+func (d *DefaultNode) Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error) {
+	result := d.ComputeReconcilePlan(diff)
+
+	if result.Action == clabtypes.TopologyDiffActionNone {
+		return result, nil
+	}
+
+	log.Info("Applying node changes", "node", d.Cfg.ShortName, "action", result.Action, "fields", diff.Fields)
+
+	switch result.Action {
 	case clabtypes.TopologyDiffActionRestart:
 		if err := d.Stop(ctx); err != nil {
 			return result, fmt.Errorf("stop failed: %w", err)
@@ -252,13 +335,11 @@ func (d *DefaultNode) Reconcile(ctx context.Context, diff *clabtypes.TopologyDif
 		if err := d.Start(ctx); err != nil {
 			return result, fmt.Errorf("start failed: %w", err)
 		}
-		result.Restarted = []string{d.Cfg.LongName}
 
 	case clabtypes.TopologyDiffActionRecreate:
 		if err := d.Delete(ctx); err != nil {
 			return result, fmt.Errorf("delete failed: %w", err)
 		}
-		result.Recreated = []string{d.Cfg.LongName}
 	}
 
 	return result, nil

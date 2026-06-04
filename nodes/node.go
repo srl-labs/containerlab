@@ -172,7 +172,13 @@ type Node interface {
 	GetNSPath(ctx context.Context) (string, error)
 	// Generate the host entries for this node
 	GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error)
-	// Reconcile takes diff, determines what action to take, and executes it.
+	// ComputeDiff diffs old node cfg with the new one and
+	// returns the diff.
+	ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff
+	// GetReconcilePlan decides the action. Useful for dry-run and actual
+	// reconciliation.
+	GetReconcilePlan(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error)
+	// Reconcile determines what action to take based on diff and executes it.
 	Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error)
 }
 
