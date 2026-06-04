@@ -14,6 +14,7 @@ func TestSRLLinkApplyMode(t *testing.T) {
 	if got := (&srl{}).LinkApplyMode(); got != clabnodes.LinkApplyModeLive {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeLive)
 	}
+
 	if !(&srl{}).SupportsLiveLinkApply() {
 		t.Fatal("expected SR Linux to support live link apply")
 	}
