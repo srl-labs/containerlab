@@ -57,9 +57,9 @@ func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error 
 	return nil
 }
 
-func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) error {
+func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) ([]Endpoint, error) {
 	if err := p.DiscoverOwnedEndpoints(ctx, dst); err != nil {
-		return err
+		return nil, err
 	}
 
 	endpoints := append([]Endpoint(nil), p.GetEndpoints()...)
@@ -70,7 +70,7 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) error {
 			for i := len(moved) - 1; i >= 0; i-- {
 				_ = moved[i].MoveTo(ctx, p)
 			}
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"failed to restore interface %q for node %q: %w",
 				ep.GetIfaceName(),
 				dst.GetShortName(),
@@ -82,7 +82,7 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) error {
 			for i := len(moved) - 1; i >= 0; i-- {
 				_ = moved[i].MoveTo(ctx, p)
 			}
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"failed to activate interface %q for node %q: %w",
 				ep.GetIfaceName(),
 				dst.GetShortName(),
@@ -92,7 +92,7 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) error {
 		moved = append(moved, ep)
 	}
 
-	return nil
+	return moved, nil
 }
 
 func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original EndpointOwner) error {

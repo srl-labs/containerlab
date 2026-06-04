@@ -180,13 +180,10 @@ func TestDefaultNodeRestoreEndpointsMissingParkingNetNSError(t *testing.T) {
 		},
 	}
 
-	err := d.RestoreEndpoints(context.Background())
-	if err == nil {
-		t.Fatalf("expected error when parking netns is missing")
-	}
-
-	if !strings.Contains(err.Error(), "no parking netns found") {
-		t.Fatalf("unexpected error: %v", err)
+	// A node stopped outside of containerlab (or with no dataplane links) has no
+	// parking netns; restoring should be a no-op rather than an error.
+	if err := d.RestoreEndpoints(context.Background()); err != nil {
+		t.Fatalf("expected no error when parking netns is missing, got %v", err)
 	}
 }
 

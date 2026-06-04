@@ -29,6 +29,7 @@ type ApplyResult struct {
 	AddedNodes       []string
 	DeletedNodes     []string
 	RecreatedNodes   []string
+	StartedNodes     []string
 	AddedLinks       []string
 	DeletedEndpoints []string
 	RestartedNodes   []string
@@ -70,6 +71,7 @@ type applyPlan struct {
 	liveEndpointSet    map[applyEndpointKey]struct{}
 	state              *LabState
 	parkedNodeSet      map[string]struct{}
+	startNodeSet       map[string]struct{}
 }
 
 var errApplyInterfaceUnowned = errors.New("interface is not marked as containerlab-owned")
@@ -83,6 +85,7 @@ func (p *applyPlan) empty() bool {
 		len(p.result.AddedNodes) == 0 &&
 		len(p.result.DeletedNodes) == 0 &&
 		len(p.result.RecreatedNodes) == 0 &&
+		len(p.result.StartedNodes) == 0 &&
 		len(p.restartNodeSet) == 0 &&
 		len(p.result.AddedLinks) == 0 &&
 		len(p.result.DeletedEndpoints) == 0
@@ -196,6 +199,10 @@ func (c *CLab) Apply(
 	}
 
 	if err := c.restoreRecreatedNodes(ctx, plan); err != nil {
+		return nil, err
+	}
+
+	if err := c.startStoppedNodes(ctx, plan); err != nil {
 		return nil, err
 	}
 
@@ -355,6 +362,7 @@ func (c *CLab) planApply(
 			AddedNodes:       []string{},
 			DeletedNodes:     []string{},
 			RecreatedNodes:   []string{},
+			StartedNodes:     []string{},
 			AddedLinks:       []string{},
 			DeletedEndpoints: []string{},
 			RestartedNodes:   []string{},
@@ -364,6 +372,7 @@ func (c *CLab) planApply(
 		deletedNodeSet:     map[string]struct{}{},
 		recreatedNodeSet:   map[string]struct{}{},
 		parkedNodeSet:      map[string]struct{}{},
+		startNodeSet:       map[string]struct{}{},
 		restartNodeSet:     map[string]struct{}{},
 		nodeDiffs:          map[string]*clabtypes.TopologyDiff{},
 		plannedLinkSet:     map[int]struct{}{},
@@ -400,6 +409,7 @@ func (c *CLab) planApply(
 	}
 
 	c.planParkedNodes(ctx, plan)
+	c.planStoppedNodes(ctx, plan)
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
 		for _, ep := range clablinks.ApplyRuntimeEndpoints(c.Links[linkIdx]) {
@@ -436,6 +446,7 @@ func (c *CLab) planApply(
 
 	c.planRecreatedNodeLinks(plan)
 	plan.result.RecreatedNodes = sortedStringSet(plan.recreatedNodeSet)
+	plan.result.StartedNodes = sortedStringSet(plan.startNodeSet)
 
 	return plan, nil
 }
@@ -470,6 +481,30 @@ func (c *CLab) planParkedNodes(ctx context.Context, plan *applyPlan) {
 		}
 		if clabruntime.ContainerHasJoinableNetns(node.GetContainerStatus(ctx)) {
 			plan.parkedNodeSet[nodeName] = struct{}{}
+		}
+	}
+}
+
+func (c *CLab) planStoppedNodes(ctx context.Context, plan *applyPlan) {
+	if plan == nil {
+		return
+	}
+
+	for nodeName := range plan.currentNodes {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			continue
+		}
+		if _, deleted := plan.deletedNodeSet[nodeName]; deleted {
+			continue
+		}
+		if _, added := plan.addedNodeSet[nodeName]; added {
+			continue
+		}
+
+		switch node.GetContainerStatus(ctx) {
+		case clabruntime.Stopped, clabruntime.Created:
+			plan.startNodeSet[nodeName] = struct{}{}
 		}
 	}
 }
@@ -613,6 +648,9 @@ func (c *CLab) discoverLiveApplyEndpoints(
 			if _, parked := plan.parkedNodeSet[nodeName]; !parked {
 				continue
 			}
+		}
+		if _, start := plan.startNodeSet[nodeName]; start {
+			continue
 		}
 
 		if !isApplySpecialNode(nodeName) {
@@ -905,6 +943,9 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
+		if _, start := p.startNodeSet[key.node]; start {
+			continue
+		}
 		if _, parked := p.parkedNodeSet[key.node]; !parked {
 			if _, added := p.addedNodeSet[key.node]; added {
 				return true
@@ -1078,6 +1119,21 @@ func (c *CLab) restoreRecreatedNodes(ctx context.Context, plan *applyPlan) error
 		log.Info("Restoring links after recreate", "node", nodeName)
 		if err := restorer.RestoreEndpoints(ctx); err != nil {
 			return fmt.Errorf("failed restoring endpoints for node %q: %w", nodeName, err)
+		}
+	}
+
+	return nil
+}
+
+func (c *CLab) startStoppedNodes(ctx context.Context, plan *applyPlan) error {
+	for _, nodeName := range sortedStringSet(plan.startNodeSet) {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			continue
+		}
+		log.Info("Starting stopped node", "node", nodeName)
+		if err := node.Start(ctx); err != nil {
+			return fmt.Errorf("failed starting node %q: %w", nodeName, err)
 		}
 	}
 
