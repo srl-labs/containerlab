@@ -119,6 +119,20 @@ func (mr *MockNodeMockRecorder) CheckInterfaceName() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInterfaceName", reflect.TypeOf((*MockNode)(nil).CheckInterfaceName))
 }
 
+// ComputeDiff mocks base method.
+func (m *MockNode) ComputeDiff(oldCfg, newCfg *types.NodeConfig) *types.TopologyDiff {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ComputeDiff", oldCfg, newCfg)
+	ret0, _ := ret[0].(*types.TopologyDiff)
+	return ret0
+}
+
+// ComputeDiff indicates an expected call of ComputeDiff.
+func (mr *MockNodeMockRecorder) ComputeDiff(oldCfg, newCfg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeDiff", reflect.TypeOf((*MockNode)(nil).ComputeDiff), oldCfg, newCfg)
+}
+
 // Config mocks base method.
 func (m *MockNode) Config() *types.NodeConfig {
 	m.ctrl.T.Helper()
