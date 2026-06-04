@@ -11,45 +11,8 @@ topology:
     client:
       kind: linux
       image: ghcr.io/srl-labs/network-multitool
-      exec:
-        - ip link set dev eth1 up
-        - ip addr add dev eth1 10.0.1.1/24
-{{- if .addLink }}
-        - ip link set dev eth2 up
-        - ip addr add dev eth2 10.0.2.1/24
-{{- end }}
-{{- if .addNode }}
-        - ip link set dev eth3 up
-        - ip addr add dev eth3 10.0.3.1/24
-{{- end }}
 
-    sros:
-      kind: nokia_srsim
-      type: sr-1-92s
-      components:
-        - slot: A
-{{- if .componentChange }}
-        - slot: 1
-        - slot: 2
-{{- else }}
-        - slot: 1
-{{- end }}
-      startup-config: |
-        /configure port 1/1/c23 connector breakout c4-100g
-        /configure port 1/1/c23 admin-state enable
-        /configure port 1/1/c23/4 ethernet mode hybrid
-        /configure port 1/1/c23/4 admin-state enable
-        /configure port 1/1/c23/3 ethernet mode hybrid
-        /configure port 1/1/c23/3 admin-state enable
-        /configure router "Base" interface "to-client-1" port 1/1/c23/4:0
-        /configure router "Base" interface "to-client-1" ipv4 primary address 10.0.1.2
-        /configure router "Base" interface "to-client-1" ipv4 primary prefix-length 24
-        /configure router "Base" interface "to-client-2" port 1/1/c23/3:0
-        /configure router "Base" interface "to-client-2" ipv4 primary address 10.0.2.2
-        /configure router "Base" interface "to-client-2" ipv4 primary prefix-length 24
-
-{{- if .addNode }}
-    extra:
+    R1:
       kind: nokia_srsim
       type: sr-1
       startup-config: |
@@ -59,15 +22,44 @@ topology:
         /configure port 1/1/c1 admin-state enable
         /configure port 1/1/c1/1 admin-state enable
         /configure router "Base" interface "to-client" port 1/1/c1/1
-        /configure router "Base" interface "to-client" ipv4 primary address 10.0.3.2
-        /configure router "Base" interface "to-client" ipv4 primary prefix-length 24
+        /configure router "Base" interface "to-client" ipv4 primary address 10.0.1.2 prefix-length 24
+        /configure router "Base" interface "to-client" admin-state enable
+
+    R2:
+      kind: nokia_srsim
+      type: sr-1-24d
+      components:
+        - slot: A
+          type: cpm-1x/i24-800gqsfpdd-1
+        - slot: 1
+          type: cpm-1x/i24-800gqsfpdd-1
+          mda:
+            - slot: 1
+              type: m24-800g-qsfpdd-1
+      startup-config: |
+        /configure port 1/1/c1 connector breakout c4-100g
+        /configure port 1/1/c1 admin-state enable
+        /configure port 1/1/c1/1 admin-state enable
+        /configure router "Base" interface "to-client" port 1/1/c1/1
+        /configure router "Base" interface "to-client" ipv4 primary address 10.0.2.2 prefix-length 24
+        /configure router "Base" interface "to-client" admin-state enable
+{{- if .addNode }}
+
+    R3:
+      kind: nokia_srsim
+      type: sr-1-24d
+      components:
+        - slot: A
+          type: cpm-1x/i24-800gqsfpdd-1
+        - slot: 1
+          type: cpm-1x/i24-800gqsfpdd-1
+          mda:
+            - slot: 1
+              type: m24-800g-qsfpdd-1
 {{- end }}
 
+{{- if .addLinks }}
   links:
-    - endpoints: ["client:eth1", "sros:1/1/c23/4"]
-{{- if .addLink }}
-    - endpoints: ["client:eth2", "sros:1/1/c23/3"]
-{{- end }}
-{{- if .addNode }}
-    - endpoints: ["client:eth3", "extra:1/1/c1/1"]
+    - endpoints: ["client:eth1", "R1:1/1/c1/1"]
+    - endpoints: ["client:eth2", "R2:1/1/c1/1"]
 {{- end }}

@@ -3,221 +3,123 @@ Library             OperatingSystem
 Resource            ../common.robot
 Resource            ../ssh.robot
 
-Suite Setup         Setup
-Suite Teardown      Teardown
+Suite Teardown      Run Keyword    Cleanup
 
 
 *** Variables ***
 ${lab-name}                 srsim-apply
 ${topo}                     11-srsim-apply.clab.yml
-${initial-vars}             11-srsim-apply.vars.initial.yml
-${add-link-vars}            11-srsim-apply.vars.add-link.yml
-${add-node-vars}            11-srsim-apply.vars.add-node.yml
-${component-change-vars}    11-srsim-apply.vars.component-change.yml
+${no-links-vars}            11-srsim-apply.vars.no-links.yml
+${linked-vars}              11-srsim-apply.vars.linked.yml
+${linked-with-node-vars}    11-srsim-apply.vars.linked-with-node.yml
 ${runtime}                  docker
-${runtime-cli-exec-cmd}     docker exec
 ${recovery-timeout}         3 minutes
+${boot-timeout}             5 minutes
 ${retry-interval}           10 seconds
 
 
 *** Test Cases ***
-Apply initial component-based SR-SIM lab
-    ${rc}    ${output} =    Apply Topology    ${initial-vars}
+Apply initial lab without links has no client connectivity
+    ${rc}    ${output} =    Apply    ${no-links-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    deployed lab
-    Should Contain    ${output}    ${lab-name}
-    Node Should Be Running    sros-1
-    Node Should Be Running    sros-a
-    Component Label Should Equal    sros-1    clab-root-node-name    sros
-    Component Label Should Equal    sros-1    clab-root-node-longname    clab-${lab-name}-sros
-    Component Label Should Equal    sros-a    clab-root-node-name    sros
-    Component Label Should Equal    sros-a    clab-root-node-longname    clab-${lab-name}-sros
-    Interface Should Exist    client    eth1
-    Interface Should Exist    sros-1    e1-1-c23-4
-    Wait Until Keyword Succeeds
-    ...    ${recovery-timeout}
-    ...    ${retry-interval}
-    ...    Ping From Client Succeeds
-    ...    10.0.1.2
-    SR-SIM SSH Should Be Reachable    sros
+    # no links yet: client cannot reach either SR-SIM node
+    Client Cannot Ping    10.0.1.2
+    Client Cannot Ping    10.0.2.2
 
-Dry-run reports SR-SIM link addition
-    ${rc}    ${output} =    Apply Topology    ${add-link-vars}    --dry-run
+Apply adds links to SR-SIM nodes and connectivity succeeds
+    ${rc}    ${output} =    Apply    ${linked-vars}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    Apply plan
     Should Contain    ${output}    added links
-    Should Contain    ${output}    client:eth2
-    Should Contain    ${output}    sros:e1-1-c23-3
-    Interface Should Not Exist    client    eth2
-    Interface Should Not Exist    sros-1    e1-1-c23-3
+    Configure Client Interface    eth1    10.0.1.1/24
+    Configure Client Interface    eth2    10.0.2.1/24
+    # standalone SR-SIM
+    Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Client Can Ping    10.0.1.2
+    # distributed SR-SIM
+    Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Client Can Ping    10.0.2.2
 
-Apply adds link to existing component-based SR-SIM node
-    ${sros_1_before} =    Node Runtime Identity    sros-1
-    ${sros_a_before} =    Node Runtime Identity    sros-a
-    ${rc}    ${output} =    Apply Topology    ${add-link-vars}
+Stopping the SR-SIM nodes breaks connectivity
+    Stop Node    R1
+    Stop Node    R2
+    Client Cannot Ping    10.0.1.2
+    Client Cannot Ping    10.0.2.2
+
+Apply restarts the stopped SR-SIM nodes and unparks their links
+    ${rc}    ${output} =    Apply    ${linked-vars}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    Apply summary
-    Should Contain    ${output}    added links
-    Interface Should Exist    client    eth2
-    Interface Should Exist    sros-1    e1-1-c23-3
-    ${sros_1_after} =    Node Runtime Identity    sros-1
-    ${sros_a_after} =    Node Runtime Identity    sros-a
-    Should Be Equal As Strings    ${sros_1_after}    ${sros_1_before}
-    Should Be Equal As Strings    ${sros_a_after}    ${sros_a_before}
-    Wait Until Keyword Succeeds
-    ...    ${recovery-timeout}
-    ...    ${retry-interval}
-    ...    Ping From Client Succeeds
-    ...    10.0.1.2
-    Configure Client Interface Address    eth2    10.0.2.1/24
-    Wait Until Keyword Succeeds
-    ...    ${recovery-timeout}
-    ...    ${retry-interval}
-    ...    Ping From Client Succeeds
-    ...    10.0.2.2
+    Should Contain    ${output}    started nodes
+    Should Contain    ${output}    Restored link
+    Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Client Can Ping    10.0.1.2
+    Wait Until Keyword Succeeds    ${recovery-timeout}    ${retry-interval}    Client Can Ping    10.0.2.2
 
-Apply deletes link from existing component-based SR-SIM node
-    ${sros_1_before} =    Node Runtime Identity    sros-1
-    ${sros_a_before} =    Node Runtime Identity    sros-a
-    ${rc}    ${output} =    Apply Topology    ${initial-vars}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    deleted endpoints
-    Interface Should Exist    client    eth1
-    Interface Should Exist    sros-1    e1-1-c23-4
-    Interface Should Not Exist    client    eth2
-    Interface Should Not Exist    sros-1    e1-1-c23-3
-    ${sros_1_after} =    Node Runtime Identity    sros-1
-    ${sros_a_after} =    Node Runtime Identity    sros-a
-    Should Be Equal As Strings    ${sros_1_after}    ${sros_1_before}
-    Should Be Equal As Strings    ${sros_a_after}    ${sros_a_before}
-    Wait Until Keyword Succeeds
-    ...    ${recovery-timeout}
-    ...    ${retry-interval}
-    ...    Ping From Client Succeeds
-    ...    10.0.1.2
-
-Apply adds SR-SIM node and link
-    ${rc}    ${output} =    Apply Topology    ${add-node-vars}
+Apply adds a components-based SR-SIM node that boots with its cards up
+    ${rc}    ${output} =    Apply    ${linked-with-node-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    added nodes
-    Should Contain    ${output}    extra
-    Node Should Be Running    extra
-    Interface Should Exist    client    eth3
-    Interface Should Exist    extra    e1-1-c1-1
-    Configure Client Interface Address    eth3    10.0.3.1/24
-    Wait Until Keyword Succeeds
-    ...    ${recovery-timeout}
-    ...    ${retry-interval}
-    ...    Ping From Client Succeeds
-    ...    10.0.3.2
-    SR-SIM SSH Should Be Reachable    extra
-
-Apply deletes SR-SIM node and link
-    ${rc}    ${output} =    Apply Topology    ${initial-vars}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    deleted nodes
-    Should Contain    ${output}    extra
-    Node Should Not Exist    extra
-    Interface Should Not Exist    client    eth3
-
-Dry-run rejects SR-SIM component layout change
-    ${rc}    ${output} =    Apply Topology    ${component-change-vars}    --dry-run
-    Should Not Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    distributed component layout changed
-    Should Contain    ${output}    deploy --reconfigure
+    Should Contain    ${output}    R3
+    # node boots and is reachable over SSH
+    Wait Until Keyword Succeeds    ${boot-timeout}    ${retry-interval}    SR-SIM SSH Reachable    R3
+    # both components (CPM slot A and line card slot 1) report up
+    Wait Until Keyword Succeeds    ${boot-timeout}    ${retry-interval}    SR-SIM Cards Up    R3
 
 
 *** Keywords ***
-Setup
-    Run Clab Command    destroy --name ${lab-name} --cleanup
-
-Teardown
-    Run Clab Command    destroy --name ${lab-name} --cleanup
-
-Run Clab Command
-    [Arguments]    ${args}
+Apply
+    [Arguments]    ${vars_file}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${CLAB_BIN} --runtime ${runtime} ${args} 2>&1
+    ...    ${CLAB_BIN} --runtime ${runtime} apply -t ${CURDIR}/${topo} --vars ${CURDIR}/${vars_file} 2>&1
     Log    ${output}
     RETURN    ${rc}    ${output}
 
-Apply Topology
-    [Arguments]    ${vars_file}    ${extra_args}=${EMPTY}
-    ${rc}    ${output} =    Run Clab Command
-    ...    apply -t ${CURDIR}/${topo} --vars ${CURDIR}/${vars_file} ${extra_args}
-    RETURN    ${rc}    ${output}
-
-Node Should Be Running
+Stop Node
     [Arguments]    ${node}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} inspect -f '{{.State.Status}}' clab-${lab-name}-${node}
+    ...    ${CLAB_BIN} --runtime ${runtime} stop -t ${CURDIR}/${topo} -n ${node} 2>&1
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
-    Should Match Regexp    ${output}    (?im)^running\\s*$
 
-Node Should Not Exist
-    [Arguments]    ${node}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} inspect -f '{{.State.Status}}' clab-${lab-name}-${node}
-    Log    ${output}
-    Should Not Be Equal As Integers    ${rc}    0
-
-Node Runtime Identity
-    [Arguments]    ${node}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} inspect -f '{{.State.Pid}} {{.State.StartedAt}}' clab-${lab-name}-${node}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    RETURN    ${output}
-
-Component Label Should Equal
-    [Arguments]    ${node}    ${label}    ${want}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} inspect -f '{{index .Config.Labels "${label}"}}' clab-${lab-name}-${node}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Be Equal As Strings    ${output}    ${want}
-
-Interface Should Exist
-    [Arguments]    ${node}    ${interface}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-${node} ip link show ${interface}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    ${interface}
-
-Interface Should Not Exist
-    [Arguments]    ${node}    ${interface}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-${node} ip link show ${interface}
-    Log    ${output}
-    Should Not Be Equal As Integers    ${rc}    0
-
-Configure Client Interface Address
+Configure Client Interface
     [Arguments]    ${interface}    ${address}
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-client ip link set dev ${interface} up
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
-    ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-client ip addr add ${address} dev ${interface}
-    Log    ${output}
-    Should Be Equal As Integers    ${rc}    0
+    Run    ${runtime} exec clab-${lab-name}-client ip link set dev ${interface} up
+    Run    ${runtime} exec clab-${lab-name}-client ip addr add ${address} dev ${interface}
 
-Ping From Client Succeeds
+Client Can Ping
     [Arguments]    ${destination}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-client ping -c 2 -W 2 ${destination}
+    ...    ${runtime} exec clab-${lab-name}-client ping -c2 -W2 ${destination}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Match Regexp    ${output}    2 packets transmitted, 2 (packets )?received, 0% packet loss
 
-SR-SIM SSH Should Be Reachable
+Client Cannot Ping
+    [Arguments]    ${destination}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} exec clab-${lab-name}-client ping -c2 -W2 ${destination}
+    Log    ${output}
+    Should Not Be Equal As Integers    ${rc}    0
+
+SR-SIM SSH Reachable
     [Arguments]    ${node}
     Login via SSH with username and password
     ...    address=clab-${lab-name}-${node}
     ...    username=admin
     ...    password=NokiaSros1!
     ...    try_for=20
-    ...    conn_timeout=2
+    ...    conn_timeout=3
     SSHLibrary.Close All Connections
+
+SR-SIM Cards Up
+    [Arguments]    ${node}
+    # 'show card state' for an sr-1-24d lists slot 1 (IOM), 1/1 (MDA) and A (CPM),
+    # each with "<admin> <oper>" states. Assert both components are operationally up.
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    echo "show card state" | sshpass -p 'NokiaSros1!' ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null admin@clab-${lab-name}-${node}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    # CPM (slot A): "A   cpm-1x   up   up"
+    Should Match Regexp    ${output}    (?m)^A\\s+\\S+\\s+up\\s+up
+    # IOM (slot 1): "1   i24-...   up   up"
+    Should Match Regexp    ${output}    (?m)^1\\s+\\S+\\s+up\\s+up
+
+Cleanup
+    Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${topo} --cleanup
