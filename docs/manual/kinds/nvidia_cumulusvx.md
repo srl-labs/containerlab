@@ -27,7 +27,7 @@ Cumulus VX node launched with containerlab can be managed via the following inte
 SSH server is running on port 22
 
 ```bash
-ssh cumulust@<container-name>
+ssh cumulus@<container-name>
 ```
 
 ///
