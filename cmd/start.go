@@ -13,7 +13,7 @@ func startCmd(o *Options) (*cobra.Command, error) {
 		Use:   "start",
 		Short: "Start one or more nodes in a deployed lab (seamless dataplane)",
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if !runtimeRequiresRoot(o.Global.Runtime) {
+			if commandSkipsRoot(o.Global.Runtime) {
 				return nil
 			}
 

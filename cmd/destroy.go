@@ -20,7 +20,7 @@ func destroyCmd(o *Options) (*cobra.Command, error) {
 			"reference: https://containerlab.dev/cmd/destroy/",
 		Aliases: []string{"des"},
 		PreRunE: func(_ *cobra.Command, _ []string) error {
-			if !runtimeRequiresRoot(o.Global.Runtime) {
+			if commandSkipsRoot(o.Global.Runtime) {
 				return nil
 			}
 

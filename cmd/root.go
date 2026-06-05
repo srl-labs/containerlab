@@ -156,7 +156,7 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	if err != nil {
 		return err
 	}
-	if runtimeRequiresRoot(o.Global.Runtime) {
+	if globalRuntimeRequiresRoot(o.Global.Runtime) {
 		err := clabutils.CheckAndGetRootPrivs()
 		if err != nil {
 			return err
@@ -166,10 +166,14 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	return getTopoFilePath(cobraCmd, o)
 }
 
-func runtimeRequiresRoot(name string) bool {
+func globalRuntimeRequiresRoot(name string) bool {
 	return name != "" &&
 		name != clabruntimedocker.RuntimeName &&
-		!labruntime.IsLabRuntimeName(name)
+		!commandSkipsRoot(name)
+}
+
+func commandSkipsRoot(name string) bool {
+	return labruntime.IsLabRuntimeName(name)
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory
