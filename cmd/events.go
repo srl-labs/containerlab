@@ -1,11 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 	clabevents "github.com/srl-labs/containerlab/core/events"
-	"github.com/srl-labs/containerlab/labruntime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -68,10 +65,6 @@ containerlab events --format json`
 }
 
 func eventsFn(cmd *cobra.Command, o *Options) error {
-	if labruntime.IsLabRuntimeName(o.Global.Runtime) {
-		return fmt.Errorf("events is not supported for lab runtime %q yet", o.Global.Runtime)
-	}
-
 	opts := clabevents.Options{
 		Format:                o.Events.Format,
 		Runtime:               o.Global.Runtime,

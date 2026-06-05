@@ -225,6 +225,11 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 
 	c.nodeFilter = nodeFilter
 
+	if c.LabRuntime != nil {
+		log.Infof("Applying node filter: %q", nodeFilter)
+		return nil
+	}
+
 	// ensure that the node filter is a subset of the nodes in the topology
 	for _, n := range nodeFilter {
 		if _, ok := c.Config.Topology.Nodes[n]; !ok {

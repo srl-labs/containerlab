@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	clabexec "github.com/srl-labs/containerlab/exec"
 )
 
 const (
@@ -40,11 +42,58 @@ type ListRequest struct {
 	AllNamespaces bool
 }
 
+type NodeRequest struct {
+	Name      string
+	Namespace string
+	Nodes     []string
+	Timeout   time.Duration
+}
+
+type ExecRequest struct {
+	Name      string
+	Namespace string
+	NodeName  string
+	Command   []string
+}
+
+type SaveRequest struct {
+	Name      string
+	Namespace string
+	Nodes     []string
+	Copy      bool
+}
+
+type EventStreamRequest struct {
+	Namespace             string
+	AllNamespaces         bool
+	IncludeInitialState   bool
+	IncludeInterfaceStats bool
+	StatsInterval         time.Duration
+}
+
+type SavedFile struct {
+	NodeName   string
+	Name       string
+	Data       []byte
+	Mode       int64
+	LinkTarget string
+}
+
+type SaveResult struct {
+	Files []SavedFile
+}
+
 type RuntimeCapabilities struct {
 	Deploy  bool
 	Destroy bool
 	Inspect bool
 	List    bool
+	Exec    bool
+	Start   bool
+	Stop    bool
+	Restart bool
+	Save    bool
+	Events  bool
 }
 
 type NodeState struct {
@@ -65,11 +114,27 @@ type LabState struct {
 	Nodes        []NodeState
 }
 
+type Event struct {
+	Timestamp   time.Time
+	Type        string
+	Action      string
+	ActorID     string
+	ActorName   string
+	ActorFullID string
+	Attributes  map[string]string
+}
+
 type LabRuntime interface {
 	Deploy(context.Context, DeployRequest) (*LabState, error)
 	Destroy(context.Context, DestroyRequest) error
 	Inspect(context.Context, InspectRequest) (*LabState, error)
 	List(context.Context, ListRequest) ([]*LabState, error)
+	Exec(context.Context, ExecRequest) (*clabexec.ExecResult, error)
+	Start(context.Context, NodeRequest) error
+	Stop(context.Context, NodeRequest) error
+	Restart(context.Context, NodeRequest) error
+	Save(context.Context, SaveRequest) (*SaveResult, error)
+	StreamEvents(context.Context, EventStreamRequest) (<-chan Event, <-chan error, error)
 	Capabilities() RuntimeCapabilities
 }
 

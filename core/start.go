@@ -8,7 +8,7 @@ import (
 // container network namespace.
 func (c *CLab) StartNodes(ctx context.Context, nodeNames []string) error {
 	if c.LabRuntime != nil {
-		return c.unsupportedLabRuntimeOperation("start")
+		return c.startNodesWithLabRuntime(ctx, nodeNames)
 	}
 
 	if err := c.ResolveLinks(); err != nil {

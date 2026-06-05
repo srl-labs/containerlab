@@ -8,7 +8,7 @@ import (
 // the node's interfaces in a dedicated network namespace before stopping the container.
 func (c *CLab) StopNodes(ctx context.Context, nodeNames []string) error {
 	if c.LabRuntime != nil {
-		return c.unsupportedLabRuntimeOperation("stop")
+		return c.stopNodesWithLabRuntime(ctx, nodeNames)
 	}
 
 	if err := c.ResolveLinks(); err != nil {

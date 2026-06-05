@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	"github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -25,6 +26,10 @@ func Stream(ctx context.Context, opts Options) error {
 	clab, err := clabcore.NewContainerLab(opts.ClabOptions...)
 	if err != nil {
 		return err
+	}
+
+	if clab.LabRuntime != nil {
+		return streamLabRuntimeEvents(ctx, clab, opts)
 	}
 
 	runtime, ok := clab.Runtimes[opts.Runtime]
@@ -99,6 +104,58 @@ func Stream(ctx context.Context, opts Options) error {
 		case <-ctx.Done():
 			return nil
 		}
+	}
+}
+
+func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Options) error {
+	printer, err := newFormatter(opts.Format, opts.writer())
+	if err != nil {
+		return err
+	}
+
+	runtimeEvents, runtimeErrs, err := clab.LabRuntime.StreamEvents(
+		ctx,
+		labruntime.EventStreamRequest{
+			AllNamespaces:         true,
+			IncludeInitialState:   opts.IncludeInitialState,
+			IncludeInterfaceStats: opts.IncludeInterfaceStats,
+			StatsInterval:         opts.StatsInterval,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to stream events for lab runtime %q: %w", opts.Runtime, err)
+	}
+
+	for {
+		select {
+		case ev := <-runtimeEvents:
+			if err := printer(aggregatedEventFromLabRuntimeEvent(ev)); err != nil {
+				log.Debugf("failed to write event: %v", err)
+			}
+		case err := <-runtimeErrs:
+			if err != nil && !errors.Is(err, context.Canceled) {
+				return err
+			}
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func aggregatedEventFromLabRuntimeEvent(ev labruntime.Event) aggregatedEvent {
+	ts := ev.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+
+	return aggregatedEvent{
+		Timestamp:   ts,
+		Type:        ev.Type,
+		Action:      ev.Action,
+		ActorID:     ev.ActorID,
+		ActorName:   ev.ActorName,
+		ActorFullID: ev.ActorFullID,
+		Attributes:  cloneStringMap(ev.Attributes),
 	}
 }
 

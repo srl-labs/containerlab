@@ -1,24 +1,40 @@
 package clabernetes
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
+	"path"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/log"
+	clabexec "github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/labruntime"
 	"gopkg.in/yaml.v2"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
+	kubeexec "k8s.io/client-go/util/exec"
 )
 
 const (
@@ -28,6 +44,13 @@ const (
 	envKubeconfig = "CLAB_KUBECONFIG"
 	envContext    = "CLAB_KUBE_CONTEXT"
 	envNamespace  = "CLAB_KUBE_NAMESPACE"
+
+	labelApp              = "clabernetes/app"
+	labelTopologyOwner    = "clabernetes/topologyOwner"
+	labelTopologyNode     = "clabernetes/topologyNode"
+	labelIgnoreReconcile  = "clabernetes/ignoreReconcile"
+	clabernetesAppValue   = "clabernetes"
+	restartedAtAnnotation = "kubectl.kubernetes.io/restartedAt"
 )
 
 var topologyGVR = schema.GroupVersionResource{
@@ -37,9 +60,11 @@ var topologyGVR = schema.GroupVersionResource{
 }
 
 type Runtime struct {
-	client    dynamic.Interface
-	namespace string
-	timeout   time.Duration
+	client     dynamic.Interface
+	kubeClient kubernetes.Interface
+	restConfig *rest.Config
+	namespace  string
+	timeout    time.Duration
 }
 
 func init() {
@@ -57,14 +82,21 @@ func New(cfg labruntime.Config) (labruntime.LabRuntime, error) {
 		return nil, fmt.Errorf("failed to create Kubernetes dynamic client: %w", err)
 	}
 
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+	}
+
 	if namespace == "" {
 		namespace = defaultNamespace
 	}
 
 	return &Runtime{
-		client:    client,
-		namespace: namespace,
-		timeout:   cfg.Timeout,
+		client:     client,
+		kubeClient: kubeClient,
+		restConfig: kubeConfig,
+		namespace:  namespace,
+		timeout:    cfg.Timeout,
 	}, nil
 }
 
@@ -74,6 +106,12 @@ func (r *Runtime) Capabilities() labruntime.RuntimeCapabilities {
 		Destroy: true,
 		Inspect: true,
 		List:    true,
+		Exec:    true,
+		Start:   true,
+		Stop:    true,
+		Restart: true,
+		Save:    true,
+		Events:  true,
 	}
 }
 
@@ -165,7 +203,12 @@ func (r *Runtime) Inspect(
 			namespace, req.Name, err)
 	}
 
-	return stateFromTopology(obj, namespace), nil
+	state := stateFromTopology(obj, namespace)
+	if err := r.enrichState(ctx, state); err != nil {
+		log.Debug("failed to enrich clabernetes topology state", "error", err)
+	}
+
+	return state, nil
 }
 
 func (r *Runtime) List(
@@ -185,7 +228,15 @@ func (r *Runtime) List(
 
 	states := make([]*labruntime.LabState, 0, len(list.Items))
 	for idx := range list.Items {
-		states = append(states, stateFromTopology(&list.Items[idx], namespace))
+		state := stateFromTopology(&list.Items[idx], namespace)
+		if err := r.enrichState(ctx, state); err != nil {
+			log.Debug("failed to enrich clabernetes topology state",
+				"name", state.Name,
+				"namespace", state.Namespace,
+				"error", err,
+			)
+		}
+		states = append(states, state)
 	}
 
 	sort.Slice(states, func(i, j int) bool {
@@ -196,6 +247,177 @@ func (r *Runtime) List(
 	})
 
 	return states, nil
+}
+
+func (r *Runtime) Exec(
+	ctx context.Context,
+	req labruntime.ExecRequest,
+) (*clabexec.ExecResult, error) {
+	if req.Name == "" {
+		return nil, fmt.Errorf("topology name is required")
+	}
+	if req.NodeName == "" {
+		return nil, fmt.Errorf("node name is required")
+	}
+	if len(req.Command) == 0 {
+		return nil, fmt.Errorf("command is required")
+	}
+
+	pod, err := r.launcherPod(ctx, req.Name, req.Namespace, req.NodeName)
+	if err != nil {
+		return nil, err
+	}
+
+	execCmd := clabexec.NewExecCmdFromSlice(req.Command)
+	result := clabexec.NewExecResult(execCmd)
+	cmd := append([]string{"docker", "exec", req.NodeName}, req.Command...)
+
+	stdout, stderr, rc, err := r.execInPod(ctx, pod, cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	result.SetReturnCode(rc)
+	result.SetStdOut(stdout)
+	result.SetStdErr(stderr)
+
+	return result, nil
+}
+
+func (r *Runtime) Start(ctx context.Context, req labruntime.NodeRequest) error {
+	return r.setNodesReplicas(ctx, req, 1)
+}
+
+func (r *Runtime) Stop(ctx context.Context, req labruntime.NodeRequest) error {
+	if err := r.setTopologyIgnoreReconcile(ctx, req.Name, req.Namespace, true); err != nil {
+		return err
+	}
+
+	return r.setNodesReplicas(ctx, req, 0)
+}
+
+func (r *Runtime) Restart(ctx context.Context, req labruntime.NodeRequest) error {
+	targets, namespace, err := r.targetNodes(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	for _, nodeName := range targets {
+		deployment, err := r.deploymentForNode(ctx, req.Name, namespace, nodeName)
+		if err != nil {
+			return err
+		}
+
+		if deployment.Spec.Template.ObjectMeta.Annotations == nil {
+			deployment.Spec.Template.ObjectMeta.Annotations = map[string]string{}
+		}
+		deployment.Spec.Template.ObjectMeta.Annotations[restartedAtAnnotation] = now
+
+		if deployment.Spec.Replicas != nil && *deployment.Spec.Replicas == 0 {
+			replicas := int32(1)
+			deployment.Spec.Replicas = &replicas
+		}
+
+		_, err = r.kubeClient.AppsV1().Deployments(namespace).
+			Update(ctx, deployment, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to restart clabernetes node %s/%s/%s: %w",
+				namespace, req.Name, nodeName, err)
+		}
+
+		if err := r.waitDeploymentReplicas(ctx, namespace, deployment.Name, 1, req.Timeout); err != nil {
+			return err
+		}
+	}
+
+	return r.clearIgnoreWhenAllStarted(ctx, req.Name, namespace)
+}
+
+func (r *Runtime) Save(
+	ctx context.Context,
+	req labruntime.SaveRequest,
+) (*labruntime.SaveResult, error) {
+	targets, namespace, err := r.targetNodes(ctx, labruntime.NodeRequest{
+		Name:      req.Name,
+		Namespace: req.Namespace,
+		Nodes:     req.Nodes,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := &labruntime.SaveResult{}
+	for _, nodeName := range targets {
+		pod, err := r.launcherPod(ctx, req.Name, namespace, nodeName)
+		if err != nil {
+			return nil, err
+		}
+
+		copyDir := ""
+		command := []string{"containerlab", "save", "-t", "/clabernetes/topo.clab.yaml"}
+		if req.Copy {
+			copyDir = fmt.Sprintf("/tmp/clab-save-copy-%s-%s-%d",
+				req.Name, nodeName, time.Now().UnixNano())
+			_, _, _, _ = r.execInPod(ctx, pod, []string{"rm", "-rf", copyDir})
+			command = append(command, "--copy", copyDir)
+		}
+
+		stdout, stderr, rc, err := r.execInPod(ctx, pod, command)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(stdout) != 0 {
+			log.Info("clabernetes save output", "node", nodeName, "stdout", strings.TrimSpace(string(stdout)))
+		}
+		if len(stderr) != 0 {
+			log.Info("clabernetes save output", "node", nodeName, "stderr", strings.TrimSpace(string(stderr)))
+		}
+		if rc != 0 {
+			return nil, fmt.Errorf("save failed for clabernetes node %s/%s/%s: rc=%d",
+				namespace, req.Name, nodeName, rc)
+		}
+
+		if req.Copy {
+			files, err := r.collectSavedFiles(ctx, pod, nodeName, copyDir)
+			if cleanupDir := copyDir; cleanupDir != "" {
+				_, _, _, _ = r.execInPod(ctx, pod, []string{"rm", "-rf", cleanupDir})
+			}
+			if err != nil {
+				return nil, err
+			}
+			result.Files = append(result.Files, files...)
+		}
+	}
+
+	return result, nil
+}
+
+func (r *Runtime) StreamEvents(
+	ctx context.Context,
+	req labruntime.EventStreamRequest,
+) (<-chan labruntime.Event, <-chan error, error) {
+	events := make(chan labruntime.Event, 128)
+	errs := make(chan error, 2)
+
+	namespace := r.namespaceFor(req.Namespace)
+	if req.AllNamespaces {
+		namespace = metav1.NamespaceAll
+	}
+
+	if req.IncludeInitialState {
+		go r.emitInitialEvents(ctx, namespace, events, errs)
+	}
+
+	if req.IncludeInterfaceStats {
+		go r.pollInterfaceStats(ctx, namespace, req.StatsInterval, events)
+	}
+
+	go r.watchTopologies(ctx, namespace, events, errs)
+	go r.watchPods(ctx, namespace, events, errs)
+
+	return events, errs, nil
 }
 
 func (r *Runtime) waitReady(ctx context.Context, name, namespace string, timeout time.Duration) error {
@@ -250,6 +472,931 @@ func (r *Runtime) waitDeleted(ctx context.Context, name, namespace string, timeo
 				return false, nil
 			}
 		})
+}
+
+func (r *Runtime) targetNodes(
+	ctx context.Context,
+	req labruntime.NodeRequest,
+) ([]string, string, error) {
+	if req.Name == "" {
+		return nil, "", fmt.Errorf("topology name is required")
+	}
+
+	namespace := r.namespaceFor(req.Namespace)
+	deployments, err := r.deploymentsForTopology(ctx, req.Name, namespace)
+	if err != nil {
+		return nil, "", err
+	}
+
+	known := map[string]struct{}{}
+	for idx := range deployments.Items {
+		nodeName := deployments.Items[idx].Labels[labelTopologyNode]
+		if nodeName != "" {
+			known[nodeName] = struct{}{}
+		}
+	}
+
+	if len(known) == 0 {
+		state, err := r.Inspect(ctx, labruntime.InspectRequest{Name: req.Name, Namespace: namespace})
+		if err != nil {
+			return nil, "", err
+		}
+		for _, node := range state.Nodes {
+			known[node.Name] = struct{}{}
+		}
+	}
+
+	if len(known) == 0 {
+		return nil, "", fmt.Errorf("topology %s/%s has no nodes", namespace, req.Name)
+	}
+
+	var targets []string
+	if len(req.Nodes) == 0 {
+		targets = make([]string, 0, len(known))
+		for nodeName := range known {
+			targets = append(targets, nodeName)
+		}
+		sort.Strings(targets)
+
+		return targets, namespace, nil
+	}
+
+	for _, nodeName := range req.Nodes {
+		if _, ok := known[nodeName]; !ok {
+			return nil, "", fmt.Errorf("node %q was not found in topology %s/%s",
+				nodeName, namespace, req.Name)
+		}
+		targets = append(targets, nodeName)
+	}
+
+	return targets, namespace, nil
+}
+
+func (r *Runtime) setNodesReplicas(
+	ctx context.Context,
+	req labruntime.NodeRequest,
+	replicas int32,
+) error {
+	targets, namespace, err := r.targetNodes(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	for _, nodeName := range targets {
+		deployment, err := r.deploymentForNode(ctx, req.Name, namespace, nodeName)
+		if err != nil {
+			return err
+		}
+
+		deployment.Spec.Replicas = &replicas
+		_, err = r.kubeClient.AppsV1().Deployments(namespace).
+			Update(ctx, deployment, metav1.UpdateOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to set clabernetes node %s/%s/%s replicas to %d: %w",
+				namespace, req.Name, nodeName, replicas, err)
+		}
+
+		if err := r.waitDeploymentReplicas(ctx, namespace, deployment.Name, replicas, req.Timeout); err != nil {
+			return err
+		}
+	}
+
+	if replicas > 0 {
+		return r.clearIgnoreWhenAllStarted(ctx, req.Name, namespace)
+	}
+
+	return nil
+}
+
+func (r *Runtime) clearIgnoreWhenAllStarted(ctx context.Context, name, namespace string) error {
+	deployments, err := r.deploymentsForTopology(ctx, name, namespace)
+	if err != nil {
+		return err
+	}
+
+	for idx := range deployments.Items {
+		replicas := int32(1)
+		if deployments.Items[idx].Spec.Replicas != nil {
+			replicas = *deployments.Items[idx].Spec.Replicas
+		}
+		if replicas == 0 {
+			return nil
+		}
+	}
+
+	return r.setTopologyIgnoreReconcile(ctx, name, namespace, false)
+}
+
+func (r *Runtime) setTopologyIgnoreReconcile(
+	ctx context.Context,
+	name,
+	namespace string,
+	enabled bool,
+) error {
+	if name == "" {
+		return fmt.Errorf("topology name is required")
+	}
+
+	namespace = r.namespaceFor(namespace)
+	resource := r.client.Resource(topologyGVR).Namespace(namespace)
+
+	obj, err := resource.Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get clabernetes topology %s/%s: %w",
+			namespace, name, err)
+	}
+
+	labelsMap := obj.GetLabels()
+	if labelsMap == nil {
+		labelsMap = map[string]string{}
+	}
+
+	if enabled {
+		labelsMap[labelIgnoreReconcile] = "true"
+	} else {
+		delete(labelsMap, labelIgnoreReconcile)
+	}
+
+	obj.SetLabels(labelsMap)
+
+	_, err = resource.Update(ctx, obj, metav1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to update clabernetes topology %s/%s labels: %w",
+			namespace, name, err)
+	}
+
+	return nil
+}
+
+func (r *Runtime) waitDeploymentReplicas(
+	ctx context.Context,
+	namespace,
+	name string,
+	replicas int32,
+	timeout time.Duration,
+) error {
+	waitCtx, cancel := context.WithTimeout(ctx, r.timeoutFor(timeout))
+	defer cancel()
+
+	return wait.PollUntilContextCancel(waitCtx, pollInterval, true,
+		func(ctx context.Context) (bool, error) {
+			deployment, err := r.kubeClient.AppsV1().Deployments(namespace).
+				Get(ctx, name, metav1.GetOptions{})
+			if err != nil {
+				return false, fmt.Errorf("failed to get clabernetes deployment %s/%s: %w",
+					namespace, name, err)
+			}
+
+			if replicas == 0 {
+				return deployment.Status.Replicas == 0 &&
+					deployment.Status.AvailableReplicas == 0, nil
+			}
+
+			return deployment.Status.ReadyReplicas >= replicas &&
+				deployment.Status.AvailableReplicas >= replicas, nil
+		})
+}
+
+func (r *Runtime) deploymentsForTopology(
+	ctx context.Context,
+	name,
+	namespace string,
+) (*appsv1.DeploymentList, error) {
+	namespace = r.namespaceFor(namespace)
+	list, err := r.kubeClient.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labels.Set{
+			labelApp:           clabernetesAppValue,
+			labelTopologyOwner: name,
+		}.String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clabernetes deployments for topology %s/%s: %w",
+			namespace, name, err)
+	}
+
+	return list, nil
+}
+
+func (r *Runtime) deploymentForNode(
+	ctx context.Context,
+	name,
+	namespace,
+	nodeName string,
+) (*appsv1.Deployment, error) {
+	namespace = r.namespaceFor(namespace)
+	list, err := r.kubeClient.AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labels.Set{
+			labelApp:           clabernetesAppValue,
+			labelTopologyOwner: name,
+			labelTopologyNode:  nodeName,
+		}.String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clabernetes deployment for node %s/%s/%s: %w",
+			namespace, name, nodeName, err)
+	}
+	if len(list.Items) == 0 {
+		return nil, fmt.Errorf("clabernetes deployment for node %s/%s/%s was not found",
+			namespace, name, nodeName)
+	}
+
+	return &list.Items[0], nil
+}
+
+func (r *Runtime) launcherPod(
+	ctx context.Context,
+	name,
+	namespace,
+	nodeName string,
+) (*corev1.Pod, error) {
+	namespace = r.namespaceFor(namespace)
+	list, err := r.kubeClient.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labels.Set{
+			labelApp:           clabernetesAppValue,
+			labelTopologyOwner: name,
+			labelTopologyNode:  nodeName,
+		}.String(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clabernetes launcher pods for node %s/%s/%s: %w",
+			namespace, name, nodeName, err)
+	}
+	if len(list.Items) == 0 {
+		return nil, fmt.Errorf("clabernetes launcher pod for node %s/%s/%s was not found",
+			namespace, name, nodeName)
+	}
+
+	for idx := range list.Items {
+		if list.Items[idx].Status.Phase == corev1.PodRunning {
+			return &list.Items[idx], nil
+		}
+	}
+
+	return &list.Items[0], nil
+}
+
+func (r *Runtime) execInPod(
+	ctx context.Context,
+	pod *corev1.Pod,
+	command []string,
+) ([]byte, []byte, int, error) {
+	if pod == nil {
+		return nil, nil, 0, fmt.Errorf("launcher pod is nil")
+	}
+	if len(command) == 0 {
+		return nil, nil, 0, fmt.Errorf("command is required")
+	}
+
+	containerName := ""
+	if len(pod.Spec.Containers) != 0 {
+		containerName = pod.Spec.Containers[0].Name
+	}
+
+	req := r.kubeClient.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(pod.Name).
+		Namespace(pod.Namespace).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Container: containerName,
+			Command:   command,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+
+	executor, err := remotecommand.NewSPDYExecutor(r.restConfig, "POST", req.URL())
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("failed to create Kubernetes exec executor: %w", err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	err = executor.StreamWithContext(ctx, remotecommand.StreamOptions{
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    false,
+	})
+
+	rc := 0
+	if err != nil {
+		var exitErr kubeexec.ExitError
+		if errors.As(err, &exitErr) {
+			rc = exitErr.ExitStatus()
+			err = nil
+		}
+	}
+	if err != nil {
+		return stdout.Bytes(), stderr.Bytes(), rc, fmt.Errorf("failed to execute command in pod %s/%s: %w",
+			pod.Namespace, pod.Name, err)
+	}
+
+	return stdout.Bytes(), stderr.Bytes(), rc, nil
+}
+
+func (r *Runtime) collectSavedFiles(
+	ctx context.Context,
+	pod *corev1.Pod,
+	nodeName,
+	copyDir string,
+) ([]labruntime.SavedFile, error) {
+	if copyDir == "" {
+		return nil, nil
+	}
+
+	nodeCopyDir := path.Join(copyDir, "clab-clabernetes-"+nodeName, nodeName)
+	_, _, rc, err := r.execInPod(ctx, pod, []string{"test", "-d", nodeCopyDir})
+	if err != nil {
+		return nil, err
+	}
+	if rc != 0 {
+		log.Debug("no clabernetes saved config copy directory found",
+			"node", nodeName,
+			"path", nodeCopyDir,
+		)
+
+		return nil, nil
+	}
+
+	stdout, stderr, rc, err := r.execInPod(ctx, pod,
+		[]string{"tar", "cf", "-", "-C", nodeCopyDir, "."})
+	if err != nil {
+		return nil, err
+	}
+	if rc != 0 {
+		return nil, fmt.Errorf("failed to archive saved config copy for node %s: rc=%d stderr=%s",
+			nodeName, rc, strings.TrimSpace(string(stderr)))
+	}
+
+	files, err := savedFilesFromTar(nodeName, stdout)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read saved config archive for node %s: %w",
+			nodeName, err)
+	}
+
+	return files, nil
+}
+
+func savedFilesFromTar(nodeName string, data []byte) ([]labruntime.SavedFile, error) {
+	reader := tar.NewReader(bytes.NewReader(data))
+	var files []labruntime.SavedFile
+
+	for {
+		header, err := reader.Next()
+		switch {
+		case errors.Is(err, io.EOF):
+			return files, nil
+		case err != nil:
+			return nil, err
+		}
+
+		name, ok := cleanTarPath(header.Name)
+		if !ok || name == "." {
+			continue
+		}
+
+		switch header.Typeflag {
+		case tar.TypeReg, tar.TypeRegA:
+			content, err := io.ReadAll(reader)
+			if err != nil {
+				return nil, err
+			}
+
+			files = append(files, labruntime.SavedFile{
+				NodeName: nodeName,
+				Name:     name,
+				Data:     content,
+				Mode:     header.Mode,
+			})
+		case tar.TypeSymlink:
+			files = append(files, labruntime.SavedFile{
+				NodeName:   nodeName,
+				Name:       name,
+				Mode:       header.Mode,
+				LinkTarget: header.Linkname,
+			})
+		}
+	}
+}
+
+func cleanTarPath(name string) (string, bool) {
+	name = strings.TrimPrefix(name, "./")
+	cleaned := path.Clean(name)
+	if cleaned == "." || cleaned == "" {
+		return cleaned, true
+	}
+	if strings.HasPrefix(cleaned, "../") || strings.HasPrefix(cleaned, "/") || cleaned == ".." {
+		return "", false
+	}
+
+	return cleaned, true
+}
+
+func (r *Runtime) enrichState(ctx context.Context, state *labruntime.LabState) error {
+	if state == nil || state.Name == "" {
+		return nil
+	}
+
+	deployments, err := r.deploymentsForTopology(ctx, state.Name, state.Namespace)
+	if err != nil {
+		return err
+	}
+
+	pods, err := r.kubeClient.CoreV1().Pods(state.Namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labels.Set{
+			labelApp:           clabernetesAppValue,
+			labelTopologyOwner: state.Name,
+		}.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to list clabernetes pods for topology %s/%s: %w",
+			state.Namespace, state.Name, err)
+	}
+
+	nodesByName := map[string]labruntime.NodeState{}
+	for _, node := range state.Nodes {
+		nodesByName[node.Name] = node
+	}
+
+	podsByNode := map[string]*corev1.Pod{}
+	for idx := range pods.Items {
+		nodeName := pods.Items[idx].Labels[labelTopologyNode]
+		if nodeName == "" {
+			continue
+		}
+		if pods.Items[idx].Status.Phase == corev1.PodRunning {
+			podsByNode[nodeName] = &pods.Items[idx]
+			continue
+		}
+		if _, ok := podsByNode[nodeName]; !ok {
+			podsByNode[nodeName] = &pods.Items[idx]
+		}
+	}
+
+	for idx := range deployments.Items {
+		deployment := &deployments.Items[idx]
+		nodeName := deployment.Labels[labelTopologyNode]
+		if nodeName == "" {
+			continue
+		}
+
+		node := nodesByName[nodeName]
+		node.Name = nodeName
+		replicas := int32(1)
+		if deployment.Spec.Replicas != nil {
+			replicas = *deployment.Spec.Replicas
+		}
+
+		switch {
+		case replicas == 0:
+			node.State = "stopped"
+			node.Ready = false
+		case deployment.Status.ReadyReplicas > 0:
+			node.State = "ready"
+			node.Ready = true
+		case podsByNode[nodeName] != nil && podsByNode[nodeName].Status.Phase != "":
+			node.State = strings.ToLower(string(podsByNode[nodeName].Status.Phase))
+			node.Ready = false
+		default:
+			node.State = "notready"
+			node.Ready = false
+		}
+
+		nodesByName[nodeName] = node
+	}
+
+	nodeNames := make([]string, 0, len(nodesByName))
+	for nodeName := range nodesByName {
+		nodeNames = append(nodeNames, nodeName)
+	}
+	sort.Strings(nodeNames)
+
+	state.Nodes = make([]labruntime.NodeState, 0, len(nodeNames))
+	allReady := len(nodeNames) > 0
+	allStopped := len(nodeNames) > 0
+	for _, nodeName := range nodeNames {
+		node := nodesByName[nodeName]
+		state.Nodes = append(state.Nodes, node)
+		allReady = allReady && node.Ready
+		allStopped = allStopped && node.State == "stopped"
+	}
+
+	switch {
+	case allReady:
+		state.State = "running"
+		state.Ready = true
+	case allStopped:
+		state.State = "stopped"
+		state.Ready = false
+	case len(nodeNames) != 0:
+		state.State = "partial"
+		state.Ready = false
+	}
+
+	return nil
+}
+
+func (r *Runtime) emitInitialEvents(
+	ctx context.Context,
+	namespace string,
+	eventSink chan<- labruntime.Event,
+	errSink chan<- error,
+) {
+	states, err := r.List(ctx, labruntime.ListRequest{
+		Namespace:     namespace,
+		AllNamespaces: namespace == metav1.NamespaceAll,
+	})
+	if err != nil {
+		sendEventError(ctx, errSink, err)
+		return
+	}
+
+	for _, state := range states {
+		for _, node := range state.Nodes {
+			action := node.State
+			if node.Ready {
+				action = "running"
+			}
+			if action == "" {
+				action = state.State
+			}
+			r.sendEvent(ctx, eventSink, labruntime.Event{
+				Timestamp: time.Now(),
+				Type:      "container",
+				Action:    action,
+				ActorID:   fmt.Sprintf("%s/%s/%s", state.Namespace, state.Name, node.Name),
+				ActorName: fmt.Sprintf("%s-%s", state.Name, node.Name),
+				Attributes: map[string]string{
+					"namespace": state.Namespace,
+					"lab":       state.Name,
+					"node":      node.Name,
+					"state":     node.State,
+				},
+			})
+		}
+	}
+}
+
+func (r *Runtime) watchTopologies(
+	ctx context.Context,
+	namespace string,
+	eventSink chan<- labruntime.Event,
+	errSink chan<- error,
+) {
+	resource := r.client.Resource(topologyGVR).Namespace(namespace)
+
+	watcher, err := resource.Watch(ctx, metav1.ListOptions{})
+	if err != nil {
+		sendEventError(ctx, errSink, fmt.Errorf("failed to watch clabernetes topologies: %w", err))
+		return
+	}
+	defer watcher.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ev, ok := <-watcher.ResultChan():
+			if !ok {
+				return
+			}
+			if ev.Type == watch.Error {
+				sendEventError(ctx, errSink, fmt.Errorf("clabernetes topology watch returned an error"))
+				continue
+			}
+
+			obj, ok := ev.Object.(*unstructured.Unstructured)
+			if !ok {
+				continue
+			}
+			state := stateFromTopology(obj, namespace)
+			r.sendEvent(ctx, eventSink, labruntime.Event{
+				Timestamp: time.Now(),
+				Type:      "topology",
+				Action:    strings.ToLower(string(ev.Type)),
+				ActorID:   fmt.Sprintf("%s/%s", state.Namespace, state.Name),
+				ActorName: state.Name,
+				Attributes: map[string]string{
+					"namespace": state.Namespace,
+					"lab":       state.Name,
+					"state":     state.State,
+					"ready":     fmt.Sprintf("%t", state.Ready),
+				},
+			})
+		}
+	}
+}
+
+func (r *Runtime) watchPods(
+	ctx context.Context,
+	namespace string,
+	eventSink chan<- labruntime.Event,
+	errSink chan<- error,
+) {
+	watcher, err := r.kubeClient.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
+		LabelSelector: labelTopologyOwner,
+	})
+	if err != nil {
+		sendEventError(ctx, errSink, fmt.Errorf("failed to watch clabernetes pods: %w", err))
+		return
+	}
+	defer watcher.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ev, ok := <-watcher.ResultChan():
+			if !ok {
+				return
+			}
+			if ev.Type == watch.Error {
+				sendEventError(ctx, errSink, fmt.Errorf("clabernetes pod watch returned an error"))
+				continue
+			}
+
+			pod, ok := ev.Object.(*corev1.Pod)
+			if !ok {
+				continue
+			}
+
+			labName := pod.Labels[labelTopologyOwner]
+			nodeName := pod.Labels[labelTopologyNode]
+			if labName == "" || nodeName == "" {
+				continue
+			}
+
+			r.sendEvent(ctx, eventSink, labruntime.Event{
+				Timestamp:   time.Now(),
+				Type:        "container",
+				Action:      strings.ToLower(string(ev.Type)),
+				ActorID:     fmt.Sprintf("%s/%s/%s", pod.Namespace, labName, nodeName),
+				ActorName:   fmt.Sprintf("%s-%s", labName, nodeName),
+				ActorFullID: pod.Name,
+				Attributes: map[string]string{
+					"namespace": pod.Namespace,
+					"lab":       labName,
+					"node":      nodeName,
+					"pod":       pod.Name,
+					"phase":     string(pod.Status.Phase),
+					"pod_ip":    pod.Status.PodIP,
+				},
+			})
+		}
+	}
+}
+
+func (r *Runtime) pollInterfaceStats(
+	ctx context.Context,
+	namespace string,
+	interval time.Duration,
+	eventSink chan<- labruntime.Event,
+) {
+	if interval <= 0 {
+		interval = time.Second
+	}
+
+	samples := map[string]c9sIfaceStatsSample{}
+
+	sample := func() {
+		states, err := r.List(ctx, labruntime.ListRequest{
+			Namespace:     namespace,
+			AllNamespaces: namespace == metav1.NamespaceAll,
+		})
+		if err != nil {
+			log.Debug("failed to list clabernetes topologies for interface stats", "error", err)
+			return
+		}
+
+		now := time.Now()
+		for _, state := range states {
+			for _, node := range state.Nodes {
+				if !node.Ready {
+					continue
+				}
+
+				pod, err := r.launcherPod(ctx, state.Name, state.Namespace, node.Name)
+				if err != nil {
+					log.Debug("failed to resolve clabernetes launcher pod for interface stats",
+						"namespace", state.Namespace,
+						"lab", state.Name,
+						"node", node.Name,
+						"error", err,
+					)
+					continue
+				}
+
+				stdout, stderr, rc, err := r.execInPod(ctx, pod,
+					[]string{"docker", "exec", node.Name, "cat", "/proc/net/dev"})
+				if err != nil {
+					log.Debug("failed to collect clabernetes interface stats",
+						"namespace", state.Namespace,
+						"lab", state.Name,
+						"node", node.Name,
+						"error", err,
+					)
+					continue
+				}
+				if rc != 0 {
+					log.Debug("failed to collect clabernetes interface stats",
+						"namespace", state.Namespace,
+						"lab", state.Name,
+						"node", node.Name,
+						"rc", rc,
+						"stderr", strings.TrimSpace(string(stderr)),
+					)
+					continue
+				}
+
+				stats, err := parseProcNetDev(stdout)
+				if err != nil {
+					log.Debug("failed to parse clabernetes interface stats",
+						"namespace", state.Namespace,
+						"lab", state.Name,
+						"node", node.Name,
+						"error", err,
+					)
+					continue
+				}
+
+				for _, stat := range stats {
+					key := c9sIfaceStatsKey(state.Namespace, state.Name, node.Name, stat.Name)
+					current := c9sIfaceStatsSample{
+						Stats:     stat,
+						Timestamp: now,
+					}
+
+					if previous, ok := samples[key]; ok {
+						event := c9sIfaceStatsEvent(state, node, pod, stat, previous, current)
+						r.sendEvent(ctx, eventSink, event)
+					}
+
+					samples[key] = current
+				}
+			}
+		}
+	}
+
+	sample()
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			sample()
+		}
+	}
+}
+
+type c9sIfaceStats struct {
+	Name      string
+	RxBytes   uint64
+	RxPackets uint64
+	TxBytes   uint64
+	TxPackets uint64
+}
+
+type c9sIfaceStatsSample struct {
+	Stats     c9sIfaceStats
+	Timestamp time.Time
+}
+
+func parseProcNetDev(data []byte) ([]c9sIfaceStats, error) {
+	lines := strings.Split(string(data), "\n")
+	stats := make([]c9sIfaceStats, 0, len(lines))
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || !strings.Contains(line, ":") {
+			continue
+		}
+
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		ifName := strings.TrimSpace(parts[0])
+		fields := strings.Fields(parts[1])
+		if len(fields) < 16 {
+			return nil, fmt.Errorf("unexpected /proc/net/dev line for %q: %q", ifName, line)
+		}
+
+		rxBytes, err := strconv.ParseUint(fields[0], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse rx bytes for %q: %w", ifName, err)
+		}
+		rxPackets, err := strconv.ParseUint(fields[1], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse rx packets for %q: %w", ifName, err)
+		}
+		txBytes, err := strconv.ParseUint(fields[8], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse tx bytes for %q: %w", ifName, err)
+		}
+		txPackets, err := strconv.ParseUint(fields[9], 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse tx packets for %q: %w", ifName, err)
+		}
+
+		stats = append(stats, c9sIfaceStats{
+			Name:      ifName,
+			RxBytes:   rxBytes,
+			RxPackets: rxPackets,
+			TxBytes:   txBytes,
+			TxPackets: txPackets,
+		})
+	}
+
+	return stats, nil
+}
+
+func c9sIfaceStatsKey(namespace, lab, node, ifName string) string {
+	return namespace + "/" + lab + "/" + node + "/" + ifName
+}
+
+func c9sIfaceStatsEvent(
+	state *labruntime.LabState,
+	node labruntime.NodeState,
+	pod *corev1.Pod,
+	stat c9sIfaceStats,
+	previous,
+	current c9sIfaceStatsSample,
+) labruntime.Event {
+	interval := current.Timestamp.Sub(previous.Timestamp)
+	if interval <= 0 {
+		interval = time.Second
+	}
+
+	seconds := interval.Seconds()
+	rxBytesDelta := counterDelta(stat.RxBytes, previous.Stats.RxBytes)
+	txBytesDelta := counterDelta(stat.TxBytes, previous.Stats.TxBytes)
+	rxPacketsDelta := counterDelta(stat.RxPackets, previous.Stats.RxPackets)
+	txPacketsDelta := counterDelta(stat.TxPackets, previous.Stats.TxPackets)
+
+	actorName := fmt.Sprintf("%s-%s", state.Name, node.Name)
+	podName := ""
+	if pod != nil {
+		podName = pod.Name
+	}
+
+	return labruntime.Event{
+		Timestamp:   current.Timestamp,
+		Type:        "interface",
+		Action:      "stats",
+		ActorID:     c9sIfaceStatsKey(state.Namespace, state.Name, node.Name, stat.Name),
+		ActorName:   actorName,
+		ActorFullID: podName,
+		Attributes: map[string]string{
+			"namespace":        state.Namespace,
+			"lab":              state.Name,
+			"node":             node.Name,
+			"name":             actorName,
+			"pod":              podName,
+			"ifname":           stat.Name,
+			"origin":           "clabernetes",
+			"rx_bytes":         strconv.FormatUint(stat.RxBytes, 10),
+			"tx_bytes":         strconv.FormatUint(stat.TxBytes, 10),
+			"rx_packets":       strconv.FormatUint(stat.RxPackets, 10),
+			"tx_packets":       strconv.FormatUint(stat.TxPackets, 10),
+			"rx_bps":           strconv.FormatFloat(float64(rxBytesDelta*8)/seconds, 'f', -1, 64),
+			"tx_bps":           strconv.FormatFloat(float64(txBytesDelta*8)/seconds, 'f', -1, 64),
+			"rx_pps":           strconv.FormatFloat(float64(rxPacketsDelta)/seconds, 'f', -1, 64),
+			"tx_pps":           strconv.FormatFloat(float64(txPacketsDelta)/seconds, 'f', -1, 64),
+			"interval_seconds": strconv.FormatFloat(seconds, 'f', -1, 64),
+		},
+	}
+}
+
+func counterDelta(current, previous uint64) uint64 {
+	if current < previous {
+		return 0
+	}
+
+	return current - previous
+}
+
+func (r *Runtime) sendEvent(
+	ctx context.Context,
+	eventSink chan<- labruntime.Event,
+	event labruntime.Event,
+) {
+	select {
+	case eventSink <- event:
+	case <-ctx.Done():
+	}
+}
+
+func sendEventError(ctx context.Context, errSink chan<- error, err error) {
+	select {
+	case errSink <- err:
+	case <-ctx.Done():
+	}
 }
 
 func (r *Runtime) namespaceFor(namespace string) string {

@@ -7,7 +7,7 @@ import (
 // RestartNodes performs stop+start for each node, restoring parked interfaces.
 func (c *CLab) RestartNodes(ctx context.Context, nodeNames []string) error {
 	if c.LabRuntime != nil {
-		return c.unsupportedLabRuntimeOperation("restart")
+		return c.restartNodesWithLabRuntime(ctx, nodeNames)
 	}
 
 	if err := c.ResolveLinks(); err != nil {
