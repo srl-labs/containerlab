@@ -1048,30 +1048,55 @@ func (r *Runtime) watchTopologies(
 ) {
 	resource := r.client.Resource(topologyGVR).Namespace(namespace)
 
-	watcher, err := resource.Watch(ctx, metav1.ListOptions{})
-	if err != nil {
-		sendEventError(ctx, errSink, fmt.Errorf("failed to watch clabernetes topologies: %w", err))
-		return
+	for {
+		watcher, err := resource.Watch(ctx, metav1.ListOptions{})
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+
+			sendEventError(ctx, errSink, fmt.Errorf("failed to watch clabernetes topologies: %w", err))
+			return
+		}
+
+		if !r.forwardTopologyWatch(ctx, namespace, watcher, eventSink, errSink) {
+			return
+		}
+
+		if !sleepContext(ctx, pollInterval) {
+			return
+		}
 	}
+}
+
+func (r *Runtime) forwardTopologyWatch(
+	ctx context.Context,
+	namespace string,
+	watcher watch.Interface,
+	eventSink chan<- labruntime.Event,
+	errSink chan<- error,
+) bool {
 	defer watcher.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return false
 		case ev, ok := <-watcher.ResultChan():
 			if !ok {
-				return
+				log.Debug("clabernetes topology watch closed, reconnecting")
+				return true
 			}
 			if ev.Type == watch.Error {
 				sendEventError(ctx, errSink, fmt.Errorf("clabernetes topology watch returned an error"))
-				continue
+				return false
 			}
 
 			obj, ok := ev.Object.(*unstructured.Unstructured)
 			if !ok {
 				continue
 			}
+
 			state := stateFromTopology(obj, namespace)
 			r.sendEvent(ctx, eventSink, labruntime.Event{
 				Timestamp: time.Now(),
@@ -1096,26 +1121,49 @@ func (r *Runtime) watchPods(
 	eventSink chan<- labruntime.Event,
 	errSink chan<- error,
 ) {
-	watcher, err := r.kubeClient.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
-		LabelSelector: labelTopologyOwner,
-	})
-	if err != nil {
-		sendEventError(ctx, errSink, fmt.Errorf("failed to watch clabernetes pods: %w", err))
-		return
+	for {
+		watcher, err := r.kubeClient.CoreV1().Pods(namespace).Watch(ctx, metav1.ListOptions{
+			LabelSelector: labelTopologyOwner,
+		})
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+
+			sendEventError(ctx, errSink, fmt.Errorf("failed to watch clabernetes pods: %w", err))
+			return
+		}
+
+		if !r.forwardPodWatch(ctx, watcher, eventSink, errSink) {
+			return
+		}
+
+		if !sleepContext(ctx, pollInterval) {
+			return
+		}
 	}
+}
+
+func (r *Runtime) forwardPodWatch(
+	ctx context.Context,
+	watcher watch.Interface,
+	eventSink chan<- labruntime.Event,
+	errSink chan<- error,
+) bool {
 	defer watcher.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return false
 		case ev, ok := <-watcher.ResultChan():
 			if !ok {
-				return
+				log.Debug("clabernetes pod watch closed, reconnecting")
+				return true
 			}
 			if ev.Type == watch.Error {
 				sendEventError(ctx, errSink, fmt.Errorf("clabernetes pod watch returned an error"))
-				continue
+				return false
 			}
 
 			pod, ok := ev.Object.(*corev1.Pod)
@@ -1146,6 +1194,18 @@ func (r *Runtime) watchPods(
 				},
 			})
 		}
+	}
+}
+
+func sleepContext(ctx context.Context, d time.Duration) bool {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
 	}
 }
 

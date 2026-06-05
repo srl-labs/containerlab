@@ -182,7 +182,19 @@ func runtimeTimeout(rtconfig *clabruntime.RuntimeConfig) time.Duration {
 
 func WithKeepMgmtNet() ClabOption {
 	return func(c *CLab) error {
-		c.globalRuntime().WithKeepMgmtNet()
+		if c.LabRuntime != nil {
+			log.Debug("Ignoring keep management network option for lab runtime",
+				"runtime", c.globalRuntimeName)
+
+			return nil
+		}
+
+		r := c.globalRuntime()
+		if r == nil {
+			return fmt.Errorf("container runtime %q is not initialized", c.globalRuntimeName)
+		}
+
+		r.WithKeepMgmtNet()
 
 		return nil
 	}

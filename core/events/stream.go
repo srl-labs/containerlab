@@ -126,13 +126,25 @@ func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Optio
 		return fmt.Errorf("failed to stream events for lab runtime %q: %w", opts.Runtime, err)
 	}
 
-	for {
+	for runtimeEvents != nil || runtimeErrs != nil {
 		select {
-		case ev := <-runtimeEvents:
+		case ev, ok := <-runtimeEvents:
+			if !ok {
+				runtimeEvents = nil
+
+				continue
+			}
+
 			if err := printer(aggregatedEventFromLabRuntimeEvent(ev)); err != nil {
 				log.Debugf("failed to write event: %v", err)
 			}
-		case err := <-runtimeErrs:
+		case err, ok := <-runtimeErrs:
+			if !ok {
+				runtimeErrs = nil
+
+				continue
+			}
+
 			if err != nil && !errors.Is(err, context.Canceled) {
 				return err
 			}
@@ -140,6 +152,8 @@ func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Optio
 			return nil
 		}
 	}
+
+	return nil
 }
 
 func aggregatedEventFromLabRuntimeEvent(ev labruntime.Event) aggregatedEvent {

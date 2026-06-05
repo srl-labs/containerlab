@@ -657,9 +657,6 @@ func (c *CLab) HasKind(k string) bool {
 	return false
 }
 
-// addDefaultLabels adds default labels to node's config struct.
-// Update the addDefaultLabels function in clab/config.go
-// addDefaultLabels adds default labels to node's config struct.
 func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 	if cfg.Labels == nil {
 		cfg.Labels = map[string]string{}
