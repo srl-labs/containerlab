@@ -13,6 +13,10 @@ func restartCmd(o *Options) (*cobra.Command, error) {
 		Use:   "restart",
 		Short: "Restart one or more nodes in a deployed lab (seamless dataplane)",
 		PreRunE: func(_ *cobra.Command, _ []string) error {
+			if !runtimeRequiresRoot(o.Global.Runtime) {
+				return nil
+			}
+
 			return clabutils.CheckAndGetRootPrivs()
 		},
 		SilenceUsage: true,

@@ -28,6 +28,10 @@ func (c *CLab) Destroy(ctx context.Context, options ...DestroyOption) (err error
 		opt(opts)
 	}
 
+	if c.LabRuntime != nil {
+		return c.destroyWithLabRuntime(ctx, opts)
+	}
+
 	var containers []clabruntime.GenericContainer
 
 	switch {

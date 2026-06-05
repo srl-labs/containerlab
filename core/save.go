@@ -20,6 +20,10 @@ func (c *CLab) Save(
 	ctx context.Context,
 	options ...SaveOption,
 ) error {
+	if c.LabRuntime != nil {
+		return c.unsupportedLabRuntimeOperation("save")
+	}
+
 	opts := NewSaveOptions()
 	for _, opt := range options {
 		opt(opts)

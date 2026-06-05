@@ -165,6 +165,10 @@ func listContainers(
 	c *clabcore.CLab,
 	o *Options,
 ) ([]clabruntime.GenericContainer, error) {
+	if c.LabRuntime != nil {
+		return c.ListLabRuntimeContainers(ctx, o.Destroy.All)
+	}
+
 	var containers []clabruntime.GenericContainer
 
 	var err error
@@ -247,6 +251,9 @@ func toTableData(contDetails []clabtypes.ContainerDetails, o *Options) []tableWr
 func getShortestTopologyPath(p string) (string, error) {
 	if p == "" {
 		return "", nil
+	}
+	if strings.Contains(p, "://") {
+		return p, nil
 	}
 
 	// get topo file path relative of the cwd

@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 	clabevents "github.com/srl-labs/containerlab/core/events"
+	"github.com/srl-labs/containerlab/labruntime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -14,6 +17,10 @@ func eventsCmd(o *Options) (*cobra.Command, error) {
 			"reference: https://containerlab.dev/cmd/events/",
 		Aliases: []string{"ev"},
 		PreRunE: func(*cobra.Command, []string) error {
+			if !runtimeRequiresRoot(o.Global.Runtime) {
+				return nil
+			}
+
 			return clabutils.CheckAndGetRootPrivs()
 		},
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -61,6 +68,10 @@ containerlab events --format json`
 }
 
 func eventsFn(cmd *cobra.Command, o *Options) error {
+	if labruntime.IsLabRuntimeName(o.Global.Runtime) {
+		return fmt.Errorf("events is not supported for lab runtime %q yet", o.Global.Runtime)
+	}
+
 	opts := clabevents.Options{
 		Format:                o.Events.Format,
 		Runtime:               o.Global.Runtime,

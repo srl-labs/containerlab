@@ -7,6 +7,10 @@ import (
 // StopNodes stops one or more deployed nodes without losing their dataplane links by parking
 // the node's interfaces in a dedicated network namespace before stopping the container.
 func (c *CLab) StopNodes(ctx context.Context, nodeNames []string) error {
+	if c.LabRuntime != nil {
+		return c.unsupportedLabRuntimeOperation("stop")
+	}
+
 	if err := c.ResolveLinks(); err != nil {
 		return err
 	}

@@ -16,6 +16,10 @@ func (c *CLab) Exec(
 	cmds []string,
 	listOptions ...ListOption,
 ) (*clabexec.ExecCollection, error) {
+	if c.LabRuntime != nil {
+		return nil, c.unsupportedLabRuntimeOperation("exec")
+	}
+
 	err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err

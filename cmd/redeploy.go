@@ -13,6 +13,10 @@ func redeployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 			"reference: https://containerlab.dev/cmd/redeploy/",
 		Aliases: []string{"rdep"},
 		PreRunE: func(_ *cobra.Command, _ []string) error {
+			if !runtimeRequiresRoot(o.Global.Runtime) {
+				return nil
+			}
+
 			return clabutils.CheckAndGetRootPrivs()
 		},
 		SilenceUsage: true,

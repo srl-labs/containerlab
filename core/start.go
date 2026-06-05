@@ -7,6 +7,10 @@ import (
 // StartNodes starts one or more stopped nodes and restores their parked interfaces back into the
 // container network namespace.
 func (c *CLab) StartNodes(ctx context.Context, nodeNames []string) error {
+	if c.LabRuntime != nil {
+		return c.unsupportedLabRuntimeOperation("start")
+	}
+
 	if err := c.ResolveLinks(); err != nil {
 		return err
 	}

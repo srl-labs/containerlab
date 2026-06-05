@@ -7,6 +7,7 @@ import (
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	"github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 )
@@ -279,7 +280,8 @@ func (o *GlobalOptions) toClabOptions() []clabcore.ClabOption {
 		options = append(options, clabcore.WithTopologyName(o.TopologyName))
 	}
 
-	if o.TopologyFile == "" && o.TopologyName != "" {
+	if o.TopologyFile == "" && o.TopologyName != "" &&
+		!labruntime.IsLabRuntimeName(o.Runtime) {
 		options = append(options, clabcore.WithTopologyFromLab(o.TopologyName, o.VarsFiles))
 	}
 

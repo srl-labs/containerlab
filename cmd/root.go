@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	clabgit "github.com/srl-labs/containerlab/git"
+	"github.com/srl-labs/containerlab/labruntime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -155,8 +156,7 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	if err != nil {
 		return err
 	}
-	// Rootless operations only supported for Docker runtime
-	if o.Global.Runtime != "" && o.Global.Runtime != clabruntimedocker.RuntimeName {
+	if runtimeRequiresRoot(o.Global.Runtime) {
 		err := clabutils.CheckAndGetRootPrivs()
 		if err != nil {
 			return err
@@ -164,6 +164,12 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	return getTopoFilePath(cobraCmd, o)
+}
+
+func runtimeRequiresRoot(name string) bool {
+	return name != "" &&
+		name != clabruntimedocker.RuntimeName &&
+		!labruntime.IsLabRuntimeName(name)
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory
