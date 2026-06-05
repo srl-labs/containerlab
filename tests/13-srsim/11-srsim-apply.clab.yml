@@ -6,6 +6,8 @@ topology:
     nokia_srsim:
       license: /opt/nokia/sros/license-sros25.txt
       image: registry.srlinux.dev/pub/nokia_srsim:25.10.R2
+      env:
+        CLAB_SROS_DISABLE_COMPONENT_CONFIG: "true"
 
   nodes:
     client:
