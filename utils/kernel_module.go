@@ -17,20 +17,76 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-// IsKernelModuleLoaded checks if a kernel module is loaded by parsing /proc/modules file.
+// IsKernelModuleLoaded checks if a kernel module is available.
+// either built-in to kernel, or loaded.
 func IsKernelModuleLoaded(name string) (bool, error) {
+	loaded, err := isKernelModuleLoadable(name)
+	if err != nil {
+		return false, err
+	}
+	if loaded {
+		return true, nil
+	}
+
+	return isKernelModuleBuiltin(name)
+}
+
+// isKernelModuleLoadable checks if a kernel module is loaded by parsing the
+// /proc/modules file.
+func isKernelModuleLoadable(name string) (bool, error) {
 	f, err := os.Open("/proc/modules")
 	if err != nil {
 		return false, err
 	}
+	defer f.Close() // skipcq: GO-S2307
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		if strings.HasPrefix(strings.Fields(scanner.Text())[0], name) {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) == 0 {
+			continue
+		}
+		if strings.HasPrefix(fields[0], name) {
 			return true, nil
 		}
 	}
-	return false, f.Close()
+	return false, scanner.Err()
+}
+
+// isKernelModuleBuiltin checks if a kernel module is compiled directly into the
+// kernel by parsing the /lib/modules/<kernel-version>/modules.builtin file.
+func isKernelModuleBuiltin(name string) (bool, error) {
+	ver, err := os.ReadFile(kernelOSReleasePath)
+	if err != nil {
+		return false, err
+	}
+
+	builtinPath := filepath.Join(
+		"/lib/modules", strings.TrimSpace(string(ver)), "modules.builtin",
+	)
+
+	f, err := os.Open(builtinPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	defer f.Close()
+
+	moduleName := strings.TrimSuffix(name, ".ko")
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		base := filepath.Base(strings.TrimSpace(scanner.Text()))
+		base = strings.TrimSuffix(base, filepath.Ext(base)) // catch any compressed, ie. .ko.gz
+		base = strings.TrimSuffix(base, ".ko")
+
+		if base == moduleName {
+			return true, nil
+		}
+	}
+	return false, scanner.Err()
 }
 
 const kernelOSReleasePath = "/proc/sys/kernel/osrelease"
