@@ -4,12 +4,16 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -229,6 +233,189 @@ func TestDeployCreatesTopology(t *testing.T) {
 	}
 }
 
+func TestDeployStagesLocalFilesFromTopology(t *testing.T) {
+	t.Parallel()
+
+	topologyDir := t.TempDir()
+	writeFile(t, filepath.Join(topologyDir, "configs", "client2", "iperf.sh"), "#!/bin/sh\n", 0o755)
+	writeFile(t, filepath.Join(topologyDir, "configs", "prometheus", "prometheus.yml"), "global: {}\n", 0o644)
+	writeFile(t, filepath.Join(topologyDir, "configs", "fabric", "leaf1.cfg"), "set / system name leaf1\n", 0o644)
+
+	const definition = `name: lab1
+topology:
+  defaults:
+    kind: linux
+  nodes:
+    leaf1:
+      startup-config: configs/fabric/leaf1.cfg
+    client2:
+      kind: linux
+      binds:
+        - configs/client2:/config
+    prometheus:
+      kind: linux
+      binds:
+        - configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+`
+
+	topologyFile := filepath.Join(topologyDir, "lab.clab.yml")
+	writeFile(t, topologyFile, definition, 0o644)
+
+	r := newTestRuntime()
+	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyFile:       topologyFile,
+		TopologyLabDir:     filepath.Join(topologyDir, "clab-lab1"),
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Name != "lab1" || state.Namespace != "lab-ns" {
+		t.Fatalf("unexpected deploy state: %+v", state)
+	}
+
+	clientConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-client2-files")
+	if got := string(clientConfigMap.BinaryData["configs-client2-iperf-sh"]); got != "#!/bin/sh\n" {
+		t.Fatalf("unexpected client2 staged file content: %q", got)
+	}
+
+	prometheusConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-prometheus-files")
+	if got := string(prometheusConfigMap.BinaryData["configs-prometheus-prometheus-yml"]); got != "global: {}\n" {
+		t.Fatalf("unexpected prometheus staged file content: %q", got)
+	}
+
+	startupConfigMap := getTestConfigMap(t, r, "lab-ns", "lab1-leaf1-startup-config")
+	if got := string(startupConfigMap.BinaryData["startup-config"]); got != "set / system name leaf1\n" {
+		t.Fatalf("unexpected startup config content: %q", got)
+	}
+
+	obj := getTestTopology(t, r, "lab-ns", "lab1")
+	assertFileMount(
+		t,
+		obj,
+		"client2",
+		"configs/client2/iperf.sh",
+		"lab1-client2-files",
+		"configs-client2-iperf-sh",
+		"execute",
+	)
+	assertFileMount(
+		t,
+		obj,
+		"prometheus",
+		"configs/prometheus/prometheus.yml",
+		"lab1-prometheus-files",
+		"configs-prometheus-prometheus-yml",
+		"read",
+	)
+	assertFileMount(
+		t,
+		obj,
+		"leaf1",
+		"configs/fabric/leaf1.cfg",
+		"lab1-leaf1-startup-config",
+		"startup-config",
+		"read",
+	)
+}
+
+func TestDeployPreservesDockerCompatibleNamesForEmptyPrefixTopology(t *testing.T) {
+	t.Parallel()
+
+	const definition = `name: st
+prefix: ""
+topology:
+  nodes:
+    leaf1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:24.10.1
+    prometheus:
+      kind: linux
+      image: quay.io/prometheus/prometheus:v2.54.1
+`
+
+	r := newTestRuntime()
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "st",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	obj := getTestTopology(t, r, "lab-ns", "st")
+	if got := topologyNaming(t, obj); got != "non-prefixed" {
+		t.Fatalf("topology naming = %q, want %q", got, "non-prefixed")
+	}
+}
+
+func TestDeployExposesGNMICMetricsPortForClabernetes(t *testing.T) {
+	t.Parallel()
+
+	const definition = `name: st
+prefix: ""
+mgmt:
+  network: st
+  ipv4-subnet: 172.20.20.0/24
+topology:
+  nodes:
+    leaf1:
+      kind: nokia_srlinux
+      image: ghcr.io/nokia/srlinux:24.10.1
+    gnmic:
+      kind: linux
+      image: ghcr.io/openconfig/gnmic:0.39.1
+      cmd: --config /gnmic-config.yml --log subscribe
+    prometheus:
+      kind: linux
+      image: quay.io/prometheus/prometheus:v2.54.1
+      ports:
+        - 9090:9090
+  links:
+    - endpoints: ["leaf1:e1-1", "prometheus:eth1"]
+`
+
+	r := newTestRuntime()
+	if _, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "st",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	definitionAfterDeploy := topologyDefinition(t, getTestTopology(t, r, "lab-ns", "st"))
+	if !strings.Contains(definitionAfterDeploy, "mgmt:\n  network: st\n  ipv4-subnet: 172.20.20.0/24") {
+		t.Fatalf("topology definition did not preserve mgmt config:\n%s", definitionAfterDeploy)
+	}
+	if !strings.Contains(definitionAfterDeploy, "- leaf1:e1-1") ||
+		!strings.Contains(definitionAfterDeploy, "- prometheus:eth1") {
+		t.Fatalf("topology definition did not preserve brief link endpoints:\n%s", definitionAfterDeploy)
+	}
+	if strings.Contains(definitionAfterDeploy, "node: leaf1") ||
+		strings.Contains(definitionAfterDeploy, "interface: e1-1") {
+		t.Fatalf("topology definition rendered structured link endpoints:\n%s", definitionAfterDeploy)
+	}
+
+	var config clabRuntimeConfig
+	if err := yaml.Unmarshal([]byte(definitionAfterDeploy), &config); err != nil {
+		t.Fatal(err)
+	}
+
+	gnmic := config.Topology.Nodes["gnmic"]
+	if gnmic == nil {
+		t.Fatal("gnmic node was not found in topology definition")
+	}
+	if !slices.Contains(gnmic.Ports, "9273:9273/tcp") {
+		t.Fatalf("gnmic ports = %v, want 9273:9273/tcp", gnmic.Ports)
+	}
+}
+
 func TestDeployFailsWhenTopologyAlreadyExists(t *testing.T) {
 	t.Parallel()
 
@@ -425,6 +612,100 @@ func topologyDefinition(t *testing.T, obj *unstructured.Unstructured) string {
 	}
 
 	return definition
+}
+
+func topologyNaming(t *testing.T, obj *unstructured.Unstructured) string {
+	t.Helper()
+
+	naming, found, err := unstructured.NestedString(obj.Object, "spec", "naming")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found {
+		return ""
+	}
+
+	return naming
+}
+
+func getTestConfigMap(
+	t *testing.T,
+	r *Runtime,
+	namespace string,
+	name string,
+) *corev1.ConfigMap {
+	t.Helper()
+
+	configMap, err := r.kubeClient.CoreV1().ConfigMaps(namespace).
+		Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return configMap
+}
+
+func assertFileMount(
+	t *testing.T,
+	obj *unstructured.Unstructured,
+	nodeName,
+	filePath,
+	configMapName,
+	configMapPath,
+	mode string,
+) {
+	t.Helper()
+
+	filesFromConfigMap, found, err := unstructured.NestedMap(
+		obj.Object,
+		"spec",
+		"deployment",
+		"filesFromConfigMap",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found {
+		t.Fatal("filesFromConfigMap was not found")
+	}
+
+	rawMounts, ok := filesFromConfigMap[nodeName].([]any)
+	if !ok {
+		t.Fatalf("filesFromConfigMap[%s] has unexpected type %T", nodeName, filesFromConfigMap[nodeName])
+	}
+
+	for _, rawMount := range rawMounts {
+		mount, ok := rawMount.(map[string]any)
+		if !ok {
+			t.Fatalf("mount has unexpected type %T", rawMount)
+		}
+		if mount["filePath"] == filePath &&
+			mount["configMapName"] == configMapName &&
+			mount["configMapPath"] == configMapPath &&
+			mount["mode"] == mode {
+			return
+		}
+	}
+
+	t.Fatalf(
+		"mount %s/%s/%s/%s was not found in %+v",
+		filePath,
+		configMapName,
+		configMapPath,
+		mode,
+		rawMounts,
+	)
+}
+
+func writeFile(t *testing.T, path string, content string, mode os.FileMode) {
+	t.Helper()
+
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), mode); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func writeTarEntry(t *testing.T, tw *tar.Writer, hdr *tar.Header, data []byte) {

@@ -13,7 +13,23 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-func topologyObject(name, namespace, owner, definition string) *unstructured.Unstructured {
+type topologyObjectOption func(map[string]any)
+
+func topologyWithNaming(naming string) topologyObjectOption {
+	return func(spec map[string]any) {
+		if naming != "" {
+			spec["naming"] = naming
+		}
+	}
+}
+
+func topologyObject(
+	name,
+	namespace,
+	owner,
+	definition string,
+	opts ...topologyObjectOption,
+) *unstructured.Unstructured {
 	topologyLabels := map[string]any{
 		"containerlab.dev/runtime": clablabruntime.ClabernetesRuntimeName,
 	}
@@ -34,16 +50,21 @@ func topologyObject(name, namespace, owner, definition string) *unstructured.Uns
 		metadata["annotations"] = topologyAnnotations
 	}
 
+	spec := map[string]any{
+		"definition": map[string]any{
+			"containerlab": definition,
+		},
+	}
+	for _, opt := range opts {
+		opt(spec)
+	}
+
 	return &unstructured.Unstructured{
 		Object: map[string]any{
 			"apiVersion": "clabernetes.containerlab.dev/v1alpha1",
 			"kind":       "Topology",
 			"metadata":   metadata,
-			"spec": map[string]any{
-				"definition": map[string]any{
-					"containerlab": definition,
-				},
-			},
+			"spec":       spec,
 		},
 	}
 }

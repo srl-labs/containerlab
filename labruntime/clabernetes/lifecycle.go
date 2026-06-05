@@ -27,18 +27,46 @@ func (r *Runtime) Deploy(
 
 	namespace := r.namespaceFor(req.Namespace)
 	resource := r.client.Resource(topologyGVR).Namespace(namespace)
-	desired := topologyObject(req.Name, namespace, req.Owner, string(req.TopologyDefinition))
 
 	_, err := resource.Get(ctx, req.Name, metav1.GetOptions{})
 	switch {
 	case apierrors.IsNotFound(err):
+		topologyDefinition, stagedConfigMaps, naming, err := stageTopologyLocalFiles(req)
+		if err != nil {
+			return nil, err
+		}
+
+		desired := topologyObject(
+			req.Name,
+			namespace,
+			req.Owner,
+			string(topologyDefinition),
+			topologyWithNaming(naming),
+		)
+		if err := setTopologyFilesFromConfigMaps(desired, stagedConfigMaps); err != nil {
+			return nil, err
+		}
+
+		if err = r.applyStagedConfigMaps(ctx, namespace, req.Name, stagedConfigMaps); err != nil {
+			return nil, err
+		}
+
 		log.Info("Creating clabernetes topology", "name", req.Name, "namespace", namespace)
-		if _, err = resource.Create(ctx, desired, metav1.CreateOptions{}); err != nil {
+		created, createErr := resource.Create(ctx, desired, metav1.CreateOptions{})
+		if createErr != nil {
+			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+
+			err = createErr
 			if apierrors.IsAlreadyExists(err) {
 				return nil, duplicateTopologyError(req.Name, namespace)
 			}
+
 			return nil, fmt.Errorf("failed to create clabernetes topology %s/%s: %w",
 				namespace, req.Name, err)
+		}
+
+		if err = r.setStagedConfigMapOwnerReferences(ctx, namespace, stagedConfigMaps, created); err != nil {
+			return nil, err
 		}
 	case err != nil:
 		return nil, fmt.Errorf("failed to get clabernetes topology %s/%s: %w",

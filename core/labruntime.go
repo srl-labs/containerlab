@@ -43,9 +43,18 @@ func (c *CLab) deployWithLabRuntime(
 		}
 	}
 
+	topologyFile := ""
+	topologyLabDir := ""
+	if c.TopoPaths != nil {
+		topologyFile = c.TopoPaths.TopologyFilenameAbsPath()
+		topologyLabDir = c.TopoPaths.TopologyLabDir()
+	}
+
 	state, err := c.LabRuntime.Deploy(ctx, clablabruntime.DeployRequest{
 		Name:               c.Config.Name,
 		Owner:              c.labOwner(),
+		TopologyFile:       topologyFile,
+		TopologyLabDir:     topologyLabDir,
 		TopologyDefinition: c.renderedTopology,
 		Wait:               true,
 		Timeout:            c.timeout,

@@ -21,6 +21,8 @@ type DeployRequest struct {
 	Name               string
 	Namespace          string
 	Owner              string
+	TopologyFile       string
+	TopologyLabDir     string
 	TopologyDefinition []byte
 	Wait               bool
 	Timeout            time.Duration
