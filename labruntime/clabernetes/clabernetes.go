@@ -18,7 +18,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/labruntime"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	"gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -70,10 +70,10 @@ type Runtime struct {
 }
 
 func init() {
-	labruntime.Register(labruntime.ClabernetesRuntimeName, New)
+	clablabruntime.Register(clablabruntime.ClabernetesRuntimeName, New)
 }
 
-func New(cfg labruntime.Config) (labruntime.LabRuntime, error) {
+func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
 	kubeConfig, namespace, err := kubeClientConfig()
 	if err != nil {
 		return nil, err
@@ -102,8 +102,8 @@ func New(cfg labruntime.Config) (labruntime.LabRuntime, error) {
 	}, nil
 }
 
-func (r *Runtime) Capabilities() labruntime.RuntimeCapabilities {
-	return labruntime.RuntimeCapabilities{
+func (r *Runtime) Capabilities() clablabruntime.RuntimeCapabilities {
+	return clablabruntime.RuntimeCapabilities{
 		Deploy:  true,
 		Destroy: true,
 		Inspect: true,
@@ -119,8 +119,8 @@ func (r *Runtime) Capabilities() labruntime.RuntimeCapabilities {
 
 func (r *Runtime) Deploy(
 	ctx context.Context,
-	req labruntime.DeployRequest,
-) (*labruntime.LabState, error) {
+	req clablabruntime.DeployRequest,
+) (*clablabruntime.LabState, error) {
 	if req.Name == "" {
 		return nil, fmt.Errorf("topology name is required")
 	}
@@ -152,17 +152,17 @@ func (r *Runtime) Deploy(
 	}
 
 	if !req.Wait {
-		return r.Inspect(ctx, labruntime.InspectRequest{Name: req.Name, Namespace: namespace})
+		return r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
 	}
 
 	if err := r.waitReady(ctx, req.Name, namespace, req.Timeout); err != nil {
 		return nil, err
 	}
 
-	return r.Inspect(ctx, labruntime.InspectRequest{Name: req.Name, Namespace: namespace})
+	return r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
 }
 
-func (r *Runtime) Destroy(ctx context.Context, req labruntime.DestroyRequest) error {
+func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest) error {
 	if req.Name == "" {
 		return fmt.Errorf("topology name is required")
 	}
@@ -191,8 +191,8 @@ func (r *Runtime) Destroy(ctx context.Context, req labruntime.DestroyRequest) er
 
 func (r *Runtime) Inspect(
 	ctx context.Context,
-	req labruntime.InspectRequest,
-) (*labruntime.LabState, error) {
+	req clablabruntime.InspectRequest,
+) (*clablabruntime.LabState, error) {
 	if req.Name == "" {
 		return nil, fmt.Errorf("topology name is required")
 	}
@@ -215,8 +215,8 @@ func (r *Runtime) Inspect(
 
 func (r *Runtime) List(
 	ctx context.Context,
-	req labruntime.ListRequest,
-) ([]*labruntime.LabState, error) {
+	req clablabruntime.ListRequest,
+) ([]*clablabruntime.LabState, error) {
 	namespace := r.namespaceFor(req.Namespace)
 	if req.AllNamespaces {
 		namespace = metav1.NamespaceAll
@@ -228,7 +228,7 @@ func (r *Runtime) List(
 		return nil, fmt.Errorf("failed to list clabernetes topologies: %w", err)
 	}
 
-	states := make([]*labruntime.LabState, 0, len(list.Items))
+	states := make([]*clablabruntime.LabState, 0, len(list.Items))
 	for idx := range list.Items {
 		state := stateFromTopology(&list.Items[idx], namespace)
 		if err := r.enrichState(ctx, state); err != nil {
@@ -253,7 +253,7 @@ func (r *Runtime) List(
 
 func (r *Runtime) Exec(
 	ctx context.Context,
-	req labruntime.ExecRequest,
+	req clablabruntime.ExecRequest,
 ) (*clabexec.ExecResult, error) {
 	if req.Name == "" {
 		return nil, fmt.Errorf("topology name is required")
@@ -286,11 +286,11 @@ func (r *Runtime) Exec(
 	return result, nil
 }
 
-func (r *Runtime) Start(ctx context.Context, req labruntime.NodeRequest) error {
+func (r *Runtime) Start(ctx context.Context, req clablabruntime.NodeRequest) error {
 	return r.setNodesReplicas(ctx, req, 1)
 }
 
-func (r *Runtime) Stop(ctx context.Context, req labruntime.NodeRequest) error {
+func (r *Runtime) Stop(ctx context.Context, req clablabruntime.NodeRequest) error {
 	if err := r.setTopologyIgnoreReconcile(ctx, req.Name, req.Namespace, true); err != nil {
 		return err
 	}
@@ -298,7 +298,7 @@ func (r *Runtime) Stop(ctx context.Context, req labruntime.NodeRequest) error {
 	return r.setNodesReplicas(ctx, req, 0)
 }
 
-func (r *Runtime) Restart(ctx context.Context, req labruntime.NodeRequest) error {
+func (r *Runtime) Restart(ctx context.Context, req clablabruntime.NodeRequest) error {
 	targets, namespace, err := r.targetNodes(ctx, req)
 	if err != nil {
 		return err
@@ -338,9 +338,9 @@ func (r *Runtime) Restart(ctx context.Context, req labruntime.NodeRequest) error
 
 func (r *Runtime) Save(
 	ctx context.Context,
-	req labruntime.SaveRequest,
-) (*labruntime.SaveResult, error) {
-	targets, namespace, err := r.targetNodes(ctx, labruntime.NodeRequest{
+	req clablabruntime.SaveRequest,
+) (*clablabruntime.SaveResult, error) {
+	targets, namespace, err := r.targetNodes(ctx, clablabruntime.NodeRequest{
 		Name:      req.Name,
 		Namespace: req.Namespace,
 		Nodes:     req.Nodes,
@@ -349,7 +349,7 @@ func (r *Runtime) Save(
 		return nil, err
 	}
 
-	result := &labruntime.SaveResult{}
+	result := &clablabruntime.SaveResult{}
 	for _, nodeName := range targets {
 		pod, err := r.launcherPod(ctx, req.Name, namespace, nodeName)
 		if err != nil {
@@ -398,9 +398,9 @@ func (r *Runtime) Save(
 
 func (r *Runtime) StreamEvents(
 	ctx context.Context,
-	req labruntime.EventStreamRequest,
-) (<-chan labruntime.Event, <-chan error, error) {
-	events := make(chan labruntime.Event, 128)
+	req clablabruntime.EventStreamRequest,
+) (<-chan clablabruntime.Event, <-chan error, error) {
+	events := make(chan clablabruntime.Event, 128)
 	errs := make(chan error, 2)
 
 	namespace := r.namespaceFor(req.Namespace)
@@ -478,7 +478,7 @@ func (r *Runtime) waitDeleted(ctx context.Context, name, namespace string, timeo
 
 func (r *Runtime) targetNodes(
 	ctx context.Context,
-	req labruntime.NodeRequest,
+	req clablabruntime.NodeRequest,
 ) ([]string, string, error) {
 	if req.Name == "" {
 		return nil, "", fmt.Errorf("topology name is required")
@@ -499,7 +499,7 @@ func (r *Runtime) targetNodes(
 	}
 
 	if len(known) == 0 {
-		state, err := r.Inspect(ctx, labruntime.InspectRequest{Name: req.Name, Namespace: namespace})
+		state, err := r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
 		if err != nil {
 			return nil, "", err
 		}
@@ -536,7 +536,7 @@ func (r *Runtime) targetNodes(
 
 func (r *Runtime) setNodesReplicas(
 	ctx context.Context,
-	req labruntime.NodeRequest,
+	req clablabruntime.NodeRequest,
 	replicas int32,
 ) error {
 	targets, namespace, err := r.targetNodes(ctx, req)
@@ -802,7 +802,7 @@ func (r *Runtime) collectSavedFiles(
 	pod *corev1.Pod,
 	nodeName,
 	copyDir string,
-) ([]labruntime.SavedFile, error) {
+) ([]clablabruntime.SavedFile, error) {
 	if copyDir == "" {
 		return nil, nil
 	}
@@ -840,9 +840,9 @@ func (r *Runtime) collectSavedFiles(
 	return files, nil
 }
 
-func savedFilesFromTar(nodeName string, data []byte) ([]labruntime.SavedFile, error) {
+func savedFilesFromTar(nodeName string, data []byte) ([]clablabruntime.SavedFile, error) {
 	reader := tar.NewReader(bytes.NewReader(data))
-	var files []labruntime.SavedFile
+	var files []clablabruntime.SavedFile
 
 	for {
 		header, err := reader.Next()
@@ -865,14 +865,14 @@ func savedFilesFromTar(nodeName string, data []byte) ([]labruntime.SavedFile, er
 				return nil, err
 			}
 
-			files = append(files, labruntime.SavedFile{
+			files = append(files, clablabruntime.SavedFile{
 				NodeName: nodeName,
 				Name:     name,
 				Data:     content,
 				Mode:     header.Mode,
 			})
 		case tar.TypeSymlink:
-			files = append(files, labruntime.SavedFile{
+			files = append(files, clablabruntime.SavedFile{
 				NodeName:   nodeName,
 				Name:       name,
 				Mode:       header.Mode,
@@ -895,7 +895,7 @@ func cleanTarPath(name string) (string, bool) {
 	return cleaned, true
 }
 
-func (r *Runtime) enrichState(ctx context.Context, state *labruntime.LabState) error {
+func (r *Runtime) enrichState(ctx context.Context, state *clablabruntime.LabState) error {
 	if state == nil || state.Name == "" {
 		return nil
 	}
@@ -916,7 +916,7 @@ func (r *Runtime) enrichState(ctx context.Context, state *labruntime.LabState) e
 			state.Namespace, state.Name, err)
 	}
 
-	nodesByName := map[string]labruntime.NodeState{}
+	nodesByName := map[string]clablabruntime.NodeState{}
 	for _, node := range state.Nodes {
 		nodesByName[node.Name] = node
 	}
@@ -974,7 +974,7 @@ func (r *Runtime) enrichState(ctx context.Context, state *labruntime.LabState) e
 	}
 	sort.Strings(nodeNames)
 
-	state.Nodes = make([]labruntime.NodeState, 0, len(nodeNames))
+	state.Nodes = make([]clablabruntime.NodeState, 0, len(nodeNames))
 	allReady := len(nodeNames) > 0
 	allStopped := len(nodeNames) > 0
 	for _, nodeName := range nodeNames {
@@ -1002,10 +1002,10 @@ func (r *Runtime) enrichState(ctx context.Context, state *labruntime.LabState) e
 func (r *Runtime) emitInitialEvents(
 	ctx context.Context,
 	namespace string,
-	eventSink chan<- labruntime.Event,
+	eventSink chan<- clablabruntime.Event,
 	errSink chan<- error,
 ) {
-	states, err := r.List(ctx, labruntime.ListRequest{
+	states, err := r.List(ctx, clablabruntime.ListRequest{
 		Namespace:     namespace,
 		AllNamespaces: namespace == metav1.NamespaceAll,
 	})
@@ -1023,7 +1023,7 @@ func (r *Runtime) emitInitialEvents(
 			if action == "" {
 				action = state.State
 			}
-			r.sendEvent(ctx, eventSink, labruntime.Event{
+			r.sendEvent(ctx, eventSink, clablabruntime.Event{
 				Timestamp: time.Now(),
 				Type:      "container",
 				Action:    action,
@@ -1043,7 +1043,7 @@ func (r *Runtime) emitInitialEvents(
 func (r *Runtime) watchTopologies(
 	ctx context.Context,
 	namespace string,
-	eventSink chan<- labruntime.Event,
+	eventSink chan<- clablabruntime.Event,
 	errSink chan<- error,
 ) {
 	resource := r.client.Resource(topologyGVR).Namespace(namespace)
@@ -1073,7 +1073,7 @@ func (r *Runtime) forwardTopologyWatch(
 	ctx context.Context,
 	namespace string,
 	watcher watch.Interface,
-	eventSink chan<- labruntime.Event,
+	eventSink chan<- clablabruntime.Event,
 	errSink chan<- error,
 ) bool {
 	defer watcher.Stop()
@@ -1098,7 +1098,7 @@ func (r *Runtime) forwardTopologyWatch(
 			}
 
 			state := stateFromTopology(obj, namespace)
-			r.sendEvent(ctx, eventSink, labruntime.Event{
+			r.sendEvent(ctx, eventSink, clablabruntime.Event{
 				Timestamp: time.Now(),
 				Type:      "topology",
 				Action:    strings.ToLower(string(ev.Type)),
@@ -1118,7 +1118,7 @@ func (r *Runtime) forwardTopologyWatch(
 func (r *Runtime) watchPods(
 	ctx context.Context,
 	namespace string,
-	eventSink chan<- labruntime.Event,
+	eventSink chan<- clablabruntime.Event,
 	errSink chan<- error,
 ) {
 	for {
@@ -1147,7 +1147,7 @@ func (r *Runtime) watchPods(
 func (r *Runtime) forwardPodWatch(
 	ctx context.Context,
 	watcher watch.Interface,
-	eventSink chan<- labruntime.Event,
+	eventSink chan<- clablabruntime.Event,
 	errSink chan<- error,
 ) bool {
 	defer watcher.Stop()
@@ -1177,7 +1177,7 @@ func (r *Runtime) forwardPodWatch(
 				continue
 			}
 
-			r.sendEvent(ctx, eventSink, labruntime.Event{
+			r.sendEvent(ctx, eventSink, clablabruntime.Event{
 				Timestamp:   time.Now(),
 				Type:        "container",
 				Action:      strings.ToLower(string(ev.Type)),
@@ -1213,7 +1213,7 @@ func (r *Runtime) pollInterfaceStats(
 	ctx context.Context,
 	namespace string,
 	interval time.Duration,
-	eventSink chan<- labruntime.Event,
+	eventSink chan<- clablabruntime.Event,
 ) {
 	if interval <= 0 {
 		interval = time.Second
@@ -1222,7 +1222,7 @@ func (r *Runtime) pollInterfaceStats(
 	samples := map[string]c9sIfaceStatsSample{}
 
 	sample := func() {
-		states, err := r.List(ctx, labruntime.ListRequest{
+		states, err := r.List(ctx, clablabruntime.ListRequest{
 			Namespace:     namespace,
 			AllNamespaces: namespace == metav1.NamespaceAll,
 		})
@@ -1383,13 +1383,13 @@ func c9sIfaceStatsKey(namespace, lab, node, ifName string) string {
 }
 
 func c9sIfaceStatsEvent(
-	state *labruntime.LabState,
-	node labruntime.NodeState,
+	state *clablabruntime.LabState,
+	node clablabruntime.NodeState,
 	pod *corev1.Pod,
 	stat c9sIfaceStats,
 	previous,
 	current c9sIfaceStatsSample,
-) labruntime.Event {
+) clablabruntime.Event {
 	interval := current.Timestamp.Sub(previous.Timestamp)
 	if interval <= 0 {
 		interval = time.Second
@@ -1407,7 +1407,7 @@ func c9sIfaceStatsEvent(
 		podName = pod.Name
 	}
 
-	return labruntime.Event{
+	return clablabruntime.Event{
 		Timestamp:   current.Timestamp,
 		Type:        "interface",
 		Action:      "stats",
@@ -1445,8 +1445,8 @@ func counterDelta(current, previous uint64) uint64 {
 
 func (r *Runtime) sendEvent(
 	ctx context.Context,
-	eventSink chan<- labruntime.Event,
-	event labruntime.Event,
+	eventSink chan<- clablabruntime.Event,
+	event clablabruntime.Event,
 ) {
 	select {
 	case eventSink <- event:
@@ -1483,7 +1483,7 @@ func (r *Runtime) timeoutFor(timeout time.Duration) time.Duration {
 
 func topologyObject(name, namespace, owner, definition string) *unstructured.Unstructured {
 	topologyLabels := map[string]any{
-		"containerlab.dev/runtime": labruntime.ClabernetesRuntimeName,
+		"containerlab.dev/runtime": clablabruntime.ClabernetesRuntimeName,
 	}
 	topologyAnnotations := map[string]any{}
 	if owner != "" {
@@ -1548,7 +1548,7 @@ func kubeClientConfig() (*rest.Config, string, error) {
 	return restConfig, namespace, nil
 }
 
-func stateFromTopology(obj *unstructured.Unstructured, namespace string) *labruntime.LabState {
+func stateFromTopology(obj *unstructured.Unstructured, namespace string) *clablabruntime.LabState {
 	if obj.GetNamespace() != "" {
 		namespace = obj.GetNamespace()
 	}
@@ -1581,11 +1581,11 @@ func stateFromTopology(obj *unstructured.Unstructured, namespace string) *labrun
 	}
 	sort.Strings(nodeNames)
 
-	nodes := make([]labruntime.NodeState, 0, len(nodeNames))
+	nodes := make([]clablabruntime.NodeState, 0, len(nodeNames))
 	for _, nodeName := range nodeNames {
 		nodeState := nodeReadiness[nodeName]
 		spec := nodeSpecs[nodeName]
-		nodes = append(nodes, labruntime.NodeState{
+		nodes = append(nodes, clablabruntime.NodeState{
 			Name:                nodeName,
 			Kind:                spec.Kind,
 			Image:               spec.Image,
@@ -1595,7 +1595,7 @@ func stateFromTopology(obj *unstructured.Unstructured, namespace string) *labrun
 		})
 	}
 
-	return &labruntime.LabState{
+	return &clablabruntime.LabState{
 		Name:         obj.GetName(),
 		Namespace:    namespace,
 		Owner:        owner,

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	claberrors "github.com/srl-labs/containerlab/errors"
-	"github.com/srl-labs/containerlab/labruntime"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 )
 
 // makeCopyForDestroy must apply WithTopoPath (or WithLabNameOnly) before WithNodeFilter so that
@@ -75,7 +75,7 @@ func TestWithLabNameOnly_setsNameWithoutTopologyFile(t *testing.T) {
 }
 
 type noopLabRuntime struct {
-	labruntime.LabRuntime
+	clablabruntime.LabRuntime
 }
 
 func TestWithKeepMgmtNet_noopsForLabRuntime(t *testing.T) {
@@ -83,7 +83,7 @@ func TestWithKeepMgmtNet_noopsForLabRuntime(t *testing.T) {
 
 	c := &CLab{
 		LabRuntime:        noopLabRuntime{},
-		globalRuntimeName: labruntime.ClabernetesRuntimeName,
+		globalRuntimeName: clablabruntime.ClabernetesRuntimeName,
 	}
 
 	if err := WithKeepMgmtNet()(c); err != nil {

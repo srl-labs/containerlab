@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/labruntime"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	"golang.org/x/term"
@@ -33,7 +33,7 @@ func (c *CLab) deployWithLabRuntime(
 	}
 
 	if options != nil && options.reconfigure {
-		err := c.LabRuntime.Destroy(ctx, labruntime.DestroyRequest{
+		err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
 			Name:    c.Config.Name,
 			Wait:    true,
 			Timeout: c.timeout,
@@ -43,7 +43,7 @@ func (c *CLab) deployWithLabRuntime(
 		}
 	}
 
-	state, err := c.LabRuntime.Deploy(ctx, labruntime.DeployRequest{
+	state, err := c.LabRuntime.Deploy(ctx, clablabruntime.DeployRequest{
 		Name:               c.Config.Name,
 		Owner:              c.labOwner(),
 		TopologyDefinition: c.renderedTopology,
@@ -66,7 +66,7 @@ func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) 
 		return fmt.Errorf("topology name is required")
 	}
 
-	return c.LabRuntime.Destroy(ctx, labruntime.DestroyRequest{
+	return c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
 		Name:    c.Config.Name,
 		Wait:    true,
 		Timeout: c.timeout,
@@ -74,7 +74,7 @@ func (c *CLab) destroyWithLabRuntime(ctx context.Context, opts *DestroyOptions) 
 }
 
 func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOptions) error {
-	states, err := c.LabRuntime.List(ctx, labruntime.ListRequest{AllNamespaces: true})
+	states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{AllNamespaces: true})
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (c *CLab) destroyAllWithLabRuntime(ctx context.Context, opts *DestroyOption
 
 	var errs []error
 	for _, state := range states {
-		if err := c.LabRuntime.Destroy(ctx, labruntime.DestroyRequest{
+		if err := c.LabRuntime.Destroy(ctx, clablabruntime.DestroyRequest{
 			Name:      state.Name,
 			Namespace: state.Namespace,
 			Wait:      true,
@@ -131,7 +131,7 @@ func (c *CLab) ListLabRuntimeContainers(
 	}
 
 	if all || c.Config.Name == "" {
-		states, err := c.LabRuntime.List(ctx, labruntime.ListRequest{AllNamespaces: true})
+		states, err := c.LabRuntime.List(ctx, clablabruntime.ListRequest{AllNamespaces: true})
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func (c *CLab) ListLabRuntimeContainers(
 		return nil, fmt.Errorf("topology name is required")
 	}
 
-	state, err := c.LabRuntime.Inspect(ctx, labruntime.InspectRequest{Name: c.Config.Name})
+	state, err := c.LabRuntime.Inspect(ctx, clablabruntime.InspectRequest{Name: c.Config.Name})
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (c *CLab) execWithLabRuntime(
 		}
 
 		for _, execCmd := range execCmds {
-			result, err := c.LabRuntime.Exec(ctx, labruntime.ExecRequest{
+			result, err := c.LabRuntime.Exec(ctx, clablabruntime.ExecRequest{
 				Name:      labName,
 				Namespace: namespace,
 				NodeName:  nodeName,
@@ -206,7 +206,7 @@ func (c *CLab) execWithLabRuntime(
 }
 
 func (c *CLab) startNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
-	return c.LabRuntime.Start(ctx, labruntime.NodeRequest{
+	return c.LabRuntime.Start(ctx, clablabruntime.NodeRequest{
 		Name:    c.Config.Name,
 		Nodes:   nodeNames,
 		Timeout: c.timeout,
@@ -214,7 +214,7 @@ func (c *CLab) startNodesWithLabRuntime(ctx context.Context, nodeNames []string)
 }
 
 func (c *CLab) stopNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
-	return c.LabRuntime.Stop(ctx, labruntime.NodeRequest{
+	return c.LabRuntime.Stop(ctx, clablabruntime.NodeRequest{
 		Name:    c.Config.Name,
 		Nodes:   nodeNames,
 		Timeout: c.timeout,
@@ -222,7 +222,7 @@ func (c *CLab) stopNodesWithLabRuntime(ctx context.Context, nodeNames []string) 
 }
 
 func (c *CLab) restartNodesWithLabRuntime(ctx context.Context, nodeNames []string) error {
-	return c.LabRuntime.Restart(ctx, labruntime.NodeRequest{
+	return c.LabRuntime.Restart(ctx, clablabruntime.NodeRequest{
 		Name:    c.Config.Name,
 		Nodes:   nodeNames,
 		Timeout: c.timeout,
@@ -238,7 +238,7 @@ func (c *CLab) saveWithLabRuntime(ctx context.Context, opts *SaveOptions) error 
 		opts.copyDst = resolvedDst
 	}
 
-	result, err := c.LabRuntime.Save(ctx, labruntime.SaveRequest{
+	result, err := c.LabRuntime.Save(ctx, clablabruntime.SaveRequest{
 		Name:  c.Config.Name,
 		Nodes: c.nodeFilter,
 		Copy:  opts.copyDst != "",
@@ -254,7 +254,7 @@ func (c *CLab) saveWithLabRuntime(ctx context.Context, opts *SaveOptions) error 
 	return c.copyLabRuntimeSavedFiles(result, opts.copyDst)
 }
 
-func (c *CLab) containersFromLabState(state *labruntime.LabState) []clabruntime.GenericContainer {
+func (c *CLab) containersFromLabState(state *clablabruntime.LabState) []clabruntime.GenericContainer {
 	if state == nil {
 		return nil
 	}
@@ -267,9 +267,9 @@ func (c *CLab) containersFromLabState(state *labruntime.LabState) []clabruntime.
 		}
 		sort.Strings(nodeNames)
 
-		nodes = make([]labruntime.NodeState, 0, len(nodeNames))
+		nodes = make([]clablabruntime.NodeState, 0, len(nodeNames))
 		for _, nodeName := range nodeNames {
-			nodes = append(nodes, labruntime.NodeState{
+			nodes = append(nodes, clablabruntime.NodeState{
 				Name:  nodeName,
 				Kind:  c.Config.Topology.GetNodeKind(nodeName),
 				Image: c.Config.Topology.GetNodeImage(nodeName),
@@ -288,8 +288,8 @@ func (c *CLab) containersFromLabState(state *labruntime.LabState) []clabruntime.
 }
 
 func (c *CLab) containerFromLabNode(
-	state *labruntime.LabState,
-	node labruntime.NodeState,
+	state *clablabruntime.LabState,
+	node clablabruntime.NodeState,
 ) clabruntime.GenericContainer {
 	nodeName := fmt.Sprintf("%s-%s", state.Name, node.Name)
 	containerState := node.State
@@ -363,7 +363,7 @@ func managementAddress(addr string) clabruntime.GenericMgmtIPs {
 	}
 }
 
-func labRuntimeTopologyPath(c *CLab, state *labruntime.LabState) string {
+func labRuntimeTopologyPath(c *CLab, state *clablabruntime.LabState) string {
 	if c.TopoPaths.TopologyFileIsSet() {
 		return c.TopoPaths.TopologyFilenameAbsPath()
 	}
@@ -450,7 +450,7 @@ func labRuntimeLabelMatches(labels map[string]string, filter *clabtypes.GenericF
 }
 
 func (c *CLab) copyLabRuntimeSavedFiles(
-	result *labruntime.SaveResult,
+	result *clablabruntime.SaveResult,
 	dstRoot string,
 ) error {
 	for _, file := range result.Files {

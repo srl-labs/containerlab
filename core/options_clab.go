@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
-	"github.com/srl-labs/containerlab/labruntime"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -130,10 +130,10 @@ func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 	return func(c *CLab) error {
 		name = resolveRuntimeName(name)
 
-		if labruntime.IsLabRuntimeName(name) {
+		if clablabruntime.IsLabRuntimeName(name) {
 			c.globalRuntimeName = name
 
-			lr, err := labruntime.Init(name, labruntime.Config{
+			lr, err := clablabruntime.Init(name, clablabruntime.Config{
 				Debug:   rtconfig != nil && rtconfig.Debug,
 				Timeout: runtimeTimeout(rtconfig),
 			})

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
-	"github.com/srl-labs/containerlab/labruntime"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -204,7 +204,7 @@ func TestForwardPodWatchReconnectsOnClosedChannel(t *testing.T) {
 	if !r.forwardPodWatch(
 		context.Background(),
 		watcher,
-		make(chan labruntime.Event, 1),
+		make(chan clablabruntime.Event, 1),
 		make(chan error, 1),
 	) {
 		t.Fatal("expected closed pod watch to request reconnect")
@@ -222,7 +222,7 @@ func TestForwardTopologyWatchReconnectsOnClosedChannel(t *testing.T) {
 		context.Background(),
 		"default",
 		watcher,
-		make(chan labruntime.Event, 1),
+		make(chan clablabruntime.Event, 1),
 		make(chan error, 1),
 	) {
 		t.Fatal("expected closed topology watch to request reconnect")
@@ -233,7 +233,7 @@ func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
 	t.Parallel()
 
 	watcher := watch.NewFake()
-	events := make(chan labruntime.Event, 1)
+	events := make(chan clablabruntime.Event, 1)
 	errs := make(chan error, 1)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

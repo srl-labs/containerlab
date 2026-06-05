@@ -20,7 +20,7 @@ import (
 	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
 	claberrors "github.com/srl-labs/containerlab/errors"
 	clabexec "github.com/srl-labs/containerlab/exec"
-	"github.com/srl-labs/containerlab/labruntime"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	_ "github.com/srl-labs/containerlab/labruntime/all"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -41,7 +41,7 @@ type CLab struct {
 	Links      map[int]clablinks.Link    `json:"links,omitempty"`
 	Endpoints  []clablinks.Endpoint
 	Runtimes   map[string]clabruntime.ContainerRuntime `json:"runtimes,omitempty"`
-	LabRuntime labruntime.LabRuntime                   `json:"-"`
+	LabRuntime clablabruntime.LabRuntime               `json:"-"`
 	// reg is a registry of node kinds
 	Reg  *clabnodes.NodeRegistry
 	Cert *clabcert.Cert

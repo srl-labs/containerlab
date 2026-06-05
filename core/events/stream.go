@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
-	"github.com/srl-labs/containerlab/labruntime"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -115,7 +115,7 @@ func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Optio
 
 	runtimeEvents, runtimeErrs, err := clab.LabRuntime.StreamEvents(
 		ctx,
-		labruntime.EventStreamRequest{
+		clablabruntime.EventStreamRequest{
 			AllNamespaces:         true,
 			IncludeInitialState:   opts.IncludeInitialState,
 			IncludeInterfaceStats: opts.IncludeInterfaceStats,
@@ -156,7 +156,7 @@ func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Optio
 	return nil
 }
 
-func aggregatedEventFromLabRuntimeEvent(ev labruntime.Event) aggregatedEvent {
+func aggregatedEventFromLabRuntimeEvent(ev clablabruntime.Event) aggregatedEvent {
 	ts := ev.Timestamp
 	if ts.IsZero() {
 		ts = time.Now()

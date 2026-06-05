@@ -15,7 +15,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	clabgit "github.com/srl-labs/containerlab/git"
-	"github.com/srl-labs/containerlab/labruntime"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -173,7 +173,7 @@ func globalRuntimeRequiresRoot(name string) bool {
 }
 
 func commandSkipsRoot(name string) bool {
-	return labruntime.IsLabRuntimeName(name)
+	return clablabruntime.IsLabRuntimeName(name)
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory
