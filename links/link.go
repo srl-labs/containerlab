@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/netip"
 	"strings"
+	"syscall"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
@@ -30,6 +31,8 @@ const (
 )
 
 const ownershipAltNamePrefix = "clab-o-"
+
+var linkAddAltName = netlink.LinkAddAltName
 
 // LinkCommonParams represents the common parameters for all link types.
 type LinkCommonParams struct {
@@ -576,11 +579,25 @@ func addOwnershipAltName(link netlink.Link, endpt Endpoint) error {
 		return nil
 	}
 
-	if err := netlink.LinkAddAltName(link, ownershipAltName(endpt)); err != nil {
+	altName := ownershipAltName(endpt)
+	if err := linkAddAltName(link, altName); err != nil {
+		if isAltNameNotSupportedErr(err) {
+			log.Warnf(
+				"kernel does not support interface altname capability; consider upgrading the kernel for full containerlab compatibility. Continuing without containerlab ownership marker %q for %s",
+				altName,
+				endpt,
+			)
+			return nil
+		}
+
 		return fmt.Errorf("failed to add containerlab ownership altname: %w", err)
 	}
 
 	return nil
+}
+
+func isAltNameNotSupportedErr(err error) bool {
+	return errors.Is(err, syscall.EOPNOTSUPP)
 }
 
 // ResolveParams is a struct that is passed to the Resolve() function of a raw link

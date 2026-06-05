@@ -5,6 +5,7 @@ go 1.25
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
 	github.com/beevik/etree v1.6.0
+	github.com/bramvdbogaerde/go-scp v1.2.1
 	github.com/brunoga/deep v1.3.1
 	github.com/charmbracelet/fang v0.4.4
 	github.com/charmbracelet/lipgloss v1.1.0
@@ -26,14 +27,16 @@ require (
 	github.com/hashicorp/go-version v1.8.0
 	github.com/hellt/envsubst v0.2.0
 	github.com/jedib0t/go-pretty/v6 v6.7.8
+	github.com/jlaffaye/ftp v0.2.0
 	github.com/joho/godotenv v1.5.1
 	github.com/jsimonetti/rtnetlink v1.4.2
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/mackerelio/go-osstat v0.2.6
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/opencontainers/runtime-spec v1.2.1
+	github.com/pkg/sftp v1.13.9
 	github.com/pmorjan/kmod v1.1.1
-	github.com/scrapli/scrapligo v1.3.2
+	github.com/scrapli/scrapligo v1.4.0
 	github.com/scrapli/scrapligocfg v1.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
@@ -109,7 +112,6 @@ require (
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pkg/sftp v1.13.9 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect

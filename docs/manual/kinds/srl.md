@@ -179,8 +179,6 @@ Nokia 7250 IXR chassis-based systems have types `ixr-6e`, `ixr-10e`, `ixr-18e`, 
 
 Nokia 7730 SXR routers have types `sxr-1x-44s`, `sxr-1d-32d`, `sxr-1-32d`.
 
-> The 7250 IXR and 7730 SXR platforms require a license file. Check with your Nokia representative for eligibility.
-
 If the type is not set in the clab file, the `ixr-d2l` type will be used by containerlab.
 
 Based on the provided type, containerlab will generate the topology file that will be mounted to the SR Linux container and make it boot in a chosen HW variant.

@@ -109,7 +109,7 @@
                         "cisco_iol",
                         "cisco_asav",
                         "cisco_vios",
-                        "cumulus_cvx",
+                        "nvidia_cumulusvx",
                         "huawei_vrp",
                         "openbsd",
                         "freebsd",
@@ -2112,7 +2112,7 @@
                         "rare": {
                             "$ref": "#/definitions/node-config"
                         },
-                        "cumulus_cvx": {
+                        "nvidia_cumulusvx": {
                             "$ref": "#/definitions/node-config"
                         },
                         "openbsd": {

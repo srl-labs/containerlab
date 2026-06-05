@@ -143,6 +143,10 @@ The following env vars are supported:
 
 By hosting a VM inside a container, we made it easy to run VM-based routers in a containerized environment. However, how would you connect container's interfaces to the VM's tap interfaces in a transparent way?
 
+/// note | exec targets the launcher container
+Because the guest network OS runs in a VM inside the launcher container, the [`exec` node property](nodes.md#exec) and the [`exec` command](../cmd/exec.md) run inside the launcher container, not inside the guest VM. Guest network-OS commands are therefore not reachable via `exec`; connect to the node over SSH at its management address (or use the node's native CLI) instead.
+///
+
 To solve this challenge containerlab uses **tc** backend[^4], which mirrors the traffic to and from container interfaces to the appropriate VM interfaces. A huge bonus of `tc` is that there are not bridges inbetween, and we have a clear channel that supports transparent passage of any frames, like LACP, for example.
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:6,&quot;zoom&quot;:1.5,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/vrnetlab.drawio&quot;}"></div>
