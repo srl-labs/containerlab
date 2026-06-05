@@ -133,22 +133,22 @@ func (r *Runtime) Deploy(
 	resource := r.client.Resource(topologyGVR).Namespace(namespace)
 	desired := topologyObject(req.Name, namespace, req.Owner, string(req.TopologyDefinition))
 
-	existing, err := resource.Get(ctx, req.Name, metav1.GetOptions{})
+	_, err := resource.Get(ctx, req.Name, metav1.GetOptions{})
 	switch {
 	case apierrors.IsNotFound(err):
 		log.Info("Creating clabernetes topology", "name", req.Name, "namespace", namespace)
-		_, err = resource.Create(ctx, desired, metav1.CreateOptions{})
+		if _, err = resource.Create(ctx, desired, metav1.CreateOptions{}); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				return nil, duplicateTopologyError(req.Name, namespace)
+			}
+			return nil, fmt.Errorf("failed to create clabernetes topology %s/%s: %w",
+				namespace, req.Name, err)
+		}
 	case err != nil:
 		return nil, fmt.Errorf("failed to get clabernetes topology %s/%s: %w",
 			namespace, req.Name, err)
 	default:
-		log.Info("Updating clabernetes topology", "name", req.Name, "namespace", namespace)
-		desired.SetResourceVersion(existing.GetResourceVersion())
-		_, err = resource.Update(ctx, desired, metav1.UpdateOptions{})
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply clabernetes topology %s/%s: %w",
-			namespace, req.Name, err)
+		return nil, duplicateTopologyError(req.Name, namespace)
 	}
 
 	if !req.Wait {
@@ -160,6 +160,16 @@ func (r *Runtime) Deploy(
 	}
 
 	return r.Inspect(ctx, clablabruntime.InspectRequest{Name: req.Name, Namespace: namespace})
+}
+
+func duplicateTopologyError(name, namespace string) error {
+	return fmt.Errorf(
+		"the '%s' lab has already been deployed in namespace '%s'. "+
+			"Destroy the lab before deploying a lab with the same name, "+
+			"or use '--reconfigure' to redeploy it",
+		name,
+		namespace,
+	)
 }
 
 func (r *Runtime) Destroy(ctx context.Context, req clablabruntime.DestroyRequest) error {

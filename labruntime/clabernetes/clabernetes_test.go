@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +13,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
+	dynamicfake "k8s.io/client-go/dynamic/fake"
+	kubefake "k8s.io/client-go/kubernetes/fake"
 )
 
 func TestParseProcNetDev(t *testing.T) {
@@ -194,6 +198,101 @@ func TestStateFromTopology(t *testing.T) {
 	}
 }
 
+func TestDeployCreatesTopology(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime()
+	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		Owner:              "alice",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Name != "lab1" || state.Namespace != "lab-ns" || state.Owner != "alice" {
+		t.Fatalf("unexpected deploy state: %+v", state)
+	}
+
+	obj := getTestTopology(t, r, "lab-ns", "lab1")
+	if got := topologyDefinition(t, obj); got != definition {
+		t.Fatalf("topology definition = %q, want %q", got, definition)
+	}
+}
+
+func TestDeployFailsWhenTopologyAlreadyExists(t *testing.T) {
+	t.Parallel()
+
+	const existingDefinition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3.20
+`
+	const newDefinition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:3.21
+`
+
+	r := newTestRuntime(topologyObject("lab1", "lab-ns", "", existingDefinition))
+	_, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-ns",
+		TopologyDefinition: []byte(newDefinition),
+		Wait:               false,
+	})
+	if err == nil {
+		t.Fatal("expected duplicate topology deploy to fail")
+	}
+	if !strings.Contains(err.Error(), "already been deployed in namespace 'lab-ns'") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	obj := getTestTopology(t, r, "lab-ns", "lab1")
+	if got := topologyDefinition(t, obj); got != existingDefinition {
+		t.Fatalf("topology definition was updated to %q, want %q", got, existingDefinition)
+	}
+}
+
+func TestDeployDuplicateCheckIsNamespaceScoped(t *testing.T) {
+	t.Parallel()
+
+	const definition = `topology:
+  nodes:
+    node1:
+      kind: linux
+      image: alpine:latest
+`
+
+	r := newTestRuntime(topologyObject("lab1", "lab-a", "", definition))
+	state, err := r.Deploy(context.Background(), clablabruntime.DeployRequest{
+		Name:               "lab1",
+		Namespace:          "lab-b",
+		TopologyDefinition: []byte(definition),
+		Wait:               false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.Name != "lab1" || state.Namespace != "lab-b" {
+		t.Fatalf("unexpected deploy state: %+v", state)
+	}
+
+	_ = getTestTopology(t, r, "lab-a", "lab1")
+	_ = getTestTopology(t, r, "lab-b", "lab1")
+}
+
 func TestForwardPodWatchReconnectsOnClosedChannel(t *testing.T) {
 	t.Parallel()
 
@@ -277,6 +376,55 @@ func TestForwardPodWatchEmitsPodEvent(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("forwardPodWatch did not exit after cancellation")
 	}
+}
+
+func newTestRuntime(objects ...*unstructured.Unstructured) *Runtime {
+	runtimeObjects := make([]k8sruntime.Object, 0, len(objects))
+	for _, obj := range objects {
+		runtimeObjects = append(runtimeObjects, obj)
+	}
+
+	return &Runtime{
+		client:     dynamicfake.NewSimpleDynamicClient(k8sruntime.NewScheme(), runtimeObjects...),
+		kubeClient: kubefake.NewSimpleClientset(),
+		namespace:  defaultNamespace,
+	}
+}
+
+func getTestTopology(
+	t *testing.T,
+	r *Runtime,
+	namespace string,
+	name string,
+) *unstructured.Unstructured {
+	t.Helper()
+
+	obj, err := r.client.Resource(topologyGVR).Namespace(namespace).
+		Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return obj
+}
+
+func topologyDefinition(t *testing.T, obj *unstructured.Unstructured) string {
+	t.Helper()
+
+	definition, found, err := unstructured.NestedString(
+		obj.Object,
+		"spec",
+		"definition",
+		"containerlab",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !found {
+		t.Fatal("topology definition was not found")
+	}
+
+	return definition
 }
 
 func writeTarEntry(t *testing.T, tw *tar.Writer, hdr *tar.Header, data []byte) {

@@ -54,7 +54,7 @@ The c9s runtime currently supports the main lab lifecycle and node operations:
 
 | Command | c9s behavior |
 | ------- | ------------ |
-| `deploy` | creates or updates the Clabernetes `Topology` resource and waits for readiness |
+| `deploy` | creates the Clabernetes `Topology` resource and waits for readiness |
 | `destroy` | deletes the `Topology` resource |
 | `inspect` | reads `Topology`, Deployment, Pod, and service status |
 | `exec` | execs through the launcher pod into the nested node container |
@@ -124,7 +124,8 @@ CLAB_KUBE_NAMESPACE=lab-a \
   containerlab --runtime clabernetes deploy -t topo.clab.yml
 ```
 
-creates or updates the `Topology` resource in the `lab-a` namespace.
+creates the `Topology` resource in the `lab-a` namespace when a topology with
+the same name does not already exist there.
 
 Some commands intentionally look across namespaces:
 
@@ -158,7 +159,7 @@ The deploy flow is:
 
 1. containerlab parses and checks the topology file.
 2. It renders the final topology YAML.
-3. It creates or updates a Clabernetes `Topology` resource.
+3. It creates a Clabernetes `Topology` resource.
 4. It waits until Clabernetes reports the topology as ready.
 5. It inspects the resulting kubernetes state and prints the node table.
 
@@ -172,14 +173,15 @@ Deploy the full topology, then use node filtering with commands such as
 `start`, `stop`, `restart`, `exec`, or `save` after the topology exists.
 ///
 
-Deploy is create-or-update. If a `Topology` with the same name already exists in
-the same namespace, containerlab updates it:
+Deploy is create-only. If a `Topology` with the same name already exists in the
+same namespace, containerlab fails the deployment:
 
 ```text
-Updating clabernetes topology name=<lab> namespace=<namespace>
+the '<lab>' lab has already been deployed in namespace '<namespace>'.
 ```
 
-Use a different lab name or namespace when you want a separate lab:
+Use `deploy --reconfigure` to replace the existing lab, or use a different lab
+name or namespace when you want a separate lab:
 
 ```bash
 containerlab --runtime clabernetes --name <new-lab-name> deploy -t topo.clab.yml
@@ -443,7 +445,7 @@ again.
 Typical symptoms:
 
 ```text
-failed to apply clabernetes topology <namespace>/<lab>: namespaces "<namespace>" not found
+failed to create clabernetes topology <namespace>/<lab>: namespaces "<namespace>" not found
 ```
 
 Check:
