@@ -45,6 +45,7 @@ func (c *CLab) deployWithLabRuntime(
 
 	state, err := c.LabRuntime.Deploy(ctx, labruntime.DeployRequest{
 		Name:               c.Config.Name,
+		Owner:              c.labOwner(),
 		TopologyDefinition: c.renderedTopology,
 		Wait:               true,
 		Timeout:            c.timeout,
@@ -324,7 +325,9 @@ func (c *CLab) containerFromLabNode(
 		image = node.Image
 	}
 
-	if c.customOwner != "" {
+	if state.Owner != "" {
+		labels[clabconstants.Owner] = state.Owner
+	} else if c.customOwner != "" {
 		labels[clabconstants.Owner] = c.customOwner
 	}
 

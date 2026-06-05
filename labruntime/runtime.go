@@ -20,6 +20,7 @@ type Config struct {
 type DeployRequest struct {
 	Name               string
 	Namespace          string
+	Owner              string
 	TopologyDefinition []byte
 	Wait               bool
 	Timeout            time.Duration
@@ -108,6 +109,7 @@ type NodeState struct {
 type LabState struct {
 	Name         string
 	Namespace    string
+	Owner        string
 	TopologyPath string
 	State        string
 	Ready        bool

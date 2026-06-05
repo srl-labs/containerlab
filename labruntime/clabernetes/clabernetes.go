@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	"github.com/srl-labs/containerlab/labruntime"
 	"gopkg.in/yaml.v2"
@@ -26,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
@@ -129,7 +131,7 @@ func (r *Runtime) Deploy(
 
 	namespace := r.namespaceFor(req.Namespace)
 	resource := r.client.Resource(topologyGVR).Namespace(namespace)
-	desired := topologyObject(req.Name, namespace, string(req.TopologyDefinition))
+	desired := topologyObject(req.Name, namespace, req.Owner, string(req.TopologyDefinition))
 
 	existing, err := resource.Get(ctx, req.Name, metav1.GetOptions{})
 	switch {
@@ -1419,18 +1421,32 @@ func (r *Runtime) timeoutFor(timeout time.Duration) time.Duration {
 	return 10 * time.Minute
 }
 
-func topologyObject(name, namespace, definition string) *unstructured.Unstructured {
+func topologyObject(name, namespace, owner, definition string) *unstructured.Unstructured {
+	topologyLabels := map[string]any{
+		"containerlab.dev/runtime": labruntime.ClabernetesRuntimeName,
+	}
+	topologyAnnotations := map[string]any{}
+	if owner != "" {
+		topologyAnnotations[clabconstants.Owner] = owner
+		if len(validation.IsValidLabelValue(owner)) == 0 {
+			topologyLabels[clabconstants.Owner] = owner
+		}
+	}
+
+	metadata := map[string]any{
+		"name":      name,
+		"namespace": namespace,
+		"labels":    topologyLabels,
+	}
+	if len(topologyAnnotations) != 0 {
+		metadata["annotations"] = topologyAnnotations
+	}
+
 	return &unstructured.Unstructured{
 		Object: map[string]any{
 			"apiVersion": "clabernetes.containerlab.dev/v1alpha1",
 			"kind":       "Topology",
-			"metadata": map[string]any{
-				"name":      name,
-				"namespace": namespace,
-				"labels": map[string]any{
-					"containerlab.dev/runtime": labruntime.ClabernetesRuntimeName,
-				},
-			},
+			"metadata":   metadata,
 			"spec": map[string]any{
 				"definition": map[string]any{
 					"containerlab": definition,
@@ -1479,6 +1495,10 @@ func stateFromTopology(obj *unstructured.Unstructured, namespace string) *labrun
 
 	ready, _, _ := unstructured.NestedBool(obj.Object, "status", "topologyReady")
 	state, _, _ := unstructured.NestedString(obj.Object, "status", "topologyState")
+	owner := obj.GetLabels()[clabconstants.Owner]
+	if owner == "" {
+		owner = obj.GetAnnotations()[clabconstants.Owner]
+	}
 	nodeReadiness, _, _ := unstructured.NestedStringMap(
 		obj.Object,
 		"status",
@@ -1518,6 +1538,7 @@ func stateFromTopology(obj *unstructured.Unstructured, namespace string) *labrun
 	return &labruntime.LabState{
 		Name:         obj.GetName(),
 		Namespace:    namespace,
+		Owner:        owner,
 		TopologyPath: fmt.Sprintf("k8s://%s/topologies/%s", namespace, obj.GetName()),
 		State:        state,
 		Ready:        ready,
