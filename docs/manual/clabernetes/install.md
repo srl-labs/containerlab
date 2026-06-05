@@ -2,10 +2,17 @@
 
 Clabernetes runs on a Kubernetes cluster and hence requires one to be available before you start your Clabernetes journey. Although we don't have a strict requirement on the k8s version, we recommend using the version 1.21 or higher.
 
-Clabernetes project consists of two components:
+Clabernetes project consists of two main components:
 
 - Clabernetes manager (a.k.a. controller) - a k8s controller that watches for the Clabernetes topology resources and deploys them to the cluster.
 - Clabverter - a CLI tool that converts containerlab topology files into Clabernetes topology resources.
+
+/// note | Using the containerlab runtime
+When you use [`containerlab --runtime clabernetes`](runtime.md), containerlab
+renders the topology and creates the `Topology` custom resource directly. In
+that workflow you still need the Clabernetes manager and CRDs installed in the
+cluster, but you don't need to run `clabverter` for every deployment.
+///
 
 ## Clabernetes Manager
 

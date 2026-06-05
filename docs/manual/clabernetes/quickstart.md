@@ -156,6 +156,14 @@ To make sure you have a smooth sailing in the clabernetes waters we've created a
 
 Clabverter is not a requirement to run clabernetes, but it is a helper tool to convert containerlab topologies to clabernetes resources and kubernetes objects.
 
+/// note | Native containerlab runtime
+Recent containerlab versions can also deploy to clabernetes directly with
+`containerlab --runtime clabernetes`. This quickstart keeps using `clabverter`
+because it shows the generated kubernetes manifests explicitly. If you want the
+regular containerlab CLI lifecycle, see the [Containerlab runtime](runtime.md)
+page.
+///
+
 As per clabverter's [installation instructions](install.md#clabverter) we will setup an alias that uses the latest available clabverter container image:
 
 --8<-- "docs/manual/clabernetes/install.md:cv-install"

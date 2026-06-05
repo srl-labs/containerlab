@@ -17,6 +17,11 @@ Love containerlab? Want containerlab, just distributed in a kubernetes cluster? 
 
 Clabernetes deploys containerlab topologies into a kubernetes cluster. The goal of Clabernetes is to scale Containerlab beyond a single node while keeping the user experience you love.
 
+You can use clabernetes in two ways:
+
+- with the native [`containerlab --runtime clabernetes`](runtime.md) workflow
+- with [`clabverter`](install.md#clabverter), which converts topology files into kubernetes manifests
+
 If all goes to plan, Clabernetes is going to be one of the solutions to enable [multi-node labs](../multi-node.md) and allow its users to create large topologies powered by a k8s cluster.
 
 Eager to try it out? Check out the [Quickstart](quickstart.md)! Have questions, join our [Discord](https://discord.gg/2A8ZxM7hD9).
@@ -31,4 +36,5 @@ In the beta release we focus on the core topology constructs working our way tow
 
 * [Helm chart on ArtifactHub](https://artifacthub.io/packages/helm/clabernetes/clabernetes)
 * [CRD reference](https://crds.r8y.page/repo/github.com/srl-labs/clabernetes)
+* [Native containerlab runtime](runtime.md)
 * Source code on [GitHub](https://github.com/srl-labs/clabernetes)
