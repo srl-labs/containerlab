@@ -15,7 +15,7 @@ type LinkDummyRaw struct {
 }
 
 func (*LinkDummyRaw) GetType() LinkType {
-	return LinkTypeVEth
+	return LinkTypeDummy
 }
 
 // Resolve resolves the raw veth link definition into a Link interface that is implemented
