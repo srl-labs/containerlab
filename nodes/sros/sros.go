@@ -2137,7 +2137,10 @@ func (n *sros) GetContainerStatus(ctx context.Context) clabruntime.ContainerStat
 
 func (n *sros) Start(ctx context.Context) error {
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
-		return n.DefaultNode.Start(ctx)
+		if err := n.DefaultNode.Start(ctx); err != nil {
+			return err
+		}
+		return n.PostDeployEndpoints(ctx)
 	}
 
 	for _, c := range n.componentNodes {
@@ -2151,7 +2154,7 @@ func (n *sros) Start(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	return n.PostDeployEndpoints(ctx)
 }
 
 func (n *sros) Stop(ctx context.Context) error {
