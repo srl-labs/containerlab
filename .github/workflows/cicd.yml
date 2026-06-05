@@ -372,6 +372,15 @@ jobs:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
+  clabernetes-tests:
+    uses: ./.github/workflows/clabernetes-tests.yml
+    needs:
+      - file-changes
+      - build-containerlab
+      - process-gitref
+    with:
+      py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+
   # sros-tests:
   #   uses: ./.github/workflows/sros-tests.yml
   #   needs:
@@ -452,6 +461,7 @@ jobs:
       - ixiac-one-basic-tests
       - vxlan-tests
       - kind-tests
+      - clabernetes-tests
       - srsim-tests
       - fortigate-tests
       - cisco_iol-tests
@@ -534,6 +544,7 @@ jobs:
       - ext-container-tests
       - vxlan-tests
       - kind-tests
+      - clabernetes-tests
       - srsim-tests
       - cisco_iol-tests
       - fortigate-tests

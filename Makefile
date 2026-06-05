@@ -76,6 +76,7 @@ endif
 ifndef suite
 override suite = .
 endif
+.PHONY: robot-test
 robot-test: build-with-podman-debug
 	sudo chown root:root $(BINARY) && sudo chmod 4755 $(BINARY)
 	CLAB_BIN=$(BINARY) $$PWD/tests/rf-run.sh $(runtime) $$PWD/tests/$(suite)
