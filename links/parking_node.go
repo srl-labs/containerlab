@@ -173,22 +173,12 @@ func (p *ParkingNode) captureCandidates(
 	ctx context.Context,
 	src EndpointOwner,
 ) ([]Endpoint, error) {
-	tracked := append([]Endpoint(nil), src.GetEndpoints()...)
-	endpoints := make([]Endpoint, 0, len(tracked))
-	knownIfaceNames := make(map[string]struct{}, len(tracked))
-
-	for _, ep := range tracked {
-		if ep.IsRuntimeDiscovered() {
-			endpoints = append(endpoints, ep)
-			knownIfaceNames[ep.GetIfaceName()] = struct{}{}
-			continue
-		}
-
-		endpoints = append(endpoints, ep)
-		knownIfaceNames[ep.GetIfaceName()] = struct{}{}
+	trackedEndpoints := src.GetEndpoints()
+	tracked := make(map[string]Endpoint, len(trackedEndpoints))
+	for _, ep := range trackedEndpoints {
+		tracked[ep.GetIfaceName()] = ep
 	}
-
-	runtimeIfaceNames, err := listOwnedInterfaceNames(ctx, src, nil)
+	presentIfaceNames, err := listOwnedInterfaceNames(ctx, src, trackedIfaceNames(trackedEndpoints))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to discover runtime interfaces for node %q: %w",
@@ -197,18 +187,17 @@ func (p *ParkingNode) captureCandidates(
 		)
 	}
 
-	for _, ifaceName := range runtimeIfaceNames {
-		if _, known := knownIfaceNames[ifaceName]; known {
-			continue
+	endpoints := make([]Endpoint, 0, len(presentIfaceNames))
+	for _, ifaceName := range presentIfaceNames {
+		ep, ok := tracked[ifaceName]
+		if !ok {
+			ep = NewRuntimeEndpoint(src, ifaceName)
+			if err := src.AdoptEndpoint(ep); err != nil {
+				return nil, err
+			}
 		}
 
-		runtimeEp := NewRuntimeEndpoint(src, ifaceName)
-		if err := src.AdoptEndpoint(runtimeEp); err != nil {
-			return nil, err
-		}
-
-		endpoints = append(endpoints, runtimeEp)
-		knownIfaceNames[ifaceName] = struct{}{}
+		endpoints = append(endpoints, ep)
 	}
 
 	return endpoints, nil
