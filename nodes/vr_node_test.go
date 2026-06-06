@@ -1,6 +1,7 @@
 package nodes
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestVRNodeLinkApplyMode(t *testing.T) {
-	if got := (&VRNode{}).LinkApplyMode(); got != LinkApplyModeRecreate {
+	if got := (&VRNode{}).LinkApplyMode(context.Background()); got != LinkApplyModeRecreate {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, LinkApplyModeRecreate)
 	}
 }

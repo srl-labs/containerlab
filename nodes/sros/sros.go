@@ -218,7 +218,7 @@ type sros struct {
 	preDeployParams *clabnodes.PreDeployParams
 }
 
-func (*sros) LinkApplyMode() clabnodes.LinkApplyMode {
+func (*sros) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
 	return clabnodes.LinkApplyModeLive
 }
 

@@ -173,8 +173,8 @@ func (n *ceos) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	return n.ceosPostDeploy(ctx)
 }
 
-func (*ceos) LinkApplyMode() clabnodes.LinkApplyMode {
-	return clabnodes.LinkApplyModeRestart
+func (n *ceos) LinkApplyMode(ctx context.Context) clabnodes.LinkApplyMode {
+	return n.ImageLinkApplyMode(ctx, clabnodes.LinkApplyModeRestart)
 }
 
 func (n *ceos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {

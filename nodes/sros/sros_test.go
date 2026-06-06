@@ -19,7 +19,7 @@ import (
 )
 
 func TestSrosLinkApplyMode(t *testing.T) {
-	if got := (&sros{}).LinkApplyMode(); got != clabnodes.LinkApplyModeLive {
+	if got := (&sros{}).LinkApplyMode(context.Background()); got != clabnodes.LinkApplyModeLive {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeLive)
 	}
 }

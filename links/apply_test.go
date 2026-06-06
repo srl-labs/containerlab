@@ -1,6 +1,10 @@
 package links
 
-import "testing"
+import (
+	"sort"
+	"strings"
+	"testing"
+)
 
 func TestApplyRuntimeEndpointsForMacVlanExcludesParent(t *testing.T) {
 	t.Parallel()
@@ -40,4 +44,31 @@ func TestApplyRuntimeEndpointsForVxlanStitchedIncludesUnderlyingObjects(t *testi
 	if got := endpointTokens(ApplyRuntimeEndpoints(link)); got != "host:ve-n1_eth1,host:vx-n1_eth1,n1:eth1" {
 		t.Fatalf("unexpected runtime endpoints %q", got)
 	}
+}
+
+func endpointTokens(endpoints []Endpoint) string {
+	tokens := make([]string, 0, len(endpoints))
+	for _, ep := range endpoints {
+		if ep == nil {
+			continue
+		}
+		token := endpointToken(ep)
+		if token == "" {
+			continue
+		}
+		tokens = append(tokens, token)
+	}
+	sort.Strings(tokens)
+	return strings.Join(tokens, ",")
+}
+
+func endpointToken(ep Endpoint) string {
+	if ep == nil || ep.GetNode() == nil || ep.GetIfaceName() == "" {
+		return ""
+	}
+	nodeName := ep.GetNode().GetShortName()
+	if ep.IsNodeless() && ep.GetNode().GetLinkEndpointType() == LinkEndpointTypeBridge {
+		nodeName = "mgmt-net"
+	}
+	return nodeName + ":" + ep.GetIfaceName()
 }

@@ -35,6 +35,9 @@ const (
 	containerNamePattern = "^[a-zA-Z0-9][a-zA-Z0-9-._]+$"
 	dnsIncompatibleChars = "._"
 	maxNameLength        = 60
+
+	boxenImageVendorLabel = "org.opencontainers.image.vendor"
+	boxenImageVendorValue = "Boxen"
 )
 
 var containerNamePatternRe = regexp.MustCompile(containerNamePattern)
@@ -218,8 +221,45 @@ func (d *DefaultNode) ShouldSkipLifecycle() bool {
 
 // LinkApplyMode returns the conservative default for node kinds that do not
 // explicitly opt into live hotplug or restart handling.
-func (*DefaultNode) LinkApplyMode() LinkApplyMode {
-	return LinkApplyModeRecreate
+func (d *DefaultNode) LinkApplyMode(ctx context.Context) LinkApplyMode {
+	return d.ImageLinkApplyMode(ctx, LinkApplyModeRecreate)
+}
+
+// ImageLinkApplyMode allows node kinds to keep their normal fallback behavior
+// while opting into live link apply when their image declares support for it.
+func (d *DefaultNode) ImageLinkApplyMode(ctx context.Context, fallback LinkApplyMode) LinkApplyMode {
+	if d.imageHasBoxenVendorLabel(ctx) {
+		return LinkApplyModeLive
+	}
+
+	return fallback
+}
+
+func (d *DefaultNode) imageHasBoxenVendorLabel(ctx context.Context) bool {
+	if d == nil || d.Cfg == nil || d.Cfg.Image == "" {
+		return false
+	}
+	if d.Runtime == nil {
+		log.Debug("Skipping image label check for apply link hotplug support",
+			"image", d.Cfg.Image,
+			"reason", "node runtime is not initialized",
+		)
+		return false
+	}
+
+	inspect, err := d.Runtime.InspectImage(ctx, d.Cfg.Image)
+	if err != nil {
+		log.Debug("Failed to inspect image for apply link hotplug support",
+			"image", d.Cfg.Image,
+			"error", err,
+		)
+		return false
+	}
+	if inspect == nil || inspect.Config.Labels == nil {
+		return false
+	}
+
+	return inspect.Config.Labels[boxenImageVendorLabel] == boxenImageVendorValue
 }
 
 func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff {

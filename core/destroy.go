@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 
@@ -309,6 +310,49 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 			default:
 				log.Error(err)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
+	nodeNames := make([]string, 0, len(plan.deletedNodeSet)+len(plan.recreatedNodeSet))
+	for nodeName := range plan.deletedNodeSet {
+		nodeNames = append(nodeNames, nodeName)
+	}
+	for nodeName := range plan.recreatedNodeSet {
+		nodeNames = append(nodeNames, nodeName)
+	}
+	sort.Strings(nodeNames)
+
+	for _, nodeName := range nodeNames {
+		runtimeNode := plan.currentNodes[nodeName]
+		if runtimeNode == nil {
+			return fmt.Errorf("runtime node %q not found", nodeName)
+		}
+
+		for i := len(runtimeNode.containers) - 1; i >= 0; i-- {
+			ctr := runtimeNode.containers[i]
+			if len(ctr.Names) == 0 {
+				return fmt.Errorf("runtime container for node %q has no name", nodeName)
+			}
+
+			runtime := ctr.Runtime
+			if runtime == nil {
+				runtime = c.globalRuntime()
+			}
+
+			action := "Deleting node"
+			if _, recreate := plan.recreatedNodeSet[nodeName]; recreate {
+				action = "Deleting node for recreate"
+			}
+			log.Info(action, "node", nodeName, "container", ctr.Names[0])
+			if err := runtime.DeleteContainer(ctx, ctr.Names[0]); err != nil {
+				return fmt.Errorf("failed deleting node %q: %w", nodeName, err)
+			}
+
+			_ = clabutils.DeleteNetnsSymlink(ctr.Names[0])
 		}
 	}
 

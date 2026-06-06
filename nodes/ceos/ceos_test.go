@@ -5,13 +5,14 @@
 package ceos
 
 import (
+	"context"
 	"testing"
 
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 )
 
 func TestCeosLinkApplyMode(t *testing.T) {
-	if got := (&ceos{}).LinkApplyMode(); got != clabnodes.LinkApplyModeRestart {
+	if got := (&ceos{}).LinkApplyMode(context.Background()); got != clabnodes.LinkApplyModeRestart {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeRestart)
 	}
 }

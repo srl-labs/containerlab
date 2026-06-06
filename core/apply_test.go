@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"strings"
 	"testing"
@@ -32,7 +31,7 @@ type applyLiveMockNode struct {
 	linkApplyMode clabnodes.LinkApplyMode
 }
 
-func (n *applyLiveMockNode) LinkApplyMode() clabnodes.LinkApplyMode {
+func (n *applyLiveMockNode) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
 	return n.linkApplyMode
 }
 
@@ -197,9 +196,7 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 				{node: "n1", iface: "eth1"}: {},
 				{node: "n2", iface: "eth1"}: {},
 			},
-			// n2 is recreated (hence in addedNodeSet) but parked, so its existing
-			// link is preserved, not redeployed.
-			addedNode:  map[string]struct{}{"n2": {}},
+			// n2 is recreated but parked, so its existing link is preserved, not redeployed.
 			parkedNode: map[string]struct{}{"n2": {}},
 			want:       false,
 		},
@@ -208,7 +205,6 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 			live: map[applyEndpointKey]struct{}{
 				{node: "n1", iface: "eth1"}: {},
 			},
-			addedNode:  map[string]struct{}{"n2": {}},
 			parkedNode: map[string]struct{}{"n2": {}},
 			want:       true,
 		},
@@ -233,14 +229,18 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			plan := &applyPlan{
-				addedNodeSet:    tt.addedNode,
-				parkedNodeSet:   tt.parkedNode,
-				startNodeSet:    tt.startNode,
-				liveEndpointSet: tt.live,
+			plan := newApplyPlan(nil, nil)
+			if tt.addedNode != nil {
+				plan.addedNodeSet = tt.addedNode
 			}
-			if plan.addedNodeSet == nil {
-				plan.addedNodeSet = map[string]struct{}{}
+			if tt.parkedNode != nil {
+				plan.parkedNodeSet = tt.parkedNode
+			}
+			if tt.startNode != nil {
+				plan.startNodeSet = tt.startNode
+			}
+			if tt.live != nil {
+				plan.liveEndpointSet = tt.live
 			}
 
 			if got := plan.linkNeedsDeploy(link); got != tt.want {
@@ -274,12 +274,10 @@ func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 			1: link2,
 		},
 	}
-	plan := &applyPlan{
-		result:           &ApplyResult{AddedLinks: []string{applyLinkName(link2)}},
-		recreatedNodeSet: map[string]struct{}{"n1": {}},
-		plannedLinkSet:   map[int]struct{}{1: {}},
-		addedLinks:       []clablinks.Link{link2},
-	}
+	plan := newApplyPlan(nil, nil)
+	plan.recreatedNodeSet = map[string]struct{}{"n1": {}}
+	plan.plannedLinkSet = map[int]struct{}{1: {}}
+	plan.addedLinks = []clablinks.Link{link2}
 
 	c.planRecreatedNodeLinks(plan)
 
@@ -292,7 +290,8 @@ func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	if plan.addedLinks[1] != link1 {
 		t.Fatalf("expected unchanged recreated-node link to be planned")
 	}
-	if got, want := len(plan.result.AddedLinks), 2; got != want {
+	result := applyResultFromPlan(plan)
+	if got, want := len(result.AddedLinks), 2; got != want {
 		t.Fatalf("reported added links = %d, want %d", got, want)
 	}
 }
@@ -301,19 +300,12 @@ func TestPlanDeletedEndpointsUsesDiscoveredEndpointNode(t *testing.T) {
 	t.Parallel()
 
 	parkingNode := &applyFakeLinkNode{name: "parking-n1"}
-	plan := &applyPlan{
-		result:             &ApplyResult{DeletedEndpoints: []string{}},
-		addedNodeSet:       map[string]struct{}{},
-		restartNodeSet:     map[string]struct{}{},
-		linkRestartNodeSet: map[string]struct{}{},
-		recreatedNodeSet:   map[string]struct{}{},
-		desiredEndpointSet: map[applyEndpointKey]struct{}{},
-		liveEndpointSet: map[applyEndpointKey]struct{}{
-			{node: "n1", iface: "eth1"}: {},
-		},
-		endpointNodes: map[string]clablinks.Node{
-			"n1": parkingNode,
-		},
+	plan := newApplyPlan(nil, nil)
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "n1", iface: "eth1"}: {},
+	}
+	plan.endpointNodes = map[string]clablinks.Node{
+		"n1": parkingNode,
 	}
 
 	c := &CLab{}
@@ -379,8 +371,8 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 				}
 			}
 
-			if got := applyNodeLinkApplyMode(node); got != tt.want {
-				t.Fatalf("applyNodeLinkApplyMode() = %v, want %v", got, tt.want)
+			if got := clabnodes.LinkApplyModeForNode(context.Background(), node); got != tt.want {
+				t.Fatalf("LinkApplyModeForNode() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -434,12 +426,7 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 				},
 			}
 			mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{}).AnyTimes()
-			plan := &applyPlan{
-				addedNodeSet:       map[string]struct{}{},
-				restartNodeSet:     map[string]struct{}{},
-				linkRestartNodeSet: map[string]struct{}{},
-				recreatedNodeSet:   map[string]struct{}{},
-			}
+			plan := newApplyPlan(nil, nil)
 
 			c.planAffectedApplyNode(context.Background(), plan, "n1", tt.change)
 
@@ -453,154 +440,11 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 				t.Fatalf("recreated = %v, want %v", recreated, tt.wantRecreated)
 			}
 
-			_, deployNode := plan.addedNodeSet["n1"]
+			deployNode := strings.Join(plan.deployNodeNames(), ",") == "n1"
 			if deployNode != tt.wantRecreated {
 				t.Fatalf("deploy node = %v, want %v", deployNode, tt.wantRecreated)
 			}
 		})
-	}
-}
-
-func TestPlanAffectedApplyNodeBoxenImageLabel(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name          string
-		mode          clabnodes.LinkApplyMode
-		labels        map[string]string
-		inspectErr    error
-		wantRestart   bool
-		wantRecreated bool
-	}{
-		{
-			name:   "boxen image makes recreate node live",
-			mode:   clabnodes.LinkApplyModeRecreate,
-			labels: map[string]string{boxenImageVendorLabel: boxenImageVendorValue},
-		},
-		{
-			name:   "boxen image makes restart node live",
-			mode:   clabnodes.LinkApplyModeRestart,
-			labels: map[string]string{boxenImageVendorLabel: boxenImageVendorValue},
-		},
-		{
-			name:          "missing boxen label keeps recreate mode",
-			mode:          clabnodes.LinkApplyModeRecreate,
-			labels:        map[string]string{"other": "label"},
-			wantRecreated: true,
-		},
-		{
-			name:          "image inspect error keeps recreate mode",
-			mode:          clabnodes.LinkApplyModeRecreate,
-			inspectErr:    errors.New("inspect image"),
-			wantRecreated: true,
-		},
-		{
-			name:        "missing boxen label keeps restart mode",
-			mode:        clabnodes.LinkApplyModeRestart,
-			labels:      map[string]string{"other": "label"},
-			wantRestart: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			mockNode := clabmocksmocknodes.NewMockNode(ctrl)
-			mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-
-			mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{Image: "img"}).AnyTimes()
-			mockNode.EXPECT().GetRuntime().Return(mockRuntime).AnyTimes()
-
-			if tt.inspectErr != nil {
-				mockRuntime.EXPECT().
-					InspectImage(gomock.Any(), "img").
-					Return(nil, tt.inspectErr)
-			} else {
-				mockRuntime.EXPECT().
-					InspectImage(gomock.Any(), "img").
-					Return(&clabruntime.ImageInspect{
-						Config: clabruntime.ImageConfig{Labels: tt.labels},
-					}, nil)
-			}
-
-			c := &CLab{
-				Nodes: map[string]clabnodes.Node{
-					"n1": &applyLiveMockNode{
-						MockNode:      mockNode,
-						linkApplyMode: tt.mode,
-					},
-				},
-			}
-			plan := &applyPlan{
-				addedNodeSet:       map[string]struct{}{},
-				restartNodeSet:     map[string]struct{}{},
-				linkRestartNodeSet: map[string]struct{}{},
-				recreatedNodeSet:   map[string]struct{}{},
-				boxenImageCache:    map[string]bool{},
-			}
-
-			c.planAffectedApplyNode(context.Background(), plan, "n1", "added link")
-
-			_, restart := plan.linkRestartNodeSet["n1"]
-			if restart != tt.wantRestart {
-				t.Fatalf("restart = %v, want %v", restart, tt.wantRestart)
-			}
-
-			_, recreated := plan.recreatedNodeSet["n1"]
-			if recreated != tt.wantRecreated {
-				t.Fatalf("recreated = %v, want %v", recreated, tt.wantRecreated)
-			}
-
-			_, deployNode := plan.addedNodeSet["n1"]
-			if deployNode != tt.wantRecreated {
-				t.Fatalf("deploy node = %v, want %v", deployNode, tt.wantRecreated)
-			}
-		})
-	}
-}
-
-func TestPlanAffectedApplyNodeCachesBoxenImageLabel(t *testing.T) {
-	t.Parallel()
-
-	ctrl := gomock.NewController(t)
-	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
-	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
-
-	mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{Image: "img"}).AnyTimes()
-	mockNode.EXPECT().GetRuntime().Return(mockRuntime).AnyTimes()
-	mockRuntime.EXPECT().
-		InspectImage(gomock.Any(), "img").
-		Return(&clabruntime.ImageInspect{
-			Config: clabruntime.ImageConfig{
-				Labels: map[string]string{boxenImageVendorLabel: boxenImageVendorValue},
-			},
-		}, nil).
-		Times(1)
-
-	c := &CLab{
-		Nodes: map[string]clabnodes.Node{
-			"n1": &applyLiveMockNode{
-				MockNode:      mockNode,
-				linkApplyMode: clabnodes.LinkApplyModeRecreate,
-			},
-		},
-	}
-	plan := &applyPlan{
-		addedNodeSet:       map[string]struct{}{},
-		restartNodeSet:     map[string]struct{}{},
-		linkRestartNodeSet: map[string]struct{}{},
-		recreatedNodeSet:   map[string]struct{}{},
-		boxenImageCache:    map[string]bool{},
-	}
-
-	c.planAffectedApplyNode(context.Background(), plan, "n1", "added link")
-	c.planAffectedApplyNode(context.Background(), plan, "n1", "deleted endpoint")
-
-	if _, restarted := plan.linkRestartNodeSet["n1"]; restarted {
-		t.Fatal("expected boxen image node not to be restarted")
-	}
-	if _, recreated := plan.recreatedNodeSet["n1"]; recreated {
-		t.Fatal("expected boxen image node not to be recreated")
 	}
 }
 
@@ -625,13 +469,7 @@ func TestPlanNodeReconciliationKeepsRecreateAction(t *testing.T) {
 		},
 		Nodes: map[string]clabnodes.Node{"n1": mockNode},
 	}
-	plan := &applyPlan{
-		currentNodes:     map[string]*applyRuntimeNode{"n1": {}},
-		addedNodeSet:     map[string]struct{}{},
-		recreatedNodeSet: map[string]struct{}{},
-		restartNodeSet:   map[string]struct{}{},
-		nodeDiffs:        map[string]*clabtypes.TopologyDiff{},
-	}
+	plan := newApplyPlan(map[string]*runtimeNodeGroup{"n1": {}}, nil)
 
 	if err := c.planNodeReconciliation(context.Background(), plan); err != nil {
 		t.Fatal(err)
@@ -640,8 +478,11 @@ func TestPlanNodeReconciliationKeepsRecreateAction(t *testing.T) {
 	if _, recreated := plan.recreatedNodeSet["n1"]; !recreated {
 		t.Fatal("expected node reconciliation recreate action to be preserved")
 	}
-	if _, added := plan.addedNodeSet["n1"]; !added {
-		t.Fatal("expected recreated node to be scheduled for deploy")
+	if _, added := plan.addedNodeSet["n1"]; added {
+		t.Fatal("did not expect recreated node to be reported as added")
+	}
+	if got := strings.Join(plan.deployNodeNames(), ","); got != "n1" {
+		t.Fatalf("deploy nodes = %q, want n1", got)
 	}
 }
 
@@ -663,16 +504,12 @@ func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
 		timeout: time.Second,
 	}
 
-	restarted, err := c.restartApplyNodes(context.Background(), map[string]struct{}{"n1": {}})
-	if err != nil {
+	if err := c.restartApplyNodes(context.Background(), map[string]struct{}{"n1": {}}); err != nil {
 		t.Fatal(err)
-	}
-	if strings.Join(restarted, ",") != "n1" {
-		t.Fatalf("restarted nodes = %v, want [n1]", restarted)
 	}
 }
 
-func TestRuntimeNodeContainersGroupsDistributedComponents(t *testing.T) {
+func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
@@ -705,7 +542,7 @@ func TestRuntimeNodeContainersGroupsDistributedComponents(t *testing.T) {
 			},
 		}, nil)
 
-	currentNodes, err := c.runtimeNodeContainers(context.Background())
+	currentNodes, err := c.runtimeNodeGroups(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -722,14 +559,14 @@ func TestRuntimeNodeContainersGroupsDistributedComponents(t *testing.T) {
 	}
 }
 
-func TestSetApplyMgmtBridgeFromRuntime(t *testing.T) {
+func TestSetMgmtBridgeFromRuntime(t *testing.T) {
 	t.Parallel()
 
 	c := &CLab{
 		Config: &Config{Mgmt: &clabtypes.MgmtNet{}},
 	}
 
-	err := c.setApplyMgmtBridgeFromRuntime(map[string]*applyRuntimeNode{
+	err := c.setMgmtBridgeFromRuntime(map[string]*runtimeNodeGroup{
 		"l1": {
 			containers: []clabruntime.GenericContainer{
 				{
@@ -749,7 +586,7 @@ func TestSetApplyMgmtBridgeFromRuntime(t *testing.T) {
 	}
 }
 
-func TestApplyContainerSortsSrosComponentsInDeploymentOrder(t *testing.T) {
+func TestRuntimeContainerSortsSrosComponentsInDeploymentOrder(t *testing.T) {
 	t.Parallel()
 
 	containers := []clabruntime.GenericContainer{
@@ -759,13 +596,13 @@ func TestApplyContainerSortsSrosComponentsInDeploymentOrder(t *testing.T) {
 	}
 
 	sort.Slice(containers, func(i, j int) bool {
-		return applyContainerLess(containers[i], containers[j])
+		return runtimeContainerLess(containers[i], containers[j])
 	})
 
 	got := []string{
-		applyContainerNodeName(containers[0]),
-		applyContainerNodeName(containers[1]),
-		applyContainerNodeName(containers[2]),
+		runtimeContainerNodeName(containers[0]),
+		runtimeContainerNodeName(containers[1]),
+		runtimeContainerNodeName(containers[2]),
 	}
 	want := []string{"sros-1", "sros-b", "sros-a"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {

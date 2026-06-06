@@ -190,7 +190,7 @@ type srl struct {
 	supportsOpenconfig bool
 }
 
-func (*srl) LinkApplyMode() clabnodes.LinkApplyMode {
+func (*srl) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
 	return clabnodes.LinkApplyModeLive
 }
 

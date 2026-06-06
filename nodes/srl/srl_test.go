@@ -1,6 +1,7 @@
 package srl
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestSRLLinkApplyMode(t *testing.T) {
-	if got := (&srl{}).LinkApplyMode(); got != clabnodes.LinkApplyModeLive {
+	if got := (&srl{}).LinkApplyMode(context.Background()); got != clabnodes.LinkApplyModeLive {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeLive)
 	}
 }

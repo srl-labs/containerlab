@@ -39,7 +39,7 @@ type linux struct {
 	clabnodes.DefaultNode
 }
 
-func (*linux) LinkApplyMode() clabnodes.LinkApplyMode {
+func (*linux) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
 	return clabnodes.LinkApplyModeLive
 }
 

@@ -109,8 +109,66 @@ func TestDefaultNodeShouldSkipLifecycle(t *testing.T) {
 
 func TestDefaultNodeLinkApplyMode(t *testing.T) {
 	d := &DefaultNode{}
-	if got := d.LinkApplyMode(); got != LinkApplyModeRecreate {
+	if got := d.LinkApplyMode(context.Background()); got != LinkApplyModeRecreate {
 		t.Fatalf("LinkApplyMode() = %q, want %q", got, LinkApplyModeRecreate)
+	}
+}
+
+func TestDefaultNodeImageLinkApplyMode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		labels     map[string]string
+		inspectErr error
+		fallback   LinkApplyMode
+		want       LinkApplyMode
+	}{
+		{
+			name:     "boxen image uses live apply",
+			labels:   map[string]string{boxenImageVendorLabel: boxenImageVendorValue},
+			fallback: LinkApplyModeRecreate,
+			want:     LinkApplyModeLive,
+		},
+		{
+			name:     "missing label keeps restart fallback",
+			labels:   map[string]string{"other": "label"},
+			fallback: LinkApplyModeRestart,
+			want:     LinkApplyModeRestart,
+		},
+		{
+			name:       "inspect error keeps recreate fallback",
+			inspectErr: errors.New("inspect image"),
+			fallback:   LinkApplyModeRecreate,
+			want:       LinkApplyModeRecreate,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			runtime := mockruntime.NewMockContainerRuntime(ctrl)
+			if tt.inspectErr != nil {
+				runtime.EXPECT().
+					InspectImage(gomock.Any(), "img").
+					Return(nil, tt.inspectErr)
+			} else {
+				runtime.EXPECT().
+					InspectImage(gomock.Any(), "img").
+					Return(&clabruntime.ImageInspect{
+						Config: clabruntime.ImageConfig{Labels: tt.labels},
+					}, nil)
+			}
+
+			d := &DefaultNode{
+				Cfg:     &clabtypes.NodeConfig{Image: "img"},
+				Runtime: runtime,
+			}
+
+			if got := d.ImageLinkApplyMode(context.Background(), tt.fallback); got != tt.want {
+				t.Fatalf("ImageLinkApplyMode() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

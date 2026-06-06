@@ -44,6 +44,29 @@ const (
 	LinkApplyModeLive LinkApplyMode = "live"
 )
 
+type linkApplyModeNode interface {
+	LinkApplyMode(context.Context) LinkApplyMode
+}
+
+// LinkApplyModeForNode asks a node how apply should handle dataplane link changes.
+func LinkApplyModeForNode(ctx context.Context, node Node) LinkApplyMode {
+	if node == nil {
+		return LinkApplyModeRecreate
+	}
+
+	modeNode, ok := node.(linkApplyModeNode)
+	if !ok {
+		return LinkApplyModeRecreate
+	}
+
+	switch mode := modeNode.LinkApplyMode(ctx); mode {
+	case LinkApplyModeLive, LinkApplyModeRestart, LinkApplyModeRecreate:
+		return mode
+	default:
+		return LinkApplyModeRecreate
+	}
+}
+
 var (
 	// a map of node kinds overriding the default global runtime.
 	NonDefaultRuntimes = map[string]string{}

@@ -15,6 +15,7 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -43,15 +44,7 @@ func (c *CLab) Deploy( //nolint: funlen
 		}
 	}
 
-	// create or reuse the management network, unless every node opts out
-	skipMgmt := c.skipMgmtNetwork()
-	if !skipMgmt {
-		if err := c.CreateNetwork(ctx); err != nil {
-			return nil, err
-		}
-	}
-
-	err = clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge)
+	skipMgmt, err := c.prepareLabManagementNetwork(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -60,86 +53,8 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
-	if err := c.loadKernelModules(); err != nil {
+	if err := c.prepareDeployArtifacts(ctx, options.skipLabDirFileACLs); err != nil {
 		return nil, err
-	}
-
-	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
-	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabconstants.PermissionsDirDefault)
-
-	if !options.skipLabDirFileACLs {
-		// adjust ACL for Labdir such that SUDO_UID Users will
-		// also have access to lab directory files
-		err = clabutils.AdjustFileACLs(c.TopoPaths.TopologyLabDir())
-		if err != nil {
-			log.Infof("unable to adjust Labdir file ACLs: %v", err)
-		}
-	}
-
-	// create an empty ansible inventory file that will get populated later
-	// we create it here first, so that bind mounts of ansible-inventory.yml file could work
-	ansibleInvFPath := c.TopoPaths.AnsibleInventoryFileAbsPath()
-
-	ansibleF, err := os.Create(ansibleInvFPath)
-	if err != nil {
-		return nil, err
-	}
-	ansibleF.Close()
-
-	// create an empty nornir simple inventory file that will get populated later
-	// we create it here first, so that bind mounts of nornir-simple-inventory.yml file could work
-	nornirSimpleInvFPath := c.TopoPaths.NornirSimpleInventoryFileAbsPath()
-
-	nornirF, err := os.Create(nornirSimpleInvFPath)
-	if err != nil {
-		return nil, err
-	}
-	nornirF.Close()
-
-	// in an similar fashion, create an empty topology data file
-	topoDataFPath := c.TopoPaths.TopoExportFile()
-
-	topoDataF, err := os.Create(topoDataFPath)
-	if err != nil {
-		return nil, err
-	}
-	defer topoDataF.Close()
-
-	if err := c.certificateAuthoritySetup(); err != nil {
-		return nil, err
-	}
-
-	c.SSHPubKeys, err = c.RetrieveSSHPubKeys(ctx)
-	if err != nil {
-		log.Warn(err)
-	}
-
-	if err := c.createAuthzKeysFile(); err != nil {
-		return nil, err
-	}
-
-	// extraHosts holds host entries for nodes with static IPv4/6 addresses
-	// these entries will be used by container runtime to populate /etc/hosts file
-	extraHosts := make([]string, 0, len(c.Nodes))
-
-	for _, n := range c.Nodes {
-		if n.Config().MgmtIPv4Address != "" {
-			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s",
-				n.Config().ShortName, n.Config().MgmtIPv4Address)
-			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
-		}
-
-		if n.Config().MgmtIPv6Address != "" {
-			log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s",
-				n.Config().ShortName, n.Config().MgmtIPv6Address)
-			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
-		}
-	}
-
-	for _, n := range c.Nodes {
-		if !strings.HasPrefix(n.Config().NetworkMode, "container:") {
-			n.Config().ExtraHosts = extraHosts
-		}
 	}
 
 	// Apply snapshot restore configuration to nodes
@@ -207,6 +122,12 @@ func (c *CLab) Deploy( //nolint: funlen
 		return nil, err
 	}
 
+	topoDataF, err := os.Create(c.TopoPaths.TopoExportFile())
+	if err != nil {
+		return nil, err
+	}
+	defer topoDataF.Close()
+
 	if err := c.GenerateExports(ctx, topoDataF, options.exportTemplate); err != nil {
 		return nil, err
 	}
@@ -245,6 +166,118 @@ func (c *CLab) Deploy( //nolint: funlen
 	}
 
 	return containers, nil
+}
+
+func (c *CLab) prepareLabManagementNetwork(ctx context.Context) (bool, error) {
+	skipMgmt := c.skipMgmtNetwork()
+	if !skipMgmt {
+		if err := c.CreateNetwork(ctx); err != nil {
+			return skipMgmt, err
+		}
+	}
+
+	if err := clablinks.SetMgmtNetUnderlyingBridge(c.Config.Mgmt.Bridge); err != nil {
+		return skipMgmt, err
+	}
+
+	return skipMgmt, nil
+}
+
+func (c *CLab) prepareDeployArtifacts(ctx context.Context, skipLabDirFileACLs bool) error {
+	if err := c.loadKernelModules(); err != nil {
+		return err
+	}
+
+	c.prepareLabDirectory(skipLabDirFileACLs)
+
+	if err := c.createPlaceholderArtifacts(); err != nil {
+		return err
+	}
+
+	if err := c.setupNodeAuth(ctx); err != nil {
+		return err
+	}
+
+	c.populateExtraHosts()
+
+	return nil
+}
+
+func (c *CLab) prepareLabDirectory(skipFileACLs bool) {
+	log.Info("Creating lab directory", "path", c.TopoPaths.TopologyLabDir())
+	clabutils.CreateDirectory(c.TopoPaths.TopologyLabDir(), clabconstants.PermissionsDirDefault)
+
+	if skipFileACLs {
+		return
+	}
+
+	if err := clabutils.AdjustFileACLs(c.TopoPaths.TopologyLabDir()); err != nil {
+		log.Infof("unable to adjust Labdir file ACLs: %v", err)
+	}
+}
+
+func (c *CLab) createPlaceholderArtifacts() error {
+	paths := []string{
+		c.TopoPaths.AnsibleInventoryFileAbsPath(),
+		c.TopoPaths.NornirSimpleInventoryFileAbsPath(),
+		c.TopoPaths.TopoExportFile(),
+	}
+
+	for _, path := range paths {
+		if err := createEmptyFile(path); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createEmptyFile(path string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	return f.Close()
+}
+
+func (c *CLab) setupNodeAuth(ctx context.Context) error {
+	if err := c.certificateAuthoritySetup(); err != nil {
+		return err
+	}
+
+	var err error
+	c.SSHPubKeys, err = c.RetrieveSSHPubKeys(ctx)
+	if err != nil {
+		log.Warn(err)
+	}
+
+	return c.createAuthzKeysFile()
+}
+
+func (c *CLab) populateExtraHosts() {
+	extraHosts := make([]string, 0, len(c.Nodes))
+
+	for _, nodeName := range sortedNodeNames(c.Nodes) {
+		n := c.Nodes[nodeName]
+		if n.Config().MgmtIPv4Address != "" {
+			log.Debugf("Adding static ipv4 /etc/hosts entry for %s:%s",
+				n.Config().ShortName, n.Config().MgmtIPv4Address)
+			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv4Address)
+		}
+		if n.Config().MgmtIPv6Address != "" {
+			log.Debugf("Adding static ipv6 /etc/hosts entry for %s:%s",
+				n.Config().ShortName, n.Config().MgmtIPv6Address)
+			extraHosts = append(extraHosts, n.Config().ShortName+":"+n.Config().MgmtIPv6Address)
+		}
+	}
+
+	for _, nodeName := range sortedNodeNames(c.Nodes) {
+		n := c.Nodes[nodeName]
+		if !strings.HasPrefix(n.Config().NetworkMode, "container:") {
+			n.Config().ExtraHosts = extraHosts
+		}
+	}
 }
 
 // certificateAuthoritySetup sets up the certificate authority parameters.
@@ -349,6 +382,179 @@ func (c *CLab) createNodes(
 	NodesWg, execCollection := c.scheduleNodes(ctx, int(maxWorkers), skipPostDeploy, nodeFailCh)
 
 	return NodesWg, execCollection, nodeFailCh, nil
+}
+
+func (c *CLab) deployApplyNodes(
+	ctx context.Context,
+	nodeNames []string,
+	maxWorkers uint,
+) error {
+	if len(nodeNames) == 0 {
+		return nil
+	}
+
+	if maxWorkers == 0 || int(maxWorkers) > len(nodeNames) {
+		maxWorkers = uint(len(nodeNames))
+	}
+
+	input := make(chan string)
+	errCh := make(chan error, len(nodeNames))
+
+	for range maxWorkers {
+		go func() {
+			for nodeName := range input {
+				errCh <- c.deployApplyNode(ctx, nodeName)
+			}
+		}()
+	}
+
+	for _, nodeName := range nodeNames {
+		input <- nodeName
+	}
+	close(input)
+
+	var errs []error
+	for range nodeNames {
+		if err := <-errCh; err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
+}
+
+func (c *CLab) deployApplyNode(ctx context.Context, nodeName string) error {
+	node := c.Nodes[nodeName]
+
+	log.Info("Creating node", "node", nodeName)
+	if err := node.PreDeploy(ctx, &clabnodes.PreDeployParams{
+		Cert:         c.Cert,
+		TopologyName: c.Config.Name,
+		TopoPaths:    c.TopoPaths,
+		SSHPubKeys:   c.SSHPubKeys,
+	}); err != nil {
+		return fmt.Errorf("node %q pre-deploy: %w", nodeName, err)
+	}
+
+	if err := node.Deploy(ctx, &clabnodes.DeployParams{Nodes: c.Nodes}); err != nil {
+		return fmt.Errorf("node %q deploy: %w", nodeName, err)
+	}
+
+	if err := node.UpdateConfigWithRuntimeInfo(ctx); err != nil {
+		log.Errorf("failed to update node runtime information for node %s: %v", nodeName, err)
+	}
+
+	return nil
+}
+
+func (c *CLab) deployApplyLinks(ctx context.Context, links []clablinks.Link) error {
+	for _, link := range links {
+		log.Info("Creating link", "link", applyLinkName(link))
+
+		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+			if err := clablinks.RemoveOwnedInterface(ctx, ep.GetNode(), ep.GetIfaceName()); err != nil {
+				return err
+			}
+		}
+
+		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+			deployable, ok := ep.(clablinks.DeployableEndpoint)
+			if !ok {
+				return fmt.Errorf("endpoint %q is not deployable", ep.GetIfaceName())
+			}
+
+			if err := deployable.Deploy(ctx); err != nil {
+				return fmt.Errorf("failed deploying link %s: %w", applyLinkName(link), err)
+			}
+		}
+
+		if stitchedLink, ok := link.(*clablinks.VxlanStitched); ok {
+			if err := stitchedLink.Stitch(); err != nil {
+				return fmt.Errorf("failed stitching link %s: %w", applyLinkName(link), err)
+			}
+		}
+	}
+
+	return nil
+}
+
+type postDeployEndpointsNode interface {
+	PostDeployEndpoints(context.Context) error
+}
+
+func (c *CLab) postDeployApplyLinks(ctx context.Context, nodeNames []string) error {
+	for _, nodeName := range nodeNames {
+		node, ok := c.Nodes[nodeName].(postDeployEndpointsNode)
+		if !ok {
+			continue
+		}
+
+		if err := node.PostDeployEndpoints(ctx); err != nil {
+			return fmt.Errorf("node %q post-deploy links: %w", nodeName, err)
+		}
+	}
+
+	return nil
+}
+
+func (c *CLab) postDeployApplyNodes(
+	ctx context.Context,
+	nodeNames []string,
+	skipPostDeploy bool,
+) error {
+	execCollection := clabexec.NewExecCollection()
+
+	for _, nodeName := range nodeNames {
+		node := c.Nodes[nodeName]
+
+		if !skipPostDeploy {
+			if err := node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes}); err != nil {
+				return fmt.Errorf("node %q post-deploy: %w", nodeName, err)
+			}
+		}
+
+		if err := node.RunExecFromConfig(ctx, execCollection); err != nil {
+			log.Errorf("failed to run exec commands for %s: %v", nodeName, err)
+		}
+	}
+
+	execCollection.Log()
+
+	return nil
+}
+
+func (c *CLab) regenerateApplyArtifacts(ctx context.Context, exportTemplate string) error {
+	if err := c.GenerateInventories(); err != nil {
+		return err
+	}
+
+	topoDataF, err := os.Create(c.TopoPaths.TopoExportFile())
+	if err != nil {
+		return err
+	}
+	defer topoDataF.Close()
+
+	if err := c.GenerateExports(ctx, topoDataF, exportTemplate); err != nil {
+		return err
+	}
+
+	if !c.skipMgmtNetwork() {
+		log.Info("Updating host entries", "path", "/etc/hosts")
+		if err := c.appendHostsFileEntries(ctx); err != nil {
+			log.Errorf("failed to update hosts file: %v", err)
+		}
+	}
+
+	log.Info("Updating SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
+	if err := c.addSSHConfig(); err != nil {
+		log.Errorf("failed to create ssh config file: %v", err)
+	}
+
+	return nil
 }
 
 // configureSnapshotRestore configures nodes for snapshot restoration.

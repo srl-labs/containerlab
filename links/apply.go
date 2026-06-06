@@ -1,10 +1,5 @@
 package links
 
-import (
-	"sort"
-	"strings"
-)
-
 // ApplyRuntimeEndpoints returns the runtime-owned endpoints that an apply operation may
 // deploy, discover, or remove for a link. Parent and remote-only metadata endpoints are
 // intentionally excluded.
@@ -39,31 +34,4 @@ func materialEndpoints(endpoints []Endpoint) []Endpoint {
 		result = append(result, ep)
 	}
 	return result
-}
-
-func endpointTokens(endpoints []Endpoint) string {
-	tokens := make([]string, 0, len(endpoints))
-	for _, ep := range endpoints {
-		if ep == nil {
-			continue
-		}
-		token := endpointToken(ep)
-		if token == "" {
-			continue
-		}
-		tokens = append(tokens, token)
-	}
-	sort.Strings(tokens)
-	return strings.Join(tokens, ",")
-}
-
-func endpointToken(ep Endpoint) string {
-	if ep == nil || ep.GetNode() == nil || ep.GetIfaceName() == "" {
-		return ""
-	}
-	nodeName := ep.GetNode().GetShortName()
-	if ep.IsNodeless() && ep.GetNode().GetLinkEndpointType() == LinkEndpointTypeBridge {
-		nodeName = "mgmt-net"
-	}
-	return nodeName + ":" + ep.GetIfaceName()
 }
