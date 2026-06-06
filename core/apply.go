@@ -74,9 +74,15 @@ type applyPlan struct {
 	state              *LabState
 	parkedNodeSet      map[string]struct{}
 	startNodeSet       map[string]struct{}
+	boxenImageCache    map[string]bool
 }
 
 var errApplyInterfaceUnowned = errors.New("interface is not marked as containerlab-owned")
+
+const (
+	boxenImageVendorLabel = "org.opencontainers.image.vendor"
+	boxenImageVendorValue = "Boxen"
+)
 
 type linkApplyModeNode interface {
 	LinkApplyMode() clabnodes.LinkApplyMode
@@ -388,6 +394,7 @@ func (c *CLab) planApply(
 		liveEndpointSet:    map[applyEndpointKey]struct{}{},
 		endpointNodes:      map[string]clablinks.Node{},
 		state:              state,
+		boxenImageCache:    map[string]bool{},
 	}
 
 	for _, nodeName := range sortedNodeNames(c.Nodes) {
@@ -430,7 +437,7 @@ func (c *CLab) planApply(
 		return nil, err
 	}
 
-	c.planDeletedEndpoints(plan)
+	c.planDeletedEndpoints(ctx, plan)
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
 		link := c.Links[linkIdx]
@@ -449,7 +456,7 @@ func (c *CLab) planApply(
 				continue
 			}
 
-			c.planAffectedApplyNode(plan, nodeName, "added link")
+			c.planAffectedApplyNode(ctx, plan, nodeName, "added link")
 		}
 	}
 
@@ -564,18 +571,19 @@ func linkTouchesNodeSet(link clablinks.Link, nodeSet map[string]struct{}) bool {
 	return false
 }
 
-func (c *CLab) planDeletedEndpoints(plan *applyPlan) {
+func (c *CLab) planDeletedEndpoints(ctx context.Context, plan *applyPlan) {
 	plannedEndpointSet := map[applyEndpointKey]struct{}{}
 
 	for _, key := range sortedEndpointKeys(plan.liveEndpointSet) {
 		if _, exists := plan.desiredEndpointSet[key]; exists {
 			continue
 		}
-		c.addStaleApplyEndpoint(plan, plannedEndpointSet, key)
+		c.addStaleApplyEndpoint(ctx, plan, plannedEndpointSet, key)
 	}
 }
 
 func (c *CLab) addStaleApplyEndpoint(
+	ctx context.Context,
 	plan *applyPlan,
 	plannedEndpointSet map[applyEndpointKey]struct{},
 	key applyEndpointKey,
@@ -604,7 +612,7 @@ func (c *CLab) addStaleApplyEndpoint(
 
 	if _, exists := c.Nodes[key.node]; exists {
 		if _, added := plan.addedNodeSet[key.node]; !added {
-			c.planAffectedApplyNode(plan, key.node, "deleted endpoint")
+			c.planAffectedApplyNode(ctx, plan, key.node, "deleted endpoint")
 		}
 	}
 
@@ -807,6 +815,7 @@ func isApplySpecialNode(nodeName string) bool {
 }
 
 func (c *CLab) planAffectedApplyNode(
+	ctx context.Context,
 	plan *applyPlan,
 	nodeName string,
 	change string,
@@ -838,7 +847,7 @@ func (c *CLab) planAffectedApplyNode(
 		return
 	}
 
-	switch applyNodeLinkApplyMode(node) {
+	switch c.applyNodeLinkApplyMode(ctx, plan, node) {
 	case clabnodes.LinkApplyModeLive:
 		log.Info("Applying link change without node lifecycle action", "node", nodeName, "change", change)
 	case clabnodes.LinkApplyModeRestart:
@@ -849,6 +858,86 @@ func (c *CLab) planAffectedApplyNode(
 		delete(plan.restartNodeSet, nodeName)
 		delete(plan.linkRestartNodeSet, nodeName)
 	}
+}
+
+func (c *CLab) applyNodeLinkApplyMode(
+	ctx context.Context,
+	plan *applyPlan,
+	node clabnodes.Node,
+) clabnodes.LinkApplyMode {
+	mode := applyNodeLinkApplyMode(node)
+	if mode == clabnodes.LinkApplyModeLive {
+		return mode
+	}
+
+	if c.applyNodeUsesBoxenImage(ctx, plan, node) {
+		return clabnodes.LinkApplyModeLive
+	}
+
+	return mode
+}
+
+func (c *CLab) applyNodeUsesBoxenImage(
+	ctx context.Context,
+	plan *applyPlan,
+	node clabnodes.Node,
+) bool {
+	if node == nil {
+		return false
+	}
+
+	cfg := node.Config()
+	if cfg == nil || cfg.Image == "" {
+		return false
+	}
+
+	if plan != nil {
+		if plan.boxenImageCache == nil {
+			plan.boxenImageCache = map[string]bool{}
+		}
+		if supported, exists := plan.boxenImageCache[cfg.Image]; exists {
+			return supported
+		}
+	}
+
+	supported := c.imageHasBoxenVendorLabel(ctx, node, cfg.Image)
+	if plan != nil {
+		plan.boxenImageCache[cfg.Image] = supported
+	}
+
+	return supported
+}
+
+func (c *CLab) imageHasBoxenVendorLabel(
+	ctx context.Context,
+	node clabnodes.Node,
+	image string,
+) bool {
+	runtime := node.GetRuntime()
+	if runtime == nil && c != nil && c.Runtimes != nil && c.globalRuntimeName != "" {
+		runtime = c.Runtimes[c.globalRuntimeName]
+	}
+	if runtime == nil {
+		log.Debug("Skipping image label check for apply link hotplug support",
+			"image", image,
+			"reason", "node runtime is not initialized",
+		)
+		return false
+	}
+
+	inspect, err := runtime.InspectImage(ctx, image)
+	if err != nil {
+		log.Debug("Failed to inspect image for apply link hotplug support",
+			"image", image,
+			"error", err,
+		)
+		return false
+	}
+	if inspect == nil || inspect.Config.Labels == nil {
+		return false
+	}
+
+	return inspect.Config.Labels[boxenImageVendorLabel] == boxenImageVendorValue
 }
 
 func applyNodeLinkApplyMode(node clabnodes.Node) clabnodes.LinkApplyMode {
