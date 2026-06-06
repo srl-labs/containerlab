@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -162,6 +163,7 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 		live       map[applyEndpointKey]struct{}
 		addedNode  map[string]struct{}
 		parkedNode map[string]struct{}
+		startNode  map[string]struct{}
 		want       bool
 	}{
 		{
@@ -209,6 +211,23 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 			parkedNode: map[string]struct{}{"n2": {}},
 			want:       true,
 		},
+		{
+			name: "stopped node with preserved endpoint keeps existing link",
+			live: map[applyEndpointKey]struct{}{
+				{node: "n1", iface: "eth1"}: {},
+				{node: "n2", iface: "eth1"}: {},
+			},
+			startNode: map[string]struct{}{"n2": {}},
+			want:      false,
+		},
+		{
+			name: "stopped node with missing endpoint deploys link",
+			live: map[applyEndpointKey]struct{}{
+				{node: "n1", iface: "eth1"}: {},
+			},
+			startNode: map[string]struct{}{"n2": {}},
+			want:      true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -216,6 +235,7 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 			plan := &applyPlan{
 				addedNodeSet:    tt.addedNode,
 				parkedNodeSet:   tt.parkedNode,
+				startNodeSet:    tt.startNode,
 				liveEndpointSet: tt.live,
 			}
 			if plan.addedNodeSet == nil {
@@ -273,6 +293,36 @@ func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	}
 	if got, want := len(plan.result.AddedLinks), 2; got != want {
 		t.Fatalf("reported added links = %d, want %d", got, want)
+	}
+}
+
+func TestPlanDeletedEndpointsUsesDiscoveredEndpointNode(t *testing.T) {
+	t.Parallel()
+
+	parkingNode := &applyFakeLinkNode{name: "parking-n1"}
+	plan := &applyPlan{
+		result:             &ApplyResult{DeletedEndpoints: []string{}},
+		addedNodeSet:       map[string]struct{}{},
+		restartNodeSet:     map[string]struct{}{},
+		linkRestartNodeSet: map[string]struct{}{},
+		recreatedNodeSet:   map[string]struct{}{},
+		desiredEndpointSet: map[applyEndpointKey]struct{}{},
+		liveEndpointSet: map[applyEndpointKey]struct{}{
+			{node: "n1", iface: "eth1"}: {},
+		},
+		endpointNodes: map[string]clablinks.Node{
+			"n1": parkingNode,
+		},
+	}
+
+	c := &CLab{}
+	c.planDeletedEndpoints(plan)
+
+	if len(plan.staleEndpoints) != 1 {
+		t.Fatalf("stale endpoints = %d, want 1", len(plan.staleEndpoints))
+	}
+	if plan.staleEndpoints[0].node != parkingNode {
+		t.Fatalf("stale endpoint delete node = %v, want discovered endpoint node", plan.staleEndpoints[0].node)
 	}
 }
 
@@ -383,14 +433,15 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 				},
 			}
 			plan := &applyPlan{
-				addedNodeSet:     map[string]struct{}{},
-				restartNodeSet:   map[string]struct{}{},
-				recreatedNodeSet: map[string]struct{}{},
+				addedNodeSet:       map[string]struct{}{},
+				restartNodeSet:     map[string]struct{}{},
+				linkRestartNodeSet: map[string]struct{}{},
+				recreatedNodeSet:   map[string]struct{}{},
 			}
 
 			c.planAffectedApplyNode(plan, "n1", tt.change)
 
-			_, restart := plan.restartNodeSet["n1"]
+			_, restart := plan.linkRestartNodeSet["n1"]
 			if restart != tt.wantRestart {
 				t.Fatalf("restart = %v, want %v", restart, tt.wantRestart)
 			}
@@ -405,6 +456,33 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 				t.Fatalf("deploy node = %v, want %v", deployNode, tt.wantRecreated)
 			}
 		})
+	}
+}
+
+func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+
+	mockNode.EXPECT().Stop(gomock.Any()).Return(nil)
+	mockNode.EXPECT().Start(gomock.Any()).Return(nil)
+	mockNode.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
+	mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "n1"}).AnyTimes()
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{
+			"n1": mockNode,
+		},
+		timeout: time.Second,
+	}
+
+	restarted, err := c.restartApplyNodes(context.Background(), map[string]struct{}{"n1": {}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(restarted, ",") != "n1" {
+		t.Fatalf("restarted nodes = %v, want [n1]", restarted)
 	}
 }
 

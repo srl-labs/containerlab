@@ -63,12 +63,14 @@ type applyPlan struct {
 	deletedNodeSet     map[string]struct{}
 	recreatedNodeSet   map[string]struct{}
 	restartNodeSet     map[string]struct{}
+	linkRestartNodeSet map[string]struct{}
 	nodeDiffs          map[string]*clabtypes.TopologyDiff
 	addedLinks         []clablinks.Link
 	plannedLinkSet     map[int]struct{}
 	staleEndpoints     []applyEndpointRef
 	desiredEndpointSet map[applyEndpointKey]struct{}
 	liveEndpointSet    map[applyEndpointKey]struct{}
+	endpointNodes      map[string]clablinks.Node
 	state              *LabState
 	parkedNodeSet      map[string]struct{}
 	startNodeSet       map[string]struct{}
@@ -87,6 +89,7 @@ func (p *applyPlan) empty() bool {
 		len(p.result.RecreatedNodes) == 0 &&
 		len(p.result.StartedNodes) == 0 &&
 		len(p.restartNodeSet) == 0 &&
+		len(p.linkRestartNodeSet) == 0 &&
 		len(p.result.AddedLinks) == 0 &&
 		len(p.result.DeletedEndpoints) == 0
 }
@@ -215,6 +218,10 @@ func (c *CLab) Apply(
 	}
 
 	if err := c.postDeployApplyNodes(ctx, deployNodeNames, options.skipPostDeploy); err != nil {
+		return nil, err
+	}
+
+	if _, err := c.restartApplyNodes(ctx, plan.linkRestartNodeSet); err != nil {
 		return nil, err
 	}
 
@@ -374,10 +381,12 @@ func (c *CLab) planApply(
 		parkedNodeSet:      map[string]struct{}{},
 		startNodeSet:       map[string]struct{}{},
 		restartNodeSet:     map[string]struct{}{},
+		linkRestartNodeSet: map[string]struct{}{},
 		nodeDiffs:          map[string]*clabtypes.TopologyDiff{},
 		plannedLinkSet:     map[int]struct{}{},
 		desiredEndpointSet: map[applyEndpointKey]struct{}{},
 		liveEndpointSet:    map[applyEndpointKey]struct{}{},
+		endpointNodes:      map[string]clablinks.Node{},
 		state:              state,
 	}
 
@@ -445,8 +454,16 @@ func (c *CLab) planApply(
 	}
 
 	c.planRecreatedNodeLinks(plan)
+	for nodeName := range plan.recreatedNodeSet {
+		delete(plan.restartNodeSet, nodeName)
+		delete(plan.linkRestartNodeSet, nodeName)
+	}
 	plan.result.RecreatedNodes = sortedStringSet(plan.recreatedNodeSet)
 	plan.result.StartedNodes = sortedStringSet(plan.startNodeSet)
+	plan.result.RestartedNodes = sortedStringSet(unionStringSets(
+		plan.restartNodeSet,
+		plan.linkRestartNodeSet,
+	))
 
 	return plan, nil
 }
@@ -573,7 +590,10 @@ func (c *CLab) addStaleApplyEndpoint(
 		return
 	}
 
-	node, exists := c.applyLinkNode(key.node)
+	node, exists := plan.endpointNode(key.node)
+	if !exists {
+		node, exists = c.applyLinkNode(key.node)
+	}
 	if !exists {
 		return
 	}
@@ -650,10 +670,12 @@ func (c *CLab) discoverLiveApplyEndpoints(
 			}
 		}
 		if _, start := plan.startNodeSet[nodeName]; start {
-			continue
-		}
-
-		if !isApplySpecialNode(nodeName) {
+			parkingNode, ok := c.applyParkingLinkNode(nodeName)
+			if !ok {
+				continue
+			}
+			n = parkingNode
+		} else if !isApplySpecialNode(nodeName) {
 			status := c.Nodes[nodeName].GetContainerStatus(ctx)
 			if !clabruntime.ContainerHasJoinableNetns(status) {
 				return fmt.Errorf(
@@ -663,6 +685,8 @@ func (c *CLab) discoverLiveApplyEndpoints(
 				)
 			}
 		}
+
+		plan.setEndpointNode(nodeName, n)
 
 		ifaceNames, err := discoverOwnedInterfaceNames(ctx, n, c.applyKnownEndpointNames(plan, nodeName))
 		if err != nil {
@@ -675,6 +699,22 @@ func (c *CLab) discoverLiveApplyEndpoints(
 	}
 
 	return nil
+}
+
+func (c *CLab) applyParkingLinkNode(nodeName string) (clablinks.Node, bool) {
+	node, exists := c.Nodes[nodeName]
+	if !exists || node.Config() == nil || node.Config().LongName == "" {
+		return nil, false
+	}
+
+	parkPath, err := clabutils.GetNamedNetNS(
+		clabutils.ParkingNetnsName(node.Config().LongName),
+	)
+	if err != nil {
+		return nil, false
+	}
+
+	return clablinks.NewParkingNode(node.Config().LongName, parkPath), true
 }
 
 func discoverOwnedInterfaceNames(
@@ -777,13 +817,16 @@ func (c *CLab) planAffectedApplyNode(
 	if plan.restartNodeSet == nil {
 		plan.restartNodeSet = map[string]struct{}{}
 	}
+	if plan.linkRestartNodeSet == nil {
+		plan.linkRestartNodeSet = map[string]struct{}{}
+	}
 	if plan.recreatedNodeSet == nil {
 		plan.recreatedNodeSet = map[string]struct{}{}
 	}
 	if plan.addedNodeSet == nil {
 		plan.addedNodeSet = map[string]struct{}{}
 	}
-	if _, planned := plan.restartNodeSet[nodeName]; planned {
+	if _, planned := plan.linkRestartNodeSet[nodeName]; planned {
 		return
 	}
 	if _, planned := plan.recreatedNodeSet[nodeName]; planned {
@@ -799,10 +842,12 @@ func (c *CLab) planAffectedApplyNode(
 	case clabnodes.LinkApplyModeLive:
 		log.Info("Applying link change without node lifecycle action", "node", nodeName, "change", change)
 	case clabnodes.LinkApplyModeRestart:
-		plan.restartNodeSet[nodeName] = struct{}{}
+		plan.linkRestartNodeSet[nodeName] = struct{}{}
 	case clabnodes.LinkApplyModeRecreate:
 		plan.recreatedNodeSet[nodeName] = struct{}{}
 		plan.addedNodeSet[nodeName] = struct{}{}
+		delete(plan.restartNodeSet, nodeName)
+		delete(plan.linkRestartNodeSet, nodeName)
 	}
 }
 
@@ -943,9 +988,6 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
-		if _, start := p.startNodeSet[key.node]; start {
-			continue
-		}
 		if _, parked := p.parkedNodeSet[key.node]; !parked {
 			if _, added := p.addedNodeSet[key.node]; added {
 				return true
@@ -1326,6 +1368,57 @@ func (c *CLab) postDeployApplyNodes(
 	return nil
 }
 
+func (p *applyPlan) setEndpointNode(nodeName string, node clablinks.Node) {
+	if p == nil || nodeName == "" || node == nil {
+		return
+	}
+	if p.endpointNodes == nil {
+		p.endpointNodes = map[string]clablinks.Node{}
+	}
+	p.endpointNodes[nodeName] = node
+}
+
+func (p *applyPlan) endpointNode(nodeName string) (clablinks.Node, bool) {
+	if p == nil || p.endpointNodes == nil {
+		return nil, false
+	}
+	node, ok := p.endpointNodes[nodeName]
+	return node, ok
+}
+
+func (c *CLab) restartApplyNodes(
+	ctx context.Context,
+	nodeSet map[string]struct{},
+) ([]string, error) {
+	nodeNames := sortedStringSet(nodeSet)
+	restarted := make([]string, 0, len(nodeNames))
+
+	for _, nodeName := range nodeNames {
+		node := c.Nodes[nodeName]
+		if node == nil {
+			continue
+		}
+
+		log.Info("Restarting node after link apply", "node", nodeName)
+		if err := node.Stop(ctx); err != nil {
+			return restarted, err
+		}
+		if err := node.Start(ctx); err != nil {
+			return restarted, err
+		}
+		if err := c.waitNodeRunning(ctx, node); err != nil {
+			return restarted, err
+		}
+		if err := c.waitNodeHealthyIfAvailable(ctx, node); err != nil {
+			return restarted, err
+		}
+
+		restarted = append(restarted, nodeName)
+	}
+
+	return restarted, nil
+}
+
 func (c *CLab) waitNodeRunning(ctx context.Context, node clabnodes.Node) error {
 	deadline := time.Now().Add(c.timeout)
 
@@ -1582,5 +1675,15 @@ func sortedStringSet(values map[string]struct{}) []string {
 		result = append(result, value)
 	}
 	sort.Strings(result)
+	return result
+}
+
+func unionStringSets(sets ...map[string]struct{}) map[string]struct{} {
+	result := map[string]struct{}{}
+	for _, set := range sets {
+		for value := range set {
+			result[value] = struct{}{}
+		}
+	}
 	return result
 }
