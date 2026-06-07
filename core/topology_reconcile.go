@@ -573,6 +573,13 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 		if _, added := plan.addedNodeSet[nodeName]; added {
 			continue
 		}
+		// Recreated nodes are handled exclusively by the apply pipeline
+		// (park -> delete -> deploy -> restore). Calling Reconcile here would
+		// delete the container before parkRecreatedNodes can capture its
+		// interfaces, breaking the recreate flow.
+		if _, recreated := plan.recreatedNodeSet[nodeName]; recreated {
+			continue
+		}
 
 		diff := plan.nodeDiffs[nodeName]
 
@@ -581,17 +588,13 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 			return fmt.Errorf("reconcile failed for node %q: %w", nodeName, err)
 		}
 
-		switch result.Action {
-		case clabtypes.TopologyDiffActionRestart:
+		if result.Action == clabtypes.TopologyDiffActionRestart {
 			if err := c.waitNodeRunning(ctx, node); err != nil {
 				return err
 			}
 			if err := c.waitNodeHealthyIfAvailable(ctx, node); err != nil {
 				return err
 			}
-
-		case clabtypes.TopologyDiffActionRecreate:
-			plan.recreatedNodeSet[nodeName] = struct{}{}
 		}
 	}
 
