@@ -228,6 +228,75 @@ This topology will be equivalent to `ceos1:Ethernet1/1` connected to `ceos2:Ethe
 This feature can not be used together with interface mapping. If the interface mapping is in use, all names must be redefined in the map and the underscore naming option will not work. Also, it's only possible to rename Ethernet interfaces this way, not management ports.
 ///
 
+### Management interface
+
+By default a ceos node uses `Management0` as its management interface, reachable over the [containerlab management network](../network.md). cEOS derives the EOS management interface name from the kernel netdev that backs it, which is controlled by the `MGMT_INTF` environment variable:
+
+* `MGMT_INTF=eth0` (the default) --> `Management0`
+* `MGMT_INTF=ma1` --> `Management1` (and `maN` --> `ManagementN` in general)
+
+`Management1` is the management interface name used by vEOS and physical EOS switches. Exposing the management interface as `Management1` lets you reuse startup-configs and automation written for those devices without renaming the management interface.
+
+Only `eth0` (the default) and `maN` values are handled by containerlab. Any other value (for example `eth1`) is passed through to cEOS unchanged and logged with a warning, as cEOS would consume that interface as the management interface.
+
+/// note
+The legacy `MAPETH0` environment variable has no effect on current cEOS images and is automatically omitted when `MGMT_INTF` is set to a `maN` value. The management interface is selected solely by `MGMT_INTF`.
+///
+
+#### Keep the management network, expose it as `Management1`
+
+To keep the automatic containerlab management network (and its assigned management address) but have it appear as `Management1`, set `MGMT_INTF` to `ma1`. Containerlab renames the runtime-provided `eth0` netdev to `ma1` during boot so cEOS maps it to `Management1`; the management address, default route and `ssh`/`gNMI` reachability are preserved.
+
+```yaml
+name: ceos
+topology:
+  kinds:
+    arista_ceos:
+      env:
+        MGMT_INTF: ma1 # all ceos nodes use Management1 as their mgmt interface
+  nodes:
+    ceos1:
+      kind: arista_ceos
+      image: ceos:4.32.0F
+    ceos2:
+      kind: arista_ceos
+      image: ceos:4.32.0F
+  links:
+    - endpoints: ["ceos1:eth1", "ceos2:eth1"]
+```
+
+This keeps the `eth1_1` --> `Ethernet1/1` underscore naming working, unlike the [interface mapping file](#user-defined-interface-mapping) approach.
+
+#### Wiring the management interface manually
+
+The management interface can also be wired as a regular point-to-point link to any interface on any other node, instead of being attached to the containerlab management network. This makes it behave like the management port of a physical switch: it can be cabled directly to a management host (as shown below), or to a dedicated management switch that aggregates the management ports of several nodes into an out-of-band (OOB) network.
+
+To do this, set [`network-mode: none`](../nodes.md#network-mode) on the node (so it is not attached to the management network and no management address is auto-assigned), set `MGMT_INTF` to the desired `maN` netdev, and add a link that uses that netdev as the ceos endpoint:
+
+```yaml
+name: ceos_oob
+topology:
+  nodes:
+    ceos:
+      kind: arista_ceos
+      image: ceos:4.32.0F
+      network-mode: none # opt out of the management network
+      env:
+        MGMT_INTF: ma1 # ma1 -> Management1 (use ma0 to keep Management0)
+    mgmt-host:
+      kind: linux
+      image: alpine:latest
+  links:
+    - endpoints: ["ceos:ma1", "mgmt-host:eth1"] # Management1 cabled directly to the management host
+      ipv4: ["172.31.0.1/24", "172.31.0.254/24"] # optional, applied to Management1
+```
+
+With `network-mode: none` the runtime does not assign a management address, so the management interface only gets an address if the link defines `ipv4`/`ipv6` or the startup-config configures one. Use `ma0` instead of `ma1` to keep the interface as `Management0`.
+
+/// note
+Management link endpoints must be named `maN` (e.g. `ma1`). They are only accepted when `network-mode: none` is set, and require the matching `MGMT_INTF=maN` environment variable so cEOS maps the netdev to `ManagementN`.
+///
+
 ## Features and options
 
 ### Node configuration

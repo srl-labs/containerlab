@@ -36,6 +36,15 @@ const (
 	tlsKeyFile  = "node.key"
 	tlsCertFile = "node.crt"
 	tlsCAFile   = "ca.crt"
+
+	// MGMT_INTF selects the container netdev cEOS maps to the management
+	// interface; MAPETH0 is a legacy companion flag kept in the default env.
+	mgmtIntfEnvVar = "MGMT_INTF"
+	mapEth0EnvVar  = "MAPETH0"
+	// default management netdev, mapped to Management0 by cEOS.
+	defaultMgmtIntfNetdev = "eth0"
+
+	networkModeNone = "none"
 )
 
 var (
@@ -48,8 +57,8 @@ var (
 		"ETBA":                                "1",
 		"SKIP_ZEROTOUCH_BARRIER_IN_SYSDBINIT": "1",
 		"INTFTYPE":                            "eth",
-		"MAPETH0":                             "1",
-		"MGMT_INTF":                           "eth0",
+		mapEth0EnvVar:                         "1",
+		mgmtIntfEnvVar:                        defaultMgmtIntfNetdev,
 	}
 
 	//go:embed ceos.cfg
@@ -58,6 +67,9 @@ var (
 	saveCmd = "Cli -p 15 -c wr"
 
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
+
+	// maN management netdev (e.g. ma1 -> Management1).
+	mgmtIntfRegexp = regexp.MustCompile(`^ma([0-9]+)$`)
 )
 
 // Register registers the node in the NodeRegistry.
@@ -107,11 +119,39 @@ func (n *ceos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 
 	n.Cfg.Env = clabutils.MergeStringMaps(ceosEnv, n.Cfg.Env)
 
+	// containerlab only special-cases a maN management netdev; anything else is
+	// passed through to cEOS unchanged. Warn about values that cEOS would map to
+	// an unexpected interface (e.g. MGMT_INTF=eth1 hijacks a data interface).
+	mgmtNetdev := n.mgmtNetdev()
+	if mgmtNetdev != defaultMgmtIntfNetdev && !n.mgmtRemapped() {
+		log.Warnf(
+			"node %q: MGMT_INTF=%q is not handled by containerlab; only %q (default) or maN are supported, cEOS may use an unexpected interface for management",
+			n.Cfg.ShortName, mgmtNetdev, defaultMgmtIntfNetdev,
+		)
+	}
+
+	// MGMT_INTF alone selects the management interface, so drop the legacy
+	// MAPETH0 flag once the mgmt netdev is remapped to maN.
+	if n.mgmtRemapped() {
+		delete(n.Cfg.Env, mapEth0EnvVar)
+	}
+
 	// the node.Cmd should be aligned with the environment.
 	// prepending original Cmd with if-wait.sh script to make sure that interfaces are available
 	// before init process starts
 	var envSb strings.Builder
-	envSb.WriteString("bash -c '" + ifWaitScriptContainerPath + " ; exec /sbin/init ")
+	envSb.WriteString("bash -c '" + ifWaitScriptContainerPath + " ; ")
+
+	// The runtime always names the mgmt veth eth0. When MGMT_INTF remaps the mgmt
+	// interface (e.g. ma1 -> Management1) rename eth0 accordingly before init.
+	// Only do this when attached to the runtime mgmt network: with host or
+	// container network modes eth0 belongs to a foreign namespace, and with
+	// network-mode none there is no eth0 (the netdev comes from a link).
+	if n.mgmtRemapped() && n.mgmtViaRuntimeNetwork() {
+		envSb.WriteString(renameMgmtNetdevCmd(mgmtNetdev) + " ; ")
+	}
+
+	envSb.WriteString("exec /sbin/init ")
 	for k, v := range n.Cfg.Env {
 		envSb.WriteString("systemd.setenv=\"" + k + "=" + v + "\" ")
 	}
@@ -202,9 +242,13 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 
 	// set mgmt ipv4 gateway as it is already known by now
 	// since the container network has been created before we launch nodes
-	// and mgmt gateway can be used in ceos.Cfg template to configure default route for mgmt
-	nodeCfg.MgmtIPv4Gateway = n.Runtime.Mgmt().IPv4Gw
-	nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
+	// and mgmt gateway can be used in ceos.Cfg template to configure default route for mgmt.
+	// Skip it when the mgmt interface is wired manually via a link, as the node
+	// is not attached to the runtime mgmt network.
+	if !n.mgmtWiredViaLink() {
+		nodeCfg.MgmtIPv4Gateway = n.Runtime.Mgmt().IPv4Gw
+		nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
+	}
 
 	// set the mgmt interface name for the node
 	err := setMgmtInterface(nodeCfg)
@@ -304,9 +348,19 @@ func (n *ceos) createCEOSCertificates() error {
 }
 
 func setMgmtInterface(node *clabtypes.NodeConfig) error {
-	// use interface mapping file to set the Management interface if it is provided in the binds
-	// section
-	// default is Management0
+	mgmtNetdev := node.Env[mgmtIntfEnvVar]
+	if mgmtNetdev == "" {
+		mgmtNetdev = defaultMgmtIntfNetdev
+	}
+
+	// a maN netdev (e.g. ma1) is exposed by cEOS as ManagementN
+	if m := mgmtIntfRegexp.FindStringSubmatch(mgmtNetdev); m != nil {
+		node.MgmtIntf = "Management" + m[1]
+		log.Debugf("Management interface for '%s' node is set to %s.", node.ShortName, node.MgmtIntf)
+		return nil
+	}
+
+	// otherwise eth0 maps to Management0, unless an EosIntfMapping.json overrides it
 	mgmtInterface := "Management0"
 	for _, bindelement := range node.Binds {
 		if !strings.Contains(bindelement, "EosIntfMapping.json") {
@@ -342,46 +396,113 @@ func setMgmtInterface(node *clabtypes.NodeConfig) error {
 	return nil
 }
 
-// ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
-func (n *ceos) ceosPostDeploy(_ context.Context) error {
-	nodeCfg := n.Config()
-	d, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
-	if err != nil {
-		return err
+// mgmtNetdev returns the container netdev cEOS maps to the management interface,
+// as set by MGMT_INTF (default eth0).
+func (n *ceos) mgmtNetdev() string {
+	if d := n.Cfg.Env[mgmtIntfEnvVar]; d != "" {
+		return d
 	}
+	return defaultMgmtIntfNetdev
+}
 
-	defer d.Close()
+// mgmtRemapped reports whether the management netdev is remapped to a maN netdev
+// (e.g. ma1 -> Management1). This is the single switch that enables the
+// management interface handling; any other MGMT_INTF value is left to cEOS.
+func (n *ceos) mgmtRemapped() bool {
+	return mgmtIntfRegexp.MatchString(n.mgmtNetdev())
+}
 
-	cfgs := []string{
-		"interface " + nodeCfg.MgmtIntf,
-		"no ip address",
-		"no ipv6 address",
-	}
+// mgmtWiredViaLink reports whether the management interface is wired manually via
+// a topology link: the netdev is remapped to maN and the node opts out of the
+// runtime mgmt network with network-mode: none.
+func (n *ceos) mgmtWiredViaLink() bool {
+	return n.mgmtRemapped() && n.Cfg.NetworkMode == networkModeNone
+}
 
-	// adding ipv4 address to configs
+// mgmtViaRuntimeNetwork reports whether the node uses the runtime's management
+// network (the default mode), where eth0 is a runtime-created veth that can be
+// safely renamed. Explicit modes (none, host, container:<name>) either have no
+// eth0 or share a foreign namespace whose eth0 must not be renamed.
+func (n *ceos) mgmtViaRuntimeNetwork() bool {
+	return n.Cfg.NetworkMode == ""
+}
+
+// renameMgmtNetdevCmd returns a shell snippet renaming eth0 to the netdev cEOS
+// expects (e.g. ma1 -> Management1). The existence guard is defence-in-depth.
+func renameMgmtNetdevCmd(netdev string) string {
+	return fmt.Sprintf(
+		"if [ -e /sys/class/net/%[1]s ]; then "+
+			"ip link set %[1]s down && ip link set %[1]s name %[2]s && ip link set %[2]s up; fi",
+		defaultMgmtIntfNetdev, netdev,
+	)
+}
+
+// mgmtAddressFromConfig returns the runtime-assigned management IPv4 and IPv6
+// addresses in CIDR notation, or empty strings when none were assigned.
+func mgmtAddressFromConfig(nodeCfg *clabtypes.NodeConfig) (v4, v6 string) {
 	if nodeCfg.MgmtIPv4Address != "" {
-		cfgs = append(cfgs,
-			fmt.Sprintf("ip address %s/%d", nodeCfg.MgmtIPv4Address, nodeCfg.MgmtIPv4PrefixLength),
-		)
+		v4 = fmt.Sprintf("%s/%d", nodeCfg.MgmtIPv4Address, nodeCfg.MgmtIPv4PrefixLength)
+	}
+	if nodeCfg.MgmtIPv6Address != "" {
+		v6 = fmt.Sprintf("%s/%d", nodeCfg.MgmtIPv6Address, nodeCfg.MgmtIPv6PrefixLength)
+	}
+	return v4, v6
+}
+
+// postDeployConfig builds the EOS configuration pushed after deploy: the
+// management interface addressing (when an address is known) followed by the
+// data interface addressing. It returns nil when there is nothing to configure,
+// for example a manually wired management interface left to its startup-config.
+func (n *ceos) postDeployConfig() []string {
+	nodeCfg := n.Config()
+
+	var cfgs []string
+
+	// mgmt address comes from the runtime mgmt network; when wired manually
+	// (network-mode: none) fall back to the maN link endpoint address, if any.
+	mgmtV4, mgmtV6 := mgmtAddressFromConfig(nodeCfg)
+	if n.mgmtRemapped() && mgmtV4 == "" && mgmtV6 == "" {
+		for _, e := range n.Endpoints {
+			if e.GetIfaceName() != n.mgmtNetdev() {
+				continue
+			}
+			if v4 := e.GetIPv4Addr(); v4.IsValid() {
+				mgmtV4 = v4.String()
+			}
+			if v6 := e.GetIPv6Addr(); v6.IsValid() {
+				mgmtV6 = v6.String()
+			}
+		}
 	}
 
-	// adding ipv6 address to configs
-	if nodeCfg.MgmtIPv6Address != "" {
-		cfgs = append(
-			cfgs,
-			fmt.Sprintf(
-				"ipv6 address %s/%d",
-				nodeCfg.MgmtIPv6Address,
-				nodeCfg.MgmtIPv6PrefixLength,
-			),
+	// the legacy path always (re)configures the mgmt interface; the remapped path
+	// only does so when it has an address, leaving a startup-config address intact.
+	if !n.mgmtRemapped() || mgmtV4 != "" || mgmtV6 != "" {
+		cfgs = append(cfgs,
+			"interface "+nodeCfg.MgmtIntf,
+			"no ip address",
+			"no ipv6 address",
 		)
+		if mgmtV4 != "" {
+			cfgs = append(cfgs, "ip address "+mgmtV4)
+		}
+		if mgmtV6 != "" {
+			cfgs = append(cfgs, "ipv6 address "+mgmtV6)
+		}
+	}
+
+	// skip the mgmt interface in the data loop. When remapped it is a maN kernel
+	// netdev; otherwise the EOS name is used, which never matches a kernel
+	// endpoint name (legacy behaviour, effectively no skip).
+	skipIface := nodeCfg.MgmtIntf
+	if n.mgmtRemapped() {
+		skipIface = n.mgmtNetdev()
 	}
 
 	// configure data interfaces
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
-		// skip management interface
-		if ifName == nodeCfg.MgmtIntf {
+		if ifName == skipIface {
 			continue
 		}
 
@@ -405,6 +526,27 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 		}
 	}
 
+	return cfgs
+}
+
+// ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
+func (n *ceos) ceosPostDeploy(_ context.Context) error {
+	cfgs := n.postDeployConfig()
+
+	// nothing to configure (e.g. manually wired mgmt without addresses) - leave
+	// the running/startup config untouched and skip opening a CLI session.
+	if len(cfgs) == 0 {
+		return nil
+	}
+
+	nodeCfg := n.Config()
+	d, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
+	if err != nil {
+		return err
+	}
+
+	defer d.Close()
+
 	// add save to startup cmd
 	cfgs = append(cfgs, "wr")
 
@@ -425,14 +567,42 @@ func (n *ceos) CheckInterfaceName() error {
 	// allow eth and et interfaces
 	// https://regex101.com/r/umQW5Z/2
 	ifRe := regexp.MustCompile(`eth[1-9][\w.]*$|et[1-9][\w.]*$`)
+	mgmtNetdev := n.mgmtNetdev()
+
 	for _, e := range n.Endpoints {
-		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf(
-				"arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters",
-				n.Cfg.ShortName,
-				e.GetIfaceName(),
-			)
+		ifName := e.GetIfaceName()
+		if ifRe.MatchString(ifName) {
+			continue
 		}
+
+		// a maN interface may be wired manually, but only with network-mode: none
+		// and only the netdev MGMT_INTF points at (e.g. ma1 -> Management1)
+		if mgmtIntfRegexp.MatchString(ifName) {
+			switch {
+			case n.Cfg.NetworkMode != networkModeNone:
+				return fmt.Errorf(
+					"arista cEOS node %q wires management interface %q via a link, which requires network-mode: none",
+					n.Cfg.ShortName,
+					ifName,
+				)
+			case ifName != mgmtNetdev:
+				return fmt.Errorf(
+					"arista cEOS node %q wires management interface %q but its MGMT_INTF env is %q; the link endpoint name must match MGMT_INTF (e.g. set MGMT_INTF=%s)",
+					n.Cfg.ShortName,
+					ifName,
+					mgmtNetdev,
+					ifName,
+				)
+			default:
+				continue
+			}
+		}
+
+		return fmt.Errorf(
+			"arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters",
+			n.Cfg.ShortName,
+			ifName,
+		)
 	}
 
 	return nil
