@@ -40,13 +40,15 @@ func isKernelModuleLoadable(name string) (bool, error) {
 	}
 	defer f.Close() // skipcq: GO-S2307
 
+	moduleName := strings.ReplaceAll(name, "-", "_")
+
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if len(fields) == 0 {
 			continue
 		}
-		if strings.HasPrefix(fields[0], name) {
+		if fields[0] == moduleName {
 			return true, nil
 		}
 	}
@@ -74,7 +76,7 @@ func isKernelModuleBuiltin(name string) (bool, error) {
 	}
 	defer f.Close()
 
-	moduleName := strings.TrimSuffix(name, ".ko")
+	moduleName := strings.ReplaceAll(strings.TrimSuffix(name, ".ko"), "-", "_")
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -82,7 +84,7 @@ func isKernelModuleBuiltin(name string) (bool, error) {
 		base = strings.TrimSuffix(base, filepath.Ext(base)) // catch any compressed, ie. .ko.gz
 		base = strings.TrimSuffix(base, ".ko")
 
-		if base == moduleName {
+		if strings.ReplaceAll(base, "-", "_") == moduleName {
 			return true, nil
 		}
 	}
