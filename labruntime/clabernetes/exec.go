@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/charmbracelet/log"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	corev1 "k8s.io/api/core/v1"
@@ -74,13 +75,36 @@ func (r *Runtime) launcherPod(
 			namespace, name, nodeName)
 	}
 
+	candidates := make([]*corev1.Pod, 0, len(list.Items))
 	for idx := range list.Items {
 		if list.Items[idx].Status.Phase == corev1.PodRunning {
-			return &list.Items[idx], nil
+			candidates = append(candidates, &list.Items[idx])
+		}
+	}
+	if len(candidates) == 0 {
+		for idx := range list.Items {
+			candidates = append(candidates, &list.Items[idx])
 		}
 	}
 
-	return &list.Items[0], nil
+	// more than one pod can match during a rolling update; use the newest one
+	pod := candidates[0]
+	for _, candidate := range candidates[1:] {
+		if candidate.CreationTimestamp.After(pod.CreationTimestamp.Time) {
+			pod = candidate
+		}
+	}
+
+	if len(list.Items) > 1 {
+		log.Warn("multiple clabernetes launcher pods matched node, using newest",
+			"namespace", namespace,
+			"lab", name,
+			"node", nodeName,
+			"pod", pod.Name,
+		)
+	}
+
+	return pod, nil
 }
 
 func (r *Runtime) execInPod(

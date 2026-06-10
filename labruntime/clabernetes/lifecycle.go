@@ -66,6 +66,18 @@ func (r *Runtime) Deploy(
 		}
 
 		if err = r.setStagedConfigMapOwnerReferences(ctx, namespace, stagedConfigMaps, created); err != nil {
+			// without owner references the ConfigMaps would never be garbage
+			// collected, so roll back the partially deployed topology
+			if delErr := resource.Delete(ctx, req.Name, metav1.DeleteOptions{}); delErr != nil &&
+				!apierrors.IsNotFound(delErr) {
+				log.Debug("failed to roll back clabernetes topology",
+					"name", req.Name,
+					"namespace", namespace,
+					"error", delErr,
+				)
+			}
+			r.deleteStagedConfigMaps(ctx, namespace, stagedConfigMaps)
+
 			return nil, err
 		}
 	case err != nil:

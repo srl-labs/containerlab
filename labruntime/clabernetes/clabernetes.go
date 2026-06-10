@@ -73,18 +73,3 @@ func New(cfg clablabruntime.Config) (clablabruntime.LabRuntime, error) {
 		timeout:    cfg.Timeout,
 	}, nil
 }
-
-func (r *Runtime) Capabilities() clablabruntime.RuntimeCapabilities {
-	return clablabruntime.RuntimeCapabilities{
-		Deploy:  true,
-		Destroy: true,
-		Inspect: true,
-		List:    true,
-		Exec:    true,
-		Start:   true,
-		Stop:    true,
-		Restart: true,
-		Save:    true,
-		Events:  true,
-	}
-}

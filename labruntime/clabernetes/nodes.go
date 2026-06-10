@@ -288,6 +288,11 @@ func (r *Runtime) deploymentForNode(
 		return nil, fmt.Errorf("clabernetes deployment for node %s/%s/%s was not found",
 			namespace, name, nodeName)
 	}
+	if len(list.Items) > 1 {
+		return nil, fmt.Errorf(
+			"expected exactly one clabernetes deployment for node %s/%s/%s, found %d",
+			namespace, name, nodeName, len(list.Items))
+	}
 
 	return &list.Items[0], nil
 }

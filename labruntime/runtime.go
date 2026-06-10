@@ -86,19 +86,6 @@ type SaveResult struct {
 	Files []SavedFile
 }
 
-type RuntimeCapabilities struct {
-	Deploy  bool
-	Destroy bool
-	Inspect bool
-	List    bool
-	Exec    bool
-	Start   bool
-	Stop    bool
-	Restart bool
-	Save    bool
-	Events  bool
-}
-
 type NodeState struct {
 	Name                string
 	Kind                string
@@ -139,7 +126,6 @@ type LabRuntime interface {
 	Restart(context.Context, NodeRequest) error
 	Save(context.Context, SaveRequest) (*SaveResult, error)
 	StreamEvents(context.Context, EventStreamRequest) (<-chan Event, <-chan error, error)
-	Capabilities() RuntimeCapabilities
 }
 
 type Initializer func(Config) (LabRuntime, error)

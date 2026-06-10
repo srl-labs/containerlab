@@ -576,8 +576,8 @@ Known differences:
 - Local network namespace features are not equivalent in c9s.
 - `inspect interfaces` and host-side `tc` or netem operations do not have the
   same local namespace access they have with Docker labs.
-- Some `tools` commands create local helper containers and are not modeled as
-  Clabernetes `Topology` resources.
+- `graph` and `tools` commands operate on local containers and host networking
+  and are rejected with an error when the `clabernetes` runtime is selected.
 - Per-node `runtime: docker` or `runtime: podman` is not the same as selecting
   the global `clabernetes` lab runtime.
 - Two c9s labs can have the same lab name in different namespaces.

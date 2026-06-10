@@ -152,6 +152,10 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 
 	log.SetTimeFormat(time.TimeOnly)
 
+	if err := checkLabRuntimeCommandSupport(cobraCmd, o.Global.Runtime); err != nil {
+		return err
+	}
+
 	err := clabutils.DropRootPrivs()
 	if err != nil {
 		return err
@@ -174,6 +178,28 @@ func globalRuntimeRequiresRoot(name string) bool {
 
 func commandSkipsRoot(name string) bool {
 	return clablabruntime.IsLabRuntimeName(name)
+}
+
+// labRuntimeUnsupportedCommands operate on local containers or host networking
+// and have no lab runtime equivalent.
+var labRuntimeUnsupportedCommands = map[string]struct{}{
+	"graph": {},
+	"tools": {},
+}
+
+func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) error {
+	if !clablabruntime.IsLabRuntimeName(runtimeName) {
+		return nil
+	}
+
+	for cmd := cobraCmd; cmd != nil; cmd = cmd.Parent() {
+		if _, ok := labRuntimeUnsupportedCommands[cmd.Name()]; ok {
+			return fmt.Errorf("the %q command is not supported with lab runtime %q",
+				cmd.Name(), runtimeName)
+		}
+	}
+
+	return nil
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory
