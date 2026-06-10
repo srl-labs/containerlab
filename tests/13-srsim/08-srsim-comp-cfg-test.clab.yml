@@ -8,7 +8,10 @@ topology:
       image: registry.srlinux.dev/pub/nokia_srsim:25.10.R2
 
   nodes:
-    # only distributed nodes support the config gen for now
+    sr1:
+      kind: nokia_srsim
+      type: sr-1
+
     sr2s:
       kind: nokia_srsim
       type: sr-2s

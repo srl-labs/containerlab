@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
@@ -208,4 +209,118 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 		// Default config should include typical SR OS snippets (banner, system, etc.)
 		assert.Contains(t, cfg, "Welcome to Nokia SR OS")
 	})
+}
+
+func Test_sros_generateComponentConfig(t *testing.T) {
+	t.Run("integrated_sr1_default", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode("sr-1", nil, nil)
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(t, cfg, "/configure card 1 card-type iom-1 admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type me6-100gb-qsfp28 admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 mda 2 mda-type me12-100gb-qsfp28 admin-state enable")
+		assert.NotContains(t, cfg, "power-shelf")
+		assert.NotContains(t, cfg, "power-module")
+	})
+
+	t.Run("integrated_sr1s_default", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode("sr-1s", nil, nil)
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(t, cfg, "/configure card 1 card-type xcm-1s admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type s36-100gb-qsfp28 admin-state enable")
+		assert.Contains(t, cfg, "power-shelf 1 power-shelf-type ps-a4-shelf-dc")
+		assert.Equal(t, 4, strings.Count(cfg, "power-module-type ps-a-dc-6000"))
+	})
+
+	t.Run("integrated_env_overrides_preserve_default_mda_slots", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode(
+			"sr-1",
+			map[string]string{
+				envNokiaSrosCard:       "env-card",
+				envNokiaSrosMDA + "_1": "env-mda",
+			},
+			nil,
+		)
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(t, cfg, "/configure card 1 card-type env-card admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type env-mda admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 mda 2 mda-type me12-100gb-qsfp28 admin-state enable")
+	})
+
+	t.Run("disabled_component_config_returns_empty", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode(
+			"sr-1",
+			map[string]string{envDisableComponentConfigGen: "true"},
+			nil,
+		)
+
+		assert.Empty(t, n.generateComponentConfig())
+	})
+
+	t.Run("classic_config_returns_empty", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode(
+			"sr-1",
+			map[string]string{envSrosConfigMode: string(ConfigModeClassic)},
+			nil,
+		)
+
+		assert.Empty(t, n.generateComponentConfig())
+	})
+
+	t.Run("distributed_components_still_generate", func(t *testing.T) {
+		n := newSrosComponentConfigTestNode("sr-2s", nil, nil)
+		n.rootCtrName = "clab-test-sr2s-a"
+		n.rootComponents = []*clabtypes.Component{
+			{Slot: slotAName, Type: "cpm-2s", SFM: "sfm-2s"},
+			{
+				Slot: "1",
+				Type: "xcm-2s",
+				SFM:  "sfm-2s",
+				XIOM: clabtypes.XIOMS{
+					{
+						Slot: 1,
+						Type: "iom-s-3.0t",
+						MDA:  clabtypes.MDAS{{Slot: 1, Type: "ms18-100gb-qsfp28"}},
+					},
+				},
+			},
+		}
+
+		cfg := n.generateComponentConfig()
+
+		assert.Contains(t, cfg, "/configure card 1 card-type xcm-2s admin-state enable")
+		assert.Contains(t, cfg, "/configure sfm 1 sfm-type sfm-2s admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 xiom x1 xiom-type iom-s-3.0t admin-state enable")
+		assert.Contains(t, cfg, "/configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28 admin-state enable")
+		assert.Contains(t, cfg, "power-shelf 1 power-shelf-type ps-a4-shelf-dc")
+	})
+}
+
+func newSrosComponentConfigTestNode(
+	nodeType string,
+	env map[string]string,
+	components []*clabtypes.Component,
+) *sros {
+	if env == nil {
+		env = map[string]string{}
+	}
+	if _, ok := env[envSrosConfigMode]; !ok {
+		env[envSrosConfigMode] = string(ConfigModeModelDriven)
+	}
+
+	n := &sros{}
+	n.DefaultNode = *clabnodes.NewDefaultNode(n)
+	n.Cfg = &clabtypes.NodeConfig{
+		ShortName:  "n1",
+		LongName:   "clab-test-n1",
+		NodeType:   nodeType,
+		Env:        env,
+		Components: components,
+	}
+	return n
 }

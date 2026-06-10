@@ -11,6 +11,29 @@ import (
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
+const integratedSrosCardSlot = "1"
+
+type integratedSrosDefaultComponent struct {
+	cardType string
+	mdas     clabtypes.MDAS
+}
+
+var integratedSrosDefaultComponents = map[string]integratedSrosDefaultComponent{
+	"sr-1": {
+		cardType: "iom-1",
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "me6-100gb-qsfp28"},
+			{Slot: 2, Type: "me12-100gb-qsfp28"},
+		},
+	},
+	"sr-1s": {
+		cardType: "xcm-1s",
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "s36-100gb-qsfp28"},
+		},
+	},
+}
+
 // componentCfgLine represents one SR OS config line for a component (card, sfm, xiom, mda).
 // Adding a new component type = add a Kind and a case in String().
 type componentCfgLine struct {
@@ -89,5 +112,35 @@ func buildComponentCfgLines(components []*clabtypes.Component) []componentCfgLin
 			}
 		}
 	}
+	return lines
+}
+
+func buildIntegratedComponentCfgLines(
+	nodeType string,
+	env map[string]string,
+) []componentCfgLine {
+	component, ok := integratedSrosDefaultComponents[strings.ToLower(nodeType)]
+	if !ok {
+		return nil
+	}
+
+	cardType := component.cardType
+	if envCardType := strings.TrimSpace(env[envNokiaSrosCard]); envCardType != "" {
+		cardType = envCardType
+	}
+
+	lines := []componentCfgLine{
+		{Kind: "card", Slot: integratedSrosCardSlot, Type: cardType},
+	}
+	for _, mda := range component.mdas {
+		mdaType := mda.Type
+		if envMdaType := strings.TrimSpace(env[fmt.Sprintf("%s_%d", envNokiaSrosMDA, mda.Slot)]); envMdaType != "" {
+			mdaType = envMdaType
+		}
+		lines = append(lines, componentCfgLine{
+			Kind: "mda", Slot: integratedSrosCardSlot, MdaSlot: mda.Slot, Type: mdaType,
+		})
+	}
+
 	return lines
 }

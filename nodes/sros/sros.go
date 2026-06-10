@@ -1919,8 +1919,8 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	)
 }
 
-// generateComponentConfig generates SR OS configuration for explicitly defined
-// components (cards, SFMs, XIOMs, MDAs) using a struct + loop; power config is appended.
+// generateComponentConfig generates SR OS configuration for explicitly defined distributed
+// components or known integrated SR-SIM defaults. Power config is appended when supported.
 func (n *sros) generateComponentConfig() string {
 	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
 		return ""
@@ -1928,12 +1928,18 @@ func (n *sros) generateComponentConfig() string {
 	if n.isConfigClassic() {
 		return ""
 	}
-	if n.isStandaloneNode() {
-		return ""
-	}
+
 	components := n.rootComponents
 	if len(components) == 0 {
-		return ""
+		if len(n.Cfg.Components) > 1 || n.rootCtrName != "" {
+			return ""
+		}
+
+		lines := buildIntegratedComponentCfgLines(n.Cfg.NodeType, n.Cfg.Env)
+		if len(lines) == 0 {
+			return ""
+		}
+		return n.componentConfigFromLines(lines)
 	}
 
 	for _, c := range components {
@@ -1953,11 +1959,20 @@ func (n *sros) generateComponentConfig() string {
 	}
 
 	lines := buildComponentCfgLines(components)
+	return n.componentConfigFromLines(lines)
+}
+
+func (n *sros) componentConfigFromLines(lines []componentCfgLine) string {
+	powerConfig := n.generatePowerConfig()
+	if len(lines) == 0 && powerConfig == "" {
+		return ""
+	}
+
 	var config strings.Builder
 	for _, l := range lines {
 		config.WriteString(l.String())
 	}
-	config.WriteString(n.generatePowerConfig())
+	config.WriteString(powerConfig)
 	return config.String()
 }
 
