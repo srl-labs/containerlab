@@ -489,7 +489,7 @@ jobs:
         run: make convert-coverage
 
       - name: Upload coverage to codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
