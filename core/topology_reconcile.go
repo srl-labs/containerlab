@@ -47,6 +47,9 @@ type applyPlan struct {
 	state              *LabState
 	parkedNodeSet      map[string]struct{}
 	startNodeSet       map[string]struct{}
+	// nodeChangeReasons explains per node why apply restarts or recreates it,
+	// e.g. "added link" or "config drift: image".
+	nodeChangeReasons map[string]string
 }
 
 func (p *applyPlan) empty() bool {
@@ -76,6 +79,7 @@ func newApplyPlan(currentNodes map[string]*runtimeNodeGroup, state *LabState) *a
 		liveEndpointSet:    map[applyEndpointKey]struct{}{},
 		endpointNodes:      map[string]clablinks.Node{},
 		state:              state,
+		nodeChangeReasons:  map[string]string{},
 	}
 }
 
@@ -476,15 +480,33 @@ func (c *CLab) planAffectedApplyNode(
 		return
 	}
 
+	overridden := clabnodes.LinkApplyModeOverrideForNode(node) != ""
+
 	switch clabnodes.LinkApplyModeForNode(ctx, node) {
 	case clabnodes.LinkApplyModeLive:
 		log.Info("Applying link change without node lifecycle action", "node", nodeName, "change", change)
 	case clabnodes.LinkApplyModeRestart:
 		plan.linkRestartNodeSet[nodeName] = struct{}{}
+		plan.nodeChangeReasons[nodeName] = change
+		log.Info("Node will be restarted to apply link change", "node", nodeName, "change", change)
 	case clabnodes.LinkApplyModeRecreate:
 		plan.recreatedNodeSet[nodeName] = struct{}{}
 		delete(plan.restartNodeSet, nodeName)
 		delete(plan.linkRestartNodeSet, nodeName)
+		plan.nodeChangeReasons[nodeName] = change
+
+		if overridden {
+			log.Info("Node will be recreated to apply link change",
+				"node", nodeName, "change", change, "link-apply-mode", "recreate")
+		} else {
+			log.Info(
+				"Node will be recreated to apply link change since its kind does not declare "+
+					"live link support; if the NOS detects hot-plugged interfaces, set "+
+					"link-apply-mode: live on the node to avoid the recreation",
+				"node", nodeName,
+				"change", change,
+			)
+		}
 	}
 }
 
@@ -552,12 +574,22 @@ func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) erro
 		switch result.Action {
 		case clabtypes.TopologyDiffActionRestart:
 			plan.restartNodeSet[nodeName] = struct{}{}
+			plan.nodeChangeReasons[nodeName] = configDriftReason(diff)
 		case clabtypes.TopologyDiffActionRecreate:
 			plan.recreatedNodeSet[nodeName] = struct{}{}
+			plan.nodeChangeReasons[nodeName] = configDriftReason(diff)
 		}
 	}
 
 	return nil
+}
+
+func configDriftReason(diff *clabtypes.TopologyDiff) string {
+	if diff == nil || len(diff.Fields) == 0 {
+		return "config drift"
+	}
+
+	return "config drift: " + strings.Join(diff.Fields, ", ")
 }
 
 func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {

@@ -88,6 +88,9 @@ type NodeDefinition struct {
 	// Network aliases
 	Aliases    []string     `yaml:"aliases,omitempty"`
 	Components []*Component `yaml:"components,omitempty"`
+	// how `containerlab apply` handles dataplane link changes for this node:
+	// live, restart or recreate. Overrides the kind's own declaration.
+	LinkApplyMode string `yaml:"link-apply-mode,omitempty"`
 }
 
 // Interface compliance.

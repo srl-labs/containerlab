@@ -240,12 +240,26 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		StartupDelay:    c.Config.Topology.GetNodeStartupDelay(nodeName),
 		AutoRemove:      c.Config.Topology.GetNodeAutoRemove(nodeName),
 		RestartPolicy:   c.Config.Topology.GetRestartPolicy(nodeName),
+		LinkApplyMode:   c.Config.Topology.GetNodeLinkApplyMode(nodeName),
 		Extras:          c.Config.Topology.GetNodeExtras(nodeName),
 		DNS:             c.Config.Topology.GetNodeDns(nodeName),
 		Certificate:     c.Config.Topology.GetCertificateConfig(nodeName),
 		Healthcheck:     c.Config.Topology.GetHealthCheckConfig(nodeName),
 		Aliases:         c.Config.Topology.GetNodeAliases(nodeName),
 		Components:      c.Config.Topology.GetComponents(nodeName),
+	}
+
+	switch clabnodes.LinkApplyMode(nodeCfg.LinkApplyMode) {
+	case "", clabnodes.LinkApplyModeLive, clabnodes.LinkApplyModeRestart, clabnodes.LinkApplyModeRecreate:
+	default:
+		return nil, fmt.Errorf(
+			"node %q has invalid link-apply-mode %q, valid values: %s, %s, %s",
+			nodeName,
+			nodeCfg.LinkApplyMode,
+			clabnodes.LinkApplyModeLive,
+			clabnodes.LinkApplyModeRestart,
+			clabnodes.LinkApplyModeRecreate,
+		)
 	}
 
 	// Resolve credentials: topology settings take priority, falling back to kind's hardcoded

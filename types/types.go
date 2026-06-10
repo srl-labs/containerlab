@@ -144,6 +144,9 @@ type NodeConfig struct {
 	// when set to true will auto-remove a stopped/failed container
 	AutoRemove    bool   `json:"auto-remove,omitempty"`
 	RestartPolicy string `json:"restart-policy,omitempty"`
+	// user-provided override for how `containerlab apply` handles dataplane link
+	// changes for this node: live, restart or recreate. Empty means the kind decides.
+	LinkApplyMode string `json:"link-apply-mode,omitempty"`
 	// path to config file that is actually mounted to the container and is a result of templation
 	ResStartupConfig string            `json:"startup-config-abs-path,omitempty"`
 	Config           *ConfigDispatcher `json:"config,omitempty"`

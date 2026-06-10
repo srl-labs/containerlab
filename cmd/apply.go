@@ -116,11 +116,11 @@ func printApplyResult(result *clabcore.ApplyResult) {
 	}{
 		{label: "added nodes", values: result.AddedNodes},
 		{label: "deleted nodes", values: result.DeletedNodes},
-		{label: "recreated nodes", values: result.RecreatedNodes},
+		{label: "recreated nodes", values: withNodeChangeReasons(result.RecreatedNodes, result.NodeChangeReasons)},
 		{label: "started nodes", values: result.StartedNodes},
 		{label: "added links", values: result.AddedLinks},
 		{label: "deleted endpoints", values: result.DeletedEndpoints},
-		{label: "restarted nodes", values: result.RestartedNodes},
+		{label: "restarted nodes", values: withNodeChangeReasons(result.RestartedNodes, result.NodeChangeReasons)},
 	}
 
 	for _, row := range rows {
@@ -134,6 +134,23 @@ func printApplyResult(result *clabcore.ApplyResult) {
 	}
 
 	table.Render()
+}
+
+func withNodeChangeReasons(nodeNames []string, reasons map[string]string) []string {
+	if len(reasons) == 0 {
+		return nodeNames
+	}
+
+	values := make([]string, 0, len(nodeNames))
+	for _, nodeName := range nodeNames {
+		if reason, ok := reasons[nodeName]; ok && reason != "" {
+			values = append(values, fmt.Sprintf("%s (%s)", nodeName, reason))
+			continue
+		}
+		values = append(values, nodeName)
+	}
+
+	return values
 }
 
 func appendApplyResultRows(table tableWriter.Writer, label string, values []string) bool {

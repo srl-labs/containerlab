@@ -20,17 +20,21 @@ type ApplyResult struct {
 	AddedLinks       []string
 	DeletedEndpoints []string
 	RestartedNodes   []string
+	// NodeChangeReasons explains per node why apply restarts or recreates it,
+	// e.g. "added link" or "config drift: image".
+	NodeChangeReasons map[string]string
 }
 
 func applyResultFromPlan(plan *applyPlan) *ApplyResult {
 	result := &ApplyResult{
-		AddedNodes:       []string{},
-		DeletedNodes:     []string{},
-		RecreatedNodes:   []string{},
-		StartedNodes:     []string{},
-		AddedLinks:       []string{},
-		DeletedEndpoints: []string{},
-		RestartedNodes:   []string{},
+		AddedNodes:        []string{},
+		DeletedNodes:      []string{},
+		RecreatedNodes:    []string{},
+		StartedNodes:      []string{},
+		AddedLinks:        []string{},
+		DeletedEndpoints:  []string{},
+		RestartedNodes:    []string{},
+		NodeChangeReasons: map[string]string{},
 	}
 	if plan == nil {
 		return result
@@ -46,6 +50,10 @@ func applyResultFromPlan(plan *applyPlan) *ApplyResult {
 		plan.restartNodeSet,
 		plan.linkRestartNodeSet,
 	))
+
+	for nodeName, reason := range plan.nodeChangeReasons {
+		result.NodeChangeReasons[nodeName] = reason
+	}
 
 	return result
 }

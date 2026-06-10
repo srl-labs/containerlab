@@ -323,10 +323,11 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		hasMode bool
-		mode    clabnodes.LinkApplyMode
-		want    clabnodes.LinkApplyMode
+		name     string
+		hasMode  bool
+		mode     clabnodes.LinkApplyMode
+		override string
+		want     clabnodes.LinkApplyMode
 	}{
 		{
 			name:    "live node",
@@ -356,12 +357,42 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 			name: "node without mode defaults to recreate",
 			want: clabnodes.LinkApplyModeRecreate,
 		},
+		{
+			name:     "override upgrades recreate kind to live",
+			hasMode:  true,
+			mode:     clabnodes.LinkApplyModeRecreate,
+			override: "live",
+			want:     clabnodes.LinkApplyModeLive,
+		},
+		{
+			name:     "override restricts live kind to recreate",
+			hasMode:  true,
+			mode:     clabnodes.LinkApplyModeLive,
+			override: "recreate",
+			want:     clabnodes.LinkApplyModeRecreate,
+		},
+		{
+			name:     "invalid override falls back to kind mode",
+			hasMode:  true,
+			mode:     clabnodes.LinkApplyModeRestart,
+			override: "hotplug",
+			want:     clabnodes.LinkApplyModeRestart,
+		},
+		{
+			name:     "override on node without declared mode",
+			override: "live",
+			want:     clabnodes.LinkApplyModeLive,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+			mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+				ShortName:     "n1",
+				LinkApplyMode: tt.override,
+			}).AnyTimes()
 
 			var node clabnodes.Node = mockNode
 			if tt.hasMode {
@@ -443,6 +474,15 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 			deployNode := strings.Join(plan.deployNodeNames(), ",") == "n1"
 			if deployNode != tt.wantRecreated {
 				t.Fatalf("deploy node = %v, want %v", deployNode, tt.wantRecreated)
+			}
+
+			reason, hasReason := plan.nodeChangeReasons["n1"]
+			wantReason := tt.wantRestart || tt.wantRecreated
+			if hasReason != wantReason {
+				t.Fatalf("change reason recorded = %v, want %v", hasReason, wantReason)
+			}
+			if hasReason && reason != tt.change {
+				t.Fatalf("change reason = %q, want %q", reason, tt.change)
 			}
 		})
 	}
