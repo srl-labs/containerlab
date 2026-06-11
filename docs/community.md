@@ -16,7 +16,9 @@ Growing the number of supported NOSes is a task that can't be done by a single p
 
 Everybody is welcome to join and chat with our community members about all things containerlab!
 
-<center>[:fontawesome-brands-discord: Join Containerlab Discord Server](https://discord.gg/vAyddtaEV9){ .md-button .md-button--primary }</center>
+<div style="text-align: center" markdown="1">
+[:fontawesome-brands-discord: Join Containerlab Discord Server](https://discord.gg/vAyddtaEV9){ .md-button .md-button--primary }
+</div>
 
 ### IRC
 
