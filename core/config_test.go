@@ -849,6 +849,48 @@ func TestExtrasInit(t *testing.T) {
 	}
 }
 
+func TestKindExtrasMagicVarsAreNodeScoped(t *testing.T) {
+	opts := []ClabOption{
+		WithTopoPath("test_data/topo16.yml", nil),
+	}
+
+	c, err := NewContainerLab(opts...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := map[string]struct {
+		node         string
+		wantCeosCopy []string
+	}{
+		"node1": {
+			node: "node1",
+			wantCeosCopy: []string{
+				"ceos-configs/node1/ceos-config",
+			},
+		},
+		"node2": {
+			node: "node2",
+			wantCeosCopy: []string{
+				"ceos-configs/node2/ceos-config",
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			extras := c.Nodes[tc.node].Config().Extras
+			if extras == nil {
+				t.Fatal("extras is nil")
+			}
+
+			if d := cmp.Diff(extras.CeosCopyToFlash, tc.wantCeosCopy); d != "" {
+				t.Errorf("ceos-copy-to-flash mismatch (-want +got):\n%s", d)
+			}
+		})
+	}
+}
+
 func TestMagicVarReplacerWithoutNodeName(t *testing.T) {
 	c, err := NewContainerLab(WithTopoPath("test_data/topo14.yml", nil))
 	if err != nil {

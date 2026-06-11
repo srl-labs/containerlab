@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -793,21 +794,26 @@ func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
 	}
 }
 
-// processNodeExtras replaces (in place) magic variables in node extras.
+// processNodeExtras replaces magic variables in node extras.
 func (c *CLab) processNodeExtras(nodeCfg *clabtypes.NodeConfig) {
 	if nodeCfg.Extras == nil {
 		return
 	}
 
 	r := c.magicVarReplacer(nodeCfg.ShortName)
+	extras := *nodeCfg.Extras
 
-	for i, e := range nodeCfg.Extras.CeosCopyToFlash {
-		nodeCfg.Extras.CeosCopyToFlash[i] = r.Replace(e)
+	extras.CeosCopyToFlash = slices.Clone(nodeCfg.Extras.CeosCopyToFlash)
+	for i, e := range extras.CeosCopyToFlash {
+		extras.CeosCopyToFlash[i] = r.Replace(e)
 	}
 
-	for i, e := range nodeCfg.Extras.SRLAgents {
-		nodeCfg.Extras.SRLAgents[i] = r.Replace(e)
+	extras.SRLAgents = slices.Clone(nodeCfg.Extras.SRLAgents)
+	for i, e := range extras.SRLAgents {
+		extras.SRLAgents[i] = r.Replace(e)
 	}
+
+	nodeCfg.Extras = &extras
 }
 
 // magicVarReplacer returns a string replacer that replaces all supported magic variables.
