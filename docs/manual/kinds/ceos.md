@@ -228,6 +228,64 @@ This topology will be equivalent to `ceos1:Ethernet1/1` connected to `ceos2:Ethe
 This feature can not be used together with interface mapping. If the interface mapping is in use, all names must be redefined in the map and the underscore naming option will not work. Also, it's only possible to rename Ethernet interfaces this way, not management ports.
 ///
 
+### Wiring the management interface
+
+By default `eth0` is the management interface (`Management0`, unless remapped by an interface-mapping file), attached to the [containerlab management network](../network.md) and addressed automatically by the runtime.
+
+`eth0` can instead be wired as a regular point-to-point link to an interface on another node, modelling the management port of a physical switch. It can be cabled directly to a management host, or to a dedicated management switch that aggregates the management ports of several nodes into an out-of-band (OOB) network. This is also useful for testing zero-touch provisioning (ZTP), where the management interface must come up unaddressed and obtain its configuration over the wire.
+
+To wire `eth0`, set [`network-mode: none`](../nodes.md#network-mode) on the node so it is detached from the management network, and add a link that uses `eth0` as the ceos endpoint:
+
+```yaml
+name: ceos-oob
+topology:
+  nodes:
+    ceos1:
+      kind: arista_ceos
+      image: ceos:4.32.0F
+      network-mode: none
+    mgmtsw:
+      kind: linux
+      image: alpine:latest
+  links:
+    - endpoints: ["ceos1:eth0", "mgmtsw:eth1"]
+```
+
+When wired this way:
+
+* No management address or default route is assigned automatically. The management interface (`Management0` by default) comes up addressed only if the link provides an address (via [link addressing](#link-addressing)) or the [startup-config](#user-defined-config) configures one.
+* `eth0` may only be used as a link endpoint when `network-mode: none` is set. In the default mode `eth0` is the runtime-provided management interface and cannot be wired.
+
+/// note
+With `network-mode: none` the node is not attached to the containerlab management network, so it is not reachable on the management subnet and its address is not shown in `containerlab inspect`. Reach it over the wired link or through another node.
+///
+
+/// warning
+Wiring the management interface relies on `network-mode: none`, which is currently only supported with the Docker runtime.
+///
+
+#### Zero-touch provisioning (ZTP)
+
+Wiring the management interface is what makes realistic ZTP testing possible, but it is not sufficient on its own: containerlab always renders a startup-config from its template (hostname, management APIs, etc.), and the presence of a startup-config disables ZTP. To boot a node with no configuration so it actually zero-touch provisions, also set [`suppress-startup-config: true`](../nodes.md#suppress-startup-config):
+
+```yaml
+name: ceos-ztp
+topology:
+  nodes:
+    ceos1:
+      kind: arista_ceos
+      image: ceos:4.32.0F
+      network-mode: none
+      suppress-startup-config: true # no startup-config -> node boots into ZTP
+    mgmtsw:
+      kind: arista_ceos
+      image: ceos:4.32.0F
+  links:
+    - endpoints: ["ceos1:eth0", "mgmtsw:eth1"]
+```
+
+With both options, `ceos1` boots without a startup-config and with `Management0` wired to `mgmtsw` but unaddressed, so it can obtain its configuration over that link (e.g. via DHCP/ZTP served by `mgmtsw`).
+
 ## Features and options
 
 ### Node configuration

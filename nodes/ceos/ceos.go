@@ -15,12 +15,15 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -173,6 +176,49 @@ func (n *ceos) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) er
 	return n.ceosPostDeploy(ctx)
 }
 
+// ceosInterfaceWait derives the in-container boot-wait inputs from a node's
+// endpoints: dataIntfs is the number of data interfaces (the CLAB_INTFS value,
+// which excludes a wired eth0 because if-wait.sh never counts eth0), and
+// eth0Wired reports whether eth0 is wired as a link (driving CLAB_WAIT_ETH0).
+func ceosInterfaceWait(endpoints []clablinks.Endpoint) (dataIntfs int, eth0Wired bool) {
+	for _, e := range endpoints {
+		if e.GetIfaceName() == "eth0" {
+			eth0Wired = true
+			continue
+		}
+		dataIntfs++
+	}
+	return dataIntfs, eth0Wired
+}
+
+func (n *ceos) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
+	// Set CLAB_INTFS to the number of data interfaces so the in-container
+	// if-wait.sh waits for them before EOS is started. A manually wired eth0 (the
+	// management netdev) is excluded, since if-wait.sh never counts eth0.
+	dataIntfs, eth0Wired := ceosInterfaceWait(n.Endpoints)
+	n.Config().Env[clabconstants.ClabEnvIntfs] = strconv.Itoa(dataIntfs)
+
+	// A wired eth0 (network-mode: none) is injected as a veth after the container
+	// starts, like any link, but if-wait.sh does not count eth0. cEOS maps kernel
+	// netdevs to interfaces only once at boot, so EOS must not start init before
+	// eth0 exists or Management0 is never created. Have if-wait.sh wait for it.
+	if eth0Wired {
+		n.Config().Env[clabconstants.ClabEnvWaitEth0] = "1"
+	}
+
+	cID, err := n.Runtime.CreateContainer(ctx, n.Cfg)
+	if err != nil {
+		return err
+	}
+	if _, err := n.Runtime.StartContainer(ctx, cID, n); err != nil {
+		return err
+	}
+
+	n.SetState(clabnodesstate.Deployed)
+
+	return nil
+}
+
 func (n *ceos) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
 	cmd, _ := clabexec.NewExecCmdFromString(saveCmd)
 	execResult, err := n.RunExec(ctx, cmd)
@@ -202,9 +248,16 @@ func (n *ceos) createCEOSFiles(ctx context.Context) error {
 
 	// set mgmt ipv4 gateway as it is already known by now
 	// since the container network has been created before we launch nodes
-	// and mgmt gateway can be used in ceos.Cfg template to configure default route for mgmt
-	nodeCfg.MgmtIPv4Gateway = n.Runtime.Mgmt().IPv4Gw
-	nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
+	// and mgmt gateway can be used in ceos.Cfg template to configure default route for mgmt.
+	// Skip it when the node is detached from the containerlab management network:
+	// the none, host and container:<name> network modes all detach the node (see
+	// the docker runtime's processNetworkMode), so a default route via the mgmt
+	// gateway would be bogus.
+	mode, _, _ := strings.Cut(strings.ToLower(n.Cfg.NetworkMode), ":")
+	if mode != "none" && mode != "host" && mode != "container" {
+		nodeCfg.MgmtIPv4Gateway = n.Runtime.Mgmt().IPv4Gw
+		nodeCfg.MgmtIPv6Gateway = n.Runtime.Mgmt().IPv6Gw
+	}
 
 	// set the mgmt interface name for the node
 	err := setMgmtInterface(nodeCfg)
@@ -342,46 +395,77 @@ func setMgmtInterface(node *clabtypes.NodeConfig) error {
 	return nil
 }
 
-// ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
-func (n *ceos) ceosPostDeploy(_ context.Context) error {
+// mgmtAddresses returns the IPv4 and IPv6 addresses (in CIDR notation) to assign
+// to the management interface, or empty strings when none are known. The two
+// families are resolved independently: each prefers its management-network
+// address and otherwise falls back to the matching address on a manually wired
+// eth0 link, used when the node is detached from that network with
+// network-mode: none.
+func (n *ceos) mgmtAddresses() (v4, v6 string) {
 	nodeCfg := n.Config()
-	d, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
-	if err != nil {
-		return err
-	}
 
-	defer d.Close()
-
-	cfgs := []string{
-		"interface " + nodeCfg.MgmtIntf,
-		"no ip address",
-		"no ipv6 address",
-	}
-
-	// adding ipv4 address to configs
+	// Prefer the runtime-assigned management address. When the node is detached
+	// from the management network (e.g. network-mode: none) these fields are
+	// empty: UpdateConfigWithRuntimeInfo overwrites them with the empty runtime
+	// values before post-deploy, even if mgmt-ipv4/6 were set in the topology.
 	if nodeCfg.MgmtIPv4Address != "" {
-		cfgs = append(cfgs,
-			fmt.Sprintf("ip address %s/%d", nodeCfg.MgmtIPv4Address, nodeCfg.MgmtIPv4PrefixLength),
-		)
+		v4 = fmt.Sprintf("%s/%d", nodeCfg.MgmtIPv4Address, nodeCfg.MgmtIPv4PrefixLength)
+	}
+	if nodeCfg.MgmtIPv6Address != "" {
+		v6 = fmt.Sprintf("%s/%d", nodeCfg.MgmtIPv6Address, nodeCfg.MgmtIPv6PrefixLength)
 	}
 
-	// adding ipv6 address to configs
-	if nodeCfg.MgmtIPv6Address != "" {
-		cfgs = append(
-			cfgs,
-			fmt.Sprintf(
-				"ipv6 address %s/%d",
-				nodeCfg.MgmtIPv6Address,
-				nodeCfg.MgmtIPv6PrefixLength,
-			),
-		)
+	// fall back to the wired eth0 link address for any family still unset. In the
+	// default mode eth0 is not a topology endpoint, so this matches nothing.
+	for _, e := range n.Endpoints {
+		if e.GetIfaceName() != "eth0" {
+			continue
+		}
+		if v4 == "" {
+			if a := e.GetIPv4Addr(); a.IsValid() {
+				v4 = a.String()
+			}
+		}
+		if v6 == "" {
+			if a := e.GetIPv6Addr(); a.IsValid() {
+				v6 = a.String()
+			}
+		}
+	}
+
+	return v4, v6
+}
+
+// postDeployConfigs builds the EOS configuration pushed after deploy: management
+// interface addressing followed by data interface addressing.
+func (n *ceos) postDeployConfigs() []string {
+	nodeCfg := n.Config()
+
+	mgmtV4, mgmtV6 := n.mgmtAddresses()
+
+	var cfgs []string
+
+	// (Re)configure the management interface address only for the families that
+	// have a derived address. Resetting a family ("no ip address" / "no ipv6
+	// address") that is not being set would wipe an address the user supplied via
+	// startup-config (e.g. a manually wired, ZTP-style management interface), so
+	// each family is reset only when it is also being reconfigured.
+	if mgmtV4 != "" || mgmtV6 != "" {
+		cfgs = append(cfgs, "interface "+nodeCfg.MgmtIntf)
+		if mgmtV4 != "" {
+			cfgs = append(cfgs, "no ip address", "ip address "+mgmtV4)
+		}
+		if mgmtV6 != "" {
+			cfgs = append(cfgs, "no ipv6 address", "ipv6 address "+mgmtV6)
+		}
 	}
 
 	// configure data interfaces
 	for _, e := range n.Endpoints {
 		ifName := e.GetIfaceName()
-		// skip management interface
-		if ifName == nodeCfg.MgmtIntf {
+		// skip the management interface: its EOS name (e.g. Management0) and the
+		// eth0 netdev that backs it when wired manually via a link.
+		if ifName == nodeCfg.MgmtIntf || ifName == "eth0" {
 			continue
 		}
 
@@ -405,6 +489,28 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 		}
 	}
 
+	return cfgs
+}
+
+// ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
+func (n *ceos) ceosPostDeploy(_ context.Context) error {
+	cfgs := n.postDeployConfigs()
+
+	// nothing to configure (e.g. a manually wired management interface left to
+	// its startup-config): don't open a CLI session or save the running config,
+	// leaving the node's configuration untouched.
+	if len(cfgs) == 0 {
+		return nil
+	}
+
+	nodeCfg := n.Config()
+	d, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
+	if err != nil {
+		return err
+	}
+
+	defer d.Close()
+
 	// add save to startup cmd
 	cfgs = append(cfgs, "wr")
 
@@ -425,12 +531,28 @@ func (n *ceos) CheckInterfaceName() error {
 	// allow eth and et interfaces
 	// https://regex101.com/r/umQW5Z/2
 	ifRe := regexp.MustCompile(`eth[1-9][\w.]*$|et[1-9][\w.]*$`)
+	nm := strings.ToLower(n.Cfg.NetworkMode)
 	for _, e := range n.Endpoints {
-		if !ifRe.MatchString(e.GetIfaceName()) {
+		ifName := e.GetIfaceName()
+
+		// eth0 is the management interface; it can be wired as a regular link
+		// (for example to model out-of-band management or to test ZTP) only when
+		// the node is detached from the management network with network-mode: none.
+		if ifName == "eth0" {
+			if nm != "none" {
+				return fmt.Errorf(
+					"eth0 interface name is not allowed for %s node when network mode is not set to none",
+					n.Cfg.ShortName,
+				)
+			}
+			continue
+		}
+
+		if !ifRe.MatchString(ifName) {
 			return fmt.Errorf(
-				"arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X consists of alpanumerical characters",
+				"arista cEOS node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named as ethX or etX, where X is a number optionally followed by alphanumeric characters, underscores or dots",
 				n.Cfg.ShortName,
-				e.GetIfaceName(),
+				ifName,
 			)
 		}
 	}
