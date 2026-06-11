@@ -294,6 +294,12 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 	if len(n.Cfg.Components) == 0 {
 		return nil, nil
 	}
+	if len(n.Cfg.Components) > 1 {
+		return nil, fmt.Errorf(
+			"expected at most one component override for standalone SR-SIM node %q",
+			n.Cfg.ShortName,
+		)
+	}
 
 	slotA := n.Cfg.Components[0]
 
@@ -303,13 +309,14 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 		slotName = standaloneSlotName
 	}
 
-	if slotName != standaloneSlotName {
+	if !integratedSrosSlotAllowed(n.Cfg.NodeType, slotName) {
 		return nil, fmt.Errorf(
-			"expected no slot, or slot %q for components of standalone SR-SIM node: %q",
-			standaloneSlotName,
+			"expected no slot, or slot %s for components of standalone SR-SIM node %q",
+			strings.Join(integratedSrosAllowedSlots(n.Cfg.NodeType), "/"),
 			n.Cfg.ShortName,
 		)
 	}
+	vars[envNokiaSrosSlot] = slotName
 
 	if slotA.Type != "" {
 		vars[envNokiaSrosCard] = slotA.Type
@@ -742,6 +749,9 @@ func (n *sros) isDistributedCardNode() bool {
 // isDistributedBaseNode returns true if this is the base node of a distributed
 // SR-SIM deployment. The base node orchestrates multiple component nodes.
 func (n *sros) isDistributedBaseNode() bool {
+	if isIntegratedSrosNodeType(n.Cfg.NodeType) {
+		return false
+	}
 	return len(n.Cfg.Components) > 1
 }
 

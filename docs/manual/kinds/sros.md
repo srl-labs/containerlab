@@ -190,7 +190,7 @@ If the chosen platform is chassis-based, the SR-SIM deployment needs to be done 
 
 ### Integrated
 
-We call non-chassis-based systems like SR-1, SR-1s integrated variants. As these systems have a fixed form factor, they run as a single container and are represented as a single node in the topology file.
+We call non-chassis-based systems like SR-1, SR-1s and supported IXR pizza-box systems integrated variants. As these systems have a fixed form factor, they run as a single container and are represented as a single node in the topology file.
 
 Besides setting the `type` to drive the platform selection, users can then modify some of the default settings on a per-node basis using the `components` configuration on the node, or the environment variables.
 
@@ -241,7 +241,9 @@ topology:
 
 ///
 
-For SR-1 and SR-1s integrated nodes, containerlab's default model-driven configuration also provisions the default card and MDA configuration. If the hardware is overridden with `components` or SR-SIM environment variables, the generated SR OS card/MDA configuration follows those overrides.
+For known SR/IXR integrated nodes, containerlab's default model-driven configuration also provisions the default card and MDA configuration. The built-in defaults cover `sr-1`, `sr-1s`, `ixr-r6`, `ixr-e2`, `ixr-e2c`, `ixr-e2n`, `ixr-e2n-s`, `ixr-e3c`, `ixr-e3x` and `ixr-ec`. If the hardware is overridden with `components` or SR-SIM environment variables, the generated SR OS card/MDA configuration follows those overrides.
+
+Integrated nodes accept at most one `components` entry because they still run as a single container. The component slot can be omitted or set to `A`; `ixr-r6` also accepts a single `B` slot override.
 
 ### Distributed
 
@@ -391,7 +393,7 @@ When a distributed SR-SIM node is defined using `components`, we need to take in
 
 ##### Configuration for components
 
-When using the `components` structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^6] to ensure the installed components come up without requiring a user to manually provide the configuration. The same generated configuration mechanism is used for the built-in SR-1 and SR-1s integrated defaults.
+When using the `components` structure in the node definition for a distributed node, containerlab will also generate the SR OS configuration for the installed components in the chassis, as well as relevant power supply configuration[^6] to ensure the installed components come up without requiring a user to manually provide the configuration. The same generated configuration mechanism is used for the built-in SR/IXR integrated defaults.
 
 /// details | Disabling generated SR OS configuration for `components`
     type: tip
@@ -597,7 +599,7 @@ topology:
 
 ## Node configuration
 
-Nokia SR OS nodes come up with a default configuration where the management interfaces such as NETCONF, SNMP, and gNMI are provisioned. For SR-1 and SR-1s integrated nodes, and for distributed nodes using generated component configuration, the default model-driven configuration also provisions supported card and MDA hardware. Supported node types additionally receive power-supply configuration[^7].
+Nokia SR OS nodes come up with a default configuration where the management interfaces such as NETCONF, SNMP, and gNMI are provisioned. For known SR/IXR integrated nodes, and for distributed nodes using generated component configuration, the default model-driven configuration also provisions supported card and MDA hardware. Supported node types additionally receive power-supply configuration[^7].
 
 ### User-defined config
 

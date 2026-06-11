@@ -12,6 +12,10 @@ topology:
       kind: nokia_srsim
       type: sr-1
 
+    ixrr6:
+      kind: nokia_srsim
+      type: ixr-r6
+
     sr2s:
       kind: nokia_srsim
       type: sr-2s

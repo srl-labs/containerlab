@@ -46,6 +46,20 @@ Check SR-1 MDA 2 configuration
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    me12-100gb-qsfp28
 
+Check IXR-R6 card configuration
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-ixrr6 --path /configure/card[slot-number=1]/card-type
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    cpiom-ixr-r6
+
+Check IXR-R6 MDA configuration
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-ixrr6 --path /configure/card[slot-number=1]/mda[mda-slot=1]/mda-type
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    m6-10g-sfp++1-100g-qsfp28
+
 Check SR-2S power shelf configuration
     ${rc}    ${output} =    Run And Return Rc And Output
     ...    sudo ${runtime} run --network host --rm ${gnmic_image} get ${gnmic_flags} --address clab-${lab-name}-sr2s --path /configure/chassis[chassis-class=*][chassis-number=*]/power-shelf[power-shelf-id=*]/power-shelf-type

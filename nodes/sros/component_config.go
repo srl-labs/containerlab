@@ -6,6 +6,8 @@ package sros
 
 import (
 	"fmt"
+	"slices"
+	"strconv"
 	"strings"
 
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -14,22 +16,81 @@ import (
 const integratedSrosCardSlot = "1"
 
 type integratedSrosDefaultComponent struct {
-	cardType string
-	mdas     clabtypes.MDAS
+	cardType     string
+	mdas         clabtypes.MDAS
+	allowedSlots []string
 }
 
 var integratedSrosDefaultComponents = map[string]integratedSrosDefaultComponent{
 	"sr-1": {
-		cardType: "iom-1",
+		cardType:     "iom-1",
+		allowedSlots: []string{slotAName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "me6-100gb-qsfp28"},
 			{Slot: 2, Type: "me12-100gb-qsfp28"},
 		},
 	},
 	"sr-1s": {
-		cardType: "xcm-1s",
+		cardType:     "xcm-1s",
+		allowedSlots: []string{slotAName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "s36-100gb-qsfp28"},
+		},
+	},
+	"ixr-r6": {
+		cardType:     "cpiom-ixr-r6",
+		allowedSlots: []string{slotAName, slotBName},
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "m6-10g-sfp++1-100g-qsfp28"},
+		},
+	},
+	"ixr-e2": {
+		cardType:     "cpm-ixr-e2",
+		allowedSlots: []string{slotAName},
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "m2-qsfpdd+2-qsfp28+24-sfp28"},
+		},
+	},
+	"ixr-e2c": {
+		cardType:     "cpm-ixr-e2c",
+		allowedSlots: []string{slotAName},
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "m12-sfp28+2-qsfp28"},
+		},
+	},
+	"ixr-e2n": {
+		cardType:     "cpm-ixr-e2n",
+		allowedSlots: []string{slotAName},
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "m4-sfp+4-sfp+"},
+		},
+	},
+	"ixr-e2n-s": {
+		cardType:     "cpm-ixr-e2n-s",
+		allowedSlots: []string{slotAName},
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "m4-sfp+4-sfp+-s"},
+		},
+	},
+	"ixr-e3c": {
+		cardType:     "cpm-ixr-e3c",
+		allowedSlots: []string{slotAName},
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "m4-qsfp28+16-sfp28+8-sfp56"},
+		},
+	},
+	"ixr-e3x": {
+		cardType:     "cpm-ixr-e3x",
+		allowedSlots: []string{slotAName},
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"},
+		},
+	},
+	"ixr-ec": {
+		cardType:     "cpm-ixr-ec",
+		allowedSlots: []string{slotAName},
+		mdas: clabtypes.MDAS{
+			{Slot: 1, Type: "m4-1g-tx+20-1g-sfp+6-10g-sfp+"},
 		},
 	},
 }
@@ -119,7 +180,7 @@ func buildIntegratedComponentCfgLines(
 	nodeType string,
 	env map[string]string,
 ) []componentCfgLine {
-	component, ok := integratedSrosDefaultComponents[strings.ToLower(nodeType)]
+	component, ok := integratedSrosDefaultComponents[canonicalSrosNodeType(nodeType)]
 	if !ok {
 		return nil
 	}
@@ -132,15 +193,78 @@ func buildIntegratedComponentCfgLines(
 	lines := []componentCfgLine{
 		{Kind: "card", Slot: integratedSrosCardSlot, Type: cardType},
 	}
-	for _, mda := range component.mdas {
-		mdaType := mda.Type
-		if envMdaType := strings.TrimSpace(env[fmt.Sprintf("%s_%d", envNokiaSrosMDA, mda.Slot)]); envMdaType != "" {
-			mdaType = envMdaType
-		}
+
+	for _, mda := range mergeIntegratedMdas(component.mdas, env) {
 		lines = append(lines, componentCfgLine{
-			Kind: "mda", Slot: integratedSrosCardSlot, MdaSlot: mda.Slot, Type: mdaType,
+			Kind: "mda", Slot: integratedSrosCardSlot, MdaSlot: mda.Slot, Type: mda.Type,
 		})
 	}
 
 	return lines
+}
+
+func mergeIntegratedMdas(defaults clabtypes.MDAS, env map[string]string) clabtypes.MDAS {
+	bySlot := map[int]string{}
+	for _, mda := range defaults {
+		if mda.Slot > 0 && mda.Type != "" {
+			bySlot[mda.Slot] = mda.Type
+		}
+	}
+
+	const prefix = envNokiaSrosMDA + "_"
+	for key, value := range env {
+		slotText, ok := strings.CutPrefix(key, prefix)
+		if !ok {
+			continue
+		}
+		slot, err := strconv.Atoi(slotText)
+		if err != nil || slot <= 0 {
+			continue
+		}
+		if value = strings.TrimSpace(value); value != "" {
+			bySlot[slot] = value
+		}
+	}
+
+	slots := make([]int, 0, len(bySlot))
+	for slot := range bySlot {
+		slots = append(slots, slot)
+	}
+	slices.Sort(slots)
+
+	mdas := make(clabtypes.MDAS, 0, len(slots))
+	for _, slot := range slots {
+		mdas = append(mdas, clabtypes.MDA{Slot: slot, Type: bySlot[slot]})
+	}
+	return mdas
+}
+
+func canonicalSrosNodeType(nodeType string) string {
+	return strings.ToLower(strings.TrimSpace(nodeType))
+}
+
+func integratedSrosDefault(nodeType string) (integratedSrosDefaultComponent, bool) {
+	component, ok := integratedSrosDefaultComponents[canonicalSrosNodeType(nodeType)]
+	return component, ok
+}
+
+func isIntegratedSrosNodeType(nodeType string) bool {
+	_, ok := integratedSrosDefault(nodeType)
+	return ok
+}
+
+func integratedSrosAllowedSlots(nodeType string) []string {
+	component, ok := integratedSrosDefault(nodeType)
+	if !ok || len(component.allowedSlots) == 0 {
+		return []string{slotAName}
+	}
+	return component.allowedSlots
+}
+
+func integratedSrosSlotAllowed(nodeType, slot string) bool {
+	slot = strings.ToUpper(strings.TrimSpace(slot))
+	if slot == "" {
+		slot = standaloneSlotName
+	}
+	return slices.Contains(integratedSrosAllowedSlots(nodeType), slot)
 }
