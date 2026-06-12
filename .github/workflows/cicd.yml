@@ -502,6 +502,8 @@ jobs:
       - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ${{ env.MKDOCS_IMAGE }} build --clean --strict
 
       - name: Cache htmltest external links
+        # cache is only used when external links are checked (tags and docs-publish)
+        if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish'
         uses: actions/cache@v5
         with:
           path: tmp/.htmltest
@@ -516,7 +518,9 @@ jobs:
       - name: htmltest
         uses: wjdp/htmltest-action@master
         with:
-          config: docs/htmltest.yml
+          # external links are checked only on tags and docs-publish (where docs get published);
+          # PRs use the internal-only config since external sites fail with 403/429 regardless of PR content
+          config: ${{ (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/docs-publish') && 'docs/htmltest.yml' || 'docs/htmltest-pr.yml' }}
 
   build-and-release:
     runs-on: ubuntu-24.04
