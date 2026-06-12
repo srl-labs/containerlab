@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -127,11 +128,28 @@ func WithDebug(debug bool) ClabOption {
 // WithRuntime option sets a container runtime to be used by containerlab.
 func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 	return func(c *CLab) error {
+		name = resolveRuntimeName(name)
+
+		if clablabruntime.IsLabRuntimeName(name) {
+			c.globalRuntimeName = name
+
+			lr, err := clablabruntime.Init(name, clablabruntime.Config{
+				Debug:   rtconfig != nil && rtconfig.Debug,
+				Timeout: runtimeTimeout(rtconfig),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to init the lab runtime: %w", err)
+			}
+
+			c.LabRuntime = lr
+
+			return nil
+		}
+
 		name, rInit, err := RuntimeInitializer(name)
 		if err != nil {
 			return err
 		}
-
 		c.globalRuntimeName = name
 
 		r := rInit()
@@ -154,9 +172,29 @@ func WithRuntime(name string, rtconfig *clabruntime.RuntimeConfig) ClabOption {
 	}
 }
 
+func runtimeTimeout(rtconfig *clabruntime.RuntimeConfig) time.Duration {
+	if rtconfig == nil {
+		return 0
+	}
+
+	return rtconfig.Timeout
+}
+
 func WithKeepMgmtNet() ClabOption {
 	return func(c *CLab) error {
-		c.globalRuntime().WithKeepMgmtNet()
+		if c.LabRuntime != nil {
+			log.Debug("Ignoring keep management network option for lab runtime",
+				"runtime", c.globalRuntimeName)
+
+			return nil
+		}
+
+		r := c.globalRuntime()
+		if r == nil {
+			return fmt.Errorf("container runtime %q is not initialized", c.globalRuntimeName)
+		}
+
+		r.WithKeepMgmtNet()
 
 		return nil
 	}

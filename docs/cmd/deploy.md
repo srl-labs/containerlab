@@ -103,16 +103,21 @@ With `--max-workers` flag, it is possible to limit the number of concurrent work
 
 #### runtime
 
-Containerlab nodes can be started by different runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman` runtime.
+Containerlab nodes can be started by different local container runtimes, with `docker` being the default one. Besides that, containerlab has experimental support for `podman` runtime.
 
-A global runtime can be selected with a global `--runtime | -r` flag that will select a runtime to use. The possible value are:
+A global runtime can be selected with the `--runtime | -r` flag. The possible values are:
 
-* `docker` - default
-* `podman` - experimental support
+* `docker` - default local container runtime
+* `podman` - experimental local container runtime
+* `clabernetes` - Clabernetes lab runtime that deploys the whole topology to a kubernetes cluster
+
+/// note
+`clabernetes` is a lab runtime, not a per-node container runtime. When it is selected, containerlab renders the topology and creates a Clabernetes `Topology` custom resource. See [Containerlab runtime](../manual/clabernetes/runtime.md) for details.
+///
 
 #### timeout
 
-A global `--timeout` flag drives the timeout of API requests that containerlab send toward external resources. Currently the only external resource is the container runtime (i.e. docker).
+A global `--timeout` flag drives the timeout of API requests that containerlab sends toward external resources, such as the selected container runtime or the kubernetes API used by the Clabernetes lab runtime.
 
 In a busy compute the runtime may respond longer than anticipated, in that case increasing the timeout may help.
 
@@ -150,6 +155,10 @@ The local `--node-filter` flag allows users to specify a subset of topology node
 When a subset of nodes is specified, containerlab will only deploy those nodes and links belonging to all selected nodes and ignore the rest. This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full topology.
 
 Read more about [node filtering](../manual/node-filtering.md) in the documentation.
+
+/// warning | Clabernetes runtime
+`deploy --node-filter` is not supported with `--runtime clabernetes`. Clabernetes reconciles the complete topology stored in a `Topology` custom resource. After the topology exists, use node filtering with commands such as `start`, `stop`, `restart`, `exec`, or `save`.
+///
 
 #### skip-post-deploy
 
@@ -245,12 +254,16 @@ In this example:
 
 #### `CLAB_RUNTIME`
 
-Default value of "runtime" key for nodes, same as global `--runtime | -r` flag described above.
-Affects all containerlab commands in the same way, not just `deploy`.
+Default value for the global `--runtime | -r` flag described above. It affects all containerlab commands in the same way, not just `deploy`.
 
-Intended to be set in environments where non-default container runtime should be used, to avoid needing to specify it for every command invocation or in every configuration file.
+For `docker` or `podman`, it selects the default local container runtime. For `clabernetes`, it selects the whole-lab Clabernetes runtime.
 
-Example command-line usage: `CLAB_RUNTIME=podman containerlab deploy`
+Example command-line usage:
+
+```bash
+CLAB_RUNTIME=podman containerlab deploy
+CLAB_RUNTIME=clabernetes containerlab deploy -t topo.clab.yml
+```
 
 #### `CLAB_VERSION_CHECK`
 

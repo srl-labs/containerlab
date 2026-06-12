@@ -27,6 +27,10 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		Aliases:      []string{"dep"},
 		SilenceUsage: true,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
+			if commandSkipsRoot(o.Global.Runtime) {
+				return nil
+			}
+
 			return clabutils.CheckAndGetRootPrivs()
 		},
 		RunE: func(cobraCmd *cobra.Command, _ []string) error {

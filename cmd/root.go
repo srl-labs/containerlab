@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	clabgit "github.com/srl-labs/containerlab/git"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -151,12 +152,15 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 
 	log.SetTimeFormat(time.TimeOnly)
 
+	if err := checkLabRuntimeCommandSupport(cobraCmd, o.Global.Runtime); err != nil {
+		return err
+	}
+
 	err := clabutils.DropRootPrivs()
 	if err != nil {
 		return err
 	}
-	// Rootless operations only supported for Docker runtime
-	if o.Global.Runtime != "" && o.Global.Runtime != clabruntimedocker.RuntimeName {
+	if globalRuntimeRequiresRoot(o.Global.Runtime) {
 		err := clabutils.CheckAndGetRootPrivs()
 		if err != nil {
 			return err
@@ -164,6 +168,38 @@ func preRunFn(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	return getTopoFilePath(cobraCmd, o)
+}
+
+func globalRuntimeRequiresRoot(name string) bool {
+	return name != "" &&
+		name != clabruntimedocker.RuntimeName &&
+		!commandSkipsRoot(name)
+}
+
+func commandSkipsRoot(name string) bool {
+	return clablabruntime.IsLabRuntimeName(name)
+}
+
+// labRuntimeUnsupportedCommands operate on local containers or host networking
+// and have no lab runtime equivalent.
+var labRuntimeUnsupportedCommands = map[string]struct{}{
+	"graph": {},
+	"tools": {},
+}
+
+func checkLabRuntimeCommandSupport(cobraCmd *cobra.Command, runtimeName string) error {
+	if !clablabruntime.IsLabRuntimeName(runtimeName) {
+		return nil
+	}
+
+	for cmd := cobraCmd; cmd != nil; cmd = cmd.Parent() {
+		if _, ok := labRuntimeUnsupportedCommands[cmd.Name()]; ok {
+			return fmt.Errorf("the %q command is not supported with lab runtime %q",
+				cmd.Name(), runtimeName)
+		}
+	}
+
+	return nil
 }
 
 // getTopoFilePath finds *.clab.y*ml file in the current working directory

@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
+	clablabruntime "github.com/srl-labs/containerlab/labruntime"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -25,6 +26,10 @@ func Stream(ctx context.Context, opts Options) error {
 	clab, err := clabcore.NewContainerLab(opts.ClabOptions...)
 	if err != nil {
 		return err
+	}
+
+	if clab.LabRuntime != nil {
+		return streamLabRuntimeEvents(ctx, clab, opts)
 	}
 
 	runtime, ok := clab.Runtimes[opts.Runtime]
@@ -99,6 +104,72 @@ func Stream(ctx context.Context, opts Options) error {
 		case <-ctx.Done():
 			return nil
 		}
+	}
+}
+
+func streamLabRuntimeEvents(ctx context.Context, clab *clabcore.CLab, opts Options) error {
+	printer, err := newFormatter(opts.Format, opts.writer())
+	if err != nil {
+		return err
+	}
+
+	runtimeEvents, runtimeErrs, err := clab.LabRuntime.StreamEvents(
+		ctx,
+		clablabruntime.EventStreamRequest{
+			AllNamespaces:         true,
+			IncludeInitialState:   opts.IncludeInitialState,
+			IncludeInterfaceStats: opts.IncludeInterfaceStats,
+			StatsInterval:         opts.StatsInterval,
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to stream events for lab runtime %q: %w", opts.Runtime, err)
+	}
+
+	for runtimeEvents != nil || runtimeErrs != nil {
+		select {
+		case ev, ok := <-runtimeEvents:
+			if !ok {
+				runtimeEvents = nil
+
+				continue
+			}
+
+			if err := printer(aggregatedEventFromLabRuntimeEvent(ev)); err != nil {
+				log.Debugf("failed to write event: %v", err)
+			}
+		case err, ok := <-runtimeErrs:
+			if !ok {
+				runtimeErrs = nil
+
+				continue
+			}
+
+			if err != nil && !errors.Is(err, context.Canceled) {
+				return err
+			}
+		case <-ctx.Done():
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func aggregatedEventFromLabRuntimeEvent(ev clablabruntime.Event) aggregatedEvent {
+	ts := ev.Timestamp
+	if ts.IsZero() {
+		ts = time.Now()
+	}
+
+	return aggregatedEvent{
+		Timestamp:   ts,
+		Type:        ev.Type,
+		Action:      ev.Action,
+		ActorID:     ev.ActorID,
+		ActorName:   ev.ActorName,
+		ActorFullID: ev.ActorFullID,
+		Attributes:  cloneStringMap(ev.Attributes),
 	}
 }
 

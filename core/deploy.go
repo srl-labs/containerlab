@@ -25,6 +25,10 @@ func (c *CLab) Deploy( //nolint: funlen
 	ctx context.Context,
 	options *DeployOptions,
 ) ([]clabruntime.GenericContainer, error) {
+	if c.LabRuntime != nil {
+		return c.deployWithLabRuntime(ctx, options)
+	}
+
 	var err error
 
 	err = c.ResolveLinks()

@@ -1,0 +1,99 @@
+name: clabernetes-tests
+
+"on":
+  workflow_call:
+    inputs:
+      py_ver:
+        required: true
+        type: string
+
+jobs:
+  clabernetes-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: containerlab
+
+      - name: Move containerlab to usr/bin
+        run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.5.28"
+          enable-cache: true
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install the project
+        run: uv sync --all-extras --dev
+
+      - name: Install kubectl
+        run: |
+          curl -L -o ./kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin/kubectl
+
+      - name: Install kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.22.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Create kind cluster
+        run: |
+          cat > /tmp/c9s-kind-config.yaml <<'EOF'
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+            - role: control-plane
+            - role: worker
+          containerdConfigPatches:
+          - |-
+            [plugins."io.containerd.grpc.v1.cri".containerd]
+              discard_unpacked_layers = false
+          EOF
+
+          kind create cluster --name c9s --config /tmp/c9s-kind-config.yaml
+          kubectl wait --for=condition=Ready nodes --all --timeout=120s
+
+      - name: Install Clabernetes
+        run: |
+          docker run --network host --rm \
+            -v "${HOME}/.kube:/root/.kube" \
+            -v "${HOME}/.helm:/root/.helm" \
+            -v "${HOME}/.config/helm:/root/.config/helm" \
+            -v "${HOME}/.cache/helm:/root/.cache/helm" \
+            alpine/helm:3.12.3 \
+            upgrade --install --create-namespace --namespace c9s \
+              clabernetes oci://ghcr.io/srl-labs/clabernetes/clabernetes
+
+          kubectl -n c9s rollout status deploy/clabernetes-manager --timeout=180s
+
+      - name: Run Clabernetes Robot tests
+        run: |
+          bash ./tests/rf-run.sh clabernetes ./tests/14-clabernetes
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: 14-clabernetes-log
+          path: ./tests/out/*.html
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: coverage-clabernetes-tests
+          path: /tmp/clab-tests/coverage/*
+          retention-days: 7

@@ -657,9 +657,6 @@ func (c *CLab) HasKind(k string) bool {
 	return false
 }
 
-// addDefaultLabels adds default labels to node's config struct.
-// Update the addDefaultLabels function in clab/config.go
-// addDefaultLabels adds default labels to node's config struct.
 func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 	if cfg.Labels == nil {
 		cfg.Labels = map[string]string{}
@@ -674,16 +671,7 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 	cfg.Labels[clabconstants.NodeLabDir] = cfg.LabDir
 	cfg.Labels[clabconstants.TopoFile] = c.TopoPaths.TopologyFilenameAbsPath()
 
-	// Use custom owner if set, otherwise use current user
-	owner := c.customOwner
-	if owner == "" {
-		owner = os.Getenv("SUDO_USER")
-		if owner == "" {
-			owner = os.Getenv("USER")
-		}
-	}
-
-	cfg.Labels[clabconstants.Owner] = owner
+	cfg.Labels[clabconstants.Owner] = c.labOwner()
 
 	gitBranch, gitHash := c.getGitInfo()
 
@@ -693,6 +681,18 @@ func (c *CLab) addDefaultLabels(cfg *clabtypes.NodeConfig) {
 			cfg.Labels[clabconstants.GitHash] = gitHash
 		}
 	}
+}
+
+func (c *CLab) labOwner() string {
+	if c.customOwner != "" {
+		return c.customOwner
+	}
+
+	if owner := os.Getenv("SUDO_USER"); owner != "" {
+		return owner
+	}
+
+	return os.Getenv("USER")
 }
 
 // labelsToEnvVars adds labels to env vars with CLAB_LABEL_ prefix added
