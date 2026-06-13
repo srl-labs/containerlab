@@ -503,6 +503,15 @@ func (*CLab) loadKernelModules() error {
 		// trying to load the kernel modules.
 		km, err := kmod.New(opts...)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				log.Debugf(
+					"No loadable kernel module support (%v). Assuming module %q is built into the kernel",
+					err, m,
+				)
+
+				return nil
+			}
+
 			log.Warnf("Unable to init module loader: %v. Skipping...", err)
 
 			return nil
@@ -510,9 +519,9 @@ func (*CLab) loadKernelModules() error {
 
 		err = km.Load(m, "", 0)
 		if err != nil {
-			log.Warnf("Unable to load kernel module %q automatically %q", m, err)
-
-			return nil
+			return fmt.Errorf(
+				"kernel module %q is not loaded, not built-in and could not be loaded: %w", m, err,
+			)
 		}
 
 		log.Debugf("kernel module %q loaded successfully", m)
