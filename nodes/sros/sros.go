@@ -294,6 +294,12 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 	if len(n.Cfg.Components) == 0 {
 		return nil, nil
 	}
+	if len(n.Cfg.Components) > 1 {
+		return nil, fmt.Errorf(
+			"expected at most one component override for standalone SR-SIM node %q",
+			n.Cfg.ShortName,
+		)
+	}
 
 	slotA := n.Cfg.Components[0]
 
@@ -303,15 +309,23 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 		slotName = standaloneSlotName
 	}
 
-	if slotName != standaloneSlotName {
+	if !integratedSrosSlotAllowed(n.Cfg.NodeType, slotName) {
 		return nil, fmt.Errorf(
-			"expected no slot, or slot %q for components of standalone SR-SIM node: %q",
-			standaloneSlotName,
+			"expected no slot, or slot %s for components of standalone SR-SIM node %q",
+			strings.Join(integratedSrosAllowedSlots(n.Cfg.NodeType), "/"),
 			n.Cfg.ShortName,
 		)
 	}
+	vars[envNokiaSrosSlot] = slotName
 
 	if slotA.Type != "" {
+		if isSingleSlotIntegratedSrosNodeType(n.Cfg.NodeType) {
+			return nil, fmt.Errorf(
+				"node %q type %q is integrated and does not support component card-type override",
+				n.Cfg.ShortName,
+				n.Cfg.NodeType,
+			)
+		}
 		vars[envNokiaSrosCard] = slotA.Type
 	}
 
@@ -742,6 +756,9 @@ func (n *sros) isDistributedCardNode() bool {
 // isDistributedBaseNode returns true if this is the base node of a distributed
 // SR-SIM deployment. The base node orchestrates multiple component nodes.
 func (n *sros) isDistributedBaseNode() bool {
+	if isIntegratedSrosNodeType(n.Cfg.NodeType) {
+		return false
+	}
 	return len(n.Cfg.Components) > 1
 }
 
@@ -982,7 +999,7 @@ func (n *sros) createSROSFiles(ctx context.Context) error {
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
 	if err := n.writeChassisInfoToLabDir(ctx); err != nil {
-		log.Warn("Failed to write chassis_info.json to lab dir",
+		log.Debug("Didn't write chassis_info.json to lab dir. Docker version is likely too new.",
 			"node", n.Cfg.ShortName, "path", n.Cfg.LabDir, "error", err)
 	}
 	if n.isCPM(slotAName) || n.isStandaloneNode() {
@@ -1919,8 +1936,8 @@ func (n *sros) MgmtIPAddr() (string, error) {
 	)
 }
 
-// generateComponentConfig generates SR OS configuration for explicitly defined
-// components (cards, SFMs, XIOMs, MDAs) using a struct + loop; power config is appended.
+// generateComponentConfig generates SR OS configuration for explicitly defined distributed
+// components or known integrated SR-SIM defaults. Power config is appended when supported.
 func (n *sros) generateComponentConfig() string {
 	if _, exists := n.Cfg.Env[envDisableComponentConfigGen]; exists {
 		return ""
@@ -1928,12 +1945,18 @@ func (n *sros) generateComponentConfig() string {
 	if n.isConfigClassic() {
 		return ""
 	}
-	if n.isStandaloneNode() {
-		return ""
-	}
+
 	components := n.rootComponents
 	if len(components) == 0 {
-		return ""
+		if len(n.Cfg.Components) > 1 || n.rootCtrName != "" {
+			return ""
+		}
+
+		lines := buildIntegratedComponentCfgLines(n.Cfg.NodeType, n.Cfg.Env)
+		if len(lines) == 0 {
+			return ""
+		}
+		return n.componentConfigFromLines(lines)
 	}
 
 	for _, c := range components {
@@ -1953,11 +1976,20 @@ func (n *sros) generateComponentConfig() string {
 	}
 
 	lines := buildComponentCfgLines(components)
+	return n.componentConfigFromLines(lines)
+}
+
+func (n *sros) componentConfigFromLines(lines []componentCfgLine) string {
+	powerConfig := n.generatePowerConfig()
+	if len(lines) == 0 && powerConfig == "" {
+		return ""
+	}
+
 	var config strings.Builder
 	for _, l := range lines {
 		config.WriteString(l.String())
 	}
-	config.WriteString(n.generatePowerConfig())
+	config.WriteString(powerConfig)
 	return config.String()
 }
 
