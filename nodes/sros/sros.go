@@ -326,6 +326,7 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 				n.Cfg.NodeType,
 			)
 		}
+		vars[envNokiaSrosCard] = slotA.Type
 	}
 
 	if len(slotA.MDA) > 0 {
