@@ -38,56 +38,56 @@ var integratedSrosDefaultComponents = map[string]integratedSrosDefaultComponent{
 		},
 	},
 	"ixr-r6": {
-		cardType:     "cpiom-ixr-r6",
+		cardType:     "iom-ixr-r6",
 		allowedSlots: []string{slotAName, slotBName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "m6-10g-sfp++1-100g-qsfp28"},
 		},
 	},
 	"ixr-e2": {
-		cardType:     "cpm-ixr-e2",
+		cardType:     "imm2-qsfpdd+2-qsfp28+24-sfp28",
 		allowedSlots: []string{slotAName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "m2-qsfpdd+2-qsfp28+24-sfp28"},
 		},
 	},
 	"ixr-e2c": {
-		cardType:     "cpm-ixr-e2c",
+		cardType:     "imm12-sfp28+2-qsfp28",
 		allowedSlots: []string{slotAName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "m12-sfp28+2-qsfp28"},
 		},
 	},
 	"ixr-e2n": {
-		cardType:     "cpm-ixr-e2n",
+		cardType:     "imm4-sfp+4-sfp+",
 		allowedSlots: []string{slotAName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "m4-sfp+4-sfp+"},
 		},
 	},
 	"ixr-e2n-s": {
-		cardType:     "cpm-ixr-e2n-s",
+		cardType:     "imm4-sfp+4-sfp+-s",
 		allowedSlots: []string{slotAName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "m4-sfp+4-sfp+-s"},
 		},
 	},
 	"ixr-e3c": {
-		cardType:     "cpm-ixr-e3c",
+		cardType:     "imm4-qsfp28+16-sfp28+8-sfp56",
 		allowedSlots: []string{slotAName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "m4-qsfp28+16-sfp28+8-sfp56"},
 		},
 	},
 	"ixr-e3x": {
-		cardType:     "cpm-ixr-e3x",
+		cardType:     "imm16-sfp112+15-sfp56+6-qsfpdd",
 		allowedSlots: []string{slotAName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"},
 		},
 	},
 	"ixr-ec": {
-		cardType:     "cpm-ixr-ec",
+		cardType:     "imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
 		allowedSlots: []string{slotAName},
 		mdas: clabtypes.MDAS{
 			{Slot: 1, Type: "m4-1g-tx+20-1g-sfp+6-10g-sfp+"},
