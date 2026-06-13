@@ -319,7 +319,13 @@ func (n *sros) setupStandaloneComponents() (map[string]string, error) {
 	vars[envNokiaSrosSlot] = slotName
 
 	if slotA.Type != "" {
-		vars[envNokiaSrosCard] = slotA.Type
+		if isSingleSlotIntegratedSrosNodeType(n.Cfg.NodeType) {
+			return nil, fmt.Errorf(
+				"node %q type %q is integrated and does not support component card-type override",
+				n.Cfg.ShortName,
+				n.Cfg.NodeType,
+			)
+		}
 	}
 
 	if len(slotA.MDA) > 0 {

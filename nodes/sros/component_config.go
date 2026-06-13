@@ -261,6 +261,13 @@ func integratedSrosAllowedSlots(nodeType string) []string {
 	return component.allowedSlots
 }
 
+func isSingleSlotIntegratedSrosNodeType(nodeType string) bool {
+	if !isIntegratedSrosNodeType(nodeType) {
+		return false
+	}
+	return len(integratedSrosAllowedSlots(nodeType)) == 1
+}
+
 func integratedSrosSlotAllowed(nodeType, slot string) bool {
 	slot = strings.ToUpper(strings.TrimSpace(slot))
 	if slot == "" {

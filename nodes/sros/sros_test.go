@@ -238,49 +238,49 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		{
 			name:     "integrated_ixr_r6_default",
 			nodeType: "ixr-r6",
-			cardType: "cpiom-ixr-r6",
+			cardType: "iom-ixr-r6",
 			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m6-10g-sfp++1-100g-qsfp28"}},
 		},
 		{
 			name:     "integrated_ixr_e2_default",
 			nodeType: "ixr-e2",
-			cardType: "cpm-ixr-e2",
+			cardType: "imm2-qsfpdd+2-qsfp28+24-sfp28",
 			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m2-qsfpdd+2-qsfp28+24-sfp28"}},
 		},
 		{
 			name:     "integrated_ixr_e2c_default",
 			nodeType: "ixr-e2c",
-			cardType: "cpm-ixr-e2c",
+			cardType: "imm12-sfp28+2-qsfp28",
 			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m12-sfp28+2-qsfp28"}},
 		},
 		{
 			name:     "integrated_ixr_e2n_default",
 			nodeType: "ixr-e2n",
-			cardType: "cpm-ixr-e2n",
+			cardType: "imm4-sfp+4-sfp+",
 			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-sfp+4-sfp+"}},
 		},
 		{
 			name:     "integrated_ixr_e2n_s_default",
 			nodeType: "ixr-e2n-s",
-			cardType: "cpm-ixr-e2n-s",
+			cardType: "imm4-sfp+4-sfp+-s",
 			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-sfp+4-sfp+-s"}},
 		},
 		{
 			name:     "integrated_ixr_e3c_default",
 			nodeType: "ixr-e3c",
-			cardType: "cpm-ixr-e3c",
+			cardType: "imm4-qsfp28+16-sfp28+8-sfp56",
 			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-qsfp28+16-sfp28+8-sfp56"}},
 		},
 		{
 			name:     "integrated_ixr_e3x_default",
 			nodeType: "ixr-e3x",
-			cardType: "cpm-ixr-e3x",
+			cardType: "imm16-sfp112+15-sfp56+6-qsfpdd",
 			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m16-sfp112+15-sfp56+6-qsfpdd"}},
 		},
 		{
 			name:     "integrated_ixr_ec_default",
 			nodeType: "ixr-ec",
-			cardType: "cpm-ixr-ec",
+			cardType: "imm4-1g-tx+20-1g-sfp+6-10g-sfp+",
 			mdas:     clabtypes.MDAS{{Slot: 1, Type: "m4-1g-tx+20-1g-sfp+6-10g-sfp+"}},
 		},
 	}
@@ -418,6 +418,17 @@ func Test_sros_integratedComponentOverrides(t *testing.T) {
 
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "at most one component override")
+	})
+
+	t.Run("single_slot_integrated_rejects_card_type_override", func(t *testing.T) {
+		n := newSrosInitTestNode("ixr-e2", []*clabtypes.Component{
+			{Slot: slotAName, Type: "imm2-qsfpdd+2-qsfp28+24-sfp28"},
+		})
+
+		err := n.Init(n.Cfg)
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does not support component card-type override")
 	})
 
 	t.Run("integrated_rejects_invalid_slot", func(t *testing.T) {
