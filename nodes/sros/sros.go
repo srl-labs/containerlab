@@ -992,7 +992,7 @@ func (n *sros) createSROSFiles(ctx context.Context) error {
 	clabutils.CreateDirectory(path.Join(n.Cfg.LabDir, n.Cfg.Env[envNokiaSrosSlot], configCf3),
 		clabconstants.PermissionsOpen)
 	if err := n.writeChassisInfoToLabDir(ctx); err != nil {
-		log.Warn("Failed to write chassis_info.json to lab dir",
+		log.Debug("Didn't write chassis_info.json to lab dir. Docker version is likely too new.",
 			"node", n.Cfg.ShortName, "path", n.Cfg.LabDir, "error", err)
 	}
 	if n.isCPM(slotAName) || n.isStandaloneNode() {
