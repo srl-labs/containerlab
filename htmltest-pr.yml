@@ -1,0 +1,11 @@
+# htmltest config used for PR/branch runs.
+# External links are flaky to check from CI (bot-blocking 403s, 429 rate limits, timeouts)
+# and are not something a PR author can fix, so PRs validate internal links/anchors/images only.
+# The full check including external links (docs/htmltest.yml) runs on tags and the docs-publish branch.
+DirectoryPath: ./site
+CheckExternal: false
+IgnoreDirectoryMissingTrailingSlash: true
+IgnoreAltMissing: true
+IgnoreDirs:
+  - overrides
+IgnoreInternalEmptyHash: true
