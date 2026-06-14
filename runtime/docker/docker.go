@@ -35,10 +35,10 @@ import (
 	"github.com/google/shlex"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
-	clabprogress "github.com/srl-labs/containerlab/progress"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	clabutilsprogress "github.com/srl-labs/containerlab/utils/progress"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/mod/semver"
 )
@@ -880,11 +880,11 @@ func (d *DockerRuntime) PullImage(
 	// The progress reporter renders this image's pull as a single aggregated bar.
 	// When pulls are orchestrated concurrently the reporter is shared via the
 	// context; for standalone pulls (e.g. tool images) we spin up our own.
-	reporter := clabprogress.FromContext(ctx)
+	reporter := clabutilsprogress.FromContext(ctx)
 	if reporter == nil {
 		var stop func()
 
-		reporter, stop = clabprogress.New(os.Stderr)
+		reporter, stop = clabutilsprogress.New(os.Stderr)
 		defer stop()
 	}
 
@@ -912,7 +912,7 @@ type pullLayer struct {
 
 func streamPullProgress(
 	reader io.Reader,
-	r clabprogress.Reporter,
+	r clabutilsprogress.Reporter,
 	image string,
 ) error {
 	dec := json.NewDecoder(reader)
