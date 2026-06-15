@@ -37,7 +37,7 @@ require (
 	github.com/mackerelio/go-osstat v0.2.6
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/opencontainers/runtime-spec v1.2.1
-	github.com/pkg/sftp v1.13.9
+	github.com/pkg/sftp v1.13.10
 	github.com/pmorjan/kmod v1.1.1
 	github.com/scrapli/scrapligo v1.4.0
 	github.com/scrapli/scrapligocfg v1.0.0
