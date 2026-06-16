@@ -77,6 +77,7 @@ func (n *cvce) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		n.Cfg.Memory = "2048MB"
 	}
 
+	n.Cfg.Entrypoint = "/sbin/init"
 	n.Cfg.NetworkMode = "none"
 
 	n.resolvConfPath = filepath.Join(n.Cfg.LabDir, "resolv.conf")
