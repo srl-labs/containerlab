@@ -1,4 +1,4 @@
-package cvce
+package cvcg
 
 import (
 	"context"
@@ -18,7 +18,7 @@ const (
 )
 
 var (
-	KindNames = []string{"cvce", "arista_cvce"}
+	KindNames = []string{"cvcg", "arista_cvcg"}
 
 	defaultCredentials = clabnodes.NewCredentials("root", "password")
 )
@@ -30,17 +30,17 @@ func Register(r *clabnodes.NodeRegistry) {
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
 	r.Register(KindNames, func() clabnodes.Node {
-		return new(cvce)
+		return new(cvcg)
 	}, nrea)
 }
 
-type cvce struct {
+type cvcg struct {
 	clabnodes.DefaultNode
 
 	resolvConfPath string
 }
 
-func (n *cvce) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
+func (n *cvcg) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)
 
 	n.HostRequirements.MinVCPU = 2
@@ -68,10 +68,10 @@ func (n *cvce) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	}
 
 	if n.Cfg.CPU == 0 {
-		n.Cfg.CPU = 2
+		n.Cfg.CPU = 4
 	}
 	if n.Cfg.CPUSet == "" {
-		n.Cfg.CPUSet = "0,3"
+		n.Cfg.CPUSet = "0-3"
 	}
 	if n.Cfg.Memory == "" {
 		n.Cfg.Memory = "2048MB"
@@ -85,7 +85,7 @@ func (n *cvce) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 	return nil
 }
 
-func (n *cvce) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *cvcg) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
 	clabutils.CreateFile(n.resolvConfPath, ResolvConfText)
 
@@ -93,11 +93,11 @@ func (n *cvce) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) e
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
-func (n *cvce) CheckInterfaceName() error {
+func (n *cvcg) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`eth[0-7]$`)
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf("cvce node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named eth0-eth7, where eth0 -> GE1, and so on", n.Cfg.ShortName, e.GetIfaceName())
+			return fmt.Errorf("cvcg node %q has an interface named %q which doesn't match the required pattern. Interfaces should be named eth0-eth7, where eth0 -> GE1, and so on", n.Cfg.ShortName, e.GetIfaceName())
 		}
 	}
 
