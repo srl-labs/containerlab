@@ -342,54 +342,6 @@ func (t *Topology) GetNodeType(nodeName string) string {
 	return defaultType
 }
 
-func (t *Topology) GetVcoFqdn(nodeName string) string {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) string { return node.VeloVcoFqdn },
-		func(group *NodeDefinition) string { return group.VeloVcoFqdn },
-		func(kind *NodeDefinition) string { return kind.VeloVcoFqdn },
-		func(defaults *NodeDefinition) string { return defaults.VeloVcoFqdn },
-		func(v string) bool { return v != "" },
-	)
-}
-
-func (t *Topology) GetVcoApiToken(nodeName string) string {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) string { return node.VeloApiToken },
-		func(group *NodeDefinition) string { return group.VeloApiToken },
-		func(kind *NodeDefinition) string { return kind.VeloApiToken },
-		func(defaults *NodeDefinition) string { return defaults.VeloApiToken },
-		func(v string) bool { return v != "" },
-	)
-}
-
-func (t *Topology) GetVcoEnterpriseId(nodeName string) int {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) int { return node.VeloEnterpriseId },
-		func(group *NodeDefinition) int { return group.VeloEnterpriseId },
-		func(kind *NodeDefinition) int { return kind.VeloEnterpriseId },
-		func(defaults *NodeDefinition) int { return defaults.VeloEnterpriseId },
-		func(v int) bool { return v != 0 },
-	)
-}
-
-func (t *Topology) GetVcoEdgeId(nodeName string) int {
-	return getField(
-		t,
-		nodeName,
-		func(node *NodeDefinition) int { return node.VeloEdgeId },
-		func(group *NodeDefinition) int { return group.VeloEdgeId },
-		func(kind *NodeDefinition) int { return kind.VeloEdgeId },
-		func(defaults *NodeDefinition) int { return defaults.VeloEdgeId },
-		func(v int) bool { return v != 0 },
-	)
-}
-
 func (t *Topology) GetNodePorts(nodeName string) (nat.PortSet, nat.PortMap, error) {
 	ports := getField(
 		t,

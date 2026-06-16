@@ -55,11 +55,6 @@ type NodeDefinition struct {
 	Kind  string `yaml:"kind,omitempty"`
 	Group string `yaml:"group,omitempty"`
 	Type  string `yaml:"type,omitempty"`
-	// Velocloud-specific stuff. Probably need to make this more generic.
-	VeloVcoFqdn           string            `yaml:"vco-fqdn,omitempty"`
-	VeloApiToken          string            `yaml:"api-token,omitempty"`
-	VeloEnterpriseId      int               `yaml:"enterprise-id"`
-	VeloEdgeId            int               `yaml:"edge-id"`
 	StartupConfig         string            `yaml:"startup-config,omitempty"`
 	StartupDelay          uint              `yaml:"startup-delay,omitempty"`
 	EnforceStartupConfig  *bool             `yaml:"enforce-startup-config,omitempty"`
