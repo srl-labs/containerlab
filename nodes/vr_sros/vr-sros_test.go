@@ -140,7 +140,7 @@ func Test_vrSROS_Init_withComponents_buildsVariant(t *testing.T) {
 	err := s.Init(cfg, clabnodes.WithMgmtNet(mgmt))
 	require.NoError(t, err)
 	assert.Contains(t, s.Cfg.Cmd, "cp: chassis=ixr-e slot=A card=cpm-ixr-e ___ "+
-		"lc: chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28")
+		"lc: max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28")
 }
 
 func Test_vrSROS_Init_withMultipleCPMs_errors(t *testing.T) {

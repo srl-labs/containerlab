@@ -2,6 +2,8 @@ package vr_sros
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -67,6 +69,9 @@ func componentTimosLine(chassis string, c *clabtypes.Component, sfm string) stri
 	}
 	if v := strings.TrimSpace(c.Env["max_nics"]); v != "" {
 		parts = append(parts, "max_nics="+v)
+	} else if n := componentPortCount(c); n > 0 {
+		// else try to automatically derive it
+		parts = append(parts, "max_nics="+strconv.Itoa(n))
 	}
 
 	parts = append(parts, "chassis="+chassis)
@@ -103,4 +108,31 @@ func componentTimosLine(chassis string, c *clabtypes.Component, sfm string) stri
 	}
 
 	return strings.Join(parts, " ")
+}
+
+// figure out the max_nics per slot
+func componentPortCount(c *clabtypes.Component) int {
+	total := 0
+	for _, m := range c.MDA {
+		total += mdaPortCount(m.Type)
+	}
+	for _, x := range c.XIOM {
+		for _, m := range x.MDA {
+			total += mdaPortCount(m.Type)
+		}
+	}
+	return total
+}
+
+// get the first number from the mda type, delimit based on the '+'
+// for mdas with multiple formfactors/speeds.
+func mdaPortCount(mdaType string) int {
+	total := 0
+	for group := range strings.SplitSeq(mdaType, "+") {
+		if m := regexp.MustCompile(`^[a-zA-Z]*(\d+)`).FindStringSubmatch(group); m != nil {
+			n, _ := strconv.Atoi(m[1])
+			total += n
+		}
+	}
+	return total
 }
