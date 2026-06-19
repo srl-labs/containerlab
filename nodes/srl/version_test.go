@@ -139,7 +139,13 @@ func TestSetVersionSpecificParamsSSHPubKeys(t *testing.T) {
 			keys := testSSHPubKeys(tt.keyCount)
 			n := &srl{
 				sshPubKeys: keys,
-				swVersion:  &SrlVersion{Major: "23", Minor: "10", Patch: "1", Build: "1", Commit: "test"},
+				swVersion: &SrlVersion{
+					Major:  "23",
+					Minor:  "10",
+					Patch:  "1",
+					Build:  "1",
+					Commit: "test",
+				},
 			}
 			n.Cfg = &clabtypes.NodeConfig{ShortName: "srl1"}
 
@@ -163,6 +169,7 @@ func TestSetVersionSpecificParamsSSHPubKeys(t *testing.T) {
 func TestSetVersionSpecificParamsSSHPubKeysDeterministic(t *testing.T) {
 	keys := testSSHPubKeys(46)
 	reversed := make([]ssh.PublicKey, len(keys))
+
 	for i := range keys {
 		reversed[len(keys)-1-i] = keys[i]
 	}
@@ -170,7 +177,13 @@ func TestSetVersionSpecificParamsSSHPubKeysDeterministic(t *testing.T) {
 	render := func(in []ssh.PublicKey) string {
 		n := &srl{
 			sshPubKeys: in,
-			swVersion:  &SrlVersion{Major: "23", Minor: "10", Patch: "1", Build: "1", Commit: "test"},
+			swVersion: &SrlVersion{
+				Major:  "23",
+				Minor:  "10",
+				Patch:  "1",
+				Build:  "1",
+				Commit: "test",
+			},
 		}
 		n.Cfg = &clabtypes.NodeConfig{ShortName: "srl1"}
 
@@ -183,7 +196,11 @@ func TestSetVersionSpecificParamsSSHPubKeysDeterministic(t *testing.T) {
 	}
 
 	if got, want := render(keys), render(reversed); got != want {
-		t.Fatalf("SSHPubKeys not deterministic across input orderings:\n got: %s\nwant: %s", got, want)
+		t.Fatalf(
+			"SSHPubKeys not deterministic across input orderings:\n got: %s\nwant: %s",
+			got,
+			want,
+		)
 	}
 }
 
