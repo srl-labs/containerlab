@@ -146,6 +146,11 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	s.InterfaceOffset = InterfaceOffset
 	s.InterfaceHelp = InterfaceHelp
 
+	if len(s.Cfg.Components) > 0 {
+		s.InterfaceRegexp = componentIfaceRegexp
+		s.InterfaceHelp = componentInterfaceHelp
+	}
+
 	return nil
 }
 
