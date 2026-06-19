@@ -67,10 +67,7 @@ func componentTimosLine(chassis string, c *clabtypes.Component, sfm string) stri
 	if v := strings.TrimSpace(c.Env["ram"]); v != "" {
 		parts = append(parts, "ram="+v)
 	}
-	if v := strings.TrimSpace(c.Env["max_nics"]); v != "" {
-		parts = append(parts, "max_nics="+v)
-	} else if n := componentPortCount(c); n > 0 {
-		// else try to automatically derive it
+	if n := componentMaxNics(c); n > 0 {
 		parts = append(parts, "max_nics="+strconv.Itoa(n))
 	}
 
@@ -108,6 +105,15 @@ func componentTimosLine(chassis string, c *clabtypes.Component, sfm string) stri
 	}
 
 	return strings.Join(parts, " ")
+}
+
+func componentMaxNics(c *clabtypes.Component) int {
+	if v := strings.TrimSpace(c.Env["max_nics"]); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return componentPortCount(c)
 }
 
 // figure out the max_nics per slot
