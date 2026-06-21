@@ -9,9 +9,9 @@ on:
 env:
   GO_VER: "1.25.10"
   CGO_ENABLED: 0
-  MKDOCS_IMAGE: ghcr.io/eda-labs/mkdocs-material:v9.7.5-3
   GORELEASER_VER: v2.0.1
   PY_VER: "3.10"
+  UV_VER: "0.11.23"
 
 jobs:
   get-tag:
@@ -63,6 +63,8 @@ jobs:
     needs: build-and-release
     runs-on: ubuntu-24.04
     if: contains(github.ref, '-') != true # do not publish docs for beta releases which will have something like v0.0.0-0.33.0-beta
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -70,13 +72,26 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ env.UV_VER }}
+          enable-cache: true
 
-      - name: build docs
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Build docs with Zensical
         if: ${{ contains(needs.get-tag.outputs.git_tag, '-') != true }}
-        run: docker run -v $(pwd):/docs --entrypoint mkdocs ${{ env.MKDOCS_IMAGE }} gh-deploy --force --strict
+        run: |
+          uv run --group docs zensical build --clean --strict
+          test -f site/index.html
+
+      - name: Deploy to GitHub Pages
+        if: ${{ contains(needs.get-tag.outputs.git_tag, '-') != true }}
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          # CNAME ships via docs/CNAME -> site/CNAME, preserving the custom domain.

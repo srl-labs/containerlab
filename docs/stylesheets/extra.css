@@ -370,3 +370,12 @@ div.highlight.code-scroll-sm pre>code {
   border-radius: 0.25rem;
   background: linear-gradient(to bottom, var(--md-default-fg-color--lighter), var(--md-accent-fg-color));
 }
+
+/* accent-colored square bullets for unordered lists */
+.md-typeset ul li {
+  list-style-type: square;
+}
+
+.md-typeset ul li::marker {
+  color: var(--md-accent-fg-color);
+}

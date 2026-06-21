@@ -1,5 +1,6 @@
 ---
 comments: true
+comments_anchor: true
 hide:
   - navigation
 ---
@@ -344,6 +345,8 @@ In a [subsequent post](https://networkcloudandeverything.com/configuring-srlinux
 Create and then destroy a cloud environment ready to Containerlab with pre-loaded topology files, which just work if you use FRR and SR Linux. If you need to run Arista's cEOS, see: [Getting cEOS image](https://github.com/nleiva/aws-testbed/blob/main/lab/get_arista_ceos.md).
 
 This post describes the benefits of running any temporary workload in the cloud to then focus on Containerlab, so skip to the “Network testing challenges” section if you want to get to the meat of it. More details on the labs included at [Network Labs](https://github.com/nleiva/aws-testbed/tree/main/lab#network-labs).
+
+<span id="__comments"></span>
 
 [rdodin-twitter]: https://twitter.com/ntdvps
 [rdodin-linkedin]: https://linkedin.com/in/rdodin

@@ -15,12 +15,12 @@ Sometimes you might want to have a change that spans more than one file, in that
 
 While online editing makes it easy to make small changes, it doesn't offer you a preview of the changes you're making, and this might be a bit cumbersome for larger changes. For this reason, we recommend setting up a local development environment to preview your changes when you feel like your changes are more substantial than a typo fix.
 
-To setup the dev environment you have to have Docker installed, which is a requirement for containerlab anyway. Once you have Docker installed, you can run the following command to start the development server:
+To set up the dev environment you need [uv](https://docs.astral.sh/uv/) installed. uv manages the Python environment and automatically pulls in [Zensical](https://zensical.org/) (the static site generator the documentation is built with) from the `docs` dependency group. Once you have uv installed, you can run the following command to start the development server:
 
 1. Fork the [srl-labs/containerlab](https://github.com/srl-labs/containerlab) repo
 2. Clone your fork of the repo locally
 3. Change to the local repo top level directory - `cd containerlab`
-4. Run `make serve-docs-full PUBLIC=yes`
+4. Run `make serve-docs-full`
 
 You can access the local website content from your browser at http://localhost:8001
 
@@ -28,7 +28,7 @@ Look at the `nav` key in the [`mkdocs.yml`](https://github.com/srl-labs/containe
 
 Any new content page should be added as a markdown file at a suitable location in the `docs` hierarchy and added under the `nav` key in `mkdocs.yml` to be reflected in the website documentation.
 
-Consult the [mkdocs](https://www.mkdocs.org/) and [mkdocs-material](https://squidfunk.github.io/mkdocs-material/) for more information.
+Consult the [Zensical documentation](https://zensical.org/docs/) for more information. Zensical reads the existing `mkdocs.yml` configuration, so the same options largely apply.
 
 Once the documentation changes are complete, commit the changes and raise a pull request.
 

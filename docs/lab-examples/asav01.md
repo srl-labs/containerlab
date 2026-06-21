@@ -7,6 +7,11 @@
 | **Name**                      | asav01                                                               |
 | **Version information**[^2]   | `asav9-23-1.qcow2`, `docker:24.0.6`                                  |
 
+[^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
+[^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
+[asav]: ../manual/kinds/cisco_asav.md
+[client]: https://github.com/srl-labs/network-multitool
+
 ## Description
 
 This lab consists of one Cisco ASAv firewall connected to two Alpine Linux nodes.
