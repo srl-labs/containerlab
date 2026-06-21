@@ -11,11 +11,6 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-// componentIfaceRegexp matches the SR OS port aliases used by components-based nodes:
-//   - direct MDA:    <slot>/<mda>/<port>                e.g. 2/1/3
-//   - XIOM MDA:      <slot>/x<xiom>/<mda>/<port>        e.g. 1/x1/2/3
-//   - connectorized: <slot>/<mda>/c<conn>/<port>       e.g. 1/1/c1/1  (FP4/FP5 QSFP-DD cages)
-//     (xiom + connector combine: <slot>/x<xiom>/<mda>/c<conn>/<port>)
 var componentIfaceRegexp = regexp.MustCompile(
 	`^(?P<slot>\d+)/(?:x(?P<xiom>\d+)/)?(?P<mda>\d+)/(?:c(?P<conn>\d+)/)?(?P<port>\d+)$`,
 )
@@ -23,44 +18,70 @@ var componentIfaceRegexp = regexp.MustCompile(
 const componentInterfaceHelp = "<slot>/<mda>/<port>, <slot>/x<xiom>/<mda>/<port> or " +
 	"<slot>/<mda>/c<conn>/<port> (e.g. 2/1/3, 1/x1/2/3 or 1/1/c1/1), or ethX"
 
-func (s *vrSROS) CalculateInterfaceIndex(ifName string) (int, error) {
-	if len(s.Cfg.Components) == 0 {
-		return s.VRNode.DefaultNode.CalculateInterfaceIndex(ifName)
-	}
-	return componentInterfaceIndex(s.Cfg.Components, ifName)
+type srosPortAlias struct {
+	slot, xiom, mda, portIndex int
 }
 
-func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (int, error) {
+func parseSrosPortAlias(ifName string) (srosPortAlias, error) {
 	groups, err := clabutils.GetRegexpCaptureGroups(componentIfaceRegexp, ifName)
 	if err != nil {
-		return 0, err
+		return srosPortAlias{}, err
 	}
 
-	slot, _ := strconv.Atoi(groups["slot"])
-	mda, _ := strconv.Atoi(groups["mda"])
+	p := srosPortAlias{}
+	p.slot, _ = strconv.Atoi(groups["slot"])
+	p.mda, _ = strconv.Atoi(groups["mda"])
 	port, _ := strconv.Atoi(groups["port"])
-	xiom := 0
 	if groups["xiom"] != "" {
-		xiom, _ = strconv.Atoi(groups["xiom"])
+		p.xiom, _ = strconv.Atoi(groups["xiom"])
 	}
 	if port < 1 {
-		return 0, fmt.Errorf("interface %q has an invalid port number", ifName)
+		return p, fmt.Errorf("interface %q has an invalid port number", ifName)
 	}
 
-	// portIndex is the 1-based position of the port within its MDA. On FP4/FP5 cards each connector
-	// (cN) is one physical cage / one ethX, so the connector number is that position and the
-	// trailing port is the breakout sub-port - which doesn't map to a distinct veth.
-	portIndex := port
+	p.portIndex = port
 	if groups["conn"] != "" {
 		conn, _ := strconv.Atoi(groups["conn"])
 		if port != 1 {
-			return 0, fmt.Errorf(
+			return p, fmt.Errorf(
 				"interface %q uses a breakout sub-port (c%d/%d); breakout ports are not auto-mapped, use the ethX name instead",
 				ifName, conn, port,
 			)
 		}
-		portIndex = conn
+		p.portIndex = conn
 	}
+
+	return p, nil
+}
+
+func (s *vrSROS) CalculateInterfaceIndex(ifName string) (int, error) {
+	if len(s.Cfg.Components) == 0 {
+		return simpleInterfaceIndex(ifName)
+	}
+	return componentInterfaceIndex(s.Cfg.Components, ifName)
+}
+
+func simpleInterfaceIndex(ifName string) (int, error) {
+	p, err := parseSrosPortAlias(ifName)
+	if err != nil {
+		return 0, err
+	}
+	if p.slot != 1 || p.mda != 1 {
+		return 0, fmt.Errorf(
+			"interface %q cannot be mapped on a node without components: only slot 1 / mda 1 ports map automatically. "+
+				"Define components: on this node to use XIOM/multi-MDA/multi-slot port names (e.g. 1/x1/2/c24/1 or 4/1/c1/1), or use the ethX name",
+			ifName,
+		)
+	}
+	return p.portIndex, nil
+}
+
+func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (int, error) {
+	p, err := parseSrosPortAlias(ifName)
+	if err != nil {
+		return 0, err
+	}
+	slot, xiom, mda, portIndex := p.slot, p.xiom, p.mda, p.portIndex
 
 	lcs := make([]*clabtypes.Component, 0, len(components))
 	for _, c := range components {
@@ -72,14 +93,11 @@ func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (
 	base := 0
 	var target *clabtypes.Component
 	if len(lcs) == 0 {
-		// integrated chassis: the (single) card sits in slot A / unset but its data ports are
-		// addressed as slot 1 (e.g. sr-1, ixr-x). Map slot 1 to that card.
 		if slot != 1 {
 			return 0, fmt.Errorf("interface %q references slot %d, but integrated node only has data ports on slot 1", ifName, slot)
 		}
 		target = components[0]
 	} else {
-		// distributed chassis: line cards own contiguous ethX windows in ascending slot order.
 		slices.SortFunc(lcs, func(a, b *clabtypes.Component) int {
 			as, _ := strconv.Atoi(strings.TrimSpace(a.Slot))
 			bs, _ := strconv.Atoi(strings.TrimSpace(b.Slot))
@@ -106,21 +124,11 @@ func componentInterfaceIndex(components []*clabtypes.Component, ifName string) (
 	return base + within + portIndex, nil
 }
 
-// withinCardOffset returns the number of ethX ports that precede the requested (xiom, mda) within a
-// single card. Ordering: direct MDAs (ascending slot) first, then each XIOM (ascending slot) with
-// its MDAs (ascending slot).
-//
-// The XIOM in the alias is optional: SR OS may name an XIOM MDA's ports either with the xiom marker
-// (1/x1/1/c1/1) or without it (1/1/c1/1). When the alias omits the xiom (xiom == 0) the MDA is
-// matched by its number wherever it lives. Cards with no MDA list (e.g. an embedded IMM card such
-// as cpm-ixr-x/imm6-...) have a single implicit port group, so the offset is 0.
 func withinCardOffset(c *clabtypes.Component, xiom, mda int) (int, error) {
 	if len(c.MDA) == 0 && len(c.XIOM) == 0 {
 		return 0, nil
 	}
 
-	// matches reports whether the iterated MDA is the one the alias refers to. With an explicit
-	// xiom the (xiom, mda) pair must match exactly; without one, the mda number alone matches.
 	matches := func(isXiom bool, xiomSlot, mdaSlot int) bool {
 		if xiom > 0 {
 			return isXiom && xiomSlot == xiom && mdaSlot == mda
