@@ -18,9 +18,9 @@ on:
 env:
   GO_VER: "1.25.10"
   CGO_ENABLED: 0
-  MKDOCS_IMAGE: ghcr.io/eda-labs/mkdocs-material:v9.7.5-3
   GORELEASER_VER: v2.6.1
   PY_VER: "3.10"
+  UV_VER: "0.11.23"
   RUNTIME: ${{ inputs.runtime || 'docker' }}
 
 jobs:
@@ -34,6 +34,7 @@ jobs:
       # exporting env vars to be used in invoked workflows
       py_ver: ${{ env.PY_VER }}
       go_ver: ${{ env.GO_VER }}
+      uv_ver: ${{ env.UV_VER }}
       runtime: ${{ env.RUNTIME }}
     steps:
       - id: set-outputs
@@ -144,6 +145,7 @@ jobs:
     uses: ./.github/workflows/smoke-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
     secrets: inherit
     needs:
@@ -170,7 +172,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
-          version: "0.5.28"
+          version: ${{ env.UV_VER }}
           enable-cache: true
 
       - uses: actions/setup-python@v6
@@ -236,7 +238,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
-          version: "0.5.28"
+          version: ${{ env.UV_VER }}
           enable-cache: true
 
       - uses: actions/setup-python@v6
@@ -288,6 +290,7 @@ jobs:
     uses: ./.github/workflows/srlinux-tests.yml
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
     needs:
       - file-changes
@@ -312,7 +315,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
-          version: "0.5.28"
+          version: ${{ env.UV_VER }}
           enable-cache: true
 
       - uses: actions/setup-python@v6
@@ -360,6 +363,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   kind-tests:
@@ -370,6 +374,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   # sros-tests:
@@ -379,6 +384,7 @@ jobs:
   #     - build-containerlab
   #   with:
   #     py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+  #     uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
 
   srsim-tests:
     uses: ./.github/workflows/srsim-tests.yml
@@ -389,6 +395,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
 
   fortigate-tests:
     uses: ./.github/workflows/fortigate-tests.yml
@@ -398,6 +405,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   cisco_iol-tests:
@@ -408,6 +416,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   fdio_vpp-tests:
@@ -418,6 +427,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   vyosnetworks_vyos-tests:
@@ -428,6 +438,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   download-tests:
@@ -438,6 +449,7 @@ jobs:
       - process-gitref
     with:
       py_ver: ${{ needs.process-gitref.outputs.py_ver }}
+      uv_ver: ${{ needs.process-gitref.outputs.uv_ver }}
       runtime: ${{ needs.process-gitref.outputs.runtime }}
 
   # a job that downloads coverage artifact and uses codecov to upload it
@@ -492,14 +504,26 @@ jobs:
         with:
           lfs: true
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ env.UV_VER }}
+          enable-cache: true
 
-      - run: docker run -v $(pwd):/docs --user $(id -u):$(id -g) --entrypoint mkdocs ${{ env.MKDOCS_IMAGE }} build --clean --strict
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Build docs with Zensical
+        run: |
+          uv run --group docs zensical build --clean 2>&1 | tee zensical-build.log
+          # Zensical can exit 0 even on hard build errors (zensical/zensical#491),
+          # so fail explicitly if the output is missing or errors were reported.
+          test -f site/index.html
+          if sed 's/\x1b\[[0-9;]*m//g' zensical-build.log | grep -qE "^Error:"; then
+            echo "::error::Zensical reported build errors"
+            exit 1
+          fi
 
       - name: Cache htmltest external links
         # cache is only used when external links are checked (tags and docs-publish)
@@ -599,24 +623,27 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ env.UV_VER }}
+          enable-cache: true
 
-      - env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Build docs with Zensical
         run: |
-          docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
-            -e GITHUB_TOKEN \
-            --entrypoint /bin/sh \
-            ${{ env.MKDOCS_IMAGE }} \
-            -c 'git -C /docs config --local user.name "github-actions[bot]"; \
-                git -C /docs config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"; \
-                git -C /docs config --local url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \
-                mkdocs gh-deploy --force --strict'
+          uv run --group docs zensical build --clean
+          test -f site/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          # CNAME ships via docs/CNAME -> site/CNAME, preserving the custom domain.
 
   build-devcontainer:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -645,22 +672,24 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          version: ${{ env.UV_VER }}
+          enable-cache: true
 
-      # checkout@v6 does not set the git user config, which is required for mkdocs gh-deploy to work, thus we need to set it manually in the container
-      - env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Build docs with Zensical
         run: |
-          docker run -v $(pwd):/docs --user $(id -u):$(id -g) \
-            -e GITHUB_TOKEN \
-            --entrypoint /bin/sh \
-            ${{ env.MKDOCS_IMAGE }} \
-            -c 'git -C /docs config --local user.name "github-actions[bot]"; \
-                git -C /docs config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"; \
-                git -C /docs config --local url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"; \
-                mkdocs gh-deploy --force --strict'
+          uv run --group docs zensical build --clean
+          test -f site/index.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          # CNAME ships via docs/CNAME -> site/CNAME, preserving the custom domain.

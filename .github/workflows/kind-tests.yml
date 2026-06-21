@@ -6,6 +6,9 @@ name: kind-test
       py_ver:
         required: true
         type: string
+      uv_ver:
+        required: true
+        type: string
       runtime:
         type: string
         default: "docker"
@@ -34,7 +37,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
-          version: "0.5.28"
+          version: ${{ inputs.uv_ver }}
           enable-cache: true
 
       - uses: actions/setup-python@v6

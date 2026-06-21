@@ -1,6 +1,5 @@
 BIN_DIR = $(CURDIR)/bin
 BINARY = $(BIN_DIR)/containerlab
-MKDOCS_IMAGE = ghcr.io/eda-labs/mkdocs-material:v9.7.5-3
 
 DATE := $(shell date)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
@@ -101,28 +100,27 @@ lint:
 
 .PHONY: docs
 docs:
-	docker run -v $(CURDIR):/docs $(MKDOCS_IMAGE) build --clean --strict
+	uv run --group docs zensical build --clean
 
 .PHONY: site
 site:
-	docker run -it --rm -p 8000:8000 -v $(CURDIR):/docs $(MKDOCS_IMAGE)
+	uv run --group docs zensical serve -a 0.0.0.0:8000
 
-# serve the site locally using mkdocs-material
+# serve the site locally using zensical
 .PHONY: serve-docs-full
 serve-docs-full:
-	@docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs $(MKDOCS_IMAGE)
+	uv run --group docs zensical serve -a 0.0.0.0:8001
 
 
-# serve the site locally using mkdocs-material container and dirty-reload
-# in this mode navigation might not update properly, but the content will be updated
-# if nav is not updated, re-run the target.
+# serve the site locally using zensical
+# zensical performs incremental rebuilds, so content and navigation update automatically.
 .PHONY: serve-docs
 serve-docs:
-	docker run -it --rm -p 8001:8000 -v $(CURDIR):/docs $(MKDOCS_IMAGE) serve -a 0.0.0.0:8000 --dirtyreload
+	uv run --group docs zensical serve -a 0.0.0.0:8001
 
 .PHONY: htmltest
 htmltest:
-	docker run --rm -v $(CURDIR):/docs $(MKDOCS_IMAGE) build --clean --strict
+	uv run --group docs zensical build --clean
 	docker run --rm -v $(CURDIR):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
 

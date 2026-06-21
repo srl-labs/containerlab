@@ -9,3 +9,6 @@ IgnoreAltMissing: true
 IgnoreDirs:
   - overrides
 IgnoreInternalEmptyHash: true
+# Zensical renders self-referential theme links (logo, active nav/tab) with an
+# empty href on the page they point to (e.g. the homepage linking to itself).
+IgnoreEmptyHref: true

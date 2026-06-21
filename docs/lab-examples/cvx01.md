@@ -44,3 +44,6 @@ rtt min/avg/max/mdev = 0.400/0.400/0.400/0.000 ms
 [topofile]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/cvx01/topo.clab.yml
 
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
+
+[^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
+[^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
