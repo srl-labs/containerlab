@@ -981,10 +981,13 @@ func TestGetNodeCertificateConfig(t *testing.T) {
 // TestGetNodeCredentials tests the credential resolution hierarchy.
 func TestGetNodeCredentials(t *testing.T) {
 	tests := map[string]struct {
-		topo         *Topology
-		nodeName     string
-		wantUsername string
-		wantPassword string
+		topo                *Topology
+		nodeName            string
+		wantUsername        string
+		wantPassword        string
+		wantIdentityFile    string
+		checkCredentialsSrc bool
+		wantCredentialsSrc  CredentialTopologySource
 	}{
 		"node_overrides_kind": {
 			topo: &Topology{
@@ -1139,12 +1142,90 @@ func TestGetNodeCredentials(t *testing.T) {
 			wantUsername: "node-user-only",
 			wantPassword: "",
 		},
+		"defaults_identity_file_applies_to_node": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{
+					Credentials: NodeCredentials{
+						Username:     "default-user",
+						IdentityFile: "/keys/default",
+					},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName:         "node1",
+			wantUsername:     "default-user",
+			wantIdentityFile: "/keys/default",
+		},
+		"node_identity_file_overrides_defaults": {
+			topo: &Topology{
+				Defaults: &NodeDefinition{
+					Credentials: NodeCredentials{IdentityFile: "/keys/default"},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {
+						Kind:        "srl",
+						Credentials: NodeCredentials{IdentityFile: "/keys/node"},
+					},
+				},
+			},
+			nodeName:         "node1",
+			wantIdentityFile: "/keys/node",
+		},
+		"node_identity_file_resolves_independently_of_username_password": {
+			// A node that sets only identity-file must still pick up its own identity-file, while
+			// username/password continue to resolve on their own precedence chain (here: the kind).
+			// The identity-file source must not hijack the username/password winning level used by
+			// inventory generation.
+			topo: &Topology{
+				Kinds: map[string]*NodeDefinition{
+					"srl": {
+						Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"},
+					},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {
+						Kind:        "srl",
+						Credentials: NodeCredentials{IdentityFile: "/keys/node"},
+					},
+				},
+			},
+			nodeName:         "node1",
+			wantUsername:     "kind-user",
+			wantPassword:     "kind-pass",
+			wantIdentityFile: "/keys/node",
+		},
+		"defaults_identity_only_does_not_change_credentials_source": {
+			// defaults sets only identity-file; the kind supplies username/password. The credentials
+			// source must remain the kind so inventory generation keeps emitting the kind creds.
+			topo: &Topology{
+				Defaults: &NodeDefinition{
+					Credentials: NodeCredentials{IdentityFile: "/keys/default"},
+				},
+				Kinds: map[string]*NodeDefinition{
+					"srl": {
+						Credentials: NodeCredentials{Username: "kind-user", Password: "kind-pass"},
+					},
+				},
+				Nodes: map[string]*NodeDefinition{
+					"node1": {Kind: "srl"},
+				},
+			},
+			nodeName:            "node1",
+			wantUsername:        "kind-user",
+			wantPassword:        "kind-pass",
+			wantIdentityFile:    "/keys/default",
+			checkCredentialsSrc: true,
+			wantCredentialsSrc:  CredentialTopologyKind,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			gotUsername := tc.topo.GetNodeUsername(tc.nodeName)
 			gotPassword := tc.topo.GetNodePassword(tc.nodeName)
+			gotIdentityFile := tc.topo.GetNodeIdentityFile(tc.nodeName)
 
 			if gotUsername != tc.wantUsername {
 				t.Errorf("username: got %q, want %q", gotUsername, tc.wantUsername)
@@ -1152,6 +1233,16 @@ func TestGetNodeCredentials(t *testing.T) {
 
 			if gotPassword != tc.wantPassword {
 				t.Errorf("password: got %q, want %q", gotPassword, tc.wantPassword)
+			}
+
+			if gotIdentityFile != tc.wantIdentityFile {
+				t.Errorf("identity-file: got %q, want %q", gotIdentityFile, tc.wantIdentityFile)
+			}
+
+			if tc.checkCredentialsSrc {
+				if gotSrc := tc.topo.GetNodeCredentialsTopologySource(tc.nodeName); gotSrc != tc.wantCredentialsSrc {
+					t.Errorf("credentials source: got %v, want %v", gotSrc, tc.wantCredentialsSrc)
+				}
 			}
 		})
 	}

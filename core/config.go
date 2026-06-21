@@ -253,6 +253,14 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	// defaults from the node registry.
 	nodeCfg.Credentials.Username = c.Config.Topology.GetNodeUsername(nodeName)
 	nodeCfg.Credentials.Password = c.Config.Topology.GetNodePassword(nodeName)
+	// Resolve the SSH identity-file path against the topology directory (and expand ~) so the
+	// rendered ssh_config works regardless of the cwd ssh is later invoked from.
+	if identityFile := c.Config.Topology.GetNodeIdentityFile(nodeName); identityFile != "" {
+		nodeCfg.Credentials.IdentityFile = clabutils.ResolvePath(
+			identityFile,
+			c.TopoPaths.TopologyFileDir(),
+		)
+	}
 
 	if nodeCfg.Credentials.Username == "" || nodeCfg.Credentials.Password == "" {
 		kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
