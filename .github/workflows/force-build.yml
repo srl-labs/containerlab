@@ -85,7 +85,7 @@ jobs:
       - name: Build docs with Zensical
         if: ${{ contains(needs.get-tag.outputs.git_tag, '-') != true }}
         run: |
-          uv run --group docs zensical build --clean
+          uv run --group docs zensical build --clean --strict
           test -f site/index.html
 
       - name: Deploy to GitHub Pages

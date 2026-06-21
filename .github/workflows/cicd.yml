@@ -516,7 +516,7 @@ jobs:
 
       - name: Build docs with Zensical
         run: |
-          uv run --group docs zensical build --clean 2>&1 | tee zensical-build.log
+          uv run --group docs zensical build --clean --strict 2>&1 | tee zensical-build.log
           # Zensical can exit 0 even on hard build errors (zensical/zensical#491),
           # so fail explicitly if the output is missing or errors were reported.
           test -f site/index.html
@@ -635,7 +635,7 @@ jobs:
 
       - name: Build docs with Zensical
         run: |
-          uv run --group docs zensical build --clean
+          uv run --group docs zensical build --clean --strict
           test -f site/index.html
 
       - name: Deploy to GitHub Pages
@@ -684,7 +684,7 @@ jobs:
 
       - name: Build docs with Zensical
         run: |
-          uv run --group docs zensical build --clean
+          uv run --group docs zensical build --clean --strict
           test -f site/index.html
 
       - name: Deploy to GitHub Pages

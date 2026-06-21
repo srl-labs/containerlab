@@ -100,7 +100,7 @@ lint:
 
 .PHONY: docs
 docs:
-	uv run --group docs zensical build --clean
+	uv run --group docs zensical build --clean --strict
 
 .PHONY: site
 site:
@@ -120,7 +120,7 @@ serve-docs:
 
 .PHONY: htmltest
 htmltest:
-	uv run --group docs zensical build --clean
+	uv run --group docs zensical build --clean --strict
 	docker run --rm -v $(CURDIR):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
 
