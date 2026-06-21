@@ -6,6 +6,43 @@ COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
 LDFLAGS := -s -w -X 'github.com/srl-labs/containerlab/cmd.Version=0.0.0' -X 'github.com/srl-labs/containerlab/cmd.commit=$(COMMIT_HASH)' -X 'github.com/srl-labs/containerlab/cmd.date=$(DATE)'
 
+# uv version downloaded by `install-uv` when uv is not found on the system.
+# Keep in sync with UV_VER in .github/workflows/*.
+UV_VERSION ?= 0.11.23
+
+# Local directory used for downloaded tooling (uv). Already gitignored.
+TOOLS_BIN_DIR ?= $(BIN_DIR)
+
+# OS / arch detection used to download the matching uv release.
+OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ARCH_QUERY := $(shell uname -m)
+ifeq ($(ARCH_QUERY),x86_64)
+ARCH := x86_64
+else ifeq ($(ARCH_QUERY),amd64)
+ARCH := x86_64
+else ifeq ($(ARCH_QUERY),aarch64)
+ARCH := aarch64
+else ifeq ($(ARCH_QUERY),arm64)
+ARCH := aarch64
+else
+ARCH := $(ARCH_QUERY)
+endif
+
+# uv ships its release binaries named after Rust target triples.
+ifeq ($(OS),darwin)
+UV_TARGET := $(ARCH)-apple-darwin
+else
+UV_TARGET := $(ARCH)-unknown-linux-gnu
+endif
+UV_URL := https://github.com/astral-sh/uv/releases/download/$(UV_VERSION)/uv-$(UV_TARGET).tar.gz
+
+# Prefer a uv already on PATH, otherwise fall back to the locally downloaded
+# copy that `install-uv` places in TOOLS_BIN_DIR.
+UV := $(shell command -v uv 2>/dev/null)
+ifeq ($(UV),)
+UV := $(TOOLS_BIN_DIR)/uv
+endif
+
 include .mk/lint.mk
 
 all: build
@@ -98,29 +135,43 @@ lint:
 
 
 
+# Download uv for the detected OS/arch into TOOLS_BIN_DIR.
+.PHONY: install-uv
+install-uv:
+	@mkdir -p $(TOOLS_BIN_DIR)
+	@echo "--> downloading uv $(UV_VERSION) ($(UV_TARGET)) to $(TOOLS_BIN_DIR)"
+	@curl --location --silent --fail --show-error --output - $(UV_URL) \
+		| tar -xz --strip-components=1 -C $(TOOLS_BIN_DIR) uv-$(UV_TARGET)/uv uv-$(UV_TARGET)/uvx
+	@chmod +x $(TOOLS_BIN_DIR)/uv $(TOOLS_BIN_DIR)/uvx
+
+# Ensure uv is available before running any docs target; download it if missing.
+.PHONY: ensure-uv
+ensure-uv:
+	@command -v uv >/dev/null 2>&1 || test -x $(TOOLS_BIN_DIR)/uv || $(MAKE) install-uv
+
 .PHONY: docs
-docs:
-	uv run --group docs zensical build --clean --strict
+docs: ensure-uv
+	$(UV) run --group docs zensical build --clean --strict
 
 .PHONY: site
-site:
-	uv run --group docs zensical serve -a 0.0.0.0:8000
+site: ensure-uv
+	$(UV) run --group docs zensical serve -a 0.0.0.0:8000
 
 # serve the site locally using zensical
 .PHONY: serve-docs-full
-serve-docs-full:
-	uv run --group docs zensical serve -a 0.0.0.0:8001
+serve-docs-full: ensure-uv
+	$(UV) run --group docs zensical serve -a 0.0.0.0:8001
 
 
 # serve the site locally using zensical
 # zensical performs incremental rebuilds, so content and navigation update automatically.
 .PHONY: serve-docs
-serve-docs:
-	uv run --group docs zensical serve -a 0.0.0.0:8001
+serve-docs: ensure-uv
+	$(UV) run --group docs zensical serve -a 0.0.0.0:8001
 
 .PHONY: htmltest
-htmltest:
-	uv run --group docs zensical build --clean --strict
+htmltest: ensure-uv
+	$(UV) run --group docs zensical build --clean --strict
 	docker run --rm -v $(CURDIR):/test wjdp/htmltest --conf ./site/htmltest-w-github.yml
 	rm -rf ./site
 
