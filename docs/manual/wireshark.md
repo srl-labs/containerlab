@@ -24,7 +24,6 @@ Consider the following lab topology which highlights the typical points of packe
 
 <div class="mxgraph" style="max-width:100%;border:1px solid transparent;margin:0 auto; display:block;" data-mxgraph="{&quot;page&quot;:13,&quot;zoom&quot;:2,&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;check-visible-state&quot;:true,&quot;resize&quot;:true,&quot;url&quot;:&quot;https://raw.githubusercontent.com/srl-labs/containerlab/diagrams/containerlab.drawio&quot;}"></div>
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 Since containerlab leverages Linux network devices, users can use any tool to sniff packets. Let's see how one can use either or a combination of the following well-known packet capturing tools: `tcpdump`, `tshark` and `wireshark`.
 
@@ -319,7 +318,6 @@ ip netns exec $netns_name ip link
 
 [edgeshark-docs]: https://edgeshark.siemens.io/#/
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 [^1]: Install `tshark` if you don't have it, or edit the script to use `tcpdump` instead.
 [^2]: It is more than just a UI for Wireshark, but in the context of pcap capture we focus on this feature solely.

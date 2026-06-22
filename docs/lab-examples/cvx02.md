@@ -44,7 +44,6 @@ root@sw1:mgmt:~#
 [cvx]: https://www.nvidia.com/en-gb/networking/ethernet-switching/cumulus-vx/
 [topofile]: https://github.com/srl-labs/containerlab/blob/main/lab-examples/cvx02/topo.clab.yml
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
