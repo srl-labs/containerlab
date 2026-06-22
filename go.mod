@@ -1,6 +1,6 @@
 module github.com/srl-labs/containerlab
 
-go 1.25
+go 1.25.0
 
 require (
 	github.com/awalterschulze/gographviz v2.0.3+incompatible
@@ -37,7 +37,7 @@ require (
 	github.com/mackerelio/go-osstat v0.2.6
 	github.com/minio/minio-go/v7 v7.0.98
 	github.com/opencontainers/runtime-spec v1.2.1
-	github.com/pkg/sftp v1.13.9
+	github.com/pkg/sftp v1.13.10
 	github.com/pmorjan/kmod v1.1.1
 	github.com/scrapli/scrapligo v1.4.0
 	github.com/scrapli/scrapligocfg v1.0.0
@@ -220,7 +220,7 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	go.opentelemetry.io/otel v1.36.0 // indirect
 	go.opentelemetry.io/otel/trace v1.36.0 // indirect
-	golang.org/x/mod v0.32.0
+	golang.org/x/mod v0.37.0
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sync v0.19.0
 	golang.org/x/text v0.33.0 // indirect
