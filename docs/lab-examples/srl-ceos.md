@@ -209,4 +209,3 @@ PING 10.10.10.2 (10.10.10.2) 56(84) bytes of data.
 [^1]: Resource requirements are provisional. Consult with the installation guides for additional information.
 [^2]: The lab has been validated using these versions of the required tools/components. Using versions other than stated might lead to a non-operational setup process.
 [^3]: Credentials `admin:admin`
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

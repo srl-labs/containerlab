@@ -205,4 +205,3 @@ Containerlab CLI has a rich set of commands and flags. Check out the [**Command 
 
 [^1]: For other installation options such as package managers, manual binary downloads or instructions to get containerlab for non-RHEL/Debian distros, refer to the [installation guide](install.md).
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

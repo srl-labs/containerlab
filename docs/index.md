@@ -32,7 +32,7 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 
 <div class="grid cards clab-card-grid" markdown>
 
--   :material-rocket-launch-outline:{ .lg .middle } __Quickstart__
+- :material-rocket-launch-outline:{ .lg .middle } __Quickstart__
 
     ---
 
@@ -40,7 +40,7 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 
     [:octicons-arrow-right-24: Quickstart](quickstart.md)
 
--   :material-file-code-outline:{ .lg .middle } __Topology definition__
+- :material-file-code-outline:{ .lg .middle } __Topology definition__
 
     ---
 
@@ -48,7 +48,7 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 
     [:octicons-arrow-right-24: Topology definition](manual/topo-def-file.md)
 
--   :material-cube-outline:{ .lg .middle } __Kinds__
+- :material-cube-outline:{ .lg .middle } __Kinds__
 
     ---
 
@@ -56,7 +56,7 @@ Containerlab provides a CLI for orchestrating and managing container-based netwo
 
     [:octicons-arrow-right-24: Kinds](manual/kinds/index.md)
 
--   :material-flask-outline:{ .lg .middle } __Lab examples__
+- :material-flask-outline:{ .lg .middle } __Lab examples__
 
     ---
 
@@ -82,7 +82,7 @@ Container orchestration tools like docker-compose are not a good fit for this pu
 
 <div class="grid cards clab-card-grid" markdown>
 
--   :material-console-line:{ .lg .middle } __Command reference__
+- :material-console-line:{ .lg .middle } __Command reference__
 
     ---
 
@@ -90,7 +90,7 @@ Container orchestration tools like docker-compose are not a good fit for this pu
 
     [:octicons-arrow-right-24: Commands](cmd/deploy.md)
 
--   :material-monitor-dashboard:{ .lg .middle } __GUI__
+- :material-monitor-dashboard:{ .lg .middle } __GUI__
 
     ---
 
@@ -98,7 +98,7 @@ Container orchestration tools like docker-compose are not a good fit for this pu
 
     [:octicons-arrow-right-24: GUI](manual/gui/index.md)
 
--   :material-lan:{ .lg .middle } __Networking__
+- :material-lan:{ .lg .middle } __Networking__
 
     ---
 
@@ -106,7 +106,7 @@ Container orchestration tools like docker-compose are not a good fit for this pu
 
     [:octicons-arrow-right-24: Network](manual/network.md)
 
--   :material-kubernetes:{ .lg .middle } __Clabernetes__
+- :material-kubernetes:{ .lg .middle } __Clabernetes__
 
     ---
 
@@ -128,7 +128,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 
 <div class="grid cards clab-card-grid" markdown>
 
--   :simple-nokia:{ .lg .middle } __Nokia__
+- :simple-nokia:{ .lg .middle } __Nokia__
 
     ---
 
@@ -136,7 +136,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 
     [:octicons-arrow-right-24: Nokia SR Linux](manual/kinds/srl.md)
 
--   :simple-cisco:{ .lg .middle } __Cisco__
+- :simple-cisco:{ .lg .middle } __Cisco__
 
     ---
 
@@ -144,7 +144,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 
     [:octicons-arrow-right-24: Cisco XRd](manual/kinds/xrd.md)
 
--   :simple-junipernetworks:{ .lg .middle } __Juniper__
+- :simple-junipernetworks:{ .lg .middle } __Juniper__
 
     ---
 
@@ -152,7 +152,7 @@ Containerlab focuses on the containerized Network Operating Systems which are ty
 
     [:octicons-arrow-right-24: Juniper cRPD](manual/kinds/crpd.md)
 
--   :material-plus-network:{ .lg .middle } __Other kinds__
+- :material-plus-network:{ .lg .middle } __Other kinds__
 
     ---
 
@@ -176,11 +176,11 @@ This short clip demonstrates containerlab features and explains its purpose:
 <section class="clab-section" markdown>
 ## Use cases
 
-* **Labs and demos**  
+- __Labs and demos__  
     Containerlab can be used to provision networking labs built with containers. No software apart from Docker is required on the lab host.
-* **Testing and CI**  
+- __Testing and CI__  
     Because of the containerlab's single-binary packaging and code-based lab definition files, CI systems can spin up containerlab topologies in a single command.
-* **Telemetry validation**  
+- __Telemetry validation__  
     Containerlab labs can be used together with telemetry stacks to validate collection, transport and visualization workflows.
 
 ## Join us

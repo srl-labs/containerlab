@@ -7,7 +7,6 @@ tags:
   - Kind
   - Container kind
 ---
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 # -{{ kind_display_name }}-
 -{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).

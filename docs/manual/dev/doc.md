@@ -52,8 +52,4 @@ Once your diagram PR is merged, you can embed it in any markdown document using 
 
 Replace `YOUR-DIAGRAM` with the name of your diagram file in the above markup. If your file has multiple pages, you can specify the required page number in the above markup. Each diagram will need a markup like the above. You can add multiple markups for different diagrams in the same markdown file.
 
-You MUST also add the below HTML markup at the bottom of your markdown file so that the diagrams are viewable -
-
-```html
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
-```
+The diagrams.net viewer is loaded globally for all documentation pages, so no per-page script tag is required.

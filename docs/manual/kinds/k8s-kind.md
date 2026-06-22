@@ -12,7 +12,6 @@ tags:
 
 -{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 Since more and more applications (including network management systems and network functions) are being deployed in the k8s clusters, it is important to be able to test the network connectivity between the k8s workloads and the underlay network.
 

@@ -12,7 +12,6 @@ Containerlab builds labs based on the topology information that users pass to it
 
 -{{diagram(url='srl-labs/containerlab/diagrams/containerlab.drawio', page='4', title='', zoom='1.5')}}-
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 ## Topology definition components
 

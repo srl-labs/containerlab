@@ -414,10 +414,13 @@ extra_css:
   - stylesheets/extra.css
 
 extra_javascript:
-  # diagrams.net viewer is loaded globally (not inline in index.md) so it
-  # survives instant navigation; instant-reinit.js re-renders it on page swaps
-  - https://viewer.diagrams.net/js/viewer-static.min.js
+  # instant-reinit.js must load BEFORE the diagrams.net viewer so it can define
+  # window.onDrawioViewerLoad and take over rendering, preventing the viewer's
+  # built-in auto-init from racing with us and duplicating diagrams. The viewer
+  # is loaded globally so it survives instant
+  # navigation; instant-reinit.js re-renders it on page swaps.
   - javascripts/instant-reinit.js
+  - https://viewer.diagrams.net/js/viewer-static.min.js
 
 # Extensions
 markdown_extensions:
