@@ -187,5 +187,3 @@ This short clip demonstrates containerlab features and explains its purpose:
 
 Have questions, ideas, bug reports or just want to chat? Come join [our discord server](https://discord.gg/vAyddtaEV9).
 </section>
-
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

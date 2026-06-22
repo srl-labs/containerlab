@@ -12,6 +12,29 @@
   fill: var(--logo-outline-color);
 }
 
+/* START brand accent (custom cyan) --------------------------------------------
+   accent: custom is set in mkdocs.yml; the header stays white because the modern
+   theme variant drives the header from neither primary nor accent. */
+:root {
+  --clab-brand: #00c9ff;
+}
+
+[data-md-color-accent="custom"] {
+  --md-accent-fg-color: var(--clab-brand);
+  --md-accent-fg-color--transparent: color-mix(in srgb, var(--clab-brand) 10%, transparent);
+}
+
+/* brand-colored links — a darker cyan keeps contrast on the light background,
+   the full brand cyan pops against the dark one */
+[data-md-color-scheme="default"] {
+  --md-typeset-a-color: #0098c4;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: var(--clab-brand);
+}
+/* END brand accent */
+
 .md-grid {
   /* a slightly increased width for the main content ~1300px */
   max-width: 65rem;
@@ -397,10 +420,32 @@ div.highlight.code-scroll-sm pre>code {
 
 /* hero --------------------------------------------------------------------- */
 .clab-hero {
+  position: relative;
   margin: 0 0 2.6rem;
   padding: 1rem 0 2.2rem;
   text-align: center;
   border-bottom: 1px solid var(--clab-border);
+}
+
+/* soft brand glow behind the hero logo */
+.clab-hero::before {
+  content: "";
+  position: absolute;
+  top: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36rem;
+  max-width: 90%;
+  height: 15rem;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--clab-cyan) 20%, transparent), transparent);
+  filter: blur(6px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.clab-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 .clab-hero__content {
@@ -441,8 +486,22 @@ div.highlight.code-scroll-sm pre>code {
 }
 
 .clab-section > h2 {
+  position: relative;
+  display: inline-block;
   margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
   font-size: 1.6rem;
+}
+
+.clab-section > h2::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2.4rem;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--clab-cyan), color-mix(in srgb, var(--clab-cyan) 15%, transparent));
 }
 
 .clab-section > p {
@@ -452,21 +511,20 @@ div.highlight.code-scroll-sm pre>code {
   font-size: 0.95rem;
 }
 
-/* diagrams & video must not span the full content width -------------------- */
-/* the two drawings render at different native sizes; stretch both to the full
-   content width so they read as consistent full-width figures with no dead
-   space, instead of one banner + one box floating with gaps */
+/* diagrams & video ---------------------------------------------------------- */
 .clab-diagram {
   margin: 1.4rem 0 0;
+  text-align: center;
 }
 
-/* the diagrams.net viewer pins .mxgraph to an inline pixel width/height; override
-   it (needs !important) and let the SVG viewBox drive proportional scaling */
+/* the diagrams.net viewer pins .mxgraph to an inline pixel width/height; cap it
+   to the column, let the SVG viewBox drive proportional scaling, and center the
+   figure with auto margins */
 .clab-diagram .mxgraph {
   display: block;
   width: 100%;
   height: auto !important;
-  margin: 0;
+  margin: 0 auto;
   border: 1px solid transparent;
 }
 
@@ -479,9 +537,15 @@ div.highlight.code-scroll-sm pre>code {
 .clab-section .iframe-container {
   max-width: 44rem;
   height: auto;
-  margin: 1.2rem 0 0;
+  margin: 1.2rem auto 0;
   padding-bottom: 0;
   aspect-ratio: 16 / 9;
+}
+
+/* center any standalone images placed inside home-page sections */
+.clab-home .clab-section img {
+  display: block;
+  margin-inline: auto;
 }
 
 /* cards -------------------------------------------------------------------- */
@@ -511,11 +575,14 @@ div.highlight.code-scroll-sm pre>code {
 .clab-card-grid.grid.cards > ol > li {
   border-color: var(--clab-border);
   border-radius: 8px;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
 }
 
 .clab-card-grid.grid.cards > ul > li:hover,
 .clab-card-grid.grid.cards > ol > li:hover {
   border-color: color-mix(in srgb, var(--clab-cyan) 65%, var(--clab-border));
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--clab-cyan) 22%, transparent);
 }
 
 @media screen and (max-width: 48em) {
