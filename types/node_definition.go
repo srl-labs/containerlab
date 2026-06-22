@@ -16,6 +16,11 @@ const (
 type NodeCredentials struct {
 	Username string `json:"username,omitempty" yaml:"username,omitempty"`
 	Password string `json:"-" yaml:"password,omitempty"`
+	// IdentityFile is the path to the SSH private key used to authenticate against the node.
+	// When set it is rendered as an IdentityFile directive in the generated ssh_config. Relative
+	// paths are resolved against the topology directory and a leading ~ is expanded; the value is
+	// double-quoted on render so spaces are handled.
+	IdentityFile string `json:"identity-file,omitempty" yaml:"identity-file,omitempty"`
 }
 
 // NodeDefinition represents a configuration a given node can have in the lab definition file.

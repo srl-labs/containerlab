@@ -892,6 +892,10 @@ func (t *Topology) GetNodeAliases(nodeName string) []string {
 	return nodeDefinition.Aliases
 }
 
+// credentialsPresent reports whether a credentials block supplies a username/password pair. The
+// identity-file is resolved on its own precedence chain (resolveTopologyIdentityFile) and is
+// intentionally excluded here so it does not influence the username/password winning level used by
+// inventory generation.
 func credentialsPresent(c NodeCredentials) bool {
 	return c.Username != "" || c.Password != ""
 }
@@ -933,6 +937,37 @@ func (t *Topology) resolveTopologyCredentials(
 	return "", "", CredentialTopologyUnset
 }
 
+// resolveTopologyIdentityFile returns the SSH identity-file path from the most specific topology
+// level where it is set (node, then group, then kind, then defaults). It is resolved independently
+// of username/password so a node may set only identity-file and still have it apply, without
+// affecting the username/password winning level (see resolveTopologyCredentials).
+func (t *Topology) resolveTopologyIdentityFile(nodeName string) string {
+	nodeDefinition, ok := t.Nodes[nodeName]
+	if !ok {
+		return ""
+	}
+
+	if nodeDefinition != nil && nodeDefinition.Credentials.IdentityFile != "" {
+		return nodeDefinition.Credentials.IdentityFile
+	}
+
+	if group := t.GetGroup(t.GetNodeGroup(nodeName)); group != nil &&
+		group.Credentials.IdentityFile != "" {
+		return group.Credentials.IdentityFile
+	}
+
+	if kind := t.GetKind(t.GetNodeKind(nodeName)); kind != nil &&
+		kind.Credentials.IdentityFile != "" {
+		return kind.Credentials.IdentityFile
+	}
+
+	if defaults := t.GetDefaults(); defaults != nil && defaults.Credentials.IdentityFile != "" {
+		return defaults.Credentials.IdentityFile
+	}
+
+	return ""
+}
+
 // GetNodeUsername returns the username from the topology credentials block at the winning
 // precedence level (see resolveTopologyCredentials). Empty if unset at every level.
 func (t *Topology) GetNodeUsername(nodeName string) string {
@@ -945,6 +980,12 @@ func (t *Topology) GetNodeUsername(nodeName string) string {
 func (t *Topology) GetNodePassword(nodeName string) string {
 	_, p, _ := t.resolveTopologyCredentials(nodeName)
 	return p
+}
+
+// GetNodeIdentityFile returns the SSH identity-file path from the topology credentials block at the
+// winning precedence level (see resolveTopologyIdentityFile). Empty if unset at every level.
+func (t *Topology) GetNodeIdentityFile(nodeName string) string {
+	return t.resolveTopologyIdentityFile(nodeName)
 }
 
 // CredentialTopologySource identifies which topology level supplied the credentials block

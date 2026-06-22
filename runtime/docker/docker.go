@@ -7,6 +7,7 @@ package docker
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -32,12 +33,12 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/dustin/go-humanize"
 	"github.com/google/shlex"
-	"github.com/moby/term"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
+	clabutilsprogress "github.com/srl-labs/containerlab/utils/progress"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/mod/semver"
 )
@@ -876,21 +877,169 @@ func (d *DockerRuntime) PullImage(
 		}
 	}
 
-	log.Info("Pulling image", "image", canonicalImageName)
+	// The progress reporter renders this image's pull as a single aggregated bar.
+	// When pulls are orchestrated concurrently the reporter is shared via the
+	// context; for standalone pulls (e.g. tool images) we spin up our own.
+	reporter := clabutilsprogress.FromContext(ctx)
+	if reporter == nil {
+		var stop func()
+
+		reporter, stop = clabutilsprogress.New(os.Stderr)
+		defer stop()
+	}
+
+	reporter.Start(canonicalImageName)
+
 	reader, err := d.Client.ImagePull(ctx, canonicalImageName, image.PullOptions{
 		RegistryAuth: authString,
 	})
 	if err != nil {
+		reporter.Done(canonicalImageName, err)
 		return err
 	}
+	defer reader.Close()
 
-	// show pull progress in term
-	terminalFd, isTerminal := term.GetFdInfo(os.Stdout)
-	_ = jsonmessage.DisplayJSONMessagesStream(reader, os.Stdout, terminalFd, isTerminal, nil)
+	err = streamPullProgress(reader, reporter, canonicalImageName)
+	reporter.Done(canonicalImageName, err)
 
-	log.Info("Done pulling image", "image", canonicalImageName)
+	return err
+}
 
-	return reader.Close()
+type pullLayer struct {
+	frac   float64
+	status string
+}
+
+func streamPullProgress(
+	reader io.Reader,
+	r clabutilsprogress.Reporter,
+	image string,
+) error {
+	dec := json.NewDecoder(reader)
+	layers := map[string]*pullLayer{}
+
+	var lastPercent float64
+
+	var lastStatus string
+
+	for {
+		var jm jsonmessage.JSONMessage
+
+		if err := dec.Decode(&jm); err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+
+			return err
+		}
+
+		if jm.Error != nil {
+			return errors.New(jm.Error.Message)
+		}
+
+		// Messages without an ID are top-level lines ("Pulling from ...",
+		// "Digest: ...", "Status: ...") that don't contribute to layer progress.
+		if jm.ID == "" {
+			continue
+		}
+
+		l, ok := layers[jm.ID]
+		if !ok {
+			l = &pullLayer{}
+			layers[jm.ID] = l
+		}
+
+		l.status = jm.Status
+		l.frac = layerFraction(jm.Status, jm.Progress)
+
+		percent, status := aggregateProgress(layers)
+
+		// Throttle updates: only report meaningful changes.
+		if status != lastStatus || percent-lastPercent >= 0.01 || percent >= 1 {
+			r.Update(image, status, percent)
+			lastPercent = percent
+			lastStatus = status
+		}
+	}
+}
+
+// layerFraction maps a single layer's status/progress to a completion fraction
+// in [0,1], splitting the work evenly between the download and extract phases so
+// the bar advances smoothly across both.
+func layerFraction(status string, p *jsonmessage.JSONProgress) float64 {
+	switch status {
+	case "Already exists", "Pull complete":
+		return 1.0
+	case "Extracting":
+		return 0.5 + 0.5*progressFraction(p)
+	case "Download complete", "Verifying Checksum":
+		return 0.5
+	case "Downloading":
+		return 0.5 * progressFraction(p)
+	default: // "Pulling fs layer", "Waiting", "Retrying", ...
+		return 0.0
+	}
+}
+
+func progressFraction(p *jsonmessage.JSONProgress) float64 {
+	if p == nil || p.Total <= 0 {
+		return 0
+	}
+
+	f := float64(p.Current) / float64(p.Total)
+
+	switch {
+	case f < 0:
+		return 0
+	case f > 1:
+		return 1
+	default:
+		return f
+	}
+}
+
+// aggregateProgress reduces all known layers into one overall percent and a
+// single status word for the image. Docker emits a "Pulling fs layer" line for
+// every layer up front, so the layer count is stable early and the mean is
+// effectively monotonic.
+func aggregateProgress(layers map[string]*pullLayer) (float64, string) {
+	if len(layers) == 0 {
+		return 0, "Waiting"
+	}
+
+	var sum float64
+
+	var anyDownloading, anyExtracting bool
+
+	allComplete := true
+
+	for _, l := range layers {
+		sum += l.frac
+
+		switch l.status {
+		case "Downloading":
+			anyDownloading = true
+		case "Extracting":
+			anyExtracting = true
+		}
+
+		if l.frac < 1 {
+			allComplete = false
+		}
+	}
+
+	status := "Waiting"
+
+	switch {
+	case anyDownloading:
+		status = "Downloading"
+	case anyExtracting:
+		status = "Extracting"
+	case allComplete:
+		status = "Pulled"
+	}
+
+	return sum / float64(len(layers)), status
 }
 
 // StartContainer starts a docker container.

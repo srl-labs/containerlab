@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -266,6 +267,14 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	// defaults from the node registry.
 	nodeCfg.Credentials.Username = c.Config.Topology.GetNodeUsername(nodeName)
 	nodeCfg.Credentials.Password = c.Config.Topology.GetNodePassword(nodeName)
+	// Resolve the SSH identity-file path against the topology directory (and expand ~) so the
+	// rendered ssh_config works regardless of the cwd ssh is later invoked from.
+	if identityFile := c.Config.Topology.GetNodeIdentityFile(nodeName); identityFile != "" {
+		nodeCfg.Credentials.IdentityFile = clabutils.ResolvePath(
+			identityFile,
+			c.TopoPaths.TopologyFileDir(),
+		)
+	}
 
 	if nodeCfg.Credentials.Username == "" || nodeCfg.Credentials.Password == "" {
 		kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
@@ -517,6 +526,15 @@ func (*CLab) loadKernelModules() error {
 		// trying to load the kernel modules.
 		km, err := kmod.New(opts...)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				log.Debugf(
+					"No loadable kernel module support (%v). Assuming module %q is built into the kernel",
+					err, m,
+				)
+
+				return nil
+			}
+
 			log.Warnf("Unable to init module loader: %v. Skipping...", err)
 
 			return nil
@@ -524,9 +542,9 @@ func (*CLab) loadKernelModules() error {
 
 		err = km.Load(m, "", 0)
 		if err != nil {
-			log.Warnf("Unable to load kernel module %q automatically %q", m, err)
-
-			return nil
+			return fmt.Errorf(
+				"kernel module %q is not loaded, not built-in and could not be loaded: %w", m, err,
+			)
 		}
 
 		log.Debugf("kernel module %q loaded successfully", m)
@@ -807,21 +825,26 @@ func (c *CLab) processNodeExecs(nodeCfg *clabtypes.NodeConfig) {
 	}
 }
 
-// processNodeExtras replaces (in place) magic variables in node extras.
+// processNodeExtras replaces magic variables in node extras.
 func (c *CLab) processNodeExtras(nodeCfg *clabtypes.NodeConfig) {
 	if nodeCfg.Extras == nil {
 		return
 	}
 
 	r := c.magicVarReplacer(nodeCfg.ShortName)
+	extras := *nodeCfg.Extras
 
-	for i, e := range nodeCfg.Extras.CeosCopyToFlash {
-		nodeCfg.Extras.CeosCopyToFlash[i] = r.Replace(e)
+	extras.CeosCopyToFlash = slices.Clone(nodeCfg.Extras.CeosCopyToFlash)
+	for i, e := range extras.CeosCopyToFlash {
+		extras.CeosCopyToFlash[i] = r.Replace(e)
 	}
 
-	for i, e := range nodeCfg.Extras.SRLAgents {
-		nodeCfg.Extras.SRLAgents[i] = r.Replace(e)
+	extras.SRLAgents = slices.Clone(nodeCfg.Extras.SRLAgents)
+	for i, e := range extras.SRLAgents {
+		extras.SRLAgents[i] = r.Replace(e)
 	}
+
+	nodeCfg.Extras = &extras
 }
 
 // magicVarReplacer returns a string replacer that replaces all supported magic variables.

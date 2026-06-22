@@ -6,6 +6,9 @@ name: vxlan-test
       py_ver:
         required: true
         type: string
+      uv_ver:
+        required: true
+        type: string
       runtime:
         type: string
         default: "docker"
@@ -21,11 +24,11 @@ jobs:
           - "03*.robot"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: containerlab
 
@@ -36,7 +39,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
-          version: "0.5.28"
+          version: ${{ inputs.uv_ver }}
           enable-cache: true
 
       - uses: actions/setup-python@v6
@@ -96,7 +99,7 @@ jobs:
         run: echo "TEST_SUITE=$(echo ${{ matrix.test-suite }} | tr -d '*')" >> $GITHUB_ENV
 
       # upload test reports as a zip file
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: 08-vxlan-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
@@ -105,7 +108,7 @@ jobs:
       # upload coverage report from unit tests, as they are then
       # merged with e2e tests coverage
       - name: Upload coverage report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-vxlan-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}

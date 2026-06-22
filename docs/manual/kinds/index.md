@@ -3,6 +3,8 @@ search:
   boost: 4
 kind_code_name: kinds_overview
 kind_display_name: Kinds
+tags:
+  - Kind
 ---
 # -{{ kind_display_name }}-
 

@@ -1,6 +1,9 @@
 ---
 hide:
   - navigation
+tags:
+  - Installation
+  - Getting started
 ---
 
 # Installation

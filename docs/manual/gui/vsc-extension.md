@@ -1,3 +1,8 @@
+---
+tags:
+  - GUI
+---
+
 # Containerlab VS Code Extension
 
 The Containerlab VS Code extension brings Containerlab into the editor. It embeds the shared [Containerlab GUI](index.md), discovers topology files in your workspace, shows running labs from the VS Code host, and exposes common lab operations through webviews, editor buttons, context menus, keybindings, and the command palette.

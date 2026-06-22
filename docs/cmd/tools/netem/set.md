@@ -1,3 +1,9 @@
+---
+tags:
+  - Command
+  - Networking
+---
+
 # Setting link impairments
 
 With the `containerlab tools netem set` command users can set link impairments on a specific interface of a container. The following list of link impairments is supported:

@@ -216,6 +216,11 @@
                             "type": "string",
                             "description": "password to use when accessing the node over SSH/NETCONF/GNMI/etc.",
                             "markdownDescription": "[password](https://containerlab.dev/manual/nodes/#credentials) to use when accessing the node over SSH/NETCONF/GNMI/etc."
+                        },
+                        "identity-file": {
+                            "type": "string",
+                            "description": "path to the SSH private key used to authenticate against the node; rendered as an IdentityFile directive in the generated ssh_config.",
+                            "markdownDescription": "path to the SSH private key used to authenticate against the node, rendered as an [IdentityFile](https://containerlab.dev/manual/nodes/#credentials) directive in the generated ssh_config."
                         }
                     }
                 },

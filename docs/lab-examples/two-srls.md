@@ -45,4 +45,3 @@ This lab, besides having the same objectives as [srl01](single-srl.md) lab, also
 [^1]: Resource requirements are provisional. Consult with SR Linux Software Installation guide for additional information.
 [^2]: versions of respective container images or software that was used to create the lab.
 
-<script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>

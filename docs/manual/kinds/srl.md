@@ -3,6 +3,9 @@ search:
   boost: 4
 kind_code_name: nokia_srlinux
 kind_display_name: Nokia SR Linux
+tags:
+  - Kind
+  - Container kind
 ---
 # -{{ kind_display_name }}-
 
