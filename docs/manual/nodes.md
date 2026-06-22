@@ -1,6 +1,9 @@
 ---
 search:
   boost: 6
+tags:
+  - Configuration
+  - Networking
 ---
 
 # Nodes

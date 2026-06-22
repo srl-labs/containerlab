@@ -3,6 +3,9 @@ search:
   boost: 4
 kind_code_name: linux
 kind_display_name: Linux container
+tags:
+  - Kind
+  - Container kind
 ---
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 

@@ -289,9 +289,16 @@ theme:
     - navigation.top
     # - navigation.instant
     - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.path
+    - navigation.prune
+    - navigation.footer
     - search.suggest
+    - search.highlight
     - content.code.annotate
     - content.code.copy
+    - content.action.view
     - content.action.edit
     - toc.follow
     - content.tooltips
@@ -323,6 +330,17 @@ theme:
     logo: clab/icon
     repo: fontawesome/brands/github
     edit: material/file-edit-outline
+    view: material/file-eye-outline
+    tag:
+      default: material/tag-outline
+      getting-started: material/rocket-launch-outline
+      kind: material/cube-outline
+      lab: material/flask-outline
+      command: material/console-line
+      gui: material/monitor-dashboard
+      clabernetes: material/kubernetes
+      ci: material/source-branch-sync
+      networking: material/lan
   favicon: images/favicon.svg
 
 # Plugins
@@ -343,6 +361,21 @@ plugins:
 
 # Customization
 extra:
+  tags:
+    Getting started: getting-started
+    Installation: getting-started
+    Kind: kind
+    Container kind: kind
+    VM kind: kind
+    Lab example: lab
+    Command: command
+    GUI: gui
+    Clabernetes: clabernetes
+    CI: ci
+    Networking: networking
+    Packet capture: networking
+    Image management: networking
+    Configuration: networking
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/hellt
@@ -420,6 +453,7 @@ markdown_extensions:
   - pymdownx.blocks.tab:
       alternate_style: true
   - pymdownx.blocks.admonition
+  - pymdownx.blocks.caption
   - pymdownx.blocks.definition
   - pymdownx.blocks.details
   - pymdownx.tasklist:

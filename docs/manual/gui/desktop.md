@@ -1,3 +1,8 @@
+---
+tags:
+  - GUI
+---
+
 # Containerlab Desktop GUI
 
 The Containerlab Desktop GUI is a standalone application for Linux, macOS, and Windows. It uses the same [Containerlab GUI](index.md) as the Web app, but packages it in an Electron desktop window.

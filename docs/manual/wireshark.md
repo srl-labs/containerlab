@@ -1,5 +1,8 @@
 ---
 comments: true
+tags:
+  - Packet capture
+  - Networking
 ---
 
 # Packet capture & Wireshark
