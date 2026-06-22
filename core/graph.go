@@ -120,6 +120,13 @@ func (c *CLab) GenerateDotGraph(ctx context.Context) error {
 		attr["color"] = black
 
 		eps := link.GetEndpoints()
+		// Skip links that are not point-to-point (e.g. dummy, host, macvlan,
+		// mgmt-net links expose a single endpoint). Indexing eps[1] on such
+		// links would panic, so they are not rendered as edges.
+		if len(eps) != 2 {
+			log.Debugf("skipping non point-to-point link with %d endpoint(s) in dot graph", len(eps))
+			continue
+		}
 		ANodeName := eps[0].GetNode().GetShortName()
 		BNodeName := eps[1].GetNode().GetShortName()
 
@@ -276,6 +283,13 @@ func (c *CLab) GenerateMermaidGraph(direction string) error {
 	// Process the links between Nodes
 	for _, link := range c.Links {
 		eps := link.GetEndpoints()
+		// Skip links that are not point-to-point (e.g. dummy, host, macvlan,
+		// mgmt-net links expose a single endpoint). Indexing eps[1] on such
+		// links would panic, so they are not rendered as edges.
+		if len(eps) != 2 {
+			log.Debugf("skipping non point-to-point link with %d endpoint(s) in mermaid graph", len(eps))
+			continue
+		}
 		fc.AddEdge(eps[0].GetNode().GetShortName(), eps[1].GetNode().GetShortName())
 	}
 
