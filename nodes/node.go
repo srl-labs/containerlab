@@ -31,18 +31,18 @@ const (
 
 // LinkApplyMode describes how apply should handle dataplane link changes for a
 // node that already exists in the running lab.
-type LinkApplyMode string
+type LinkApplyMode = clabtypes.LinkApplyMode
 
 const (
 	// LinkApplyModeRecreate deletes and creates the node so generated runtime
 	// metadata, container env, binds, and startup files are rebuilt.
-	LinkApplyModeRecreate LinkApplyMode = "recreate"
+	LinkApplyModeRecreate LinkApplyMode = clabtypes.LinkApplyModeRecreate
 	// LinkApplyModeRestart adds/removes links first and then restarts the same
 	// container object.
-	LinkApplyModeRestart LinkApplyMode = "restart"
+	LinkApplyModeRestart LinkApplyMode = clabtypes.LinkApplyModeRestart
 	// LinkApplyModeLive applies link changes directly without node lifecycle
 	// actions.
-	LinkApplyModeLive LinkApplyMode = "live"
+	LinkApplyModeLive LinkApplyMode = clabtypes.LinkApplyModeLive
 )
 
 type linkApplyModeNode interface {
@@ -98,7 +98,7 @@ func LinkApplyModeOverrideForNode(node Node) LinkApplyMode {
 		return ""
 	}
 
-	switch mode := LinkApplyMode(node.Config().LinkApplyMode); mode {
+	switch mode := node.Config().LinkApplyMode; mode {
 	case LinkApplyModeLive, LinkApplyModeRestart, LinkApplyModeRecreate:
 		return mode
 	case "":

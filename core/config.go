@@ -250,9 +250,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Components:      c.Config.Topology.GetComponents(nodeName),
 	}
 
-	switch clabnodes.LinkApplyMode(nodeCfg.LinkApplyMode) {
-	case "", clabnodes.LinkApplyModeLive, clabnodes.LinkApplyModeRestart, clabnodes.LinkApplyModeRecreate:
-	default:
+	if nodeCfg.LinkApplyMode != "" && !nodeCfg.LinkApplyMode.IsValid() {
 		return nil, fmt.Errorf(
 			"node %q has invalid link-apply-mode %q, valid values: %s, %s, %s",
 			nodeName,

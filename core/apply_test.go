@@ -326,7 +326,7 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 		name     string
 		hasMode  bool
 		mode     clabnodes.LinkApplyMode
-		override string
+		override clabnodes.LinkApplyMode
 		want     clabnodes.LinkApplyMode
 	}{
 		{
@@ -361,26 +361,26 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 			name:     "override upgrades recreate kind to live",
 			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeRecreate,
-			override: "live",
+			override: clabnodes.LinkApplyModeLive,
 			want:     clabnodes.LinkApplyModeLive,
 		},
 		{
 			name:     "override restricts live kind to recreate",
 			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeLive,
-			override: "recreate",
+			override: clabnodes.LinkApplyModeRecreate,
 			want:     clabnodes.LinkApplyModeRecreate,
 		},
 		{
 			name:     "invalid override falls back to kind mode",
 			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeRestart,
-			override: "hotplug",
+			override: clabnodes.LinkApplyMode("hotplug"),
 			want:     clabnodes.LinkApplyModeRestart,
 		},
 		{
 			name:     "override on node without declared mode",
-			override: "live",
+			override: clabnodes.LinkApplyModeLive,
 			want:     clabnodes.LinkApplyModeLive,
 		},
 	}
