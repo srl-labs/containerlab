@@ -1,6 +1,9 @@
 ---
 search:
   boost: 8
+tags:
+  - Configuration
+  - Getting started
 ---
 
 # Topology definition

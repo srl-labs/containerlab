@@ -1,3 +1,9 @@
+---
+tags:
+  - Lab example
+  - Container kind
+---
+
 # Nokia SR Linux and Arista cEOS
 
 |                               |                                                                             |

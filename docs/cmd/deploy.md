@@ -1,3 +1,9 @@
+---
+tags:
+  - Command
+  - Getting started
+---
+
 # deploy command
 
 ### Description

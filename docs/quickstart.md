@@ -1,6 +1,9 @@
 ---
 hide:
   - navigation
+tags:
+  - Getting started
+  - Lab example
 ---
 # Quickstart
 

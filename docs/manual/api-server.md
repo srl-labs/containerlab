@@ -1,3 +1,9 @@
+---
+tags:
+  - GUI
+  - Command
+---
+
 # Containerlab API Server
 
 The `clab-api-server` exposes Containerlab operations over an HTTP API. It is meant for cases where the lab host needs to be controlled by another program, a browser UI, or a remote user session instead of by someone typing `containerlab` commands directly on the host.

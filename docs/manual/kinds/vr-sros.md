@@ -3,6 +3,9 @@ search:
   boost: 4
 kind_code_name: nokia_sros
 kind_display_name: Nokia SR OS
+tags:
+  - Kind
+  - VM kind
 ---
 # Nokia SR OS
 

@@ -287,12 +287,25 @@ theme:
 
   features:
     - navigation.top
-    # - navigation.instant
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.instant.preview
+    - navigation.tracking
     - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.path
+    - navigation.prune
+    - navigation.footer
     - search.suggest
+    - search.highlight
     - content.code.annotate
     - content.code.copy
+    - content.code.select
+    - content.action.view
     - content.action.edit
+    - content.tabs.link
     - toc.follow
     - content.tooltips
     - navigation.indexes
@@ -304,7 +317,7 @@ theme:
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: white
-      accent: cyan
+      accent: custom
       toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to dark mode
@@ -312,7 +325,7 @@ theme:
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: black
-      accent: cyan
+      accent: custom
       toggle:
         icon: material/toggle-switch
         name: Switch to light mode
@@ -323,6 +336,17 @@ theme:
     logo: clab/icon
     repo: fontawesome/brands/github
     edit: material/file-edit-outline
+    view: material/file-eye-outline
+    tag:
+      default: material/tag-outline
+      getting-started: material/rocket-launch-outline
+      kind: material/cube-outline
+      lab: material/flask-outline
+      command: material/console-line
+      gui: material/monitor-dashboard
+      clabernetes: material/kubernetes
+      ci: material/source-branch-sync
+      networking: material/lan
   favicon: images/favicon.svg
 
 # Plugins
@@ -343,6 +367,21 @@ plugins:
 
 # Customization
 extra:
+  tags:
+    Getting started: getting-started
+    Installation: getting-started
+    Kind: kind
+    Container kind: kind
+    VM kind: kind
+    Lab example: lab
+    Command: command
+    GUI: gui
+    Clabernetes: clabernetes
+    CI: ci
+    Networking: networking
+    Packet capture: networking
+    Image management: networking
+    Configuration: networking
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/hellt
@@ -370,7 +409,16 @@ copyright: >
   <span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.87 9.5C20.6 9 20 9 20 9h-2V8c0-1-1-1-1-1h-2V6c0-1-1-1-1-1h-1V3c0-1-1-1-1-1a9 9 0 1 0 9 9c0-.5-.04-1-.13-1.5M6.5 12c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8  10.5 7.33 12 6.5 12M8 6.5C8 5.67 8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8 8 7.33 8 6.5M11 18c-.83 0-1.5-.67-1.5-1.5S10.17 15 11 15s1.5.67 1.5 1.5S11.83 18 11 18m.5-5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5m5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5M7 22h2v2H7v-2m4 0h2v2h-2v-2m4 0h2v2h-2v-2Z"></path></svg></span> <a href="#__consent">Cookie settings</a>
 
 extra_css:
+  # Manrope is the font the topology diagrams were authored in (fontFamily=Manrope);
+  # load it so the diagrams.net SVGs render in their intended font, not a fallback
+  - https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap
   - stylesheets/extra.css
+
+extra_javascript:
+  # diagrams.net viewer is loaded globally (not inline in index.md) so it
+  # survives instant navigation; instant-reinit.js re-renders it on page swaps
+  - https://viewer.diagrams.net/js/viewer-static.min.js
+  - javascripts/instant-reinit.js
 
 # Extensions
 markdown_extensions:
@@ -420,6 +468,7 @@ markdown_extensions:
   - pymdownx.blocks.tab:
       alternate_style: true
   - pymdownx.blocks.admonition
+  - pymdownx.blocks.caption
   - pymdownx.blocks.definition
   - pymdownx.blocks.details
   - pymdownx.tasklist:

@@ -3,6 +3,9 @@ search:
   boost: 4
 kind_code_name: arista_ceos
 kind_display_name: Arista cEOS
+tags:
+  - Kind
+  - Container kind
 ---
 # -{{ kind_display_name }}-
 

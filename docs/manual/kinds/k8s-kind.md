@@ -3,6 +3,9 @@ search:
   boost: 4
 kind_code_name: k8s-kind
 kind_display_name: Kubernetes in docker (kind) cluster
+tags:
+  - Kind
+  - Clabernetes
 ---
 
 # -{{ kind_display_name }}-

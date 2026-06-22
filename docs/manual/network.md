@@ -1,3 +1,9 @@
+---
+tags:
+  - Networking
+  - Configuration
+---
+
 <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js" async></script>
 
 One of the most important tasks in the process of building container based labs is to create a virtual wiring between the containers and the host. That is one of the problems that containerlab was designed to solve.
