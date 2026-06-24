@@ -11,6 +11,33 @@ const (
 	importEnvsKey = "__IMPORT_ENVS"
 )
 
+// LinkApplyMode describes how apply should handle dataplane link changes for a
+// node that already exists in the running lab.
+type LinkApplyMode string
+
+const (
+	// LinkApplyModeRecreate deletes and creates the node so generated runtime
+	// metadata, container env, binds, and startup files are rebuilt.
+	LinkApplyModeRecreate LinkApplyMode = "recreate"
+	// LinkApplyModeRestart adds/removes links first and then restarts the same
+	// container object.
+	LinkApplyModeRestart LinkApplyMode = "restart"
+	// LinkApplyModeLive applies link changes directly without node lifecycle
+	// actions.
+	LinkApplyModeLive LinkApplyMode = "live"
+)
+
+// IsValid reports whether m is a supported explicit link apply mode. Empty is
+// not a valid explicit mode; it means no override was configured.
+func (m LinkApplyMode) IsValid() bool {
+	switch m {
+	case LinkApplyModeLive, LinkApplyModeRestart, LinkApplyModeRecreate:
+		return true
+	default:
+		return false
+	}
+}
+
 // NodeCredentials holds login material for SSH/NETCONF/GNMI/etc. (topology
 // defaults/kinds/groups/nodes).
 type NodeCredentials struct {
@@ -93,6 +120,9 @@ type NodeDefinition struct {
 	// Network aliases
 	Aliases    []string     `yaml:"aliases,omitempty"`
 	Components []*Component `yaml:"components,omitempty"`
+	// how `containerlab apply` handles dataplane link changes for this node:
+	// live, restart or recreate. Overrides the kind's own declaration.
+	LinkApplyMode LinkApplyMode `yaml:"link-apply-mode,omitempty"`
 }
 
 // Interface compliance.

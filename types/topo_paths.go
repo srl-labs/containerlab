@@ -15,6 +15,7 @@ const (
 	ansibleInventoryFileName      = "ansible-inventory.yml"
 	nornirSimpleInventoryFileName = "nornir-simple-inventory.yml"
 	topologyExportDatFileName     = "topology-data.json"
+	stateFileName                 = ".state.clab.yaml"
 	authzKeysFileName             = "authorized_keys"
 	tlsDir                        = ".tls"
 	caDir                         = "ca"
@@ -195,6 +196,12 @@ func (t *TopoPaths) NodeDir(nodeName string) string {
 // TopoExportFile returns the path for the topology-export file.
 func (t *TopoPaths) TopoExportFile() string {
 	return filepath.Join(t.labDir, topologyExportDatFileName)
+}
+
+// StateFile returns the path for the deployed state file (.state.clab.yaml).
+// state file stores resolved NodeConfigs for diff comparison.
+func (t *TopoPaths) StateFile() string {
+	return filepath.Join(t.labDir, stateFileName)
 }
 
 // AnsibleInventoryFileAbsPath returns the absolute path to the ansible-inventory file.

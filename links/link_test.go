@@ -751,11 +751,17 @@ func TestHasOwnershipAltName(t *testing.T) {
 	if !hasOwnershipAltName(link) {
 		t.Fatalf("expected ownership marker to be detected")
 	}
+	if !HasOwnershipAltName(link) {
+		t.Fatalf("expected exported ownership marker helper to detect marker")
+	}
 
 	link.Attrs().AltNames = []string{"user-alt"}
 
 	if hasOwnershipAltName(link) {
 		t.Fatalf("did not expect ownership marker to be detected")
+	}
+	if HasOwnershipAltName(link) {
+		t.Fatalf("did not expect exported ownership marker helper to detect marker")
 	}
 }
 

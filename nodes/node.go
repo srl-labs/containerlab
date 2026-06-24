@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabcert "github.com/srl-labs/containerlab/cert"
 	clabexec "github.com/srl-labs/containerlab/exec"
@@ -27,6 +28,90 @@ const (
 	// keys for the map returned by GetImages.
 	ImageKey = "image"
 )
+
+// LinkApplyMode describes how apply should handle dataplane link changes for a
+// node that already exists in the running lab.
+type LinkApplyMode = clabtypes.LinkApplyMode
+
+const (
+	// LinkApplyModeRecreate deletes and creates the node so generated runtime
+	// metadata, container env, binds, and startup files are rebuilt.
+	LinkApplyModeRecreate LinkApplyMode = clabtypes.LinkApplyModeRecreate
+	// LinkApplyModeRestart adds/removes links first and then restarts the same
+	// container object.
+	LinkApplyModeRestart LinkApplyMode = clabtypes.LinkApplyModeRestart
+	// LinkApplyModeLive applies link changes directly without node lifecycle
+	// actions.
+	LinkApplyModeLive LinkApplyMode = clabtypes.LinkApplyModeLive
+)
+
+type linkApplyModeNode interface {
+	LinkApplyMode(context.Context) LinkApplyMode
+}
+
+// linkApplyModePermissiveness orders modes from most disruptive to least
+// disruptive; a higher rank means apply touches the node lifecycle less.
+var linkApplyModePermissiveness = map[LinkApplyMode]int{
+	LinkApplyModeRecreate: 0,
+	LinkApplyModeRestart:  1,
+	LinkApplyModeLive:     2,
+}
+
+// LinkApplyModeForNode asks a node how apply should handle dataplane link changes.
+// A link-apply-mode set in the topology file takes precedence over the kind's own
+// declaration.
+func LinkApplyModeForNode(ctx context.Context, node Node) LinkApplyMode {
+	if node == nil {
+		return LinkApplyModeRecreate
+	}
+
+	kindMode := LinkApplyModeRecreate
+	if modeNode, ok := node.(linkApplyModeNode); ok {
+		switch mode := modeNode.LinkApplyMode(ctx); mode {
+		case LinkApplyModeLive, LinkApplyModeRestart, LinkApplyModeRecreate:
+			kindMode = mode
+		}
+	}
+
+	override := LinkApplyModeOverrideForNode(node)
+	if override == "" {
+		return kindMode
+	}
+
+	if linkApplyModePermissiveness[override] > linkApplyModePermissiveness[kindMode] {
+		log.Warn(
+			"link-apply-mode is more permissive than the kind default; "+
+				"make sure the NOS picks up interface changes applied this way",
+			"node", node.Config().ShortName,
+			"link-apply-mode", override,
+			"kind-default", kindMode,
+		)
+	}
+
+	return override
+}
+
+// LinkApplyModeOverrideForNode returns the validated link-apply-mode set for the
+// node in the topology file, or an empty string when no override is set.
+func LinkApplyModeOverrideForNode(node Node) LinkApplyMode {
+	if node == nil || node.Config() == nil {
+		return ""
+	}
+
+	switch mode := node.Config().LinkApplyMode; mode {
+	case LinkApplyModeLive, LinkApplyModeRestart, LinkApplyModeRecreate:
+		return mode
+	case "":
+		return ""
+	default:
+		log.Warn(
+			"Ignoring invalid link-apply-mode",
+			"node", node.Config().ShortName,
+			"link-apply-mode", node.Config().LinkApplyMode,
+		)
+		return ""
+	}
+}
 
 var (
 	// a map of node kinds overriding the default global runtime.
@@ -81,6 +166,14 @@ type DeployParams struct {
 // PostDeployParams contains parameters for the PostDeploy function.
 type PostDeployParams struct {
 	Nodes map[string]Node
+}
+
+type ReconcileResult struct {
+	Action    clabtypes.TopologyDiffAction
+	Restarted []string
+	Recreated []string
+	Created   []string
+	Deleted   []string
 }
 
 // Node is an interface that defines the behavior of a node.
@@ -148,6 +241,14 @@ type Node interface {
 	GetNSPath(ctx context.Context) (string, error)
 	// Generate the host entries for this node
 	GetHostsEntries(ctx context.Context) (clabtypes.HostEntries, error)
+	// ComputeDiff diffs old node cfg with the new one and
+	// returns the diff.
+	ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff
+	// GetReconcilePlan decides the action. Useful for dry-run and actual
+	// reconciliation.
+	GetReconcilePlan(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error)
+	// Reconcile determines what action to take based on diff and executes it.
+	Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error)
 }
 
 type NodeOption func(Node)

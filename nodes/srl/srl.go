@@ -190,6 +190,10 @@ type srl struct {
 	supportsOpenconfig bool
 }
 
+func (*srl) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
+	return clabnodes.LinkApplyModeLive
+}
+
 func (n *srl) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	// Init DefaultNode
 	n.DefaultNode = *clabnodes.NewDefaultNode(n)

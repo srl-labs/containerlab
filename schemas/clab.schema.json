@@ -287,6 +287,16 @@
                     "markdownDescription": "node [network mode](https://containerlab.dev/manual/nodes/#network-mode) (can only be set host, defaults to bridge)",
                     "pattern": "^(host)|(container:\\S+)|(none)$"
                 },
+                "link-apply-mode": {
+                    "type": "string",
+                    "description": "how `containerlab apply` handles dataplane link changes for this node: live (no lifecycle action), restart or recreate; overrides the kind default",
+                    "markdownDescription": "how `containerlab apply` handles [link changes](https://containerlab.dev/cmd/apply/#link-apply-modes) for this node: live (no lifecycle action), restart or recreate; overrides the kind default",
+                    "enum": [
+                        "live",
+                        "restart",
+                        "recreate"
+                    ]
+                },
                 "cpu": {
                     "type": "number",
                     "description": "number of vcpu to allocate for this node/container",

@@ -110,6 +110,7 @@ nav:
       - start: cmd/start.md
       - stop: cmd/stop.md
       - restart: cmd/restart.md
+      - apply: cmd/apply.md
       - redeploy: cmd/redeploy.md
       - inspect:
           - cmd/inspect/index.md

@@ -1,0 +1,67 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: srsim-apply
+
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R2
+      env:
+        CLAB_SROS_DISABLE_COMPONENT_CONFIG: "true"
+
+  nodes:
+    client:
+      kind: linux
+      image: ghcr.io/srl-labs/network-multitool
+
+    R1:
+      kind: nokia_srsim
+      type: sr-1
+      startup-config: |
+        /configure card 1 card-type iom-1
+        /configure card 1 mda 1 mda-type me6-100gb-qsfp28
+        /configure port 1/1/c1 connector breakout c1-100g
+        /configure port 1/1/c1 admin-state enable
+        /configure port 1/1/c1/1 admin-state enable
+        /configure router "Base" interface "to-client" port 1/1/c1/1
+        /configure router "Base" interface "to-client" ipv4 primary address 10.0.1.2 prefix-length 24
+        /configure router "Base" interface "to-client" admin-state enable
+
+    R2:
+      kind: nokia_srsim
+      type: sr-1-24d
+      components:
+        - slot: A
+          type: cpm-1x/i24-800gqsfpdd-1
+        - slot: 1
+          type: cpm-1x/i24-800gqsfpdd-1
+          mda:
+            - slot: 1
+              type: m24-800g-qsfpdd-1
+      startup-config: |
+        /configure port 1/1/c1 connector breakout c4-100g
+        /configure port 1/1/c1 admin-state enable
+        /configure port 1/1/c1/1 admin-state enable
+        /configure router "Base" interface "to-client" port 1/1/c1/1
+        /configure router "Base" interface "to-client" ipv4 primary address 10.0.2.2 prefix-length 24
+        /configure router "Base" interface "to-client" admin-state enable
+{{- if .addNode }}
+
+    R3:
+      kind: nokia_srsim
+      type: sr-1-24d
+      components:
+        - slot: A
+          type: cpm-1x/i24-800gqsfpdd-1
+        - slot: 1
+          type: cpm-1x/i24-800gqsfpdd-1
+          mda:
+            - slot: 1
+              type: m24-800g-qsfpdd-1
+{{- end }}
+
+{{- if .addLinks }}
+  links:
+    - endpoints: ["client:eth1", "R1:1/1/c1/1"]
+    - endpoints: ["client:eth2", "R2:1/1/c1/1"]
+{{- end }}

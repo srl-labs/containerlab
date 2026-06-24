@@ -623,6 +623,18 @@ func (t *Topology) GetNodeNetworkMode(nodeName string) string {
 	)
 }
 
+func (t *Topology) GetNodeLinkApplyMode(nodeName string) LinkApplyMode {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) LinkApplyMode { return node.LinkApplyMode },
+		func(group *NodeDefinition) LinkApplyMode { return group.LinkApplyMode },
+		func(kind *NodeDefinition) LinkApplyMode { return kind.LinkApplyMode },
+		func(defaults *NodeDefinition) LinkApplyMode { return defaults.LinkApplyMode },
+		func(v LinkApplyMode) bool { return v != "" },
+	)
+}
+
 func (t *Topology) GetNodeRuntime(nodeName string) string {
 	return getField(
 		t,

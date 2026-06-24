@@ -62,34 +62,6 @@ func (mr *MockNodeMockRecorder) AddEndpoint(e any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEndpoint", reflect.TypeOf((*MockNode)(nil).AddEndpoint), e)
 }
 
-// AdoptEndpoint mocks base method.
-func (m *MockNode) AdoptEndpoint(e links.Endpoint) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AdoptEndpoint", e)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AdoptEndpoint indicates an expected call of AdoptEndpoint.
-func (mr *MockNodeMockRecorder) AdoptEndpoint(e any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdoptEndpoint", reflect.TypeOf((*MockNode)(nil).AdoptEndpoint), e)
-}
-
-// ReleaseEndpoint mocks base method.
-func (m *MockNode) ReleaseEndpoint(e links.Endpoint) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReleaseEndpoint", e)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ReleaseEndpoint indicates an expected call of ReleaseEndpoint.
-func (mr *MockNodeMockRecorder) ReleaseEndpoint(e any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseEndpoint", reflect.TypeOf((*MockNode)(nil).ReleaseEndpoint), e)
-}
-
 // AddLinkToContainer mocks base method.
 func (m *MockNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	m.ctrl.T.Helper()
@@ -145,6 +117,20 @@ func (m *MockNode) CheckInterfaceName() error {
 func (mr *MockNodeMockRecorder) CheckInterfaceName() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckInterfaceName", reflect.TypeOf((*MockNode)(nil).CheckInterfaceName))
+}
+
+// ComputeDiff mocks base method.
+func (m *MockNode) ComputeDiff(oldCfg, newCfg *types.NodeConfig) *types.TopologyDiff {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ComputeDiff", oldCfg, newCfg)
+	ret0, _ := ret[0].(*types.TopologyDiff)
+	return ret0
+}
+
+// ComputeDiff indicates an expected call of ComputeDiff.
+func (mr *MockNodeMockRecorder) ComputeDiff(oldCfg, newCfg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ComputeDiff", reflect.TypeOf((*MockNode)(nil).ComputeDiff), oldCfg, newCfg)
 }
 
 // Config mocks base method.
@@ -346,6 +332,21 @@ func (mr *MockNodeMockRecorder) GetNSPath(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNSPath", reflect.TypeOf((*MockNode)(nil).GetNSPath), ctx)
 }
 
+// GetReconcilePlan mocks base method.
+func (m *MockNode) GetReconcilePlan(ctx context.Context, diff *types.TopologyDiff) (*nodes.ReconcileResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReconcilePlan", ctx, diff)
+	ret0, _ := ret[0].(*nodes.ReconcileResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetReconcilePlan indicates an expected call of GetReconcilePlan.
+func (mr *MockNodeMockRecorder) GetReconcilePlan(ctx, diff any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReconcilePlan", reflect.TypeOf((*MockNode)(nil).GetReconcilePlan), ctx, diff)
+}
+
 // GetRuntime mocks base method.
 func (m *MockNode) GetRuntime() runtime.ContainerRuntime {
 	m.ctrl.T.Helper()
@@ -476,6 +477,21 @@ func (m *MockNode) PullImage(ctx context.Context) error {
 func (mr *MockNodeMockRecorder) PullImage(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PullImage", reflect.TypeOf((*MockNode)(nil).PullImage), ctx)
+}
+
+// Reconcile mocks base method.
+func (m *MockNode) Reconcile(ctx context.Context, diff *types.TopologyDiff) (*nodes.ReconcileResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Reconcile", ctx, diff)
+	ret0, _ := ret[0].(*nodes.ReconcileResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Reconcile indicates an expected call of Reconcile.
+func (mr *MockNodeMockRecorder) Reconcile(ctx, diff any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockNode)(nil).Reconcile), ctx, diff)
 }
 
 // RunExec mocks base method.

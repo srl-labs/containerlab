@@ -17,6 +17,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strconv"
@@ -47,7 +48,8 @@ import (
 const (
 	SrosDefaultType = "SR-1" // default sros node type
 
-	readyTimeout = time.Minute * 1 // max wait time for node to boot
+	readyTimeout   = time.Minute * 1 // max wait time for node to boot
+	tcpDialTimeout = time.Second * 1
 
 	generateable     = true
 	generateIfFormat = "%d/%d/%d"
@@ -214,6 +216,10 @@ type sros struct {
 	rootCtrName string
 
 	preDeployParams *clabnodes.PreDeployParams
+}
+
+func (*sros) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
+	return clabnodes.LinkApplyModeLive
 }
 
 // Init Function for SR-SIM kind.
@@ -405,6 +411,11 @@ func (n *sros) DeployEndpoints(ctx context.Context) error {
 		return err
 	}
 
+	return n.PostDeployEndpoints(ctx)
+}
+
+// PostDeployEndpoints runs SR-SIM endpoint fixups after dataplane links exist.
+func (n *sros) PostDeployEndpoints(ctx context.Context) error {
 	// Disable TX checksum offload on the host NS veth for the mgmt interface.
 	var peerIfIndex int
 	err := n.ExecFunction(ctx, clabutils.VethPeerIndex("eth0", &peerIfIndex))
@@ -464,6 +475,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 	// Execute SaveConfig after boot. This code should only run on active CPM
 	deadline := time.Now().Add(readyTimeout)
+	var lastHealthErr error
 	for time.Now().Before(deadline) {
 		// Check if context is canceled
 		if err := ctx.Err(); err != nil {
@@ -472,6 +484,7 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 
 		isHealthy, err := n.IsHealthy(ctx)
 		if err != nil {
+			lastHealthErr = err
 			log.Debug(
 				fmt.Errorf(
 					"health check failed, check 'docker logs -f %s': %w",
@@ -527,7 +540,13 @@ func (n *sros) PostDeploy(ctx context.Context, params *clabnodes.PostDeployParam
 			// continue to next iteration
 		}
 	}
-	return nil
+
+	if lastHealthErr != nil {
+		return fmt.Errorf("node %q did not become healthy before timeout: %w",
+			n.Cfg.LongName, lastHealthErr)
+	}
+
+	return fmt.Errorf("node %q did not become healthy before timeout", n.Cfg.LongName)
 }
 
 // Delete func for SR-SIM kind.
@@ -1781,7 +1800,7 @@ func (n *sros) IsHealthy(_ context.Context) (bool, error) {
 		"addr",
 		fmt.Sprintf("%q:830", addr),
 	)
-	return CheckPortWithRetry(addr, 830, readyTimeout, 5, retryTimer)
+	return CheckPortWithRetry(addr, 830, readyTimeout, int(readyTimeout/retryTimer), retryTimer)
 }
 
 // CheckPortWithRetry checks if a port is open with retry logic.
@@ -1793,19 +1812,40 @@ func CheckPortWithRetry(
 	retryDelay time.Duration,
 ) (bool, error) {
 	var lastErr error
+	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
+	deadline := time.Now().Add(timeout)
 
 	for i := range maxRetries {
 		if i > 0 {
-			time.Sleep(retryDelay)
+			if remaining := time.Until(deadline); remaining <= 0 {
+				break
+			} else if retryDelay < remaining {
+				time.Sleep(retryDelay)
+			} else {
+				time.Sleep(remaining)
+			}
 		}
 
-		address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
-		conn, err := net.DialTimeout("tcp", address, timeout)
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+
+		dialTimeout := tcpDialTimeout
+		if remaining < dialTimeout {
+			dialTimeout = remaining
+		}
+
+		conn, err := net.DialTimeout("tcp", address, dialTimeout)
 		if err == nil {
 			conn.Close()
 			return true, nil
 		}
 		lastErr = err
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("timed out checking tcp port %s", address)
 	}
 
 	return false, lastErr
@@ -2129,7 +2169,10 @@ func (n *sros) GetContainerStatus(ctx context.Context) clabruntime.ContainerStat
 
 func (n *sros) Start(ctx context.Context) error {
 	if n.isStandaloneNode() || n.isDistributedCardNode() {
-		return n.DefaultNode.Start(ctx)
+		if err := n.DefaultNode.Start(ctx); err != nil {
+			return err
+		}
+		return n.PostDeployEndpoints(ctx)
 	}
 
 	for _, c := range n.componentNodes {
@@ -2143,7 +2186,7 @@ func (n *sros) Start(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	return n.PostDeployEndpoints(ctx)
 }
 
 func (n *sros) Stop(ctx context.Context) error {
@@ -2166,4 +2209,36 @@ func (n *sros) Stop(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (n *sros) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtypes.TopologyDiff {
+	diff := n.DefaultNode.ComputeDiff(oldCfg, newCfg)
+
+	if oldCfg == nil || newCfg == nil {
+		return diff
+	}
+
+	if !componentSetsEqual(oldCfg.Components, newCfg.Components) {
+		diff.Fields = append(diff.Fields, "Components")
+	}
+
+	return diff
+}
+
+func componentSetsEqual(a, b []*clabtypes.Component) bool {
+	return reflect.DeepEqual(componentsBySlot(a), componentsBySlot(b))
+}
+
+func componentsBySlot(components []*clabtypes.Component) map[string]clabtypes.Component {
+	m := make(map[string]clabtypes.Component)
+	for _, c := range components {
+		if c == nil || strings.TrimSpace(c.Slot) == "" {
+			continue
+		}
+		slot := strings.ToUpper(strings.TrimSpace(c.Slot))
+		norm := *c
+		norm.Slot = slot
+		m[slot] = norm
+	}
+	return m
 }

@@ -3,10 +3,12 @@ package sros
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
@@ -16,6 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
+
+func TestSrosLinkApplyMode(t *testing.T) {
+	if got := (&sros{}).LinkApplyMode(context.Background()); got != clabnodes.LinkApplyModeLive {
+		t.Fatalf("LinkApplyMode() = %q, want %q", got, clabnodes.LinkApplyModeLive)
+	}
+}
 
 func TestComponentSorting(t *testing.T) {
 	tests := []struct {
@@ -74,6 +82,51 @@ func TestComponentSorting(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCheckPortWithRetry(t *testing.T) {
+	seed, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	addr := seed.Addr().(*net.TCPAddr)
+	port := addr.Port
+	require.NoError(t, seed.Close())
+
+	done := make(chan struct{})
+	errCh := make(chan error, 1)
+	go func() {
+		defer close(done)
+
+		time.Sleep(50 * time.Millisecond)
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			errCh <- err
+			return
+		}
+		defer ln.Close()
+
+		conn, err := ln.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		conn.Close()
+	}()
+
+	ok, err := CheckPortWithRetry("127.0.0.1", port, time.Second, 10, 25*time.Millisecond)
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	select {
+	case <-done:
+		select {
+		case err := <-errCh:
+			require.NoError(t, err)
+		default:
+		}
+	case <-time.After(time.Second):
+		t.Fatal("listener did not accept a connection")
 	}
 }
 

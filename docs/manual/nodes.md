@@ -137,6 +137,27 @@ topology:
       restart-policy: "no"
 ```
 
+### link-apply-mode
+
+With `link-apply-mode` a user overrides how the [`apply`](../cmd/apply.md) command handles dataplane link changes for a node that is already running. By default the node kind declares this behavior; the override exists for kinds that have not (yet) been validated for less disruptive handling.
+
+Valid values are:
+
+- `live` - apply link changes in place, without restarting or recreating the node. Requires the NOS to detect hot-plugged interfaces.
+- `restart` - apply link changes and then restart the existing container.
+- `recreate` - delete and create the node so all generated runtime metadata is rebuilt. This is the default for most kinds.
+
+```yaml
+topology:
+  nodes:
+    r1:
+      kind: juniper_crpd
+      image: crpd:24.4R1.9
+      link-apply-mode: live
+```
+
+See [link apply modes](../cmd/apply.md#link-apply-modes) for the per-kind defaults and how to validate that a kind supports `live`.
+
 ### license
 
 Some containerized NOSes require a license to operate or can leverage a license to lift-off limitations of an unlicensed version. With `license` property a user sets a path to a license file that a node will use. The license file will then be mounted to the container by the path that is defined by the `kind/type` of the node.
