@@ -22,12 +22,12 @@ var (
 		`(?:Gi|GigabitEthernet|Te|TenGigE|TenGigabitEthernet)\s?0/0/0/(?P<port>\d+)`,
 	)
 	InterfaceOffset = 0
-	InterfaceHelp   = "GigabitEthernet0/0/0/X, Gi0/0/0/X or TenGigabitEthernet0/0/0/X, TenGigE0/0/0/X, Te0/0/0/X (where X >= 0) or ethX (where X >= 1)"
+	InterfaceHelp   = "TenGigE0/0/0/X, Te0/0/0/X (vmxnet3 default) or GigabitEthernet0/0/0/X, Gi0/0/0/X (igb), where X >= 0, or ethX (where X >= 1)"
 )
 
 const (
 	generateable     = true
-	generateIfFormat = "Gi0/0/0/%d"
+	generateIfFormat = "Te0/0/0/%d"
 
 	scrapliPlatformName = "cisco_iosxr"
 	NapalmPlatformName  = "iosxr"
