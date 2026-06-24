@@ -1,8 +1,8 @@
 # apply command
 
-### Description
+## Description
 
-The `apply` command makes the runtime match a topology definition file. If the lab is not
+The `apply` command reconciles the existing lab topology with the topology definition provided by the user. If the lab is not
 deployed yet, `apply` deploys it. If the lab is already deployed, `apply` discovers the current
 state from the container runtime and applies supported topology deltas without destroying and
 redeploying the whole lab.
@@ -14,20 +14,25 @@ The first implementation focuses on topology shape changes:
 - add links
 - delete links
 
-Apply also tracks a small set of existing node definition changes from the last saved apply state.
-Some changes, such as `exec`, restart the existing node; changes that affect the container object,
-such as image, type, environment, binds, ports, resources, runtime, or components, recreate the node.
-Use `redeploy` or `deploy --reconfigure` when unsupported node properties, startup configuration,
-or generated configuration artifacts need to change.
+Apply also tracks a small set of existing node definition changes from the last saved apply state:
+
+- Changes, such as `exec`, restart the existing node;
+- Changes that affect the container object, such as `image`, `type`, `environment`, `binds`, `ports`, `resources`, `runtime`, or `components`, recreate the node.
+
+Use `redeploy` instead of `apply` when:
+
+- you modify or add node properties that `apply` does not support
+- you need to change the startup configuration,
+- the generated configuration artifacts need to change.
 
 When existing nodes need their dataplane adjusted, apply uses the same endpoint parking
-mechanism as `stop`, `start`, and `restart`: affected nodes are stopped, their dataplane
+mechanism as `stop`/`start`/`restart` commands: affected nodes are stopped, their dataplane
 interfaces are parked in a temporary network namespace, and the interfaces are restored after the
 node starts again.
 
 --8<-- "docs/cmd/deploy.md:env-vars-flags"
 
-### Link apply modes
+## Link apply modes
 
 When apply adds or removes a link on a node that keeps running, the node kind decides how
 disruptive that change is. Three modes exist:
@@ -44,15 +49,15 @@ The currently declared modes per kind:
 
 | Kind                          | Mode       | Notes                                                            |
 | ----------------------------- | ---------- | ---------------------------------------------------------------- |
-| `nokia_srlinux` / `srl`       | `live`     | SR Linux detects hot-plugged interfaces                          |
+| `nokia_srlinux`       | `live`     | SR Linux detects hot-plugged interfaces                          |
 | `nokia_srsim`                 | `live`     | SR-SIM detects hot-plugged interfaces                            |
 | `linux`                       | `live`     | plain Linux containers see new interfaces immediately            |
-| `ceos` / `arista_ceos`        | `restart`  | cEOS requires a restart to enumerate new interfaces              |
+| `arista_ceos`        | `restart`  | cEOS requires a restart to enumerate new interfaces              |
 | vrnetlab-based VM kinds       | `recreate` | VM NIC wiring is fixed at VM boot; live changes cannot work      |
 | images built with Boxen       | `live`     | detected via the `org.opencontainers.image.vendor=Boxen` label   |
 | all other kinds               | `recreate` | conservative default for kinds not yet validated                 |
 
-#### Overriding the mode
+### Overriding the mode
 
 If you know that a node's NOS handles hot-plugged interfaces (or at least survives a plain
 restart), you can override the kind default with the `link-apply-mode` property on a node, a
@@ -71,7 +76,7 @@ The override takes precedence over the kind's declaration. When the override is 
 than the kind default, containerlab logs a warning: it is then your responsibility to verify the
 NOS actually uses interfaces added this way.
 
-#### Validating that a kind supports live link changes
+### Validating that a kind supports live link changes
 
 The kernel will always show a hot-plugged interface inside the container namespace - the real
 question is whether the NOS picks it up. To validate a kind:
@@ -88,13 +93,13 @@ question is whether the NOS picks it up. To validate a kind:
 If a kind passes this validation, please open an issue or pull request so the kind's default can
 be changed for everyone - the change is a one-line declaration in the kind's node implementation.
 
-### Usage
+## Usage
 
 `containerlab [global-flags] apply [local-flags]`
 
-### Flags
+## Flags
 
-#### topology | name
+### topology | name
 
 Use the global `--topo | -t` flag to reference the desired topology file, or use the global
 `--name` flag to reference an already deployed lab by name.
@@ -106,26 +111,26 @@ When `--name` is used, containerlab tries to derive the topology file from the l
 deployed containers. If the original topology file is no longer available, provide `--topo`
 explicitly.
 
-#### dry-run
+### dry-run
 
 The local `--dry-run` flag prints the planned apply actions without applying them.
 
-#### max-workers
+### max-workers
 
 With `--max-workers` flag, it is possible to limit the number of concurrent workers that create
 new nodes.
 
-#### skip-post-deploy
+### skip-post-deploy
 
 The `--skip-post-deploy` flag skips the post-deploy phase for nodes added by apply.
 
-#### export-template
+### export-template
 
 The local `--export-template` flag allows a user to specify a custom Go template that will be used
 for exporting topology data into `topology-data.json` file under the lab directory after apply
 finishes.
 
-### Limitations
+## Limitations
 
 Apply currently supports only a subset of topology changes:
 
@@ -152,15 +157,15 @@ endpoint.
 
 Deleted nodes are removed directly from the runtime. Node lab directories are kept.
 
-### Examples
+## Examples
 
-#### Preview topology changes
+### Preview topology changes
 
 ```bash
 containerlab apply -t mylab.clab.yml --dry-run
 ```
 
-#### Deploy or apply topology changes
+### Deploy or apply topology changes
 
 ```bash
 containerlab apply -t mylab.clab.yml
@@ -169,7 +174,7 @@ containerlab apply -t mylab.clab.yml
 If `mylab` is not running, the command deploys it. If it is running, the command applies supported
 topology changes in place.
 
-#### Apply by lab name
+### Apply by lab name
 
 ```bash
 containerlab apply --name mylab
