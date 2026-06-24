@@ -103,6 +103,7 @@
                         "ext-container",
                         "rare",
                         "cisco_xrd",
+                        "cisco_xrd_vrouter",
                         "cisco_c8000",
                         "cisco_c8000v",
                         "cisco_cat9kv",
@@ -2062,6 +2063,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_xrd": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cisco_xrd_vrouter": {
                             "$ref": "#/definitions/node-config"
                         },
                         "cisco_xrv": {

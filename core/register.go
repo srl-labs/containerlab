@@ -14,6 +14,7 @@ import (
 	clabnodescisco_asav "github.com/srl-labs/containerlab/nodes/cisco_asav"
 	clabnodescisco_sdwan "github.com/srl-labs/containerlab/nodes/cisco_sdwan"
 	clabnodescisco_vios "github.com/srl-labs/containerlab/nodes/cisco_vios"
+	clabnodescisco_xrd_vrouter "github.com/srl-labs/containerlab/nodes/cisco_xrd_vrouter"
 	clabnodescjunosevolved "github.com/srl-labs/containerlab/nodes/cjunosevolved"
 	clabnodescrpd "github.com/srl-labs/containerlab/nodes/crpd"
 	clabnodescvx "github.com/srl-labs/containerlab/nodes/cvx"
@@ -108,6 +109,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesvr_vjunosevolved.Register(c.Reg)
 	clabnodesvr_xrv.Register(c.Reg)
 	clabnodesvr_xrv9k.Register(c.Reg)
+	clabnodescisco_xrd_vrouter.Register(c.Reg)
 	clabnodessonic_vm.Register(c.Reg)
 	clabnodesvr_cat9kv.Register(c.Reg)
 	clabnodesvr_openwrt.Register(c.Reg)

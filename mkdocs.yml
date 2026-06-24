@@ -14,6 +14,7 @@ nav:
           - Arista vEOS: manual/kinds/vr-veos.md
       - Cisco:
           - Cisco XRd: manual/kinds/xrd.md
+          - Cisco XRd vRouter: manual/kinds/cisco_xrd_vrouter.md
           - Cisco XRv9k: manual/kinds/vr-xrv9k.md
           - Cisco XRv: manual/kinds/vr-xrv.md
           - Cisco CSR1000v: manual/kinds/vr-csr.md
