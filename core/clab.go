@@ -553,15 +553,27 @@ func (c *CLab) scheduleNodes(
 				// the nodes stuck in waiting.
 				// Entering the Create stage here would not consume a worker and let other nodes
 				// to be scheduled.
+				// indicate we are done, such that only when all of these functions are done,
+				// the workerChan is being closed
+				defer wfcwg.Done()
+
 				node.EnterStage(ctx, clabtypes.WaitForCreate)
+				// if the deploy was cancelled while waiting for the create stage, stop
+				// here instead of enqueueing a node whose dependencies were never met
+				// (and whose worker may already have exited).
+				if ctx.Err() != nil {
+					return
+				}
 
 				// wait for possible external dependencies
 				c.waitForExternalNodeDependencies(ctx, node.Config().ShortName)
-				// when all nodes that this node depends on are created, push it into the channel
-				workerChan <- node
-				// indicate we are done, such that only when all of these functions are done,
-				// the workerChan is being closed
-				wfcwg.Done()
+				// when all nodes that this node depends on are created, push it into the
+				// channel; honor cancellation so the send cannot block forever once the
+				// workers have unwound on Ctrl-C.
+				select {
+				case workerChan <- node:
+				case <-ctx.Done():
+				}
 			}(dn, c.dependencyManager, concurrentChan, workerFuncChWG)
 		}
 
