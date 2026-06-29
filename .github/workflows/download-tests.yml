@@ -66,14 +66,14 @@ jobs:
           bash ./tests/rf-run.sh ${{ inputs.runtime }} ./tests/09-download/${{ matrix.test-suite }}
 
       - name: Upload test report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: 09-download-log-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
           path: ./tests/out/*.html
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: coverage-download-tests-${{ env.TEST_SUITE }}-${{ inputs.runtime }}
