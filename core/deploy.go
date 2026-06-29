@@ -87,6 +87,13 @@ func (c *CLab) Deploy( //nolint: funlen
 		)
 	}
 
+	// if the deploy context was cancelled (e.g. Ctrl-C) the node workers above
+	// unwound early; stop here instead of running post-deploy work (host endpoint
+	// deployment, vxlan stitching, exports, inventories) against a partial lab.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	// also call deploy on the special nodes endpoints (only host is required for the
 	// vxlan stitched endpoints).
 	// this must happen after all node workers have finished so that veth pairs created
