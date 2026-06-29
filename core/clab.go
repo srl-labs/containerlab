@@ -356,7 +356,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			delay := node.Config().StartupDelay
 			if delay > 0 {
 				log.Infof("node %q is being delayed for %d seconds", node.Config().ShortName, delay)
-				time.Sleep(time.Duration(delay) * time.Second)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(time.Duration(delay) * time.Second):
+				}
 			}
 
 			err := node.PreDeploy(
@@ -447,7 +451,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 						break
 					}
 
-					time.Sleep(time.Second)
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(time.Second):
+					}
 				}
 			}
 
@@ -464,7 +472,11 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 						break
 					}
 
-					time.Sleep(time.Second)
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(time.Second):
+					}
 				}
 			}
 
