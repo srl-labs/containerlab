@@ -51,7 +51,7 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 // supposed to be stitched is returned separately for further processing.
 func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(
 	params *ResolveParams,
-) (*LinkVEth, Endpoint, error) {
+) (Link, Endpoint, error) {
 	var err error
 
 	// hostIface is the name of the host interface that will be created
@@ -77,10 +77,36 @@ func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(
 		return nil, nil, err
 	}
 
-	vethLink := hl.(*LinkVEth)
+	if hl == nil {
+		return nil, nil, fmt.Errorf("failed to resolve host veth component for vxlan-stitch")
+	}
 
-	// host endpoint is always the 2nd element in the Endpoints slice
-	return vethLink, vethLink.Endpoints[1], nil
+	eps := hl.GetEndpoints()
+	if len(eps) != 2 {
+		return nil, nil, fmt.Errorf(
+			"expected host veth component to resolve to 2 endpoints, got %d",
+			len(eps),
+		)
+	}
+
+	stitchEp, ok := endpointByInterfaceName(eps, hostIface)
+	if !ok {
+		return nil, nil, fmt.Errorf(
+			"expected host veth component to include endpoint %q",
+			hostIface,
+		)
+	}
+
+	return hl, stitchEp, nil
+}
+
+func endpointByInterfaceName(endpoints []Endpoint, ifaceName string) (Endpoint, bool) {
+	for _, ep := range endpoints {
+		if ep != nil && ep.GetIfaceName() == ifaceName {
+			return ep, true
+		}
+	}
+	return nil, false
 }
 
 // resolveStitchedVxlan resolves the stitched raw vxlan link.
@@ -316,6 +342,10 @@ func (l *LinkVxlan) Remove(ctx context.Context) error {
 
 func (l *LinkVxlan) GetEndpoints() []Endpoint {
 	return []Endpoint{l.localEndpoint, l.remoteEndpoint}
+}
+
+func (l *LinkVxlan) GetRuntimeEndpoints() []Endpoint {
+	return []Endpoint{l.localEndpoint}
 }
 
 func (*LinkVxlan) GetType() LinkType {

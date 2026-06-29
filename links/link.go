@@ -347,10 +347,18 @@ type Link interface {
 	GetType() LinkType
 	// GetEndpoints returns the endpoints of the link.
 	GetEndpoints() []Endpoint
+	// GetRuntimeEndpoints returns endpoints apply/deploy may create, discover, or remove.
+	// Parent-only and remote metadata endpoints are excluded where applicable.
+	GetRuntimeEndpoints() []Endpoint
 	// GetMTU returns the Link MTU.
 	GetMTU() int
 	// GetVars returns the link-level vars.
 	GetVars() map[string]any
+}
+
+// StitchingLink is implemented by links that apply a post-deploy stitching step.
+type StitchingLink interface {
+	Stitch() error
 }
 
 func extractHostNodeInterfaceData(

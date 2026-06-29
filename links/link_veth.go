@@ -339,3 +339,7 @@ func (l *LinkVEth) Remove(ctx context.Context) error {
 func (l *LinkVEth) GetEndpoints() []Endpoint {
 	return l.Endpoints
 }
+
+func (l *LinkVEth) GetRuntimeEndpoints() []Endpoint {
+	return l.GetEndpoints()
+}

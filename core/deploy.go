@@ -105,12 +105,12 @@ func (c *CLab) Deploy( //nolint: funlen
 		}
 	}
 
-	// Stitch VxlanStitched links after node workers and host endpoints have finished.
+	// Stitch links after node workers and host endpoints have finished.
 	// The veth pair is already created by node workers and the VxLAN interface is created
 	// by host endpoint deploy; Stitch applies the TC redirect rules to bridge them.
 	for _, link := range c.Links {
-		if stitchedLink, ok := link.(*clablinks.VxlanStitched); ok {
-			if err = stitchedLink.Stitch(); err != nil {
+		if stitcher, ok := link.(clablinks.StitchingLink); ok {
+			if err = stitcher.Stitch(); err != nil {
 				log.Warnf("failed stitching vxlan link: %v", err)
 			}
 		}
@@ -472,8 +472,8 @@ func (c *CLab) deployApplyLinks(ctx context.Context, links []clablinks.Link) err
 			}
 		}
 
-		if stitchedLink, ok := link.(*clablinks.VxlanStitched); ok {
-			if err := stitchedLink.Stitch(); err != nil {
+		if stitcher, ok := link.(clablinks.StitchingLink); ok {
+			if err := stitcher.Stitch(); err != nil {
 				return fmt.Errorf("failed stitching link %s: %w", applyLinkName(link), err)
 			}
 		}

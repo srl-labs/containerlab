@@ -13,7 +13,7 @@ import (
 type VxlanStitched struct {
 	LinkCommonParams
 	vxlanLink *LinkVxlan
-	vethLink  *LinkVEth
+	vethLink  Link
 	// the veth does not distinguish between endpoints. but we
 	// need to know which endpoint is the one used for
 	// stitching therefore we get that endpoint separately
@@ -21,7 +21,7 @@ type VxlanStitched struct {
 }
 
 // NewVxlanStitched constructs a new VxlanStitched object.
-func NewVxlanStitched(vxlan *LinkVxlan, veth *LinkVEth, vethStitchEp Endpoint) *VxlanStitched {
+func NewVxlanStitched(vxlan *LinkVxlan, veth Link, vethStitchEp Endpoint) *VxlanStitched {
 	// init the VxlanStitched struct
 	vxlanStitched := &VxlanStitched{
 		LinkCommonParams: vxlan.LinkCommonParams,
@@ -112,6 +112,14 @@ func (l *VxlanStitched) Remove(ctx context.Context) error {
 // GetEndpoints returns the endpoints that are part of the link.
 func (l *VxlanStitched) GetEndpoints() []Endpoint {
 	return []Endpoint{l.vxlanLink.localEndpoint, l.vxlanLink.remoteEndpoint}
+}
+
+func (l *VxlanStitched) GetRuntimeEndpoints() []Endpoint {
+	eps := l.vethLink.GetRuntimeEndpoints()
+	endpoints := make([]Endpoint, 0, len(eps)+1)
+	endpoints = append(endpoints, eps...)
+	endpoints = append(endpoints, l.vxlanLink.localEndpoint)
+	return endpoints
 }
 
 // GetType returns the LinkType enum.

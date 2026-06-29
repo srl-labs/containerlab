@@ -118,3 +118,7 @@ func (l *LinkDummy) Remove(ctx context.Context) error {
 func (l *LinkDummy) GetEndpoints() []Endpoint {
 	return l.Endpoints
 }
+
+func (l *LinkDummy) GetRuntimeEndpoints() []Endpoint {
+	return l.GetEndpoints()
+}

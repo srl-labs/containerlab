@@ -618,6 +618,8 @@ func (*CLab) getSpecialLinkNodes() map[string]clablinks.Node {
 
 // ResolveLinks resolves raw links to the actual link types and stores them in the CLab.Links map.
 func (c *CLab) ResolveLinks() error {
+	c.resetResolvedLinks()
+
 	resolveParams := &clablinks.ResolveParams{
 		Nodes:          c.getLinkNodes(),
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
@@ -640,6 +642,22 @@ func (c *CLab) ResolveLinks() error {
 	}
 
 	return nil
+}
+
+func (c *CLab) resetResolvedLinks() {
+	for _, ep := range c.Endpoints {
+		if ep == nil || ep.GetNode() == nil {
+			continue
+		}
+		owner, ok := ep.GetNode().(clablinks.EndpointOwner)
+		if !ok {
+			continue
+		}
+		_ = owner.ReleaseEndpoint(ep)
+	}
+
+	c.Endpoints = nil
+	c.Links = make(map[int]clablinks.Link)
 }
 
 // extractDNSServers extracts DNS servers from the resolv.conf files

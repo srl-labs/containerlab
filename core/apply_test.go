@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -93,6 +95,10 @@ func (l *applyFakeLink) GetEndpoints() []clablinks.Endpoint {
 	return l.endpoints
 }
 
+func (l *applyFakeLink) GetRuntimeEndpoints() []clablinks.Endpoint {
+	return l.endpoints
+}
+
 func (*applyFakeLink) GetMTU() int {
 	return 0
 }
@@ -145,6 +151,85 @@ func TestApplyDryRunPlansDeployWhenLabMissing(t *testing.T) {
 	}
 	if result.LabName != c.Config.Name {
 		t.Fatalf("planned lab name %q, want %q", result.LabName, c.Config.Name)
+	}
+}
+
+func TestApplyWritesStateForNoChanges(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+
+	labDir := t.TempDir()
+	topoFile := filepath.Join(labDir, "noop.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: noop\n"), 0o644); err != nil {
+		t.Fatalf("failed to write topology file: %v", err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatalf("failed to create topo paths: %v", err)
+	}
+	if err := topoPaths.SetLabDir(labDir); err != nil {
+		t.Fatalf("failed to set lab dir: %v", err)
+	}
+
+	nodeCfg := &clabtypes.NodeConfig{
+		ShortName: "n1",
+		LongName:  "clab-noop-n1",
+	}
+	diff := &clabtypes.TopologyDiff{}
+
+	mockRuntime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return([]clabruntime.GenericContainer{
+			{
+				Labels: map[string]string{
+					clabconstants.NodeName:      "n1",
+					clabconstants.NodeMgmtNetBr: "br-test",
+				},
+			},
+		}, nil)
+	mockNode.EXPECT().Config().Return(nodeCfg).AnyTimes()
+	mockNode.EXPECT().CheckDeploymentConditions(gomock.Any()).Return(nil)
+	mockNode.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).Return(diff)
+	mockNode.EXPECT().
+		GetReconcilePlan(gomock.Any(), diff).
+		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionNone}, nil)
+	mockNode.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running).AnyTimes()
+	mockNode.EXPECT().ExecFunction(gomock.Any(), gomock.Any()).Return(nil)
+	mockNode.EXPECT().
+		Reconcile(gomock.Any(), diff).
+		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionNone}, nil)
+
+	topo := clabtypes.NewTopology()
+	topo.Nodes["n1"] = &clabtypes.NodeDefinition{Kind: "linux", Image: "alpine:latest"}
+
+	c := &CLab{
+		Config: &Config{
+			Name:     "noop",
+			Mgmt:     &clabtypes.MgmtNet{},
+			Topology: topo,
+		},
+		TopoPaths: topoPaths,
+		Nodes: map[string]clabnodes.Node{
+			"n1": mockNode,
+		},
+		Links: map[int]clablinks.Link{},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: mockRuntime,
+		},
+	}
+
+	result, err := c.Apply(context.Background(), &ApplyOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.DeployedLab {
+		t.Fatal("expected no-op apply, got deploy result")
+	}
+	if _, err := os.Stat(topoPaths.StateFile()); err != nil {
+		t.Fatalf("expected no-op apply to write state file: %v", err)
 	}
 }
 

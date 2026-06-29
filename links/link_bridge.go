@@ -71,6 +71,10 @@ func (b *Bridge) GetEndpoints() []Endpoint {
 	return []Endpoint{b.endpoint}
 }
 
+func (b *Bridge) GetRuntimeEndpoints() []Endpoint {
+	return b.GetEndpoints()
+}
+
 // GetMTU returns the Link MTU.
 func (b *Bridge) GetMTU() int {
 	return b.MTU

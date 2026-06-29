@@ -200,6 +200,10 @@ func (l *LinkMacVlan) GetEndpoints() []Endpoint {
 	}
 }
 
+func (l *LinkMacVlan) GetRuntimeEndpoints() []Endpoint {
+	return []Endpoint{l.NodeEndpoint}
+}
+
 type MacVlanMode string
 
 const (

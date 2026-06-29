@@ -5,6 +5,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -180,9 +181,9 @@ func vxlanCreate(cobraCmd *cobra.Command, o *Options) error {
 		return err
 	}
 
-	vxl, ok := link.(*clablinks.VxlanStitched)
+	vxl, ok := link.(existingVethDeployer)
 	if !ok {
-		return fmt.Errorf("not a VxlanStitched link")
+		return fmt.Errorf("link does not support deployment with an existing veth")
 	}
 
 	err = vxl.DeployWithExistingVeth(ctx)
@@ -191,6 +192,10 @@ func vxlanCreate(cobraCmd *cobra.Command, o *Options) error {
 	}
 
 	return nil
+}
+
+type existingVethDeployer interface {
+	DeployWithExistingVeth(context.Context) error
 }
 
 func vxlanDelete(o *Options) error {
