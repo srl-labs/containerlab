@@ -11,7 +11,7 @@ Use Containerlab's extension points instead of duplicating type knowledge in gen
 
 Prefer:
 
-- Domain interfaces such as `links.Link`, `links.RawLink`, `links.Endpoint`, `nodes.Node`, and `runtime.ContainerRuntime`.
+- Domain interfaces such as `links.Link`, `links.RawLink`, `links.Endpoint`, endpoint ownership/move contracts, `nodes.Node`, and `runtime.ContainerRuntime`.
 - Node and runtime registries.
 - Topology parser and resolver boundaries.
 - Narrow optional interfaces for behavior that should not become part of a broad interface.
@@ -33,4 +33,4 @@ case *LinkDummy:
 return l.GetEndpoints()
 ```
 
-Concrete type switches are acceptable at parser, registry, compatibility, and third-party adapter boundaries. Elsewhere, first ask whether the behavior belongs on the link, node, runtime, or topology resolver.
+Concrete type switches are acceptable at parser, registry, compatibility, and third-party adapter boundaries. Elsewhere, first ask whether the behavior belongs on the link, endpoint, node, runtime, or topology resolver.

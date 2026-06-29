@@ -11,7 +11,7 @@ Choose tests according to risk:
 
 - Pure logic: focused Go unit tests.
 - Topology parsing or validation: valid and invalid topology tests plus schema/docs updates.
-- Link/node/runtime contracts: package tests through interfaces and fakes where useful.
+- Link/endpoint/node/runtime contracts: package tests through interfaces and fakes where useful.
 - CLI behavior: command, flag, output, and docs tests.
 - Deploy/apply/reconcile/runtime behavior: package tests and relevant Robot Framework integration tests when feasible.
 

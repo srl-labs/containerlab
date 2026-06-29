@@ -4,7 +4,7 @@
 Containerlab agent guidance  
 June 2026
 
-> This document is for agents maintaining, reviewing, or refactoring Containerlab. It covers CLI compatibility, topology behavior, lifecycle safety, architecture boundaries, runtimes, nodes, links, tests, and docs.
+> This document is for agents maintaining, reviewing, or refactoring Containerlab. It covers CLI compatibility, topology behavior, lifecycle safety, architecture boundaries, runtimes, nodes, links, endpoints, tests, and docs.
 
 ## Abstract
 
@@ -16,7 +16,7 @@ Containerlab is a CLI that manages real labs, containers, namespaces, links, gen
 2. [Operational Lifecycle Safety](#2-operational-lifecycle-safety) - **CRITICAL**
 3. [Architecture and Extension Boundaries](#3-architecture-and-extension-boundaries) - **CRITICAL**
 4. [Topology, Schema, and Docs](#4-topology-schema-and-docs) - **HIGH**
-5. [Node, Link, and Runtime Contracts](#5-node-link-and-runtime-contracts) - **HIGH**
+5. [Link, Endpoint, Node, and Runtime Contracts](#5-link-endpoint-node-and-runtime-contracts) - **HIGH**
 6. [Go Context, Errors, and Logging](#6-go-context-errors-and-logging) - **MEDIUM-HIGH**
 7. [Tests and Validation](#7-tests-and-validation) - **MEDIUM-HIGH**
 
@@ -62,7 +62,7 @@ Containerlab is extended through registries, interfaces, and package boundaries.
 
 Use existing abstractions first:
 
-- `links.Link`, `links.RawLink`, and `links.Endpoint`.
+- `links.Link`, `links.RawLink`, `links.Endpoint`, and endpoint ownership/move interfaces.
 - `nodes.Node` and narrow optional node interfaces.
 - `runtime.ContainerRuntime`.
 - Node and runtime registries.
@@ -116,23 +116,26 @@ For topology changes:
 
 Do not let deployment code parse YAML strings. Do not put deploy behavior on raw topology structs. Do not accept invalid input silently if an actionable validation error is possible.
 
-## 5. Node, Link, and Runtime Contracts
+## 5. Link, Endpoint, Node, and Runtime Contracts
 
 **Impact: HIGH**
 
 Put behavior where it belongs:
 
-- Links own link semantics such as endpoints, deploy/remove behavior, MTU, vars, and link-specific apply endpoints.
+- Links own link semantics such as endpoint lists, deploy/remove behavior, MTU, vars, and link-specific apply endpoints.
+- Endpoints own endpoint-local behavior such as interface identity, runtime-discovered state, namespace moves, activation, and link back-references.
 - Nodes own kind-specific endpoint normalization, interface validation, deploy hooks, config generation, health, and lifecycle policy.
 - Runtimes own Docker/Podman-specific API differences, labels, container/network operations, and provider behavior.
 
 For links, prefer `Link.GetEndpoints()` or link-owned optional interfaces over central concrete type switches.
 
+For endpoints, prefer `Endpoint` methods and endpoint-owner contracts over code that reaches into concrete endpoint structs.
+
 For nodes, prefer methods such as `AddEndpoint`, `CheckInterfaceName`, `CalculateInterfaceIndex`, `DeployEndpoints`, `PostDeploy`, and `LinkApplyMode` over generic `Config().Kind` checks.
 
 For runtimes, generic code should call `ContainerRuntime` methods instead of checking runtime names.
 
-Adding a new kind, link type, or runtime should require localized edits: implementation, registry/parser/schema/docs as needed, and focused tests.
+Adding a new kind, link type, endpoint type, or runtime should require localized edits: implementation, registry/parser/schema/docs as needed, and focused tests.
 
 ## 6. Go Context, Errors, and Logging
 
@@ -159,7 +162,7 @@ Let test coverage scale with risk:
 
 - Narrow pure logic change: focused Go unit test.
 - Topology parse or schema change: parsing tests plus schema/docs/example update.
-- Link/node contract change: interface-level tests with fakes where useful.
+- Link/endpoint/node contract change: interface-level tests with fakes where useful.
 - Apply/reconcile/deploy/runtime change: package tests plus the relevant Robot Framework integration test when feasible.
 - CLI behavior change: command/flag/output tests and docs update.
 
@@ -174,7 +177,7 @@ CLAB_BIN=$(pwd)/bin/containerlab ./tests/rf-run.sh docker tests/<path to robot f
 Useful architecture review search:
 
 ```bash
-rg -n "\\.\\(type\\)|type switch|Config\\(\\)\\.Kind|GetType\\(\\)|runtimeName|cobra.Command" links nodes core runtime cmd
+rg -n "\\.\\(type\\)|type switch|Config\\(\\)\\.Kind|GetType\\(\\)|runtimeName|Endpoint|cobra.Command" links nodes core runtime cmd
 ```
 
 Treat grep results as review prompts, not automatic failures. Parser, registry, and adapter boundaries can legitimately inspect types.

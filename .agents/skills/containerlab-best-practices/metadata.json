@@ -2,7 +2,7 @@
   "version": "1.1.0",
   "organization": "Containerlab",
   "date": "June 2026",
-  "abstract": "General engineering rules for AI agents maintaining Containerlab. The guide covers CLI and topology compatibility, operational lifecycle safety, architecture boundaries, node/link/runtime contracts, Go context/error/logging practices, docs/schema alignment, and testing strategy. Interface dispatch over concrete type switches remains a key architecture rule, but it is part of a broader Containerlab best-practices package.",
+  "abstract": "General engineering rules for AI agents maintaining Containerlab. The guide covers CLI and topology compatibility, operational lifecycle safety, architecture boundaries, link/endpoint/node/runtime contracts, Go context/error/logging practices, docs/schema alignment, and testing strategy. Interface dispatch over concrete type switches remains a key architecture rule, but it is part of a broader Containerlab best-practices package.",
   "references": [
     "https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices",
     "cmd/",
