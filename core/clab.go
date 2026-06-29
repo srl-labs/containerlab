@@ -399,6 +399,9 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			node.Done(ctx, clabtypes.WaitForCreate)
 
 			node.EnterStage(ctx, clabtypes.WaitForCreateLinks)
+			if ctx.Err() != nil {
+				return
+			}
 
 			// Deploy the Nodes link endpoints
 			err = node.DeployEndpoints(ctx)
@@ -410,6 +413,9 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 
 			node.Done(ctx, clabtypes.WaitForCreateLinks)
 			node.EnterStage(ctx, clabtypes.WaitForConfigure)
+			if ctx.Err() != nil {
+				return
+			}
 
 			if !skipPostDeploy {
 				err = node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes})
@@ -431,6 +437,9 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 
 			if node.MustWait(clabtypes.WaitForHealthy) {
 				node.EnterStage(ctx, clabtypes.WaitForHealthy)
+				if ctx.Err() != nil {
+					return
+				}
 				// if there is a dependecy on the healthy state of this node, enter the
 				// checking procedure
 				for {
@@ -461,6 +470,9 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 
 			if node.MustWait(clabtypes.WaitForExit) {
 				node.EnterStage(ctx, clabtypes.WaitForExit)
+				if ctx.Err() != nil {
+					return
+				}
 				// if there is a dependency on the healthy state of this node, enter the
 				// checking procedure
 				for {

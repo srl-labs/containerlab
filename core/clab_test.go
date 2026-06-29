@@ -290,7 +290,10 @@ func Test_scheduleNodeWorkerF_HealthyWaitHonorsCancel(t *testing.T) {
 		t.Fatalf("AddDepender failed: %v", err)
 	}
 
-	c := &CLab{Nodes: map[string]clabnodes.Node{"node1": mockNode}}
+	c := &CLab{
+		Config: &Config{},
+		Nodes:  map[string]clabnodes.Node{"node1": mockNode},
+	}
 
 	input := make(chan *clabcoredependency_manager.DependencyNode, 1)
 	input <- depNode
