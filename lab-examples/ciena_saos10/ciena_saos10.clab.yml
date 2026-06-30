@@ -1,0 +1,15 @@
+name: ciena_saos10
+
+topology:
+  nodes:
+    saos1:
+      kind: ciena_saos10
+      image: vrnetlab/ciena_saos10:10-12-00-0228
+      type: 5132
+    saos2:
+      kind: ciena_saos10
+      image: vrnetlab/ciena_saos10:10-12-00-0228
+      type: 5132
+
+  links:
+    - endpoints: ["saos1:1", "saos2:1"]

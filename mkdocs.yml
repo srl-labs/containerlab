@@ -56,6 +56,7 @@ nav:
       - Ostinato: manual/kinds/ostinato.md
       - Spirent TestCenter: manual/kinds/spirent_stc.md
       - Check Point Cloudguard: manual/kinds/checkpoint_cloudguard.md
+      - Ciena SAOS 10: manual/kinds/ciena_saos10.md
       - Fortinet Fortigate: manual/kinds/fortinet_fortigate.md
       - F5 BIG-IP VE: manual/kinds/f5_bigipve.md
       - Palo Alto PAN: manual/kinds/vr-pan.md
