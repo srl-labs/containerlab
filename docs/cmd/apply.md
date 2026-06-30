@@ -49,10 +49,10 @@ The currently declared modes per kind:
 
 | Kind                          | Mode       | Notes                                                            |
 | ----------------------------- | ---------- | ---------------------------------------------------------------- |
-| `nokia_srlinux`       | `live`     | SR Linux detects hot-plugged interfaces                          |
+| `nokia_srlinux`               | `live`     | SR Linux detects hot-plugged interfaces                          |
 | `nokia_srsim`                 | `live`     | SR-SIM detects hot-plugged interfaces                            |
 | `linux`                       | `live`     | plain Linux containers see new interfaces immediately            |
-| `arista_ceos`        | `restart`  | cEOS requires a restart to enumerate new interfaces              |
+| `arista_ceos`                 | `restart`  | cEOS requires a restart to enumerate new interfaces              |
 | vrnetlab-based VM kinds       | `recreate` | VM NIC wiring is fixed at VM boot; live changes cannot work      |
 | images built with Boxen       | `live`     | detected via the `org.opencontainers.image.vendor=Boxen` label   |
 | all other kinds               | `recreate` | conservative default for kinds not yet validated                 |

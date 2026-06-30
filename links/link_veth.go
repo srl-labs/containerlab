@@ -320,6 +320,10 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	return lastErr
 }
 
+func (*LinkVEth) PostDeploy(context.Context) error {
+	return nil
+}
+
 func (l *LinkVEth) Remove(ctx context.Context) error {
 	l.deployMutex.Lock()
 	defer l.deployMutex.Unlock()
@@ -338,4 +342,8 @@ func (l *LinkVEth) Remove(ctx context.Context) error {
 
 func (l *LinkVEth) GetEndpoints() []Endpoint {
 	return l.Endpoints
+}
+
+func (l *LinkVEth) GetRuntimeEndpoints() []Endpoint {
+	return l.GetEndpoints()
 }

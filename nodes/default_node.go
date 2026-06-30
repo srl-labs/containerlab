@@ -1052,17 +1052,15 @@ func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 			continue
 		}
 
-		deployable, ok := ep.(clablinks.DeployableEndpoint)
-		if !ok {
-			return fmt.Errorf("endpoint %q is not deployable", ep.GetIfaceName())
-		}
-
-		err := deployable.Deploy(ctx)
-		if err != nil {
+		if err := clablinks.DeployEndpoint(ctx, ep); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (*DefaultNode) PostDeployEndpoints(context.Context) error {
 	return nil
 }
 
