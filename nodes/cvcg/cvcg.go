@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabvelocpu "github.com/srl-labs/containerlab/internal/velocpu"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
@@ -38,6 +39,7 @@ type cvcg struct {
 	clabnodes.DefaultNode
 
 	resolvConfPath string
+	optVCPath      string
 }
 
 func (n *cvcg) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
@@ -54,40 +56,69 @@ func (n *cvcg) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) err
 		o(n)
 	}
 
-	hwa, err := clabutils.GenMac("f0:8e:db")
-	if err != nil {
-		return err
+	if n.Cfg.MacAddress == "" {
+		hwa, err := clabutils.GenMac("f0:8e:db")
+		if err != nil {
+			return err
+		}
+		n.Cfg.MacAddress = hwa.String()
 	}
-	n.Cfg.MacAddress = hwa.String()
 
-	n.Cfg.CapAdd = []string{
+	// Containers are run in privileged mode so it should not matter now.
+	// If it changes, add the capabilities required to run the VeloCloud Gateway.
+	n.Cfg.CapAdd = append(n.Cfg.CapAdd,
 		"CAP_NET_ADMIN",
 		"CAP_NET_RAW",
 		"CAP_SYS_ADMIN",
 		"CAP_SYS_NICE",
-	}
+	)
 
 	if n.Cfg.CPU == 0 {
 		n.Cfg.CPU = 4
 	}
-	if n.Cfg.CPUSet == "" {
-		n.Cfg.CPUSet = "0-3"
+	// Pin to host CPUs from the shared velo pool. An explicit cpu-set wins and
+	// is reserved out of the pool; otherwise claim a block sized to n.Cfg.CPU.
+	// Under oversubscription the allocator may co-locate nodes on a block and
+	// caps each with a reduced CPU quota so neither can starve the other.
+	if n.Cfg.CPUSet != "" {
+		if err := clabvelocpu.Reserve(n.Cfg.CPUSet); err != nil {
+			return err
+		}
+	} else {
+		alloc, err := clabvelocpu.Claim(int(n.Cfg.CPU))
+		if err != nil {
+			return err
+		}
+		n.Cfg.CPUSet = alloc.CPUSet
+		n.Cfg.CPU = alloc.CPUQuota
 	}
 	if n.Cfg.Memory == "" {
 		n.Cfg.Memory = "2048MB"
 	}
 
-	n.Cfg.Entrypoint = "/sbin/init"
-	n.Cfg.NetworkMode = "none"
+	if n.Cfg.Entrypoint == "" {
+		n.Cfg.Entrypoint = "/sbin/init"
+	}
+	// The Gateway manages its own dataplane and resolver, so by default it runs
+	// without the management network. A user-specified network-mode wins.
+	if n.Cfg.NetworkMode == "" {
+		n.Cfg.NetworkMode = "none"
+	}
 
 	n.resolvConfPath = filepath.Join(n.Cfg.LabDir, "resolv.conf")
 	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.resolvConfPath, ":/etc/resolv.conf"))
 
+	// Persist /opt/vc (activation state, certs) across runs by binding a
+	// directory under the lab dir. Other paths may need similar handling - TBD.
+	n.optVCPath = filepath.Join(n.Cfg.LabDir, "opt-vc")
+	n.Cfg.Binds = append(n.Cfg.Binds, fmt.Sprint(n.optVCPath, ":/opt/vc"))
+
 	return nil
 }
 
-func (n *cvcg) PreDeploy(_ context.Context, params *clabnodes.PreDeployParams) error {
+func (n *cvcg) PreDeploy(_ context.Context, _ *clabnodes.PreDeployParams) error {
 	clabutils.CreateDirectory(n.Cfg.LabDir, clabconstants.PermissionsOpen)
+	clabutils.CreateDirectory(n.optVCPath, clabconstants.PermissionsOpen)
 	clabutils.CreateFile(n.resolvConfPath, ResolvConfText)
 
 	return nil

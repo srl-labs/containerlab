@@ -52,9 +52,9 @@ type NodeCredentials struct {
 
 // NodeDefinition represents a configuration a given node can have in the lab definition file.
 type NodeDefinition struct {
-	Kind  string `yaml:"kind,omitempty"`
-	Group string `yaml:"group,omitempty"`
-	Type  string `yaml:"type,omitempty"`
+	Kind                  string            `yaml:"kind,omitempty"`
+	Group                 string            `yaml:"group,omitempty"`
+	Type                  string            `yaml:"type,omitempty"`
 	StartupConfig         string            `yaml:"startup-config,omitempty"`
 	StartupDelay          uint              `yaml:"startup-delay,omitempty"`
 	EnforceStartupConfig  *bool             `yaml:"enforce-startup-config,omitempty"`

@@ -69,6 +69,8 @@
                         "nokia_srlinux",
                         "arista_cvce",
                         "cvce",
+                        "arista_cvcg",
+                        "cvcg",
                         "arista_ceos",
                         "juniper_crpd",
                         "juniper_csrx",
@@ -140,22 +142,6 @@
                     "type": "string",
                     "description": "type is a per-node property that can select a special type of a node",
                     "markdownDescription": "node's [type](https://containerlab.dev/manual/nodes/#type) file"
-                },
-                "vco-fqdn": {
-                    "type": "string",
-                    "description": "FQDN of the Velocloud Orchestrator"
-                },
-                "api-token": {
-                    "type": "string",
-                    "description": "Velocloud orchestrator API token"
-                },
-                "enterprise-id": {
-                    "type": "integer",
-                    "description": "enterprise ID in the Velocloud orchestrator"
-                },
-                "edge-id": {
-                    "type": "integer",
-                    "description": "edge ID for this node in the Velocloud orchestrator"
                 },
                 "group": {
                     "type": "string",
@@ -2038,6 +2024,15 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "arista_cvce": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cvce": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "arista_cvcg": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "cvcg": {
                             "$ref": "#/definitions/node-config"
                         },
                         "vyosnetworks_vyos": {
