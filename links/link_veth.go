@@ -320,6 +320,10 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	return lastErr
 }
 
+func (*LinkVEth) PostDeploy(context.Context) error {
+	return nil
+}
+
 func (l *LinkVEth) Remove(ctx context.Context) error {
 	l.deployMutex.Lock()
 	defer l.deployMutex.Unlock()

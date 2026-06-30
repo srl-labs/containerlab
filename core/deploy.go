@@ -93,13 +93,7 @@ func (c *CLab) Deploy( //nolint: funlen
 	// as part of vxlan-stitch links are already deployed before the stitch TC rules are applied.
 	eps := c.getSpecialLinkNodes()["host"].GetEndpoints()
 	for _, ep := range eps {
-		deployable, ok := ep.(clablinks.DeployableEndpoint)
-		if !ok {
-			log.Warnf("skipping non-deployable endpoint %s", ep)
-			continue
-		}
-
-		err = deployable.Deploy(ctx)
+		err = clablinks.DeployEndpoint(ctx, ep)
 		if err != nil {
 			log.Warnf("failed deploying endpoint %s", ep)
 		}
@@ -109,10 +103,8 @@ func (c *CLab) Deploy( //nolint: funlen
 	// The veth pair is already created by node workers and the VxLAN interface is created
 	// by host endpoint deploy; Stitch applies the TC redirect rules to bridge them.
 	for _, link := range c.Links {
-		if stitcher, ok := link.(clablinks.StitchingLink); ok {
-			if err = stitcher.Stitch(); err != nil {
-				log.Warnf("failed stitching vxlan link: %v", err)
-			}
+		if err = link.PostDeploy(ctx); err != nil {
+			log.Warnf("failed post-deploying link: %v", err)
 		}
 	}
 
@@ -462,36 +454,22 @@ func (c *CLab) deployApplyLinks(ctx context.Context, links []clablinks.Link) err
 		}
 
 		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
-			deployable, ok := ep.(clablinks.DeployableEndpoint)
-			if !ok {
-				return fmt.Errorf("endpoint %q is not deployable", ep.GetIfaceName())
-			}
-
-			if err := deployable.Deploy(ctx); err != nil {
+			if err := clablinks.DeployEndpoint(ctx, ep); err != nil {
 				return fmt.Errorf("failed deploying link %s: %w", applyLinkName(link), err)
 			}
 		}
 
-		if stitcher, ok := link.(clablinks.StitchingLink); ok {
-			if err := stitcher.Stitch(); err != nil {
-				return fmt.Errorf("failed stitching link %s: %w", applyLinkName(link), err)
-			}
+		if err := link.PostDeploy(ctx); err != nil {
+			return fmt.Errorf("failed post-deploying link %s: %w", applyLinkName(link), err)
 		}
 	}
 
 	return nil
 }
 
-type postDeployEndpointsNode interface {
-	PostDeployEndpoints(context.Context) error
-}
-
 func (c *CLab) postDeployApplyLinks(ctx context.Context, nodeNames []string) error {
 	for _, nodeName := range nodeNames {
-		node, ok := c.Nodes[nodeName].(postDeployEndpointsNode)
-		if !ok {
-			continue
-		}
+		node := c.Nodes[nodeName]
 
 		if err := node.PostDeployEndpoints(ctx); err != nil {
 			return fmt.Errorf("node %q post-deploy links: %w", nodeName, err)

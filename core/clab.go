@@ -649,11 +649,7 @@ func (c *CLab) resetResolvedLinks() {
 		if ep == nil || ep.GetNode() == nil {
 			continue
 		}
-		owner, ok := ep.GetNode().(clablinks.EndpointOwner)
-		if !ok {
-			continue
-		}
-		_ = owner.ReleaseEndpoint(ep)
+		_ = ep.GetNode().ReleaseEndpoint(ep)
 	}
 
 	c.Endpoints = nil

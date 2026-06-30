@@ -51,15 +51,6 @@ type Endpoint interface {
 	GetVars() map[string]any
 }
 
-// DeployableEndpoint is implemented by endpoint kinds that participate in initial lab deployment.
-type DeployableEndpoint interface {
-	Endpoint
-	// Deploy deploys the endpoint by calling the Deploy method of the link it is assigned to
-	// and passing the endpoint as an argument so that the link that consists of A and B endpoints
-	// can deploy them independently.
-	Deploy(context.Context) error
-}
-
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
 type EndpointGeneric struct {
 	Node       Node
@@ -184,16 +175,6 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 		return nil
 	}
 
-	srcOwner, ok := src.(EndpointOwner)
-	if !ok {
-		return fmt.Errorf("node %q does not support endpoint ownership moves", src.GetShortName())
-	}
-
-	dstOwner, ok := dst.(EndpointOwner)
-	if !ok {
-		return fmt.Errorf("node %q does not support endpoint ownership moves", dst.GetShortName())
-	}
-
 	if !slices.Contains(src.GetEndpoints(), e) {
 		return fmt.Errorf("node %q does not own endpoint %q", src.GetShortName(), e.GetIfaceName())
 	}
@@ -223,13 +204,13 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 		return err
 	}
 
-	if err := srcOwner.ReleaseEndpoint(e); err != nil {
+	if err := src.ReleaseEndpoint(e); err != nil {
 		return err
 	}
 	e.SetNode(dst)
-	if err := dstOwner.AdoptEndpoint(e); err != nil {
+	if err := dst.AdoptEndpoint(e); err != nil {
 		e.SetNode(src)
-		_ = srcOwner.AdoptEndpoint(e)
+		_ = src.AdoptEndpoint(e)
 		return fmt.Errorf(
 			"endpoint %q moved but destination ownership update failed: %w",
 			e.GetIfaceName(),
@@ -238,6 +219,19 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 	}
 
 	return nil
+}
+
+func DeployEndpoint(ctx context.Context, ep Endpoint) error {
+	if ep == nil {
+		return fmt.Errorf("cannot deploy nil endpoint")
+	}
+
+	link := ep.GetLink()
+	if link == nil {
+		return fmt.Errorf("endpoint %q has no link", ep.GetIfaceName())
+	}
+
+	return link.Deploy(ctx, ep)
 }
 
 // activateEndpoint brings the endpoint's interface up in its current namespace.

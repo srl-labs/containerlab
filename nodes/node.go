@@ -224,11 +224,15 @@ type Node interface {
 	// AddEndpoint attaches an endpoint discovered from topology resolution and may normalize
 	// endpoint identity first, such as interface-name remapping.
 	AddEndpoint(e clablinks.Endpoint) error
+	AdoptEndpoint(e clablinks.Endpoint) error
+	ReleaseEndpoint(e clablinks.Endpoint) error
 	GetEndpoints() []clablinks.Endpoint
 	GetLinkEndpointType() clablinks.LinkEndpointType
 	GetShortName() string
 	// DeployEndpoints deploys the links for the node.
 	DeployEndpoints(ctx context.Context) error
+	// PostDeployEndpoints runs endpoint fixups after dataplane links exist.
+	PostDeployEndpoints(ctx context.Context) error
 	// ExecFunction executes the given function within the nodes network namespace
 	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() clabnodesstate.NodeState

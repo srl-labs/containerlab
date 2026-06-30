@@ -76,6 +76,10 @@ func (*applyRuntimeFakeLink) Deploy(context.Context, Endpoint) error {
 	return nil
 }
 
+func (*applyRuntimeFakeLink) PostDeploy(context.Context) error {
+	return nil
+}
+
 func (*applyRuntimeFakeLink) Remove(context.Context) error {
 	return nil
 }

@@ -62,6 +62,20 @@ func (mr *MockNodeMockRecorder) AddEndpoint(e any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEndpoint", reflect.TypeOf((*MockNode)(nil).AddEndpoint), e)
 }
 
+// AdoptEndpoint mocks base method.
+func (m *MockNode) AdoptEndpoint(e links.Endpoint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdoptEndpoint", e)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AdoptEndpoint indicates an expected call of AdoptEndpoint.
+func (mr *MockNodeMockRecorder) AdoptEndpoint(e any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdoptEndpoint", reflect.TypeOf((*MockNode)(nil).AdoptEndpoint), e)
+}
+
 // AddLinkToContainer mocks base method.
 func (m *MockNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
 	m.ctrl.T.Helper()
@@ -289,6 +303,20 @@ func (mr *MockNodeMockRecorder) GetHostsEntries(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHostsEntries", reflect.TypeOf((*MockNode)(nil).GetHostsEntries), ctx)
 }
 
+// ReleaseEndpoint mocks base method.
+func (m *MockNode) ReleaseEndpoint(e links.Endpoint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReleaseEndpoint", e)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReleaseEndpoint indicates an expected call of ReleaseEndpoint.
+func (mr *MockNodeMockRecorder) ReleaseEndpoint(e any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseEndpoint", reflect.TypeOf((*MockNode)(nil).ReleaseEndpoint), e)
+}
+
 // GetImages mocks base method.
 func (m *MockNode) GetImages(arg0 context.Context) map[string]string {
 	m.ctrl.T.Helper()
@@ -449,6 +477,20 @@ func (m *MockNode) PostDeploy(ctx context.Context, params *nodes.PostDeployParam
 func (mr *MockNodeMockRecorder) PostDeploy(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeploy", reflect.TypeOf((*MockNode)(nil).PostDeploy), ctx, params)
+}
+
+// PostDeployEndpoints mocks base method.
+func (m *MockNode) PostDeployEndpoints(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PostDeployEndpoints", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PostDeployEndpoints indicates an expected call of PostDeployEndpoints.
+func (mr *MockNodeMockRecorder) PostDeployEndpoints(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeployEndpoints", reflect.TypeOf((*MockNode)(nil).PostDeployEndpoints), ctx)
 }
 
 // PreDeploy mocks base method.

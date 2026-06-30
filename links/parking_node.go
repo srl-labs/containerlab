@@ -30,7 +30,7 @@ func (p *ParkingNode) RepointSymlink() error {
 	return clabutils.LinkContainerNS(p.nspath, p.containerName)
 }
 
-func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error {
+func (p *ParkingNode) CaptureFrom(ctx context.Context, src Node) error {
 	endpoints, err := p.captureCandidates(ctx, src)
 	if err != nil {
 		return err
@@ -57,7 +57,7 @@ func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error 
 	return nil
 }
 
-func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) ([]Endpoint, error) {
+func (p *ParkingNode) RestoreTo(ctx context.Context, dst Node) ([]Endpoint, error) {
 	if err := p.DiscoverOwnedEndpoints(ctx, dst); err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) ([]Endpo
 	return moved, nil
 }
 
-func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original EndpointOwner) error {
+func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Node) error {
 	ifaceNames, err := listOwnedInterfaceNames(
 		ctx,
 		p,
@@ -142,15 +142,7 @@ func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Endpo
 				continue
 			}
 
-			currentOwner, ok := ep.GetNode().(EndpointOwner)
-			if !ok {
-				return fmt.Errorf(
-					"node %q does not support endpoint ownership moves",
-					ep.GetNode().GetShortName(),
-				)
-			}
-
-			if err := currentOwner.ReleaseEndpoint(ep); err != nil {
+			if err := ep.GetNode().ReleaseEndpoint(ep); err != nil {
 				return err
 			}
 			ep.SetNode(p)
@@ -171,7 +163,7 @@ func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Endpo
 
 func (p *ParkingNode) captureCandidates(
 	ctx context.Context,
-	src EndpointOwner,
+	src Node,
 ) ([]Endpoint, error) {
 	trackedEndpoints := src.GetEndpoints()
 	tracked := make(map[string]Endpoint, len(trackedEndpoints))

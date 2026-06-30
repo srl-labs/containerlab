@@ -341,6 +341,8 @@ type RawLink interface {
 type Link interface {
 	// Deploy deploys the link. Endpoint is the endpoint that triggers the creation of the link.
 	Deploy(context.Context, Endpoint) error
+	// PostDeploy runs link work that must happen after endpoint deployment.
+	PostDeploy(context.Context) error
 	// Remove removes the link.
 	Remove(context.Context) error
 	// GetType returns the type of the link.
@@ -354,11 +356,6 @@ type Link interface {
 	GetMTU() int
 	// GetVars returns the link-level vars.
 	GetVars() map[string]any
-}
-
-// StitchingLink is implemented by links that apply a post-deploy stitching step.
-type StitchingLink interface {
-	Stitch() error
 }
 
 func extractHostNodeInterfaceData(
@@ -481,20 +478,14 @@ type Node interface {
 	// AddEndpoint attaches an endpoint discovered from topology resolution and may normalize
 	// endpoint identity first, such as interface-name remapping.
 	AddEndpoint(e Endpoint) error
+	AdoptEndpoint(e Endpoint) error
+	ReleaseEndpoint(e Endpoint) error
 	GetLinkEndpointType() LinkEndpointType
 	GetShortName() string
 	GetEndpoints() []Endpoint
 	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() clabnodesstate.NodeState
 	Delete(ctx context.Context) error
-}
-
-// EndpointOwner is implemented by nodes that keep runtime endpoint ownership in sync with the
-// actual namespace that owns an interface.
-type EndpointOwner interface {
-	Node
-	AdoptEndpoint(e Endpoint) error
-	ReleaseEndpoint(e Endpoint) error
 }
 
 type LinkEndpointType string

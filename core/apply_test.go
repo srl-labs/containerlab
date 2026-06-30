@@ -50,6 +50,22 @@ func (n *applyFakeLinkNode) AddEndpoint(e clablinks.Endpoint) error {
 	return nil
 }
 
+func (n *applyFakeLinkNode) AdoptEndpoint(e clablinks.Endpoint) error {
+	n.endpoints = append(n.endpoints, e)
+	e.SetNode(n)
+	return nil
+}
+
+func (n *applyFakeLinkNode) ReleaseEndpoint(e clablinks.Endpoint) error {
+	for i, ep := range n.endpoints {
+		if ep == e {
+			n.endpoints = append(n.endpoints[:i], n.endpoints[i+1:]...)
+			break
+		}
+	}
+	return nil
+}
+
 func (*applyFakeLinkNode) GetLinkEndpointType() clablinks.LinkEndpointType {
 	return clablinks.LinkEndpointTypeVeth
 }
@@ -80,6 +96,10 @@ type applyFakeLink struct {
 }
 
 func (*applyFakeLink) Deploy(context.Context, clablinks.Endpoint) error {
+	return nil
+}
+
+func (*applyFakeLink) PostDeploy(context.Context) error {
 	return nil
 }
 

@@ -47,6 +47,10 @@ func (lr *LinkVxlanRaw) Resolve(params *ResolveParams) (Link, error) {
 	}
 }
 
+func (lr *LinkVxlanRaw) ResolveStitched(params *ResolveParams) (*VxlanStitched, error) {
+	return lr.resolveStitchedVxlan(params)
+}
+
 // resolveStitchedVEthComponent creates the veth link and returns it, the endpoint that is
 // supposed to be stitched is returned separately for further processing.
 func (lr *LinkVxlanRaw) resolveStitchedVEthComponent(
@@ -110,7 +114,7 @@ func endpointByInterfaceName(endpoints []Endpoint, ifaceName string) (Endpoint, 
 }
 
 // resolveStitchedVxlan resolves the stitched raw vxlan link.
-func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (Link, error) {
+func (lr *LinkVxlanRaw) resolveStitchedVxlan(params *ResolveParams) (*VxlanStitched, error) {
 	// prepare the vxlan struct
 	vxlanLink, err := lr.resolveVxlan(params, true)
 	if err != nil {
@@ -264,6 +268,10 @@ func (l *LinkVxlan) Deploy(ctx context.Context, _ Endpoint) error {
 	err = l.localEndpoint.GetNode().AddLinkToContainer(ctx, mvInterface,
 		SetNameMACAndUpInterface(mvInterface, l.localEndpoint))
 	return err
+}
+
+func (*LinkVxlan) PostDeploy(context.Context) error {
+	return nil
 }
 
 // deployVxlanInterface internal function to create the vxlan interface in the host namespace.

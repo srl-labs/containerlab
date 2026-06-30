@@ -101,6 +101,10 @@ func (l *LinkDummy) Deploy(ctx context.Context, ep Endpoint) error {
 	return nil
 }
 
+func (*LinkDummy) PostDeploy(context.Context) error {
+	return nil
+}
+
 func (l *LinkDummy) Remove(ctx context.Context) error {
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
