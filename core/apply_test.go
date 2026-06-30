@@ -28,15 +28,6 @@ type applyFakeLinkNode struct {
 	endpoints []clablinks.Endpoint
 }
 
-type applyLiveMockNode struct {
-	*clabmocksmocknodes.MockNode
-	linkApplyMode clabnodes.LinkApplyMode
-}
-
-func (n *applyLiveMockNode) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
-	return n.linkApplyMode
-}
-
 func (n *applyFakeLinkNode) AddLinkToContainer(
 	_ context.Context,
 	_ netlink.Link,
@@ -429,34 +420,29 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		hasMode  bool
 		mode     clabnodes.LinkApplyMode
 		override clabnodes.LinkApplyMode
 		want     clabnodes.LinkApplyMode
 	}{
 		{
-			name:    "live node",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyModeLive,
-			want:    clabnodes.LinkApplyModeLive,
+			name: "live node",
+			mode: clabnodes.LinkApplyModeLive,
+			want: clabnodes.LinkApplyModeLive,
 		},
 		{
-			name:    "restart node",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyModeRestart,
-			want:    clabnodes.LinkApplyModeRestart,
+			name: "restart node",
+			mode: clabnodes.LinkApplyModeRestart,
+			want: clabnodes.LinkApplyModeRestart,
 		},
 		{
-			name:    "recreate node",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyModeRecreate,
-			want:    clabnodes.LinkApplyModeRecreate,
+			name: "recreate node",
+			mode: clabnodes.LinkApplyModeRecreate,
+			want: clabnodes.LinkApplyModeRecreate,
 		},
 		{
-			name:    "invalid mode defaults to recreate",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyMode("invalid"),
-			want:    clabnodes.LinkApplyModeRecreate,
+			name: "invalid mode defaults to recreate",
+			mode: clabnodes.LinkApplyMode("invalid"),
+			want: clabnodes.LinkApplyModeRecreate,
 		},
 		{
 			name: "node without mode defaults to recreate",
@@ -464,21 +450,18 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 		},
 		{
 			name:     "override upgrades recreate kind to live",
-			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeRecreate,
 			override: clabnodes.LinkApplyModeLive,
 			want:     clabnodes.LinkApplyModeLive,
 		},
 		{
 			name:     "override restricts live kind to recreate",
-			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeLive,
 			override: clabnodes.LinkApplyModeRecreate,
 			want:     clabnodes.LinkApplyModeRecreate,
 		},
 		{
 			name:     "invalid override falls back to kind mode",
-			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeRestart,
 			override: clabnodes.LinkApplyMode("hotplug"),
 			want:     clabnodes.LinkApplyModeRestart,
@@ -498,16 +481,9 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 				ShortName:     "n1",
 				LinkApplyMode: tt.override,
 			}).AnyTimes()
+			mockNode.EXPECT().LinkApplyMode(gomock.Any()).Return(tt.mode)
 
-			var node clabnodes.Node = mockNode
-			if tt.hasMode {
-				node = &applyLiveMockNode{
-					MockNode:      mockNode,
-					linkApplyMode: tt.mode,
-				}
-			}
-
-			if got := clabnodes.LinkApplyModeForNode(context.Background(), node); got != tt.want {
+			if got := clabnodes.LinkApplyModeForNode(context.Background(), mockNode); got != tt.want {
 				t.Fatalf("LinkApplyModeForNode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -555,13 +531,11 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 
 			c := &CLab{
 				Nodes: map[string]clabnodes.Node{
-					"n1": &applyLiveMockNode{
-						MockNode:      mockNode,
-						linkApplyMode: tt.mode,
-					},
+					"n1": mockNode,
 				},
 			}
 			mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{}).AnyTimes()
+			mockNode.EXPECT().LinkApplyMode(gomock.Any()).Return(tt.mode)
 			plan := newApplyPlan(nil, nil)
 
 			c.planAffectedApplyNode(context.Background(), plan, "n1", tt.change)
@@ -658,16 +632,16 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 
 	c := &CLab{
 		Config: &Config{Name: "lab"},
 		Runtimes: map[string]clabruntime.ContainerRuntime{
-			clabruntimedocker.RuntimeName: clabmocksmockruntime.NewMockContainerRuntime(ctrl),
+			clabruntimedocker.RuntimeName: mockRuntime,
 		},
 		globalRuntimeName: clabruntimedocker.RuntimeName,
 	}
 
-	mockRuntime := c.Runtimes[clabruntimedocker.RuntimeName].(*clabmocksmockruntime.MockContainerRuntime)
 	mockRuntime.EXPECT().
 		ListContainers(gomock.Any(), gomock.Any()).
 		Return([]clabruntime.GenericContainer{

@@ -465,6 +465,20 @@ func (mr *MockNodeMockRecorder) IsHealthy(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsHealthy", reflect.TypeOf((*MockNode)(nil).IsHealthy), ctx)
 }
 
+// LinkApplyMode mocks base method.
+func (m *MockNode) LinkApplyMode(arg0 context.Context) nodes.LinkApplyMode {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LinkApplyMode", arg0)
+	ret0, _ := ret[0].(nodes.LinkApplyMode)
+	return ret0
+}
+
+// LinkApplyMode indicates an expected call of LinkApplyMode.
+func (mr *MockNodeMockRecorder) LinkApplyMode(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LinkApplyMode", reflect.TypeOf((*MockNode)(nil).LinkApplyMode), arg0)
+}
+
 // PostDeploy mocks base method.
 func (m *MockNode) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	m.ctrl.T.Helper()
@@ -491,6 +505,20 @@ func (m *MockNode) PostDeployEndpoints(ctx context.Context) error {
 func (mr *MockNodeMockRecorder) PostDeployEndpoints(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeployEndpoints", reflect.TypeOf((*MockNode)(nil).PostDeployEndpoints), ctx)
+}
+
+// ParkEndpoints mocks base method.
+func (m *MockNode) ParkEndpoints(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParkEndpoints", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ParkEndpoints indicates an expected call of ParkEndpoints.
+func (mr *MockNodeMockRecorder) ParkEndpoints(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkEndpoints", reflect.TypeOf((*MockNode)(nil).ParkEndpoints), ctx)
 }
 
 // PreDeploy mocks base method.
@@ -534,6 +562,20 @@ func (m *MockNode) Reconcile(ctx context.Context, diff *types.TopologyDiff) (*no
 func (mr *MockNodeMockRecorder) Reconcile(ctx, diff any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockNode)(nil).Reconcile), ctx, diff)
+}
+
+// RestoreEndpoints mocks base method.
+func (m *MockNode) RestoreEndpoints(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RestoreEndpoints", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RestoreEndpoints indicates an expected call of RestoreEndpoints.
+func (mr *MockNodeMockRecorder) RestoreEndpoints(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestoreEndpoints", reflect.TypeOf((*MockNode)(nil).RestoreEndpoints), ctx)
 }
 
 // RunExec mocks base method.
