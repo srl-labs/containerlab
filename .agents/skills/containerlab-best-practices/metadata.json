@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "organization": "Containerlab",
+  "date": "June 2026",
+  "abstract": "Engineering rules for AI agents maintaining Containerlab, structured as 27 granular rules across 7 categories prioritized by impact: user compatibility, operational lifecycle safety, architecture/extension boundaries, link/endpoint/node/runtime contracts, topology/schema/docs alignment, Go context/error/logging practices, and testing strategy. Each rule is a single focused do/don't with an incorrect and correct example grounded in the real codebase. The core architecture rule — delegate to the owning interface and register new types rather than dispatching on a link type, node kind, or runtime name — spans every subsystem, the largest being the 60+ node kinds.",
+  "references": [
+    "https://github.com/vercel-labs/agent-skills/tree/main/skills/react-best-practices",
+    "cmd/",
+    "core/",
+    "links/link.go",
+    "nodes/node.go",
+    "runtime/runtime.go",
+    "schemas/",
+    "docs/",
+    "tests/"
+  ]
+}

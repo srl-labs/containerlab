@@ -1,0 +1,4 @@
+interface:
+  display_name: "Containerlab Best Practices"
+  short_description: "Containerlab coding and review rules"
+  default_prompt: "Use $containerlab-best-practices to review a Containerlab code, CLI, topology, runtime, docs, or test change."
