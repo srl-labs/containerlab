@@ -182,7 +182,7 @@ func (c *CLab) makeCopyForDestroy(
 	// we call this to populate the nc.cfg.mgmt.bridge variable
 	// which is needed for the removal of the iptables rules
 	if !cc.skipMgmtNetwork() {
-		err = cc.CreateNetwork(ctx)
+		err = cc.CreateNetwork(ctx, "destroy")
 		if err != nil {
 			return nil, err
 		}

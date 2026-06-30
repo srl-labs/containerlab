@@ -103,17 +103,27 @@ func (mr *MockContainerRuntimeMockRecorder) CreateContainer(arg0, arg1 any) *gom
 }
 
 // CreateNet mocks base method.
-func (m *MockContainerRuntime) CreateNet(arg0 context.Context) error {
+func (m *MockContainerRuntime) CreateNet(arg0 context.Context, arg1 ...string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateNet", arg0)
+	varargs := []any{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "CreateNet", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateNet indicates an expected call of CreateNet.
-func (mr *MockContainerRuntimeMockRecorder) CreateNet(arg0 any) *gomock.Call {
+func (mr *MockContainerRuntimeMockRecorder) CreateNet(arg0 any, arg1 ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNet", reflect.TypeOf((*MockContainerRuntime)(nil).CreateNet), arg0)
+	varargs := append([]any{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(
+		mr.mock,
+		"CreateNet",
+		reflect.TypeOf((*MockContainerRuntime)(nil).CreateNet),
+		varargs...,
+	)
 }
 
 // DeleteContainer mocks base method.
