@@ -104,6 +104,8 @@ var (
 		"ixr-h5-64d": "7220IXRH5-64D.yml",
 		"ixrh564o":   "7220IXRH5-64O.yml",
 		"ixr-h5-64o": "7220IXRH5-64O.yml",
+		"ixrh6":      "7220IXRH6.yml",
+		"ixr-h6":     "7220IXRH6.yml",
 		"ixr6":       "7250IXR6.yml",
 		"ixr-6":      "7250IXR6.yml",
 		"ixr6e":      "7250IXR6e.yml",
