@@ -24,7 +24,13 @@ Use these rules whenever changing Containerlab Go code, CLI behavior, topology p
 rg -n "type .* interface|Register\\(|Resolve\\(|GetEndpoints|LinkApplyMode|ContainerRuntime|cobra.Command" links nodes core runtime cmd types
 ```
 
-3. Keep changes scoped to the affected package boundary.
+   And check whether you are about to add a type/kind/runtime-name branch the architecture forbids:
+
+```bash
+rg -n "Config\\(\\)\\.Kind|\\.GetName\\(\\) ==|\\.\\(type\\)" core links cmd
+```
+
+3. Keep changes scoped to the affected package boundary. Adding a node kind means a new `nodes/<kind>/` package plus `Register(r *nodes.NodeRegistry)` — not a new `case` in core, cmd, or links.
 4. Add focused tests that exercise the contract, not only the one implementation you changed.
 
 ## Validation
