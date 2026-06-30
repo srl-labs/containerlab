@@ -7,7 +7,7 @@ tags: contracts, links, endpoints
 
 ## Links Own Endpoint Sets and Link Semantics
 
-A link owns its endpoint collection, deploy/remove behavior, MTU, vars, and any apply-specific subset. Generic code should read these through the `links.Link` contract (and narrow link-owned optional interfaces such as `runtimeEndpoints()`), never by reaching into concrete struct fields.
+A link owns its endpoint collection, deploy/remove behavior, MTU, vars, and any apply-specific subset. Generic code should read these through the `links.Link` contract, including dedicated methods such as `GetRuntimeEndpoints()` when the generic endpoint set has the wrong semantics. Do not bolt on optional provider assertions in callers.
 
 **Incorrect (reach into the concrete struct):**
 

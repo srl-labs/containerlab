@@ -1,13 +1,13 @@
 ---
-title: Type Switches Belong Only at Boundaries
+title: Type Assertions Belong Only at Boundaries
 impact: HIGH
 impactDescription: Distinguishes legitimate parser/factory dispatch from architecture smells
-tags: architecture, boundaries, parsing, serialization
+tags: architecture, boundaries, parsing, serialization, type-assertions
 ---
 
-## Type Switches Belong Only at Boundaries
+## Type Assertions Belong Only at Boundaries
 
-Concrete type switches are legitimate where the format itself is type-encoded: YAML parsing and shorthand translation, central registration or factory wiring, serialization, and third-party adapters. Everywhere else, a type switch or kind check is a smell — first ask whether the behavior belongs on the link, endpoint, node, runtime, or topology resolver.
+Concrete type switches and type assertions are legitimate only at narrow boundaries: parser/factory routing after YAML or shorthand decoding, third-party adapters that hand back `any`, and compatibility shims while migrating an old API to a unified one. Everywhere else, a type assertion or kind check is a smell — first add the missing behavior to the link, endpoint, node, runtime, or topology resolver interface.
 
 **Acceptable (serialization boundary — the wire format is type-specific):**
 
@@ -20,10 +20,12 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 }
 ```
 
-**Smell (behavior selection in generic flow — push onto the type instead):**
+**Smell (behavior selection in generic flow — add the method instead):**
 
 ```go
-if strings.Contains(node.Config().Kind, "srl") { icon = "srl.svg" }
+if stitcher, ok := link.(interface{ Stitch() error }); ok {
+	return stitcher.Stitch()
+}
 ```
 
 Reference: `links/link.go` (`MarshalYAML`, `LinkType` factory), `core/graph.go`

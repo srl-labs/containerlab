@@ -48,11 +48,11 @@ Containerlab is much more than links and apply. A change can touch: **node kinds
 
 ### 3. Architecture and Extension Boundaries (`architecture`) — CRITICAL
 - `architecture-call-the-interface` — Call the interface method; don't type-switch.
-- `architecture-narrow-optional-interface` — Diverging semantics get a narrow optional interface, not an overloaded method.
+- `architecture-promote-behavior-to-interface` — Missing behavior belongs on the owning interface.
 - `architecture-no-kind-switch` — Never branch on `node.Config().Kind`.
 - `architecture-no-runtime-name-check` — Don't check runtime names; call a runtime method.
 - `architecture-register-dont-branch` — New kinds/runtimes register; they don't add a central case.
-- `architecture-type-switch-only-at-boundaries` — Type switches only at parser/factory/serialization boundaries.
+- `architecture-type-switch-only-at-boundaries` — Type assertions/switches only at parser/factory, third-party adapter, or compatibility boundaries.
 
 ### 4. Link, Endpoint, Node, and Runtime Contracts (`contracts`) — HIGH
 - `contracts-links-own-endpoints` — Read endpoints through `links.Link`, not concrete fields.

@@ -184,17 +184,11 @@ Correct — the contract already exposes it:
 return l.GetEndpoints()
 ```
 
-## Add a Narrow Optional Interface When Semantics Diverge
+## Promote Missing Behavior to the Owning Interface
 
-When generic code needs behavior that is *not* an existing method — and especially when its contract differs from a broad method — do not overload the broad method and do not type-switch. Add a narrow optional interface that the relevant types implement, with a fallback for the rest. Apply needs runtime-owned endpoints, a subset of `GetEndpoints()` (macvlan excludes its host endpoint, vxlan excludes the remote endpoint), so the subset lives on the types.
+When generic code needs behavior that is not on the interface it already receives, add the method to the owning interface and implement it for every concrete type. A type assertion moves missed implementations from compile time to runtime, which defeats the point of the interface. Apply needs runtime-owned endpoints, a subset of `GetEndpoints()` (macvlan excludes its host endpoint, vxlan excludes the remote endpoint), so the subset belongs on `Link`.
 
-Incorrect — reuse a broad method whose contract differs (silently wrong):
-
-```go
-return materialEndpoints(l.GetEndpoints()) // includes parent/remote endpoints apply must skip
-```
-
-Correct — narrow optional interface with fallback:
+Incorrect — optional provider hides missing implementations until runtime:
 
 ```go
 type runtimeEndpointProvider interface{ runtimeEndpoints() []Endpoint }
@@ -204,6 +198,19 @@ func ApplyRuntimeEndpoints(l Link) []Endpoint {
 		return materialEndpoints(link.runtimeEndpoints())
 	}
 	return materialEndpoints(l.GetEndpoints()) // fallback: runtime set == all endpoints
+}
+```
+
+Correct — the owning contract exposes the behavior:
+
+```go
+type Link interface {
+	GetEndpoints() []Endpoint
+	GetRuntimeEndpoints() []Endpoint
+}
+
+func ApplyRuntimeEndpoints(l Link) []Endpoint {
+	return materialEndpoints(l.GetRuntimeEndpoints())
 }
 ```
 
@@ -270,9 +277,9 @@ func Register(r *nodes.NodeRegistry) { // in nodes/<kind>/<kind>.go
 node, err := reg.NewNodeOfKind(kind) // generic code
 ```
 
-## Type Switches Belong Only at Boundaries
+## Type Assertions Belong Only at Boundaries
 
-Concrete type switches are legitimate where the format itself is type-encoded: YAML parsing and shorthand translation, factory/registration wiring, serialization, and third-party adapters. Everywhere else, a type switch or kind check is a smell.
+Concrete type switches and type assertions are legitimate only at narrow boundaries: parser/factory routing after YAML or shorthand decoding, third-party adapters that hand back `any`, and compatibility shims while migrating an old API to a unified one. Everywhere else, a type assertion or kind check is a smell — first add the missing behavior to the link, endpoint, node, runtime, or topology resolver interface.
 
 Acceptable — serialization boundary (the wire format is type-specific):
 
@@ -285,10 +292,12 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 }
 ```
 
-Smell — behavior selection in generic flow (push onto the type instead):
+Smell — behavior selection in generic flow (add the method instead):
 
 ```go
-if strings.Contains(node.Config().Kind, "srl") { icon = "srl.svg" }
+if stitcher, ok := link.(interface{ Stitch() error }); ok {
+	return stitcher.Stitch()
+}
 ```
 
 ---
@@ -299,7 +308,7 @@ Behavior belongs to the abstraction that owns it.
 
 ## Links Own Endpoint Sets and Link Semantics
 
-A link owns its endpoint collection, deploy/remove behavior, MTU, vars, and any apply-specific subset. Read these through the `links.Link` contract (and narrow link-owned optional interfaces such as `runtimeEndpoints()`), never by reaching into concrete struct fields.
+A link owns its endpoint collection, deploy/remove behavior, MTU, vars, and any apply-specific subset. Read these through the `links.Link` contract, including dedicated methods such as `GetRuntimeEndpoints()` when the generic endpoint set has the wrong semantics. Do not bolt on optional provider assertions in callers.
 
 Incorrect — reach into the concrete struct:
 
