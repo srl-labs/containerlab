@@ -165,7 +165,7 @@ node via the `env` map: `SAOS_STARTUP_PARTIAL_CLI_CMD_TIMEOUT_S` (default
 ## Lab examples
 
 The following minimal lab connects two `ciena_saos10` nodes back to back — see
-[`lab-examples/ciena_saos10/`](https://github.com/ciena/containerlab/tree/main/lab-examples/ciena_saos10):
+`lab-examples/ciena_saos10/ciena_saos10.clab.yml`:
 
 ```yaml
 name: ciena_saos10
