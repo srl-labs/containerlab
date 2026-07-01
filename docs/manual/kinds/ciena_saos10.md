@@ -11,6 +11,16 @@ The Ciena SAOS 10.x virtualized switch is identified with the `ciena_saos10` kin
 [vrnetlab](../vrnetlab.md)-packaged container image and runs as a Qemu VM inside
 the container.
 
+## Host requirements
+
+Because SAOS 10 runs as a Qemu VM inside the container, the host must support
+hardware virtualization (KVM). When containerlab itself runs inside a VM, nested
+virtualization must be enabled on that VM.
+
+By default the kind uses the `tc` dataplane connection mode. When
+`connection-mode` is set to `macvtap`, the launcher additionally bind-mounts the
+host's `/dev` into the container.
+
 ## Managing ciena_saos10 nodes
 
 Ciena SAOS 10 nodes launched with containerlab can be managed via the following interfaces:
@@ -37,9 +47,11 @@ telnet <container-name/id> 5000
 ```
 ///
 
-/// info
-Default user credentials: `diag:ciena123`
-///
+## Credentials
+
+Default user credentials are `diag` / `ciena123`. They are used for both SSH
+(port 22) and NETCONF (port 830) access. The defaults can be overridden per node
+via the `credentials` property in the topology file.
 
 ## Variants
 
@@ -83,6 +95,17 @@ topology:
       type: 5132
 ```
 
+### Node configuration
+
+Out of the box a `ciena_saos10` node boots with the default `diag` user and its
+management plane reachable over SSH (port 22) and NETCONF (port 830). No
+data-plane configuration is present until a startup config is applied.
+
+When a `startup-config` is provided, containerlab mounts it into the node's
+`/config` directory and points the launcher at it via the
+`SAOS_STARTUP_CONFIG_PATH` environment variable. Only partial overlays are
+supported — see below.
+
 ### Startup configuration
 
 SAOS 10 does **not** support full startup-config replacement. The startup config
@@ -90,9 +113,7 @@ is treated as a **partial overlay** that is applied once, after the node finishe
 booting and its management plane becomes reachable.
 
 For the `ciena_saos10` kind, set the `startup-config` property to a partial config
-file whose name contains `.partial`. containerlab mounts the file into the node's
-`/config` directory and points the launcher at it via the
-`SAOS_STARTUP_CONFIG_PATH` environment variable.
+file whose name contains `.partial`.
 
 The config format is auto-detected from the file **contents** (not the file
 extension):
@@ -120,17 +141,46 @@ topology:
       startup-config: configuration.xml.partial
 ```
 
-/// warning | Not supported with management passthrough
-Startup partial config apply is **not supported when management passthrough
-is enabled**. In that mode the launcher does not apply the partial config —
-it records `startup_partial_apply_status=skipped` in `/state.json` and
-continues booting. Any configuration must be applied out-of-band against the
-node's management IP.
-///
-
 /// tip | Apply timeout tuning
 Older SAOS 10.11 images may need longer apply timeouts. These can be set per
 node via the `env` map: `SAOS_STARTUP_PARTIAL_CLI_CMD_TIMEOUT_S` (default
 `240`), `SAOS_CONFIG_ENTER_CMD_TIMEOUT_S` (default `90`), and
 `SAOS_BASE_CONFIG_CMD_TIMEOUT_S` (default `180`).
 ///
+
+## Known issues and limitations
+
+* Only **partial** startup-config overlays are supported. A full-config
+  replacement (a `startup-config` file whose name does not contain `.partial`)
+  is rejected at deploy time.
+* Partial-config apply is **not supported when management passthrough is
+  enabled**. In that mode the launcher does not apply the partial config — it
+  records `startup_partial_apply_status=skipped` in `/state.json` and continues
+  booting. Any configuration must then be applied out-of-band against the node's
+  management IP.
+* Older SAOS 10.11 images may boot and apply config slowly; if the partial apply
+  times out, tune the `SAOS_*_TIMEOUT_S` values described in the
+  [Startup configuration](#startup-configuration) section.
+
+## Lab examples
+
+The following minimal lab connects two `ciena_saos10` nodes back to back — see
+[`lab-examples/ciena_saos10/`](https://github.com/ciena/containerlab/tree/main/lab-examples/ciena_saos10):
+
+```yaml
+name: ciena_saos10
+
+topology:
+  nodes:
+    saos1:
+      kind: ciena_saos10
+      image: vrnetlab/ciena_saos10:10-12-00-0228
+      type: 5132
+    saos2:
+      kind: ciena_saos10
+      image: vrnetlab/ciena_saos10:10-12-00-0228
+      type: 5132
+
+  links:
+    - endpoints: ["saos1:1", "saos2:1"]
+```
