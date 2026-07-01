@@ -128,7 +128,8 @@ In all cases the partial is applied over the **management plane** (NETCONF or
 SSH) once the device reaches SSH readiness — it is **never** applied over the
 serial console. Explicit config/RPC errors (for example `Config Mode Error`,
 `rpc-error`, `access-denied`) fail the apply instead of being treated as success.
-The apply result is recorded in the container's `/state.json`.
+The apply result is recorded in the container's `/state.json` — see
+[Boot state and health](#boot-state-and-health).
 
 ```yaml
 topology:
@@ -148,6 +149,39 @@ node via the `env` map: `SAOS_STARTUP_PARTIAL_CLI_CMD_TIMEOUT_S` (default
 `SAOS_BASE_CONFIG_CMD_TIMEOUT_S` (default `180`).
 ///
 
+## Boot state and health
+
+The launcher records boot and config-apply progress in `/state.json` inside the
+container. It is the primary way to see where a node is — or why it is stuck:
+
+```bash
+docker exec <container-name/id> cat /state.json
+```
+
+Useful fields:
+
+* `current` - the node's current state
+* `states` - a timestamped log of each state transition
+* `timeouts_soft_s` / `timeouts_hard_s` - per-state time budgets (tunable via the
+  `SAOS_*_TIMEOUT_S` env vars)
+* `meta` - extra detail, including the partial-config apply result
+
+A node advances through these states in order:
+
+`waiting_for_login` → `password_revert` → `bootstrap_done` → `config_ready` →
+`config_base_applied` → `ssh_ready` → `startup_partial_applied` → `healthy`
+
+The container reports Docker health `healthy` only once it reaches the `healthy`
+state. A cold boot typically takes several minutes, dominated by `config_ready`.
+
+The partial-config apply outcome is recorded under `meta`:
+
+| Outcome | How it appears in `/state.json` |
+| --- | --- |
+| Applied | node reaches the `startup_partial_applied` state (then `healthy`) |
+| Skipped | `startup_partial_apply_status: "skipped"` with a `startup_partial_apply_warning` |
+| Failed | `startup_partial_apply_failed: true` and `startup_partial_apply_error: "<reason>"` |
+
 ## Known issues and limitations
 
 * Only **partial** startup-config overlays are supported. A full-config
@@ -155,9 +189,9 @@ node via the `env` map: `SAOS_STARTUP_PARTIAL_CLI_CMD_TIMEOUT_S` (default
   is rejected at deploy time.
 * Partial-config apply is **not supported when management passthrough is
   enabled**. In that mode the launcher does not apply the partial config — it
-  records `startup_partial_apply_status=skipped` in `/state.json` and continues
-  booting. Any configuration must then be applied out-of-band against the node's
-  management IP.
+  records `startup_partial_apply_status=skipped` in `/state.json` (see
+  [Boot state and health](#boot-state-and-health)) and continues booting. Any
+  configuration must then be applied out-of-band against the node's management IP.
 * Older SAOS 10.11 images may boot and apply config slowly; if the partial apply
   times out, tune the `SAOS_*_TIMEOUT_S` values described in the
   [Startup configuration](#startup-configuration) section.
