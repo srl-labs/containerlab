@@ -15,24 +15,31 @@ the container.
 
 Ciena SAOS 10 nodes launched with containerlab can be managed via the following interfaces:
 
-=== "CLI via SSH"
-    to connect to the SAOS CLI (password `ciena123`)
-    ```bash
-    ssh diag@<container-name/id>
-    ```
-=== "NETCONF"
-    NETCONF is exposed over SSH on port 830:
-    ```bash
-    ssh diag@<container-name/id> -p 830 -s netconf
-    ```
-=== "Console via telnet"
-    to connect to the serial console
-    ```bash
-    telnet <container-name/id> 5000
-    ```
+/// tab | CLI via SSH
+to connect to the SAOS CLI (password `ciena123`)
 
-!!!info
-    Default user credentials: `diag:ciena123`
+```bash
+ssh diag@<container-name/id>
+```
+///
+/// tab | NETCONF
+NETCONF is exposed over SSH on port 830:
+
+```bash
+ssh diag@<container-name/id> -p 830 -s netconf
+```
+///
+/// tab | Console via telnet
+to connect to the serial console
+
+```bash
+telnet <container-name/id> 5000
+```
+///
+
+/// info
+Default user credentials: `diag:ciena123`
+///
 
 ## Variants
 
@@ -113,15 +120,17 @@ topology:
       startup-config: configuration.xml.partial
 ```
 
-!!!warning "Not supported with management passthrough"
-    Startup partial config apply is **not supported when management passthrough
-    is enabled**. In that mode the launcher does not apply the partial config —
-    it records `startup_partial_apply_status=skipped` in `/state.json` and
-    continues booting. Any configuration must be applied out-of-band against the
-    node's management IP.
+/// warning | Not supported with management passthrough
+Startup partial config apply is **not supported when management passthrough
+is enabled**. In that mode the launcher does not apply the partial config —
+it records `startup_partial_apply_status=skipped` in `/state.json` and
+continues booting. Any configuration must be applied out-of-band against the
+node's management IP.
+///
 
-!!!tip "Apply timeout tuning"
-    Older SAOS 10.11 images may need longer apply timeouts. These can be set per
-    node via the `env` map: `SAOS_STARTUP_PARTIAL_CLI_CMD_TIMEOUT_S` (default
-    `240`), `SAOS_CONFIG_ENTER_CMD_TIMEOUT_S` (default `90`), and
-    `SAOS_BASE_CONFIG_CMD_TIMEOUT_S` (default `180`).
+/// tip | Apply timeout tuning
+Older SAOS 10.11 images may need longer apply timeouts. These can be set per
+node via the `env` map: `SAOS_STARTUP_PARTIAL_CLI_CMD_TIMEOUT_S` (default
+`240`), `SAOS_CONFIG_ENTER_CMD_TIMEOUT_S` (default `90`), and
+`SAOS_BASE_CONFIG_CMD_TIMEOUT_S` (default `180`).
+///
