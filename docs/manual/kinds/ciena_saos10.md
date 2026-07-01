@@ -198,7 +198,8 @@ The partial-config apply outcome is recorded under `meta`:
 
 ## Lab examples
 
-The following minimal lab connects two `ciena_saos10` nodes back to back — see
+The following lab connects two `ciena_saos10` nodes back to back and applies a
+partial startup-config to each — see
 `lab-examples/ciena_saos10/ciena_saos10.clab.yml`:
 
 ```yaml
@@ -210,11 +211,26 @@ topology:
       kind: ciena_saos10
       image: vrnetlab/ciena_saos10:10-12-00-0228
       type: 5132
+      startup-config: saos1.cfg.partial
     saos2:
       kind: ciena_saos10
       image: vrnetlab/ciena_saos10:10-12-00-0228
       type: 5132
+      startup-config: saos2.cfg.partial
 
   links:
     - endpoints: ["saos1:1", "saos2:1"]
 ```
+
+Each `startup-config` points at a **partial** overlay (the file name must
+contain `.partial`). For example, `saos1.cfg.partial` is a CLI partial that sets
+the node's hostname:
+
+```
+system config hostname saos1-lab
+```
+
+Because it does not start with `<`, it is applied over SSH as a CLI partial. To
+apply configuration over NETCONF instead, provide an XML partial (for example
+`saos1.xml.partial`) whose contents begin with `<`. See
+[Startup configuration](#startup-configuration) for the full behavior.

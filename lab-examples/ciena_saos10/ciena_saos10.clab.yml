@@ -1,3 +1,11 @@
+# Two Ciena SAOS 10 nodes connected back to back, each applying a partial
+# startup-config once it finishes booting.
+#
+# SAOS 10 only supports *partial* startup-config overlays: the file name must
+# contain ".partial". CLI partials (e.g. .cfg.partial) are applied over SSH;
+# XML partials (.xml.partial) are applied over NETCONF. The apply result is
+# recorded in the container's /state.json.
+# See https://containerlab.dev/manual/kinds/ciena_saos10/
 name: ciena_saos10
 
 topology:
@@ -6,10 +14,12 @@ topology:
       kind: ciena_saos10
       image: vrnetlab/ciena_saos10:10-12-00-0228
       type: 5132
+      startup-config: saos1.cfg.partial
     saos2:
       kind: ciena_saos10
       image: vrnetlab/ciena_saos10:10-12-00-0228
       type: 5132
+      startup-config: saos2.cfg.partial
 
   links:
     - endpoints: ["saos1:1", "saos2:1"]
