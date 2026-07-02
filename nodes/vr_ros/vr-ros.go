@@ -137,8 +137,11 @@ func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, erro
 		return nil, fmt.Errorf("received empty configuration from %s", n.Cfg.LongName)
 	}
 
-	// Filter out ether1 management interface IP address configuration
-	filtered_config := n.filterManagementInterfaceConfig(config_content)
+	// Drop the launcher-managed management address so a saved config never pins
+	// a stale mgmt IP that breaks reachability on redeploy (shared with all
+	// other vrnetlab kinds via VRNode).
+	filtered_config := clabnodes.FilterMgmtIPConfigLines(
+		config_content, n.Cfg.MgmtIPv4Address, n.Cfg.MgmtIPv6Address)
 
 	// Save config to mounted labdir startup config path
 	configPath := filepath.Join(n.Cfg.LabDir, n.ConfigDirName, n.StartupCfgFName)
@@ -157,32 +160,4 @@ func (n *vrRos) SaveConfig(_ context.Context) (*clabnodes.SaveConfigResult, erro
 	return &clabnodes.SaveConfigResult{
 		ConfigPath: configPath,
 	}, nil
-}
-
-// filterManagementInterfaceConfig removes ether1 (management interface) IP address configuration
-// from the exported RouterOS configuration to avoid including containerlab management IP settings.
-func (n *vrRos) filterManagementInterfaceConfig(config string) string {
-	lines := strings.Split(config, "\n")
-	var filteredLines []string
-
-	for _, line := range lines {
-		// Skip lines related to ether1 IP address configuration
-		if strings.Contains(line, "/ip address") {
-			// Mark that we're in the IP address section
-			filteredLines = append(filteredLines, line)
-			continue
-		}
-
-		// Skip IP address entries for ether1 interface
-		if strings.Contains(line, "interface=ether1") &&
-			(strings.Contains(line, "add address=") || strings.Contains(line, "add ")) {
-			// Skip this line as it's ether1 IP configuration
-			continue
-		}
-
-		// Keep all other lines
-		filteredLines = append(filteredLines, line)
-	}
-
-	return strings.Join(filteredLines, "\n")
 }
