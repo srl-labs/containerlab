@@ -17,6 +17,17 @@ Because SAOS 10 runs as a Qemu VM inside the container, the host must support
 hardware virtualization (KVM). When containerlab itself runs inside a VM, nested
 virtualization must be enabled on that VM.
 
+Each running container launches a VM with the following resources:
+
+| Resource | Value                                          |
+| -------- | ---------------------------------------------- |
+| vCPU     | 2 (`host` CPU model, 1 socket/1 core/2 threads) |
+| RAM (MB) | 8196                                           |
+
+Users can adjust the CPU and memory resources by setting the appropriate
+environment variables as explained in the
+[Tuning Qemu Parameters section](../vrnetlab.md#tuning-qemu-parameters).
+
 By default the kind uses the `tc` dataplane connection mode. When
 `connection-mode` is set to `macvtap`, the launcher additionally bind-mounts the
 host's `/dev` into the container.
