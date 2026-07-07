@@ -1,12 +1,12 @@
 ---
 search:
   boost: 4
-kind_code_name: ciena_saos10
+kind_code_name: ciena_saos
 kind_display_name: Ciena SAOS 10
 ---
 # Ciena SAOS 10
 
-The Ciena SAOS 10.x virtualized switch is identified with the `ciena_saos10` kind in the
+The Ciena SAOS 10.x virtualized switch is identified with the `ciena_saos` kind in the
 [topology file](../topo-def-file.md). It is distributed by Ciena as a
 [vrnetlab](../vrnetlab.md)-packaged container image and runs as a Qemu VM inside
 the container.
@@ -32,7 +32,7 @@ By default the kind uses the `tc` dataplane connection mode. When
 `connection-mode` is set to `macvtap`, the launcher additionally bind-mounts the
 host's `/dev` into the container.
 
-## Managing ciena_saos10 nodes
+## Managing ciena_saos nodes
 
 Ciena SAOS 10 nodes launched with containerlab can be managed via the following interfaces:
 
@@ -90,7 +90,7 @@ The ports above are mapped to the following Linux interfaces inside the containe
 
 ### Image
 
-The `ciena_saos10` image is **provided by Ciena**. Unlike most vrnetlab-based
+The `ciena_saos` image is **provided by Ciena**. Unlike most vrnetlab-based
 kinds, it cannot currently be built locally from a qcow2 disk — obtain the
 prebuilt image from your Ciena representative and load it onto the host
 (for example with `docker load`) before deploying.
@@ -101,14 +101,14 @@ Reference the provided image tag explicitly in the topology:
 topology:
   nodes:
     saos-1:
-      kind: ciena_saos10
-      image: vrnetlab/ciena_saos10:10-12-00-0228
+      kind: ciena_saos
+      image: vrnetlab/ciena_saos:10-12-00-0228
       type: 5132
 ```
 
 ### Node configuration
 
-Out of the box a `ciena_saos10` node boots with the default `diag` user and its
+Out of the box a `ciena_saos` node boots with the default `diag` user and its
 management plane reachable over SSH (port 22) and NETCONF (port 830). No
 data-plane configuration is present until a startup config is applied.
 
@@ -123,7 +123,7 @@ SAOS 10 does **not** support full startup-config replacement. The startup config
 is treated as a **partial overlay** that is applied once, after the node finishes
 booting and its management plane becomes reachable.
 
-For the `ciena_saos10` kind, set the `startup-config` property to a partial config
+For the `ciena_saos` kind, set the `startup-config` property to a partial config
 file whose name contains `.partial`.
 
 The config format is auto-detected from the file **contents** (not the file
@@ -146,8 +146,8 @@ The apply result is recorded in the container's `/state.json` — see
 topology:
   nodes:
     saos-1:
-      kind: ciena_saos10
-      image: vrnetlab/ciena_saos10:10-12-00-0228
+      kind: ciena_saos
+      image: vrnetlab/ciena_saos:10-12-00-0228
       type: 5132
       # CLI partials (e.g. .cfg.partial / .txt.partial) work the same way
       startup-config: configuration.xml.partial
@@ -209,23 +209,23 @@ The partial-config apply outcome is recorded under `meta`:
 
 ## Lab examples
 
-The following lab connects two `ciena_saos10` nodes back to back and applies a
+The following lab connects two `ciena_saos` nodes back to back and applies a
 partial startup-config to each — see
-`lab-examples/ciena_saos10/ciena_saos10.clab.yml`:
+`lab-examples/ciena_saos/ciena_saos.clab.yml`:
 
 ```yaml
-name: ciena_saos10
+name: ciena_saos
 
 topology:
   nodes:
     saos1:
-      kind: ciena_saos10
-      image: vrnetlab/ciena_saos10:10-12-00-0228
+      kind: ciena_saos
+      image: vrnetlab/ciena_saos:10-12-00-0228
       type: 5132
       startup-config: saos1.cfg.partial
     saos2:
-      kind: ciena_saos10
-      image: vrnetlab/ciena_saos10:10-12-00-0228
+      kind: ciena_saos
+      image: vrnetlab/ciena_saos:10-12-00-0228
       type: 5132
       startup-config: saos2.cfg.partial
 

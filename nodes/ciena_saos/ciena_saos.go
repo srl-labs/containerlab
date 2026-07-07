@@ -2,7 +2,7 @@
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
-package ciena_saos10
+package ciena_saos
 
 import (
 	"context"
@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	kindNames          = []string{"ciena_saos10", "vr-ciena_saos10"}
+	kindNames          = []string{"ciena_saos", "vr-ciena_saos"}
 	defaultCredentials = clabnodes.NewCredentials("diag", "ciena123")
 
 	InterfaceRegexp = regexp.MustCompile(`^(?P<port>[1-9]\d*)$`)
@@ -60,15 +60,15 @@ func Register(r *clabnodes.NodeRegistry) {
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(defaultCredentials, generateNodeAttributes, nil)
 
 	r.Register(kindNames, func() clabnodes.Node {
-		return new(cienaSaos10)
+		return new(cienaSaos)
 	}, nrea)
 }
 
-type cienaSaos10 struct {
+type cienaSaos struct {
 	clabnodes.VRNode
 }
 
-func (n *cienaSaos10) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
+func (n *cienaSaos) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
 	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, "")
 	n.HostRequirements.VirtRequired = true
 
@@ -79,11 +79,11 @@ func (n *cienaSaos10) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 
 	variant := strings.TrimSpace(n.Cfg.NodeType)
 	if variant == "" {
-		return fmt.Errorf("missing type for ciena_saos10 node %q", n.Cfg.ShortName)
+		return fmt.Errorf("missing type for ciena_saos node %q", n.Cfg.ShortName)
 	}
 	if _, ok := supportedVariants[variant]; !ok {
 		return fmt.Errorf(
-			"unsupported type %q for ciena_saos10 node %q. Supported: %s",
+			"unsupported type %q for ciena_saos node %q. Supported: %s",
 			variant,
 			n.Cfg.ShortName,
 			strings.Join(supportedVariantList, ", "),
@@ -123,7 +123,7 @@ func (n *cienaSaos10) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOpti
 	return nil
 }
 
-func (n *cienaSaos10) VerifyStartupConfig(topoDir string) error {
+func (n *cienaSaos) VerifyStartupConfig(topoDir string) error {
 	if err := n.VRNode.VerifyStartupConfig(topoDir); err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func (n *cienaSaos10) VerifyStartupConfig(topoDir string) error {
 	}
 	if !clabutils.IsPartialConfigFile(n.Cfg.StartupConfig) {
 		return fmt.Errorf(
-			"ciena_saos10 node %q only supports partial startup-config files (missing .partial): %s",
+			"ciena_saos node %q only supports partial startup-config files (missing .partial): %s",
 			n.Cfg.ShortName,
 			n.Cfg.StartupConfig,
 		)
@@ -140,11 +140,11 @@ func (n *cienaSaos10) VerifyStartupConfig(topoDir string) error {
 	return nil
 }
 
-func (n *cienaSaos10) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
+func (n *cienaSaos) PreDeploy(ctx context.Context, params *clabnodes.PreDeployParams) error {
 	if n.Cfg.StartupConfig != "" {
 		if !clabutils.IsPartialConfigFile(n.Cfg.StartupConfig) {
 			return fmt.Errorf(
-				"ciena_saos10 node %q only supports partial startup-config files (missing .partial): %s",
+				"ciena_saos node %q only supports partial startup-config files (missing .partial): %s",
 				n.Cfg.ShortName,
 				n.Cfg.StartupConfig,
 			)

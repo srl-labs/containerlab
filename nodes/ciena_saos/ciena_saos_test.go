@@ -1,4 +1,4 @@
-package ciena_saos10
+package ciena_saos
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 func TestSaosInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
 		endpoints []*clablinks.EndpointVeth
-		node      *cienaSaos10
+		node      *cienaSaos
 		resultEps []string
 	}{
 		"alias-parse": {
@@ -34,7 +34,7 @@ func TestSaosInterfaceParsing(t *testing.T) {
 					},
 				},
 			},
-			node: &cienaSaos10{
+			node: &cienaSaos{
 				VRNode: clabnodes.VRNode{
 					DefaultNode: clabnodes.DefaultNode{
 						Cfg: &clabtypes.NodeConfig{
@@ -67,7 +67,7 @@ func TestSaosInterfaceParsing(t *testing.T) {
 					},
 				},
 			},
-			node: &cienaSaos10{
+			node: &cienaSaos{
 				VRNode: clabnodes.VRNode{
 					DefaultNode: clabnodes.DefaultNode{
 						Cfg: &clabtypes.NodeConfig{
@@ -147,7 +147,7 @@ func TestSaosVariantValidation(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(tt *testing.T) {
-			n := new(cienaSaos10)
+			n := new(cienaSaos)
 			err := n.Init(&clabtypes.NodeConfig{
 				ShortName: "saos",
 				NodeType:  tc.nodeType,
@@ -176,7 +176,7 @@ func TestSaosPartialConfigOnly(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(tt *testing.T) {
-			n := &cienaSaos10{
+			n := &cienaSaos{
 				VRNode: clabnodes.VRNode{
 					DefaultNode: clabnodes.DefaultNode{
 						Cfg: &clabtypes.NodeConfig{

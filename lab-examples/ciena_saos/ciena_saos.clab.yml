@@ -5,19 +5,19 @@
 # contain ".partial". CLI partials (e.g. .cfg.partial) are applied over SSH;
 # XML partials (.xml.partial) are applied over NETCONF. The apply result is
 # recorded in the container's /state.json.
-# See https://containerlab.dev/manual/kinds/ciena_saos10/
-name: ciena_saos10
+# See https://containerlab.dev/manual/kinds/ciena_saos/
+name: ciena_saos
 
 topology:
   nodes:
     saos1:
-      kind: ciena_saos10
-      image: vrnetlab/ciena_saos10:10-12-00-0228
+      kind: ciena_saos
+      image: vrnetlab/ciena_saos:10-12-00-0228
       type: 5132
       startup-config: saos1.cfg.partial
     saos2:
-      kind: ciena_saos10
-      image: vrnetlab/ciena_saos10:10-12-00-0228
+      kind: ciena_saos
+      image: vrnetlab/ciena_saos:10-12-00-0228
       type: 5132
       startup-config: saos2.cfg.partial
 
