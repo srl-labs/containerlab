@@ -281,6 +281,7 @@ links:
 A veth link in extended format can request an impairment bridge by setting `impairment.mode: bridge`.
 The topology keeps this as a single authored link, while Containerlab expands it into a generated Linux bridge node and two regular veth links before deployment.
 This is useful for nodes whose datapath interfaces cannot be impaired directly with `tools netem`, because the generated Linux node can be targeted instead.
+Node kinds that require bridge-backed links, such as `nokia_srsim`, use the same internal bridge expansion for regular veth links even when no `impairment` block is present.
 
 ```yaml
 links:

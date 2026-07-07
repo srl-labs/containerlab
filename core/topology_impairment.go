@@ -23,7 +23,10 @@ func (c *CLab) expandLinkImpairments() error {
 		c.Config.Topology.Nodes = map[string]*clabtypes.NodeDefinition{}
 	}
 
-	expansion, err := clablinks.ExpandImpairments(c.Config.Topology.Links)
+	expansion, err := clablinks.ExpandImpairments(
+		c.Config.Topology.Links,
+		c.linkRequiresImpairmentBridge,
+	)
 	if err != nil {
 		return err
 	}
@@ -39,6 +42,22 @@ func (c *CLab) expandLinkImpairments() error {
 	c.Config.Topology.Links = expansion.Links
 
 	return nil
+}
+
+func (c *CLab) linkRequiresImpairmentBridge(endpointNodes []string) bool {
+	if c.Reg == nil {
+		return false
+	}
+
+	for _, nodeName := range endpointNodes {
+		nodeKind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
+		kind := c.Reg.Kind(nodeKind)
+		if kind != nil && kind.RequiresLinkImpairmentBridge() {
+			return true
+		}
+	}
+
+	return false
 }
 
 func newImpairmentBridgeNodeDefinition(bridgeNode *clablinks.ImpairmentBridgeNode) *clabtypes.NodeDefinition {

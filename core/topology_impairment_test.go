@@ -6,8 +6,39 @@ import (
 	"github.com/google/go-cmp/cmp"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
+
+func TestExpandLinkImpairmentsAutoCreatesBridgeForSrsimRegularLink(t *testing.T) {
+	c := newTestCLabWithRegularVethLink("nokia_srsim", "linux")
+
+	if err := c.expandLinkImpairments(); err != nil {
+		t.Fatalf("expandLinkImpairments() error = %v", err)
+	}
+
+	if len(c.Config.Topology.Links) != 2 {
+		t.Fatalf("links = %d, want 2", len(c.Config.Topology.Links))
+	}
+	if _, exists := c.Config.Topology.Nodes["impairment-bridge-01"]; !exists {
+		t.Fatalf("generated impairment bridge node missing for SR-SIM regular link")
+	}
+}
+
+func TestExpandLinkImpairmentsKeepsRegularLinkDirectWithoutBridgeRequirement(t *testing.T) {
+	c := newTestCLabWithRegularVethLink("linux", "linux")
+
+	if err := c.expandLinkImpairments(); err != nil {
+		t.Fatalf("expandLinkImpairments() error = %v", err)
+	}
+
+	if len(c.Config.Topology.Links) != 1 {
+		t.Fatalf("links = %d, want 1", len(c.Config.Topology.Links))
+	}
+	if _, exists := c.Config.Topology.Nodes["impairment-bridge-01"]; exists {
+		t.Fatalf("generated impairment bridge node exists for direct linux-to-linux link")
+	}
+}
 
 func TestNewImpairmentBridgeNodeDefinition(t *testing.T) {
 	got := newImpairmentBridgeNodeDefinition(&clablinks.ImpairmentBridgeNode{
@@ -30,6 +61,43 @@ func TestNewImpairmentBridgeNodeDefinition(t *testing.T) {
 
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Fatalf("generated bridge node definition mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func newTestCLabWithRegularVethLink(nodeAKind, nodeBKind string) *CLab {
+	registry := clabnodes.NewNodeRegistry()
+	_ = registry.Register(
+		[]string{"linux"},
+		nil,
+		clabnodes.NewNodeRegistryEntryAttributes(nil, nil, nil),
+	)
+	_ = registry.Register(
+		[]string{"nokia_srsim"},
+		nil,
+		clabnodes.NewNodeRegistryEntryAttributes(nil, nil, nil).WithLinkImpairmentBridgeRequired(),
+	)
+
+	return &CLab{
+		Reg: registry,
+		Config: &Config{
+			Topology: &clabtypes.Topology{
+				Nodes: map[string]*clabtypes.NodeDefinition{
+					"pe01": {Kind: nodeAKind},
+					"pe02": {Kind: nodeBKind},
+				},
+				Links: []*clablinks.LinkDefinition{
+					{
+						Type: string(clablinks.LinkTypeBrief),
+						Link: &clablinks.LinkVEthRaw{
+							Endpoints: []*clablinks.EndpointRaw{
+								{Node: "pe01", Iface: "eth1"},
+								{Node: "pe02", Iface: "eth1"},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

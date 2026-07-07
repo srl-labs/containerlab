@@ -30,9 +30,16 @@ type ImpairmentExpansion struct {
 	BridgeNodes []*ImpairmentBridgeNode
 }
 
-// ExpandImpairments expands opt-in veth link impairments into regular raw link
-// definitions and generated helper node metadata.
-func ExpandImpairments(linkDefs []*LinkDefinition) (*ImpairmentExpansion, error) {
+// ImpairmentBridgePredicate decides whether the provided endpoint node names
+// require a generated bridge node realization.
+type ImpairmentBridgePredicate func(endpointNodes []string) bool
+
+// ExpandImpairments expands veth links that either request impairment bridge
+// realization or touch an endpoint that requires bridge-backed links.
+func ExpandImpairments(
+	linkDefs []*LinkDefinition,
+	requiresBridge ImpairmentBridgePredicate,
+) (*ImpairmentExpansion, error) {
 	result := &ImpairmentExpansion{
 		Links: make([]*LinkDefinition, 0, len(linkDefs)),
 	}
@@ -45,16 +52,26 @@ func ExpandImpairments(linkDefs []*LinkDefinition) (*ImpairmentExpansion, error)
 		}
 
 		raw, ok := linkDef.Link.(*LinkVEthRaw)
-		if !ok || raw.Impairment == nil {
+		if !ok {
 			result.Links = append(result.Links, linkDef)
 			continue
 		}
 
+		if len(raw.Endpoints) != 2 && raw.Impairment == nil {
+			result.Links = append(result.Links, linkDef)
+			continue
+		}
 		if len(raw.Endpoints) != 2 {
 			return nil, fmt.Errorf(
 				"impairment bridge links require exactly two endpoints, got %d",
 				len(raw.Endpoints),
 			)
+		}
+
+		endpointNodes := []string{raw.Endpoints[0].Node, raw.Endpoints[1].Node}
+		if raw.Impairment == nil && (requiresBridge == nil || !requiresBridge(endpointNodes)) {
+			result.Links = append(result.Links, linkDef)
+			continue
 		}
 
 		bridgeNode, err := buildImpairmentBridgeNode(idx, raw)
@@ -90,7 +107,10 @@ func ExpandImpairments(linkDefs []*LinkDefinition) (*ImpairmentExpansion, error)
 }
 
 func buildImpairmentBridgeNode(idx int, raw *LinkVEthRaw) (*ImpairmentBridgeNode, error) {
-	mode := raw.Impairment.Mode
+	mode := ""
+	if raw.Impairment != nil {
+		mode = raw.Impairment.Mode
+	}
 	if mode == "" {
 		mode = LinkImpairmentModeBridge
 	}
@@ -98,12 +118,18 @@ func buildImpairmentBridgeNode(idx int, raw *LinkVEthRaw) (*ImpairmentBridgeNode
 		return nil, fmt.Errorf("unsupported link impairment mode %q", raw.Impairment.Mode)
 	}
 
-	name := raw.Impairment.Name
+	name := ""
+	if raw.Impairment != nil {
+		name = raw.Impairment.Name
+	}
 	if name == "" {
 		name = fmt.Sprintf("impairment-bridge-%02d", idx+1)
 	}
 
-	image := raw.Impairment.Image
+	image := ""
+	if raw.Impairment != nil {
+		image = raw.Impairment.Image
+	}
 	if image == "" {
 		image = DefaultImpairmentBridgeImage
 	}

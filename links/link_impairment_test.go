@@ -25,7 +25,7 @@ impairment:
 		t.Fatalf("yaml.UnmarshalStrict() error = %v", err)
 	}
 
-	expansion, err := ExpandImpairments([]*LinkDefinition{&linkDef})
+	expansion, err := ExpandImpairments([]*LinkDefinition{&linkDef}, nil)
 	if err != nil {
 		t.Fatalf("ExpandImpairments() error = %v", err)
 	}
@@ -68,6 +68,72 @@ impairment:
 	}
 }
 
+func TestExpandImpairmentsAutoExpandsRegularVethWhenRequired(t *testing.T) {
+	var linkDef LinkDefinition
+
+	err := yaml.UnmarshalStrict([]byte(`
+endpoints: ["pe01:1/1/c3/1", "pe02:1/1/c3/1"]
+`), &linkDef)
+	if err != nil {
+		t.Fatalf("yaml.UnmarshalStrict() error = %v", err)
+	}
+
+	expansion, err := ExpandImpairments(
+		[]*LinkDefinition{&linkDef},
+		func(endpointNodes []string) bool {
+			return endpointNodes[0] == "pe01" || endpointNodes[1] == "pe01"
+		},
+	)
+	if err != nil {
+		t.Fatalf("ExpandImpairments() error = %v", err)
+	}
+
+	if len(expansion.BridgeNodes) != 1 {
+		t.Fatalf("generated bridge nodes = %d, want 1", len(expansion.BridgeNodes))
+	}
+	if diff := cmp.Diff(&ImpairmentBridgeNode{
+		Name:          "impairment-bridge-01",
+		Image:         DefaultImpairmentBridgeImage,
+		OriginalNodes: []string{"pe01", "pe02"},
+	}, expansion.BridgeNodes[0]); diff != "" {
+		t.Fatalf("bridge node mismatch (-want +got):\n%s", diff)
+	}
+
+	assertVethRawEndpoints(t, expansion.Links[0], []*EndpointRaw{
+		{Node: "pe01", Iface: "1/1/c3/1"},
+		{Node: "impairment-bridge-01", Iface: "eth1"},
+	})
+	assertVethRawEndpoints(t, expansion.Links[1], []*EndpointRaw{
+		{Node: "impairment-bridge-01", Iface: "eth2"},
+		{Node: "pe02", Iface: "1/1/c3/1"},
+	})
+}
+
+func TestExpandImpairmentsKeepsRegularVethDirectWhenBridgeIsNotRequired(t *testing.T) {
+	var linkDef LinkDefinition
+
+	err := yaml.UnmarshalStrict([]byte(`
+endpoints: ["pe01:eth1", "pe02:eth1"]
+`), &linkDef)
+	if err != nil {
+		t.Fatalf("yaml.UnmarshalStrict() error = %v", err)
+	}
+
+	expansion, err := ExpandImpairments(
+		[]*LinkDefinition{&linkDef},
+		func([]string) bool { return false },
+	)
+	if err != nil {
+		t.Fatalf("ExpandImpairments() error = %v", err)
+	}
+	if len(expansion.BridgeNodes) != 0 {
+		t.Fatalf("generated bridge nodes = %d, want 0", len(expansion.BridgeNodes))
+	}
+	if diff := cmp.Diff([]*LinkDefinition{&linkDef}, expansion.Links); diff != "" {
+		t.Fatalf("links mismatch (-want +got):\n%s", diff)
+	}
+}
+
 func TestExpandImpairmentsRejectsUnsupportedMode(t *testing.T) {
 	linkDef := &LinkDefinition{
 		Type: string(LinkTypeVEth),
@@ -83,7 +149,7 @@ func TestExpandImpairmentsRejectsUnsupportedMode(t *testing.T) {
 		},
 	}
 
-	if _, err := ExpandImpairments([]*LinkDefinition{linkDef}); err == nil {
+	if _, err := ExpandImpairments([]*LinkDefinition{linkDef}, nil); err == nil {
 		t.Fatalf("ExpandImpairments() error = nil, want unsupported mode error")
 	}
 }
@@ -112,7 +178,7 @@ func TestExpandImpairmentsRejectsDuplicateBridgeNode(t *testing.T) {
 		},
 	}
 
-	if _, err := ExpandImpairments(linkDefs); err == nil {
+	if _, err := ExpandImpairments(linkDefs, nil); err == nil {
 		t.Fatalf("ExpandImpairments() error = nil, want duplicate bridge node error")
 	}
 }
