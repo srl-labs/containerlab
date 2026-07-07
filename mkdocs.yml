@@ -120,6 +120,7 @@ nav:
       - exec: cmd/exec.md
       - generate: cmd/generate.md
       - graph: cmd/graph.md
+      - validate: cmd/validate.md
       - tools:
           - disable-tx-offload: cmd/tools/disable-tx-offload.md
           - veth:
