@@ -270,7 +270,41 @@ links:
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
+    impairment:                             # optional
+      mode: bridge
+      name: <generated-bridge-node-name>    # optional
+      image: <linux-image>                  # optional
 ```
+
+###### veth link impairment
+
+A veth link in extended format can request an impairment bridge by setting `impairment.mode: bridge`.
+The topology keeps this as a single authored link, while Containerlab expands it into a generated Linux bridge node and two regular veth links before deployment.
+This is useful for nodes whose datapath interfaces cannot be impaired directly with `tools netem`, because the generated Linux node can be targeted instead.
+
+```yaml
+links:
+  - type: veth
+    endpoints:
+      - node: pe02-core
+        interface: 1/1/c3/1
+      - node: pe01-core
+        interface: 1/1/c3/1
+    impairment:
+      mode: bridge
+      name: link-0102--01
+```
+
+The generated bridge node is equivalent to:
+
+```text
+pe02-core:1/1/c3/1 <-> link-0102--01:eth1
+link-0102--01:eth2 <-> pe01-core:1/1/c3/1
+```
+
+The bridge node uses a Linux container and creates `br0` with `eth1` and `eth2` as member interfaces.
+The default image is `ghcr.io/srl-labs/network-multitool:v0.4.1`; use `impairment.image` to override it.
+The generated node is labeled with `containerlab.dev/generated=true` and `containerlab.dev/role=impairment-bridge`.
 
 ###### mgmt-net
 

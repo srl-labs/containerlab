@@ -845,6 +845,9 @@
                 },
                 "labels": {
                     "$ref": "#/definitions/labels"
+                },
+                "impairment": {
+                    "$ref": "#/definitions/link-impairment"
                 }
             },
             "required": [
@@ -852,6 +855,29 @@
                 "endpoints"
             ],
             "additionalItems": false
+        },
+        "link-impairment": {
+            "type": "object",
+            "description": "Optional link impairment helper configuration",
+            "markdownDescription": "Optional link impairment helper configuration",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "description": "Impairment helper mode",
+                    "enum": [
+                        "bridge"
+                    ]
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Name of the generated impairment bridge node"
+                },
+                "image": {
+                    "type": "string",
+                    "description": "Container image to use for the generated impairment bridge node"
+                }
+            },
+            "additionalProperties": false
         },
         "link-type-mgmt-net": {
             "type": "object",
