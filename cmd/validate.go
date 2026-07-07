@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
 	clabcore "github.com/srl-labs/containerlab/core"
@@ -28,6 +30,10 @@ func validateFn(o *Options) error {
 	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
 	if err != nil {
 		return err
+	}
+
+	if c.Config.Name == "" || len(c.Nodes) == 0 {
+		return fmt.Errorf("topology file %q defines no name or nodes. likely an empty file", c.TopoPaths.TopologyFilenameBase())
 	}
 
 	if err := c.ResolveLinks(); err != nil {
