@@ -102,6 +102,17 @@ func (n *sonic_vm) PreDeploy(_ context.Context, params *clabnodes.PreDeployParam
 		return err
 	}
 
+	// Bind-mount the lab's authorized_keys file to /authorized_keys inside the
+	// container so that the vrnetlab launch.py bootstrap can inject it into the
+	// QEMU guest via the serial console, enabling passwordless SSH on first boot.
+	authzKeysFile := params.TopoPaths.AuthorizedKeysFilename()
+	if clabutils.FileExists(authzKeysFile) {
+		n.Cfg.Binds = append(
+			n.Cfg.Binds,
+			fmt.Sprintf("%s:/authorized_keys:ro", authzKeysFile),
+		)
+	}
+
 	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
 }
 
