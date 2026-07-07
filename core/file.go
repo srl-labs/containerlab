@@ -107,10 +107,6 @@ func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 		)
 	}
 
-	if err := c.expandLinkImpairments(); err != nil {
-		return err
-	}
-
 	c.Config.Topology.ImportEnvs()
 
 	return nil

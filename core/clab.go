@@ -190,7 +190,7 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 		}
 	}
 
-	c.nodeFilter = c.expandNodeFilterForGeneratedNodes(nodeFilter)
+	c.nodeFilter = nodeFilter
 
 	log.Infof("Applying node filter: %q", nodeFilter)
 
@@ -622,6 +622,7 @@ func (c *CLab) ResolveLinks() error {
 		Nodes:          c.getLinkNodes(),
 		MgmtBridgeName: c.Config.Mgmt.Bridge,
 		NodesFilter:    c.nodeFilter,
+		LabName:        c.Config.Name,
 	}
 
 	for i, l := range c.Config.Topology.Links {

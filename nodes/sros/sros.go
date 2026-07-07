@@ -176,7 +176,7 @@ func Register(r *clabnodes.NodeRegistry) {
 		defaultCredentials,
 		generateNodeAttributes,
 		platformOpts,
-	).WithLinkImpairmentBridgeRequired()
+	)
 
 	r.Register(kindNames, func() clabnodes.Node {
 		return new(sros)

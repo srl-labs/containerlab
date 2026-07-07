@@ -114,6 +114,12 @@ func (c *CLab) Deploy( //nolint: funlen
 				log.Warnf("failed stitching vxlan link: %v", err)
 			}
 		}
+
+		if stitchedVeth, ok := link.(*clablinks.LinkVEthStitched); ok {
+			if err = stitchedVeth.Stitch(ctx); err != nil {
+				log.Warnf("failed stitching veth-stitch link: %v", err)
+			}
+		}
 	}
 
 	execCollection.Log()

@@ -23,8 +23,7 @@ const (
 // LinkVEthRaw is the raw (string) representation of a veth link as defined in the topology file.
 type LinkVEthRaw struct {
 	LinkCommonParams `               yaml:",inline"`
-	Endpoints        []*EndpointRaw  `yaml:"endpoints"`
-	Impairment       *LinkImpairment `yaml:"impairment,omitempty"`
+	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
 // ToLinkBriefRaw converts the raw link into a LinkBriefRaw.

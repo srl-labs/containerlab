@@ -16,8 +16,4 @@ const (
 	RootNodeLongName = "clab-root-node-longname"
 	GitBranch        = "clab-git-branch"
 	GitHash          = "clab-git-hash"
-
-	GeneratedNode           = "containerlab.dev/generated"
-	GeneratedNodeRole       = "containerlab.dev/role"
-	ImpairmentOriginalNodes = "containerlab.dev/impairment-original-nodes"
 )

@@ -65,6 +65,7 @@ type LinkType string
 
 const (
 	LinkTypeVEth        LinkType = "veth"
+	LinkTypeVethStitch  LinkType = "veth-stitch"
 	LinkTypeMgmtNet     LinkType = "mgmt-net"
 	LinkTypeMacVLan     LinkType = "macvlan"
 	LinkTypeHost        LinkType = "host"
@@ -87,6 +88,9 @@ func parseLinkType(s string) (LinkType, error) {
 
 	case string(LinkTypeVEth):
 		return LinkTypeVEth, nil
+
+	case string(LinkTypeVethStitch):
+		return LinkTypeVethStitch, nil
 
 	case string(LinkTypeMgmtNet):
 		return LinkTypeMgmtNet, nil
@@ -163,6 +167,19 @@ func (ld *LinkDefinition) UnmarshalYAML( //nolint: funlen
 			return err
 		}
 		ld.Link = &l.LinkVEthRaw
+
+	case LinkTypeVethStitch:
+		var l struct {
+			// the Type field is injected artificially
+			// to allow strict yaml parsing to work.
+			Type                string `yaml:"type"`
+			LinkVEthStitchedRaw `yaml:",inline"`
+		}
+		err := unmarshal(&l)
+		if err != nil {
+			return err
+		}
+		ld.Link = &l.LinkVEthStitchedRaw
 
 	case LinkTypeMgmtNet:
 		var l struct {
@@ -282,6 +299,15 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 		}{
 			LinkVEthRaw: *r.Link.(*LinkVEthRaw),
 			Type:        string(LinkTypeVEth),
+		}
+		return x, nil
+	case LinkTypeVethStitch:
+		x := struct {
+			Type                string `yaml:"type"`
+			LinkVEthStitchedRaw `yaml:",inline"`
+		}{
+			LinkVEthStitchedRaw: *r.Link.(*LinkVEthStitchedRaw),
+			Type:                string(LinkTypeVethStitch),
 		}
 		return x, nil
 	case LinkTypeMgmtNet:
@@ -606,6 +632,9 @@ func isAltNameNotSupportedErr(err error) bool {
 type ResolveParams struct {
 	Nodes          map[string]Node
 	MgmtBridgeName string
+	// LabName is the name of the lab, used to scope generated host-global
+	// resources such as veth-stitch network namespaces.
+	LabName string
 	// list of node shortnames that user
 	// passed as a node filter
 	NodesFilter []string

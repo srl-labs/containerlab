@@ -99,10 +99,9 @@ func (nre *NodeRegistryEntry) GetCredentials() *Credentials {
 }
 
 type NodeRegistryEntryAttributes struct {
-	credentials                  *Credentials
-	generateAttributes           *GenerateNodeAttributes
-	platformAttrs                *PlatformAttrs
-	requiresLinkImpairmentBridge bool
+	credentials        *Credentials
+	generateAttributes *GenerateNodeAttributes
+	platformAttrs      *PlatformAttrs
 }
 
 func (nre *NodeRegistryEntry) GetGenerateAttributes() *GenerateNodeAttributes {
@@ -118,14 +117,6 @@ func (nre *NodeRegistryEntry) PlatformAttrs() *PlatformAttrs {
 	}
 
 	return nre.attributes.PlatformAttrs()
-}
-
-func (nre *NodeRegistryEntry) RequiresLinkImpairmentBridge() bool {
-	if nre.attributes == nil {
-		return false
-	}
-
-	return nre.attributes.RequiresLinkImpairmentBridge()
 }
 
 // Credentials returns entry's credentials.
@@ -188,23 +179,6 @@ func (nrea *NodeRegistryEntryAttributes) PlatformAttrs() *PlatformAttrs {
 	}
 
 	return nrea.platformAttrs
-}
-
-func (nrea *NodeRegistryEntryAttributes) RequiresLinkImpairmentBridge() bool {
-	if nrea == nil {
-		return false
-	}
-
-	return nrea.requiresLinkImpairmentBridge
-}
-
-func (nrea *NodeRegistryEntryAttributes) WithLinkImpairmentBridgeRequired() *NodeRegistryEntryAttributes {
-	if nrea == nil {
-		return nrea
-	}
-
-	nrea.requiresLinkImpairmentBridge = true
-	return nrea
 }
 
 type GenerateNodeAttributes struct {
