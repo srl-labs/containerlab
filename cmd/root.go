@@ -38,6 +38,7 @@ func subcommandRegisterFuncs() []func(*Options) (*cobra.Command, error) {
 		redeployCmd,
 		saveCmd,
 		toolsCmd,
+		validateCmd,
 	}
 }
 
@@ -184,6 +185,7 @@ func getTopoFilePath(cobraCmd *cobra.Command, o *Options) error { // skipcq: GO-
 		cobraCmd.Name() != "inspect" &&
 		cobraCmd.Name() != "save" &&
 		cobraCmd.Name() != "graph" &&
+		cobraCmd.Name() != "validate" &&
 		cobraCmd.Name() != "interfaces" {
 		return nil
 	}
