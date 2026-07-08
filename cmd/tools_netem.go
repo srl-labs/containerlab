@@ -481,7 +481,7 @@ func netemResetFn(o *Options) error {
 			return err
 		}
 
-		fmt.Printf("Reset impairments on %q, interface %q\n",
+		fmt.Printf("Reset impairments on node %q, interface %q\n",
 			target.DisplayName, netemIfLink.Attrs().Name)
 
 		return nil
