@@ -24,7 +24,6 @@ import (
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
 	clabconstants "github.com/srl-labs/containerlab/constants"
-	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -311,20 +310,6 @@ func nodeConfigExists(labDir string) bool {
 	return err == nil
 }
 
-// isHealthy checks if the "/health" file created by vrnetlab exists and contains "0 running".
-func (s *vrSROS) isHealthy(ctx context.Context) bool {
-	ex := clabexec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
-
-	res, err := s.RunExec(ctx, ex)
-	if err != nil {
-		return false
-	}
-
-	log.Debugf("Node %q health status: %v", s.Cfg.ShortName, res.ReturnCode == 0)
-
-	return res.ReturnCode == 0
-}
-
 // applyPartialConfig applies partial configuration to the SR OS.
 func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	username, password string, config io.Reader,
@@ -350,7 +335,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	)
 
 	for loop := true; loop; {
-		if !s.isHealthy(ctx) {
+		if !s.IsVrnetlabHealthy(ctx) {
 			time.Sleep(5 * time.Second) // cool-off period
 			log.Debugf("Waiting for %s to become healthy", s.Cfg.ShortName)
 			continue

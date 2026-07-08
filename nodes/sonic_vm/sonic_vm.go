@@ -10,8 +10,15 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/scrapli/scrapligo/driver/generic"
+	"github.com/scrapli/scrapligo/driver/options"
+	"github.com/scrapli/scrapligo/transport"
+	"golang.org/x/crypto/ssh"
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
@@ -34,7 +41,11 @@ const (
 	saveCmd         = `sh -c "/backup.sh -u $USERNAME -p $PASSWORD backup"`
 
 	scrapliPlatformName = "sonic"
+	readyTimeout        = 5 * time.Minute
+	readyRetryInterval  = 5 * time.Second
 )
+
+var bashPromptPattern = regexp.MustCompile(`[$#]\s*$`)
 
 // Register registers the node in the NodeRegistry.
 func Register(r *clabnodes.NodeRegistry) {
@@ -55,13 +66,12 @@ func Register(r *clabnodes.NodeRegistry) {
 }
 
 type sonic_vm struct {
-	clabnodes.DefaultNode
+	clabnodes.VRNode
+	sshPubKeys []ssh.PublicKey
 }
 
 func (n *sonic_vm) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) error {
-	// Init DefaultNode
-	n.DefaultNode = *clabnodes.NewDefaultNode(n)
-	// set virtualization requirement
+	n.VRNode = *clabnodes.NewVRNode(n, defaultCredentials, scrapliPlatformName)
 	n.HostRequirements.VirtRequired = true
 
 	n.Cfg = cfg
@@ -102,7 +112,92 @@ func (n *sonic_vm) PreDeploy(_ context.Context, params *clabnodes.PreDeployParam
 		return err
 	}
 
+	n.sshPubKeys = params.SSHPubKeys
+
 	return clabnodes.LoadStartupConfigFileVr(n, configDirName, startupCfgFName)
+}
+
+func (n *sonic_vm) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams) error {
+	if len(n.sshPubKeys) == 0 {
+		return nil
+	}
+
+	deadlineCtx, cancel := context.WithTimeout(ctx, readyTimeout)
+	defer cancel()
+
+	if err := n.deploySSHKeys(deadlineCtx); err != nil {
+		return fmt.Errorf("%s: failed to deploy SSH public keys: %w", n.Cfg.ShortName, err)
+	}
+
+	log.Infof("Deployed %d SSH public key(s) for node %s", len(n.sshPubKeys), n.Cfg.ShortName)
+
+	return nil
+}
+
+// deploySSHKeys waits for the VM to become healthy and then injects the SSH public keys
+// via a scrapligo SSH session.
+func (n *sonic_vm) deploySSHKeys(ctx context.Context) error {
+	commands := buildSSHKeyInjectionCommands(clabutils.MarshalSSHPubKeys(n.sshPubKeys))
+
+	log.Infof("Waiting for %s to be ready to accept SSH connections. This may take a while",
+		n.Cfg.ShortName)
+
+	for {
+		if !n.IsVrnetlabHealthy(ctx) {
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("timed out waiting for node to become healthy")
+			default:
+				log.Debugf("Waiting for %s to become healthy", n.Cfg.ShortName)
+				time.Sleep(readyRetryInterval)
+				continue
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timed out waiting for SSH to become available")
+		default:
+			driver, err := generic.NewDriver(
+				n.Cfg.MgmtIPv4Address,
+				options.WithAuthNoStrictKey(),
+				options.WithAuthUsername(n.Cfg.Credentials.Username),
+				options.WithAuthPassword(n.Cfg.Credentials.Password),
+				options.WithTransportType(transport.StandardTransport),
+				options.WithPromptPattern(bashPromptPattern),
+				options.WithTimeoutOps(30*time.Second),
+			)
+			if err != nil {
+				return err
+			}
+
+			if err := driver.Open(); err != nil {
+				log.Debugf("%s: SSH not yet ready - %v", n.Cfg.ShortName, err)
+				time.Sleep(readyRetryInterval)
+				continue
+			}
+			defer driver.Close()
+
+			_, err = driver.SendCommands(commands)
+			return err
+		}
+	}
+}
+
+func buildSSHKeyInjectionCommands(keys []string) []string {
+	cmds := []string{
+		"mkdir -p ~/.ssh && chmod 700 ~/.ssh",
+		"truncate -s 0 ~/.ssh/authorized_keys",
+	}
+
+	for _, key := range keys {
+		escaped := strings.ReplaceAll(key, "'", `'\''`)
+		cmds = append(cmds, fmt.Sprintf("printf '%%s\\n' '%s' >> ~/.ssh/authorized_keys", escaped))
+	}
+
+	cmds = append(cmds, "chmod 600 ~/.ssh/authorized_keys")
+
+	return cmds
 }
 
 func (n *sonic_vm) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {
