@@ -100,6 +100,7 @@
                         "keysight_ixia-c-one",
                         "ipinfusion_ocnos",
                         "checkpoint_cloudguard",
+                        "ciena_saos",
                         "ext-container",
                         "rare",
                         "cisco_xrd",
@@ -2125,6 +2126,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "checkpoint_cloudguard": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "ciena_saos": {
                             "$ref": "#/definitions/node-config"
                         },
                         "ext-container": {
