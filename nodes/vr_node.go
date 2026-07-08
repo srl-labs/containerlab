@@ -158,9 +158,9 @@ func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	}, nil
 }
 
-// IsVrnetlabHealthy checks if the "/health" file written by vrnetlab's launch.py exists and
+// IsVrnodeHealthy checks if the "/health" file written by vrnetlab's launch.py exists and
 // contains "0 running", indicating the inner VM has finished booting.
-func (vr *VRNode) IsVrnetlabHealthy(ctx context.Context) bool {
+func (vr *VRNode) IsVrnodeHealthy(ctx context.Context) bool {
 	cmd := clabexec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
 
 	res, err := vr.RunExec(ctx, cmd)

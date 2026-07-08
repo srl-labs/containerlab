@@ -143,7 +143,7 @@ func (n *sonic_vm) deploySSHKeys(ctx context.Context) error {
 		n.Cfg.ShortName)
 
 	for {
-		if !n.IsVrnetlabHealthy(ctx) {
+		if !n.IsVrnodeHealthy(ctx) {
 			select {
 			case <-ctx.Done():
 				return fmt.Errorf("timed out waiting for node to become healthy")

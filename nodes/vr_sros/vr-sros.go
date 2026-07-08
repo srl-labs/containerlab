@@ -335,7 +335,7 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	)
 
 	for loop := true; loop; {
-		if !s.IsVrnetlabHealthy(ctx) {
+		if !s.IsVrnodeHealthy(ctx) {
 			time.Sleep(5 * time.Second) // cool-off period
 			log.Debugf("Waiting for %s to become healthy", s.Cfg.ShortName)
 			continue
