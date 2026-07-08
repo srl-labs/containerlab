@@ -229,3 +229,53 @@ func TestVethStitchNetnsName(t *testing.T) {
 		t.Fatalf("netns name should differ across endpoint sets")
 	}
 }
+
+func TestResolveNetemTarget(t *testing.T) {
+	link := &LinkVEthStitchedRaw{
+		Endpoints: []*EndpointRaw{{Node: "pe01", Iface: "e1"}, {Node: "pe02", Iface: "e1"}},
+	}
+
+	tests := []struct {
+		name           string
+		node, rootNode string
+		iface          string
+		wantRedirect   bool // matched endpoint => netns lookup attempted; else nil,nil
+	}{
+		{"match by node name", "pe01", "", "e1", true},
+		{"match by root node name", "sros-1", "pe02", "e1", true},
+		{"no match: wrong iface", "pe01", "", "e2", false},
+		{"no match: wrong node", "pe09", "", "e1", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			target, err := link.ResolveNetemTarget("mylab", tt.node, tt.rootNode, tt.iface)
+
+			if !tt.wantRedirect {
+				if target != nil || err != nil {
+					t.Fatalf("want no redirect, got target=%v err=%v", target, err)
+				}
+				return
+			}
+
+			// Matched: the (undeployed) stitch netns is absent, so the lookup
+			// errors, naming the deterministic netns for this link.
+			if err == nil {
+				t.Fatalf("want lookup error for matched endpoint, got target=%v", target)
+			}
+			wantNetns := VEthStitchNetnsName("mylab", link.Endpoints)
+			if !strings.Contains(err.Error(), wantNetns) {
+				t.Fatalf("error %q does not reference netns %q", err, wantNetns)
+			}
+		})
+	}
+}
+
+func TestResolveNetemTargetWrongEndpointCount(t *testing.T) {
+	link := &LinkVEthStitchedRaw{Endpoints: []*EndpointRaw{{Node: "pe01", Iface: "e1"}}}
+
+	target, err := link.ResolveNetemTarget("mylab", "pe01", "", "e1")
+	if target != nil || err != nil {
+		t.Fatalf("want nil for non-2-endpoint link, got target=%v err=%v", target, err)
+	}
+}

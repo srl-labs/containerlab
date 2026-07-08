@@ -284,6 +284,41 @@ func validateVEthStitched(r *LinkVEthStitchedRaw) error {
 	return nil
 }
 
+// ResolveNetemTarget redirects netem into the stitch netns when node:iface is one
+// of this link's endpoints, targeting the interface named after the other node
+// (egress-of-iface semantics); nil otherwise.
+func (r *LinkVEthStitchedRaw) ResolveNetemTarget(
+	labName, node, rootNode, iface string,
+) (*NetemTarget, error) {
+	if len(r.Endpoints) != 2 {
+		return nil, nil
+	}
+
+	for i, ep := range r.Endpoints {
+		if ep.Iface != iface || (ep.Node != node && ep.Node != rootNode) {
+			continue
+		}
+
+		other := r.Endpoints[(i+1)%2]
+		netnsName := VEthStitchNetnsName(labName, r.Endpoints)
+
+		nsPath, err := clabutils.GetNamedNetNS(netnsName)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"veth-stitch namespace %q for %s:%s not found (is the lab deployed?): %w",
+				netnsName, node, iface, err)
+		}
+
+		return &NetemTarget{
+			NSPath:      nsPath,
+			Iface:       other.Node,
+			DisplayName: fmt.Sprintf("%s:%s (veth-stitch)", node, iface),
+		}, nil
+	}
+
+	return nil, nil
+}
+
 // VEthStitchNetnsName returns a deterministic, lab-scoped name for a link's stitch
 // netns. Exported so tooling (tools netem) can locate it.
 func VEthStitchNetnsName(labName string, eps []*EndpointRaw) string {

@@ -25,7 +25,6 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetem "github.com/srl-labs/containerlab/netem"
-	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -164,12 +163,12 @@ func netemSetFn(ctx context.Context, o *Options) error {
 		)
 	}
 
-	target, err := resolveNetemTarget(ctx, o)
+	target, err := clabcore.ResolveNetemTarget(ctx, o.Global.Runtime, o.Global.Timeout, o.ToolsNetem.ContainerName, o.ToolsNetem.Interface)
 	if err != nil {
 		return err
 	}
 
-	nodeNs, err := ns.GetNS(target.nsPath)
+	nodeNs, err := ns.GetNS(target.NSPath)
 	if err != nil {
 		return err
 	}
@@ -187,7 +186,7 @@ func netemSetFn(ctx context.Context, o *Options) error {
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
 		netemIfLink, err := netlink.LinkByName(
-			clablinks.SanitizeInterfaceName(target.iface))
+			clablinks.SanitizeInterfaceName(target.Iface))
 		if err != nil {
 			return err
 		}
@@ -201,7 +200,7 @@ func netemSetFn(ctx context.Context, o *Options) error {
 
 		qdisc, err := clabnetem.SetImpairments(
 			tcnl,
-			target.displayName,
+			target.DisplayName,
 			link,
 			o.ToolsNetem.Delay,
 			o.ToolsNetem.Jitter,
@@ -235,123 +234,6 @@ func validateInputAndRoot(o *Options) error {
 	}
 
 	return nil
-}
-
-// netemTarget identifies the network namespace, the interface within it, and a
-// human-facing name that netem operations act on.
-type netemTarget struct {
-	nsPath      string
-	iface       string
-	displayName string
-}
-
-// resolveNetemTarget returns the netns and interface to apply netem on: a
-// veth-stitch link's namespace if the interface is one of its endpoints, else the
-// node's own netns.
-func resolveNetemTarget(ctx context.Context, o *Options) (*netemTarget, error) {
-	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
-	if err != nil {
-		return nil, err
-	}
-
-	rt := rinit()
-	if err := rt.Init(
-		clabruntime.WithConfig(&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout}),
-	); err != nil {
-		return nil, err
-	}
-
-	if target, err := vethStitchNetemTarget(ctx, rt, o); err != nil {
-		return nil, err
-	} else if target != nil {
-		return target, nil
-	}
-
-	nsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
-	if err != nil {
-		return nil, err
-	}
-
-	return &netemTarget{
-		nsPath:      nsPath,
-		iface:       o.ToolsNetem.Interface,
-		displayName: o.ToolsNetem.ContainerName,
-	}, nil
-}
-
-// vethStitchNetemTarget returns a target inside a veth-stitch namespace if the
-// requested node:interface is one of its endpoints, else nil. The link is
-// discovered from the container's labels (topology file + node name).
-func vethStitchNetemTarget(
-	ctx context.Context,
-	rt clabruntime.ContainerRuntime,
-	o *Options,
-) (*netemTarget, error) {
-	cnts, err := rt.ListContainers(ctx, []*clabtypes.GenericFilter{
-		{FilterType: "name", Match: o.ToolsNetem.ContainerName},
-	})
-	if err != nil || len(cnts) != 1 {
-		// not a uniquely resolvable container; let the node path surface the error
-		return nil, nil //nolint:nilerr
-	}
-
-	topoFile := cnts[0].Labels[clabconstants.TopoFile]
-	nodeName := cnts[0].Labels[clabconstants.NodeName]
-	// for multi-component nodes (e.g. multi-slot SR-SIM) the topology endpoint
-	// references the root node name while the container carries a component name.
-	rootNodeName := cnts[0].Labels[clabconstants.RootNodeName]
-	if topoFile == "" || nodeName == "" {
-		return nil, nil
-	}
-
-	tc, err := clabcore.NewContainerLab(
-		clabcore.WithTimeout(o.Global.Timeout),
-		clabcore.WithRuntime(
-			o.Global.Runtime,
-			&clabruntime.RuntimeConfig{Timeout: o.Global.Timeout},
-		),
-		clabcore.WithTopoPath(topoFile, nil),
-	)
-	if err != nil {
-		// topology no longer loadable; fall back to the node namespace
-		log.Debugf("could not load topology %q to check for veth-stitch links: %v", topoFile, err)
-		return nil, nil //nolint:nilerr
-	}
-
-	for _, ld := range tc.Config.Topology.Links {
-		raw, ok := ld.Link.(*clablinks.LinkVEthStitchedRaw)
-		if !ok || len(raw.Endpoints) != 2 {
-			continue
-		}
-
-		for i, ep := range raw.Endpoints {
-			if ep.Iface != o.ToolsNetem.Interface ||
-				(ep.Node != nodeName && ep.Node != rootNodeName) {
-				continue
-			}
-
-			// traffic egressing the requested interface leaves the netns via the
-			// interface named after the other endpoint's node.
-			other := raw.Endpoints[(i+1)%2]
-
-			netnsName := clablinks.VEthStitchNetnsName(tc.Config.Name, raw.Endpoints)
-
-			nsPath, nsErr := clabutils.GetNamedNetNS(netnsName)
-			if nsErr != nil {
-				return nil, fmt.Errorf(
-					"veth-stitch namespace %q for %s:%s not found (is the lab deployed?): %w",
-					netnsName, nodeName, o.ToolsNetem.Interface, nsErr)
-			}
-
-			return &netemTarget{
-				nsPath:      nsPath,
-				iface:       other.Node,
-				displayName: fmt.Sprintf("%s:%s (veth-stitch)", nodeName, o.ToolsNetem.Interface),
-			}, nil
-		}
-	}
-
-	return nil, nil
 }
 
 func printImpairments(qdiscs []gotc.Object) {
@@ -499,12 +381,12 @@ func netemShowFn(o *Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	target, err := resolveNetemTarget(ctx, o)
+	target, err := clabcore.ResolveNetemTarget(ctx, o.Global.Runtime, o.Global.Timeout, o.ToolsNetem.ContainerName, o.ToolsNetem.Interface)
 	if err != nil {
 		return err
 	}
 
-	nodeNs, err := ns.GetNS(target.nsPath)
+	nodeNs, err := ns.GetNS(target.NSPath)
 	if err != nil {
 		return err
 	}
@@ -539,7 +421,7 @@ func netemShowFn(o *Options) error {
 
 			// Structure output as a map keyed by the target name.
 			outputData := map[string][]clabtypes.ImpairmentData{
-				target.displayName: impairments,
+				target.DisplayName: impairments,
 			}
 
 			jsonData, err := json.MarshalIndent(outputData, "", "  ")
@@ -562,12 +444,12 @@ func netemResetFn(o *Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	target, err := resolveNetemTarget(ctx, o)
+	target, err := clabcore.ResolveNetemTarget(ctx, o.Global.Runtime, o.Global.Timeout, o.ToolsNetem.ContainerName, o.ToolsNetem.Interface)
 	if err != nil {
 		return err
 	}
 
-	nodeNs, err := ns.GetNS(target.nsPath)
+	nodeNs, err := ns.GetNS(target.NSPath)
 	if err != nil {
 		return err
 	}
@@ -585,7 +467,7 @@ func netemResetFn(o *Options) error {
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
 		netemIfLink, err := netlink.LinkByName(
-			clablinks.SanitizeInterfaceName(target.iface))
+			clablinks.SanitizeInterfaceName(target.Iface))
 		if err != nil {
 			return err
 		}
@@ -600,7 +482,7 @@ func netemResetFn(o *Options) error {
 		}
 
 		fmt.Printf("Reset impairments on %q, interface %q\n",
-			target.displayName, netemIfLink.Attrs().Name)
+			target.DisplayName, netemIfLink.Attrs().Name)
 
 		return nil
 	})

@@ -54,6 +54,12 @@ func (l *LinkCommonParams) GetVars() map[string]any {
 	return l.Vars
 }
 
+// ResolveNetemTarget defaults to no redirect: `tools netem` acts on the node's
+// own netns. Links whose datapath lives outside it (e.g. veth-stitch) override.
+func (l *LinkCommonParams) ResolveNetemTarget(_, _, _, _ string) (*NetemTarget, error) {
+	return nil, nil
+}
+
 // LinkDefinition represents a link definition in the topology file.
 type LinkDefinition struct {
 	Type string  `yaml:"type,omitempty"`
@@ -360,6 +366,9 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 type RawLink interface {
 	Resolve(params *ResolveParams) (Link, error)
 	GetType() LinkType
+	// ResolveNetemTarget reports where `tools netem` should apply impairment for
+	// the given endpoint, or nil to use the node's own netns. See NetemTarget.
+	ResolveNetemTarget(labName, node, rootNode, iface string) (*NetemTarget, error)
 }
 
 // Link is an interface that all concrete link types must implement.
@@ -513,6 +522,14 @@ type EndpointOwner interface {
 	Node
 	AdoptEndpoint(e Endpoint) error
 	ReleaseEndpoint(e Endpoint) error
+}
+
+// NetemTarget is where `tools netem` applies impairment when an endpoint's
+// datapath isn't in the node's own namespace.
+type NetemTarget struct {
+	NSPath      string // netns to apply netem in
+	Iface       string // interface within it
+	DisplayName string // label for output
 }
 
 type LinkEndpointType string
