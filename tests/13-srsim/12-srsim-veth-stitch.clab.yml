@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+name: veth-stitch
+topology:
+  kinds:
+    nokia_srsim:
+      license: /opt/nokia/sros/license-sros25.txt
+      image: registry.srlinux.dev/pub/nokia_srsim:25.10.R2
+      env:
+        CLAB_SROS_DISABLE_COMPONENT_CONFIG: "true"
+
+  nodes:
+    sros1:
+      kind: nokia_srsim
+      type: sr-1
+      startup-config: |
+        /configure card 1 card-type iom-1
+        /configure card 1 mda 1 mda-type me6-100gb-qsfp28
+        /configure port 1/1/c1 connector breakout c1-100g
+        /configure port 1/1/c1 admin-state enable
+        /configure port 1/1/c1/1 admin-state enable
+        /configure router "Base" interface "to-peer" port 1/1/c1/1
+        /configure router "Base" interface "to-peer" ipv4 primary address 10.0.0.1
+        /configure router "Base" interface "to-peer" ipv4 primary prefix-length 24
+
+    sros2:
+      kind: nokia_srsim
+      type: sr-1
+      startup-config: |
+        /configure card 1 card-type iom-1
+        /configure card 1 mda 1 mda-type me6-100gb-qsfp28
+        /configure port 1/1/c1 connector breakout c1-100g
+        /configure port 1/1/c1 admin-state enable
+        /configure port 1/1/c1/1 admin-state enable
+        /configure router "Base" interface "to-peer" port 1/1/c1/1
+        /configure router "Base" interface "to-peer" ipv4 primary address 10.0.0.2
+        /configure router "Base" interface "to-peer" ipv4 primary prefix-length 24
+
+  links:
+    - type: veth-stitch
+      endpoints: ["sros1:1/1/c1/1", "sros2:1/1/c1/1"]
