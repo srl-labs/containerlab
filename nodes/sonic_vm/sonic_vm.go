@@ -126,7 +126,7 @@ func (n *sonic_vm) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams
 	defer cancel()
 
 	if err := n.deploySSHKeys(deadlineCtx); err != nil {
-		return fmt.Errorf("failed to deploy SSH public keys", "node", n.Cfg.ShortName, "error", err)
+		return fmt.Errorf("failed to deploy SSH public keys for node %s: %w", n.Cfg.ShortName, err)
 	}
 
 	log.Info("Deployed SSH public key(s)", "count", len(n.sshPubKeys), "node", n.Cfg.ShortName)
@@ -139,7 +139,7 @@ func (n *sonic_vm) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams
 func (n *sonic_vm) deploySSHKeys(ctx context.Context) error {
 	commands := buildSSHKeyInjectionCommands(clabutils.MarshalSSHPubKeys(n.sshPubKeys))
 
-	log.Infof("Waiting for healthy status. This may take a while",
+	log.Info("Waiting for healthy status. This may take a while",
 		"node", n.Cfg.ShortName)
 
 	for {
