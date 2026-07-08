@@ -274,6 +274,14 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 		c.deleteContainersDirect(ctx, containers)
 	}
 
+	// explicitly remove links to cover non-node-owned esources
+	// like the veth-stitch netns.
+	for _, link := range c.Links {
+		if err := link.Remove(ctx); err != nil {
+			log.Debugf("failed to remove link: %v", err)
+		}
+	}
+
 	c.deleteToolContainers(ctx)
 
 	log.Info("Removing host entries", "path", "/etc/hosts")
