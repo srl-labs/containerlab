@@ -845,9 +845,6 @@
                 },
                 "labels": {
                     "$ref": "#/definitions/labels"
-                },
-                "impairment": {
-                    "$ref": "#/definitions/link-impairment"
                 }
             },
             "required": [
@@ -856,27 +853,45 @@
             ],
             "additionalItems": false
         },
-        "link-impairment": {
+        "link-type-veth-stitched": {
             "type": "object",
-            "description": "Optional link impairment helper configuration",
-            "markdownDescription": "Optional link impairment helper configuration",
+            "description": "Link definition that transparently stitches two veth endpoints through a dedicated network namespace",
+            "markdownDescription": "Link definition that transparently stitches two veth endpoints through a dedicated network namespace, so traffic can be captured (tcpdump) and impaired (tc netem) on plain Linux netdevs even when the node cannot be impaired directly (e.g. SR-SIM). Passes all traffic incl. STP/LLDP/LACP.",
             "properties": {
-                "mode": {
+                "type": {
                     "type": "string",
-                    "description": "Impairment helper mode",
-                    "enum": [
-                        "bridge"
-                    ]
+                    "const": "veth-stitch"
                 },
-                "name": {
-                    "type": "string",
-                    "description": "Name of the generated impairment bridge node"
+                "endpoints": {
+                    "type": "array",
+                    "description": "Endpoints for the link, as brief \"node:interface\" strings or extended objects",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/definitions/link-endpoint"
+                            }
+                        ]
+                    }
                 },
-                "image": {
-                    "type": "string",
-                    "description": "Container image to use for the generated impairment bridge node"
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
                 }
             },
+            "required": [
+                "type",
+                "endpoints"
+            ],
             "additionalProperties": false
         },
         "link-type-mgmt-net": {
@@ -2216,6 +2231,9 @@
                             },
                             {
                                 "$ref": "#/definitions/link-type-veth"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-veth-stitched"
                             },
                             {
                                 "$ref": "#/definitions/link-type-mgmt-net"

@@ -270,42 +270,32 @@ links:
     mtu: <link-mtu>                         # optional
     vars: <link-variables>                  # optional (used in templating)
     labels: <link-labels>                   # optional (used in templating)
-    impairment:                             # optional
-      mode: bridge
-      name: <generated-bridge-node-name>    # optional
-      image: <linux-image>                  # optional
 ```
 
-###### veth link impairment
+###### veth-stitch
 
-A veth link in extended format can request an impairment bridge by setting `impairment.mode: bridge`.
-The topology keeps this as a single authored link, while Containerlab expands it into a generated Linux bridge node and two regular veth links before deployment.
-This is useful for nodes whose datapath interfaces cannot be impaired directly with `tools netem`, because the generated Linux node can be targeted instead.
-Node kinds that require bridge-backed links, such as `nokia_srsim`, use the same internal bridge expansion for regular veth links even when no `impairment` block is present.
+The veth-stitch link type transparently stitches its two endpoints through a dedicated network namespace.
+This is useful for nodes whose datapath interfaces cannot be captured or impaired directly (such as SR-SIM).
 
 ```yaml
 links:
-  - type: veth
+  - type: veth-stitch
     endpoints:
-      - node: pe02-core
-        interface: 1/1/c3/1
-      - node: pe01-core
-        interface: 1/1/c3/1
-    impairment:
-      mode: bridge
-      name: link-0102--01
+      - node: r1
+        interface: 1/1/c1/1
+      - node: r2
+        interface: 1/1/c1/1
 ```
 
-The generated bridge node is equivalent to:
+The brief endpoint form is also supported:
 
-```text
-pe02-core:1/1/c3/1 <-> link-0102--01:eth1
-link-0102--01:eth2 <-> pe01-core:1/1/c3/1
+```yaml
+links:
+  - type: veth-stitch
+    endpoints: ["r1:1/1/c1/1", "pe01-core:1/1/c3/1"]
 ```
 
-The bridge node uses a Linux container and creates `br0` with `eth1` and `eth2` as member interfaces.
-The default image is `ghcr.io/srl-labs/network-multitool:v0.4.1`; use `impairment.image` to override it.
-The generated node is labeled with `containerlab.dev/generated=true` and `containerlab.dev/role=impairment-bridge`.
+A veth-stitch link cannot carry `mac`, `ipv4`, or `ipv6` parameters as it behaves like a transparently to any frames passed across the link.
 
 ###### mgmt-net
 
