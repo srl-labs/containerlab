@@ -55,6 +55,13 @@ func (se *stitchEndpoints) UnmarshalYAML(unmarshal func(any) error) error {
 	return nil
 }
 
+func NewVEthStitchedRawFromVEth(v *LinkVEthRaw) *LinkVEthStitchedRaw {
+	return &LinkVEthStitchedRaw{
+		LinkCommonParams: v.LinkCommonParams,
+		Endpoints:        stitchEndpoints(v.Endpoints),
+	}
+}
+
 func (*LinkVEthStitchedRaw) GetType() LinkType {
 	return LinkTypeVethStitch
 }

@@ -150,7 +150,26 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
+	c.upgradeBriefLinksForStitchKinds()
+
 	return nil
+}
+
+// upgradeBriefLinksForStitchKinds rewrites brief links (no explicit type set by user) that
+// touch a nokia_srsim node into veth-stitch links.
+func (c *CLab) upgradeBriefLinksForStitchKinds() {
+	for _, ld := range c.Config.Topology.Links {
+		if ld.Type != string(clablinks.LinkTypeBrief) {
+			continue
+		}
+
+		veth, ok := ld.Link.(*clablinks.LinkVEthRaw)
+		if !ok || !c.linkTouchesStitchKind(veth) {
+			continue
+		}
+
+		ld.Link = clablinks.NewVEthStitchedRawFromVEth(veth)
+	}
 }
 
 // NewNode initializes a new node object.
