@@ -335,7 +335,12 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	)
 
 	for loop := true; loop; {
-		if !s.IsVrnodeHealthy(ctx) {
+		healthy, err := s.IsHealthy(ctx)
+		if err != nil {
+			log.Debugf("%s: health check failed: %v", s.Cfg.ShortName, err)
+		}
+
+		if !healthy {
 			time.Sleep(5 * time.Second) // cool-off period
 			log.Debugf("Waiting for %s to become healthy", s.Cfg.ShortName)
 			continue
