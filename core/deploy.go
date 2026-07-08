@@ -483,6 +483,12 @@ func (c *CLab) deployApplyLinks(ctx context.Context, links []clablinks.Link) err
 				return fmt.Errorf("failed stitching link %s: %w", applyLinkName(link), err)
 			}
 		}
+
+		if stitchedVeth, ok := link.(*clablinks.LinkVEthStitched); ok {
+			if err := stitchedVeth.Stitch(ctx); err != nil {
+				return fmt.Errorf("failed stitching link %s: %w", applyLinkName(link), err)
+			}
+		}
 	}
 
 	return nil

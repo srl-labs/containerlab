@@ -156,6 +156,14 @@ func (n *vethStitchNode) AddLinkToContainer(
 	return n.GenericLinkNode.AddLinkToContainer(ctx, link, f)
 }
 
+func (n *vethStitchNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
+	if err := n.ensureNetns(); err != nil {
+		return err
+	}
+
+	return n.GenericLinkNode.ExecFunction(ctx, f)
+}
+
 // LinkVEthStitched is the resolved veth-stitch link: two veth segments
 // (nodeA<->netns, nodeB<->netns) whose in-netns ends are joined by a tc stitch.
 type LinkVEthStitched struct {
