@@ -126,10 +126,10 @@ func (n *sonic_vm) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams
 	defer cancel()
 
 	if err := n.deploySSHKeys(deadlineCtx); err != nil {
-		return fmt.Errorf("%s: failed to deploy SSH public keys: %w", n.Cfg.ShortName, err)
+		return fmt.Errorf("failed to deploy SSH public keys", "node", n.Cfg.ShortName, "error", err)
 	}
 
-	log.Infof("Deployed %d SSH public key(s) for node %s", len(n.sshPubKeys), n.Cfg.ShortName)
+	log.Info("Deployed SSH public key(s)", "count", len(n.sshPubKeys), "node", n.Cfg.ShortName)
 
 	return nil
 }
@@ -139,13 +139,13 @@ func (n *sonic_vm) PostDeploy(ctx context.Context, _ *clabnodes.PostDeployParams
 func (n *sonic_vm) deploySSHKeys(ctx context.Context) error {
 	commands := buildSSHKeyInjectionCommands(clabutils.MarshalSSHPubKeys(n.sshPubKeys))
 
-	log.Infof("Waiting for %s to be ready to accept SSH connections. This may take a while",
-		n.Cfg.ShortName)
+	log.Infof("Waiting for healthy status. This may take a while",
+		"node", n.Cfg.ShortName)
 
 	for {
 		healthy, err := n.IsHealthy(ctx)
 		if err != nil {
-			log.Debugf("%s: health check failed: %v", n.Cfg.ShortName, err)
+			log.Debug("health check failed", "node", n.Cfg.ShortName, "error", err)
 		}
 
 		if !healthy {
@@ -153,7 +153,7 @@ func (n *sonic_vm) deploySSHKeys(ctx context.Context) error {
 			case <-ctx.Done():
 				return fmt.Errorf("timed out waiting for node to become healthy")
 			default:
-				log.Debugf("Waiting for %s to become healthy", n.Cfg.ShortName)
+				log.Debug("waiting for node to become healthy", "node", n.Cfg.ShortName)
 				time.Sleep(readyRetryInterval)
 				continue
 			}
