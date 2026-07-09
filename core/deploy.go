@@ -114,12 +114,6 @@ func (c *CLab) Deploy( //nolint: funlen
 				log.Warnf("failed stitching vxlan link: %v", err)
 			}
 		}
-
-		if stitchedVeth, ok := link.(*clablinks.LinkVEthStitched); ok {
-			if err = stitchedVeth.Stitch(ctx); err != nil {
-				log.Warnf("failed stitching veth-stitch link: %v", err)
-			}
-		}
 	}
 
 	execCollection.Log()
@@ -480,12 +474,6 @@ func (c *CLab) deployApplyLinks(ctx context.Context, links []clablinks.Link) err
 
 		if stitchedLink, ok := link.(*clablinks.VxlanStitched); ok {
 			if err := stitchedLink.Stitch(); err != nil {
-				return fmt.Errorf("failed stitching link %s: %w", applyLinkName(link), err)
-			}
-		}
-
-		if stitchedVeth, ok := link.(*clablinks.LinkVEthStitched); ok {
-			if err := stitchedVeth.Stitch(ctx); err != nil {
 				return fmt.Errorf("failed stitching link %s: %w", applyLinkName(link), err)
 			}
 		}

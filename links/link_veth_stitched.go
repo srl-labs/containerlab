@@ -81,27 +81,24 @@ func (r *LinkVEthStitchedRaw) Resolve(params *ResolveParams) (Link, error) {
 		mtu = clabconstants.DefaultLinkMTU
 	}
 
-	node := newVEthStitchNode(VEthStitchNetnsName(params.LabName, r.Endpoints))
-
-	segA, epA, err := buildVEthStitchSegment(params, node, r.Endpoints[0], mtu)
-	if err != nil {
-		return nil, err
-	}
-
-	segB, epB, err := buildVEthStitchSegment(params, node, r.Endpoints[1], mtu)
-	if err != nil {
-		return nil, err
-	}
-
 	l := &LinkVEthStitched{
-		segA: segA,
-		segB: segB,
-		node: node,
-		epA:  epA,
-		epB:  epB,
+		node: newVEthStitchNode(VEthStitchNetnsName(params.LabName, r.Endpoints)),
 	}
 	l.MTU = mtu
 	l.Vars = normalizeVars(r.Vars)
+
+	segA, epA, err := buildVEthStitchSegment(params, l, r.Endpoints[0], mtu)
+	if err != nil {
+		return nil, err
+	}
+
+	segB, epB, err := buildVEthStitchSegment(params, l, r.Endpoints[1], mtu)
+	if err != nil {
+		return nil, err
+	}
+
+	l.segA, l.segB = segA, segB
+	l.epA, l.epB = epA, epB
 
 	return l, nil
 }
@@ -177,6 +174,10 @@ type LinkVEthStitched struct {
 	// the two netns-side endpoints that get stitched together
 	epA Endpoint
 	epB Endpoint
+
+	// serialises the two node workers and gates the one-shot stitch
+	deployMutex sync.Mutex
+	stitched    bool
 }
 
 func (*LinkVEthStitched) GetType() LinkType {
@@ -187,23 +188,39 @@ func (l *LinkVEthStitched) GetEndpoints() []Endpoint {
 	return []Endpoint{l.segA.Endpoints[0], l.segB.Endpoints[0]}
 }
 
-// Deploy is idempotent; used by apply/tools flows. The normal deploy path relies
-// on the node workers deploying the segments and the post-deploy pass calling Stitch.
-func (l *LinkVEthStitched) Deploy(ctx context.Context, _ Endpoint) error {
-	if err := l.segA.Deploy(ctx, l.segA.Endpoints[0]); err != nil {
+// Deploy is called by each node worker as it deploys its side. It deploys the
+// segment whose node end triggered the call and, once both node ends are up,
+// applies the tc stitch once.
+func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
+	l.deployMutex.Lock()
+	defer l.deployMutex.Unlock()
+
+	seg := l.segA
+	if ep == l.segB.Endpoints[0] {
+		seg = l.segB
+	}
+
+	if err := seg.Deploy(ctx, ep); err != nil {
 		return err
 	}
 
-	if err := l.segB.Deploy(ctx, l.segB.Endpoints[0]); err != nil {
-		return err
+	if l.stitched ||
+		l.segA.DeploymentState != LinkDeploymentStateFullDeployed ||
+		l.segB.DeploymentState != LinkDeploymentStateFullDeployed {
+		return nil
 	}
 
-	return l.Stitch(ctx)
+	if err := l.applyStitch(ctx); err != nil {
+		return err
+	}
+	l.stitched = true
+
+	return nil
 }
 
-// Stitch bidirectionally joins the two in-netns interfaces; run after both
+// applyStitch bidirectionally joins the two in-netns interfaces; run after both
 // segments are deployed.
-func (l *LinkVEthStitched) Stitch(ctx context.Context) error {
+func (l *LinkVEthStitched) applyStitch(ctx context.Context) error {
 	return l.node.ExecFunction(ctx, func(ns.NetNS) error {
 		if err := stitch(l.epA, l.epB); err != nil {
 			return err
@@ -239,24 +256,26 @@ func (l *LinkVEthStitched) Remove(ctx context.Context) error {
 // far end in the stitch netns, named after the facing node.
 func buildVEthStitchSegment(
 	params *ResolveParams,
-	node *vethStitchNode,
+	l *LinkVEthStitched,
 	nodeEpRaw *EndpointRaw,
 	mtu int,
 ) (*LinkVEth, Endpoint, error) {
 	seg := NewLinkVEth()
 	seg.MTU = mtu
 
-	nodeEp, err := nodeEpRaw.Resolve(params, seg)
+	// the node end belongs to the composite so the node worker calls l.Deploy; the
+	// segment only carries the endpoint to build its own veth pair.
+	nodeEp, err := nodeEpRaw.Resolve(params, l)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// nodeless (EndpointHost) so the veth deploy pushes it into the netns right
 	// after the node end, without waiting for a peer worker.
-	farEp := NewEndpointHost(NewEndpointGeneric(node, nodeEpRaw.Node, seg))
+	farEp := NewEndpointHost(NewEndpointGeneric(l.node, nodeEpRaw.Node, seg))
 	seg.Endpoints = []Endpoint{nodeEp, farEp}
 
-	if err := node.AddEndpoint(farEp); err != nil {
+	if err := l.node.AddEndpoint(farEp); err != nil {
 		return nil, nil, err
 	}
 
