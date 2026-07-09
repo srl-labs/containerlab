@@ -175,9 +175,8 @@ type LinkVEthStitched struct {
 	epA Endpoint
 	epB Endpoint
 
-	// serialises the two node workers and gates the one-shot stitch
-	deployMutex sync.Mutex
-	stitched    bool
+	mu       sync.Mutex
+	stitched bool
 }
 
 func (*LinkVEthStitched) GetType() LinkType {
@@ -192,8 +191,8 @@ func (l *LinkVEthStitched) GetEndpoints() []Endpoint {
 // segment whose node end triggered the call and, once both node ends are up,
 // applies the tc stitch once.
 func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
-	l.deployMutex.Lock()
-	defer l.deployMutex.Unlock()
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
 	seg := l.segA
 	if ep == l.segB.Endpoints[0] {
@@ -231,6 +230,9 @@ func (l *LinkVEthStitched) applyStitch(ctx context.Context) error {
 }
 
 func (l *LinkVEthStitched) Remove(ctx context.Context) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
