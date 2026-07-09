@@ -643,16 +643,6 @@ func (c *CLab) ResolveLinks() error {
 	return nil
 }
 
-func (c *CLab) linkTouchesStitchKind(veth *clablinks.LinkVEthRaw) bool {
-	for _, ep := range veth.Endpoints {
-		if n, ok := c.Nodes[ep.Node]; ok && n.Config().Kind == "nokia_srsim" {
-			return true
-		}
-	}
-
-	return false
-}
-
 // extractDNSServers extracts DNS servers from the resolv.conf files
 // and populates the Nodes DNS Config with these if not specifically provided.
 func (c *CLab) extractDNSServers(filesys fs.FS) error {

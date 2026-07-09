@@ -36,6 +36,7 @@ import (
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
@@ -171,6 +172,7 @@ func Register(r *clabnodes.NodeRegistry) {
 	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
+		DefaultLinkType:     clablinks.LinkTypeVethStitch,
 	}
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(
 		defaultCredentials,
