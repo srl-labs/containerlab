@@ -8,10 +8,7 @@ func ApplyRuntimeEndpoints(l Link) []Endpoint {
 	case *LinkVEth:
 		return append([]Endpoint(nil), link.Endpoints...)
 	case *LinkVEthStitched:
-		endpoints := make([]Endpoint, 0, len(link.segA.Endpoints)+len(link.segB.Endpoints))
-		endpoints = append(endpoints, link.segA.Endpoints...)
-		endpoints = append(endpoints, link.segB.Endpoints...)
-		return endpoints
+		return []Endpoint{link.segA.Endpoints[0], link.segB.Endpoints[0]}
 	case *LinkMacVlan:
 		return []Endpoint{link.NodeEndpoint}
 	case *LinkVxlan:

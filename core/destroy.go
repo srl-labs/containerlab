@@ -276,10 +276,8 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 
 	// explicitly remove links to cover non-node-owned esources
 	// like the veth-stitch netns.
-	for _, link := range c.Links {
-		if err := link.Remove(ctx); err != nil {
-			log.Debugf("failed to remove link: %v", err)
-		}
+	if err := clablinks.RemoveStaleStitchNetns(c.Config.Name, nil); err != nil {
+		log.Debugf("failed to clean up veth-stitch namespaces: %v", err)
 	}
 
 	c.deleteToolContainers(ctx)

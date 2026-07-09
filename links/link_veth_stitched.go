@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -225,11 +226,6 @@ func (l *LinkVEthStitched) Remove(ctx context.Context) error {
 		log.Debug(err)
 	}
 
-	// deleting the netns also tears down any interfaces and tc rules left in it
-	if err := netns.DeleteNamed(l.node.netnsName); err != nil {
-		log.Debugf("failed to delete veth-stitch netns %q: %v", l.node.netnsName, err)
-	}
-
 	l.DeploymentState = LinkDeploymentStateRemoved
 
 	return nil
@@ -343,4 +339,39 @@ func VEthStitchNetnsName(labName string, eps []*EndpointRaw) string {
 
 	return fmt.Sprintf("clab-%s-vstitch-%s",
 		SanitizeInterfaceName(labName), hex.EncodeToString(sum[:])[:6])
+}
+
+// NetnsName returns the name of the dedicated stitching netns.
+func (l *LinkVEthStitched) NetnsName() string {
+	return l.node.netnsName
+}
+
+// if the stitch netns is no longer required, clean it up so it isn't orphaned
+func RemoveStaleStitchNetns(labName string, keep map[string]struct{}) error {
+	prefix := fmt.Sprintf("clab-%s-vstitch-", SanitizeInterfaceName(labName))
+
+	entries, err := os.ReadDir("/run/netns")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		if _, ok := keep[name]; ok {
+			continue
+		}
+
+		if err := netns.DeleteNamed(name); err != nil {
+			log.Debugf("failed to delete stale veth-stitch netns %q: %v", name, err)
+		}
+	}
+
+	return nil
 }
