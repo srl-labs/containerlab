@@ -279,3 +279,55 @@ func TestResolveNetemTargetWrongEndpointCount(t *testing.T) {
 		t.Fatalf("want nil for non-2-endpoint link, got target=%v err=%v", target, err)
 	}
 }
+
+func TestNewVEthStitchedRawFromVEth(t *testing.T) {
+	v := &LinkVEthRaw{
+		LinkCommonParams: LinkCommonParams{MTU: 1400},
+		Endpoints: []*EndpointRaw{
+			{Node: "a", Iface: "e1"},
+			{Node: "b", Iface: "e2"},
+		},
+	}
+
+	s := NewVEthStitchedRawFromVEth(v)
+
+	if s.GetType() != LinkTypeVethStitch {
+		t.Fatalf("type = %q, want %q", s.GetType(), LinkTypeVethStitch)
+	}
+	if s.MTU != 1400 {
+		t.Fatalf("MTU = %d, want 1400", s.MTU)
+	}
+	if len(s.Endpoints) != 2 || s.Endpoints[0].Node != "a" || s.Endpoints[1].Node != "b" {
+		t.Fatalf("endpoints not carried over: %+v", s.Endpoints)
+	}
+}
+
+func TestVethStitchedNodeAndNetnsName(t *testing.T) {
+	r := &LinkVEthStitchedRaw{
+		Endpoints: []*EndpointRaw{
+			{Node: "pe01", Iface: "e1"},
+			{Node: "pe02", Iface: "e1"},
+		},
+	}
+
+	l, err := r.Resolve(vethStitchResolveParams())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stitched := l.(*LinkVEthStitched)
+
+	if got, want := stitched.NetnsName(), VEthStitchNetnsName("mylab", r.Endpoints); got != want {
+		t.Fatalf("NetnsName() = %q, want %q", got, want)
+	}
+	if got := stitched.node.GetLinkEndpointType(); got != LinkEndpointTypeVeth {
+		t.Fatalf("GetLinkEndpointType() = %q, want %q", got, LinkEndpointTypeVeth)
+	}
+}
+
+func TestLinkCommonParamsResolveNetemTargetDefault(t *testing.T) {
+	// non-stitch raw links do not redirect netem
+	target, err := (&LinkCommonParams{}).ResolveNetemTarget("lab", "n1", "", "e1")
+	if err != nil || target != nil {
+		t.Fatalf("default ResolveNetemTarget = (%v, %v), want (nil, nil)", target, err)
+	}
+}

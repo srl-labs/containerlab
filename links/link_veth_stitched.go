@@ -226,6 +226,10 @@ func (l *LinkVEthStitched) Remove(ctx context.Context) error {
 		log.Debug(err)
 	}
 
+	if err := netns.DeleteNamed(l.node.netnsName); err != nil {
+		log.Debugf("failed to delete veth-stitch netns %q: %v", l.node.netnsName, err)
+	}
+
 	l.DeploymentState = LinkDeploymentStateRemoved
 
 	return nil
