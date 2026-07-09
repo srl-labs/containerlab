@@ -123,19 +123,39 @@ func TestAosCXInterfaceParsing(t *testing.T) {
 	}
 }
 
-func Test_vrSROS_Init_withComponents_warns(t *testing.T) {
+func Test_vrSROS_Init_withComponents_buildsVariant(t *testing.T) {
 	dir := t.TempDir()
 	cfg := &clabtypes.NodeConfig{
-		ShortName:  "sros1",
-		LabDir:     dir,
-		Env:        map[string]string{},
-		Components: []*clabtypes.Component{{Slot: "A"}},
+		ShortName: "sros1",
+		LabDir:    dir,
+		NodeType:  "ixr-e",
+		Env:       map[string]string{},
+		Components: []*clabtypes.Component{
+			{Slot: "A", Type: "cpm-ixr-e"},
+			{Slot: "1", Type: "imm24-sfp++8-sfp28+2-qsfp28", MDA: clabtypes.MDAS{{Slot: 1, Type: "m24-sfp++8-sfp28+2-qsfp28"}}},
+		},
 	}
 	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}
 	s := new(vrSROS)
 	err := s.Init(cfg, clabnodes.WithMgmtNet(mgmt))
 	require.NoError(t, err)
-	assert.NotEmpty(t, s.Cfg.Components)
+	assert.Contains(t, s.Cfg.Cmd, "cp: chassis=ixr-e slot=A card=cpm-ixr-e ___ "+
+		"lc: max_nics=34 chassis=ixr-e slot=1 card=imm24-sfp++8-sfp28+2-qsfp28 mda/1=m24-sfp++8-sfp28+2-qsfp28")
+}
+
+func Test_vrSROS_Init_withMultipleCPMs_errors(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &clabtypes.NodeConfig{
+		ShortName:  "sros1",
+		LabDir:     dir,
+		NodeType:   "sr-7",
+		Env:        map[string]string{},
+		Components: []*clabtypes.Component{{Slot: "A", Type: "cpm5"}, {Slot: "B", Type: "cpm5"}},
+	}
+	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}
+	s := new(vrSROS)
+	err := s.Init(cfg, clabnodes.WithMgmtNet(mgmt))
+	require.Error(t, err)
 }
 
 func Test_vrSROS_verifyNokiaSrosImage(t *testing.T) {

@@ -24,7 +24,6 @@ import (
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
 	clabconstants "github.com/srl-labs/containerlab/constants"
-	clabexec "github.com/srl-labs/containerlab/exec"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabtypes "github.com/srl-labs/containerlab/types"
@@ -109,6 +108,17 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 	if s.Cfg.NodeType == "" {
 		s.Cfg.NodeType = vrsrosDefaultType
 	}
+
+	// if user defined components: are used, parse them.
+	variant := s.Cfg.NodeType
+	if len(s.Cfg.Components) > 0 {
+		var err error
+		variant, err = buildSrosVariant(s.Cfg.NodeType, s.Cfg.Components, s.Cfg.Env)
+		if err != nil {
+			return err
+		}
+	}
+
 	// env vars are used to set launch.py arguments in vrnetlab container
 	defEnv := map[string]string{
 		"CONNECTION_MODE":    clabnodes.VrDefConnMode,
@@ -128,19 +138,12 @@ func (s *vrSROS) Init(cfg *clabtypes.NodeConfig, opts ...clabnodes.NodeOption) e
 		"--trace --connection-mode %s --hostname %s --variant %q",
 		s.Cfg.Env["CONNECTION_MODE"],
 		s.Cfg.ShortName,
-		s.Cfg.NodeType,
+		variant,
 	)
 
-	s.InterfaceRegexp = InterfaceRegexp
+	s.InterfaceRegexp = componentIfaceRegexp
 	s.InterfaceOffset = InterfaceOffset
-	s.InterfaceHelp = InterfaceHelp
-
-	if len(s.Cfg.Components) > 0 {
-		log.Warnf(
-			"node %q: kind nokia_sros (vrnetlab) does not support components; components are ignored. Use kind nokia_srsim for distributed/chassis topologies with components",
-			s.Cfg.ShortName,
-		)
-	}
+	s.InterfaceHelp = componentInterfaceHelp
 
 	return nil
 }
@@ -307,20 +310,6 @@ func nodeConfigExists(labDir string) bool {
 	return err == nil
 }
 
-// isHealthy checks if the "/health" file created by vrnetlab exists and contains "0 running".
-func (s *vrSROS) isHealthy(ctx context.Context) bool {
-	ex := clabexec.NewExecCmdFromSlice([]string{"grep", "0 running", "/health"})
-
-	res, err := s.RunExec(ctx, ex)
-	if err != nil {
-		return false
-	}
-
-	log.Debugf("Node %q health status: %v", s.Cfg.ShortName, res.ReturnCode == 0)
-
-	return res.ReturnCode == 0
-}
-
 // applyPartialConfig applies partial configuration to the SR OS.
 func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	username, password string, config io.Reader,
@@ -346,7 +335,12 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	)
 
 	for loop := true; loop; {
-		if !s.isHealthy(ctx) {
+		healthy, err := s.IsHealthy(ctx)
+		if err != nil {
+			log.Debugf("%s: health check failed: %v", s.Cfg.ShortName, err)
+		}
+
+		if !healthy {
 			time.Sleep(5 * time.Second) // cool-off period
 			log.Debugf("Waiting for %s to become healthy", s.Cfg.ShortName)
 			continue
