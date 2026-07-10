@@ -149,39 +149,13 @@ func createPlaceholderNodes(c *clabcore.CLab, aEnd, bEnd parsedEndpoint, rt stri
 		if _, exists := c.Nodes[epDefinition.Node]; exists {
 			continue
 		}
-		switch epDefinition.Kind {
-		case clablinks.LinkEndpointTypeHost:
-			err := c.AddPlaceholderNode(&clabtypes.NodeConfig{
-				ShortName: epDefinition.Node,
-				LongName:  epDefinition.Node,
-				Kind:      "host",
-				Runtime:   rt,
-			})
-			if err != nil {
-				return err
-			}
-
-		case clablinks.LinkEndpointTypeBridge,
-			clablinks.LinkEndpointTypeBridgeNS:
-			err := c.AddPlaceholderNode(&clabtypes.NodeConfig{
-				ShortName: epDefinition.Node,
-				LongName:  epDefinition.Node,
-				Kind:      "bridge",
-				Runtime:   rt,
-			})
-			if err != nil {
-				return err
-			}
-		default:
-			err := c.AddPlaceholderNode(&clabtypes.NodeConfig{
-				ShortName: epDefinition.Node,
-				LongName:  epDefinition.Node,
-				Kind:      "ext-container",
-				Runtime:   rt,
-			})
-			if err != nil {
-				return err
-			}
+		if err := c.AddPlaceholderNode(&clabtypes.NodeConfig{
+			ShortName: epDefinition.Node,
+			LongName:  epDefinition.Node,
+			Kind:      epDefinition.Kind.PlaceholderNodeKind(),
+			Runtime:   rt,
+		}); err != nil {
+			return err
 		}
 	}
 
