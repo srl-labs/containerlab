@@ -202,7 +202,7 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := c.DeployLinks(ctx, plan.addedLinks); err != nil {
+	if err := c.deployLinks(ctx, plan.addedLinks, deployNodeNames); err != nil {
 		return nil, err
 	}
 

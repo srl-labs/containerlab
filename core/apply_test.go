@@ -137,6 +137,19 @@ func TestDeployLinksUsesEndpointOwnership(t *testing.T) {
 	}
 }
 
+func TestDeployLinksPostDeploysSelectedNodeWithoutLinks(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	node := clabmocksmocknodes.NewMockNode(ctrl)
+	node.EXPECT().PostDeployEndpoints(gomock.Any()).Return(nil)
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{"n1": node}}
+	if err := c.deployLinks(context.Background(), nil, []string{"n1"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestApplyRequiresTopologyFile(t *testing.T) {
 	t.Parallel()
 

@@ -447,7 +447,18 @@ func (c *CLab) deployNode(ctx context.Context, node clabnodes.Node) error {
 
 // DeployLinks deploys selected links through their endpoints and runs their post-deploy hooks.
 func (c *CLab) DeployLinks(ctx context.Context, links []clablinks.Link) error {
-	touchedNodes := map[string]struct{}{}
+	return c.deployLinks(ctx, links, nil)
+}
+
+func (c *CLab) deployLinks(
+	ctx context.Context,
+	links []clablinks.Link,
+	additionalNodeNames []string,
+) error {
+	touchedNodes := make(map[string]struct{}, len(additionalNodeNames))
+	for _, nodeName := range additionalNodeNames {
+		touchedNodes[nodeName] = struct{}{}
+	}
 	for _, link := range links {
 		log.Info("Creating link", "link", applyLinkName(link))
 
