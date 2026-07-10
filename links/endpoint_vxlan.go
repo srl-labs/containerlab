@@ -42,7 +42,3 @@ func (e *EndpointVxlan) IsNodeless() bool {
 func (e *EndpointVxlan) MoveTo(ctx context.Context, dst Node) error {
 	return moveEndpoint(ctx, e, dst)
 }
-
-func (e *EndpointVxlan) Activate(ctx context.Context) error {
-	return activateEndpoint(ctx, e)
-}

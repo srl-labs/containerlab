@@ -38,7 +38,3 @@ func (e *EndpointHost) IsNodeless() bool {
 func (e *EndpointHost) MoveTo(ctx context.Context, dst Node) error {
 	return moveEndpoint(ctx, e, dst)
 }
-
-func (e *EndpointHost) Activate(ctx context.Context) error {
-	return activateEndpoint(ctx, e)
-}

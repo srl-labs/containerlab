@@ -24,7 +24,3 @@ func (*EndpointDummy) IsNodeless() bool {
 func (e *EndpointDummy) MoveTo(ctx context.Context, dst Node) error {
 	return moveEndpoint(ctx, e, dst)
 }
-
-func (e *EndpointDummy) Activate(ctx context.Context) error {
-	return activateEndpoint(ctx, e)
-}

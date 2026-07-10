@@ -24,7 +24,3 @@ func (e *EndpointVeth) IsNodeless() bool {
 func (e *EndpointVeth) MoveTo(ctx context.Context, dst Node) error {
 	return moveEndpoint(ctx, e, dst)
 }
-
-func (e *EndpointVeth) Activate(ctx context.Context) error {
-	return activateEndpoint(ctx, e)
-}

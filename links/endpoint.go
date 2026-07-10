@@ -160,7 +160,7 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 
 // moveEndpoint moves the endpoint's interface into dst's namespace and transfers ownership.
 // The interface is left in the DOWN state; callers that need it active should follow up with
-// activateEndpoint once all endpoints are in place.
+// Endpoint.Activate once all endpoints are in place.
 func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 	src := e.GetNode()
 	if src == nil {
@@ -221,8 +221,8 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 	return nil
 }
 
-// activateEndpoint brings the endpoint's interface up in its current namespace.
-func activateEndpoint(ctx context.Context, e Endpoint) error {
+// Activate brings the endpoint's interface up in its current namespace.
+func (e *EndpointGeneric) Activate(ctx context.Context) error {
 	return e.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
 		link, err := netlink.LinkByName(e.GetIfaceName())
 		if err != nil {

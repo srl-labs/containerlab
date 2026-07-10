@@ -33,7 +33,3 @@ func (*EndpointRuntime) IsNodeless() bool {
 func (e *EndpointRuntime) MoveTo(ctx context.Context, dst Node) error {
 	return moveEndpoint(ctx, e, dst)
 }
-
-func (e *EndpointRuntime) Activate(ctx context.Context) error {
-	return activateEndpoint(ctx, e)
-}
