@@ -93,7 +93,7 @@ func (c *CLab) Deploy( //nolint: funlen
 	// as part of vxlan-stitch links are already deployed before the stitch TC rules are applied.
 	eps := c.getSpecialLinkNodes()["host"].GetEndpoints()
 	for _, ep := range eps {
-		err = clablinks.DeployEndpoint(ctx, ep)
+		err = ep.GetLink().Deploy(ctx, ep)
 		if err != nil {
 			log.Warnf("failed deploying endpoint %s", ep)
 		}
@@ -454,7 +454,7 @@ func (c *CLab) deployApplyLinks(ctx context.Context, links []clablinks.Link) err
 		}
 
 		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
-			if err := clablinks.DeployEndpoint(ctx, ep); err != nil {
+			if err := ep.GetLink().Deploy(ctx, ep); err != nil {
 				return fmt.Errorf("failed deploying link %s: %w", applyLinkName(link), err)
 			}
 		}

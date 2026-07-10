@@ -1052,7 +1052,7 @@ func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 			continue
 		}
 
-		if err := clablinks.DeployEndpoint(ctx, ep); err != nil {
+		if err := ep.GetLink().Deploy(ctx, ep); err != nil {
 			return err
 		}
 	}

@@ -131,7 +131,7 @@ func vethCreate(o *Options) error {
 
 	// deploy the endpoints of the Link
 	for _, ep := range link.GetEndpoints() {
-		if err := clablinks.DeployEndpoint(ctx, ep); err != nil {
+		if err := link.Deploy(ctx, ep); err != nil {
 			return fmt.Errorf("failed to deploy veth endpoint: %w", err)
 		}
 	}

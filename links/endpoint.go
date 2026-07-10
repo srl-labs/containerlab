@@ -221,20 +221,6 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 	return nil
 }
 
-// DeployEndpoint deploys the link associated with the endpoint.
-func DeployEndpoint(ctx context.Context, ep Endpoint) error {
-	if ep == nil {
-		return fmt.Errorf("cannot deploy nil endpoint")
-	}
-
-	link := ep.GetLink()
-	if link == nil {
-		return fmt.Errorf("endpoint %q has no link", ep.GetIfaceName())
-	}
-
-	return link.Deploy(ctx, ep)
-}
-
 // activateEndpoint brings the endpoint's interface up in its current namespace.
 func activateEndpoint(ctx context.Context, e Endpoint) error {
 	return e.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
