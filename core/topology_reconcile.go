@@ -123,7 +123,7 @@ func (c *CLab) planApply(
 	c.planStoppedNodes(ctx, plan)
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
-		for _, ep := range clablinks.ApplyRuntimeEndpoints(c.Links[linkIdx]) {
+		for _, ep := range clablinks.RuntimeEndpoints(c.Links[linkIdx]) {
 			plan.desiredEndpointSet[endpointKeyFromEndpoint(ep)] = struct{}{}
 		}
 	}
@@ -142,7 +142,7 @@ func (c *CLab) planApply(
 
 		plan.addDeployApplyLink(linkIdx, link)
 
-		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+		for _, ep := range clablinks.RuntimeEndpoints(link) {
 			nodeName := ep.GetNode().GetShortName()
 			if _, exists := currentNodes[nodeName]; !exists {
 				continue
@@ -244,7 +244,7 @@ func linkTouchesNodeSet(link clablinks.Link, nodeSet map[string]struct{}) bool {
 		return false
 	}
 
-	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
 		if _, exists := nodeSet[key.node]; exists {
 			return true
@@ -520,6 +520,7 @@ func resolveNodeConfigFromTopology(topo *clabtypes.Topology, nodeName string) *c
 
 	return &clabtypes.NodeConfig{
 		ShortName:   nodeName,
+		Kind:        topo.GetNodeKind(nodeName),
 		NodeType:    topo.GetNodeType(nodeName),
 		Image:       topo.GetNodeImage(nodeName),
 		Entrypoint:  topo.GetNodeEntrypoint(nodeName),
@@ -569,6 +570,14 @@ func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) erro
 		result, err := node.GetReconcilePlan(ctx, diff)
 		if err != nil {
 			return fmt.Errorf("reconcile planning failed for node %q: %w", nodeName, err)
+		}
+		if plan.currentNodes[nodeName].external && result.Action != clabtypes.TopologyDiffActionNone {
+			return fmt.Errorf(
+				"node %q is externally managed and cannot be %s for %s",
+				nodeName,
+				result.Action,
+				configDriftReason(diff),
+			)
 		}
 
 		switch result.Action {
@@ -634,7 +643,7 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 }
 
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
-	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
 		if _, parked := p.parkedNodeSet[key.node]; !parked {
 			if _, added := p.addedNodeSet[key.node]; added {
@@ -714,7 +723,7 @@ func endpointKeyFromEndpoint(ep clablinks.Endpoint) applyEndpointKey {
 }
 
 func applyLinkName(link clablinks.Link) string {
-	endpoints := clablinks.ApplyRuntimeEndpoints(link)
+	endpoints := clablinks.RuntimeEndpoints(link)
 	names := make([]string, 0, len(endpoints))
 	for _, ep := range endpoints {
 		key := endpointKeyFromEndpoint(ep)

@@ -1,9 +1,8 @@
 package links
 
-// ApplyRuntimeEndpoints returns the runtime-owned endpoints that an apply operation may
-// deploy, discover, or remove for a link. Parent and remote-only metadata endpoints are
-// intentionally excluded.
-func ApplyRuntimeEndpoints(l Link) []Endpoint {
+// RuntimeEndpoints returns the material endpoints a deployment may create, discover, or remove.
+// Parent and remote-only metadata endpoints are intentionally excluded.
+func RuntimeEndpoints(l Link) []Endpoint {
 	if l == nil {
 		return nil
 	}

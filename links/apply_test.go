@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestApplyRuntimeEndpointsForMacVlanExcludesParent(t *testing.T) {
+func TestRuntimeEndpointsForMacVlanExcludesParent(t *testing.T) {
 	t.Parallel()
 
 	node := newFakeNode("n1")
@@ -17,7 +17,7 @@ func TestApplyRuntimeEndpointsForMacVlanExcludesParent(t *testing.T) {
 		NodeEndpoint: NewEndpointVeth(NewEndpointGeneric(node, "eth1", nil)),
 	}
 
-	endpoints := ApplyRuntimeEndpoints(link)
+	endpoints := RuntimeEndpoints(link)
 	if len(endpoints) != 1 {
 		t.Fatalf("expected one runtime endpoint, got %d", len(endpoints))
 	}
@@ -26,7 +26,7 @@ func TestApplyRuntimeEndpointsForMacVlanExcludesParent(t *testing.T) {
 	}
 }
 
-func TestApplyRuntimeEndpointsForVxlanStitchedIncludesUnderlyingObjects(t *testing.T) {
+func TestRuntimeEndpointsForVxlanStitchedIncludesUnderlyingObjects(t *testing.T) {
 	t.Parallel()
 
 	node := newFakeNode("n1")
@@ -42,7 +42,7 @@ func TestApplyRuntimeEndpointsForVxlanStitchedIncludesUnderlyingObjects(t *testi
 	}
 	link := NewVxlanStitched(vxlan, veth, hostEp)
 
-	if got := endpointTokens(ApplyRuntimeEndpoints(link)); got != "host:ve-n1_eth1,host:vx-n1_eth1,n1:eth1" {
+	if got := endpointTokens(RuntimeEndpoints(link)); got != "host:ve-n1_eth1,host:vx-n1_eth1,n1:eth1" {
 		t.Fatalf("unexpected runtime endpoints %q", got)
 	}
 }

@@ -14,6 +14,7 @@ type runtimeNodeGroup struct {
 	name        string
 	containers  []clabruntime.GenericContainer
 	distributed bool
+	external    bool
 }
 
 func (c *CLab) runtimeNodeGroups(
@@ -60,6 +61,22 @@ func (c *CLab) runtimeNodeGroups(
 		}
 	}
 
+	// Pre-existing resources have no containerlab labels, but still participate in apply.
+	for nodeName, node := range c.Nodes {
+		cfg := node.Config()
+		if cfg == nil {
+			continue
+		}
+		if _, exists := result[nodeName]; exists {
+			continue
+		}
+		if !cfg.IsRootNamespaceBased &&
+			(!cfg.SkipUniquenessCheck || node.GetContainerStatus(ctx) == clabruntime.NotFound) {
+			continue
+		}
+		result[nodeName] = &runtimeNodeGroup{name: nodeName, external: true}
+	}
+
 	if len(duplicates) > 0 {
 		sort.Strings(duplicates)
 		return nil, fmt.Errorf(
@@ -75,6 +92,20 @@ func (c *CLab) runtimeNodeGroups(
 	}
 
 	return result, nil
+}
+
+func (c *CLab) needsInitialDeploy(currentNodes map[string]*runtimeNodeGroup) (bool, error) {
+	if len(currentNodes) == 0 {
+		return true, nil
+	}
+	for _, node := range currentNodes {
+		if !node.external {
+			return false, nil
+		}
+	}
+
+	state, err := c.LoadState()
+	return state == nil, err
 }
 
 func (c *CLab) setMgmtBridgeFromRuntime(

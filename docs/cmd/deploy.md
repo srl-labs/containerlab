@@ -9,6 +9,8 @@ tags:
 ### Description
 
 The `deploy` command spins up a lab using the topology expressed via [topology definition file](../manual/topo-def-file.md).
+When the lab already exists, deploy reconciles it through the same convergence path as
+[`apply`](apply.md); `--reconfigure` retains its explicit destroy-and-recreate behavior.
 <!-- --8<-- [start:env-vars-flags] -->
 > All command line arguments can be also provided via environment variables (CLI flags take precedence). The environment variable names are constructed by prepending `CLAB_` to the flag name, then adding the command path and ending with the flag name in its full form, all in uppercase and with hyphens replaced by underscores.
 >

@@ -359,37 +359,10 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 				time.Sleep(time.Duration(delay) * time.Second)
 			}
 
-			err := node.PreDeploy(
-				ctx,
-				&clabnodes.PreDeployParams{
-					Cert:         c.Cert,
-					TopologyName: c.Config.Name,
-					TopoPaths:    c.TopoPaths,
-					SSHPubKeys:   c.SSHPubKeys,
-				},
-			)
-			if err != nil {
-				log.Errorf("failed pre-deploy stage for node %q: %v", node.Config().ShortName, err)
-				nodeFailCh <- fmt.Errorf("node %q pre-deploy: %w", node.Config().ShortName, err)
+			if err := c.deployNode(ctx, node); err != nil {
+				log.Error(err)
+				nodeFailCh <- err
 				continue
-			}
-
-			err = node.Deploy(ctx, &clabnodes.DeployParams{Nodes: c.Nodes})
-			if err != nil {
-				log.Errorf("failed deploy stage for node %q: %v", node.Config().ShortName, err)
-				nodeFailCh <- fmt.Errorf("node %q deploy: %w", node.Config().ShortName, err)
-				continue
-			}
-
-			// we need to update the node's state with runtime info (e.g. the mgmt net ip addresses)
-			// before continuing with the post-deploy stage (for e.g. certificate creation)
-			err = node.UpdateConfigWithRuntimeInfo(ctx)
-			if err != nil {
-				log.Errorf(
-					"failed to update node runtime information for node %s: %v",
-					node.Config().ShortName,
-					err,
-				)
 			}
 
 			node.Done(ctx, clabtypes.WaitForCreate)
@@ -397,7 +370,7 @@ func (c *CLab) scheduleNodeWorkerF( //nolint: funlen
 			node.EnterStage(ctx, clabtypes.WaitForCreateLinks)
 
 			// Deploy the Nodes link endpoints
-			err = node.DeployEndpoints(ctx)
+			err := node.DeployEndpoints(ctx)
 			if err != nil {
 				log.Errorf("failed deploy links for node %q: %v", node.Config().ShortName, err)
 				nodeFailCh <- fmt.Errorf("node %q deploy links: %w", node.Config().ShortName, err)

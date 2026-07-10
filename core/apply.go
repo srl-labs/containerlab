@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/charmbracelet/log"
 	clablinks "github.com/srl-labs/containerlab/links"
 )
 
@@ -85,7 +84,20 @@ func (c *CLab) Apply(
 	if err != nil {
 		return nil, err
 	}
-	if len(currentNodes) == 0 {
+
+	return c.apply(ctx, options, currentNodes)
+}
+
+func (c *CLab) apply(
+	ctx context.Context,
+	options *ApplyOptions,
+	currentNodes map[string]*runtimeNodeGroup,
+) (*ApplyResult, error) {
+	initialDeploy, err := c.needsInitialDeploy(currentNodes)
+	if err != nil {
+		return nil, err
+	}
+	if initialDeploy {
 		result := &ApplyResult{
 			DryRun:      options.dryRun,
 			DeployedLab: true,
@@ -101,9 +113,11 @@ func (c *CLab) Apply(
 			return nil, err
 		}
 		deployOptions.SetSkipPostDeploy(options.skipPostDeploy).
+			SetSkipLabDirFileACLs(options.skipLabDirFileACLs).
+			SetGraph(options.graph).
 			SetExportTemplate(options.exportTemplate)
 
-		if _, err := c.Deploy(ctx, deployOptions); err != nil {
+		if _, err := c.deploy(ctx, deployOptions); err != nil {
 			return nil, err
 		}
 
@@ -142,12 +156,21 @@ func (c *CLab) Apply(
 	}
 
 	if plan.empty() {
-		c.writeApplyState()
+		if options.finalizeNoop {
+			if err := c.prepareApply(ctx, nil, options.skipLabDirFileACLs); err != nil {
+				return nil, err
+			}
+			if _, err := c.finalize(ctx, options.exportTemplate, options.graph); err != nil {
+				return nil, err
+			}
+		} else {
+			c.writeState()
+		}
 		return applyResultFromPlan(plan), nil
 	}
 
 	deployNodeNames := plan.deployNodeNames()
-	if err := c.prepareApply(ctx, deployNodeNames); err != nil {
+	if err := c.prepareApply(ctx, deployNodeNames, options.skipLabDirFileACLs); err != nil {
 		return nil, err
 	}
 
@@ -163,7 +186,7 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
-	if err := c.deployApplyNodes(ctx, deployNodeNames, options.maxWorkers); err != nil {
+	if err := c.DeployNodes(ctx, deployNodeNames, options.maxWorkers); err != nil {
 		return nil, err
 	}
 
@@ -175,11 +198,11 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
-	if err := c.deployApplyLinks(ctx, plan.addedLinks); err != nil {
+	if err := c.removeApplyLinkEndpoints(ctx, plan.addedLinks); err != nil {
 		return nil, err
 	}
 
-	if err := c.postDeployApplyLinks(ctx, deployNodeNames); err != nil {
+	if err := c.DeployLinks(ctx, plan.addedLinks); err != nil {
 		return nil, err
 	}
 
@@ -195,19 +218,11 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
-	if err := c.regenerateApplyArtifacts(ctx, options.exportTemplate); err != nil {
+	if _, err := c.finalize(ctx, options.exportTemplate, options.graph); err != nil {
 		return nil, err
 	}
 
-	c.writeApplyState()
-
 	return applyResultFromPlan(plan), nil
-}
-
-func (c *CLab) writeApplyState() {
-	if err := c.WriteState(); err != nil {
-		log.Warnf("failed to write state file: %v", err)
-	}
 }
 
 func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
@@ -231,18 +246,31 @@ func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
 func (c *CLab) prepareApply(
 	ctx context.Context,
 	addedNodes []string,
+	skipLabDirFileACLs bool,
 ) error {
 	if _, err := c.prepareLabManagementNetwork(ctx); err != nil {
 		return err
 	}
 
-	if err := c.prepareDeployArtifacts(ctx, false); err != nil {
+	if err := c.prepareDeployArtifacts(ctx, skipLabDirFileACLs); err != nil {
 		return err
 	}
 
 	for _, nodeName := range addedNodes {
 		if err := c.Nodes[nodeName].PullImage(ctx); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (*CLab) removeApplyLinkEndpoints(ctx context.Context, links []clablinks.Link) error {
+	for _, link := range links {
+		for _, ep := range clablinks.RuntimeEndpoints(link) {
+			if err := clablinks.RemoveOwnedInterface(ctx, ep.GetNode(), ep.GetIfaceName()); err != nil {
+				return err
+			}
 		}
 	}
 

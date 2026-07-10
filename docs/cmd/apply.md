@@ -14,10 +14,9 @@ The first implementation focuses on topology shape changes:
 - add links
 - delete links
 
-Apply also tracks a small set of existing node definition changes from the last saved apply state:
-
-- Changes, such as `exec`, restart the existing node;
-- Changes that affect the container object, such as `image`, `type`, `environment`, `binds`, `ports`, `resources`, `runtime`, or `components`, recreate the node.
+Apply also tracks a small set of existing node definition changes from the last saved apply state.
+Any tracked change—including `exec`, `environment`, `image`, `type`, `binds`, `ports`, resources,
+runtime, or components—conservatively recreates only the affected node.
 
 Use `redeploy` instead of `apply` when:
 
@@ -137,9 +136,10 @@ Apply currently supports only a subset of topology changes:
 - supported link types are `veth`, brief links, `host`, `mgmt-net`, `macvlan`, `vxlan`,
   `vxlan-stitch`, `dummy`, and `bridge`
 - distributed nodes, such as SR-SIM with components, are supported for node and link add/delete
-- root-namespace-based nodes are not supported
+- root-namespace-based and `ext-container` nodes can participate in link reconciliation; apply
+  does not create or delete their underlying resource
+- configuration drift that would require recreating an externally managed node is rejected
 - nodes with `auto-remove` enabled are not supported
-- `ext-container` and other pre-existing container nodes are not supported
 - `network-mode: container:<...>` users/providers are not supported
 - existing node definition reconciliation is limited to fields captured in the apply state file
 - existing link parameter/type changes with the same runtime interface names are not applied in

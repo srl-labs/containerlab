@@ -15,6 +15,7 @@ ${initial-vars}             29-apply.vars.initial.yml
 ${add-link-vars}            29-apply.vars.add-link.yml
 ${add-special-links-vars}   29-apply.vars.add-special-links.yml
 ${add-node-vars}            29-apply.vars.add-node.yml
+${deploy-drift-vars}        29-apply.vars.deploy-drift.yml
 ${runtime-cli-exec-cmd}     docker exec
 ${recovery-timeout}         30s
 ${retry-interval}           2s
@@ -169,11 +170,19 @@ Apply deletes supported non-veth links
     Host Interface Should Not Exist    appmgmt1
 
 Apply adds node and link
+    ${l1_before} =    Node Runtime Identity    l1
+    ${l2_before} =    Node Runtime Identity    l2
     ${rc}    ${output} =    Apply Topology    ${add-node-vars}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    added nodes
+    Should Contain    ${output}    recreated nodes
+    Should Contain    ${output}    config drift: Exec
     Should Contain    ${output}    l3
     Node Should Be Running    l3
+    ${l1_after} =    Node Runtime Identity    l1
+    ${l2_after} =    Node Runtime Identity    l2
+    Should Not Be Equal As Strings    ${l1_after}    ${l1_before}
+    Should Be Equal As Strings    ${l2_after}    ${l2_before}
     Interface Should Exist    l1    eth1
     Interface Should Exist    l2    eth1
     Interface Should Exist    l1    eth3
@@ -184,7 +193,6 @@ Apply adds node and link
     ...    Ping From Node Succeeds
     ...    l1
     ...    172.17.0.2
-    Configure Interface Address    l1    eth3    172.17.1.1/24
     Wait Until Keyword Succeeds
     ...    ${recovery-timeout}
     ...    ${retry-interval}
@@ -201,6 +209,26 @@ Apply deletes node and link
     Interface Should Exist    l1    eth1
     Interface Should Exist    l2    eth1
     Interface Should Not Exist    l1    eth3
+
+Deploy reconciles node config drift idempotently
+    ${l1_before} =    Node Runtime Identity    l1
+    ${l2_before} =    Node Runtime Identity    l2
+    ${rc}    ${output} =    Deploy Topology    ${deploy-drift-vars}
+    Should Be Equal As Integers    ${rc}    0
+    ${l1_reconciled} =    Node Runtime Identity    l1
+    ${l2_reconciled} =    Node Runtime Identity    l2
+    Should Not Be Equal As Strings    ${l1_reconciled}    ${l1_before}
+    Should Be Equal As Strings    ${l2_reconciled}    ${l2_before}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-l1 printenv RECONCILE_MARKER
+    Should Be Equal As Integers    ${rc}    0
+    Should Match Regexp    ${output}    (?m)^updated\s*$
+    ${rc}    ${output} =    Deploy Topology    ${deploy-drift-vars}
+    Should Be Equal As Integers    ${rc}    0
+    ${l1_noop} =    Node Runtime Identity    l1
+    ${l2_noop} =    Node Runtime Identity    l2
+    Should Be Equal As Strings    ${l1_noop}    ${l1_reconciled}
+    Should Be Equal As Strings    ${l2_noop}    ${l2_reconciled}
 
 
 *** Keywords ***
@@ -221,6 +249,12 @@ Apply Topology
     [Arguments]    ${vars_file}    ${extra_args}=${EMPTY}
     ${rc}    ${output} =    Run Clab Command
     ...    apply -t ${CURDIR}/${topo} --vars ${CURDIR}/${vars_file} ${extra_args}
+    RETURN    ${rc}    ${output}
+
+Deploy Topology
+    [Arguments]    ${vars_file}
+    ${rc}    ${output} =    Run Clab Command
+    ...    deploy -t ${CURDIR}/${topo} --vars ${CURDIR}/${vars_file}
     RETURN    ${rc}    ${output}
 
 Interface Should Exist

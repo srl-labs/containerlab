@@ -12,6 +12,8 @@ type deleteTestEndpoint struct {
 
 func (*deleteTestEndpoint) Verify(context.Context, *VerifyLinkParams) error { return nil }
 
+func (*deleteTestEndpoint) Deploy(context.Context) error { return nil }
+
 func (*deleteTestEndpoint) HasSameNodeAndInterface(Endpoint) bool { return false }
 
 func (*deleteTestEndpoint) IsNodeless() bool { return false }

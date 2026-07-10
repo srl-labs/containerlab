@@ -37,6 +37,10 @@ topology:
 
 By specifying the node `external-node1` as part of the containerlab topology, users can use this node name in the links section of the file and create links between containerlab-managed and externally-managed nodes.
 
+`containerlab apply` can add and remove containerlab-owned interfaces on an external container.
+The external container itself remains outside containerlab's lifecycle and is never created or
+deleted by these operations.
+
 ## Interacting with External Container nodes
 
 Even though -{{ kind_display_name }}- nodes are not scheduled by containerlab, it is possible to configure or interact with them using containerlab topology definition options.

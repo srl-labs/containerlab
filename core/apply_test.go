@@ -82,15 +82,19 @@ func (*applyFakeLinkNode) Delete(context.Context) error {
 }
 
 type applyFakeLink struct {
-	linkType  clablinks.LinkType
-	endpoints []clablinks.Endpoint
+	linkType        clablinks.LinkType
+	endpoints       []clablinks.Endpoint
+	deployCalls     int
+	postDeployCalls int
 }
 
-func (*applyFakeLink) Deploy(context.Context, clablinks.Endpoint) error {
+func (l *applyFakeLink) Deploy(context.Context, clablinks.Endpoint) error {
+	l.deployCalls++
 	return nil
 }
 
-func (*applyFakeLink) PostDeploy(context.Context) error {
+func (l *applyFakeLink) PostDeploy(context.Context) error {
+	l.postDeployCalls++
 	return nil
 }
 
@@ -116,6 +120,21 @@ func (*applyFakeLink) GetMTU() int {
 
 func (*applyFakeLink) GetVars() map[string]any {
 	return nil
+}
+
+func TestDeployLinksUsesEndpointOwnership(t *testing.T) {
+	node := &applyFakeLinkNode{name: "n1"}
+	link := &applyFakeLink{linkType: clablinks.LinkTypeDummy}
+	link.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(node, "eth1", link)),
+	}
+
+	if err := (&CLab{}).DeployLinks(context.Background(), []clablinks.Link{link}); err != nil {
+		t.Fatal(err)
+	}
+	if link.deployCalls != 1 || link.postDeployCalls != 1 {
+		t.Fatalf("deploy calls = %d, post-deploy calls = %d", link.deployCalls, link.postDeployCalls)
+	}
 }
 
 func TestApplyRequiresTopologyFile(t *testing.T) {
@@ -605,6 +624,35 @@ func TestPlanNodeReconciliationKeepsRecreateAction(t *testing.T) {
 	}
 }
 
+func TestPlanNodeReconciliationRejectsExternalRecreate(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+	diff := &clabtypes.TopologyDiff{Fields: []string{"Env"}}
+
+	mockNode.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).Return(diff)
+	mockNode.EXPECT().
+		GetReconcilePlan(gomock.Any(), diff).
+		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionRecreate}, nil)
+
+	topo := clabtypes.NewTopology()
+	topo.Nodes["n1"] = &clabtypes.NodeDefinition{Kind: "ext-container"}
+	c := &CLab{
+		Config: &Config{Topology: topo},
+		Nodes:  map[string]clabnodes.Node{"n1": mockNode},
+	}
+	plan := newApplyPlan(
+		map[string]*runtimeNodeGroup{"n1": {external: true}},
+		nil,
+	)
+
+	err := c.planNodeReconciliation(context.Background(), plan)
+	if err == nil || !strings.Contains(err.Error(), "externally managed") {
+		t.Fatalf("error = %v, want externally managed node error", err)
+	}
+}
+
 func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
 	t.Parallel()
 
@@ -675,6 +723,73 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	}
 	if got := len(group.containers); got != 2 {
 		t.Fatalf("expected 2 component containers, got %d", got)
+	}
+}
+
+func TestRuntimeNodeGroupsIncludesPreExistingNodes(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	node := clabmocksmocknodes.NewMockNode(ctrl)
+	node.EXPECT().Config().Return(&clabtypes.NodeConfig{SkipUniquenessCheck: true})
+	node.EXPECT().GetContainerStatus(ctx).Return(clabruntime.Running)
+	rt.EXPECT().ListContainers(gomock.Any(), gomock.Any()).Return(nil, nil)
+
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Nodes:  map[string]clabnodes.Node{"external": node},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: rt,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	groups, err := c.runtimeNodeGroups(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	group := groups["external"]
+	if group == nil || !group.external || len(group.containers) != 0 {
+		t.Fatalf("unexpected external runtime group: %#v", group)
+	}
+}
+
+func TestNeedsInitialDeploy(t *testing.T) {
+	t.Parallel()
+
+	topoFile := filepath.Join(t.TempDir(), "lab.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: lab\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := topoPaths.SetLabDirByPrefix("lab"); err != nil {
+		t.Fatal(err)
+	}
+	c := &CLab{TopoPaths: topoPaths}
+
+	initial, err := c.needsInitialDeploy(map[string]*runtimeNodeGroup{
+		"external": {external: true},
+	})
+	if err != nil || !initial {
+		t.Fatalf("external nodes without state: initial = %v, error = %v", initial, err)
+	}
+
+	if err := os.MkdirAll(topoPaths.TopologyLabDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(topoPaths.StateFile(), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	initial, err = c.needsInitialDeploy(map[string]*runtimeNodeGroup{
+		"external": {external: true},
+	})
+	if err != nil || initial {
+		t.Fatalf("external nodes with state: initial = %v, error = %v", initial, err)
 	}
 }
 
