@@ -221,6 +221,7 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 	return nil
 }
 
+// DeployEndpoint deploys the link associated with the endpoint.
 func DeployEndpoint(ctx context.Context, ep Endpoint) error {
 	if ep == nil {
 		return fmt.Errorf("cannot deploy nil endpoint")
