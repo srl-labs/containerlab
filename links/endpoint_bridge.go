@@ -48,10 +48,6 @@ func (e *EndpointBridge) Verify(ctx context.Context, p *VerifyLinkParams) error 
 	return nil
 }
 
-func (e *EndpointBridge) Deploy(ctx context.Context) error {
-	return e.GetLink().Deploy(ctx, e)
-}
-
 func (e *EndpointBridge) IsNodeless() bool {
 	// the mgmt bridge is nodeless.
 	// If this is a regular bridge, then it should trigger BEnd deployment.

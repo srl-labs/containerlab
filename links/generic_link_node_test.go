@@ -14,8 +14,6 @@ func (*deleteTestEndpoint) Verify(context.Context, *VerifyLinkParams) error { re
 
 func (*deleteTestEndpoint) HasSameNodeAndInterface(Endpoint) bool { return false }
 
-func (*deleteTestEndpoint) Deploy(context.Context) error { return nil }
-
 func (*deleteTestEndpoint) IsNodeless() bool { return false }
 
 func (e *deleteTestEndpoint) Remove(context.Context) error {

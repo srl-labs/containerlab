@@ -15,10 +15,6 @@ func NewEndpointHost(eg *EndpointGeneric) *EndpointHost {
 	}
 }
 
-func (e *EndpointHost) Deploy(ctx context.Context) error {
-	return e.GetLink().Deploy(ctx, e)
-}
-
 func (e *EndpointHost) Verify(ctx context.Context, _ *VerifyLinkParams) error {
 	var errs []error
 	err := CheckEndpointUniqueness(e)
