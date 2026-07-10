@@ -220,7 +220,9 @@ type Node interface {
 	// AddEndpoint attaches an endpoint discovered from topology resolution and may normalize
 	// endpoint identity first, such as interface-name remapping.
 	AddEndpoint(e clablinks.Endpoint) error
+	// AdoptEndpoint adds an endpoint already owned by this node to its endpoint list.
 	AdoptEndpoint(e clablinks.Endpoint) error
+	// ReleaseEndpoint removes an endpoint owned by this node from its endpoint list.
 	ReleaseEndpoint(e clablinks.Endpoint) error
 	GetEndpoints() []clablinks.Endpoint
 	GetLinkEndpointType() clablinks.LinkEndpointType
