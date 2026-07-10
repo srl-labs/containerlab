@@ -20,7 +20,3 @@ func (e *EndpointMacVlan) Verify(ctx context.Context, _ *VerifyLinkParams) error
 func (e *EndpointMacVlan) IsNodeless() bool {
 	return false
 }
-
-func (e *EndpointMacVlan) MoveTo(ctx context.Context, dst Node) error {
-	return moveEndpoint(ctx, e, dst)
-}

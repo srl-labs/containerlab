@@ -21,10 +21,6 @@ func (e *deleteTestEndpoint) Remove(context.Context) error {
 	return nil
 }
 
-func (e *deleteTestEndpoint) MoveTo(ctx context.Context, dst Node) error {
-	return moveEndpoint(ctx, e, dst)
-}
-
 func TestGenericLinkNodeDeleteHandlesEndpointsWithoutLink(t *testing.T) {
 	node := &GenericLinkNode{
 		shortname: "test-node",

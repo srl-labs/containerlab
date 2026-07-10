@@ -38,7 +38,3 @@ func (e *EndpointVxlan) Verify(_ context.Context, _ *VerifyLinkParams) error {
 func (e *EndpointVxlan) IsNodeless() bool {
 	return false
 }
-
-func (e *EndpointVxlan) MoveTo(ctx context.Context, dst Node) error {
-	return moveEndpoint(ctx, e, dst)
-}

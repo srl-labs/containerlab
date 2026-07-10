@@ -20,7 +20,3 @@ func (e *EndpointVeth) Verify(_ context.Context, _ *VerifyLinkParams) error {
 func (e *EndpointVeth) IsNodeless() bool {
 	return false
 }
-
-func (e *EndpointVeth) MoveTo(ctx context.Context, dst Node) error {
-	return moveEndpoint(ctx, e, dst)
-}

@@ -34,7 +34,3 @@ func (e *EndpointHost) Verify(ctx context.Context, _ *VerifyLinkParams) error {
 func (e *EndpointHost) IsNodeless() bool {
 	return true
 }
-
-func (e *EndpointHost) MoveTo(ctx context.Context, dst Node) error {
-	return moveEndpoint(ctx, e, dst)
-}
