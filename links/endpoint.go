@@ -33,8 +33,6 @@ type Endpoint interface {
 	// has the same node and interface name as the given endpoint.
 	HasSameNodeAndInterface(ept Endpoint) bool
 	Remove(context.Context) error
-	// MoveTo moves this endpoint's interface to the destination node's namespace and transfers ownership.
-	MoveTo(context.Context, Node) error
 	// Activate brings this endpoint's interface up in its current namespace.
 	Activate(context.Context) error
 	// IsNodeless returns true for the endpoints that has no explicit node defined in the topology.
@@ -49,15 +47,6 @@ type Endpoint interface {
 	IsRuntimeDiscovered() bool
 	// GetVars returns the endpoint-level vars.
 	GetVars() map[string]any
-}
-
-// DeployableEndpoint is implemented by endpoint kinds that participate in initial lab deployment.
-type DeployableEndpoint interface {
-	Endpoint
-	// Deploy deploys the endpoint by calling the Deploy method of the link it is assigned to
-	// and passing the endpoint as an argument so that the link that consists of A and B endpoints
-	// can deploy them independently.
-	Deploy(context.Context) error
 }
 
 // EndpointGeneric is the generic endpoint struct that is used by all endpoint types.
@@ -169,7 +158,7 @@ func (e *EndpointGeneric) Remove(ctx context.Context) error {
 
 // moveEndpoint moves the endpoint's interface into dst's namespace and transfers ownership.
 // The interface is left in the DOWN state; callers that need it active should follow up with
-// activateEndpoint once all endpoints are in place.
+// Endpoint.Activate once all endpoints are in place.
 func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 	src := e.GetNode()
 	if src == nil {
@@ -182,16 +171,6 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 
 	if src == dst {
 		return nil
-	}
-
-	srcOwner, ok := src.(EndpointOwner)
-	if !ok {
-		return fmt.Errorf("node %q does not support endpoint ownership moves", src.GetShortName())
-	}
-
-	dstOwner, ok := dst.(EndpointOwner)
-	if !ok {
-		return fmt.Errorf("node %q does not support endpoint ownership moves", dst.GetShortName())
 	}
 
 	if !slices.Contains(src.GetEndpoints(), e) {
@@ -223,13 +202,13 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 		return err
 	}
 
-	if err := srcOwner.ReleaseEndpoint(e); err != nil {
+	if err := src.ReleaseEndpoint(e); err != nil {
 		return err
 	}
 	e.SetNode(dst)
-	if err := dstOwner.AdoptEndpoint(e); err != nil {
+	if err := dst.AdoptEndpoint(e); err != nil {
 		e.SetNode(src)
-		_ = srcOwner.AdoptEndpoint(e)
+		_ = src.AdoptEndpoint(e)
 		return fmt.Errorf(
 			"endpoint %q moved but destination ownership update failed: %w",
 			e.GetIfaceName(),
@@ -240,8 +219,8 @@ func moveEndpoint(ctx context.Context, e Endpoint, dst Node) error {
 	return nil
 }
 
-// activateEndpoint brings the endpoint's interface up in its current namespace.
-func activateEndpoint(ctx context.Context, e Endpoint) error {
+// Activate brings the endpoint's interface up in its current namespace.
+func (e *EndpointGeneric) Activate(ctx context.Context) error {
 	return e.GetNode().ExecFunction(ctx, func(_ ns.NetNS) error {
 		link, err := netlink.LinkByName(e.GetIfaceName())
 		if err != nil {

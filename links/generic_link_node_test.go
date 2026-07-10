@@ -14,21 +14,11 @@ func (*deleteTestEndpoint) Verify(context.Context, *VerifyLinkParams) error { re
 
 func (*deleteTestEndpoint) HasSameNodeAndInterface(Endpoint) bool { return false }
 
-func (*deleteTestEndpoint) Deploy(context.Context) error { return nil }
-
 func (*deleteTestEndpoint) IsNodeless() bool { return false }
 
 func (e *deleteTestEndpoint) Remove(context.Context) error {
 	e.removed = true
 	return nil
-}
-
-func (e *deleteTestEndpoint) MoveTo(ctx context.Context, dst Node) error {
-	return moveEndpoint(ctx, e, dst)
-}
-
-func (e *deleteTestEndpoint) Activate(ctx context.Context) error {
-	return activateEndpoint(ctx, e)
 }
 
 func TestGenericLinkNodeDeleteHandlesEndpointsWithoutLink(t *testing.T) {

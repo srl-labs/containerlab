@@ -142,6 +142,7 @@ func (c *CLab) Apply(
 	}
 
 	if plan.empty() {
+		c.writeApplyState()
 		return applyResultFromPlan(plan), nil
 	}
 
@@ -198,11 +199,15 @@ func (c *CLab) Apply(
 		return nil, err
 	}
 
+	c.writeApplyState()
+
+	return applyResultFromPlan(plan), nil
+}
+
+func (c *CLab) writeApplyState() {
 	if err := c.WriteState(); err != nil {
 		log.Warnf("failed to write state file: %v", err)
 	}
-
-	return applyResultFromPlan(plan), nil
 }
 
 func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {

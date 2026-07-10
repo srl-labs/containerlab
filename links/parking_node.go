@@ -30,7 +30,7 @@ func (p *ParkingNode) RepointSymlink() error {
 	return clabutils.LinkContainerNS(p.nspath, p.containerName)
 }
 
-func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error {
+func (p *ParkingNode) CaptureFrom(ctx context.Context, src Node) error {
 	endpoints, err := p.captureCandidates(ctx, src)
 	if err != nil {
 		return err
@@ -38,9 +38,9 @@ func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error 
 
 	moved := make([]Endpoint, 0, len(endpoints))
 	for _, ep := range endpoints {
-		if err := ep.MoveTo(ctx, p); err != nil {
+		if err := moveEndpoint(ctx, ep, p); err != nil {
 			for i := len(moved) - 1; i >= 0; i-- {
-				if err := moved[i].MoveTo(ctx, src); err == nil {
+				if err := moveEndpoint(ctx, moved[i], src); err == nil {
 					_ = moved[i].Activate(ctx)
 				}
 			}
@@ -57,7 +57,7 @@ func (p *ParkingNode) CaptureFrom(ctx context.Context, src EndpointOwner) error 
 	return nil
 }
 
-func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) ([]Endpoint, error) {
+func (p *ParkingNode) RestoreTo(ctx context.Context, dst Node) ([]Endpoint, error) {
 	if err := p.DiscoverOwnedEndpoints(ctx, dst); err != nil {
 		return nil, err
 	}
@@ -66,9 +66,9 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) ([]Endpo
 	moved := make([]Endpoint, 0, len(endpoints))
 
 	for _, ep := range endpoints {
-		if err := ep.MoveTo(ctx, dst); err != nil {
+		if err := moveEndpoint(ctx, ep, dst); err != nil {
 			for i := len(moved) - 1; i >= 0; i-- {
-				_ = moved[i].MoveTo(ctx, p)
+				_ = moveEndpoint(ctx, moved[i], p)
 			}
 			return nil, fmt.Errorf(
 				"failed to restore interface %q for node %q: %w",
@@ -78,9 +78,9 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) ([]Endpo
 			)
 		}
 		if err := ep.Activate(ctx); err != nil {
-			_ = ep.MoveTo(ctx, p)
+			_ = moveEndpoint(ctx, ep, p)
 			for i := len(moved) - 1; i >= 0; i-- {
-				_ = moved[i].MoveTo(ctx, p)
+				_ = moveEndpoint(ctx, moved[i], p)
 			}
 			return nil, fmt.Errorf(
 				"failed to activate interface %q for node %q: %w",
@@ -95,7 +95,7 @@ func (p *ParkingNode) RestoreTo(ctx context.Context, dst EndpointOwner) ([]Endpo
 	return moved, nil
 }
 
-func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original EndpointOwner) error {
+func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Node) error {
 	ifaceNames, err := listOwnedInterfaceNames(
 		ctx,
 		p,
@@ -142,15 +142,7 @@ func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Endpo
 				continue
 			}
 
-			currentOwner, ok := ep.GetNode().(EndpointOwner)
-			if !ok {
-				return fmt.Errorf(
-					"node %q does not support endpoint ownership moves",
-					ep.GetNode().GetShortName(),
-				)
-			}
-
-			if err := currentOwner.ReleaseEndpoint(ep); err != nil {
+			if err := ep.GetNode().ReleaseEndpoint(ep); err != nil {
 				return err
 			}
 			ep.SetNode(p)
@@ -171,7 +163,7 @@ func (p *ParkingNode) DiscoverOwnedEndpoints(ctx context.Context, original Endpo
 
 func (p *ParkingNode) captureCandidates(
 	ctx context.Context,
-	src EndpointOwner,
+	src Node,
 ) ([]Endpoint, error) {
 	trackedEndpoints := src.GetEndpoints()
 	tracked := make(map[string]Endpoint, len(trackedEndpoints))

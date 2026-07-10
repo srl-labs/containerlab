@@ -350,6 +350,48 @@ func TestVerifyLinks(t *testing.T) {
 	}
 }
 
+func TestResolveLinksIsIdempotent(t *testing.T) {
+	topoContent := []byte(`
+name: resolve-links
+topology:
+  nodes:
+    n1:
+      kind: linux
+      image: alpine:latest
+    n2:
+      kind: linux
+      image: alpine:latest
+  links:
+    - endpoints: ["n1:eth1", "n2:eth1"]
+`)
+
+	topoFile := filepath.Join(t.TempDir(), "resolve-links.clab.yml")
+	if err := os.WriteFile(topoFile, topoContent, 0o644); err != nil {
+		t.Fatalf("failed to write topology file: %v", err)
+	}
+
+	c, err := NewContainerLab(WithTopoPath(topoFile, nil))
+	if err != nil {
+		t.Fatalf("failed to create lab: %v", err)
+	}
+
+	if err := c.ResolveLinks(); err != nil {
+		t.Fatalf("first ResolveLinks() failed: %v", err)
+	}
+	if err := c.ResolveLinks(); err != nil {
+		t.Fatalf("second ResolveLinks() failed: %v", err)
+	}
+
+	if got := len(c.Endpoints); got != 2 {
+		t.Fatalf("endpoint count after repeated ResolveLinks() = %d, want 2", got)
+	}
+	for _, nodeName := range []string{"n1", "n2"} {
+		if got := len(c.Nodes[nodeName].GetEndpoints()); got != 1 {
+			t.Fatalf("%s endpoint count after repeated ResolveLinks() = %d, want 1", nodeName, got)
+		}
+	}
+}
+
 func TestLabelsInit(t *testing.T) {
 	owner := os.Getenv("SUDO_USER")
 

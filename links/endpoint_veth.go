@@ -17,18 +17,6 @@ func (e *EndpointVeth) Verify(_ context.Context, _ *VerifyLinkParams) error {
 	return CheckEndpointUniqueness(e)
 }
 
-func (e *EndpointVeth) Deploy(ctx context.Context) error {
-	return e.GetLink().Deploy(ctx, e)
-}
-
 func (e *EndpointVeth) IsNodeless() bool {
 	return false
-}
-
-func (e *EndpointVeth) MoveTo(ctx context.Context, dst Node) error {
-	return moveEndpoint(ctx, e, dst)
-}
-
-func (e *EndpointVeth) Activate(ctx context.Context) error {
-	return activateEndpoint(ctx, e)
 }

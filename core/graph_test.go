@@ -46,6 +46,10 @@ func (*graphTestNode) AddLinkToContainer(
 
 func (*graphTestNode) AddEndpoint(_ clablinks.Endpoint) error { return nil }
 
+func (*graphTestNode) AdoptEndpoint(_ clablinks.Endpoint) error { return nil }
+
+func (*graphTestNode) ReleaseEndpoint(_ clablinks.Endpoint) error { return nil }
+
 func (*graphTestNode) GetLinkEndpointType() clablinks.LinkEndpointType {
 	return clablinks.LinkEndpointTypeVeth
 }

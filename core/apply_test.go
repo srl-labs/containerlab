@@ -2,6 +2,8 @@ package core
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -26,15 +28,6 @@ type applyFakeLinkNode struct {
 	endpoints []clablinks.Endpoint
 }
 
-type applyLiveMockNode struct {
-	*clabmocksmocknodes.MockNode
-	linkApplyMode clabnodes.LinkApplyMode
-}
-
-func (n *applyLiveMockNode) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
-	return n.linkApplyMode
-}
-
 func (n *applyFakeLinkNode) AddLinkToContainer(
 	_ context.Context,
 	_ netlink.Link,
@@ -45,6 +38,22 @@ func (n *applyFakeLinkNode) AddLinkToContainer(
 
 func (n *applyFakeLinkNode) AddEndpoint(e clablinks.Endpoint) error {
 	n.endpoints = append(n.endpoints, e)
+	return nil
+}
+
+func (n *applyFakeLinkNode) AdoptEndpoint(e clablinks.Endpoint) error {
+	n.endpoints = append(n.endpoints, e)
+	e.SetNode(n)
+	return nil
+}
+
+func (n *applyFakeLinkNode) ReleaseEndpoint(e clablinks.Endpoint) error {
+	for i, ep := range n.endpoints {
+		if ep == e {
+			n.endpoints = append(n.endpoints[:i], n.endpoints[i+1:]...)
+			break
+		}
+	}
 	return nil
 }
 
@@ -81,6 +90,10 @@ func (*applyFakeLink) Deploy(context.Context, clablinks.Endpoint) error {
 	return nil
 }
 
+func (*applyFakeLink) PostDeploy(context.Context) error {
+	return nil
+}
+
 func (*applyFakeLink) Remove(context.Context) error {
 	return nil
 }
@@ -90,6 +103,10 @@ func (l *applyFakeLink) GetType() clablinks.LinkType {
 }
 
 func (l *applyFakeLink) GetEndpoints() []clablinks.Endpoint {
+	return l.endpoints
+}
+
+func (l *applyFakeLink) GetRuntimeEndpoints() []clablinks.Endpoint {
 	return l.endpoints
 }
 
@@ -145,6 +162,85 @@ func TestApplyDryRunPlansDeployWhenLabMissing(t *testing.T) {
 	}
 	if result.LabName != c.Config.Name {
 		t.Fatalf("planned lab name %q, want %q", result.LabName, c.Config.Name)
+	}
+}
+
+func TestApplyWritesStateForNoChanges(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+
+	labDir := t.TempDir()
+	topoFile := filepath.Join(labDir, "noop.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: noop\n"), 0o644); err != nil {
+		t.Fatalf("failed to write topology file: %v", err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatalf("failed to create topo paths: %v", err)
+	}
+	if err := topoPaths.SetLabDir(labDir); err != nil {
+		t.Fatalf("failed to set lab dir: %v", err)
+	}
+
+	nodeCfg := &clabtypes.NodeConfig{
+		ShortName: "n1",
+		LongName:  "clab-noop-n1",
+	}
+	diff := &clabtypes.TopologyDiff{}
+
+	mockRuntime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return([]clabruntime.GenericContainer{
+			{
+				Labels: map[string]string{
+					clabconstants.NodeName:      "n1",
+					clabconstants.NodeMgmtNetBr: "br-test",
+				},
+			},
+		}, nil)
+	mockNode.EXPECT().Config().Return(nodeCfg).AnyTimes()
+	mockNode.EXPECT().CheckDeploymentConditions(gomock.Any()).Return(nil)
+	mockNode.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).Return(diff)
+	mockNode.EXPECT().
+		GetReconcilePlan(gomock.Any(), diff).
+		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionNone}, nil)
+	mockNode.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running).AnyTimes()
+	mockNode.EXPECT().ExecFunction(gomock.Any(), gomock.Any()).Return(nil)
+	mockNode.EXPECT().
+		Reconcile(gomock.Any(), diff).
+		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionNone}, nil)
+
+	topo := clabtypes.NewTopology()
+	topo.Nodes["n1"] = &clabtypes.NodeDefinition{Kind: "linux", Image: "alpine:latest"}
+
+	c := &CLab{
+		Config: &Config{
+			Name:     "noop",
+			Mgmt:     &clabtypes.MgmtNet{},
+			Topology: topo,
+		},
+		TopoPaths: topoPaths,
+		Nodes: map[string]clabnodes.Node{
+			"n1": mockNode,
+		},
+		Links: map[int]clablinks.Link{},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: mockRuntime,
+		},
+	}
+
+	result, err := c.Apply(context.Background(), &ApplyOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.DeployedLab {
+		t.Fatal("expected no-op apply, got deploy result")
+	}
+	if _, err := os.Stat(topoPaths.StateFile()); err != nil {
+		t.Fatalf("expected no-op apply to write state file: %v", err)
 	}
 }
 
@@ -324,34 +420,29 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		hasMode  bool
 		mode     clabnodes.LinkApplyMode
 		override clabnodes.LinkApplyMode
 		want     clabnodes.LinkApplyMode
 	}{
 		{
-			name:    "live node",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyModeLive,
-			want:    clabnodes.LinkApplyModeLive,
+			name: "live node",
+			mode: clabnodes.LinkApplyModeLive,
+			want: clabnodes.LinkApplyModeLive,
 		},
 		{
-			name:    "restart node",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyModeRestart,
-			want:    clabnodes.LinkApplyModeRestart,
+			name: "restart node",
+			mode: clabnodes.LinkApplyModeRestart,
+			want: clabnodes.LinkApplyModeRestart,
 		},
 		{
-			name:    "recreate node",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyModeRecreate,
-			want:    clabnodes.LinkApplyModeRecreate,
+			name: "recreate node",
+			mode: clabnodes.LinkApplyModeRecreate,
+			want: clabnodes.LinkApplyModeRecreate,
 		},
 		{
-			name:    "invalid mode defaults to recreate",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyMode("invalid"),
-			want:    clabnodes.LinkApplyModeRecreate,
+			name: "invalid mode defaults to recreate",
+			mode: clabnodes.LinkApplyMode("invalid"),
+			want: clabnodes.LinkApplyModeRecreate,
 		},
 		{
 			name: "node without mode defaults to recreate",
@@ -359,21 +450,18 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 		},
 		{
 			name:     "override upgrades recreate kind to live",
-			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeRecreate,
 			override: clabnodes.LinkApplyModeLive,
 			want:     clabnodes.LinkApplyModeLive,
 		},
 		{
 			name:     "override restricts live kind to recreate",
-			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeLive,
 			override: clabnodes.LinkApplyModeRecreate,
 			want:     clabnodes.LinkApplyModeRecreate,
 		},
 		{
 			name:     "invalid override falls back to kind mode",
-			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeRestart,
 			override: clabnodes.LinkApplyMode("hotplug"),
 			want:     clabnodes.LinkApplyModeRestart,
@@ -393,16 +481,9 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 				ShortName:     "n1",
 				LinkApplyMode: tt.override,
 			}).AnyTimes()
+			mockNode.EXPECT().LinkApplyMode(gomock.Any()).Return(tt.mode)
 
-			var node clabnodes.Node = mockNode
-			if tt.hasMode {
-				node = &applyLiveMockNode{
-					MockNode:      mockNode,
-					linkApplyMode: tt.mode,
-				}
-			}
-
-			if got := clabnodes.LinkApplyModeForNode(context.Background(), node); got != tt.want {
+			if got := clabnodes.LinkApplyModeForNode(context.Background(), mockNode); got != tt.want {
 				t.Fatalf("LinkApplyModeForNode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -450,13 +531,11 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 
 			c := &CLab{
 				Nodes: map[string]clabnodes.Node{
-					"n1": &applyLiveMockNode{
-						MockNode:      mockNode,
-						linkApplyMode: tt.mode,
-					},
+					"n1": mockNode,
 				},
 			}
 			mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{}).AnyTimes()
+			mockNode.EXPECT().LinkApplyMode(gomock.Any()).Return(tt.mode)
 			plan := newApplyPlan(nil, nil)
 
 			c.planAffectedApplyNode(context.Background(), plan, "n1", tt.change)
@@ -553,16 +632,16 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 
 	c := &CLab{
 		Config: &Config{Name: "lab"},
 		Runtimes: map[string]clabruntime.ContainerRuntime{
-			clabruntimedocker.RuntimeName: clabmocksmockruntime.NewMockContainerRuntime(ctrl),
+			clabruntimedocker.RuntimeName: mockRuntime,
 		},
 		globalRuntimeName: clabruntimedocker.RuntimeName,
 	}
 
-	mockRuntime := c.Runtimes[clabruntimedocker.RuntimeName].(*clabmocksmockruntime.MockContainerRuntime)
 	mockRuntime.EXPECT().
 		ListContainers(gomock.Any(), gomock.Any()).
 		Return([]clabruntime.GenericContainer{
