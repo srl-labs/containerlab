@@ -1,0 +1,7 @@
+name: plvision_sonic01
+
+topology:
+  nodes:
+    sonic:
+      kind: plvision_sonic
+      image: vrnetlab/plvision_sonic:lite_1_13_202405

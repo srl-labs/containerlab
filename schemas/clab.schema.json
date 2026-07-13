@@ -71,7 +71,7 @@
                         "juniper_crpd",
                         "juniper_csrx",
                         "sonic-vs",
-                        "sonic-vm",
+                        "sonic-vm",       
                         "nokia_sros",
                         "nokia_srsim",
                         "juniper_vmx",
@@ -126,7 +126,8 @@
                         "openwrt",
                         "spirent_stc",
                         "veesix_osvbng",
-                        "ostinato"
+                        "ostinato",
+                        "plvision_sonic"
                     ]
                 },
                 "license": {
@@ -2033,11 +2034,14 @@
                         },
                         "sonic-vm": {
                             "$ref": "#/definitions/node-config"
-                        },
+                        },  
                         "dell_ftosv": {
                             "$ref": "#/definitions/node-config"
                         },
                         "dell_sonic": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "plvision_sonic": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vmx": {
