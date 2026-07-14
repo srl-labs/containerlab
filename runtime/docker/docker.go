@@ -664,9 +664,10 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		Binds:        node.Binds,
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
-		Privileged:   true,
+		Privileged:   node.Privileged,
 		Tmpfs:        node.Tmpfs,
 		PidMode:      "",
+		SecurityOpt:  node.SecurityOpts,
 		// Network mode will be defined below via switch
 		NetworkMode: "",
 		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
@@ -699,6 +700,10 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 	}
 
 	if err := d.processPidMode(node, containerHostConfig); err != nil {
+		return "", err
+	}
+
+	if err := d.processCgroupnsMode(node, containerHostConfig); err != nil {
 		return "", err
 	}
 
@@ -1477,6 +1482,20 @@ func (*DockerRuntime) processPidMode(
 	}
 
 	containerHostConfig.PidMode = pidMode
+
+	return nil
+}
+
+func (*DockerRuntime) processCgroupnsMode(
+	node *clabtypes.NodeConfig,
+	containerHostConfig *container.HostConfig,
+) error {
+	cgroupnsMode := container.CgroupnsMode(node.CgroupnsMode)
+	if !cgroupnsMode.Valid() {
+		return fmt.Errorf("cgroupns mode %q invalid", node.CgroupnsMode)
+	}
+
+	containerHostConfig.CgroupnsMode = cgroupnsMode
 
 	return nil
 }

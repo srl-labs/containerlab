@@ -415,6 +415,65 @@ func (t *Topology) GetNodeCapAdd(nodeName string) []string {
 	)
 }
 
+func (t *Topology) GetNodePrivileged(nodeName string) bool {
+	return getFieldPtr(
+		t,
+		nodeName,
+		func(node *NodeDefinition) *bool { return node.Privileged },
+		func(group *NodeDefinition) *bool { return group.Privileged },
+		func(kind *NodeDefinition) *bool { return kind.Privileged },
+		func(defaults *NodeDefinition) *bool { return defaults.Privileged },
+		func(v *bool) bool { return v != nil },
+		true,
+	)
+}
+
+func (t *Topology) GetNodeCgroupnsMode(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.CgroupnsMode },
+		func(group *NodeDefinition) string { return group.CgroupnsMode },
+		func(kind *NodeDefinition) string { return kind.CgroupnsMode },
+		func(defaults *NodeDefinition) string { return defaults.CgroupnsMode },
+		func(v string) bool { return v != "" },
+	)
+}
+
+func (t *Topology) GetNodePidMode(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.PidMode },
+		func(group *NodeDefinition) string { return group.PidMode },
+		func(kind *NodeDefinition) string { return kind.PidMode },
+		func(defaults *NodeDefinition) string { return defaults.PidMode },
+		func(v string) bool { return v != "" },
+	)
+}
+
+func (t *Topology) GetNodeTmpfs(nodeName string) map[string]string {
+	return mergeStringMapFields(
+		t,
+		nodeName,
+		func(node *NodeDefinition) map[string]string { return node.Tmpfs },
+		func(group *NodeDefinition) map[string]string { return group.Tmpfs },
+		func(kind *NodeDefinition) map[string]string { return kind.Tmpfs },
+		func(defaults *NodeDefinition) map[string]string { return defaults.Tmpfs },
+	)
+}
+
+func (t *Topology) GetNodeSecurityOpts(nodeName string) []string {
+	return mergeStringSliceFields(
+		t,
+		nodeName,
+		func(node *NodeDefinition) []string { return node.SecurityOpts },
+		func(group *NodeDefinition) []string { return group.SecurityOpts },
+		func(kind *NodeDefinition) []string { return kind.SecurityOpts },
+		func(defaults *NodeDefinition) []string { return defaults.SecurityOpts },
+	)
+}
+
 func (t *Topology) GetNodeShmSize(nodeName string) string {
 	return getField(
 		t,

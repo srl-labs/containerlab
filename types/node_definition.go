@@ -76,6 +76,16 @@ type NodeDefinition struct {
 	Devices []string `yaml:"devices,omitempty"`
 	// List of capabilities to add for the container
 	CapAdd []string `yaml:"cap-add,omitempty"`
+	// Run the container in privileged mode.
+	Privileged *bool `yaml:"privileged,omitempty"`
+	// Cgroup namespace mode for the container.
+	CgroupnsMode string `yaml:"cgroupns-mode,omitempty"`
+	// PID namespace mode for the container.
+	PidMode string `yaml:"pid-mode,omitempty"`
+	// Tmpfs mounts to add to the container, keyed by destination path.
+	Tmpfs map[string]string `yaml:"tmpfs,omitempty"`
+	// Security options to apply to the container runtime.
+	SecurityOpts []string `yaml:"security-opts,omitempty"`
 	// Set the shared memory size allocated to the container
 	ShmSize string `yaml:"shm-size,omitempty"`
 	// list of port bindings
