@@ -8,7 +8,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
@@ -347,16 +347,10 @@ func setMgmtInterface(node *clabtypes.NodeConfig) error {
 }
 
 // ceosPostDeploy runs postdeploy actions which are required for ceos nodes.
-func (n *ceos) ceosPostDeploy(_ context.Context) error {
+func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 	nodeCfg := n.Config()
-	d, err := clabutils.SpawnCLIviaExec("arista_eos", nodeCfg.LongName, n.Runtime.GetName())
-	if err != nil {
-		return err
-	}
-
-	defer d.Close()
-
 	cfgs := []string{
+		"configure terminal",
 		"interface " + nodeCfg.MgmtIntf,
 		"no ip address",
 		"no ipv6 address",
@@ -410,18 +404,40 @@ func (n *ceos) ceosPostDeploy(_ context.Context) error {
 	}
 
 	// add save to startup cmd
-	cfgs = append(cfgs, "wr")
+	cfgs = append(cfgs, "end", "write memory")
 
 	log.Debugf("cEOS PostDeploy configuration for node %s: %v", n.Cfg.ShortName, cfgs)
 
-	resp, err := d.SendConfigs(cfgs)
-	if err != nil {
-		return err
-	} else if resp.Failed != nil {
-		return errors.New("failed CLI configuration")
+	var lastErr error
+	var lastResp *clabexec.ExecResult
+	cliCmd := "Cli -p 15 --abort-on-error -c $'" + strings.Join(cfgs, "\n") + "'"
+
+	for range 60 {
+		execCmd := clabexec.NewExecCmdFromSlice([]string{"/bin/bash", "-lc", cliCmd})
+		resp, err := n.RunExec(ctx, execCmd)
+		if err == nil && resp.GetReturnCode() == 0 {
+			return nil
+		}
+
+		lastErr = err
+		lastResp = resp
+		log.Debugf("%s - Cli not ready (%v, %v) - waiting.", nodeCfg.LongName, err, resp)
+		time.Sleep(2 * time.Second)
 	}
 
-	return err
+	if lastErr != nil {
+		return lastErr
+	}
+	if lastResp != nil {
+		return fmt.Errorf(
+			"failed CLI configuration: rc=%d stdout=%q stderr=%q",
+			lastResp.GetReturnCode(),
+			lastResp.GetStdOutString(),
+			lastResp.GetStdErrString(),
+		)
+	}
+
+	return fmt.Errorf("failed CLI configuration")
 }
 
 // CheckInterfaceName checks if a name of the interface referenced in the topology file correct.
