@@ -76,7 +76,7 @@ func (r *PodmanRuntime) createContainerSpec(
 		Terminal:   utils.Pointer(true),
 		Stdin:      utils.Pointer(true),
 		Labels:     cfg.Labels,
-		Hostname:   cfg.ShortName,
+		Hostname:   cfg.GetHostname(),
 		Sysctl:     cfg.Sysctls,
 		Remove:     utils.Pointer(false),
 	}

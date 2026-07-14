@@ -250,6 +250,12 @@
                         }
                     ]
                 },
+                "hostname": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "hostname configured inside the container",
+                    "markdownDescription": "container [hostname](https://containerlab.dev/manual/nodes/#hostname); defaults to the topology node name"
+                },
                 "entrypoint": {
                     "type": "string",
                     "description": "container's entrypoint",

@@ -704,7 +704,7 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		Env:          clabutils.ConvertEnvs(node.Env),
 		AttachStdout: true,
 		AttachStderr: true,
-		Hostname:     node.ShortName,
+		Hostname:     node.GetHostname(),
 		Tty:          true,
 		OpenStdin:    true,
 		User:         node.User,

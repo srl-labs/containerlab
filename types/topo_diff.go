@@ -25,6 +25,7 @@ func (d *TopologyDiff) HasDiff() bool {
 // fields that require a recreate of the container
 var RecreateFields = map[string]bool{
 	"Image":       true,
+	"Hostname":    true,
 	"Type":        true,
 	"Env":         true,
 	"Cmd":         true,

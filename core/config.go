@@ -215,6 +215,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:       nodeName, // just the node name as seen in the topo file
 		LongName:        longName, // by default clab-$labName-$nodeName
+		Hostname:        c.Config.Topology.GetNodeHostname(nodeName),
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
 		LabDir:          c.TopoPaths.NodeDir(nodeName),
 		Index:           idx,
