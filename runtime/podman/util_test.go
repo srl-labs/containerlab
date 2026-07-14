@@ -72,3 +72,24 @@ func TestCreateContainerSpecPreservesImageCommandDefaults(t *testing.T) {
 		t.Fatalf("Entrypoint = %#v, want nil to preserve the image default", sg.Entrypoint)
 	}
 }
+
+func TestCreateContainerSpecAppliesNoneNetworkMode(t *testing.T) {
+	r := &PodmanRuntime{mgmt: &types.MgmtNet{Network: "clab"}}
+	cfg := &types.NodeConfig{
+		LongName:    "clab-test-node1",
+		ShortName:   "node1",
+		Image:       "localhost/test:latest",
+		Labels:      map[string]string{},
+		NetworkMode: "none",
+		ExtraHosts:  []string{"example:127.0.0.1"},
+	}
+
+	sg, err := r.createContainerSpec(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("createContainerSpec returned error: %v", err)
+	}
+
+	if sg.NetNS.NSMode != specgen.NoNetwork {
+		t.Fatalf("NetNS mode = %q, want %q", sg.NetNS.NSMode, specgen.NoNetwork)
+	}
+}
