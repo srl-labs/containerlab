@@ -835,6 +835,44 @@ func TestGetNodePosition(t *testing.T) {
 	}
 }
 
+func TestGetNodeHostname(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{Hostname: "default-host"},
+		Kinds: map[string]*NodeDefinition{
+			"linux": {Hostname: "kind-host"},
+		},
+		Groups: map[string]*NodeDefinition{
+			"apps": {Hostname: "group-host"},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"node-default": {},
+			"node-kind":    {Kind: "linux"},
+			"node-group":   {Kind: "linux", Group: "apps"},
+			"node-explicit": {
+				Kind: "linux", Group: "apps", Hostname: "node-host",
+			},
+		},
+	}
+
+	tests := []struct {
+		name string
+		want string
+	}{
+		{name: "node-default", want: "default-host"},
+		{name: "node-kind", want: "kind-host"},
+		{name: "node-group", want: "group-host"},
+		{name: "node-explicit", want: "node-host"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := topology.GetNodeHostname(tt.name); got != tt.want {
+				t.Fatalf("GetNodeHostname(%q) = %q, want %q", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGetNodeCmd(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)

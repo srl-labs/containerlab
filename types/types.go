@@ -124,6 +124,8 @@ type NodeConfig struct {
 	ShortName string `json:"shortname,omitempty"`
 	// containerlab-prefixed unique container name
 	LongName string `json:"longname,omitempty"`
+	// Hostname is the runtime hostname. An empty value falls back to ShortName.
+	Hostname string `json:"hostname,omitempty"`
 	Fqdn     string `json:"fqdn,omitempty"`
 	// LabDir is a directory related to the node, it contains config items and/or other persistent
 	// state
@@ -238,6 +240,15 @@ type NodeConfig struct {
 	// they should be present by definition.
 	SkipUniquenessCheck bool
 	Components          []*Component
+}
+
+// GetHostname returns the configured runtime hostname or the topology node name.
+func (n *NodeConfig) GetHostname() string {
+	if n.Hostname != "" {
+		return n.Hostname
+	}
+
+	return n.ShortName
 }
 
 type GenericFilter struct {

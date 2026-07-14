@@ -66,8 +66,10 @@ type NodeDefinition struct {
 	ImagePullPolicy       string            `yaml:"image-pull-policy,omitempty"`
 	License               string            `yaml:"license,omitempty"`
 	Position              string            `yaml:"position,omitempty"`
-	Entrypoint            string            `yaml:"entrypoint,omitempty"`
-	Cmd                   string            `yaml:"cmd,omitempty"`
+	// Hostname overrides the container hostname. When unset, the topology node name is used.
+	Hostname   string `yaml:"hostname,omitempty"`
+	Entrypoint string `yaml:"entrypoint,omitempty"`
+	Cmd        string `yaml:"cmd,omitempty"`
 	// list of commands to run in container
 	Exec []string `yaml:"exec,omitempty"`
 	// list of bind mount compatible strings
