@@ -90,6 +90,8 @@ This short clip briefly demonstrates containerlab features and explains its purp
     Although being kick-started by Nokia engineers, containerlab doesn't take sides and supports NOSes from other vendors and opensource projects.
 * **Lab orchestration**  
     Starting the containers and interconnecting them alone is already good, but containerlab packages even more features like managing lab lifecycle: [deploy](https://containerlab.dev/cmd/deploy), [destroy](https://containerlab.dev/cmd/destroy), [save](https://containerlab.dev/cmd/save), [inspect](https://containerlab.dev/cmd/inspect), [graph](https://containerlab.dev/cmd/graph) operations.
+* **Systemd-capable container runtime controls**
+    Container nodes can opt into init-friendly runtime settings such as cgroup namespace mode, PID namespace mode, tmpfs mounts, security options, shared memory sizing, and privileged mode. Docker and Podman runtimes honor these settings consistently for containers that need to run systemd or other PID 1 supervisors.
 * **Scaled labs generator**  
     With [`generate`](https://containerlab.dev/cmd/generate) capabilities of containerlab it possible to define/launch CLOS-based topologies of arbitrary scale. Just say how many tiers you need and how big each tier is, the rest will be done in a split second.
 * **Simplicity and convenience**  
