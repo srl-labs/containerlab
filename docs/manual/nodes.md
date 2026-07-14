@@ -751,8 +751,7 @@ my-node:
 ### cap-add
 
 The `cap-add` parameter can be used to add capabilities to the container.
-Docker containers are currently executed in privileged mode, so this should not be needed.
-If this becomes configurable, specifying the capabilities required for a container will be useful.
+By default, containers are executed in privileged mode, so this should not be needed unless [`privileged`](#privileged) is set to `false`.
 
 ```yaml
 # my-node will be given the NET_ADMIN and the SYS_ADMIN capabilities
@@ -762,6 +761,74 @@ my-node:
   cap-add:
     - NET_ADMIN
     - SYS_ADMIN
+```
+
+### privileged
+
+The `privileged` parameter controls whether the container runs in privileged mode.
+It defaults to `true` to preserve containerlab's historical behavior.
+
+```yaml
+# my-node will not run as a privileged container.
+my-node:
+  image: alpine:3
+  kind: linux
+  privileged: false
+```
+
+### cgroupns-mode
+
+The `cgroupns-mode` parameter controls the cgroup namespace mode used by the container runtime.
+Supported values are `host` and `private`.
+
+```yaml
+# my-node will use the host cgroup namespace.
+my-node:
+  image: alpine:3
+  kind: linux
+  cgroupns-mode: host
+```
+
+### pid-mode
+
+The `pid-mode` parameter controls the PID namespace mode used by the container runtime.
+For Docker, this accepts the same values as Docker's PID mode setting, such as `host` or `container:<name>`.
+
+```yaml
+# my-node will use the host PID namespace.
+my-node:
+  image: alpine:3
+  kind: linux
+  pid-mode: host
+```
+
+### tmpfs
+
+The `tmpfs` parameter adds tmpfs mounts to the container.
+It is a map keyed by container path, with mount options as the value.
+
+```yaml
+# my-node will have tmpfs mounts commonly used by init-style containers.
+my-node:
+  image: alpine:3
+  kind: linux
+  tmpfs:
+    /run: rw,nosuid,nodev
+    /run/lock: rw,nosuid,nodev,noexec
+    /tmp: rw,nosuid,nodev
+```
+
+### security-opts
+
+The `security-opts` parameter passes security options to the container runtime.
+
+```yaml
+# my-node will disable the default seccomp profile.
+my-node:
+  image: alpine:3
+  kind: linux
+  security-opts:
+    - seccomp=unconfined
 ```
 
 ### sysctls
