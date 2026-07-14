@@ -823,19 +823,3 @@ func TestAddOwnershipAltNameAllowsUnsupportedAltName(t *testing.T) {
 		t.Fatalf("got altname %q, want %q", gotAltName, ownershipAltName(ep))
 	}
 }
-
-func TestPlaceholderNodeKind(t *testing.T) {
-	tests := map[LinkEndpointType]string{
-		LinkEndpointTypeHost:     "host",
-		LinkEndpointTypeBridge:   "bridge",
-		LinkEndpointTypeBridgeNS: "bridge",
-		LinkEndpointTypeVeth:     "ext-container",
-		"anything-else":          "ext-container",
-	}
-
-	for epType, want := range tests {
-		if got := epType.PlaceholderNodeKind(); got != want {
-			t.Errorf("%q.PlaceholderNodeKind() = %q, want %q", epType, got, want)
-		}
-	}
-}

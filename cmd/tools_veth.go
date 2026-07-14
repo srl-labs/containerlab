@@ -152,7 +152,7 @@ func createPlaceholderNodes(c *clabcore.CLab, aEnd, bEnd parsedEndpoint, rt stri
 		if err := c.AddPlaceholderNode(&clabtypes.NodeConfig{
 			ShortName: epDefinition.Node,
 			LongName:  epDefinition.Node,
-			Kind:      epDefinition.Kind.PlaceholderNodeKind(),
+			Kind:      placeholderNodeKind(epDefinition.Kind),
 			Runtime:   rt,
 		}); err != nil {
 			return err
@@ -218,4 +218,17 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 	}
 
 	return ep, nil
+}
+
+// placeholderNodeKind maps a veth endpoint type to the node kind used as a
+// non-owning placeholder for an already-existing resource.
+func placeholderNodeKind(t clablinks.LinkEndpointType) string {
+	switch t {
+	case clablinks.LinkEndpointTypeHost:
+		return "host"
+	case clablinks.LinkEndpointTypeBridge, clablinks.LinkEndpointTypeBridgeNS:
+		return "bridge"
+	default:
+		return "ext-container"
+	}
 }

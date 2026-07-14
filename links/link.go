@@ -676,14 +676,3 @@ func IsValidInterfaceName(ifaceName string) bool {
 
 	return true
 }
-
-func (t LinkEndpointType) PlaceholderNodeKind() string {
-	switch t {
-	case LinkEndpointTypeHost:
-		return "host"
-	case LinkEndpointTypeBridge, LinkEndpointTypeBridgeNS:
-		return "bridge"
-	default:
-		return "ext-container"
-	}
-}
