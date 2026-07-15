@@ -458,6 +458,20 @@ func (c *CLab) DeployNodes(
 	nodeNames []string,
 	maxWorkers uint,
 ) error {
+	if err := c.deployNodesUntilRunning(ctx, nodeNames, maxWorkers); err != nil {
+		return err
+	}
+	return c.waitNodesHealthy(ctx, nodeNames)
+}
+
+// deployNodesUntilRunning creates dependency batches without waiting for
+// healthchecks that may require topology interfaces. Apply attaches or restores
+// those interfaces before calling waitNodesHealthy.
+func (c *CLab) deployNodesUntilRunning(
+	ctx context.Context,
+	nodeNames []string,
+	maxWorkers uint,
+) error {
 	if len(nodeNames) == 0 {
 		return nil
 	}
@@ -474,9 +488,19 @@ func (c *CLab) DeployNodes(
 			if err := c.waitNodeRunning(ctx, node); err != nil {
 				return err
 			}
-			if err := c.waitNodeHealthyIfAvailable(ctx, node); err != nil {
-				return err
-			}
+		}
+	}
+	return nil
+}
+
+func (c *CLab) waitNodesHealthy(ctx context.Context, nodeNames []string) error {
+	for _, nodeName := range nodeNames {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			return fmt.Errorf("node %q not found", nodeName)
+		}
+		if err := c.waitNodeHealthyIfAvailable(ctx, node); err != nil {
+			return err
 		}
 	}
 	return nil
