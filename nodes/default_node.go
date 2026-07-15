@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -99,6 +100,9 @@ func (*DefaultNode) PreStop(context.Context) error                           { r
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
+	if d.Cfg.IsRootNamespaceBased || d.Cfg.SkipUniquenessCheck {
+		return nil
+	}
 	_, err := d.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return fmt.Errorf("loading or generating certificate for node %q: %w", d.Cfg.ShortName, err)
@@ -222,6 +226,9 @@ func (d *DefaultNode) ShouldSkipLifecycle() bool {
 // LinkApplyMode returns the conservative default for node kinds that do not
 // explicitly opt into live hotplug or restart handling.
 func (d *DefaultNode) LinkApplyMode(ctx context.Context) LinkApplyMode {
+	if d.Cfg != nil && (d.Cfg.IsRootNamespaceBased || d.Cfg.SkipUniquenessCheck) {
+		return LinkApplyModeLive
+	}
 	return d.ImageLinkApplyMode(ctx, LinkApplyModeRecreate)
 }
 
@@ -271,6 +278,9 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 
 	if oldCfg.NodeType != newCfg.NodeType {
 		diff.Fields = append(diff.Fields, "Type")
+	}
+	if oldCfg.Kind != newCfg.Kind {
+		diff.Fields = append(diff.Fields, "Kind")
 	}
 	if oldCfg.Image != newCfg.Image {
 		diff.Fields = append(diff.Fields, "Image")
@@ -322,6 +332,10 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	}
 	if oldCfg.License != newCfg.License {
 		diff.Fields = append(diff.Fields, "License")
+	}
+	if (len(oldCfg.Components) > 0 || len(newCfg.Components) > 0) &&
+		!reflect.DeepEqual(oldCfg.Components, newCfg.Components) {
+		diff.Fields = append(diff.Fields, "Components")
 	}
 
 	return diff
@@ -1052,7 +1066,7 @@ func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 			continue
 		}
 
-		if err := ep.GetLink().Deploy(ctx, ep); err != nil {
+		if err := ep.Deploy(ctx); err != nil {
 			return err
 		}
 	}

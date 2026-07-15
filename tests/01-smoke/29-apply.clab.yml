@@ -11,6 +11,10 @@ topology:
       kind: linux
       image: alpine:3
       cmd: tail -f /dev/null
+{{- if .deployDrift }}
+      env:
+        RECONCILE_MARKER: updated
+{{- end }}
       exec:
         - ip address add 172.17.0.1/24 dev eth1
         - ip -6 address add 2002::172:17:0:1/96 dev eth1

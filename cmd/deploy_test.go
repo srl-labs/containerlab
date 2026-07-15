@@ -11,7 +11,7 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 )
 
-func TestApplyCommandRegistered(t *testing.T) {
+func TestApplyIsDeployAlias(t *testing.T) {
 	optionsInstance = nil
 
 	cmd, err := Entrypoint()
@@ -19,14 +19,22 @@ func TestApplyCommandRegistered(t *testing.T) {
 		t.Fatalf("failed to create command: %v", err)
 	}
 
-	apply := findCommand(cmd, "apply")
-	if apply == nil {
-		t.Fatal("apply command is not registered")
+	if apply := findCommand(cmd, "apply"); apply != nil {
+		t.Fatal("apply must not be a standalone command")
+	}
+
+	deploy := findCommand(cmd, "deploy")
+	if deploy == nil {
+		t.Fatal("deploy command is not registered")
+	}
+
+	if !deploy.HasAlias("apply") {
+		t.Fatal("deploy command is missing the apply alias")
 	}
 
 	for _, flagName := range []string{"dry-run", "max-workers", "skip-post-deploy", "export-template"} {
-		if apply.Flags().Lookup(flagName) == nil {
-			t.Fatalf("apply command missing %q flag", flagName)
+		if deploy.Flags().Lookup(flagName) == nil {
+			t.Fatalf("deploy command missing %q flag", flagName)
 		}
 	}
 }

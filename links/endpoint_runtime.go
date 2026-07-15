@@ -1,6 +1,9 @@
 package links
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // EndpointRuntime represents an interface that exists at runtime but is not backed by the
 // original topology link graph.
@@ -20,6 +23,10 @@ func NewRuntimeEndpoint(node Node, ifaceName string) *EndpointRuntime {
 
 func (*EndpointRuntime) Verify(context.Context, *VerifyLinkParams) error {
 	return nil
+}
+
+func (e *EndpointRuntime) Deploy(context.Context) error {
+	return fmt.Errorf("runtime-discovered endpoint %q has no topology link", e.GetIfaceName())
 }
 
 func (*EndpointRuntime) IsRuntimeDiscovered() bool {

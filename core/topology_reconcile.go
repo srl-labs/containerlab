@@ -83,6 +83,14 @@ func newApplyPlan(currentNodes map[string]*runtimeNodeGroup, state *LabState) *a
 	}
 }
 
+func (p *applyPlan) isExternallyManaged(nodeName string) bool {
+	if p == nil {
+		return false
+	}
+	node := p.currentNodes[nodeName]
+	return node != nil && node.external
+}
+
 func (c *CLab) planApply(
 	ctx context.Context,
 	currentNodes map[string]*runtimeNodeGroup,
@@ -123,7 +131,7 @@ func (c *CLab) planApply(
 	c.planStoppedNodes(ctx, plan)
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
-		for _, ep := range clablinks.ApplyRuntimeEndpoints(c.Links[linkIdx]) {
+		for _, ep := range clablinks.RuntimeEndpoints(c.Links[linkIdx]) {
 			plan.desiredEndpointSet[endpointKeyFromEndpoint(ep)] = struct{}{}
 		}
 	}
@@ -142,7 +150,7 @@ func (c *CLab) planApply(
 
 		plan.addDeployApplyLink(linkIdx, link)
 
-		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+		for _, ep := range clablinks.RuntimeEndpoints(link) {
 			nodeName := ep.GetNode().GetShortName()
 			if _, exists := currentNodes[nodeName]; !exists {
 				continue
@@ -195,6 +203,9 @@ func (c *CLab) planStoppedNodes(ctx context.Context, plan *applyPlan) {
 	}
 
 	for nodeName := range plan.currentNodes {
+		if plan.isExternallyManaged(nodeName) {
+			continue
+		}
 		node, exists := c.Nodes[nodeName]
 		if !exists {
 			continue
@@ -244,7 +255,7 @@ func linkTouchesNodeSet(link clablinks.Link, nodeSet map[string]struct{}) bool {
 		return false
 	}
 
-	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
 		if _, exists := nodeSet[key.node]; exists {
 			return true
@@ -368,6 +379,14 @@ func (c *CLab) discoverLiveApplyEndpoints(
 		} else if !isApplySpecialNode(nodeName) {
 			status := c.Nodes[nodeName].GetContainerStatus(ctx)
 			if !clabruntime.ContainerHasJoinableNetns(status) {
+				if plan.isExternallyManaged(nodeName) {
+					return fmt.Errorf(
+						"externally managed node %q is %s; "+
+							"start it outside containerlab before running apply",
+						nodeName,
+						status,
+					)
+				}
 				return fmt.Errorf(
 					"node %q is %s; apply requires existing nodes to have a joinable network namespace",
 					nodeName,
@@ -479,6 +498,15 @@ func (c *CLab) planAffectedApplyNode(
 	if !exists {
 		return
 	}
+	if plan.isExternallyManaged(nodeName) {
+		log.Info(
+			"Applying link change without node lifecycle action",
+			"node", nodeName,
+			"change", change,
+			"externally-managed", true,
+		)
+		return
+	}
 
 	overridden := clabnodes.LinkApplyModeOverrideForNode(node) != ""
 
@@ -520,6 +548,7 @@ func resolveNodeConfigFromTopology(topo *clabtypes.Topology, nodeName string) *c
 
 	return &clabtypes.NodeConfig{
 		ShortName:   nodeName,
+		Kind:        topo.GetNodeKind(nodeName),
 		NodeType:    topo.GetNodeType(nodeName),
 		Image:       topo.GetNodeImage(nodeName),
 		Entrypoint:  topo.GetNodeEntrypoint(nodeName),
@@ -569,6 +598,14 @@ func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) erro
 		result, err := node.GetReconcilePlan(ctx, diff)
 		if err != nil {
 			return fmt.Errorf("reconcile planning failed for node %q: %w", nodeName, err)
+		}
+		if plan.isExternallyManaged(nodeName) && result.Action != clabtypes.TopologyDiffActionNone {
+			return fmt.Errorf(
+				"node %q is externally managed and cannot be %s for %s",
+				nodeName,
+				result.Action,
+				configDriftReason(diff),
+			)
 		}
 
 		switch result.Action {
@@ -634,7 +671,7 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 }
 
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
-	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
 		if _, parked := p.parkedNodeSet[key.node]; !parked {
 			if _, added := p.addedNodeSet[key.node]; added {
@@ -714,7 +751,7 @@ func endpointKeyFromEndpoint(ep clablinks.Endpoint) applyEndpointKey {
 }
 
 func applyLinkName(link clablinks.Link) string {
-	endpoints := clablinks.ApplyRuntimeEndpoints(link)
+	endpoints := clablinks.RuntimeEndpoints(link)
 	names := make([]string, 0, len(endpoints))
 	for _, ep := range endpoints {
 		key := endpointKeyFromEndpoint(ep)

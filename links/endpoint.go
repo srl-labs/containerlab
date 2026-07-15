@@ -15,6 +15,8 @@ import (
 // Endpoint is the interface that all endpoint types implement.
 // Endpoints like bridge, host, veth and macvlan are the types implementing this interface.
 type Endpoint interface {
+	// Deploy deploys this endpoint through its associated link.
+	Deploy(context.Context) error
 	GetNode() Node
 	SetNode(Node)
 	GetIfaceName() string
