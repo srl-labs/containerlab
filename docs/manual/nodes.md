@@ -139,7 +139,7 @@ topology:
 
 ### link-apply-mode
 
-With `link-apply-mode` a user overrides how the [`apply`](../cmd/apply.md) command handles dataplane link changes for a node that is already running. By default the node kind declares this behavior; the override exists for kinds that have not (yet) been validated for less disruptive handling.
+With `link-apply-mode` a user overrides how the [`deploy`](../cmd/deploy.md#link-apply-modes) command handles dataplane link changes for a node that is already running. By default the node kind declares this behavior; the override exists for kinds that have not (yet) been validated for less disruptive handling.
 
 Valid values are:
 
@@ -156,7 +156,7 @@ topology:
       link-apply-mode: live
 ```
 
-See [link apply modes](../cmd/apply.md#link-apply-modes) for the per-kind defaults and how to validate that a kind supports `live`.
+See [link apply modes](../cmd/deploy.md#link-apply-modes) for the per-kind defaults and how to validate that a kind supports `live`.
 
 ### license
 
