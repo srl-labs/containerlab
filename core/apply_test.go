@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -424,6 +425,54 @@ func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	}
 }
 
+func TestPlanStoppedNodesSkipsExternallyManagedNodes(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	managedNode := clabmocksmocknodes.NewMockNode(ctrl)
+	externalNode := clabmocksmocknodes.NewMockNode(ctrl)
+	managedNode.EXPECT().GetContainerStatus(ctx).Return(clabruntime.Stopped)
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{
+			"managed":  managedNode,
+			"external": externalNode,
+		},
+	}
+	plan := newApplyPlan(map[string]*runtimeNodeGroup{
+		"managed":  {},
+		"external": {external: true},
+	}, nil)
+
+	c.planStoppedNodes(ctx, plan)
+
+	if got, want := sortedStringSet(plan.startNodeSet), []string{"managed"}; !slices.Equal(got, want) {
+		t.Fatalf("nodes planned for start = %v, want %v", got, want)
+	}
+}
+
+func TestDiscoverLiveApplyEndpointsRejectsStoppedExternalNode(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	externalNode := clabmocksmocknodes.NewMockNode(ctrl)
+	externalNode.EXPECT().GetContainerStatus(ctx).Return(clabruntime.Stopped)
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{"external": externalNode},
+	}
+	plan := newApplyPlan(map[string]*runtimeNodeGroup{
+		"external": {external: true},
+	}, nil)
+
+	err := c.discoverLiveApplyEndpoints(ctx, plan)
+	if err == nil || !strings.Contains(err.Error(), "start it outside containerlab") {
+		t.Fatalf("error = %v, want external lifecycle guidance", err)
+	}
+}
+
 func TestPlanDeletedEndpointsUsesDiscoveredEndpointNode(t *testing.T) {
 	t.Parallel()
 
@@ -596,6 +645,37 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 				t.Fatalf("change reason = %q, want %q", reason, tt.change)
 			}
 		})
+	}
+}
+
+func TestPlanAffectedApplyNodeIgnoresExternalLifecycleOverride(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	externalNode := clabmocksmocknodes.NewMockNode(ctrl)
+	externalNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		LinkApplyMode: clabnodes.LinkApplyModeRestart,
+	}).AnyTimes()
+	externalNode.EXPECT().
+		LinkApplyMode(gomock.Any()).
+		Return(clabnodes.LinkApplyModeLive).
+		AnyTimes()
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{"external": externalNode},
+	}
+	plan := newApplyPlan(map[string]*runtimeNodeGroup{
+		"external": {external: true},
+	}, nil)
+
+	c.planAffectedApplyNode(context.Background(), plan, "external", "added link")
+
+	if len(plan.linkRestartNodeSet) != 0 || len(plan.recreatedNodeSet) != 0 {
+		t.Fatalf(
+			"external node received lifecycle action: restart=%v recreate=%v",
+			plan.linkRestartNodeSet,
+			plan.recreatedNodeSet,
+		)
 	}
 }
 

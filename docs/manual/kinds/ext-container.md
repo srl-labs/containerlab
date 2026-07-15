@@ -6,6 +6,7 @@ kind_display_name: External Container
 ---
 
 # -{{ kind_display_name }}-
+
 -{{ kind_display_name }}- is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 
 Regular containerlab-managed nodes can be connected to externally managed containers. For instance, users may want to connect Network OS nodes launched by containerlab to some containers that are managed by other container orchestration tools to create advanced topologies.
@@ -38,8 +39,9 @@ topology:
 By specifying the node `external-node1` as part of the containerlab topology, users can use this node name in the links section of the file and create links between containerlab-managed and externally-managed nodes.
 
 `containerlab apply` can add and remove containerlab-owned interfaces on an external container.
-The external container itself remains outside containerlab's lifecycle and is never created or
-deleted by these operations.
+The external container itself remains outside containerlab's lifecycle and is never started,
+stopped, restarted, created, or deleted by these operations. If it is stopped, start it outside
+containerlab before running `apply`.
 
 ## Interacting with External Container nodes
 

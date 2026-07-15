@@ -83,6 +83,14 @@ func newApplyPlan(currentNodes map[string]*runtimeNodeGroup, state *LabState) *a
 	}
 }
 
+func (p *applyPlan) isExternallyManaged(nodeName string) bool {
+	if p == nil {
+		return false
+	}
+	node := p.currentNodes[nodeName]
+	return node != nil && node.external
+}
+
 func (c *CLab) planApply(
 	ctx context.Context,
 	currentNodes map[string]*runtimeNodeGroup,
@@ -195,6 +203,9 @@ func (c *CLab) planStoppedNodes(ctx context.Context, plan *applyPlan) {
 	}
 
 	for nodeName := range plan.currentNodes {
+		if plan.isExternallyManaged(nodeName) {
+			continue
+		}
 		node, exists := c.Nodes[nodeName]
 		if !exists {
 			continue
@@ -368,6 +379,14 @@ func (c *CLab) discoverLiveApplyEndpoints(
 		} else if !isApplySpecialNode(nodeName) {
 			status := c.Nodes[nodeName].GetContainerStatus(ctx)
 			if !clabruntime.ContainerHasJoinableNetns(status) {
+				if plan.isExternallyManaged(nodeName) {
+					return fmt.Errorf(
+						"externally managed node %q is %s; "+
+							"start it outside containerlab before running apply",
+						nodeName,
+						status,
+					)
+				}
 				return fmt.Errorf(
 					"node %q is %s; apply requires existing nodes to have a joinable network namespace",
 					nodeName,
@@ -479,6 +498,15 @@ func (c *CLab) planAffectedApplyNode(
 	if !exists {
 		return
 	}
+	if plan.isExternallyManaged(nodeName) {
+		log.Info(
+			"Applying link change without node lifecycle action",
+			"node", nodeName,
+			"change", change,
+			"externally-managed", true,
+		)
+		return
+	}
 
 	overridden := clabnodes.LinkApplyModeOverrideForNode(node) != ""
 
@@ -571,7 +599,7 @@ func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) erro
 		if err != nil {
 			return fmt.Errorf("reconcile planning failed for node %q: %w", nodeName, err)
 		}
-		if plan.currentNodes[nodeName].external && result.Action != clabtypes.TopologyDiffActionNone {
+		if plan.isExternallyManaged(nodeName) && result.Action != clabtypes.TopologyDiffActionNone {
 			return fmt.Errorf(
 				"node %q is externally managed and cannot be %s for %s",
 				nodeName,
