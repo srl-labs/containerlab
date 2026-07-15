@@ -11,7 +11,8 @@ import (
 )
 
 type LabState struct {
-	Topology *clabtypes.Topology `yaml:"topology"`
+	Topology    *clabtypes.Topology              `yaml:"topology"`
+	NodeConfigs map[string]*clabtypes.NodeConfig `yaml:"node-configs,omitempty"`
 }
 
 // WriteState saves the topology to the state file.
@@ -19,7 +20,10 @@ func (c *CLab) WriteState() error {
 	state := &LabState{
 		Topology: c.Config.Topology,
 	}
+	return c.writeLabState(state)
+}
 
+func (c *CLab) writeLabState(state *LabState) error {
 	data, err := yaml.Marshal(state)
 	if err != nil {
 		return fmt.Errorf("failed to marshal state: %w", err)
