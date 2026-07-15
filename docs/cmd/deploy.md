@@ -9,8 +9,11 @@ tags:
 ### Description
 
 The `deploy` command spins up a lab using the topology expressed via [topology definition file](../manual/topo-def-file.md).
-When the lab already exists, deploy reconciles it through the same convergence path as
-[`apply`](apply.md); `--reconfigure` retains its explicit destroy-and-recreate behavior.
+When the lab is already deployed, `deploy` reconciles the running lab with the topology
+definition: supported node and link changes are applied in place without destroying and
+redeploying the whole lab. The [reconciliation behavior](apply.md) is documented on the page of
+the `apply` command, which is an alias of `deploy`. `--reconfigure` retains its explicit
+destroy-and-recreate behavior, and `--dry-run` previews the planned changes.
 <!-- --8<-- [start:env-vars-flags] -->
 > All command line arguments can be also provided via environment variables (CLI flags take precedence). The environment variable names are constructed by prepending `CLAB_` to the flag name, then adding the command path and ending with the flag name in its full form, all in uppercase and with hyphens replaced by underscores.
 >
@@ -23,7 +26,7 @@ When the lab already exists, deploy reconciles it through the same convergence p
 
 `containerlab [global-flags] deploy [local-flags]`
 
-**aliases:** `dep`
+**aliases:** `dep`, `apply`
 
 ### Flags
 
@@ -105,6 +108,16 @@ Without this flag present, containerlab will reuse the available configuration a
 
 Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get more information on the lab directory contents.
 
+Management network overrides (`--network`, `--ipv4-subnet` and `--ipv6-subnet`) require a fresh
+deployment. They are rejected when an existing lab is reconciled; use `--reconfigure` to apply
+them by destroying and redeploying the lab.
+
+#### dry-run
+
+The local `--dry-run` flag prints the planned changes without applying them. For an already deployed lab this shows the [reconciliation plan](apply.md) — the nodes and links to add, delete, recreate or restart. For a lab that is not deployed yet it reports that the lab would be deployed.
+
+`--dry-run` cannot be combined with `--reconfigure`, since reconfigure always destroys and redeploys the full lab.
+
 #### max-workers
 
 With `--max-workers` flag, it is possible to limit the number of concurrent workers that create containers or wire virtual links. By default, the number of workers equals the number of nodes/links to create.
@@ -156,6 +169,8 @@ It should be useful to enable more verbose logging when something doesn't work a
 The local `--node-filter` flag allows users to specify a subset of topology nodes targeted by `deploy` command. The value of this flag is a comma-separated list of node names as they appear in the topology.
 
 When a subset of nodes is specified, containerlab will only deploy those nodes and links belonging to all selected nodes and ignore the rest. This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full topology.
+
+Node filtering applies to fresh deployments (including `--reconfigure`) only. When deploy [reconciles](apply.md) an already deployed lab, the filter is rejected, because running nodes excluded by the filter would otherwise be deleted.
 
 Read more about [node filtering](../manual/node-filtering.md) in the documentation.
 
@@ -213,6 +228,8 @@ containerlab deploy -t mylab.clab.yml --restore-all /backups/lab1
 ```
 
 **Note**: Only vrnetlab-based nodes support snapshot restore. The snapshot feature requires vrnetlab images with snapshot support.
+
+**Note**: Snapshot restore requires a fresh deployment. Restoring into an already deployed lab is rejected; use `--reconfigure` to destroy the lab and redeploy it from snapshots.
 
 #### restore
 
@@ -287,6 +304,14 @@ containerlab deploy -t mylab.clab.yml
 ```bash
 containerlab deploy -t mylab.clab.yml --reconfigure
 ```
+
+#### Preview changes to an already deployed lab
+
+```bash
+containerlab deploy -t mylab.clab.yml --dry-run
+```
+
+Shows the [reconciliation plan](apply.md) without applying it. Running the same command without `--dry-run` applies the changes in place.
 
 #### Deploy a lab without specifying topology file
 

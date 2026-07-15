@@ -94,6 +94,17 @@ func (c *CLab) runtimeNodeGroups(
 	return result, nil
 }
 
+// NeedsInitialDeploy reports whether the lab has no runtime state yet, i.e. whether
+// Deploy would perform a fresh deployment instead of reconciling a running lab.
+func (c *CLab) NeedsInitialDeploy(ctx context.Context) (bool, error) {
+	currentNodes, err := c.runtimeNodeGroups(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return c.needsInitialDeploy(currentNodes)
+}
+
 func (c *CLab) needsInitialDeploy(currentNodes map[string]*runtimeNodeGroup) (bool, error) {
 	if len(currentNodes) == 0 {
 		return true, nil

@@ -25,8 +25,9 @@ ${retry-interval}           2s
 Apply initial lab
     ${rc}    ${output} =    Apply Topology    ${initial-vars}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    deployed lab
-    Should Contain    ${output}    apply
+    # a fresh deployment prints the container inspect table and no reconciliation summary
+    Should Contain    ${output}    clab-${lab-name}-l1
+    Should Not Contain    ${output}    Apply summary
     Interface Should Exist    l1    eth1
     Interface Should Exist    l2    eth1
     Interface Should Exist    n1    eth1

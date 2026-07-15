@@ -9,19 +9,19 @@ import (
 
 // ApplyResult summarizes the changes applied by an apply operation.
 type ApplyResult struct {
-	DryRun           bool
-	DeployedLab      bool
-	LabName          string
-	AddedNodes       []string
-	DeletedNodes     []string
-	RecreatedNodes   []string
-	StartedNodes     []string
-	AddedLinks       []string
-	DeletedEndpoints []string
-	RestartedNodes   []string
+	DryRun           bool     `json:"dry-run"`
+	DeployedLab      bool     `json:"deployed-lab"`
+	LabName          string   `json:"lab-name,omitempty"`
+	AddedNodes       []string `json:"added-nodes"`
+	DeletedNodes     []string `json:"deleted-nodes"`
+	RecreatedNodes   []string `json:"recreated-nodes"`
+	StartedNodes     []string `json:"started-nodes"`
+	AddedLinks       []string `json:"added-links"`
+	DeletedEndpoints []string `json:"deleted-endpoints"`
+	RestartedNodes   []string `json:"restarted-nodes"`
 	// NodeChangeReasons explains per node why apply restarts or recreates it,
 	// e.g. "added link" or "config drift: image".
-	NodeChangeReasons map[string]string
+	NodeChangeReasons map[string]string `json:"node-change-reasons,omitempty"`
 }
 
 func applyResultFromPlan(plan *applyPlan) *ApplyResult {

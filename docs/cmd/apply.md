@@ -2,12 +2,17 @@
 
 ## Description
 
-The `apply` command reconciles the existing lab topology with the topology definition provided by the user. If the lab is not
-deployed yet, `apply` deploys it. If the lab is already deployed, `apply` discovers the current
-state from the container runtime and applies supported topology deltas without destroying and
-redeploying the whole lab.
+`apply` is an alias of the [`deploy`](deploy.md) command: both accept the same flags and behave
+identically. This page documents the lab reconciliation behavior that both command forms share;
+refer to the [`deploy`](deploy.md) page for the full list of flags.
 
-The first implementation focuses on topology shape changes:
+Deploy/apply converge a lab to the topology definition provided by the user. If the lab is not
+deployed yet, it is deployed. If the lab is already deployed, containerlab discovers the current
+state from the container runtime and applies supported topology deltas without destroying and
+redeploying the whole lab. The `--dry-run` flag previews the planned changes without applying
+them.
+
+The reconciliation focuses on topology shape changes:
 
 - add nodes
 - delete nodes
@@ -98,36 +103,17 @@ be changed for everyone - the change is a one-line declaration in the kind's nod
 
 ## Flags
 
-### topology | name
+`apply` accepts every [`deploy` flag](deploy.md#flags). Fresh-deployment-only flags are rejected
+when an already deployed lab is being reconciled: `--node-filter` (running nodes excluded by the
+filter would be deleted), `--network`, `--ipv4-subnet` and `--ipv6-subnet` (the management network
+cannot be changed in place), and `--restore` and `--restore-all` (snapshot restore needs a fresh
+deployment). `--dry-run` cannot be combined with `--reconfigure`, since reconfigure always destroys
+and redeploys the full lab.
 
 Use the global `--topo | -t` flag to reference the desired topology file, or use the global
-`--name` flag to reference an already deployed lab by name.
-
-When the lab does not exist yet, `--topo` is required because there is no runtime state from which
-containerlab can derive the original topology path.
-
-When `--name` is used, containerlab tries to derive the topology file from the labels on the
-deployed containers. If the original topology file is no longer available, provide `--topo`
-explicitly.
-
-### dry-run
-
-The local `--dry-run` flag prints the planned apply actions without applying them.
-
-### max-workers
-
-With `--max-workers` flag, it is possible to limit the number of concurrent workers that create
-new nodes.
-
-### skip-post-deploy
-
-The `--skip-post-deploy` flag skips the post-deploy phase for nodes added by apply.
-
-### export-template
-
-The local `--export-template` flag allows a user to specify a custom Go template that will be used
-for exporting topology data into `topology-data.json` file under the lab directory after apply
-finishes.
+`--name` flag to reference an already deployed lab by name. When `--name` is used, containerlab
+tries to derive the topology file from the labels on the deployed containers. If the original
+topology file is no longer available, provide `--topo` explicitly.
 
 ## Limitations
 

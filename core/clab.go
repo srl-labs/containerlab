@@ -59,6 +59,9 @@ type CLab struct {
 	checkBindsPaths bool
 	// customOwner is the user-specified owner label for the lab
 	customOwner string
+	// managementNetworkOverridden reports whether a management network setting was
+	// explicitly overridden through a ClabOption rather than read from the topology.
+	managementNetworkOverridden bool
 	// gitBranch and gitHash cache Git repository information
 	// to avoid repeated repository opens. Empty strings indicate not yet cached.
 	gitBranch string

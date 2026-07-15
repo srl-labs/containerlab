@@ -20,11 +20,20 @@ import (
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
-// Deploy converges the lab to the requested topology.
+// DeployResult holds the outcome of a Deploy call.
+type DeployResult struct {
+	Containers []clabruntime.GenericContainer
+	// Apply summarizes the reconciliation of an already deployed lab or the dry-run plan;
+	// it is nil when Deploy performed a fresh full deployment.
+	Apply *ApplyResult
+}
+
+// Deploy converges the lab to the requested topology. A lab without runtime state is
+// deployed from scratch, an already deployed lab is reconciled in place.
 func (c *CLab) Deploy(
 	ctx context.Context,
 	options *DeployOptions,
-) ([]clabruntime.GenericContainer, error) {
+) (*DeployResult, error) {
 	if options == nil {
 		var err error
 		options, err = NewDeployOptions(0)
@@ -34,7 +43,19 @@ func (c *CLab) Deploy(
 	}
 
 	if options.reconfigure {
-		return c.deploy(ctx, options)
+		if options.dryRun {
+			return nil, fmt.Errorf(
+				"dry-run cannot be combined with reconfigure: " +
+					"reconfigure always destroys and redeploys the full lab",
+			)
+		}
+
+		containers, err := c.deploy(ctx, options)
+		if err != nil {
+			return nil, err
+		}
+
+		return &DeployResult{Containers: containers}, nil
 	}
 
 	currentNodes, err := c.runtimeNodeGroups(ctx)
@@ -46,10 +67,30 @@ func (c *CLab) Deploy(
 		return nil, err
 	}
 	if initialDeploy {
-		return c.deploy(ctx, options)
+		if options.dryRun {
+			return &DeployResult{
+				Apply: &ApplyResult{
+					DryRun:      true,
+					DeployedLab: true,
+					LabName:     c.Config.Name,
+				},
+			}, nil
+		}
+
+		containers, err := c.deploy(ctx, options)
+		if err != nil {
+			return nil, err
+		}
+
+		return &DeployResult{Containers: containers}, nil
+	}
+
+	if err := c.checkReconcileDeployOptions(options); err != nil {
+		return nil, err
 	}
 
 	applyOptions := &ApplyOptions{
+		dryRun:             options.dryRun,
 		skipPostDeploy:     options.skipPostDeploy,
 		skipLabDirFileACLs: options.skipLabDirFileACLs,
 		graph:              options.graph,
@@ -57,11 +98,52 @@ func (c *CLab) Deploy(
 		maxWorkers:         options.maxWorkers,
 		exportTemplate:     options.exportTemplate,
 	}
-	if _, err := c.apply(ctx, applyOptions, currentNodes); err != nil {
+	applyResult, err := c.apply(ctx, applyOptions, currentNodes)
+	if err != nil {
 		return nil, err
 	}
 
-	return c.ListNodesContainers(ctx)
+	if options.dryRun {
+		return &DeployResult{Apply: applyResult}, nil
+	}
+
+	containers, err := c.ListNodesContainers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DeployResult{Containers: containers, Apply: applyResult}, nil
+}
+
+// checkReconcileDeployOptions rejects deploy options that only make sense for a fresh
+// deployment when deploy is about to reconcile an already deployed lab.
+func (c *CLab) checkReconcileDeployOptions(options *DeployOptions) error {
+	if c.managementNetworkOverridden {
+		return fmt.Errorf(
+			"management network overrides require a fresh deployment, but lab %q is already "+
+				"deployed; use --reconfigure to destroy and redeploy it",
+			c.Config.Name,
+		)
+	}
+
+	if options.restoreAll != "" || len(options.restoreNodeSnapshots) > 0 {
+		return fmt.Errorf(
+			"snapshot restore requires a fresh deployment, but lab %q is already deployed; "+
+				"use --reconfigure to destroy and redeploy it",
+			c.Config.Name,
+		)
+	}
+
+	if len(c.nodeFilter) > 0 {
+		return fmt.Errorf(
+			"node filter is not supported when reconciling deployed lab %q: "+
+				"running nodes excluded by the filter would be deleted; "+
+				"remove the filter or use --reconfigure",
+			c.Config.Name,
+		)
+	}
+
+	return nil
 }
 
 // deploy creates a lab that has no managed runtime nodes yet.

@@ -6,10 +6,16 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/charmbracelet/log"
+	tableWriter "github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/spf13/cobra"
+	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -22,9 +28,10 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 	c := &cobra.Command{
 		Use:   "deploy",
 		Short: "deploy a lab",
-		Long: "deploy a lab based defined by means of the topology definition " +
-			"file\nreference: https://containerlab.dev/cmd/deploy/",
-		Aliases:      []string{"dep"},
+		Long: "deploy a lab defined by means of the topology definition file; " +
+			"a lab that is already deployed is reconciled with the topology instead of " +
+			"being recreated\nreference: https://containerlab.dev/cmd/deploy/",
+		Aliases:      []string{"dep", "apply"},
 		SilenceUsage: true,
 		PreRunE: func(_ *cobra.Command, _ []string) error {
 			return clabutils.CheckAndGetRootPrivs()
@@ -80,6 +87,13 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 		"c",
 		o.Deploy.Reconfigure,
 		"regenerate configuration artifacts and overwrite previous ones if any",
+	)
+
+	c.Flags().BoolVar(
+		&o.Deploy.DryRun,
+		"dry-run",
+		o.Deploy.DryRun,
+		"show the planned changes without applying them",
 	)
 
 	c.Flags().UintVarP(
@@ -159,10 +173,14 @@ func deployCmd(o *Options) (*cobra.Command, error) { //nolint: funlen
 
 // deployFn function runs deploy sub command.
 func deployFn(cobraCmd *cobra.Command, o *Options) error {
-	// when deploying we cleanup if root context is canceled
-	o.Global.CleanOnCancel = true
+	if o.Deploy.DryRun && o.Deploy.Reconfigure {
+		return fmt.Errorf(
+			"--dry-run cannot be combined with --reconfigure: " +
+				"reconfigure always destroys and redeploys the full lab",
+		)
+	}
 
-	o.Global.BackupTopologyFile = true
+	o.Global.BackupTopologyFile = !o.Deploy.DryRun
 
 	var err error
 
@@ -175,6 +193,20 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 		return err
 	}
 
+	// destroy-on-cancel must only be armed when deploy creates the lab from scratch;
+	// canceling a reconciliation of an already deployed lab must not destroy it
+	if !o.Deploy.DryRun {
+		cleanOnCancel := o.Deploy.Reconfigure
+		if !cleanOnCancel {
+			cleanOnCancel, err = c.NeedsInitialDeploy(cobraCmd.Context())
+			if err != nil {
+				return err
+			}
+		}
+
+		o.Global.CleanOnCancel = cleanOnCancel
+	}
+
 	deploymentOptions, err := clabcore.NewDeployOptions(o.Deploy.MaxWorkers)
 	if err != nil {
 		return err
@@ -182,15 +214,26 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 
 	deploymentOptions.SetExportTemplate(o.Deploy.ExportTemplate).
 		SetReconfigure(o.Deploy.Reconfigure).
+		SetDryRun(o.Deploy.DryRun).
 		SetGraph(o.Deploy.GenerateGraph).
 		SetSkipPostDeploy(o.Deploy.SkipPostDeploy).
 		SetSkipLabDirFileACLs(o.Deploy.SkipLabDirectoryFileACLs).
 		SetRestoreAll(o.Deploy.RestoreAll).
 		SetRestoreNodeSnapshots(o.Deploy.RestoreNodeSnapshots)
 
-	containers, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
+	result, err := c.Deploy(cobraCmd.Context(), deploymentOptions)
 	if err != nil {
 		return err
+	}
+
+	if o.Deploy.DryRun {
+		return printDryRunResult(result.Apply, o)
+	}
+
+	// keep stdout machine-readable for non-table formats: the reconciliation summary
+	// table is only printed when the inspect output is a table as well
+	if result.Apply != nil && o.Inspect.Format == clabconstants.FormatTable {
+		printApplyResult(result.Apply)
 	}
 
 	// historically i think this was 5s, but we will already have had at least some time for
@@ -206,5 +249,104 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 	m.DisplayNewVersionAvailable(versionCheckContext, false)
 
 	// print table summary
-	return PrintContainerInspect(containers, o)
+	return PrintContainerInspect(result.Containers, o)
+}
+
+// printDryRunResult prints the planned changes of a dry run, as JSON when requested via
+// the --format flag and as a table otherwise.
+func printDryRunResult(result *clabcore.ApplyResult, o *Options) error {
+	if o.Inspect.Format == clabconstants.FormatJSON {
+		b, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(string(b))
+
+		return nil
+	}
+
+	printApplyResult(result)
+
+	return nil
+}
+
+func printApplyResult(result *clabcore.ApplyResult) {
+	title := "Apply summary"
+	if result.DryRun {
+		title = "Apply plan"
+	}
+
+	log.Info(title)
+
+	table := tableWriter.NewWriter()
+	table.SetOutputMirror(os.Stdout)
+	table.SetStyle(tableWriter.StyleRounded)
+	table.Style().Format.Header = text.FormatTitle
+	table.Style().Format.HeaderAlign = text.AlignCenter
+	table.AppendHeader(tableWriter.Row{"Action", "Details"})
+
+	hasRows := false
+	if result.DeployedLab {
+		label := "deployed lab"
+		if result.DryRun {
+			label = "deploy lab"
+		}
+		table.AppendRow(tableWriter.Row{label, result.LabName})
+		hasRows = true
+	}
+
+	rows := []struct {
+		label  string
+		values []string
+	}{
+		{label: "added nodes", values: result.AddedNodes},
+		{label: "deleted nodes", values: result.DeletedNodes},
+		{label: "recreated nodes", values: withNodeChangeReasons(result.RecreatedNodes, result.NodeChangeReasons)},
+		{label: "started nodes", values: result.StartedNodes},
+		{label: "added links", values: result.AddedLinks},
+		{label: "deleted endpoints", values: result.DeletedEndpoints},
+		{label: "restarted nodes", values: withNodeChangeReasons(result.RestartedNodes, result.NodeChangeReasons)},
+	}
+
+	for _, row := range rows {
+		if appendApplyResultRows(table, row.label, row.values) {
+			hasRows = true
+		}
+	}
+
+	if !hasRows {
+		table.AppendRow(tableWriter.Row{"no changes", "-"})
+	}
+
+	table.Render()
+}
+
+func withNodeChangeReasons(nodeNames []string, reasons map[string]string) []string {
+	if len(reasons) == 0 {
+		return nodeNames
+	}
+
+	values := make([]string, 0, len(nodeNames))
+	for _, nodeName := range nodeNames {
+		if reason, ok := reasons[nodeName]; ok && reason != "" {
+			values = append(values, fmt.Sprintf("%s (%s)", nodeName, reason))
+			continue
+		}
+		values = append(values, nodeName)
+	}
+
+	return values
+}
+
+func appendApplyResultRows(table tableWriter.Writer, label string, values []string) bool {
+	if len(values) == 0 {
+		return false
+	}
+
+	for _, value := range values {
+		table.AppendRow(tableWriter.Row{label, value})
+	}
+
+	return true
 }
