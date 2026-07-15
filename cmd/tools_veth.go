@@ -94,7 +94,7 @@ func vethCreate(o *Options) error {
 	}
 
 	// create placeholder nodes to make links resolve work
-	err = createPlaceholderNodes(c, parsedAEnd, parsedBEnd, rtName)
+	nodeNames, err := createPlaceholderNodes(c, parsedAEnd, parsedBEnd, rtName)
 	if err != nil {
 		return err
 	}
@@ -127,10 +127,6 @@ func vethCreate(o *Options) error {
 		return err
 	}
 
-	nodeNames := []string{parsedAEnd.Node}
-	if parsedBEnd.Node != parsedAEnd.Node {
-		nodeNames = append(nodeNames, parsedBEnd.Node)
-	}
 	if err := c.DeployNodes(ctx, nodeNames, uint(len(nodeNames))); err != nil {
 		return err
 	}
@@ -144,7 +140,13 @@ func vethCreate(o *Options) error {
 }
 
 // createPlaceholderNodes creates non-owning nodes for resources that already exist.
-func createPlaceholderNodes(c *clabcore.CLab, aEnd, bEnd parsedEndpoint, rt string) error {
+// It returns the names of the placeholders it added.
+func createPlaceholderNodes(
+	c *clabcore.CLab,
+	aEnd, bEnd parsedEndpoint,
+	rt string,
+) ([]string, error) {
+	var nodeNames []string
 	for _, epDefinition := range []parsedEndpoint{aEnd, bEnd} {
 		if _, exists := c.Nodes[epDefinition.Node]; exists {
 			continue
@@ -155,11 +157,12 @@ func createPlaceholderNodes(c *clabcore.CLab, aEnd, bEnd parsedEndpoint, rt stri
 			Kind:      placeholderNodeKind(epDefinition.Kind),
 			Runtime:   rt,
 		}); err != nil {
-			return err
+			return nil, err
 		}
+		nodeNames = append(nodeNames, epDefinition.Node)
 	}
 
-	return nil
+	return nodeNames, nil
 }
 
 // parsedEndpoint is a parsed veth endpoint definition.
