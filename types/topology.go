@@ -564,6 +564,18 @@ func (t *Topology) GetNodePosition(nodeName string) string {
 	)
 }
 
+func (t *Topology) GetNodeHostname(nodeName string) string {
+	return getField(
+		t,
+		nodeName,
+		func(node *NodeDefinition) string { return node.Hostname },
+		func(group *NodeDefinition) string { return group.Hostname },
+		func(kind *NodeDefinition) string { return kind.Hostname },
+		func(defaults *NodeDefinition) string { return defaults.Hostname },
+		func(v string) bool { return v != "" },
+	)
+}
+
 func (t *Topology) GetNodeEntrypoint(nodeName string) string {
 	return getField(
 		t,

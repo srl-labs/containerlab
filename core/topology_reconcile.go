@@ -549,6 +549,7 @@ func resolveNodeConfigFromTopology(topo *clabtypes.Topology, nodeName string) *c
 	return &clabtypes.NodeConfig{
 		ShortName:   nodeName,
 		Kind:        topo.GetNodeKind(nodeName),
+		Hostname:    topo.GetNodeHostname(nodeName),
 		NodeType:    topo.GetNodeType(nodeName),
 		Image:       topo.GetNodeImage(nodeName),
 		Entrypoint:  topo.GetNodeEntrypoint(nodeName),

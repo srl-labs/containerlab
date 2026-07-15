@@ -449,6 +449,24 @@ topology:
       user: clab # clab user will be used for node1
 ```
 
+### hostname
+
+The `hostname` option overrides the hostname configured inside the node's
+container. It can be set at the defaults, kind, group, or node level. When it is
+not set, containerlab uses the topology node name.
+
+```yaml
+topology:
+  nodes:
+    app1:
+      kind: linux
+      hostname: app-production-01001
+```
+
+Podman supports this option for nodes using `network-mode: container:<node>`.
+Docker does not permit setting a hostname while joining another container's
+network namespace, so Docker ignores the override for that network mode.
+
 ### entrypoint
 
 Changing the entrypoint of the container is done with `entrypoint` config option. It accepts the "shell" form and can be set on all levels.
