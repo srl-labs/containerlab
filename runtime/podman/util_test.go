@@ -93,6 +93,33 @@ func TestCreateContainerSpecAppliesConfiguredHostname(t *testing.T) {
 	}
 }
 
+func TestCreateContainerSpecAppliesHostnameWithContainerNetworkMode(t *testing.T) {
+	r := &PodmanRuntime{mgmt: &types.MgmtNet{Network: "clab"}}
+	cfg := &types.NodeConfig{
+		LongName:    "clab-test-child",
+		ShortName:   "child",
+		Hostname:    "dns-private-master-01001",
+		Image:       "localhost/test:latest",
+		Labels:      map[string]string{},
+		NetworkMode: "container:provider",
+	}
+
+	sg, err := r.createContainerSpec(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("createContainerSpec returned error: %v", err)
+	}
+
+	if sg.Hostname != cfg.Hostname {
+		t.Fatalf("Hostname = %q, want %q", sg.Hostname, cfg.Hostname)
+	}
+	if sg.UtsNS.NSMode != specgen.Private {
+		t.Fatalf("UtsNS mode = %q, want %q", sg.UtsNS.NSMode, specgen.Private)
+	}
+	if sg.NetNS.NSMode != "container" {
+		t.Fatalf("NetNS mode = %q, want container", sg.NetNS.NSMode)
+	}
+}
+
 func TestCreateContainerSpecDefaultsHostnameToNodeName(t *testing.T) {
 	r := &PodmanRuntime{mgmt: &types.MgmtNet{Network: "clab"}}
 	cfg := &types.NodeConfig{
