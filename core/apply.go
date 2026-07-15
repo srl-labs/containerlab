@@ -190,7 +190,7 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := c.DeployNodes(ctx, deployNodeNames, options.maxWorkers); err != nil {
+	if err := c.deployNodesUntilRunning(ctx, deployNodeNames, options.maxWorkers); err != nil {
 		return nil, err
 	}
 
@@ -207,6 +207,10 @@ func (c *CLab) apply(
 	}
 
 	if err := c.deployLinks(ctx, plan.addedLinks, deployNodeNames); err != nil {
+		return nil, err
+	}
+
+	if err := c.waitNodesHealthy(ctx, deployNodeNames); err != nil {
 		return nil, err
 	}
 
