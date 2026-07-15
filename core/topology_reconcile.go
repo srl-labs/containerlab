@@ -553,6 +553,10 @@ func (c *CLab) applyKnownEndpointNames(
 func (c *CLab) applyEndpointDiscoveryNodes(plan *applyPlan) map[string]clablinks.Node {
 	nodes := make(map[string]clablinks.Node, len(c.Nodes)+2)
 	for nodeName, node := range c.Nodes {
+		if plan != nil && plan.isExternallyManaged(nodeName) {
+			nodes[nodeName] = node
+			continue
+		}
 		if _, shared := c.applySharedNetNSProvider(node); shared {
 			continue
 		}
@@ -692,6 +696,7 @@ func resolveNodeConfigFromTopology(topo *clabtypes.Topology, nodeName string) *c
 	return &clabtypes.NodeConfig{
 		ShortName:   nodeName,
 		Kind:        topo.GetNodeKind(nodeName),
+		Hostname:    topo.GetNodeHostname(nodeName),
 		NodeType:    topo.GetNodeType(nodeName),
 		Image:       topo.GetNodeImage(nodeName),
 		Entrypoint:  topo.GetNodeEntrypoint(nodeName),

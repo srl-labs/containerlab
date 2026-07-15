@@ -285,6 +285,9 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if oldCfg.Image != newCfg.Image {
 		diff.Fields = append(diff.Fields, "Image")
 	}
+	if oldCfg.GetHostname() != newCfg.GetHostname() {
+		diff.Fields = append(diff.Fields, "Hostname")
+	}
 	if oldCfg.Entrypoint != newCfg.Entrypoint {
 		diff.Fields = append(diff.Fields, "Entrypoint")
 	}

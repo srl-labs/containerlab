@@ -250,6 +250,12 @@
                         }
                     ]
                 },
+                "hostname": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "hostname configured inside the container",
+                    "markdownDescription": "container [hostname](https://containerlab.dev/manual/nodes/#hostname); defaults to the topology node name"
+                },
                 "entrypoint": {
                     "type": "string",
                     "description": "container's entrypoint",
@@ -482,6 +488,45 @@
                     "type": "array",
                     "description": "list of capabilities to add to the container",
                     "markdownDescription": "list of [capabilities](https://containerlab.dev/manual/nodes/#cap-add) to add to the container",
+                    "items": {
+                        "type": "string"
+                    },
+                    "uniqueItems": true
+                },
+                "privileged": {
+                    "type": "boolean",
+                    "description": "run the container in privileged mode",
+                    "markdownDescription": "run the container in [privileged](https://containerlab.dev/manual/nodes/#privileged) mode"
+                },
+                "cgroupns-mode": {
+                    "type": "string",
+                    "description": "cgroup namespace mode for the container",
+                    "markdownDescription": "[cgroup namespace mode](https://containerlab.dev/manual/nodes/#cgroupns-mode) for the container",
+                    "enum": [
+                        "host",
+                        "private"
+                    ]
+                },
+                "pid-mode": {
+                    "type": "string",
+                    "description": "PID namespace mode for the container",
+                    "markdownDescription": "[PID namespace mode](https://containerlab.dev/manual/nodes/#pid-mode) for the container"
+                },
+                "tmpfs": {
+                    "type": "object",
+                    "description": "tmpfs mounts to add to the container",
+                    "markdownDescription": "[tmpfs mounts](https://containerlab.dev/manual/nodes/#tmpfs) to add to the container",
+                    "patternProperties": {
+                        "^/.*": {
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "security-opts": {
+                    "type": "array",
+                    "description": "security options to apply to the container runtime",
+                    "markdownDescription": "[security options](https://containerlab.dev/manual/nodes/#security-opts) to apply to the container runtime",
                     "items": {
                         "type": "string"
                     },

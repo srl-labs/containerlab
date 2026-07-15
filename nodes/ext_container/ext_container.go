@@ -55,8 +55,10 @@ func (e *extcont) Deploy(ctx context.Context, _ *clabnodes.DeployParams) error {
 // Delete we will not mess with external containers on delete.
 func (*extcont) Delete(_ context.Context) error { return nil }
 
-func (*extcont) Stop(context.Context) error { return nil }
+// Stop we will not mess with external containers on stop.
+func (*extcont) Stop(_ context.Context) error { return nil }
 
+// Start waits for external containers to be running without attempting to start them.
 func (e *extcont) Start(ctx context.Context) error {
 	return clabruntime.WaitForContainerRunning(ctx, e.Runtime, e.Cfg.ShortName, e.Cfg.ShortName)
 }
