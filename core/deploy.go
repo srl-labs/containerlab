@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -67,6 +68,11 @@ func (c *CLab) Deploy(
 		return nil, err
 	}
 	if initialDeploy {
+		if len(c.nodeFilter) > 0 {
+			if err := c.filterClabNodes(c.nodeFilter); err != nil {
+				return nil, err
+			}
+		}
 		if options.dryRun {
 			return &DeployResult{
 				Apply: &ApplyResult{
@@ -130,15 +136,6 @@ func (c *CLab) checkReconcileDeployOptions(options *DeployOptions) error {
 		return fmt.Errorf(
 			"snapshot restore requires a fresh deployment, but lab %q is already deployed; "+
 				"use --reconfigure to destroy and redeploy it",
-			c.Config.Name,
-		)
-	}
-
-	if len(c.nodeFilter) > 0 {
-		return fmt.Errorf(
-			"node filter is not supported when reconciling deployed lab %q: "+
-				"running nodes excluded by the filter would be deleted; "+
-				"remove the filter or use --reconfigure",
 			c.Config.Name,
 		)
 	}
@@ -464,6 +461,32 @@ func (c *CLab) DeployNodes(
 	if len(nodeNames) == 0 {
 		return nil
 	}
+	batches, err := c.applyDeployBatches(nodeNames)
+	if err != nil {
+		return err
+	}
+	for _, batch := range batches {
+		if err := c.deployNodeBatch(ctx, batch, maxWorkers); err != nil {
+			return err
+		}
+		for _, nodeName := range batch {
+			node := c.Nodes[nodeName]
+			if err := c.waitNodeRunning(ctx, node); err != nil {
+				return err
+			}
+			if err := c.waitNodeHealthyIfAvailable(ctx, node); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *CLab) deployNodeBatch(
+	ctx context.Context,
+	nodeNames []string,
+	maxWorkers uint,
+) error {
 
 	if maxWorkers == 0 || int(maxWorkers) > len(nodeNames) {
 		maxWorkers = uint(len(nodeNames))
@@ -503,6 +526,68 @@ func (c *CLab) DeployNodes(
 	}
 
 	return nil
+}
+
+func (c *CLab) applyDeployBatches(nodeNames []string) ([][]string, error) {
+	pending := make(map[string]map[string]struct{}, len(nodeNames))
+	deploySet := make(map[string]struct{}, len(nodeNames))
+	for _, nodeName := range nodeNames {
+		deploySet[nodeName] = struct{}{}
+	}
+	for nodeName := range deploySet {
+		dependencies := map[string]struct{}{}
+		node := c.Nodes[nodeName]
+		if provider, shared := c.applySharedNetNSProvider(node); shared {
+			if _, deploying := deploySet[provider]; deploying {
+				dependencies[provider] = struct{}{}
+			}
+		}
+		if node != nil && node.Config() != nil && node.Config().Stages != nil {
+			for _, waitForList := range node.Config().Stages.GetWaitFor() {
+				for _, waitFor := range waitForList {
+					if waitFor == nil {
+						continue
+					}
+					if _, deploying := deploySet[waitFor.Node]; deploying {
+						dependencies[waitFor.Node] = struct{}{}
+					}
+				}
+			}
+		}
+		pending[nodeName] = dependencies
+	}
+
+	var batches [][]string
+	completed := map[string]struct{}{}
+	for len(pending) > 0 {
+		var ready []string
+		for nodeName, dependencies := range pending {
+			allComplete := true
+			for dependency := range dependencies {
+				if _, complete := completed[dependency]; !complete {
+					allComplete = false
+					break
+				}
+			}
+			if allComplete {
+				ready = append(ready, nodeName)
+			}
+		}
+		if len(ready) == 0 {
+			return nil, fmt.Errorf(
+				"apply node dependencies contain a cycle among %v",
+				sortedStringSet(deploySet),
+			)
+		}
+		sort.Strings(ready)
+		batches = append(batches, ready)
+		for _, nodeName := range ready {
+			delete(pending, nodeName)
+			completed[nodeName] = struct{}{}
+		}
+	}
+
+	return batches, nil
 }
 
 func (c *CLab) deployNode(ctx context.Context, node clabnodes.Node) error {
@@ -591,6 +676,36 @@ func (c *CLab) postDeployApplyNodes(
 	}
 
 	execCollection.Log()
+
+	return nil
+}
+
+func (c *CLab) regenerateApplyArtifacts(ctx context.Context, exportTemplate string) error {
+	if err := c.GenerateInventories(); err != nil {
+		return err
+	}
+
+	topoDataF, err := os.Create(c.TopoPaths.TopoExportFile())
+	if err != nil {
+		return err
+	}
+	defer topoDataF.Close()
+
+	if err := c.GenerateExports(ctx, topoDataF, exportTemplate); err != nil {
+		return err
+	}
+
+	if !c.skipMgmtNetwork() {
+		log.Info("Updating host entries", "path", "/etc/hosts")
+		if err := c.appendHostsFileEntries(ctx); err != nil {
+			log.Errorf("failed to update hosts file: %v", err)
+		}
+	}
+
+	log.Info("Updating SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
+	if err := c.addSSHConfig(); err != nil {
+		log.Errorf("failed to create ssh config file: %v", err)
+	}
 
 	return nil
 }

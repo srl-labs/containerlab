@@ -173,6 +173,10 @@ func (c *CLab) makeCopyForDestroy(
 		}
 	}
 
+	if err := cc.restoreAppliedStateNodes(); err != nil {
+		return nil, err
+	}
+
 	err = clablinks.SetMgmtNetUnderlyingBridge(cc.Config.Mgmt.Bridge)
 	if err != nil {
 		return nil, err
@@ -194,6 +198,60 @@ func (c *CLab) makeCopyForDestroy(
 	}
 
 	return cc, nil
+}
+
+// restoreAppliedStateNodes adds nodes introduced by a filtered apply back to the
+// destroy graph. The original topology template may not render those nodes
+// without the vars used by apply, while the applied state contains their fully
+// resolved configuration.
+func (c *CLab) restoreAppliedStateNodes() error {
+	state, err := c.LoadState()
+	if err != nil {
+		return fmt.Errorf("failed to load applied state for destroy: %w", err)
+	}
+	if state == nil {
+		return nil
+	}
+
+	for _, nodeName := range sortedNodeConfigNames(state.NodeConfigs) {
+		if _, exists := c.Nodes[nodeName]; exists {
+			continue
+		}
+
+		cfg := state.NodeConfigs[nodeName]
+		if cfg == nil {
+			continue
+		}
+
+		runtimeName := cfg.Runtime
+		if runtimeName == "" {
+			runtimeName = c.globalRuntimeName
+		}
+		r, exists := c.Runtimes[runtimeName]
+		if !exists {
+			return fmt.Errorf("runtime %q for applied node %q is not configured", runtimeName, nodeName)
+		}
+
+		n, err := c.Reg.NewNodeOfKind(cfg.Kind)
+		if err != nil {
+			return fmt.Errorf("failed to restore applied node %q: %w", nodeName, err)
+		}
+		if err := n.Init(cfg, clabnodes.WithRuntime(r), clabnodes.WithMgmtNet(c.Config.Mgmt)); err != nil {
+			return fmt.Errorf("failed to initialize applied node %q for destroy: %w", nodeName, err)
+		}
+		c.Nodes[nodeName] = n
+	}
+
+	return nil
+}
+
+func sortedNodeConfigNames(configs map[string]*clabtypes.NodeConfig) []string {
+	names := make([]string, 0, len(configs))
+	for name := range configs {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func (c *CLab) destroyLabDirs(topos map[string]string, all bool) error {
@@ -363,45 +421,15 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 }
 
 func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
-	wg := new(sync.WaitGroup)
-
-	concurrentChan := make(chan clabnodes.Node)
-
-	workerFunc := func(i uint, input chan clabnodes.Node, wg *sync.WaitGroup) {
-		defer wg.Done()
-
-		for {
-			select {
-			case n := <-input:
-				if n == nil {
-					log.Debugf("Worker %d terminating...", i)
-					return
-				}
-
-				err := n.Delete(ctx)
-				if err != nil {
-					log.Errorf("could not remove container %q: %v", n.Config().LongName, err)
-				}
-			case <-ctx.Done():
-				return
-			}
-		}
+	nodeNames := sortedNodeNames(c.Nodes)
+	batches, err := c.applyDeployBatches(nodeNames)
+	if err != nil {
+		log.Errorf("could not determine dependency-safe node deletion order: %v", err)
+		batches = [][]string{nodeNames}
 	}
-
-	// start concurrent workers
-	wg.Add(int(workers))
-
-	for i := range workers {
-		go workerFunc(i, concurrentChan, wg)
+	for i := len(batches) - 1; i >= 0; i-- {
+		c.deleteNodeBatch(ctx, batches[i], workers)
 	}
-
-	// send nodes to workers
-	for _, n := range c.Nodes {
-		concurrentChan <- n
-	}
-
-	// close channel to terminate the workers
-	close(concurrentChan)
 
 	// also call delete on the special nodes
 	for _, n := range c.getSpecialLinkNodes() {
@@ -411,6 +439,34 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 		}
 	}
 
+}
+
+func (c *CLab) deleteNodeBatch(ctx context.Context, nodeNames []string, workers uint) {
+	if len(nodeNames) == 0 {
+		return
+	}
+	if workers == 0 || int(workers) > len(nodeNames) {
+		workers = uint(len(nodeNames))
+	}
+
+	wg := new(sync.WaitGroup)
+	input := make(chan clabnodes.Node)
+	wg.Add(int(workers))
+	for i := range workers {
+		go func() {
+			defer wg.Done()
+			for n := range input {
+				if err := n.Delete(ctx); err != nil {
+					log.Errorf("could not remove container %q: %v", n.Config().LongName, err)
+				}
+			}
+			log.Debugf("Worker %d terminating...", i)
+		}()
+	}
+	for _, nodeName := range nodeNames {
+		input <- c.Nodes[nodeName]
+	}
+	close(input)
 	wg.Wait()
 }
 

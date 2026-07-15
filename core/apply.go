@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/charmbracelet/log"
 	clablinks "github.com/srl-labs/containerlab/links"
+	clabtypes "github.com/srl-labs/containerlab/types"
 )
 
 // ApplyResult summarizes the changes applied by an apply operation.
@@ -132,7 +134,7 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := c.ResolveLinks(); err != nil {
+	if err := c.resolveApplyLinks(); err != nil {
 		return nil, err
 	}
 
@@ -140,7 +142,7 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	plan, err := c.planApply(ctx, currentNodes)
+	plan, err := c.planApply(ctx, currentNodes, c.nodeFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +158,9 @@ func (c *CLab) apply(
 	}
 
 	if plan.empty() {
-		if options.finalizeNoop {
+		if plan.mutableNodeSet != nil {
+			c.writeApplyState(plan)
+		} else if options.finalizeNoop {
 			if err := c.prepareApply(ctx, nil, options.skipLabDirFileACLs); err != nil {
 				return nil, err
 			}
@@ -218,11 +222,96 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if _, err := c.finalize(ctx, options.exportTemplate, options.graph); err != nil {
-		return nil, err
+	if plan.mutableNodeSet != nil {
+		if err := c.regenerateApplyArtifacts(ctx, options.exportTemplate); err != nil {
+			return nil, err
+		}
+		c.writeApplyState(plan)
+	} else {
+		if _, err := c.finalize(ctx, options.exportTemplate, options.graph); err != nil {
+			return nil, err
+		}
 	}
 
 	return applyResultFromPlan(plan), nil
+}
+
+// resolveApplyLinks keeps the full desired topology available to reconciliation.
+// ResolveLinks normally uses nodeFilter to discard links during a fresh filtered
+// deploy; apply instead uses that filter only to limit which nodes may change.
+func (c *CLab) resolveApplyLinks() error {
+	nodeFilter := c.nodeFilter
+	c.nodeFilter = nil
+	err := c.ResolveLinks()
+	c.nodeFilter = nodeFilter
+	return err
+}
+
+func (c *CLab) writeApplyState(plan *applyPlan) {
+	var err error
+	if plan == nil || plan.mutableNodeSet == nil {
+		err = c.WriteState()
+	} else {
+		state := plan.state
+		if state == nil {
+			state = &LabState{Topology: clabtypes.NewTopology()}
+		}
+		if state.NodeConfigs == nil {
+			state.NodeConfigs = map[string]*clabtypes.NodeConfig{}
+		}
+		for nodeName := range plan.mutableNodeSet {
+			node, exists := c.Nodes[nodeName]
+			if !exists {
+				delete(state.NodeConfigs, nodeName)
+				continue
+			}
+			state.NodeConfigs[nodeName] = c.applyStateNodeConfig(nodeName, node.Config())
+		}
+		err = c.writeLabState(state)
+	}
+	if err != nil {
+		log.Warnf("failed to write state file: %v", err)
+	}
+}
+
+func (c *CLab) applyStateNodeConfig(
+	nodeName string,
+	runtimeConfig *clabtypes.NodeConfig,
+) *clabtypes.NodeConfig {
+	if runtimeConfig == nil {
+		return nil
+	}
+
+	applied := *runtimeConfig
+	desired := resolveNodeConfigFromTopology(c.Config.Topology, nodeName)
+	if desired == nil {
+		return &applied
+	}
+
+	applied.NodeType = desired.NodeType
+	applied.Kind = desired.Kind
+	applied.Image = desired.Image
+	applied.Entrypoint = desired.Entrypoint
+	applied.Cmd = desired.Cmd
+	applied.Exec = desired.Exec
+	applied.Env = desired.Env
+	applied.Binds = desired.Binds
+	applied.Devices = desired.Devices
+	applied.CapAdd = desired.CapAdd
+	applied.ShmSize = desired.ShmSize
+	applied.PortSet = desired.PortSet
+	applied.User = desired.User
+	applied.NetworkMode = desired.NetworkMode
+	if desired.Runtime != "" {
+		applied.Runtime = desired.Runtime
+	}
+	applied.CPU = desired.CPU
+	applied.CPUSet = desired.CPUSet
+	applied.Memory = desired.Memory
+	applied.License = desired.License
+	applied.Components = desired.Components
+
+	return &applied
 }
 
 func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {

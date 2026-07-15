@@ -301,3 +301,13 @@ func WithNodeFilter(nodeFilter []string) ClabOption {
 		return c.filterClabNodes(nodeFilter)
 	}
 }
+
+// WithDeployNodeFilter records a deploy filter without immediately removing
+// other topology nodes. Deploy applies the destructive filter only for a fresh
+// lab; reconciliation needs the full topology as immutable context.
+func WithDeployNodeFilter(nodeFilter []string) ClabOption {
+	return func(c *CLab) error {
+		c.nodeFilter = append([]string(nil), nodeFilter...)
+		return nil
+	}
+}
