@@ -188,7 +188,7 @@ func deployFn(cobraCmd *cobra.Command, o *Options) error {
 
 	clabcore.ExportRenderedTopology = o.Deploy.ExportRenderedTopology
 
-	c, err := clabcore.NewContainerLab(o.ToClabOptions()...)
+	c, err := clabcore.NewContainerLab(o.ToClabDeployOptions()...)
 	if err != nil {
 		return err
 	}
