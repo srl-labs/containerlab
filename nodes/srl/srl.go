@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -1035,29 +1036,28 @@ func (n *srl) CheckInterfaceName() error {
 	ifRe := regexp.MustCompile(`(:?e|ethernet)\d+-\d+(-\d+)?|` + mgmt0InterfaceName)
 	nm := strings.ToLower(n.Cfg.NetworkMode)
 
-	err := n.CheckInterfaceOverlap()
-	if err != nil {
-		return err
-	}
+	var errs []error
 
 	for _, e := range n.Endpoints {
 		if !ifRe.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"nokia sr linux interface name %q doesn't match the required pattern: %s",
 				e.GetIfaceName(),
 				n.InterfaceHelp,
-			)
+			))
+
+			continue
 		}
 
 		if e.GetIfaceName() == mgmt0InterfaceName && nm != "none" {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"mgmt0 interface name is not allowed for %s node when network mode is not set to none",
 				n.Cfg.ShortName,
-			)
+			))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // createRepoFiles creates apt/ym repository files

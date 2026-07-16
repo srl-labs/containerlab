@@ -146,7 +146,7 @@ func (c *CLab) parseTopology() error {
 	for idx, nodeName := range nodeNames {
 		err = c.NewNode(nodeName, nodeRuntimes[nodeName], c.Config.Topology.Nodes[nodeName], idx)
 		if err != nil {
-			return err
+			c.addValidationError(err)
 		}
 	}
 
@@ -163,6 +163,23 @@ func (c *CLab) NewNode(
 	nodeCfg, err := c.createNodeCfg(nodeName, nodeDef, idx)
 	if err != nil {
 		return err
+	}
+
+	if nodeCfg.Kind == "" {
+		errs := []error{fmt.Errorf(
+			"node %q has no kind defined, set the kind on the node or in the topology defaults/groups",
+			nodeCfg.ShortName)}
+
+		// without a kind the node cannot be constructed and its other attributes
+		// cannot be checked, so report the missing image here as well
+		if nodeCfg.Image == "" {
+			errs = append(errs, fmt.Errorf(
+				"node %q has no image defined, note that all kinds except bridge, host, "+
+					"ovs-bridge, ext-container and k8s-kind require one",
+				nodeCfg.ShortName))
+		}
+
+		return errors.Join(errs...)
 	}
 
 	// construct node
@@ -439,23 +456,7 @@ func (c *CLab) processNodeLicense(nodeCfg *clabtypes.NodeConfig) error {
 // checkTopologyDefinition runs topology checks and returns any errors found.
 // This function runs after topology file is parsed and all nodes/links are initialized.
 func (c *CLab) checkTopologyDefinition(ctx context.Context) error {
-	if err := c.verifyLinks(ctx); err != nil {
-		return err
-	}
-
-	if err := c.verifyRootNetNSLinks(); err != nil {
-		return err
-	}
-
-	// Check deployment conditions for all nodes (sequentially)
-	for _, node := range c.Nodes {
-		err := node.CheckDeploymentConditions(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := c.verifyDuplicateAddresses(); err != nil {
+	if err := c.ValidateTopology(ctx); err != nil {
 		return err
 	}
 
@@ -585,6 +586,8 @@ func (*CLab) loadKernelModules() error {
 
 // verifyDuplicateAddresses checks that every static IP address in the topology is unique.
 func (c *CLab) verifyDuplicateAddresses() error {
+	var errs []error
+
 	dupIps := map[string]struct{}{}
 	for _, node := range c.Nodes {
 		ips := []string{node.Config().MgmtIPv4Address, node.Config().MgmtIPv6Address}
@@ -600,15 +603,15 @@ func (c *CLab) verifyDuplicateAddresses() error {
 
 				dupIps[ip] = struct{}{}
 			} else {
-				return fmt.Errorf(
+				errs = append(errs, fmt.Errorf(
 					"management IP address %s appeared more than once in the topology file",
 					ip,
-				)
+				))
 			}
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // verifyContainersUniqueness ensures that nodes defined in the topology do not have names of the

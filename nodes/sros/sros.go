@@ -1550,29 +1550,28 @@ func (n *sros) GetMappedInterfaceName(ifName string) (string, error) {
 func (n *sros) CheckInterfaceName() error {
 	nm := n.Cfg.NetworkMode
 
-	err := n.CheckInterfaceOverlap()
-	if err != nil {
-		return err
-	}
+	var errs []error
 
 	for _, e := range n.Endpoints {
 		if !MappedInterfaceRegexp.MatchString(e.GetIfaceName()) {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"nokia SR OS interface name %q doesn't match the required pattern: %s",
 				e.GetIfaceName(),
 				n.InterfaceHelp,
-			)
+			))
+
+			continue
 		}
 
 		if e.GetIfaceName() == "eth0" && nm != "none" {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"eth0 interface name is not allowed for %s node when network mode is not set to none",
 				n.Cfg.ShortName,
-			)
+			))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (n *sros) SaveConfig(ctx context.Context) (*clabnodes.SaveConfigResult, error) {

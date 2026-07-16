@@ -66,6 +66,10 @@ type CLab struct {
 	// to avoid repeated repository opens. Empty strings indicate not yet cached.
 	gitBranch string
 	gitHash   string
+	// validationErrors collects non-fatal topology errors (decode errors,
+	// invalid nodes) during loading; NewContainerLab returns them joined so the
+	// caller gets the fully loaded topology together with everything wrong with it.
+	validationErrors []error
 }
 
 // NewContainerLab function defines a new container lab.
@@ -95,9 +99,10 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		}
 	}
 
-	var err error
 	if c.TopoPaths.TopologyFileIsSet() {
-		err = c.parseTopology()
+		if err := c.parseTopology(); err != nil {
+			return nil, err
+		}
 	}
 
 	// Extract the host systems DNS servers and populate the
@@ -107,7 +112,7 @@ func NewContainerLab(opts ...ClabOption) (*CLab, error) {
 		return nil, err
 	}
 
-	return c, err
+	return c, errors.Join(c.validationErrors...)
 }
 
 // RuntimeInitializer returns a runtime initializer function for a provided runtime name.
@@ -685,4 +690,9 @@ func (c *CLab) CheckConnectivity(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// addValidationError records a non-fatal topology error found while loading.
+func (c *CLab) addValidationError(err error) {
+	c.validationErrors = append(c.validationErrors, err)
 }

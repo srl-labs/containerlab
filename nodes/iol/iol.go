@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -411,31 +412,30 @@ func (n *iol) AddEndpoint(e clablinks.Endpoint) error {
 }
 
 func (n *iol) CheckInterfaceName() error {
-	err := n.CheckInterfaceOverlap()
-	if err != nil {
-		return err
-	}
+	var errs []error
 
 	for _, e := range n.Endpoints {
 		IFaceName := e.GetIfaceName()
 		if MgmtIntfRegexp.MatchString(IFaceName) {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"IOL Node: %q. Management interface Ethernet0/0, e0/0 or eth0 is not allowed",
 				n.Cfg.ShortName,
-			)
+			))
+
+			continue
 		}
 
 		if !DefaultIntfRegexp.MatchString(IFaceName) {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"IOL Node %q has an interface named %q which doesn't match the required pattern. %s",
 				n.Cfg.ShortName,
 				IFaceName,
 				IntfHelpMsg,
-			)
+			))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (n *iol) UpdateMgmtIntf(ctx context.Context) error {
