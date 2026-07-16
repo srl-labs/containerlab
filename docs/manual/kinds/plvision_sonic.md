@@ -9,6 +9,16 @@ This document covers the VM flavor of [Enterprise SONiC Linux Distribution](http
 
 The image is built with the [`vrnetlab/plvision_sonic`](https://github.com/srl-labs/vrnetlab) vrnetlab project and packaged as a Qemu VM inside a Docker container.
 
+## Overview
+
+`-{{ kind_code_name }}-` is an optimized SONiC distribution designed for:
+
+- Access switches
+- Out-of-band management switches
+- Campus deployments
+- Edge deployments
+- Resource-constrained platforms
+
 ## Getting -{{ kind_display_name }}- images
 
 1. To download the image, log in to [Solutions: PLVision ServiceDesk](https://support.plvision.eu/support/solutions) and find the required version.
