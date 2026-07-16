@@ -174,9 +174,6 @@ type LinkVEthStitched struct {
 	// the two netns-side endpoints that get stitched together
 	epA Endpoint
 	epB Endpoint
-
-	mu       sync.Mutex
-	stitched bool
 }
 
 func (*LinkVEthStitched) GetType() LinkType {
@@ -187,34 +184,26 @@ func (l *LinkVEthStitched) GetEndpoints() []Endpoint {
 	return []Endpoint{l.segA.Endpoints[0], l.segB.Endpoints[0]}
 }
 
-// Deploy is called by each node worker as it deploys its side. It deploys the
-// segment whose node end triggered the call and, once both node ends are up,
-// applies the tc stitch once.
-func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+// GetRuntimeEndpoints returns the node-side endpoints on the two real nodes — the
+// interfaces apply reconciliation creates, discovers, and removes for this link.
+func (l *LinkVEthStitched) GetRuntimeEndpoints() []Endpoint {
+	return []Endpoint{l.segA.Endpoints[0], l.segB.Endpoints[0]}
+}
 
-	seg := l.segA
-	if ep == l.segB.Endpoints[0] {
-		seg = l.segB
-	}
-
-	if err := seg.Deploy(ctx, ep); err != nil {
+// Deploy deploys both veth segments; their far ends land in the shared stitch
+// netns. The tc stitch that joins them runs later, in PostDeploy.
+func (l *LinkVEthStitched) Deploy(ctx context.Context, _ Endpoint) error {
+	if err := l.segA.Deploy(ctx, l.segA.Endpoints[0]); err != nil {
 		return err
 	}
 
-	if l.stitched ||
-		l.segA.DeploymentState != LinkDeploymentStateFullDeployed ||
-		l.segB.DeploymentState != LinkDeploymentStateFullDeployed {
-		return nil
-	}
+	return l.segB.Deploy(ctx, l.segB.Endpoints[0])
+}
 
-	if err := l.applyStitch(ctx); err != nil {
-		return err
-	}
-	l.stitched = true
-
-	return nil
+// PostDeploy applies the tc stitch between the two in-netns ends. The deploy
+// orchestrator calls it on every link after node workers create the veth pairs.
+func (l *LinkVEthStitched) PostDeploy(ctx context.Context) error {
+	return l.applyStitch(ctx)
 }
 
 // applyStitch bidirectionally joins the two in-netns interfaces; run after both
@@ -230,9 +219,6 @@ func (l *LinkVEthStitched) applyStitch(ctx context.Context) error {
 }
 
 func (l *LinkVEthStitched) Remove(ctx context.Context) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
@@ -265,9 +251,9 @@ func buildVEthStitchSegment(
 	seg := NewLinkVEth()
 	seg.MTU = mtu
 
-	// the node end belongs to the composite so the node worker calls l.Deploy; the
-	// segment only carries the endpoint to build its own veth pair.
-	nodeEp, err := nodeEpRaw.Resolve(params, l)
+	// the node end belongs to the segment, so node workers deploy the veth pair
+	// directly; the composite joins the two far ends later, in PostDeploy.
+	nodeEp, err := nodeEpRaw.Resolve(params, seg)
 	if err != nil {
 		return nil, nil, err
 	}

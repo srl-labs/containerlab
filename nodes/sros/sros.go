@@ -621,17 +621,11 @@ func (n *sros) setupComponentNodes() error {
 
 	rootCtrName := n.calcComponentName(n.Cfg.LongName, n.Cfg.Components[0].Slot)
 
-	// Registry, because it is not a package Var
-	nr := clabnodes.NewNodeRegistry()
-	Register(nr)
-
 	// loop through the components, creating them
 	for idx, c := range n.Cfg.Components {
 		// instantiate a new nokia_srsim instance
-		componentNode, err := nr.NewNodeOfKind("nokia_srsim")
-		if err != nil {
-			return err
-		}
+		srosNode := new(sros)
+		componentNode := clabnodes.Node(srosNode)
 
 		// copy the original node's NodeConfig to the component
 		componentConfig, err := deep.Copy(n.Cfg)
@@ -690,13 +684,11 @@ func (n *sros) setupComponentNodes() error {
 		componentNode.WithRuntime(n.GetRuntime())
 
 		// store root components for cpms, for config gen
-		if srosNode, ok := componentNode.(*sros); ok {
-			srosNode.rootComponents = n.Cfg.Components
-			// store base node name
-			srosNode.baseShortName = n.Cfg.ShortName
-			srosNode.baseLongName = n.Cfg.LongName
-			srosNode.rootCtrName = rootCtrName
-		}
+		srosNode.rootComponents = n.Cfg.Components
+		// store base node name
+		srosNode.baseShortName = n.Cfg.ShortName
+		srosNode.baseLongName = n.Cfg.LongName
+		srosNode.rootCtrName = rootCtrName
 
 		// store the node in the componentNodes
 		n.componentNodes = append(n.componentNodes, componentNode)

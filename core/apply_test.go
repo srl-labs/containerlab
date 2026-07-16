@@ -2,6 +2,9 @@ package core
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -26,15 +29,6 @@ type applyFakeLinkNode struct {
 	endpoints []clablinks.Endpoint
 }
 
-type applyLiveMockNode struct {
-	*clabmocksmocknodes.MockNode
-	linkApplyMode clabnodes.LinkApplyMode
-}
-
-func (n *applyLiveMockNode) LinkApplyMode(context.Context) clabnodes.LinkApplyMode {
-	return n.linkApplyMode
-}
-
 func (n *applyFakeLinkNode) AddLinkToContainer(
 	_ context.Context,
 	_ netlink.Link,
@@ -45,6 +39,22 @@ func (n *applyFakeLinkNode) AddLinkToContainer(
 
 func (n *applyFakeLinkNode) AddEndpoint(e clablinks.Endpoint) error {
 	n.endpoints = append(n.endpoints, e)
+	return nil
+}
+
+func (n *applyFakeLinkNode) AdoptEndpoint(e clablinks.Endpoint) error {
+	n.endpoints = append(n.endpoints, e)
+	e.SetNode(n)
+	return nil
+}
+
+func (n *applyFakeLinkNode) ReleaseEndpoint(e clablinks.Endpoint) error {
+	for i, ep := range n.endpoints {
+		if ep == e {
+			n.endpoints = append(n.endpoints[:i], n.endpoints[i+1:]...)
+			break
+		}
+	}
 	return nil
 }
 
@@ -73,11 +83,19 @@ func (*applyFakeLinkNode) Delete(context.Context) error {
 }
 
 type applyFakeLink struct {
-	linkType  clablinks.LinkType
-	endpoints []clablinks.Endpoint
+	linkType        clablinks.LinkType
+	endpoints       []clablinks.Endpoint
+	deployCalls     int
+	postDeployCalls int
 }
 
-func (*applyFakeLink) Deploy(context.Context, clablinks.Endpoint) error {
+func (l *applyFakeLink) Deploy(context.Context, clablinks.Endpoint) error {
+	l.deployCalls++
+	return nil
+}
+
+func (l *applyFakeLink) PostDeploy(context.Context) error {
+	l.postDeployCalls++
 	return nil
 }
 
@@ -93,12 +111,44 @@ func (l *applyFakeLink) GetEndpoints() []clablinks.Endpoint {
 	return l.endpoints
 }
 
+func (l *applyFakeLink) GetRuntimeEndpoints() []clablinks.Endpoint {
+	return l.endpoints
+}
+
 func (*applyFakeLink) GetMTU() int {
 	return 0
 }
 
 func (*applyFakeLink) GetVars() map[string]any {
 	return nil
+}
+
+func TestDeployLinksUsesEndpointOwnership(t *testing.T) {
+	node := &applyFakeLinkNode{name: "n1"}
+	link := &applyFakeLink{linkType: clablinks.LinkTypeDummy}
+	link.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(node, "eth1", link)),
+	}
+
+	if err := (&CLab{}).DeployLinks(context.Background(), []clablinks.Link{link}); err != nil {
+		t.Fatal(err)
+	}
+	if link.deployCalls != 1 || link.postDeployCalls != 1 {
+		t.Fatalf("deploy calls = %d, post-deploy calls = %d", link.deployCalls, link.postDeployCalls)
+	}
+}
+
+func TestDeployLinksPostDeploysSelectedNodeWithoutLinks(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	node := clabmocksmocknodes.NewMockNode(ctrl)
+	node.EXPECT().PostDeployEndpoints(gomock.Any()).Return(nil)
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{"n1": node}}
+	if err := c.deployLinks(context.Background(), nil, []string{"n1"}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestApplyRequiresTopologyFile(t *testing.T) {
@@ -145,6 +195,85 @@ func TestApplyDryRunPlansDeployWhenLabMissing(t *testing.T) {
 	}
 	if result.LabName != c.Config.Name {
 		t.Fatalf("planned lab name %q, want %q", result.LabName, c.Config.Name)
+	}
+}
+
+func TestApplyWritesStateForNoChanges(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+
+	labDir := t.TempDir()
+	topoFile := filepath.Join(labDir, "noop.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: noop\n"), 0o644); err != nil {
+		t.Fatalf("failed to write topology file: %v", err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatalf("failed to create topo paths: %v", err)
+	}
+	if err := topoPaths.SetLabDir(labDir); err != nil {
+		t.Fatalf("failed to set lab dir: %v", err)
+	}
+
+	nodeCfg := &clabtypes.NodeConfig{
+		ShortName: "n1",
+		LongName:  "clab-noop-n1",
+	}
+	diff := &clabtypes.TopologyDiff{}
+
+	mockRuntime.EXPECT().
+		ListContainers(gomock.Any(), gomock.Any()).
+		Return([]clabruntime.GenericContainer{
+			{
+				Labels: map[string]string{
+					clabconstants.NodeName:      "n1",
+					clabconstants.NodeMgmtNetBr: "br-test",
+				},
+			},
+		}, nil)
+	mockNode.EXPECT().Config().Return(nodeCfg).AnyTimes()
+	mockNode.EXPECT().CheckDeploymentConditions(gomock.Any()).Return(nil)
+	mockNode.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).Return(diff)
+	mockNode.EXPECT().
+		GetReconcilePlan(gomock.Any(), diff).
+		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionNone}, nil)
+	mockNode.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running).AnyTimes()
+	mockNode.EXPECT().ExecFunction(gomock.Any(), gomock.Any()).Return(nil)
+	mockNode.EXPECT().
+		Reconcile(gomock.Any(), diff).
+		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionNone}, nil)
+
+	topo := clabtypes.NewTopology()
+	topo.Nodes["n1"] = &clabtypes.NodeDefinition{Kind: "linux", Image: "alpine:latest"}
+
+	c := &CLab{
+		Config: &Config{
+			Name:     "noop",
+			Mgmt:     &clabtypes.MgmtNet{},
+			Topology: topo,
+		},
+		TopoPaths: topoPaths,
+		Nodes: map[string]clabnodes.Node{
+			"n1": mockNode,
+		},
+		Links: map[int]clablinks.Link{},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: mockRuntime,
+		},
+	}
+
+	result, err := c.Apply(context.Background(), &ApplyOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.DeployedLab {
+		t.Fatal("expected no-op apply, got deploy result")
+	}
+	if _, err := os.Stat(topoPaths.StateFile()); err != nil {
+		t.Fatalf("expected no-op apply to write state file: %v", err)
 	}
 }
 
@@ -296,6 +425,54 @@ func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	}
 }
 
+func TestPlanStoppedNodesSkipsExternallyManagedNodes(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	managedNode := clabmocksmocknodes.NewMockNode(ctrl)
+	externalNode := clabmocksmocknodes.NewMockNode(ctrl)
+	managedNode.EXPECT().GetContainerStatus(ctx).Return(clabruntime.Stopped)
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{
+			"managed":  managedNode,
+			"external": externalNode,
+		},
+	}
+	plan := newApplyPlan(map[string]*runtimeNodeGroup{
+		"managed":  {},
+		"external": {external: true},
+	}, nil)
+
+	c.planStoppedNodes(ctx, plan)
+
+	if got, want := sortedStringSet(plan.startNodeSet), []string{"managed"}; !slices.Equal(got, want) {
+		t.Fatalf("nodes planned for start = %v, want %v", got, want)
+	}
+}
+
+func TestDiscoverLiveApplyEndpointsRejectsStoppedExternalNode(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	externalNode := clabmocksmocknodes.NewMockNode(ctrl)
+	externalNode.EXPECT().GetContainerStatus(ctx).Return(clabruntime.Stopped)
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{"external": externalNode},
+	}
+	plan := newApplyPlan(map[string]*runtimeNodeGroup{
+		"external": {external: true},
+	}, nil)
+
+	err := c.discoverLiveApplyEndpoints(ctx, plan)
+	if err == nil || !strings.Contains(err.Error(), "start it outside containerlab") {
+		t.Fatalf("error = %v, want external lifecycle guidance", err)
+	}
+}
+
 func TestPlanDeletedEndpointsUsesDiscoveredEndpointNode(t *testing.T) {
 	t.Parallel()
 
@@ -324,34 +501,29 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		hasMode  bool
 		mode     clabnodes.LinkApplyMode
 		override clabnodes.LinkApplyMode
 		want     clabnodes.LinkApplyMode
 	}{
 		{
-			name:    "live node",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyModeLive,
-			want:    clabnodes.LinkApplyModeLive,
+			name: "live node",
+			mode: clabnodes.LinkApplyModeLive,
+			want: clabnodes.LinkApplyModeLive,
 		},
 		{
-			name:    "restart node",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyModeRestart,
-			want:    clabnodes.LinkApplyModeRestart,
+			name: "restart node",
+			mode: clabnodes.LinkApplyModeRestart,
+			want: clabnodes.LinkApplyModeRestart,
 		},
 		{
-			name:    "recreate node",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyModeRecreate,
-			want:    clabnodes.LinkApplyModeRecreate,
+			name: "recreate node",
+			mode: clabnodes.LinkApplyModeRecreate,
+			want: clabnodes.LinkApplyModeRecreate,
 		},
 		{
-			name:    "invalid mode defaults to recreate",
-			hasMode: true,
-			mode:    clabnodes.LinkApplyMode("invalid"),
-			want:    clabnodes.LinkApplyModeRecreate,
+			name: "invalid mode defaults to recreate",
+			mode: clabnodes.LinkApplyMode("invalid"),
+			want: clabnodes.LinkApplyModeRecreate,
 		},
 		{
 			name: "node without mode defaults to recreate",
@@ -359,21 +531,18 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 		},
 		{
 			name:     "override upgrades recreate kind to live",
-			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeRecreate,
 			override: clabnodes.LinkApplyModeLive,
 			want:     clabnodes.LinkApplyModeLive,
 		},
 		{
 			name:     "override restricts live kind to recreate",
-			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeLive,
 			override: clabnodes.LinkApplyModeRecreate,
 			want:     clabnodes.LinkApplyModeRecreate,
 		},
 		{
 			name:     "invalid override falls back to kind mode",
-			hasMode:  true,
 			mode:     clabnodes.LinkApplyModeRestart,
 			override: clabnodes.LinkApplyMode("hotplug"),
 			want:     clabnodes.LinkApplyModeRestart,
@@ -393,16 +562,9 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 				ShortName:     "n1",
 				LinkApplyMode: tt.override,
 			}).AnyTimes()
+			mockNode.EXPECT().LinkApplyMode(gomock.Any()).Return(tt.mode)
 
-			var node clabnodes.Node = mockNode
-			if tt.hasMode {
-				node = &applyLiveMockNode{
-					MockNode:      mockNode,
-					linkApplyMode: tt.mode,
-				}
-			}
-
-			if got := clabnodes.LinkApplyModeForNode(context.Background(), node); got != tt.want {
+			if got := clabnodes.LinkApplyModeForNode(context.Background(), mockNode); got != tt.want {
 				t.Fatalf("LinkApplyModeForNode() = %v, want %v", got, tt.want)
 			}
 		})
@@ -450,13 +612,11 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 
 			c := &CLab{
 				Nodes: map[string]clabnodes.Node{
-					"n1": &applyLiveMockNode{
-						MockNode:      mockNode,
-						linkApplyMode: tt.mode,
-					},
+					"n1": mockNode,
 				},
 			}
 			mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{}).AnyTimes()
+			mockNode.EXPECT().LinkApplyMode(gomock.Any()).Return(tt.mode)
 			plan := newApplyPlan(nil, nil)
 
 			c.planAffectedApplyNode(context.Background(), plan, "n1", tt.change)
@@ -485,6 +645,37 @@ func TestPlanAffectedApplyNode(t *testing.T) {
 				t.Fatalf("change reason = %q, want %q", reason, tt.change)
 			}
 		})
+	}
+}
+
+func TestPlanAffectedApplyNodeIgnoresExternalLifecycleOverride(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	externalNode := clabmocksmocknodes.NewMockNode(ctrl)
+	externalNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		LinkApplyMode: clabnodes.LinkApplyModeRestart,
+	}).AnyTimes()
+	externalNode.EXPECT().
+		LinkApplyMode(gomock.Any()).
+		Return(clabnodes.LinkApplyModeLive).
+		AnyTimes()
+
+	c := &CLab{
+		Nodes: map[string]clabnodes.Node{"external": externalNode},
+	}
+	plan := newApplyPlan(map[string]*runtimeNodeGroup{
+		"external": {external: true},
+	}, nil)
+
+	c.planAffectedApplyNode(context.Background(), plan, "external", "added link")
+
+	if len(plan.linkRestartNodeSet) != 0 || len(plan.recreatedNodeSet) != 0 {
+		t.Fatalf(
+			"external node received lifecycle action: restart=%v recreate=%v",
+			plan.linkRestartNodeSet,
+			plan.recreatedNodeSet,
+		)
 	}
 }
 
@@ -526,6 +717,35 @@ func TestPlanNodeReconciliationKeepsRecreateAction(t *testing.T) {
 	}
 }
 
+func TestPlanNodeReconciliationRejectsExternalRecreate(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+	diff := &clabtypes.TopologyDiff{Fields: []string{"Env"}}
+
+	mockNode.EXPECT().ComputeDiff(gomock.Any(), gomock.Any()).Return(diff)
+	mockNode.EXPECT().
+		GetReconcilePlan(gomock.Any(), diff).
+		Return(&clabnodes.ReconcileResult{Action: clabtypes.TopologyDiffActionRecreate}, nil)
+
+	topo := clabtypes.NewTopology()
+	topo.Nodes["n1"] = &clabtypes.NodeDefinition{Kind: "ext-container"}
+	c := &CLab{
+		Config: &Config{Topology: topo},
+		Nodes:  map[string]clabnodes.Node{"n1": mockNode},
+	}
+	plan := newApplyPlan(
+		map[string]*runtimeNodeGroup{"n1": {external: true}},
+		nil,
+	)
+
+	err := c.planNodeReconciliation(context.Background(), plan)
+	if err == nil || !strings.Contains(err.Error(), "externally managed") {
+		t.Fatalf("error = %v, want externally managed node error", err)
+	}
+}
+
 func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
 	t.Parallel()
 
@@ -553,16 +773,16 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	t.Parallel()
 
 	ctrl := gomock.NewController(t)
+	mockRuntime := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 
 	c := &CLab{
 		Config: &Config{Name: "lab"},
 		Runtimes: map[string]clabruntime.ContainerRuntime{
-			clabruntimedocker.RuntimeName: clabmocksmockruntime.NewMockContainerRuntime(ctrl),
+			clabruntimedocker.RuntimeName: mockRuntime,
 		},
 		globalRuntimeName: clabruntimedocker.RuntimeName,
 	}
 
-	mockRuntime := c.Runtimes[clabruntimedocker.RuntimeName].(*clabmocksmockruntime.MockContainerRuntime)
 	mockRuntime.EXPECT().
 		ListContainers(gomock.Any(), gomock.Any()).
 		Return([]clabruntime.GenericContainer{
@@ -596,6 +816,73 @@ func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {
 	}
 	if got := len(group.containers); got != 2 {
 		t.Fatalf("expected 2 component containers, got %d", got)
+	}
+}
+
+func TestRuntimeNodeGroupsIncludesPreExistingNodes(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	rt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	node := clabmocksmocknodes.NewMockNode(ctrl)
+	node.EXPECT().Config().Return(&clabtypes.NodeConfig{SkipUniquenessCheck: true})
+	node.EXPECT().GetContainerStatus(ctx).Return(clabruntime.Running)
+	rt.EXPECT().ListContainers(gomock.Any(), gomock.Any()).Return(nil, nil)
+
+	c := &CLab{
+		Config: &Config{Name: "lab"},
+		Nodes:  map[string]clabnodes.Node{"external": node},
+		Runtimes: map[string]clabruntime.ContainerRuntime{
+			clabruntimedocker.RuntimeName: rt,
+		},
+		globalRuntimeName: clabruntimedocker.RuntimeName,
+	}
+
+	groups, err := c.runtimeNodeGroups(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	group := groups["external"]
+	if group == nil || !group.external || len(group.containers) != 0 {
+		t.Fatalf("unexpected external runtime group: %#v", group)
+	}
+}
+
+func TestNeedsInitialDeploy(t *testing.T) {
+	t.Parallel()
+
+	topoFile := filepath.Join(t.TempDir(), "lab.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: lab\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := topoPaths.SetLabDirByPrefix("lab"); err != nil {
+		t.Fatal(err)
+	}
+	c := &CLab{TopoPaths: topoPaths}
+
+	initial, err := c.needsInitialDeploy(map[string]*runtimeNodeGroup{
+		"external": {external: true},
+	})
+	if err != nil || !initial {
+		t.Fatalf("external nodes without state: initial = %v, error = %v", initial, err)
+	}
+
+	if err := os.MkdirAll(topoPaths.TopologyLabDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(topoPaths.StateFile(), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	initial, err = c.needsInitialDeploy(map[string]*runtimeNodeGroup{
+		"external": {external: true},
+	})
+	if err != nil || initial {
+		t.Fatalf("external nodes with state: initial = %v, error = %v", initial, err)
 	}
 }
 

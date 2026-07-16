@@ -198,7 +198,7 @@ func (c *CLab) NewNode(
 	// construct node
 	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
 	if err != nil {
-		return fmt.Errorf("error constructing node %q: %v", nodeCfg.ShortName, err)
+		return fmt.Errorf("constructing node %q: %w", nodeCfg.ShortName, err)
 	}
 
 	// adding default labels to the node config
@@ -222,6 +222,38 @@ func (c *CLab) NewNode(
 	// overwrote original values for the default labels
 	c.addDefaultLabels(n.Config())
 	labelsToEnvVars(n.Config())
+
+	return nil
+}
+
+// AddPlaceholderNode adds a node whose underlying resource already exists outside this lab.
+func (c *CLab) AddPlaceholderNode(nodeCfg *clabtypes.NodeConfig) error {
+	if nodeCfg == nil || nodeCfg.ShortName == "" || nodeCfg.Kind == "" {
+		return errors.New("placeholder node requires a name and kind")
+	}
+	if _, exists := c.Nodes[nodeCfg.ShortName]; exists {
+		return fmt.Errorf("node %q already exists", nodeCfg.ShortName)
+	}
+	rt, exists := c.Runtimes[nodeCfg.Runtime]
+	if !exists {
+		return fmt.Errorf("runtime %q not found for node %q", nodeCfg.Runtime, nodeCfg.ShortName)
+	}
+	n, err := c.Reg.NewNodeOfKind(nodeCfg.Kind)
+	if err != nil {
+		return fmt.Errorf("constructing node %q: %w", nodeCfg.ShortName, err)
+	}
+	if err := n.Init(
+		nodeCfg,
+		clabnodes.WithRuntime(rt),
+		clabnodes.WithMgmtNet(c.Config.Mgmt),
+	); err != nil {
+		return fmt.Errorf("initializing node %q: %w", nodeCfg.ShortName, err)
+	}
+
+	if c.Nodes == nil {
+		c.Nodes = make(map[string]clabnodes.Node)
+	}
+	c.Nodes[nodeCfg.ShortName] = n
 
 	return nil
 }

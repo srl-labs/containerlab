@@ -339,6 +339,9 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 		if runtimeNode == nil {
 			return fmt.Errorf("runtime node %q not found", nodeName)
 		}
+		if runtimeNode.external {
+			continue
+		}
 
 		for i := len(runtimeNode.containers) - 1; i >= 0; i-- {
 			ctr := runtimeNode.containers[i]

@@ -45,10 +45,6 @@ const (
 	LinkApplyModeLive LinkApplyMode = clabtypes.LinkApplyModeLive
 )
 
-type linkApplyModeNode interface {
-	LinkApplyMode(context.Context) LinkApplyMode
-}
-
 // linkApplyModePermissiveness orders modes from most disruptive to least
 // disruptive; a higher rank means apply touches the node lifecycle less.
 var linkApplyModePermissiveness = map[LinkApplyMode]int{
@@ -66,11 +62,9 @@ func LinkApplyModeForNode(ctx context.Context, node Node) LinkApplyMode {
 	}
 
 	kindMode := LinkApplyModeRecreate
-	if modeNode, ok := node.(linkApplyModeNode); ok {
-		switch mode := modeNode.LinkApplyMode(ctx); mode {
-		case LinkApplyModeLive, LinkApplyModeRestart, LinkApplyModeRecreate:
-			kindMode = mode
-		}
+	switch mode := node.LinkApplyMode(ctx); mode {
+	case LinkApplyModeLive, LinkApplyModeRestart, LinkApplyModeRecreate:
+		kindMode = mode
 	}
 
 	override := LinkApplyModeOverrideForNode(node)
@@ -202,6 +196,8 @@ type Node interface {
 	// VerifyStartupConfig checks for existence of the referenced file and maybe performs additional
 	// config checks
 	VerifyStartupConfig(topoDir string) error
+	// LinkApplyMode returns how apply handles dataplane link changes for this node.
+	LinkApplyMode(context.Context) LinkApplyMode
 	SaveConfig(
 		context.Context,
 	) (*SaveConfigResult, error) // SaveConfig saves the nodes configuration to an external file
@@ -224,11 +220,21 @@ type Node interface {
 	// AddEndpoint attaches an endpoint discovered from topology resolution and may normalize
 	// endpoint identity first, such as interface-name remapping.
 	AddEndpoint(e clablinks.Endpoint) error
+	// AdoptEndpoint adds an endpoint already owned by this node to its endpoint list.
+	AdoptEndpoint(e clablinks.Endpoint) error
+	// ReleaseEndpoint removes an endpoint owned by this node from its endpoint list.
+	ReleaseEndpoint(e clablinks.Endpoint) error
 	GetEndpoints() []clablinks.Endpoint
 	GetLinkEndpointType() clablinks.LinkEndpointType
 	GetShortName() string
 	// DeployEndpoints deploys the links for the node.
 	DeployEndpoints(ctx context.Context) error
+	// PostDeployEndpoints runs endpoint fixups after dataplane links exist.
+	PostDeployEndpoints(ctx context.Context) error
+	// ParkEndpoints parks dataplane interfaces before node recreation.
+	ParkEndpoints(ctx context.Context) error
+	// RestoreEndpoints restores parked dataplane interfaces after node recreation.
+	RestoreEndpoints(ctx context.Context) error
 	// ExecFunction executes the given function within the nodes network namespace
 	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() clabnodesstate.NodeState

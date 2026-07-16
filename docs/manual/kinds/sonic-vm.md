@@ -5,6 +5,7 @@ kind_code_name: sonic-vm
 kind_display_name: SONiC (VM)
 ---
 # -{{ kind_display_name }}-
+
 This document covers the VM flavor of the upstream SONiC that is identified with `-{{ kind_code_name }}-` kind in the [topology file](../topo-def-file.md).
 A kind defines a supported feature set and a startup procedure of a `-{{ kind_code_name }}-` node.
 
@@ -13,17 +14,17 @@ A kind defines a supported feature set and a startup procedure of a `-{{ kind_co
 1. Containerized SONiC (`sonic-vs` kind)
 2. Virtual Machine SONiC (`-{{ kind_code_name }}-` kind; the topic of this document)
 
-
 The VM-based image of SONiC is built with the [`srl-labs/vrnetlab`](https://github.com/srl-labs/vrnetlab/tree/master/sonic) project.
 
 ## Getting Sonic images
 
-Getting SONiC images is possible via two resources:
+Getting SONiC images is possible via the following resources:
 
 1. [Sonic.software](https://sonic.software/) -- an unofficial repo with SONiC images (may be down sometimes, uses Azure pipeline as a source)
 2. [Azure pipeline](https://sonic-build.azurewebsites.net/ui/sonic/pipelines) -- an official source of SONiC images (may also be down eventually), and finding the right one there is a pita.
 3. [Another pipeline view](https://sonic-net.github.io/SONiC/sonic_latest_images.html) -- may not contain recent pipelines.
 
+/// details | How to download SONiC image from Azure pipeline?
 When https://sonic.software is down, you can follow the following procedure to find the SONiC image in the Azure pipeline artifacts maze:
 
 1. Go to the piplines list: https://sonic-build.azurewebsites.net/ui/sonic/pipelines
@@ -34,10 +35,11 @@ When https://sonic.software is down, you can follow the following procedure to f
 6. One more long scroll down until you see `target/sonic-vs.img.gz` name (or Ctrl+F for it), click on it to start the download or copy the download link.
 7. Here you go, you managed to download a SONiC image from a mysteriosly named branch for a build that probably means nothing to you. This Sonic experience for ya...
 
-/// details | How to download SONiC image from Azure pipeline (video)
+//// details | How to download SONiC image from Azure pipeline (video)
 <video width="100%" controls>
   <source src="https://gitlab.com/rdodin/pics/-/wikis/uploads/054c60a0c8d685f826297c115470221b/sonic-dl.mp4" type="video/mp4">
 </video>
+////
 ///
 
 ## Managing sonic-vm nodes
