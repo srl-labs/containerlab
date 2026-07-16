@@ -113,7 +113,12 @@ func (c *CLab) Deploy(
 		return &DeployResult{Apply: applyResult}, nil
 	}
 
-	containers, err := c.ListNodesContainers(ctx)
+	var containers []clabruntime.GenericContainer
+	if len(c.nodeFilter) > 0 {
+		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
+	} else {
+		containers, err = c.ListNodesContainers(ctx)
+	}
 	if err != nil {
 		return nil, err
 	}
