@@ -136,7 +136,7 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := c.checkApplyTopologyDefinition(ctx); err != nil {
+	if err := c.ValidateTopology(ctx); err != nil {
 		return nil, err
 	}
 
@@ -223,24 +223,6 @@ func (c *CLab) apply(
 	}
 
 	return applyResultFromPlan(plan), nil
-}
-
-func (c *CLab) checkApplyTopologyDefinition(ctx context.Context) error {
-	if err := c.verifyLinks(ctx); err != nil {
-		return err
-	}
-
-	if err := c.verifyRootNetNSLinks(); err != nil {
-		return err
-	}
-
-	for _, nodeName := range sortedNodeNames(c.Nodes) {
-		if err := c.Nodes[nodeName].CheckDeploymentConditions(ctx); err != nil {
-			return err
-		}
-	}
-
-	return c.verifyDuplicateAddresses()
 }
 
 func (c *CLab) prepareApply(

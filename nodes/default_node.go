@@ -120,32 +120,33 @@ func (d *DefaultNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 // CheckDeploymentConditions wraps individual functions that check if a node
 // satisfies deployment requirements.
 func (d *DefaultNode) CheckDeploymentConditions(ctx context.Context) error {
-	err := d.OverwriteNode.VerifyHostRequirements()
-	if err != nil {
-		return err
+	var errs []error
+
+	if err := d.VerifyNodeImage(ctx); err != nil {
+		errs = append(errs, err)
 	}
 
-	err = d.OverwriteNode.VerifyStartupConfig(d.Cfg.LabDir)
-	if err != nil {
-		return err
+	if err := d.OverwriteNode.VerifyHostRequirements(); err != nil {
+		errs = append(errs, err)
 	}
 
-	err = d.OverwriteNode.CheckInterfaceName()
-	if err != nil {
-		return err
+	if err := d.OverwriteNode.VerifyStartupConfig(d.Cfg.LabDir); err != nil {
+		errs = append(errs, err)
 	}
 
-	err = d.OverwriteNode.VerifyLicenseFileExists(ctx)
-	if err != nil {
-		return err
+	if err := d.OverwriteNode.CheckInterfaceName(); err != nil {
+		errs = append(errs, err)
 	}
 
-	err = d.OverwriteNode.VerifyContainerName()
-	if err != nil {
-		return err
+	if err := d.OverwriteNode.VerifyLicenseFileExists(ctx); err != nil {
+		errs = append(errs, err)
 	}
 
-	return nil
+	if err := d.OverwriteNode.VerifyContainerName(); err != nil {
+		errs = append(errs, err)
+	}
+
+	return errors.Join(errs...)
 }
 
 func (d *DefaultNode) PullImage(ctx context.Context) error {
@@ -505,27 +506,13 @@ func (d *DefaultNode) DeleteNetnsSymlink() error {
 	return clabutils.DeleteNetnsSymlink(d.OverwriteNode.GetContainerName())
 }
 
-func (d *DefaultNode) CheckInterfaceOverlap() error {
-	var seenEps []clablinks.Endpoint
-
-	for _, ep := range d.Endpoints {
-		ifName := ep.GetIfaceName()
-		for _, seenEp := range seenEps {
-			if ifName == seenEp.GetIfaceName() {
-				return fmt.Errorf("%q and %q have overlapping interface names", ep, seenEp)
-			}
-		}
-		seenEps = append(seenEps, ep)
-	}
-
-	return nil
-}
-
 // CheckInterfaceName checks if a name of the interface referenced in the topology file is in the
 // expected range of name values.
 // A no-op for the default node, specific nodes should implement this method.
-func (d *DefaultNode) CheckInterfaceName() error {
-	return d.CheckInterfaceOverlap()
+// Duplicate interface names are caught by the endpoint uniqueness check during
+// link verification.
+func (*DefaultNode) CheckInterfaceName() error {
+	return nil
 }
 
 // CalculateInterfaceIndex parses the supplied interface name with the InterfaceRegexp.
@@ -1242,4 +1229,18 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 	execCollection.Log()
 
 	return nil
+}
+
+// VerifyNodeImage checks that every image required by the node is defined.
+func (d *DefaultNode) VerifyNodeImage(ctx context.Context) error {
+	var errs []error
+
+	for imageKey, imageName := range d.OverwriteNode.GetImages(ctx) {
+		if imageName == "" {
+			errs = append(errs, fmt.Errorf(
+				"missing required %q attribute for node %q", imageKey, d.Cfg.ShortName))
+		}
+	}
+
+	return errors.Join(errs...)
 }

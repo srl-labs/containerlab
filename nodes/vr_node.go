@@ -2,6 +2,7 @@ package nodes
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -106,24 +107,21 @@ func (vr *VRNode) AddEndpoint(e clablinks.Endpoint) error {
 // CheckInterfaceName checks interface names for generic VM-based nodes.
 // Displays InterfaceHelp if the check fails for the expected VM interface regexp.
 func (vr *VRNode) CheckInterfaceName() error {
-	err := vr.CheckInterfaceOverlap()
-	if err != nil {
-		return err
-	}
+	var errs []error
 
 	for _, ep := range vr.Endpoints {
 		ifName := ep.GetIfaceName()
 		if !VMInterfaceRegexp.MatchString(ifName) {
-			return fmt.Errorf(
+			errs = append(errs, fmt.Errorf(
 				"%q interface name %q does not match the required interface patterns: %q",
 				vr.Cfg.ShortName,
 				ifName,
 				vr.InterfaceHelp,
-			)
+			))
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {

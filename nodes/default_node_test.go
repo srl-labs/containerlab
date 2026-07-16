@@ -542,30 +542,6 @@ func TestInterfacesAliases(t *testing.T) { // skipcq: GO-R1005
 				"eth1", "eth2", "eth4",
 			},
 		},
-		"overlap": {
-			endpoints: []*clablinks.EndpointVeth{
-				{
-					EndpointGeneric: clablinks.EndpointGeneric{
-						IfaceName: "ge-0/0/1",
-					},
-				},
-				{
-					EndpointGeneric: clablinks.EndpointGeneric{
-						IfaceName: "eth1",
-					},
-				},
-			},
-			node: &DefaultNode{
-				Cfg: &clabtypes.NodeConfig{
-					ShortName: "juniper-overlap",
-				},
-				InterfaceRegexp: regexp.MustCompile(`(?:et|xe|ge)-0/0/(?P<port>\d+)$`),
-				InterfaceOffset: 0,
-			},
-			endpointErrContains: "",
-			checkErrContains:    "overlapping interface names",
-			resultEps:           []string{},
-		},
 		"out-of-bounds-index": {
 			endpoints: []*clablinks.EndpointVeth{
 				{

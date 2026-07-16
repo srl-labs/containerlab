@@ -21,7 +21,7 @@ func main() {
 
 	root.SetContext(ctx)
 
-	err = fang.Execute(ctx, root, fang.WithoutVersion())
+	err = fang.Execute(ctx, root, fang.WithoutVersion(), fang.WithErrorHandler(clabcmd.ErrorHandler))
 
 	// ensure cancel is *always* called (os.Exit bypasses)
 	cancel()

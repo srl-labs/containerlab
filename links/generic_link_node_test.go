@@ -23,6 +23,26 @@ func (e *deleteTestEndpoint) Remove(context.Context) error {
 	return nil
 }
 
+func TestCheckEndpointUniqueness(t *testing.T) {
+	node := newFakeNode("n1")
+
+	ep1 := &EndpointVeth{EndpointGeneric: EndpointGeneric{Node: node, IfaceName: "eth1"}}
+	ep2 := &EndpointVeth{EndpointGeneric: EndpointGeneric{Node: node, IfaceName: "eth1"}}
+
+	_ = node.AddEndpoint(ep1)
+	_ = node.AddEndpoint(ep2)
+
+	if err := CheckEndpointUniqueness(ep1); err == nil {
+		t.Fatal("expected duplicate endpoint error, got nil")
+	}
+
+	ep2.IfaceName = "eth2"
+
+	if err := CheckEndpointUniqueness(ep1); err != nil {
+		t.Fatalf("expected no error for unique endpoints, got %v", err)
+	}
+}
+
 func TestGenericLinkNodeDeleteHandlesEndpointsWithoutLink(t *testing.T) {
 	node := &GenericLinkNode{
 		shortname: "test-node",

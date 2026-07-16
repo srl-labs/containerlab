@@ -6,6 +6,7 @@ package core
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -102,9 +103,12 @@ func (c *CLab) LoadTopologyFromFile(topo string, varsFiles []string) error {
 
 	err = yaml.UnmarshalStrict(yamlFile, c.Config)
 	if err != nil {
-		return fmt.Errorf(
-			"%w\nConsult with release notes to see if any fields were changed/removed", err,
-		)
+		var typeErr *yaml.TypeError
+		if !errors.As(err, &typeErr) {
+			return err
+		}
+
+		c.addValidationError(descriptiveYamlError(typeErr))
 	}
 
 	c.Config.Topology.ImportEnvs()

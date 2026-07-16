@@ -7,11 +7,13 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/fang"
 	"github.com/charmbracelet/log"
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
@@ -304,4 +306,19 @@ func processGitTopoFile(topo string) (string, error) {
 	}
 
 	return repo.GetFilename(), err
+}
+
+// ErrorHandler logs each error of an aggregated error on its own line before
+// handing a short summary to fangs default handler.
+func ErrorHandler(w io.Writer, styles fang.Styles, err error) {
+	errs := flattenErrors([]error{err})
+	if len(errs) > 1 {
+		for _, e := range errs {
+			log.Error(e)
+		}
+
+		err = fmt.Errorf("%d errors occurred", len(errs))
+	}
+
+	fang.DefaultErrorHandler(w, styles, err)
 }
