@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -300,7 +301,11 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if !clabutils.MapsEqualOrBothEmpty(oldCfg.Env, newCfg.Env) {
 		diff.Fields = append(diff.Fields, "Env")
 	}
-	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Binds, newCfg.Binds) {
+	oldBinds := slices.Clone(oldCfg.Binds)
+	newBinds := slices.Clone(newCfg.Binds)
+	slices.Sort(oldBinds)
+	slices.Sort(newBinds)
+	if !slices.Equal(oldBinds, newBinds) {
 		diff.Fields = append(diff.Fields, "Binds")
 	}
 	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Devices, newCfg.Devices) {

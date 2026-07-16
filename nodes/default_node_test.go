@@ -111,6 +111,37 @@ func TestDefaultNodeComputeDiffIgnoresEquivalentDefaultHostname(t *testing.T) {
 	}
 }
 
+func TestDefaultNodeComputeDiffTreatsBindsAsUnordered(t *testing.T) {
+	d := &DefaultNode{}
+	oldCfg := &clabtypes.NodeConfig{Binds: []string{
+		"/host/config:/etc/config:ro",
+		"/host/data:/var/lib/data",
+	}}
+
+	t.Run("reordered binds", func(t *testing.T) {
+		newCfg := &clabtypes.NodeConfig{Binds: []string{
+			"/host/data:/var/lib/data",
+			"/host/config:/etc/config:ro",
+		}}
+
+		if diff := d.ComputeDiff(oldCfg, newCfg); diff.HasDiff() {
+			t.Fatalf("ComputeDiff fields = %#v, want no diff", diff.Fields)
+		}
+	})
+
+	t.Run("changed bind", func(t *testing.T) {
+		newCfg := &clabtypes.NodeConfig{Binds: []string{
+			"/host/data:/var/lib/data",
+			"/host/config:/etc/config",
+		}}
+
+		diff := d.ComputeDiff(oldCfg, newCfg)
+		if len(diff.Fields) != 1 || diff.Fields[0] != "Binds" {
+			t.Fatalf("ComputeDiff fields = %#v, want [Binds]", diff.Fields)
+		}
+	})
+}
+
 func TestDefaultNodeAdoptEndpointRejectsForeignOwner(t *testing.T) {
 	d := &DefaultNode{
 		Cfg: &clabtypes.NodeConfig{
