@@ -227,10 +227,13 @@ func (c *CLab) apply(
 	}
 
 	if plan.mutableNodeSet != nil {
-		if err := c.regenerateApplyArtifacts(ctx, options.exportTemplate); err != nil {
-			return nil, err
-		}
 		c.writeApplyState(plan)
+		if err := c.regenerateApplyArtifacts(ctx, options.exportTemplate); err != nil {
+			log.Warnf(
+				"filtered apply completed and state was persisted, but shared artifacts could not be regenerated: %v",
+				err,
+			)
+		}
 	} else {
 		if _, err := c.finalize(ctx, options.exportTemplate, options.graph); err != nil {
 			return nil, err

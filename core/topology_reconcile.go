@@ -286,6 +286,12 @@ func (c *CLab) planParkedNodes(ctx context.Context, plan *applyPlan) {
 		if !exists {
 			continue
 		}
+		// A container sharing another node's network namespace does not own
+		// that namespace's endpoints. Parking it would detach the provider's
+		// links and can strip the provider's live address and route state.
+		if _, shared := c.applySharedNetNSProvider(node); shared {
+			continue
+		}
 		if clabruntime.ContainerHasJoinableNetns(node.GetContainerStatus(ctx)) {
 			plan.parkedNodeSet[nodeName] = struct{}{}
 		}

@@ -629,6 +629,42 @@ func TestApplyEndpointDiscoveryNodesUsesSharedNetNSProvider(t *testing.T) {
 	}
 }
 
+func TestPlanParkedNodesSkipsSharedNetNSChildren(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	provider := clabmocksmocknodes.NewMockNode(ctrl)
+	child := clabmocksmocknodes.NewMockNode(ctrl)
+
+	provider.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "provider",
+	}).AnyTimes()
+	provider.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
+	child.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "child",
+		NetworkMode: "container:provider",
+	}).AnyTimes()
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{
+		"provider": provider,
+		"child":    child,
+	}}
+	plan := newApplyPlan(nil, nil)
+	plan.recreatedNodeSet = map[string]struct{}{
+		"provider": {},
+		"child":    {},
+	}
+
+	c.planParkedNodes(context.Background(), plan)
+
+	if _, parked := plan.parkedNodeSet["provider"]; !parked {
+		t.Fatal("provider must retain ownership of its parked endpoints")
+	}
+	if _, parked := plan.parkedNodeSet["child"]; parked {
+		t.Fatal("shared-netns child must not park provider-owned endpoints")
+	}
+}
+
 func TestApplyNodeFilterClosureIncludesDependencies(t *testing.T) {
 	t.Parallel()
 
