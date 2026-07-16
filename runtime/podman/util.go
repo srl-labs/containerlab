@@ -203,6 +203,12 @@ func (r *PodmanRuntime) createContainerSpec(
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
 		}
+	case "none":
+		specNetConfig = specgen.ContainerNetworkConfig{
+			NetNS:         specgen.Namespace{NSMode: specgen.NoNetwork},
+			UseImageHosts: utils.Pointer(false),
+			HostAdd:       cfg.ExtraHosts,
+		}
 	// Bridge will be used if none provided
 	case "bridge", "":
 		netName := r.mgmt.Network
