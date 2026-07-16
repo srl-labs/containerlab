@@ -52,11 +52,11 @@ Destroy ${lab-name} lab
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
 
-Verify the stitch namespace is removed on destroy
+Verify the stitch interfaces are removed on destroy
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ip netns list
+    ...    ip link show
     Log    ${output}
-    Should Not Contain    ${output}    clab-${lab-name}-vstitch
+    Should Not Contain    ${output}    clab-s-
 
 
 *** Keywords ***

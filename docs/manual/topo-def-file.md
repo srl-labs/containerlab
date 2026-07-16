@@ -274,7 +274,7 @@ links:
 
 ###### veth-stitch
 
-The veth-stitch link type transparently stitches its two endpoints through a dedicated network namespace.
+The veth-stitch link type transparently stitches its two endpoints by using three veth links. One per node interface, and a third veth which stitches the two together.
 This is useful for nodes whose datapath interfaces cannot be captured or impaired directly (such as SR-SIM).
 
 ```yaml

@@ -90,13 +90,13 @@ func TestResolveVethStitched(t *testing.T) {
 		t.Fatalf("resolved link type = %T, want *LinkVEthStitched", l)
 	}
 
-	// the in-netns ends are named after the facing node so they are intuitive to
-	// target with tc/tcpdump.
-	if got := stitched.epA.GetIfaceName(); got != "pe01" {
-		t.Fatalf("epA iface = %q, want %q", got, "pe01")
+	// the root-ns far ends carry a deterministic hash name (the readable name
+	// lives in the clab-s- altname added at PostDeploy).
+	if got, want := stitched.epA.GetIfaceName(), stitchFarEndName("mylab", "pe01", "1/1/c3/1"); got != want {
+		t.Fatalf("epA far-end name = %q, want %q", got, want)
 	}
-	if got := stitched.epB.GetIfaceName(); got != "pe02" {
-		t.Fatalf("epB iface = %q, want %q", got, "pe02")
+	if got, want := stitched.epB.GetIfaceName(), stitchFarEndName("mylab", "pe02", "1/1/c3/1"); got != want {
+		t.Fatalf("epB far-end name = %q, want %q", got, want)
 	}
 
 	// each segment: [ real node endpoint, in-netns far endpoint ]
@@ -104,7 +104,7 @@ func TestResolveVethStitched(t *testing.T) {
 		t.Fatalf("segA node endpoint owner = %q, want %q", got, "pe01")
 	}
 	if !stitched.epA.IsNodeless() {
-		t.Fatalf("epA should be nodeless so the veth deploy pushes it into the netns immediately")
+		t.Fatalf("epA should be nodeless so the veth deploy pushes it into the root ns immediately")
 	}
 
 	// the logical endpoints are the two node-side ones.
@@ -115,8 +115,9 @@ func TestResolveVethStitched(t *testing.T) {
 		t.Fatalf("GetEndpoints() = %v, want [pe01 pe02] node-side endpoints", eps)
 	}
 
-	if !strings.HasPrefix(stitched.node.netnsName, "clab-mylab-vstitch-") {
-		t.Fatalf("netns name = %q, want clab-mylab-vstitch- prefix", stitched.node.netnsName)
+	// far ends live on the host (root-ns) node
+	if got := stitched.epA.GetNode().GetShortName(); got != "host" {
+		t.Fatalf("epA far end node = %q, want host (root ns)", got)
 	}
 }
 
@@ -167,16 +168,6 @@ func TestValidateVEthStitched(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "node name too long for interface",
-			raw: &LinkVEthStitchedRaw{
-				Endpoints: []*EndpointRaw{
-					{Node: "this-node-name-is-too-long", Iface: "e1"},
-					{Node: "pe02", Iface: "e1"},
-				},
-			},
-			wantErr: true,
-		},
-		{
 			name: "endpoint carries mac",
 			raw: &LinkVEthStitchedRaw{
 				Endpoints: []*EndpointRaw{
@@ -206,27 +197,28 @@ func TestValidateVEthStitched(t *testing.T) {
 	}
 }
 
-func TestVethStitchNetnsName(t *testing.T) {
-	eps := []*EndpointRaw{{Node: "pe01", Iface: "e1"}, {Node: "pe02", Iface: "e1"}}
+func TestStitchFarEndName(t *testing.T) {
+	name := stitchFarEndName("lab", "pe01", "e1")
 
-	name := VEthStitchNetnsName("lab", eps)
-
+	if len(name) > 15 {
+		t.Fatalf("far-end name %q exceeds the 15-char interface limit", name)
+	}
+	if !strings.HasPrefix(name, "clab-s-") {
+		t.Fatalf("far-end name = %q, want clab-s- prefix", name)
+	}
 	// deterministic
-	if name != VEthStitchNetnsName("lab", eps) {
-		t.Fatalf("netns name is not deterministic")
+	if name != stitchFarEndName("lab", "pe01", "e1") {
+		t.Fatalf("far-end name is not deterministic")
 	}
-	// lab-scoped
-	if !strings.HasPrefix(name, "clab-lab-vstitch-") {
-		t.Fatalf("netns name = %q, want clab-lab-vstitch- prefix", name)
+	// differs by lab, node, and iface
+	if name == stitchFarEndName("other", "pe01", "e1") {
+		t.Fatalf("far-end name should differ across labs")
 	}
-	// differs by lab
-	if name == VEthStitchNetnsName("other", eps) {
-		t.Fatalf("netns name should differ across labs")
+	if name == stitchFarEndName("lab", "pe02", "e1") {
+		t.Fatalf("far-end name should differ across nodes")
 	}
-	// differs by endpoints
-	other := []*EndpointRaw{{Node: "pe01", Iface: "e1"}, {Node: "pe03", Iface: "e1"}}
-	if name == VEthStitchNetnsName("lab", other) {
-		t.Fatalf("netns name should differ across endpoint sets")
+	if name == stitchFarEndName("lab", "pe01", "e2") {
+		t.Fatalf("far-end name should differ across interfaces")
 	}
 }
 
@@ -239,33 +231,31 @@ func TestResolveNetemTarget(t *testing.T) {
 		name           string
 		node, rootNode string
 		iface          string
-		wantRedirect   bool // matched endpoint => netns lookup attempted; else nil,nil
+		wantIface      string // far-end name of the OTHER endpoint; "" => no redirect
 	}{
-		{"match by node name", "pe01", "", "e1", true},
-		{"match by root node name", "sros-1", "pe02", "e1", true},
-		{"no match: wrong iface", "pe01", "", "e2", false},
-		{"no match: wrong node", "pe09", "", "e1", false},
+		{"match by node name", "pe01", "", "e1", stitchFarEndName("mylab", "pe02", "e1")},
+		{"match by root node name", "sros-1", "pe02", "e1", stitchFarEndName("mylab", "pe01", "e1")},
+		{"no match: wrong iface", "pe01", "", "e2", ""},
+		{"no match: wrong node", "pe09", "", "e1", ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			target, err := link.ResolveNetemTarget("mylab", tt.node, tt.rootNode, tt.iface)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-			if !tt.wantRedirect {
-				if target != nil || err != nil {
-					t.Fatalf("want no redirect, got target=%v err=%v", target, err)
+			if tt.wantIface == "" {
+				if target != nil {
+					t.Fatalf("want no redirect, got %v", target)
 				}
 				return
 			}
 
-			// Matched: the (undeployed) stitch netns is absent, so the lookup
-			// errors, naming the deterministic netns for this link.
-			if err == nil {
-				t.Fatalf("want lookup error for matched endpoint, got target=%v", target)
-			}
-			wantNetns := VEthStitchNetnsName("mylab", link.Endpoints)
-			if !strings.Contains(err.Error(), wantNetns) {
-				t.Fatalf("error %q does not reference netns %q", err, wantNetns)
+			// matched: netem targets the other node's root-ns far end
+			if target == nil || target.Iface != tt.wantIface {
+				t.Fatalf("target = %v, want Iface %q", target, tt.wantIface)
 			}
 		})
 	}
@@ -299,28 +289,6 @@ func TestNewVEthStitchedRawFromVEth(t *testing.T) {
 	}
 	if len(s.Endpoints) != 2 || s.Endpoints[0].Node != "a" || s.Endpoints[1].Node != "b" {
 		t.Fatalf("endpoints not carried over: %+v", s.Endpoints)
-	}
-}
-
-func TestVethStitchedNodeAndNetnsName(t *testing.T) {
-	r := &LinkVEthStitchedRaw{
-		Endpoints: []*EndpointRaw{
-			{Node: "pe01", Iface: "e1"},
-			{Node: "pe02", Iface: "e1"},
-		},
-	}
-
-	l, err := r.Resolve(vethStitchResolveParams())
-	if err != nil {
-		t.Fatal(err)
-	}
-	stitched := l.(*LinkVEthStitched)
-
-	if got, want := stitched.NetnsName(), VEthStitchNetnsName("mylab", r.Endpoints); got != want {
-		t.Fatalf("NetnsName() = %q, want %q", got, want)
-	}
-	if got := stitched.node.GetLinkEndpointType(); got != LinkEndpointTypeVeth {
-		t.Fatalf("GetLinkEndpointType() = %q, want %q", got, LinkEndpointTypeVeth)
 	}
 }
 

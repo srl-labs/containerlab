@@ -856,8 +856,8 @@
         },
         "link-type-veth-stitched": {
             "type": "object",
-            "description": "Link definition that transparently stitches two veth endpoints through a dedicated network namespace",
-            "markdownDescription": "Link definition that transparently stitches two veth endpoints through a dedicated network namespace, so traffic can be captured (tcpdump) and impaired (tc netem) on plain Linux netdevs even when the node cannot be impaired directly (e.g. SR-SIM). Passes all traffic incl. STP/LLDP/LACP.",
+            "description": "Link definition that transparently stitches two veth endpoints through root-namespace veth ends joined by a tc redirect",
+            "markdownDescription": "Link definition that transparently stitches two veth endpoints through root-namespace veth ends joined by a tc redirect, so traffic can be captured (tcpdump) and impaired (tc netem) on plain Linux netdevs even when the node cannot be impaired directly (e.g. SR-SIM). Passes all traffic incl. STP/LLDP/LACP.",
             "properties": {
                 "type": {
                     "type": "string",

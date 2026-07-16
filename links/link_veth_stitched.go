@@ -5,23 +5,14 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/charmbracelet/log"
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabconstants "github.com/srl-labs/containerlab/constants"
-	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
-	"github.com/vishvananda/netns"
 )
 
-// LinkVEthStitchedRaw is the raw representation of a veth-stitch link: its two
-// endpoints are wired through a dedicated netns and joined with a tc mirred
-// egress-redirect, so traffic can be captured and impaired on plain netdevs even
-// when the node itself cannot be (e.g. SR-SIM).
 type LinkVEthStitchedRaw struct {
 	LinkCommonParams `yaml:",inline"`
 	Endpoints        stitchEndpoints `yaml:"endpoints"`
@@ -81,18 +72,16 @@ func (r *LinkVEthStitchedRaw) Resolve(params *ResolveParams) (Link, error) {
 		mtu = clabconstants.DefaultLinkMTU
 	}
 
-	l := &LinkVEthStitched{
-		node: newVEthStitchNode(VEthStitchNetnsName(params.LabName, r.Endpoints)),
-	}
+	l := &LinkVEthStitched{}
 	l.MTU = mtu
 	l.Vars = normalizeVars(r.Vars)
 
-	segA, epA, err := buildVEthStitchSegment(params, l, r.Endpoints[0], mtu)
+	segA, epA, err := buildVEthStitchSegment(params, r.Endpoints[0], mtu)
 	if err != nil {
 		return nil, err
 	}
 
-	segB, epB, err := buildVEthStitchSegment(params, l, r.Endpoints[1], mtu)
+	segB, epB, err := buildVEthStitchSegment(params, r.Endpoints[1], mtu)
 	if err != nil {
 		return nil, err
 	}
@@ -103,75 +92,15 @@ func (r *LinkVEthStitchedRaw) Resolve(params *ResolveParams) (Link, error) {
 	return l, nil
 }
 
-// vethStitchNode is a nodeless named netns (not a container) that holds the two
-// veth ends of a veth-stitch link.
-type vethStitchNode struct {
-	GenericLinkNode
-	netnsName string
-	once      sync.Once
-	onceErr   error
-}
-
-func newVEthStitchNode(netnsName string) *vethStitchNode {
-	return &vethStitchNode{
-		GenericLinkNode: GenericLinkNode{
-			shortname: netnsName,
-			endpoints: []Endpoint{},
-			nspath:    filepath.Join("/run/netns", netnsName),
-		},
-		netnsName: netnsName,
-	}
-}
-
-func (*vethStitchNode) GetLinkEndpointType() LinkEndpointType {
-	return LinkEndpointTypeVeth
-}
-
-// ensureNetns creates the backing netns once; the two segments may deploy
-// concurrently from different node workers.
-func (n *vethStitchNode) ensureNetns() error {
-	n.once.Do(func() {
-		nsPath, err := clabutils.CreateOrGetNamedNetNS(n.netnsName)
-		if err != nil {
-			n.onceErr = err
-			return
-		}
-		n.nspath = nsPath
-	})
-
-	return n.onceErr
-}
-
-func (n *vethStitchNode) AddLinkToContainer(
-	ctx context.Context,
-	link netlink.Link,
-	f func(ns.NetNS) error,
-) error {
-	if err := n.ensureNetns(); err != nil {
-		return err
-	}
-
-	return n.GenericLinkNode.AddLinkToContainer(ctx, link, f)
-}
-
-func (n *vethStitchNode) ExecFunction(ctx context.Context, f func(ns.NetNS) error) error {
-	if err := n.ensureNetns(); err != nil {
-		return err
-	}
-
-	return n.GenericLinkNode.ExecFunction(ctx, f)
-}
-
 // LinkVEthStitched is the resolved veth-stitch link: two veth segments
-// (nodeA<->netns, nodeB<->netns) whose in-netns ends are joined by a tc stitch.
+// (nodeA<->root-ns, nodeB<->root-ns) whose root-ns ends are joined by a tc stitch.
 type LinkVEthStitched struct {
 	LinkCommonParams
 
 	segA *LinkVEth
 	segB *LinkVEth
-	node *vethStitchNode
 
-	// the two netns-side endpoints that get stitched together
+	// the two root-ns endpoints that get stitched together
 	epA Endpoint
 	epB Endpoint
 }
@@ -184,14 +113,12 @@ func (l *LinkVEthStitched) GetEndpoints() []Endpoint {
 	return []Endpoint{l.segA.Endpoints[0], l.segB.Endpoints[0]}
 }
 
-// GetRuntimeEndpoints returns the node-side endpoints on the two real nodes — the
-// interfaces apply reconciliation creates, discovers, and removes for this link.
+// GetRuntimeEndpoints returns the two node-side endpoints.
 func (l *LinkVEthStitched) GetRuntimeEndpoints() []Endpoint {
 	return []Endpoint{l.segA.Endpoints[0], l.segB.Endpoints[0]}
 }
 
-// Deploy deploys both veth segments; their far ends land in the shared stitch
-// netns. The tc stitch that joins them runs later, in PostDeploy.
+// Deploy creates both veth segments.
 func (l *LinkVEthStitched) Deploy(ctx context.Context, _ Endpoint) error {
 	if err := l.segA.Deploy(ctx, l.segA.Endpoints[0]); err != nil {
 		return err
@@ -200,22 +127,21 @@ func (l *LinkVEthStitched) Deploy(ctx context.Context, _ Endpoint) error {
 	return l.segB.Deploy(ctx, l.segB.Endpoints[0])
 }
 
-// PostDeploy applies the tc stitch between the two in-netns ends. The deploy
-// orchestrator calls it on every link after node workers create the veth pairs.
-func (l *LinkVEthStitched) PostDeploy(ctx context.Context) error {
-	return l.applyStitch(ctx)
-}
+// PostDeploy tags the two root-ns far ends and joins them with tc
+func (l *LinkVEthStitched) PostDeploy(_ context.Context) error {
+	if err := markFarEnd(l.epA, l.segA.Endpoints[0]); err != nil {
+		return err
+	}
 
-// applyStitch bidirectionally joins the two in-netns interfaces; run after both
-// segments are deployed.
-func (l *LinkVEthStitched) applyStitch(ctx context.Context) error {
-	return l.node.ExecFunction(ctx, func(ns.NetNS) error {
-		if err := stitch(l.epA, l.epB); err != nil {
-			return err
-		}
+	if err := markFarEnd(l.epB, l.segB.Endpoints[0]); err != nil {
+		return err
+	}
 
-		return stitch(l.epB, l.epA)
-	})
+	if err := stitch(l.epA, l.epB); err != nil {
+		return err
+	}
+
+	return stitch(l.epB, l.epA)
 }
 
 func (l *LinkVEthStitched) Remove(ctx context.Context) error {
@@ -231,43 +157,56 @@ func (l *LinkVEthStitched) Remove(ctx context.Context) error {
 		log.Debug(err)
 	}
 
-	if err := netns.DeleteNamed(l.node.netnsName); err != nil {
-		log.Debugf("failed to delete veth-stitch netns %q: %v", l.node.netnsName, err)
-	}
-
 	l.DeploymentState = LinkDeploymentStateRemoved
 
 	return nil
 }
 
 // buildVEthStitchSegment builds one veth segment: the real node endpoint plus a
-// far end in the stitch netns, named after the facing node.
+// root-namespace far end named with a hash.
 func buildVEthStitchSegment(
 	params *ResolveParams,
-	l *LinkVEthStitched,
 	nodeEpRaw *EndpointRaw,
 	mtu int,
 ) (*LinkVEth, Endpoint, error) {
 	seg := NewLinkVEth()
 	seg.MTU = mtu
 
-	// the node end belongs to the segment, so node workers deploy the veth pair
-	// directly; the composite joins the two far ends later, in PostDeploy.
 	nodeEp, err := nodeEpRaw.Resolve(params, seg)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// nodeless (EndpointHost) so the veth deploy pushes it into the netns right
-	// after the node end, without waiting for a peer worker.
-	farEp := NewEndpointHost(NewEndpointGeneric(l.node, nodeEpRaw.Node, seg))
+	// the far end sits in the root namespace (host node) with a short hash name
+	// that fits the 15 char name limit.
+	farName := stitchFarEndName(params.LabName, nodeEpRaw.Node, nodeEpRaw.Iface)
+	farEp := NewEndpointHost(NewEndpointGeneric(GetHostLinkNode(), farName, seg))
 	seg.Endpoints = []Endpoint{nodeEp, farEp}
 
-	if err := l.node.AddEndpoint(farEp); err != nil {
-		return nil, nil, err
+	return seg, farEp, nil
+}
+
+func stitchFarEndName(labName, node, iface string) string {
+	sum := sha1.Sum([]byte(labName + "\x00" + node + "\x00" + iface))
+	return "clab-s-" + hex.EncodeToString(sum[:4]) // 7 + 8 = 15 chars
+}
+
+func markFarEnd(farEp, nodeEp Endpoint) error {
+	l, err := netlink.LinkByName(farEp.GetIfaceName())
+	if err != nil {
+		return fmt.Errorf("failed to look up veth-stitch far end %q: %w", farEp.GetIfaceName(), err)
 	}
 
-	return seg, farEp, nil
+	if err := netlink.LinkDelAltName(l, ownershipAltName(farEp)); err != nil {
+		log.Debugf("could not drop ownership altname on %q: %v", farEp.GetIfaceName(), err)
+	}
+
+	altName := "clab-stitch-" + SanitizeInterfaceName(nodeEp.GetNode().GetShortName()+"-"+nodeEp.GetIfaceName())
+	if err := netlink.LinkAddAltName(l, altName); err != nil && !isAltNameNotSupportedErr(err) {
+		return fmt.Errorf("failed to add veth-stitch altname %q: %w", altName, err)
+	}
+
+	return nil
 }
 
 func validateVEthStitched(r *LinkVEthStitchedRaw) error {
@@ -287,14 +226,6 @@ func validateVEthStitched(r *LinkVEthStitchedRaw) error {
 	}
 
 	for _, ep := range r.Endpoints {
-		// the node name becomes the in-netns interface name
-		if !IsValidInterfaceName(ep.Node) {
-			return fmt.Errorf(
-				"node name %q cannot be used as a veth-stitch interface name (max 15 chars, no '/' or spaces)",
-				ep.Node,
-			)
-		}
-
 		if ep.MAC != "" || ep.IPv4 != "" || ep.IPv6 != "" {
 			return fmt.Errorf(
 				"veth-stitch endpoint %s:%s cannot carry mac/ipv4/ipv6 (transparent L2 stitch)",
@@ -306,9 +237,7 @@ func validateVEthStitched(r *LinkVEthStitchedRaw) error {
 	return nil
 }
 
-// ResolveNetemTarget redirects netem into the stitch netns when node:iface is one
-// of this link's endpoints, targeting the interface named after the other node
-// (egress-of-iface semantics); nil otherwise.
+// ResolveNetemTarget redirects netem to the stitch side interface
 func (r *LinkVEthStitchedRaw) ResolveNetemTarget(
 	labName, node, rootNode, iface string,
 ) (*NetemTarget, error) {
@@ -322,67 +251,18 @@ func (r *LinkVEthStitchedRaw) ResolveNetemTarget(
 		}
 
 		other := r.Endpoints[(i+1)%2]
-		netnsName := VEthStitchNetnsName(labName, r.Endpoints)
 
-		nsPath, err := clabutils.GetNamedNetNS(netnsName)
+		current, err := ns.GetCurrentNS()
 		if err != nil {
-			return nil, fmt.Errorf(
-				"veth-stitch namespace %q for %s:%s not found (is the lab deployed?): %w",
-				netnsName, node, iface, err)
+			return nil, err
 		}
 
 		return &NetemTarget{
-			NSPath:      nsPath,
-			Iface:       other.Node,
+			NSPath:      current.Path(),
+			Iface:       stitchFarEndName(labName, other.Node, other.Iface),
 			DisplayName: fmt.Sprintf("%s:%s (veth-stitch)", node, iface),
 		}, nil
 	}
 
 	return nil, nil
-}
-
-// VEthStitchNetnsName returns a deterministic, lab-scoped name for a link's stitch
-// netns. Exported so tooling (tools netem) can locate it.
-func VEthStitchNetnsName(labName string, eps []*EndpointRaw) string {
-	seed := fmt.Sprintf("%s\x00%s/%s\x00%s/%s",
-		labName, eps[0].Node, eps[0].Iface, eps[1].Node, eps[1].Iface)
-	sum := sha1.Sum([]byte(seed))
-
-	return fmt.Sprintf("clab-%s-vstitch-%s",
-		SanitizeInterfaceName(labName), hex.EncodeToString(sum[:])[:6])
-}
-
-// NetnsName returns the name of the dedicated stitching netns.
-func (l *LinkVEthStitched) NetnsName() string {
-	return l.node.netnsName
-}
-
-// if the stitch netns is no longer required, clean it up so it isn't orphaned
-func RemoveStaleStitchNetns(labName string, keep map[string]struct{}) error {
-	prefix := fmt.Sprintf("clab-%s-vstitch-", SanitizeInterfaceName(labName))
-
-	entries, err := os.ReadDir("/run/netns")
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-
-		return err
-	}
-
-	for _, e := range entries {
-		name := e.Name()
-		if !strings.HasPrefix(name, prefix) {
-			continue
-		}
-		if _, ok := keep[name]; ok {
-			continue
-		}
-
-		if err := netns.DeleteNamed(name); err != nil {
-			log.Debugf("failed to delete stale veth-stitch netns %q: %v", name, err)
-		}
-	}
-
-	return nil
 }

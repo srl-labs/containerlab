@@ -206,17 +206,6 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	// clean up dedicated netns of veth-stitch links that were removed
-	activeStitchNetns := map[string]struct{}{}
-	for _, link := range c.Links {
-		if sv, ok := link.(*clablinks.LinkVEthStitched); ok {
-			activeStitchNetns[sv.NetnsName()] = struct{}{}
-		}
-	}
-	if err := clablinks.RemoveStaleStitchNetns(c.Config.Name, activeStitchNetns); err != nil {
-		return nil, err
-	}
-
 	if err := c.postDeployApplyNodes(ctx, deployNodeNames, options.skipPostDeploy); err != nil {
 		return nil, err
 	}
