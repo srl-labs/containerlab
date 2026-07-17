@@ -11,6 +11,14 @@ topology:
       kind: linux
       image: alpine:3
       cmd: tail -f /dev/null
+      stages:
+        configure:
+          exec:
+            - command: >-
+                sh -c 'ip link show eth1 >/dev/null &&
+                echo configured >> /tmp/configure-stage-runs'
+      env:
+        PROVIDER_DRIFT: "{{ .providerDrift }}"
     child1:
       kind: linux
       image: alpine:3
@@ -29,6 +37,8 @@ topology:
       kind: linux
       image: alpine:3
       cmd: tail -f /dev/null
+      env:
+        UNRELATED2_DRIFT: "{{ .unrelated2Drift }}"
 {{- if .addGroup }}
     new-provider:
       kind: linux

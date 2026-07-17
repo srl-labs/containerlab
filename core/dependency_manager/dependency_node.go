@@ -70,19 +70,46 @@ func (d *DependencyNode) getStageWG(n clabtypes.WaitForStage) *sync.WaitGroup {
 func (d *DependencyNode) getExecs(stage clabtypes.WaitForStage,
 	execPhase clabtypes.ExecPhase,
 ) ([]*clabtypes.Exec, error) {
+	return getStageExecs(d.Config(), stage, execPhase)
+}
+
+func getStageExecs(
+	cfg *clabtypes.NodeConfig,
+	stage clabtypes.WaitForStage,
+	execPhase clabtypes.ExecPhase,
+) ([]*clabtypes.Exec, error) {
+	if cfg == nil || cfg.Stages == nil {
+		return nil, nil
+	}
+
 	var sb clabtypes.StageBase
 
 	switch stage {
 	case clabtypes.WaitForCreate:
-		sb = d.Config().Stages.Create.StageBase
+		if cfg.Stages.Create == nil {
+			return nil, nil
+		}
+		sb = cfg.Stages.Create.StageBase
 	case clabtypes.WaitForCreateLinks:
-		sb = d.Config().Stages.CreateLinks.StageBase
+		if cfg.Stages.CreateLinks == nil {
+			return nil, nil
+		}
+		sb = cfg.Stages.CreateLinks.StageBase
 	case clabtypes.WaitForConfigure:
-		sb = d.Config().Stages.Configure.StageBase
+		if cfg.Stages.Configure == nil {
+			return nil, nil
+		}
+		sb = cfg.Stages.Configure.StageBase
 	case clabtypes.WaitForHealthy:
-		sb = d.Config().Stages.Healthy.StageBase
+		if cfg.Stages.Healthy == nil {
+			return nil, nil
+		}
+		sb = cfg.Stages.Healthy.StageBase
 	case clabtypes.WaitForExit:
-		sb = d.Config().Stages.Exit.StageBase
+		if cfg.Stages.Exit == nil {
+			return nil, nil
+		}
+		sb = cfg.Stages.Exit.StageBase
 	default:
 		return nil, fmt.Errorf("stage %s unknown", stage)
 	}
@@ -116,9 +143,21 @@ func (d *DependencyNode) runExecs(
 	execPhase clabtypes.ExecPhase,
 	stage clabtypes.WaitForStage,
 ) {
-	execs, err := d.getExecs(stage, execPhase)
+	RunStageExecs(ctx, d, execPhase, stage)
+}
+
+// RunStageExecs executes a node's commands for one deployment stage phase.
+// Lifecycle operations use this after restoring links because they do not run
+// through the normal dependency worker stage transitions.
+func RunStageExecs(
+	ctx context.Context,
+	node clabnodes.Node,
+	execPhase clabtypes.ExecPhase,
+	stage clabtypes.WaitForStage,
+) {
+	execs, err := getStageExecs(node.Config(), stage, execPhase)
 	if err != nil {
-		log.Errorf("error getting exec commands defined for %s: %v", d.GetShortName(), err)
+		log.Errorf("error getting exec commands defined for %s: %v", node.GetShortName(), err)
 	}
 
 	if len(execs) == 0 {
@@ -136,23 +175,24 @@ func (d *DependencyNode) runExecs(
 		execCmd, err := exec.GetExecCmd()
 		if err != nil {
 			log.Errorf(
-				"%s stage %s error parsing command: %s", d.GetShortName(), stage, exec.String(),
+				"%s stage %s error parsing command: %s", node.GetShortName(), stage, exec.String(),
 			)
+			continue
 		}
 
 		switch exec.Target {
 		case clabtypes.CommandTargetContainer:
-			execResult, err = d.RunExec(ctx, execCmd)
-			hostname = d.GetShortName()
+			execResult, err = node.RunExec(ctx, execCmd)
+			hostname = node.GetShortName()
 		case clabtypes.CommandTargetHost:
 			execResult, err = clabnodeshost.RunExec(ctx, execCmd)
-			hostname = fmt.Sprintf("host via %s", d.GetShortName())
+			hostname = fmt.Sprintf("host via %s", node.GetShortName())
 		default:
 			continue
 		}
 
 		if err != nil {
-			log.Errorf("error on exec in node %s for stage %s: %v", d.GetShortName(), stage, err)
+			log.Errorf("error on exec in node %s for stage %s: %v", node.GetShortName(), stage, err)
 		} else {
 			execResultCollection.Add(hostname, execResult)
 		}

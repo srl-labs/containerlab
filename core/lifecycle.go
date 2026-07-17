@@ -8,11 +8,22 @@ import (
 	"time"
 
 	"github.com/charmbracelet/log"
+	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
 	claberrors "github.com/srl-labs/containerlab/errors"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 )
+
+func runLifecycleConfigureStage(ctx context.Context, node clabnodes.Node) {
+	clabcoredependency_manager.RunStageExecs(
+		ctx, node, clabtypes.CommandExecutionPhaseEnter, clabtypes.WaitForConfigure,
+	)
+	clabcoredependency_manager.RunStageExecs(
+		ctx, node, clabtypes.CommandExecutionPhaseExit, clabtypes.WaitForConfigure,
+	)
+}
 
 // lifecycleNodes resolves the requested node names without applying lifecycle policy.
 func (c *CLab) lifecycleNodes(nodeNames []string) ([]clabnodes.Node, error) {
@@ -227,13 +238,14 @@ func (c *CLab) parkRecreatedNodes(ctx context.Context, plan *applyPlan) error {
 }
 
 func (c *CLab) restoreRecreatedNodes(ctx context.Context, plan *applyPlan) error {
-	return c.restoreRecreatedNodeBatch(ctx, plan, sortedStringSet(plan.parkedNodeSet))
+	return c.restoreRecreatedNodeBatch(ctx, plan, sortedStringSet(plan.parkedNodeSet), nil)
 }
 
 func (c *CLab) restoreRecreatedNodeBatch(
 	ctx context.Context,
 	plan *applyPlan,
 	nodeNames []string,
+	pendingLinks []clablinks.Link,
 ) error {
 	for _, nodeName := range nodeNames {
 		if _, parked := plan.parkedNodeSet[nodeName]; !parked {
@@ -243,6 +255,19 @@ func (c *CLab) restoreRecreatedNodeBatch(
 		if !exists {
 			continue
 		}
+		pendingIfaceNames := pendingApplyEndpointNames(nodeName, pendingLinks)
+		if len(pendingIfaceNames) > 0 {
+			log.Info(
+				"Discarding parked interfaces for pending added links",
+				"node", nodeName,
+				"interfaces", pendingIfaceNames,
+			)
+			if err := clablinks.RemoveParkedInterfaces(
+				ctx, node.Config().LongName, pendingIfaceNames,
+			); err != nil {
+				return fmt.Errorf("failed preparing parked endpoints for node %q: %w", nodeName, err)
+			}
+		}
 		log.Info("Restoring links after recreate", "node", nodeName)
 		if err := node.RestoreEndpoints(ctx); err != nil {
 			return fmt.Errorf("failed restoring endpoints for node %q: %w", nodeName, err)
@@ -250,6 +275,18 @@ func (c *CLab) restoreRecreatedNodeBatch(
 	}
 
 	return nil
+}
+
+func pendingApplyEndpointNames(nodeName string, links []clablinks.Link) []string {
+	ifaceSet := map[string]struct{}{}
+	for _, link := range links {
+		for _, ep := range clablinks.RuntimeEndpoints(link) {
+			if endpointKeyFromEndpoint(ep).node == nodeName {
+				ifaceSet[ep.GetIfaceName()] = struct{}{}
+			}
+		}
+	}
+	return sortedStringSet(ifaceSet)
 }
 
 func (c *CLab) startStoppedNodes(ctx context.Context, plan *applyPlan) error {
@@ -262,6 +299,7 @@ func (c *CLab) startStoppedNodes(ctx context.Context, plan *applyPlan) error {
 		if err := node.Start(ctx); err != nil {
 			return fmt.Errorf("failed starting node %q: %w", nodeName, err)
 		}
+		runLifecycleConfigureStage(ctx, node)
 	}
 
 	return nil
@@ -286,6 +324,7 @@ func (c *CLab) restartApplyNodes(
 		if err := node.Start(ctx); err != nil {
 			return err
 		}
+		runLifecycleConfigureStage(ctx, node)
 		if err := c.waitNodeRunning(ctx, node); err != nil {
 			return err
 		}

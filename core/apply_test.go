@@ -13,6 +13,7 @@ import (
 	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/google/go-cmp/cmp"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
@@ -181,6 +182,51 @@ func TestApplyPartitionReadyLinksWaitsForSharedNetNSChildContainer(t *testing.T)
 	}
 }
 
+func TestPendingAddedLinkWaitsForAbsentPeerAndDiscardsParkedEndpoint(t *testing.T) {
+	t.Parallel()
+
+	btor := &applyFakeLinkNode{name: "btor2"}
+	wic := &applyFakeLinkNode{name: "wic2"}
+	link := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	link.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(btor, "eth1", link)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(wic, "cpp2s", link)),
+	}
+
+	ready, pending := applyPartitionReadyLinks(
+		[]clablinks.Link{link},
+		map[string]struct{}{"btor2": {}},
+	)
+	if len(ready) != 0 || len(pending) != 1 {
+		t.Fatalf("before WIC creation ready=%v pending=%v, want only pending link", ready, pending)
+	}
+	if got := pendingApplyEndpointNames("btor2", pending); !slices.Equal(got, []string{"eth1"}) {
+		t.Fatalf("parked endpoints to discard = %v, want [eth1]", got)
+	}
+	if link.deployCalls != 0 {
+		t.Fatalf("link deployed %d times before WIC existed", link.deployCalls)
+	}
+
+	ready, pending = applyPartitionReadyLinks(
+		pending,
+		map[string]struct{}{"btor2": {}, "wic2": {}},
+	)
+	if len(ready) != 1 || len(pending) != 0 {
+		t.Fatalf("after WIC creation ready=%v pending=%v, want only ready link", ready, pending)
+	}
+	for _, ep := range clablinks.RuntimeEndpoints(ready[0]) {
+		if err := ep.Deploy(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := ready[0].PostDeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if link.deployCalls != 2 {
+		t.Fatalf("endpoint deploy calls = %d, want one per endpoint after both nodes exist", link.deployCalls)
+	}
+}
+
 func TestPlanRecreatedNodePostLinkRestart(t *testing.T) {
 	t.Parallel()
 
@@ -220,7 +266,7 @@ func TestRestartRecreatedNodeAfterAllAddedLinksAreReady(t *testing.T) {
 	btor.EXPECT().Stop(gomock.Any()).Return(nil)
 	btor.EXPECT().Start(gomock.Any()).Return(nil)
 	btor.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
-	btor.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "btor1"})
+	btor.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "btor1"}).AnyTimes()
 
 	c := &CLab{
 		Nodes:   map[string]clabnodes.Node{"btor1": btor},
@@ -1174,11 +1220,34 @@ func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+	stages := clabtypes.NewStages()
+	stages.Configure.Execs = clabtypes.Execs{
+		&clabtypes.Exec{
+			Command: "configure-enter",
+			Target:  clabtypes.CommandTargetContainer,
+			Phase:   clabtypes.CommandExecutionPhaseEnter,
+		},
+		&clabtypes.Exec{
+			Command: "configure-exit",
+			Target:  clabtypes.CommandTargetContainer,
+			Phase:   clabtypes.CommandExecutionPhaseExit,
+		},
+	}
 
 	mockNode.EXPECT().Stop(gomock.Any()).Return(nil)
-	mockNode.EXPECT().Start(gomock.Any()).Return(nil)
-	mockNode.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
-	mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "n1"}).AnyTimes()
+	mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "n1",
+		Stages:    stages,
+	}).AnyTimes()
+	mockNode.EXPECT().GetShortName().Return("n1").AnyTimes()
+	gomock.InOrder(
+		mockNode.EXPECT().Start(gomock.Any()).Return(nil),
+		mockNode.EXPECT().RunExec(gomock.Any(), execCmdMatcher("configure-enter")).
+			Return(clabexec.NewExecResult(mustExecCmd(t, "configure-enter")), nil),
+		mockNode.EXPECT().RunExec(gomock.Any(), execCmdMatcher("configure-exit")).
+			Return(clabexec.NewExecResult(mustExecCmd(t, "configure-exit")), nil),
+		mockNode.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running),
+	)
 
 	c := &CLab{
 		Nodes: map[string]clabnodes.Node{
@@ -1190,6 +1259,68 @@ func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
 	if err := c.restartApplyNodes(context.Background(), map[string]struct{}{"n1": {}}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestPostDeployApplyNodesRunsConfigureStageAroundPostDeploy(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+	stages := clabtypes.NewStages()
+	stages.Configure.Execs = clabtypes.Execs{
+		&clabtypes.Exec{
+			Command: "configure-enter",
+			Target:  clabtypes.CommandTargetContainer,
+			Phase:   clabtypes.CommandExecutionPhaseEnter,
+		},
+		&clabtypes.Exec{
+			Command: "configure-exit",
+			Target:  clabtypes.CommandTargetContainer,
+			Phase:   clabtypes.CommandExecutionPhaseExit,
+		},
+	}
+	mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "bridge",
+		Stages:    stages,
+	}).AnyTimes()
+	mockNode.EXPECT().GetShortName().Return("bridge").AnyTimes()
+	gomock.InOrder(
+		mockNode.EXPECT().RunExec(gomock.Any(), execCmdMatcher("configure-enter")).
+			Return(clabexec.NewExecResult(mustExecCmd(t, "configure-enter")), nil),
+		mockNode.EXPECT().PostDeploy(gomock.Any(), gomock.Any()).Return(nil),
+		mockNode.EXPECT().RunExec(gomock.Any(), execCmdMatcher("configure-exit")).
+			Return(clabexec.NewExecResult(mustExecCmd(t, "configure-exit")), nil),
+		mockNode.EXPECT().RunExecFromConfig(gomock.Any(), gomock.Any()).Return(nil),
+	)
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{"bridge": mockNode}}
+	if err := c.postDeployApplyNodes(context.Background(), []string{"bridge"}, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type execCmdStringMatcher string
+
+func execCmdMatcher(command string) gomock.Matcher {
+	return execCmdStringMatcher(command)
+}
+
+func (m execCmdStringMatcher) Matches(value any) bool {
+	cmd, ok := value.(*clabexec.ExecCmd)
+	return ok && cmd.GetCmdString() == string(m)
+}
+
+func (m execCmdStringMatcher) String() string {
+	return "exec command " + string(m)
+}
+
+func mustExecCmd(t *testing.T, command string) *clabexec.ExecCmd {
+	t.Helper()
+	cmd, err := clabexec.NewExecCmdFromString(command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cmd
 }
 
 func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {

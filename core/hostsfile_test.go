@@ -13,8 +13,48 @@ import (
 	"sync"
 	"testing"
 
+	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
+	clabtypes "github.com/srl-labs/containerlab/types"
+	"go.uber.org/mock/gomock"
 )
+
+func TestFilteredApplyHostsArtifactsExcludeAbsentUnselectedNodes(t *testing.T) {
+	withTestHostsFiles(t, t.TempDir())
+
+	ctrl := gomock.NewController(t)
+	live := clabmocksmocknodes.NewMockNode(ctrl)
+	absent := clabmocksmocknodes.NewMockNode(ctrl)
+	live.EXPECT().GetHostsEntries(gomock.Any()).Return(clabtypes.HostEntries{
+		clabtypes.NewHostEntry("192.0.2.10", "selected", clabtypes.IpVersionV4),
+	}, nil)
+
+	c := &CLab{
+		Config: &Config{Name: "filtered-artifacts"},
+		Nodes: map[string]clabnodes.Node{
+			"selected": live,
+			"absent":   absent,
+		},
+	}
+	artifactLab := c.applyArtifactLab(map[string]*runtimeNodeGroup{"selected": {}})
+	if err := artifactLab.appendHostsFileEntries(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	contents, err := os.ReadFile(clabHostsFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(contents), "192.0.2.10\tselected") {
+		t.Fatalf("selected live node missing from hosts artifacts:\n%s", contents)
+	}
+	if len(artifactLab.Nodes) != 1 || artifactLab.Nodes["selected"] != live {
+		t.Fatalf("artifact node scope = %#v, want selected live node only", artifactLab.Nodes)
+	}
+	if len(c.Nodes) != 2 || c.Nodes["absent"] != absent {
+		t.Fatal("filtered artifact scoping mutated the full desired node map")
+	}
+}
 
 // withTestHostsFiles redirects the package hosts/lock paths to files in tmp
 // and seeds a baseline hosts file.

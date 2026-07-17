@@ -13,7 +13,7 @@ ${runtime}                  docker
 ${topo}                     30-apply-filter.clab.yml
 ${initial-vars}             30-apply-filter.vars.initial.yml
 ${add-group-vars}           30-apply-filter.vars.add-group.yml
-${runtime-cli-exec-cmd}     docker exec
+${peer-recreate-vars}       30-apply-filter.vars.peer-recreate.yml
 
 
 *** Test Cases ***
@@ -53,16 +53,39 @@ Filtered apply adds shared-netns group without touching existing nodes
     Should Be Equal As Strings    ${unrelated1_after}    ${unrelated1_before}
     Should Be Equal As Strings    ${unrelated2_after}    ${unrelated2_before}
 
-    ${rc}    ${output} =    Run Clab Command    destroy --name ${lab-name} --cleanup
+Targeted restart restores links before replaying configure stage
+    Configure Stage Run Count Should Be    provider    1
+
+    ${rc}    ${output} =    Run Clab Command
+    ...    restart -t ${CURDIR}/${topo} --node provider
     Should Be Equal As Integers    ${rc}    0
-    Node Should Not Exist    provider
-    Node Should Not Exist    child1
-    Node Should Not Exist    child2
-    Node Should Not Exist    unrelated1
-    Node Should Not Exist    unrelated2
-    Node Should Not Exist    new-provider
-    Node Should Not Exist    new-child1
-    Node Should Not Exist    new-child2
+    Interface Should Exist    provider    eth1
+    Configure Stage Run Count Should Be    provider    2
+
+Filtered apply recreates a provider link only after its absent peer exists
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} rm --force clab-${lab-name}-unrelated1 2>&1
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
+    ${rc}    ${output} =    Apply Topology
+    ...    ${peer-recreate-vars}
+    ...    --node-filter unrelated1,unrelated2
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    added nodes
+    Should Contain    ${output}    unrelated1
+    Should Contain    ${output}    recreated nodes
+    Should Contain    ${output}    unrelated2
+    Interface Should Exist    unrelated1    eth1
+    Interface Should Exist    unrelated1    eth2
+    Interface Should Exist    unrelated2    eth1
+    Interface Should Exist    unrelated2    eth2
+
+    ${rc}    ${output} =    Apply Topology
+    ...    ${peer-recreate-vars}
+    ...    --node-filter unrelated1,unrelated2 --dry-run
+    Should Be Equal As Integers    ${rc}    0
+    Should Contain    ${output}    no changes
 
 
 *** Keywords ***
@@ -85,10 +108,18 @@ Apply Topology
 Interface Should Exist
     [Arguments]    ${node}    ${interface}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-${node} ip link show ${interface}
+    ...    ${runtime} exec clab-${lab-name}-${node} ip link show ${interface}
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    ${interface}
+
+Configure Stage Run Count Should Be
+    [Arguments]    ${node}    ${expected}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} exec clab-${lab-name}-${node} wc -l /tmp/configure-stage-runs
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    Should Be Equal As Integers    ${output}    ${expected}
 
 Node Should Be Running
     [Arguments]    ${node}

@@ -14,10 +14,12 @@ import (
 	"github.com/charmbracelet/log"
 	clabcert "github.com/srl-labs/containerlab/cert"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -692,12 +694,18 @@ func (c *CLab) postDeployApplyNodes(
 
 	for _, nodeName := range nodeNames {
 		node := c.Nodes[nodeName]
+		clabcoredependency_manager.RunStageExecs(
+			ctx, node, clabtypes.CommandExecutionPhaseEnter, clabtypes.WaitForConfigure,
+		)
 
 		if !skipPostDeploy {
 			if err := node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes}); err != nil {
 				return fmt.Errorf("node %q post-deploy: %w", nodeName, err)
 			}
 		}
+		clabcoredependency_manager.RunStageExecs(
+			ctx, node, clabtypes.CommandExecutionPhaseExit, clabtypes.WaitForConfigure,
+		)
 
 		if err := node.RunExecFromConfig(ctx, execCollection); err != nil {
 			log.Errorf("failed to run exec commands for %s: %v", nodeName, err)
@@ -710,33 +718,50 @@ func (c *CLab) postDeployApplyNodes(
 }
 
 func (c *CLab) regenerateApplyArtifacts(ctx context.Context, exportTemplate string) error {
-	if err := c.GenerateInventories(); err != nil {
+	runtimeNodes, err := c.runtimeNodeGroups(ctx)
+	if err != nil {
+		return err
+	}
+	artifactLab := c.applyArtifactLab(runtimeNodes)
+
+	if err := artifactLab.GenerateInventories(); err != nil {
 		return err
 	}
 
-	topoDataF, err := os.Create(c.TopoPaths.TopoExportFile())
+	topoDataF, err := os.Create(artifactLab.TopoPaths.TopoExportFile())
 	if err != nil {
 		return err
 	}
 	defer topoDataF.Close()
 
-	if err := c.GenerateExports(ctx, topoDataF, exportTemplate); err != nil {
+	if err := artifactLab.GenerateExports(ctx, topoDataF, exportTemplate); err != nil {
 		return err
 	}
 
-	if !c.skipMgmtNetwork() {
+	if !artifactLab.skipMgmtNetwork() {
 		log.Info("Updating host entries", "path", "/etc/hosts")
-		if err := c.appendHostsFileEntries(ctx); err != nil {
+		if err := artifactLab.appendHostsFileEntries(ctx); err != nil {
 			log.Errorf("failed to update hosts file: %v", err)
 		}
 	}
 
-	log.Info("Updating SSH config for nodes", "path", c.TopoPaths.SSHConfigPath())
-	if err := c.addSSHConfig(); err != nil {
+	log.Info("Updating SSH config for nodes", "path", artifactLab.TopoPaths.SSHConfigPath())
+	if err := artifactLab.addSSHConfig(); err != nil {
 		log.Errorf("failed to create ssh config file: %v", err)
 	}
 
 	return nil
+}
+
+func (c *CLab) applyArtifactLab(runtimeNodes map[string]*runtimeNodeGroup) *CLab {
+	artifactLab := *c
+	artifactLab.Nodes = make(map[string]clabnodes.Node, len(runtimeNodes))
+	for nodeName := range runtimeNodes {
+		if node, exists := c.Nodes[nodeName]; exists {
+			artifactLab.Nodes[nodeName] = node
+		}
+	}
+	return &artifactLab
 }
 
 func (c *CLab) finalize(

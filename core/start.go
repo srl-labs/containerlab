@@ -32,6 +32,7 @@ func (c *CLab) StartNodes(ctx context.Context, nodeNames []string) error {
 		if err := n.Start(ctx); err != nil {
 			return err
 		}
+		runLifecycleConfigureStage(ctx, n)
 	}
 
 	return nil

@@ -26,6 +26,39 @@ func NewParkingNode(containerName, nsPath string) *ParkingNode {
 	}
 }
 
+// RemoveParkedInterfaces deletes interfaces from a container-owned parking
+// namespace before the remaining endpoints are restored. Apply uses this for
+// added links whose peer containers do not exist yet; those links are created
+// fresh once both endpoints are available.
+func RemoveParkedInterfaces(
+	ctx context.Context,
+	containerName string,
+	ifaceNames []string,
+) error {
+	if len(ifaceNames) == 0 {
+		return nil
+	}
+
+	parkPath, err := clabutils.GetNamedNetNS(clabutils.ParkingNetnsName(containerName))
+	if err != nil {
+		return nil
+	}
+	parkingNode := NewParkingNode(containerName, parkPath)
+
+	for _, ifaceName := range ifaceNames {
+		if err := RemoveOwnedInterface(ctx, parkingNode, ifaceName); err != nil {
+			return fmt.Errorf(
+				"failed to discard parked interface %q for container %q: %w",
+				ifaceName,
+				containerName,
+				err,
+			)
+		}
+	}
+
+	return nil
+}
+
 func (p *ParkingNode) RepointSymlink() error {
 	return clabutils.LinkContainerNS(p.nspath, p.containerName)
 }

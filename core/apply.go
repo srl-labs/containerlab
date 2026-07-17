@@ -291,7 +291,7 @@ func (c *CLab) deployApplyNodesAndLinks(
 			}
 			available[nodeName] = struct{}{}
 		}
-		if err := c.restoreRecreatedNodeBatch(ctx, plan, batch); err != nil {
+		if err := c.restoreRecreatedNodeBatch(ctx, plan, batch, pendingLinks); err != nil {
 			return err
 		}
 
