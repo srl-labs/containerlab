@@ -126,6 +126,43 @@ func TestCreateContainerSpecAppliesHostnameWithContainerNetworkMode(t *testing.T
 	}
 }
 
+func TestContainerModeProviderName(t *testing.T) {
+	tests := []struct {
+		name        string
+		networkMode string
+		want        string
+	}{
+		{
+			name:        "short provider name",
+			networkMode: "container:provider",
+			want:        "clab-test-provider",
+		},
+		{
+			name:        "long provider name",
+			networkMode: "container:clab-test-provider",
+			want:        "clab-test-provider",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &types.NodeConfig{
+				LongName:    "clab-test-child",
+				ShortName:   "child",
+				NetworkMode: tt.networkMode,
+			}
+
+			got, err := containerModeProviderName(cfg)
+			if err != nil {
+				t.Fatalf("containerModeProviderName returned error: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("containerModeProviderName = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCreateContainerSpecDefaultsHostnameToNodeName(t *testing.T) {
 	r := &PodmanRuntime{mgmt: &types.MgmtNet{Network: "clab"}}
 	cfg := &types.NodeConfig{

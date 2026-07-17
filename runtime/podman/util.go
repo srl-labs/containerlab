@@ -197,25 +197,10 @@ func (r *PodmanRuntime) createContainerSpec(
 	netMode := strings.SplitN(cfg.NetworkMode, ":", 2)
 	switch netMode[0] {
 	case "container":
-		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
-		if len(netMode) != 2 {
-			return sg, fmt.Errorf(
-				"container network mode was specified for container %q, but no container name was found: %q",
-				cfg.ShortName,
-				netMode,
-			)
+		providerName, err := containerModeProviderName(cfg)
+		if err != nil {
+			return sg, err
 		}
-		// also cont. ID shouldn't be empty
-		if netMode[1] == "" {
-			return sg, fmt.Errorf(
-				"container network mode was specified for container %q, but no container name was found: %q",
-				cfg.ShortName,
-				netMode,
-			)
-		}
-		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
-		prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
-		providerName := prefix + netMode[1]
 		// A container that shares another container's network namespace must also
 		// share its UTS namespace. The provider owns the hostname; requesting a
 		// separate hostname for the child is ignored by Podman and leaves the child
@@ -329,6 +314,25 @@ func (r *PodmanRuntime) createContainerSpec(
 		ContainerHealthCheckConfig: specHCheckConfig,
 	}
 	return sg, nil
+}
+
+func containerModeProviderName(cfg *types.NodeConfig) (string, error) {
+	netMode := strings.SplitN(cfg.NetworkMode, ":", 2)
+	if len(netMode) != 2 || netMode[0] != "container" || netMode[1] == "" {
+		return "", fmt.Errorf(
+			"container network mode was specified for container %q, but no container name was found: %q",
+			cfg.ShortName,
+			netMode,
+		)
+	}
+
+	// If the topology already provides the long containerlab name, keep it.
+	// Otherwise derive it from the child long/short name pair.
+	prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
+	if strings.HasPrefix(netMode[1], prefix) {
+		return netMode[1], nil
+	}
+	return prefix + netMode[1], nil
 }
 
 // convertMounts takes a list of filesystem mount binds in docker/clab format (src:dest:options)
