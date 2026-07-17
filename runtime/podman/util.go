@@ -47,13 +47,20 @@ func (r *PodmanRuntime) createContainerSpec(
 	cfg *types.NodeConfig,
 ) (specgen.SpecGenerator, error) {
 	sg := specgen.SpecGenerator{}
-	cmd, err := shlex.Split(cfg.Cmd)
-	if err != nil {
-		return sg, err
+	var err error
+	var cmd []string
+	if strings.TrimSpace(cfg.Cmd) != "" {
+		cmd, err = shlex.Split(cfg.Cmd)
+		if err != nil {
+			return sg, err
+		}
 	}
-	entrypoint, err := shlex.Split(cfg.Entrypoint)
-	if err != nil {
-		return sg, err
+	var entrypoint []string
+	if strings.TrimSpace(cfg.Entrypoint) != "" {
+		entrypoint, err = shlex.Split(cfg.Entrypoint)
+		if err != nil {
+			return sg, err
+		}
 	}
 	// Main container specs
 	labels := cfg.Labels
