@@ -116,7 +116,7 @@ Interface Should Exist
 Configure Stage Run Count Should Be
     [Arguments]    ${node}    ${expected}
     ${rc}    ${output} =    Run And Return Rc And Output
-    ...    ${runtime} exec clab-${lab-name}-${node} wc -l /tmp/configure-stage-runs
+    ...    ${runtime} exec clab-${lab-name}-${node} sh -c 'wc -l < /tmp/configure-stage-runs'
     Log    ${output}
     Should Be Equal As Integers    ${rc}    0
     Should Be Equal As Integers    ${output}    ${expected}
