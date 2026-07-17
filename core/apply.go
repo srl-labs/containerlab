@@ -50,6 +50,7 @@ func applyResultFromPlan(plan *applyPlan) *ApplyResult {
 	result.RestartedNodes = sortedStringSet(unionStringSets(
 		plan.restartNodeSet,
 		plan.linkRestartNodeSet,
+		plan.postLinkRestartNodeSet,
 	))
 
 	for nodeName, reason := range plan.nodeChangeReasons {
@@ -190,27 +191,11 @@ func (c *CLab) apply(
 		return nil, err
 	}
 
-	if err := c.deployNodesUntilRunning(ctx, deployNodeNames, options.maxWorkers); err != nil {
-		return nil, err
-	}
-
-	if err := c.restoreRecreatedNodes(ctx, plan); err != nil {
-		return nil, err
-	}
-
 	if err := c.startStoppedNodes(ctx, plan); err != nil {
 		return nil, err
 	}
 
-	if err := c.removeApplyLinkEndpoints(ctx, plan.addedLinks); err != nil {
-		return nil, err
-	}
-
-	if err := c.deployLinks(ctx, plan.addedLinks, deployNodeNames); err != nil {
-		return nil, err
-	}
-
-	if err := c.waitNodesHealthy(ctx, deployNodeNames); err != nil {
+	if err := c.deployApplyNodesAndLinks(ctx, plan, deployNodeNames, options.maxWorkers); err != nil {
 		return nil, err
 	}
 
@@ -241,6 +226,182 @@ func (c *CLab) apply(
 	}
 
 	return applyResultFromPlan(plan), nil
+}
+
+// deployApplyNodesAndLinks advances one dependency batch at a time. Links whose
+// endpoint containers are available are attached before the batch health check,
+// so shared-netns children cannot start against an unready provider namespace.
+func (c *CLab) deployApplyNodesAndLinks(
+	ctx context.Context,
+	plan *applyPlan,
+	nodeNames []string,
+	maxWorkers uint,
+) error {
+	batches, err := c.applyDeployBatches(nodeNames)
+	if err != nil {
+		return err
+	}
+
+	available := map[string]struct{}{"host": {}, "mgmt-net": {}}
+	for nodeName := range plan.currentNodes {
+		if _, deleted := plan.deletedNodeSet[nodeName]; deleted {
+			continue
+		}
+		if _, recreated := plan.recreatedNodeSet[nodeName]; recreated {
+			continue
+		}
+		available[nodeName] = struct{}{}
+	}
+	pendingLinks := append([]clablinks.Link(nil), plan.addedLinks...)
+	postLinkRestarted := map[string]struct{}{}
+
+	for _, batch := range batches {
+		// Existing providers may gain a link in the same filtered apply that
+		// introduces a new shared-netns child. Attach those links and satisfy
+		// provider health before the child process can observe the namespace.
+		ready, remaining := applyPartitionReadyLinks(pendingLinks, available)
+		if err := c.deployFreshApplyLinks(ctx, ready, nil); err != nil {
+			return err
+		}
+		pendingLinks = remaining
+		if err := c.restartRecreatedApplyLinkNodes(
+			ctx, plan, ready, pendingLinks, postLinkRestarted,
+		); err != nil {
+			return err
+		}
+		for _, nodeName := range batch {
+			provider, shared := c.applySharedNetNSProvider(c.Nodes[nodeName])
+			if !shared {
+				continue
+			}
+			if _, exists := available[provider]; !exists {
+				continue
+			}
+			if err := c.waitNodeHealthyIfAvailable(ctx, c.Nodes[provider]); err != nil {
+				return err
+			}
+		}
+
+		if err := c.deployNodeBatch(ctx, batch, maxWorkers); err != nil {
+			return err
+		}
+		for _, nodeName := range batch {
+			if err := c.waitNodeRunning(ctx, c.Nodes[nodeName]); err != nil {
+				return err
+			}
+			available[nodeName] = struct{}{}
+		}
+		if err := c.restoreRecreatedNodeBatch(ctx, plan, batch); err != nil {
+			return err
+		}
+
+		ready, remaining = applyPartitionReadyLinks(pendingLinks, available)
+		if err := c.deployFreshApplyLinks(ctx, ready, batch); err != nil {
+			return err
+		}
+		pendingLinks = remaining
+		if err := c.restartRecreatedApplyLinkNodes(
+			ctx, plan, ready, pendingLinks, postLinkRestarted,
+		); err != nil {
+			return err
+		}
+
+		if err := c.waitNodesHealthy(ctx, batch); err != nil {
+			return err
+		}
+	}
+	ready, remaining := applyPartitionReadyLinks(pendingLinks, available)
+	if err := c.deployFreshApplyLinks(ctx, ready, nil); err != nil {
+		return err
+	}
+	pendingLinks = remaining
+	if err := c.restartRecreatedApplyLinkNodes(
+		ctx, plan, ready, pendingLinks, postLinkRestarted,
+	); err != nil {
+		return err
+	}
+
+	if len(pendingLinks) != 0 {
+		return fmt.Errorf("apply links still depend on unavailable nodes: %v", applyLinkNames(pendingLinks))
+	}
+
+	return nil
+}
+
+func (c *CLab) restartRecreatedApplyLinkNodes(
+	ctx context.Context,
+	plan *applyPlan,
+	links []clablinks.Link,
+	pendingLinks []clablinks.Link,
+	restarted map[string]struct{},
+) error {
+	nodeSet := map[string]struct{}{}
+	for _, link := range links {
+		for _, ep := range clablinks.RuntimeEndpoints(link) {
+			nodeName := endpointKeyFromEndpoint(ep).node
+			if _, required := plan.postLinkRestartNodeSet[nodeName]; !required {
+				continue
+			}
+			if _, done := restarted[nodeName]; done {
+				continue
+			}
+			nodeSet[nodeName] = struct{}{}
+		}
+	}
+	for nodeName := range nodeSet {
+		if linkTouchesNodeSetInList(pendingLinks, map[string]struct{}{nodeName: {}}) {
+			delete(nodeSet, nodeName)
+		}
+	}
+	if err := c.restartApplyNodes(ctx, nodeSet); err != nil {
+		return err
+	}
+	for nodeName := range nodeSet {
+		restarted[nodeName] = struct{}{}
+	}
+	return nil
+}
+
+func linkTouchesNodeSetInList(links []clablinks.Link, nodeSet map[string]struct{}) bool {
+	for _, link := range links {
+		if linkTouchesNodeSet(link, nodeSet) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *CLab) deployFreshApplyLinks(
+	ctx context.Context,
+	links []clablinks.Link,
+	additionalNodeNames []string,
+) error {
+	if err := c.removeApplyLinkEndpoints(ctx, links); err != nil {
+		return err
+	}
+	return c.deployLinks(ctx, links, additionalNodeNames)
+}
+
+func applyPartitionReadyLinks(
+	links []clablinks.Link,
+	available map[string]struct{},
+) (ready, pending []clablinks.Link) {
+	for _, link := range links {
+		linkReady := true
+		for _, ep := range clablinks.RuntimeEndpoints(link) {
+			key := endpointKeyFromEndpoint(ep)
+			if _, exists := available[key.node]; !exists {
+				linkReady = false
+				break
+			}
+		}
+		if linkReady {
+			ready = append(ready, link)
+		} else {
+			pending = append(pending, link)
+		}
+	}
+	return ready, pending
 }
 
 // resolveApplyLinks keeps the full desired topology available to reconciliation.

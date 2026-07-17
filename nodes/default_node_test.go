@@ -354,6 +354,26 @@ func TestDefaultNodeRestoreEndpointsMissingParkingNetNSError(t *testing.T) {
 	}
 }
 
+func TestDefaultNodeSharedNetNSNeverParksProviderEndpoints(t *testing.T) {
+	t.Parallel()
+
+	d := &DefaultNode{Cfg: &clabtypes.NodeConfig{
+		ShortName:   "child",
+		LongName:    "clab-test-child",
+		NetworkMode: "container:provider",
+	}}
+
+	if err := d.ParkEndpoints(context.Background()); err != nil {
+		t.Fatalf("shared-netns ParkEndpoints returned error: %v", err)
+	}
+	if err := d.RestoreEndpoints(context.Background()); err != nil {
+		t.Fatalf("shared-netns RestoreEndpoints returned error: %v", err)
+	}
+	if _, err := d.parkingNetNSPath(); err == nil {
+		t.Fatal("shared-netns child created a parking namespace")
+	}
+}
+
 func TestGenerateConfigs(t *testing.T) {
 	defCfg := "default config"
 	oldCfg := "old config"

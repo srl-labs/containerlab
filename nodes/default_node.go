@@ -1112,6 +1112,11 @@ func (d *DefaultNode) IsHealthy(ctx context.Context) (bool, error) {
 
 // ParkEndpoints moves all tracked endpoints into the node-owned parking namespace.
 func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
+	if _, shared := strings.CutPrefix(d.Cfg.NetworkMode, "container:"); shared {
+		log.Debugf("node %q shares a network namespace and owns no endpoints to park", d.Cfg.ShortName)
+		return nil
+	}
+
 	parkPath, err := clabutils.CreateOrGetNamedNetNS(d.parkingNetNSName())
 	if err != nil {
 		return fmt.Errorf("failed to create parking netns for node %q: %w", d.Cfg.ShortName, err)
@@ -1141,6 +1146,11 @@ func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
 
 // RestoreEndpoints tries to get the parking node to unpark its interfaces.
 func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
+	if _, shared := strings.CutPrefix(d.Cfg.NetworkMode, "container:"); shared {
+		log.Debugf("node %q shares a network namespace and owns no endpoints to restore", d.Cfg.ShortName)
+		return nil
+	}
+
 	parkPath, err := d.parkingNetNSPath()
 	if err != nil {
 		// No parking netns means the node had no parked interfaces - e.g. it was

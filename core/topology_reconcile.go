@@ -31,22 +31,23 @@ type applyEndpointRef struct {
 }
 
 type applyPlan struct {
-	currentNodes       map[string]*runtimeNodeGroup
-	addedNodeSet       map[string]struct{}
-	deletedNodeSet     map[string]struct{}
-	recreatedNodeSet   map[string]struct{}
-	restartNodeSet     map[string]struct{}
-	linkRestartNodeSet map[string]struct{}
-	nodeDiffs          map[string]*clabtypes.TopologyDiff
-	addedLinks         []clablinks.Link
-	plannedLinkSet     map[int]struct{}
-	staleEndpoints     []applyEndpointRef
-	desiredEndpointSet map[applyEndpointKey]struct{}
-	liveEndpointSet    map[applyEndpointKey]struct{}
-	endpointNodes      map[string]clablinks.Node
-	state              *LabState
-	parkedNodeSet      map[string]struct{}
-	startNodeSet       map[string]struct{}
+	currentNodes           map[string]*runtimeNodeGroup
+	addedNodeSet           map[string]struct{}
+	deletedNodeSet         map[string]struct{}
+	recreatedNodeSet       map[string]struct{}
+	restartNodeSet         map[string]struct{}
+	linkRestartNodeSet     map[string]struct{}
+	postLinkRestartNodeSet map[string]struct{}
+	nodeDiffs              map[string]*clabtypes.TopologyDiff
+	addedLinks             []clablinks.Link
+	plannedLinkSet         map[int]struct{}
+	staleEndpoints         []applyEndpointRef
+	desiredEndpointSet     map[applyEndpointKey]struct{}
+	liveEndpointSet        map[applyEndpointKey]struct{}
+	endpointNodes          map[string]clablinks.Node
+	state                  *LabState
+	parkedNodeSet          map[string]struct{}
+	startNodeSet           map[string]struct{}
 	// nodeChangeReasons explains per node why apply restarts or recreates it,
 	// e.g. "added link" or "config drift: image".
 	nodeChangeReasons map[string]string
@@ -80,27 +81,29 @@ func (p *applyPlan) empty() bool {
 		len(p.startNodeSet) == 0 &&
 		len(p.restartNodeSet) == 0 &&
 		len(p.linkRestartNodeSet) == 0 &&
+		len(p.postLinkRestartNodeSet) == 0 &&
 		len(p.addedLinks) == 0 &&
 		len(p.staleEndpoints) == 0
 }
 
 func newApplyPlan(currentNodes map[string]*runtimeNodeGroup, state *LabState) *applyPlan {
 	return &applyPlan{
-		currentNodes:       currentNodes,
-		addedNodeSet:       map[string]struct{}{},
-		deletedNodeSet:     map[string]struct{}{},
-		recreatedNodeSet:   map[string]struct{}{},
-		parkedNodeSet:      map[string]struct{}{},
-		startNodeSet:       map[string]struct{}{},
-		restartNodeSet:     map[string]struct{}{},
-		linkRestartNodeSet: map[string]struct{}{},
-		nodeDiffs:          map[string]*clabtypes.TopologyDiff{},
-		plannedLinkSet:     map[int]struct{}{},
-		desiredEndpointSet: map[applyEndpointKey]struct{}{},
-		liveEndpointSet:    map[applyEndpointKey]struct{}{},
-		endpointNodes:      map[string]clablinks.Node{},
-		state:              state,
-		nodeChangeReasons:  map[string]string{},
+		currentNodes:           currentNodes,
+		addedNodeSet:           map[string]struct{}{},
+		deletedNodeSet:         map[string]struct{}{},
+		recreatedNodeSet:       map[string]struct{}{},
+		parkedNodeSet:          map[string]struct{}{},
+		startNodeSet:           map[string]struct{}{},
+		restartNodeSet:         map[string]struct{}{},
+		linkRestartNodeSet:     map[string]struct{}{},
+		postLinkRestartNodeSet: map[string]struct{}{},
+		nodeDiffs:              map[string]*clabtypes.TopologyDiff{},
+		plannedLinkSet:         map[int]struct{}{},
+		desiredEndpointSet:     map[applyEndpointKey]struct{}{},
+		liveEndpointSet:        map[applyEndpointKey]struct{}{},
+		endpointNodes:          map[string]clablinks.Node{},
+		state:                  state,
+		nodeChangeReasons:      map[string]string{},
 	}
 }
 
@@ -203,12 +206,24 @@ func (c *CLab) planApply(
 	}
 
 	c.planRecreatedNodeLinks(plan)
+	c.planRecreatedNodePostLinkRestarts(plan)
 	for nodeName := range plan.recreatedNodeSet {
 		delete(plan.restartNodeSet, nodeName)
 		delete(plan.linkRestartNodeSet, nodeName)
 	}
 
 	return plan, nil
+}
+
+func (c *CLab) planRecreatedNodePostLinkRestarts(plan *applyPlan) {
+	for _, link := range plan.addedLinks {
+		for _, ep := range clablinks.RuntimeEndpoints(link) {
+			key := endpointKeyFromEndpoint(ep)
+			if _, recreated := plan.recreatedNodeSet[key.node]; recreated {
+				plan.postLinkRestartNodeSet[key.node] = struct{}{}
+			}
+		}
+	}
 }
 
 func (c *CLab) applyNodeFilterClosure(nodeFilter []string) (map[string]struct{}, error) {

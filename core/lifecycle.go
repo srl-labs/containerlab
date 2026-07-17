@@ -227,7 +227,18 @@ func (c *CLab) parkRecreatedNodes(ctx context.Context, plan *applyPlan) error {
 }
 
 func (c *CLab) restoreRecreatedNodes(ctx context.Context, plan *applyPlan) error {
-	for _, nodeName := range sortedStringSet(plan.parkedNodeSet) {
+	return c.restoreRecreatedNodeBatch(ctx, plan, sortedStringSet(plan.parkedNodeSet))
+}
+
+func (c *CLab) restoreRecreatedNodeBatch(
+	ctx context.Context,
+	plan *applyPlan,
+	nodeNames []string,
+) error {
+	for _, nodeName := range nodeNames {
+		if _, parked := plan.parkedNodeSet[nodeName]; !parked {
+			continue
+		}
 		node, exists := c.Nodes[nodeName]
 		if !exists {
 			continue

@@ -152,6 +152,94 @@ func TestDeployLinksPostDeploysSelectedNodeWithoutLinks(t *testing.T) {
 	}
 }
 
+func TestApplyPartitionReadyLinksWaitsForSharedNetNSChildContainer(t *testing.T) {
+	t.Parallel()
+
+	provider := &applyFakeLinkNode{name: "provider"}
+	child := &applyFakeLinkNode{name: "child"}
+	peer := &applyFakeLinkNode{name: "peer"}
+	providerLink := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	providerLink.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(provider, "eth1", providerLink)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(peer, "eth1", providerLink)),
+	}
+	childLink := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	childLink.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(child, "eth2", childLink)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(peer, "eth2", childLink)),
+	}
+
+	ready, pending := applyPartitionReadyLinks(
+		[]clablinks.Link{childLink, providerLink},
+		map[string]struct{}{"provider": {}, "peer": {}},
+	)
+	if len(ready) != 1 || ready[0] != providerLink {
+		t.Fatalf("ready links = %v, want provider link only", applyLinkNames(ready))
+	}
+	if len(pending) != 1 || pending[0] != childLink {
+		t.Fatalf("pending links = %v, want child link only", applyLinkNames(pending))
+	}
+}
+
+func TestPlanRecreatedNodePostLinkRestart(t *testing.T) {
+	t.Parallel()
+
+	btor := &applyFakeLinkNode{name: "btor1"}
+	wic := &applyFakeLinkNode{name: "wic1"}
+	link := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	link.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(btor, "eth1", link)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(wic, "cpp2s", link)),
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.recreatedNodeSet["btor1"] = struct{}{}
+	plan.addedLinks = []clablinks.Link{link}
+
+	(&CLab{}).planRecreatedNodePostLinkRestarts(plan)
+
+	if _, restart := plan.postLinkRestartNodeSet["btor1"]; !restart {
+		t.Fatal("recreated link endpoint must restart after its new link is attached")
+	}
+	if _, restart := plan.postLinkRestartNodeSet["wic1"]; restart {
+		t.Fatal("new peer must not be treated as a recreated post-link restart")
+	}
+}
+
+func TestRestartRecreatedNodeAfterAllAddedLinksAreReady(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	btor := clabmocksmocknodes.NewMockNode(ctrl)
+	wic := &applyFakeLinkNode{name: "wic1"}
+	link := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	link.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(btor, "eth1", link)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(wic, "cpp2s", link)),
+	}
+	btor.EXPECT().GetShortName().Return("btor1").AnyTimes()
+	btor.EXPECT().Stop(gomock.Any()).Return(nil)
+	btor.EXPECT().Start(gomock.Any()).Return(nil)
+	btor.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
+	btor.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "btor1"})
+
+	c := &CLab{
+		Nodes:   map[string]clabnodes.Node{"btor1": btor},
+		timeout: time.Second,
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.postLinkRestartNodeSet["btor1"] = struct{}{}
+	restarted := map[string]struct{}{}
+
+	if err := c.restartRecreatedApplyLinkNodes(
+		context.Background(), plan, []clablinks.Link{link}, nil, restarted,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := restarted["btor1"]; !ok {
+		t.Fatal("recreated cEOS-shaped endpoint was not restarted after link readiness")
+	}
+}
+
 func TestApplyRequiresTopologyFile(t *testing.T) {
 	t.Parallel()
 

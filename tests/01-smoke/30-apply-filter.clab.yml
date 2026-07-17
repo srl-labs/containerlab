@@ -34,15 +34,22 @@ topology:
       kind: linux
       image: alpine:3
       cmd: tail -f /dev/null
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - ip link show eth1
+        interval: 1
+        timeout: 1
+        retries: 10
     new-child1:
       kind: linux
       image: alpine:3
-      cmd: tail -f /dev/null
+      cmd: sh -c "ip link show eth1 >/dev/null && tail -f /dev/null"
       network-mode: container:new-provider
     new-child2:
       kind: linux
       image: alpine:3
-      cmd: tail -f /dev/null
+      cmd: sh -c "ip link show eth1 >/dev/null && tail -f /dev/null"
       network-mode: container:new-provider
 {{- end }}
 

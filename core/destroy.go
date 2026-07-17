@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -163,6 +164,7 @@ func (c *CLab) makeCopyForDestroy(
 	if err != nil {
 		return nil, err
 	}
+	cc.nodeFilter = append([]string(nil), opts.nodeFilter...)
 
 	if labDir != "" && clabutils.FileOrDirExists(labDir) {
 		// adjust the labdir. Usually we take the PWD. but now on destroy time,
@@ -214,6 +216,9 @@ func (c *CLab) restoreAppliedStateNodes() error {
 	}
 
 	for _, nodeName := range sortedNodeConfigNames(state.NodeConfigs) {
+		if !c.nodeInDestroyScope(nodeName) {
+			continue
+		}
 		if _, exists := c.Nodes[nodeName]; exists {
 			continue
 		}
@@ -243,6 +248,10 @@ func (c *CLab) restoreAppliedStateNodes() error {
 	}
 
 	return nil
+}
+
+func (c *CLab) nodeInDestroyScope(nodeName string) bool {
+	return len(c.nodeFilter) == 0 || slices.Contains(c.nodeFilter, nodeName)
 }
 
 func sortedNodeConfigNames(configs map[string]*clabtypes.NodeConfig) []string {
@@ -327,9 +336,21 @@ func (c *CLab) destroy(ctx context.Context, maxWorkers uint, keepMgmtNet bool) e
 	// If we have nodes defined, use the normal node-based deletion.
 	// Otherwise, delete containers directly via the runtime (for destroy-by-name-only case).
 	if len(c.Nodes) > 0 {
-		c.deleteNodes(ctx, maxWorkers)
+		c.deleteNodes(ctx, maxWorkers, len(c.nodeFilter) == 0)
 	} else {
 		c.deleteContainersDirect(ctx, containers)
+	}
+
+	if len(c.nodeFilter) != 0 {
+		// A filtered destroy only owns the selected node containers and their
+		// netns symlinks. Lab-wide tools, host/SSH files, and the management
+		// network remain owned by the unrelated nodes still in the lab.
+		for _, node := range c.Nodes {
+			if err = node.DeleteNetnsSymlink(); err != nil {
+				return fmt.Errorf("error while deleting netns symlinks: %w", err)
+			}
+		}
+		return nil
 	}
 
 	c.deleteToolContainers(ctx)
@@ -420,7 +441,7 @@ func (c *CLab) deleteApplyNodes(ctx context.Context, plan *applyPlan) error {
 	return nil
 }
 
-func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
+func (c *CLab) deleteNodes(ctx context.Context, workers uint, deleteSpecialNodes bool) {
 	nodeNames := sortedNodeNames(c.Nodes)
 	batches, err := c.applyDeployBatches(nodeNames)
 	if err != nil {
@@ -429,6 +450,10 @@ func (c *CLab) deleteNodes(ctx context.Context, workers uint) {
 	}
 	for i := len(batches) - 1; i >= 0; i-- {
 		c.deleteNodeBatch(ctx, batches[i], workers)
+	}
+
+	if !deleteSpecialNodes {
+		return
 	}
 
 	// also call delete on the special nodes
