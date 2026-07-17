@@ -109,14 +109,20 @@ func TestCreateContainerSpecAppliesHostnameWithContainerNetworkMode(t *testing.T
 		t.Fatalf("createContainerSpec returned error: %v", err)
 	}
 
-	if sg.Hostname != cfg.Hostname {
-		t.Fatalf("Hostname = %q, want %q", sg.Hostname, cfg.Hostname)
+	if sg.Hostname != "" {
+		t.Fatalf("Hostname = %q, want empty so the provider owns the hostname", sg.Hostname)
 	}
-	if sg.UtsNS.NSMode != specgen.Private {
-		t.Fatalf("UtsNS mode = %q, want %q", sg.UtsNS.NSMode, specgen.Private)
+	if sg.UtsNS.NSMode != specgen.FromContainer {
+		t.Fatalf("UtsNS mode = %q, want %q", sg.UtsNS.NSMode, specgen.FromContainer)
 	}
-	if sg.NetNS.NSMode != "container" {
-		t.Fatalf("NetNS mode = %q, want container", sg.NetNS.NSMode)
+	if sg.UtsNS.Value != "clab-test-provider" {
+		t.Fatalf("UtsNS value = %q, want clab-test-provider", sg.UtsNS.Value)
+	}
+	if sg.NetNS.NSMode != specgen.FromContainer {
+		t.Fatalf("NetNS mode = %q, want %q", sg.NetNS.NSMode, specgen.FromContainer)
+	}
+	if sg.NetNS.Value != "clab-test-provider" {
+		t.Fatalf("NetNS value = %q, want clab-test-provider", sg.NetNS.Value)
 	}
 }
 

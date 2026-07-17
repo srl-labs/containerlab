@@ -215,11 +215,21 @@ func (r *PodmanRuntime) createContainerSpec(
 		}
 		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
 		prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
+		providerName := prefix + netMode[1]
+		// A container that shares another container's network namespace must also
+		// share its UTS namespace. The provider owns the hostname; requesting a
+		// separate hostname for the child is ignored by Podman and leaves the child
+		// with its generated container ID instead.
+		specBasicConfig.Hostname = ""
+		specBasicConfig.UtsNS = specgen.Namespace{
+			NSMode: specgen.FromContainer,
+			Value:  providerName,
+		}
 		// Compile the net spec
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{
-				NSMode: "container",
-				Value:  prefix + netMode[1],
+				NSMode: specgen.FromContainer,
+				Value:  providerName,
 			},
 		}
 	case "host":
