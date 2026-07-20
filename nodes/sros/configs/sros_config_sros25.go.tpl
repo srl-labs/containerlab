@@ -16,5 +16,9 @@
 {{ range $index, $key := .SSHPubKeysECDSA }}
 /configure system security user-params local-user user "admin" public-keys ecdsa ecdsa-key {{ subtract 32 $index }} key-value {{ $key }}
 {{ end }}
+
+{{ range $index, $key := .SSHPubKeysED25519 }}
+/configure system security user-params local-user user "admin" public-keys ed25519 ed25519-key {{ subtract 32 $index }} key-value {{ $key }}
+{{ end }}
 {{/* Component configuration for cards, xioms, xiom-mdas and mdas */}}
 {{ .ComponentConfig }}
