@@ -850,6 +850,8 @@ In the example below node four nodes are defined with different stages and `wait
 
 Containerlab's built-in Dependency Manger takes care of all the dependencies, both explicitly-defined and implicit ones. It will inspect the dependency graph and make sure it is acyclic. The output of the Dependency Manager graph is visible in the debug mode.
 
+The same dependencies are honored by `containerlab start`. When a stopped lab is started with dependency-aware stages, containerlab starts prerequisites first. A dependency on the `healthy` stage waits until the prerequisite node reports healthy before starting the dependent node.
+
 Note, that `wait-for` is a list, a node's stage may depend on several other nodes' stages.
 
 /// admonition | Usage scenarios
