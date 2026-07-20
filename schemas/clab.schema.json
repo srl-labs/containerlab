@@ -71,7 +71,7 @@
                         "juniper_crpd",
                         "juniper_csrx",
                         "sonic-vs",
-                        "sonic-vm",       
+                        "sonic-vm",
                         "nokia_sros",
                         "nokia_srsim",
                         "juniper_vmx",
@@ -2034,7 +2034,7 @@
                         },
                         "sonic-vm": {
                             "$ref": "#/definitions/node-config"
-                        },  
+                        },
                         "dell_ftosv": {
                             "$ref": "#/definitions/node-config"
                         },
