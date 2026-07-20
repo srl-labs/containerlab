@@ -89,7 +89,7 @@ func (r *PodmanRuntime) WithKeepMgmtNet() {
 }
 
 // CreateNet used to create a new bridge for clab mgmt network.
-func (r *PodmanRuntime) CreateNet(ctx context.Context) error {
+func (r *PodmanRuntime) CreateNet(ctx context.Context, _ ...string) error {
 	ctx, err := r.connect(ctx)
 	if err != nil {
 		return err
