@@ -1,0 +1,737 @@
+[IHUB]
+service vpls 10
+admin-state enable
+customer 1
+v-vpls true
+vlan 10
+sap 1/1/1:10 admin-state enable
+
+[LT1]
+hardware component PONSFP_1 class transceiver
+parent C1
+parent-rel-pos 1
+model-name 3FE53441AA
+exit
+hardware component PON_1_GPON class transceiver-link-gpon
+parent PONSFP_1
+parent-rel-pos 1
+exit
+interfaces interface LT1_PON1 type channel-group
+enabled
+channel-group polling-period 100
+channel-group raman-mitigation raman-none
+channel-group system-id 00000
+exit
+tm-profiles tc-id-2-queue-id-mapping-profile DEFAULT_TC_TO_8Queues
+mapping-entry 0
+local-queue-id 0
+exit
+mapping-entry 1
+local-queue-id 1
+exit
+mapping-entry 2
+local-queue-id 2
+exit
+mapping-entry 3
+local-queue-id 3
+exit
+mapping-entry 4
+local-queue-id 4
+exit
+mapping-entry 5
+local-queue-id 5
+exit
+mapping-entry 6
+local-queue-id 6
+exit
+mapping-entry 7
+local-queue-id 7
+exit
+interfaces interface LT1_PON1_CPART_GPON type channel-partition
+enabled true
+channel-partition channel-group-ref LT1_PON1
+channel-partition channel-partition-index 1
+channel-partition downstream-fec true
+channel-partition closest-onu-distance 0
+channel-partition maximum-differential-xpon-distance 20
+channel-partition authentication-method as-per-v-ani-expected
+channel-partition multicast-aes-indicator false
+channel-partition early-fetch-onu-loid-info false
+exit
+interfaces interface LT1_PON1_CPAIR_GPON
+type channel-pair
+enabled true
+channel-pair channel-group-ref LT1_PON1
+channel-pair channel-partition-ref LT1_PON1_CPART_GPON
+channel-pair channel-pair-type gpon
+channel-pair gpon-pon-id-interval 10
+multicast-cac max-group-number no-limit
+multicast-cac max-multicast-rate-limit no-limit
+multicast-cac multicast-rate-limit-exceed-action best-effort
+exit
+interfaces interface CT_LT1_PON1_1_GPON
+description LT1_PON1
+type channel-termination
+enabled true
+port-layer-if PON_1_GPON
+channel-termination channel-pair-ref LT1_PON1_CPAIR_GPON
+channel-termination channel-termination-type gpon
+channel-termination gpon-pon-id 00000000000000
+channel-termination ber-calc-period 10
+channel-termination location inside-olt
+channel-termination laser-on-by-default true
+exit
+onus onu GENERIC-NOKIA usage node-template-usage
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_untag_write_pbit0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_untag_write_pbit0 match-criteria untagged
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_untag_write_pbit0 classifier-action-entry-cfg pbit-marking pbit-marking-cfg pbit-marking-list 0 pbit-value 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit0 match-criteria tag 0 in-pbit-list 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit0 match-criteria dscp-range any
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit0 classifier-action-entry-cfg pbit-marking pbit-marking-cfg pbit-marking-list 0 pbit-value 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit1 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit1 match-criteria tag 0 in-pbit-list 1
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit1 match-criteria dscp-range any
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit1 classifier-action-entry-cfg pbit-marking pbit-marking-cfg pbit-marking-list 0 pbit-value 1
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit2 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit2 match-criteria tag 0 in-pbit-list 2
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit2 match-criteria dscp-range any
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit2 classifier-action-entry-cfg pbit-marking pbit-marking-cfg pbit-marking-list 0 pbit-value 2
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit3 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit3 match-criteria tag 0 in-pbit-list 3
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit3 match-criteria dscp-range any
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit3 classifier-action-entry-cfg pbit-marking pbit-marking-cfg pbit-marking-list 0 pbit-value 3
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit4 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit4 match-criteria tag 0 in-pbit-list 4
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit4 match-criteria dscp-range any
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit4 classifier-action-entry-cfg pbit-marking pbit-marking-cfg pbit-marking-list 0 pbit-value 4
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit5 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit5 match-criteria tag 0 in-pbit-list 5
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit5 match-criteria dscp-range any
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit5 classifier-action-entry-cfg pbit-marking pbit-marking-cfg pbit-marking-list 0 pbit-value 5
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit6 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit6 match-criteria tag 0 in-pbit-list 6
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit6 match-criteria dscp-range any
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit6 classifier-action-entry-cfg pbit-marking pbit-marking-cfg pbit-marking-list 0 pbit-value 6
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit7 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit7 match-criteria tag 0 in-pbit-list 7
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit7 match-criteria dscp-range any
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit_marking_copy_pbit7 classifier-action-entry-cfg pbit-marking pbit-marking-cfg pbit-marking-list 0 pbit-value 7
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit0_to_tc0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit0_to_tc0 match-criteria pbit-marking-list 0 pbit-value 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit0_to_tc0 classifier-action-entry-cfg scheduling-traffic-class scheduling-traffic-class 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit1_to_tc0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit1_to_tc0 match-criteria pbit-marking-list 0 pbit-value 1
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit1_to_tc0 classifier-action-entry-cfg scheduling-traffic-class scheduling-traffic-class 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit2_to_tc0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit2_to_tc0 match-criteria pbit-marking-list 0 pbit-value 2
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit2_to_tc0 classifier-action-entry-cfg scheduling-traffic-class scheduling-traffic-class 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit3_to_tc0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit3_to_tc0 match-criteria pbit-marking-list 0 pbit-value 3
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit3_to_tc0 classifier-action-entry-cfg scheduling-traffic-class scheduling-traffic-class 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit4_to_tc0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit4_to_tc0 match-criteria pbit-marking-list 0 pbit-value 4
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit4_to_tc0 classifier-action-entry-cfg scheduling-traffic-class scheduling-traffic-class 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit5_to_tc0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit5_to_tc0 match-criteria pbit-marking-list 0 pbit-value 5
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit5_to_tc0 classifier-action-entry-cfg scheduling-traffic-class scheduling-traffic-class 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit6_to_tc0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit6_to_tc0 match-criteria pbit-marking-list 0 pbit-value 6
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit6_to_tc0 classifier-action-entry-cfg scheduling-traffic-class scheduling-traffic-class 0
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit7_to_tc0 filter-operation match-all-filter
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit7_to_tc0 match-criteria pbit-marking-list 0 pbit-value 7
+onus onu GENERIC-NOKIA root classifiers classifier-entry pbit2tc_pbit7_to_tc0 classifier-action-entry-cfg scheduling-traffic-class scheduling-traffic-class 0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0 classifiers pbit_marking_untag_write_pbit0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0 classifiers pbit_marking_copy_pbit0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0 classifiers pbit_marking_copy_pbit1
+onus onu GENERIC-NOKIA root policies policy HSI_TC0 classifiers pbit_marking_copy_pbit2
+onus onu GENERIC-NOKIA root policies policy HSI_TC0 classifiers pbit_marking_copy_pbit3
+onus onu GENERIC-NOKIA root policies policy HSI_TC0 classifiers pbit_marking_copy_pbit4
+onus onu GENERIC-NOKIA root policies policy HSI_TC0 classifiers pbit_marking_copy_pbit5
+onus onu GENERIC-NOKIA root policies policy HSI_TC0 classifiers pbit_marking_copy_pbit6
+onus onu GENERIC-NOKIA root policies policy HSI_TC0 classifiers pbit_marking_copy_pbit7
+onus onu GENERIC-NOKIA root policies policy HSI_TC0_tc classifiers pbit2tc_pbit0_to_tc0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0_tc classifiers pbit2tc_pbit1_to_tc0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0_tc classifiers pbit2tc_pbit2_to_tc0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0_tc classifiers pbit2tc_pbit3_to_tc0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0_tc classifiers pbit2tc_pbit4_to_tc0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0_tc classifiers pbit2tc_pbit5_to_tc0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0_tc classifiers pbit2tc_pbit6_to_tc0
+onus onu GENERIC-NOKIA root policies policy HSI_TC0_tc classifiers pbit2tc_pbit7_to_tc0
+onus onu GENERIC-NOKIA root qos-policy-profiles policy-profile Q_HSI_TC0 policy-list HSI_TC0
+onus onu GENERIC-NOKIA root qos-policy-profiles policy-profile Q_HSI_TC0 policy-list HSI_TC0_tc
+onus onu GENERIC-NOKIA root tm-profiles tc-id-2-queue-id-mapping-profile TC2Q_Profile_Single-TC mapping-entry 0 local-queue-id 0
+onus onu GENERIC-NOKIA root tm-profiles tc-id-2-queue-id-mapping-profile TC2Q_Profile_8-TC mapping-entry 0 local-queue-id 0
+onus onu GENERIC-NOKIA root tm-profiles tc-id-2-queue-id-mapping-profile TC2Q_Profile_8-TC mapping-entry 1 local-queue-id 1
+onus onu GENERIC-NOKIA root tm-profiles tc-id-2-queue-id-mapping-profile TC2Q_Profile_8-TC mapping-entry 2 local-queue-id 2
+onus onu GENERIC-NOKIA root tm-profiles tc-id-2-queue-id-mapping-profile TC2Q_Profile_8-TC mapping-entry 3 local-queue-id 3
+onus onu GENERIC-NOKIA root tm-profiles tc-id-2-queue-id-mapping-profile TC2Q_Profile_8-TC mapping-entry 4 local-queue-id 4
+onus onu GENERIC-NOKIA root tm-profiles tc-id-2-queue-id-mapping-profile TC2Q_Profile_8-TC mapping-entry 5 local-queue-id 5
+onus onu GENERIC-NOKIA root tm-profiles tc-id-2-queue-id-mapping-profile TC2Q_Profile_8-TC mapping-entry 6 local-queue-id 6
+onus onu GENERIC-NOKIA root tm-profiles tc-id-2-queue-id-mapping-profile TC2Q_Profile_8-TC mapping-entry 7 local-queue-id 7
+onus onu GENERIC-NOKIA root voip-configuration-characteristics configuration-method omci
+onus onu GENERIC-NOKIA root xpongemtcont tconts tcont TCONT_VEIP_HSI interface-reference ANI
+onus onu GENERIC-NOKIA root xpongemtcont tconts tcont TCONT_VEIP_HSI tm-root queue 0 priority 1
+onus onu GENERIC-NOKIA root xpongemtcont tconts tcont TCONT_VEIP_HSI tm-root queue 0 weight 1
+onus onu GENERIC-NOKIA root xpongemtcont tconts tcont TCONT_VEIP_HSI tm-root tc-id-2-queue-id-mapping-profile-name TC2Q_Profile_Single-TC
+onus onu GENERIC-NOKIA root xpongemtcont gemports gemport GEM0_VEIP_HSI interface VSI_VEIP_HSI
+onus onu GENERIC-NOKIA root xpongemtcont gemports gemport GEM0_VEIP_HSI traffic-class 0
+onus onu GENERIC-NOKIA root xpongemtcont gemports gemport GEM0_VEIP_HSI tcont-ref TCONT_VEIP_HSI
+onus onu GENERIC-NOKIA root hardware component CHASSIS class chassis
+onus onu GENERIC-NOKIA root hardware component CHASSIS admin-state unlocked
+onus onu GENERIC-NOKIA root hardware component CAGE class cage
+onus onu GENERIC-NOKIA root hardware component CAGE parent CHASSIS
+onus onu GENERIC-NOKIA root hardware component CAGE parent-rel-pos 0
+onus onu GENERIC-NOKIA root hardware component SFP class transceiver
+onus onu GENERIC-NOKIA root hardware component SFP parent CAGE
+onus onu GENERIC-NOKIA root hardware component SFP parent-rel-pos 0
+onus onu GENERIC-NOKIA root hardware component ANIPORT class transceiver-link
+onus onu GENERIC-NOKIA root hardware component ANIPORT parent SFP
+onus onu GENERIC-NOKIA root hardware component ANIPORT parent-rel-pos 1
+onus onu GENERIC-NOKIA root hardware component UNI_LAN1 class rj45
+onus onu GENERIC-NOKIA root hardware component UNI_LAN1 parent CHASSIS
+onus onu GENERIC-NOKIA root hardware component UNI_LAN1 parent-rel-pos 1
+onus onu GENERIC-NOKIA root hardware component UNI_LAN1 omci-identifier-helper virtual-board-number 1
+onus onu GENERIC-NOKIA root hardware component UNI_LAN2 class rj45
+onus onu GENERIC-NOKIA root hardware component UNI_LAN2 parent CHASSIS
+onus onu GENERIC-NOKIA root hardware component UNI_LAN2 parent-rel-pos 2
+onus onu GENERIC-NOKIA root hardware component UNI_LAN2 omci-identifier-helper virtual-board-number 1
+onus onu GENERIC-NOKIA root hardware component UNI_LAN3 class rj45
+onus onu GENERIC-NOKIA root hardware component UNI_LAN3 parent CHASSIS
+onus onu GENERIC-NOKIA root hardware component UNI_LAN3 parent-rel-pos 3
+onus onu GENERIC-NOKIA root hardware component UNI_LAN3 omci-identifier-helper virtual-board-number 1
+onus onu GENERIC-NOKIA root hardware component UNI_LAN4 class rj45
+onus onu GENERIC-NOKIA root hardware component UNI_LAN4 parent CHASSIS
+onus onu GENERIC-NOKIA root hardware component UNI_LAN4 parent-rel-pos 4
+onus onu GENERIC-NOKIA root hardware component UNI_LAN4 omci-identifier-helper virtual-board-number 1
+onus onu GENERIC-NOKIA root hardware component UNI_VEIP class virtual-port
+onus onu GENERIC-NOKIA root hardware component UNI_VEIP parent CHASSIS
+onus onu GENERIC-NOKIA root hardware component UNI_VEIP parent-rel-pos 1
+onus onu GENERIC-NOKIA root hardware component UNI_TEL1 class rj11
+onus onu GENERIC-NOKIA root hardware component UNI_TEL1 parent CHASSIS
+onus onu GENERIC-NOKIA root hardware component UNI_TEL1 parent-rel-pos 1
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN1 type ethernetCsmacd
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN1 enabled false
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN1 port-layer-if UNI_LAN1
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN1 ethernet auto-negotiation status enabled
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN1 ethernet auto-negotiation duplex full
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN1 ethernet auto-negotiation speed eth-if-speed-1gb
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN2 type ethernetCsmacd
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN2 enabled false
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN2 port-layer-if UNI_LAN2
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN2 ethernet auto-negotiation status enabled
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN2 ethernet auto-negotiation duplex full
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN2 ethernet auto-negotiation speed eth-if-speed-1gb
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN3 type ethernetCsmacd
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN3 enabled false
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN3 port-layer-if UNI_LAN3
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN3 ethernet auto-negotiation status enabled
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN3 ethernet auto-negotiation duplex full
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN3 ethernet auto-negotiation speed eth-if-speed-1gb
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN4 type ethernetCsmacd
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN4 enabled false
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN4 port-layer-if UNI_LAN4
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN4 ethernet auto-negotiation status enabled
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN4 ethernet auto-negotiation duplex full
+onus onu GENERIC-NOKIA root interfaces interface ENET_LAN4 ethernet auto-negotiation speed eth-if-speed-1gb
+onus onu GENERIC-NOKIA root interfaces interface ENET_VEIP type onu-v-vrefpoint
+onus onu GENERIC-NOKIA root interfaces interface ENET_VEIP enabled false
+onus onu GENERIC-NOKIA root interfaces interface ENET_VEIP port-layer-if UNI_VEIP
+onus onu GENERIC-NOKIA root interfaces interface ENET_VEIP onu-v-vrefpoint related-onu ANI
+onus onu GENERIC-NOKIA root interfaces interface POTS_TEL1 type voiceFXS
+onus onu GENERIC-NOKIA root interfaces interface POTS_TEL1 enabled false
+onus onu GENERIC-NOKIA root interfaces interface POTS_TEL1 port-layer-if UNI_TEL1
+onus onu GENERIC-NOKIA root interfaces interface ANI type ani
+onus onu GENERIC-NOKIA root interfaces interface ANI port-layer-if ANIPORT
+onus onu GENERIC-NOKIA root interfaces interface ANI performance pm-counter-size 32bit-performance-monitoring
+onus onu GENERIC-NOKIA root interfaces interface ANI ani multicast-gemport ANI_2046 mc-gemport-id 2046
+onus onu GENERIC-NOKIA root interfaces interface ANI ani multicast-gemport ANI_2046 is-broadcast true
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI type vlan-sub-interface
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI ingress-qos-policy-profile Q_HSI_TC0
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI subif-lower-layer interface ENET_VEIP
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged priority 100
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged flexible-match match-criteria tag 0 dot1q-tag tag-type c-vlan
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged flexible-match match-criteria tag 0 dot1q-tag vlan-id 10
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged flexible-match match-criteria tag 0 dot1q-tag pbit any
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged flexible-match match-criteria tag 0 dot1q-tag dei any
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged ingress-rewrite pop-tags 1
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged ingress-rewrite push-tag 0 dot1q-tag tag-type c-vlan
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged ingress-rewrite push-tag 0 dot1q-tag vlan-id 10
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged ingress-rewrite push-tag 0 dot1q-tag pbit-marking-index 0
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged ingress-rewrite push-tag 0 dot1q-tag dei-from-tag-index 0
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI inline-frame-processing ingress-rule rule single-tagged auto-instantiate false
+onus onu GENERIC-NOKIA root interfaces interface VSI_VEIP_HSI auto-instantiate false
+onus onu GENERIC-NOKIA root routing control-plane-protocols control-plane-protocol static default-route static-routes ipv4 route 0.0.0.0/0 next-hop next-hop-address 0.0.0.1
+onus onu GENERIC-NOKIA root system dns-resolver server pridns udp-and-tcp address 0.0.0.0
+onus onu GENERIC-NOKIA root system dns-resolver server backupdns udp-and-tcp address 0.0.0.0
+onus onu GENERIC-NOKIA root ptp-ccsa-profiles ptp-ccsa-port-profile default domain 0
+onus onu GENERIC-NOKIA root ptp-ccsa-profiles ptp-ccsa-port-profile default master-only true
+onus onu GENERIC-NOKIA root ptp-ccsa-profiles ptp-ccsa-port-profile default dest-mac-addr-forwardable forwardable
+onus onu GENERIC-NOKIA root ptp-ccsa-profiles ptp-ccsa-port-profile default log-anno-interval -3
+onus onu GENERIC-NOKIA root ptp-ccsa-profiles ptp-ccsa-port-profile default log-sync-interval -4
+onus onu GENERIC-NOKIA root ptp-ccsa-profiles ptp-ccsa-port-profile default log-delay-interval 0
+onus onu GENERIC-NOKIA root ptp-ccsa-profiles ptp-ccsa-port-profile default step-mode one-step
+onus onu GENERIC-NOKIA root ptp-g8275dot1-profiles ptp-g8275dot1-port-profile default domain 24
+onus onu GENERIC-NOKIA root ptp-g8275dot1-profiles ptp-g8275dot1-port-profile default master-only true
+onus onu GENERIC-NOKIA root ptp-g8275dot1-profiles ptp-g8275dot1-port-profile default dest-mac-addr-forwardable forwardable
+onus onu GENERIC-NOKIA root ptp-g8275dot1-profiles ptp-g8275dot1-port-profile default log-anno-interval -3
+onus onu GENERIC-NOKIA root ptp-g8275dot1-profiles ptp-g8275dot1-port-profile default log-sync-interval -4
+onus onu GENERIC-NOKIA root ptp-g8275dot1-profiles ptp-g8275dot1-port-profile default log-delay-interval -4
+onus onu GENERIC-NOKIA root ptp-g8275dot1-profiles ptp-g8275dot1-port-profile default step-mode one-step
+exit
+interfaces interface ONT-01 type v-ani
+enabled true
+performance enable false
+v-ani onu-id 0
+v-ani channel-partition LT1_PON1_CPART_GPON
+v-ani expected-serial-number ALCL00000002
+v-ani preferred-channel-pair LT1_PON1_CPAIR_GPON
+v-ani upstream-fec true
+v-ani management-gemport-aes-indicator false
+v-ani tod-enable false
+v-ani onu-name ONT-01
+exit
+interfaces interface LT1_PON1_CPART_GPON
+tm-root scheduler-node ONT-01 scheduling-level 1
+exit
+tm-root scheduler-node ONT-01 child-scheduler-nodes ONT-01_VEIP priority 0 weight 1
+exit
+tm-root scheduler-node ONT-01_VEIP scheduling-level 2 contains-queues true
+exit
+tm-root scheduler-node ONT-01_VEIP queue local-queue-id 0 priority 0 weight 1
+exit
+tm-root child-scheduler-nodes ONT-01 priority 0 weight 1
+exit
+tm-root tc-id-2-queue-id-mapping-profile-name DEFAULT_TC_TO_8Queues
+exit
+subscriber-profiles subscriber-profile test
+circuit-id 1
+remote-id 1
+subscriber-id 1
+exit
+interfaces interface VENET_ONT-01_VEIP type olt-v-enet
+enabled true
+mac-learning max-number-mac-addresses 4
+egress-tm-objects root-if-name LT1_PON1_CPART_GPON scheduler-node-name ONT-01_VEIP
+olt-v-enet lower-layer-interface ONT-01 protocol-identifier-helper slot-id 14 port-id 1
+exit
+onus onu ONT-01
+usage node-from-template-usage
+template-parameters template-ref GENERIC-NOKIA
+template-parameters interfaces interface template-ref ANI
+template-parameters hardware-config hardware template-ref SFP
+tca-monitoring-enabled false
+exit
+template-parameters hardware-config hardware template-ref CHASSIS admin-state unlocked
+exit
+exit
+forwarding mac-learning-control-profiles mac-learning-control-profile mlcp1
+mac-learning-rule user-port
+mac-can-not-move-to [ user-port subtended-node-port ]
+exit
+mac-learning-rule subtended-node-port
+mac-can-not-move-to [ user-port subtended-node-port ]
+exit
+exit
+forwarding forwarding-databases forwarding-database FWD_DB_HSI
+max-number-mac-addresses 4294967295
+aging-timer 300
+mac-learning-control mac-learning-control-profile mlcp1
+mac-learning-control generate-mac-learning-alarm true
+exit
+forwarding split-horizon-profiles split-horizon-profile spl1
+split-horizon user-port
+out-interface-usage [ user-port subtended-node-port ]
+exit
+split-horizon subtended-node-port
+out-interface-usage [ user-port subtended-node-port ]
+exit
+exit
+forwarding flooding-policies-profiles flooding-policies-profile drop_all
+flooding-policy dn_drop
+in-interface-usages interface-usages [ network-port ]
+destination-address any-frame
+out-interface-usages interface-usages [ subtended-node-port ]
+exit
+flooding-policy up_drop
+in-interface-usages interface-usages [ user-port ]
+destination-address any-multicast-mac-address
+discard
+exit
+exit
+frame-processing-profiles frame-processing-profile CC-SINGLE-VLAN-PROFILE
+priority 100
+match-criteria tag 0
+tag-type c-vlan
+vlan-id parameter-vlan-id
+pbit any
+dei any
+exit
+ingress-rewrite pop-tags 1
+ingress-rewrite copy-from-tags-to-marking-list 0
+pbit-marking-index 0
+dei-marking-index 0
+exit
+egress-rewrite push-tag 0
+tag-type c-vlan
+vlan-id vlan-id-from-match
+pbit-marking-index 0
+dei-marking-index 0
+exit
+exit
+frame-processing-profiles frame-processing-profile Single_Tagged_PBIT_Marking_Done
+priority 100
+match-criteria tag 0
+tag-type c-vlan
+vlan-id parameter-vlan-id
+pbit any
+dei any
+exit
+ingress-rewrite pop-tags 1
+egress-rewrite push-tag 0
+tag-type c-vlan
+vlan-id vlan-id-from-match
+pbit-marking-index 0
+dei-marking-index 0
+exit
+exit
+interfaces interface NTW_VSI_HSI
+type vlan-sub-interface
+enabled
+interface-usage interface-usage network-port
+mac-learning mac-learning-enable true
+subif-lower-layer interface BP_Eth
+frame-processing-profile-ref CC-SINGLE-VLAN-PROFILE
+tag-0 vlan-id 100
+exit
+forwarding forwarders forwarder FWD_HSI
+ports port NTW_PORT_HSI sub-interface NTW_VSI_HSI
+flooding-policies flooding-policies-profile drop_all
+mac-learning forwarding-database FWD_DB_HSI
+split-horizon-profiles split-horizon-profile spl1
+l2-dhcpv4-relay downstream-broadcast-flooding false
+arp-security downstream-arp-broadcast secured-with-fallback-to-layer2
+ND-security downstream-ns-multicast secured-forwarding
+exit
+l2-dhcpv4-relay-profiles l2-dhcpv4-relay-profile DHCP_Default
+max-packet-size 1500
+option82-format suboptions [ circuit-id remote-id ]
+option82-format default-circuit-id-syntax Access_Node_ID:Chassis:Port:OnuID:v-ani:olt-v-enet
+option82-format start-numbering-from-zero false
+option82-format use-leading-zeroes false
+exit
+dhcpv6-ldra-profiles dhcpv6-ldra-profile DHCPv6_Default
+options option [ interface-id remote-id vendor-specific-information ]
+options default-interface-id-syntax Access_Node_ID:Chassis:Port:OnuID:v-ani:olt-v-enet
+options default-remote-id-syntax pon-id
+options start-numbering-from-zero false
+options use-leading-zeroes false
+options xpon-access-loop-characteristics [ xpon-tree-maximum-data-rate-upstream onu-maximum-data-rate-upstream xpon-tree-maximum-data-rate-downstream onu-peak-data-rate-downstream ]
+exit
+pppoe-profiles pppoe-profile PPPoE_Default
+pppoe-vendor-specific-tag subtag [ circuit-id remote-id ]
+pppoe-vendor-specific-tag default-remote-id-syntax Access_Node_ID:Chassis:Port:OnuID:v-ani:olt-v-enet
+pppoe-vendor-specific-tag start-numbering-from-zero false
+pppoe-vendor-specific-tag use-leading-zeroes false
+exit
+vsi-vector-profiles vsi-vector-profile default
+ipv4-security prevent-ipv4-address-spoofing true
+ipv4-security learn-addresses-from-dhcp
+ipv4-security max-address no-limit
+l2-dhcpv4-relay enable true
+l2-dhcpv4-relay trusted-port false
+l2-dhcpv4-relay profile-ref DHCP_Default
+dhcpv6-ldra enable true
+dhcpv6-ldra trusted-port true
+dhcpv6-ldra profile-ref DHCPv6_Default
+pppoe enable true
+pppoe profile-ref PPPoE_Default
+interface-usage interface-usage user-port
+exit
+xpongemtcont traffic-descriptor-profiles traffic-descriptor-profile 100M_UP
+fixed-bandwidth 0
+assured-bandwidth 0
+maximum-bandwidth 100000000
+jitter-tolerance 16
+exit
+classifiers classifier-entry pbit0_to_TC0
+filter-operation match-all-filter
+match-criteria pbit-marking-list 0
+pbit-value 0
+exit
+classifier-action-entry-cfg scheduling-traffic-class
+scheduling-traffic-class 0
+exit
+exit
+classifiers classifier-entry pbit1_to_TC0
+filter-operation match-all-filter
+match-criteria pbit-marking-list 0
+pbit-value 1
+exit
+classifier-action-entry-cfg scheduling-traffic-class
+scheduling-traffic-class 0
+exit
+exit
+classifiers classifier-entry pbit2_to_TC0
+filter-operation match-all-filter
+match-criteria pbit-marking-list 0
+pbit-value 2
+exit
+classifier-action-entry-cfg scheduling-traffic-class
+scheduling-traffic-class 0
+exit
+exit
+classifiers classifier-entry pbit3_to_TC0
+filter-operation match-all-filter
+match-criteria pbit-marking-list 0
+pbit-value 3
+exit
+classifier-action-entry-cfg scheduling-traffic-class
+scheduling-traffic-class 0
+exit
+exit
+classifiers classifier-entry pbit4_to_TC0
+filter-operation match-all-filter
+match-criteria pbit-marking-list 0
+pbit-value 4
+exit
+classifier-action-entry-cfg scheduling-traffic-class
+scheduling-traffic-class 0
+exit
+exit
+classifiers classifier-entry pbit5_to_TC0
+filter-operation match-all-filter
+match-criteria pbit-marking-list 0
+pbit-value 5
+exit
+classifier-action-entry-cfg scheduling-traffic-class
+scheduling-traffic-class 0
+exit
+exit
+classifiers classifier-entry pbit6_to_TC0
+filter-operation match-all-filter
+match-criteria pbit-marking-list 0
+pbit-value 6
+exit
+classifier-action-entry-cfg scheduling-traffic-class
+scheduling-traffic-class 0
+exit
+exit
+classifiers classifier-entry pbit7_to_TC0
+filter-operation match-all-filter
+match-criteria pbit-marking-list 0
+pbit-value 7
+exit
+classifier-action-entry-cfg scheduling-traffic-class
+scheduling-traffic-class 0
+exit
+exit
+classifiers classifier-entry untag_pbit_hsi_tc0
+filter-operation match-all-filter
+vlans untagged
+classifier-action-entry-cfg pbit-marking
+pbit-marking-cfg pbit-marking-list 0
+pbit-value 0
+exit
+exit
+exit
+classifiers classifier-entry copy_tag_pbit0
+filter-operation match-all-filter
+match-criteria tag 0
+in-pbit-list 0
+exit
+dscp-range any
+any-protocol
+exit
+classifier-action-entry-cfg pbit-marking
+pbit-marking-cfg pbit-marking-list 0
+pbit-value 0
+exit
+exit
+exit
+classifiers classifier-entry copy_tag_pbit1
+filter-operation match-all-filter
+match-criteria
+tag 0
+in-pbit-list 1
+exit
+dscp-range any
+any-protocol
+exit
+classifier-action-entry-cfg pbit-marking
+pbit-marking-cfg pbit-marking-list 0
+pbit-value 1
+exit
+exit
+exit
+classifiers classifier-entry copy_tag_pbit2
+filter-operation match-all-filter
+match-criteria
+tag 0
+in-pbit-list 2
+exit
+dscp-range any
+any-protocol
+exit
+classifier-action-entry-cfg pbit-marking
+pbit-marking-cfg pbit-marking-list 0
+pbit-value 2
+exit
+exit
+exit
+classifiers classifier-entry copy_tag_pbit3
+filter-operation match-all-filter
+match-criteria
+tag 0
+in-pbit-list 3
+exit
+dscp-range any
+any-protocol
+exit
+classifier-action-entry-cfg pbit-marking
+pbit-marking-cfg pbit-marking-list 0
+pbit-value 3
+exit
+exit
+exit
+classifiers classifier-entry copy_tag_pbit4
+filter-operation match-all-filter
+match-criteria
+tag 0
+in-pbit-list 4
+exit
+dscp-range any
+any-protocol
+exit
+classifier-action-entry-cfg pbit-marking
+pbit-marking-cfg pbit-marking-list 0
+pbit-value 4
+exit
+exit
+exit
+classifiers classifier-entry copy_tag_pbit5
+filter-operation match-all-filter
+match-criteria
+tag 0
+in-pbit-list 5
+exit
+dscp-range any
+any-protocol
+exit
+classifier-action-entry-cfg pbit-marking
+pbit-marking-cfg pbit-marking-list 0
+pbit-value 5
+exit
+exit
+exit
+classifiers classifier-entry copy_tag_pbit6
+filter-operation match-all-filter
+match-criteria
+tag 0
+in-pbit-list 6
+exit
+dscp-range any
+any-protocol
+exit
+classifier-action-entry-cfg pbit-marking
+pbit-marking-cfg pbit-marking-list 0
+pbit-value 6
+exit
+exit
+exit
+classifiers classifier-entry copy_tag_pbit7
+filter-operation match-all-filter
+match-criteria
+tag 0
+in-pbit-list 7
+exit
+dscp-range any
+any-protocol
+exit
+classifier-action-entry-cfg pbit-marking
+pbit-marking-cfg pbit-marking-list 0
+pbit-value 7
+exit
+exit
+exit
+policies policy pbit0-7_to_TC0
+classifiers pbit0_to_TC0
+exit
+classifiers pbit1_to_TC0
+exit
+classifiers pbit2_to_TC0
+exit
+classifiers pbit3_to_TC0
+exit
+classifiers pbit4_to_TC0
+exit
+classifiers pbit5_to_TC0
+exit
+classifiers pbit6_to_TC0
+exit
+classifiers pbit7_to_TC0
+exit
+exit
+policies policy untag_tag_pbit_hsi_tc0
+classifiers untag_pbit_hsi_tc0
+exit
+classifiers copy_tag_pbit0
+exit
+classifiers copy_tag_pbit1
+exit
+classifiers copy_tag_pbit2
+exit
+classifiers copy_tag_pbit3
+exit
+classifiers copy_tag_pbit4
+exit
+classifiers copy_tag_pbit5
+exit
+classifiers copy_tag_pbit6
+exit
+classifiers copy_tag_pbit7
+exit
+exit
+qos-policy-profiles policy-profile DS_HSI_TC0
+policy-list pbit0-7_to_TC0
+exit
+qos-policy-profiles policy-profile US_HSI_TC0
+policy-list untag_tag_pbit_hsi_tc0
+exit
+xpongemtcont tconts tcont TCONT_ONT-01_VEIP_HSI
+alloc-id 256
+interface-reference ONT-01
+traffic-descriptor-profile-ref 100M_UP
+exit
+interfaces interface VSI_ONT-01_VEIP_HSI
+type vlan-sub-interface
+enabled true
+performance enable false
+mac-learning max-number-mac-addresses 4
+mac-learning mac-learning-enable true
+ingress-qos-policy-profile US_HSI_TC0
+egress-qos-policy-profile DS_HSI_TC0
+subif-lower-layer interface VENET_ONT-01_VEIP
+frame-processing-profile-ref Single_Tagged_PBIT_Marking_Done
+tag-0 vlan-id 10
+subscriber-profile profile test
+vector-profile default
+exit
+xpongemtcont gemports gemport GEM0_ONT-01_VEIP_HSI
+gemport-id 256
+interface VSI_ONT-01_VEIP_HSI
+traffic-class 0
+downstream-aes-indicator false
+upstream-aes-indicator false
+exit
+forwarding forwarders forwarder FWD_HSI
+forwarding forwarders forwarder FWD_HSI ports port USR_PORT_ONT-01_VEIP_HSI sub-interface VSI_ONT-01_VEIP_HSI
+exit
+onus onu ONT-01
+template-parameters tconts tcont template-ref TCONT_VEIP_HSI id 256
+exit
+template-parameters gemports gemport template-ref GEM0_VEIP_HSI id 256
+template-parameters interfaces interface template-ref ENET_VEIP admin true
+template-parameters interfaces interface template-ref VSI_VEIP_HSI pm-enable false vsi ingress-rule single-tagged match-criteria-tag-0-vlan-id 10 ingress-rewrite-tag-0-vlan-id 10
+exit
+template-parameters interfaces interface template-ref VSI_VEIP_HSI vsi ingress-qos-policy-profile Q_HSI_TC0

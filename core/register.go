@@ -32,6 +32,7 @@ import (
 	clabnodesjuniper_csrx "github.com/srl-labs/containerlab/nodes/juniper_csrx"
 	clabnodesk8s_kind "github.com/srl-labs/containerlab/nodes/k8s_kind"
 	clabnodeskeysight_ixiacone "github.com/srl-labs/containerlab/nodes/keysight_ixiacone"
+	clabnodeslight_olt "github.com/srl-labs/containerlab/nodes/light_olt"
 	clabnodeslinux "github.com/srl-labs/containerlab/nodes/linux"
 	clabnodesnvidia_cumulusvx "github.com/srl-labs/containerlab/nodes/nvidia_cumulusvx"
 	clabnodesovs "github.com/srl-labs/containerlab/nodes/ovs"
@@ -83,6 +84,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodeshost.Register(c.Reg)
 	clabnodesipinfusion_ocnos.Register(c.Reg)
 	clabnodeskeysight_ixiacone.Register(c.Reg)
+	clabnodeslight_olt.Register(c.Reg)
 	clabnodeslinux.Register(c.Reg)
 	clabnodesovs.Register(c.Reg)
 	clabnodessonic.Register(c.Reg)
