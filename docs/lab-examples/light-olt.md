@@ -10,7 +10,7 @@ container.
 Install Containerlab and Docker, then pull the Light OLT images:
 
 ```bash
-docker pull ghcr.io/abelperezr/olt-light:0.0.2
+docker pull ghcr.io/abelperezr/olt-light:0.1.0
 docker pull ghcr.io/abelperezr/olt-proxy:0.0.1
 ```
 
@@ -144,7 +144,7 @@ topology:
 
     olt:
       kind: light_olt
-      image: ghcr.io/abelperezr/olt-light:0.0.2
+      image: ghcr.io/abelperezr/olt-light:0.1.0
       mgmt-ipv4: 172.30.30.10
       binds:
         - ./seeds/onts_oper.xml:/seeds/onts_oper.xml:ro

@@ -18,17 +18,17 @@ The [-{{ kind_display_name }}-](https://github.com/abelperezr/olt-light) emulato
 Containerlab does not distribute the -{{ kind_display_name }}- image. Pull the version used by the topology from GHCR:
 
 ```bash
-docker pull ghcr.io/abelperezr/olt-light:0.0.2
+docker pull ghcr.io/abelperezr/olt-light:0.1.0
 ```
 
-The integration has been validated with version `0.0.2`. Reference that version explicitly in the topology:
+The integration has been validated with version `0.1.0`. Reference that version explicitly in the topology:
 
 ```yaml
 topology:
   nodes:
     olt:
       kind: -{{ kind_code_name }}-
-      image: ghcr.io/abelperezr/olt-light:0.0.2
+      image: ghcr.io/abelperezr/olt-light:0.1.0
 ```
 
 /// warning | Startup time
@@ -278,7 +278,7 @@ topology:
   nodes:
     olt:
       kind: light_olt
-      image: ghcr.io/abelperezr/olt-light:0.0.2
+      image: ghcr.io/abelperezr/olt-light:0.1.0
       startup-config: ./clab-bng-olt/olt/config/light-olt-startup.tgz
       env:
         OLT_LT_SLOTS: "1=FGLT-D,2=FWLT-C"
