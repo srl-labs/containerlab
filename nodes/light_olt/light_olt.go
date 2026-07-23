@@ -1,4 +1,4 @@
-// Copyright 2026 Light OLT authors
+// Copyright 2026 Abel Perez, Eluzmar Alviarez
 // Licensed under the BSD 3-Clause License.
 // SPDX-License-Identifier: BSD-3-Clause
 
