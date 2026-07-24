@@ -25,7 +25,6 @@ import (
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetem "github.com/srl-labs/containerlab/netem"
-	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -164,39 +163,13 @@ func netemSetFn(ctx context.Context, o *Options) error {
 		)
 	}
 
-	// Get the runtime initializer.
-	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
+	target, err := clabcore.ResolveNetemTarget(ctx, o.Global.Runtime, o.Global.Timeout, o.ToolsNetem.ContainerName, o.ToolsNetem.Interface)
 	if err != nil {
 		return err
 	}
 
-	// init the runtime
-	rt := rinit()
-
-	// init runtime with timeout
-	err = rt.Init(
-		clabruntime.WithConfig(
-			&clabruntime.RuntimeConfig{
-				Timeout: o.Global.Timeout,
-			},
-		),
-	)
+	nodeNs, err := ns.GetNS(target.NSPath)
 	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// retrieve the containers NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
-	if err != nil {
-		return err
-	}
-
-	var nodeNs ns.NetNS
-
-	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
 		return err
 	}
 
@@ -213,7 +186,7 @@ func netemSetFn(ctx context.Context, o *Options) error {
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
 		netemIfLink, err := netlink.LinkByName(
-			clablinks.SanitizeInterfaceName(o.ToolsNetem.Interface))
+			clablinks.SanitizeInterfaceName(target.Iface))
 		if err != nil {
 			return err
 		}
@@ -227,7 +200,7 @@ func netemSetFn(ctx context.Context, o *Options) error {
 
 		qdisc, err := clabnetem.SetImpairments(
 			tcnl,
-			o.ToolsNetem.ContainerName,
+			target.DisplayName,
 			link,
 			o.ToolsNetem.Delay,
 			o.ToolsNetem.Jitter,
@@ -405,37 +378,16 @@ func qdiscToJSONData(qdisc *gotc.Object) clabtypes.ImpairmentData {
 }
 
 func netemShowFn(o *Options) error {
-	// Get the runtime initializer.
-	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
-	if err != nil {
-		return err
-	}
-
-	// init the runtime
-	rt := rinit()
-
-	err = rt.Init(
-		clabruntime.WithConfig(
-			&clabruntime.RuntimeConfig{
-				Timeout: o.Global.Timeout,
-			},
-		),
-	)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// retrieve the container's NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
+	target, err := clabcore.ResolveNetemTarget(ctx, o.Global.Runtime, o.Global.Timeout, o.ToolsNetem.ContainerName, o.ToolsNetem.Interface)
 	if err != nil {
 		return err
 	}
 
-	var nodeNs ns.NetNS
-	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
+	nodeNs, err := ns.GetNS(target.NSPath)
+	if err != nil {
 		return err
 	}
 
@@ -467,9 +419,9 @@ func netemShowFn(o *Options) error {
 				impairments = append(impairments, qdiscToJSONData(&qdiscs[idx]))
 			}
 
-			// Structure output as a map keyed by the node name.
+			// Structure output as a map keyed by the target name.
 			outputData := map[string][]clabtypes.ImpairmentData{
-				o.ToolsNetem.ContainerName: impairments,
+				target.DisplayName: impairments,
 			}
 
 			jsonData, err := json.MarshalIndent(outputData, "", "  ")
@@ -489,37 +441,16 @@ func netemShowFn(o *Options) error {
 }
 
 func netemResetFn(o *Options) error {
-	// Get the runtime initializer.
-	_, rinit, err := clabcore.RuntimeInitializer(o.Global.Runtime)
-	if err != nil {
-		return err
-	}
-
-	// init the runtime
-	rt := rinit()
-
-	err = rt.Init(
-		clabruntime.WithConfig(
-			&clabruntime.RuntimeConfig{
-				Timeout: o.Global.Timeout,
-			},
-		),
-	)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// retrieve the container's NSPath
-	nodeNsPath, err := rt.GetNSPath(ctx, o.ToolsNetem.ContainerName)
+	target, err := clabcore.ResolveNetemTarget(ctx, o.Global.Runtime, o.Global.Timeout, o.ToolsNetem.ContainerName, o.ToolsNetem.Interface)
 	if err != nil {
 		return err
 	}
 
-	var nodeNs ns.NetNS
-	if nodeNs, err = ns.GetNS(nodeNsPath); err != nil {
+	nodeNs, err := ns.GetNS(target.NSPath)
+	if err != nil {
 		return err
 	}
 
@@ -536,7 +467,7 @@ func netemResetFn(o *Options) error {
 
 	err = nodeNs.Do(func(_ ns.NetNS) error {
 		netemIfLink, err := netlink.LinkByName(
-			clablinks.SanitizeInterfaceName(o.ToolsNetem.Interface))
+			clablinks.SanitizeInterfaceName(target.Iface))
 		if err != nil {
 			return err
 		}
@@ -551,7 +482,7 @@ func netemResetFn(o *Options) error {
 		}
 
 		fmt.Printf("Reset impairments on node %q, interface %q\n",
-			o.ToolsNetem.ContainerName, netemIfLink.Attrs().Name)
+			target.DisplayName, netemIfLink.Attrs().Name)
 
 		return nil
 	})

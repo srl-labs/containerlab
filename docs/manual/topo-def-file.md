@@ -272,6 +272,31 @@ links:
     labels: <link-labels>                   # optional (used in templating)
 ```
 
+###### veth-stitch
+
+The veth-stitch link type transparently stitches its two endpoints by using three veth links. One per node interface, and a third veth which stitches the two together.
+This is useful for nodes whose datapath interfaces cannot be captured or impaired directly (such as SR-SIM).
+
+```yaml
+links:
+  - type: veth-stitch
+    endpoints:
+      - node: r1
+        interface: 1/1/c1/1
+      - node: r2
+        interface: 1/1/c1/1
+```
+
+The brief endpoint form is also supported:
+
+```yaml
+links:
+  - type: veth-stitch
+    endpoints: ["r1:1/1/c1/1", "pe01-core:1/1/c3/1"]
+```
+
+A veth-stitch link cannot carry `mac`, `ipv4`, or `ipv6` parameters as it behaves like a transparently to any frames passed across the link.
+
 ###### mgmt-net
 
 The mgmt-net link type represents a veth pair that is connected to a container node on one side and to the management network (usually a bridge) instantiated by the container runtime on the other.

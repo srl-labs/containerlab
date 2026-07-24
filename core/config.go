@@ -150,7 +150,37 @@ func (c *CLab) parseTopology() error {
 		}
 	}
 
+	c.applyNodeDefaultLinkTypes()
+
 	return nil
+}
+
+// Create the link for the default link type of the node
+func (c *CLab) applyNodeDefaultLinkTypes() {
+	for _, ld := range c.Config.Topology.Links {
+		if ld.Type != string(clablinks.LinkTypeBrief) {
+			continue
+		}
+
+		veth, ok := ld.Link.(*clablinks.LinkVEthRaw)
+		if !ok {
+			continue
+		}
+
+		for _, ep := range veth.Endpoints {
+			entry := c.Reg.Kind(strings.ToLower(c.Config.Topology.GetNodeKind(ep.Node)))
+			if entry == nil || entry.PlatformAttrs().GetDefaultLinkType() != clablinks.LinkTypeVethStitch {
+				continue
+			}
+
+			log.Debugf("using veth-stitch for brief link %s:%s <-> %s:%s (node default)",
+				veth.Endpoints[0].Node, veth.Endpoints[0].Iface,
+				veth.Endpoints[1].Node, veth.Endpoints[1].Iface)
+			ld.Link = clablinks.NewVEthStitchedRawFromVEth(veth)
+
+			break
+		}
+	}
 }
 
 // NewNode initializes a new node object.

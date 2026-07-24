@@ -854,6 +854,47 @@
             ],
             "additionalItems": false
         },
+        "link-type-veth-stitched": {
+            "type": "object",
+            "description": "Link definition that transparently stitches two veth endpoints through root-namespace veth ends joined by a tc redirect",
+            "markdownDescription": "Link definition that transparently stitches two veth endpoints through root-namespace veth ends joined by a tc redirect, so traffic can be captured (tcpdump) and impaired (tc netem) on plain Linux netdevs even when the node cannot be impaired directly (e.g. SR-SIM). Passes all traffic incl. STP/LLDP/LACP.",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "const": "veth-stitch"
+                },
+                "endpoints": {
+                    "type": "array",
+                    "description": "Endpoints for the link, as brief \"node:interface\" strings or extended objects",
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "items": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "$ref": "#/definitions/link-endpoint"
+                            }
+                        ]
+                    }
+                },
+                "mtu": {
+                    "$ref": "#/definitions/mtu"
+                },
+                "vars": {
+                    "$ref": "#/definitions/link-vars"
+                },
+                "labels": {
+                    "$ref": "#/definitions/labels"
+                }
+            },
+            "required": [
+                "type",
+                "endpoints"
+            ],
+            "additionalProperties": false
+        },
         "link-type-mgmt-net": {
             "type": "object",
             "description": "Link definition for management network interfaces",
@@ -2197,6 +2238,9 @@
                             },
                             {
                                 "$ref": "#/definitions/link-type-veth"
+                            },
+                            {
+                                "$ref": "#/definitions/link-type-veth-stitched"
                             },
                             {
                                 "$ref": "#/definitions/link-type-mgmt-net"

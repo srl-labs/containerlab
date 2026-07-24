@@ -54,6 +54,12 @@ func (l *LinkCommonParams) GetVars() map[string]any {
 	return l.Vars
 }
 
+// ResolveNetemTarget defaults to no redirect: `tools netem` acts on the node's
+// own netns. Links whose datapath lives outside it (e.g. veth-stitch) override.
+func (l *LinkCommonParams) ResolveNetemTarget(_, _, _, _ string) (*NetemTarget, error) {
+	return nil, nil
+}
+
 // LinkDefinition represents a link definition in the topology file.
 type LinkDefinition struct {
 	Type string  `yaml:"type,omitempty"`
@@ -65,6 +71,7 @@ type LinkType string
 
 const (
 	LinkTypeVEth        LinkType = "veth"
+	LinkTypeVethStitch  LinkType = "veth-stitch"
 	LinkTypeMgmtNet     LinkType = "mgmt-net"
 	LinkTypeMacVLan     LinkType = "macvlan"
 	LinkTypeHost        LinkType = "host"
@@ -87,6 +94,9 @@ func parseLinkType(s string) (LinkType, error) {
 
 	case string(LinkTypeVEth):
 		return LinkTypeVEth, nil
+
+	case string(LinkTypeVethStitch):
+		return LinkTypeVethStitch, nil
 
 	case string(LinkTypeMgmtNet):
 		return LinkTypeMgmtNet, nil
@@ -163,6 +173,19 @@ func (ld *LinkDefinition) UnmarshalYAML( //nolint: funlen
 			return err
 		}
 		ld.Link = &l.LinkVEthRaw
+
+	case LinkTypeVethStitch:
+		var l struct {
+			// the Type field is injected artificially
+			// to allow strict yaml parsing to work.
+			Type                string `yaml:"type"`
+			LinkVEthStitchedRaw `yaml:",inline"`
+		}
+		err := unmarshal(&l)
+		if err != nil {
+			return err
+		}
+		ld.Link = &l.LinkVEthStitchedRaw
 
 	case LinkTypeMgmtNet:
 		var l struct {
@@ -284,6 +307,15 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 			Type:        string(LinkTypeVEth),
 		}
 		return x, nil
+	case LinkTypeVethStitch:
+		x := struct {
+			Type                string `yaml:"type"`
+			LinkVEthStitchedRaw `yaml:",inline"`
+		}{
+			LinkVEthStitchedRaw: *r.Link.(*LinkVEthStitchedRaw),
+			Type:                string(LinkTypeVethStitch),
+		}
+		return x, nil
 	case LinkTypeMgmtNet:
 		x := struct {
 			Type           string `yaml:"type"`
@@ -334,6 +366,9 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 type RawLink interface {
 	Resolve(params *ResolveParams) (Link, error)
 	GetType() LinkType
+	// ResolveNetemTarget reports where `tools netem` should apply impairment for
+	// the given endpoint, or nil to use the node's own netns. See NetemTarget.
+	ResolveNetemTarget(labName, node, rootNode, iface string) (*NetemTarget, error)
 }
 
 // Link is an interface that all concrete link types must implement.
@@ -488,6 +523,14 @@ type Node interface {
 	Delete(ctx context.Context) error
 }
 
+// NetemTarget is where `tools netem` applies impairment when an endpoint's
+// datapath isn't in the node's own namespace.
+type NetemTarget struct {
+	NSPath      string // netns to apply netem in
+	Iface       string // interface within it
+	DisplayName string // label for output
+}
+
 type LinkEndpointType string
 
 const (
@@ -605,6 +648,9 @@ func isAltNameNotSupportedErr(err error) bool {
 type ResolveParams struct {
 	Nodes          map[string]Node
 	MgmtBridgeName string
+	// LabName is the name of the lab, used to scope generated host-global
+	// resources such as veth-stitch network namespaces.
+	LabName string
 	// list of node shortnames that user
 	// passed as a node filter
 	NodesFilter []string
