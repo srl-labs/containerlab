@@ -45,15 +45,6 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Nokia SR OS (SRsim)**    | [`nokia_srsim`](sros.md)                            | supported | container |
 | **Arista cEOS**            | [`arista_ceos`](ceos.md)                            | supported | container |
 | **Arista vEOS**            | [`arista_veos`](vr-veos.md)                         | supported |    VM     |
-| **Juniper cRPD**           | [`juniper_crpd`](crpd.md)                           | supported | container |
-| **Juniper cSRX**           | [`juniper_csrx`](csrx.md)                           | supported | container |
-| **Juniper vMX**            | [`juniper_vmx`](vr-vmx.md)                          | supported |    VM     |
-| **Juniper vQFX**           | [`juniper_vqfx`](vr-vqfx.md)                        | supported |    VM     |
-| **Juniper vSRX**           | [`juniper_vsrx`](vr-vsrx.md)                        | supported |    VM     |
-| **Juniper vJunos-router**  | [`juniper_vjunosrouter`](vr-vjunosrouter.md)        | supported |    VM     |
-| **Juniper vJunos-switch**  | [`juniper_vjunosswitch`](vr-vjunosswitch.md)        | supported |    VM     |
-| **Juniper vJunosEvolved**  | [`juniper_vjunosevolved`](vr-vjunosevolved.md)      | supported |    VM     |
-| **Juniper cJunosEvolved**  | [`juniper_cjunosevolved`](cjunosevolved.md)         | supported |    VM     |
 | **Cisco XRd**              | [`cisco_xrd`](xrd.md)                               | supported | container |
 | **Cisco XRd vRouter**      | [`cisco_xrd_vrouter`](cisco_xrd_vrouter.md)         | supported |    VM     |
 | **Cisco XRv**              | [`cisco_xrv`](vr-xrv.md)                            | supported |    VM     |
@@ -65,6 +56,16 @@ Within each predefined kind, we store the necessary information that is used to 
 | **Cisco Catalyst 9000v**   | [`cisco_cat9kv`](vr-cat9kv.md)                      | supported |    VM     |
 | **Cisco IOL**              | [`cisco_iol`](cisco_iol.md)                         | supported | container |
 | **Cisco FTDv**             | [`cisco_ftdv`](vr-ftdv.md)                          | supported |    VM     |
+| **Juniper cRPD**           | [`juniper_crpd`](crpd.md)                           | supported | container |
+| **Juniper cSRX**           | [`juniper_csrx`](csrx.md)                           | supported | container |
+| **Juniper vMX**            | [`juniper_vmx`](vr-vmx.md)                          | supported |    VM     |
+| **Juniper vQFX**           | [`juniper_vqfx`](vr-vqfx.md)                        | supported |    VM     |
+| **Juniper vSRX**           | [`juniper_vsrx`](vr-vsrx.md)                        | supported |    VM     |
+| **Juniper vJunos-router**  | [`juniper_vjunosrouter`](vr-vjunosrouter.md)        | supported |    VM     |
+| **Juniper vJunos-switch**  | [`juniper_vjunosswitch`](vr-vjunosswitch.md)        | supported |    VM     |
+| **Juniper vJunosEvolved**  | [`juniper_vjunosevolved`](vr-vjunosevolved.md)      | supported |    VM     |
+| **Juniper cJunosEvolved**  | [`juniper_cjunosevolved`](cjunosevolved.md)         | supported |    VM     |
+| **Light OLT**              | [`light_olt`](light_olt.md)                          | supported | container |
 | **Nvidia Cumulus VX**      | [`nvidia_cumulusvx`](nvidia_cumulusvx.md)           | supported |    VM     |
 | **Aruba ArubaOS-CX**       | [`aruba_aoscx`](vr-aoscx.md)                        | supported |    VM     |
 | **SONiC (VS)**             | [`sonic-vs`](sonic-vs.md)                           | supported | container |

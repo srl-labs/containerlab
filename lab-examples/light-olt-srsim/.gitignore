@@ -1,0 +1,6 @@
+# Nokia SR-SIM licenses are supplied by the user and must not be committed.
+configs/license/*
+!configs/license/.gitkeep
+
+# Runtime state created by the optional Altiplano proxy.
+persist/

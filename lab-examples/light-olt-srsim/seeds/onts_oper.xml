@@ -1,0 +1,36 @@
+<interfaces-state xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+  <interface>
+    <name>CT_LT1_PON1_1_GPON</name>
+    <type xmlns:bbf-xponift="urn:bbf:yang:bbf-xpon-if-type">bbf-xponift:channel-termination</type>
+    <oper-status>up</oper-status>
+    <channel-termination xmlns="urn:bbf:yang:bbf-xpon">
+      <onus-present-on-local-channel-termination xmlns="urn:bbf:yang:bbf-xpon-onu-state">
+        <onu>
+          <detected-serial-number>ALCL00000001</detected-serial-number>
+          <onu-presence-state xmlns:bbf-xpon-onu-types="urn:bbf:yang:bbf-xpon-onu-types">bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-in-o5</onu-presence-state>
+          <onu-detected-datetime>2026-07-02T16:44:38Z</onu-detected-datetime>
+        </onu>
+        <onu>
+          <detected-serial-number>ALCL00000002</detected-serial-number>
+          <onu-presence-state xmlns:bbf-xpon-onu-types="urn:bbf:yang:bbf-xpon-onu-types">bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-in-o5</onu-presence-state>
+          <onu-detected-datetime>2026-07-02T16:44:38Z</onu-detected-datetime>
+        </onu>
+        <onu>
+          <detected-serial-number>ALCL00000003</detected-serial-number>
+          <onu-presence-state xmlns:bbf-xpon-onu-types="urn:bbf:yang:bbf-xpon-onu-types">bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-in-o5</onu-presence-state>
+          <onu-detected-datetime>2026-07-02T16:44:38Z</onu-detected-datetime>
+        </onu>
+        <onu>
+          <detected-serial-number>ALCL00000004</detected-serial-number>
+          <onu-presence-state xmlns:bbf-xpon-onu-types="urn:bbf:yang:bbf-xpon-onu-types">bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-in-o5</onu-presence-state>
+          <onu-detected-datetime>2026-07-02T16:44:38Z</onu-detected-datetime>
+        </onu>
+        <onu>
+          <detected-serial-number>ALCL00000005</detected-serial-number>
+          <onu-presence-state xmlns:bbf-xpon-onu-types="urn:bbf:yang:bbf-xpon-onu-types">bbf-xpon-onu-types:onu-present-and-no-v-ani-known-and-in-o5</onu-presence-state>
+          <onu-detected-datetime>2026-07-02T16:44:38Z</onu-detected-datetime>
+        </onu>
+      </onus-present-on-local-channel-termination>
+    </channel-termination>
+  </interface>
+</interfaces-state>

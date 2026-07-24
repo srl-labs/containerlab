@@ -1,0 +1,60 @@
+name: bng-olt
+prefix: ""
+
+mgmt:
+  network: bng-olt
+  ipv4-subnet: 172.30.30.0/24
+
+topology:
+  kinds:
+    nokia_srsim:
+      image: nokia_srsim:25.10.R2
+      license: configs/license/SR_SIM_license.txt
+
+  nodes:
+    sros:
+      kind: nokia_srsim
+      mgmt-ipv4: 172.30.30.2
+      type: sr-7
+      components:
+        - slot: A
+        - slot: B
+        - slot: 1
+          type: iom5-e
+          env:
+            NOKIA_SROS_MDA_1: me6-100gb-qsfp28
+            NOKIA_SROS_SFM: m-sfm6-7/12
+        - slot: 2
+          type: iom4-e-b
+          env:
+            NOKIA_SROS_MDA_1: isa2-bb
+            NOKIA_SROS_SFM: m-sfm6-7/12
+      startup-config: configs/sros/bng.txt
+      ports:
+        - 56612:22
+
+    olt:
+      kind: light_olt
+      image: ghcr.io/abelperezr/olt-light:0.1.0
+      mgmt-ipv4: 172.30.30.10
+      binds:
+        - ./seeds/onts_oper.xml:/seeds/onts_oper.xml:ro
+        - ./seeds/onts_oper_gpon_xgs.xml:/seeds/onts_oper_lt2.xml:ro
+      env:
+        OLT_LT_SLOTS: "1=FGLT-D,2=FWLT-C,3=FWLT-C,4=FWLT-C"
+      ports:
+        - 56613:22
+      startup-config: configs/olt/olt.txt
+
+    # Required only when Nokia Altiplano manages the OLT.
+    olt-proxy:
+      kind: linux
+      image: ghcr.io/abelperezr/olt-proxy:0.0.1
+      mgmt-ipv4: 172.30.30.11
+      binds:
+        - ./persist/olt-proxy/data:/data
+      env:
+        UPSTREAM_HOST: 172.30.30.10
+
+  links:
+    - endpoints: ["olt:1/1/1", "sros:1/1/c2/1"]

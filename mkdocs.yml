@@ -37,6 +37,7 @@ nav:
           - Juniper vJunos-switch: manual/kinds/vr-vjunosswitch.md
           - Juniper vJunosEvolved: manual/kinds/vr-vjunosevolved.md
           - Juniper cJunosEvolved: manual/kinds/cjunosevolved.md
+      - Light OLT: manual/kinds/light_olt.md
       - NVIDIA Cumulus VX: manual/kinds/nvidia_cumulusvx.md
       - Aruba AOS-CX: manual/kinds/vr-aoscx.md
       - SONiC:
@@ -186,6 +187,7 @@ nav:
       - Multi-node labs: lab-examples/multinode.md
       - RARE/freeRtr: lab-examples/rare-freertr.md
       - Juniper vSRX: lab-examples/vsrx01.md
+      - Light OLT with Nokia SR-SIM: lab-examples/light-olt.md
       - OpenBSD: lab-examples/openbsd01.md
       - Cisco ASAv: lab-examples/asav01.md
       - Cisco FTDv: lab-examples/ftdv01.md

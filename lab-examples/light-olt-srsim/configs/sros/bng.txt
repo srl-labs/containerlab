@@ -1,0 +1,1321 @@
+#CONTENT - BNG
+#1. SYSTEM NAME
+#2. TIME
+#3. GRPC
+#4. NETCONF
+#5. SNMP
+#6. SSH
+#7. SYSTEM USERS PROFILES
+#8. SYSTEM USERS
+#9. LOGS
+#10. CARDS
+#    10.1. IOM
+#    10.2. MDA
+#    10.3. SFM
+#11. ROUTER BASE
+#12. PORTS
+#    12.1. PORT TO BNG2
+#    12.2. PORT TO OLT
+#    12.3. PORT TO LIG
+#    12.4. PORT TO DNS
+#    12.5. PORT TO CARRIER1
+#    12.6. PORT TO CARRIER2
+#13. INTERFACE TO BNG2
+#14. IS-IS
+#15. LDP
+#16. IBGP
+#    16.1. GROUPS
+#    16.2. NEIGHBORS
+#17. COMMUNITIES
+#18. PREFIX-LIST
+#19. EXPORT/IMPORT POLICIES INTER-VPRNs
+#    19.1. EXPORT TO 9998
+#        19.1.1. DIRECT
+#        19.1.2. STATIC
+#        19.1.3. BGP
+#        19.1.4. NAT
+#    19.2. EXPORT TO 9999
+#        19.2.1. DIRECT
+#        19.2.2. STATIC
+#        19.2.3. NAT
+#        19.2.4. SUB-MGMT
+#        19.2.5. MANAGED
+#    19.3. IMPORT FROM 9998
+#    19.4. IMPORT FROM 9999
+#20. INTER-VPRN
+#21. RADIUS
+#    21.1. ROUTER MANAGEMENT
+#    21.2. RADIUS POLICY
+#    21.3. RADIUS ACCOUNTING POLICY
+#    21.4. RADIUS AUTHENTICATION POLICY
+#    21.5. AUTHENTICATION ORIGIN
+#22. QOS
+#    22.1. QOS SAP-INGRESS
+#    22.2. QOS SAP-EGRESS
+#23. ESM
+#    23.1. IPOE POLICY
+#    23.2. PPPOE POLICY
+#    23.3. SUB-PROFILE
+#    23.4. SUB-IDENT POLICY
+#    23.5. SLA PROFILE
+#    23.6. MSAP POLICY
+#    23.7. LOCAL USER DATABASE
+#    23.8. SHCV POLICY
+#24. NAT64 + VPRN 9999
+#    24.1. ISA
+#    24.2. VPRN 9999
+#    24.3. VPRN 9999 INTERFACE TO LIG
+#    24.4. VPRN 9999 INTERFACE TO CARRIER1
+#    24.5. VPRN 9999 INTERFACE TO CARRIER2
+#    24.6. NAT OUTSIDE 64
+#    24.7. NAT POLICY 64
+#    24.8. NAT INSIDE 64
+#    24.9. NAT FILTER 64
+#25. IMPORT/EXPORT POLICIES CARRIERS
+#    25.1. PREFIX LISTS
+#    25.2. IMPORT CARRIER 1
+#    25.3. IMPORT CARRIER 2
+#    25.4. EXPORT CARRIER 1 IF MASTER
+#    25.5. EXPORT CARRIER 1 IF BACKUP
+#    25.6. EXPORT CARRIER 2 IF MASTER
+#    25.7. EXPORT CARRIER 2 IF BACKUP
+#26. EBGP
+#    26.1. GROUPS
+#    26.2. NEIGHBORS
+#27. VPRN 9998
+#28. DHCP SERVERS
+#    28.1. DHCP IPV6 (VPRN 9998)
+#    28.2. LOOPBACK DHCP (VPRN 9998)
+#    28.3. INTERFACE TO DNS64 (VPRN 9998)
+#29. SUBSCRIBER INTERFACE (VPRN 9998)
+#    29.1. IPV4
+#    29.2. IPV6
+#30. GROUP INTERFACES - IPV6 ONLY (VPRN 9998)
+#    30.1. HSI RESIDENTIAL (BASE)
+#    30.2. HSI RESIDENTIAL IPV6
+#    30.3. HSI RESIDENTIAL IPOE POLICY
+#    30.4. HSI RESIDENTIAL PPPOE POLICY
+#31. SERVICES FOR DUAL-STACK (VPRN 9998 & 9999)
+#    31.1. NAT FILTER DUAL-STACK
+#    31.2. NAT OUTSIDE DUAL-STACK
+#    31.3. NAT POLICY DUAL-STACK
+#    31.4. NAT INSIDE DUAL-STACK
+#    31.5. DHCP IPV4 DUAL-STACK
+#    31.6. DHCP IPV6 DUAL-STACK
+#    31.7. HSI DUAL-STACK (GROUP INTERFACE)
+#    31.8. HSI DUAL-STACK IPV4
+#    31.9. HSI DUAL-STACK IPV6
+#    31.10. HSI DUAL-STACK IPOE POLICY
+#    31.11. HSI DUAL-STACK PPPOE POLICY
+#32. SERVICES FOR VIP (VPRN 9998 & 9999)
+#    32.1. NAT FILTER VIP
+#    32.2. NAT OUTSIDE VIP
+#    32.3. NAT POLICY VIP
+#    32.4. NAT INSIDE VIP
+#    32.5. DHCP IPV4 VIP
+#    32.6. HSI VIP (GROUP INTERFACE)
+#    32.7. HSI VIP IPV4
+#    32.8. HSI VIP IPOE POLICY
+#    32.9. SLA PROFILE VIP
+#37. VPLS (CAPTURE SAP)
+#    37.1. CAPTURE DOT1Q
+#39. LAWFUL INTERCEPTION
+#    39.1. PERFIL LI
+#    39.2. LI ADMINISTRADOR
+#    39.3. MIRROR DESTINATION
+#    39.4. CONFIG EN LIADMIN
+
+##################1. SYSTEM NAME ####################################################################################
+
+/configure system
+/configure system name "MASTER"
+
+##################2. TIME ###########################################################################################
+
+/configure system time
+/configure system time zone
+/configure system time zone standard
+/configure system time zone standard name est
+
+/configure system time ntp admin-state enable
+/configure system time ntp server 216.239.35.12 router-instance "9999"
+
+##################3. GRPC ###########################################################################################
+
+/configure system grpc admin-state enable
+/configure system grpc allow-unsecure-connection
+/configure system grpc gnmi auto-config-save true
+/configure system grpc rib-api admin-state enable
+
+##################4. NETCONF ###########################################################################################
+
+/configure system management-interface netconf listen admin-state enable
+/configure system management-interface configuration-save configuration-backups 5
+/configure system management-interface configuration-save incremental-saves false
+/configure system management-interface netconf auto-config-save true
+
+##################5. SNMP ###########################################################################################
+
+/configure system management-interface snmp packet-size 9216
+/configure system management-interface snmp streaming admin-state enable
+/configure system security snmp community "public" access-permissions r
+/configure system security snmp community "public" version v2c
+
+##################6. SSH#############################################################################################
+
+/configure system login-control ssh inbound-max-sessions 30
+/configure system security ssh server-cipher-list-v2 cipher 190 name aes256-ctr
+/configure system security ssh server-cipher-list-v2 cipher 192 name aes192-ctr
+/configure system security ssh server-cipher-list-v2 cipher 194 name aes128-ctr
+/configure system security ssh server-cipher-list-v2 cipher 200 name aes128-cbc
+/configure system security ssh server-cipher-list-v2 cipher 205 name 3des-cbc
+/configure system security ssh server-cipher-list-v2 cipher 225 name aes192-cbc
+/configure system security ssh server-cipher-list-v2 cipher 230 name aes256-cbc
+/configure system security ssh client-cipher-list-v2 cipher 190 name aes256-ctr
+/configure system security ssh client-cipher-list-v2 cipher 192 name aes192-ctr
+/configure system security ssh client-cipher-list-v2 cipher 194 name aes128-ctr
+/configure system security ssh client-cipher-list-v2 cipher 200 name aes128-cbc
+/configure system security ssh client-cipher-list-v2 cipher 205 name 3des-cbc
+/configure system security ssh client-cipher-list-v2 cipher 225 name aes192-cbc
+/configure system security ssh client-cipher-list-v2 cipher 230 name aes256-cbc
+/configure system security ssh server-mac-list-v2 mac 200 name hmac-sha2-512
+/configure system security ssh server-mac-list-v2 mac 210 name hmac-sha2-256
+/configure system security ssh server-mac-list-v2 mac 215 name hmac-sha1
+/configure system security ssh server-mac-list-v2 mac 220 name hmac-sha1-96
+/configure system security ssh server-mac-list-v2 mac 225 name hmac-md5
+/configure system security ssh server-mac-list-v2 mac 240 name hmac-md5-96
+/configure system security ssh client-mac-list-v2 mac 200 name hmac-sha2-512
+/configure system security ssh client-mac-list-v2 mac 210 name hmac-sha2-256
+/configure system security ssh client-mac-list-v2 mac 215 name hmac-sha1
+/configure system security ssh client-mac-list-v2 mac 220 name hmac-sha1-96
+/configure system security ssh client-mac-list-v2 mac 225 name hmac-md5
+/configure system security ssh client-mac-list-v2 mac 240 name hmac-md5-96
+
+##################7. SYSTEM USERS PROFILES##################################################################
+
+/configure system security aaa local-profiles profile "administrative" default-action permit-all
+/configure system security aaa local-profiles profile "administrative" entry 10 match "configure system security"
+/configure system security aaa local-profiles profile "administrative" entry 10 action permit
+/configure system security aaa local-profiles profile "administrative" entry 20 match "show system security"
+/configure system security aaa local-profiles profile "administrative" entry 20 action permit
+/configure system security aaa local-profiles profile "administrative" entry 30 match "tools perform security"
+/configure system security aaa local-profiles profile "administrative" entry 30 action permit
+/configure system security aaa local-profiles profile "administrative" entry 40 match "tools dump security"
+/configure system security aaa local-profiles profile "administrative" entry 40 action permit
+/configure system security aaa local-profiles profile "administrative" entry 42 match "tools dump system security"
+/configure system security aaa local-profiles profile "administrative" entry 42 action permit
+/configure system security aaa local-profiles profile "administrative" entry 50 match "admin system security"
+/configure system security aaa local-profiles profile "administrative" entry 50 action permit
+/configure system security aaa local-profiles profile "administrative" entry 100 match "configure li"
+/configure system security aaa local-profiles profile "administrative" entry 100 action deny
+/configure system security aaa local-profiles profile "administrative" entry 110 match "show li"
+/configure system security aaa local-profiles profile "administrative" entry 110 action deny
+/configure system security aaa local-profiles profile "administrative" entry 111 match "clear li"
+/configure system security aaa local-profiles profile "administrative" entry 111 action deny
+/configure system security aaa local-profiles profile "administrative" entry 112 match "tools dump li"
+/configure system security aaa local-profiles profile "administrative" entry 112 action deny
+
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization action true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization cancel-commit true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization close-session true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization commit true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization copy-config true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization create-subscription true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization delete-config true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization discard-changes true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization edit-config true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get-config true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get-data true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization get-schema true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization kill-session true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization lock true
+/configure system security aaa local-profiles profile "administrative" netconf base-op-authorization validate true
+
+/configure system security aaa local-profiles profile "default" entry 10 match "exec"
+/configure system security aaa local-profiles profile "default" entry 10 action permit
+/configure system security aaa local-profiles profile "default" entry 20 match "exit"
+/configure system security aaa local-profiles profile "default" entry 20 action permit
+/configure system security aaa local-profiles profile "default" entry 30 match "help"
+/configure system security aaa local-profiles profile "default" entry 30 action permit
+/configure system security aaa local-profiles profile "default" entry 40 match "logout"
+/configure system security aaa local-profiles profile "default" entry 40 action permit
+/configure system security aaa local-profiles profile "default" entry 50 match "password"
+/configure system security aaa local-profiles profile "default" entry 50 action permit
+/configure system security aaa local-profiles profile "default" entry 60 match "show config"
+/configure system security aaa local-profiles profile "default" entry 60 action deny
+/configure system security aaa local-profiles profile "default" entry 65 match "show li"
+/configure system security aaa local-profiles profile "default" entry 65 action deny
+/configure system security aaa local-profiles profile "default" entry 66 match "clear li"
+/configure system security aaa local-profiles profile "default" entry 66 action deny
+/configure system security aaa local-profiles profile "default" entry 67 match "tools dump li"
+/configure system security aaa local-profiles profile "default" entry 67 action deny
+/configure system security aaa local-profiles profile "default" entry 68 match "state li"
+/configure system security aaa local-profiles profile "default" entry 68 action deny
+/configure system security aaa local-profiles profile "default" entry 70 match "show"
+/configure system security aaa local-profiles profile "default" entry 70 action permit
+/configure system security aaa local-profiles profile "default" entry 75 match "state"
+/configure system security aaa local-profiles profile "default" entry 75 action permit
+/configure system security aaa local-profiles profile "default" entry 80 match "enable-admin"
+/configure system security aaa local-profiles profile "default" entry 80 action permit
+/configure system security aaa local-profiles profile "default" entry 90 match "enable"
+/configure system security aaa local-profiles profile "default" entry 90 action permit
+/configure system security aaa local-profiles profile "default" entry 100 match "configure li"
+/configure system security aaa local-profiles profile "default" entry 100 action deny
+
+##################8. SYSTEM USERS ########################################################################
+
+/configure system security user-params local-user user "admin" restricted-to-home false
+/configure system security user-params local-user user "admin" access console true
+/configure system security user-params local-user user "admin" access ftp true
+/configure system security user-params local-user user "admin" access netconf true
+/configure system security user-params local-user user "admin" access grpc true
+/configure system security user-params local-user user "admin" password "lab123"
+/configure system security user-params local-user user "admin" restricted-to-home false
+/configure system security user-params local-user user "admin" access console true
+/configure system security user-params local-user user "admin" console member ["administrative"]
+
+
+##################9. LOGS ###########################################################################################
+
+/configure log filter "1001" named-entry "10" description "Collect only events of major severity or higher"
+/configure log filter "1001" named-entry "10" action forward
+/configure log filter "1001" named-entry "10" match severity gte major
+/configure log log-id "77" description "Default System Log to Syslog"
+/configure log log-id "77" source main true
+/configure log log-id "77" destination syslog "1"
+/configure log route-preference primary outband
+/configure log syslog "1" description "syslog container"
+/configure log syslog "1" address 10.99.1.16
+/configure log syslog "1" facility local6
+/configure log syslog "1" severity info
+/configure log syslog "1" port 5514
+/configure log syslog "1" hostname use-system-name
+/configure log log-id "99" description "Default System Log"
+/configure log log-id "99" source main true
+/configure log log-id "99" destination memory max-entries 500
+/configure log log-id "100" description "Default Serious Errors Log"
+/configure log log-id "100" filter "1001"
+/configure log log-id "100" source main true
+/configure log log-id "100" destination memory max-entries 500
+
+##################10. CARDS ###########################################################################################
+##################10.1. IOM ###########################################################################################
+
+/configure card 1 card-type iom5-e
+
+##################10.2. MDA ###########################################################################################
+
+/configure card 1 mda 1 mda-type me6-100gb-qsfp28
+/configure card 2 card-type iom4-e-b
+/configure card 2 mda 1 mda-type isa2-bb
+
+##################10.3. SFM ###########################################################################################
+
+/configure sfm 1 sfm-type m-sfm6-7/12
+
+##################11. ROUTER BASE ###########################################################################################
+
+/configure router "Base"
+/configure router "Base" autonomous-system 65510
+/configure router "Base" interface "system"
+/configure router "Base" interface "system" ipv4
+/configure router "Base" interface "system" ipv4 primary
+/configure router "Base" interface "system" ipv4 primary address 10.0.0.1
+/configure router "Base" interface "system" ipv4 primary prefix-length 32
+
+##################12. PORTS ################################################################################################
+##################12.1. PORT TO BNG2 ##########################################################################################
+
+/configure port 1/1/c1 admin-state enable
+/configure port 1/1/c1 connector breakout c1-100g
+/configure port 1/1/c1/1 admin-state enable
+/configure port 1/1/c1/1 ethernet mode hybrid
+/configure port 1/1/c1/1 ethernet encap-type dot1q
+
+
+##################12.2. PORT TO OLT ###########################################################################################
+
+/configure port 1/1/c2 admin-state enable
+/configure port 1/1/c2 connector breakout c1-100g
+/configure port 1/1/c2/1 admin-state enable
+/configure port 1/1/c2/1 ethernet mode hybrid
+/configure port 1/1/c2/1 ethernet encap-type dot1q
+
+##################12.3. PORT TO LIG ###########################################################################################
+
+/configure port 1/1/c3 admin-state enable
+/configure port 1/1/c3 connector breakout c1-100g
+/configure port 1/1/c3/1 admin-state enable
+/configure port 1/1/c3/1 ethernet mode hybrid
+/configure port 1/1/c3/1 ethernet encap-type dot1q
+
+##################12.4. PORT TO DNS ###########################################################################################
+
+/configure port 1/1/c4 admin-state enable
+/configure port 1/1/c4 connector breakout c1-100g
+/configure port 1/1/c4/1 admin-state enable
+/configure port 1/1/c4/1 ethernet mode hybrid
+
+##################12.5. PORT TO CARRIER1 ###########################################################################################
+
+/configure port 1/1/c5 admin-state enable
+/configure port 1/1/c5 connector breakout c1-100g
+/configure port 1/1/c5/1 admin-state enable
+/configure port 1/1/c5/1 ethernet mode hybrid
+/configure port 1/1/c5/1 ethernet encap-type dot1q
+
+##################12.6. PORT TO CARRIER2 ###########################################################################################
+
+/configure port 1/1/c6 admin-state enable
+/configure port 1/1/c6 connector breakout c1-100g
+/configure port 1/1/c6/1 admin-state enable
+/configure port 1/1/c6/1 ethernet mode hybrid
+/configure port 1/1/c6/1 ethernet encap-type dot1q
+
+
+##################17. COMMUNITIES  ######################################################################################
+
+/configure policy-options community "internet-vrf" member "target:65510:9999"
+/configure policy-options community "subscriber-vrf" member "target:65510:9998"
+
+##################18 PREFIX-LIST  ######################################################################################
+
+/configure policy-options prefix-list "default-ipv4" prefix 0.0.0.0/0 type exact
+
+##################19. EXPORT/IMPORT POLICIES INTER-VPRNs ###########################################################################################
+##################19.1. EXPORT TO 9998 ###########################################################################################
+##################19.1.1. DIRECT ###########################################################################################
+
+/configure policy-options policy-statement "export-to-9998" entry 10 from protocol name [direct]
+/configure policy-options policy-statement "export-to-9998" entry 10 action action-type accept
+/configure policy-options policy-statement "export-to-9998" entry 10 action community add ["internet-vrf"]
+
+##################19.1.2. STATIC ###########################################################################################
+
+/configure policy-options policy-statement "export-to-9998"  entry 20 from protocol name [static]
+/configure policy-options policy-statement "export-to-9998"  entry 20 action action-type accept
+/configure policy-options policy-statement "export-to-9998"  entry 20 action community add ["internet-vrf"]
+
+##################19.1.3. BGP ###########################################################################################
+
+/configure policy-options policy-statement "export-to-9998"  entry 30 from protocol name [bgp]
+/configure policy-options policy-statement "export-to-9998"  entry 30 action action-type accept
+/configure policy-options policy-statement "export-to-9998"  entry 30 action community add ["internet-vrf"]
+
+##################19.1.4. NAT ###########################################################################################
+
+/configure policy-options policy-statement "export-to-9998"  entry 40 from protocol name [nat]
+/configure policy-options policy-statement "export-to-9998"  entry 40 action action-type accept
+/configure policy-options policy-statement "export-to-9998"  entry 40 action community add ["internet-vrf"]
+
+##################19.2. EXPORT TO 9999 ###########################################################################################
+##################19.2.1. DIRECT ###########################################################################################
+
+/configure policy-options policy-statement "export-to-9999" entry 10 from protocol name [direct]
+/configure policy-options policy-statement "export-to-9999"  entry 10 action action-type accept
+/configure policy-options policy-statement "export-to-9999"  entry 10 action community add ["subscriber-vrf"]
+
+##################19.2.2. STATIC ###########################################################################################
+
+/configure policy-options policy-statement "export-to-9999"  entry 20 from protocol name [static]
+/configure policy-options policy-statement "export-to-9999"  entry 20 action action-type accept
+/configure policy-options policy-statement "export-to-9999"  entry 20 action community add ["subscriber-vrf"]
+
+##################19.2.3. NAT ###########################################################################################
+
+/configure policy-options policy-statement "export-to-9999"  entry 30 from prefix-list ["default-ipv4"]
+/configure policy-options policy-statement "export-to-9999"  entry 30 from protocol name [nat]
+/configure policy-options policy-statement "export-to-9999"  entry 30 action action-type accept
+/configure policy-options policy-statement "export-to-9999"  entry 30 action community add ["subscriber-vrf"]
+
+##################19.2.4. SUB MGMT ###########################################################################################
+
+/configure policy-options policy-statement "export-to-9999"  entry 50 from protocol name [sub-mgmt]
+/configure policy-options policy-statement "export-to-9999"  entry 50 action action-type accept
+/configure policy-options policy-statement "export-to-9999"  entry 50 action community add ["subscriber-vrf"]
+
+##################19.2.5. MANAGED ###########################################################################################
+
+/configure policy-options policy-statement "export-to-9999"  entry 60 from protocol name [managed]
+/configure policy-options policy-statement "export-to-9999"  entry 60 action action-type accept
+/configure policy-options policy-statement "export-to-9999"  entry 60 action community add ["subscriber-vrf"]
+
+/configure policy-options policy-statement "export-to-9999"  default-action action-type reject
+
+##################19.3. IMPORT FROM 9998 ###########################################################################################
+
+/configure policy-options policy-statement "import-from-9998" entry 10 from community name "subscriber-vrf"
+/configure policy-options policy-statement "import-from-9998" entry 10 action action-type accept
+
+##################19.4. IMPORT FROM 9999 ###########################################################################################
+
+/configure policy-options policy-statement "import-from-9999" entry 10 from community name "internet-vrf"
+/configure policy-options policy-statement "import-from-9999" entry 10 action action-type accept
+
+##################20. INTER-VPRN ###########################################################################################
+
+/configure service vprn "9998" bgp-ipvpn mpls admin-state enable
+/configure service vprn "9998" bgp-ipvpn mpls route-distinguisher "65510:9998"
+/configure service vprn "9998" bgp-ipvpn mpls vrf-import policy ["import-from-9999"]
+/configure service vprn "9998" bgp-ipvpn mpls vrf-export policy ["export-to-9999"]
+/configure service vprn "9998" bgp-ipvpn mpls auto-bind-tunnel resolution any
+
+/configure service vprn "9999" bgp-ipvpn mpls admin-state enable
+/configure service vprn "9999" bgp-ipvpn mpls route-distinguisher "65510:9999"
+/configure service vprn "9999" bgp-ipvpn mpls vrf-import policy ["import-from-9998"]
+/configure service vprn "9999" bgp-ipvpn mpls vrf-export policy ["export-to-9998"]
+/configure service vprn "9999" bgp-ipvpn mpls auto-bind-tunnel resolution any
+
+##################21. RADIUS ###########################################################################################
+##################21.1. ROUTER MANAGEMENT ###########################################################################################
+
+/configure router "management"
+/configure router "management" radius
+/configure router "management" radius server "radius"
+/configure router "management" radius server "radius" address 10.99.1.8
+/configure router "management" radius server "radius" secret testlab123
+/configure router "management" radius server "radius" accept-coa true
+
+##################21.2. RADIUS POLICY ###########################################################################################
+
+/configure aaa
+/configure aaa radius server-policy "radius_policy"
+/configure aaa radius server-policy "radius_policy" servers
+/configure aaa radius server-policy "radius_policy" servers retry-count 5
+/configure aaa radius server-policy "radius_policy" servers router-instance "management"
+/configure aaa radius server-policy "radius_policy" servers source-address 10.99.1.2
+/configure aaa radius server-policy "radius_policy" servers server 1
+/configure aaa radius server-policy "radius_policy" servers server 1 server-name "radius"
+/configure aaa radius server-policy "radius_policy" acct-on-off
+
+##################21.3. RADIUS ACCOUNTING-POLICY ###########################################################################################
+
+/configure subscriber-mgmt radius-accounting-policy "accounting"
+/configure subscriber-mgmt radius-accounting-policy "accounting" radius-server-policy "radius_policy"
+/configure subscriber-mgmt radius-accounting-policy "accounting" session-id-format number
+/configure subscriber-mgmt radius-accounting-policy "accounting" queue-instance-accounting
+/configure subscriber-mgmt radius-accounting-policy "accounting" queue-instance-accounting admin-state disable
+/configure subscriber-mgmt radius-accounting-policy "accounting" queue-instance-accounting interim-update false
+/configure subscriber-mgmt radius-accounting-policy "accounting" session-accounting
+/configure subscriber-mgmt radius-accounting-policy "accounting" session-accounting admin-state enable
+/configure subscriber-mgmt radius-accounting-policy "accounting" session-accounting interim-update true
+/configure subscriber-mgmt radius-accounting-policy "accounting" session-accounting host-update true
+/configure subscriber-mgmt radius-accounting-policy "accounting" update-interval
+/configure subscriber-mgmt radius-accounting-policy "accounting" update-interval interval 720
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute acct-authentic true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute acct-delay-time true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute acct-triggered-reason true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute called-station-id true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute circuit-id true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute delegated-ipv6-prefix true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute framed-ip-address true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute framed-ip-netmask true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute framed-ipv6-prefix true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute framed-ipv6-route true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute framed-route true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute ipv6-address true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute mac-address true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute nas-identifier true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute nat-port-range true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute remote-id true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute sla-profile true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute std-acct-attributes true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute sub-profile true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute subscriber-id true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute tunnel-server-attrs true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute user-name true
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute nas-port-id
+/configure subscriber-mgmt radius-accounting-policy "accounting" include-radius-attribute nas-port-type
+
+##################21.4. RADIUS AUTHENTICATION-POLICY ###########################################################################################
+
+/configure subscriber-mgmt radius-authentication-policy "autpolicy"
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" password testlab123
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" pppoe-access-method pap-chap
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" radius-server-policy "radius_policy"
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" re-authentication true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" fallback
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" fallback action
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" fallback action user-db "clientes"
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute access-loop-options true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute called-station-id true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute dhcp-options true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute dhcp-vendor-class-id true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute mac-address true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute nas-identifier true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute pppoe-service-name true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute remote-id true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute tunnel-server-attrs true
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute acct-session-id
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute acct-session-id type session
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute calling-station-id
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute calling-station-id type sap-string
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute nas-port-id
+/configure subscriber-mgmt radius-authentication-policy "autpolicy" include-radius-attribute nas-port-type
+
+##################21.5. AUTHENTICATION ORIGIN ###########################################################################################
+
+/configure subscriber-mgmt authentication-origin
+/configure subscriber-mgmt authentication-origin overrides
+/configure subscriber-mgmt authentication-origin overrides priority 3
+/configure subscriber-mgmt authentication-origin overrides priority 3 source radius
+
+##################22. QOS  ########################################################################################################
+##################22.1. QOS SAP-INGRESS ###########################################################################################
+
+/configure qos
+/configure qos sap-ingress "10"
+/configure qos sap-ingress "10" queue 1
+/configure qos sap-ingress "10" queue 11
+/configure qos sap-ingress "10" queue 11 multipoint true
+/configure qos sap-ingress "10" fc "af"
+/configure qos sap-ingress "10" fc "af" queue 1
+/configure qos sap-ingress "10" fc "be"
+/configure qos sap-ingress "10" fc "be" queue 1
+/configure qos sap-ingress "10" fc "ef"
+/configure qos sap-ingress "10" fc "ef" queue 1
+/configure qos sap-ingress "10" fc "h1"
+/configure qos sap-ingress "10" fc "h1" queue 1
+/configure qos sap-ingress "10" fc "h2"
+/configure qos sap-ingress "10" fc "h2" queue 1
+/configure qos sap-ingress "10" fc "l1"
+/configure qos sap-ingress "10" fc "l1" queue 1
+/configure qos sap-ingress "10" fc "l2"
+/configure qos sap-ingress "10" fc "l2" queue 1
+/configure qos sap-ingress "10" fc "nc"
+/configure qos sap-ingress "10" fc "nc" queue 1
+
+##################22.2. QOS SAP-EGRESS ###########################################################################################
+
+/configure qos sap-egress "10"
+/configure qos sap-egress "10" queue 1
+/configure qos sap-egress "10" fc be
+/configure qos sap-egress "10" fc be queue 1
+/configure qos sap-egress "10" fc l2
+/configure qos sap-egress "10" fc l2 queue 1
+/configure qos sap-egress "10" fc af
+/configure qos sap-egress "10" fc af queue 1
+/configure qos sap-egress "10" fc l1
+/configure qos sap-egress "10" fc l1 queue 1
+/configure qos sap-egress "10" fc h2
+/configure qos sap-egress "10" fc h2 queue 1
+/configure qos sap-egress "10" fc ef
+/configure qos sap-egress "10" fc ef queue 1
+/configure qos sap-egress "10" fc h1
+/configure qos sap-egress "10" fc h1 queue 1
+/configure qos sap-egress "10" fc nc
+/configure qos sap-egress "10" fc nc queue 1
+
+
+##################23. ESM ##############################################################################################################
+##################23.1. IPOE POLICY #################################################################################################
+
+/configure subscriber-mgmt
+/configure subscriber-mgmt ipoe-session-policy "ipoe"
+
+##################23.2.  PPPOE POLICY ################################################################################################
+
+/configure subscriber-mgmt ppp-policy "pppoe"
+/configure subscriber-mgmt ppp-policy "pppoe" ppp-authentication pref-pap
+/configure subscriber-mgmt ppp-policy "pppoe" ppp-initial-delay true
+/configure subscriber-mgmt ppp-policy "pppoe" ppp-mtu 1500
+/configure subscriber-mgmt ppp-policy "pppoe" reply-on-padt true
+/configure subscriber-mgmt ppp-policy "pppoe" keepalive
+/configure subscriber-mgmt ppp-policy "pppoe" keepalive interval 10
+/configure subscriber-mgmt ppp-policy "pppoe" keepalive hold-up-multiplier 4
+
+##################23.3. SUB-PROFILE ###########################################################################################
+
+/configure subscriber-mgmt sub-profile "subprofile"
+/configure subscriber-mgmt sub-profile "subprofile" radius-accounting
+/configure subscriber-mgmt sub-profile "subprofile" radius-accounting policy ["accounting"]
+/configure subscriber-mgmt sub-profile "subprofile" radius-accounting session-optimized-stop true
+
+##################23.4. SUB-IDENT POLICY ###########################################################################################
+
+/configure subscriber-mgmt sub-ident-policy "subident"
+/configure subscriber-mgmt sub-ident-policy "subident" sla-profile-map
+/configure subscriber-mgmt sub-ident-policy "subident" sla-profile-map use-direct-map-as-default true
+/configure subscriber-mgmt sub-ident-policy "subident" sub-profile-map
+/configure subscriber-mgmt sub-ident-policy "subident" sub-profile-map use-direct-map-as-default true
+
+##################23.5. SLA PROFILE ###########################################################################################
+
+/configure subscriber-mgmt sla-profile "100M" egress qos sap-egress policy-name "10"
+/configure subscriber-mgmt sla-profile "100M" egress qos sap-egress overrides queue 1 stat-mode v4-v6
+/configure subscriber-mgmt sla-profile "100M" egress qos sap-egress overrides queue 1 rate pir 100000
+/configure subscriber-mgmt sla-profile "100M" egress qos sap-egress overrides queue 1 rate cir 100000
+/configure subscriber-mgmt sla-profile "100M" host-limits overall 10
+/configure subscriber-mgmt sla-profile "100M" host-limits ipv4 dhcp 1
+/configure subscriber-mgmt sla-profile "100M" host-limits ipv6 pd-ipoe-dhcp 1
+/configure subscriber-mgmt sla-profile "100M" host-limits ipv6 wan-ipoe-dhcp 1
+/configure subscriber-mgmt sla-profile "100M" ingress ip-filter "10"
+/configure subscriber-mgmt sla-profile "100M" ingress qos sap-ingress policy-name "10"
+/configure subscriber-mgmt sla-profile "100M" ingress qos sap-ingress overrides queue 1 stat-mode v4-v6
+/configure subscriber-mgmt sla-profile "100M" ingress qos sap-ingress overrides queue 1 rate pir 100000
+/configure subscriber-mgmt sla-profile "100M" ingress qos sap-ingress overrides queue 1 rate cir 100000
+
+##################23.6. MSAP POLICY###########################################################################################
+
+/configure subscriber-mgmt msap-policy "msap" sub-sla-mgmt subscriber-limit 131071
+/configure subscriber-mgmt msap-policy "msap" sub-sla-mgmt sub-ident-policy "subident"
+/configure subscriber-mgmt msap-policy "msap" sub-sla-mgmt defaults sla-profile "100M"
+/configure subscriber-mgmt msap-policy "msap" sub-sla-mgmt defaults sub-profile "subprofile"
+/configure subscriber-mgmt msap-policy "msap" sub-sla-mgmt defaults subscriber-id auto-id
+/configure subscriber-mgmt msap-policy "msap" sub-sla-mgmt single-sub-parameters profiled-traffic-only true
+/configure subscriber-mgmt msap-policy "msap" ies-vprn-only-sap-parameters anti-spoof next-hop-ip-and-mac-addr
+/configure subscriber-mgmt msap-policy "msap" ies-vprn-only-sap-parameters ingress qos queuing-type service
+
+##################23.7. LOCAL USER DATABASE ###########################################################################################
+
+/configure subscriber-mgmt local-user-db clientes
+/configure subscriber-mgmt local-user-db clientes admin-state enable
+/configure subscriber-mgmt local-user-db clientes ipoe match-list [sap-id]
+/configure subscriber-mgmt local-user-db clientes ppp match-list [user-name]
+
+#DEFAULT PROFILE
+/configure subscriber-mgmt local-user-db "clientes" admin-state enable
+/configure subscriber-mgmt local-user-db "clientes" ipoe match-list [sap-id mac]
+/configure subscriber-mgmt local-user-db "clientes" ipoe host "default" admin-state enable
+/configure subscriber-mgmt local-user-db "clientes" ipoe host "default" identification sla-profile-string "100M"
+/configure subscriber-mgmt local-user-db "clientes" ipoe host "default" identification sub-profile-string "subprofile"
+/configure subscriber-mgmt local-user-db "clientes" ipoe host "default" msap-defaults policy "msap"
+/configure subscriber-mgmt local-user-db "clientes" ipoe host "default" msap-defaults service 9998
+/configure subscriber-mgmt local-user-db "clientes" ipoe host "default" ipv4 address pool primary "cgnat"
+/configure subscriber-mgmt local-user-db "clientes" ppp match-list [user-name]
+
+
+##################23.8. SHCV POLICY ###########################################################################################
+
+/configure subscriber-mgmt shcv-policy "host-connectivity-verify"
+/configure subscriber-mgmt shcv-policy "host-connectivity-verify" trigger
+/configure subscriber-mgmt shcv-policy "host-connectivity-verify" trigger inactivity
+/configure subscriber-mgmt shcv-policy "host-connectivity-verify" trigger inactivity admin-state enable
+/configure subscriber-mgmt shcv-policy "host-connectivity-verify" trigger inactivity timeout 60
+
+##################24. NAT #####################################################################################################
+##################24.1. ISA ###################################################################################################
+
+/configure isa
+/configure isa nat-group 1
+/configure isa nat-group 1 admin-state enable
+/configure isa nat-group 1 redundancy
+/configure isa nat-group 1 redundancy active-mda-limit 1
+/configure isa nat-group 1 session-limits
+/configure isa nat-group 1 session-limits watermarks
+/configure isa nat-group 1 session-limits watermarks low 80
+/configure isa nat-group 1 session-limits watermarks high 90
+/configure isa nat-group 1 mda 2/1
+
+##################24.2. VPRN 9999  ##########################################################################################################
+
+/configure service vprn "9999"
+/configure service vprn "9999" admin-state enable
+/configure service vprn "9999" customer "1"
+/configure service vprn "9999" autonomous-system 65520
+
+##################24.3. VPRN 9999 INTERFACE TO LIG ##########################################################################################################
+
+/configure service vprn "9999" interface "to_LIG"
+/configure service vprn "9999" interface "to_LIG" admin-state enable
+/configure service vprn "9999" interface "to_LIG" ipv4 primary
+/configure service vprn "9999" interface "to_LIG" ipv4 primary address 172.19.1.2
+/configure service vprn "9999" interface "to_LIG" ipv4 primary prefix-length 30
+/configure service vprn "9999" interface "to_LIG" sap 1/1/c3/1:0 admin-state enable
+/configure service vprn "9999" interface "to_LIG" ipv6 address 2001:db8:ffff::2 prefix-length 126
+
+##################24.4. VPRN 9999 INTERFACE TO CARRIER1 ##########################################################################################################
+
+/configure service vprn "9999" interface "to_CARRIER1" admin-state enable
+/configure service vprn "9999" interface "to_CARRIER1" ipv4 primary address 172.16.1.0
+/configure service vprn "9999" interface "to_CARRIER1" ipv4 primary prefix-length 31
+/configure service vprn "9999" interface "to_CARRIER1" sap 1/1/c5/1:0 admin-state enable
+/configure service vprn "9999" interface "to_CARRIER1" ipv6 address 2001:db8:f1::1 prefix-length 126
+
+##################24.5. VPRN 9999 INTERFACE TO CARRIER2 ##########################################################################################################
+
+/configure service vprn "9999" interface "to_CARRIER2" admin-state enable
+/configure service vprn "9999" interface "to_CARRIER2" ipv4 primary address 172.16.2.0
+/configure service vprn "9999" interface "to_CARRIER2" ipv4 primary prefix-length 31
+/configure service vprn "9999" interface "to_CARRIER2" sap 1/1/c6/1:0 admin-state enable
+/configure service vprn "9999" interface "to_CARRIER2" ipv6 address 2001:db8:f2::1 prefix-length 126
+
+##################24.6. NAT OUTSIDE 64 ##########################################################################################################
+
+/configure service vprn "9999" nat outside pool "nat64-pool" admin-state enable
+/configure service vprn "9999" nat outside pool "nat64-pool" type large-scale
+/configure service vprn "9999" nat outside pool "nat64-pool" nat-group 1
+/configure service vprn "9999" nat outside pool "nat64-pool" port-reservation ports 200
+/configure service vprn "9999" nat  outside pool "nat64-pool" address-range 199.199.199.199 end 199.199.199.199
+
+##################24.7.  NAT POLICY 64 ##########################################################################################################
+
+/configure service nat nat-policy "nat64-pol" pool router-instance "9999"
+/configure service nat nat-policy "nat64-pol" pool name "nat64-pool"
+/configure service nat nat-policy "nat64-pol" alg pptp true
+/configure service nat nat-policy "nat64-pol" alg rtsp true
+/configure service nat nat-policy "nat64-pol" alg sip true
+
+##################24.8. NAT INSIDE 64 ##########################################################################################################
+
+/configure service vprn "9998" nat inside large-scale nat64 admin-state enable
+/configure service vprn "9998" nat inside large-scale nat64 prefix 64:ff9b::/96
+/configure service vprn "9998" nat inside large-scale nat64 subscriber-prefix-length 64
+/configure service vprn "9998" nat inside large-scale nat64 ipv6-mtu 1500
+/configure service vprn "9998" nat inside large-scale nat-policy "nat64-pol" nat64
+
+##################24.9. NAT FILTER 64 ###################################################################################################
+
+/configure filter ipv6-filter "10" default-action accept
+/configure filter ipv6-filter "10" entry 10 match dst-ip address 64:ff9b::
+/configure filter ipv6-filter "10" entry 10 match dst-ip mask ffff:ffff:ffff:ffff:ffff:ffff::
+/configure filter ipv6-filter "10" entry 10  action nat nat-type nat64
+/configure filter ipv6-filter "10" entry 10 action nat nat-type nat64 nat-policy "nat64-pol"
+/configure subscriber-mgmt sla-profile "100M" ingress ipv6-filter "10"
+
+##################25. IMPORT/EXPORT POLICIES  ##########################################################################################################
+##################25.1. PREFIX LISTS  ##########################################################################################################
+
+/configure policy-options prefix-list "public-nat-v4" prefix 99.99.99.99/32 type exact
+/configure policy-options prefix-list "public-nat-v4" prefix 199.199.199.199/32 type exact
+/configure policy-options prefix-list "public-nat-v4" prefix 88.88.88.88/29 type exact
+
+/configure policy-options prefix-list "public-v6" prefix 2001:db8:100::/56 type exact
+/configure policy-options prefix-list "public-v6" prefix 2001:db8:200::/48 type exact
+/configure policy-options prefix-list "public-v6" prefix 2001:db8:cccc::/56 type exact
+/configure policy-options prefix-list "public-v6" prefix 2001:db8:dddd::/48 type exact
+
+##################25.2. IMPORT CARRIER 1  ##########################################################################################################
+
+/configure policy-options policy-statement "IMPORT-CARRIER1" entry 10 from protocol name [bgp]
+/configure policy-options policy-statement "IMPORT-CARRIER1" entry 10 action action-type accept
+/configure policy-options policy-statement "IMPORT-CARRIER1" entry 10 action local-preference 300
+/configure policy-options policy-statement "IMPORT-CARRIER1" default-action action-type reject
+
+##################25.3. IMPORT CARRIER 2  ##########################################################################################################
+
+/configure policy-options policy-statement "IMPORT-CARRIER2" entry 10 from protocol name [bgp]
+/configure policy-options policy-statement "IMPORT-CARRIER2" entry 10 action action-type accept
+/configure policy-options policy-statement "IMPORT-CARRIER2" entry 10 action local-preference 150
+/configure policy-options policy-statement "IMPORT-CARRIER2" default-action action-type reject
+
+##################25.4. EXPORT CARRIER 1 -IF=MASTER ##########################################################################################################
+
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 5 from prefix-list ["public-nat-v4"]
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 5 from protocol name [nat]
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 5 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 5 action metric set 50
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 10 from prefix-list ["public-nat-v4"]
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 10 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 10 action metric set 50
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 20 from prefix-list ["public-v6"]
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 20 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C1_Master" entry 20 action metric set 50
+/configure policy-options policy-statement "public_to_ISP_C1_Master" default-action action-type reject
+
+##################25.5. EXPORT CARRIER 1 -IF=BACKUP ##########################################################################################################
+
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 5 from prefix-list ["public-nat-v4"]
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 5 from protocol name [nat]
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 5 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 5 action as-path-prepend as-path 65520
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 5 action as-path-prepend repeat 3
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 5 action metric set 100
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 10 from prefix-list ["public-nat-v4"]
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 10 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 10 action as-path-prepend as-path 65520
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 10 action as-path-prepend repeat 3
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 10 action metric set 100
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 20 from prefix-list ["public-v6"]
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 20 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 20 action as-path-prepend as-path 65520
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 20 action as-path-prepend repeat 3
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" entry 20 action metric set 100
+/configure policy-options policy-statement "public_to_ISP_C1_Backup" default-action action-type reject
+
+##################25.6. EXPORT CARRIER 2 -IF=MASTER ##########################################################################################################
+
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 5 from prefix-list ["public-nat-v4"]
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 5 from protocol name [nat]
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 5 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 5 action as-path-prepend as-path 65520
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 5 action as-path-prepend repeat 2
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 5 action metric set 50
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 10 from prefix-list ["public-nat-v4"]
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 10 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 10 action as-path-prepend as-path 65520
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 10 action as-path-prepend repeat 2
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 10 action metric set 50
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 20 from prefix-list ["public-v6"]
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 20 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 20 action as-path-prepend as-path 65520
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 20 action as-path-prepend repeat 2
+/configure policy-options policy-statement "public_to_ISP_C2_Master" entry 20 action metric set 50
+/configure policy-options policy-statement "public_to_ISP_C2_Master" default-action action-type reject
+
+##################25.7. EXPORT CARRIER 2 -IF=BACKUP ##########################################################################################################
+
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 5 from prefix-list ["public-nat-v4"]
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 5 from protocol name [nat]
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 5 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 5 action as-path-prepend as-path 65520
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 5 action as-path-prepend repeat 4
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 5 action metric set 100
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 10 from prefix-list ["public-nat-v4"]
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 10 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 10 action as-path-prepend as-path 65520
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 10 action as-path-prepend repeat 4
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 10 action metric set 100
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 20 from prefix-list ["public-v6"]
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 20 action action-type accept
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 20 action as-path-prepend as-path 65520
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 20 action as-path-prepend repeat 4
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" entry 20 action metric set 100
+/configure policy-options policy-statement "public_to_ISP_C2_Backup" default-action action-type reject
+
+##################26. eBGP ##########################################################################################################
+
+/configure service vprn "9999" bgp admin-state enable
+/configure service vprn "9999" bgp rapid-withdrawal true
+/configure service vprn "9999" bgp peer-ip-tracking true
+/configure service vprn "9999" bgp family ipv4 true
+/configure service vprn "9999" bgp family ipv6 true
+
+##################26.1. GROUPS ##########################################################################################################
+
+/configure service vprn "9999" bgp group "eBGP-CARRIERS" admin-state enable
+/configure service vprn "9999" bgp group "eBGP-CARRIERS" type external
+/configure service vprn "9999" bgp group "eBGP-CARRIERS" family ipv4 true
+/configure service vprn "9999" bgp group "eBGP-CARRIERS" family ipv6 true
+
+##################26.2. NEIGHBORS ##########################################################################################################
+
+/configure service vprn "9999" bgp neighbor "172.16.1.1" admin-state enable
+/configure service vprn "9999" bgp neighbor "172.16.1.1" description "to_CARRIER1"
+/configure service vprn "9999" bgp neighbor "172.16.1.1" group "eBGP-CARRIERS"
+/configure service vprn "9999" bgp neighbor "172.16.1.1" peer-as 65501
+/configure service vprn "9999" bgp neighbor "172.16.1.1" import policy ["IMPORT-CARRIER1"]
+/configure service vprn "9999" bgp neighbor "172.16.1.1" export policy ["public_to_ISP_C1_Master"]
+
+/configure service vprn "9999" bgp neighbor "172.16.2.1" admin-state enable
+/configure service vprn "9999" bgp neighbor "172.16.2.1" description "to_CARRIER2"
+/configure service vprn "9999" bgp neighbor "172.16.2.1" group "eBGP-CARRIERS"
+/configure service vprn "9999" bgp neighbor "172.16.2.1" peer-as 65502
+/configure service vprn "9999" bgp neighbor "172.16.2.1" import policy ["IMPORT-CARRIER2"]
+/configure service vprn "9999" bgp neighbor "172.16.2.1" export policy ["public_to_ISP_C2_Master"]
+
+##################27. VPRN 9998 ##########################################################################################################
+
+/configure service vprn "9998"
+/configure service vprn "9998" admin-state enable
+/configure service vprn "9998" customer "1"
+/configure service vprn "9998" management
+/configure service vprn "9998" management allow-ftp true
+/configure service vprn "9998" management allow-ssh true
+/configure service vprn "9998" management allow-netconf true
+/configure service vprn "9998" management allow-grpc true
+
+##################28. DHCP SERVERS ##########################################################################################################
+##################28.1. DHCP IPV6 ##########################################################################################################
+
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" admin-state enable
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool-selection use-pool-from-client
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool-selection use-link-address scope pool
+
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" delegated-prefix minimum 56
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" delegated-prefix maximum 64
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" options option dns-server ipv6-address [ 2001:db8:aaaa::2 2001:db8:aaab::2 ]
+
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:100::/56 preferred-lifetime 43200
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:100::/56 valid-lifetime 86400
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:100::/56 renew-time 21600
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:100::/56 rebind-time 36000
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:100::/56 prefix-type wan-host true
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:100::/56 prefix-type pd false
+
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:200::/48 preferred-lifetime 43200
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:200::/48 valid-lifetime 86400
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:200::/48 renew-time 21600
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:200::/48 rebind-time 36000
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:200::/48 prefix-type wan-host false
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6" prefix 2001:db8:200::/48 prefix-type pd true
+
+
+##################28.2. LOOPBACK DHCP ##########################################################################################################
+
+/configure service vprn "9998" interface "loopback"
+/configure service vprn "9998" interface "loopback" admin-state enable
+/configure service vprn "9998" interface "loopback" loopback true
+/configure service vprn "9998" interface "loopback" ipv4
+/configure service vprn "9998" interface "loopback" ipv4 local-dhcp-server "suscriptores"
+/configure service vprn "9998" interface "loopback" ipv4 primary
+/configure service vprn "9998" interface "loopback" ipv4 primary address 9.9.9.9
+/configure service vprn "9998" interface "loopback" ipv4 primary prefix-length 32
+/configure service vprn "9998" interface "loopback" ipv4 primary prefix-length 32
+/configure service vprn "9998" interface "loopback" ipv6 local-dhcp-server "suscriptores_v6"
+/configure service vprn "9998" interface "loopback" ipv6 address fd07:47::aaaa prefix-length 128
+
+##################28.3. INTERFACE toDNS ##########################################################################################################
+
+/configure service vprn "9998" interface "toDNS64" admin-state enable
+/configure service vprn "9998" interface "toDNS64" ipv4 primary address 192.168.3.1
+/configure service vprn "9998" interface "toDNS64" sap 1/1/c4/1:0 admin-state enable
+/configure service vprn "9998" interface "toDNS64" ipv4 primary prefix-length 30
+/configure service vprn "9998" interface "toDNS64" ipv6 address 2001:db8:aaaa::1 prefix-length 126
+
+##################28.3. INTERFACE toOLT ##########################################################################################################
+
+/configure service vprn "9998" interface "toOLT-MGMT" admin-state enable
+/configure service vprn "9998" interface "toOLT-MGMT" ipv4 primary address 192.168.0.1
+/configure service vprn "9998" interface "toOLT-MGMT" sap 1/1/c2/1:50 admin-state enable
+/configure service vprn "9998" interface "toOLT-MGMT" ipv4 primary prefix-length 24
+
+
+##################29. SUBSCRIBER INTERFACE ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services"
+/configure service vprn "9998" subscriber-interface "services" admin-state enable
+/configure service vprn "9998" subscriber-interface "services" wan-mode mode128
+
+##################29.1. IPV4 ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" ipv4
+/configure service vprn "9998" subscriber-interface "services" ipv4 allow-unmatching-subnets true
+/configure service vprn "9998" subscriber-interface "services" ipv4 default-dns [8.8.8.8 8.8.4.4]
+/configure service vprn "9998" subscriber-interface "services" ipv4 address 100.80.0.5
+/configure service vprn "9998" subscriber-interface "services" ipv4 address 100.80.0.5 prefix-length 29
+/configure service vprn "9998" subscriber-interface "services" ipv4 address 100.80.0.5 gateway 100.80.0.1
+/configure service vprn "9998" subscriber-interface "services" ipv4 dhcp
+/configure service vprn "9998" subscriber-interface "services" ipv4 dhcp gi-address 100.80.0.1
+
+/configure service vprn "9998" subscriber-interface "services" ipv4 address 192.168.5.5 prefix-length 29 gateway 192.168.5.1
+
+##################29.2. IPV6 ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" ipv6 allow-unmatching-prefixes true
+/configure service vprn "9998" subscriber-interface "services" ipv6 delegated-prefix-length variable
+/configure service vprn "9998" subscriber-interface "services" ipv6 prefix 2001:db8:100::/56 host-type wan
+/configure service vprn "9998" subscriber-interface "services" ipv6 prefix 2001:db8:200::/48 host-type pd
+
+/configure service vprn "9998" subscriber-interface "services" ipv6 prefix 2001:db8:cccc::/56 host-type wan
+/configure service vprn "9998" subscriber-interface "services" ipv6 prefix 2001:db8:dddd::/48 host-type pd
+
+/configure service vprn "9998" subscriber-interface "services" ipv6 link-local-address address fe80::7e20:64ff:fe84:8365
+
+##################30. GROUP-INTERFACES ##########################################################################################################
+##################30.1. HSI RESIDENTIAL ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only"
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" radius-auth-policy "autpolicy"
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ingress-stats true
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" oper-up-while-empty true
+
+##################30.2. HSI RESIDENTIAL IPV6 ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 urpf-check mode strict-no-ecmp
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 dhcp6 pd-managed-route
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 dhcp6 relay admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 dhcp6 relay link-address 2001:db8:100::
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 dhcp6 relay server ["fd07:47::aaaa" "fd07:47::aaab"]
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 dhcp6 relay client-applications dhcp true
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 dhcp6 relay client-applications ppp true
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 dhcp6 proxy-server admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 router-advertisements admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 router-advertisements options other-stateful-configuration true
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 router-advertisements prefix-options autonomous false
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipv6 router-advertisements options managed-configuration true
+
+##################30.3. HSI RESIDENTIAL IPOE POLICY ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipoe-session
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipoe-session admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipoe-session ipoe-session-policy "ipoe"
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipoe-session user-db "clientes"
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipoe-session session-limit 131071
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" ipoe-session sap-session-limit 131071
+
+##################30.4. HSI RESIDENTIAL PPPOE POLICY ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" pppoe
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" pppoe admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" pppoe policy "pppoe"
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" pppoe session-limit 131071
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" pppoe sap-session-limit 131071
+/configure service vprn "9998" subscriber-interface "services" group-interface "ipv6-only" pppoe user-db "clientes"
+
+##################31. SERVICES FOR dual-stack ###################################################################################################
+##################31.1. NAT FILTER dual-stack #########################################################################################################
+
+/configure filter ip-filter "10" default-action accept
+/configure filter ip-filter "10" entry 1 match dst-ip address 100.80.0.0
+/configure filter ip-filter "10" entry 1 match dst-ip mask 255.255.255.248
+/configure filter ip-filter "10" entry 1 action accept
+/configure filter ip-filter "10" entry 2 match src-ip address 100.80.0.0
+/configure filter ip-filter "10" entry 2 match src-ip mask 255.255.255.248
+/configure filter ip-filter "10" entry 2 action nat
+
+##################31.2. NAT OUTSIDE dual-stack #########################################################################################################
+
+/configure service vprn "9999" nat
+/configure service vprn "9999" nat outside
+/configure service vprn "9999" nat outside pool "dtpool"
+/configure service vprn "9999" nat outside pool "dtpool" admin-state enable
+/configure service vprn "9999" nat outside pool "dtpool" type large-scale
+/configure service vprn "9999" nat outside pool "dtpool" nat-group 1
+/configure service vprn "9999" nat outside pool "dtpool" mode napt
+/configure service vprn "9999" nat outside pool "dtpool" large-scale
+/configure service vprn "9999" nat outside pool "dtpool" large-scale subscriber-limit 8
+/configure service vprn "9999" nat outside pool "dtpool" large-scale deterministic
+/configure service vprn "9999" nat outside pool "dtpool" large-scale deterministic port-reservation 64
+/configure service vprn "9999" nat outside pool "dtpool" address-range 99.99.99.99 end 99.99.99.99
+
+##################31.3. NAT POLICY dual-stack ##########################################################################################################
+
+/configure service
+/configure service nat
+/configure service nat nat-policy "natpol"
+/configure service nat nat-policy "natpol" pool
+/configure service nat nat-policy "natpol" pool router-instance "9999"
+/configure service nat nat-policy "natpol" pool name "dtpool"
+/configure service nat nat-policy "natpol" alg
+/configure service nat nat-policy "natpol" alg pptp true
+/configure service nat nat-policy "natpol" alg rtsp true
+/configure service nat nat-policy "natpol" alg sip true
+
+##################31.4. NAT INSIDE dual-stack ##########################################################################################################
+
+/configure service vprn "9998" nat
+/configure service vprn "9998" nat inside
+/configure service vprn "9998" nat inside large-scale
+/configure service vprn "9998" nat inside large-scale nat44
+/configure service vprn "9998" nat inside large-scale nat44 max-subscriber-limit 8
+/configure service vprn "9998" nat inside large-scale nat44 deterministic
+/configure service vprn "9998" nat inside large-scale nat44 deterministic prefix-map 100.80.0.0/29 nat-policy "natpol"
+/configure service vprn "9998" nat inside large-scale nat44 deterministic prefix-map 100.80.0.0/29 nat-policy "natpol" admin-state enable
+/configure service vprn "9998" nat inside large-scale nat44 deterministic prefix-map 100.80.0.0/29 nat-policy "natpol" map 100.80.0.0 to 100.80.0.7
+/configure service vprn "9998" nat inside large-scale nat44 deterministic prefix-map 100.80.0.0/29 nat-policy "natpol" map 100.80.0.0 to 100.80.0.7 first-outside-address 99.99.99.99
+/configure service vprn "9998" nat inside large-scale nat44 destination-prefix 0.0.0.0/0
+
+##################31.5. DHCP IPV4 dual-stack ##########################################################################################################
+
+/configure service vprn "9998" dhcp-server
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores"
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" admin-state enable
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool-selection
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool-selection use-gi-address
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool-selection use-pool-from-client
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat"
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" minimum-free
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" minimum-free percent 3
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" options
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" options option dns-server
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" options option dns-server ipv4-address [8.8.8.8 8.8.4.4]
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" options option lease-time
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" options option lease-time duration 315446399
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" subnet 100.80.0.0/29
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" subnet 100.80.0.0/29 options
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" subnet 100.80.0.0/29 options option default-router
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" subnet 100.80.0.0/29 options option default-router ipv4-address [100.80.0.1]
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" subnet 100.80.0.0/29 options option lease-time
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" subnet 100.80.0.0/29 options option lease-time duration 315446399
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" subnet 100.80.0.0/29 address-range 100.80.0.2 end 100.80.0.4
+/configure service vprn "9998" dhcp-server dhcpv4 "suscriptores" pool "cgnat" subnet 100.80.0.0/29 exclude-addresses 100.80.0.1 end 100.80.0.1
+
+
+#################31.6. DHCP IPV6 dual-stack ##########################################################################################################
+
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" admin-state enable
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool-selection use-pool-from-client
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool-selection use-link-address scope pool
+
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" delegated-prefix minimum 56
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" delegated-prefix maximum 64
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" options option dns-server ipv6-address [ 2001:db8:aaaa::2 2001:db8:aaab::2  ]
+
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:cccc::/56 preferred-lifetime 43200
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:cccc::/56 valid-lifetime 86400
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:cccc::/56 renew-time 21600
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:cccc::/56 rebind-time 36000
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:cccc::/56 prefix-type wan-host true
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:cccc::/56 prefix-type pd false
+
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:dddd::/48 preferred-lifetime 43200
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:dddd::/48 valid-lifetime 86400
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:dddd::/48 renew-time 21600
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:dddd::/48 rebind-time 36000
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:dddd::/48 prefix-type wan-host false
+/configure service vprn "9998" dhcp-server dhcpv6 "suscriptores_v6" pool "IPv6-dual-stack" prefix 2001:db8:dddd::/48 prefix-type pd true
+
+##################31.7. HSI dual-stack ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack"
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" radius-auth-policy "autpolicy"
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ingress-stats true
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" oper-up-while-empty true
+
+
+##################31.8. HSI dual-stack IPV4 ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 urpf-check
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 urpf-check mode strict-no-ecmp
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 neighbor-discovery
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 neighbor-discovery populate true
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp server [9.9.9.9]
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp trusted true
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp gi-address 100.80.0.1
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp proxy-server
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp proxy-server admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp proxy-server emulated-server 100.80.0.1
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp lease-populate
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp lease-populate max-leases 131071
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp client-applications
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp client-applications dhcp true
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv4 dhcp client-applications ppp true
+
+##################31.9. HSI dual-stack IPV6 ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 urpf-check mode strict-no-ecmp
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 dhcp6 pd-managed-route
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 dhcp6 relay admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 dhcp6 relay link-address 2001:db8:cccc::
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 dhcp6 relay server ["fd07:47::aaaa" "fd07:47::aaab"]
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 dhcp6 relay client-applications dhcp true
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 dhcp6 relay client-applications ppp true
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 dhcp6 proxy-server admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 router-advertisements admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 router-advertisements options other-stateful-configuration true
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 router-advertisements prefix-options autonomous false
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipv6 router-advertisements options managed-configuration true
+
+##################31.10. HSI dual-stack IPOE POLICY ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipoe-session
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipoe-session admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipoe-session ipoe-session-policy "ipoe"
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipoe-session user-db "clientes"
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipoe-session session-limit 131071
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" ipoe-session sap-session-limit 131071
+
+##################31.11. HSI dual-stack PPPOE POLICY ##########################################################################################################
+
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" pppoe
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" pppoe admin-state enable
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" pppoe policy "pppoe"
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" pppoe session-limit 131071
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" pppoe sap-session-limit 131071
+/configure service vprn "9998" subscriber-interface "services" group-interface "dual-stack" pppoe user-db "clientes"
+
+
+##################37. VPLS ##########################################################################################################
+
+/configure service vpls "capture-sap"
+/configure service vpls "capture-sap" admin-state enable
+/configure service vpls "capture-sap" service-id 2
+/configure service vpls "capture-sap" customer "1"
+
+##################37.1. CAPTURE S-VLAN 50##########################################################################################################
+
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:*
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* radius-auth-policy "autpolicy"
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* trigger-packet dhcp true
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* trigger-packet dhcp6 true
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* trigger-packet pppoe true
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* msap-defaults policy "msap"
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* msap-defaults service-name "9998"
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* msap-defaults group-interface "dual-stack"
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* ipoe-session admin-state enable
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* ipoe-session ipoe-session-policy "ipoe"
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* ipoe-session user-db "clientes"
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* pppoe policy "pppoe"
+/configure service vpls "capture-sap" capture-sap 1/1/c2/1:* pppoe user-db "clientes"
+
+##################39. LAWFUL INTERCEPTION ##########################################################################################################
+##################39.1. PERFIL LI ##########################################################################################################
+
+/configure system security aaa local-profiles profile "li"
+/configure system security aaa local-profiles profile "li" default-action deny-all
+/configure system security aaa local-profiles profile "li" entry 10 match "edit-config li exclusive"
+/configure system security aaa local-profiles profile "li" entry 10 action permit
+/configure system security aaa local-profiles profile "li" entry 20 match "li"
+/configure system security aaa local-profiles profile "li" entry 20 action permit
+/configure system security aaa local-profiles profile "li" entry 30 match "show li"
+/configure system security aaa local-profiles profile "li" entry 30 action permit
+/configure system security aaa local-profiles profile "li" entry 40 match "admin save li"
+/configure system security aaa local-profiles profile "li" entry 40 action permit
+/configure system security aaa local-profiles profile "li" entry 50 match "quit-config"
+/configure system security aaa local-profiles profile "li" entry 50 action permit
+/configure system security aaa local-profiles profile "li" entry 60 match "edit-config private"
+/configure system security aaa local-profiles profile "li" entry 60 action permit
+/configure system security aaa local-profiles profile "li" entry 70 match "configure system security user-params local-user"
+/configure system security aaa local-profiles profile "li" entry 70 action permit
+/configure system security aaa local-profiles profile "li" entry 80 match "tools perform security"
+/configure system security aaa local-profiles profile "li" entry 80 action permit
+/configure system security aaa local-profiles profile "li" entry 100 match "commit"
+/configure system security aaa local-profiles profile "li" entry 100 action permit
+/configure system security aaa local-profiles profile "li" entry 110 match "validate"
+/configure system security aaa local-profiles profile "li" entry 110 action permit
+/configure system security aaa local-profiles profile "li" entry 120 match "admin save"
+/configure system security aaa local-profiles profile "li" entry 120 action permit
+/configure system security aaa local-profiles profile "li" entry 130 match "info"
+/configure system security aaa local-profiles profile "li" entry 130 action permit
+/configure system security aaa local-profiles profile "li" entry 140 match "back"
+/configure system security aaa local-profiles profile "li" entry 140 action permit
+
+/configure system security aaa local-profiles profile "li" netconf base-op-authorization action true
+/configure system security aaa local-profiles profile "li" netconf base-op-authorization cancel-commit true
+/configure system security aaa local-profiles profile "li" netconf base-op-authorization close-session true
+/configure system security aaa local-profiles profile "li" netconf base-op-authorization commit true
+/configure system security aaa local-profiles profile "li" netconf base-op-authorization edit-config true
+/configure system security aaa local-profiles profile "li" netconf base-op-authorization get true
+/configure system security aaa local-profiles profile "li" netconf base-op-authorization get-config true
+/configure system security aaa local-profiles profile "li" netconf base-op-authorization validate true
+
+##################39.2. LI ADMINISTRADOR ##########################################################################################################
+
+/configure system security user-params local-user user "liadmin" password "admin123"
+/configure system security user-params local-user user "liadmin" restricted-to-home false
+/configure system security user-params local-user user "liadmin" access console true
+/configure system security user-params local-user user "liadmin" access netconf true
+/configure system security user-params local-user user "liadmin" access li true
+/configure system security user-params local-user user "liadmin" console member ["li"]
+
+##################39.3. MIRROR DESTINATION ##########################################################################################################
+
+/configure mirror mirror-dest "li-dest-1"
+/configure mirror mirror-dest "li-dest-1" admin-state enable
+/configure mirror mirror-dest "li-dest-1" service-id 111111
+/configure mirror mirror-dest "li-dest-1" encap layer-3-encap header-type ip-udp-shim
+/configure mirror mirror-dest "li-dest-1" encap layer-3-encap direction-bit true
+/configure mirror mirror-dest "li-dest-1" encap layer-3-encap router-instance "9999"
+/configure mirror mirror-dest "li-dest-1" encap layer-3-encap gateway ip-address source 172.19.1.2
+/configure mirror mirror-dest "li-dest-1" encap layer-3-encap gateway ip-address destination 172.19.1.1
+/configure mirror mirror-dest "li-dest-1" encap layer-3-encap gateway udp-port source 11111
+/configure mirror mirror-dest "li-dest-1" encap layer-3-encap gateway udp-port destination 11111
+
+##################39.4. CONFIG EN LIADMIN ##########################################################################################################
+#This procedure can you make in CLI:
+#log log-id "1" netconf-stream "li"
+#log log-id "1" source li true
+#log log-id "1" destination netconf
+
+#by subscriber
+#li-source "li-dest-1" subscriber "ONT-001" ingress true
+#li-source "li-dest-1" subscriber "ONT-001" egress true
+#li-source "li-dest-1" subscriber "ONT-001" intercept-id 1001
+#li-source "li-dest-1" subscriber "ONT-001" session-id 1
+
+#by sap
+#li-source "li-dest-1" sap 1/1/c1/1:50.150 ingress true
+#li-source "li-dest-1" sap 1/1/c1/1:50.150 egress true
+#li-source "li-dest-1" sap 1/1/c1/1:50.150 intercept-id 2001
+#li-source "li-dest-1" sap 1/1/c1/1:50.150 session-id 1
+
+#Check in LI: show li li-source "111111"
