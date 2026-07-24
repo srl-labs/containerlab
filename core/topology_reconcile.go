@@ -31,25 +31,47 @@ type applyEndpointRef struct {
 }
 
 type applyPlan struct {
-	currentNodes       map[string]*runtimeNodeGroup
-	addedNodeSet       map[string]struct{}
-	deletedNodeSet     map[string]struct{}
-	recreatedNodeSet   map[string]struct{}
-	restartNodeSet     map[string]struct{}
-	linkRestartNodeSet map[string]struct{}
-	nodeDiffs          map[string]*clabtypes.TopologyDiff
-	addedLinks         []clablinks.Link
-	plannedLinkSet     map[int]struct{}
-	staleEndpoints     []applyEndpointRef
-	desiredEndpointSet map[applyEndpointKey]struct{}
-	liveEndpointSet    map[applyEndpointKey]struct{}
-	endpointNodes      map[string]clablinks.Node
-	state              *LabState
-	parkedNodeSet      map[string]struct{}
-	startNodeSet       map[string]struct{}
+	currentNodes           map[string]*runtimeNodeGroup
+	addedNodeSet           map[string]struct{}
+	deletedNodeSet         map[string]struct{}
+	recreatedNodeSet       map[string]struct{}
+	restartNodeSet         map[string]struct{}
+	linkRestartNodeSet     map[string]struct{}
+	postLinkRestartNodeSet map[string]struct{}
+	nodeDiffs              map[string]*clabtypes.TopologyDiff
+	addedLinks             []clablinks.Link
+	plannedLinkSet         map[int]struct{}
+	staleEndpoints         []applyEndpointRef
+	desiredEndpointSet     map[applyEndpointKey]struct{}
+	liveEndpointSet        map[applyEndpointKey]struct{}
+	endpointNodes          map[string]clablinks.Node
+	state                  *LabState
+	parkedNodeSet          map[string]struct{}
+	startNodeSet           map[string]struct{}
 	// nodeChangeReasons explains per node why apply restarts or recreates it,
 	// e.g. "added link" or "config drift: image".
 	nodeChangeReasons map[string]string
+	// mutableNodeSet limits reconciliation when --node-filter is set. A nil set
+	// preserves full-topology reconciliation behavior.
+	mutableNodeSet map[string]struct{}
+	endpointOwner  map[string]string
+}
+
+func (p *applyPlan) nodeMutable(nodeName string) bool {
+	if p == nil || p.mutableNodeSet == nil {
+		return true
+	}
+	_, ok := p.mutableNodeSet[nodeName]
+	return ok
+}
+
+func (p *applyPlan) endpointKey(key applyEndpointKey) applyEndpointKey {
+	if p != nil && p.endpointOwner != nil {
+		if owner, exists := p.endpointOwner[key.node]; exists {
+			key.node = owner
+		}
+	}
+	return key
 }
 
 func (p *applyPlan) empty() bool {
@@ -59,27 +81,29 @@ func (p *applyPlan) empty() bool {
 		len(p.startNodeSet) == 0 &&
 		len(p.restartNodeSet) == 0 &&
 		len(p.linkRestartNodeSet) == 0 &&
+		len(p.postLinkRestartNodeSet) == 0 &&
 		len(p.addedLinks) == 0 &&
 		len(p.staleEndpoints) == 0
 }
 
 func newApplyPlan(currentNodes map[string]*runtimeNodeGroup, state *LabState) *applyPlan {
 	return &applyPlan{
-		currentNodes:       currentNodes,
-		addedNodeSet:       map[string]struct{}{},
-		deletedNodeSet:     map[string]struct{}{},
-		recreatedNodeSet:   map[string]struct{}{},
-		parkedNodeSet:      map[string]struct{}{},
-		startNodeSet:       map[string]struct{}{},
-		restartNodeSet:     map[string]struct{}{},
-		linkRestartNodeSet: map[string]struct{}{},
-		nodeDiffs:          map[string]*clabtypes.TopologyDiff{},
-		plannedLinkSet:     map[int]struct{}{},
-		desiredEndpointSet: map[applyEndpointKey]struct{}{},
-		liveEndpointSet:    map[applyEndpointKey]struct{}{},
-		endpointNodes:      map[string]clablinks.Node{},
-		state:              state,
-		nodeChangeReasons:  map[string]string{},
+		currentNodes:           currentNodes,
+		addedNodeSet:           map[string]struct{}{},
+		deletedNodeSet:         map[string]struct{}{},
+		recreatedNodeSet:       map[string]struct{}{},
+		parkedNodeSet:          map[string]struct{}{},
+		startNodeSet:           map[string]struct{}{},
+		restartNodeSet:         map[string]struct{}{},
+		linkRestartNodeSet:     map[string]struct{}{},
+		postLinkRestartNodeSet: map[string]struct{}{},
+		nodeDiffs:              map[string]*clabtypes.TopologyDiff{},
+		plannedLinkSet:         map[int]struct{}{},
+		desiredEndpointSet:     map[applyEndpointKey]struct{}{},
+		liveEndpointSet:        map[applyEndpointKey]struct{}{},
+		endpointNodes:          map[string]clablinks.Node{},
+		state:                  state,
+		nodeChangeReasons:      map[string]string{},
 	}
 }
 
@@ -94,6 +118,7 @@ func (p *applyPlan) isExternallyManaged(nodeName string) bool {
 func (c *CLab) planApply(
 	ctx context.Context,
 	currentNodes map[string]*runtimeNodeGroup,
+	nodeFilter []string,
 ) (*applyPlan, error) {
 	state, err := c.LoadState()
 	if err != nil {
@@ -101,8 +126,16 @@ func (c *CLab) planApply(
 	}
 
 	plan := newApplyPlan(currentNodes, state)
+	plan.mutableNodeSet, err = c.applyNodeFilterClosure(nodeFilter)
+	if err != nil {
+		return nil, err
+	}
+	plan.endpointOwner = c.applyEndpointOwnerMap()
 
 	for _, nodeName := range sortedNodeNames(c.Nodes) {
+		if !plan.nodeMutable(nodeName) {
+			continue
+		}
 		if _, exists := currentNodes[nodeName]; !exists {
 			status := c.Nodes[nodeName].GetContainerStatus(ctx)
 			if status != clabruntime.NotFound {
@@ -118,6 +151,9 @@ func (c *CLab) planApply(
 	}
 
 	for _, nodeName := range sortedRuntimeNodeGroupNames(currentNodes) {
+		if !plan.nodeMutable(nodeName) {
+			continue
+		}
 		if _, exists := c.Nodes[nodeName]; !exists {
 			plan.deletedNodeSet[nodeName] = struct{}{}
 		}
@@ -131,8 +167,11 @@ func (c *CLab) planApply(
 	c.planStoppedNodes(ctx, plan)
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
+		if plan.mutableNodeSet != nil && !linkTouchesNodeSet(c.Links[linkIdx], plan.mutableNodeSet) {
+			continue
+		}
 		for _, ep := range clablinks.RuntimeEndpoints(c.Links[linkIdx]) {
-			plan.desiredEndpointSet[endpointKeyFromEndpoint(ep)] = struct{}{}
+			plan.desiredEndpointSet[plan.endpointKey(endpointKeyFromEndpoint(ep))] = struct{}{}
 		}
 	}
 
@@ -144,6 +183,9 @@ func (c *CLab) planApply(
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
 		link := c.Links[linkIdx]
+		if plan.mutableNodeSet != nil && !linkTouchesNodeSet(link, plan.mutableNodeSet) {
+			continue
+		}
 		if !plan.linkNeedsDeploy(link) {
 			continue
 		}
@@ -151,7 +193,7 @@ func (c *CLab) planApply(
 		plan.addDeployApplyLink(linkIdx, link)
 
 		for _, ep := range clablinks.RuntimeEndpoints(link) {
-			nodeName := ep.GetNode().GetShortName()
+			nodeName := plan.endpointKey(endpointKeyFromEndpoint(ep)).node
 			if _, exists := currentNodes[nodeName]; !exists {
 				continue
 			}
@@ -164,12 +206,80 @@ func (c *CLab) planApply(
 	}
 
 	c.planRecreatedNodeLinks(plan)
+	c.planRecreatedNodePostLinkRestarts(plan)
 	for nodeName := range plan.recreatedNodeSet {
 		delete(plan.restartNodeSet, nodeName)
 		delete(plan.linkRestartNodeSet, nodeName)
 	}
 
 	return plan, nil
+}
+
+func (c *CLab) planRecreatedNodePostLinkRestarts(plan *applyPlan) {
+	for _, link := range plan.addedLinks {
+		for _, ep := range clablinks.RuntimeEndpoints(link) {
+			key := endpointKeyFromEndpoint(ep)
+			if _, recreated := plan.recreatedNodeSet[key.node]; recreated {
+				plan.postLinkRestartNodeSet[key.node] = struct{}{}
+			}
+		}
+	}
+}
+
+func (c *CLab) applyNodeFilterClosure(nodeFilter []string) (map[string]struct{}, error) {
+	if len(nodeFilter) == 0 {
+		return nil, nil
+	}
+
+	closure := make(map[string]struct{}, len(nodeFilter))
+	visiting := append([]string(nil), nodeFilter...)
+	for len(visiting) > 0 {
+		nodeName := visiting[0]
+		visiting = visiting[1:]
+		if _, seen := closure[nodeName]; seen {
+			continue
+		}
+
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			return nil, fmt.Errorf("node %q is not present in the topology", nodeName)
+		}
+		closure[nodeName] = struct{}{}
+
+		cfg := node.Config()
+		if cfg == nil {
+			continue
+		}
+		if provider, ok := c.applySharedNetNSProvider(node); ok {
+			visiting = append(visiting, provider)
+		}
+		if cfg.Stages != nil {
+			for _, dependencies := range cfg.Stages.GetWaitFor() {
+				for _, dependency := range dependencies {
+					if dependency != nil {
+						visiting = append(visiting, dependency.Node)
+					}
+				}
+			}
+		}
+	}
+
+	return closure, nil
+}
+
+func sharedNetNSProvider(networkMode string) (string, bool) {
+	provider, ok := strings.CutPrefix(networkMode, "container:")
+	return provider, ok && provider != ""
+}
+
+func (c *CLab) applyEndpointOwnerMap() map[string]string {
+	owners := map[string]string{}
+	for nodeName, node := range c.Nodes {
+		if provider, shared := c.applySharedNetNSProvider(node); shared {
+			owners[nodeName] = provider
+		}
+	}
+	return owners
 }
 
 func (p *applyPlan) addDeployApplyLink(linkIdx int, link clablinks.Link) {
@@ -191,6 +301,12 @@ func (c *CLab) planParkedNodes(ctx context.Context, plan *applyPlan) {
 		if !exists {
 			continue
 		}
+		// A container sharing another node's network namespace does not own
+		// that namespace's endpoints. Parking it would detach the provider's
+		// links and can strip the provider's live address and route state.
+		if _, shared := c.applySharedNetNSProvider(node); shared {
+			continue
+		}
 		if clabruntime.ContainerHasJoinableNetns(node.GetContainerStatus(ctx)) {
 			plan.parkedNodeSet[nodeName] = struct{}{}
 		}
@@ -203,7 +319,7 @@ func (c *CLab) planStoppedNodes(ctx context.Context, plan *applyPlan) {
 	}
 
 	for nodeName := range plan.currentNodes {
-		if plan.isExternallyManaged(nodeName) {
+		if !plan.nodeMutable(nodeName) || plan.isExternallyManaged(nodeName) {
 			continue
 		}
 		node, exists := c.Nodes[nodeName]
@@ -269,6 +385,11 @@ func (c *CLab) planDeletedEndpoints(ctx context.Context, plan *applyPlan) {
 	plannedEndpointSet := map[applyEndpointKey]struct{}{}
 
 	for _, key := range sortedEndpointKeys(plan.liveEndpointSet) {
+		if plan.mutableNodeSet != nil {
+			if isApplySpecialNode(key.node) || !plan.nodeMutable(key.node) {
+				continue
+			}
+		}
 		if _, exists := plan.desiredEndpointSet[key]; exists {
 			continue
 		}
@@ -407,7 +528,9 @@ func (c *CLab) discoverLiveApplyEndpoints(
 		}
 
 		for _, ifaceName := range ifaceNames {
-			plan.liveEndpointSet[applyEndpointKey{node: nodeName, iface: ifaceName}] = struct{}{}
+			plan.liveEndpointSet[plan.endpointKey(applyEndpointKey{
+				node: nodeName, iface: ifaceName,
+			})] = struct{}{}
 		}
 	}
 
@@ -451,6 +574,18 @@ func (c *CLab) applyKnownEndpointNames(
 func (c *CLab) applyEndpointDiscoveryNodes(plan *applyPlan) map[string]clablinks.Node {
 	nodes := make(map[string]clablinks.Node, len(c.Nodes)+2)
 	for nodeName, node := range c.Nodes {
+		if plan != nil && plan.isExternallyManaged(nodeName) {
+			nodes[nodeName] = node
+			continue
+		}
+		if _, shared := c.applySharedNetNSProvider(node); shared {
+			continue
+		}
+		if plan != nil && plan.mutableNodeSet != nil && !plan.nodeMutable(nodeName) {
+			if !endpointSetContainsNode(plan.desiredEndpointSet, nodeName) {
+				continue
+			}
+		}
 		nodes[nodeName] = node
 	}
 
@@ -464,6 +599,36 @@ func (c *CLab) applyEndpointDiscoveryNodes(plan *applyPlan) map[string]clablinks
 	}
 
 	return nodes
+}
+
+func endpointSetContainsNode(endpoints map[applyEndpointKey]struct{}, nodeName string) bool {
+	for endpoint := range endpoints {
+		if endpoint.node == nodeName {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *CLab) applySharedNetNSProvider(node clabnodes.Node) (string, bool) {
+	if node == nil || node.Config() == nil {
+		return "", false
+	}
+
+	provider, shared := sharedNetNSProvider(node.Config().NetworkMode)
+	if !shared {
+		return "", false
+	}
+	if _, exists := c.Nodes[provider]; exists {
+		return provider, true
+	}
+	for nodeName, candidate := range c.Nodes {
+		if candidate != nil && candidate.Config() != nil && candidate.Config().LongName == provider {
+			return nodeName, true
+		}
+	}
+
+	return "", false
 }
 
 func (c *CLab) applyLinkNode(nodeName string) (clablinks.Node, bool) {
@@ -485,6 +650,9 @@ func (c *CLab) planAffectedApplyNode(
 	change string,
 ) {
 	if nodeName == "" {
+		return
+	}
+	if !plan.nodeMutable(nodeName) {
 		return
 	}
 	if _, planned := plan.linkRestartNodeSet[nodeName]; planned {
@@ -549,6 +717,7 @@ func resolveNodeConfigFromTopology(topo *clabtypes.Topology, nodeName string) *c
 	return &clabtypes.NodeConfig{
 		ShortName:   nodeName,
 		Kind:        topo.GetNodeKind(nodeName),
+		Hostname:    topo.GetNodeHostname(nodeName),
 		NodeType:    topo.GetNodeType(nodeName),
 		Image:       topo.GetNodeImage(nodeName),
 		Entrypoint:  topo.GetNodeEntrypoint(nodeName),
@@ -582,6 +751,9 @@ func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) erro
 	}
 
 	for nodeName := range plan.currentNodes {
+		if !plan.nodeMutable(nodeName) {
+			continue
+		}
 		node, exists := c.Nodes[nodeName]
 		if !exists {
 			continue
@@ -591,6 +763,11 @@ func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) erro
 		}
 
 		oldNodeConfig := resolveNodeConfigFromTopology(oldTopo, nodeName)
+		if plan.state != nil && plan.state.NodeConfigs != nil {
+			if appliedConfig, exists := plan.state.NodeConfigs[nodeName]; exists {
+				oldNodeConfig = appliedConfig
+			}
+		}
 		newNodeConfig := resolveNodeConfigFromTopology(c.Config.Topology, nodeName)
 		diff := node.ComputeDiff(oldNodeConfig, newNodeConfig)
 		plan.nodeDiffs[nodeName] = diff
@@ -635,6 +812,9 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 	}
 
 	for nodeName := range plan.currentNodes {
+		if !plan.nodeMutable(nodeName) {
+			continue
+		}
 		node, exists := c.Nodes[nodeName]
 		if !exists {
 			continue
@@ -672,7 +852,7 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
 	for _, ep := range clablinks.RuntimeEndpoints(link) {
-		key := endpointKeyFromEndpoint(ep)
+		key := p.endpointKey(endpointKeyFromEndpoint(ep))
 		if _, parked := p.parkedNodeSet[key.node]; !parked {
 			if _, added := p.addedNodeSet[key.node]; added {
 				return true

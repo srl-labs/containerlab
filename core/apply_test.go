@@ -11,7 +11,9 @@ import (
 	"time"
 
 	"github.com/containernetworking/plugins/pkg/ns"
+	"github.com/google/go-cmp/cmp"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmocknodes "github.com/srl-labs/containerlab/mocks/mocknodes"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
@@ -148,6 +150,139 @@ func TestDeployLinksPostDeploysSelectedNodeWithoutLinks(t *testing.T) {
 	c := &CLab{Nodes: map[string]clabnodes.Node{"n1": node}}
 	if err := c.deployLinks(context.Background(), nil, []string{"n1"}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestApplyPartitionReadyLinksWaitsForSharedNetNSChildContainer(t *testing.T) {
+	t.Parallel()
+
+	provider := &applyFakeLinkNode{name: "provider"}
+	child := &applyFakeLinkNode{name: "child"}
+	peer := &applyFakeLinkNode{name: "peer"}
+	providerLink := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	providerLink.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(provider, "eth1", providerLink)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(peer, "eth1", providerLink)),
+	}
+	childLink := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	childLink.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(child, "eth2", childLink)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(peer, "eth2", childLink)),
+	}
+
+	ready, pending := applyPartitionReadyLinks(
+		[]clablinks.Link{childLink, providerLink},
+		map[string]struct{}{"provider": {}, "peer": {}},
+	)
+	if len(ready) != 1 || ready[0] != providerLink {
+		t.Fatalf("ready links = %v, want provider link only", applyLinkNames(ready))
+	}
+	if len(pending) != 1 || pending[0] != childLink {
+		t.Fatalf("pending links = %v, want child link only", applyLinkNames(pending))
+	}
+}
+
+func TestPendingAddedLinkWaitsForAbsentPeerAndDiscardsParkedEndpoint(t *testing.T) {
+	t.Parallel()
+
+	btor := &applyFakeLinkNode{name: "btor2"}
+	wic := &applyFakeLinkNode{name: "wic2"}
+	link := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	link.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(btor, "eth1", link)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(wic, "cpp2s", link)),
+	}
+
+	ready, pending := applyPartitionReadyLinks(
+		[]clablinks.Link{link},
+		map[string]struct{}{"btor2": {}},
+	)
+	if len(ready) != 0 || len(pending) != 1 {
+		t.Fatalf("before WIC creation ready=%v pending=%v, want only pending link", ready, pending)
+	}
+	if got := pendingApplyEndpointNames("btor2", pending); !slices.Equal(got, []string{"eth1"}) {
+		t.Fatalf("parked endpoints to discard = %v, want [eth1]", got)
+	}
+	if link.deployCalls != 0 {
+		t.Fatalf("link deployed %d times before WIC existed", link.deployCalls)
+	}
+
+	ready, pending = applyPartitionReadyLinks(
+		pending,
+		map[string]struct{}{"btor2": {}, "wic2": {}},
+	)
+	if len(ready) != 1 || len(pending) != 0 {
+		t.Fatalf("after WIC creation ready=%v pending=%v, want only ready link", ready, pending)
+	}
+	for _, ep := range clablinks.RuntimeEndpoints(ready[0]) {
+		if err := ep.Deploy(context.Background()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := ready[0].PostDeploy(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if link.deployCalls != 2 {
+		t.Fatalf("endpoint deploy calls = %d, want one per endpoint after both nodes exist", link.deployCalls)
+	}
+}
+
+func TestPlanRecreatedNodePostLinkRestart(t *testing.T) {
+	t.Parallel()
+
+	btor := &applyFakeLinkNode{name: "btor1"}
+	wic := &applyFakeLinkNode{name: "wic1"}
+	link := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	link.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(btor, "eth1", link)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(wic, "cpp2s", link)),
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.recreatedNodeSet["btor1"] = struct{}{}
+	plan.addedLinks = []clablinks.Link{link}
+
+	(&CLab{}).planRecreatedNodePostLinkRestarts(plan)
+
+	if _, restart := plan.postLinkRestartNodeSet["btor1"]; !restart {
+		t.Fatal("recreated link endpoint must restart after its new link is attached")
+	}
+	if _, restart := plan.postLinkRestartNodeSet["wic1"]; restart {
+		t.Fatal("new peer must not be treated as a recreated post-link restart")
+	}
+}
+
+func TestRestartRecreatedNodeAfterAllAddedLinksAreReady(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	btor := clabmocksmocknodes.NewMockNode(ctrl)
+	wic := &applyFakeLinkNode{name: "wic1"}
+	link := &applyFakeLink{linkType: clablinks.LinkTypeVEth}
+	link.endpoints = []clablinks.Endpoint{
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(btor, "eth1", link)),
+		clablinks.NewEndpointDummy(clablinks.NewEndpointGeneric(wic, "cpp2s", link)),
+	}
+	btor.EXPECT().GetShortName().Return("btor1").AnyTimes()
+	btor.EXPECT().Stop(gomock.Any()).Return(nil)
+	btor.EXPECT().Start(gomock.Any()).Return(nil)
+	btor.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
+	btor.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "btor1"}).AnyTimes()
+
+	c := &CLab{
+		Nodes:   map[string]clabnodes.Node{"btor1": btor},
+		timeout: time.Second,
+	}
+	plan := newApplyPlan(nil, nil)
+	plan.postLinkRestartNodeSet["btor1"] = struct{}{}
+	restarted := map[string]struct{}{}
+
+	if err := c.restartRecreatedApplyLinkNodes(
+		context.Background(), plan, []clablinks.Link{link}, nil, restarted,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := restarted["btor1"]; !ok {
+		t.Fatal("recreated cEOS-shaped endpoint was not restarted after link readiness")
 	}
 }
 
@@ -379,6 +514,53 @@ func TestApplyPlanLinkNeedsDeploy(t *testing.T) {
 	}
 }
 
+func TestResolveApplyLinksPreservesCrossFilterLink(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	selected := clabmocksmocknodes.NewMockNode(ctrl)
+	unselected := clabmocksmocknodes.NewMockNode(ctrl)
+	for name, node := range map[string]*clabmocksmocknodes.MockNode{
+		"selected": selected, "unselected": unselected,
+	} {
+		node.EXPECT().GetLinkEndpointType().Return(
+			clablinks.LinkEndpointType(clablinks.LinkEndpointTypeVeth),
+		).AnyTimes()
+		node.EXPECT().AddEndpoint(gomock.Any()).Return(nil).AnyTimes()
+		node.EXPECT().GetShortName().Return(name).AnyTimes()
+	}
+	topoLink := &clablinks.LinkDefinition{
+		Type: "veth",
+		Link: &clablinks.LinkVEthRaw{
+			Endpoints: []*clablinks.EndpointRaw{
+				{Node: "selected", Iface: "eth1"},
+				{Node: "unselected", Iface: "eth1"},
+			},
+		},
+	}
+	c := &CLab{
+		Config: &Config{
+			Topology: &clabtypes.Topology{Links: []*clablinks.LinkDefinition{topoLink}},
+			Mgmt:     &clabtypes.MgmtNet{},
+		},
+		Nodes: map[string]clabnodes.Node{
+			"selected":   selected,
+			"unselected": unselected,
+		},
+		nodeFilter: []string{"selected"},
+	}
+
+	if err := c.resolveApplyLinks(); err != nil {
+		t.Fatalf("resolveApplyLinks() failed: %v", err)
+	}
+	if got, want := len(c.Links), 1; got != want {
+		t.Fatalf("resolved link count = %d, want %d", got, want)
+	}
+	if got, want := c.nodeFilter, []string{"selected"}; !slices.Equal(got, want) {
+		t.Fatalf("nodeFilter = %v, want %v", got, want)
+	}
+}
+
 func TestPlanRecreatedNodeLinksDeploysAllTouchingLinks(t *testing.T) {
 	t.Parallel()
 
@@ -493,6 +675,293 @@ func TestPlanDeletedEndpointsUsesDiscoveredEndpointNode(t *testing.T) {
 	}
 	if plan.staleEndpoints[0].node != parkingNode {
 		t.Fatalf("stale endpoint delete node = %v, want discovered endpoint node", plan.staleEndpoints[0].node)
+	}
+}
+
+func TestPlanDeletedEndpointsPreservesUnselectedNodes(t *testing.T) {
+	t.Parallel()
+
+	selected := &applyFakeLinkNode{name: "selected"}
+	unrelated := &applyFakeLinkNode{name: "unrelated"}
+	plan := newApplyPlan(nil, nil)
+	plan.mutableNodeSet = map[string]struct{}{"selected": {}}
+	plan.liveEndpointSet = map[applyEndpointKey]struct{}{
+		{node: "selected", iface: "eth1"}:  {},
+		{node: "unrelated", iface: "eth9"}: {},
+	}
+	plan.endpointNodes = map[string]clablinks.Node{
+		"selected":  selected,
+		"unrelated": unrelated,
+	}
+
+	c := &CLab{}
+	c.planDeletedEndpoints(context.Background(), plan)
+
+	if got, want := len(plan.staleEndpoints), 1; got != want {
+		t.Fatalf("stale endpoints = %d, want %d", got, want)
+	}
+	if got, want := plan.staleEndpoints[0].key.node, "selected"; got != want {
+		t.Fatalf("stale endpoint node = %q, want %q", got, want)
+	}
+}
+
+func TestApplyEndpointDiscoveryNodesUsesSharedNetNSProvider(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	provider := clabmocksmocknodes.NewMockNode(ctrl)
+	child1 := clabmocksmocknodes.NewMockNode(ctrl)
+	child2 := clabmocksmocknodes.NewMockNode(ctrl)
+	unrelated := clabmocksmocknodes.NewMockNode(ctrl)
+
+	provider.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "provider",
+		LongName:  "clab-test-provider",
+	}).AnyTimes()
+	child1.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "child1",
+		NetworkMode: "container:provider",
+	}).AnyTimes()
+	child2.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "child2",
+		NetworkMode: "container:clab-test-provider",
+	}).AnyTimes()
+	unrelated.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "unrelated"}).AnyTimes()
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{
+		"provider":  provider,
+		"child1":    child1,
+		"child2":    child2,
+		"unrelated": unrelated,
+	}}
+	nodes := c.applyEndpointDiscoveryNodes(newApplyPlan(nil, nil))
+
+	if _, exists := nodes["provider"]; !exists {
+		t.Fatal("provider missing from endpoint discovery")
+	}
+	if _, exists := nodes["unrelated"]; !exists {
+		t.Fatal("unrelated node missing from endpoint discovery")
+	}
+	for _, child := range []string{"child1", "child2"} {
+		if _, exists := nodes[child]; exists {
+			t.Fatalf("shared-netns child %q must not own discovered interfaces", child)
+		}
+	}
+
+	filteredPlan := newApplyPlan(nil, nil)
+	filteredPlan.mutableNodeSet = map[string]struct{}{"provider": {}}
+	filteredPlan.endpointOwner = c.applyEndpointOwnerMap()
+	filteredNodes := c.applyEndpointDiscoveryNodes(filteredPlan)
+	if _, exists := filteredNodes["provider"]; !exists {
+		t.Fatal("filtered discovery omitted selected provider")
+	}
+	if _, exists := filteredNodes["unrelated"]; exists {
+		t.Fatal("filtered discovery must not inspect unrelated nodes")
+	}
+	if got, want := filteredPlan.endpointKey(applyEndpointKey{node: "child2", iface: "eth1"}).node, "provider"; got != want {
+		t.Fatalf("shared-netns endpoint owner = %q, want %q", got, want)
+	}
+}
+
+func TestPlanParkedNodesSkipsSharedNetNSChildren(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	provider := clabmocksmocknodes.NewMockNode(ctrl)
+	child := clabmocksmocknodes.NewMockNode(ctrl)
+
+	provider.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "provider",
+	}).AnyTimes()
+	provider.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
+	child.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "child",
+		NetworkMode: "container:provider",
+	}).AnyTimes()
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{
+		"provider": provider,
+		"child":    child,
+	}}
+	plan := newApplyPlan(nil, nil)
+	plan.recreatedNodeSet = map[string]struct{}{
+		"provider": {},
+		"child":    {},
+	}
+
+	c.planParkedNodes(context.Background(), plan)
+
+	if _, parked := plan.parkedNodeSet["provider"]; !parked {
+		t.Fatal("provider must retain ownership of its parked endpoints")
+	}
+	if _, parked := plan.parkedNodeSet["child"]; parked {
+		t.Fatal("shared-netns child must not park provider-owned endpoints")
+	}
+}
+
+func TestApplyNodeFilterClosureIncludesDependencies(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	selected := clabmocksmocknodes.NewMockNode(ctrl)
+	provider := clabmocksmocknodes.NewMockNode(ctrl)
+	dependency := clabmocksmocknodes.NewMockNode(ctrl)
+	unrelated := clabmocksmocknodes.NewMockNode(ctrl)
+
+	stages := clabtypes.NewStages()
+	stages.Create.WaitFor = clabtypes.WaitForList{
+		&clabtypes.WaitFor{Node: "dependency", Stage: clabtypes.WaitForCreate},
+	}
+	selected.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "selected",
+		NetworkMode: "container:clab-test-provider",
+		Stages:      stages,
+	}).AnyTimes()
+	provider.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "provider",
+		LongName:  "clab-test-provider",
+	}).AnyTimes()
+	dependency.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "dependency"}).AnyTimes()
+	unrelated.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "unrelated"}).AnyTimes()
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{
+		"selected":   selected,
+		"provider":   provider,
+		"dependency": dependency,
+		"unrelated":  unrelated,
+	}}
+	closure, err := c.applyNodeFilterClosure([]string{"selected"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, nodeName := range []string{"selected", "provider", "dependency"} {
+		if _, exists := closure[nodeName]; !exists {
+			t.Fatalf("dependency closure missing %q", nodeName)
+		}
+	}
+	if _, exists := closure["unrelated"]; exists {
+		t.Fatal("unrelated node unexpectedly included in dependency closure")
+	}
+
+	if _, err := c.applyNodeFilterClosure([]string{"missing"}); err == nil {
+		t.Fatal("expected unknown filtered node to fail")
+	}
+}
+
+func TestWriteFilteredApplyStatePreservesUnselectedBaseline(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+
+	labDir := t.TempDir()
+	topoFile := filepath.Join(labDir, "filtered.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: filtered\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := topoPaths.SetLabDir(labDir); err != nil {
+		t.Fatal(err)
+	}
+
+	oldTopo := clabtypes.NewTopology()
+	oldTopo.Nodes["selected"] = &clabtypes.NodeDefinition{Image: "old-selected"}
+	oldTopo.Nodes["unrelated"] = &clabtypes.NodeDefinition{Image: "old-unrelated"}
+	desiredTopo := clabtypes.NewTopology()
+	desiredTopo.Nodes["selected"] = &clabtypes.NodeDefinition{
+		Kind:  "linux",
+		Image: "new-selected",
+		Env:   map[string]string{"USER_SETTING": "desired"},
+	}
+	desiredTopo.Nodes["unrelated"] = &clabtypes.NodeDefinition{Image: "new-unrelated"}
+
+	selectedNode := clabmocksmocknodes.NewMockNode(ctrl)
+	selectedNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "selected",
+		LongName:  "clab-filtered-selected",
+		Kind:      "linux",
+		Image:     "new-selected",
+		Runtime:   clabruntimedocker.RuntimeName,
+		Env: map[string]string{
+			"USER_SETTING": "desired",
+			"CLAB_INTFS":   "0",
+		},
+	})
+
+	c := &CLab{
+		Config:    &Config{Topology: desiredTopo},
+		TopoPaths: topoPaths,
+		Nodes: map[string]clabnodes.Node{
+			"selected":  selectedNode,
+			"unrelated": nil,
+		},
+	}
+	plan := newApplyPlan(nil, &LabState{Topology: oldTopo})
+	plan.mutableNodeSet = map[string]struct{}{"selected": {}}
+	c.writeApplyState(plan)
+
+	state, err := c.LoadState()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := state.Topology.Nodes["unrelated"].Image, "old-unrelated"; got != want {
+		t.Fatalf("unselected baseline image = %q, want %q", got, want)
+	}
+	if got, want := state.NodeConfigs["selected"].Image, "new-selected"; got != want {
+		t.Fatalf("selected applied image = %q, want %q", got, want)
+	}
+	if got, want := state.NodeConfigs["selected"].Kind, "linux"; got != want {
+		t.Fatalf("selected applied kind = %q, want %q", got, want)
+	}
+	if got, want := state.NodeConfigs["selected"].LongName, "clab-filtered-selected"; got != want {
+		t.Fatalf("selected applied long name = %q, want %q", got, want)
+	}
+	if got, want := state.NodeConfigs["selected"].Runtime, clabruntimedocker.RuntimeName; got != want {
+		t.Fatalf("selected applied runtime = %q, want %q", got, want)
+	}
+	if got, want := state.NodeConfigs["selected"].Env, map[string]string{"USER_SETTING": "desired"}; !cmp.Equal(got, want) {
+		t.Fatalf("selected applied env = %v, want %v", got, want)
+	}
+	if _, exists := state.NodeConfigs["unrelated"]; exists {
+		t.Fatal("unselected node must not receive an applied config checkpoint")
+	}
+}
+
+func TestApplyDeployBatchesOrdersSharedNetNSProvider(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	provider := clabmocksmocknodes.NewMockNode(ctrl)
+	child1 := clabmocksmocknodes.NewMockNode(ctrl)
+	child2 := clabmocksmocknodes.NewMockNode(ctrl)
+	provider.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "provider"}).AnyTimes()
+	child1.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "child1",
+		NetworkMode: "container:provider",
+	}).AnyTimes()
+	child2.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName:   "child2",
+		NetworkMode: "container:provider",
+	}).AnyTimes()
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{
+		"provider": provider,
+		"child1":   child1,
+		"child2":   child2,
+	}}
+	batches, err := c.applyDeployBatches([]string{"child2", "provider", "child1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := len(batches), 2; got != want {
+		t.Fatalf("batch count = %d, want %d: %v", got, want, batches)
+	}
+	if diff := cmp.Diff([]string{"provider"}, batches[0]); diff != "" {
+		t.Fatalf("provider batch mismatch (-want +got):\n%s", diff)
+	}
+	if diff := cmp.Diff([]string{"child1", "child2"}, batches[1]); diff != "" {
+		t.Fatalf("child batch mismatch (-want +got):\n%s", diff)
 	}
 }
 
@@ -751,11 +1220,34 @@ func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+	stages := clabtypes.NewStages()
+	stages.Configure.Execs = clabtypes.Execs{
+		&clabtypes.Exec{
+			Command: "configure-enter",
+			Target:  clabtypes.CommandTargetContainer,
+			Phase:   clabtypes.CommandExecutionPhaseEnter,
+		},
+		&clabtypes.Exec{
+			Command: "configure-exit",
+			Target:  clabtypes.CommandTargetContainer,
+			Phase:   clabtypes.CommandExecutionPhaseExit,
+		},
+	}
 
 	mockNode.EXPECT().Stop(gomock.Any()).Return(nil)
-	mockNode.EXPECT().Start(gomock.Any()).Return(nil)
-	mockNode.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running)
-	mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{ShortName: "n1"}).AnyTimes()
+	mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "n1",
+		Stages:    stages,
+	}).AnyTimes()
+	mockNode.EXPECT().GetShortName().Return("n1").AnyTimes()
+	gomock.InOrder(
+		mockNode.EXPECT().Start(gomock.Any()).Return(nil),
+		mockNode.EXPECT().RunExec(gomock.Any(), execCmdMatcher("configure-enter")).
+			Return(clabexec.NewExecResult(mustExecCmd(t, "configure-enter")), nil),
+		mockNode.EXPECT().RunExec(gomock.Any(), execCmdMatcher("configure-exit")).
+			Return(clabexec.NewExecResult(mustExecCmd(t, "configure-exit")), nil),
+		mockNode.EXPECT().GetContainerStatus(gomock.Any()).Return(clabruntime.Running),
+	)
 
 	c := &CLab{
 		Nodes: map[string]clabnodes.Node{
@@ -767,6 +1259,68 @@ func TestRestartApplyNodesRestartsLinkAffectedNodes(t *testing.T) {
 	if err := c.restartApplyNodes(context.Background(), map[string]struct{}{"n1": {}}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestPostDeployApplyNodesRunsConfigureStageAroundPostDeploy(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	mockNode := clabmocksmocknodes.NewMockNode(ctrl)
+	stages := clabtypes.NewStages()
+	stages.Configure.Execs = clabtypes.Execs{
+		&clabtypes.Exec{
+			Command: "configure-enter",
+			Target:  clabtypes.CommandTargetContainer,
+			Phase:   clabtypes.CommandExecutionPhaseEnter,
+		},
+		&clabtypes.Exec{
+			Command: "configure-exit",
+			Target:  clabtypes.CommandTargetContainer,
+			Phase:   clabtypes.CommandExecutionPhaseExit,
+		},
+	}
+	mockNode.EXPECT().Config().Return(&clabtypes.NodeConfig{
+		ShortName: "bridge",
+		Stages:    stages,
+	}).AnyTimes()
+	mockNode.EXPECT().GetShortName().Return("bridge").AnyTimes()
+	gomock.InOrder(
+		mockNode.EXPECT().RunExec(gomock.Any(), execCmdMatcher("configure-enter")).
+			Return(clabexec.NewExecResult(mustExecCmd(t, "configure-enter")), nil),
+		mockNode.EXPECT().PostDeploy(gomock.Any(), gomock.Any()).Return(nil),
+		mockNode.EXPECT().RunExec(gomock.Any(), execCmdMatcher("configure-exit")).
+			Return(clabexec.NewExecResult(mustExecCmd(t, "configure-exit")), nil),
+		mockNode.EXPECT().RunExecFromConfig(gomock.Any(), gomock.Any()).Return(nil),
+	)
+
+	c := &CLab{Nodes: map[string]clabnodes.Node{"bridge": mockNode}}
+	if err := c.postDeployApplyNodes(context.Background(), []string{"bridge"}, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type execCmdStringMatcher string
+
+func execCmdMatcher(command string) gomock.Matcher {
+	return execCmdStringMatcher(command)
+}
+
+func (m execCmdStringMatcher) Matches(value any) bool {
+	cmd, ok := value.(*clabexec.ExecCmd)
+	return ok && cmd.GetCmdString() == string(m)
+}
+
+func (m execCmdStringMatcher) String() string {
+	return "exec command " + string(m)
+}
+
+func mustExecCmd(t *testing.T, command string) *clabexec.ExecCmd {
+	t.Helper()
+	cmd, err := clabexec.NewExecCmdFromString(command)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cmd
 }
 
 func TestRuntimeNodeGroupsDistributedComponents(t *testing.T) {

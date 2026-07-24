@@ -175,6 +175,17 @@ func (o *Options) ToClabOptions() []clabcore.ClabOption {
 	return clabOptions
 }
 
+// ToClabDeployOptions defers node filtering until Deploy knows whether it is
+// creating a new lab or reconciling an existing one.
+func (o *Options) ToClabDeployOptions() []clabcore.ClabOption {
+	var options []clabcore.ClabOption
+	options = append(options, o.Global.toClabOptions()...)
+	options = append(options, o.Deploy.toClabOptions()...)
+	options = append(options, o.Destroy.toClabOptions()...)
+	options = append(options, clabcore.WithDeployNodeFilter(o.Filter.NodeFilter))
+	return options
+}
+
 func (o *Options) ToClabDestroyOptions() []clabcore.DestroyOption {
 	destroyOptions := []clabcore.DestroyOption{
 		clabcore.WithDestroyMaxWorkers(o.Deploy.MaxWorkers),

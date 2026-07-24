@@ -47,13 +47,20 @@ func (r *PodmanRuntime) createContainerSpec(
 	cfg *types.NodeConfig,
 ) (specgen.SpecGenerator, error) {
 	sg := specgen.SpecGenerator{}
-	cmd, err := shlex.Split(cfg.Cmd)
-	if err != nil {
-		return sg, err
+	var err error
+	var cmd []string
+	if strings.TrimSpace(cfg.Cmd) != "" {
+		cmd, err = shlex.Split(cfg.Cmd)
+		if err != nil {
+			return sg, err
+		}
 	}
-	entrypoint, err := shlex.Split(cfg.Entrypoint)
-	if err != nil {
-		return sg, err
+	var entrypoint []string
+	if strings.TrimSpace(cfg.Entrypoint) != "" {
+		entrypoint, err = shlex.Split(cfg.Entrypoint)
+		if err != nil {
+			return sg, err
+		}
 	}
 	// Main container specs
 	labels := cfg.Labels
@@ -69,7 +76,8 @@ func (r *PodmanRuntime) createContainerSpec(
 		Terminal:   utils.Pointer(true),
 		Stdin:      utils.Pointer(true),
 		Labels:     cfg.Labels,
-		Hostname:   cfg.ShortName,
+		Hostname:   cfg.GetHostname(),
+		UtsNS:      specgen.Namespace{NSMode: specgen.Private},
 		Sysctl:     cfg.Sysctls,
 		Remove:     utils.Pointer(false),
 	}
@@ -79,6 +87,7 @@ func (r *PodmanRuntime) createContainerSpec(
 		log.Errorf("Cannot convert mounts %v: %v", cfg.Binds, err)
 		mounts = nil
 	}
+	mounts = append(mounts, convertTmpfsMounts(cfg.Tmpfs)...)
 	specStorageConfig := specgen.ContainerStorageConfig{
 		Image: cfg.Image,
 		// Rootfs:            "",
@@ -99,14 +108,32 @@ func (r *PodmanRuntime) createContainerSpec(
 		// Secrets:           nil,
 		// Volatile:          false,
 	}
+	if cfg.ShmSize != "" {
+		shmSize, err := humanize.ParseBytes(cfg.ShmSize)
+		if err != nil {
+			return sg, fmt.Errorf("failed to parse shm-size %q for container %q: %w", cfg.ShmSize, cfg.LongName, err)
+		}
+		shmSizeInt := int64(shmSize)
+		specStorageConfig.ShmSize = &shmSizeInt
+	}
 	// Security
 	specSecurityConfig := specgen.ContainerSecurityConfig{
-		Privileged: utils.Pointer(true),
+		Privileged: utils.Pointer(cfg.Privileged),
 		User:       cfg.User,
+		CapAdd:     cfg.CapAdd,
 	}
-	// Going with the defaults for cgroups
+	if err := applySecurityOpts(cfg.SecurityOpts, &specSecurityConfig); err != nil {
+		return sg, err
+	}
+
 	specCgroupConfig := specgen.ContainerCgroupConfig{
 		CgroupNS: specgen.Namespace{},
+	}
+	if cfg.CgroupnsMode != "" {
+		specCgroupConfig.CgroupNS, err = specgen.ParseCgroupNamespace(cfg.CgroupnsMode)
+		if err != nil {
+			return sg, err
+		}
 	}
 	// Resource limits
 	var (
@@ -170,29 +197,24 @@ func (r *PodmanRuntime) createContainerSpec(
 	netMode := strings.SplitN(cfg.NetworkMode, ":", 2)
 	switch netMode[0] {
 	case "container":
-		// We expect exactly two arguments in this case ("container" keyword & cont. name/ID)
-		if len(netMode) != 2 {
-			return sg, fmt.Errorf(
-				"container network mode was specified for container %q, but no container name was found: %q",
-				cfg.ShortName,
-				netMode,
-			)
+		providerName, err := containerModeProviderName(cfg)
+		if err != nil {
+			return sg, err
 		}
-		// also cont. ID shouldn't be empty
-		if netMode[1] == "" {
-			return sg, fmt.Errorf(
-				"container network mode was specified for container %q, but no container name was found: %q",
-				cfg.ShortName,
-				netMode,
-			)
+		// A container that shares another container's network namespace must also
+		// share its UTS namespace. The provider owns the hostname; requesting a
+		// separate hostname for the child is ignored by Podman and leaves the child
+		// with its generated container ID instead.
+		specBasicConfig.Hostname = ""
+		specBasicConfig.UtsNS = specgen.Namespace{
+			NSMode: specgen.FromContainer,
+			Value:  providerName,
 		}
-		// Extract lab/topo prefix to provide a full (long) container name. Hackish way.
-		prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
 		// Compile the net spec
 		specNetConfig = specgen.ContainerNetworkConfig{
 			NetNS: specgen.Namespace{
-				NSMode: "container",
-				Value:  prefix + netMode[1],
+				NSMode: specgen.FromContainer,
+				Value:  providerName,
 			},
 		}
 	case "host":
@@ -202,6 +224,12 @@ func (r *PodmanRuntime) createContainerSpec(
 			UseImageHosts: utils.Pointer(false),
 			HostAdd:       cfg.ExtraHosts,
 			// NetworkOptions:      nil,
+		}
+	case "none":
+		specNetConfig = specgen.ContainerNetworkConfig{
+			NetNS:         specgen.Namespace{NSMode: specgen.NoNetwork},
+			UseImageHosts: utils.Pointer(false),
+			HostAdd:       cfg.ExtraHosts,
 		}
 	// Bridge will be used if none provided
 	case "bridge", "":
@@ -288,6 +316,25 @@ func (r *PodmanRuntime) createContainerSpec(
 	return sg, nil
 }
 
+func containerModeProviderName(cfg *types.NodeConfig) (string, error) {
+	netMode := strings.SplitN(cfg.NetworkMode, ":", 2)
+	if len(netMode) != 2 || netMode[0] != "container" || netMode[1] == "" {
+		return "", fmt.Errorf(
+			"container network mode was specified for container %q, but no container name was found: %q",
+			cfg.ShortName,
+			netMode,
+		)
+	}
+
+	// If the topology already provides the long containerlab name, keep it.
+	// Otherwise derive it from the child long/short name pair.
+	prefix := strings.SplitN(cfg.LongName, cfg.ShortName, 2)[0]
+	if strings.HasPrefix(netMode[1], prefix) {
+		return netMode[1], nil
+	}
+	return prefix + netMode[1], nil
+}
+
 // convertMounts takes a list of filesystem mount binds in docker/clab format (src:dest:options)
 // and converts it into an opencontainers spec format.
 func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs.Mount, error) {
@@ -320,6 +367,52 @@ func (*PodmanRuntime) convertMounts(_ context.Context, mounts []string) ([]specs
 		mntSpec,
 	)
 	return mntSpec, nil
+}
+
+func convertTmpfsMounts(tmpfs map[string]string) []specs.Mount {
+	mounts := make([]specs.Mount, 0, len(tmpfs))
+
+	for dst, options := range tmpfs {
+		mount := specs.Mount{
+			Destination: dst,
+			Type:        "tmpfs",
+			Source:      "tmpfs",
+		}
+		if options != "" {
+			mount.Options = strings.Split(options, ",")
+		}
+		mounts = append(mounts, mount)
+	}
+
+	return mounts
+}
+
+func applySecurityOpts(
+	opts []string,
+	securityConfig *specgen.ContainerSecurityConfig,
+) error {
+	for _, opt := range opts {
+		key, val, ok := strings.Cut(opt, "=")
+		if !ok {
+			key = opt
+		}
+
+		switch key {
+		case "label":
+			securityConfig.SelinuxOpts = append(securityConfig.SelinuxOpts, val)
+		case "apparmor":
+			securityConfig.ApparmorProfile = val
+		case "seccomp":
+			securityConfig.SeccompProfilePath = val
+		case "no-new-privileges":
+			noNewPrivileges := val == "" || val == "true"
+			securityConfig.NoNewPrivileges = &noNewPrivileges
+		default:
+			return fmt.Errorf("unsupported podman security option %q", opt)
+		}
+	}
+
+	return nil
 }
 
 // produceGenericContainerList takes a list of containers in a podman entities.ListContainer format

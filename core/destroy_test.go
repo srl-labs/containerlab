@@ -72,3 +72,18 @@ func TestWithLabNameOnly_setsNameWithoutTopologyFile(t *testing.T) {
 		t.Fatal("topology file should not be set for lab-name-only init")
 	}
 }
+
+func TestFilteredDestroyScopesAppliedStateRestoration(t *testing.T) {
+	t.Parallel()
+
+	c := &CLab{nodeFilter: []string{"selected"}}
+	if !c.nodeInDestroyScope("selected") {
+		t.Fatal("selected node is outside filtered destroy scope")
+	}
+	if c.nodeInDestroyScope("unrelated") {
+		t.Fatal("unrelated applied-state node entered filtered destroy scope")
+	}
+	if !(&CLab{}).nodeInDestroyScope("any") {
+		t.Fatal("unfiltered destroy must include every restored state node")
+	}
+}

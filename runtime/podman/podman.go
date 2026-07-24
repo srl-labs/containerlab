@@ -206,6 +206,25 @@ func (r *PodmanRuntime) CreateContainer(
 			err,
 		)
 	}
+	if strings.HasPrefix(cfg.NetworkMode, "container:") {
+		providerName, err := containerModeProviderName(cfg)
+		if err != nil {
+			return "", err
+		}
+		provider, err := containers.Inspect(ctx, providerName, &containers.InspectOptions{})
+		if err != nil {
+			return "", fmt.Errorf(
+				"failed to inspect shared namespace provider %q for container %q: %w",
+				providerName,
+				cfg.LongName,
+				err,
+			)
+		}
+		if provider.ID != "" {
+			sg.NetNS.Value = provider.ID
+			sg.UtsNS.Value = provider.ID
+		}
+	}
 	res, err := containers.CreateWithSpec(ctx, &sg, &containers.CreateOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to create container %q: %w", cfg.LongName, err)
