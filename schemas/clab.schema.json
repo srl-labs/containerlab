@@ -127,7 +127,8 @@
                         "openwrt",
                         "spirent_stc",
                         "veesix_osvbng",
-                        "ostinato"
+                        "ostinato",
+                        "plvision_sonic"
                     ]
                 },
                 "license": {
@@ -2039,6 +2040,9 @@
                             "$ref": "#/definitions/node-config"
                         },
                         "dell_sonic": {
+                            "$ref": "#/definitions/node-config"
+                        },
+                        "plvision_sonic": {
                             "$ref": "#/definitions/node-config"
                         },
                         "juniper_vmx": {

@@ -45,6 +45,8 @@ nav:
       - Dell:
           - FTOS10v: manual/kinds/vr-ftosv.md
           - Enterprise SONiC: manual/kinds/dell_sonic.md
+      - PLVision:
+          - Enterprise SONiC: manual/kinds/plvision_sonic.md
       - MikroTik RouterOS: manual/kinds/vr-ros.md
       - Huawei VRP: manual/kinds/huawei_vrp.md
       - IPInfusion OcNOS: manual/kinds/ipinfusion-ocnos.md
