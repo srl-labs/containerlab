@@ -39,7 +39,7 @@ jobs:
           version: ${{ inputs.uv_ver }}
           enable-cache: true
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version-file: "pyproject.toml"
 
