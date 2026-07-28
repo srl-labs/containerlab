@@ -27,11 +27,11 @@ func TestCeosLinkApplyMode(t *testing.T) {
 func TestCeosPostDeployBuildsRuntimeExecCommand(t *testing.T) {
 	node := newTestCEOSNode()
 	node.Endpoints = []clablinks.Endpoint{
-		&clablinks.EndpointGeneric{
+		clablinks.NewEndpointVeth(&clablinks.EndpointGeneric{
 			IfaceName: "eth1",
 			IPv4:      netip.MustParsePrefix("192.0.2.1/31"),
 			IPv6:      netip.MustParsePrefix("2001:db8::1/127"),
-		},
+		}),
 	}
 
 	var gotCmd string
