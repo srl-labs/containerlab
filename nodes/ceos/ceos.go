@@ -57,6 +57,15 @@ var (
 
 	saveCmd = "Cli -p 15 -c wr"
 
+	ceosPostDeployExec = func(
+		n *ceos,
+		ctx context.Context,
+		execCmd *clabexec.ExecCmd,
+	) (*clabexec.ExecResult, error) {
+		return n.RunExec(ctx, execCmd)
+	}
+	ceosPostDeploySleep = time.Sleep
+
 	defaultCredentials = clabnodes.NewCredentials("admin", "admin")
 )
 
@@ -414,7 +423,7 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 
 	for range 60 {
 		execCmd := clabexec.NewExecCmdFromSlice([]string{"/bin/bash", "-lc", cliCmd})
-		resp, err := n.RunExec(ctx, execCmd)
+		resp, err := ceosPostDeployExec(n, ctx, execCmd)
 		if err == nil && resp.GetReturnCode() == 0 {
 			return nil
 		}
@@ -422,7 +431,7 @@ func (n *ceos) ceosPostDeploy(ctx context.Context) error {
 		lastErr = err
 		lastResp = resp
 		log.Debugf("%s - Cli not ready (%v, %v) - waiting.", nodeCfg.LongName, err, resp)
-		time.Sleep(2 * time.Second)
+		ceosPostDeploySleep(2 * time.Second)
 	}
 
 	if lastErr != nil {

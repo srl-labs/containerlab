@@ -34,6 +34,8 @@ docker import cEOS64-lab-4.32.0F.tar.xz ceos:4.32.0F
 
 Arista cEOS node launched with containerlab can be managed via the following interfaces:
 
+Containerlab applies the built-in postdeploy cEOS CLI configuration through the configured container runtime `exec` path. This keeps management-interface and link-addressing setup aligned with the selected runtime, including Docker and Podman.
+
 /// tab | bash
 to connect to a `bash` shell of a running ceos container:
 
