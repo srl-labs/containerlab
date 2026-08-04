@@ -274,7 +274,14 @@ links:
 
 ###### veth-stitch
 
-The veth-stitch link type transparently stitches its two endpoints by using three veth links. One per node interface, and a third veth which stitches the two together.
+The veth-stitch link type transparently stitches its two endpoints by using a veth pair per node interface then each veth is joined with a transparent tc stitch to pass the traffic.
+
+```mermaid
+graph LR
+    A[Node A] <-->|veth| B((tc stitch))
+    B <-->|veth| C[Node B]
+```
+
 This is useful for nodes whose datapath interfaces cannot be captured or impaired directly (such as SR-SIM).
 
 ```yaml
@@ -287,13 +294,6 @@ links:
         interface: 1/1/c1/1
 ```
 
-The brief endpoint form is also supported:
-
-```yaml
-links:
-  - type: veth-stitch
-    endpoints: ["r1:1/1/c1/1", "pe01-core:1/1/c3/1"]
-```
 
 A veth-stitch link cannot carry `mac`, `ipv4`, or `ipv6` parameters as it behaves like a transparently to any frames passed across the link.
 
