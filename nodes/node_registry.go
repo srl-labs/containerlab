@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	clablinks "github.com/srl-labs/containerlab/links"
 )
 
 type Initializer func() Node
@@ -147,16 +145,6 @@ func newRegistryEntry(nodeKindNames []string, initFunction Initializer,
 type PlatformAttrs struct {
 	ScrapliPlatformName string
 	NapalmPlatformName  string
-	DefaultLinkType     clablinks.LinkType
-}
-
-// GetDefaultLinkType returns the platform's brief-link default type, or veth when unset.
-func (pa *PlatformAttrs) GetDefaultLinkType() clablinks.LinkType {
-	if pa == nil || pa.DefaultLinkType == "" {
-		return clablinks.LinkTypeVEth
-	}
-
-	return pa.DefaultLinkType
 }
 
 // NewNodeRegistryEntryAttributes creates a new NodeRegistryEntryAttributes.

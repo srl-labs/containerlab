@@ -1,7 +1,6 @@
 package links
 
 import (
-	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v2"
@@ -41,34 +40,6 @@ endpoints:
 	}
 	if len(raw.Endpoints) != 2 {
 		t.Fatalf("endpoints = %d, want 2", len(raw.Endpoints))
-	}
-}
-
-func TestVethStitchedUnmarshalBriefYAML(t *testing.T) {
-	var linkDef LinkDefinition
-
-	err := yaml.UnmarshalStrict([]byte(`
-type: veth-stitch
-endpoints: ["sros1:1/1/c1/1", "sros:1/1/c1/1"]
-`), &linkDef)
-	if err != nil {
-		t.Fatalf("yaml.UnmarshalStrict() error = %v", err)
-	}
-
-	raw, ok := linkDef.Link.(*LinkVEthStitchedRaw)
-	if !ok {
-		t.Fatalf("link raw type = %T, want *LinkVEthStitchedRaw", linkDef.Link)
-	}
-
-	want := []*EndpointRaw{
-		{Node: "sros1", Iface: "1/1/c1/1"},
-		{Node: "sros", Iface: "1/1/c1/1"},
-	}
-	for i, w := range want {
-		if raw.Endpoints[i].Node != w.Node || raw.Endpoints[i].Iface != w.Iface {
-			t.Fatalf("endpoint[%d] = %s:%s, want %s:%s",
-				i, raw.Endpoints[i].Node, raw.Endpoints[i].Iface, w.Node, w.Iface)
-		}
 	}
 }
 
@@ -165,7 +136,6 @@ func TestValidateVEthStitched(t *testing.T) {
 			raw: &LinkVEthStitchedRaw{
 				Endpoints: []*EndpointRaw{{Node: "pe01", Iface: "e1"}, {Node: "pe01", Iface: "e2"}},
 			},
-			wantErr: true,
 		},
 		{
 			name: "endpoint carries mac",
@@ -197,79 +167,6 @@ func TestValidateVEthStitched(t *testing.T) {
 	}
 }
 
-func TestStitchFarEndName(t *testing.T) {
-	name := stitchFarEndName("lab", "pe01", "e1")
-
-	if len(name) > 15 {
-		t.Fatalf("far-end name %q exceeds the 15-char interface limit", name)
-	}
-	if !strings.HasPrefix(name, "clab-s-") {
-		t.Fatalf("far-end name = %q, want clab-s- prefix", name)
-	}
-	// deterministic
-	if name != stitchFarEndName("lab", "pe01", "e1") {
-		t.Fatalf("far-end name is not deterministic")
-	}
-	// differs by lab, node, and iface
-	if name == stitchFarEndName("other", "pe01", "e1") {
-		t.Fatalf("far-end name should differ across labs")
-	}
-	if name == stitchFarEndName("lab", "pe02", "e1") {
-		t.Fatalf("far-end name should differ across nodes")
-	}
-	if name == stitchFarEndName("lab", "pe01", "e2") {
-		t.Fatalf("far-end name should differ across interfaces")
-	}
-}
-
-func TestResolveNetemTarget(t *testing.T) {
-	link := &LinkVEthStitchedRaw{
-		Endpoints: []*EndpointRaw{{Node: "pe01", Iface: "e1"}, {Node: "pe02", Iface: "e1"}},
-	}
-
-	tests := []struct {
-		name           string
-		node, rootNode string
-		iface          string
-		wantIface      string // far-end name of the OTHER endpoint; "" => no redirect
-	}{
-		{"match by node name", "pe01", "", "e1", stitchFarEndName("mylab", "pe02", "e1")},
-		{"match by root node name", "sros-1", "pe02", "e1", stitchFarEndName("mylab", "pe01", "e1")},
-		{"no match: wrong iface", "pe01", "", "e2", ""},
-		{"no match: wrong node", "pe09", "", "e1", ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			target, err := link.ResolveNetemTarget("mylab", tt.node, tt.rootNode, tt.iface)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if tt.wantIface == "" {
-				if target != nil {
-					t.Fatalf("want no redirect, got %v", target)
-				}
-				return
-			}
-
-			// matched: netem targets the other node's root-ns far end
-			if target == nil || target.Iface != tt.wantIface {
-				t.Fatalf("target = %v, want Iface %q", target, tt.wantIface)
-			}
-		})
-	}
-}
-
-func TestResolveNetemTargetWrongEndpointCount(t *testing.T) {
-	link := &LinkVEthStitchedRaw{Endpoints: []*EndpointRaw{{Node: "pe01", Iface: "e1"}}}
-
-	target, err := link.ResolveNetemTarget("mylab", "pe01", "", "e1")
-	if target != nil || err != nil {
-		t.Fatalf("want nil for non-2-endpoint link, got target=%v err=%v", target, err)
-	}
-}
-
 func TestNewVEthStitchedRawFromVEth(t *testing.T) {
 	v := &LinkVEthRaw{
 		LinkCommonParams: LinkCommonParams{MTU: 1400},
@@ -289,13 +186,5 @@ func TestNewVEthStitchedRawFromVEth(t *testing.T) {
 	}
 	if len(s.Endpoints) != 2 || s.Endpoints[0].Node != "a" || s.Endpoints[1].Node != "b" {
 		t.Fatalf("endpoints not carried over: %+v", s.Endpoints)
-	}
-}
-
-func TestLinkCommonParamsResolveNetemTargetDefault(t *testing.T) {
-	// non-stitch raw links do not redirect netem
-	target, err := (&LinkCommonParams{}).ResolveNetemTarget("lab", "n1", "", "e1")
-	if err != nil || target != nil {
-		t.Fatalf("default ResolveNetemTarget = (%v, %v), want (nil, nil)", target, err)
 	}
 }

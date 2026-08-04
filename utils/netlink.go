@@ -217,3 +217,26 @@ func GetNamedNetNS(name string) (string, error) {
 
 	return nsPath, nil
 }
+
+// SanitizeInterfaceName sanitizes the interface name by replacing '/' and ' ' with '-'.
+// Making it suitable to write as AltName for the interface.
+func SanitizeInterfaceName(ifaceName string) string {
+	var sb strings.Builder
+	sb.Grow(len(ifaceName))
+
+	for _, char := range ifaceName {
+		switch char {
+		case '/', ' ':
+			sb.WriteRune('-')
+		default:
+			sb.WriteRune(char)
+		}
+	}
+
+	return sb.String()
+}
+
+// a unique name for links tagged for later clab tools usage (like veth-stitch)
+func StitchAltName(labName, node, iface string) string {
+	return "clab-stitch-" + SanitizeInterfaceName(labName+"-"+node+"-"+iface)
+}

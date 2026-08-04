@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	clabinternalslices "github.com/srl-labs/containerlab/internal/slices"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 	"gopkg.in/yaml.v2"
 )
@@ -52,12 +53,6 @@ func (l *LinkCommonParams) GetMTU() int {
 // GetVars returns the link-level vars.
 func (l *LinkCommonParams) GetVars() map[string]any {
 	return l.Vars
-}
-
-// ResolveNetemTarget defaults to no redirect: `tools netem` acts on the node's
-// own netns. Links whose datapath lives outside it (e.g. veth-stitch) override.
-func (l *LinkCommonParams) ResolveNetemTarget(_, _, _, _ string) (*NetemTarget, error) {
-	return nil, nil
 }
 
 // LinkDefinition represents a link definition in the topology file.
@@ -274,6 +269,10 @@ func (ld *LinkDefinition) UnmarshalYAML( //nolint: funlen
 			return err
 		}
 
+		if veth, ok := ld.Link.(*LinkVEthRaw); ok {
+			veth.fromBrief = true
+		}
+
 	default:
 		return fmt.Errorf("unknown link type %q", lt)
 	}
@@ -366,9 +365,6 @@ func (r *LinkDefinition) MarshalYAML() (any, error) {
 type RawLink interface {
 	Resolve(params *ResolveParams) (Link, error)
 	GetType() LinkType
-	// ResolveNetemTarget reports where `tools netem` should apply impairment for
-	// the given endpoint, or nil to use the node's own netns. See NetemTarget.
-	ResolveNetemTarget(labName, node, rootNode, iface string) (*NetemTarget, error)
 }
 
 // Link is an interface that all concrete link types must implement.
@@ -521,14 +517,7 @@ type Node interface {
 	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() clabnodesstate.NodeState
 	Delete(ctx context.Context) error
-}
-
-// NetemTarget is where `tools netem` applies impairment when an endpoint's
-// datapath isn't in the node's own namespace.
-type NetemTarget struct {
-	NSPath      string // netns to apply netem in
-	Iface       string // interface within it
-	DisplayName string // label for output
+	DefaultLinkType() LinkType
 }
 
 type LinkEndpointType string
@@ -553,7 +542,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 			}
 		} else {
 			// when the name is too long, we add a sanitized interface name as AltName
-			sanitizedIfaceName := SanitizeInterfaceName(endpt.GetIfaceName())
+			sanitizedIfaceName := clabutils.SanitizeInterfaceName(endpt.GetIfaceName())
 			err := netlink.LinkAddAltName(l, sanitizedIfaceName)
 			if err != nil {
 				return fmt.Errorf(
@@ -575,7 +564,7 @@ func SetNameMACAndUpInterface(l netlink.Link, endpt Endpoint) func(ns.NetNS) err
 				return err
 			}
 			// Set a sanitized altname for ease of access. '/', and ' ' are changed to '-'
-			sanitizedIfaceName := SanitizeInterfaceName(endpt.GetIfaceAlias())
+			sanitizedIfaceName := clabutils.SanitizeInterfaceName(endpt.GetIfaceAlias())
 			err = netlink.LinkAddAltName(l, sanitizedIfaceName)
 			if err != nil {
 				return err
@@ -688,24 +677,6 @@ func isInFilter(params *ResolveParams, endpoints []*EndpointRaw) bool {
 	}
 
 	return true
-}
-
-// SanitizeInterfaceName sanitizes the interface name by replacing '/' and ' ' with '-'.
-// Making it suitable to write as AltName for the interface.
-func SanitizeInterfaceName(ifaceName string) string {
-	var sb strings.Builder
-	sb.Grow(len(ifaceName))
-
-	for _, char := range ifaceName {
-		switch char {
-		case '/', ' ':
-			sb.WriteRune('-')
-		default:
-			sb.WriteRune(char)
-		}
-	}
-
-	return sb.String()
 }
 
 // IsValidInterfaceName checks if the interface name is valid

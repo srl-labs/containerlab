@@ -24,6 +24,7 @@ const (
 type LinkVEthRaw struct {
 	LinkCommonParams `               yaml:",inline"`
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
+	fromBrief        bool
 }
 
 // ToLinkBriefRaw converts the raw link into a LinkBriefRaw.
@@ -52,6 +53,10 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	filtered := isInFilter(params, r.Endpoints)
 	if !filtered {
 		return nil, nil
+	}
+
+	if r.fromBrief && r.briefDefaultLinkType(params) == LinkTypeVethStitch {
+		return NewVEthStitchedRawFromVEth(r).Resolve(params)
 	}
 
 	// create LinkVEth struct
@@ -106,6 +111,21 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	}
 
 	return link, nil
+}
+
+func (r *LinkVEthRaw) briefDefaultLinkType(params *ResolveParams) LinkType {
+	for _, ep := range r.Endpoints {
+		n, ok := params.Nodes[ep.Node]
+		if !ok {
+			continue
+		}
+
+		if lt := n.DefaultLinkType(); lt != "" && lt != LinkTypeVEth {
+			return lt
+		}
+	}
+
+	return LinkTypeVEth
 }
 
 type LinkVEth struct {

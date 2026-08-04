@@ -305,6 +305,10 @@ func (*fakeNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeVeth
 }
 
+func (*fakeNode) DefaultLinkType() LinkType {
+	return LinkTypeVEth
+}
+
 func (f *fakeNode) GetShortName() string {
 	return f.Name
 }

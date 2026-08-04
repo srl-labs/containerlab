@@ -2,24 +2,56 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/charmbracelet/log"
+	"github.com/containernetworking/plugins/pkg/ns"
 	clabconstants "github.com/srl-labs/containerlab/constants"
-	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
+	clabutils "github.com/srl-labs/containerlab/utils"
+	"github.com/vishvananda/netlink"
 )
 
-// ResolveNetemTarget picks the netns + interface `tools netem` should act on for
-// containerName:iface — a link-owned namespace if a link redirects impairment
-// (e.g. veth-stitch), else the container's own netns.
-func ResolveNetemTarget(
+// NetemTarget is the netns and interface `tools netem` applies impairment to.
+type NetemTarget struct {
+	NSPath      string // netns holding Iface
+	Iface       string // interface name or altname resolvable within NSPath
+	DisplayName string // label for command output
+}
+
+// NetemNode is the container `tools netem` operates on: its own netns plus the
+// topology identity (lab and node name) read from its labels.
+type NetemNode struct {
+	NSPath string // the container's own netns
+
+	name      string
+	lab, node string // from container labels; empty when unresolvable
+}
+
+// topoIdentity returns the lab and node name recorded in a container's labels.
+// A component of a multi-container node (e.g. a multi-slot SR-SIM slot) yields
+// its root node name, the name topology links reference.
+func topoIdentity(labels map[string]string) (lab, node string) {
+	node = labels[clabconstants.NodeName]
+	if root := labels[clabconstants.RootNodeName]; root != "" {
+		node = root
+	}
+
+	return labels[clabconstants.Containerlab], node
+}
+
+// ResolveNetemNode resolves containerName's netns path and topology identity
+// via the named runtime. The topology identity is best-effort: it stays empty
+// when containerName does not match exactly one container, which disables
+// tools-interface
+// lookups but leaves the container's own netns usable.
+func ResolveNetemNode(
 	ctx context.Context,
 	runtimeName string,
 	timeout time.Duration,
-	containerName, iface string,
-) (*clablinks.NetemTarget, error) {
+	containerName string,
+) (*NetemNode, error) {
 	_, rinit, err := RuntimeInitializer(runtimeName)
 	if err != nil {
 		return nil, err
@@ -32,73 +64,59 @@ func ResolveNetemTarget(
 		return nil, err
 	}
 
-	if target, err := linkNetemTarget(ctx, rt, runtimeName, timeout, containerName, iface); err != nil {
-		return nil, err
-	} else if target != nil {
-		return target, nil
-	}
+	n := &NetemNode{name: containerName}
 
-	nsPath, err := rt.GetNSPath(ctx, containerName)
+	n.NSPath, err = rt.GetNSPath(ctx, containerName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &clablinks.NetemTarget{
-		NSPath:      nsPath,
-		Iface:       iface,
-		DisplayName: containerName,
-	}, nil
-}
-
-// linkNetemTarget asks each link in the container's topology whether it redirects
-// netem for containerName:iface, returning the first override or nil to fall back
-// to the container's own netns. The topology is discovered from the container's
-// labels (topology file + node name).
-func linkNetemTarget(
-	ctx context.Context,
-	rt clabruntime.ContainerRuntime,
-	runtimeName string,
-	timeout time.Duration,
-	containerName, iface string,
-) (*clablinks.NetemTarget, error) {
 	cnts, err := rt.ListContainers(ctx, []*clabtypes.GenericFilter{
 		{FilterType: "name", Match: containerName},
 	})
-	if err != nil || len(cnts) != 1 {
-		// not a uniquely resolvable container; let the node path surface the error
-		return nil, nil //nolint:nilerr
+	if err == nil && len(cnts) == 1 {
+		n.lab, n.node = topoIdentity(cnts[0].Labels)
 	}
 
-	topoFile := cnts[0].Labels[clabconstants.TopoFile]
-	nodeName := cnts[0].Labels[clabconstants.NodeName]
-	// multi-component nodes (e.g. multi-slot SR-SIM) reference the root name.
-	rootNodeName := cnts[0].Labels[clabconstants.RootNodeName]
-	if topoFile == "" || nodeName == "" {
-		return nil, nil
+	return n, nil
+}
+
+// ToolsIfaceFor returns the name of the host-namespace tools interface a link
+// published for node:iface (see utils.StitchAltName), or "" when no link
+// published one.
+func (n *NetemNode) ToolsIfaceFor(iface string) string {
+	if n.lab == "" || n.node == "" || iface == "" {
+		return ""
 	}
 
-	tc, err := NewContainerLab(
-		WithTimeout(timeout),
-		WithRuntime(runtimeName, &clabruntime.RuntimeConfig{Timeout: timeout}),
-		WithTopoPath(topoFile, nil),
-	)
-	if err != nil {
-		// topology no longer loadable; fall back to the node namespace
-		log.Debugf("could not load topology %q to check for netem redirects: %v", topoFile, err)
-		return nil, nil //nolint:nilerr
+	altName := clabutils.StitchAltName(n.lab, n.node, iface)
+	if _, err := netlink.LinkByName(altName); err != nil {
+		return ""
 	}
 
-	for _, ld := range tc.Config.Topology.Links {
-		target, err := ld.Link.ResolveNetemTarget(
-			tc.Config.Name, nodeName, rootNodeName, iface)
+	return altName
+}
+
+// TargetFor returns the netns and interface where impairment of iface must be
+// applied: the host-namespace tools interface when a link published one,
+// otherwise iface in the container's own netns.
+func (n *NetemNode) TargetFor(iface string) (*NetemTarget, error) {
+	if toolsIface := n.ToolsIfaceFor(iface); toolsIface != "" {
+		current, err := ns.GetCurrentNS()
 		if err != nil {
 			return nil, err
 		}
 
-		if target != nil {
-			return target, nil
-		}
+		return &NetemTarget{
+			NSPath:      current.Path(),
+			Iface:       toolsIface,
+			DisplayName: fmt.Sprintf("%s:%s (host)", n.node, iface),
+		}, nil
 	}
 
-	return nil, nil
+	return &NetemTarget{
+		NSPath:      n.NSPath,
+		Iface:       iface,
+		DisplayName: n.name,
+	}, nil
 }

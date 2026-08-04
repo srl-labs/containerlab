@@ -62,6 +62,10 @@ func (*applyFakeLinkNode) GetLinkEndpointType() clablinks.LinkEndpointType {
 	return clablinks.LinkEndpointTypeVeth
 }
 
+func (*applyFakeLinkNode) DefaultLinkType() clablinks.LinkType {
+	return clablinks.LinkTypeVEth
+}
+
 func (n *applyFakeLinkNode) GetShortName() string {
 	return n.name
 }

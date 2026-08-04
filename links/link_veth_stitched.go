@@ -5,52 +5,22 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/containernetworking/plugins/pkg/ns"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
 type LinkVEthStitchedRaw struct {
-	LinkCommonParams `yaml:",inline"`
-	Endpoints        stitchEndpoints `yaml:"endpoints"`
-}
-
-// stitchEndpoints accepts endpoints in either the brief "node:interface" string
-// form or the extended object form.
-type stitchEndpoints []*EndpointRaw
-
-func (se *stitchEndpoints) UnmarshalYAML(unmarshal func(any) error) error {
-	var briefs []string
-	if err := unmarshal(&briefs); err == nil {
-		eps := make([]*EndpointRaw, 0, len(briefs))
-		for _, b := range briefs {
-			node, iface, ok := strings.Cut(b, ":")
-			if !ok {
-				return fmt.Errorf("invalid veth-stitch endpoint %q, expected node:interface", b)
-			}
-			eps = append(eps, &EndpointRaw{Node: node, Iface: iface})
-		}
-		*se = eps
-
-		return nil
-	}
-
-	var objs []*EndpointRaw
-	if err := unmarshal(&objs); err != nil {
-		return err
-	}
-	*se = objs
-
-	return nil
+	LinkCommonParams `               yaml:",inline"`
+	Endpoints        []*EndpointRaw `yaml:"endpoints"`
 }
 
 func NewVEthStitchedRawFromVEth(v *LinkVEthRaw) *LinkVEthStitchedRaw {
 	return &LinkVEthStitchedRaw{
 		LinkCommonParams: v.LinkCommonParams,
-		Endpoints:        stitchEndpoints(v.Endpoints),
+		Endpoints:        v.Endpoints,
 	}
 }
 
@@ -72,7 +42,7 @@ func (r *LinkVEthStitchedRaw) Resolve(params *ResolveParams) (Link, error) {
 		mtu = clabconstants.DefaultLinkMTU
 	}
 
-	l := &LinkVEthStitched{}
+	l := &LinkVEthStitched{labName: params.LabName}
 	l.MTU = mtu
 	l.Vars = normalizeVars(r.Vars)
 
@@ -97,6 +67,10 @@ func (r *LinkVEthStitchedRaw) Resolve(params *ResolveParams) (Link, error) {
 type LinkVEthStitched struct {
 	LinkCommonParams
 
+	// since the stitch veth lives in the root ns, we need to ensure altnames
+	// are per-lab unique.
+	labName string
+
 	segA *LinkVEth
 	segB *LinkVEth
 
@@ -115,25 +89,29 @@ func (l *LinkVEthStitched) GetEndpoints() []Endpoint {
 
 // GetRuntimeEndpoints returns the two node-side endpoints.
 func (l *LinkVEthStitched) GetRuntimeEndpoints() []Endpoint {
-	return []Endpoint{l.segA.Endpoints[0], l.segB.Endpoints[0]}
+	return l.GetEndpoints()
 }
 
 // Deploy creates both veth segments.
-func (l *LinkVEthStitched) Deploy(ctx context.Context, _ Endpoint) error {
-	if err := l.segA.Deploy(ctx, l.segA.Endpoints[0]); err != nil {
-		return err
+func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
+	switch ep {
+	case l.segA.Endpoints[0]:
+		return l.segA.Deploy(ctx, ep)
+	case l.segB.Endpoints[0]:
+		return l.segB.Deploy(ctx, ep)
 	}
 
-	return l.segB.Deploy(ctx, l.segB.Endpoints[0])
+	return fmt.Errorf("endpoint %s does not belong to link [ %s, %s ]",
+		ep, l.segA.Endpoints[0], l.segB.Endpoints[0])
 }
 
 // PostDeploy tags the two root-ns far ends and joins them with tc
 func (l *LinkVEthStitched) PostDeploy(_ context.Context) error {
-	if err := markFarEnd(l.epA, l.segA.Endpoints[0]); err != nil {
+	if err := markFarEnd(l.epB, l.segA.Endpoints[0], l.labName); err != nil {
 		return err
 	}
 
-	if err := markFarEnd(l.epB, l.segB.Endpoints[0]); err != nil {
+	if err := markFarEnd(l.epA, l.segB.Endpoints[0], l.labName); err != nil {
 		return err
 	}
 
@@ -191,17 +169,18 @@ func stitchFarEndName(labName, node, iface string) string {
 	return "clab-s-" + hex.EncodeToString(sum[:4]) // 7 + 8 = 15 chars
 }
 
-func markFarEnd(farEp, nodeEp Endpoint) error {
+func markFarEnd(farEp, nodeEp Endpoint, labName string) error {
 	l, err := netlink.LinkByName(farEp.GetIfaceName())
 	if err != nil {
 		return fmt.Errorf("failed to look up veth-stitch far end %q: %w", farEp.GetIfaceName(), err)
 	}
 
-	if err := netlink.LinkDelAltName(l, ownershipAltName(farEp)); err != nil {
-		log.Debugf("could not drop ownership altname on %q: %v", farEp.GetIfaceName(), err)
+	iface := nodeEp.GetIfaceAlias()
+	if iface == "" {
+		iface = nodeEp.GetIfaceName()
 	}
 
-	altName := "clab-stitch-" + SanitizeInterfaceName(nodeEp.GetNode().GetShortName()+"-"+nodeEp.GetIfaceName())
+	altName := clabutils.StitchAltName(labName, nodeEp.GetNode().GetShortName(), iface)
 	if err := netlink.LinkAddAltName(l, altName); err != nil && !isAltNameNotSupportedErr(err) {
 		return fmt.Errorf("failed to add veth-stitch altname %q: %w", altName, err)
 	}
@@ -212,13 +191,6 @@ func markFarEnd(farEp, nodeEp Endpoint) error {
 func validateVEthStitched(r *LinkVEthStitchedRaw) error {
 	if len(r.Endpoints) != 2 {
 		return fmt.Errorf("veth-stitch links require exactly two endpoints, got %d", len(r.Endpoints))
-	}
-
-	if r.Endpoints[0].Node == r.Endpoints[1].Node {
-		return fmt.Errorf(
-			"veth-stitch links cannot start and end on the same node %q",
-			r.Endpoints[0].Node,
-		)
 	}
 
 	if len(r.IPv4) > 0 || len(r.IPv6) > 0 {
@@ -235,34 +207,4 @@ func validateVEthStitched(r *LinkVEthStitchedRaw) error {
 	}
 
 	return nil
-}
-
-// ResolveNetemTarget redirects netem to the stitch side interface
-func (r *LinkVEthStitchedRaw) ResolveNetemTarget(
-	labName, node, rootNode, iface string,
-) (*NetemTarget, error) {
-	if len(r.Endpoints) != 2 {
-		return nil, nil
-	}
-
-	for i, ep := range r.Endpoints {
-		if ep.Iface != iface || (ep.Node != node && ep.Node != rootNode) {
-			continue
-		}
-
-		other := r.Endpoints[(i+1)%2]
-
-		current, err := ns.GetCurrentNS()
-		if err != nil {
-			return nil, err
-		}
-
-		return &NetemTarget{
-			NSPath:      current.Path(),
-			Iface:       stitchFarEndName(labName, other.Node, other.Iface),
-			DisplayName: fmt.Sprintf("%s:%s (veth-stitch)", node, iface),
-		}, nil
-	}
-
-	return nil, nil
 }

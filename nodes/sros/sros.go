@@ -172,7 +172,6 @@ func Register(r *clabnodes.NodeRegistry) {
 	generateNodeAttributes := clabnodes.NewGenerateNodeAttributes(generateable, generateIfFormat)
 	platformOpts := &clabnodes.PlatformAttrs{
 		ScrapliPlatformName: scrapliPlatformName,
-		DefaultLinkType:     clablinks.LinkTypeVethStitch,
 	}
 	nrea := clabnodes.NewNodeRegistryEntryAttributes(
 		defaultCredentials,
@@ -2235,4 +2234,8 @@ func componentsBySlot(components []*clabtypes.Component) map[string]clabtypes.Co
 		m[slot] = norm
 	}
 	return m
+}
+
+func (*sros) DefaultLinkType() clablinks.LinkType {
+	return clablinks.LinkTypeVethStitch
 }

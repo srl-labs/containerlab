@@ -37,4 +37,8 @@ topology:
 
   links:
     - type: veth-stitch
-      endpoints: ["sros1:1/1/c1/1", "sros2:1/1/c1/1"]
+      endpoints:
+        - node: sros1
+          interface: 1/1/c1/1
+        - node: sros2
+          interface: 1/1/c1/1
