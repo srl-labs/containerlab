@@ -185,6 +185,8 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 		return nil
 	}
 
+	c.nodeFilter = nodeFilter
+
 	// ensure that the node filter is a subset of the nodes in the topology
 	for _, n := range nodeFilter {
 		if _, ok := c.Config.Topology.Nodes[n]; !ok {
@@ -193,13 +195,11 @@ func (c *CLab) filterClabNodes(nodeFilter []string) error {
 		}
 	}
 
-	c.nodeFilter = nodeFilter
-
 	log.Infof("Applying node filter: %q", nodeFilter)
 
 	// filter nodes
 	for name := range c.Config.Topology.Nodes {
-		if exists := slices.Contains(c.nodeFilter, name); !exists {
+		if exists := slices.Contains(nodeFilter, name); !exists {
 			log.Debugf("Excluding node %s", name)
 			delete(c.Config.Topology.Nodes, name)
 		}
