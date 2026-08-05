@@ -772,9 +772,11 @@ func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
 	}
 
 	result := make([]string, 0, len(binds))
+
 	for _, b := range binds {
 		result = append(result, b.String())
 	}
+
 	slices.Sort(result)
 
 	return result, nil
