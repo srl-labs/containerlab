@@ -771,17 +771,11 @@ func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
 		return nil, nil
 	}
 
-	// Sort by destination path so map iteration cannot introduce config drift.
-	destinations := make([]string, 0, len(binds))
-	for dst := range binds {
-		destinations = append(destinations, dst)
-	}
-	slices.Sort(destinations)
-
 	result := make([]string, 0, len(binds))
-	for _, dst := range destinations {
-		result = append(result, binds[dst].String())
+	for _, b := range binds {
+		result = append(result, b.String())
 	}
+	slices.Sort(result)
 
 	return result, nil
 }
