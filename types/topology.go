@@ -1,6 +1,7 @@
 package types
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/docker/go-connections/nat"
@@ -770,11 +771,16 @@ func (t *Topology) GetNodeBinds(nodeName string) ([]string, error) {
 		return nil, nil
 	}
 
-	// build the result array with all the entries from binds map
-	result := make([]string, 0, len(binds))
+	// Sort by destination path so map iteration cannot introduce config drift.
+	destinations := make([]string, 0, len(binds))
+	for dst := range binds {
+		destinations = append(destinations, dst)
+	}
+	slices.Sort(destinations)
 
-	for _, b := range binds {
-		result = append(result, b.String())
+	result := make([]string, 0, len(binds))
+	for _, dst := range destinations {
+		result = append(result, binds[dst].String())
 	}
 
 	return result, nil
