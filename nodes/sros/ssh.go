@@ -14,6 +14,7 @@ import (
 	"github.com/scrapli/scrapligo/transport"
 	"github.com/scrapli/scrapligo/util"
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/mod/semver"
 )
 
 // limitSSHKeys truncates SSH keys to SROS maximum of 32 per type.
@@ -41,10 +42,19 @@ func (n *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 		ssh.KeyAlgoECDSA256: &tplData.SSHPubKeysECDSA,
 	}
 
+	currVersion := tplData.SwVersion.MajorMinorSemverString()
+	if semver.Compare(currVersion, "v26.7") >= 0 {
+		supportedSSHKeyAlgos[ssh.KeyAlgoED25519] = &tplData.SSHPubKeysED25519
+	}
+
 	n.mapSSHPubKeys(supportedSSHKeyAlgos)
 
 	limitSSHKeys(&tplData.SSHPubKeysRSA, "RSA")
 	limitSSHKeys(&tplData.SSHPubKeysECDSA, "ECDSA")
+	if semver.Compare(currVersion, "v26.7") >= 0 {
+		limitSSHKeys(&tplData.SSHPubKeysED25519, "ED25519")
+	}
+
 }
 
 // mapSSHPubKeys goes over s.sshPubKeys and puts the supported keys to the corresponding

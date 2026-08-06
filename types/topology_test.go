@@ -896,6 +896,39 @@ func TestGetNodeBinds(t *testing.T) {
 	}
 }
 
+func TestGetNodeBindsDeterministicOrder(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {
+				Binds: []string{
+					"z-source:/etc/z.conf",
+					"a-source:/etc/a.conf",
+					"m-source:/etc/m.conf",
+				},
+			},
+		},
+	}
+	want := []string{
+		"a-source:/etc/a.conf",
+		"m-source:/etc/m.conf",
+		"z-source:/etc/z.conf",
+	}
+
+	for range 100 {
+		got, err := topology.GetNodeBinds("node1")
+		if err != nil {
+			t.Fatalf("GetNodeBinds() unexpected error: %v", err)
+		}
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Fatalf(
+				"GetNodeBinds() returned binds in a non-deterministic order (-want +got):\n%s",
+				diff,
+			)
+		}
+	}
+}
+
 func TestGetNodeEnv(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)

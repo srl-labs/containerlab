@@ -226,6 +226,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			LongName:      "lab-n1",
 			StartupConfig: cfgPath,
 		}
+		n.swVersion = &SrosVersion{"0", "0", "0"}
 
 		cfg, err := n.buildStartupConfig(false) // full config, not partial
 		require.NoError(t, err)
@@ -255,6 +256,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			LabDir:      t.TempDir(),
 		}
 		n.WithRuntime(mockRt)
+		n.swVersion = &SrosVersion{"0", "0", "0"}
 
 		cfg, err := n.buildStartupConfig(true) // no full config; use default + partial
 		require.NoError(t, err)
