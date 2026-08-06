@@ -62,20 +62,6 @@ func (mr *MockNodeMockRecorder) AddEndpoint(e any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddEndpoint", reflect.TypeOf((*MockNode)(nil).AddEndpoint), e)
 }
 
-// AddLinkToContainer mocks base method.
-func (m *MockNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddLinkToContainer", ctx, link, f)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddLinkToContainer indicates an expected call of AddLinkToContainer.
-func (mr *MockNodeMockRecorder) AddLinkToContainer(ctx, link, f any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLinkToContainer", reflect.TypeOf((*MockNode)(nil).AddLinkToContainer), ctx, link, f)
-}
-
 // AdoptEndpoint mocks base method.
 func (m *MockNode) AdoptEndpoint(e links.Endpoint) error {
 	m.ctrl.T.Helper()
@@ -88,6 +74,20 @@ func (m *MockNode) AdoptEndpoint(e links.Endpoint) error {
 func (mr *MockNodeMockRecorder) AdoptEndpoint(e any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdoptEndpoint", reflect.TypeOf((*MockNode)(nil).AdoptEndpoint), e)
+}
+
+// AddLinkToContainer mocks base method.
+func (m *MockNode) AddLinkToContainer(ctx context.Context, link netlink.Link, f func(ns.NetNS) error) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddLinkToContainer", ctx, link, f)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddLinkToContainer indicates an expected call of AddLinkToContainer.
+func (mr *MockNodeMockRecorder) AddLinkToContainer(ctx, link, f any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLinkToContainer", reflect.TypeOf((*MockNode)(nil).AddLinkToContainer), ctx, link, f)
 }
 
 // CalculateInterfaceIndex mocks base method.
@@ -159,20 +159,6 @@ func (m *MockNode) Config() *types.NodeConfig {
 func (mr *MockNodeMockRecorder) Config() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Config", reflect.TypeOf((*MockNode)(nil).Config))
-}
-
-// DefaultLinkType mocks base method.
-func (m *MockNode) DefaultLinkType() links.LinkType {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DefaultLinkType")
-	ret0, _ := ret[0].(links.LinkType)
-	return ret0
-}
-
-// DefaultLinkType indicates an expected call of DefaultLinkType.
-func (mr *MockNodeMockRecorder) DefaultLinkType() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultLinkType", reflect.TypeOf((*MockNode)(nil).DefaultLinkType))
 }
 
 // Delete mocks base method.
@@ -315,6 +301,20 @@ func (m *MockNode) GetHostsEntries(ctx context.Context) (types.HostEntries, erro
 func (mr *MockNodeMockRecorder) GetHostsEntries(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHostsEntries", reflect.TypeOf((*MockNode)(nil).GetHostsEntries), ctx)
+}
+
+// ReleaseEndpoint mocks base method.
+func (m *MockNode) ReleaseEndpoint(e links.Endpoint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReleaseEndpoint", e)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReleaseEndpoint indicates an expected call of ReleaseEndpoint.
+func (mr *MockNodeMockRecorder) ReleaseEndpoint(e any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseEndpoint", reflect.TypeOf((*MockNode)(nil).ReleaseEndpoint), e)
 }
 
 // GetImages mocks base method.
@@ -479,20 +479,6 @@ func (mr *MockNodeMockRecorder) LinkApplyMode(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LinkApplyMode", reflect.TypeOf((*MockNode)(nil).LinkApplyMode), arg0)
 }
 
-// ParkEndpoints mocks base method.
-func (m *MockNode) ParkEndpoints(ctx context.Context) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParkEndpoints", ctx)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ParkEndpoints indicates an expected call of ParkEndpoints.
-func (mr *MockNodeMockRecorder) ParkEndpoints(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkEndpoints", reflect.TypeOf((*MockNode)(nil).ParkEndpoints), ctx)
-}
-
 // PostDeploy mocks base method.
 func (m *MockNode) PostDeploy(ctx context.Context, params *nodes.PostDeployParams) error {
 	m.ctrl.T.Helper()
@@ -519,6 +505,20 @@ func (m *MockNode) PostDeployEndpoints(ctx context.Context) error {
 func (mr *MockNodeMockRecorder) PostDeployEndpoints(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostDeployEndpoints", reflect.TypeOf((*MockNode)(nil).PostDeployEndpoints), ctx)
+}
+
+// ParkEndpoints mocks base method.
+func (m *MockNode) ParkEndpoints(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParkEndpoints", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ParkEndpoints indicates an expected call of ParkEndpoints.
+func (mr *MockNodeMockRecorder) ParkEndpoints(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParkEndpoints", reflect.TypeOf((*MockNode)(nil).ParkEndpoints), ctx)
 }
 
 // PreDeploy mocks base method.
@@ -562,20 +562,6 @@ func (m *MockNode) Reconcile(ctx context.Context, diff *types.TopologyDiff) (*no
 func (mr *MockNodeMockRecorder) Reconcile(ctx, diff any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MockNode)(nil).Reconcile), ctx, diff)
-}
-
-// ReleaseEndpoint mocks base method.
-func (m *MockNode) ReleaseEndpoint(e links.Endpoint) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReleaseEndpoint", e)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ReleaseEndpoint indicates an expected call of ReleaseEndpoint.
-func (mr *MockNodeMockRecorder) ReleaseEndpoint(e any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseEndpoint", reflect.TypeOf((*MockNode)(nil).ReleaseEndpoint), e)
 }
 
 // RestoreEndpoints mocks base method.

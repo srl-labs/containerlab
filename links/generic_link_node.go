@@ -125,7 +125,3 @@ func (g *GenericLinkNode) Delete(ctx context.Context) error {
 	}
 	return nil
 }
-
-func (*GenericLinkNode) DefaultLinkType() LinkType {
-	return LinkTypeVEth
-}

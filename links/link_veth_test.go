@@ -254,12 +254,64 @@ func TestLinkVEthRaw_InvalidEndpointVarAFParsing(t *testing.T) {
 	})
 }
 
+func TestLinkVEthRaw_BriefDefaultLinkType(t *testing.T) {
+	t.Run("nodes without provider use veth", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			Endpoints: []*EndpointRaw{
+				{Node: "node1"},
+				{Node: "node2"},
+			},
+		}
+		params := &ResolveParams{
+			Nodes: map[string]Node{
+				"node1": newFakeNode("node1"),
+				"node2": newFakeNode("node2"),
+			},
+		}
+
+		if got := r.briefDefaultLinkType(params); got != LinkTypeVEth {
+			t.Fatalf("briefDefaultLinkType() = %q, want %q", got, LinkTypeVEth)
+		}
+	})
+
+	t.Run("optional provider overrides veth", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			Endpoints: []*EndpointRaw{
+				{Node: "node1"},
+				{Node: "srsim"},
+			},
+		}
+		params := &ResolveParams{
+			Nodes: map[string]Node{
+				"node1": newFakeNode("node1"),
+				"srsim": &fakeDefaultLinkTypeNode{
+					fakeNode: newFakeNode("srsim"),
+					linkType: LinkTypeVethStitch,
+				},
+			},
+		}
+
+		if got := r.briefDefaultLinkType(params); got != LinkTypeVethStitch {
+			t.Fatalf("briefDefaultLinkType() = %q, want %q", got, LinkTypeVethStitch)
+		}
+	})
+}
+
 // fakeNode is a fake implementation of Node for testing.
 type fakeNode struct {
 	Name      string
 	Endpoints []Endpoint
 	State     clabnodesstate.NodeState
 	Links     []Link
+}
+
+type fakeDefaultLinkTypeNode struct {
+	*fakeNode
+	linkType LinkType
+}
+
+func (n *fakeDefaultLinkTypeNode) DefaultLinkType() LinkType {
+	return n.linkType
 }
 
 func newFakeNode(name string) *fakeNode {
@@ -303,10 +355,6 @@ func (f *fakeNode) ReleaseEndpoint(e Endpoint) error {
 
 func (*fakeNode) GetLinkEndpointType() LinkEndpointType {
 	return LinkEndpointTypeVeth
-}
-
-func (*fakeNode) DefaultLinkType() LinkType {
-	return LinkTypeVEth
 }
 
 func (f *fakeNode) GetShortName() string {

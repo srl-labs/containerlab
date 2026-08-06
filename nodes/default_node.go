@@ -1243,7 +1243,3 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 
 	return nil
 }
-
-func (*DefaultNode) DefaultLinkType() clablinks.LinkType {
-	return clablinks.LinkTypeVEth
-}

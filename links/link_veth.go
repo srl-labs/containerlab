@@ -113,6 +113,11 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	return link, nil
 }
 
+// defaultLinkTypeProvider is a type that can provide the default link type for a node. Currently only needed for SR-SIM nodes that use veth-stitch for a regular veth link.
+type defaultLinkTypeProvider interface {
+	DefaultLinkType() LinkType
+}
+
 func (r *LinkVEthRaw) briefDefaultLinkType(params *ResolveParams) LinkType {
 	for _, ep := range r.Endpoints {
 		n, ok := params.Nodes[ep.Node]
@@ -120,7 +125,13 @@ func (r *LinkVEthRaw) briefDefaultLinkType(params *ResolveParams) LinkType {
 			continue
 		}
 
-		if lt := n.DefaultLinkType(); lt != "" && lt != LinkTypeVEth {
+		provider, ok := n.(defaultLinkTypeProvider)
+		if !ok {
+			continue
+		}
+
+		lt := provider.DefaultLinkType()
+		if lt != "" && lt != LinkTypeVEth {
 			return lt
 		}
 	}

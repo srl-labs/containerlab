@@ -255,9 +255,6 @@ type Node interface {
 	GetReconcilePlan(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error)
 	// Reconcile determines what action to take based on diff and executes it.
 	Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error)
-	// DefaultLinkType returns the link type a link written in the brief
-	// notation resolves to when it touches this node.
-	DefaultLinkType() clablinks.LinkType
 }
 
 type NodeOption func(Node)

@@ -54,10 +54,6 @@ func (*graphTestNode) GetLinkEndpointType() clablinks.LinkEndpointType {
 	return clablinks.LinkEndpointTypeVeth
 }
 
-func (*graphTestNode) DefaultLinkType() clablinks.LinkType {
-	return clablinks.LinkTypeVEth
-}
-
 func (*graphTestNode) GetEndpoints() []clablinks.Endpoint { return nil }
 
 func (*graphTestNode) ExecFunction(_ context.Context, _ func(ns.NetNS) error) error {

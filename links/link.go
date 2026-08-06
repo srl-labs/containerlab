@@ -517,7 +517,6 @@ type Node interface {
 	ExecFunction(context.Context, func(ns.NetNS) error) error
 	GetState() clabnodesstate.NodeState
 	Delete(ctx context.Context) error
-	DefaultLinkType() LinkType
 }
 
 type LinkEndpointType string
