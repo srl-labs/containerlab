@@ -180,7 +180,7 @@ func markFarEnd(farEp, nodeEp Endpoint, labName string) error {
 		iface = nodeEp.GetIfaceName()
 	}
 
-	altName := clabutils.StitchAltName(labName, nodeEp.GetNode().GetShortName(), iface)
+	altName := StitchAltName(labName, nodeEp.GetNode().GetShortName(), iface)
 	if err := netlink.LinkAddAltName(l, altName); err != nil && !isAltNameNotSupportedErr(err) {
 		return fmt.Errorf("failed to add veth-stitch altname %q: %w", altName, err)
 	}
@@ -207,4 +207,9 @@ func validateVEthStitched(r *LinkVEthStitchedRaw) error {
 	}
 
 	return nil
+}
+
+// StitchAltName returns a unique name for veth-stitch links.
+func StitchAltName(labName, node, iface string) string {
+	return "clab-stitch-" + clabutils.SanitizeInterfaceName(labName+"-"+node+"-"+iface)
 }

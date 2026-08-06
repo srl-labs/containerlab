@@ -6,9 +6,9 @@ import (
 	"sort"
 
 	"github.com/charmbracelet/log"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
-	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 )
@@ -177,7 +177,7 @@ func overlayToolsIfaces(labels map[string]string, ifaces []*clabtypes.ContainerI
 			topoName = iface.InterfaceName
 		}
 
-		toolsIface, err := netlink.LinkByName(clabutils.StitchAltName(lab, node, topoName))
+		toolsIface, err := netlink.LinkByName(clablinks.StitchAltName(lab, node, topoName))
 		if err != nil {
 			continue
 		}

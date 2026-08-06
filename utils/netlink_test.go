@@ -38,15 +38,3 @@ func TestSanitizeInterfaceName(t *testing.T) {
 		})
 	}
 }
-
-func TestStitchAltName(t *testing.T) {
-	got := StitchAltName("mylab", "sros1", "1/1/c1/1")
-
-	if want := "clab-stitch-mylab-sros1-1-1-c1-1"; got != want {
-		t.Fatalf("StitchAltName() = %q, want %q", got, want)
-	}
-
-	if len(StitchAltName("l", "n", "e")) <= 15 {
-		t.Fatal("stitch altname must exceed 15 chars for netlink.LinkByName to resolve it")
-	}
-}

@@ -7,9 +7,9 @@ import (
 
 	"github.com/containernetworking/plugins/pkg/ns"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabtypes "github.com/srl-labs/containerlab/types"
-	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
 )
 
@@ -89,7 +89,7 @@ func (n *NetemNode) ToolsIfaceFor(iface string) string {
 		return ""
 	}
 
-	altName := clabutils.StitchAltName(n.lab, n.node, iface)
+	altName := clablinks.StitchAltName(n.lab, n.node, iface)
 	if _, err := netlink.LinkByName(altName); err != nil {
 		return ""
 	}

@@ -235,8 +235,3 @@ func SanitizeInterfaceName(ifaceName string) string {
 
 	return sb.String()
 }
-
-// a unique name for links tagged for later clab tools usage (like veth-stitch)
-func StitchAltName(labName, node, iface string) string {
-	return "clab-stitch-" + SanitizeInterfaceName(labName+"-"+node+"-"+iface)
-}
