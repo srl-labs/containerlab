@@ -1,0 +1,71 @@
+# yaml-language-server: $schema=../../schemas/clab.schema.json
+# Copyright 2020 Nokia
+# Licensed under the BSD 3-Clause License.
+# SPDX-License-Identifier: BSD-3-Clause
+
+name: apply-filter
+
+topology:
+  nodes:
+    provider:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      stages:
+        configure:
+          exec:
+            - command: >-
+                sh -c 'ip link show eth1 >/dev/null &&
+                echo configured >> /tmp/configure-stage-runs'
+      env:
+        PROVIDER_DRIFT: "{{ .providerDrift }}"
+    child1:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      network-mode: container:provider
+    child2:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      network-mode: container:provider
+    unrelated1:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+    unrelated2:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      env:
+        UNRELATED2_DRIFT: "{{ .unrelated2Drift }}"
+{{- if .addGroup }}
+    new-provider:
+      kind: linux
+      image: alpine:3
+      cmd: tail -f /dev/null
+      healthcheck:
+        test:
+          - CMD-SHELL
+          - ip link show eth1
+        interval: 1
+        timeout: 1
+        retries: 10
+    new-child1:
+      kind: linux
+      image: alpine:3
+      cmd: sh -c "ip link show eth1 >/dev/null && tail -f /dev/null"
+      network-mode: container:new-provider
+    new-child2:
+      kind: linux
+      image: alpine:3
+      cmd: sh -c "ip link show eth1 >/dev/null && tail -f /dev/null"
+      network-mode: container:new-provider
+{{- end }}
+
+  links:
+    - endpoints: ["provider:eth1", "unrelated1:eth1"]
+    - endpoints: ["unrelated1:eth2", "unrelated2:eth1"]
+{{- if .addGroup }}
+    - endpoints: ["new-provider:eth1", "unrelated2:eth2"]
+{{- end }}

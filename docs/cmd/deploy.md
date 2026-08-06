@@ -293,7 +293,21 @@ The local `--node-filter` flag allows users to specify a subset of topology node
 
 When a subset of nodes is specified, containerlab will only deploy those nodes and links belonging to all selected nodes and ignore the rest. This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full topology.
 
-Node filtering applies to fresh deployments (including `--reconfigure`) only. When deploy [reconciles](#reconciliation-behavior) an already deployed lab, the filter is rejected, because running nodes excluded by the filter would otherwise be deleted.
+For a fresh deployment (including `--reconfigure`), node filtering deploys only the selected nodes.
+When `deploy` reconciles an existing lab, the selected nodes form a mutable scope. Containerlab
+automatically includes nodes required through `wait-for` or
+`network-mode: container:<provider>` and links needed by selected added or recreated nodes. Nodes
+and endpoints outside that closure remain immutable: they are not deleted, restarted, recreated,
+or reconciled.
+
+```bash
+containerlab deploy -t mylab.clab.yml --node-filter app1,app2
+```
+
+Filtered reconciliation checkpoints resolved state only for nodes in the selected closure, so
+pending topology changes outside the filter remain pending. For shared network namespaces, the
+provider owns discovered interfaces; children using `network-mode: container:<provider>` do not
+independently claim the same interfaces.
 
 Read more about [node filtering](../manual/node-filtering.md) in the documentation.
 

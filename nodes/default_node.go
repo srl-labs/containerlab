@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -285,6 +286,9 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if oldCfg.Image != newCfg.Image {
 		diff.Fields = append(diff.Fields, "Image")
 	}
+	if oldCfg.GetHostname() != newCfg.GetHostname() {
+		diff.Fields = append(diff.Fields, "Hostname")
+	}
 	if oldCfg.Entrypoint != newCfg.Entrypoint {
 		diff.Fields = append(diff.Fields, "Entrypoint")
 	}
@@ -297,7 +301,11 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if !clabutils.MapsEqualOrBothEmpty(oldCfg.Env, newCfg.Env) {
 		diff.Fields = append(diff.Fields, "Env")
 	}
-	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Binds, newCfg.Binds) {
+	oldBinds := slices.Clone(oldCfg.Binds)
+	newBinds := slices.Clone(newCfg.Binds)
+	slices.Sort(oldBinds)
+	slices.Sort(newBinds)
+	if !slices.Equal(oldBinds, newBinds) {
 		diff.Fields = append(diff.Fields, "Binds")
 	}
 	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.Devices, newCfg.Devices) {
@@ -1104,6 +1112,11 @@ func (d *DefaultNode) IsHealthy(ctx context.Context) (bool, error) {
 
 // ParkEndpoints moves all tracked endpoints into the node-owned parking namespace.
 func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
+	if _, shared := strings.CutPrefix(d.Cfg.NetworkMode, "container:"); shared {
+		log.Debugf("node %q shares a network namespace and owns no endpoints to park", d.Cfg.ShortName)
+		return nil
+	}
+
 	parkPath, err := clabutils.CreateOrGetNamedNetNS(d.parkingNetNSName())
 	if err != nil {
 		return fmt.Errorf("failed to create parking netns for node %q: %w", d.Cfg.ShortName, err)
@@ -1133,6 +1146,11 @@ func (d *DefaultNode) ParkEndpoints(ctx context.Context) error {
 
 // RestoreEndpoints tries to get the parking node to unpark its interfaces.
 func (d *DefaultNode) RestoreEndpoints(ctx context.Context) error {
+	if _, shared := strings.CutPrefix(d.Cfg.NetworkMode, "container:"); shared {
+		log.Debugf("node %q shares a network namespace and owns no endpoints to restore", d.Cfg.ShortName)
+		return nil
+	}
+
 	parkPath, err := d.parkingNetNSPath()
 	if err != nil {
 		// No parking netns means the node had no parked interfaces - e.g. it was

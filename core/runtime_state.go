@@ -155,9 +155,14 @@ func (c *CLab) setMgmtBridgeFromRuntime(
 }
 
 func (c *CLab) updateRuntimeInfoForExistingNodes(ctx context.Context) error {
-	for _, nodeName := range sortedNodeNames(c.Nodes) {
-		node := c.Nodes[nodeName]
-		if node.GetContainerStatus(ctx) == clabruntime.NotFound {
+	runtimeNodes, err := c.runtimeNodeGroups(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, nodeName := range sortedRuntimeNodeGroupNames(runtimeNodes) {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
 			continue
 		}
 		if err := node.UpdateConfigWithRuntimeInfo(ctx); err != nil {

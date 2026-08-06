@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -13,10 +14,12 @@ import (
 	"github.com/charmbracelet/log"
 	clabcert "github.com/srl-labs/containerlab/cert"
 	clabconstants "github.com/srl-labs/containerlab/constants"
+	clabcoredependency_manager "github.com/srl-labs/containerlab/core/dependency_manager"
 	clabexec "github.com/srl-labs/containerlab/exec"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
 
@@ -67,6 +70,11 @@ func (c *CLab) Deploy(
 		return nil, err
 	}
 	if initialDeploy {
+		if len(c.nodeFilter) > 0 {
+			if err := c.filterClabNodes(c.nodeFilter); err != nil {
+				return nil, err
+			}
+		}
 		if options.dryRun {
 			return &DeployResult{
 				Apply: &ApplyResult{
@@ -107,7 +115,12 @@ func (c *CLab) Deploy(
 		return &DeployResult{Apply: applyResult}, nil
 	}
 
-	containers, err := c.ListNodesContainers(ctx)
+	var containers []clabruntime.GenericContainer
+	if len(c.nodeFilter) > 0 {
+		containers, err = c.ListNodesContainersIgnoreNotFound(ctx)
+	} else {
+		containers, err = c.ListNodesContainers(ctx)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -130,15 +143,6 @@ func (c *CLab) checkReconcileDeployOptions(options *DeployOptions) error {
 		return fmt.Errorf(
 			"snapshot restore requires a fresh deployment, but lab %q is already deployed; "+
 				"use --reconfigure to destroy and redeploy it",
-			c.Config.Name,
-		)
-	}
-
-	if len(c.nodeFilter) > 0 {
-		return fmt.Errorf(
-			"node filter is not supported when reconciling deployed lab %q: "+
-				"running nodes excluded by the filter would be deleted; "+
-				"remove the filter or use --reconfigure",
 			c.Config.Name,
 		)
 	}
@@ -461,9 +465,59 @@ func (c *CLab) DeployNodes(
 	nodeNames []string,
 	maxWorkers uint,
 ) error {
+	if err := c.deployNodesUntilRunning(ctx, nodeNames, maxWorkers); err != nil {
+		return err
+	}
+	return c.waitNodesHealthy(ctx, nodeNames)
+}
+
+// deployNodesUntilRunning creates dependency batches without waiting for
+// healthchecks that may require topology interfaces. Apply attaches or restores
+// those interfaces before calling waitNodesHealthy.
+func (c *CLab) deployNodesUntilRunning(
+	ctx context.Context,
+	nodeNames []string,
+	maxWorkers uint,
+) error {
 	if len(nodeNames) == 0 {
 		return nil
 	}
+	batches, err := c.applyDeployBatches(nodeNames)
+	if err != nil {
+		return err
+	}
+	for _, batch := range batches {
+		if err := c.deployNodeBatch(ctx, batch, maxWorkers); err != nil {
+			return err
+		}
+		for _, nodeName := range batch {
+			node := c.Nodes[nodeName]
+			if err := c.waitNodeRunning(ctx, node); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (c *CLab) waitNodesHealthy(ctx context.Context, nodeNames []string) error {
+	for _, nodeName := range nodeNames {
+		node, exists := c.Nodes[nodeName]
+		if !exists {
+			return fmt.Errorf("node %q not found", nodeName)
+		}
+		if err := c.waitNodeHealthyIfAvailable(ctx, node); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *CLab) deployNodeBatch(
+	ctx context.Context,
+	nodeNames []string,
+	maxWorkers uint,
+) error {
 
 	if maxWorkers == 0 || int(maxWorkers) > len(nodeNames) {
 		maxWorkers = uint(len(nodeNames))
@@ -503,6 +557,68 @@ func (c *CLab) DeployNodes(
 	}
 
 	return nil
+}
+
+func (c *CLab) applyDeployBatches(nodeNames []string) ([][]string, error) {
+	pending := make(map[string]map[string]struct{}, len(nodeNames))
+	deploySet := make(map[string]struct{}, len(nodeNames))
+	for _, nodeName := range nodeNames {
+		deploySet[nodeName] = struct{}{}
+	}
+	for nodeName := range deploySet {
+		dependencies := map[string]struct{}{}
+		node := c.Nodes[nodeName]
+		if provider, shared := c.applySharedNetNSProvider(node); shared {
+			if _, deploying := deploySet[provider]; deploying {
+				dependencies[provider] = struct{}{}
+			}
+		}
+		if node != nil && node.Config() != nil && node.Config().Stages != nil {
+			for _, waitForList := range node.Config().Stages.GetWaitFor() {
+				for _, waitFor := range waitForList {
+					if waitFor == nil {
+						continue
+					}
+					if _, deploying := deploySet[waitFor.Node]; deploying {
+						dependencies[waitFor.Node] = struct{}{}
+					}
+				}
+			}
+		}
+		pending[nodeName] = dependencies
+	}
+
+	var batches [][]string
+	completed := map[string]struct{}{}
+	for len(pending) > 0 {
+		var ready []string
+		for nodeName, dependencies := range pending {
+			allComplete := true
+			for dependency := range dependencies {
+				if _, complete := completed[dependency]; !complete {
+					allComplete = false
+					break
+				}
+			}
+			if allComplete {
+				ready = append(ready, nodeName)
+			}
+		}
+		if len(ready) == 0 {
+			return nil, fmt.Errorf(
+				"apply node dependencies contain a cycle among %v",
+				sortedStringSet(deploySet),
+			)
+		}
+		sort.Strings(ready)
+		batches = append(batches, ready)
+		for _, nodeName := range ready {
+			delete(pending, nodeName)
+			completed[nodeName] = struct{}{}
+		}
+	}
+
+	return batches, nil
 }
 
 func (c *CLab) deployNode(ctx context.Context, node clabnodes.Node) error {
@@ -578,12 +694,18 @@ func (c *CLab) postDeployApplyNodes(
 
 	for _, nodeName := range nodeNames {
 		node := c.Nodes[nodeName]
+		clabcoredependency_manager.RunStageExecs(
+			ctx, node, clabtypes.CommandExecutionPhaseEnter, clabtypes.WaitForConfigure,
+		)
 
 		if !skipPostDeploy {
 			if err := node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes}); err != nil {
 				return fmt.Errorf("node %q post-deploy: %w", nodeName, err)
 			}
 		}
+		clabcoredependency_manager.RunStageExecs(
+			ctx, node, clabtypes.CommandExecutionPhaseExit, clabtypes.WaitForConfigure,
+		)
 
 		if err := node.RunExecFromConfig(ctx, execCollection); err != nil {
 			log.Errorf("failed to run exec commands for %s: %v", nodeName, err)
@@ -593,6 +715,53 @@ func (c *CLab) postDeployApplyNodes(
 	execCollection.Log()
 
 	return nil
+}
+
+func (c *CLab) regenerateApplyArtifacts(ctx context.Context, exportTemplate string) error {
+	runtimeNodes, err := c.runtimeNodeGroups(ctx)
+	if err != nil {
+		return err
+	}
+	artifactLab := c.applyArtifactLab(runtimeNodes)
+
+	if err := artifactLab.GenerateInventories(); err != nil {
+		return err
+	}
+
+	topoDataF, err := os.Create(artifactLab.TopoPaths.TopoExportFile())
+	if err != nil {
+		return err
+	}
+	defer topoDataF.Close()
+
+	if err := artifactLab.GenerateExports(ctx, topoDataF, exportTemplate); err != nil {
+		return err
+	}
+
+	if !artifactLab.skipMgmtNetwork() {
+		log.Info("Updating host entries", "path", "/etc/hosts")
+		if err := artifactLab.appendHostsFileEntries(ctx); err != nil {
+			log.Errorf("failed to update hosts file: %v", err)
+		}
+	}
+
+	log.Info("Updating SSH config for nodes", "path", artifactLab.TopoPaths.SSHConfigPath())
+	if err := artifactLab.addSSHConfig(); err != nil {
+		log.Errorf("failed to create ssh config file: %v", err)
+	}
+
+	return nil
+}
+
+func (c *CLab) applyArtifactLab(runtimeNodes map[string]*runtimeNodeGroup) *CLab {
+	artifactLab := *c
+	artifactLab.Nodes = make(map[string]clabnodes.Node, len(runtimeNodes))
+	for nodeName := range runtimeNodes {
+		if node, exists := c.Nodes[nodeName]; exists {
+			artifactLab.Nodes[nodeName] = node
+		}
+	}
+	return &artifactLab
 }
 
 func (c *CLab) finalize(

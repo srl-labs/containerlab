@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -165,18 +166,14 @@ func (d *DockerRuntime) WithMgmtNet(n *clabtypes.MgmtNet) {
 	if d.mgmt.Bridge == "" && d.mgmt.Network != "" {
 		// fetch the network by the name set in the topo and populate the bridge name used by this
 		// network
-		netRes, err := d.Client.NetworkInspect(
+		netRes, raw, err := d.Client.NetworkInspectWithRaw(
 			context.TODO(),
 			d.mgmt.Network,
 			networkapi.InspectOptions{},
 		)
 		// if the network is successfully found, set the bridge used by it
 		if err == nil {
-			if name, exists := netRes.Options[bridgeNameOption]; exists {
-				d.mgmt.Bridge = name
-			} else {
-				d.mgmt.Bridge = "br-" + netRes.ID[:12]
-			}
+			d.mgmt.Bridge = d.detectMgmtBridgeName(context.TODO(), d.mgmt.Network, netRes, raw)
 			log.Debugf(
 				"detected network name in use: %s, backed by a bridge %s",
 				d.mgmt.Network,
@@ -195,18 +192,33 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	bridgeName := d.mgmt.Bridge
 
 	log.Debugf("Checking if docker network %q exists", d.mgmt.Network)
-	netResource, err := d.Client.NetworkInspect(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+	netResource, rawNetResource, err := d.Client.NetworkInspectWithRaw(nctx, d.mgmt.Network, networkapi.InspectOptions{})
 	switch {
 	case dockerC.IsErrNotFound(err):
 		bridgeName, err = d.createMgmtBridge(nctx, bridgeName)
 		if err != nil {
 			return err
 		}
+		netResource, rawNetResource, err = d.Client.NetworkInspectWithRaw(nctx, d.mgmt.Network, networkapi.InspectOptions{})
+		if err != nil {
+			return err
+		}
+		if inspectedBridgeName := d.detectMgmtBridgeName(nctx, d.mgmt.Network, netResource, rawNetResource); inspectedBridgeName != "" {
+			bridgeName = inspectedBridgeName
+		}
 	case err == nil:
 		log.Debugf("network %q was found. Reusing it...", d.mgmt.Network)
 		bridgeName, err = bridgeNameFromInspect(&netResource, d.mgmt.Network)
 		if err != nil {
 			return err
+		}
+		if inspectedBridgeName := d.detectMgmtBridgeName(
+			nctx,
+			d.mgmt.Network,
+			netResource,
+			rawNetResource,
+		); inspectedBridgeName != "" {
+			bridgeName = inspectedBridgeName
 		}
 
 	default:
@@ -229,6 +241,96 @@ func (d *DockerRuntime) CreateNet(ctx context.Context) (err error) {
 	log.Debugf("Docker network %q, bridge name %q", d.mgmt.Network, bridgeName)
 
 	return d.postCreateNetActions()
+}
+
+func (d *DockerRuntime) detectMgmtBridgeName(
+	ctx context.Context,
+	networkName string,
+	netResource networkapi.Inspect,
+	raw []byte,
+) string {
+	if name := netavarkNetworkInterface(raw); name != "" {
+		return name
+	}
+
+	if name := d.libpodNetworkInterface(ctx, networkName); name != "" {
+		return name
+	}
+
+	return mgmtBridgeNameFromInspect(networkName, netResource, "")
+}
+
+func mgmtBridgeNameFromInspect(
+	networkName string,
+	netResource networkapi.Inspect,
+	podmanNetworkInterface string,
+) string {
+	if podmanNetworkInterface != "" {
+		return podmanNetworkInterface
+	}
+
+	if networkName == "bridge" {
+		return "docker0"
+	}
+
+	if name := netResource.Options["com.docker.network.bridge.name"]; name != "" {
+		return name
+	}
+
+	if len(netResource.ID) >= 12 {
+		return "br-" + netResource.ID[:12]
+	}
+
+	return ""
+}
+
+func netavarkNetworkInterface(raw []byte) string {
+	var inspect struct {
+		NetworkInterface string `json:"network_interface"`
+	}
+	if err := json.Unmarshal(raw, &inspect); err != nil {
+		return ""
+	}
+
+	return inspect.NetworkInterface
+}
+
+func (d *DockerRuntime) libpodNetworkInterface(ctx context.Context, networkName string) string {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"http://"+dockerC.DummyHost+"/v5.0.0/libpod/networks/json",
+		nil,
+	)
+	if err != nil {
+		return ""
+	}
+
+	resp, err := d.Client.HTTPClient().Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	var networks []struct {
+		Name             string `json:"name"`
+		NetworkInterface string `json:"network_interface"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&networks); err != nil {
+		return ""
+	}
+
+	for _, network := range networks {
+		if network.Name == networkName {
+			return network.NetworkInterface
+		}
+	}
+
+	return ""
 }
 
 // skipcq: GO-R1005
@@ -602,7 +704,7 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		Env:          clabutils.ConvertEnvs(node.Env),
 		AttachStdout: true,
 		AttachStderr: true,
-		Hostname:     node.ShortName,
+		Hostname:     node.GetHostname(),
 		Tty:          true,
 		OpenStdin:    true,
 		User:         node.User,
@@ -664,9 +766,10 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		Binds:        node.Binds,
 		PortBindings: node.PortBindings,
 		Sysctls:      node.Sysctls,
-		Privileged:   true,
+		Privileged:   node.Privileged,
 		Tmpfs:        node.Tmpfs,
 		PidMode:      "",
+		SecurityOpt:  node.SecurityOpts,
 		// Network mode will be defined below via switch
 		NetworkMode: "",
 		ExtraHosts:  node.ExtraHosts, // add static /etc/hosts entries
@@ -699,6 +802,10 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 	}
 
 	if err := d.processPidMode(node, containerHostConfig); err != nil {
+		return "", err
+	}
+
+	if err := d.processCgroupnsMode(node, containerHostConfig); err != nil {
 		return "", err
 	}
 
@@ -1477,6 +1584,20 @@ func (*DockerRuntime) processPidMode(
 	}
 
 	containerHostConfig.PidMode = pidMode
+
+	return nil
+}
+
+func (*DockerRuntime) processCgroupnsMode(
+	node *clabtypes.NodeConfig,
+	containerHostConfig *container.HostConfig,
+) error {
+	cgroupnsMode := container.CgroupnsMode(node.CgroupnsMode)
+	if !cgroupnsMode.Valid() {
+		return fmt.Errorf("cgroupns mode %q invalid", node.CgroupnsMode)
+	}
+
+	containerHostConfig.CgroupnsMode = cgroupnsMode
 
 	return nil
 }

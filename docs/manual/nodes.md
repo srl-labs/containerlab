@@ -449,6 +449,24 @@ topology:
       user: clab # clab user will be used for node1
 ```
 
+### hostname
+
+The `hostname` option overrides the hostname configured inside the node's
+container. It can be set at the defaults, kind, group, or node level. When it is
+not set, containerlab uses the topology node name.
+
+```yaml
+topology:
+  nodes:
+    app1:
+      kind: linux
+      hostname: app-production-01001
+```
+
+Podman supports this option for nodes using `network-mode: container:<node>`.
+Docker does not permit setting a hostname while joining another container's
+network namespace, so Docker ignores the override for that network mode.
+
 ### entrypoint
 
 Changing the entrypoint of the container is done with `entrypoint` config option. It accepts the "shell" form and can be set on all levels.
@@ -751,8 +769,7 @@ my-node:
 ### cap-add
 
 The `cap-add` parameter can be used to add capabilities to the container.
-Docker containers are currently executed in privileged mode, so this should not be needed.
-If this becomes configurable, specifying the capabilities required for a container will be useful.
+By default, containers are executed in privileged mode, so this should not be needed unless [`privileged`](#privileged) is set to `false`.
 
 ```yaml
 # my-node will be given the NET_ADMIN and the SYS_ADMIN capabilities
@@ -762,6 +779,74 @@ my-node:
   cap-add:
     - NET_ADMIN
     - SYS_ADMIN
+```
+
+### privileged
+
+The `privileged` parameter controls whether the container runs in privileged mode.
+It defaults to `true` to preserve containerlab's historical behavior.
+
+```yaml
+# my-node will not run as a privileged container.
+my-node:
+  image: alpine:3
+  kind: linux
+  privileged: false
+```
+
+### cgroupns-mode
+
+The `cgroupns-mode` parameter controls the cgroup namespace mode used by the container runtime.
+Supported values are `host` and `private`.
+
+```yaml
+# my-node will use the host cgroup namespace.
+my-node:
+  image: alpine:3
+  kind: linux
+  cgroupns-mode: host
+```
+
+### pid-mode
+
+The `pid-mode` parameter controls the PID namespace mode used by the container runtime.
+For Docker, this accepts the same values as Docker's PID mode setting, such as `host` or `container:<name>`.
+
+```yaml
+# my-node will use the host PID namespace.
+my-node:
+  image: alpine:3
+  kind: linux
+  pid-mode: host
+```
+
+### tmpfs
+
+The `tmpfs` parameter adds tmpfs mounts to the container.
+It is a map keyed by container path, with mount options as the value.
+
+```yaml
+# my-node will have tmpfs mounts commonly used by init-style containers.
+my-node:
+  image: alpine:3
+  kind: linux
+  tmpfs:
+    /run: rw,nosuid,nodev
+    /run/lock: rw,nosuid,nodev,noexec
+    /tmp: rw,nosuid,nodev
+```
+
+### security-opts
+
+The `security-opts` parameter passes security options to the container runtime.
+
+```yaml
+# my-node will disable the default seccomp profile.
+my-node:
+  image: alpine:3
+  kind: linux
+  security-opts:
+    - seccomp=unconfined
 ```
 
 ### sysctls
@@ -849,6 +934,8 @@ In the example below node four nodes are defined with different stages and `wait
 ```
 
 Containerlab's built-in Dependency Manger takes care of all the dependencies, both explicitly-defined and implicit ones. It will inspect the dependency graph and make sure it is acyclic. The output of the Dependency Manager graph is visible in the debug mode.
+
+The same dependencies are honored by `containerlab start`. When a stopped lab is started with dependency-aware stages, containerlab starts prerequisites first. A dependency on the `healthy` stage waits until the prerequisite node reports healthy before starting the dependent node.
 
 Note, that `wait-for` is a list, a node's stage may depend on several other nodes' stages.
 

@@ -84,6 +84,64 @@ func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
 	}
 }
 
+func TestDefaultNodeComputeDiffDetectsHostnameChange(t *testing.T) {
+	d := &DefaultNode{}
+	diff := d.ComputeDiff(
+		&clabtypes.NodeConfig{ShortName: "node1"},
+		&clabtypes.NodeConfig{ShortName: "node1", Hostname: "production-host"},
+	)
+
+	if len(diff.Fields) != 1 || diff.Fields[0] != "Hostname" {
+		t.Fatalf("ComputeDiff fields = %#v, want [Hostname]", diff.Fields)
+	}
+	if got := diff.DefaultAction(); got != clabtypes.TopologyDiffActionRecreate {
+		t.Fatalf("DefaultAction() = %q, want %q", got, clabtypes.TopologyDiffActionRecreate)
+	}
+}
+
+func TestDefaultNodeComputeDiffIgnoresEquivalentDefaultHostname(t *testing.T) {
+	d := &DefaultNode{}
+	diff := d.ComputeDiff(
+		&clabtypes.NodeConfig{ShortName: "node1"},
+		&clabtypes.NodeConfig{ShortName: "node1", Hostname: "node1"},
+	)
+
+	if diff.HasDiff() {
+		t.Fatalf("ComputeDiff fields = %#v, want no diff", diff.Fields)
+	}
+}
+
+func TestDefaultNodeComputeDiffTreatsBindsAsUnordered(t *testing.T) {
+	d := &DefaultNode{}
+	oldCfg := &clabtypes.NodeConfig{Binds: []string{
+		"/host/config:/etc/config:ro",
+		"/host/data:/var/lib/data",
+	}}
+
+	t.Run("reordered binds", func(t *testing.T) {
+		newCfg := &clabtypes.NodeConfig{Binds: []string{
+			"/host/data:/var/lib/data",
+			"/host/config:/etc/config:ro",
+		}}
+
+		if diff := d.ComputeDiff(oldCfg, newCfg); diff.HasDiff() {
+			t.Fatalf("ComputeDiff fields = %#v, want no diff", diff.Fields)
+		}
+	})
+
+	t.Run("changed bind", func(t *testing.T) {
+		newCfg := &clabtypes.NodeConfig{Binds: []string{
+			"/host/data:/var/lib/data",
+			"/host/config:/etc/config",
+		}}
+
+		diff := d.ComputeDiff(oldCfg, newCfg)
+		if len(diff.Fields) != 1 || diff.Fields[0] != "Binds" {
+			t.Fatalf("ComputeDiff fields = %#v, want [Binds]", diff.Fields)
+		}
+	})
+}
+
 func TestDefaultNodeAdoptEndpointRejectsForeignOwner(t *testing.T) {
 	d := &DefaultNode{
 		Cfg: &clabtypes.NodeConfig{
@@ -293,6 +351,26 @@ func TestDefaultNodeRestoreEndpointsMissingParkingNetNSError(t *testing.T) {
 	// parking netns; restoring should be a no-op rather than an error.
 	if err := d.RestoreEndpoints(context.Background()); err != nil {
 		t.Fatalf("expected no error when parking netns is missing, got %v", err)
+	}
+}
+
+func TestDefaultNodeSharedNetNSNeverParksProviderEndpoints(t *testing.T) {
+	t.Parallel()
+
+	d := &DefaultNode{Cfg: &clabtypes.NodeConfig{
+		ShortName:   "child",
+		LongName:    "clab-test-child",
+		NetworkMode: "container:provider",
+	}}
+
+	if err := d.ParkEndpoints(context.Background()); err != nil {
+		t.Fatalf("shared-netns ParkEndpoints returned error: %v", err)
+	}
+	if err := d.RestoreEndpoints(context.Background()); err != nil {
+		t.Fatalf("shared-netns RestoreEndpoints returned error: %v", err)
+	}
+	if _, err := d.parkingNetNSPath(); err == nil {
+		t.Fatal("shared-netns child created a parking namespace")
 	}
 }
 
