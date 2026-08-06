@@ -1,6 +1,8 @@
 package links
 
 import (
+	"context"
+	"sync"
 	"testing"
 
 	"gopkg.in/yaml.v2"
@@ -99,6 +101,20 @@ func TestResolveVethStitched(t *testing.T) {
 	if got := stitched.epA.GetNode().GetShortName(); got != "host" {
 		t.Fatalf("epA far end node = %q, want host (root ns)", got)
 	}
+	if got := stitched.GetEndpoints()[0].GetLink(); got != stitched {
+		t.Fatalf("node endpoint link = %T, want *LinkVEthStitched", got)
+	}
+	if got := stitched.epA.GetLink(); got != stitched.segA {
+		t.Fatalf("far endpoint link = %T, want *LinkVEth", got)
+	}
+
+	runtimeEndpoints := stitched.GetRuntimeEndpoints()
+	if len(runtimeEndpoints) != 4 {
+		t.Fatalf("GetRuntimeEndpoints() returned %d endpoints, want 4", len(runtimeEndpoints))
+	}
+	if runtimeEndpoints[2] != stitched.epA || runtimeEndpoints[3] != stitched.epB {
+		t.Fatalf("GetRuntimeEndpoints() does not include both host far ends")
+	}
 
 	if got := stitched.Labels["role"]; got != "dataplane" {
 		t.Fatalf("resolved link label = %q, want dataplane", got)
@@ -108,6 +124,69 @@ func TestResolveVethStitched(t *testing.T) {
 	}
 	if got := stitched.GetEndpoints()[0].GetMac().String(); got != "02:00:00:00:00:01" {
 		t.Fatalf("node endpoint MAC = %q, want 02:00:00:00:00:01", got)
+	}
+}
+
+func TestVethStitchedRemoveConcurrent(t *testing.T) {
+	l, err := (&LinkVEthStitchedRaw{
+		Endpoints: []*EndpointRaw{
+			{Node: "pe01", Iface: "e1"},
+			{Node: "pe02", Iface: "e1"},
+		},
+	}).Resolve(vethStitchResolveParams())
+	if err != nil {
+		t.Fatalf("Resolve() error = %v", err)
+	}
+
+	stitched := l.(*LinkVEthStitched)
+	stitched.segA.DeploymentState = LinkDeploymentStateRemoved
+	stitched.segB.DeploymentState = LinkDeploymentStateRemoved
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 2)
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs <- stitched.Remove(context.Background())
+		}()
+	}
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("Remove() error = %v", err)
+		}
+	}
+	if stitched.DeploymentState != LinkDeploymentStateRemoved {
+		t.Fatalf("DeploymentState = %d, want removed", stitched.DeploymentState)
+	}
+}
+
+func TestFilteredVethStitchAltNames(t *testing.T) {
+	got := filteredVethStitchAltNames(
+		"lab",
+		[]string{"n1"},
+		[]*EndpointRaw{
+			{Node: "n1", Iface: "e2"},
+			{Node: "n2", Iface: "e1"},
+			{Node: "n1", Iface: "e1"},
+			{Node: "n1", Iface: "e1"},
+		},
+	)
+	want := []string{
+		StitchAltName("lab", "n1", "e1"),
+		StitchAltName("lab", "n1", "e2"),
+	}
+
+	if len(got) != len(want) {
+		t.Fatalf("filteredVethStitchAltNames() = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("filteredVethStitchAltNames()[%d] = %q, want %q", i, got[i], want[i])
+		}
 	}
 }
 

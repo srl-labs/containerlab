@@ -367,6 +367,38 @@ type RawLink interface {
 	GetType() LinkType
 }
 
+type filteredLinkCleaner interface {
+	cleanupFilteredLink(context.Context, string, []string) error
+}
+
+// CleanupFilteredLinks lets raw link types remove resources that cannot be
+// reached through resolved links after a node filter excludes one endpoint.
+func CleanupFilteredLinks(
+	ctx context.Context,
+	linkDefs []*LinkDefinition,
+	labName string,
+	nodesFilter []string,
+) error {
+	if len(nodesFilter) == 0 {
+		return nil
+	}
+
+	for i, linkDef := range linkDefs {
+		if linkDef == nil {
+			continue
+		}
+		cleaner, ok := linkDef.Link.(filteredLinkCleaner)
+		if !ok {
+			continue
+		}
+		if err := cleaner.cleanupFilteredLink(ctx, labName, nodesFilter); err != nil {
+			return fmt.Errorf("failed cleaning up filtered link %d: %w", i, err)
+		}
+	}
+
+	return nil
+}
+
 // Link is an interface that all concrete link types must implement.
 // Concrete link types are resolved from raw links and become part of CLab.Links.
 type Link interface {

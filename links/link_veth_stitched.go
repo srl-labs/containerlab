@@ -4,9 +4,12 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"slices"
+	"sort"
+	"sync"
 
-	"github.com/charmbracelet/log"
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/vishvananda/netlink"
@@ -49,12 +52,12 @@ func (r *LinkVEthStitchedRaw) Resolve(params *ResolveParams) (Link, error) {
 	l.MTU = mtu
 	l.Vars = normalizeVars(l.Vars)
 
-	segA, epA, err := buildVEthStitchSegment(params, r.Endpoints[0], mtu)
+	segA, epA, err := buildVEthStitchSegment(params, l, r.Endpoints[0], mtu)
 	if err != nil {
 		return nil, err
 	}
 
-	segB, epB, err := buildVEthStitchSegment(params, r.Endpoints[1], mtu)
+	segB, epB, err := buildVEthStitchSegment(params, l, r.Endpoints[1], mtu)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +72,8 @@ func (r *LinkVEthStitchedRaw) Resolve(params *ResolveParams) (Link, error) {
 // (nodeA<->root-ns, nodeB<->root-ns) whose root-ns ends are joined by a tc stitch.
 type LinkVEthStitched struct {
 	LinkCommonParams
+
+	lifecycleMutex sync.Mutex
 
 	// since the stitch veth lives in the root ns, we need to ensure altnames
 	// are per-lab unique.
@@ -90,26 +95,47 @@ func (l *LinkVEthStitched) GetEndpoints() []Endpoint {
 	return []Endpoint{l.segA.Endpoints[0], l.segB.Endpoints[0]}
 }
 
-// GetRuntimeEndpoints returns the two node-side endpoints.
+// GetRuntimeEndpoints returns every material endpoint managed by the stitched link.
 func (l *LinkVEthStitched) GetRuntimeEndpoints() []Endpoint {
-	return l.GetEndpoints()
+	return []Endpoint{l.segA.Endpoints[0], l.segB.Endpoints[0], l.epA, l.epB}
 }
 
-// Deploy creates both veth segments.
+// Deploy creates the veth segment belonging to ep.
 func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
+	l.lifecycleMutex.Lock()
+	defer l.lifecycleMutex.Unlock()
+
+	var err error
 	switch ep {
 	case l.segA.Endpoints[0]:
-		return l.segA.Deploy(ctx, ep)
+		err = l.segA.Deploy(ctx, ep)
 	case l.segB.Endpoints[0]:
-		return l.segB.Deploy(ctx, ep)
+		err = l.segB.Deploy(ctx, ep)
+	default:
+		return fmt.Errorf("endpoint %s does not belong to link [ %s, %s ]",
+			ep, l.segA.Endpoints[0], l.segB.Endpoints[0])
 	}
 
-	return fmt.Errorf("endpoint %s does not belong to link [ %s, %s ]",
-		ep, l.segA.Endpoints[0], l.segB.Endpoints[0])
+	if err == nil {
+		l.DeploymentState = LinkDeploymentStateHalfDeployed
+	}
+
+	return err
 }
 
 // PostDeploy tags the two root-ns far ends and joins them with tc
 func (l *LinkVEthStitched) PostDeploy(_ context.Context) error {
+	l.lifecycleMutex.Lock()
+	defer l.lifecycleMutex.Unlock()
+
+	if l.DeploymentState == LinkDeploymentStateFullDeployed {
+		return nil
+	}
+	if l.segA.DeploymentState != LinkDeploymentStateFullDeployed ||
+		l.segB.DeploymentState != LinkDeploymentStateFullDeployed {
+		return fmt.Errorf("cannot stitch veth segments before both are fully deployed")
+	}
+
 	if err := markFarEnd(l.epB, l.segA.Endpoints[0], l.labName); err != nil {
 		return err
 	}
@@ -122,38 +148,42 @@ func (l *LinkVEthStitched) PostDeploy(_ context.Context) error {
 		return err
 	}
 
-	return stitch(l.epB, l.epA)
+	if err := stitch(l.epB, l.epA); err != nil {
+		return err
+	}
+
+	l.DeploymentState = LinkDeploymentStateFullDeployed
+
+	return nil
 }
 
 func (l *LinkVEthStitched) Remove(ctx context.Context) error {
+	l.lifecycleMutex.Lock()
+	defer l.lifecycleMutex.Unlock()
+
 	if l.DeploymentState == LinkDeploymentStateRemoved {
 		return nil
 	}
 
-	if err := l.segA.Remove(ctx); err != nil {
-		log.Debug(err)
-	}
-
-	if err := l.segB.Remove(ctx); err != nil {
-		log.Debug(err)
-	}
+	err := errors.Join(l.segA.Remove(ctx), l.segB.Remove(ctx))
 
 	l.DeploymentState = LinkDeploymentStateRemoved
 
-	return nil
+	return err
 }
 
 // buildVEthStitchSegment builds one veth segment: the real node endpoint plus a
 // root-namespace far end named with a hash.
 func buildVEthStitchSegment(
 	params *ResolveParams,
+	owner *LinkVEthStitched,
 	nodeEpRaw *EndpointRaw,
 	mtu int,
 ) (*LinkVEth, Endpoint, error) {
 	seg := NewLinkVEth()
 	seg.MTU = mtu
 
-	nodeEp, err := nodeEpRaw.Resolve(params, seg)
+	nodeEp, err := nodeEpRaw.Resolve(params, owner)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -197,6 +227,52 @@ func validateVEthStitched(r *LinkVEthStitchedRaw) error {
 	}
 
 	return nil
+}
+
+func (r *LinkVEthStitchedRaw) cleanupFilteredLink(
+	ctx context.Context,
+	labName string,
+	nodesFilter []string,
+) error {
+	return cleanupFilteredVethStitch(ctx, labName, nodesFilter, r.Endpoints)
+}
+
+func cleanupFilteredVethStitch(
+	ctx context.Context,
+	labName string,
+	nodesFilter []string,
+	endpoints []*EndpointRaw,
+) error {
+	for _, altName := range filteredVethStitchAltNames(labName, nodesFilter, endpoints) {
+		if err := RemoveOwnedInterface(ctx, GetHostLinkNode(), altName); err != nil {
+			return fmt.Errorf("failed cleaning up veth-stitch interface %q: %w", altName, err)
+		}
+	}
+
+	return nil
+}
+
+func filteredVethStitchAltNames(
+	labName string,
+	nodesFilter []string,
+	endpoints []*EndpointRaw,
+) []string {
+	names := make(map[string]struct{})
+	for _, ep := range endpoints {
+		if ep == nil || ep.Node == "" || ep.Iface == "" ||
+			!slices.Contains(nodesFilter, ep.Node) {
+			continue
+		}
+		names[StitchAltName(labName, ep.Node, ep.Iface)] = struct{}{}
+	}
+
+	result := make([]string, 0, len(names))
+	for name := range names {
+		result = append(result, name)
+	}
+	sort.Strings(result)
+
+	return result
 }
 
 // StitchAltName returns a unique name for veth-stitch links.
