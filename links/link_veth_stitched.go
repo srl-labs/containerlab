@@ -42,9 +42,12 @@ func (r *LinkVEthStitchedRaw) Resolve(params *ResolveParams) (Link, error) {
 		mtu = clabconstants.DefaultLinkMTU
 	}
 
-	l := &LinkVEthStitched{labName: params.LabName}
+	l := &LinkVEthStitched{
+		LinkCommonParams: r.LinkCommonParams,
+		labName:          params.LabName,
+	}
 	l.MTU = mtu
-	l.Vars = normalizeVars(r.Vars)
+	l.Vars = normalizeVars(l.Vars)
 
 	segA, epA, err := buildVEthStitchSegment(params, r.Endpoints[0], mtu)
 	if err != nil {
@@ -191,19 +194,6 @@ func markFarEnd(farEp, nodeEp Endpoint, labName string) error {
 func validateVEthStitched(r *LinkVEthStitchedRaw) error {
 	if len(r.Endpoints) != 2 {
 		return fmt.Errorf("veth-stitch links require exactly two endpoints, got %d", len(r.Endpoints))
-	}
-
-	if len(r.IPv4) > 0 || len(r.IPv6) > 0 {
-		return fmt.Errorf("veth-stitch links cannot carry ipv4/ipv6 (transparent L2 stitch)")
-	}
-
-	for _, ep := range r.Endpoints {
-		if ep.MAC != "" || ep.IPv4 != "" || ep.IPv6 != "" {
-			return fmt.Errorf(
-				"veth-stitch endpoint %s:%s cannot carry mac/ipv4/ipv6 (transparent L2 stitch)",
-				ep.Node, ep.Iface,
-			)
-		}
 	}
 
 	return nil

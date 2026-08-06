@@ -2236,6 +2236,10 @@ func componentsBySlot(components []*clabtypes.Component) map[string]clabtypes.Co
 	return m
 }
 
+// DefaultLinkType returns the default link type for an SR-SIM node
+// when the brief notation of a link definition is used.
+// It returns veth-stitch for SR-SIM nodes to support pcap and netem features,
+// see https://github.com/srl-labs/containerlab/pull/3270.
 func (*sros) DefaultLinkType() clablinks.LinkType {
 	return clablinks.LinkTypeVethStitch
 }

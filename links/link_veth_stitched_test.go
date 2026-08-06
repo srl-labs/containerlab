@@ -45,8 +45,17 @@ endpoints:
 
 func TestResolveVethStitched(t *testing.T) {
 	r := &LinkVEthStitchedRaw{
+		LinkCommonParams: LinkCommonParams{
+			Labels: map[string]string{"role": "dataplane"},
+			IPv4:   []string{"10.0.0.1/31", "10.0.0.0/31"},
+		},
 		Endpoints: []*EndpointRaw{
-			{Node: "pe01", Iface: "1/1/c3/1"},
+			{
+				Node:  "pe01",
+				Iface: "1/1/c3/1",
+				MAC:   "02:00:00:00:00:01",
+				IPv4:  "10.0.0.1/31",
+			},
 			{Node: "pe02", Iface: "1/1/c3/1"},
 		},
 	}
@@ -89,6 +98,16 @@ func TestResolveVethStitched(t *testing.T) {
 	// far ends live on the host (root-ns) node
 	if got := stitched.epA.GetNode().GetShortName(); got != "host" {
 		t.Fatalf("epA far end node = %q, want host (root ns)", got)
+	}
+
+	if got := stitched.Labels["role"]; got != "dataplane" {
+		t.Fatalf("resolved link label = %q, want dataplane", got)
+	}
+	if got := stitched.GetEndpoints()[0].GetIPv4Addr().String(); got != "10.0.0.1/31" {
+		t.Fatalf("node endpoint IPv4 = %q, want 10.0.0.1/31", got)
+	}
+	if got := stitched.GetEndpoints()[0].GetMac().String(); got != "02:00:00:00:00:01" {
+		t.Fatalf("node endpoint MAC = %q, want 02:00:00:00:00:01", got)
 	}
 }
 
@@ -138,22 +157,29 @@ func TestValidateVEthStitched(t *testing.T) {
 			},
 		},
 		{
-			name: "endpoint carries mac",
+			name: "endpoint addressing is supported",
 			raw: &LinkVEthStitchedRaw{
 				Endpoints: []*EndpointRaw{
-					{Node: "pe01", Iface: "e1", MAC: "00:11:22:33:44:55"},
+					{
+						Node:  "pe01",
+						Iface: "e1",
+						MAC:   "00:11:22:33:44:55",
+						IPv4:  "10.0.0.1/31",
+						IPv6:  "2001:db8::1/127",
+					},
 					{Node: "pe02", Iface: "e1"},
 				},
 			},
-			wantErr: true,
 		},
 		{
-			name: "link carries ipv4",
+			name: "link addressing is supported",
 			raw: &LinkVEthStitchedRaw{
-				LinkCommonParams: LinkCommonParams{IPv4: []string{"10.0.0.0/31"}},
-				Endpoints:        []*EndpointRaw{{Node: "pe01", Iface: "e1"}, {Node: "pe02", Iface: "e1"}},
+				LinkCommonParams: LinkCommonParams{
+					IPv4: []string{"10.0.0.0/31"},
+					IPv6: []string{"2001:db8::/127"},
+				},
+				Endpoints: []*EndpointRaw{{Node: "pe01", Iface: "e1"}, {Node: "pe02", Iface: "e1"}},
 			},
-			wantErr: true,
 		},
 	}
 
