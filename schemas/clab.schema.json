@@ -865,18 +865,11 @@
                 },
                 "endpoints": {
                     "type": "array",
-                    "description": "Endpoints for the link, as brief \"node:interface\" strings or extended objects",
+                    "description": "Endpoints for the link as extended objects",
                     "minItems": 2,
                     "maxItems": 2,
                     "items": {
-                        "oneOf": [
-                            {
-                                "type": "string"
-                            },
-                            {
-                                "$ref": "#/definitions/link-endpoint"
-                            }
-                        ]
+                        "$ref": "#/definitions/link-endpoint"
                     }
                 },
                 "mtu": {
