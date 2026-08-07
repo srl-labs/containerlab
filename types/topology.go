@@ -416,7 +416,10 @@ func (t *Topology) GetNodeCapAdd(nodeName string) []string {
 	)
 }
 
-func (t *Topology) GetNodePrivileged(nodeName string) bool {
+func (t *Topology) GetNodePrivileged(
+	nodeName string,
+	privilegedByDefault bool,
+) bool {
 	return getFieldPtr(
 		t,
 		nodeName,
@@ -425,7 +428,7 @@ func (t *Topology) GetNodePrivileged(nodeName string) bool {
 		func(kind *NodeDefinition) *bool { return kind.Privileged },
 		func(defaults *NodeDefinition) *bool { return defaults.Privileged },
 		func(v *bool) bool { return v != nil },
-		true,
+		privilegedByDefault,
 	)
 }
 

@@ -766,10 +766,10 @@ my-node:
 ### privileged
 
 The `privileged` parameter controls whether the container runs in privileged mode.
-It defaults to `true` to preserve containerlab's historical behavior.
+It defaults to `true` when unset, to preserve containerlab's historical behavior.
 
 ```yaml
-# my-node will not run as a privileged container.
+# my-node will run as an *unprivileged* container.
 my-node:
   image: alpine:3
   kind: linux

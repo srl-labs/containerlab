@@ -233,6 +233,15 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeDef *clabtypes.NodeDefinition,
 	idx int,
 ) (*clabtypes.NodeConfig, error) {
+	kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
+	privilegedByDefault := true
+	if c.Reg != nil {
+		if regEntry := c.Reg.Kind(kind); regEntry != nil {
+			privilegedByDefault = regEntry.PrivilegedByDefault()
+		}
+	}
+	privileged := c.Config.Topology.GetNodePrivileged(nodeName, privilegedByDefault)
+
 	// default longName follows $prefix-$lab-$nodeName pattern
 	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
 
@@ -251,7 +260,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		LabDir:          c.TopoPaths.NodeDir(nodeName),
 		Index:           idx,
 		Group:           c.Config.Topology.GetNodeGroup(nodeName),
-		Kind:            strings.ToLower(c.Config.Topology.GetNodeKind(nodeName)),
+		Kind:            kind,
 		NodeType:        c.Config.Topology.GetNodeType(nodeName),
 		Position:        c.Config.Topology.GetNodePosition(nodeName),
 		Image:           c.Config.Topology.GetNodeImage(nodeName),
@@ -266,7 +275,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 		Devices:         c.Config.Topology.GetNodeDevices(nodeName),
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
-		Privileged:      c.Config.Topology.GetNodePrivileged(nodeName),
+		Privileged:      privileged,
 		CgroupnsMode:    c.Config.Topology.GetNodeCgroupnsMode(nodeName),
 		PidMode:         c.Config.Topology.GetNodePidMode(nodeName),
 		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
@@ -312,7 +321,6 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	}
 
 	if nodeCfg.Credentials.Username == "" || nodeCfg.Credentials.Password == "" {
-		kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
 		if regEntry := c.Reg.Kind(kind); regEntry != nil {
 			creds := regEntry.GetCredentials()
 			if nodeCfg.Credentials.Username == "" {

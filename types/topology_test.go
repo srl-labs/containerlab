@@ -1443,15 +1443,15 @@ func TestGetNodeRuntimeOptions(t *testing.T) {
 		},
 	}
 
-	if got := topo.GetNodePrivileged("node1"); got {
+	if got := topo.GetNodePrivileged("node1", true); got {
 		t.Fatalf("node1 privileged = %v, want false", got)
 	}
 
-	if got := topo.GetNodePrivileged("node2"); !got {
+	if got := topo.GetNodePrivileged("node2", true); !got {
 		t.Fatalf("node2 privileged = %v, want true", got)
 	}
 
-	if got := topo.GetNodePrivileged("node3"); got {
+	if got := topo.GetNodePrivileged("node3", true); got {
 		t.Fatalf("node3 privileged = %v, want false", got)
 	}
 
@@ -1489,7 +1489,10 @@ func TestGetNodePrivilegedDefault(t *testing.T) {
 		},
 	}
 
-	if got := topo.GetNodePrivileged("node1"); !got {
+	if got := topo.GetNodePrivileged("node1", true); !got {
 		t.Fatalf("privileged = %v, want true", got)
+	}
+	if got := topo.GetNodePrivileged("node1", false); got {
+		t.Fatalf("privileged with kind default = %v, want false", got)
 	}
 }
