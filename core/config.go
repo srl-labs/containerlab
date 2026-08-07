@@ -228,19 +228,23 @@ func (c *CLab) AddPlaceholderNode(nodeCfg *clabtypes.NodeConfig) error {
 	return nil
 }
 
+func (c *CLab) privilegedByDefault(kind string) bool {
+	if c.Reg != nil {
+		if regEntry := c.Reg.Kind(kind); regEntry != nil {
+			return regEntry.PrivilegedByDefault()
+		}
+	}
+
+	return true
+}
+
 func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeName string,
 	nodeDef *clabtypes.NodeDefinition,
 	idx int,
 ) (*clabtypes.NodeConfig, error) {
 	kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
-	privilegedByDefault := true
-	if c.Reg != nil {
-		if regEntry := c.Reg.Kind(kind); regEntry != nil {
-			privilegedByDefault = regEntry.PrivilegedByDefault()
-		}
-	}
-	privileged := c.Config.Topology.GetNodePrivileged(nodeName, privilegedByDefault)
+	privileged := c.Config.Topology.GetNodePrivileged(nodeName, c.privilegedByDefault(kind))
 
 	// default longName follows $prefix-$lab-$nodeName pattern
 	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)

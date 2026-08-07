@@ -548,7 +548,7 @@ func (c *CLab) planAffectedApplyNode(
 	}
 }
 
-func resolveNodeConfigFromTopology(
+func (c *CLab) resolveNodeConfigFromTopology(
 	topo *clabtypes.Topology,
 	nodeName string,
 ) *clabtypes.NodeConfig {
@@ -558,29 +558,39 @@ func resolveNodeConfigFromTopology(
 
 	binds, _ := topo.GetNodeBinds(nodeName)
 	portSet, _, _ := topo.GetNodePorts(nodeName)
+	kind := topo.GetNodeKind(nodeName)
+	privileged := topo.GetNodePrivileged(
+		nodeName,
+		c.privilegedByDefault(strings.ToLower(kind)),
+	)
 
 	return &clabtypes.NodeConfig{
-		ShortName:   nodeName,
-		Kind:        topo.GetNodeKind(nodeName),
-		NodeType:    topo.GetNodeType(nodeName),
-		Image:       topo.GetNodeImage(nodeName),
-		Entrypoint:  topo.GetNodeEntrypoint(nodeName),
-		Cmd:         topo.GetNodeCmd(nodeName),
-		Exec:        topo.GetNodeExec(nodeName),
-		Env:         topo.GetNodeEnv(nodeName),
-		Binds:       binds,
-		Devices:     topo.GetNodeDevices(nodeName),
-		CapAdd:      topo.GetNodeCapAdd(nodeName),
-		ShmSize:     topo.GetNodeShmSize(nodeName),
-		PortSet:     portSet,
-		User:        topo.GetNodeUser(nodeName),
-		NetworkMode: topo.GetNodeNetworkMode(nodeName),
-		Runtime:     topo.GetNodeRuntime(nodeName),
-		CPU:         topo.GetNodeCPU(nodeName),
-		CPUSet:      topo.GetNodeCPUSet(nodeName),
-		Memory:      topo.GetNodeMemory(nodeName),
-		License:     topo.GetNodeLicense(nodeName),
-		Components:  topo.GetComponents(nodeName),
+		ShortName:    nodeName,
+		Kind:         kind,
+		NodeType:     topo.GetNodeType(nodeName),
+		Image:        topo.GetNodeImage(nodeName),
+		Entrypoint:   topo.GetNodeEntrypoint(nodeName),
+		Cmd:          topo.GetNodeCmd(nodeName),
+		Exec:         topo.GetNodeExec(nodeName),
+		Env:          topo.GetNodeEnv(nodeName),
+		Binds:        binds,
+		Devices:      topo.GetNodeDevices(nodeName),
+		CapAdd:       topo.GetNodeCapAdd(nodeName),
+		Privileged:   privileged,
+		CgroupnsMode: topo.GetNodeCgroupnsMode(nodeName),
+		PidMode:      topo.GetNodePidMode(nodeName),
+		Tmpfs:        topo.GetNodeTmpfs(nodeName),
+		SecurityOpts: topo.GetNodeSecurityOpts(nodeName),
+		ShmSize:      topo.GetNodeShmSize(nodeName),
+		PortSet:      portSet,
+		User:         topo.GetNodeUser(nodeName),
+		NetworkMode:  topo.GetNodeNetworkMode(nodeName),
+		Runtime:      topo.GetNodeRuntime(nodeName),
+		CPU:          topo.GetNodeCPU(nodeName),
+		CPUSet:       topo.GetNodeCPUSet(nodeName),
+		Memory:       topo.GetNodeMemory(nodeName),
+		License:      topo.GetNodeLicense(nodeName),
+		Components:   topo.GetComponents(nodeName),
 	}
 }
 
@@ -603,8 +613,8 @@ func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) erro
 			continue
 		}
 
-		oldNodeConfig := resolveNodeConfigFromTopology(oldTopo, nodeName)
-		newNodeConfig := resolveNodeConfigFromTopology(c.Config.Topology, nodeName)
+		oldNodeConfig := c.resolveNodeConfigFromTopology(oldTopo, nodeName)
+		newNodeConfig := c.resolveNodeConfigFromTopology(c.Config.Topology, nodeName)
 		diff := node.ComputeDiff(oldNodeConfig, newNodeConfig)
 		plan.nodeDiffs[nodeName] = diff
 

@@ -64,6 +64,31 @@ func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
 			new:  &clabtypes.NodeConfig{Env: map[string]string{"MODE": "new"}},
 		},
 		{
+			name: "privileged",
+			old:  &clabtypes.NodeConfig{Privileged: true},
+			new:  &clabtypes.NodeConfig{Privileged: false},
+		},
+		{
+			name: "cgroup namespace mode",
+			old:  &clabtypes.NodeConfig{CgroupnsMode: "private"},
+			new:  &clabtypes.NodeConfig{CgroupnsMode: "host"},
+		},
+		{
+			name: "PID mode",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{PidMode: "host"},
+		},
+		{
+			name: "tmpfs",
+			old:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw"}},
+			new:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw,nosuid"}},
+		},
+		{
+			name: "security options",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{SecurityOpts: []string{"seccomp=unconfined"}},
+		},
+		{
 			name: "components",
 			old:  &clabtypes.NodeConfig{},
 			new:  &clabtypes.NodeConfig{Components: []*clabtypes.Component{{Slot: "1"}}},

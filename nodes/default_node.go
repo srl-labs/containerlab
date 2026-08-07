@@ -309,6 +309,21 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.CapAdd, newCfg.CapAdd) {
 		diff.Fields = append(diff.Fields, "CapAdd")
 	}
+	if oldCfg.Privileged != newCfg.Privileged {
+		diff.Fields = append(diff.Fields, "Privileged")
+	}
+	if oldCfg.CgroupnsMode != newCfg.CgroupnsMode {
+		diff.Fields = append(diff.Fields, "CgroupnsMode")
+	}
+	if oldCfg.PidMode != newCfg.PidMode {
+		diff.Fields = append(diff.Fields, "PidMode")
+	}
+	if !clabutils.MapsEqualOrBothEmpty(oldCfg.Tmpfs, newCfg.Tmpfs) {
+		diff.Fields = append(diff.Fields, "Tmpfs")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.SecurityOpts, newCfg.SecurityOpts) {
+		diff.Fields = append(diff.Fields, "SecurityOpts")
+	}
 	if oldCfg.ShmSize != newCfg.ShmSize {
 		diff.Fields = append(diff.Fields, "ShmSize")
 	}
