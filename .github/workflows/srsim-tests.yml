@@ -21,6 +21,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
     env:
       SRSIM_LICENSE: ${{ secrets.SRSIM_LICENSE }}
+      SRSIM_IMAGE_TAG: 26.7.R1
     strategy:
       matrix:
         test-suite:
@@ -34,6 +35,7 @@ jobs:
           - "09*.robot"
           - "10*.robot"
           - "11*.robot"
+          - "12*.robot"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -48,7 +50,7 @@ jobs:
         run: sudo mv ./containerlab /usr/bin/containerlab && sudo chown root:root /usr/bin/containerlab && sudo chmod 4755 /usr/bin/containerlab
 
       - name: Create license file from env vars
-        run: sudo mkdir -p /opt/nokia/sros/ && echo $SRSIM_LICENSE > /opt/nokia/sros/license-sros25.txt
+        run: sudo mkdir -p /opt/nokia/sros/ && echo $SRSIM_LICENSE > /opt/nokia/sros/license.txt
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -82,7 +84,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Pull and re-tag srsim image
-        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R2 && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:25.10.R2 registry.srlinux.dev/pub/nokia_srsim:25.10.R2
+        run: docker pull ghcr.io/srl-labs/containerlab/nokia_srsim:${SRSIM_IMAGE_TAG} && docker tag ghcr.io/srl-labs/containerlab/nokia_srsim:${SRSIM_IMAGE_TAG} registry.srlinux.dev/pub/nokia_srsim:${SRSIM_IMAGE_TAG}
 
       # - name: setup tmate session
       #   uses: mxschmitt/action-tmate@v3
