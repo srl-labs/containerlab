@@ -235,6 +235,58 @@ func TestCreateNodeCfgPrivilegedByDefault(t *testing.T) {
 	}
 }
 
+func TestResolvePidMode(t *testing.T) {
+	tests := []struct {
+		name    string
+		prefix  string
+		pidMode string
+		want    string
+	}{
+		{
+			name:    "topology node",
+			prefix:  "clab",
+			pidMode: "container:parent",
+			want:    "container:clab-test-parent",
+		},
+		{
+			name:    "topology node without prefix",
+			pidMode: "container:parent",
+			want:    "container:parent",
+		},
+		{
+			name:    "topology node with lab name prefix",
+			prefix:  "__lab-name",
+			pidMode: "container:parent",
+			want:    "container:test-parent",
+		},
+		{
+			name:    "external container",
+			prefix:  "clab",
+			pidMode: "container:external",
+			want:    "container:external",
+		},
+		{name: "host mode", prefix: "clab", pidMode: "host", want: "host"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			topology := clabtypes.NewTopology()
+			topology.Nodes["parent"] = &clabtypes.NodeDefinition{}
+			c := &CLab{
+				Config: &Config{
+					Name:     "test",
+					Prefix:   &tt.prefix,
+					Topology: topology,
+				},
+			}
+
+			if got := c.resolvePidMode(tt.pidMode); got != tt.want {
+				t.Fatalf("resolvePidMode() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestEnvInit(t *testing.T) {
 	tests := map[string]struct {
 		got    string

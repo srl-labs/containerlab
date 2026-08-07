@@ -238,6 +238,29 @@ func (c *CLab) privilegedByDefault(kind string) bool {
 	return true
 }
 
+func (c *CLab) nodeLongName(nodeName string) string {
+	switch *c.Config.Prefix {
+	case "":
+		return nodeName
+	case "__lab-name":
+		return fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
+	default:
+		return fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
+	}
+}
+
+func (c *CLab) resolvePidMode(pidMode string) string {
+	target, isContainerMode := strings.CutPrefix(pidMode, "container:")
+	if !isContainerMode || target == "" {
+		return pidMode
+	}
+	if _, isTopologyNode := c.Config.Topology.Nodes[target]; !isTopologyNode {
+		return pidMode
+	}
+
+	return "container:" + c.nodeLongName(target)
+}
+
 func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeName string,
 	nodeDef *clabtypes.NodeDefinition,
@@ -246,16 +269,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	kind := strings.ToLower(c.Config.Topology.GetNodeKind(nodeName))
 	privileged := c.Config.Topology.GetNodePrivileged(nodeName, c.privilegedByDefault(kind))
 
-	// default longName follows $prefix-$lab-$nodeName pattern
-	longName := fmt.Sprintf("%s-%s-%s", *c.Config.Prefix, c.Config.Name, nodeName)
-
-	switch *c.Config.Prefix {
-	// when prefix is an empty string longName will match shortName/nodeName
-	case "":
-		longName = nodeName
-	case "__lab-name":
-		longName = fmt.Sprintf("%s-%s", c.Config.Name, nodeName)
-	}
+	longName := c.nodeLongName(nodeName)
 
 	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:       nodeName, // just the node name as seen in the topo file
@@ -281,7 +295,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
 		Privileged:      privileged,
 		CgroupnsMode:    c.Config.Topology.GetNodeCgroupnsMode(nodeName),
-		PidMode:         c.Config.Topology.GetNodePidMode(nodeName),
+		PidMode:         c.resolvePidMode(c.Config.Topology.GetNodePidMode(nodeName)),
 		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
 		SecurityOpts:    c.Config.Topology.GetNodeSecurityOpts(nodeName),
 		ShmSize:         c.Config.Topology.GetNodeShmSize(nodeName),
