@@ -39,7 +39,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.2.1
 	github.com/pkg/sftp v1.13.10
 	github.com/pmorjan/kmod v1.1.1
-	github.com/scrapli/scrapligo v1.4.0
+	github.com/scrapli/scrapligo v1.4.1
 	github.com/scrapli/scrapligocfg v1.0.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
