@@ -247,6 +247,7 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 	nodeCfg := &clabtypes.NodeConfig{
 		ShortName:       nodeName, // just the node name as seen in the topo file
 		LongName:        longName, // by default clab-$labName-$nodeName
+		Hostname:        c.Config.Topology.GetNodeHostname(nodeName),
 		Fqdn:            strings.Join([]string{nodeName, c.Config.Name, "io"}, "."),
 		LabDir:          c.TopoPaths.NodeDir(nodeName),
 		Index:           idx,
@@ -266,6 +267,11 @@ func (c *CLab) createNodeCfg( //nolint: funlen
 		Runtime:         c.Config.Topology.GetNodeRuntime(nodeName),
 		Devices:         c.Config.Topology.GetNodeDevices(nodeName),
 		CapAdd:          c.Config.Topology.GetNodeCapAdd(nodeName),
+		Privileged:      c.Config.Topology.GetNodePrivileged(nodeName),
+		CgroupnsMode:    c.Config.Topology.GetNodeCgroupnsMode(nodeName),
+		PidMode:         c.Config.Topology.GetNodePidMode(nodeName),
+		Tmpfs:           c.Config.Topology.GetNodeTmpfs(nodeName),
+		SecurityOpts:    c.Config.Topology.GetNodeSecurityOpts(nodeName),
 		ShmSize:         c.Config.Topology.GetNodeShmSize(nodeName),
 		CPU:             c.Config.Topology.GetNodeCPU(nodeName),
 		CPUSet:          c.Config.Topology.GetNodeCPUSet(nodeName),
