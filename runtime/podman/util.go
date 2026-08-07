@@ -103,7 +103,12 @@ func (r *PodmanRuntime) createContainerSpec(
 	if cfg.ShmSize != "" {
 		shmSize, err := humanize.ParseBytes(cfg.ShmSize)
 		if err != nil {
-			return sg, fmt.Errorf("failed to parse shm-size %q for container %q: %w", cfg.ShmSize, cfg.LongName, err)
+			return sg, fmt.Errorf(
+				"failed to parse shm-size %q for container %q: %w",
+				cfg.ShmSize,
+				cfg.LongName,
+				err,
+			)
 		}
 		shmSizeInt := int64(shmSize)
 		specStorageConfig.ShmSize = &shmSizeInt
