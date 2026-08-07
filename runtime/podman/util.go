@@ -80,8 +80,13 @@ func (r *PodmanRuntime) createContainerSpec(
 		mounts = nil
 	}
 	mounts = append(mounts, convertTmpfsMounts(cfg.Tmpfs)...)
+	devices := make([]specs.LinuxDevice, 0, len(cfg.Devices))
+	for _, device := range cfg.Devices {
+		devices = append(devices, specs.LinuxDevice{Path: device})
+	}
 	specStorageConfig := specgen.ContainerStorageConfig{
-		Image: cfg.Image,
+		Image:   cfg.Image,
+		Devices: devices,
 		// Rootfs:            "",
 		// ImageVolumeMode:   "",
 		// VolumesFrom:       nil,
@@ -91,7 +96,6 @@ func (r *PodmanRuntime) createContainerSpec(
 		// Volumes:           nil,
 		// OverlayVolumes:    nil,
 		// ImageVolumes:      nil,
-		// Devices:           nil,
 		// DeviceCGroupRule:  nil,
 		// IpcNS:             specgen.Namespace{},
 		// ShmSize:           nil,

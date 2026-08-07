@@ -22,6 +22,7 @@ func TestCreateContainerSpecAppliesRuntimeNamespaceAndTmpfs(t *testing.T) {
 		CgroupnsMode: "host",
 		ShmSize:      "64m",
 		Tmpfs:        map[string]string{"/run": "rw,nosuid,nodev", "/run/lock": "rw"},
+		Devices:      []string{"/dev/null"},
 		ExtraHosts:   []string{"example:127.0.0.1"},
 	}
 
@@ -35,6 +36,9 @@ func TestCreateContainerSpecAppliesRuntimeNamespaceAndTmpfs(t *testing.T) {
 	}
 	if sg.ShmSize == nil || *sg.ShmSize != 64*1000*1000 {
 		t.Fatalf("ShmSize = %v, want 64000000", sg.ShmSize)
+	}
+	if len(sg.Devices) != 1 || sg.Devices[0].Path != "/dev/null" {
+		t.Fatalf("Devices = %#v, want /dev/null", sg.Devices)
 	}
 
 	tmpfs := map[string][]string{}
