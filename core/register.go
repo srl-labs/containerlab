@@ -65,6 +65,7 @@ import (
 	clabnodesvr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
 	clabnodesvyosnetworks_vyos "github.com/srl-labs/containerlab/nodes/vyosnetworks_vyos"
 	clabnodesxrd "github.com/srl-labs/containerlab/nodes/xrd"
+	clabnodesplvision_sonic "github.com/srl-labs/containerlab/nodes/plvision_sonic"
 )
 
 // RegisterNodes registers all the nodes/kinds supported by containerlab.
@@ -129,4 +130,5 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesarrcus_arcos.Register(c.Reg)
 	clabnodesveesix_osvbng.Register(c.Reg)
 	clabnodesspirent_stc.Register(c.Reg)
+	clabnodesplvision_sonic.Register(c.Reg)
 }

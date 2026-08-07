@@ -85,6 +85,7 @@ Within each predefined kind, we store the necessary information that is used to 
 | **FD.io VPP**              | [`fdio_vpp`](fdio_vpp.md)                           | supported | container |
 | **RARE/freeRtr**           | [`rare`](rare-freertr.md)                           | supported | container |
 | **VyOS Networks VyOS**     | [`vyosnetworks_vyos`](vyosnetworks_vyos.md)         | supported |    VM     |
+| **PLVision SONiC**         | [`plvision_sonic`](plvision_sonic.md)               | supported |    VM     |
 | **Generic VM**             | [`generic_vm`](generic_vm.md)                       | supported |    VM     |
 | **Linux container**        | [`linux`](linux.md)                                 | supported | container |
 | **Ostinato**               | [`linux`](ostinato.md)                              | supported | container |
