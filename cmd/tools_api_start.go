@@ -77,6 +77,7 @@ func NewAPIServerNode(name, image, labsDir string, runtime clabruntime.Container
 		Labels:      labels,
 		NetworkMode: "host", // Use host network namespace
 		PidMode:     "host",
+		Privileged:  true,
 	}
 
 	return &APIServerNode{

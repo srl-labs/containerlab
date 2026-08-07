@@ -734,6 +734,41 @@ func TestPlanNodeReconciliationKeepsRecreateAction(t *testing.T) {
 	}
 }
 
+func TestResolveNodeConfigFromTopologyRuntimeOptions(t *testing.T) {
+	registry := clabnodes.NewNodeRegistry()
+	attributes := clabnodes.NewNodeRegistryEntryAttributes(nil, nil, nil).
+		WithPrivilegedByDefault(false)
+	if err := registry.Register([]string{"test"}, nil, attributes); err != nil {
+		t.Fatal(err)
+	}
+
+	topo := clabtypes.NewTopology()
+	topo.Nodes["n1"] = &clabtypes.NodeDefinition{
+		Kind:         "test",
+		CgroupnsMode: "host",
+		PidMode:      "host",
+		Tmpfs:        map[string]string{"/run": "rw,nosuid"},
+		SecurityOpts: []string{"seccomp=unconfined"},
+	}
+
+	cfg := (&CLab{Reg: registry}).resolveNodeConfigFromTopology(topo, "n1")
+	if cfg.Privileged {
+		t.Fatal("expected kind default to resolve to unprivileged")
+	}
+	if cfg.CgroupnsMode != "host" {
+		t.Fatalf("CgroupnsMode = %q, want host", cfg.CgroupnsMode)
+	}
+	if cfg.PidMode != "host" {
+		t.Fatalf("PidMode = %q, want host", cfg.PidMode)
+	}
+	if got := cfg.Tmpfs["/run"]; got != "rw,nosuid" {
+		t.Fatalf("Tmpfs[/run] = %q, want rw,nosuid", got)
+	}
+	if !slices.Equal(cfg.SecurityOpts, []string{"seccomp=unconfined"}) {
+		t.Fatalf("SecurityOpts = %v, want seccomp=unconfined", cfg.SecurityOpts)
+	}
+}
+
 func TestPlanNodeReconciliationRejectsExternalRecreate(t *testing.T) {
 	t.Parallel()
 

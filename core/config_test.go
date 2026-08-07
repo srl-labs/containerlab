@@ -17,8 +17,10 @@ import (
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
+	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabruntime "github.com/srl-labs/containerlab/runtime"
 	clabruntimedocker "github.com/srl-labs/containerlab/runtime/docker"
+	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -168,6 +170,118 @@ func TestTypeInit(t *testing.T) {
 
 			if !reflect.DeepEqual(c.Nodes[tc.node].Config().NodeType, tc.want) {
 				t.Fatalf("wanted %q got %q", tc.want, c.Nodes[tc.node].Config().NodeType)
+			}
+		})
+	}
+}
+
+func TestCreateNodeCfgPrivilegedByDefault(t *testing.T) {
+	topoFile := filepath.Join(t.TempDir(), "test.clab.yml")
+	if err := os.WriteFile(topoFile, []byte("name: test\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	topoPaths, err := clabtypes.NewTopoPaths(topoFile, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := topoPaths.SetLabDir(t.TempDir()); err != nil {
+		t.Fatal(err)
+	}
+
+	registry := clabnodes.NewNodeRegistry()
+	attributes := clabnodes.NewNodeRegistryEntryAttributes(nil, nil, nil).
+		WithPrivilegedByDefault(false)
+	if err := registry.Register([]string{"test"}, nil, attributes); err != nil {
+		t.Fatal(err)
+	}
+
+	explicitlyPrivileged := true
+	tests := []struct {
+		name       string
+		privileged *bool
+		want       bool
+	}{
+		{name: "kind default"},
+		{name: "topology override", privileged: &explicitlyPrivileged, want: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			topology := clabtypes.NewTopology()
+			topology.Nodes["node1"] = &clabtypes.NodeDefinition{
+				Kind:       "test",
+				Privileged: tt.privileged,
+			}
+			prefix := "clab"
+			c := &CLab{
+				Config: &Config{
+					Name:     "test",
+					Prefix:   &prefix,
+					Mgmt:     &clabtypes.MgmtNet{},
+					Topology: topology,
+				},
+				Reg:       registry,
+				TopoPaths: topoPaths,
+			}
+
+			cfg, err := c.createNodeCfg("node1", topology.Nodes["node1"], 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.Privileged != tt.want {
+				t.Fatalf("Privileged = %v, want %v", cfg.Privileged, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolvePidMode(t *testing.T) {
+	tests := []struct {
+		name    string
+		prefix  string
+		pidMode string
+		want    string
+	}{
+		{
+			name:    "topology node",
+			prefix:  "clab",
+			pidMode: "container:parent",
+			want:    "container:clab-test-parent",
+		},
+		{
+			name:    "topology node without prefix",
+			pidMode: "container:parent",
+			want:    "container:parent",
+		},
+		{
+			name:    "topology node with lab name prefix",
+			prefix:  "__lab-name",
+			pidMode: "container:parent",
+			want:    "container:test-parent",
+		},
+		{
+			name:    "external container",
+			prefix:  "clab",
+			pidMode: "container:external",
+			want:    "container:external",
+		},
+		{name: "host mode", prefix: "clab", pidMode: "host", want: "host"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			topology := clabtypes.NewTopology()
+			topology.Nodes["parent"] = &clabtypes.NodeDefinition{}
+			c := &CLab{
+				Config: &Config{
+					Name:     "test",
+					Prefix:   &tt.prefix,
+					Topology: topology,
+				},
+			}
+
+			if got := c.resolvePidMode(tt.pidMode); got != tt.want {
+				t.Fatalf("resolvePidMode() = %q, want %q", got, tt.want)
 			}
 		})
 	}
