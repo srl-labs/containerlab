@@ -451,8 +451,8 @@ github.com/sagikazarmark/locafero v0.11.0/go.mod h1:nVIGvgyzw595SUSUE6tvCp3YYTeH
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 h1:KRzFb2m7YtdldCEkzs6KqmJw4nqEVZGK7IN2kJkjTuQ=
 github.com/santhosh-tekuri/jsonschema/v6 v6.0.2/go.mod h1:JXeL+ps8p7/KNMjDQk3TCwPpBy0wYklyWTfbkIzdIFU=
 github.com/scrapli/scrapligo v1.0.0/go.mod h1:jvRMdb90MNnswMiku8UNXj8JZaOIPhwhcqqFwr9qeoY=
-github.com/scrapli/scrapligo v1.4.0 h1:gF7bIiRHT/aB1zTu9PYIK9R2A/gXr4fF/CKUyyWaNq4=
-github.com/scrapli/scrapligo v1.4.0/go.mod h1:pOWxVyPsQRrWTrkoSSDg05tjOqtWfLffAZtAsCc0w3M=
+github.com/scrapli/scrapligo v1.4.1 h1:D0lg2xusZKbKnzy9l0yT7ly/D2rgqab12yZvEXNim0U=
+github.com/scrapli/scrapligo v1.4.1/go.mod h1:pOWxVyPsQRrWTrkoSSDg05tjOqtWfLffAZtAsCc0w3M=
 github.com/scrapli/scrapligocfg v1.0.0 h1:540SuGqqM6rKN87SLCfR54IageQ6s3a/ZOycGRgbbak=
 github.com/scrapli/scrapligocfg v1.0.0/go.mod h1:9+6k9dQeIqEZEg6EK5YXEjuVb7h+nvvel26CY1RGjy4=
 github.com/sebdah/goldie/v2 v2.7.1 h1:PkBHymaYdtvEkZV7TmyqKxdmn5/Vcj+8TpATWZjnG5E=
