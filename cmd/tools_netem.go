@@ -162,7 +162,12 @@ func netemSetFn(ctx context.Context, o *Options) error {
 		)
 	}
 
-	node, err := clabcore.ResolveNetemNode(ctx, o.Global.Runtime, o.Global.Timeout, o.ToolsNetem.ContainerName)
+	node, err := clabcore.ResolveNetemNode(
+		ctx,
+		o.Global.Runtime,
+		o.Global.Timeout,
+		o.ToolsNetem.ContainerName,
+	)
 	if err != nil {
 		return err
 	}
@@ -379,7 +384,12 @@ func netemShowFn(o *Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	node, err := clabcore.ResolveNetemNode(ctx, o.Global.Runtime, o.Global.Timeout, o.ToolsNetem.ContainerName)
+	node, err := clabcore.ResolveNetemNode(
+		ctx,
+		o.Global.Runtime,
+		o.Global.Timeout,
+		o.ToolsNetem.ContainerName,
+	)
 	if err != nil {
 		return err
 	}
@@ -551,7 +561,12 @@ func netemResetFn(o *Options) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	node, err := clabcore.ResolveNetemNode(ctx, o.Global.Runtime, o.Global.Timeout, o.ToolsNetem.ContainerName)
+	node, err := clabcore.ResolveNetemNode(
+		ctx,
+		o.Global.Runtime,
+		o.Global.Timeout,
+		o.ToolsNetem.ContainerName,
+	)
 	if err != nil {
 		return err
 	}

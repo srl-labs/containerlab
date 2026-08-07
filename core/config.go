@@ -559,7 +559,8 @@ func (*CLab) loadKernelModules() error {
 			if errors.Is(err, os.ErrNotExist) {
 				log.Debugf(
 					"No loadable kernel module support (%v). Assuming module %q is built into the kernel",
-					err, m,
+					err,
+					m,
 				)
 
 				return nil

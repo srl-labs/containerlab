@@ -268,7 +268,11 @@ func (c *CLab) prepareApply(
 func (*CLab) removeApplyLinkEndpoints(ctx context.Context, links []clablinks.Link) error {
 	for _, link := range links {
 		for _, ep := range clablinks.RuntimeEndpoints(link) {
-			if err := clablinks.RemoveOwnedInterface(ctx, ep.GetNode(), ep.GetIfaceName()); err != nil {
+			if err := clablinks.RemoveOwnedInterface(
+				ctx,
+				ep.GetNode(),
+				ep.GetIfaceName(),
+			); err != nil {
 				return err
 			}
 		}

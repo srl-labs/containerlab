@@ -516,7 +516,10 @@ func (*PodmanRuntime) buildFilterString(gFilters []*types.GenericFilter) map[str
 		if gF.Operator == "exists" {
 			filterStr = gF.Field + "="
 		} else if filterType == "name" {
-			filterStr = fmt.Sprintf("^%s$", gF.Match) // this regexp ensure we have an exact match for name
+			filterStr = fmt.Sprintf(
+				"^%s$",
+				gF.Match,
+			) // this regexp ensure we have an exact match for name
 		} else if gF.Operator != "=" {
 			log.Warnf("received a filter with unsupported match type: %+v", gF)
 			continue

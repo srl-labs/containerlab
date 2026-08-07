@@ -14,7 +14,11 @@ func isCPMSlot(slot string) bool {
 	return s == "" || s == "A" || s == "B"
 }
 
-func buildSrosVariant(chassis string, components []*clabtypes.Component, env map[string]string) (string, error) {
+func buildSrosVariant(
+	chassis string,
+	components []*clabtypes.Component,
+	env map[string]string,
+) (string, error) {
 	// vrnetlab vsim currently only supports single CPM
 	cpms := 0
 	for _, c := range components {
@@ -23,7 +27,9 @@ func buildSrosVariant(chassis string, components []*clabtypes.Component, env map
 		}
 	}
 	if cpms > 1 {
-		return "", fmt.Errorf("kind nokia_sros (vSIM) only supports a single CPM card, found multiple defined.")
+		return "", fmt.Errorf(
+			"kind nokia_sros (vSIM) only supports a single CPM card, found multiple defined.",
+		)
 	}
 
 	distributed := len(components) > 1
@@ -116,7 +122,7 @@ func componentMaxNics(c *clabtypes.Component) int {
 	return componentPortCount(c)
 }
 
-// figure out the max_nics per slot
+// figure out the max_nics per slot.
 func componentPortCount(c *clabtypes.Component) int {
 	total := 0
 	for _, m := range c.MDA {

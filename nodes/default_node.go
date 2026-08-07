@@ -234,7 +234,10 @@ func (d *DefaultNode) LinkApplyMode(ctx context.Context) LinkApplyMode {
 
 // ImageLinkApplyMode allows node kinds to keep their normal fallback behavior
 // while opting into live link apply when their image declares support for it.
-func (d *DefaultNode) ImageLinkApplyMode(ctx context.Context, fallback LinkApplyMode) LinkApplyMode {
+func (d *DefaultNode) ImageLinkApplyMode(
+	ctx context.Context,
+	fallback LinkApplyMode,
+) LinkApplyMode {
 	if d.imageHasBoxenVendorLabel(ctx) {
 		return LinkApplyModeLive
 	}
@@ -361,19 +364,33 @@ func (d *DefaultNode) ComputeReconcilePlan(diff *clabtypes.TopologyDiff) *Reconc
 	return result
 }
 
-func (d *DefaultNode) GetReconcilePlan(_ context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error) {
+func (d *DefaultNode) GetReconcilePlan(
+	_ context.Context,
+	diff *clabtypes.TopologyDiff,
+) (*ReconcileResult, error) {
 	return d.ComputeReconcilePlan(diff), nil
 }
 
 // Reconcile applies the diff and executes the appropriate action (restart/recreate).
-func (d *DefaultNode) Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error) {
+func (d *DefaultNode) Reconcile(
+	ctx context.Context,
+	diff *clabtypes.TopologyDiff,
+) (*ReconcileResult, error) {
 	result := d.ComputeReconcilePlan(diff)
 
 	if result.Action == clabtypes.TopologyDiffActionNone {
 		return result, nil
 	}
 
-	log.Info("Applying node changes", "node", d.Cfg.ShortName, "action", result.Action, "fields", diff.Fields)
+	log.Info(
+		"Applying node changes",
+		"node",
+		d.Cfg.ShortName,
+		"action",
+		result.Action,
+		"fields",
+		diff.Fields,
+	)
 
 	switch result.Action {
 	case clabtypes.TopologyDiffActionRestart:
@@ -549,7 +566,11 @@ func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
 		calculatedIndex := parsedIndexInt - d.InterfaceOffset + d.FirstDataIfIndex
 		return calculatedIndex, nil
 	} else {
-		return 0, fmt.Errorf("%q does not have extracted interface index with regexp %q, 'port' capture group missing?", ifName, d.InterfaceRegexp)
+		return 0, fmt.Errorf(
+			"%q does not have extracted interface index with regexp %q, 'port' capture group missing?",
+			ifName,
+			d.InterfaceRegexp,
+		)
 	}
 }
 
@@ -1188,7 +1209,11 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 		// Docker/podman may return an error while the container is already stopped.
 		// if ctr is already stopped, this is OK
 		if d.OverwriteNode.GetContainerStatus(ctx) == clabruntime.Stopped {
-			log.Warnf("node %q stop returned error but container is stopped: %v", cfg.ShortName, err)
+			log.Warnf(
+				"node %q stop returned error but container is stopped: %v",
+				cfg.ShortName,
+				err,
+			)
 			return nil
 		}
 
@@ -1237,7 +1262,11 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 	// (for example IP addresses added during deploy exec phase).
 	execCollection := clabexec.NewExecCollection()
 	if err := d.RunExecFromConfig(ctx, execCollection); err != nil {
-		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
+		log.Errorf(
+			"failed to run exec commands for node %q on lifecycle start: %v",
+			cfg.ShortName,
+			err,
+		)
 	}
 	execCollection.Log()
 

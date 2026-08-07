@@ -580,7 +580,10 @@ func (c *CLab) postDeployApplyNodes(
 		node := c.Nodes[nodeName]
 
 		if !skipPostDeploy {
-			if err := node.PostDeploy(ctx, &clabnodes.PostDeployParams{Nodes: c.Nodes}); err != nil {
+			if err := node.PostDeploy(
+				ctx,
+				&clabnodes.PostDeployParams{Nodes: c.Nodes},
+			); err != nil {
 				return fmt.Errorf("node %q post-deploy: %w", nodeName, err)
 			}
 		}

@@ -35,6 +35,7 @@ import (
 	clabnodeslinux "github.com/srl-labs/containerlab/nodes/linux"
 	clabnodesnvidia_cumulusvx "github.com/srl-labs/containerlab/nodes/nvidia_cumulusvx"
 	clabnodesovs "github.com/srl-labs/containerlab/nodes/ovs"
+	clabnodesplvision_sonic "github.com/srl-labs/containerlab/nodes/plvision_sonic"
 	clabnodesrare "github.com/srl-labs/containerlab/nodes/rare"
 	clabnodessonic "github.com/srl-labs/containerlab/nodes/sonic"
 	clabnodessonic_vm "github.com/srl-labs/containerlab/nodes/sonic_vm"
@@ -65,7 +66,6 @@ import (
 	clabnodesvr_xrv9k "github.com/srl-labs/containerlab/nodes/vr_xrv9k"
 	clabnodesvyosnetworks_vyos "github.com/srl-labs/containerlab/nodes/vyosnetworks_vyos"
 	clabnodesxrd "github.com/srl-labs/containerlab/nodes/xrd"
-	clabnodesplvision_sonic "github.com/srl-labs/containerlab/nodes/plvision_sonic"
 )
 
 // RegisterNodes registers all the nodes/kinds supported by containerlab.

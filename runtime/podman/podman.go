@@ -173,7 +173,11 @@ func (r *PodmanRuntime) PullImage(
 			return nil
 		} else {
 			// image not found but pull policy = never
-			return fmt.Errorf("image %s not found locally, but image-pull-policy is %s", image, pullPolicy)
+			return fmt.Errorf(
+				"image %s not found locally, but image-pull-policy is %s",
+				image,
+				pullPolicy,
+			)
 		}
 	}
 	if pullPolicy == types.PullPolicyIfNotPresent && ex == true {

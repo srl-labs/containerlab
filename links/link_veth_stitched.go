@@ -123,7 +123,7 @@ func (l *LinkVEthStitched) Deploy(ctx context.Context, ep Endpoint) error {
 	return err
 }
 
-// PostDeploy tags the two root-ns far ends and joins them with tc
+// PostDeploy tags the two root-ns far ends and joins them with tc.
 func (l *LinkVEthStitched) PostDeploy(_ context.Context) error {
 	l.lifecycleMutex.Lock()
 	defer l.lifecycleMutex.Unlock()
@@ -223,7 +223,10 @@ func markFarEnd(farEp, nodeEp Endpoint, labName string) error {
 
 func validateVEthStitched(r *LinkVEthStitchedRaw) error {
 	if len(r.Endpoints) != 2 {
-		return fmt.Errorf("veth-stitch links require exactly two endpoints, got %d", len(r.Endpoints))
+		return fmt.Errorf(
+			"veth-stitch links require exactly two endpoints, got %d",
+			len(r.Endpoints),
+		)
 	}
 
 	return nil

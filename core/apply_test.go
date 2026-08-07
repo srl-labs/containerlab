@@ -134,7 +134,11 @@ func TestDeployLinksUsesEndpointOwnership(t *testing.T) {
 		t.Fatal(err)
 	}
 	if link.deployCalls != 1 || link.postDeployCalls != 1 {
-		t.Fatalf("deploy calls = %d, post-deploy calls = %d", link.deployCalls, link.postDeployCalls)
+		t.Fatalf(
+			"deploy calls = %d, post-deploy calls = %d",
+			link.deployCalls,
+			link.postDeployCalls,
+		)
 	}
 }
 
@@ -447,7 +451,14 @@ func TestPlanStoppedNodesSkipsExternallyManagedNodes(t *testing.T) {
 
 	c.planStoppedNodes(ctx, plan)
 
-	if got, want := sortedStringSet(plan.startNodeSet), []string{"managed"}; !slices.Equal(got, want) {
+	if got, want := sortedStringSet(
+		plan.startNodeSet,
+	), []string{
+		"managed",
+	}; !slices.Equal(
+		got,
+		want,
+	) {
 		t.Fatalf("nodes planned for start = %v, want %v", got, want)
 	}
 }
@@ -492,7 +503,10 @@ func TestPlanDeletedEndpointsUsesDiscoveredEndpointNode(t *testing.T) {
 		t.Fatalf("stale endpoints = %d, want 1", len(plan.staleEndpoints))
 	}
 	if plan.staleEndpoints[0].node != parkingNode {
-		t.Fatalf("stale endpoint delete node = %v, want discovered endpoint node", plan.staleEndpoints[0].node)
+		t.Fatalf(
+			"stale endpoint delete node = %v, want discovered endpoint node",
+			plan.staleEndpoints[0].node,
+		)
 	}
 }
 
@@ -564,7 +578,10 @@ func TestApplyNodeLinkApplyMode(t *testing.T) {
 			}).AnyTimes()
 			mockNode.EXPECT().LinkApplyMode(gomock.Any()).Return(tt.mode)
 
-			if got := clabnodes.LinkApplyModeForNode(context.Background(), mockNode); got != tt.want {
+			if got := clabnodes.LinkApplyModeForNode(
+				context.Background(),
+				mockNode,
+			); got != tt.want {
 				t.Fatalf("LinkApplyModeForNode() = %v, want %v", got, tt.want)
 			}
 		})

@@ -151,8 +151,16 @@ func TestDefaultNodeLinkApplyMode(t *testing.T) {
 		want LinkApplyMode
 	}{
 		{name: "regular", want: LinkApplyModeRecreate},
-		{name: "root namespace", cfg: &clabtypes.NodeConfig{IsRootNamespaceBased: true}, want: LinkApplyModeLive},
-		{name: "external", cfg: &clabtypes.NodeConfig{SkipUniquenessCheck: true}, want: LinkApplyModeLive},
+		{
+			name: "root namespace",
+			cfg:  &clabtypes.NodeConfig{IsRootNamespaceBased: true},
+			want: LinkApplyModeLive,
+		},
+		{
+			name: "external",
+			cfg:  &clabtypes.NodeConfig{SkipUniquenessCheck: true},
+			want: LinkApplyModeLive,
+		},
 	}
 
 	for _, tt := range tests {

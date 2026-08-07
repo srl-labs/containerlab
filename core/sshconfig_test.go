@@ -99,7 +99,11 @@ func TestSSHConfigIdentityFileRendering(t *testing.T) {
 			}
 			for _, notWant := range tt.wantNotContns {
 				if strings.Contains(got, notWant) {
-					t.Errorf("rendered config unexpectedly contains %q\n--- config ---\n%s", notWant, got)
+					t.Errorf(
+						"rendered config unexpectedly contains %q\n--- config ---\n%s",
+						notWant,
+						got,
+					)
 				}
 			}
 		})

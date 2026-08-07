@@ -170,7 +170,10 @@ func graphFn(ctx context.Context, o *Options) error {
 		// mgmt-net links expose a single endpoint). Indexing eps[1] on such
 		// links would panic, so they are not rendered as edges.
 		if len(eps) != 2 {
-			log.Debugf("skipping non point-to-point link with %d endpoint(s) in graph topology", len(eps))
+			log.Debugf(
+				"skipping non point-to-point link with %d endpoint(s) in graph topology",
+				len(eps),
+			)
 			continue
 		}
 

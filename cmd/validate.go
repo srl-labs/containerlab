@@ -33,7 +33,10 @@ func validateFn(o *Options) error {
 	}
 
 	if c.Config.Name == "" || len(c.Nodes) == 0 {
-		return fmt.Errorf("topology file %q defines no name or nodes. likely an empty file", c.TopoPaths.TopologyFilenameBase())
+		return fmt.Errorf(
+			"topology file %q defines no name or nodes. likely an empty file",
+			c.TopoPaths.TopologyFilenameBase(),
+		)
 	}
 
 	if err := c.ResolveLinks(); err != nil {

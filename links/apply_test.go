@@ -21,7 +21,9 @@ func TestRuntimeEndpointsForMacVlanExcludesParent(t *testing.T) {
 	if len(endpoints) != 1 {
 		t.Fatalf("expected one runtime endpoint, got %d", len(endpoints))
 	}
-	if got := endpoints[0].GetNode().GetShortName() + ":" + endpoints[0].GetIfaceName(); got != "n1:eth1" {
+	if got := endpoints[0].GetNode().
+		GetShortName() +
+		":" + endpoints[0].GetIfaceName(); got != "n1:eth1" {
 		t.Fatalf("unexpected runtime endpoint %q", got)
 	}
 }
@@ -42,7 +44,9 @@ func TestRuntimeEndpointsForVxlanStitchedIncludesUnderlyingObjects(t *testing.T)
 	}
 	link := NewVxlanStitched(vxlan, veth, hostEp)
 
-	if got := endpointTokens(RuntimeEndpoints(link)); got != "host:ve-n1_eth1,host:vx-n1_eth1,n1:eth1" {
+	if got := endpointTokens(
+		RuntimeEndpoints(link),
+	); got != "host:ve-n1_eth1,host:vx-n1_eth1,n1:eth1" {
 		t.Fatalf("unexpected runtime endpoints %q", got)
 	}
 }

@@ -127,7 +127,8 @@ func (r *LinkVEthRaw) cleanupFilteredLink(
 	return cleanupFilteredVethStitch(ctx, labName, nodesFilter, r.Endpoints)
 }
 
-// defaultLinkTypeProvider is a type that can provide the default link type for a node. Currently only needed for SR-SIM nodes that use veth-stitch for a regular veth link.
+// defaultLinkTypeProvider is a type that can provide the default link type for a node. Currently
+// only needed for SR-SIM nodes that use veth-stitch for a regular veth link.
 type defaultLinkTypeProvider interface {
 	DefaultLinkType() LinkType
 }

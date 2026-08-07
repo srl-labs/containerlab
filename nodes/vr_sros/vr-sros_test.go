@@ -132,7 +132,11 @@ func Test_vrSROS_Init_withComponents_buildsVariant(t *testing.T) {
 		Env:       map[string]string{},
 		Components: []*clabtypes.Component{
 			{Slot: "A", Type: "cpm-ixr-e"},
-			{Slot: "1", Type: "imm24-sfp++8-sfp28+2-qsfp28", MDA: clabtypes.MDAS{{Slot: 1, Type: "m24-sfp++8-sfp28+2-qsfp28"}}},
+			{
+				Slot: "1",
+				Type: "imm24-sfp++8-sfp28+2-qsfp28",
+				MDA:  clabtypes.MDAS{{Slot: 1, Type: "m24-sfp++8-sfp28+2-qsfp28"}},
+			},
 		},
 	}
 	mgmt := &clabtypes.MgmtNet{IPv4Subnet: "172.20.20.0/24", IPv6Subnet: "2001:db8::/64"}

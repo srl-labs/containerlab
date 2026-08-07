@@ -9,7 +9,6 @@ const (
 )
 
 func (n *sros) setVersionSpecificParams(tplData *srosTemplateData) {
-
 	currVersion := tplData.SwVersion.MajorMinorSemverString()
 
 	if semver.Compare(currVersion, "v26.0") < 0 {

@@ -83,7 +83,13 @@ func (m model) View() string {
 		}
 
 		if i == m.cursor {
-			fmt.Fprintf(&b, "%s %s%s\n", cursorStyle.Render("▸"), cursorStyle.Render(it.Label), note)
+			fmt.Fprintf(
+				&b,
+				"%s %s%s\n",
+				cursorStyle.Render("▸"),
+				cursorStyle.Render(it.Label),
+				note,
+			)
 
 			continue
 		}

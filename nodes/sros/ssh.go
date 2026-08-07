@@ -54,7 +54,6 @@ func (n *sros) prepareSSHPubKeys(tplData *srosTemplateData) {
 	if semver.Compare(currVersion, "v26.7") >= 0 {
 		limitSSHKeys(&tplData.SSHPubKeysED25519, "ED25519")
 	}
-
 }
 
 // mapSSHPubKeys goes over s.sshPubKeys and puts the supported keys to the corresponding

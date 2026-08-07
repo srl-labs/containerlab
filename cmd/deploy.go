@@ -302,11 +302,17 @@ func printApplyResult(result *clabcore.ApplyResult) {
 	}{
 		{label: "added nodes", values: result.AddedNodes},
 		{label: "deleted nodes", values: result.DeletedNodes},
-		{label: "recreated nodes", values: withNodeChangeReasons(result.RecreatedNodes, result.NodeChangeReasons)},
+		{
+			label:  "recreated nodes",
+			values: withNodeChangeReasons(result.RecreatedNodes, result.NodeChangeReasons),
+		},
 		{label: "started nodes", values: result.StartedNodes},
 		{label: "added links", values: result.AddedLinks},
 		{label: "deleted endpoints", values: result.DeletedEndpoints},
-		{label: "restarted nodes", values: withNodeChangeReasons(result.RestartedNodes, result.NodeChangeReasons)},
+		{
+			label:  "restarted nodes",
+			values: withNodeChangeReasons(result.RestartedNodes, result.NodeChangeReasons),
+		},
 	}
 
 	for _, row := range rows {

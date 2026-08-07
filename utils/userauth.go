@@ -19,10 +19,18 @@ func UnixGroupExists(groupName string) (bool, error) {
 			if exitError.ExitCode() == 2 {
 				return false, nil
 			} else {
-				return false, fmt.Errorf("error while looking up user groups using getent command %v: %v", groupName, err)
+				return false, fmt.Errorf(
+					"error while looking up user groups using getent command %v: %v",
+					groupName,
+					err,
+				)
 			}
 		} else {
-			return false, fmt.Errorf("error while looking up user groups using getent command %v: %v", groupName, err)
+			return false, fmt.Errorf(
+				"error while looking up user groups using getent command %v: %v",
+				groupName,
+				err,
+			)
 		}
 	}
 

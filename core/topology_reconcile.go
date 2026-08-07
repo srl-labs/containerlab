@@ -403,7 +403,11 @@ func (c *CLab) discoverLiveApplyEndpoints(
 			c.applyKnownEndpointNames(plan, nodeName),
 		)
 		if err != nil {
-			return fmt.Errorf("failed to discover runtime interfaces for node %q: %w", nodeName, err)
+			return fmt.Errorf(
+				"failed to discover runtime interfaces for node %q: %w",
+				nodeName,
+				err,
+			)
 		}
 
 		for _, ifaceName := range ifaceNames {
@@ -512,7 +516,13 @@ func (c *CLab) planAffectedApplyNode(
 
 	switch clabnodes.LinkApplyModeForNode(ctx, node) {
 	case clabnodes.LinkApplyModeLive:
-		log.Info("Applying link change without node lifecycle action", "node", nodeName, "change", change)
+		log.Info(
+			"Applying link change without node lifecycle action",
+			"node",
+			nodeName,
+			"change",
+			change,
+		)
 	case clabnodes.LinkApplyModeRestart:
 		plan.linkRestartNodeSet[nodeName] = struct{}{}
 		plan.nodeChangeReasons[nodeName] = change
@@ -538,7 +548,10 @@ func (c *CLab) planAffectedApplyNode(
 	}
 }
 
-func resolveNodeConfigFromTopology(topo *clabtypes.Topology, nodeName string) *clabtypes.NodeConfig {
+func resolveNodeConfigFromTopology(
+	topo *clabtypes.Topology,
+	nodeName string,
+) *clabtypes.NodeConfig {
 	if topo == nil {
 		return nil
 	}

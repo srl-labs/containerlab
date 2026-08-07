@@ -74,10 +74,18 @@ func TestResolveVethStitched(t *testing.T) {
 
 	// the root-ns far ends carry a deterministic hash name (the readable name
 	// lives in the clab-s- altname added at PostDeploy).
-	if got, want := stitched.epA.GetIfaceName(), stitchFarEndName("mylab", "pe01", "1/1/c3/1"); got != want {
+	if got, want := stitched.epA.GetIfaceName(), stitchFarEndName(
+		"mylab",
+		"pe01",
+		"1/1/c3/1",
+	); got != want {
 		t.Fatalf("epA far-end name = %q, want %q", got, want)
 	}
-	if got, want := stitched.epB.GetIfaceName(), stitchFarEndName("mylab", "pe02", "1/1/c3/1"); got != want {
+	if got, want := stitched.epB.GetIfaceName(), stitchFarEndName(
+		"mylab",
+		"pe02",
+		"1/1/c3/1",
+	); got != want {
 		t.Fatalf("epB far-end name = %q, want %q", got, want)
 	}
 

@@ -1230,7 +1230,8 @@ func TestGetNodeCredentials(t *testing.T) {
 			wantIdentityFile: "/keys/node",
 		},
 		"defaults_identity_only_does_not_change_credentials_source": {
-			// defaults sets only identity-file; the kind supplies username/password. The credentials
+			// defaults sets only identity-file; the kind supplies username/password. The
+			// credentials
 			// source must remain the kind so inventory generation keeps emitting the kind creds.
 			topo: &Topology{
 				Defaults: &NodeDefinition{
@@ -1273,7 +1274,9 @@ func TestGetNodeCredentials(t *testing.T) {
 			}
 
 			if tc.checkCredentialsSrc {
-				if gotSrc := tc.topo.GetNodeCredentialsTopologySource(tc.nodeName); gotSrc != tc.wantCredentialsSrc {
+				if gotSrc := tc.topo.GetNodeCredentialsTopologySource(
+					tc.nodeName,
+				); gotSrc != tc.wantCredentialsSrc {
 					t.Errorf("credentials source: got %v, want %v", gotSrc, tc.wantCredentialsSrc)
 				}
 			}

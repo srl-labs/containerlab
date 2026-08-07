@@ -203,7 +203,10 @@ func TestSaosPartialConfigOnly(t *testing.T) {
 				tt.Errorf("partial config %q was rejected: %q", tc.startupConfig, err.Error())
 			}
 			if got := n.Cfg.Env["SAOS_STARTUP_CONFIG_PATH"]; got != "/config/configuration.xml.partial" {
-				tt.Errorf("SAOS_STARTUP_CONFIG_PATH = %q, want /config/configuration.xml.partial", got)
+				tt.Errorf(
+					"SAOS_STARTUP_CONFIG_PATH = %q, want /config/configuration.xml.partial",
+					got,
+				)
 			}
 		})
 	}

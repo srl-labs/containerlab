@@ -416,7 +416,8 @@ func (d *DockerRuntime) createMgmtBridge( //nolint: funlen
 	return bridgeName, nil
 }
 
-// bridgeNameFromInspect resolves the underlying linux bridge name from a docker network inspect response.
+// bridgeNameFromInspect resolves the underlying linux bridge name from a docker network inspect
+// response.
 func bridgeNameFromInspect(netResource *networkapi.Inspect, mgmtNetwork string) (string, error) {
 	if len(netResource.ID) < 12 {
 		return "", fmt.Errorf("could not get bridge ID")
@@ -694,7 +695,13 @@ func (d *DockerRuntime) CreateContainer( //nolint: funlen
 		containerHostConfig.CapAdd = append(containerHostConfig.CapAdd, node.CapAdd...)
 	}
 
-	if err := d.processNetworkMode(ctx, containerNetworkingConfig, containerHostConfig, containerConfig, node); err != nil {
+	if err := d.processNetworkMode(
+		ctx,
+		containerNetworkingConfig,
+		containerHostConfig,
+		containerConfig,
+		node,
+	); err != nil {
 		return "", err
 	}
 

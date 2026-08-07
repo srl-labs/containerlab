@@ -1191,7 +1191,10 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	if !isFullConfigFile(n.Cfg.StartupConfig) {
 		componentConfig = n.generateComponentConfig()
 	} else {
-		log.Debugf("SR-SIM node %q has non-partial startup-config defined, skipping component config gen", n.Cfg.LongName)
+		log.Debugf(
+			"SR-SIM node %q has non-partial startup-config defined, skipping component config gen",
+			n.Cfg.LongName,
+		)
 	}
 
 	v := n.resolveConfigVariant()
@@ -1377,7 +1380,11 @@ func (n *sros) addPartialConfig() error {
 				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
 			}
 		} else {
-			log.Warn("Passed startup-config option, but it will not have any effect", "node", n.Cfg.ShortName)
+			log.Warn(
+				"Passed startup-config option, but it will not have any effect",
+				"node",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 	return nil

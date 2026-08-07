@@ -13,7 +13,7 @@ type TopologyDiff struct {
 	Fields []string
 }
 
-// if there is a diff, returns true
+// if there is a diff, returns true.
 func (d *TopologyDiff) HasDiff() bool {
 	return d != nil && len(d.Fields) > 0
 }
