@@ -1078,8 +1078,9 @@ func (n *sros) createSROSConfigFiles() error {
 		ctx := context.Background()
 		version, err := n.srosVersionFromImage(ctx)
 		if err != nil {
+			n.swVersion = n.parseVersionString(srosDefaultVersion)
 			log.Warn("Failed to get SR OS version from image",
-				"node", n.Cfg.ShortName, "error", err)
+				"node", n.Cfg.ShortName, "version", n.swVersion, "error", err)
 		} else {
 			n.swVersion = version
 			log.Info("Retrieved SR OS version from image",
@@ -1240,6 +1241,9 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	}
 
 	n.prepareSSHPubKeys(tplData)
+
+	n.setVersionSpecificParams(tplData)
+
 	return tplData, nil
 }
 
