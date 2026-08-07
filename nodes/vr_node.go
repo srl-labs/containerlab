@@ -126,6 +126,134 @@ func (vr *VRNode) CheckInterfaceName() error {
 	return nil
 }
 
+// mgmtIPTokenRE builds a regexp matching the given management IP address as a
+// standalone token, so that e.g. 172.20.20.2 does not also match 172.20.20.20.
+// The address is bounded on both sides by any character that is not part of an
+// IPv4/IPv6 literal (hex digit, dot or colon).
+func mgmtIPTokenRE(ip string) *regexp.Regexp {
+	const bound = `[^0-9A-Fa-f:.]`
+	return regexp.MustCompile(`(?:^|` + bound + `)` + regexp.QuoteMeta(ip) + `(?:` + bound + `|$)`)
+}
+
+// addressAssignmentRE guards the mgmt-IP filter to lines that actually assign an
+// address (interface `ip address` / `ipv4 address` / Junos `address x/y;` /
+// RouterOS `add address=`), so we never drop unrelated lines that merely
+// reference the mgmt IP (e.g. `snmp-server host`, `ntp server`, a BGP neighbor).
+var addressAssignmentRE = regexp.MustCompile(`(?i)address`)
+
+// descriptionRE excludes interface/other descriptions from the filter: a
+// `description "... 172.20.20.2 ..."` can carry both the mgmt IP and the word
+// "address", but is never an address assignment. A real address line never
+// contains the word "description".
+var descriptionRE = regexp.MustCompile(`(?i)description`)
+
+// mgmtConfigFilterPlatforms is the set of scrapli platform names for which it is
+// safe to strip the management address out of a saved config.
+//
+// Stripping is safe only when the node re-establishes its management address on
+// deploy *independently* of the saved config -- i.e. a vrnetlab launcher that
+// configures the management interface itself, from the container's IP, on every
+// boot. Otherwise removing the address from a saved config that is later reused
+// verbatim as a startup-config would leave the node with no management address
+// at all. This is exactly the set of kinds whose launchers do that and are
+// fixed launcher-side in the companion vrnetlab change: Cisco
+// IOS-XR/IOS-XE/NX-OS/ASA and Juniper Junos.
+//
+// Deliberately excluded even though their address syntax would match the filter:
+// kinds whose launcher applies the startup-config verbatim with no management
+// stanza of its own -- notably cisco_ios (vios) and the dell_emc/ftosv OS10
+// launcher -- because for those, stripping the saved management address is the
+// regression this change exists to prevent, inverted. Also excluded until their
+// launcher's management behavior is verified: arista_eos, huawei_vrp,
+// ipinfusion_ocnos, and aruba_aoscx (whose "ip static" syntax the filter's
+// "address" guard would not match anyway).
+//
+// Any platform not listed here is left untouched (no-op), so unverified kinds
+// never regress.
+var mgmtConfigFilterPlatforms = map[string]bool{
+	"cisco_asa":     true,
+	"cisco_iosxe":   true,
+	"cisco_iosxr":   true,
+	"cisco_nxos":    true,
+	"juniper_junos": true,
+}
+
+// FilterMgmtIPConfigLines removes the node's clab-assigned management IP
+// address(es) from a saved device configuration, structurally.
+//
+// VM-based (vrnetlab) nodes have their management interface configured by the
+// vrnetlab launcher from the container's *actual* IP on every boot. Persisting
+// that address into the saved startup-config pins a now-fixed IP that is
+// re-applied verbatim on the next deploy; if the container is later assigned a
+// different management IP (e.g. a partial `--node-filter` deploy, or docker
+// IPAM handing out a different address), the router comes up with mgmt on the
+// stale IP while clab/DNS expect the new one -- "healthy" but unreachable. By
+// dropping the launcher-managed address at save time we keep the launcher as the
+// single source of truth for management addressing.
+//
+// Device CLIs are stateful/hierarchical, so we do not blindly delete matching
+// lines (that would unbalance a Junos "address x/y { ... }" block or similar).
+// Instead, for the line carrying the mgmt IP:
+//   - if it opens a hierarchy block ("{"), the whole *balanced* block is removed
+//     so braces and children stay consistent (Junos with address options);
+//   - otherwise it is a leaf statement (IOS-XR "ipv4 address x", IOS "ip address
+//     x", Junos "address x/y;", RouterOS "add address=x/y ...") and only that
+//     line is removed, leaving the enclosing interface/context header intact so
+//     the launcher can re-add the address on the next boot.
+//
+// This is vendor-agnostic: it keys off the assigned IP rather than each vendor's
+// management-interface name, while still respecting config structure.
+func FilterMgmtIPConfigLines(config, mgmtV4, mgmtV6 string) string {
+	var res []*regexp.Regexp
+	for _, ip := range []string{mgmtV4, mgmtV6} {
+		if ip != "" {
+			res = append(res, mgmtIPTokenRE(ip))
+		}
+	}
+	if len(res) == 0 {
+		return config
+	}
+
+	// A line is a removal candidate only if it both carries a mgmt IP token and
+	// looks like an address assignment (guard against unrelated references), and
+	// is not a description (which may legitimately contain the mgmt IP and the
+	// word "address").
+	matches := func(s string) bool {
+		if !addressAssignmentRE.MatchString(s) || descriptionRE.MatchString(s) {
+			return false
+		}
+		for _, re := range res {
+			if re.MatchString(s) {
+				return true
+			}
+		}
+		return false
+	}
+
+	lines := strings.Split(config, "\n")
+	out := make([]string, 0, len(lines))
+	for i := 0; i < len(lines); {
+		line := lines[i]
+		if !matches(line) {
+			out = append(out, line)
+			i++
+			continue
+		}
+
+		// The mgmt IP is on this line. Decide leaf vs. block by net brace depth.
+		depth := strings.Count(line, "{") - strings.Count(line, "}")
+		if depth <= 0 {
+			i++ // leaf statement: drop just this line
+			continue
+		}
+		// Block opener: consume lines until the braces it opened are balanced.
+		for i++; i < len(lines) && depth > 0; i++ {
+			depth += strings.Count(lines[i], "{") - strings.Count(lines[i], "}")
+		}
+	}
+	return strings.Join(out, "\n")
+}
+
 func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	config, err := clabnetconf.GetConfig(n.Cfg.LongName,
 		n.Cfg.Credentials.Username,
@@ -134,6 +262,14 @@ func (n *VRNode) SaveConfig(_ context.Context) (*SaveConfigResult, error) {
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	// Do not persist the launcher-managed management address; it is re-applied
+	// from the container's actual IP on every boot and would otherwise pin a
+	// stale mgmt IP on redeploy (see FilterMgmtIPConfigLines). Only for platforms
+	// whose config syntax we handle safely; others are left untouched.
+	if mgmtConfigFilterPlatforms[n.ScrapliPlatformName] {
+		config = FilterMgmtIPConfigLines(config, n.Cfg.MgmtIPv4Address, n.Cfg.MgmtIPv6Address)
 	}
 
 	// Save config to mounted labdir startup config path
