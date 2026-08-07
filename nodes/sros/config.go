@@ -9,11 +9,6 @@ const (
 )
 
 func (n *sros) setVersionSpecificParams(tplData *srosTemplateData) {
-	// currently on SAR platforms require the version specific config
-	// to be set.
-	if !n.isSARNode() {
-		return
-	}
 
 	currVersion := tplData.SwVersion.MajorMinorSemverString()
 
