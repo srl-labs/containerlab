@@ -334,59 +334,70 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 		"log", fmt.Sprintf("docker logs -f %[1]s", s.Cfg.LongName),
 	)
 
-	for loop := true; loop; {
+	for {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("%s: waiting to accept configs: %w", addr, err)
+		}
+
 		healthy, err := s.IsHealthy(ctx)
 		if err != nil {
 			log.Debugf("%s: health check failed: %v", s.Cfg.ShortName, err)
 		}
 
 		if !healthy {
-			time.Sleep(5 * time.Second) // cool-off period
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("%s: waiting to accept configs: %w", addr, ctx.Err())
+			case <-time.After(5 * time.Second): // cool-off period
+			}
 			log.Debugf("Waiting for %s to become healthy", s.Cfg.ShortName)
 			continue
 		}
 
+		sl := log.StandardLog(log.StandardLogOptions{
+			ForceLevel: log.DebugLevel,
+		})
+		li, err := scraplilogging.NewInstance(
+			scraplilogging.WithLevel("debug"),
+			scraplilogging.WithLogger(sl.Print))
+		if err != nil {
+			return err
+		}
+
+		opts := []util.Option{
+			options.WithAuthNoStrictKey(),
+			options.WithAuthUsername(username),
+			options.WithAuthPassword(password),
+			options.WithTransportType(transport.StandardTransport),
+			options.WithTimeoutOps(5 * time.Second),
+			options.WithLogger(li),
+		}
+
+		p, err := platform.NewPlatform(platformName, addr, opts...)
+		if err != nil {
+			return fmt.Errorf("%s: failed to create platform: %+v", addr, err)
+		}
+
+		d, err = p.GetNetworkDriver()
+		if err != nil {
+			return fmt.Errorf("%s: could not create the driver: %+v", addr, err)
+		}
+
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("%s: waiting to accept configs: %w", addr, err)
+		}
+
+		err = d.Open()
+		if err == nil {
+			// driver successfully opened, exit the loop
+			break
+		}
+
+		log.Debugf("%s: not yet ready - %v", addr, err)
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("%s: timed out waiting to accept configs", addr)
-		default:
-			sl := log.StandardLog(log.StandardLogOptions{
-				ForceLevel: log.DebugLevel,
-			})
-			li, err := scraplilogging.NewInstance(
-				scraplilogging.WithLevel("debug"),
-				scraplilogging.WithLogger(sl.Print))
-			if err != nil {
-				return err
-			}
-
-			opts := []util.Option{
-				options.WithAuthNoStrictKey(),
-				options.WithAuthUsername(username),
-				options.WithAuthPassword(password),
-				options.WithTransportType(transport.StandardTransport),
-				options.WithTimeoutOps(5 * time.Second),
-				options.WithLogger(li),
-			}
-
-			p, err := platform.NewPlatform(platformName, addr, opts...)
-			if err != nil {
-				return fmt.Errorf("%s: failed to create platform: %+v", addr, err)
-			}
-
-			d, err = p.GetNetworkDriver()
-			if err != nil {
-				return fmt.Errorf("%s: could not create the driver: %+v", addr, err)
-			}
-
-			err = d.Open()
-			if err == nil {
-				// driver successfully opened, exit the loop
-				loop = false
-			} else {
-				log.Debugf("%s: not yet ready - %v", addr, err)
-				time.Sleep(5 * time.Second) // cool-off period
-			}
+			return fmt.Errorf("%s: waiting to accept configs: %w", addr, ctx.Err())
+		case <-time.After(5 * time.Second): // cool-off period
 		}
 	}
 

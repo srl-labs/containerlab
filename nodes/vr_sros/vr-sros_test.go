@@ -3,7 +3,9 @@ package vr_sros
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	clablinks "github.com/srl-labs/containerlab/links"
 	clabmocksmockruntime "github.com/srl-labs/containerlab/mocks/mockruntime"
@@ -14,6 +16,45 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
+
+func Test_applyPartialConfig_HonorsContextCancellationWhileUnhealthy(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	mockRt.EXPECT().
+		IsHealthy(gomock.Any(), "n1").
+		DoAndReturn(func(context.Context, string) (bool, error) {
+			cancel()
+			return false, nil
+		}).
+		AnyTimes()
+
+	s := &vrSROS{}
+	s.VRNode = *clabnodes.NewVRNode(s, defaultCredentials, scrapliPlatformName)
+	s.Cfg = &clabtypes.NodeConfig{ShortName: "n1", LongName: "n1"}
+	s.OverwriteNode = s
+	s.WithRuntime(mockRt)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- s.applyPartialConfig(
+			ctx,
+			"192.0.2.1",
+			scrapliPlatformName,
+			"admin",
+			"admin",
+			strings.NewReader("configure system name n1"),
+		)
+	}()
+
+	select {
+	case err := <-done:
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(time.Second):
+		t.Fatal("applyPartialConfig did not return after context cancellation")
+	}
+}
 
 func TestAosCXInterfaceParsing(t *testing.T) {
 	tests := map[string]struct {
