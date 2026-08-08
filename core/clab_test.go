@@ -205,7 +205,9 @@ func Test_WaitForExternalNodeDependencies_OK(t *testing.T) {
 	}
 
 	// run the check
-	c.waitForExternalNodeDependencies(ctx, "node4")
+	if err := c.waitForExternalNodeDependencies(ctx, "node4"); err != nil {
+		t.Fatal(err)
+	}
 
 	// check that the function was called "counterMax" times
 	if counter != counterMax {
@@ -223,7 +225,9 @@ func Test_WaitForExternalNodeDependencies_NoContainerNetworkMode(t *testing.T) {
 	}
 
 	// run the check with a node that has no "network-mode: container:<CONTAINERNAME>"
-	c.waitForExternalNodeDependencies(context.TODO(), "node5")
+	if err := c.waitForExternalNodeDependencies(context.TODO(), "node5"); err != nil {
+		t.Fatal(err)
+	}
 	// should simply and quickly return
 }
 
@@ -237,8 +241,9 @@ func Test_WaitForExternalNodeDependencies_NodeNonExisting(t *testing.T) {
 	}
 
 	// run the check with a node that has no "network-mode: container:<CONTAINERNAME>"
-	c.waitForExternalNodeDependencies(context.TODO(), "NonExistingNode")
-	// should simply and quickly return
+	if err := c.waitForExternalNodeDependencies(context.TODO(), "NonExistingNode"); err == nil {
+		t.Fatal("expected missing node error")
+	}
 }
 
 func Test_scheduleNodes_PostDeployFailureCancelsWorkers(t *testing.T) {

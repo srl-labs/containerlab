@@ -548,7 +548,16 @@ func (c *CLab) scheduleNodes(
 				}
 
 				// wait for possible external dependencies
-				c.waitForExternalNodeDependencies(scheduleCtx, node.Config().ShortName)
+				err := c.waitForExternalNodeDependencies(scheduleCtx, node.Config().ShortName)
+				if err != nil {
+					if scheduleCtx.Err() != nil {
+						return
+					}
+					log.Error(err)
+					nodeFailCh <- err
+					cancelSchedule()
+					return
+				}
 				// when all nodes that this node depends on are created, push it into the
 				// channel; honor cancellation so the send cannot block forever once the
 				// workers have unwound on Ctrl-C.
@@ -577,10 +586,9 @@ func (c *CLab) scheduleNodes(
 // waitForExternalNodeDependencies makes nodes that have a reference to an external container
 // network-namespace (network-mode: container:<NAME>) to wait until the referenced container is
 // in started status. The wait time is 15 minutes by default.
-func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName string) {
+func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName string) error {
 	if _, exists := c.Nodes[nodeName]; !exists {
-		log.Errorf("unable to find referenced node %q", nodeName)
-		return
+		return fmt.Errorf("unable to find referenced node %q", nodeName)
 	}
 
 	nodeConfig := c.Nodes[nodeName].Config()
@@ -588,7 +596,7 @@ func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName str
 	netModeArr := strings.SplitN(nodeConfig.NetworkMode, ":", 2) //nolint: mnd
 	if netModeArr[0] != "container" {
 		// we only care about nodes with NetMode "container:<CONTAINERNAME>"
-		return
+		return nil
 	}
 
 	// the referenced container might be an external pre-existing or a container created also by
@@ -598,10 +606,15 @@ func (c *CLab) waitForExternalNodeDependencies(ctx context.Context, nodeName str
 	// if the container does not exist in the list of container, it must be an external dependency
 	// it can be ignored for internal processing so -> continue
 	if _, exists := c.Nodes[contName]; exists {
-		return
+		return nil
 	}
 
-	clabruntime.WaitForContainerRunning(ctx, c.Runtimes[c.globalRuntimeName], contName, nodeName)
+	return clabruntime.WaitForContainerRunning(
+		ctx,
+		c.Runtimes[c.globalRuntimeName],
+		contName,
+		nodeName,
+	)
 }
 
 // GetLinkNodes returns all CLab.Nodes nodes as links.Nodes enriched with the special nodes -
