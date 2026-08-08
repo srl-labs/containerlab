@@ -21,10 +21,13 @@ func Test_applyPartialConfig_HonorsContextCancellationWhileUnhealthy(t *testing.
 	ctrl := gomock.NewController(t)
 	mockRt := clabmocksmockruntime.NewMockContainerRuntime(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
+	var deadline time.Time
+	var hasDeadline bool
 
 	mockRt.EXPECT().
 		IsHealthy(gomock.Any(), "n1").
-		DoAndReturn(func(context.Context, string) (bool, error) {
+		DoAndReturn(func(ctx context.Context, _ string) (bool, error) {
+			deadline, hasDeadline = ctx.Deadline()
 			cancel()
 			return false, nil
 		}).
@@ -51,6 +54,8 @@ func Test_applyPartialConfig_HonorsContextCancellationWhileUnhealthy(t *testing.
 	select {
 	case err := <-done:
 		require.ErrorIs(t, err, context.Canceled)
+		require.True(t, hasDeadline)
+		assert.WithinDuration(t, time.Now().Add(readyTimeout), deadline, time.Second)
 	case <-time.After(time.Second):
 		t.Fatal("applyPartialConfig did not return after context cancellation")
 	}

@@ -47,6 +47,7 @@ const (
 	vrsrosDefaultType          = "sr-1"
 	scrapliPlatformName        = "nokia_sros"
 	scrapliPlatformNameClassic = "nokia_sros_classic"
+	readyTimeout               = 15 * time.Minute // max wait for node health and SSH readiness
 	// envSrosConfigMode is the env var that controls the CLI mode used by SR OS.
 	// When set to "classic" or "mixed", the classic CLI scrapligo platform is used.
 	// Default (unset or "model-driven") uses the MD-CLI platform.
@@ -328,6 +329,9 @@ func (s *vrSROS) applyPartialConfig(ctx context.Context, addr, platformName,
 	if strings.TrimSpace(configContentStr) == "" {
 		return nil
 	}
+
+	ctx, cancel := context.WithTimeout(ctx, readyTimeout)
+	defer cancel()
 
 	log.Info("Waiting for node to be ready. This may take a while",
 		"node", s.Cfg.LongName,
