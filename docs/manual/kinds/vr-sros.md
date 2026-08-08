@@ -93,8 +93,11 @@ The interface naming convention is: `1/1/X`, where `X` is the port number.
 
 /// admonition
     type: warning
-Nokia SR OS VM nodes currently only support the simplified interface alias `1/1/X`, where X denotes the port number.  
-Multi-chassis, multi-linecard setups, and channelized interfaces are not supported by interface aliasing at the moment, and you must fall back to the old `ethX`-based naming scheme ([see below](#custom-variants)) in these scenarios.
+Nokia SR OS VM nodes currently only support the simplified interface alias `1/1/X`, where X denotes the port number.
+
+Multi-chassis, multi-linecard setups, and channelized interfaces are only supported (in an experimental state) for interface aliasing when using the [components](#components) based variant definition.
+
+For all other cases (such as using TiMOS line based configuration) you must fall back to the old `ethX`-based naming scheme ([see below](#custom-variants)) in these scenarios.
 
 Data port numbering starts at `1`, like one would normally expect in the NOS.
 ///
@@ -217,6 +220,61 @@ type: "cpu=2 ram=4 slot=A chassis=ixr-r6 card=cpiom-ixr-r6 mda/1=m6-10g-sfp++4-2
 ```
 
 1. No `cp` nor `lc` markers are needed to define an integrated variant.
+
+#### Components
+
+Instead of hand-writing the TIMOS line, a custom variant can be described with the same structured `components` syntax, similarly to [SR-SIM](./sros.md#grouped-topology).
+
+Components are used to define the cards (slot and type) and sub-components of the card such as XIOMs and MDAs.
+
+When `components` are defined, the `type` for the node defines the chassis type (such as `sr-2s` or `ixr-r6d`) and is NOT a reference to a pre-packaged variant.
+
+See the below example topology of an SR-2s defined using `components`.
+
+```yaml
+name: sr-2s-comp-example
+topology:
+  nodes:
+    R1:
+      kind: nokia_sros
+      image: nokia_sros:24.10.R1
+      type: sr-2s
+      env:
+        NOKIA_SROS_SFM: sfm-2s
+      components:
+        - slot: A
+          type: cpm-2s
+        - slot: 1
+          type: xcm-2s
+          xiom:
+            - slot: 1
+              type: iom-s-3.0t
+              mda:
+                - slot: 1
+                  type: ms18-100gb-qsfp28
+```
+
+The same limitation as the TiMOS line variant definition applies that only a single CPM card can be defined. For dual CPM topologies, use [SR-SIM](./sros.md)
+
+##### Additional parameters
+
+By default `cpu`, `ram` and `max_nics` are derived automatically but can be easily overridden per component through that specific component's `env`.
+
+```yaml
+components:
+  - slot: 1
+    type: xcm-2s
+    env:
+      cpu: "4"        # vCPUs allocated to the card VM
+      ram: "6"        # RAM in GB
+      max_nics: "5"   # Give the card VM only 5 NICs
+    xiom:
+      - slot: 1
+        type: iom-s-3.0t
+        mda:
+          - slot: 1
+            type: ms18-100gb-qsfp28
+```
 
 ### Node configuration
 

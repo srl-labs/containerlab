@@ -226,6 +226,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			LongName:      "lab-n1",
 			StartupConfig: cfgPath,
 		}
+		n.swVersion = &SrosVersion{"0", "0", "0"}
 
 		cfg, err := n.buildStartupConfig(false) // full config, not partial
 		require.NoError(t, err)
@@ -255,6 +256,7 @@ func Test_sros_buildStartupConfig(t *testing.T) {
 			LabDir:      t.TempDir(),
 		}
 		n.WithRuntime(mockRt)
+		n.swVersion = &SrosVersion{"0", "0", "0"}
 
 		cfg, err := n.buildStartupConfig(true) // no full config; use default + partial
 		require.NoError(t, err)
@@ -343,7 +345,11 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 
 			cfg := n.generateComponentConfig()
 
-			assert.Contains(t, cfg, fmt.Sprintf("/configure card 1 card-type %s admin-state enable", tc.cardType))
+			assert.Contains(
+				t,
+				cfg,
+				fmt.Sprintf("/configure card 1 card-type %s admin-state enable", tc.cardType),
+			)
 			for _, mda := range tc.mdas {
 				assert.Contains(t, cfg, fmt.Sprintf(
 					"/configure card 1 mda %d mda-type %s admin-state enable",
@@ -355,7 +361,11 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 				assert.NotContains(t, cfg, "power-shelf")
 				assert.NotContains(t, cfg, "power-module")
 			} else {
-				assert.Contains(t, cfg, fmt.Sprintf("power-shelf 1 power-shelf-type %s", tc.powerType))
+				assert.Contains(
+					t,
+					cfg,
+					fmt.Sprintf("power-shelf 1 power-shelf-type %s", tc.powerType),
+				)
 				assert.Equal(t, 4, strings.Count(cfg, "power-module-type ps-a-dc-6000"))
 			}
 		})
@@ -375,7 +385,11 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 
 		assert.Contains(t, cfg, "/configure card 1 card-type env-card admin-state enable")
 		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type env-mda admin-state enable")
-		assert.Contains(t, cfg, "/configure card 1 mda 2 mda-type me12-100gb-qsfp28 admin-state enable")
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 mda 2 mda-type me12-100gb-qsfp28 admin-state enable",
+		)
 	})
 
 	t.Run("integrated_env_override_adds_mda_slot", func(t *testing.T) {
@@ -389,7 +403,11 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 
 		cfg := n.generateComponentConfig()
 
-		assert.Contains(t, cfg, "/configure card 1 mda 1 mda-type m6-10g-sfp++1-100g-qsfp28 admin-state enable")
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 mda 1 mda-type m6-10g-sfp++1-100g-qsfp28 admin-state enable",
+		)
 		assert.Contains(t, cfg, "/configure card 1 mda 3 mda-type m20-1g-csfp admin-state enable")
 	})
 
@@ -437,7 +455,11 @@ func Test_sros_generateComponentConfig(t *testing.T) {
 		assert.Contains(t, cfg, "/configure card 1 card-type xcm-2s admin-state enable")
 		assert.Contains(t, cfg, "/configure sfm 1 sfm-type sfm-2s admin-state enable")
 		assert.Contains(t, cfg, "/configure card 1 xiom x1 xiom-type iom-s-3.0t admin-state enable")
-		assert.Contains(t, cfg, "/configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28 admin-state enable")
+		assert.Contains(
+			t,
+			cfg,
+			"/configure card 1 xiom x1 mda 1 mda-type ms18-100gb-qsfp28 admin-state enable",
+		)
 		assert.Contains(t, cfg, "power-shelf 1 power-shelf-type ps-a4-shelf-dc")
 	})
 }

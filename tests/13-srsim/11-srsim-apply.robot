@@ -22,7 +22,9 @@ ${retry-interval}           10 seconds
 Apply initial lab without links has no client connectivity
     ${rc}    ${output} =    Apply    ${no-links-vars}
     Should Be Equal As Integers    ${rc}    0
-    Should Contain    ${output}    deployed lab
+    # a fresh deployment prints the container inspect table and no reconciliation summary
+    Should Contain    ${output}    clab-${lab-name}-client
+    Should Not Contain    ${output}    Apply summary
     # no links yet: client cannot reach either SR-SIM node
     Client Cannot Ping    10.0.1.2
     Client Cannot Ping    10.0.2.2

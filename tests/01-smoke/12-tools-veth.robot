@@ -42,6 +42,26 @@ Verify links in node n1 pre-deploy
     Should Be Equal As Integers    ${rc}    0
     Should Contain    ${output}    state UP
 
+Deploy veth using topology node names
+    ${n1-before}=    Node Runtime Identity    n1
+    ${n2-before}=    Node Runtime Identity    n2
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${CLAB_BIN} --runtime ${runtime} -t ${CURDIR}/${lab-file} tools veth create -d -a n1:eth4 -b n2:eth4
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    ${n1-after}=    Node Runtime Identity    n1
+    ${n2-after}=    Node Runtime Identity    n2
+    Should Be Equal As Strings    ${n1-after}    ${n1-before}
+    Should Be Equal As Strings    ${n2-after}    ${n2-before}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-n1 ip link show eth4
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime-cli-exec-cmd} clab-${lab-name}-n2 ip link show eth4
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+
 Deploy veth between bridge and n1
     Log    ${CURDIR}
     ${rc}    ${output} =    Run And Return Rc And Output
@@ -112,3 +132,11 @@ Setup
 Teardown
     Run    ${CLAB_BIN} --runtime ${runtime} destroy -t ${CURDIR}/${lab-file} --cleanup
     Run    sudo ip l del dev ${bridge-name}
+
+Node Runtime Identity
+    [Arguments]    ${node}
+    ${rc}    ${output} =    Run And Return Rc And Output
+    ...    ${runtime} inspect -f '{{.State.Pid}} {{.State.StartedAt}}' clab-${lab-name}-${node}
+    Log    ${output}
+    Should Be Equal As Integers    ${rc}    0
+    RETURN    ${output}

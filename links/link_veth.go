@@ -24,6 +24,7 @@ const (
 type LinkVEthRaw struct {
 	LinkCommonParams `               yaml:",inline"`
 	Endpoints        []*EndpointRaw `yaml:"endpoints"`
+	fromBrief        bool
 }
 
 // ToLinkBriefRaw converts the raw link into a LinkBriefRaw.
@@ -52,6 +53,10 @@ func (r *LinkVEthRaw) Resolve(params *ResolveParams) (Link, error) {
 	filtered := isInFilter(params, r.Endpoints)
 	if !filtered {
 		return nil, nil
+	}
+
+	if r.fromBrief && r.briefDefaultLinkType(params) == LinkTypeVethStitch {
+		return NewVEthStitchedRawFromVEth(r).Resolve(params)
 	}
 
 	// create LinkVEth struct
@@ -106,6 +111,47 @@ func linkVEthRawFromLinkBriefRaw(lb *LinkBriefRaw) (*LinkVEthRaw, error) {
 	}
 
 	return link, nil
+}
+
+func (r *LinkVEthRaw) cleanupFilteredLink(
+	ctx context.Context,
+	labName string,
+	nodesFilter []string,
+) error {
+	if !r.fromBrief {
+		return nil
+	}
+
+	// probe every brief veth because its node-selected default is
+	// unavailable after filtering; non-stitched probes are harmless no-ops.
+	return cleanupFilteredVethStitch(ctx, labName, nodesFilter, r.Endpoints)
+}
+
+// defaultLinkTypeProvider is a type that can provide the default link type for a node. Currently
+// only needed for SR-SIM nodes that use veth-stitch for a regular veth link.
+type defaultLinkTypeProvider interface {
+	DefaultLinkType() LinkType
+}
+
+func (r *LinkVEthRaw) briefDefaultLinkType(params *ResolveParams) LinkType {
+	for _, ep := range r.Endpoints {
+		n, ok := params.Nodes[ep.Node]
+		if !ok {
+			continue
+		}
+
+		provider, ok := n.(defaultLinkTypeProvider)
+		if !ok {
+			continue
+		}
+
+		lt := provider.DefaultLinkType()
+		if lt != "" && lt != LinkTypeVEth {
+			return lt
+		}
+	}
+
+	return LinkTypeVEth
 }
 
 type LinkVEth struct {
@@ -320,6 +366,10 @@ func (l *LinkVEth) Deploy(ctx context.Context, ep Endpoint) error {
 	return lastErr
 }
 
+func (*LinkVEth) PostDeploy(context.Context) error {
+	return nil
+}
+
 func (l *LinkVEth) Remove(ctx context.Context) error {
 	l.deployMutex.Lock()
 	defer l.deployMutex.Unlock()
@@ -338,4 +388,8 @@ func (l *LinkVEth) Remove(ctx context.Context) error {
 
 func (l *LinkVEth) GetEndpoints() []Endpoint {
 	return l.Endpoints
+}
+
+func (l *LinkVEth) GetRuntimeEndpoints() []Endpoint {
+	return l.GetEndpoints()
 }

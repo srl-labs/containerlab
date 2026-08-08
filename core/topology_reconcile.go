@@ -83,6 +83,14 @@ func newApplyPlan(currentNodes map[string]*runtimeNodeGroup, state *LabState) *a
 	}
 }
 
+func (p *applyPlan) isExternallyManaged(nodeName string) bool {
+	if p == nil {
+		return false
+	}
+	node := p.currentNodes[nodeName]
+	return node != nil && node.external
+}
+
 func (c *CLab) planApply(
 	ctx context.Context,
 	currentNodes map[string]*runtimeNodeGroup,
@@ -123,7 +131,7 @@ func (c *CLab) planApply(
 	c.planStoppedNodes(ctx, plan)
 
 	for _, linkIdx := range sortedLinkIndexes(c.Links) {
-		for _, ep := range clablinks.ApplyRuntimeEndpoints(c.Links[linkIdx]) {
+		for _, ep := range clablinks.RuntimeEndpoints(c.Links[linkIdx]) {
 			plan.desiredEndpointSet[endpointKeyFromEndpoint(ep)] = struct{}{}
 		}
 	}
@@ -142,7 +150,7 @@ func (c *CLab) planApply(
 
 		plan.addDeployApplyLink(linkIdx, link)
 
-		for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+		for _, ep := range clablinks.RuntimeEndpoints(link) {
 			nodeName := ep.GetNode().GetShortName()
 			if _, exists := currentNodes[nodeName]; !exists {
 				continue
@@ -195,6 +203,9 @@ func (c *CLab) planStoppedNodes(ctx context.Context, plan *applyPlan) {
 	}
 
 	for nodeName := range plan.currentNodes {
+		if plan.isExternallyManaged(nodeName) {
+			continue
+		}
 		node, exists := c.Nodes[nodeName]
 		if !exists {
 			continue
@@ -244,7 +255,7 @@ func linkTouchesNodeSet(link clablinks.Link, nodeSet map[string]struct{}) bool {
 		return false
 	}
 
-	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
 		if _, exists := nodeSet[key.node]; exists {
 			return true
@@ -368,6 +379,14 @@ func (c *CLab) discoverLiveApplyEndpoints(
 		} else if !isApplySpecialNode(nodeName) {
 			status := c.Nodes[nodeName].GetContainerStatus(ctx)
 			if !clabruntime.ContainerHasJoinableNetns(status) {
+				if plan.isExternallyManaged(nodeName) {
+					return fmt.Errorf(
+						"externally managed node %q is %s; "+
+							"start it outside containerlab before running apply",
+						nodeName,
+						status,
+					)
+				}
 				return fmt.Errorf(
 					"node %q is %s; apply requires existing nodes to have a joinable network namespace",
 					nodeName,
@@ -384,7 +403,11 @@ func (c *CLab) discoverLiveApplyEndpoints(
 			c.applyKnownEndpointNames(plan, nodeName),
 		)
 		if err != nil {
-			return fmt.Errorf("failed to discover runtime interfaces for node %q: %w", nodeName, err)
+			return fmt.Errorf(
+				"failed to discover runtime interfaces for node %q: %w",
+				nodeName,
+				err,
+			)
 		}
 
 		for _, ifaceName := range ifaceNames {
@@ -479,12 +502,27 @@ func (c *CLab) planAffectedApplyNode(
 	if !exists {
 		return
 	}
+	if plan.isExternallyManaged(nodeName) {
+		log.Info(
+			"Applying link change without node lifecycle action",
+			"node", nodeName,
+			"change", change,
+			"externally-managed", true,
+		)
+		return
+	}
 
 	overridden := clabnodes.LinkApplyModeOverrideForNode(node) != ""
 
 	switch clabnodes.LinkApplyModeForNode(ctx, node) {
 	case clabnodes.LinkApplyModeLive:
-		log.Info("Applying link change without node lifecycle action", "node", nodeName, "change", change)
+		log.Info(
+			"Applying link change without node lifecycle action",
+			"node",
+			nodeName,
+			"change",
+			change,
+		)
 	case clabnodes.LinkApplyModeRestart:
 		plan.linkRestartNodeSet[nodeName] = struct{}{}
 		plan.nodeChangeReasons[nodeName] = change
@@ -510,35 +548,49 @@ func (c *CLab) planAffectedApplyNode(
 	}
 }
 
-func resolveNodeConfigFromTopology(topo *clabtypes.Topology, nodeName string) *clabtypes.NodeConfig {
+func (c *CLab) resolveNodeConfigFromTopology(
+	topo *clabtypes.Topology,
+	nodeName string,
+) *clabtypes.NodeConfig {
 	if topo == nil {
 		return nil
 	}
 
 	binds, _ := topo.GetNodeBinds(nodeName)
 	portSet, _, _ := topo.GetNodePorts(nodeName)
+	kind := topo.GetNodeKind(nodeName)
+	privileged := topo.GetNodePrivileged(
+		nodeName,
+		c.privilegedByDefault(strings.ToLower(kind)),
+	)
 
 	return &clabtypes.NodeConfig{
-		ShortName:   nodeName,
-		NodeType:    topo.GetNodeType(nodeName),
-		Image:       topo.GetNodeImage(nodeName),
-		Entrypoint:  topo.GetNodeEntrypoint(nodeName),
-		Cmd:         topo.GetNodeCmd(nodeName),
-		Exec:        topo.GetNodeExec(nodeName),
-		Env:         topo.GetNodeEnv(nodeName),
-		Binds:       binds,
-		Devices:     topo.GetNodeDevices(nodeName),
-		CapAdd:      topo.GetNodeCapAdd(nodeName),
-		ShmSize:     topo.GetNodeShmSize(nodeName),
-		PortSet:     portSet,
-		User:        topo.GetNodeUser(nodeName),
-		NetworkMode: topo.GetNodeNetworkMode(nodeName),
-		Runtime:     topo.GetNodeRuntime(nodeName),
-		CPU:         topo.GetNodeCPU(nodeName),
-		CPUSet:      topo.GetNodeCPUSet(nodeName),
-		Memory:      topo.GetNodeMemory(nodeName),
-		License:     topo.GetNodeLicense(nodeName),
-		Components:  topo.GetComponents(nodeName),
+		ShortName:    nodeName,
+		Kind:         kind,
+		NodeType:     topo.GetNodeType(nodeName),
+		Image:        topo.GetNodeImage(nodeName),
+		Entrypoint:   topo.GetNodeEntrypoint(nodeName),
+		Cmd:          topo.GetNodeCmd(nodeName),
+		Exec:         topo.GetNodeExec(nodeName),
+		Env:          topo.GetNodeEnv(nodeName),
+		Binds:        binds,
+		Devices:      topo.GetNodeDevices(nodeName),
+		CapAdd:       topo.GetNodeCapAdd(nodeName),
+		Privileged:   privileged,
+		CgroupnsMode: topo.GetNodeCgroupnsMode(nodeName),
+		PidMode:      topo.GetNodePidMode(nodeName),
+		Tmpfs:        topo.GetNodeTmpfs(nodeName),
+		SecurityOpts: topo.GetNodeSecurityOpts(nodeName),
+		ShmSize:      topo.GetNodeShmSize(nodeName),
+		PortSet:      portSet,
+		User:         topo.GetNodeUser(nodeName),
+		NetworkMode:  topo.GetNodeNetworkMode(nodeName),
+		Runtime:      topo.GetNodeRuntime(nodeName),
+		CPU:          topo.GetNodeCPU(nodeName),
+		CPUSet:       topo.GetNodeCPUSet(nodeName),
+		Memory:       topo.GetNodeMemory(nodeName),
+		License:      topo.GetNodeLicense(nodeName),
+		Components:   topo.GetComponents(nodeName),
 	}
 }
 
@@ -561,14 +613,22 @@ func (c *CLab) planNodeReconciliation(ctx context.Context, plan *applyPlan) erro
 			continue
 		}
 
-		oldNodeConfig := resolveNodeConfigFromTopology(oldTopo, nodeName)
-		newNodeConfig := resolveNodeConfigFromTopology(c.Config.Topology, nodeName)
+		oldNodeConfig := c.resolveNodeConfigFromTopology(oldTopo, nodeName)
+		newNodeConfig := c.resolveNodeConfigFromTopology(c.Config.Topology, nodeName)
 		diff := node.ComputeDiff(oldNodeConfig, newNodeConfig)
 		plan.nodeDiffs[nodeName] = diff
 
 		result, err := node.GetReconcilePlan(ctx, diff)
 		if err != nil {
 			return fmt.Errorf("reconcile planning failed for node %q: %w", nodeName, err)
+		}
+		if plan.isExternallyManaged(nodeName) && result.Action != clabtypes.TopologyDiffActionNone {
+			return fmt.Errorf(
+				"node %q is externally managed and cannot be %s for %s",
+				nodeName,
+				result.Action,
+				configDriftReason(diff),
+			)
 		}
 
 		switch result.Action {
@@ -634,7 +694,7 @@ func (c *CLab) reconcileNodes(ctx context.Context, plan *applyPlan) error {
 }
 
 func (p *applyPlan) linkNeedsDeploy(link clablinks.Link) bool {
-	for _, ep := range clablinks.ApplyRuntimeEndpoints(link) {
+	for _, ep := range clablinks.RuntimeEndpoints(link) {
 		key := endpointKeyFromEndpoint(ep)
 		if _, parked := p.parkedNodeSet[key.node]; !parked {
 			if _, added := p.addedNodeSet[key.node]; added {
@@ -714,7 +774,7 @@ func endpointKeyFromEndpoint(ep clablinks.Endpoint) applyEndpointKey {
 }
 
 func applyLinkName(link clablinks.Link) string {
-	endpoints := clablinks.ApplyRuntimeEndpoints(link)
+	endpoints := clablinks.RuntimeEndpoints(link)
 	names := make([]string, 0, len(endpoints))
 	for _, ep := range endpoints {
 		key := endpointKeyFromEndpoint(ep)

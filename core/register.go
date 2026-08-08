@@ -11,6 +11,7 @@ import (
 	clabnodesc8000 "github.com/srl-labs/containerlab/nodes/c8000"
 	clabnodesceos "github.com/srl-labs/containerlab/nodes/ceos"
 	clabnodescheckpoint_cloudguard "github.com/srl-labs/containerlab/nodes/checkpoint_cloudguard"
+	clabnodesciena_saos "github.com/srl-labs/containerlab/nodes/ciena_saos"
 	clabnodescisco_asav "github.com/srl-labs/containerlab/nodes/cisco_asav"
 	clabnodescisco_sdwan "github.com/srl-labs/containerlab/nodes/cisco_sdwan"
 	clabnodescisco_vios "github.com/srl-labs/containerlab/nodes/cisco_vios"
@@ -34,6 +35,7 @@ import (
 	clabnodeslinux "github.com/srl-labs/containerlab/nodes/linux"
 	clabnodesnvidia_cumulusvx "github.com/srl-labs/containerlab/nodes/nvidia_cumulusvx"
 	clabnodesovs "github.com/srl-labs/containerlab/nodes/ovs"
+	clabnodesplvision_sonic "github.com/srl-labs/containerlab/nodes/plvision_sonic"
 	clabnodesrare "github.com/srl-labs/containerlab/nodes/rare"
 	clabnodessonic "github.com/srl-labs/containerlab/nodes/sonic"
 	clabnodessonic_vm "github.com/srl-labs/containerlab/nodes/sonic_vm"
@@ -71,6 +73,7 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesbridge.Register(c.Reg)
 	clabnodesceos.Register(c.Reg)
 	clabnodescheckpoint_cloudguard.Register(c.Reg)
+	clabnodesciena_saos.Register(c.Reg)
 	clabnodescisco_sdwan.Register(c.Reg)
 	clabnodescrpd.Register(c.Reg)
 	clabnodesjuniper_csrx.Register(c.Reg)
@@ -127,4 +130,5 @@ func (c *CLab) RegisterNodes() { //nolint:funlen
 	clabnodesarrcus_arcos.Register(c.Reg)
 	clabnodesveesix_osvbng.Register(c.Reg)
 	clabnodesspirent_stc.Register(c.Reg)
+	clabnodesplvision_sonic.Register(c.Reg)
 }

@@ -9,6 +9,11 @@ tags:
 ### Description
 
 The `deploy` command spins up a lab using the topology expressed via [topology definition file](../manual/topo-def-file.md).
+When the lab is already deployed, `deploy` reconciles the running lab with the topology
+definition: supported node and link changes are applied in place without destroying and
+redeploying the whole lab. `apply` is an alias of `deploy`; both command forms accept the same
+flags and behave identically. `--reconfigure` retains its explicit destroy-and-recreate behavior,
+and `--dry-run` previews the planned changes.
 <!-- --8<-- [start:env-vars-flags] -->
 > All command line arguments can be also provided via environment variables (CLI flags take precedence). The environment variable names are constructed by prepending `CLAB_` to the flag name, then adding the command path and ending with the flag name in its full form, all in uppercase and with hyphens replaced by underscores.
 >
@@ -21,7 +26,126 @@ The `deploy` command spins up a lab using the topology expressed via [topology d
 
 `containerlab [global-flags] deploy [local-flags]`
 
-**aliases:** `dep`
+**aliases:** `dep`, `apply`
+
+## Reconciliation behavior
+
+Deploy converges a lab to the topology definition provided by the user. If the lab is not
+deployed yet, it is deployed. If the lab is already deployed, containerlab discovers the current
+state from the container runtime and applies supported topology deltas without destroying and
+redeploying the whole lab. The `--dry-run` flag previews the planned changes without applying
+them.
+
+Reconciliation focuses on topology shape changes:
+
+- add nodes
+- delete nodes
+- add links
+- delete links
+
+Deploy also tracks a small set of existing node definition changes from the last saved state.
+Any tracked change—including `exec`, `environment`, `image`, `type`, `binds`, `ports`, resources,
+runtime, or components—conservatively recreates only the affected node.
+
+Use [`redeploy`](redeploy.md) instead when:
+
+- you modify or add node properties that reconciliation does not support
+- you need to change the startup configuration
+- the generated configuration artifacts need to change
+
+When existing nodes need their dataplane adjusted, deploy uses the same endpoint parking
+mechanism as the `stop`, `start`, and `restart` commands: affected nodes are stopped, their
+dataplane interfaces are parked in a temporary network namespace, and the interfaces are restored
+after the node starts again.
+
+### Link apply modes
+
+When deploy adds or removes a link on a node that keeps running, the node kind decides how
+disruptive that change is. Three modes exist:
+
+- `live` - the link change is applied in place; the node is neither restarted nor recreated.
+  This requires the NOS to detect interfaces that appear or disappear at runtime (hotplug).
+- `restart` - the link change is applied first and the existing container is then restarted so
+  the NOS picks up the new interface inventory.
+- `recreate` - the node container is deleted and created again. Generated runtime metadata such
+  as the `CLAB_INTFS` environment variable and startup files are rebuilt. This is the
+  conservative default for kinds that have not been validated for anything better.
+
+The currently declared modes per kind:
+
+| Kind                    | Mode       | Notes                                                          |
+| ----------------------- | ---------- | -------------------------------------------------------------- |
+| `nokia_srlinux`         | `live`     | SR Linux detects hot-plugged interfaces                        |
+| `nokia_srsim`           | `live`     | SR-SIM detects hot-plugged interfaces                          |
+| `linux`                 | `live`     | Plain Linux containers see new interfaces immediately          |
+| `arista_ceos`           | `restart`  | cEOS requires a restart to enumerate new interfaces            |
+| vrnetlab-based VM kinds | `recreate` | VM NIC wiring is fixed at VM boot; live changes cannot work    |
+| images built with Boxen | `live`     | Detected via the `org.opencontainers.image.vendor=Boxen` label |
+| all other kinds         | `recreate` | Conservative default for kinds not yet validated               |
+
+#### Overriding the mode
+
+If you know that a node's NOS handles hot-plugged interfaces (or at least survives a plain
+restart), you can override the kind default with the `link-apply-mode` property on a node, a
+group, a kind, or the topology defaults:
+
+```yaml
+topology:
+  nodes:
+    r1:
+      kind: juniper_crpd
+      image: crpd:24.4R1.9
+      link-apply-mode: live # apply link changes without recreating the node
+```
+
+The override takes precedence over the kind's declaration. When the override is more permissive
+than the kind default, containerlab logs a warning: it is then your responsibility to verify the
+NOS actually uses interfaces added this way.
+
+#### Validating that a kind supports live link changes
+
+The kernel will always show a hot-plugged interface inside the container namespace—the real
+question is whether the NOS picks it up. To validate a kind:
+
+1. Deploy a small lab with two nodes of that kind and one link.
+2. Add a second link between the nodes in the topology file and run
+   `containerlab deploy -t <topo>` with `link-apply-mode: live` set on the nodes.
+3. Confirm the node was not recreated (`docker inspect` start time is unchanged and the apply
+   summary lists the change under `added links` without recreating the nodes).
+4. Confirm the NOS sees and can use the new interface: it shows up in the NOS CLI, can be
+   configured, and passes traffic.
+5. Remove the link again with deploy and confirm the NOS handles the removal gracefully.
+
+If a kind passes this validation, please open an issue or pull request so the kind's default can
+be changed for everyone—the change is a one-line declaration in the kind's node implementation.
+
+### Reconciliation limitations
+
+Only a subset of topology changes can be reconciled:
+
+- supported link types are `veth`, brief links, `host`, `mgmt-net`, `macvlan`, `vxlan`,
+  `vxlan-stitch`, `dummy`, and `bridge`
+- distributed nodes, such as SR-SIM with components, are supported for node and link add/delete
+- root-namespace-based and `ext-container` nodes can participate in link reconciliation; deploy
+  does not create or delete their underlying resource
+- configuration drift that would require recreating an externally managed node is rejected
+- nodes with `auto-remove` enabled are not supported
+- `network-mode: container:<...>` users/providers are not supported
+- existing node definition reconciliation is limited to fields captured in the state file
+- existing link parameter/type changes with the same runtime interface names are not applied in
+  place; use `redeploy` for those changes
+
+Containerlab discovers existing links from live interfaces that carry its ownership marker and
+persists a `.state.clab.yaml` file under the lab directory after deployment or reconciliation. The
+state file stores the resolved topology used as the baseline for limited node definition
+reconciliation. Older labs without this state file can still reconcile supported shape changes,
+but existing node definition changes are not inferred until a state file has been written. Older
+or manually created interfaces without containerlab's ownership marker are left untouched. If
+such an interface blocks a requested link change, deployment fails instead of deleting it.
+Removed `vxlan-stitch` host-side interfaces are cleaned up on a best-effort basis when their
+default runtime names can be derived from the stale node endpoint.
+
+Deleted nodes are removed directly from the runtime. Node lab directories are kept.
 
 ### Flags
 
@@ -86,6 +210,10 @@ Containerlab supports using S3 URLs to retrieve topology files and startup confi
 
 With the global `--name | -n` flag a user sets a lab name. This value will override the lab name value passed in the topology definition file.
 
+For an already deployed lab, `--name` can be used without `--topo`. Containerlab tries to derive
+the topology file from the labels on the deployed containers. If the original topology file is no
+longer available, provide `--topo` explicitly.
+
 #### vars
 
 Global `--vars` option for using specified json or yaml file to load template variables from for generating topology file.
@@ -102,6 +230,16 @@ The local `--reconfigure | -c` flag instructs containerlab to first **destroy** 
 Without this flag present, containerlab will reuse the available configuration artifacts found in the lab directory.
 
 Refer to the [configuration artifacts](../manual/conf-artifacts.md) page to get more information on the lab directory contents.
+
+Management network overrides (`--network`, `--ipv4-subnet` and `--ipv6-subnet`) require a fresh
+deployment. They are rejected when an existing lab is reconciled; use `--reconfigure` to apply
+them by destroying and redeploying the lab.
+
+#### dry-run
+
+The local `--dry-run` flag prints the planned changes without applying them. For an already deployed lab this shows the [reconciliation plan](#reconciliation-behavior)—the nodes and links to add, delete, recreate, or restart. For a lab that is not deployed yet it reports that the lab would be deployed.
+
+`--dry-run` cannot be combined with `--reconfigure`, since reconfigure always destroys and redeploys the full lab.
 
 #### max-workers
 
@@ -154,6 +292,8 @@ It should be useful to enable more verbose logging when something doesn't work a
 The local `--node-filter` flag allows users to specify a subset of topology nodes targeted by `deploy` command. The value of this flag is a comma-separated list of node names as they appear in the topology.
 
 When a subset of nodes is specified, containerlab will only deploy those nodes and links belonging to all selected nodes and ignore the rest. This can be useful e.g. in CI/CD test case scenarios, where resource constraints may prohibit the deployment of a full topology.
+
+Node filtering applies to fresh deployments (including `--reconfigure`) only. When deploy [reconciles](#reconciliation-behavior) an already deployed lab, the filter is rejected, because running nodes excluded by the filter would otherwise be deleted.
 
 Read more about [node filtering](../manual/node-filtering.md) in the documentation.
 
@@ -211,6 +351,8 @@ containerlab deploy -t mylab.clab.yml --restore-all /backups/lab1
 ```
 
 **Note**: Only vrnetlab-based nodes support snapshot restore. The snapshot feature requires vrnetlab images with snapshot support.
+
+**Note**: Snapshot restore requires a fresh deployment. Restoring into an already deployed lab is rejected; use `--reconfigure` to destroy the lab and redeploy it from snapshots.
 
 #### restore
 
@@ -284,6 +426,26 @@ containerlab deploy -t mylab.clab.yml
 
 ```bash
 containerlab deploy -t mylab.clab.yml --reconfigure
+```
+
+#### Preview changes to an already deployed lab
+
+```bash
+containerlab deploy -t mylab.clab.yml --dry-run
+```
+
+Shows the [reconciliation plan](#reconciliation-behavior) without applying it. Running the same command without `--dry-run` applies the changes in place.
+
+The `apply` alias can be used for the same operation:
+
+```bash
+containerlab apply -t mylab.clab.yml
+```
+
+It can also reconcile an already deployed lab by name:
+
+```bash
+containerlab apply --name mylab
 ```
 
 #### Deploy a lab without specifying topology file

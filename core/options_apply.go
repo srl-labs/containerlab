@@ -7,10 +7,13 @@ import (
 
 // ApplyOptions represents options for applying a topology file to a lab.
 type ApplyOptions struct {
-	dryRun         bool
-	skipPostDeploy bool
-	maxWorkers     uint
-	exportTemplate string
+	dryRun             bool
+	skipPostDeploy     bool
+	skipLabDirFileACLs bool
+	graph              bool
+	finalizeNoop       bool
+	maxWorkers         uint
+	exportTemplate     string
 }
 
 // NewApplyOptions creates a new ApplyOptions instance.

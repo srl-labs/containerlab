@@ -254,12 +254,110 @@ func TestLinkVEthRaw_InvalidEndpointVarAFParsing(t *testing.T) {
 	})
 }
 
+func TestLinkVEthRaw_BriefDefaultLinkType(t *testing.T) {
+	t.Run("nodes without provider use veth", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			Endpoints: []*EndpointRaw{
+				{Node: "node1"},
+				{Node: "node2"},
+			},
+		}
+		params := &ResolveParams{
+			Nodes: map[string]Node{
+				"node1": newFakeNode("node1"),
+				"node2": newFakeNode("node2"),
+			},
+		}
+
+		if got := r.briefDefaultLinkType(params); got != LinkTypeVEth {
+			t.Fatalf("briefDefaultLinkType() = %q, want %q", got, LinkTypeVEth)
+		}
+	})
+
+	t.Run("optional provider overrides veth", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			Endpoints: []*EndpointRaw{
+				{Node: "node1"},
+				{Node: "srsim"},
+			},
+		}
+		params := &ResolveParams{
+			Nodes: map[string]Node{
+				"node1": newFakeNode("node1"),
+				"srsim": &fakeDefaultLinkTypeNode{
+					fakeNode: newFakeNode("srsim"),
+					linkType: LinkTypeVethStitch,
+				},
+			},
+		}
+
+		if got := r.briefDefaultLinkType(params); got != LinkTypeVethStitch {
+			t.Fatalf("briefDefaultLinkType() = %q, want %q", got, LinkTypeVethStitch)
+		}
+	})
+
+	t.Run("addressed brief link is promoted", func(t *testing.T) {
+		r := &LinkVEthRaw{
+			LinkCommonParams: LinkCommonParams{
+				IPv4: []string{"10.0.0.1/31", "10.0.0.0/31"},
+				IPv6: []string{"2001:db8::1/127", "2001:db8::/127"},
+			},
+			Endpoints: []*EndpointRaw{
+				{
+					Node: "node1", Iface: "eth1",
+					IPv4: "10.0.0.1/31", IPv6: "2001:db8::1/127",
+				},
+				{
+					Node: "srsim", Iface: "eth2",
+					IPv4: "10.0.0.0/31", IPv6: "2001:db8::/127",
+				},
+			},
+			fromBrief: true,
+		}
+		params := &ResolveParams{
+			LabName: "lab",
+			Nodes: map[string]Node{
+				"node1": newFakeNode("node1"),
+				"srsim": &fakeDefaultLinkTypeNode{
+					fakeNode: newFakeNode("srsim"),
+					linkType: LinkTypeVethStitch,
+				},
+			},
+		}
+
+		got, err := r.Resolve(params)
+		if err != nil {
+			t.Fatalf("Resolve() error = %v", err)
+		}
+
+		stitched, ok := got.(*LinkVEthStitched)
+		if !ok {
+			t.Fatalf("Resolve() type = %T, want *LinkVEthStitched", got)
+		}
+		if got := stitched.GetEndpoints()[0].GetIPv4Addr().String(); got != "10.0.0.1/31" {
+			t.Fatalf("node endpoint IPv4 = %q, want 10.0.0.1/31", got)
+		}
+		if got := stitched.GetEndpoints()[0].GetIPv6Addr().String(); got != "2001:db8::1/127" {
+			t.Fatalf("node endpoint IPv6 = %q, want 2001:db8::1/127", got)
+		}
+	})
+}
+
 // fakeNode is a fake implementation of Node for testing.
 type fakeNode struct {
 	Name      string
 	Endpoints []Endpoint
 	State     clabnodesstate.NodeState
 	Links     []Link
+}
+
+type fakeDefaultLinkTypeNode struct {
+	*fakeNode
+	linkType LinkType
+}
+
+func (n *fakeDefaultLinkTypeNode) DefaultLinkType() LinkType {
+	return n.linkType
 }
 
 func newFakeNode(name string) *fakeNode {

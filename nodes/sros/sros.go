@@ -36,6 +36,7 @@ import (
 
 	clabconstants "github.com/srl-labs/containerlab/constants"
 	clabexec "github.com/srl-labs/containerlab/exec"
+	clablinks "github.com/srl-labs/containerlab/links"
 	clabnetconf "github.com/srl-labs/containerlab/netconf"
 	clabnodes "github.com/srl-labs/containerlab/nodes"
 	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
@@ -619,17 +620,11 @@ func (n *sros) setupComponentNodes() error {
 
 	rootCtrName := n.calcComponentName(n.Cfg.LongName, n.Cfg.Components[0].Slot)
 
-	// Registry, because it is not a package Var
-	nr := clabnodes.NewNodeRegistry()
-	Register(nr)
-
 	// loop through the components, creating them
 	for idx, c := range n.Cfg.Components {
 		// instantiate a new nokia_srsim instance
-		componentNode, err := nr.NewNodeOfKind("nokia_srsim")
-		if err != nil {
-			return err
-		}
+		srosNode := new(sros)
+		componentNode := clabnodes.Node(srosNode)
 
 		// copy the original node's NodeConfig to the component
 		componentConfig, err := deep.Copy(n.Cfg)
@@ -688,13 +683,11 @@ func (n *sros) setupComponentNodes() error {
 		componentNode.WithRuntime(n.GetRuntime())
 
 		// store root components for cpms, for config gen
-		if srosNode, ok := componentNode.(*sros); ok {
-			srosNode.rootComponents = n.Cfg.Components
-			// store base node name
-			srosNode.baseShortName = n.Cfg.ShortName
-			srosNode.baseLongName = n.Cfg.LongName
-			srosNode.rootCtrName = rootCtrName
-		}
+		srosNode.rootComponents = n.Cfg.Components
+		// store base node name
+		srosNode.baseShortName = n.Cfg.ShortName
+		srosNode.baseLongName = n.Cfg.LongName
+		srosNode.rootCtrName = rootCtrName
 
 		// store the node in the componentNodes
 		n.componentNodes = append(n.componentNodes, componentNode)
@@ -1085,8 +1078,9 @@ func (n *sros) createSROSConfigFiles() error {
 		ctx := context.Background()
 		version, err := n.srosVersionFromImage(ctx)
 		if err != nil {
+			n.swVersion = n.parseVersionString(srosDefaultVersion)
 			log.Warn("Failed to get SR OS version from image",
-				"node", n.Cfg.ShortName, "error", err)
+				"node", n.Cfg.ShortName, "version", n.swVersion, "error", err)
 		} else {
 			n.swVersion = version
 			log.Info("Retrieved SR OS version from image",
@@ -1197,7 +1191,10 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	if !isFullConfigFile(n.Cfg.StartupConfig) {
 		componentConfig = n.generateComponentConfig()
 	} else {
-		log.Debugf("SR-SIM node %q has non-partial startup-config defined, skipping component config gen", n.Cfg.LongName)
+		log.Debugf(
+			"SR-SIM node %q has non-partial startup-config defined, skipping component config gen",
+			n.Cfg.LongName,
+		)
 	}
 
 	v := n.resolveConfigVariant()
@@ -1247,6 +1244,9 @@ func (n *sros) prepareConfigTemplateData() (*srosTemplateData, error) {
 	}
 
 	n.prepareSSHPubKeys(tplData)
+
+	n.setVersionSpecificParams(tplData)
+
 	return tplData, nil
 }
 
@@ -1380,7 +1380,11 @@ func (n *sros) addPartialConfig() error {
 				n.startupCliCfg = append(n.startupCliCfg, configContent.String()...)
 			}
 		} else {
-			log.Warn("Passed startup-config option, but it will not have any effect", "node", n.Cfg.ShortName)
+			log.Warn(
+				"Passed startup-config option, but it will not have any effect",
+				"node",
+				n.Cfg.ShortName,
+			)
 		}
 	}
 	return nil
@@ -2241,4 +2245,12 @@ func componentsBySlot(components []*clabtypes.Component) map[string]clabtypes.Co
 		m[slot] = norm
 	}
 	return m
+}
+
+// DefaultLinkType returns the default link type for an SR-SIM node
+// when the brief notation of a link definition is used.
+// It returns veth-stitch for SR-SIM nodes to support pcap and netem features,
+// see https://github.com/srl-labs/containerlab/pull/3270.
+func (*sros) DefaultLinkType() clablinks.LinkType {
+	return clablinks.LinkTypeVethStitch
 }

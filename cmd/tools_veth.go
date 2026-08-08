@@ -14,8 +14,6 @@ import (
 	"github.com/spf13/cobra"
 	clabcore "github.com/srl-labs/containerlab/core"
 	clablinks "github.com/srl-labs/containerlab/links"
-	clabnodes "github.com/srl-labs/containerlab/nodes"
-	clabnodesstate "github.com/srl-labs/containerlab/nodes/state"
 	clabtypes "github.com/srl-labs/containerlab/types"
 	clabutils "github.com/srl-labs/containerlab/utils"
 )
@@ -95,8 +93,8 @@ func vethCreate(o *Options) error {
 		return err
 	}
 
-	// create fake nodes to make links resolve work
-	err = createNodes(ctx, c, parsedAEnd, parsedBEnd, rtName)
+	// create placeholder nodes to make links resolve work
+	nodeNames, err := createPlaceholderNodes(c, parsedAEnd, parsedBEnd, rtName)
 	if err != nil {
 		return err
 	}
@@ -129,16 +127,11 @@ func vethCreate(o *Options) error {
 		return err
 	}
 
-	// deploy the endpoints of the Link
-	for _, ep := range link.GetEndpoints() {
-		deployable, ok := ep.(clablinks.DeployableEndpoint)
-		if !ok {
-			return fmt.Errorf("endpoint %q is not deployable", ep.GetIfaceName())
-		}
-
-		if err := deployable.Deploy(ctx); err != nil {
-			return fmt.Errorf("failed to deploy veth endpoint: %w", err)
-		}
+	if err := c.DeployNodes(ctx, nodeNames, uint(len(nodeNames))); err != nil {
+		return err
+	}
+	if err := c.DeployLinks(ctx, []clablinks.Link{link}); err != nil {
+		return err
 	}
 
 	log.Info("veth interface successfully created!")
@@ -146,49 +139,30 @@ func vethCreate(o *Options) error {
 	return nil
 }
 
-// createNodes creates fake nodes in c.Nodes map to make link resolve work.
-// It checks which endpoint type is set by a user and creates a node that matches the type.
-func createNodes(_ context.Context, c *clabcore.CLab, aEnd, bEnd parsedEndpoint, rt string) error {
+// createPlaceholderNodes creates non-owning nodes for resources that already exist.
+// It returns the names of the placeholders it added.
+func createPlaceholderNodes(
+	c *clabcore.CLab,
+	aEnd, bEnd parsedEndpoint,
+	rt string,
+) ([]string, error) {
+	var nodeNames []string
 	for _, epDefinition := range []parsedEndpoint{aEnd, bEnd} {
-		switch epDefinition.Kind {
-		case clablinks.LinkEndpointTypeHost:
-			err := createFakeNode(c, "host", &clabtypes.NodeConfig{
-				ShortName: epDefinition.Node,
-				LongName:  epDefinition.Node,
-				Runtime:   rt,
-			})
-			if err != nil {
-				return err
-			}
-
-		case clablinks.LinkEndpointTypeBridge,
-			clablinks.LinkEndpointTypeBridgeNS:
-			err := createFakeNode(c, "bridge", &clabtypes.NodeConfig{
-				ShortName: epDefinition.Node,
-				LongName:  epDefinition.Node,
-				Runtime:   rt,
-			})
-			if err != nil {
-				return err
-			}
-		default:
-			// default endpoint type is veth
-			// so we create a fake linux node for it and fetch
-			// its namespace path.
-			// techinically we don't care which node this is, as long as it uses
-			// standard veth interface attachment process.
-			err := createFakeNode(c, "linux", &clabtypes.NodeConfig{
-				ShortName: epDefinition.Node,
-				LongName:  epDefinition.Node,
-				Runtime:   rt,
-			})
-			if err != nil {
-				return err
-			}
+		if _, exists := c.Nodes[epDefinition.Node]; exists {
+			continue
 		}
+		if err := c.AddPlaceholderNode(&clabtypes.NodeConfig{
+			ShortName: epDefinition.Node,
+			LongName:  epDefinition.Node,
+			Kind:      placeholderNodeKind(epDefinition.Kind),
+			Runtime:   rt,
+		}); err != nil {
+			return nil, err
+		}
+		nodeNames = append(nodeNames, epDefinition.Node)
 	}
 
-	return nil
+	return nodeNames, nil
 }
 
 // parsedEndpoint is a parsed veth endpoint definition.
@@ -249,25 +223,15 @@ func parseVethEndpoint(s string) (parsedEndpoint, error) {
 	return ep, nil
 }
 
-// createFakeNode creates a fake node in c.Nodes map using the provided node kind and its config.
-func createFakeNode(c *clabcore.CLab, kind string, nodeCfg *clabtypes.NodeConfig) error {
-	name := nodeCfg.ShortName
-	// construct node
-	n, err := c.Reg.NewNodeOfKind(kind)
-	if err != nil {
-		return fmt.Errorf("error constructing node %s: %v", name, err)
+// placeholderNodeKind maps a veth endpoint type to the node kind used as a
+// non-owning placeholder for an already-existing resource.
+func placeholderNodeKind(t clablinks.LinkEndpointType) string {
+	switch t {
+	case clablinks.LinkEndpointTypeHost:
+		return "host"
+	case clablinks.LinkEndpointTypeBridge, clablinks.LinkEndpointTypeBridgeNS:
+		return "bridge"
+	default:
+		return "ext-container"
 	}
-
-	// Init
-	err = n.Init(nodeCfg, clabnodes.WithRuntime(c.Runtimes[nodeCfg.Runtime]))
-	if err != nil {
-		return fmt.Errorf("failed to initialize node %s: %v", name, err)
-	}
-
-	// fake node is always assumed to be deployed in case of tools veth command
-	n.SetState(clabnodesstate.Deployed)
-
-	c.Nodes[name] = n
-
-	return nil
 }

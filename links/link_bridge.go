@@ -44,6 +44,10 @@ func (b *Bridge) Deploy(ctx context.Context, endpoint Endpoint) error {
 	return err
 }
 
+func (*Bridge) PostDeploy(context.Context) error {
+	return nil
+}
+
 // Remove removes the link.
 func (b *Bridge) Remove(ctx context.Context) error {
 	// check Deployment state, if the Link was already
@@ -69,6 +73,10 @@ func (b *Bridge) GetType() LinkType {
 // GetEndpoints returns the endpoints of the link.
 func (b *Bridge) GetEndpoints() []Endpoint {
 	return []Endpoint{b.endpoint}
+}
+
+func (b *Bridge) GetRuntimeEndpoints() []Endpoint {
+	return b.GetEndpoints()
 }
 
 // GetMTU returns the Link MTU.

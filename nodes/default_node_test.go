@@ -47,6 +47,68 @@ func TestDefaultNodeEndpointOwnership(t *testing.T) {
 	}
 }
 
+func TestDefaultNodeConfigChangesRecreate(t *testing.T) {
+	tests := []struct {
+		name string
+		old  *clabtypes.NodeConfig
+		new  *clabtypes.NodeConfig
+	}{
+		{
+			name: "exec",
+			old:  &clabtypes.NodeConfig{Exec: []string{"echo old"}},
+			new:  &clabtypes.NodeConfig{Exec: []string{"echo new"}},
+		},
+		{
+			name: "environment",
+			old:  &clabtypes.NodeConfig{Env: map[string]string{"MODE": "old"}},
+			new:  &clabtypes.NodeConfig{Env: map[string]string{"MODE": "new"}},
+		},
+		{
+			name: "privileged",
+			old:  &clabtypes.NodeConfig{Privileged: true},
+			new:  &clabtypes.NodeConfig{Privileged: false},
+		},
+		{
+			name: "cgroup namespace mode",
+			old:  &clabtypes.NodeConfig{CgroupnsMode: "private"},
+			new:  &clabtypes.NodeConfig{CgroupnsMode: "host"},
+		},
+		{
+			name: "PID mode",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{PidMode: "host"},
+		},
+		{
+			name: "tmpfs",
+			old:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw"}},
+			new:  &clabtypes.NodeConfig{Tmpfs: map[string]string{"/run": "rw,nosuid"}},
+		},
+		{
+			name: "security options",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{SecurityOpts: []string{"seccomp=unconfined"}},
+		},
+		{
+			name: "components",
+			old:  &clabtypes.NodeConfig{},
+			new:  &clabtypes.NodeConfig{Components: []*clabtypes.Component{{Slot: "1"}}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := &DefaultNode{Cfg: &clabtypes.NodeConfig{LongName: "clab-lab-n1"}}
+			plan := node.ComputeReconcilePlan(node.ComputeDiff(tt.old, tt.new))
+			if plan.Action != clabtypes.TopologyDiffActionRecreate {
+				t.Fatalf("action = %q, want %q", plan.Action, clabtypes.TopologyDiffActionRecreate)
+			}
+			if len(plan.Recreated) != 1 || plan.Recreated[0] != "clab-lab-n1" {
+				t.Fatalf("recreated nodes = %v, want only clab-lab-n1", plan.Recreated)
+			}
+		})
+	}
+}
+
 func TestDefaultNodeAdoptEndpointRejectsForeignOwner(t *testing.T) {
 	d := &DefaultNode{
 		Cfg: &clabtypes.NodeConfig{
@@ -108,9 +170,31 @@ func TestDefaultNodeShouldSkipLifecycle(t *testing.T) {
 }
 
 func TestDefaultNodeLinkApplyMode(t *testing.T) {
-	d := &DefaultNode{}
-	if got := d.LinkApplyMode(context.Background()); got != LinkApplyModeRecreate {
-		t.Fatalf("LinkApplyMode() = %q, want %q", got, LinkApplyModeRecreate)
+	tests := []struct {
+		name string
+		cfg  *clabtypes.NodeConfig
+		want LinkApplyMode
+	}{
+		{name: "regular", want: LinkApplyModeRecreate},
+		{
+			name: "root namespace",
+			cfg:  &clabtypes.NodeConfig{IsRootNamespaceBased: true},
+			want: LinkApplyModeLive,
+		},
+		{
+			name: "external",
+			cfg:  &clabtypes.NodeConfig{SkipUniquenessCheck: true},
+			want: LinkApplyModeLive,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := &DefaultNode{Cfg: tt.cfg}
+			if got := d.LinkApplyMode(context.Background()); got != tt.want {
+				t.Fatalf("LinkApplyMode() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

@@ -896,6 +896,39 @@ func TestGetNodeBinds(t *testing.T) {
 	}
 }
 
+func TestGetNodeBindsDeterministicOrder(t *testing.T) {
+	topology := &Topology{
+		Defaults: &NodeDefinition{},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {
+				Binds: []string{
+					"z-source:/etc/z.conf",
+					"a-source:/etc/a.conf",
+					"m-source:/etc/m.conf",
+				},
+			},
+		},
+	}
+	want := []string{
+		"a-source:/etc/a.conf",
+		"m-source:/etc/m.conf",
+		"z-source:/etc/z.conf",
+	}
+
+	for range 100 {
+		got, err := topology.GetNodeBinds("node1")
+		if err != nil {
+			t.Fatalf("GetNodeBinds() unexpected error: %v", err)
+		}
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Fatalf(
+				"GetNodeBinds() returned binds in a non-deterministic order (-want +got):\n%s",
+				diff,
+			)
+		}
+	}
+}
+
 func TestGetNodeEnv(t *testing.T) {
 	for name, item := range topologyTestSet {
 		t.Logf("%q test item", name)
@@ -1197,7 +1230,8 @@ func TestGetNodeCredentials(t *testing.T) {
 			wantIdentityFile: "/keys/node",
 		},
 		"defaults_identity_only_does_not_change_credentials_source": {
-			// defaults sets only identity-file; the kind supplies username/password. The credentials
+			// defaults sets only identity-file; the kind supplies username/password. The
+			// credentials
 			// source must remain the kind so inventory generation keeps emitting the kind creds.
 			topo: &Topology{
 				Defaults: &NodeDefinition{
@@ -1240,7 +1274,9 @@ func TestGetNodeCredentials(t *testing.T) {
 			}
 
 			if tc.checkCredentialsSrc {
-				if gotSrc := tc.topo.GetNodeCredentialsTopologySource(tc.nodeName); gotSrc != tc.wantCredentialsSrc {
+				if gotSrc := tc.topo.GetNodeCredentialsTopologySource(
+					tc.nodeName,
+				); gotSrc != tc.wantCredentialsSrc {
 					t.Errorf("credentials source: got %v, want %v", gotSrc, tc.wantCredentialsSrc)
 				}
 			}
@@ -1361,5 +1397,102 @@ func TestGetNodeCredentialTopologySource(t *testing.T) {
 				t.Errorf("credentials source: got %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestGetNodeRuntimeOptions(t *testing.T) {
+	defaultPrivileged := false
+	kindPrivileged := true
+	nodePrivileged := false
+
+	topo := &Topology{
+		Defaults: &NodeDefinition{
+			Privileged:   &defaultPrivileged,
+			CgroupnsMode: "private",
+			PidMode:      "host",
+			Tmpfs:        map[string]string{"/run": "rw"},
+			SecurityOpts: []string{"label=disable"},
+		},
+		Kinds: map[string]*NodeDefinition{
+			"linux": {
+				Privileged:   &kindPrivileged,
+				CgroupnsMode: "host",
+				Tmpfs:        map[string]string{"/run/lock": "rw"},
+				SecurityOpts: []string{"seccomp=unconfined"},
+			},
+		},
+		Groups: map[string]*NodeDefinition{
+			"systemd": {
+				PidMode: "container:infra",
+				Tmpfs:   map[string]string{"/tmp": "rw,nosuid"},
+			},
+		},
+		Nodes: map[string]*NodeDefinition{
+			"node1": {
+				Kind:         "linux",
+				Group:        "systemd",
+				Privileged:   &nodePrivileged,
+				CgroupnsMode: "host",
+				Tmpfs:        map[string]string{"/run": "rw,nosuid,nodev"},
+				SecurityOpts: []string{"apparmor=unconfined"},
+			},
+			"node2": {
+				Kind: "linux",
+			},
+			"node3": {},
+		},
+	}
+
+	if got := topo.GetNodePrivileged("node1", true); got {
+		t.Fatalf("node1 privileged = %v, want false", got)
+	}
+
+	if got := topo.GetNodePrivileged("node2", true); !got {
+		t.Fatalf("node2 privileged = %v, want true", got)
+	}
+
+	if got := topo.GetNodePrivileged("node3", true); got {
+		t.Fatalf("node3 privileged = %v, want false", got)
+	}
+
+	if got := topo.GetNodeCgroupnsMode("node1"); got != "host" {
+		t.Fatalf("node1 cgroupns-mode = %q, want host", got)
+	}
+
+	if got := topo.GetNodePidMode("node1"); got != "container:infra" {
+		t.Fatalf("node1 pid-mode = %q, want container:infra", got)
+	}
+
+	wantTmpfs := map[string]string{
+		"/run":      "rw,nosuid,nodev",
+		"/run/lock": "rw",
+		"/tmp":      "rw,nosuid",
+	}
+	if diff := cmp.Diff(wantTmpfs, topo.GetNodeTmpfs("node1")); diff != "" {
+		t.Fatalf("node1 tmpfs mismatch (-want +got):\n%s", diff)
+	}
+
+	wantSecurityOpts := []string{
+		"label=disable",
+		"seccomp=unconfined",
+		"apparmor=unconfined",
+	}
+	if diff := cmp.Diff(wantSecurityOpts, topo.GetNodeSecurityOpts("node1")); diff != "" {
+		t.Fatalf("node1 security-opts mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestGetNodePrivilegedDefault(t *testing.T) {
+	topo := &Topology{
+		Nodes: map[string]*NodeDefinition{
+			"node1": {Kind: "linux"},
+		},
+	}
+
+	if got := topo.GetNodePrivileged("node1", true); !got {
+		t.Fatalf("privileged = %v, want true", got)
+	}
+	if got := topo.GetNodePrivileged("node1", false); got {
+		t.Fatalf("privileged with kind default = %v, want false", got)
 	}
 }

@@ -45,12 +45,8 @@ func (c *CLab) parkRecreatedNodes(ctx context.Context, plan *applyPlan) error {
 		if !exists {
 			continue
 		}
-		parker, ok := node.(interface{ ParkEndpoints(context.Context) error })
-		if !ok {
-			return fmt.Errorf("node %q does not support endpoint parking", nodeName)
-		}
 		log.Info("Parking links for recreate", "node", nodeName)
-		if err := parker.ParkEndpoints(ctx); err != nil {
+		if err := node.ParkEndpoints(ctx); err != nil {
 			return fmt.Errorf("failed parking endpoints for node %q: %w", nodeName, err)
 		}
 	}
@@ -64,12 +60,8 @@ func (c *CLab) restoreRecreatedNodes(ctx context.Context, plan *applyPlan) error
 		if !exists {
 			continue
 		}
-		restorer, ok := node.(interface{ RestoreEndpoints(context.Context) error })
-		if !ok {
-			return fmt.Errorf("node %q does not support endpoint restore", nodeName)
-		}
 		log.Info("Restoring links after recreate", "node", nodeName)
-		if err := restorer.RestoreEndpoints(ctx); err != nil {
+		if err := node.RestoreEndpoints(ctx); err != nil {
 			return fmt.Errorf("failed restoring endpoints for node %q: %w", nodeName, err)
 		}
 	}

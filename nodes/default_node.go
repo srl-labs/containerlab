@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -99,6 +100,9 @@ func (*DefaultNode) PreStop(context.Context) error                           { r
 
 // PreDeploy is a common method for all nodes that is called before the node is deployed.
 func (d *DefaultNode) PreDeploy(_ context.Context, params *PreDeployParams) error {
+	if d.Cfg.IsRootNamespaceBased || d.Cfg.SkipUniquenessCheck {
+		return nil
+	}
 	_, err := d.LoadOrGenerateCertificate(params.Cert, params.TopologyName)
 	if err != nil {
 		return fmt.Errorf("loading or generating certificate for node %q: %w", d.Cfg.ShortName, err)
@@ -222,12 +226,18 @@ func (d *DefaultNode) ShouldSkipLifecycle() bool {
 // LinkApplyMode returns the conservative default for node kinds that do not
 // explicitly opt into live hotplug or restart handling.
 func (d *DefaultNode) LinkApplyMode(ctx context.Context) LinkApplyMode {
+	if d.Cfg != nil && (d.Cfg.IsRootNamespaceBased || d.Cfg.SkipUniquenessCheck) {
+		return LinkApplyModeLive
+	}
 	return d.ImageLinkApplyMode(ctx, LinkApplyModeRecreate)
 }
 
 // ImageLinkApplyMode allows node kinds to keep their normal fallback behavior
 // while opting into live link apply when their image declares support for it.
-func (d *DefaultNode) ImageLinkApplyMode(ctx context.Context, fallback LinkApplyMode) LinkApplyMode {
+func (d *DefaultNode) ImageLinkApplyMode(
+	ctx context.Context,
+	fallback LinkApplyMode,
+) LinkApplyMode {
 	if d.imageHasBoxenVendorLabel(ctx) {
 		return LinkApplyModeLive
 	}
@@ -272,6 +282,9 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if oldCfg.NodeType != newCfg.NodeType {
 		diff.Fields = append(diff.Fields, "Type")
 	}
+	if oldCfg.Kind != newCfg.Kind {
+		diff.Fields = append(diff.Fields, "Kind")
+	}
 	if oldCfg.Image != newCfg.Image {
 		diff.Fields = append(diff.Fields, "Image")
 	}
@@ -295,6 +308,21 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	}
 	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.CapAdd, newCfg.CapAdd) {
 		diff.Fields = append(diff.Fields, "CapAdd")
+	}
+	if oldCfg.Privileged != newCfg.Privileged {
+		diff.Fields = append(diff.Fields, "Privileged")
+	}
+	if oldCfg.CgroupnsMode != newCfg.CgroupnsMode {
+		diff.Fields = append(diff.Fields, "CgroupnsMode")
+	}
+	if oldCfg.PidMode != newCfg.PidMode {
+		diff.Fields = append(diff.Fields, "PidMode")
+	}
+	if !clabutils.MapsEqualOrBothEmpty(oldCfg.Tmpfs, newCfg.Tmpfs) {
+		diff.Fields = append(diff.Fields, "Tmpfs")
+	}
+	if !clabutils.SlicesEqualOrBothEmpty(oldCfg.SecurityOpts, newCfg.SecurityOpts) {
+		diff.Fields = append(diff.Fields, "SecurityOpts")
 	}
 	if oldCfg.ShmSize != newCfg.ShmSize {
 		diff.Fields = append(diff.Fields, "ShmSize")
@@ -323,6 +351,10 @@ func (d *DefaultNode) ComputeDiff(oldCfg, newCfg *clabtypes.NodeConfig) *clabtyp
 	if oldCfg.License != newCfg.License {
 		diff.Fields = append(diff.Fields, "License")
 	}
+	if (len(oldCfg.Components) > 0 || len(newCfg.Components) > 0) &&
+		!reflect.DeepEqual(oldCfg.Components, newCfg.Components) {
+		diff.Fields = append(diff.Fields, "Components")
+	}
 
 	return diff
 }
@@ -347,19 +379,33 @@ func (d *DefaultNode) ComputeReconcilePlan(diff *clabtypes.TopologyDiff) *Reconc
 	return result
 }
 
-func (d *DefaultNode) GetReconcilePlan(_ context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error) {
+func (d *DefaultNode) GetReconcilePlan(
+	_ context.Context,
+	diff *clabtypes.TopologyDiff,
+) (*ReconcileResult, error) {
 	return d.ComputeReconcilePlan(diff), nil
 }
 
 // Reconcile applies the diff and executes the appropriate action (restart/recreate).
-func (d *DefaultNode) Reconcile(ctx context.Context, diff *clabtypes.TopologyDiff) (*ReconcileResult, error) {
+func (d *DefaultNode) Reconcile(
+	ctx context.Context,
+	diff *clabtypes.TopologyDiff,
+) (*ReconcileResult, error) {
 	result := d.ComputeReconcilePlan(diff)
 
 	if result.Action == clabtypes.TopologyDiffActionNone {
 		return result, nil
 	}
 
-	log.Info("Applying node changes", "node", d.Cfg.ShortName, "action", result.Action, "fields", diff.Fields)
+	log.Info(
+		"Applying node changes",
+		"node",
+		d.Cfg.ShortName,
+		"action",
+		result.Action,
+		"fields",
+		diff.Fields,
+	)
 
 	switch result.Action {
 	case clabtypes.TopologyDiffActionRestart:
@@ -535,7 +581,11 @@ func (d *DefaultNode) CalculateInterfaceIndex(ifName string) (int, error) {
 		calculatedIndex := parsedIndexInt - d.InterfaceOffset + d.FirstDataIfIndex
 		return calculatedIndex, nil
 	} else {
-		return 0, fmt.Errorf("%q does not have extracted interface index with regexp %q, 'port' capture group missing?", ifName, d.InterfaceRegexp)
+		return 0, fmt.Errorf(
+			"%q does not have extracted interface index with regexp %q, 'port' capture group missing?",
+			ifName,
+			d.InterfaceRegexp,
+		)
 	}
 }
 
@@ -1052,17 +1102,15 @@ func (d *DefaultNode) DeployEndpoints(ctx context.Context) error {
 			continue
 		}
 
-		deployable, ok := ep.(clablinks.DeployableEndpoint)
-		if !ok {
-			return fmt.Errorf("endpoint %q is not deployable", ep.GetIfaceName())
-		}
-
-		err := deployable.Deploy(ctx)
-		if err != nil {
+		if err := ep.Deploy(ctx); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (*DefaultNode) PostDeployEndpoints(context.Context) error {
 	return nil
 }
 
@@ -1176,7 +1224,11 @@ func (d *DefaultNode) Stop(ctx context.Context) error {
 		// Docker/podman may return an error while the container is already stopped.
 		// if ctr is already stopped, this is OK
 		if d.OverwriteNode.GetContainerStatus(ctx) == clabruntime.Stopped {
-			log.Warnf("node %q stop returned error but container is stopped: %v", cfg.ShortName, err)
+			log.Warnf(
+				"node %q stop returned error but container is stopped: %v",
+				cfg.ShortName,
+				err,
+			)
 			return nil
 		}
 
@@ -1225,7 +1277,11 @@ func (d *DefaultNode) Start(ctx context.Context) error {
 	// (for example IP addresses added during deploy exec phase).
 	execCollection := clabexec.NewExecCollection()
 	if err := d.RunExecFromConfig(ctx, execCollection); err != nil {
-		log.Errorf("failed to run exec commands for node %q on lifecycle start: %v", cfg.ShortName, err)
+		log.Errorf(
+			"failed to run exec commands for node %q on lifecycle start: %v",
+			cfg.ShortName,
+			err,
+		)
 	}
 	execCollection.Log()
 
