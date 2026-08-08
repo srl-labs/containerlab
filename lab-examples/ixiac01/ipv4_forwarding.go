@@ -1,10 +1,13 @@
+//go:build ignore
+
 /*
 Test IPv4 Forwarding with
 - Endpoints: OTG 1.1.1.1 -----> 1.1.1.2 DUT 2.2.2.2 ------> OTG 2.2.2.1
 - Static Route on DUT: 20.20.20.0/24 -> 2.2.2.2
 - TCP flow from OTG: 10.10.10.1 -> 20.20.20.1+
 
-To run: go run ipv4_forwarding.go
+This repository intentionally does not include a Go module for this example.
+Run this file from a separate module that requires gosnappi v1.55.0.
 */
 
 package main
